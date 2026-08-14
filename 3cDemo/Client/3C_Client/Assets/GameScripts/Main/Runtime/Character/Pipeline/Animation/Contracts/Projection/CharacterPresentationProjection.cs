@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPresentationProjection : ISerializationCallbackReceiver
     {
-        public const string CurrentAbiVersion = "character-presentation-projection/v12";
+        public const string CurrentAbiVersion = "character-presentation-projection/v13";
 
         [SerializeField] string m_AbiVersion = string.Empty;
         [SerializeField] string m_ProgramId = string.Empty;
@@ -565,6 +565,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class AnimationMarkerSyncBinding : ISerializationCallbackReceiver
     {
         [SerializeField] AnimationSyncMode m_Mode = AnimationSyncMode.None;
+        [SerializeField] AnimationSyncTimeMapping m_TimeMapping;
         [SerializeField] string m_CanonicalGroupId = string.Empty;
         [SerializeField] AnimationMarkerSequenceTopology m_SequenceTopology;
         [SerializeField] AnimationMarkerSyncRole m_SyncRole;
@@ -576,6 +577,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [NonSerialized] Dictionary<string, AnimationMarkerSyncSegmentOccurrence[]> m_Occurrences;
 
         public AnimationSyncMode Mode => m_Mode;
+        public AnimationSyncTimeMapping TimeMapping => m_TimeMapping;
         public string CanonicalGroupId => m_CanonicalGroupId;
         public AnimationMarkerSequenceTopology SequenceTopology => m_SequenceTopology;
         public AnimationMarkerSyncRole SyncRole => m_SyncRole;
@@ -591,6 +593,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal AnimationMarkerSyncBinding(
             AnimationSyncMode mode,
+            AnimationSyncTimeMapping timeMapping,
             string canonicalGroupId,
             AnimationMarkerSequenceTopology sequenceTopology,
             AnimationMarkerSyncRole syncRole,
@@ -600,6 +603,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationMarkerSyncSegmentOccurrence[] segments)
         {
             m_Mode = mode;
+            m_TimeMapping = timeMapping;
             m_CanonicalGroupId = canonicalGroupId ?? string.Empty;
             m_SequenceTopology = sequenceTopology;
             m_SyncRole = syncRole;
@@ -626,7 +630,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (m_Mode == AnimationSyncMode.None)
             {
-                if (!string.IsNullOrEmpty(m_CanonicalGroupId) ||
+                if (m_TimeMapping != AnimationSyncTimeMapping.Unspecified ||
+                    !string.IsNullOrEmpty(m_CanonicalGroupId) ||
                     m_SequenceTopology != AnimationMarkerSequenceTopology.Unspecified ||
                     m_SyncRole != AnimationMarkerSyncRole.Unspecified ||
                     m_DurationFrame != 0 || m_DurationSeconds != 0f ||
@@ -639,6 +644,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return true;
             }
             if (m_Mode != AnimationSyncMode.MarkerGroup ||
+                m_TimeMapping != AnimationSyncTimeMapping.MarkerSegmentFraction &&
+                m_TimeMapping != AnimationSyncTimeMapping.GeneratedFootPhase ||
                 string.IsNullOrEmpty(m_CanonicalGroupId) ||
                 m_SequenceTopology != AnimationMarkerSequenceTopology.Finite &&
                 m_SequenceTopology != AnimationMarkerSequenceTopology.Cyclic ||
@@ -728,10 +735,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
+    public sealed class CharacterPresentationSequenceNotifyBinding
+    {
+        [SerializeField] string m_AuthoringId = string.Empty;
+        [SerializeField] AnimationSequenceNotifyKind m_Kind;
+        [SerializeField] int m_Frame;
+        [SerializeField] string m_PrimaryValue = string.Empty;
+        [SerializeField] string m_SecondaryValue = string.Empty;
+
+        public CharacterPresentationSequenceNotifyBinding(
+            string authoringId,
+            AnimationSequenceNotifyKind kind,
+            int frame,
+            string primaryValue,
+            string secondaryValue)
+        {
+            m_AuthoringId = authoringId ?? string.Empty;
+            m_Kind = kind;
+            m_Frame = frame;
+            m_PrimaryValue = primaryValue ?? string.Empty;
+            m_SecondaryValue = secondaryValue ?? string.Empty;
+        }
+
+        public string AuthoringId => m_AuthoringId;
+        public AnimationSequenceNotifyKind Kind => m_Kind;
+        public int Frame => m_Frame;
+        public string PrimaryValue => m_PrimaryValue;
+        public string SecondaryValue => m_SecondaryValue;
+    }
+
+    [Serializable]
     public sealed class CharacterPresentationAnimationClipBinding
     {
         [SerializeField] string m_ClipAuthoringId = string.Empty;
+        [SerializeField] string m_SequenceAuthoringId = string.Empty;
+        [SerializeField] string m_SequenceContentRevision = string.Empty;
         [SerializeField] UnityEngine.AnimationClip m_Clip;
+        [SerializeField] bool m_SequenceLoop;
+        [SerializeField] AnimationMarkerSyncBinding m_SequenceMarkerSync = new AnimationMarkerSyncBinding();
+        [SerializeField] CharacterPresentationSequenceNotifyBinding[] m_SequenceNotifies = Array.Empty<CharacterPresentationSequenceNotifyBinding>();
         [SerializeField] float m_StartTime;
         [SerializeField] float m_EndTime;
         [SerializeField] float m_ClipInTime;
@@ -747,7 +789,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationFootFeatureCurveSet m_RightFootFeatures;
 
         public string ClipAuthoringId => m_ClipAuthoringId;
+        public string SequenceAuthoringId => m_SequenceAuthoringId;
+        public string SequenceContentRevision => m_SequenceContentRevision;
         public UnityEngine.AnimationClip Clip => m_Clip;
+        public bool SequenceLoop => m_SequenceLoop;
+        public AnimationMarkerSyncBinding SequenceMarkerSync => m_SequenceMarkerSync;
+        public IReadOnlyList<CharacterPresentationSequenceNotifyBinding> SequenceNotifies =>
+            m_SequenceNotifies ?? Array.Empty<CharacterPresentationSequenceNotifyBinding>();
         public float StartTime => m_StartTime;
         public float EndTime => m_EndTime;
         public float ClipInTime => m_ClipInTime;
@@ -758,7 +806,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPresentationAnimationClipBinding(
             string clipAuthoringId,
+            string sequenceAuthoringId,
+            string sequenceContentRevision,
             UnityEngine.AnimationClip clip,
+            bool sequenceLoop,
+            AnimationMarkerSyncBinding sequenceMarkerSync,
+            CharacterPresentationSequenceNotifyBinding[] sequenceNotifies,
             float startTime,
             float endTime,
             float clipInTime,
@@ -773,7 +826,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationFootFeaturePair footFeatures)
         {
             m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            m_SequenceAuthoringId = sequenceAuthoringId ?? string.Empty;
+            m_SequenceContentRevision = sequenceContentRevision ?? string.Empty;
             m_Clip = clip;
+            m_SequenceLoop = sequenceLoop;
+            m_SequenceMarkerSync = sequenceMarkerSync ?? throw new ArgumentNullException(nameof(sequenceMarkerSync));
+            m_SequenceNotifies = sequenceNotifies ?? Array.Empty<CharacterPresentationSequenceNotifyBinding>();
             m_StartTime = startTime;
             m_EndTime = endTime;
             m_ClipInTime = clipInTime;
@@ -794,7 +852,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void RequireSampleable(int clipBindingIndex)
         {
-            if (clipBindingIndex < 0 || string.IsNullOrWhiteSpace(m_ClipAuthoringId) || !m_Clip ||
+            if (clipBindingIndex < 0 || string.IsNullOrWhiteSpace(m_ClipAuthoringId) ||
+                !AuthoringIdentity.IsValid(m_SequenceAuthoringId) || string.IsNullOrWhiteSpace(m_SequenceContentRevision) ||
+                !m_Clip || m_SequenceMarkerSync == null ||
                 !float.IsFinite(m_Clip.length) || m_Clip.length <= 0f ||
                 !float.IsFinite(m_StartTime) || !float.IsFinite(m_EndTime) || m_EndTime < m_StartTime ||
                 !float.IsFinite(m_ClipInTime) || m_ClipInTime < 0f ||
@@ -854,7 +914,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             double continuousClipTime = (double)m_ClipInTime + selfTime + (double)cycle * m_DurationTime;
             if (double.IsNaN(continuousClipTime) || double.IsInfinity(continuousClipTime) || continuousClipTime < 0d)
                 throw new InvalidOperationException($"Presentation Projection animation clip '{m_ClipAuthoringId}' produced an invalid continuous time.");
-            bool isLooping = m_Clip.isLooping || isTrackLooping;
+            bool isLooping = m_SequenceLoop || isTrackLooping;
             double effectiveClipTime = isLooping
                 ? continuousClipTime % m_Clip.length
                 : Math.Min(continuousClipTime, m_Clip.length);
@@ -869,7 +929,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 weight,
                 isLooping);
             var footSample = new AnimationFootPlacementSample(
-                EvaluateRequired(m_FootPlacementWeightCurve, authoringNormalized, nameof(m_FootPlacementWeightCurve)),
+                EvaluateRequired(m_FootPlacementWeightCurve, animationNormalized, nameof(m_FootPlacementWeightCurve)),
                 m_LeftFootFeatures.Sample(animationNormalized).BindPredictionSource(
                     AnimationPredictedFootStepSample.SourceIdentity(m_ClipAuthoringId),
                     checked((int)Math.Floor(continuousClipTime / m_Clip.length)),

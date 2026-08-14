@@ -326,6 +326,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     result.Motion.ActionOwnerIdentity,
                     result.Motion.GameplayResultOwnerIdentity),
                 result.Motion.MovementPlaybackClock,
+                result.Motion.LocomotionTimeline,
                 resetSequence);
         }
 

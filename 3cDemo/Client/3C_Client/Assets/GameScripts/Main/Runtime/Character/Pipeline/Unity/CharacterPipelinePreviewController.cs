@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Animancer;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -169,6 +170,44 @@ namespace ThirdPersonCharacter.Pipeline
                    m_EquipmentFixture == ResolveEquipmentFixture(m_Host);
         }
 
+        public bool TryGetSequencePreviewStatus(
+            AnimationSequenceAsset sequence,
+            out string status)
+        {
+            try
+            {
+                if (sequence is not CharacterAnimationSequenceAsset characterSequence)
+                    throw new InvalidOperationException("Sequence Preview target requires a Character Animation Sequence.");
+                characterSequence.RequireValid();
+                if (!m_Projection.TryGetPoseSource(
+                        characterSequence.AuthoringId,
+                        characterSequence.ContentRevision,
+                        out CharacterPresentationPoseSourcePlan source))
+                {
+                    throw new InvalidOperationException(
+                        $"Sequence Preview is unavailable: Projection has no exact plan for '{characterSequence.name}' revision '{characterSequence.ContentRevision}'. Build the Character after authoring changes.");
+                }
+                source.RequireValid();
+                if (source.Clip != characterSequence.Clip ||
+                    source.Loop != characterSequence.Loop ||
+                    !string.Equals(source.RigId, characterSequence.Rig.RigId, StringComparison.Ordinal) ||
+                    !string.Equals(source.RigRevision, characterSequence.Rig.Revision, StringComparison.Ordinal) ||
+                    !m_Projection.PosePlan.SequencePlayers.Any(
+                        value => value.PresentationPoseSourceIndex == source.SourceIndex))
+                {
+                    throw new InvalidOperationException(
+                        $"Sequence Preview is unavailable: '{characterSequence.name}' does not match a compiled Sequence Player and Rig.");
+                }
+                status = $"Sequence Preview · {characterSequence.name} · exact Projection plan";
+                return true;
+            }
+            catch (InvalidOperationException exception)
+            {
+                status = exception.Message;
+                return false;
+            }
+        }
+
         public void Evaluate(
             Guid sessionId,
             TimelineData timeline,
@@ -188,35 +227,7 @@ namespace ThirdPersonCharacter.Pipeline
                 throw new InvalidOperationException(
                     $"Timeline preview target '{m_Host.name}' is already owned by session '{m_SessionId}'.");
 
-            bool created = m_Session == null;
-            if (created)
-            {
-                CaptureVisualPose();
-                var runtime = new AnimationPreviewRuntime(
-                    m_Definition,
-                    m_Program,
-                    m_Projection,
-                    m_Animancer,
-                    m_AnimationRigBinding,
-                    m_BodyFixture,
-                    m_WorldAwareBinding,
-                    m_PhysicsScene,
-                    m_EquipmentFixture,
-                    timeline,
-                    sessionId);
-                ApplyLinkedPosePreviewOverrides(runtime);
-                m_Session = new PreviewSession(
-                    NextGeneration(),
-                    runtime);
-                m_SessionId = sessionId;
-                AcquireGraphClock();
-                ApplyPendingPoseTuningCandidate();
-                m_Session.Engine.ConfigureMarkerSyncSource(
-                    m_TargetTimelineId,
-                    m_TargetTrackId,
-                    m_SourceTimelineId,
-                    m_SourceTrackId);
-            }
+            bool created = EnsureSession(sessionId, timeline);
 
             if (resetLifecycle && !created)
             {
@@ -234,6 +245,32 @@ namespace ThirdPersonCharacter.Pipeline
                 presentationDeltaSeconds);
             m_Session.Engine.Evaluate(m_Session);
             ApplyMotionPreview(timeline, currentTime);
+        }
+
+        public void EvaluateSequence(
+            Guid sessionId,
+            AnimationSequenceAsset sequence,
+            float currentTime,
+            ulong evaluationTick,
+            float presentationDeltaSeconds,
+            bool resetLifecycle)
+        {
+            if (sessionId == Guid.Empty || sequence == null || evaluationTick == 0)
+                throw new ArgumentException("Sequence Preview identity is incomplete.");
+            if (!TryGetSequencePreviewStatus(sequence, out string status))
+                throw new InvalidOperationException(status);
+            bool created = EnsureSession(sessionId, null);
+            if (resetLifecycle && !created)
+            {
+                m_Session.Engine.RetireAndReset(evaluationTick);
+                m_Session.Generation = NextGeneration();
+            }
+            m_Session.Engine.EvaluateSequence(
+                sequence,
+                currentTime,
+                evaluationTick,
+                presentationDeltaSeconds,
+                resetLifecycle || created);
         }
 
         public void EvaluatePoseGraph(
@@ -259,30 +296,7 @@ namespace ThirdPersonCharacter.Pipeline
                 throw new InvalidOperationException(
                     $"Animation preview target '{m_Host.name}' is already owned by session '{m_SessionId}'.");
 
-            bool created = m_Session == null;
-            if (created)
-            {
-                CaptureVisualPose();
-                var runtime = new AnimationPreviewRuntime(
-                    m_Definition,
-                    m_Program,
-                    m_Projection,
-                    m_Animancer,
-                    m_AnimationRigBinding,
-                    m_BodyFixture,
-                    m_WorldAwareBinding,
-                    m_PhysicsScene,
-                    m_EquipmentFixture,
-                    null,
-                    sessionId);
-                ApplyLinkedPosePreviewOverrides(runtime);
-                m_Session = new PreviewSession(
-                    NextGeneration(),
-                    runtime);
-                m_SessionId = sessionId;
-                AcquireGraphClock();
-                ApplyPendingPoseTuningCandidate();
-            }
+            bool created = EnsureSession(sessionId, null);
 
             if (resetLifecycle && !created)
             {
@@ -429,6 +443,46 @@ namespace ThirdPersonCharacter.Pipeline
         public void Dispose()
         {
             ClearSession();
+        }
+
+        bool EnsureSession(Guid sessionId, TimelineData timeline)
+        {
+            if (m_Session != null)
+            {
+                if (m_SessionId != sessionId)
+                    throw new InvalidOperationException(
+                        $"Animation preview target '{m_Host.name}' is already owned by session '{m_SessionId}'.");
+                return false;
+            }
+            CaptureVisualPose();
+            var runtime = new AnimationPreviewRuntime(
+                m_Definition,
+                m_Program,
+                m_Projection,
+                m_Animancer,
+                m_AnimationRigBinding,
+                m_BodyFixture,
+                m_WorldAwareBinding,
+                m_PhysicsScene,
+                m_EquipmentFixture,
+                timeline,
+                sessionId);
+            ApplyLinkedPosePreviewOverrides(runtime);
+            m_Session = new PreviewSession(
+                NextGeneration(),
+                runtime);
+            m_SessionId = sessionId;
+            AcquireGraphClock();
+            ApplyPendingPoseTuningCandidate();
+            if (timeline != null)
+            {
+                m_Session.Engine.ConfigureMarkerSyncSource(
+                    m_TargetTimelineId,
+                    m_TargetTrackId,
+                    m_SourceTimelineId,
+                    m_SourceTrackId);
+            }
+            return true;
         }
 
         void ClearSession()

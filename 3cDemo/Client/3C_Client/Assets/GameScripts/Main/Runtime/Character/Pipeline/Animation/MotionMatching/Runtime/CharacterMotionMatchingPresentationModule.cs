@@ -1421,6 +1421,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     m_Intent.Grounded,
                     m_Intent.MovementModeId,
                     m_Intent.MovementPlaybackClock,
+                    m_Intent.LocomotionMotionTimeline,
                     resetSequence);
             }
 

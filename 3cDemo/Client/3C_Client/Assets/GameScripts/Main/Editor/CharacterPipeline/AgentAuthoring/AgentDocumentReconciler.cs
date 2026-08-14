@@ -1664,6 +1664,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         timelineAuthoringId = timeline.timelineAuthoringId,
                         name = timeline.name,
                         callSites = AgentAuthoringDocumentCodec.Clone(timeline.callSites),
+                        sections = new List<AgentSnapshotTimelineSection>(),
                         tracks = new List<AgentSnapshotTimelineTrack>()
                     };
                 }
@@ -1672,6 +1673,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     report.Error(path, "timeline_metadata_modified", "Timeline名称与调用点只能通过拥有它的Timeline节点修改。");
                     continue;
+                }
+
+                var oldSections = Index(oldTimeline.sections, value => value.sectionAuthoringId, path + ".sections", report);
+                var newSections = Index(timeline.sections, value => value.sectionAuthoringId, path + ".sections", report);
+                foreach (AgentSnapshotTimelineSection section in oldTimeline.sections ?? new List<AgentSnapshotTimelineSection>())
+                {
+                    if (newSections.ContainsKey(section.sectionAuthoringId))
+                        continue;
+                    Add(mutations, $"{path}.sections[{Escape(section.sectionAuthoringId)}]", AgentMutationKind.DeleteTimelineSection, operation =>
+                    {
+                        SetTimelineReference(operation, timeline.timelineAuthoringId, localTimelineIdentities);
+                        operation.sectionAuthoringId = section.sectionAuthoringId;
+                    });
+                }
+                foreach (AgentSnapshotTimelineSection section in timeline.sections ?? new List<AgentSnapshotTimelineSection>())
+                {
+                    string sectionPath = $"{path}.sections[{Escape(section.sectionAuthoringId)}]";
+                    oldSections.TryGetValue(section.sectionAuthoringId, out AgentSnapshotTimelineSection oldSection);
+                    if (oldSection == null && !IsLocal(section.sectionAuthoringId))
+                    {
+                        report.Error(sectionPath, "timeline_section_create_requires_local_identity", "新增Timeline Section必须使用local identity。");
+                        continue;
+                    }
+                    if (oldSection != null &&
+                        string.Equals(oldSection.name, section.name, StringComparison.Ordinal) &&
+                        oldSection.frame == section.frame)
+                        continue;
+                    Add(mutations, sectionPath, AgentMutationKind.EnsureTimelineSection, operation =>
+                    {
+                        if (oldSection == null)
+                            operation.id = LocalIdentity(section.sectionAuthoringId);
+                        else
+                            operation.sectionAuthoringId = section.sectionAuthoringId;
+                        SetTimelineReference(operation, timeline.timelineAuthoringId, localTimelineIdentities);
+                        operation.displayName = section.name;
+                        operation.startFrame = section.frame;
+                    });
                 }
 
                 var oldTracks = Index(oldTimeline.tracks, value => value.trackAuthoringId, path + ".tracks", report);
@@ -1809,38 +1847,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         operation.animationChannelId = target.animationChannelId;
                     });
                 }
-                if (current == null ||
-                    !SameAnimationTrackSync(current, target))
-                {
-                    Add(mutations, path + ".markerSync", AgentMutationKind.ConfigureAnimationTrackMarkerSync, operation =>
-                    {
-                        operation.timelineAuthoringId = timelineId;
-                        SetTimelineTrackReference(operation, target.trackAuthoringId, localTrackIdentities);
-                        operation.animationSyncMode = target.syncMode;
-                        operation.animationSyncGroupId = target.syncGroupId;
-                        operation.animationMarkerSequenceTopology = target.sequenceTopology;
-                        operation.animationMarkerSyncRole = target.syncRole;
-                    });
-                }
-                BuildTimelineMarkerMutations(
-                    timelineId,
-                    current,
-                    target,
-                    localTrackIdentities,
-                    mutations,
-                    report,
-                    path);
             }
             else if (current != null &&
-                     (!SameOptionalText(current.animationChannelId, target.animationChannelId) ||
-                      !SameOptionalText(current.syncMode, target.syncMode) ||
-                      !SameOptionalText(current.syncGroupId, target.syncGroupId) ||
-                      !SameOptionalText(current.sequenceTopology, target.sequenceTopology) ||
-                      !SameOptionalText(current.syncRole, target.syncRole) ||
-                      !Same(current.markers, target.markers) ||
-                      !SameList(current.directedMarkerPairs, target.directedMarkerPairs)))
+                     !SameOptionalText(current.animationChannelId, target.animationChannelId))
             {
-                report.Error(path, "timeline_track_animation_fields_invalid", "非AnimationTrack不能携带Animation channel、marker或sync配置。");
+                report.Error(path, "timeline_track_animation_fields_invalid", "非AnimationTrack不能携带Animation channel配置。");
             }
 
             var oldClips = Index(current?.clips, value => value.clipAuthoringId, path + ".clips", report);
@@ -1878,76 +1889,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        static void BuildTimelineMarkerMutations(
-            string timelineId,
-            AgentSnapshotTimelineTrack current,
-            AgentSnapshotTimelineTrack target,
-            IReadOnlyDictionary<string, string> localTrackIdentities,
-            AgentMutationDraftSet mutations,
-            AgentCompileReport report,
-            string path)
-        {
-            List<string> expectedPairs = BuildDirectedMarkerPairs(target);
-            if (!SameList(expectedPairs, target.directedMarkerPairs))
-            {
-                report.Error(path + ".directedMarkerPairs", "timeline_marker_pairs_invalid", "directedMarkerPairs必须与目标Marker的frame顺序和sequenceTopology一致。");
-                return;
-            }
-            var oldMarkers = Index(current?.markers, value => value.authoringId, path + ".markers", report);
-            var newMarkers = Index(target.markers, value => value.authoringId, path + ".markers", report);
-            foreach (AgentSnapshotAnimationMarker marker in target.markers ?? new List<AgentSnapshotAnimationMarker>())
-            {
-                string markerPath = $"{path}.markers[{Escape(marker.authoringId)}]";
-                oldMarkers.TryGetValue(marker.authoringId, out AgentSnapshotAnimationMarker oldMarker);
-                if (oldMarker == null && !IsLocal(marker.authoringId))
-                {
-                    report.Error(markerPath, "timeline_marker_identity_unknown", "新增Marker必须使用local: identity。");
-                    continue;
-                }
-                if (oldMarker != null &&
-                    string.Equals(oldMarker.markerId, marker.markerId, StringComparison.Ordinal) &&
-                    oldMarker.frame == marker.frame)
-                    continue;
-                Add(mutations, markerPath, AgentMutationKind.EnsureAnimationSyncMarker, operation =>
-                {
-                    if (IsLocal(marker.authoringId))
-                        operation.id = LocalIdentity(marker.authoringId);
-                    else
-                        operation.markerAuthoringId = marker.authoringId;
-                    operation.timelineAuthoringId = timelineId;
-                    SetTimelineTrackReference(operation, target.trackAuthoringId, localTrackIdentities);
-                    operation.markerId = marker.markerId;
-                    operation.markerFrame = marker.frame;
-                });
-            }
-            foreach (AgentSnapshotAnimationMarker marker in current?.markers ?? new List<AgentSnapshotAnimationMarker>())
-            {
-                if (newMarkers.ContainsKey(marker.authoringId))
-                    continue;
-                Add(mutations, $"{path}.markers[{Escape(marker.authoringId)}]", AgentMutationKind.DeleteAnimationSyncMarker, operation =>
-                {
-                    operation.timelineAuthoringId = timelineId;
-                    SetTimelineTrackReference(operation, target.trackAuthoringId, localTrackIdentities);
-                    operation.markerAuthoringId = marker.authoringId;
-                });
-            }
-        }
-
-        static List<string> BuildDirectedMarkerPairs(AgentSnapshotTimelineTrack track)
-        {
-            List<AgentSnapshotAnimationMarker> markers = (track.markers ?? new List<AgentSnapshotAnimationMarker>())
-                .OrderBy(value => value.frame)
-                .ThenBy(value => value.authoringId, StringComparer.Ordinal)
-                .ToList();
-            var result = new List<string>();
-            for (int i = 1; i < markers.Count; i++)
-                result.Add(AnimationMarkerSyncAuthoring.PairKey(markers[i - 1].markerId, markers[i].markerId));
-            if (string.Equals(track.sequenceTopology, AnimationMarkerSequenceTopology.Cyclic.ToString(), StringComparison.Ordinal) &&
-                markers.Count > 1)
-                result.Add(AnimationMarkerSyncAuthoring.PairKey(markers[markers.Count - 1].markerId, markers[0].markerId));
-            return result;
-        }
-
         static void BuildTimelineClipMutations(
             string timelineId,
             AgentSnapshotTimelineTrack track,
@@ -1977,6 +1918,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             bool treeClip = targetTreeClip != null || target.typeName?.EndsWith("TreeClip", StringComparison.Ordinal) == true;
             bool motionCurveClip = target.typeName?.EndsWith("MotionCurveClip", StringComparison.Ordinal) == true;
+            bool animationSegment = target.typeName?.EndsWith("AnimationClip", StringComparison.Ordinal) == true;
             if (treeClip)
             {
                 if (targetTreeClip == null)
@@ -2050,6 +1992,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report,
                     path);
             }
+            else if (animationSegment)
+            {
+                bool ensure = current == null ||
+                              current.startFrame != target.startFrame ||
+                              current.endFrame != target.endFrame ||
+                              current.clipInFrame != target.clipInFrame ||
+                              !SameOptionalText(current.extraPolationMode, target.extraPolationMode) ||
+                              !Same(current.animationSequence, target.animationSequence);
+                if (ensure)
+                {
+                    Add(mutations, path, AgentMutationKind.EnsureAnimationSequenceSegment, operation =>
+                    {
+                        if (IsLocal(target.clipAuthoringId))
+                        {
+                            operation.id = LocalIdentity(target.clipAuthoringId);
+                            localClipIdentities[target.clipAuthoringId] = operation.id;
+                        }
+                        SetTimelineReference(operation, timelineId, localTimelineIdentities);
+                        SetTimelineTrackReference(operation, track.trackAuthoringId, localTrackIdentities);
+                        if (!IsLocal(target.clipAuthoringId))
+                            operation.clipAuthoringId = target.clipAuthoringId;
+                        operation.animationSequence = target.animationSequence;
+                        operation.startFrame = target.startFrame;
+                        operation.endFrame = target.endFrame;
+                        operation.clipInFrame = target.clipInFrame;
+                        operation.extraPolationMode = target.extraPolationMode;
+                    });
+                }
+            }
             else if (current == null)
             {
                 report.Error(path, "timeline_clip_create_unsupported", "当前Clip类型没有正式create capability。");
@@ -2110,8 +2081,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentSnapshotTimelineClip current,
             AgentSnapshotTimelineClip target)
         {
-            return SameOptionalText(current.animationClipAssetPath, target.animationClipAssetPath) &&
-                   SameOptionalText(current.animationClipAssetGuid, target.animationClipAssetGuid) &&
+            return Same(current.animationSequence, target.animationSequence) &&
+                   current.clipInFrame == target.clipInFrame &&
+                   SameOptionalText(current.extraPolationMode, target.extraPolationMode) &&
                    SameOptionalText(current.curveId, target.curveId) &&
                    current.curveEndFrame == target.curveEndFrame &&
                    SameOptionalText(current.motionSpace, target.motionSpace) &&
@@ -2776,26 +2748,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                    left?.transitionPriority == right?.transitionPriority &&
                    SameOptionalText(left?.abortPolicy, right?.abortPolicy) &&
                    SameOptionalText(left?.conditionRuleGraphAuthoringId, right?.conditionRuleGraphAuthoringId);
-        }
-
-        static bool SameAnimationTrackSync(
-            AgentSnapshotTimelineTrack left,
-            AgentSnapshotTimelineTrack right)
-        {
-            if (!SameOptionalText(left?.syncMode, right?.syncMode))
-                return false;
-            if (!string.Equals(
-                    right?.syncMode,
-                    AnimationSyncMode.MarkerGroup.ToString(),
-                    StringComparison.Ordinal))
-            {
-                return true;
-            }
-            return SameOptionalText(left.syncGroupId, right.syncGroupId) &&
-                   SameOptionalText(
-                       left.sequenceTopology,
-                       right.sequenceTopology) &&
-                   SameOptionalText(left.syncRole, right.syncRole);
         }
 
         static string Escape(string identity)

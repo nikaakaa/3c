@@ -63,6 +63,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ByProgramProducerId =
                 new Dictionary<string, ResolvedActionAnimationBinding>(
                     StringComparer.Ordinal);
+        readonly Dictionary<string, AnimationFootPhaseTimeWarpPlan>
+            m_FootPhaseWarps =
+                new Dictionary<string, AnimationFootPhaseTimeWarpPlan>(StringComparer.Ordinal);
 
         ActionAnimationBindingIndex(CharacterPresentationProjection projection)
         {
@@ -84,6 +87,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ByProgramProducerId.TryGetValue(
                 programProducerId ?? string.Empty,
                 out binding);
+
+        public AnimationFootPhaseTimeWarpPlan RequireFootPhaseWarp(
+            AnimationProducerId leaderProducerId,
+            AnimationProducerId followerProducerId)
+        {
+            if (!TryGet(leaderProducerId, out ResolvedActionAnimationBinding leader) ||
+                !TryGet(followerProducerId, out ResolvedActionAnimationBinding follower) ||
+                !m_FootPhaseWarps.TryGetValue(
+                    FootPhaseWarpKey(leader.ProgramProducerId, follower.ProgramProducerId),
+                    out AnimationFootPhaseTimeWarpPlan plan))
+                throw new InvalidOperationException(
+                    $"Action Foot Phase relation '{leaderProducerId}->{followerProducerId}' has no compiled plan.");
+            plan.RequireValid();
+            return plan;
+        }
 
         public static ActionAnimationBindingIndex Build(
             CharacterPresentationProjection projection,
@@ -184,7 +202,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (inputs.Count != 0)
                 throw new InvalidOperationException(
                     "Pose Plan retains Action Playback inputs without finite Action producers.");
+            for (int i = 0; i < projection.ActionFootPhaseWarps.Count; i++)
+            {
+                ActionAnimationFootPhaseTimeWarpPlan relation = projection.ActionFootPhaseWarps[i];
+                relation.RequireValid();
+                if (!result.m_ByProgramProducerId.TryGetValue(
+                        relation.LeaderProgramProducerId,
+                        out ResolvedActionAnimationBinding leader) ||
+                    !result.m_ByProgramProducerId.TryGetValue(
+                        relation.FollowerProgramProducerId,
+                        out ResolvedActionAnimationBinding follower) ||
+                    leader.Animation.MarkerSync.TimeMapping != AnimationSyncTimeMapping.GeneratedFootPhase ||
+                    follower.Animation.MarkerSync.TimeMapping != AnimationSyncTimeMapping.GeneratedFootPhase ||
+                    !result.m_FootPhaseWarps.TryAdd(
+                        FootPhaseWarpKey(
+                            relation.LeaderProgramProducerId,
+                            relation.FollowerProgramProducerId),
+                        relation.TimeWarp))
+                    throw new InvalidOperationException(
+                        $"Action Foot Phase relation #{i} does not match its Action bindings.");
+            }
             return result;
         }
+
+        static string FootPhaseWarpKey(string leaderProgramProducerId, string followerProgramProducerId) =>
+            string.Concat(leaderProgramProducerId, "\n", followerProgramProducerId);
     }
 }

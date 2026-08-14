@@ -15,6 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPresentationPoseSourcePlan[] m_PoseSources = Array.Empty<CharacterPresentationPoseSourcePlan>();
         [SerializeField] CharacterAnimationBlendSpacePlan[] m_BlendSpaces = Array.Empty<CharacterAnimationBlendSpacePlan>();
         [SerializeField] CharacterAnimationBlendSpacePlayerPlan[] m_BlendSpacePlayers = Array.Empty<CharacterAnimationBlendSpacePlayerPlan>();
+        [SerializeField] ActionAnimationFootPhaseTimeWarpPlan[] m_ActionFootPhaseWarps =
+            Array.Empty<ActionAnimationFootPhaseTimeWarpPlan>();
         [SerializeField] CharacterPoseTuningLayout m_TuningLayout;
         [SerializeField] CharacterPoseTuningParameterBlock m_TuningDefaultBlock;
         [SerializeField] string m_PublishedParameterRevision = string.Empty;
@@ -30,6 +32,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>();
         public IReadOnlyList<CharacterAnimationBlendSpacePlan> BlendSpaces => m_BlendSpaces ?? Array.Empty<CharacterAnimationBlendSpacePlan>();
         public IReadOnlyList<CharacterAnimationBlendSpacePlayerPlan> BlendSpacePlayers => m_BlendSpacePlayers ?? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>();
+        public IReadOnlyList<ActionAnimationFootPhaseTimeWarpPlan> ActionFootPhaseWarps =>
+            m_ActionFootPhaseWarps ?? Array.Empty<ActionAnimationFootPhaseTimeWarpPlan>();
         public MotionMatchingProjectionPayload MotionMatching => m_MotionMatching;
         public CharacterPoseTuningLayout TuningLayout => m_TuningLayout;
         public CharacterPoseTuningParameterBlock TuningDefaultBlock => m_TuningDefaultBlock;
@@ -43,6 +47,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 CharacterPresentationPoseSourcePlan candidate = PoseSources[i];
                 if (candidate != null && candidate.SourceIndex == sourceIndex)
+                {
+                    source = candidate;
+                    return true;
+                }
+            }
+            source = null;
+            return false;
+        }
+
+        public bool TryGetPoseSource(
+            string sequenceAuthoringId,
+            string sequenceContentRevision,
+            out CharacterPresentationPoseSourcePlan source)
+        {
+            for (int i = 0; i < PoseSources.Count; i++)
+            {
+                CharacterPresentationPoseSourcePlan candidate = PoseSources[i];
+                if (candidate != null &&
+                    string.Equals(candidate.SequenceAuthoringId, sequenceAuthoringId, StringComparison.Ordinal) &&
+                    string.Equals(candidate.SequenceContentRevision, sequenceContentRevision, StringComparison.Ordinal))
                 {
                     source = candidate;
                     return true;
@@ -78,6 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPresentationPoseSourcePlan[] poseSources,
             CharacterAnimationBlendSpacePlan[] blendSpaces,
             CharacterAnimationBlendSpacePlayerPlan[] blendSpacePlayers,
+            ActionAnimationFootPhaseTimeWarpPlan[] actionFootPhaseWarps,
             CharacterPresentationProducerEntry[] producers,
             AnimationFootAnalysisProjectionIdentity footAnalysis,
             string projectionRevision,
@@ -104,6 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PoseSources = poseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>(),
                 m_BlendSpaces = blendSpaces ?? Array.Empty<CharacterAnimationBlendSpacePlan>(),
                 m_BlendSpacePlayers = blendSpacePlayers ?? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>(),
+                m_ActionFootPhaseWarps = actionFootPhaseWarps ?? Array.Empty<ActionAnimationFootPhaseTimeWarpPlan>(),
                 m_Producers = producers ?? Array.Empty<CharacterPresentationProducerEntry>(),
                 m_FootAnalysis = footAnalysis,
                 m_TuningLayout = tuningLayout,
@@ -219,6 +245,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             RequireMotionMatchingPayload();
             RequireBlendSpacePayload();
+            RequireActionFootPhaseWarpPayload();
+        }
+
+        void RequireActionFootPhaseWarpPayload()
+        {
+            var producerIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < Producers.Count; i++)
+            {
+                CharacterPresentationProducerEntry producer = Producers[i];
+                if (producer.Kind == CharacterPresentationProducerKind.Animation)
+                    producerIds.Add(producer.ProgramProducerIdentity);
+            }
+            var pairs = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < ActionFootPhaseWarps.Count; i++)
+            {
+                ActionAnimationFootPhaseTimeWarpPlan relation = ActionFootPhaseWarps[i];
+                relation?.RequireValid();
+                string key = relation == null
+                    ? string.Empty
+                    : string.Concat(
+                        relation.LeaderProgramProducerId,
+                        "\n",
+                        relation.FollowerProgramProducerId);
+                if (relation == null ||
+                    !producerIds.Contains(relation.LeaderProgramProducerId) ||
+                    !producerIds.Contains(relation.FollowerProgramProducerId) ||
+                    !pairs.Add(key))
+                    throw new InvalidOperationException(
+                        $"Projection Action Foot Phase relation #{i} is invalid or duplicated.");
+            }
         }
 
         void RequireLinkedPosePosePlan(HashSet<PresentationPoseSourceIndex> poseSourceIndices)

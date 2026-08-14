@@ -38,8 +38,6 @@ MonoBehaviour:
     m_PlantConfidenceExit: 0.35
     m_AnchorBlendSpeed: 8
     m_MaximumAnchorDistance: 0.14
-    m_MinimumLegExtensionRatio: 0.18
-    m_MaximumLegExtensionRatio: 0.98
     m_MaximumPelvisLowering: 0.32
     m_MaximumPelvisRaising: 0.18
   m_PredictiveExtension:

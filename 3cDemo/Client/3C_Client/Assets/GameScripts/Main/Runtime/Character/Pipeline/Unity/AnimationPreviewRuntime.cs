@@ -137,7 +137,8 @@ namespace ThirdPersonCharacter.Pipeline
                         m_PreviewActorId,
                         descriptor.Profile.BuildSettings(m_Projection, rig),
                         rig,
-                        physicsScene);
+                        physicsScene,
+                        null);
                 }
                 var tuningTarget = new CharacterPoseTuningTargetIdentity(
                     m_PreviewActorId.Value,
@@ -391,6 +392,68 @@ namespace ThirdPersonCharacter.Pipeline
                 in composed,
                 m_WorldContextAvailable);
             ForgetReleasedPreviewPlaybacks();
+        }
+
+        public void EvaluateSequence(
+            AnimationSequenceAsset sequence,
+            double sampleTime,
+            ulong evaluationTick,
+            float presentationDeltaSeconds,
+            bool resetContinuity)
+        {
+            if (sequence is not CharacterAnimationSequenceAsset characterSequence ||
+                evaluationTick == 0 ||
+                !double.IsFinite(sampleTime) ||
+                sampleTime < 0d ||
+                !float.IsFinite(presentationDeltaSeconds) ||
+                presentationDeltaSeconds < 0f)
+            {
+                throw new ArgumentException("Sequence Preview frame is invalid.");
+            }
+            characterSequence.RequireValid();
+            if (!m_Projection.TryGetPoseSource(
+                    characterSequence.AuthoringId,
+                    characterSequence.ContentRevision,
+                    out CharacterPresentationPoseSourcePlan source))
+            {
+                throw new InvalidOperationException(
+                    $"Sequence Preview requires an exact compiled Projection plan for '{characterSequence.name}' at revision '{characterSequence.ContentRevision}'.");
+            }
+            source.RequireValid();
+            if (source.Clip != characterSequence.Clip ||
+                source.Loop != characterSequence.Loop ||
+                !string.Equals(source.RigId, characterSequence.Rig.RigId, StringComparison.Ordinal) ||
+                !string.Equals(source.RigRevision, characterSequence.Rig.Revision, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Sequence Preview Projection plan for '{characterSequence.name}' does not match its Clip, Loop mode or Rig.");
+            }
+
+            double clampedTime = Math.Min(sampleTime, source.Clip.length);
+            CharacterBodyPresentationFrame bodyFrame =
+                m_PoseGraphFactPreview.CreateBodyFrame(evaluationTick);
+            ulong presentationFrame = ++m_PresentationFrame;
+            CharacterPresentationFactFrame factFrame =
+                m_PoseGraphFactPreview.CreateFactFrame(
+                    presentationFrame,
+                    evaluationTick,
+                    clampedTime,
+                    in bodyFrame);
+            ComposedAnimationPoseFrame composed =
+                m_Playback.PresentSequencePreview(
+                    source.SourceIndex,
+                    clampedTime,
+                    resetContinuity,
+                    presentationFrame,
+                    evaluationTick,
+                    presentationDeltaSeconds,
+                    in bodyFrame,
+                    in factFrame,
+                    m_LinkedPose.Session);
+            m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
+                m_Projection.PosePlan,
+                in composed,
+                false);
         }
 
         public void EvaluatePoseGraph(

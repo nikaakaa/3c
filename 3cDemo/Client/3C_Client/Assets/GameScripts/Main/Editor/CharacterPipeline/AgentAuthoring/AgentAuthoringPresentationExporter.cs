@@ -31,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 profile = ExportProfile(profile)
             };
+            ExportSequences(definition, profile, result);
             AppendPoseGraph(result, poseAsset);
             result.linkedPoseImplementations = profile.LinkedPoseImplementations
                 .Select(ExportLinkedPoseImplementation)
@@ -262,34 +263,136 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 slot = Asset(binding.Slot, true),
                 binding = Asset(binding, true),
                 source = Asset(binding.SourceAsset, true),
-                rig = Asset(binding.Rig, true),
-                loop = sequence && sequence.Loop,
-                defaultPlayRate = sequence ? sequence.DefaultPlayRate : 1f,
-                markerGroupId = sequence ? sequence.MarkerGroupId : string.Empty,
-                markerTopology = sequence
-                    ? sequence.MarkerTopology.ToString()
-                    : AnimationMarkerSequenceTopology.Unspecified.ToString(),
-                syncRole = sequence
-                    ? sequence.SyncRole.ToString()
-                    : AnimationMarkerSyncRole.Unspecified.ToString(),
-                markers = (sequence?.Markers ??
-                           Array.Empty<PresentationPoseSourceMarker>()).Select(value =>
-                    new AgentPackagePoseSourceMarker
-                    {
-                        id = value.AuthoringId,
-                        markerId = value.MarkerId,
-                        frame = value.Frame
-                    }).ToList(),
-                footPlacementWeight = sequence
-                    ? ExportCurve(sequence.FootPlacementWeightCurve)
-                    : null,
                 searchDomainId = motionMatching?.SearchDomainId.Value ??
                                  string.Empty,
                 databases = motionMatching?.Databases
                     .Select(value => Asset(value, true))
                     .ToList() ?? new List<AgentPackageAssetReferenceV3>(),
-                footAnalysisIdentity = binding.FootAnalysisIdentity,
+                footAnalysisIdentity = sequence ? string.Empty : binding.FootAnalysisIdentity,
                 contentRevision = binding.ContentRevision
+            };
+        }
+
+        static void ExportSequences(
+            CharacterPipelineDefinition definition,
+            CharacterAnimationPresentationProfile profile,
+            AgentDocumentPresentationEditable destination)
+        {
+            var sequences = new Dictionary<string, CharacterAnimationSequenceAsset>(StringComparer.Ordinal);
+            void Add(CharacterAnimationSequenceAsset sequence)
+            {
+                if (!sequence)
+                    return;
+                sequence.RequireValid();
+                if (sequences.TryGetValue(sequence.AuthoringId, out CharacterAnimationSequenceAsset existing) &&
+                    existing != sequence)
+                    throw new InvalidOperationException($"Animation Sequence identity '{sequence.AuthoringId}' is duplicated.");
+                sequences[sequence.AuthoringId] = sequence;
+            }
+
+            for (int i = 0; i < profile.PoseSourceBindings.Count; i++)
+            {
+                if (profile.PoseSourceBindings[i] is CharacterSequencePoseSourceBinding sequenceBinding)
+                    Add(sequenceBinding.Sequence);
+                if (profile.PoseSourceBindings[i] is not CharacterBlendSpacePoseSourceBinding blendBinding || !blendBinding.BlendSpace)
+                    continue;
+                for (int sampleIndex = 0; sampleIndex < blendBinding.BlendSpace.Samples.Count; sampleIndex++)
+                    Add(blendBinding.BlendSpace.Samples[sampleIndex]?.Sequence);
+            }
+            IReadOnlyList<AnimationProducerAuthoringEntry> producers =
+                CharacterAnimationPresentationAuthoringService.DiscoverProducers(profile, definition);
+            for (int i = 0; i < producers.Count; i++)
+            {
+                for (int clipIndex = 0; clipIndex < producers[i].Track.Clips.Count; clipIndex++)
+                {
+                    if (producers[i].Track.Clips[clipIndex] is BTSMTL.Timeline.AnimationClip segment)
+                        Add(segment.Sequence as CharacterAnimationSequenceAsset);
+                }
+            }
+
+            foreach (CharacterAnimationSequenceAsset sequence in sequences.Values.OrderBy(value => value.AuthoringId, StringComparer.Ordinal))
+            {
+                destination.animationSequences.Add(ExportSequence(sequence));
+                destination.animationSequenceCurves.Add(ExportSequenceCurves(sequence));
+            }
+        }
+
+        static AgentPackageAnimationSequenceFile ExportSequence(CharacterAnimationSequenceAsset sequence)
+        {
+            return new AgentPackageAnimationSequenceFile
+            {
+                id = sequence.AuthoringId,
+                name = sequence.name,
+                asset = Asset(sequence, true),
+                clip = Asset(sequence.Clip, true),
+                rig = Asset(sequence.Rig, true),
+                loop = sequence.Loop,
+                defaultPlayRate = sequence.DefaultPlayRate,
+                syncMode = sequence.SyncMode.ToString(),
+                timeMapping = sequence.TimeMapping.ToString(),
+                markerGroupId = sequence.SyncGroupId,
+                markerTopology = sequence.SequenceTopology.ToString(),
+                syncRole = sequence.SyncRole.ToString(),
+                markers = sequence.SyncMarkers.Select(value => new AgentPackageAnimationSequenceMarker
+                {
+                    id = value.AuthoringId,
+                    markerId = value.MarkerId,
+                    frame = value.Frame
+                }).ToList(),
+                notifies = sequence.Notifies.Select(ExportNotify).ToList(),
+                footAnalysisSource = Asset(sequence.FootAnalysisSource, true),
+                footAnalysisIdentity = sequence.FootAnalysisIdentity,
+                contentRevision = sequence.ContentRevision
+            };
+        }
+
+        static AgentPackageAnimationSequenceNotify ExportNotify(AnimationSequenceNotify notify)
+        {
+            string primary;
+            string secondary;
+            switch (notify.Payload)
+            {
+                case AnimationSequenceFootstepAudioPayload footstep:
+                    primary = footstep.CueId;
+                    secondary = footstep.FootId;
+                    break;
+                case AnimationSequenceVisualEffectPayload effect:
+                    primary = effect.EffectId;
+                    secondary = effect.SocketId;
+                    break;
+                case AnimationSequenceEditorAnnotationPayload annotation:
+                    primary = annotation.Text;
+                    secondary = string.Empty;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Animation Sequence Notify '{notify.AuthoringId}' payload is unsupported.");
+            }
+            return new AgentPackageAnimationSequenceNotify
+            {
+                id = notify.AuthoringId,
+                kind = notify.Kind.ToString(),
+                frame = notify.Frame,
+                primaryValue = primary,
+                secondaryValue = secondary
+            };
+        }
+
+        static AgentPackageAnimationSequenceCurvesFile ExportSequenceCurves(
+            CharacterAnimationSequenceAsset sequence)
+        {
+            return new AgentPackageAnimationSequenceCurvesFile
+            {
+                sequenceId = sequence.AuthoringId,
+                curves = sequence.CurveChannels.Select(channel =>
+                {
+                    AgentPackageCurve curve = ExportCurve(channel.Curve);
+                    curve.channelId = channel.ChannelId;
+                    curve.bounded = channel.ValueDomain != AnimationSequenceCurveValueDomain.Unbounded;
+                    curve.minimum = channel.ValueDomain == AnimationSequenceCurveValueDomain.SignedNormalized ? -1f : 0f;
+                    curve.maximum = channel.ValueDomain == AnimationSequenceCurveValueDomain.Unbounded ? 0f : 1f;
+                    curve.unit = channel.ValueDomain.ToString();
+                    return curve;
+                }).ToList()
             };
         }
 

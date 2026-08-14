@@ -41,6 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             IReadOnlyList<CameraTargetBinding> cameraTargetBindings,
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
+            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return CreateLocalOwner(
@@ -62,6 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 inputAdapter,
                 lookInputId,
                 null,
+                futureBodyTrajectorySource,
                 diagnostics);
         }
 
@@ -84,6 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
+            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return Create(
@@ -106,6 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 inputAdapter,
                 lookInputId,
                 equipmentRigCatalog,
+                futureBodyTrajectorySource,
                 diagnostics);
         }
 
@@ -121,6 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
+            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return CreateSimulatedActor(
@@ -136,6 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 worldAwareBinding,
                 physicsScene,
                 null,
+                futureBodyTrajectorySource,
                 diagnostics);
         }
 
@@ -152,6 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
+            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return Create(
@@ -174,6 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 null,
                 string.Empty,
                 equipmentRigCatalog,
+                futureBodyTrajectorySource,
                 diagnostics);
         }
 
@@ -189,6 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
+            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return Create(
@@ -211,6 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 null,
                 string.Empty,
                 null,
+                futureBodyTrajectorySource,
                 diagnostics);
         }
 
@@ -234,6 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
+            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
             RuntimeDiagnosticsContext diagnostics)
         {
             if (contract == null)
@@ -335,7 +346,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         actorId,
                         footPlacementSettings,
                         rig,
-                        physicsScene);
+                        physicsScene,
+                        futureBodyTrajectorySource);
                 }
                 if (cameraRig)
                 {

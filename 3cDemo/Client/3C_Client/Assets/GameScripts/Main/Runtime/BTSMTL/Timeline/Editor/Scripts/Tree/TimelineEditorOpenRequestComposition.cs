@@ -3,11 +3,6 @@ using TreeDesigner.Editor;
 
 namespace BTSMTL.Timeline.Editor
 {
-    public interface ITimelineEditorMarkerTopologyResolver
-    {
-        ITimelineAnimationMarkerSyncAuthoringContext Resolve(BaseTreeWindow sourceGraphWindow);
-    }
-
     public interface ITimelineEditorToolCatalogResolver
     {
         TimelineEditorToolCatalog Resolve(BaseTreeWindow sourceGraphWindow);
@@ -15,13 +10,7 @@ namespace BTSMTL.Timeline.Editor
 
     public static class TimelineEditorOpenRequestComposition
     {
-        static ITimelineEditorMarkerTopologyResolver s_MarkerTopologyResolver;
         static ITimelineEditorToolCatalogResolver s_ToolCatalogResolver;
-
-        public static void SetMarkerTopologyResolver(ITimelineEditorMarkerTopologyResolver resolver)
-        {
-            s_MarkerTopologyResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
-        }
 
         public static void SetToolCatalogResolver(ITimelineEditorToolCatalogResolver resolver)
         {
@@ -36,10 +25,6 @@ namespace BTSMTL.Timeline.Editor
             BaseTreeWindow sourceGraphWindow,
             ITimelineEditorRuntimeDebugBinding runtimeDebugBinding = null)
         {
-            ITimelineAnimationMarkerSyncAuthoringContext topology =
-                sourceGraphWindow && s_MarkerTopologyResolver != null
-                    ? s_MarkerTopologyResolver.Resolve(sourceGraphWindow)
-                    : null;
             TimelineEditorToolCatalog toolCatalog = sourceGraphWindow && s_ToolCatalogResolver != null
                 ? s_ToolCatalogResolver.Resolve(sourceGraphWindow)
                 : TimelineEditorToolComposition.Catalog;
@@ -48,7 +33,6 @@ namespace BTSMTL.Timeline.Editor
                 serializedOwner,
                 serializedPropertyPath,
                 ownershipLabel,
-                topology,
                 runtimeDebugBinding,
                 toolCatalog ?? TimelineEditorToolCatalog.Empty);
         }

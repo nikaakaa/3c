@@ -453,14 +453,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void BindTimeline(ActionAnimationTimelineContext timeline)
         {
-            var markerContext =
-                new CharacterPipelineAuthoringContext(m_Definition);
             var request = new TimelineEditorOpenRequest(
                 timeline.Timeline,
                 timeline.SerializedOwner,
                 timeline.SerializedPropertyPath,
                 timeline.Ownership.ToString(),
-                markerContext,
                 m_Resolution.RuntimeDebug,
                 TimelineEditorToolComposition.Catalog);
             m_TimelineView = new TimelineEditorView();
@@ -665,9 +662,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_TimelineSelection.IsTreeClip)
                 AddDetailText(
                     $"Selected TreeClip: {m_TimelineSelection.ElementAuthoringId}");
-            if (m_TimelineSelection.HasMarker)
-                AddDetailText(
-                    $"Selected Marker: {m_TimelineSelection.ElementAuthoringId}");
             if (m_TimelineSelection.HasCurve)
                 AddDetailText(
                     $"Selected Curve: {m_TimelineSelection.ElementAuthoringId}/{m_TimelineSelection.SubElementId} · keys {string.Join(",", m_TimelineSelection.KeyIndices)} · revision {m_TimelineSelection.Revision}");

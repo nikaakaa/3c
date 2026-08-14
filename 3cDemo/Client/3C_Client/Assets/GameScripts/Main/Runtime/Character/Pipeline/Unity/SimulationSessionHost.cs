@@ -10,7 +10,8 @@ namespace ThirdPersonCharacter.Pipeline
 {
     [DefaultExecutionOrder(-9000)]
     [DisallowMultipleComponent]
-    public sealed class SimulationSessionHost : MonoBehaviour, IGameplayRenderFrameInputTarget, IGameplayLogicTickTarget
+    public sealed class SimulationSessionHost : MonoBehaviour, IGameplayRenderFrameInputTarget, IGameplayLogicTickTarget,
+        ICharacterFutureBodyTrajectorySource
     {
         static readonly ProfilerMarker InputMarker = new ProfilerMarker("ThirdPerson.Session.Input");
         static readonly ProfilerMarker LogicMarker = new ProfilerMarker("ThirdPerson.Session.LogicTick");
@@ -41,6 +42,19 @@ namespace ThirdPersonCharacter.Pipeline
             m_Runtime?.Diagnostics ?? m_Preparation?.Diagnostics ?? m_LastDiagnostics;
         public int RegistrationCount => m_Registrations.Count;
         public bool IsQuiesced => m_Quiesced;
+
+        public bool TryPredict(
+            in CharacterFutureBodyTrajectoryRequest request,
+            out CharacterFutureBodyTrajectory trajectory)
+        {
+            if (m_Disposed || m_Quiesced || m_State != SimulationSessionLifecycleState.Active ||
+                m_Runtime is not ICharacterFutureBodyTrajectorySource source)
+            {
+                trajectory = null;
+                return false;
+            }
+            return source.TryPredict(in request, out trajectory);
+        }
 
         public void BindComposition(SimulationSessionCompositionDefinition composition)
         {
@@ -196,15 +210,23 @@ namespace ThirdPersonCharacter.Pipeline
                 BeginFreshLifecycle();
             if (m_Quiesced || m_State == SimulationSessionLifecycleState.Failed || !m_Composition)
                 return;
-            if (!GameplayTickSystem.IsInitialized)
+            TryActivateWithGameplayTickSystem();
+        }
+
+        void Update()
+        {
+            if (m_TickTargetsRegistered || m_Disposed || m_Quiesced ||
+                m_State == SimulationSessionLifecycleState.Failed || !m_Composition)
             {
-                Fail(new SimulationSessionFailure(
-                    SimulationSessionFailureStage.Composition,
-                    "gameplay_tick_system_missing",
-                    "SimulationSessionHost requires GameplayTickSystem before activation.",
-                    name));
                 return;
             }
+            TryActivateWithGameplayTickSystem();
+        }
+
+        void TryActivateWithGameplayTickSystem()
+        {
+            if (!GameplayTickSystem.IsInitialized)
+                return;
             try
             {
                 RegisterTickTargets();

@@ -41,8 +41,6 @@ namespace BTSMTL.Timeline.Editor
     internal static class TimelineTrackLayout
     {
         public const float ClipRowHeight = 30f;
-        public const float MarkerHeaderHeight = 22f;
-        public const float MarkerLaneHeight = 24f;
         public const float CurveHeaderHeight = 22f;
         public const float CurveLaneHeight = 72f;
         public const float VerticalMargin = 5f;
@@ -50,22 +48,15 @@ namespace BTSMTL.Timeline.Editor
         public static float ContentHeight(Track track)
         {
             float height = ClipRowHeight;
-            if (track is AnimationTrack)
-                height += MarkerHeaderHeight + (MarkersExpanded(track) ? MarkerLaneHeight : 0f);
             int channelCount = VisibleCurveChannelCount(track);
             if (RegisteredCurveChannelCount(track) > 0)
-                height += CurveHeaderHeight;
+                height += CurveHeaderHeight + (CurvesExpanded(track) ? channelCount * CurveLaneHeight : 0f);
             return height;
         }
 
-        public static float MarkerHeaderTop => ClipRowHeight;
-        public static float MarkerLaneTop => ClipRowHeight + MarkerHeaderHeight;
-
         public static float CurveHeaderTop(Track track)
         {
-            return ClipRowHeight + (track is AnimationTrack
-                ? MarkerHeaderHeight + (MarkersExpanded(track) ? MarkerLaneHeight : 0f)
-                : 0f);
+            return ClipRowHeight;
         }
 
         public static float CurveLaneTop(Track track, int visibleChannelIndex)
@@ -73,11 +64,9 @@ namespace BTSMTL.Timeline.Editor
             return CurveHeaderTop(track) + CurveHeaderHeight + visibleChannelIndex * CurveLaneHeight;
         }
 
-        public static bool CurvesExpanded(Track track) => false;
-        public static bool MarkersExpanded(Track track) => track is AnimationTrack && TimelineCurveEditorSession.MarkersExpanded(track);
+        public static bool CurvesExpanded(Track track) => TimelineCurveEditorSession.CurvesExpanded(track);
 
         public static void ToggleCurves(Track track) => TimelineCurveEditorSession.ToggleCurves(track);
-        public static void ToggleMarkers(Track track) => TimelineCurveEditorSession.ToggleMarkers(track);
 
         public static int RegisteredCurveChannelCount(Track track)
         {

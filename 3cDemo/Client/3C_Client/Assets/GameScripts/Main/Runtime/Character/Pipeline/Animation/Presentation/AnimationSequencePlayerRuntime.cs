@@ -5,6 +5,7 @@ using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
@@ -212,7 +213,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     {
         struct State
         {
+            internal double RawContinuousTime;
             internal double ContinuousTime;
+            internal double ContinuationAnchorRawTime;
+            internal double ContinuationAnchorEffectiveTime;
             internal float SampleTime;
             internal int Cycle;
             internal double MovementClockOriginSeconds;
@@ -235,8 +239,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal bool SourceRetained;
             internal bool HasCompletedFrame;
             internal bool HasMovementClockOrigin;
-            internal bool HasPendingMovementClockRebase;
+            internal bool HasContinuationAnchor;
             internal bool HasMovementMarkerEpoch;
+            internal bool HasMovementMarkerAlignment;
             internal PoseSourceProviderDemandKind DemandKind;
         }
 
@@ -264,6 +269,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         double m_ContinuousTime { get => ActiveState.ContinuousTime; set => ActiveState.ContinuousTime = value; }
+        double m_RawContinuousTime { get => ActiveState.RawContinuousTime; set => ActiveState.RawContinuousTime = value; }
+        double m_ContinuationAnchorRawTime { get => ActiveState.ContinuationAnchorRawTime; set => ActiveState.ContinuationAnchorRawTime = value; }
+        double m_ContinuationAnchorEffectiveTime { get => ActiveState.ContinuationAnchorEffectiveTime; set => ActiveState.ContinuationAnchorEffectiveTime = value; }
         float m_SampleTime { get => ActiveState.SampleTime; set => ActiveState.SampleTime = value; }
         int m_Cycle { get => ActiveState.Cycle; set => ActiveState.Cycle = value; }
         double m_MovementClockOriginSeconds { get => ActiveState.MovementClockOriginSeconds; set => ActiveState.MovementClockOriginSeconds = value; }
@@ -286,8 +294,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_SourceRetained { get => ActiveState.SourceRetained; set => ActiveState.SourceRetained = value; }
         bool m_HasCompletedFrame { get => ActiveState.HasCompletedFrame; set => ActiveState.HasCompletedFrame = value; }
         bool m_HasMovementClockOrigin { get => ActiveState.HasMovementClockOrigin; set => ActiveState.HasMovementClockOrigin = value; }
-        bool m_HasPendingMovementClockRebase { get => ActiveState.HasPendingMovementClockRebase; set => ActiveState.HasPendingMovementClockRebase = value; }
+        bool m_HasContinuationAnchor { get => ActiveState.HasContinuationAnchor; set => ActiveState.HasContinuationAnchor = value; }
         bool m_HasMovementMarkerEpoch { get => ActiveState.HasMovementMarkerEpoch; set => ActiveState.HasMovementMarkerEpoch = value; }
+        bool m_HasMovementMarkerAlignment { get => ActiveState.HasMovementMarkerAlignment; set => ActiveState.HasMovementMarkerAlignment = value; }
         PoseSourceProviderDemandKind m_DemandKind { get => ActiveState.DemandKind; set => ActiveState.DemandKind = value; }
 
         internal AnimationSequencePlayerRuntime(
@@ -337,11 +346,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 PendingResetReason = PoseDiscontinuityResetReason.Initialization
             };
             m_PendingState = m_CommittedState;
-            SetClock(descriptor.InitialTime);
+            SetRawClock(descriptor.InitialTime);
         }
 
         internal PoseNodeId NodeId => m_Descriptor.NodeId;
         internal int PlayerIndex => m_Descriptor.PlayerIndex;
+        internal PresentationPoseSourceIndex SourceIndex => m_Source.SourceIndex;
         internal int FootPlacementWeightParameterIndex { get; }
         internal AnimationPoseSourceId SourceId => m_SourceId;
         internal bool IsRelevant => m_Relevant;
@@ -349,6 +359,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool HasCompletedFrame => m_HasCompletedFrame;
         internal float SampleTime => m_SampleTime;
         internal double ContinuousTime => m_ContinuousTime;
+        internal double RawContinuousTime => m_RawContinuousTime;
         internal int Cycle => m_Cycle;
         internal float RemainingTime => Math.Max(0f, m_Source.Clip.length - m_SampleTime);
         internal float Duration => m_Source.Clip.length;
@@ -457,7 +468,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ResetSequence = AllocateResetSequence();
             m_PendingResetReason = reason;
             ClearMovementClockOrigin();
-            SetClock(m_Descriptor.InitialTime);
+            SetRawClock(m_Descriptor.InitialTime);
             m_SourceWorkspace.ResetContinuity();
         }
 
@@ -465,7 +476,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             ClearMovementClockOrigin();
-            SetClock(m_Descriptor.InitialTime);
+            SetRawClock(m_Descriptor.InitialTime);
             m_HasCompletedFrame = false;
             m_ContinuityIdentity =
                 AllocateContinuityIdentity();
@@ -481,6 +492,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireOpenFrame();
             if (!m_Relevant)
                 throw new InvalidOperationException($"Sequence Player '{NodeId}' is not relevant.");
+            if (m_Descriptor.Loop &&
+                m_Descriptor.ClockSource == CharacterSequencePlayerClockSource.CommittedMovement &&
+                m_HasMovementMarkerEpoch &&
+                continuousTime < m_ContinuousTime)
+            {
+                double duration = m_Source.Clip.length;
+                double cycleCount = Math.Ceiling(
+                    (m_ContinuousTime - continuousTime) / duration);
+                continuousTime += Math.Max(1d, cycleCount) * duration;
+            }
             if (continuousTime < m_ContinuousTime)
             {
                 m_HasCompletedFrame = false;
@@ -488,25 +509,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ResetSequence = AllocateResetSequence();
                 m_PendingResetReason = PoseDiscontinuityResetReason.BranchReplacement;
             }
-            if (m_Descriptor.ClockSource ==
-                CharacterSequencePlayerClockSource.CommittedMovement)
-            {
-                if (m_HasMovementClockOrigin)
-                {
-                    m_MovementClockOffsetSeconds =
-                        continuousTime - m_Descriptor.InitialTime -
-                        (m_MovementClockLastElapsedSeconds -
-                         m_MovementClockOriginSeconds) * m_PlayRate;
-                    m_HasPendingMovementClockRebase = false;
-                }
-                else
-                {
-                    m_MovementClockOffsetSeconds =
-                        continuousTime - m_Descriptor.InitialTime;
-                    m_HasPendingMovementClockRebase = true;
-                }
-            }
-            SetClock(continuousTime);
+            m_ContinuationAnchorRawTime = m_RawContinuousTime;
+            m_ContinuationAnchorEffectiveTime = continuousTime;
+            m_HasContinuationAnchor = true;
+            SetRawClock(m_RawContinuousTime);
+        }
+
+        internal void AnchorSynchronizedTime()
+        {
+            RequireAlive();
+            RequireOpenFrame();
+            if (!m_Relevant)
+                throw new InvalidOperationException($"Sequence Player '{NodeId}' is not relevant.");
+            m_ContinuationAnchorRawTime = m_RawContinuousTime;
+            m_ContinuationAnchorEffectiveTime = m_ContinuousTime;
+            m_HasContinuationAnchor = true;
         }
 
         internal void SynchronizeMovementClock(
@@ -543,7 +560,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             if (changedClock)
             {
-                double preservedContinuousTime = m_ContinuousTime;
+                double preservedContinuousTime = m_RawContinuousTime;
                 m_MovementClockOriginSeconds = elapsedSeconds;
                 m_MovementClockLastElapsedSeconds = elapsedSeconds;
                 m_MovementClockOwnerIdentity = ownerIdentity;
@@ -563,19 +580,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                 generation.ToString(CultureInfo.InvariantCulture)));
                     m_MovementMarkerOrdinalOffset = 0;
                     m_HasMovementMarkerEpoch = true;
+                    m_HasMovementMarkerAlignment = false;
                 }
                 else if (!m_HasMovementMarkerEpoch)
                 {
                     m_MovementMarkerEpochIdentity = 0;
                     m_MovementMarkerOrdinalOffset = 0;
                     m_HasMovementMarkerEpoch = false;
+                    m_HasMovementMarkerAlignment = false;
                 }
-                if (hadClockOrigin)
-                    m_MovementClockOffsetSeconds =
-                        preservedContinuousTime - m_Descriptor.InitialTime;
-                else if (!m_HasPendingMovementClockRebase)
-                    m_MovementClockOffsetSeconds = 0d;
-                m_HasPendingMovementClockRebase = false;
+                m_MovementClockOffsetSeconds =
+                    preservedContinuousTime - m_Descriptor.InitialTime;
             }
             if (elapsedSeconds < m_MovementClockLastElapsedSeconds)
                 throw new InvalidOperationException($"Sequence Player '{NodeId}' Movement clock regressed within one owner generation.");
@@ -583,14 +598,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             double stateTime = m_Descriptor.InitialTime +
                                (elapsedSeconds - m_MovementClockOriginSeconds) * m_PlayRate +
                                m_MovementClockOffsetSeconds;
-            SetClock(stateTime);
+            SetRawClock(stateTime);
         }
 
         void ContinueMovementClock(float presentationDeltaSeconds)
         {
             if (presentationDeltaSeconds == 0f)
                 return;
-            SetClock(m_ContinuousTime + presentationDeltaSeconds * m_PlayRate);
+            SetRawClock(m_RawContinuousTime + presentationDeltaSeconds * m_PlayRate);
         }
 
         internal void AlignMovementMarkerEpoch(
@@ -598,22 +613,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireOpenFrame();
+            AnimationMarkerSyncBinding sourceMarkerSync = source?.MarkerSync;
+            AnimationMarkerSyncBinding targetMarkerSync = MarkerSync;
             if (source == null || !source.m_HasMovementMarkerEpoch ||
-                !m_HasMovementMarkerEpoch ||
+                sourceMarkerSync == null || !sourceMarkerSync.IsMarkerGroup ||
+                targetMarkerSync == null || !targetMarkerSync.IsMarkerGroup ||
                 !string.Equals(
-                    source.MarkerSync.CanonicalGroupId,
-                    MarkerSync.CanonicalGroupId,
+                    sourceMarkerSync.CanonicalGroupId,
+                    targetMarkerSync.CanonicalGroupId,
                     StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
                     "Synchronized Movement marker epochs are incompatible.");
             }
+            if (m_HasMovementMarkerAlignment &&
+                m_MovementMarkerEpochIdentity == source.m_MovementMarkerEpochIdentity)
+                return;
             long sourceOrdinal = source.ResolveCurrentMarkerOrdinal();
             long targetLocalOrdinal = ResolveCurrentLocalMarkerOrdinal();
             m_MovementMarkerEpochIdentity =
                 source.m_MovementMarkerEpochIdentity;
             m_MovementMarkerOrdinalOffset = checked(
                 sourceOrdinal - targetLocalOrdinal);
+            m_HasMovementMarkerEpoch = true;
+            m_HasMovementMarkerAlignment = true;
         }
 
         internal void Advance(float presentationDeltaSeconds)
@@ -624,8 +647,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
             if (!m_Relevant || presentationDeltaSeconds == 0f)
                 return;
-            double next = m_ContinuousTime + presentationDeltaSeconds * m_PlayRate;
-            SetClock(next);
+            double next = m_RawContinuousTime + presentationDeltaSeconds * m_PlayRate;
+            SetRawClock(next);
+        }
+
+        internal void SetPreviewTime(double continuousTime, bool resetContinuity)
+        {
+            RequireAlive();
+            RequireOpenFrame();
+            if (!m_Relevant || !double.IsFinite(continuousTime) || continuousTime < 0d)
+                throw new ArgumentOutOfRangeException(nameof(continuousTime));
+            if (resetContinuity || continuousTime + 0.0000001d < m_RawContinuousTime)
+            {
+                m_HasCompletedFrame = false;
+                m_ContinuityIdentity = AllocateContinuityIdentity();
+                m_ResetSequence = AllocateResetSequence();
+                m_PendingResetReason = PoseDiscontinuityResetReason.BranchReplacement;
+            }
+            ClearMovementClockOrigin();
+            SetRawClock(continuousTime);
         }
 
         internal void BeginFrame(ulong completionIdentity)
@@ -672,16 +712,72 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PlayRate,
                 new AnimationReadOnlyBuffer<float>(m_Parameters, 0, m_Parameters.Length),
                 new AnimationReadOnlyBuffer<byte>(m_ParameterAvailability, 0, m_ParameterAvailability.Length),
-                BindPredictionSource(
-                    m_Source.LeftFootFeatures.Sample(normalizedTime),
+                SampleAndBindPredictionSource(
+                    m_Source.LeftFootFeatures,
+                    normalizedTime,
                     CharacterFootSide.Left),
-                BindPredictionSource(
-                    m_Source.RightFootFeatures.Sample(normalizedTime),
+                SampleAndBindPredictionSource(
+                    m_Source.RightFootFeatures,
+                    normalizedTime,
                     CharacterFootSide.Right),
                 true,
                 presentationDeltaSeconds);
             m_SourceRetained = true;
             return binding;
+        }
+
+        AnimationFootFeatureSample SampleAndBindPredictionSource(
+            AnimationFootFeatureCurveSet curves,
+            float normalizedTime,
+            CharacterFootSide side)
+        {
+            AnimationFootFeatureSample feature = curves.Sample(normalizedTime);
+            AnimationPredictedFootStepSample step = feature.PredictedStep;
+            float duration = m_Source.Clip.length;
+            if (m_Descriptor.Loop && step.HasLandingEvent && duration > 0f &&
+                TrySampleFollowingPrediction(
+                    curves,
+                    in step,
+                    duration,
+                    out AnimationPredictedFootStepSample incoming,
+                    out float incomingSampleDelay))
+            {
+                feature = feature.WithIncomingPredictedStep(
+                    incoming.ScheduleAfter(incomingSampleDelay));
+            }
+            return BindPredictionSource(feature, side);
+        }
+
+        bool TrySampleFollowingPrediction(
+            AnimationFootFeatureCurveSet curves,
+            in AnimationPredictedFootStepSample current,
+            float duration,
+            out AnimationPredictedFootStepSample incoming,
+            out float sampleDelay)
+        {
+            const int searchIntervals = 256;
+            float searchStep = duration / searchIntervals;
+            float landingDelay = current.TimeToLandingSeconds;
+            for (int i = 1; i <= searchIntervals; i++)
+            {
+                float delay = landingDelay + i * searchStep;
+                float futureTime = Mathf.Repeat(m_SampleTime + delay, duration);
+                AnimationPredictedFootStepSample candidate = curves
+                    .Sample(futureTime / duration)
+                    .PredictedStep;
+                if (!candidate.HasLandingEvent ||
+                    !candidate.ActionStepClock.IsPreSwing ||
+                    candidate.TimeToLandingSeconds <= searchStep)
+                {
+                    continue;
+                }
+                incoming = candidate;
+                sampleDelay = delay;
+                return true;
+            }
+            incoming = default;
+            sampleDelay = 0f;
+            return false;
         }
 
         AnimationFootFeatureSample BindPredictionSource(
@@ -697,6 +793,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPredictedFootStepSample step = bound.PredictedStep;
             if (!step.IsSourceBound || !m_HasMovementMarkerEpoch)
                 return bound;
+            AnimationPredictedFootStepSample incoming = bound.IncomingPredictedStep;
+            return bound
+                .WithPredictedStep(BindSynchronizedMarkerSource(side, in step))
+                .WithIncomingPredictedStep(
+                    incoming.IsSourceBound
+                        ? BindSynchronizedMarkerSource(side, in incoming)
+                        : incoming);
+        }
+
+        AnimationPredictedFootStepSample BindSynchronizedMarkerSource(
+            CharacterFootSide side,
+            in AnimationPredictedFootStepSample step)
+        {
             int landingOrdinal = checked((int)ResolveLandingMarkerOrdinal(
                 side,
                 step.TimeToLandingSeconds));
@@ -709,11 +818,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         : CharacterFootSide.Left,
                     step.OpposingLandingDelaySeconds));
             }
-            return bound.WithPredictedStep(
-                step.BindSynchronizedMarkerSource(
-                    m_MovementMarkerEpochIdentity,
-                    landingOrdinal,
-                    opposingOrdinal));
+            return step.BindSynchronizedMarkerSource(
+                m_MovementMarkerEpochIdentity,
+                landingOrdinal,
+                opposingOrdinal);
         }
 
         long ResolveLandingMarkerOrdinal(
@@ -731,7 +839,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             string markerId = side == CharacterFootSide.Left
                 ? "LeftFootContact"
                 : "RightFootContact";
-            double landingTime = m_ContinuousTime + delaySeconds;
+            double landingTime = binding.SequenceTopology ==
+                                 BTSMTL.Timeline.AnimationMarkerSequenceTopology.Finite
+                ? m_SampleTime + delaySeconds
+                : m_ContinuousTime + delaySeconds;
             long bestOrdinal = long.MinValue;
             double bestDistance = double.MaxValue;
             if (binding.SequenceTopology ==
@@ -942,6 +1053,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SampleTime = (float)Math.Min(continuousTime, duration);
         }
 
+        void SetRawClock(double continuousTime)
+        {
+            if (!double.IsFinite(continuousTime) || continuousTime < 0d)
+                throw new ArgumentOutOfRangeException(nameof(continuousTime));
+            double effectiveTime = m_HasContinuationAnchor
+                ? m_ContinuationAnchorEffectiveTime +
+                  continuousTime -
+                  m_ContinuationAnchorRawTime
+                : continuousTime;
+            if (!double.IsFinite(effectiveTime) || effectiveTime < 0d)
+                throw new InvalidOperationException($"Sequence Player '{NodeId}' continuation anchor produced an invalid time.");
+            m_RawContinuousTime = continuousTime;
+            SetClock(effectiveTime);
+        }
+
         void ClearMovementClockOrigin()
         {
             m_MovementClockOriginSeconds = 0d;
@@ -952,8 +1078,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_MovementMarkerEpochIdentity = 0;
             m_MovementMarkerOrdinalOffset = 0;
             m_HasMovementClockOrigin = false;
-            m_HasPendingMovementClockRebase = false;
             m_HasMovementMarkerEpoch = false;
+            m_HasMovementMarkerAlignment = false;
+            ClearContinuationAnchor();
+        }
+
+        void ClearContinuationAnchor()
+        {
+            m_ContinuationAnchorRawTime = 0d;
+            m_ContinuationAnchorEffectiveTime = 0d;
+            m_HasContinuationAnchor = false;
         }
 
         void ReleaseRetainedSource()

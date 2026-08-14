@@ -206,7 +206,7 @@ MonoBehaviour:
     - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
       m_Position: {x: 692, y: 416}
     - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
-      m_Position: {x: -124, y: -179.33334}
+      m_Position: {x: -190, y: -141.33334}
   m_TypedGraphCatalog:
   - m_GraphId: corin.locomotion.idle.graph
     m_ContentRevision: dae5e9365ba74cd78bb57ce7533b1cbe

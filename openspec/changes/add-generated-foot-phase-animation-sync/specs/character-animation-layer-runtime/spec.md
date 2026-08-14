@@ -2,7 +2,7 @@
 
 ### Requirement: Marker同步必须编入对应source-local计划
 
-MarkerGroup binding MUST提供canonical SyncGroupId、topology、SyncRole、Time Mapping、marker occurrence和duration。PoseState relation MUST以StateMachine、Transition generation和两侧Player operation identity为key；Action relation MUST以Slot、AnimationPlaybackId和source usage为key。Runtime MUST在source采样前定位leader有向Marker pair与linear segment fraction，再按编译计划明确执行`MarkerSegmentFraction`或`GeneratedFootPhase`，生成follower fraction与effective sample，并在共同可见期间每帧持续求值。
+MarkerGroup binding MUST提供canonical SyncGroupId、topology、SyncRole、Time Mapping、marker occurrence和duration。PoseState relation MUST以StateMachine、Transition generation和两侧Player operation identity为key；Action relation MUST以Slot、AnimationPlaybackId和source usage为key。Runtime MUST在source采样前定位leader有向Marker pair与linear segment fraction，再按编译计划明确执行`MarkerSegmentFraction`或`GeneratedFootPhase`，生成follower fraction与effective sample，并在leader仍有相位覆盖的共同可见期间每帧持续求值。有限leader到达最后marker coverage时 MUST只提交一次终点映射，后续共同可见帧 MUST让follower从该continuation anchor按自己的raw delta连续推进，不得每帧把follower重新压回同一终点。
 
 `GeneratedFootPhase` MUST只查Projection中的精确occurrence warp plan，不得读取Foot Analysis artifact、当前骨骼、最终混合Pose、FootGrounding或IK结果。Pose Graph MUST不序列化MarkerSync节点，Runtime MUST不按State名、clip名、Action名、priority或weight推导relation或Time Mapping。
 
@@ -37,3 +37,9 @@ Sequence Player使用Movement clock时 MUST在source获得relevance时锁定精�
 - **WHEN** incoming source由新的Movement producer驱动且outgoing source仍被transition保留
 - **THEN** incoming Player MUST锁定新owner与generation，outgoing Player MUST保持自己的已锁定identity
 - **AND** Runtime MUST不把同一Movement通道当前winner的clock广播覆盖全部相关Player
+
+#### Scenario: MovingTurn终点切入Run
+
+- **WHEN** finite MovingTurn作为leader在最后marker coverage建立到Run的同步关系
+- **THEN** Runtime MUST先把Run映射到匹配的终点脚相位并建立continuation anchor
+- **AND** 后续混合帧 MUST让Run正常推进，不得因MovingTurn Pose仍被保留而冻结Run sample

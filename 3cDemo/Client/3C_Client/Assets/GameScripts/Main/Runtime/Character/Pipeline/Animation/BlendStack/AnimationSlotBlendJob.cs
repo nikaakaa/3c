@@ -557,20 +557,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             float leftHeight = 0f;
             float leftPlant = 0f;
             AnimationPredictedFootStepSample leftPredictedStep = default;
+            AnimationPredictedFootStepSample leftIncomingPredictedStep = default;
             float rightWeight = 0f;
             Vector3 rightVelocity = Vector3.zero;
             float rightHeight = 0f;
             float rightPlant = 0f;
             AnimationPredictedFootStepSample rightPredictedStep = default;
+            AnimationPredictedFootStepSample rightIncomingPredictedStep = default;
             bool leftValid = true;
             bool rightValid = true;
-            int predictionContribution = -1;
-            for (int contributionIndex = header.ContributionCount - 1; contributionIndex >= 0; contributionIndex--)
+            int leftPredictionContribution = -1;
+            int rightPredictionContribution = -1;
+            float leftPredictionWeight = 0f;
+            float rightPredictionWeight = 0f;
+            for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
             {
-                if (m_FramePlan.GetEntry(contributionIndex).Kind == AnimationPoseContributionKind.Live)
+                AnimationSlotBlendFramePlanEntry entry = m_FramePlan.GetEntry(contributionIndex);
+                if (entry.Kind != AnimationPoseContributionKind.Live)
+                    continue;
+                if (entry.LeftFootWeight > 0f && entry.LeftFootWeight >= leftPredictionWeight)
                 {
-                    predictionContribution = contributionIndex;
-                    break;
+                    leftPredictionContribution = contributionIndex;
+                    leftPredictionWeight = entry.LeftFootWeight;
+                }
+                if (entry.RightFootWeight > 0f && entry.RightFootWeight >= rightPredictionWeight)
+                {
+                    rightPredictionContribution = contributionIndex;
+                    rightPredictionWeight = entry.RightFootWeight;
                 }
             }
 
@@ -587,19 +600,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
                 }
 
-                if (contributionIndex == predictionContribution && hasFeatures &&
-                    (!TryResolveAuthoritativePrediction(
+                if (contributionIndex == leftPredictionContribution &&
+                    (!hasFeatures ||
+                     !TryResolveAuthoritativePrediction(
                          left,
                          visualTimeScale,
                          entry.ContributionContinuityIdentity,
                          global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left,
-                         out leftPredictedStep) ||
+                         out leftPredictedStep,
+                         out leftIncomingPredictedStep)))
+                {
+                    return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
+                }
+                if (contributionIndex == rightPredictionContribution &&
+                    (!hasFeatures ||
                      !TryResolveAuthoritativePrediction(
                          right,
                          visualTimeScale,
                          entry.ContributionContinuityIdentity,
                          global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right,
-                         out rightPredictedStep)))
+                         out rightPredictedStep,
+                         out rightIncomingPredictedStep)))
                 {
                     return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
                 }
@@ -646,6 +667,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                      leftHeight,
                      leftPlant,
                      leftPredictedStep,
+                     leftIncomingPredictedStep,
                      out leftResult) ||
                  !TryResolveFoot(
                      rightWeight,
@@ -653,6 +675,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                      rightHeight,
                      rightPlant,
                      rightPredictedStep,
+                     rightIncomingPredictedStep,
                      out rightResult)))
             {
                 return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;

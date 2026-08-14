@@ -287,6 +287,131 @@ namespace ThirdPersonSimulation
             CommittedMovementPlaybackClock right) => !left.Equals(right);
     }
 
+    public readonly struct CommittedLocomotionPlanarMotionTimeline : IEquatable<CommittedLocomotionPlanarMotionTimeline>
+    {
+        public CommittedLocomotionPlanarMotionTimeline(
+            string ownerIdentity,
+            ulong generation,
+            SimulationTick authorityTick,
+            int tickRate,
+            float currentVelocityX,
+            float currentVelocityZ,
+            float yawVelocityDegreesPerSecond,
+            float maximumYawVelocityDegreesPerSecond,
+            int currentSegmentDurationTicks,
+            string continuationOwnerIdentity,
+            float continuationVelocityX,
+            float continuationVelocityZ)
+        {
+            OwnerIdentity = SimulationIdentity.Require(ownerIdentity, nameof(ownerIdentity));
+            if (generation == 0)
+                throw new ArgumentOutOfRangeException(nameof(generation));
+            if (!authorityTick.IsValid)
+                throw new ArgumentException("Locomotion motion timeline authority tick is invalid.", nameof(authorityTick));
+            if (tickRate <= 0)
+                throw new ArgumentOutOfRangeException(nameof(tickRate));
+            if (!float.IsFinite(currentVelocityX) || !float.IsFinite(currentVelocityZ) ||
+                !float.IsFinite(yawVelocityDegreesPerSecond) ||
+                !float.IsFinite(maximumYawVelocityDegreesPerSecond) ||
+                maximumYawVelocityDegreesPerSecond < 0f ||
+                currentSegmentDurationTicks < 0 ||
+                !float.IsFinite(continuationVelocityX) || !float.IsFinite(continuationVelocityZ))
+            {
+                throw new ArgumentException("Locomotion motion timeline contains invalid motion data.");
+            }
+            if (currentSegmentDurationTicks == 0 && !string.IsNullOrEmpty(continuationOwnerIdentity))
+                throw new ArgumentException("Continuous Locomotion motion timeline cannot declare a continuation.", nameof(continuationOwnerIdentity));
+            if (string.IsNullOrEmpty(continuationOwnerIdentity) &&
+                (continuationVelocityX != 0f || continuationVelocityZ != 0f))
+            {
+                throw new ArgumentException("Locomotion continuation velocity has no owner.", nameof(continuationOwnerIdentity));
+            }
+            OwnerIdentity = ownerIdentity;
+            Generation = generation;
+            AuthorityTick = authorityTick;
+            TickRate = tickRate;
+            CurrentVelocityX = currentVelocityX;
+            CurrentVelocityZ = currentVelocityZ;
+            YawVelocityDegreesPerSecond = yawVelocityDegreesPerSecond;
+            MaximumYawVelocityDegreesPerSecond = maximumYawVelocityDegreesPerSecond;
+            CurrentSegmentDurationTicks = currentSegmentDurationTicks;
+            ContinuationOwnerIdentity = continuationOwnerIdentity ?? string.Empty;
+            ContinuationVelocityX = continuationVelocityX;
+            ContinuationVelocityZ = continuationVelocityZ;
+        }
+
+        public string OwnerIdentity { get; }
+        public ulong Generation { get; }
+        public SimulationTick AuthorityTick { get; }
+        public int TickRate { get; }
+        public float CurrentVelocityX { get; }
+        public float CurrentVelocityZ { get; }
+        public float YawVelocityDegreesPerSecond { get; }
+        public float MaximumYawVelocityDegreesPerSecond { get; }
+        public int CurrentSegmentDurationTicks { get; }
+        public string ContinuationOwnerIdentity { get; }
+        public float ContinuationVelocityX { get; }
+        public float ContinuationVelocityZ { get; }
+        public bool HasContinuation => !string.IsNullOrEmpty(ContinuationOwnerIdentity);
+        public bool IsValid =>
+            !string.IsNullOrEmpty(OwnerIdentity) &&
+            Generation != 0 &&
+            AuthorityTick.IsValid &&
+            TickRate > 0 &&
+            float.IsFinite(CurrentVelocityX) &&
+            float.IsFinite(CurrentVelocityZ) &&
+            float.IsFinite(YawVelocityDegreesPerSecond) &&
+            float.IsFinite(MaximumYawVelocityDegreesPerSecond) &&
+            MaximumYawVelocityDegreesPerSecond >= 0f &&
+            CurrentSegmentDurationTicks >= 0 &&
+            float.IsFinite(ContinuationVelocityX) &&
+            float.IsFinite(ContinuationVelocityZ) &&
+            (HasContinuation || ContinuationVelocityX == 0f && ContinuationVelocityZ == 0f);
+        public double CurrentSegmentDurationSeconds =>
+            CurrentSegmentDurationTicks > 0 ? (double)CurrentSegmentDurationTicks / TickRate : 0d;
+        public bool Matches(CommittedMovementPlaybackClock clock) =>
+            IsValid && clock.IsValid &&
+            Generation == clock.Generation &&
+            AuthorityTick == clock.AuthorityTick &&
+            TickRate == clock.TickRate &&
+            string.Equals(OwnerIdentity, clock.OwnerIdentity, StringComparison.Ordinal);
+        public bool Equals(CommittedLocomotionPlanarMotionTimeline other) =>
+            Generation == other.Generation &&
+            AuthorityTick == other.AuthorityTick &&
+            TickRate == other.TickRate &&
+            CurrentVelocityX.Equals(other.CurrentVelocityX) &&
+            CurrentVelocityZ.Equals(other.CurrentVelocityZ) &&
+            YawVelocityDegreesPerSecond.Equals(other.YawVelocityDegreesPerSecond) &&
+            MaximumYawVelocityDegreesPerSecond.Equals(other.MaximumYawVelocityDegreesPerSecond) &&
+            CurrentSegmentDurationTicks == other.CurrentSegmentDurationTicks &&
+            ContinuationVelocityX.Equals(other.ContinuationVelocityX) &&
+            ContinuationVelocityZ.Equals(other.ContinuationVelocityZ) &&
+            string.Equals(OwnerIdentity, other.OwnerIdentity, StringComparison.Ordinal) &&
+            string.Equals(ContinuationOwnerIdentity, other.ContinuationOwnerIdentity, StringComparison.Ordinal);
+        public override bool Equals(object obj) =>
+            obj is CommittedLocomotionPlanarMotionTimeline other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(
+            HashCode.Combine(
+                OwnerIdentity == null ? 0 : StringComparer.Ordinal.GetHashCode(OwnerIdentity),
+                Generation,
+                AuthorityTick,
+                TickRate,
+                CurrentVelocityX,
+                CurrentVelocityZ,
+                YawVelocityDegreesPerSecond,
+                CurrentSegmentDurationTicks),
+            MaximumYawVelocityDegreesPerSecond,
+            ContinuationOwnerIdentity == null ? 0 : StringComparer.Ordinal.GetHashCode(ContinuationOwnerIdentity),
+            ContinuationVelocityX,
+            ContinuationVelocityZ);
+        public static bool operator ==(
+            CommittedLocomotionPlanarMotionTimeline left,
+            CommittedLocomotionPlanarMotionTimeline right) => left.Equals(right);
+        public static bool operator !=(
+            CommittedLocomotionPlanarMotionTimeline left,
+            CommittedLocomotionPlanarMotionTimeline right) => !left.Equals(right);
+    }
+
     public enum SimulationTickSourceKind : byte
     {
         LocalLogic = 1,

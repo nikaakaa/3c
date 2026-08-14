@@ -16,7 +16,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string SessionKey = "3C.PredictiveFootPlacementGizmos.Enabled";
         static readonly Color s_LeftColor = new Color(0.1f, 0.8f, 1f, 1f);
         static readonly Color s_RightColor = new Color(1f, 0.35f, 0.85f, 1f);
-        static readonly Color s_RouteColor = new Color(1f, 0.8f, 0.1f, 0.85f);
+        static readonly Color s_GroundProbeColor = new Color(1f, 0.8f, 0.1f, 0.9f);
+        static readonly Color s_AnimationRouteColor = new Color(0.82f, 0.82f, 0.82f, 0.72f);
+        static readonly Color s_EnvelopeColor = new Color(1f, 0.5f, 0.12f, 0.9f);
         static readonly Color s_LandingColor = new Color(0.25f, 1f, 0.35f, 1f);
         static readonly Color s_VirtualGroundSplitColor = new Color(1f, 0.55f, 0.1f, 1f);
         static readonly Color s_LiftColor = new Color(0.8f, 0.3f, 1f, 1f);
@@ -99,8 +101,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PlanDrawCache cache = s_DrawCaches.GetValue(plan, CreateDrawCache);
             if (leg.PlanState == CharacterPredictiveFootPlanState.Rejected)
             {
-                DrawPath(cache.FootRoutePath, s_RouteColor, 2f);
-                DrawLines(cache.QueryBoundaryLines, s_RouteColor);
+                DrawPath(cache.GroundProbePath, s_GroundProbeColor, 2f);
+                DrawLines(cache.QueryBoundaryLines, s_GroundProbeColor);
                 DrawLines(cache.AcceptedLines, s_AcceptColor);
                 DrawLines(cache.RejectedLines, s_RejectColor);
                 return;
@@ -108,8 +110,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (leg.PlanState != CharacterPredictiveFootPlanState.Planned &&
                 leg.PlanState != CharacterPredictiveFootPlanState.Executing)
                 return;
-            DrawPath(cache.FootRoutePath, s_RouteColor, 2f);
-            DrawLines(cache.EnvelopeLines, sideColor);
+            DrawPath(cache.GroundProbePath, s_GroundProbeColor, 2f);
+            DrawPath(cache.AnimationFootRoutePath, s_AnimationRouteColor, 1.5f);
+            DrawLines(cache.EnvelopeLines, s_EnvelopeColor);
             DrawPath(cache.ClearancePath, sideColor, 4f);
             if (plan.LandingValid)
                 DrawMarker(plan.Landing, markerSize, s_LandingColor);
@@ -172,7 +175,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 if (plan.Executable)
                 {
-                    FootRoutePath = BuildFootRoute(plan.FootRoute);
+                    GroundProbePath = BuildRoute(plan.GroundProbeRoute);
+                    AnimationFootRoutePath = BuildRoute(plan.AnimationFootRoute);
                     ClearancePath = BuildClearancePath(plan.ClearancePath);
                     EnvelopeLines = BuildEnvelope(plan.GroundEnvelope);
                     QueryBoundaryLines = System.Array.Empty<Vector3>();
@@ -180,7 +184,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     RejectedLines = System.Array.Empty<Vector3>();
                     return;
                 }
-                FootRoutePath = BuildFootRoute(plan.FootRoute);
+                GroundProbePath = BuildRoute(plan.GroundProbeRoute);
+                AnimationFootRoutePath = System.Array.Empty<Vector3>();
                 ClearancePath = System.Array.Empty<Vector3>();
                 EnvelopeLines = System.Array.Empty<Vector3>();
                 QueryBoundaryLines = BuildQueryBoundaries(plan.QueryRequests, plan.RejectedGeometry);
@@ -188,14 +193,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RejectedLines = BuildTerminalRejectedGeometry(plan.RejectedGeometry);
             }
 
-            internal Vector3[] FootRoutePath { get; }
+            internal Vector3[] GroundProbePath { get; }
+            internal Vector3[] AnimationFootRoutePath { get; }
             internal Vector3[] ClearancePath { get; }
             internal Vector3[] EnvelopeLines { get; }
             internal Vector3[] QueryBoundaryLines { get; }
             internal Vector3[] AcceptedLines { get; }
             internal Vector3[] RejectedLines { get; }
 
-            static Vector3[] BuildFootRoute(IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> route)
+            static Vector3[] BuildRoute(IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> route)
             {
                 var path = new Vector3[route.Count];
                 for (int i = 0; i < route.Count; i++)

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Timeline;
 using UnityEngine;
+using UnityAnimationClip = UnityEngine.AnimationClip;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -38,7 +40,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum CharacterAnimationBlendSpacePhasePolicy : byte
     {
         SharedNormalizedPhase = 1,
-        MarkerSynchronizedPhase = 2
+        MarkerSegmentPhase = 2,
+        GeneratedFootPhase = 3
     }
 
     public enum CharacterAnimationBlendSpaceSampleRole : byte
@@ -82,26 +85,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterAnimationBlendSpaceMarker
-    {
-        [SerializeField] string m_MarkerId = string.Empty;
-        [SerializeField, Range(0f, 1f)] float m_NormalizedTime;
-
-        public string MarkerId => m_MarkerId ?? string.Empty;
-        public float NormalizedTime => m_NormalizedTime;
-
-        public CharacterAnimationBlendSpaceMarker() { }
-
-        public CharacterAnimationBlendSpaceMarker(string markerId, float normalizedTime)
-        {
-            if (string.IsNullOrWhiteSpace(markerId) || !float.IsFinite(normalizedTime) || normalizedTime < 0f || normalizedTime >= 1f)
-                throw new ArgumentException("Blend Space marker is invalid.");
-            m_MarkerId = markerId.Trim();
-            m_NormalizedTime = normalizedTime;
-        }
-    }
-
-    [Serializable]
     public sealed class CharacterAnimationBlendSpaceSampleParameter
     {
         [SerializeField] string m_ParameterId = string.Empty;
@@ -125,21 +108,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterAnimationBlendSpaceSample
     {
         [SerializeField] string m_SampleId = string.Empty;
-        [SerializeField] AnimationClip m_Clip;
-        [SerializeField] string m_ClipContentIdentity = string.Empty;
+        [SerializeField] CharacterAnimationSequenceAsset m_Sequence;
         [SerializeField] Vector2 m_Position;
         [SerializeField] CharacterAnimationBlendSpaceSampleRole m_Role = CharacterAnimationBlendSpaceSampleRole.DynamicCycle;
         [SerializeField, Range(0f, 1f)] float m_StationaryNormalizedTime;
-        [SerializeField] CharacterAnimationBlendSpaceMarker[] m_Markers = Array.Empty<CharacterAnimationBlendSpaceMarker>();
         [SerializeField] CharacterAnimationBlendSpaceSampleParameter[] m_Parameters = Array.Empty<CharacterAnimationBlendSpaceSampleParameter>();
 
         public CharacterAnimationBlendSpaceSampleId SampleId => string.IsNullOrWhiteSpace(m_SampleId) ? default : new CharacterAnimationBlendSpaceSampleId(m_SampleId);
-        public AnimationClip Clip => m_Clip;
-        public string ClipContentIdentity => m_ClipContentIdentity ?? string.Empty;
+        public CharacterAnimationSequenceAsset Sequence => m_Sequence;
+        public UnityAnimationClip Clip => m_Sequence ? m_Sequence.Clip : null;
+        public string ClipContentIdentity => m_Sequence ? m_Sequence.ContentRevision : string.Empty;
         public Vector2 Position => m_Position;
         public CharacterAnimationBlendSpaceSampleRole Role => m_Role;
         public float StationaryNormalizedTime => m_StationaryNormalizedTime;
-        public IReadOnlyList<CharacterAnimationBlendSpaceMarker> Markers => m_Markers ?? Array.Empty<CharacterAnimationBlendSpaceMarker>();
         public IReadOnlyList<CharacterAnimationBlendSpaceSampleParameter> Parameters => m_Parameters ?? Array.Empty<CharacterAnimationBlendSpaceSampleParameter>();
 
         internal CharacterAnimationBlendSpaceSample Clone(CharacterAnimationBlendSpaceSampleId sampleId)
@@ -147,12 +128,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return new CharacterAnimationBlendSpaceSample
             {
                 m_SampleId = sampleId.IsValid ? sampleId.Value : throw new ArgumentException("Blend Space Sample identity is invalid.", nameof(sampleId)),
-                m_Clip = m_Clip,
-                m_ClipContentIdentity = m_ClipContentIdentity,
+                m_Sequence = m_Sequence,
                 m_Position = m_Position,
                 m_Role = m_Role,
                 m_StationaryNormalizedTime = m_StationaryNormalizedTime,
-                m_Markers = m_Markers == null ? Array.Empty<CharacterAnimationBlendSpaceMarker>() : (CharacterAnimationBlendSpaceMarker[])m_Markers.Clone(),
                 m_Parameters = m_Parameters == null ? Array.Empty<CharacterAnimationBlendSpaceSampleParameter>() : (CharacterAnimationBlendSpaceSampleParameter[])m_Parameters.Clone()
             };
         }
@@ -163,18 +142,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Position = RequireFinite(position);
             m_Role = CharacterAnimationBlendSpaceSampleRole.DynamicCycle;
             m_StationaryNormalizedTime = 0f;
-            m_Markers = Array.Empty<CharacterAnimationBlendSpaceMarker>();
             m_Parameters = Array.Empty<CharacterAnimationBlendSpaceSampleParameter>();
         }
 
         internal void SetPosition(Vector2 position) => m_Position = RequireFinite(position);
 
-        internal void SetClip(AnimationClip clip, string contentIdentity)
+        internal void SetSequence(CharacterAnimationSequenceAsset sequence)
         {
-            if (!clip || !float.IsFinite(clip.length) || clip.length <= 0f || string.IsNullOrWhiteSpace(contentIdentity))
-                throw new ArgumentException("Blend Space Sample clip binding is invalid.");
-            m_Clip = clip;
-            m_ClipContentIdentity = contentIdentity.Trim();
+            if (!sequence)
+                throw new ArgumentException("Blend Space Sample Sequence binding is invalid.");
+            sequence.RequireValid();
+            m_Sequence = sequence;
         }
 
         internal void SetRole(CharacterAnimationBlendSpaceSampleRole role, float stationaryNormalizedTime)
@@ -184,13 +162,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Blend Space Sample role is invalid.");
             m_Role = role;
             m_StationaryNormalizedTime = role == CharacterAnimationBlendSpaceSampleRole.StationaryPose ? stationaryNormalizedTime : 0f;
-            if (role == CharacterAnimationBlendSpaceSampleRole.StationaryPose)
-                m_Markers = Array.Empty<CharacterAnimationBlendSpaceMarker>();
-        }
-
-        internal void SetMarkers(CharacterAnimationBlendSpaceMarker[] markers)
-        {
-            m_Markers = markers == null ? Array.Empty<CharacterAnimationBlendSpaceMarker>() : (CharacterAnimationBlendSpaceMarker[])markers.Clone();
         }
 
         internal void SetParameters(CharacterAnimationBlendSpaceSampleParameter[] parameters)
@@ -322,7 +293,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!Enum.IsDefined(typeof(CharacterAnimationBlendSpacePhasePolicy), policy))
                 throw new ArgumentOutOfRangeException(nameof(policy));
-            if (policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase && !referenceSampleId.IsValid)
+            if ((policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
+                 policy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase) && !referenceSampleId.IsValid)
                 throw new ArgumentException("Marker synchronized Blend Space requires a Phase Reference Sample.", nameof(referenceSampleId));
             if (policy == CharacterAnimationBlendSpacePhasePolicy.SharedNormalizedPhase && referenceSampleId.IsValid)
                 throw new ArgumentException("Shared normalized Blend Space cannot retain a Phase Reference Sample.", nameof(referenceSampleId));
@@ -337,7 +309,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 samples == null
                     ? Array.Empty<CharacterAnimationBlendSpaceSample>()
                     : (CharacterAnimationBlendSpaceSample[])samples.Clone();
-            if (m_PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase &&
+            if ((m_PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
+                 m_PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase) &&
                 PhaseReferenceSampleId.IsValid &&
                 !Array.Exists(next, sample => sample != null && sample.SampleId.Equals(PhaseReferenceSampleId)))
             {

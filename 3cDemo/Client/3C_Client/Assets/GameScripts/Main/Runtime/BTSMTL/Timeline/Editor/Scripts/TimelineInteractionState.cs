@@ -86,11 +86,18 @@ namespace BTSMTL.Timeline.Editor
 
         public IReadOnlyList<object> CaptureSelectedTargets()
         {
-            return m_Selections.Select(selection => selection is TimelineClipView clipView
-                    ? (object)clipView.Clip
-                    : selection is TimelineTrackView trackView
-                        ? trackView.Track
-                        : null)
+            return m_Selections.Select(selection =>
+                {
+                    if (selection is TimelineClipView clipView)
+                        return (object)clipView.Clip;
+                    if (selection is TimelineTrackView trackView)
+                        return trackView.Track;
+                    if (selection is TimelineSectionView sectionView)
+                        return sectionView.Section;
+                    if (selection is AnimationTimePointView pointView)
+                        return pointView.Selection;
+                    return null;
+                })
                 .Where(target => target != null)
                 .ToArray();
         }
@@ -112,6 +119,10 @@ namespace BTSMTL.Timeline.Editor
                 m_Host.PresentSelection(trackView.Track);
             else if (selectable is TimelineClipView clipView)
                 m_Host.PresentSelection(clipView.Clip);
+            else if (selectable is TimelineSectionView sectionView)
+                m_Host.PresentSelection(sectionView.Section);
+            else if (selectable is AnimationTimePointView pointView)
+                m_Host.PresentSelection(pointView.Selection);
         }
 
         public void RemoveFromSelection(ISelectable selectable)

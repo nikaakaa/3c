@@ -263,12 +263,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static JToken Canonicalize(JToken token)
         {
+            return Canonicalize(token, string.Empty);
+        }
+
+        static JToken Canonicalize(JToken token, string propertyName)
+        {
             if (token is JObject sourceObject)
             {
                 var result = new JObject();
                 foreach (JProperty property in sourceObject.Properties().OrderBy(property => property.Name, StringComparer.Ordinal))
                 {
-                    JToken value = Canonicalize(property.Value);
+                    JToken value = Canonicalize(property.Value, property.Name);
                     if (value.Type == JTokenType.Null ||
                         value.Type == JTokenType.String && string.IsNullOrEmpty(value.Value<string>()) ||
                         string.Equals(property.Name, "weightedMode", StringComparison.Ordinal) &&
@@ -289,7 +294,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             if (token is JArray sourceArray)
             {
-                var values = sourceArray.Select(Canonicalize).ToList();
+                var values = sourceArray
+                    .Select(value => Canonicalize(value, string.Empty))
+                    .ToList();
+                if (string.Equals(propertyName, "markers", StringComparison.Ordinal) &&
+                    values.All(value => value is JObject &&
+                        (value["frame"] == null || value["frame"]?.Type == JTokenType.Integer)))
+                {
+                    values.Sort((left, right) =>
+                    {
+                        int frame = (left["frame"]?.Value<int>() ?? 0).CompareTo(
+                            right["frame"]?.Value<int>() ?? 0);
+                        return frame != 0
+                            ? frame
+                            : string.Compare(
+                                left["id"]?.Value<string>() ?? string.Empty,
+                                right["id"]?.Value<string>() ?? string.Empty,
+                                StringComparison.Ordinal);
+                    });
+                    return new JArray(values);
+                }
                 if (values.Count > 0 &&
                     values.All(value =>
                         value is JObject &&

@@ -2,7 +2,6 @@
     <Style src="project://database/Assets/Addon/BTSMTL/Timeline/Editor/Resources/StyleSheet/TimelineTrackHandle.uss?fileID=7433441132597879392&amp;guid=949ef23287cfb554abbff1a1b8888aaf&amp;type=3#TimelineTrackHandle" />
     <ui:TextField placeholder-text="filler text" name="name-field" />
     <ui:VisualElement name="icon" />
-    <ui:Label name="marker-sync-summary" />
     <ui:VisualElement name="animation-curves-header">
         <ui:Label text=">" name="animation-curves-fold" />
         <ui:Label text="CURVES" name="animation-curves-title" />

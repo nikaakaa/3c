@@ -34,6 +34,9 @@ namespace BTSMTL.Timeline.Editor
         UnityEngine.Object m_SerializedOwner;
 
         [SerializeField]
+        AnimationSequenceAsset m_SequenceAsset;
+
+        [SerializeField]
         string m_SerializedPropertyPath;
 
         [SerializeField]
@@ -48,6 +51,33 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField]
         UnityEngine.Object m_SourceGraphOwner;
 
+        [SerializeField]
+        UnityEngine.Object m_NavigationOwner;
+
+        [SerializeField]
+        string m_NavigationPropertyPath;
+
+        [SerializeField]
+        string m_NavigationOwnershipLabel;
+
+        [SerializeField]
+        string m_NavigationTrackAuthoringId;
+
+        [SerializeField]
+        string m_NavigationClipAuthoringId;
+
+        [SerializeField]
+        string m_NavigationSourceNodeGuid;
+
+        [SerializeField]
+        BaseTreeWindow m_NavigationSourceGraphWindow;
+
+        [SerializeField]
+        UnityEngine.Object m_NavigationSourceGraphOwner;
+
+        [SerializeField]
+        Vector2 m_NavigationViewport;
+
         TimelineNode m_SourceNode;
         TimelineEditorView m_View;
 
@@ -55,6 +85,7 @@ namespace BTSMTL.Timeline.Editor
         TimelineWindowMode m_Mode;
         ToolbarToggle m_AuthoringToggle;
         ToolbarToggle m_LiveDebugToggle;
+        ToolbarButton m_BackButton;
         ObjectField m_SharedTimelineField;
         Label m_SourceSummary;
         ToolbarMenu m_TargetMenu;
@@ -75,6 +106,7 @@ namespace BTSMTL.Timeline.Editor
         long m_LastDebugTimelinePlaybackRevision = -1;
 
         public TimelineData Timeline => m_View?.Timeline;
+        public AnimationSequenceAsset Sequence => m_View?.Sequence;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
@@ -88,6 +120,7 @@ namespace BTSMTL.Timeline.Editor
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
+            window.ClearNavigation();
             window.BindNode(sourceGraphWindow, node);
             window.Show();
             window.Focus();
@@ -100,10 +133,33 @@ namespace BTSMTL.Timeline.Editor
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
+            window.ClearNavigation();
             window.BindAsset(asset);
             window.Show();
             window.Focus();
             return window;
+        }
+
+        public static TimelineEditorWindow Open(AnimationSequenceAsset sequence)
+        {
+            if (!sequence)
+                return null;
+
+            TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
+            window.ClearNavigation();
+            window.BindSequence(sequence);
+            window.Show();
+            window.Focus();
+            return window;
+        }
+
+        [UnityEditor.Callbacks.OnOpenAsset]
+        static bool OpenSequenceAsset(int instanceId, int line)
+        {
+            if (EditorUtility.InstanceIDToObject(instanceId) is not AnimationSequenceAsset sequence)
+                return false;
+            Open(sequence);
+            return true;
         }
 
         void BindAsset(TimelineAsset asset)
@@ -178,6 +234,7 @@ namespace BTSMTL.Timeline.Editor
                 throw new System.InvalidOperationException("TimelineEditorWindow requires a bound TimelineData owner/path.");
 
             DisposeView();
+            m_SequenceAsset = null;
             m_HasDebugRequest = false;
             InvalidateLiveDebugOverlay();
             timeline.BindSerializedOwner(serializedOwner, serializedPropertyPath);
@@ -217,6 +274,39 @@ namespace BTSMTL.Timeline.Editor
             SetMode(m_Mode);
         }
 
+        void BindSequence(AnimationSequenceAsset sequence)
+        {
+            if (!sequence)
+                throw new ArgumentNullException(nameof(sequence));
+            DisposeView();
+            m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
+            m_DebugBinding = null;
+            m_HasDebugRequest = false;
+            InvalidateLiveDebugOverlay();
+            m_SequenceAsset = sequence;
+            m_SerializedOwner = null;
+            m_SerializedPropertyPath = string.Empty;
+            m_OwnershipLabel = "Sequence Asset";
+            m_SourceNodeGuid = string.Empty;
+            m_SourceGraphWindow = null;
+            m_SourceGraphOwner = null;
+            m_SourceNode = null;
+            titleContent = new GUIContent($"Sequence · {sequence.name}");
+            m_View = new TimelineEditorView();
+            m_View.Init(sequence);
+            rootVisualElement.Clear();
+            rootVisualElement.Add(CreateModeToolbar());
+            Label ownership = new Label($"Sequence Document: {sequence.name}");
+            ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
+            ownership.style.paddingLeft = 8f;
+            ownership.style.paddingTop = 4f;
+            ownership.style.paddingBottom = 4f;
+            rootVisualElement.Add(ownership);
+            rootVisualElement.Add(m_View);
+            m_DebugDetails = null;
+            SetMode(TimelineWindowMode.AuthoringPreview);
+        }
+
         void BuildUnboundView()
         {
             titleContent = new GUIContent("Timeline Editor");
@@ -228,12 +318,14 @@ namespace BTSMTL.Timeline.Editor
 
         void ClearBinding()
         {
+            ClearNavigation();
             DisposeView();
             m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
             m_DebugBinding = null;
             m_HasDebugRequest = false;
             InvalidateLiveDebugOverlay();
             m_SerializedOwner = null;
+            m_SequenceAsset = null;
             m_SerializedPropertyPath = string.Empty;
             m_OwnershipLabel = string.Empty;
             m_SourceNodeGuid = string.Empty;
@@ -245,7 +337,15 @@ namespace BTSMTL.Timeline.Editor
 
         void TryRestoreBinding()
         {
-            if (m_View != null || !m_SerializedOwner || string.IsNullOrEmpty(m_SerializedPropertyPath))
+            if (m_View != null)
+                return;
+
+            if (m_SequenceAsset)
+            {
+                BindSequence(m_SequenceAsset);
+                return;
+            }
+            if (!m_SerializedOwner || string.IsNullOrEmpty(m_SerializedPropertyPath))
                 return;
 
             TimelineData timeline = ResolveTimelineData();
@@ -264,11 +364,18 @@ namespace BTSMTL.Timeline.Editor
 
         TimelineData ResolveTimelineData()
         {
-            if (m_SerializedOwner is TimelineAsset asset)
+            return ResolveTimelineData(m_SerializedOwner, m_SerializedPropertyPath);
+        }
+
+        static TimelineData ResolveTimelineData(UnityEngine.Object owner, string propertyPath)
+        {
+            if (owner is TimelineAsset asset)
                 return asset.Data;
 
-            SerializedObject serializedObject = new SerializedObject(m_SerializedOwner);
-            SerializedProperty property = serializedObject.FindProperty(m_SerializedPropertyPath);
+            if (!owner || string.IsNullOrWhiteSpace(propertyPath))
+                return null;
+            SerializedObject serializedObject = new SerializedObject(owner);
+            SerializedProperty property = serializedObject.FindProperty(propertyPath);
             return property?.propertyType == SerializedPropertyType.ManagedReference
                 ? property.managedReferenceValue as TimelineData
                 : null;
@@ -276,6 +383,12 @@ namespace BTSMTL.Timeline.Editor
 
         void OpenClip(Clip clip)
         {
+            if (clip is AnimationClip animationClip && animationClip.Sequence)
+            {
+                CaptureTimelineNavigation(animationClip);
+                BindSequence(animationClip.Sequence);
+                return;
+            }
             if (!(clip is TreeClip treeClip) || treeClip.ResolvedTree == null)
                 return;
 
@@ -326,15 +439,18 @@ namespace BTSMTL.Timeline.Editor
         VisualElement CreateModeToolbar()
         {
             var toolbar = new Toolbar();
+            m_BackButton = new ToolbarButton(ReturnToTimeline) { text = "‹ Timeline" };
+            m_BackButton.style.display = HasTimelineNavigation ? DisplayStyle.Flex : DisplayStyle.None;
             m_AuthoringToggle = new ToolbarToggle { text = "Authoring Preview" };
             m_LiveDebugToggle = new ToolbarToggle { text = "Live Debug" };
             m_SharedTimelineField = new ObjectField("Shared Timeline")
             {
-                objectType = typeof(TimelineAsset),
+                objectType = typeof(UnityEngine.Object),
                 allowSceneObjects = false
             };
             m_SharedTimelineField.style.width = 280f;
-            m_SharedTimelineField.SetValueWithoutNotify(m_SerializedOwner as TimelineAsset);
+            m_SharedTimelineField.label = "Document";
+            m_SharedTimelineField.SetValueWithoutNotify(m_SequenceAsset ? m_SequenceAsset : m_SerializedOwner as TimelineAsset);
             m_SharedTimelineField.RegisterValueChangedCallback(OnSharedTimelineChanged);
             m_SourceSummary = new Label(CurrentSourceSummary());
             m_SourceSummary.style.minWidth = 180f;
@@ -398,6 +514,7 @@ namespace BTSMTL.Timeline.Editor
                     RuntimeDebugSession.Shared.SetHistoryOffset(evt.newValue);
             });
 
+            toolbar.Add(m_BackButton);
             toolbar.Add(m_AuthoringToggle);
             toolbar.Add(m_LiveDebugToggle);
             toolbar.Add(m_SharedTimelineField);
@@ -412,16 +529,78 @@ namespace BTSMTL.Timeline.Editor
             return toolbar;
         }
 
+        bool HasTimelineNavigation => m_NavigationOwner && !string.IsNullOrWhiteSpace(m_NavigationPropertyPath);
+
+        void CaptureTimelineNavigation(AnimationClip clip)
+        {
+            if (m_View == null || !m_SerializedOwner || string.IsNullOrWhiteSpace(m_SerializedPropertyPath))
+                throw new InvalidOperationException("Sequence navigation requires a bound Action Timeline.");
+            m_NavigationOwner = m_SerializedOwner;
+            m_NavigationPropertyPath = m_SerializedPropertyPath;
+            m_NavigationOwnershipLabel = m_OwnershipLabel;
+            m_NavigationTrackAuthoringId = clip.Track?.AuthoringId ?? string.Empty;
+            m_NavigationClipAuthoringId = clip.AuthoringId;
+            m_NavigationSourceNodeGuid = m_SourceNodeGuid;
+            m_NavigationSourceGraphWindow = m_SourceGraphWindow;
+            m_NavigationSourceGraphOwner = m_SourceGraphOwner;
+            m_NavigationViewport = m_View.ViewportOffset;
+        }
+
+        void ReturnToTimeline()
+        {
+            if (!HasTimelineNavigation)
+                return;
+            UnityEngine.Object owner = m_NavigationOwner;
+            string propertyPath = m_NavigationPropertyPath;
+            string ownershipLabel = m_NavigationOwnershipLabel;
+            string trackAuthoringId = m_NavigationTrackAuthoringId;
+            string clipAuthoringId = m_NavigationClipAuthoringId;
+            string sourceNodeGuid = m_NavigationSourceNodeGuid;
+            BaseTreeWindow sourceGraphWindow = m_NavigationSourceGraphWindow;
+            UnityEngine.Object sourceGraphOwner = m_NavigationSourceGraphOwner;
+            Vector2 viewport = m_NavigationViewport;
+            TimelineData timeline = ResolveTimelineData(owner, propertyPath);
+            if (timeline == null)
+                throw new InvalidOperationException("The source Action Timeline can no longer be resolved.");
+            ClearNavigation();
+            Bind(timeline, owner, propertyPath, ownershipLabel, sourceGraphWindow, null, sourceNodeGuid);
+            m_SourceGraphOwner = sourceGraphOwner;
+            m_View.FocusSource(trackAuthoringId, clipAuthoringId);
+            m_View.RestoreViewport(viewport);
+        }
+
+        void ClearNavigation()
+        {
+            m_NavigationOwner = null;
+            m_NavigationPropertyPath = string.Empty;
+            m_NavigationOwnershipLabel = string.Empty;
+            m_NavigationTrackAuthoringId = string.Empty;
+            m_NavigationClipAuthoringId = string.Empty;
+            m_NavigationSourceNodeGuid = string.Empty;
+            m_NavigationSourceGraphWindow = null;
+            m_NavigationSourceGraphOwner = null;
+            m_NavigationViewport = Vector2.zero;
+            if (m_BackButton != null)
+                m_BackButton.style.display = DisplayStyle.None;
+        }
+
         void OnSharedTimelineChanged(ChangeEvent<UnityEngine.Object> evt)
         {
+            if (evt.newValue is AnimationSequenceAsset sequence)
+            {
+                ClearNavigation();
+                BindSequence(sequence);
+                return;
+            }
             TimelineAsset asset = evt.newValue as TimelineAsset;
             if (asset)
             {
+                ClearNavigation();
                 BindAsset(asset);
                 return;
             }
 
-            if (m_SerializedOwner is TimelineAsset)
+            if (m_SerializedOwner is TimelineAsset || m_SequenceAsset)
                 ClearBinding();
             else
                 m_SharedTimelineField.SetValueWithoutNotify(null);
@@ -429,6 +608,8 @@ namespace BTSMTL.Timeline.Editor
 
         string CurrentSourceSummary()
         {
+            if (m_View?.Sequence)
+                return $"Source: Sequence / {m_View.Sequence.name}";
             if (m_View?.Timeline == null)
                 return "Source: None";
             string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
@@ -437,10 +618,13 @@ namespace BTSMTL.Timeline.Editor
 
         void SetMode(TimelineWindowMode mode)
         {
+            if (m_View?.Sequence)
+                mode = TimelineWindowMode.AuthoringPreview;
             m_Mode = mode;
             bool liveDebug = mode == TimelineWindowMode.LiveDebug;
             m_AuthoringToggle?.SetValueWithoutNotify(!liveDebug);
             m_LiveDebugToggle?.SetValueWithoutNotify(liveDebug);
+            m_LiveDebugToggle?.SetDisplay(!m_View?.Sequence);
             m_TargetMenu?.SetDisplay(liveDebug);
             m_PlaybackMenu?.SetDisplay(liveDebug);
             m_FollowToggle?.SetDisplay(liveDebug);

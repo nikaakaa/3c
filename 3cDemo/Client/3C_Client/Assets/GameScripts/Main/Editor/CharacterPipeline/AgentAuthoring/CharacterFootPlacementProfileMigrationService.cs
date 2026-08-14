@@ -41,8 +41,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             SetFloat(serialized, "m_StanceStabilization.m_PlantConfidenceExit", 0.35f);
             SetFloat(serialized, "m_StanceStabilization.m_AnchorBlendSpeed", 8f);
             SetFloat(serialized, "m_StanceStabilization.m_MaximumAnchorDistance", 0.14f);
-            SetFloat(serialized, "m_StanceStabilization.m_MinimumLegExtensionRatio", 0.18f);
-            SetFloat(serialized, "m_StanceStabilization.m_MaximumLegExtensionRatio", 0.98f);
             SetFloat(serialized, "m_StanceStabilization.m_MaximumPelvisLowering", 0.32f);
             SetFloat(serialized, "m_StanceStabilization.m_MaximumPelvisRaising", 0.18f);
             SetFloat(serialized, "m_PredictiveExtension.m_MinimumLandingConfidence", 0.25f);

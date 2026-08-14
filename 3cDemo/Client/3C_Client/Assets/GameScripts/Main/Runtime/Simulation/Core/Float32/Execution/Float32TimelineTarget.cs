@@ -374,10 +374,26 @@ namespace ThirdPersonSimulation
                         MidpointRounding.AwayFromZero)),
                     m_Program.Manifest.TickRate)
                 : default;
+            Float32Vector3 positionDelta = currentPosition - previousPosition;
+            CommittedLocomotionPlanarMotionTimeline locomotionTimeline = channel == SimulationMotionChannel.Locomotion
+                ? new CommittedLocomotionPlanarMotionTimeline(
+                    movementPlaybackClock.OwnerIdentity,
+                    movementPlaybackClock.Generation,
+                    movementPlaybackClock.AuthorityTick,
+                    movementPlaybackClock.TickRate,
+                    (positionDelta.X * Float32Scalar.FromInt64(m_Program.Manifest.TickRate)).ToSingle(),
+                    (positionDelta.Z * Float32Scalar.FromInt64(m_Program.Manifest.TickRate)).ToSingle(),
+                    (yaw * Float32Scalar.FromInt64(m_Program.Manifest.TickRate)).ToSingle(),
+                    0f,
+                    0,
+                    string.Empty,
+                    0f,
+                    0f)
+                : default;
             var contribution = new SimulationMotionContribution(
                 SourcePath(operation),
                 operation,
-                currentPosition - previousPosition,
+                positionDelta,
                 yaw,
                 Float32Vector2.Zero,
                 CatalogInt32(definition, ProgramCatalogFieldId.Space) == 1
@@ -388,7 +404,8 @@ namespace ThirdPersonSimulation
                 channel,
                 (SimulationMotionBlendMode)CatalogInt32(definition, ProgramCatalogFieldId.BlendMode),
                 CatalogBoolean(definition, ProgramCatalogFieldId.ConsumeLowerChannels),
-                movementPlaybackClock);
+                movementPlaybackClock,
+                locomotionTimeline);
             if (contribution.CanResolve)
                 m_Motion.Submit(contribution);
         }

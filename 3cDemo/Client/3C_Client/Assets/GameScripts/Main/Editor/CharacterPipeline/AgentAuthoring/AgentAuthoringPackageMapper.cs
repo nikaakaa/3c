@@ -102,7 +102,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 animationBlendCurves = target.context.presentation?.blendCurves ??
                     new List<AgentDocumentBlendAssetContext>(),
                 animationBlendProfiles = target.context.presentation?.blendProfiles ??
-                    new List<AgentDocumentBlendAssetContext>()
+                    new List<AgentDocumentBlendAssetContext>(),
+                animationSequences = target.context.presentation?.animationSequences ??
+                    new List<AgentDocumentAnimationSequenceContext>()
             });
             files["context/dependencies.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageDependenciesFile
             {
@@ -112,7 +114,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 rootGraphAuthoringId = target.context.rootGraphAuthoringId,
                 bodyMotion = target.context.bodyMotion,
                 presentation = target.context.presentation,
-                animationMarkerGroups = target.context.animationMarkerGroups,
                 generatedProduct = target.context.generatedProduct,
                 aiController = target.context.aiController,
                 capabilities = target.context.capabilities,
@@ -191,6 +192,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             else if (files.Keys.Any(path =>
                          path.StartsWith(
                              "editable/presentation/",
+                             StringComparison.Ordinal) ||
+                         path.StartsWith(
+                             "editable/animation-sequences/",
                              StringComparison.Ordinal) ||
                          path.StartsWith(
                              "readonly/presentation/",
@@ -331,7 +335,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 bodyMotion = dependencies.bodyMotion ?? new AgentSnapshotBodyMotionProfile(),
                 presentation = dependencies.presentation ??
                                new AgentDocumentPresentationContext(),
-                animationMarkerGroups = dependencies.animationMarkerGroups ?? new List<AgentSnapshotAnimationMarkerGroup>(),
                 generatedProduct = dependencies.generatedProduct ?? new AgentDocumentGeneratedProduct(),
                 aiController = dependencies.aiController,
                 capabilities = dependencies.capabilities ?? new List<string>()
@@ -822,11 +825,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 string timelinePath = $"editable.timelines[{timeline.timelineAuthoringId}]";
                 Add(timeline.timelineAuthoringId, timelinePath);
+                foreach (AgentSnapshotTimelineSection section in timeline.sections ?? new List<AgentSnapshotTimelineSection>())
+                    Add(section?.sectionAuthoringId, timelinePath + ".sections");
                 foreach (AgentSnapshotTimelineTrack track in timeline.tracks ?? new List<AgentSnapshotTimelineTrack>())
                 {
                     Add(track?.trackAuthoringId, timelinePath + ".tracks");
-                    foreach (AgentSnapshotAnimationMarker marker in track?.markers ?? new List<AgentSnapshotAnimationMarker>())
-                        Add(marker?.authoringId, timelinePath + ".markers");
                     foreach (AgentSnapshotTimelineClip clip in track?.clips ?? new List<AgentSnapshotTimelineClip>())
                         Add(clip?.clipAuthoringId, timelinePath + ".clips");
                 }
@@ -1659,6 +1662,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 char.IsLetterOrDigit(character) || character == '-' || character == '_' || character == '.');
         }
 
+        static bool IsAssetReference(AgentPackageAssetReferenceV3 reference)
+        {
+            if (reference == null)
+                return false;
+            if (!string.IsNullOrWhiteSpace(reference.localId))
+                return IsIdentity(reference.localId) &&
+                       reference.localId.StartsWith("local:", StringComparison.Ordinal) &&
+                       string.IsNullOrWhiteSpace(reference.assetPath) &&
+                       string.IsNullOrWhiteSpace(reference.assetGuid) &&
+                       reference.localFileId == 0;
+            return !string.IsNullOrWhiteSpace(reference.assetPath) &&
+                   reference.assetPath.StartsWith("Assets/", StringComparison.Ordinal) &&
+                   !reference.assetPath.Contains("\\") &&
+                   IsIdentity(reference.assetGuid) &&
+                   reference.localFileId != 0;
+        }
+
         static void ToTimelineFiles(
             AgentSnapshotTimeline source,
             out AgentPackageTimelineFile timeline,
@@ -1669,6 +1689,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 id = source.timelineAuthoringId,
                 name = source.name,
                 callSites = AgentAuthoringDocumentCodec.Clone(source.callSites) ?? new List<AgentSnapshotTimelineCallSite>(),
+                sections = AgentAuthoringDocumentCodec.Clone(source.sections) ?? new List<AgentSnapshotTimelineSection>(),
                 tracks = AgentAuthoringDocumentCodec.Clone(source.tracks) ?? new List<AgentSnapshotTimelineTrack>()
             };
             curves = new AgentPackageCurvesFile { timelineId = source.timelineAuthoringId };
@@ -1711,19 +1732,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 timelineAuthoringId = timeline.id,
                 name = timeline.name,
                 callSites = timeline.callSites ?? new List<AgentSnapshotTimelineCallSite>(),
+                sections = timeline.sections ?? new List<AgentSnapshotTimelineSection>(),
                 tracks = timeline.tracks ?? new List<AgentSnapshotTimelineTrack>()
             };
             if (!IsIdentity(timeline.id) ||
+                timeline.sections == null ||
+                timeline.sections.Any(section =>
+                    section == null ||
+                    !IsIdentity(section.sectionAuthoringId) ||
+                    string.IsNullOrWhiteSpace(section.name) ||
+                    !string.Equals(section.name, section.name.Trim(), StringComparison.Ordinal) ||
+                    section.frame < 0) ||
                 timeline.tracks == null ||
                 timeline.tracks.Any(track =>
                     track == null ||
                     !IsIdentity(track.trackAuthoringId) ||
                     track.clips == null ||
-                    track.markers == null ||
-                    track.clips.Any(clip => clip == null || !IsIdentity(clip.clipAuthoringId)) ||
-                    track.markers.Any(marker => marker == null || !IsIdentity(marker.authoringId))))
+                    track.clips.Any(clip => clip == null ||
+                        !IsIdentity(clip.clipAuthoringId) ||
+                        clip.clipInFrame < 0 ||
+                        clip.typeName?.EndsWith("AnimationClip", StringComparison.Ordinal) == true &&
+                        (!IsAssetReference(clip.animationSequence) ||
+                         !Enum.TryParse(clip.extraPolationMode, false, out ExtraPolationMode _)))))
             {
-                report.Error(path, "timeline_structure_invalid", "Timeline、Track、Clip或Marker缺少合法identity与必需集合。");
+                report.Error(path, "timeline_structure_invalid", "Timeline、Section、Track或Clip缺少合法identity与必需集合。");
+                return false;
+            }
+            if (result.sections.GroupBy(section => section.sectionAuthoringId, StringComparer.Ordinal).Any(group => group.Count() > 1) ||
+                result.sections.GroupBy(section => section.name, StringComparer.Ordinal).Any(group => group.Count() > 1))
+            {
+                report.Error(path + ".sections", "timeline_section_duplicate", "Timeline内Section identity或名称重复。");
                 return false;
             }
             List<AgentSnapshotTimelineClip> allClips = result.tracks
@@ -2142,7 +2180,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                      timeline.callSites[0] != null &&
                                      timeline.callSites[0].nodeAuthoringId?.StartsWith("local:", StringComparison.Ordinal) == true &&
                                      !string.IsNullOrWhiteSpace(timeline.callSites[0].graphPath);
-                bool localContents = timeline.tracks != null && timeline.tracks.All(track =>
+                bool localContents = timeline.sections != null &&
+                    timeline.sections.All(section =>
+                        section != null &&
+                        section.sectionAuthoringId?.StartsWith("local:", StringComparison.Ordinal) == true) &&
+                    timeline.tracks != null && timeline.tracks.All(track =>
                     track != null &&
                     track.trackAuthoringId?.StartsWith("local:", StringComparison.Ordinal) == true &&
                     track.clips != null &&
@@ -2157,7 +2199,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report.Error(
                         timelinePath,
                         "timeline_new_pair_invalid",
-                        "新增Timeline必须使用canonical local identity目录、唯一local TimelineNode调用点、local Track/Clip，并保持curves timelineId一致。");
+                        "新增Timeline必须使用canonical local identity目录、唯一local TimelineNode调用点、local Section/Track/Clip，并保持curves timelineId一致。");
                     valid = false;
                     continue;
                 }

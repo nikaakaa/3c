@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public sealed class FixedPassPipelineRuntimeHandle : ISimulationSessionRuntimeHandle
+    public sealed class FixedPassPipelineRuntimeHandle : ISimulationSessionRuntimeHandle, ICharacterFutureBodyTrajectorySource
     {
         readonly SimulationSessionLifecycleController m_Lifecycle;
         readonly CompiledSimulationPipelinePlan m_Pipeline;
@@ -12,6 +12,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedPipelineTransaction m_Transaction;
         readonly IReadOnlyList<IFixedCompiledPipelinePassRuntime> m_Passes;
         readonly SimulationSessionResourceRegistry m_Resources;
+        readonly ICharacterFutureBodyTrajectorySource m_FutureBodyTrajectorySource;
         ulong m_LatestOuterTick;
         bool m_Disposed;
 
@@ -21,7 +22,8 @@ namespace ThirdPersonSimulation.Fixed
             SimulationWorldStateStore stateStore,
             FixedPipelineTransaction transaction,
             IReadOnlyList<IFixedCompiledPipelinePassRuntime> passes,
-            SimulationSessionResourceRegistry resources)
+            SimulationSessionResourceRegistry resources,
+            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource)
         {
             Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             m_Pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
@@ -29,6 +31,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             m_Passes = passes ?? throw new ArgumentNullException(nameof(passes));
             m_Resources = resources ?? throw new ArgumentNullException(nameof(resources));
+            m_FutureBodyTrajectorySource = futureBodyTrajectorySource;
             m_Lifecycle = new SimulationSessionLifecycleController(descriptor);
             m_Lifecycle.BeginPreparing();
             m_Lifecycle.Activate(descriptor);
@@ -38,6 +41,19 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationSessionLifecycleState LifecycleState => m_Lifecycle.State;
         public SimulationSessionFailure Failure => m_Lifecycle.Failure;
         public SimulationSessionDiagnosticsSnapshot Diagnostics => BuildDiagnostics();
+
+        public bool TryPredict(
+            in CharacterFutureBodyTrajectoryRequest request,
+            out CharacterFutureBodyTrajectory trajectory)
+        {
+            if (m_Disposed || LifecycleState != SimulationSessionLifecycleState.Active ||
+                m_FutureBodyTrajectorySource == null)
+            {
+                trajectory = null;
+                return false;
+            }
+            return m_FutureBodyTrajectorySource.TryPredict(in request, out trajectory);
+        }
 
         public void LogicTick(SimulationSessionLogicTickContext context)
         {

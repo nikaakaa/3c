@@ -137,7 +137,6 @@ namespace BTSMTL.Timeline
         public static readonly TimelineCurveChannelId AnimationWeight = Id("animation.weight");
         public static readonly TimelineCurveChannelId AnimationEaseIn = Id("animation.ease-in");
         public static readonly TimelineCurveChannelId AnimationEaseOut = Id("animation.ease-out");
-        public static readonly TimelineCurveChannelId AnimationFootPlacementWeight = Id("animation.foot-placement-weight");
         public static readonly TimelineCurveChannelId MotionWeight = Id("motion.weight");
         public static readonly TimelineCurveChannelId MotionPositionX = Id("motion.position-x");
         public static readonly TimelineCurveChannelId MotionPositionY = Id("motion.position-y");
@@ -196,7 +195,6 @@ namespace BTSMTL.Timeline
             D(AnimationWeight, typeof(AnimationClip), "Weight", C(92, 205, 235), Unit, One),
             D(AnimationEaseIn, typeof(AnimationClip), "Ease In", C(91, 187, 137), Unit, ZeroOne),
             D(AnimationEaseOut, typeof(AnimationClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
-            D(AnimationFootPlacementWeight, typeof(AnimationClip), "Foot Placement Weight", C(79, 219, 133), Unit, One),
             D(MotionWeight, typeof(MotionCurveClip), "Weight", C(120, 211, 151), Unit, One),
             D(MotionPositionX, typeof(MotionCurveClip), "Position X", C(235, 100, 91), Meters, Zero),
             D(MotionPositionY, typeof(MotionCurveClip), "Position Y", C(109, 210, 116), Meters, Zero),
@@ -247,7 +245,6 @@ namespace BTSMTL.Timeline
                 AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationWeight => clip.WeightCurve,
                 AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationEaseIn => clip.EaseInCurve,
                 AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationEaseOut => clip.EaseOutCurve,
-                AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationFootPlacementWeight => clip.FootPlacementCurve,
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionWeight => clip.WeightCurve,
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionX => clip.PositionX,
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionY => clip.PositionY,
@@ -277,7 +274,6 @@ namespace BTSMTL.Timeline
                 case AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationWeight: clip.WeightCurve = copy; break;
                 case AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationEaseIn: clip.EaseInCurve = copy; break;
                 case AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationEaseOut: clip.EaseOutCurve = copy; break;
-                case AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationFootPlacementWeight: clip.FootPlacementCurve = copy; break;
                 case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionWeight: clip.WeightCurve = copy; break;
                 case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionX: clip.PositionX = copy; break;
                 case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionY: clip.PositionY = copy; break;

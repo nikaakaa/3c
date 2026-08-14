@@ -26,7 +26,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         ApproachEnd = 8,
         ExitStart = 9,
         SettleStart = 10,
-        SettleEnd = 11
+        SettleEnd = 11,
+        TurnLeft = 12,
+        TurnRight = 13
     }
 
     public readonly struct GameplayLabFootIkRouteSnapshot
@@ -87,6 +89,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             GameplayLabFootIkRoutePhase.ExitStart => "exit-start",
             GameplayLabFootIkRoutePhase.SettleStart => "settle-start",
             GameplayLabFootIkRoutePhase.SettleEnd => "settle-end",
+            GameplayLabFootIkRoutePhase.TurnLeft => "turn-left",
+            GameplayLabFootIkRoutePhase.TurnRight => "turn-right",
             _ => throw new InvalidOperationException("GameplayLab Foot IK route phase is invalid.")
         };
         public bool IsTraversal =>
@@ -132,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField, Min(0f)] float m_EndpointHoldSeconds = 0.75f;
 
         public override string SourceIdentity =>
-            $"gameplay-lab-foot-ik/{m_StartMarkerName}/{m_EndMarkerName}/{m_MoveInputValueId}/{(m_InputProfile ? m_InputProfile.name : "unconfigured")}";
+            $"gameplay-lab-foot-ik/turn-v1/{m_StartMarkerName}/{m_EndMarkerName}/{m_MoveInputValueId}/{(m_InputProfile ? m_InputProfile.name : "unconfigured")}";
 
         public override IUnityFixedCharacterControlSourceRuntime Create(FixedCharacterControlSourceContext context)
         {
@@ -220,6 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         IUnityFixedCharacterControlSourceRuntime,
         ICharacterPresentationLookInput
     {
+        const float TurnVerificationSeconds = 1.2f;
         readonly ActorId m_ActorId;
         readonly string m_RouteIdentity;
         readonly string m_MoveInputValueId;
@@ -312,6 +317,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw;
             }
             m_Active = true;
+            m_Phase = GameplayLabFootIkRoutePhase.TurnLeft;
+            m_HoldTicksRemaining = Mathf.CeilToInt(TurnVerificationSeconds * m_TickRate);
         }
 
         public void Deactivate()
@@ -347,7 +354,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_RenderFrame = renderFrame;
             ulong elapsedTickCount = m_SimulationTick > m_LastRouteUpdateTick
                 ? m_SimulationTick - m_LastRouteUpdateTick
-                : 1UL;
+                : 0UL;
             int elapsedTicks = elapsedTickCount > int.MaxValue ? int.MaxValue : (int)elapsedTickCount;
             m_LastRouteUpdateTick = m_SimulationTick;
             m_LastWorldMovement = ResolveMovement(m_LastCommittedPosition, elapsedTicks);
@@ -500,6 +507,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Vector3 target;
             switch (m_Phase)
             {
+                case GameplayLabFootIkRoutePhase.TurnLeft:
+                    if (m_HoldTicksRemaining > elapsedTicks)
+                    {
+                        m_HoldTicksRemaining -= elapsedTicks;
+                        return ResolveTurnMovement(-1f);
+                    }
+                    m_Phase = GameplayLabFootIkRoutePhase.TurnRight;
+                    m_HoldTicksRemaining = Mathf.CeilToInt(TurnVerificationSeconds * m_TickRate);
+                    return ResolveTurnMovement(1f);
+                case GameplayLabFootIkRoutePhase.TurnRight:
+                    if (m_HoldTicksRemaining > elapsedTicks)
+                    {
+                        m_HoldTicksRemaining -= elapsedTicks;
+                        return ResolveTurnMovement(1f);
+                    }
+                    m_HoldTicksRemaining = 0;
+                    m_Phase = GameplayLabFootIkRoutePhase.AlignStart;
+                    target = m_StartAlignment;
+                    break;
                 case GameplayLabFootIkRoutePhase.AlignStart:
                     if (ReachedAlongRoute(position, m_StartAlignment, -m_RouteDirection))
                     {
@@ -609,6 +635,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return direction.sqrMagnitude <= 0.000001f
                 ? Vector2.zero
                 : direction.normalized;
+        }
+
+        Vector2 ResolveTurnMovement(float horizontal)
+        {
+            Vector2 cameraMovement = new Vector2(horizontal, 1f).normalized;
+            return ToWorldRelative(cameraMovement, m_Owner.CameraRig.BasisSnapshot);
         }
 
         bool ReachedAlongRoute(Vector3 position, Vector3 target, Vector3 direction)

@@ -29,8 +29,12 @@ namespace BTSMTL.Timeline.Editor
         ITimelineEditorToolProvider m_ActiveToolProvider;
         IVisualElementScheduledItem m_UpdateSchedule;
         readonly TimelinePreviewSession m_PreviewSession = new TimelinePreviewSession();
+        readonly AnimationSequencePreviewSession m_SequencePreviewSession =
+            new AnimationSequencePreviewSession();
+        IAnimationTimeDocumentAdapter m_TimeDocumentAdapter;
         bool m_LiveDebug;
         bool m_SyncingVerticalScroll;
+        float m_DocumentScale = 0.12f;
         string m_PendingFocusTrackAuthoringId = string.Empty;
         string m_PendingFocusClipAuthoringId = string.Empty;
         public TimelineEditorView()
@@ -42,9 +46,28 @@ namespace BTSMTL.Timeline.Editor
             InitializeView();
         }
         public TimelineData Timeline { get; private set; }
+        public AnimationSequenceAsset Sequence => m_TimeDocumentAdapter?.Document as AnimationSequenceAsset;
+        internal IAnimationTimeDocumentAdapter TimeDocumentAdapter => m_TimeDocumentAdapter;
         public TimelineEditorSessionContext SessionContext { get; private set; }
         public TimelinePreviewSession PreviewSession => m_PreviewSession;
+        public Vector2 ViewportOffset => m_TimelineField?.TrackScrollView.scrollOffset ?? Vector2.zero;
         public bool IsLiveDebug => m_LiveDebug;
+        public float AuthoringTime => m_TimeDocumentAdapter == null
+            ? m_PreviewSession.Time
+            : m_SequencePreviewSession.Time;
+        public int AuthoringFrame => m_TimeDocumentAdapter == null
+            ? m_PreviewSession.Frame
+            : m_SequencePreviewSession.Frame;
+        internal float DocumentScale
+        {
+            get => m_DocumentScale;
+            set
+            {
+                m_DocumentScale = Mathf.Clamp(value, 0.01f, 10f);
+                if (m_TimeDocumentAdapter != null)
+                    SessionState.SetFloat(DocumentScaleKey(), m_DocumentScale);
+            }
+        }
         public event Action<Clip> OpenClipRequested;
         void InitializeView()
         {
@@ -56,9 +79,9 @@ namespace BTSMTL.Timeline.Editor
             m_TargetField.RegisterValueChangedCallback(evt =>
             {
                 if (evt.newValue == null)
-                    m_PreviewSession.SetTarget(null);
+                    SetPreviewTarget(null);
                 else if (!EditorUtility.IsPersistent(evt.newValue) && evt.newValue is TimelinePreviewTarget target)
-                    m_PreviewSession.SetTarget(target);
+                    SetPreviewTarget(target);
                 else
                     m_TargetField.SetValueWithoutNotify(null);
                 UpdateBindState();
@@ -68,20 +91,28 @@ namespace BTSMTL.Timeline.Editor
             m_PlayButton = this.Q<Button>("play-button");
             m_PlayButton.clicked += () =>
             {
-                m_PreviewSession.Play();
+                if (m_TimeDocumentAdapter != null)
+                    m_SequencePreviewSession.Play();
+                else
+                    m_PreviewSession.Play();
                 UpdateBindState();
             };
             m_PauseButton = this.Q<Button>("pause-button");
             m_PauseButton.clicked += () =>
             {
-                m_PreviewSession.Pause();
+                if (m_TimeDocumentAdapter != null)
+                    m_SequencePreviewSession.Pause();
+                else
+                    m_PreviewSession.Pause();
                 UpdateBindState();
             };
             m_PlaySpeedField = this.Q<FloatField>("play-speed-field");
             m_PlaySpeedField.RegisterValueChangedCallback(evt =>
             {
-                m_PreviewSession.PlaySpeed = evt.newValue;
-                m_PlaySpeedField.SetValueWithoutNotify(m_PreviewSession.PlaySpeed);
+                float speed = Mathf.Max(0.001f, evt.newValue);
+                m_PreviewSession.PlaySpeed = speed;
+                m_SequencePreviewSession.PlaySpeed = speed;
+                m_PlaySpeedField.SetValueWithoutNotify(speed);
             });
             m_PreviewErrorLabel = new Label();
             m_PreviewErrorLabel.style.marginLeft = 6f;
@@ -109,6 +140,7 @@ namespace BTSMTL.Timeline.Editor
             m_TimelineField.VerticalScrollChanged += OnTimelineVerticalScrollChanged;
             m_TimelineField.SelectionChanged += OnTimelineSelectionChanged;
             m_PreviewSession.Evaluated += m_TimelineField.UpdateTimeLocator;
+            m_SequencePreviewSession.Evaluated += m_TimelineField.UpdateTimeLocator;
             CreateToolPanel();
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             Undo.undoRedoEvent += OnUndoRedoEvent;
@@ -123,7 +155,6 @@ namespace BTSMTL.Timeline.Editor
                 SessionContext != null &&
                 ReferenceEquals(SessionContext.SerializedOwner, request.SerializedOwner) &&
                 string.Equals(SessionContext.SerializedPropertyPath, request.SerializedPropertyPath, StringComparison.Ordinal) &&
-                ReferenceEquals(SessionContext.MarkerTopologyContext, request.MarkerTopologyContext) &&
                 ReferenceEquals(SessionContext.ToolCatalog, request.ToolCatalog))
                 return;
             DetachTimeline();
@@ -138,10 +169,32 @@ namespace BTSMTL.Timeline.Editor
             Timeline.UpdateSerializedTimeline();
             Timeline.OnValueChanged += OnTimelineValueChanged;
             m_PreviewSession.SetTimeline(Timeline, resetTime);
+            SetPreviewTarget(m_TargetField.value as TimelinePreviewTarget);
             m_Top.SetEnabled(true);
             m_LeftPanel.SetEnabled(true);
             m_TimelineField.SetEnabled(true);
             PopulateToolMenu();
+            UpdateBindState();
+            EditorCoroutineHelper.WaitWhile(m_TimelineField.PopulateView, () => m_TimelineField.ContentWidth == 0);
+        }
+
+        public void Init(AnimationSequenceAsset sequence)
+        {
+            if (!sequence)
+                throw new ArgumentNullException(nameof(sequence));
+            if (ReferenceEquals(Sequence, sequence))
+                return;
+            DetachTimeline();
+            m_TimeDocumentAdapter = new AnimationSequenceTimeDocumentAdapter(sequence);
+            m_TimeDocumentAdapter.RequireValid();
+            m_SequencePreviewSession.SetSequence(sequence);
+            SetPreviewTarget(m_TargetField.value as TimelinePreviewTarget);
+            m_DocumentScale = SessionState.GetFloat(DocumentScaleKey(), 0.12f);
+            m_Top.SetEnabled(true);
+            m_LeftPanel.SetEnabled(true);
+            m_TimelineField.SetEnabled(true);
+            m_ToolMenu.menu.MenuItems().Clear();
+            m_ToolMenu.SetEnabled(false);
             UpdateBindState();
             EditorCoroutineHelper.WaitWhile(m_TimelineField.PopulateView, () => m_TimelineField.ContentWidth == 0);
         }
@@ -180,10 +233,19 @@ namespace BTSMTL.Timeline.Editor
         void PopulateToolMenu()
         {
             m_ToolMenu.menu.MenuItems().Clear();
+            m_ToolMenu.menu.AppendAction(
+                "Add Section at Playhead",
+                _ => m_TimelineField.AddSectionAtCurrentFrame(),
+                _ => m_LiveDebug ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+            m_ToolMenu.menu.AppendAction(
+                "Delete Selected Section",
+                _ => m_TimelineField.RemoveSelectedSections(),
+                _ => !m_LiveDebug && SessionContext.Selection.Kind == TimelineEditorSelectionKind.Section
+                    ? DropdownMenuAction.Status.Normal
+                    : DropdownMenuAction.Status.Disabled);
             IReadOnlyList<ITimelineEditorToolProvider> providers = SessionContext?.ToolCatalog.Providers;
-            bool available = providers != null && providers.Count > 0;
-            m_ToolMenu.SetEnabled(available);
-            if (!available)
+            m_ToolMenu.SetEnabled(true);
+            if (providers == null || providers.Count == 0)
                 return;
             for (int i = 0; i < providers.Count; i++)
             {
@@ -247,9 +309,40 @@ namespace BTSMTL.Timeline.Editor
             m_TimelineField.UpdateBindState();
             UpdateBindState();
         }
+
+        internal void RefreshTimeDocument(bool refreshView, AnimationTimeSelection selection = null)
+        {
+            if (m_TimeDocumentAdapter == null)
+                return;
+            m_TimeDocumentAdapter.Refresh();
+            m_TimeDocumentAdapter.RequireValid();
+            m_SequencePreviewSession.Refresh(false);
+            if (refreshView)
+                m_TimelineField.PopulateView();
+            m_TimelineField.UpdateBindState();
+            UpdateBindState();
+        }
+
+        internal void SetAuthoringFrame(int frame)
+        {
+            if (m_TimeDocumentAdapter == null)
+                return;
+            float time = Mathf.Clamp(frame, 0, m_TimeDocumentAdapter.DurationFrame) /
+                         Mathf.Max(0.001f, m_TimeDocumentAdapter.FrameRate);
+            m_SequencePreviewSession.SetTime(time);
+            UpdateBindState();
+        }
         public void PopulateView()
         {
             m_TrackHandleContainer.Clear();
+            if (m_TimeDocumentAdapter != null)
+            {
+                m_TrackHandleContainer.Add(new AnimationTimeDocumentTrackHandle(this, m_TimeDocumentAdapter));
+                m_TrackHandleContainer.style.height = AnimationTimeDocumentLayout.ContentHeight(m_TimeDocumentAdapter) +
+                                                      TimelineTrackLayout.VerticalMargin * 2f;
+                OnTimelineVerticalScrollChanged(m_TimelineField.TrackScrollView.scrollOffset.y);
+                return;
+            }
             if (Timeline == null)
                 return;
             foreach (TimelineTrackView trackView in m_TimelineField.TrackViews)
@@ -318,21 +411,29 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_PlaySpeedField == null)
                 return;
-            if (!m_LiveDebug && m_PreviewSession.IsPlaying)
+            if (m_TimeDocumentAdapter != null && m_SequencePreviewSession.IsPlaying)
+                m_SequencePreviewSession.Tick((float)BTSMTLEditorUtility.DeltaTime);
+            else if (!m_LiveDebug && m_PreviewSession.IsPlaying)
                 m_PreviewSession.Tick((float)BTSMTLEditorUtility.DeltaTime);
-            m_PlaySpeedField.SetValueWithoutNotify(m_PreviewSession.PlaySpeed);
+            m_PlaySpeedField.SetValueWithoutNotify(m_TimeDocumentAdapter == null
+                ? m_PreviewSession.PlaySpeed
+                : m_SequencePreviewSession.PlaySpeed);
             UpdateBindState();
         }
         void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             m_TargetField?.SetEnabled(!m_LiveDebug && !Application.isPlaying);
             m_PreviewSession.Pause();
-            m_PreviewSession.SetTarget(null);
+            m_SequencePreviewSession.Pause();
+            SetPreviewTarget(null);
+            m_TargetField?.SetValueWithoutNotify(null);
         }
         void OnUndoRedoEvent(in UndoRedoInfo info)
         {
             if (Timeline != null && info.undoName.StartsWith("Timeline:", StringComparison.Ordinal))
                 RefreshPreview(true);
+            else if (m_TimeDocumentAdapter != null && info.undoName.StartsWith("Animation Sequence:", StringComparison.Ordinal))
+                RefreshTimeDocument(true);
         }
         void OnTimelineValueChanged()
         {
@@ -349,23 +450,33 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_TargetField == null || m_PlayButton == null || m_PauseButton == null || m_PlaySpeedField == null)
                 return;
-            if (Timeline != null)
-                m_TargetField.SetValueWithoutNotify(m_PreviewSession.Target);
-            bool canPreview = !m_LiveDebug && m_PreviewSession.CanPreview;
+            bool sequenceMode = m_TimeDocumentAdapter != null;
+            TimelinePreviewTarget activeTarget = sequenceMode
+                ? m_SequencePreviewSession.Target
+                : m_PreviewSession.Target;
+            m_TargetField.SetValueWithoutNotify(activeTarget);
+            bool canPreview = !m_LiveDebug && (sequenceMode
+                ? m_SequencePreviewSession.CanPreview
+                : m_PreviewSession.CanPreview);
             m_PlayButton.SetEnabled(canPreview);
             m_PauseButton.SetEnabled(canPreview);
             m_PlaySpeedField.SetEnabled(canPreview);
             m_TargetField.SetEnabled(!m_LiveDebug && !Application.isPlaying);
-            string previewStatus = m_PreviewSession.Status;
+            string previewStatus = sequenceMode
+                ? m_SequencePreviewSession.Status
+                : m_PreviewSession.Status;
             m_PreviewErrorLabel.text = previewStatus;
             m_PreviewErrorLabel.tooltip = previewStatus;
-            m_PreviewErrorLabel.style.color = string.IsNullOrEmpty(m_PreviewSession.Error)
+            bool hasError = sequenceMode
+                ? !string.IsNullOrEmpty(m_SequencePreviewSession.Error)
+                : !string.IsNullOrEmpty(m_PreviewSession.Error);
+            m_PreviewErrorLabel.style.color = !hasError
                 ? new Color(0.72f, 0.72f, 0.72f)
                 : new Color(1f, 0.48f, 0.36f);
             m_PreviewErrorLabel.style.display = string.IsNullOrEmpty(previewStatus)
                 ? DisplayStyle.None
                 : DisplayStyle.Flex;
-            m_AddTrackButton.SetEnabled(!m_LiveDebug);
+            m_AddTrackButton.SetEnabled(!sequenceMode && !m_LiveDebug);
         }
         public void SetLiveDebug(bool liveDebug)
         {
@@ -374,7 +485,8 @@ namespace BTSMTL.Timeline.Editor
             if (liveDebug)
             {
                 m_PreviewSession.Pause();
-                m_PreviewSession.SetTarget(null);
+                m_SequencePreviewSession.Pause();
+                SetPreviewTarget(null);
             }
             m_LiveDebug = liveDebug;
             m_TimelineField.SetRuntimeReadOnly(liveDebug);
@@ -407,6 +519,16 @@ namespace BTSMTL.Timeline.Editor
             m_PendingFocusTrackAuthoringId = trackAuthoringId ?? string.Empty;
             m_PendingFocusClipAuthoringId = clipAuthoringId ?? string.Empty;
             return true;
+        }
+        public void RestoreViewport(Vector2 offset)
+        {
+            schedule.Execute(() =>
+            {
+                if (m_TimelineField?.TrackScrollView != null)
+                    m_TimelineField.TrackScrollView.scrollOffset = new Vector2(
+                        Mathf.Max(0f, offset.x),
+                        Mathf.Max(0f, offset.y));
+            });
         }
         bool TryFocusSource(string trackAuthoringId, string clipAuthoringId)
         {
@@ -472,13 +594,38 @@ namespace BTSMTL.Timeline.Editor
             if (Timeline != null)
                 Timeline.OnValueChanged -= OnTimelineValueChanged;
             Timeline = null;
+            m_TimeDocumentAdapter = null;
             CloseToolPanel();
             SessionContext?.Dispose();
             SessionContext = null;
             m_PendingFocusTrackAuthoringId = string.Empty;
             m_PendingFocusClipAuthoringId = string.Empty;
             m_PreviewSession.SetTimeline(null);
+            m_SequencePreviewSession.SetSequence(null);
+            SetPreviewTarget(null);
         }
+
+        void SetPreviewTarget(TimelinePreviewTarget target)
+        {
+            if (m_TimeDocumentAdapter == null)
+            {
+                m_SequencePreviewSession.SetTarget(null);
+                m_PreviewSession.SetTarget(target);
+            }
+            else
+            {
+                m_PreviewSession.SetTarget(null);
+                m_SequencePreviewSession.SetTarget(target);
+            }
+        }
+
+        float DocumentDuration() => m_TimeDocumentAdapter == null
+            ? 0f
+            : m_TimeDocumentAdapter.DurationFrame / Mathf.Max(0.001f, m_TimeDocumentAdapter.FrameRate);
+
+        string DocumentScaleKey() => m_TimeDocumentAdapter == null
+            ? "BTSMTL.AnimationTime.Scale"
+            : $"BTSMTL.AnimationTime.Scale.{m_TimeDocumentAdapter.DocumentIdentity}";
         public void Dispose()
         {
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
@@ -487,6 +634,7 @@ namespace BTSMTL.Timeline.Editor
             if (m_TimelineField != null)
             {
                 m_PreviewSession.Evaluated -= m_TimelineField.UpdateTimeLocator;
+                m_SequencePreviewSession.Evaluated -= m_TimelineField.UpdateTimeLocator;
                 m_TimelineField.VerticalScrollChanged -= OnTimelineVerticalScrollChanged;
                 m_TimelineField.SelectionChanged -= OnTimelineSelectionChanged;
             }
@@ -494,6 +642,7 @@ namespace BTSMTL.Timeline.Editor
                 m_TrackHandleScroll.verticalScroller.valueChanged -= OnTrackHandleVerticalScrollChanged;
             DetachTimeline();
             m_PreviewSession.Dispose();
+            m_SequencePreviewSession.Dispose();
             OpenClipRequested = null;
         }
     }

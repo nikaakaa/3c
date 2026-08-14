@@ -65,7 +65,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 preparation.Snapshot,
                 preparation.Plan,
                 report,
-                true);
+                true,
+                preparation.PresentationPlan);
             if (!session.Initialize() || !preparation.Boundary.Validate(definition, session, report))
                 return new AgentDocumentApplyResult(report, session.TouchedOwners.ToArray());
 

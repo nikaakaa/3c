@@ -35,7 +35,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         readonly HashSet<string> m_ClipAuthoringIds = new HashSet<string>(StringComparer.Ordinal);
         BaseTree m_RootTree;
 
-        public AgentCompileReport Validate(CharacterPipelineDefinition definition)
+        public AgentCompileReport Validate(
+            CharacterPipelineDefinition definition,
+            bool includeExactCompile = true)
         {
             m_Definition = definition;
             string definitionPath = definition ? AssetDatabase.GetAssetPath(definition) : string.Empty;
@@ -104,7 +106,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 IndexBlackboardDeclarations(topology);
                 ValidateAnimationChannels(topology, definition.AnimationPresentationProfile);
                 ValidateLinkedPose(definition.AnimationPresentationProfile);
-                ValidateAnimationMarkerSync(topology);
                 var actionTargetIssues = new List<ActionTargetAuthoringIssue>();
                 ActionTargetAuthoringValidation.Collect(topology, actionTargetIssues);
                 for (int i = 0; i < actionTargetIssues.Count; i++)
@@ -118,26 +119,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     ValidateGraph(entry.Graph, path, entry.VisibleGraphs);
                 }
             }
-            CharacterSimulationBuildResult compileResult = CharacterSimulationBuildOrchestrator.DryRun(definition);
-            AppendFormalCompileReport(compileResult);
-            bool semanticValid = compileResult.Artifact != null && compileResult.Report.IsValid;
-            m_Report.metrics.semanticValidCount = semanticValid ? 1 : 0;
-            m_Report.metrics.semanticInvalidCount = semanticValid ? 0 : 1;
-            m_Report.metrics.compileSuccessCount = compileResult.IsValid ? 1 : 0;
-            m_Report.metrics.compileFailureCount = compileResult.IsValid ? 0 : 1;
+            if (includeExactCompile)
+            {
+                CharacterSimulationBuildResult compileResult =
+                    CharacterSimulationBuildOrchestrator.DryRun(definition);
+                AppendFormalCompileReport(compileResult);
+                bool semanticValid = compileResult.Artifact != null &&
+                                     compileResult.Report.IsValid;
+                m_Report.metrics.semanticValidCount = semanticValid ? 1 : 0;
+                m_Report.metrics.semanticInvalidCount = semanticValid ? 0 : 1;
+                m_Report.metrics.compileSuccessCount = compileResult.IsValid ? 1 : 0;
+                m_Report.metrics.compileFailureCount = compileResult.IsValid ? 0 : 1;
+            }
             m_Report.success = !m_Report.HasErrors();
             return m_Report;
-        }
-
-        void ValidateAnimationMarkerSync(CharacterAuthoringTopologyProjection topology)
-        {
-            var issues = new List<AnimationMarkerSyncAuthoringIssue>();
-            CharacterAnimationMarkerSyncAuthoringContext.Validate(topology, issues);
-            for (int i = 0; i < issues.Count; i++)
-            {
-                AnimationMarkerSyncAuthoringIssue issue = issues[i];
-                m_Report.Error(issue.AuthoringPath, issue.Code, issue.Message);
-            }
         }
 
         void ValidateAnimationChannels(

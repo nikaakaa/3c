@@ -25,25 +25,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public Vector3[] Velocities;
             public float[] Heights;
             public float[] PlantConfidence;
-            public float[] ActionLockConfidence;
             public float[] LandingConfidence;
             public float[] LandingDelay;
             public float[] EventPhase;
+            public float[] ReleasePhase;
             public float[] LiftOffPhase;
+            public float[] ApproachContactPhase;
             public float[] ActionStepDurationSeconds;
             public float[] EventOrdinal;
             public float[] OpposingLandingDelaySeconds;
             public float[] OpposingEventOrdinal;
             public float[] OpposingLandingCycleOffset;
+            public Vector3[] OpposingRootLocalLanding;
             public Vector3[][] RootLocalFootRoute;
             public Vector3[][] RootLocalAnkleRoute;
             public Vector3[][] RootLocalHipRoute;
             public Vector3[][] AuthoredFootPlanarRoute;
             public float[][] AnimationClearanceHeight;
-            public float[][] ConstraintMode;
-            public float[][] SupportPhase;
-            public float[][] FootOrientationPolicy;
-            public float[][] BodyRotationPivotMode;
         }
 
         sealed class SamplingContext : IDisposable
@@ -241,7 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        public static AnimationFootFeaturePair Analyze(
+        public static AnimationFootAnalysisBuildResult Analyze(
             UnityEngine.AnimationClip clip,
             CharacterFootPlacementAnalysisSource source,
             AnimationFootContactSchedule contactSchedule)
@@ -290,7 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return samplingContext.CalibrationGeometryReport;
         }
 
-        static AnimationFootFeaturePair AnalyzeClip(
+        static AnimationFootAnalysisBuildResult AnalyzeClip(
             SamplingContext samplingContext,
             CharacterFootPlacementAnalysisSource source,
             UnityEngine.AnimationClip clip,
@@ -387,6 +385,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 contactSchedule.RightLandingPhases);
             BuildLandingFeatures(
                 left,
+                right,
                 rootPositions,
                 rootRotations,
                 leftLandingSamples,
@@ -397,6 +396,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 contactSchedule.InferLandingEvents);
             BuildLandingFeatures(
                 right,
+                left,
                 rootPositions,
                 rootRotations,
                 rightLandingSamples,
@@ -407,12 +407,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 contactSchedule.InferLandingEvents);
             BuildPairedLandingFeatures(
                 left,
+                right,
+                rootPositions,
+                rootRotations,
                 leftLandingSamples,
                 rightLandingSamples,
                 clip.isLooping,
                 step);
             BuildPairedLandingFeatures(
                 right,
+                left,
+                rootPositions,
+                rootRotations,
                 rightLandingSamples,
                 leftLandingSamples,
                 clip.isLooping,
@@ -430,7 +436,36 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootFeaturePair features = new AnimationFootFeaturePair(
                 BuildCurveSet(left, source.Reduction),
                 BuildCurveSet(right, source.Reduction));
-            return features;
+            return new AnimationFootAnalysisBuildResult(
+                features,
+                new AnimationFootSynchronizationDescriptor(
+                    source.SampleRate,
+                    clip.length,
+                    BuildSynchronizationFoot(
+                        left,
+                        samplingContext.GroundReferenceHeight),
+                    BuildSynchronizationFoot(
+                        right,
+                        samplingContext.GroundReferenceHeight)));
+        }
+
+        static AnimationFootSynchronizationFootDescriptor BuildSynchronizationFoot(
+            SampledFoot foot,
+            float groundReferenceHeight)
+        {
+            int last = foot.SolePositions.Length - 1;
+            var samples = new AnimationFootSynchronizationSample[last + 1];
+            for (int i = 0; i <= last; i++)
+            {
+                Vector3 position = foot.SolePositions[i];
+                samples[i] = new AnimationFootSynchronizationSample(
+                    i / (float)last,
+                    new Vector2(position.x, position.z),
+                    foot.Heights[i] - groundReferenceHeight,
+                    foot.Velocities[i],
+                    foot.PlantConfidence[i]);
+            }
+            return new AnimationFootSynchronizationFootDescriptor(samples);
         }
 
         static SampledFoot AnalyzeFoot(
@@ -462,25 +497,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 Velocities = new Vector3[positions.Length],
                 Heights = new float[positions.Length],
                 PlantConfidence = new float[positions.Length],
-                ActionLockConfidence = new float[positions.Length],
                 LandingConfidence = new float[positions.Length],
                 LandingDelay = new float[positions.Length],
                 EventPhase = new float[positions.Length],
+                ReleasePhase = new float[positions.Length],
                 LiftOffPhase = new float[positions.Length],
+                ApproachContactPhase = new float[positions.Length],
                 ActionStepDurationSeconds = new float[positions.Length],
                 EventOrdinal = new float[positions.Length],
                 OpposingLandingDelaySeconds = new float[positions.Length],
                 OpposingEventOrdinal = new float[positions.Length],
                 OpposingLandingCycleOffset = new float[positions.Length],
+                OpposingRootLocalLanding = new Vector3[positions.Length],
                 RootLocalFootRoute = CreateVectorRoute(positions.Length),
                 RootLocalAnkleRoute = CreateVectorRoute(positions.Length),
                 RootLocalHipRoute = CreateVectorRoute(positions.Length),
                 AuthoredFootPlanarRoute = CreateVectorRoute(positions.Length),
-                AnimationClearanceHeight = CreateScalarRoute(positions.Length),
-                ConstraintMode = CreateScalarRoute(positions.Length),
-                SupportPhase = CreateScalarRoute(positions.Length),
-                FootOrientationPolicy = CreateScalarRoute(positions.Length),
-                BodyRotationPivotMode = CreateScalarRoute(positions.Length)
+                AnimationClearanceHeight = CreateScalarRoute(positions.Length)
             };
             for (int i = 0; i <= last; i++)
             {
@@ -502,20 +535,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 loop,
                 step,
                 "root-local sole velocity");
+            Vector3[] heelVelocities = BuildVelocities(
+                foot.HeelPositions,
+                loop,
+                step,
+                "root-local heel velocity");
             Vector3[] toeVelocities = BuildVelocities(
                 foot.ToePositions,
                 loop,
                 step,
                 "root-local toe velocity");
+            var heelContactConfidence = new float[foot.HeelPositions.Length];
+            var toeContactConfidence = new float[foot.ToePositions.Length];
             var toeHeights = new float[foot.ToePositions.Length];
-            var toeSpeeds = new float[foot.ToePositions.Length];
             for (int i = 0; i < foot.ToePositions.Length; i++)
             {
                 toeHeights[i] = foot.ToePositions[i].y;
-                toeSpeeds[i] = Mathf.Abs(toeVelocities[i].y);
-                foot.ActionLockConfidence[i] = EvaluateContactConfidence(
+                heelContactConfidence[i] = EvaluateContactConfidence(
+                    foot.HeelPositions[i].y,
+                    Mathf.Abs(heelVelocities[i].y),
+                    groundReferenceHeight,
+                    thresholds);
+                toeContactConfidence[i] = EvaluateContactConfidence(
                     toeHeights[i],
-                    toeVelocities[i].magnitude,
+                    Mathf.Abs(toeVelocities[i].y),
                     groundReferenceHeight,
                     thresholds);
                 foot.Heights[i] = Mathf.Min(foot.HeelPositions[i].y, foot.ToePositions[i].y);
@@ -530,10 +573,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 thresholds);
             BuildPlantConfidence(
                 foot.PlantConfidence,
-                toeHeights,
-                toeSpeeds,
+                heelContactConfidence,
+                toeContactConfidence,
                 poseConfidence,
-                groundReferenceHeight,
                 loop,
                 step,
                 thresholds);
@@ -564,15 +606,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static void BuildPlantConfidence(
             float[] confidence,
-            float[] toeHeights,
-            float[] toeSpeeds,
+            float[] heelContactConfidence,
+            float[] toeContactConfidence,
             float[] poseConfidence,
-            float groundReferenceHeight,
             bool loop,
             float step,
             CharacterFootPlacementAnalysisThresholds thresholds)
         {
-            if (toeHeights.Length != confidence.Length || toeSpeeds.Length != confidence.Length ||
+            if (heelContactConfidence.Length != confidence.Length ||
+                toeContactConfidence.Length != confidence.Length ||
                 poseConfidence.Length != confidence.Length)
             {
                 throw new ArgumentException("Foot Analysis plant feature sample counts do not match.");
@@ -584,11 +626,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 for (int i = 0; i <= intervals; i++)
                     confidence[i] = EvaluatePlantSample(
                         ref planted,
-                        toeHeights[i],
-                        toeSpeeds[i],
-                        poseConfidence[i],
-                        groundReferenceHeight,
-                        thresholds);
+                        heelContactConfidence[i],
+                        toeContactConfidence[i],
+                        poseConfidence[i]);
                 StabilizePlantConfidence(confidence, false, step, thresholds.MinimumLandingSegmentSeconds);
                 return;
             }
@@ -598,11 +638,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int i = 0; i < intervals; i++)
             {
                 float value = EvaluateCombinedContactConfidence(
-                    toeHeights[i],
-                    toeSpeeds[i],
-                    poseConfidence[i],
-                    groundReferenceHeight,
-                    thresholds);
+                    heelContactConfidence[i],
+                    toeContactConfidence[i],
+                    poseConfidence[i]);
                 hasEnterEvidence |= value >= 0.5f;
                 if (value <= 0f)
                 {
@@ -617,11 +655,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 int i = (start + offset) % intervals;
                 confidence[i] = EvaluatePlantSample(
                     ref loopPlanted,
-                    toeHeights[i],
-                    toeSpeeds[i],
-                    poseConfidence[i],
-                    groundReferenceHeight,
-                    thresholds);
+                    heelContactConfidence[i],
+                    toeContactConfidence[i],
+                    poseConfidence[i]);
             }
             confidence[intervals] = confidence[0];
             StabilizePlantConfidence(confidence, true, step, thresholds.MinimumLandingSegmentSeconds);
@@ -629,18 +665,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static float EvaluatePlantSample(
             ref bool planted,
-            float toeHeight,
-            float toeSpeed,
-            float poseConfidence,
-            float groundReferenceHeight,
-            CharacterFootPlacementAnalysisThresholds thresholds)
+            float heelContactConfidence,
+            float toeContactConfidence,
+            float poseConfidence)
         {
             float value = EvaluateCombinedContactConfidence(
-                toeHeight,
-                toeSpeed,
-                poseConfidence,
-                groundReferenceHeight,
-                thresholds);
+                heelContactConfidence,
+                toeContactConfidence,
+                poseConfidence);
             bool enter = value >= 0.5f;
             bool exit = value <= 0f;
             if (!planted && enter)
@@ -651,17 +683,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static float EvaluateCombinedContactConfidence(
-            float toeHeight,
-            float toeSpeed,
-            float poseConfidence,
-            float groundReferenceHeight,
-            CharacterFootPlacementAnalysisThresholds thresholds) =>
+            float heelContactConfidence,
+            float toeContactConfidence,
+            float poseConfidence) =>
             Mathf.Min(
-                EvaluateContactConfidence(
-                    toeHeight,
-                    toeSpeed,
-                    groundReferenceHeight,
-                    thresholds),
+                Mathf.Max(heelContactConfidence, toeContactConfidence),
                 poseConfidence);
 
         static float[] BuildIkPoseConfidence(
@@ -882,6 +908,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static void BuildLandingFeatures(
             SampledFoot foot,
+            SampledFoot opposingFoot,
             Vector3[] authoredRootPositions,
             Quaternion[] authoredRootRotations,
             IReadOnlyList<int> ownLandings,
@@ -892,7 +919,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             bool inferLandingEvents)
         {
             int intervals = foot.PlantConfidence.Length - 1;
+            if (opposingFoot == null ||
+                opposingFoot.SolePositions.Length != foot.SolePositions.Length)
+            {
+                throw new ArgumentException("Foot Analysis opposing sole samples do not match.");
+            }
             var rootLocalSole = new Vector3[foot.SolePositions.Length];
+            var opposingRootLocalSole = new Vector3[opposingFoot.SolePositions.Length];
             var rootLocalAnkle = new Vector3[foot.AnklePositions.Length];
             var rootLocalHip = new Vector3[foot.HipPositions.Length];
             for (int i = 0; i < rootLocalSole.Length; i++)
@@ -900,6 +933,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 Quaternion rootInverse = Quaternion.Inverse(authoredRootRotations[i]);
                 rootLocalSole[i] = rootInverse *
                                    (foot.SolePositions[i] - authoredRootPositions[i]);
+                opposingRootLocalSole[i] = rootInverse *
+                                           (opposingFoot.SolePositions[i] - authoredRootPositions[i]);
                 rootLocalAnkle[i] = rootInverse *
                                     (foot.AnklePositions[i] - authoredRootPositions[i]);
                 rootLocalHip[i] = rootInverse *
@@ -950,9 +985,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     previous = opposing - (next - opposing);
                 }
                 int liftOff = ResolveLiftOff(foot.PlantConfidence, previous, next, intervals, loop);
+                int release = ResolveRelease(foot.PlantConfidence, previous, liftOff, intervals, loop);
                 float eventLength = Mathf.Max(1f, next - previous);
-                foot.EventPhase[i] = EvaluatePairedEventPhase(sample, previous, opposing, next);
-                foot.LiftOffPhase[i] = EvaluatePairedEventPhase(liftOff, previous, opposing, next);
+                foot.EventPhase[i] = Mathf.InverseLerp(previous, next, sample);
+                foot.ReleasePhase[i] = Mathf.InverseLerp(previous, next, release);
+                foot.LiftOffPhase[i] = Mathf.InverseLerp(previous, next, liftOff);
+                foot.ApproachContactPhase[i] = Mathf.InverseLerp(
+                    previous,
+                    next,
+                    Mathf.Max(liftOff, next - 1));
                 foot.ActionStepDurationSeconds[i] = eventLength * step;
                 var authoredSoleHeights = new float[AnimationPredictedFootStepCurveSet.RouteSampleCount];
 
@@ -962,11 +1003,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 {
                     float routePhase = routeIndex /
                         (AnimationPredictedFootStepCurveSet.RouteSampleCount - 1f);
-                    float routeSample = EvaluatePairedRouteSample(
-                        routePhase,
-                        previous,
-                        opposing,
-                        next);
+                    float routeSample = Mathf.Lerp(previous, next, routePhase);
                     Vector3 rootLocalFoot = SampleRootLocalRoute(
                         rootLocalSole,
                         routeSample,
@@ -989,48 +1026,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         rootLocalFoot.z);
                     authoredSoleHeights[routeIndex] = rootLocalFoot.y;
 
-                    float plantConfidence = SampleScalarRoute(
-                        foot.PlantConfidence,
-                        routeSample,
-                        loop,
-                        intervals);
-                    float routeInterval = 1f / (AnimationPredictedFootStepCurveSet.RouteSampleCount - 1f);
-                    bool preSwing = routePhase < foot.LiftOffPhase[i];
-                    AnimationFootConstraintMode constraintMode;
-                    AnimationFootSupportPhase supportPhase;
-                    if (preSwing)
-                    {
-                        float lockConfidence = SampleScalarRoute(
-                            foot.ActionLockConfidence,
-                            routeSample,
-                            loop,
-                            intervals);
-                        constraintMode = AnimationFootConstraintFacts.ResolveConstraintMode(
-                            Mathf.Max(
-                                AnimationFootConstraintFacts.GroundedMinimumConfidence,
-                                lockConfidence));
-                        supportPhase = routePhase < foot.LiftOffPhase[i] &&
-                                       routePhase + routeInterval >= foot.LiftOffPhase[i]
-                            ? AnimationFootSupportPhase.Releasing
-                            : AnimationFootSupportPhase.Supporting;
-                    }
-                    else
-                    {
-                        constraintMode = AnimationFootConstraintMode.Unlocked;
-                        supportPhase = routePhase + routeInterval >= 1f
-                            ? AnimationFootSupportPhase.ApproachingContact
-                            : AnimationFootSupportPhase.Unsupported;
-                    }
-                    foot.ConstraintMode[routeIndex][i] = (float)constraintMode;
-                    foot.SupportPhase[routeIndex][i] = (float)supportPhase;
-                    foot.FootOrientationPolicy[routeIndex][i] =
-                        supportPhase == AnimationFootSupportPhase.Unsupported
-                            ? (float)AnimationFootOrientationPolicy.PreserveAnimation
-                            : (float)AnimationFootOrientationPolicy.LandingSurface;
-                    foot.BodyRotationPivotMode[routeIndex][i] =
-                        constraintMode == AnimationFootConstraintMode.Unlocked
-                            ? (float)AnimationBodyRotationPivotMode.Pelvis
-                            : (float)AnimationBodyRotationPivotMode.SupportFoot;
                 }
 
                 for (int routeIndex = 0;
@@ -1039,24 +1034,77 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 {
                     float routePhase = routeIndex /
                         (AnimationPredictedFootStepCurveSet.RouteSampleCount - 1f);
-                    float footPathHeight = Mathf.Lerp(
-                        authoredSoleHeights[0],
-                        authoredSoleHeights[authoredSoleHeights.Length - 1],
-                        routePhase);
+                    float footPathHeight = EvaluateVirtualGroundHeight(
+                        routePhase,
+                        previous,
+                        opposing,
+                        next,
+                        rootLocalSole,
+                        opposingRootLocalSole,
+                        loop,
+                        intervals);
                     foot.AnimationClearanceHeight[routeIndex][i] =
                         Mathf.Max(0f, authoredSoleHeights[routeIndex] - footPathHeight);
                 }
             }
         }
 
+        static float EvaluateVirtualGroundHeight(
+            float routePhase,
+            int previous,
+            int opposing,
+            int next,
+            Vector3[] rootLocalSole,
+            Vector3[] opposingRootLocalSole,
+            bool loop,
+            int intervals)
+        {
+            float startHeight = SampleRootLocalRoute(
+                rootLocalSole,
+                previous,
+                loop,
+                intervals).y;
+            float endHeight = SampleRootLocalRoute(
+                rootLocalSole,
+                next,
+                loop,
+                intervals).y;
+            if (opposing <= previous || opposing >= next)
+                return Mathf.Lerp(startHeight, endHeight, Mathf.Clamp01(routePhase));
+            float splitPhase = Mathf.InverseLerp(previous, next, opposing);
+            float splitHeight = SampleRootLocalRoute(
+                opposingRootLocalSole,
+                opposing,
+                loop,
+                intervals).y;
+            return routePhase <= splitPhase
+                ? Mathf.Lerp(
+                    startHeight,
+                    splitHeight,
+                    Mathf.InverseLerp(0f, splitPhase, routePhase))
+                : Mathf.Lerp(
+                    splitHeight,
+                    endHeight,
+                    Mathf.InverseLerp(splitPhase, 1f, routePhase));
+        }
+
         static void BuildPairedLandingFeatures(
             SampledFoot foot,
+            SampledFoot opposingFoot,
+            IReadOnlyList<Vector3> rootPositions,
+            IReadOnlyList<Quaternion> rootRotations,
             IReadOnlyList<int> ownLandings,
             IReadOnlyList<int> opposingLandings,
             bool loop,
             float step)
         {
             int intervals = foot.PlantConfidence.Length - 1;
+            if (opposingFoot == null || rootPositions == null || rootRotations == null ||
+                opposingFoot.SolePositions.Length != intervals + 1 ||
+                rootPositions.Count != intervals + 1 || rootRotations.Count != intervals + 1)
+            {
+                throw new ArgumentException("Foot Analysis opposing landing samples do not match.");
+            }
             if (ownLandings.Count == 0 || opposingLandings.Count == 0 || intervals <= 0)
                 return;
             for (int sample = 0; sample <= intervals; sample++)
@@ -1086,6 +1134,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 foot.OpposingLandingDelaySeconds[sample] = (opposingLanding - sample) * step;
                 foot.OpposingEventOrdinal[sample] = opposingOrdinal + 1;
                 foot.OpposingLandingCycleOffset[sample] = opposingCycle - ownCycle;
+                int landingSample = loop ? opposingLanding % intervals : opposingLanding;
+                foot.OpposingRootLocalLanding[sample] =
+                    Quaternion.Inverse(rootRotations[landingSample]) *
+                    (opposingFoot.SolePositions[landingSample] - rootPositions[landingSample]);
             }
         }
 
@@ -1232,31 +1284,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return -1;
         }
 
-        static float EvaluatePairedEventPhase(
-            float sample,
+        static int ResolveRelease(
+            float[] plantConfidence,
             int previous,
-            int opposing,
-            int next)
+            int liftOff,
+            int intervals,
+            bool loop)
         {
-            if (opposing <= previous || opposing >= next)
-                return Mathf.InverseLerp(previous, next, sample);
-            if (sample <= opposing)
-                return 0.5f * Mathf.InverseLerp(previous, opposing, sample);
-            return 0.5f + 0.5f * Mathf.InverseLerp(opposing, next, sample);
-        }
-
-        static float EvaluatePairedRouteSample(
-            float eventPhase,
-            int previous,
-            int opposing,
-            int next)
-        {
-            float phase = Mathf.Clamp01(eventPhase);
-            if (opposing <= previous || opposing >= next)
-                return Mathf.Lerp(previous, next, phase);
-            return phase <= 0.5f
-                ? Mathf.Lerp(previous, opposing, phase * 2f)
-                : Mathf.Lerp(opposing, next, (phase - 0.5f) * 2f);
+            int first = loop ? previous + 1 : Mathf.Max(0, previous + 1);
+            for (int sample = first; sample < liftOff; sample++)
+            {
+                int index = loop
+                    ? ((sample % intervals) + intervals) % intervals
+                    : Mathf.Clamp(sample, 0, intervals);
+                if (plantConfidence[index] < AnimationFootConstraintFacts.LockedMinimumConfidence)
+                    return sample;
+            }
+            return liftOff;
         }
 
         static int ResolveLiftOff(
@@ -1286,11 +1330,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             float[] x = new float[count];
             float[] y = new float[count];
             float[] z = new float[count];
+            float[] opposingLandingX = new float[count];
+            float[] opposingLandingY = new float[count];
+            float[] opposingLandingZ = new float[count];
             for (int i = 0; i < count; i++)
             {
                 x[i] = foot.Velocities[i].x;
                 y[i] = foot.Velocities[i].y;
                 z[i] = foot.Velocities[i].z;
+                opposingLandingX[i] = foot.OpposingRootLocalLanding[i].x;
+                opposingLandingY[i] = foot.OpposingRootLocalLanding[i].y;
+                opposingLandingZ[i] = foot.OpposingRootLocalLanding[i].z;
             }
             bool[] eventBoundaries = ResolveEventBoundaries(foot.EventPhase, foot.EventOrdinal);
             AnimationCurve[] routeX = BuildRouteCurves(foot.RootLocalFootRoute, 0, reduction.LandingOffsetTolerance, eventBoundaries);
@@ -1305,10 +1355,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationCurve[] authoredFootPlanarX = BuildRouteCurves(foot.AuthoredFootPlanarRoute, 0, reduction.LandingOffsetTolerance, eventBoundaries);
             AnimationCurve[] authoredFootPlanarZ = BuildRouteCurves(foot.AuthoredFootPlanarRoute, 2, reduction.LandingOffsetTolerance, eventBoundaries);
             AnimationCurve[] animationClearanceHeight = BuildRouteCurves(foot.AnimationClearanceHeight, reduction.HeightTolerance, eventBoundaries);
-            AnimationCurve[] constraintMode = BuildRouteCurves(foot.ConstraintMode, 0f, eventBoundaries);
-            AnimationCurve[] supportPhase = BuildRouteCurves(foot.SupportPhase, 0f, eventBoundaries);
-            AnimationCurve[] footOrientationPolicy = BuildRouteCurves(foot.FootOrientationPolicy, 0f, eventBoundaries);
-            AnimationCurve[] bodyRotationPivotMode = BuildRouteCurves(foot.BodyRotationPivotMode, 0f, eventBoundaries);
             return new AnimationFootFeatureCurveSet(
                 Reduce(x, reduction.VelocityTolerance),
                 Reduce(y, reduction.VelocityTolerance),
@@ -1319,12 +1365,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     ReduceEventScoped(foot.LandingConfidence, reduction.ConfidenceTolerance, eventBoundaries),
                     ReduceEventScoped(foot.LandingDelay, reduction.LandingDelayTolerance, eventBoundaries),
                     ReduceEventScoped(foot.EventPhase, reduction.ConfidenceTolerance, eventBoundaries),
+                    ReduceEventScoped(foot.ReleasePhase, reduction.ConfidenceTolerance, eventBoundaries),
                     ReduceEventScoped(foot.LiftOffPhase, reduction.ConfidenceTolerance, eventBoundaries),
+                    ReduceEventScoped(foot.ApproachContactPhase, reduction.ConfidenceTolerance, eventBoundaries),
                     ReduceEventScoped(foot.ActionStepDurationSeconds, reduction.LandingDelayTolerance, eventBoundaries),
                     ReduceEventScoped(foot.EventOrdinal, 0f, eventBoundaries),
                     ReduceEventScoped(foot.OpposingLandingDelaySeconds, reduction.LandingDelayTolerance, eventBoundaries),
                     ReduceDiscrete(foot.OpposingEventOrdinal),
                     ReduceDiscrete(foot.OpposingLandingCycleOffset),
+                    ReduceStep(opposingLandingX),
+                    ReduceStep(opposingLandingY),
+                    ReduceStep(opposingLandingZ),
                     routeX,
                     routeY,
                     routeZ,
@@ -1336,11 +1387,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     hipRouteZ,
                     authoredFootPlanarX,
                     authoredFootPlanarZ,
-                    animationClearanceHeight,
-                    constraintMode,
-                    supportPhase,
-                    footOrientationPolicy,
-                    bodyRotationPivotMode));
+                    animationClearanceHeight));
         }
 
         static AnimationCurve[] BuildRouteCurves(
@@ -1484,6 +1531,37 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int i = 1; i < values.Length; i++)
             {
                 if (Mathf.RoundToInt(values[i]) == Mathf.RoundToInt(values[i - 1]))
+                    continue;
+                float previousTime = (i - 1) / denominator;
+                if (keys[keys.Count - 1].time < previousTime)
+                    keys.Add(new Keyframe(previousTime, values[i - 1]));
+                keys.Add(new Keyframe(i / denominator, values[i]));
+            }
+            if (keys[keys.Count - 1].time < 1f)
+                keys.Add(new Keyframe(1f, values[values.Length - 1]));
+            var curve = new AnimationCurve(keys.ToArray())
+            {
+                preWrapMode = WrapMode.ClampForever,
+                postWrapMode = WrapMode.ClampForever
+            };
+            for (int i = 0; i < curve.length; i++)
+            {
+                AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.Constant);
+                AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.Constant);
+            }
+            return curve;
+        }
+
+        static AnimationCurve ReduceStep(float[] values)
+        {
+            if (values == null || values.Length < 2)
+                throw new InvalidOperationException("Foot Analysis step curve requires at least two samples.");
+            var keys = new List<Keyframe>();
+            float denominator = values.Length - 1f;
+            keys.Add(new Keyframe(0f, values[0]));
+            for (int i = 1; i < values.Length; i++)
+            {
+                if (Mathf.Abs(values[i] - values[i - 1]) <= 0.000001f)
                     continue;
                 float previousTime = (i - 1) / denominator;
                 if (keys[keys.Count - 1].time < previousTime)

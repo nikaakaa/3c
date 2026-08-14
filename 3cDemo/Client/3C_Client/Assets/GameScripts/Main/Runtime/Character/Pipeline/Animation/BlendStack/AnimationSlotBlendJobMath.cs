@@ -102,9 +102,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             float visualTimeScale,
             ulong contributionContinuityIdentity,
             CharacterFootSide side,
-            out AnimationPredictedFootStepSample predictedStep)
+            out AnimationPredictedFootStepSample predictedStep,
+            out AnimationPredictedFootStepSample incomingPredictedStep)
         {
             predictedStep = default;
+            incomingPredictedStep = default;
             if (!IsValidFoot(sample) || !float.IsFinite(visualTimeScale) || visualTimeScale < 0f ||
                 contributionContinuityIdentity == 0 ||
                 side != CharacterFootSide.Left && side != CharacterFootSide.Right)
@@ -114,7 +116,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             predictedStep = sample.PredictedStep
                 .ApplyTimeScale(visualTimeScale)
                 .BindContribution(contributionContinuityIdentity, side);
-            return IsValidPrediction(predictedStep);
+            incomingPredictedStep = sample.IncomingPredictedStep
+                .ApplyTimeScale(visualTimeScale)
+                .BindContribution(contributionContinuityIdentity, side);
+            return IsValidPrediction(predictedStep) && IsValidPrediction(incomingPredictedStep);
         }
 
         internal static bool TryResolveFoot(
@@ -123,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             float height,
             float plantConfidence,
             AnimationPredictedFootStepSample predictedStep,
+            AnimationPredictedFootStepSample incomingPredictedStep,
             out AnimationFootFeatureSample sample)
         {
             float inverseWeight = 1f / weight;
@@ -139,14 +145,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 resolvedVelocity,
                 resolvedHeight,
                 resolvedPlant,
-                predictedStep);
+                predictedStep,
+                incomingPredictedStep);
             return true;
         }
 
         internal static bool IsValidFoot(AnimationFootFeatureSample sample) =>
             sample.IsValid && AnimationPoseMath.IsFinite(sample.SoleLocalVelocity) &&
             float.IsFinite(sample.SoleHeight) && IsNormalized(sample.PlantConfidence) &&
-            IsValidPrediction(sample.PredictedStep);
+            IsValidPrediction(sample.PredictedStep) &&
+            IsValidPrediction(sample.IncomingPredictedStep);
 
         static bool IsValidPrediction(AnimationPredictedFootStepSample value) =>
             !value.IsValid ||

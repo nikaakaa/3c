@@ -420,6 +420,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 diagnostics);
         }
 
+        internal ComposedAnimationPoseFrame PresentSequencePreview(
+            PresentationPoseSourceIndex sourceIndex,
+            double sampleTime,
+            bool resetContinuity,
+            ulong presentationFrame,
+            ulong latestSimulationTick,
+            float presentationDeltaSeconds,
+            in CharacterBodyPresentationFrame bodyFrame,
+            in CharacterPresentationFactFrame factFrame,
+            CharacterLinkedPoseRuntimeSession linkedPose)
+        {
+            m_PoseRuntime.SetSequencePreview(
+                sourceIndex,
+                sampleTime,
+                resetContinuity);
+            try
+            {
+                return Present(
+                    presentationFrame,
+                    latestSimulationTick,
+                    1f,
+                    presentationDeltaSeconds,
+                    in bodyFrame,
+                    in factFrame,
+                    linkedPose,
+                    null,
+                    null);
+            }
+            finally
+            {
+                m_PoseRuntime.ClearSequencePreview();
+            }
+        }
+
         internal ComposedAnimationPoseFrame Present(
             ulong presentationFrame,
             ulong latestSimulationTick,
@@ -466,6 +500,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     publishStateDiagnostics,
                     linkedPose);
             }
+            string frameStage = "ActionLifecycle";
             try
             {
                 IReadOnlyList<ActionAnimationPlaybackLifecycleFrame>
@@ -495,6 +530,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                      (double)bodyFrame.SampleAlpha;
                 using (ActionSamplingMarker.Auto())
                 {
+                    frameStage = "ActionSampling";
                     m_ActionSampling.ProjectPresentationSamples(
                         transaction.SamplingTransaction,
                         m_ActionPlayback,
@@ -516,6 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
                 using (PoseRoutingMarker.Auto())
                 {
+                    frameStage = "PoseAdvance";
                     m_PoseRuntime.Advance(
                         presentationDeltaSeconds,
                         in factFrame,
@@ -525,6 +562,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool hasMotionMatchingResolution;
                 using (MotionMatchingMarker.Auto())
                 {
+                    frameStage = "MotionMatching";
                     motionMatchingResolution = ResolveMotionMatching(
                         transaction,
                         presentationFrame,
@@ -535,6 +573,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 using (PoseRoutingMarker.Auto())
                 {
+                    frameStage = "PoseFinalize";
                     m_PoseRuntime.FinalizePoseStateFrame(
                         in factFrame,
                         m_FrameWorkspace,
@@ -561,6 +600,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 using (ReleaseProtocolMarker.Auto())
                 {
+                    frameStage = "ReleaseProtocol";
                     CompleteSlotSourceReleases(transaction);
                     PublishActionUsageAndRetirement(transaction);
                     m_ActionSampling.ValidateFrame(
@@ -572,6 +612,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     transaction.MarkValidated();
                 }
 
+                frameStage = "EvaluateBarrier";
                 m_PoseRuntime.ExecuteEvaluateBarrier(
                     m_ActorId,
                     presentationFrame,
@@ -612,6 +653,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ComposedAnimationPoseFrame composedPose;
                 using (FrameCommitMarker.Auto())
                 {
+                    frameStage = "FrameCommit";
                     if (hasMotionMatchingResolution)
                     {
                         MotionMatchingPosePlanCompletion completion =
@@ -629,6 +671,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
                 using (PostCommitMarker.Auto())
                 {
+                    frameStage = "PostCommit";
                     m_PoseRuntime
                         .ApplyValidatedActionBackendReleaseCompletionAcknowledgements();
                     m_PoseRuntime
@@ -698,7 +741,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     MarkFaulted(transaction);
                     linkedPose.Discard();
                 }
-                throw;
+                throw new InvalidOperationException(
+                    $"Animation Presentation failed during '{frameStage}'.",
+                    frameFailure);
             }
         }
 

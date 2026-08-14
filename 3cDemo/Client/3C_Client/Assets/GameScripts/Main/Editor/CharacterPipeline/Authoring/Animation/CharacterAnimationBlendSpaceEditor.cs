@@ -16,7 +16,6 @@ using UnityEditor.Experimental.GraphView;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
-using TimelineUtility = BTSMTL.Timeline.TimelineUtility;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
@@ -572,8 +571,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly ToolbarToggle m_Authoring;
         readonly ToolbarToggle m_Live;
         readonly ToolbarToggle m_References;
-        readonly AnimationTimeField m_SampleTimeField = new AnimationTimeField();
-        CharacterAnimationBlendSpaceSampleId m_TimeFieldSampleId;
         CharacterAnimationBlendSpaceSampleId[] m_Selection = Array.Empty<CharacterAnimationBlendSpaceSampleId>();
         string m_Page = "authoring";
 
@@ -668,7 +665,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var applyPhase = new Button(() => m_Window.ApplyMutation(() =>
             {
                 CharacterAnimationBlendSpacePhasePolicy policy = (CharacterAnimationBlendSpacePhasePolicy)phase.value;
-                CharacterAnimationBlendSpaceSampleId id = policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase
+                CharacterAnimationBlendSpaceSampleId id = policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
+                                                          policy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase
                     ? new CharacterAnimationBlendSpaceSampleId(reference.value)
                     : default;
                 CharacterAnimationBlendSpaceAuthoringService.SetPhase(asset, policy, id);
@@ -705,10 +703,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (sample == null)
                 return;
             AddReadOnly("SampleId", sample.SampleId.Value);
-            var clip = new ObjectField("Animation Clip") { objectType = typeof(AnimationClip), value = sample.Clip };
-            clip.RegisterValueChangedCallback(evt => m_Window.ApplyMutation(() =>
-                CharacterAnimationBlendSpaceAuthoringService.SetSampleClip(m_Window.Asset, sample.SampleId, evt.newValue as AnimationClip)));
-            m_Content.Add(clip);
+            var sequence = new ObjectField("Sequence")
+            {
+                objectType = typeof(CharacterAnimationSequenceAsset),
+                value = sample.Sequence,
+                allowSceneObjects = false
+            };
+            sequence.RegisterValueChangedCallback(evt => m_Window.ApplyMutation(() =>
+                CharacterAnimationBlendSpaceAuthoringService.SetSampleSequence(
+                    m_Window.Asset,
+                    sample.SampleId,
+                    evt.newValue as CharacterAnimationSequenceAsset)));
+            m_Content.Add(sequence);
+            var sequenceCommands = new VisualElement();
+            sequenceCommands.style.flexDirection = FlexDirection.Row;
+            var openSequence = new Button(() => TimelineEditorWindow.Open(sample.Sequence)) { text = "Open Sequence" };
+            openSequence.SetEnabled(sample.Sequence);
+            sequenceCommands.Add(openSequence);
+            var pingSequence = new Button(() => EditorGUIUtility.PingObject(sample.Sequence)) { text = "Ping Sequence" };
+            pingSequence.SetEnabled(sample.Sequence);
+            sequenceCommands.Add(pingSequence);
+            m_Content.Add(sequenceCommands);
             var position = new Vector2Field("Position") { value = sample.Position };
             m_Content.Add(position);
             m_Content.Add(new Button(() => m_Window.ApplyMutation(() =>
@@ -723,7 +738,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     sample.SampleId,
                     (CharacterAnimationBlendSpaceSampleRole)role.value,
                     time.value))) { text = "Apply Role" });
-            DrawSampleTimeField(sample);
             DrawSampleParameters(sample);
             var commands = new VisualElement { style = { flexDirection = FlexDirection.Row } };
             commands.Add(new Button(() => m_Window.ApplyMutation(() =>
@@ -789,196 +803,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             })) { text = "Apply Delta" });
             m_Content.Add(new Button(() => m_Window.ApplyMutation(() =>
                 CharacterAnimationBlendSpaceAuthoringService.DeleteSamples(m_Window.Asset, m_Selection))) { text = "Delete Selected" });
-        }
-
-        void DrawSampleTimeField(CharacterAnimationBlendSpaceSample sample)
-        {
-            if (!m_TimeFieldSampleId.Equals(sample.SampleId))
-            {
-                m_TimeFieldSampleId = sample.SampleId;
-                m_SampleTimeField.ResetView();
-            }
-            var foldout = new Foldout { text = "Sample Time Authoring", value = true };
-            var adapter = new BlendSpaceSampleTimeAdapter(m_Window, sample);
-            var field = new IMGUIContainer(() =>
-            {
-                EditorGUILayout.LabelField("Wheel: zoom · Alt/Middle drag: pan · click marker lane: add · drag marker: move", EditorStyles.miniLabel);
-                Rect rect = GUILayoutUtility.GetRect(220f, m_SampleTimeField.RequiredHeight, GUILayout.ExpandWidth(true));
-                m_SampleTimeField.Draw(rect, adapter);
-                EditorGUILayout.Space(4f);
-                m_SampleTimeField.DrawSelectionInspector(adapter);
-                if (!adapter.CanEditCurve)
-                    EditorGUILayout.HelpBox("The curve lane is the generated left/right contact confidence envelope. It is read-only; markers are the authored sample data.", MessageType.Info);
-            });
-            field.style.minHeight = m_SampleTimeField.RequiredHeight + 72f;
-            foldout.Add(field);
-            m_Content.Add(foldout);
-        }
-
-        sealed class BlendSpaceSampleTimeAdapter : IAnimationTimeFieldAuthoringAdapter
-        {
-            readonly CharacterAnimationBlendSpaceEditorWindow m_Window;
-            readonly CharacterAnimationBlendSpaceSampleId m_SampleId;
-            readonly AnimationClip m_Clip;
-            AnimationTimeMarker[] m_Markers;
-            AnimationTimeAnalysisCandidate[] m_Candidates = Array.Empty<AnimationTimeAnalysisCandidate>();
-            AnimationFootContactCandidateSet m_CandidateSet;
-            AnimationCurve m_ContactCurve = AnimationCurve.Constant(0f, 1f, 0f);
-            string m_AnalysisStatus = "Select Refresh to inspect the exact Foot Analysis artifact.";
-
-            internal BlendSpaceSampleTimeAdapter(
-                CharacterAnimationBlendSpaceEditorWindow window,
-                CharacterAnimationBlendSpaceSample sample)
-            {
-                m_Window = window ?? throw new ArgumentNullException(nameof(window));
-                m_SampleId = sample?.SampleId ?? throw new ArgumentNullException(nameof(sample));
-                m_Clip = sample.Clip;
-                m_Markers = BuildMarkers(sample);
-            }
-
-            public string AuthoringIdentity => $"{m_Window.Asset.BlendSpaceId}/{m_SampleId}";
-            public int DurationFrames => Mathf.Max(1, Mathf.RoundToInt((m_Clip ? m_Clip.length : 1f) * FrameRate));
-            public float FrameRate => m_Clip && float.IsFinite(m_Clip.frameRate) && m_Clip.frameRate > 0f ? m_Clip.frameRate : TimelineUtility.FrameRate;
-            public bool IsCyclic => true;
-            public bool CanEditMarkers => m_Clip;
-            public string CurveLabel => "GENERATED CONTACT CONFIDENCE";
-            public int CurveStartFrame => 0;
-            public int CurveDurationFrames => DurationFrames;
-            public bool CanEditCurve => false;
-            public IReadOnlyList<AnimationTimeMarker> Markers => m_Markers;
-            public IReadOnlyList<AnimationTimeAnalysisCandidate> AnalysisCandidates => m_Candidates;
-            public string AnalysisStatus => m_AnalysisStatus;
-            public bool CanRefreshAnalysis => m_Clip && m_Window.Profile;
-            public bool CanApplyAnalysisCandidates => m_CandidateSet != null && m_Candidates.Length > 0;
-
-            public AnimationCurve ReadCurve() => CopyCurve(m_ContactCurve);
-
-            public void ReplaceMarkers(AnimationTimeMarker[] markers, string undoName)
-            {
-                CharacterAnimationBlendSpaceMarker[] values = markers
-                    .OrderBy(value => value.Frame)
-                    .ThenBy(value => value.MarkerId, StringComparer.Ordinal)
-                    .Select(value => new CharacterAnimationBlendSpaceMarker(
-                        value.MarkerId,
-                        Mathf.Clamp(value.Frame / (float)DurationFrames, 0f, 1f - 1f / DurationFrames)))
-                    .ToArray();
-                m_Window.ApplyMutation(() =>
-                    CharacterAnimationBlendSpaceAuthoringService.SetSampleMarkers(m_Window.Asset, m_SampleId, values));
-            }
-
-            public void ReplaceCurve(AnimationCurve curve, string undoName) =>
-                throw new InvalidOperationException("Blend Space generated contact confidence is read-only.");
-
-            public void Seek(int frame) =>
-                m_Window.SetTransientPreviewTime(frame / (float)Mathf.Max(1, DurationFrames - 1));
-
-            public void RefreshAnalysis()
-            {
-                m_CandidateSet = null;
-                m_Candidates = Array.Empty<AnimationTimeAnalysisCandidate>();
-                m_ContactCurve = AnimationCurve.Constant(0f, 1f, 0f);
-                try
-                {
-                    if (!m_Clip)
-                        throw new InvalidOperationException("Sample has no Animation Clip.");
-                    CharacterAnimationPresentationProfile profile = m_Window.Profile;
-                    if (!profile)
-                        throw new InvalidOperationException("Blend Space has no exact Presentation Profile context.");
-                    string path = AssetDatabase.GUIDToAssetPath(profile.FootPlacementAnalysisSourceAssetGuid);
-                    CharacterFootPlacementAnalysisSource source = AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(path);
-                    if (!source)
-                        throw new InvalidOperationException("Profile Foot Analysis Source does not resolve to an exact asset.");
-                    AnimationFootAnalysisArtifactIdentity identity = AnimationFootAnalysisArtifactBuilder.GetExpectedIdentity(m_Clip, source);
-                    AnimationFootAnalysisArtifactInspection inspection = AnimationFootAnalysisArtifactStore.Inspect(identity);
-                    if (inspection.Status != AnimationFootAnalysisArtifactStatus.Ready || inspection.Artifact == null)
-                        throw new InvalidOperationException($"Foot Analysis artifact is {inspection.Status}: {inspection.Error}");
-                    m_CandidateSet = AnimationFootContactCandidateSet.Build(m_Clip, inspection.Artifact);
-                    m_Candidates = BuildCandidates(m_CandidateSet, DurationFrames);
-                    m_ContactCurve = BuildContactCurve(inspection.Artifact);
-                    m_AnalysisStatus = $"Ready · {m_Candidates.Length} candidates · artifact {m_CandidateSet.ArtifactContentHash}";
-                }
-                catch (Exception exception)
-                {
-                    m_AnalysisStatus = exception.Message;
-                }
-            }
-
-            public void ApplyAnalysisCandidates(string undoName)
-            {
-                if (!CanApplyAnalysisCandidates)
-                    throw new InvalidOperationException("No exact Foot Analysis candidates are ready to apply.");
-                CharacterAnimationBlendSpaceSample sample = m_Window.Asset.FindSample(m_SampleId);
-                CharacterAnimationBlendSpaceMarker[] markers = sample.Markers
-                    .Where(value =>
-                        !string.Equals(value.MarkerId, TimelineFootContactMarkerProposal.LeftMarkerId, StringComparison.Ordinal) &&
-                        !string.Equals(value.MarkerId, TimelineFootContactMarkerProposal.RightMarkerId, StringComparison.Ordinal))
-                    .Concat(m_CandidateSet.Candidates.Select(value =>
-                        new CharacterAnimationBlendSpaceMarker(value.MarkerId, value.SourceNormalizedTime)))
-                    .OrderBy(value => value.NormalizedTime)
-                    .ThenBy(value => value.MarkerId, StringComparer.Ordinal)
-                    .ToArray();
-                m_Window.ApplyMutation(() =>
-                    CharacterAnimationBlendSpaceAuthoringService.SetSampleMarkers(m_Window.Asset, m_SampleId, markers));
-            }
-
-            static AnimationTimeMarker[] BuildMarkers(CharacterAnimationBlendSpaceSample sample)
-            {
-                var occurrences = new Dictionary<string, int>(StringComparer.Ordinal);
-                var result = new AnimationTimeMarker[sample.Markers.Count];
-                int duration = Mathf.Max(1, Mathf.RoundToInt((sample.Clip ? sample.Clip.length : 1f) *
-                    (sample.Clip && sample.Clip.frameRate > 0f ? sample.Clip.frameRate : TimelineUtility.FrameRate)));
-                for (int i = 0; i < result.Length; i++)
-                {
-                    CharacterAnimationBlendSpaceMarker marker = sample.Markers[i];
-                    occurrences.TryGetValue(marker.MarkerId, out int occurrence);
-                    occurrences[marker.MarkerId] = occurrence + 1;
-                    result[i] = new AnimationTimeMarker(
-                        $"{sample.SampleId}/marker/{marker.MarkerId}/{occurrence}",
-                        marker.MarkerId,
-                        Mathf.Clamp(Mathf.RoundToInt(marker.NormalizedTime * duration), 0, duration - 1));
-                }
-                return result;
-            }
-
-            static AnimationTimeAnalysisCandidate[] BuildCandidates(AnimationFootContactCandidateSet source, int durationFrames)
-            {
-                var result = new AnimationTimeAnalysisCandidate[source.Candidates.Count];
-                for (int i = 0; i < result.Length; i++)
-                {
-                    AnimationFootContactCandidate candidate = source.Candidates[i];
-                    Color color = candidate.Side == TimelineFootContactSide.Left
-                        ? new Color(0.2f, 0.85f, 1f)
-                        : new Color(1f, 0.52f, 0.25f);
-                    result[i] = new AnimationTimeAnalysisCandidate(
-                        $"{candidate.MarkerId}/{i}",
-                        candidate.MarkerId,
-                        Mathf.Clamp(Mathf.RoundToInt(candidate.SourceNormalizedTime * durationFrames), 0, durationFrames - 1),
-                        candidate.PlantConfidence,
-                        color);
-                }
-                return result;
-            }
-
-            static AnimationCurve BuildContactCurve(AnimationFootAnalysisArtifact artifact)
-            {
-                const int intervals = 64;
-                var keys = new Keyframe[intervals + 1];
-                for (int i = 0; i <= intervals; i++)
-                {
-                    float time = i / (float)intervals;
-                    float value = Mathf.Max(
-                        artifact.Features.Left.PlantConfidence.Evaluate(time),
-                        artifact.Features.Right.PlantConfidence.Evaluate(time));
-                    keys[i] = new Keyframe(time, Mathf.Clamp01(value));
-                }
-                return new AnimationCurve(keys) { preWrapMode = WrapMode.Loop, postWrapMode = WrapMode.Loop };
-            }
-
-            static AnimationCurve CopyCurve(AnimationCurve source) => new AnimationCurve(source.keys)
-            {
-                preWrapMode = source.preWrapMode,
-                postWrapMode = source.postWrapMode
-            };
         }
 
         void DrawSampleParameters(CharacterAnimationBlendSpaceSample sample)

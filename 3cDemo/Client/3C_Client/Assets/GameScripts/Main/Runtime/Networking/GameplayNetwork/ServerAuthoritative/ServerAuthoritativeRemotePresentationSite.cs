@@ -109,6 +109,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     m_BodyPresentationProfile,
                     worldAwarePresentation,
                     physicsScene,
+                    null,
                     diagnosticsContext);
                 runtime = presentationBinding.Runtime;
                 registration = new ServerAuthoritativeRemotePresentationRegistration(

@@ -16,18 +16,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             double continuousTime,
             string previousMarkerId,
             string nextMarkerId,
-            float segmentFraction)
+            float leaderSegmentFraction,
+            float followerSegmentFraction,
+            int leaderOccurrenceIndex,
+            int followerOccurrenceIndex)
         {
             ContinuousTime = continuousTime;
             PreviousMarkerId = previousMarkerId ?? string.Empty;
             NextMarkerId = nextMarkerId ?? string.Empty;
-            SegmentFraction = segmentFraction;
+            LeaderSegmentFraction = leaderSegmentFraction;
+            FollowerSegmentFraction = followerSegmentFraction;
+            LeaderOccurrenceIndex = leaderOccurrenceIndex;
+            FollowerOccurrenceIndex = followerOccurrenceIndex;
         }
 
         internal double ContinuousTime { get; }
         internal string PreviousMarkerId { get; }
         internal string NextMarkerId { get; }
-        internal float SegmentFraction { get; }
+        internal float LeaderSegmentFraction { get; }
+        internal float FollowerSegmentFraction { get; }
+        internal int LeaderOccurrenceIndex { get; }
+        internal int FollowerOccurrenceIndex { get; }
+        internal float SegmentFraction => LeaderSegmentFraction;
     }
 
     internal static class MarkerSegmentTimeMapper
@@ -37,26 +47,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             double leaderContinuousTime,
             AnimationMarkerSyncBinding followerBinding,
             double followerContinuousTime,
-            MarkerSegmentRelationCursor cursor) =>
+            MarkerSegmentRelationCursor cursor,
+            AnimationFootPhaseTimeWarpPlan footPhaseWarp = null) =>
             MapDetailed(
                 leaderBinding,
                 leaderContinuousTime,
                 followerBinding,
                 followerContinuousTime,
-                cursor).ContinuousTime;
+                cursor,
+                footPhaseWarp).ContinuousTime;
 
         internal static MarkerMappedTime MapDetailed(
             AnimationMarkerSyncBinding leaderBinding,
             double leaderContinuousTime,
             AnimationMarkerSyncBinding followerBinding,
             double followerContinuousTime,
-            MarkerSegmentRelationCursor cursor)
+            MarkerSegmentRelationCursor cursor,
+            AnimationFootPhaseTimeWarpPlan footPhaseWarp = null)
         {
             if (leaderBinding == null ||
                 followerBinding == null ||
                 cursor == null ||
                 !leaderBinding.IsMarkerGroup ||
                 !followerBinding.IsMarkerGroup ||
+                leaderBinding.TimeMapping != followerBinding.TimeMapping ||
+                leaderBinding.TimeMapping == AnimationSyncTimeMapping.GeneratedFootPhase && footPhaseWarp == null ||
+                leaderBinding.TimeMapping == AnimationSyncTimeMapping.MarkerSegmentFraction && footPhaseWarp != null ||
                 !double.IsFinite(leaderContinuousTime) ||
                 leaderContinuousTime < 0d ||
                 !double.IsFinite(followerContinuousTime) ||
@@ -110,10 +126,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     followerBinding,
                     cursor.FollowerOrdinal,
                     out long followerCycle);
+            float followerFraction = leader.Fraction;
+            if (leaderBinding.TimeMapping == AnimationSyncTimeMapping.GeneratedFootPhase)
+            {
+                followerFraction = footPhaseWarp.RequireSegment(
+                    leader.Segment.OccurrenceIndex,
+                    follower.OccurrenceIndex,
+                    leader.Segment.PreviousMarkerId,
+                    leader.Segment.NextMarkerId).Evaluate(leader.Fraction);
+            }
             double mapped =
                 followerCycle * followerBinding.DurationSeconds +
                 follower.StartTimeSeconds +
-                leader.Fraction * follower.DurationSeconds;
+                followerFraction * follower.DurationSeconds;
             if (!double.IsFinite(mapped) || mapped < 0d)
             {
                 throw new InvalidOperationException(
@@ -123,7 +148,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 mapped,
                 leader.Segment.PreviousMarkerId,
                 leader.Segment.NextMarkerId,
-                leader.Fraction);
+                leader.Fraction,
+                followerFraction,
+                leader.Segment.OccurrenceIndex,
+                follower.OccurrenceIndex);
         }
 
         static bool TryLocateSegment(
@@ -141,11 +169,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (binding.SequenceTopology ==
                 AnimationMarkerSequenceTopology.Finite)
             {
-                if (continuousTime < 0d ||
-                    continuousTime > binding.DurationSeconds)
-                {
+                if (continuousTime < 0d)
                     return false;
-                }
+                continuousTime = Math.Min(
+                    continuousTime,
+                    binding.DurationSeconds);
                 AnimationMarkerSyncSegmentOccurrence first =
                     binding.Segments[0];
                 if (continuousTime <= first.StartTimeSeconds)
@@ -261,7 +289,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     "Marker follower has no matching segment.");
             }
 
-            long bestOrdinal = -1;
+            bool hasBest = false;
+            long bestOrdinal = 0;
             double bestDistance = double.MaxValue;
             AnimationMarkerSyncSegmentOccurrence best = null;
             for (int i = 0; i < occurrences.Length; i++)
@@ -280,6 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         occurrence.OccurrenceIndex,
                         candidate,
                         rawTime,
+                        ref hasBest,
                         ref bestOrdinal,
                         ref bestDistance,
                         ref best);
@@ -310,12 +340,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         ordinal,
                         candidate,
                         rawTime,
+                        ref hasBest,
                         ref bestOrdinal,
                         ref bestDistance,
                         ref best);
                 }
             }
-            if (bestOrdinal < 0)
+            if (!hasBest)
             {
                 throw new InvalidOperationException(
                     "Marker follower has no reachable matching segment.");
@@ -329,14 +360,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             long ordinal,
             double candidate,
             double rawTime,
+            ref bool hasBest,
             ref long bestOrdinal,
             ref double bestDistance,
             ref AnimationMarkerSyncSegmentOccurrence best)
         {
             double distance = Math.Abs(candidate - rawTime);
             bool replace =
+                !hasBest ||
                 distance < bestDistance - 0.0000001d;
             if (!replace &&
+                hasBest &&
                 Math.Abs(distance - bestDistance) <=
                 0.0000001d &&
                 best != null)
@@ -359,6 +393,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             bestOrdinal = ordinal;
             bestDistance = distance;
             best = occurrence;
+            hasBest = true;
         }
 
         static long AdvanceFollowerOrdinal(

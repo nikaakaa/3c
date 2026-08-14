@@ -358,8 +358,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "plant-confidence-exit" => CharacterPoseTuningValue.Float(value.PlantConfidenceExit),
                     "anchor-blend-speed" => CharacterPoseTuningValue.Float(value.AnchorBlendSpeed),
                     "maximum-anchor-distance" => CharacterPoseTuningValue.Float(value.MaximumAnchorDistance),
-                    "minimum-leg-extension-ratio" => CharacterPoseTuningValue.Float(value.MinimumLegExtensionRatio),
-                    "maximum-leg-extension-ratio" => CharacterPoseTuningValue.Float(value.MaximumLegExtensionRatio),
                     "maximum-pelvis-lowering" => CharacterPoseTuningValue.Float(value.MaximumPelvisLowering),
                     "maximum-pelvis-raising" => CharacterPoseTuningValue.Float(value.MaximumPelvisRaising),
                     _ => throw new InvalidOperationException($"Stance Stabilization tuning field '{field}' is not declared.")

@@ -496,6 +496,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out ProjectedActionPresentationSample targetProjected);
             PresentationPoseSampleTime targetRawSample =
                 targetProjected.ProjectedRawSample;
+            AnimationFootPhaseTimeWarpPlan footPhaseWarp =
+                source.Animation.MarkerSync.TimeMapping ==
+                BTSMTL.Timeline.AnimationSyncTimeMapping.GeneratedFootPhase
+                    ? m_Bindings.RequireFootPhaseWarp(
+                        source.ProducerId,
+                        target.ProducerId)
+                    : null;
             return m_MarkerState.ResolveRelated(
                 transaction.MarkerLease,
                 relationId,
@@ -503,7 +510,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 source.Animation.MarkerSync,
                 targetPlaybackId,
                 target.Animation.MarkerSync,
-                in targetRawSample);
+                in targetRawSample,
+                footPhaseWarp);
         }
 
         public void ResolveSlotMarkers(
@@ -635,7 +643,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in projected,
                         in effective,
                         m_FootPlacementWeightParameterIndex);
-                frameWorkspace.SetActionFrame(frameLease, frame);
+                frameWorkspace.SetActionFrame(frameLease, in frame);
             }
         }
 

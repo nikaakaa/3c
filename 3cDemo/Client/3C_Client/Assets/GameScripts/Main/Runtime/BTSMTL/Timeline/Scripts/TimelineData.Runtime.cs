@@ -31,6 +31,12 @@ namespace BTSMTL.Timeline
                 if (track.MaxFrame > MaxFrame)
                     MaxFrame = track.MaxFrame;
             }
+            for (int i = 0; i < m_Sections.Count; i++)
+            {
+                TimelineSection section = m_Sections[i];
+                if (section != null && section.Frame > MaxFrame)
+                    MaxFrame = section.Frame;
+            }
             Duration = (float)MaxFrame / TimelineUtility.FrameRate;
             OnValueChanged?.Invoke();
         }
@@ -294,6 +300,56 @@ namespace BTSMTL.Timeline
             clip.Track.RemoveClip(clip);
 
             Init();
+        }
+        public TimelineSection AddSection(string name, int frame)
+        {
+            TimelineSection section = TimelineSection.Create(name, frame);
+            if (m_Sections.Exists(value => value != null && string.Equals(value.Name, section.Name, StringComparison.Ordinal)))
+                throw new InvalidOperationException($"Timeline Section '{section.Name}' already exists.");
+            m_Sections.Add(section);
+            SortSections();
+            Init();
+            return section;
+        }
+#if UNITY_EDITOR
+        public TimelineSection EnsureSection(string authoringId, string name, int frame)
+        {
+            TimelineSection section = m_Sections.SingleOrDefault(value =>
+                value != null && string.Equals(value.AuthoringId, authoringId, StringComparison.Ordinal));
+            if (section == null)
+            {
+                section = TimelineSection.Create(authoringId, name, frame);
+                m_Sections.Add(section);
+            }
+            ConfigureSection(section, name, frame);
+            return section;
+        }
+#endif
+        public void ConfigureSection(TimelineSection section, string name, int frame)
+        {
+            if (section == null || !m_Sections.Contains(section))
+                throw new ArgumentException("Timeline Section is not owned by this Timeline.", nameof(section));
+            string value = name?.Trim() ?? string.Empty;
+            if (m_Sections.Exists(candidate => candidate != null && !ReferenceEquals(candidate, section) &&
+                string.Equals(candidate.Name, value, StringComparison.Ordinal)))
+                throw new InvalidOperationException($"Timeline Section '{value}' already exists.");
+            section.Configure(value, frame);
+            SortSections();
+            Init();
+        }
+        public void RemoveSection(TimelineSection section)
+        {
+            if (section == null || !m_Sections.Remove(section))
+                throw new ArgumentException("Timeline Section is not owned by this Timeline.", nameof(section));
+            Init();
+        }
+        void SortSections()
+        {
+            m_Sections.Sort((left, right) =>
+            {
+                int frame = (left?.Frame ?? int.MaxValue).CompareTo(right?.Frame ?? int.MaxValue);
+                return frame != 0 ? frame : string.CompareOrdinal(left?.AuthoringId, right?.AuthoringId);
+            });
         }
         public void UpdateMix()
         {

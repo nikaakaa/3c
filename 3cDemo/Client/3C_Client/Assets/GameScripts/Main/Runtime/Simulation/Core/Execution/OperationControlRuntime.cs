@@ -212,12 +212,24 @@ namespace ThirdPersonSimulation
         {
             if (m_StateExecution.Count == 0)
                 return false;
-            OperationHandle state = m_StateExecution.Peek().State;
+            StateExecutionContext context = m_StateExecution.Peek();
+            if (context.HasRootCompletedOverride)
+                return context.RootCompletedOverride;
+            OperationHandle state = context.State;
             ProgramControlFlowEdge root = m_Topology.StateRoot(state);
             if (root == null)
                 return false;
             int lifecycle = FindOperationSlot(m_Topology.Operation(root.Target), ProgramStateSemantic.RunnableLifecycle);
             return lifecycle >= 0 && m_Target.ReadInt32(lifecycle) == (int)OperationRunnableStatus.Success;
+        }
+
+        public ProgramControlFlowEdge PredictCurrentStateRootCompletionTransition()
+        {
+            if (m_StateExecution.Count == 0)
+                return null;
+            OperationHandle state = m_StateExecution.Peek().State;
+            using (PushStateExecutionScope(state, -1, true))
+                return SelectTransition(state);
         }
 
         public int CurrentStateExitCause()
@@ -273,14 +285,37 @@ namespace ThirdPersonSimulation
 
         StateExecutionScope PushStateExecutionScope(OperationHandle state, int exitCause)
         {
-            PushStateExecutionContext(state, exitCause);
+            PushStateExecutionContext(state, exitCause, false, false);
+            return new StateExecutionScope(this);
+        }
+
+        StateExecutionScope PushStateExecutionScope(
+            OperationHandle state,
+            int exitCause,
+            bool rootCompletedOverride)
+        {
+            PushStateExecutionContext(state, exitCause, true, rootCompletedOverride);
             return new StateExecutionScope(this);
         }
 
         void PushStateExecutionContext(OperationHandle state, int exitCause)
         {
+            PushStateExecutionContext(state, exitCause, false, false);
+        }
+
+        void PushStateExecutionContext(
+            OperationHandle state,
+            int exitCause,
+            bool hasRootCompletedOverride,
+            bool rootCompletedOverride)
+        {
             string path = FindStateExecutionPath(state);
-            m_StateExecution.Push(new StateExecutionContext(state, exitCause, path));
+            m_StateExecution.Push(new StateExecutionContext(
+                state,
+                exitCause,
+                path,
+                hasRootCompletedOverride,
+                rootCompletedOverride));
         }
 
         public void RequireExecution(OperationHandle handle)
@@ -962,16 +997,25 @@ namespace ThirdPersonSimulation
 
         readonly struct StateExecutionContext
         {
-            public StateExecutionContext(OperationHandle state, int exitCause, string path)
+            public StateExecutionContext(
+                OperationHandle state,
+                int exitCause,
+                string path,
+                bool hasRootCompletedOverride,
+                bool rootCompletedOverride)
             {
                 State = state;
                 ExitCause = exitCause;
                 Path = path ?? string.Empty;
+                HasRootCompletedOverride = hasRootCompletedOverride;
+                RootCompletedOverride = rootCompletedOverride;
             }
 
             public OperationHandle State { get; }
             public int ExitCause { get; }
             public string Path { get; }
+            public bool HasRootCompletedOverride { get; }
+            public bool RootCompletedOverride { get; }
         }
 
         readonly struct StateExecutionScope : IDisposable

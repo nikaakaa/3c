@@ -2,9 +2,11 @@
 
 ### Requirement: Animation Foot Analysis必须拥有Editor-only规范产物
 
-Animation Foot Analysis MUST为`in-place Pose AnimationClip + Rig v4 + Sampling Rig + Calibration v4 + Geometry Validation + Analysis Settings + Analyzer Version`生成不可变Editor-only artifact。Artifact MUST保存同一采样域中的左右脚Plant Confidence、Constraint Mode、root-local Foot平面路线、鞋底相对平地参考的Clearance、同相位Hip路线、Landing鞋底姿态和逐脚Landing Event。Artifact MUST不保存Action Motion Clip、RootMotionCurveAsset、Action Root路线、运行速度或世界位移。
+Animation Foot Analysis MUST为`in-place Pose AnimationClip + Rig v4 + Sampling Rig + Calibration v4 + Geometry Validation + Analysis Settings + Analyzer Version`生成不可变Editor-only artifact。Artifact MUST保存同一采样域中的左右脚Plant Confidence、精确Release/Lift-Off/ApproachContact边界、root-local Foot平面路线、鞋底相对平地参考的Clearance、同相位Hip路线、Landing鞋底姿态和逐脚Landing Event。Artifact MUST不保存Action Motion Clip、RootMotionCurveAsset、Action Root路线、运行速度或世界位移。
 
 Artifact identity MUST覆盖全部输入identity、revision、dependency hash、采样率、事件分段、constraint分类、root重建、clearance分解和algorithm version。旧三维Foot Route、只保存Landing Offset或缺少Action Clock域的artifact MUST判为Stale；系统 MUST不提供兼容reader或运行时补建。
+
+同脚Landing Event内的root-local Foot、Ankle、Hip、平面路线与Animation Clearance MUST使用同一Action Phase采样格发布。当前正式schema MUST为这些连续几何保存25个等相位样本并由Projection与Plan原样消费；Constraint、Support、Orientation和Body Pivot MUST由精确`Release / LiftOff / ApproachContact`边界解析，不得量化为25点离散路线。旧7点几何路线或旧离散状态路线 MUST判为Stale，不得在Runtime插值补建、继续读取或只提升部分字段的分辨率。
 
 #### Scenario: Analyzer算法删除Action Root并保留Foot与Clearance分解
 
@@ -17,6 +19,12 @@ Artifact identity MUST覆盖全部输入identity、revision、dependency hash、
 - **WHEN** Geometry Validation identity变化
 - **THEN** Clearance、Landing鞋底姿态和Ankle-to-Sole相关artifact MUST全部失效
 - **AND** MUST不只比较数值revision继续复用旧payload
+
+#### Scenario: 落地前脚部存在快速回摆
+
+- **WHEN** 原动画鞋底在`0.83 -> 1.0` Action Phase内先前摆再回到Landing
+- **THEN** artifact的25点Foot/Ankle/Hip与Clearance MUST保留该弯折
+- **AND** Projection与Plan MUST不把它重新降采样为跨过该弯折的7点直线
 
 ### Requirement: 单Clip Analyzer不得依赖Tree或Projection
 
@@ -38,7 +46,7 @@ Analyzer MUST只接受精确in-place Pose AnimationClip、Rig v4、Sampling Rig�
 
 ### Requirement: 每个Landing Event必须原子发布动作级步态事实
 
-每只脚每个Landing Event MUST携带稳定event ordinal、Foot Side、Lift-Off/Landing phase、Action Clock domain、root-local Foot平面路线、Sole Clearance、Hip路线、Constraint Mode、Support Phase、Foot Orientation Policy、Body Rotation Pivot Mode、Landing鞋底姿态，以及本脚下一次Landing之前的对侧Landing delay、event ordinal与cycle offset。所有值 MUST来自同一in-place Pose Clip、同一事件区间和同一采样时钟。
+每只脚每个Landing Event MUST携带稳定event ordinal、Foot Side、精确Release/Lift-Off/ApproachContact phase、Action Clock domain、root-local Foot平面路线、Sole Clearance、Hip路线、由事件边界唯一解析的Constraint Mode、Support Phase、Foot Orientation Policy、Body Rotation Pivot Mode、Landing鞋底姿态，以及本脚下一次Landing之前的对侧Landing delay、event ordinal、cycle offset与该对侧鞋底在落地帧的root-local位置。所有值 MUST来自同一in-place Pose Clip、同一事件区间和同一采样时钟。
 
 Projection source selection MUST把整份事件作为不可拆分值选择。系统 MUST不分别混合Landing Delay、Landing Offset、Root Route、Foot Route、Clearance、Hip、Constraint、Support或Orientation Policy。
 
@@ -60,7 +68,7 @@ Projection source selection MUST把整份事件作为不可拆分值选择。系
 #### Scenario: 同脚步幅中包含一次对侧落地
 
 - **WHEN** 本脚当前事件的下一次Landing之前存在对侧Landing
-- **THEN** artifact MUST在本脚事件中保存该对侧Landing的delay、ordinal与cycle offset
+- **THEN** artifact MUST在本脚事件中保存该对侧Landing的delay、ordinal、cycle offset与落地帧root-local鞋底位置
 - **AND** Projection选择本脚事件时 MUST同时选择这份对侧配对，不得从另一份混合结果重新拼装
 
 ### Requirement: Animation Clearance必须独立于Ground Path和世界高度
@@ -75,7 +83,7 @@ Analyzer MUST把鞋底运动分成平面路线与相对动作参考脚下路径�
 
 ### Requirement: Constraint Mode必须来自同一动作采样域
 
-Analyzer MUST从Plant区间、鞋底速度与接触过渡生成`Locked / Sliding / Unlocked`期望模式曲线。该曲线只表达动画意图，不是世界接触事实。Runtime Stance仍必须结合合法Current Support、surface distance、reach和reset裁决最终约束状态。
+Analyzer MUST从同一Plant区间和接触过渡生成精确`Release / LiftOff / ApproachContact`边界。Runtime MUST按权威Action Phase与这些边界唯一解析`Locked / Sliding / Unlocked`期望模式；该模式只表达动画意图，不是世界接触事实。Runtime Stance仍必须结合合法Current Support、surface distance、reach和reset裁决最终约束状态。
 
 #### Scenario: 动画脚进入摆动
 
@@ -126,14 +134,14 @@ Projection MUST把Simulation提交的Locomotion Motion Elapsed Ticks映射成当
 
 ### Requirement: Foot Analysis不得拥有角色平面位移
 
-Corin in-place Foot Analysis MUST不保存角色平面位移、速度或Action Motion Curve。Simulation Locomotion MUST唯一拥有作者Move Speed与实际committed位移。Runtime在计划创建时 MAY冻结同帧committed Simulation平面速度，并以`frozenVelocity * timeFromGeneration`和同一Pose Clip脚骨局部姿态差定义Future Query Route；脚骨局部姿态序列不是角色位移曲线。最终Swing Foot XZ MUST继续来自当前原动画Pose。计划提交后不得重读Body速度、键鼠输入幅值、地形三维弧长或当前脚投影改写该路线。
+Corin in-place Foot Analysis MUST不保存角色平面位移、速度或Action Motion Curve。Simulation Locomotion MUST唯一拥有作者Move Speed；Simulation/KCC MUST唯一发布按正式Movement Timeline、世界碰撞和Trajectory Curvature生成的未来可执行Body XYZ轨迹。Runtime在计划创建事务中 MAY冻结该轨迹、Movement最大转向能力与实际Trajectory Curvature，并和同一Pose Clip脚骨局部姿态差定义Future Query Route；脚骨局部姿态序列不是角色位移曲线。最终Swing Foot XZ MUST继续来自当前原动画Pose。计划提交后不得重读Body、键鼠输入幅值、地形三维弧长或当前脚投影改写该路线。
 
 #### Scenario: 同一Walk动作运行在平地与楼梯
 
 - **WHEN** 同一Landing Event分别在平地和楼梯建立计划
-- **THEN** 两次计划的Pose event identity、cycle、相位与创建帧冻结Simulation速度 MUST可明确对账
-- **AND** Runtime在平地与楼梯 MUST保持同一剩余Future Query Route；当前原动画Pose继续拥有最终Foot XZ，楼梯竖直变化只进入Ground Path高度和预测Hip
-- **AND** Analyzer MUST不读取当前、目标、可见、Source Body速度生成另一条路线
+- **THEN** 两次计划的Pose event identity、cycle、相位、创建帧Body Target Velocity、Simulation Continuation、最大转向能力与Trajectory Curvature MUST可明确对账
+- **AND** Runtime在平地与楼梯 MUST从同一Landing事件、冻结KCC轨迹和Trajectory Curvature建立Future Query Route；当前原动画Pose继续拥有最终Foot XZ，楼梯竖直变化只进入Ground Path高度和预测Hip
+- **AND** Analyzer MUST不读取任何Body速度；Runtime只可在Plan创建事务中请求冻结KCC未来轨迹，Visible或Source速度不得进入预测
 
 ### Requirement: Definition Build必须精确消费新Artifact并发布Projection
 

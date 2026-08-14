@@ -23,16 +23,14 @@ namespace BTSMTL.Timeline.Editor
         public Track Track { get; private set; }
         public BiDictionary<Clip, TimelineClipView> ClipViewMap { get; private set; }
         public List<TimelineClipView> ClipViews { get; set; }
+        internal List<AnimationCurveChannelLaneView> CurveLaneViews { get; private set; }
+
         public Action OnSelected;
         public Action OnUnselected;
-        internal event Action<string> MarkerSyncSummaryChanged;
         
         DropdownMenuHandler m_MenuHandler;
         Vector2 m_LocalMousePosition;
         bool m_RuntimeReadOnly;
-        VisualElement m_MarkerHeader;
-        VisualElement m_MarkerLane;
-        Label m_MarkerLaneSummary;
         VisualElement m_CurveHeader;
         readonly List<TimelineCurveChannelDescriptor> m_CurveChannels = new List<TimelineCurveChannelDescriptor>();
         internal bool RuntimeReadOnly => m_RuntimeReadOnly;
@@ -57,7 +55,7 @@ namespace BTSMTL.Timeline.Editor
             Track.OnMutedStateChanged = OnMutedStateChanged;
             ClipViewMap = new BiDictionary<Clip, TimelineClipView>();
             ClipViews = new List<TimelineClipView>();
-            PopulateMarkerLane();
+            CurveLaneViews = new List<AnimationCurveChannelLaneView>();
             PopulateCurveLanes();
             foreach (var clip in track.Clips)
             {
@@ -70,6 +68,7 @@ namespace BTSMTL.Timeline.Editor
                 ClipViewMap.Add(clip, clipView);
                 ClipViews.Add(clipView);
             }
+
             DragAndDropManipulator dragAndDropManipulator = new DragAndDropManipulator(this);
             dragAndDropManipulator.DragValid = () => !m_RuntimeReadOnly && Track.DragValid();
             dragAndDropManipulator.DragPerform += (e1, e2) =>
@@ -103,7 +102,8 @@ namespace BTSMTL.Timeline.Editor
             {
                 clipViewPair.Value.Refresh();
             }
-            RefreshMarkerLane();
+            for (int i = 0; i < CurveLaneViews.Count; i++)
+                CurveLaneViews[i].Refresh();
         }
 
         #region Selectable
@@ -215,61 +215,6 @@ namespace BTSMTL.Timeline.Editor
                 ClipViews[i].SetRuntimeReadOnly(readOnly);
         }
 
-        void PopulateMarkerLane()
-        {
-            if (Track is not AnimationTrack animationTrack)
-                return;
-            m_MarkerHeader = new VisualElement { name = "animation-marker-sync-header" };
-            m_MarkerHeader.AddToClassList("animationMarkerSyncHeader");
-            m_MarkerHeader.style.top = TimelineTrackLayout.MarkerHeaderTop;
-            m_MarkerHeader.style.height = TimelineTrackLayout.MarkerHeaderHeight;
-            m_MarkerHeader.pickingMode = PickingMode.Position;
-            m_MarkerLaneSummary = new Label();
-            m_MarkerLaneSummary.AddToClassList("animationMarkerSyncLaneSummary");
-            m_MarkerLaneSummary.pickingMode = PickingMode.Ignore;
-            m_MarkerHeader.Add(m_MarkerLaneSummary);
-            m_MarkerHeader.RegisterCallback<PointerDownEvent>(evt =>
-            {
-                if (evt.button != 0)
-                    return;
-                SelectTrackForMarkerAuthoring();
-                evt.StopImmediatePropagation();
-            });
-            Add(m_MarkerHeader);
-            if (TimelineTrackLayout.MarkersExpanded(Track))
-            {
-                m_MarkerLane = new VisualElement { name = "animation-marker-sync-lane" };
-                m_MarkerLane.AddToClassList("animationMarkerSyncLane");
-                m_MarkerLane.style.top = TimelineTrackLayout.MarkerLaneTop;
-                m_MarkerLane.style.height = TimelineTrackLayout.MarkerLaneHeight;
-                m_MarkerLane.pickingMode = PickingMode.Position;
-                m_MarkerLane.generateVisualContent += DrawMarkerCoverage;
-                m_MarkerLane.RegisterCallback<PointerDownEvent>(evt =>
-                {
-                    if (evt.button == 0)
-                    {
-                        SelectTrackForMarkerAuthoring();
-                        evt.StopImmediatePropagation();
-                    }
-                });
-                Add(m_MarkerLane);
-            }
-            RefreshMarkerLane();
-        }
-
-        void RefreshMarkerLane()
-        {
-            if (m_MarkerLaneSummary == null || Track is not AnimationTrack animationTrack)
-                return;
-            string summary = MarkerSyncSummary(animationTrack);
-            m_MarkerLaneSummary.text = $"{(TimelineTrackLayout.MarkersExpanded(Track) ? "v" : ">") }  SYNC MARKERS   {summary}";
-            m_MarkerHeader.EnableInClassList(
-                "animationMarkerSyncLane--enabled",
-                animationTrack.SyncMode == AnimationSyncMode.MarkerGroup);
-            MarkerSyncSummaryChanged?.Invoke(summary);
-            m_MarkerLane?.MarkDirtyRepaint();
-        }
-
         void PopulateCurveLanes()
         {
             TimelineCurveChannelCatalog.CollectForTrack(Track, m_CurveChannels);
@@ -279,10 +224,10 @@ namespace BTSMTL.Timeline.Editor
             m_CurveHeader.AddToClassList("animationCurvesHeader");
             m_CurveHeader.style.top = TimelineTrackLayout.CurveHeaderTop(Track);
             m_CurveHeader.pickingMode = PickingMode.Position;
-            var fold = new Label("·");
+            var fold = new Label(TimelineTrackLayout.CurvesExpanded(Track) ? "v" : ">");
             fold.AddToClassList("animationCurvesHeaderFold");
             fold.pickingMode = PickingMode.Ignore;
-            var headerLabel = new Label("TYPED CURVES · EDIT IN SOURCE TIME INSPECTOR");
+            var headerLabel = new Label("CURVES");
             headerLabel.AddToClassList("animationCurvesHeaderLabel");
             headerLabel.pickingMode = PickingMode.Ignore;
             var rangeLabel = new Label($"{TimelineTrackLayout.VisibleCurveChannelCount(Track)}/{m_CurveChannels.Count}");
@@ -295,10 +240,22 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (evt.button != 0)
                     return;
-                SelectTrackForMarkerAuthoring();
+                ToggleCurveLanes();
                 evt.StopImmediatePropagation();
             });
             Add(m_CurveHeader);
+            if (!TimelineTrackLayout.CurvesExpanded(Track))
+                return;
+            int visibleIndex = 0;
+            for (int i = 0; i < m_CurveChannels.Count; i++)
+            {
+                TimelineCurveChannelDescriptor descriptor = m_CurveChannels[i];
+                if (!TimelineCurveEditorSession.IsChannelVisible(Track, descriptor.ChannelId))
+                    continue;
+                var lane = new TimelineCurveChannelLaneView(this, descriptor, visibleIndex++);
+                Add(lane);
+                CurveLaneViews.Add(lane);
+            }
         }
 
         internal void ToggleCurveLanes()
@@ -313,94 +270,6 @@ namespace BTSMTL.Timeline.Editor
             FieldView.schedule.Execute(FieldView.PopulateView);
         }
 
-        internal void ToggleMarkerLane()
-        {
-            TimelineTrackLayout.ToggleMarkers(Track);
-            FieldView.schedule.Execute(FieldView.PopulateView);
-        }
-
-        internal static string MarkerSyncSummary(AnimationTrack track)
-        {
-            if (track == null || track.SyncMode == AnimationSyncMode.Unspecified)
-                return "Unspecified · 0 markers";
-            if (track.SyncMode == AnimationSyncMode.None)
-                return "None · 0 markers";
-            return $"{track.SyncGroupId} · {track.SequenceTopology} · {track.SyncRole} · {track.SyncMarkers.Count} markers";
-        }
-
-        void SelectTrackForMarkerAuthoring()
-        {
-            if (IsSelected())
-            {
-                FieldView.PopulateInspector(Track);
-                return;
-            }
-            FieldView.ClearSelection();
-            FieldView.AddToSelection(this);
-        }
-
-        void DrawMarkerCoverage(MeshGenerationContext context)
-        {
-            if (Track is not AnimationTrack track || track.SyncMode != AnimationSyncMode.MarkerGroup || track.SyncMarkers.Count == 0)
-                return;
-            Painter2D painter = context.painter2D;
-            string activeFrom = string.Empty;
-            string activeTo = string.Empty;
-            if (EditorWindow.PreviewSession.TryGetMarkerSyncPreviewState(out TimelineAnimationMarkerSyncPreviewState state) &&
-                string.Equals(state.TargetProducerId, $"{track.Timeline.AuthoringId}/{track.AuthoringId}", StringComparison.Ordinal))
-            {
-                activeFrom = state.PreviousMarkerId;
-                activeTo = state.NextMarkerId;
-            }
-            for (int i = 1; i < track.SyncMarkers.Count; i++)
-                DrawMarkerSegment(painter, track.SyncMarkers[i - 1], track.SyncMarkers[i], activeFrom, activeTo);
-            painter.strokeColor = new Color(0.55f, 0.75f, 0.8f, 0.3f);
-            painter.lineWidth = 1f;
-            if (track.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic && track.SyncMarkers.Count > 1)
-            {
-                AnimationSyncMarker last = track.SyncMarkers[track.SyncMarkers.Count - 1];
-                AnimationSyncMarker first = track.SyncMarkers[0];
-                bool active = string.Equals(last.MarkerId, activeFrom, StringComparison.Ordinal) &&
-                              string.Equals(first.MarkerId, activeTo, StringComparison.Ordinal);
-                painter.strokeColor = active ? new Color(1f, 0.68f, 0.1f, 0.95f) : new Color(0.35f, 0.85f, 0.9f, 0.45f);
-                painter.lineWidth = active ? 2.5f : 1f;
-                float y = TimelineTrackLayout.MarkerLaneHeight - 5f;
-                painter.BeginPath();
-                painter.MoveTo(new Vector2(FieldView.Geometry.FrameToPosition(last.Frame), y));
-                painter.LineTo(new Vector2(contentRect.width, y));
-                painter.MoveTo(new Vector2(0f, y));
-                painter.LineTo(new Vector2(FieldView.Geometry.FrameToPosition(first.Frame), y));
-                painter.Stroke();
-            }
-            else
-            {
-                float y = TimelineTrackLayout.MarkerLaneHeight - 5f;
-                painter.BeginPath();
-                painter.MoveTo(new Vector2(FieldView.Geometry.FrameToPosition(0), y));
-                painter.LineTo(new Vector2(FieldView.Geometry.FrameToPosition(track.SyncMarkers[0].Frame), y));
-                painter.MoveTo(new Vector2(FieldView.Geometry.FrameToPosition(track.SyncMarkers[track.SyncMarkers.Count - 1].Frame), y));
-                painter.LineTo(new Vector2(FieldView.Geometry.FrameToPosition(track.Timeline.MaxFrame), y));
-                painter.Stroke();
-            }
-        }
-
-        void DrawMarkerSegment(
-            Painter2D painter,
-            AnimationSyncMarker from,
-            AnimationSyncMarker to,
-            string activeFrom,
-            string activeTo)
-        {
-            bool active = string.Equals(from.MarkerId, activeFrom, StringComparison.Ordinal) &&
-                          string.Equals(to.MarkerId, activeTo, StringComparison.Ordinal);
-            painter.strokeColor = active ? new Color(1f, 0.68f, 0.1f, 0.95f) : new Color(0.35f, 0.85f, 0.9f, 0.45f);
-            painter.lineWidth = active ? 2.5f : 1f;
-            float y = TimelineTrackLayout.MarkerLaneHeight - 5f;
-            painter.BeginPath();
-            painter.MoveTo(new Vector2(FieldView.Geometry.FrameToPosition(from.Frame), y));
-            painter.LineTo(new Vector2(FieldView.Geometry.FrameToPosition(to.Frame), y));
-            painter.Stroke();
-        }
 
         void OnPointerMove(PointerMoveEvent e)
         {

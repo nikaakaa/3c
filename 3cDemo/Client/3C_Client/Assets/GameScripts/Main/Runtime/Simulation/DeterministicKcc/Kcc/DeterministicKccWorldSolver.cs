@@ -5,7 +5,7 @@ using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicKcc
 {
-    public sealed partial class DeterministicKccWorldSolver : ICharacterWorldSolver
+    public sealed partial class DeterministicKccWorldSolver : ICharacterWorldSolver, ICharacterFutureBodyTrajectorySource
     {
         public const string SolverId = "thirdperson.simulation.solver.deterministic-kcc";
         public const string SolverVersion = "11";
@@ -14,6 +14,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
         readonly DeterministicCollisionWorldArtifact m_CollisionWorld;
         readonly DeterministicKccConfiguration m_Configuration;
         readonly DeterministicKccMotor[] m_Motors;
+        readonly DeterministicKccMotor[] m_PredictionMotors;
         readonly int m_TickRate;
         readonly ActorBinding[] m_Bindings;
         readonly ActorSolveCandidate[] m_Candidates;
@@ -55,8 +56,12 @@ namespace ThirdPersonSimulation.DeterministicKcc
             m_ActorContacts = new DeterministicActorContactCandidate[m_Bindings.Length];
             m_CandidatePositions = new FixedVector3[m_Bindings.Length];
             m_Motors = new DeterministicKccMotor[m_Bindings.Length];
+            m_PredictionMotors = new DeterministicKccMotor[m_Bindings.Length];
             for (int i = 0; i < m_Motors.Length; i++)
+            {
                 m_Motors[i] = new DeterministicKccMotor(collisionWorld, configuration);
+                m_PredictionMotors[i] = new DeterministicKccMotor(collisionWorld, configuration);
+            }
             m_ActorContactWorkspace = new DeterministicActorContactWorkspace(
                 m_Bindings.Length,
                 configuration.MaximumActorPairs,

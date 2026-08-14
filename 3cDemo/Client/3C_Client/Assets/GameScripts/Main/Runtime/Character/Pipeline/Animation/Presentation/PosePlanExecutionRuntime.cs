@@ -326,6 +326,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_HasOpenFrame;
         bool m_RecordReleaseDiagnostics;
         AnimationPresentationFrameOutcome m_PendingFrameOutcome;
+        int m_SequencePreviewPlayerIndex = -1;
+        int m_SequencePreviewOperationIndex = -1;
+        double m_SequencePreviewTime;
+        bool m_SequencePreviewReset;
+        bool m_HasSequencePreview;
         bool m_JobsInstalled;
         bool m_Disposed;
 
@@ -2198,6 +2203,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
                 !factFrame.IsValid || !parameterFrame.IsValid)
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
+            if (m_HasSequencePreview)
+            {
+                for (int i = 0; i < m_PoseStateSources.SequencePlayers.Length; i++)
+                {
+                    AnimationSequencePlayerRuntime player =
+                        m_PoseStateSources.SequencePlayers[i];
+                    bool selected = i == m_SequencePreviewPlayerIndex;
+                    player.SetRelevant(selected);
+                    if (selected)
+                        player.SetPreviewTime(
+                            m_SequencePreviewTime,
+                            m_SequencePreviewReset);
+                }
+                for (int i = 0; i < m_PoseStateSources.BlendSpacePlayers.Length; i++)
+                    m_PoseStateSources.BlendSpacePlayers[i].SetRelevant(false);
+                return;
+            }
             m_PoseStateSources.PrepareFrame(
                 presentationDeltaSeconds,
                 in factFrame);
@@ -2236,6 +2258,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentException(
                     "Pose State frame finalization is invalid.",
                     nameof(factFrame));
+            if (m_HasSequencePreview)
+                return;
             m_PoseStateSources.EvaluateTransitions(
                 in factFrame,
                 m_PosePlan,
@@ -2502,31 +2526,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             using (PoseGraphExecuteMarker.Auto())
             {
                 poseExecutor.BeginStagedEvaluation(renderFrame);
-                for (int stageIndex = 0;
-                     stageIndex < m_PosePlan.Stages.Length;
-                     stageIndex++)
+                if (m_HasSequencePreview)
                 {
-                    AnimationPoseGraphNativeStage stage =
-                        m_PosePlan.Stages[stageIndex];
-                    if (stage.ExecutionDomain ==
-                        CharacterPoseExecutionDomain.WorldAwareValue)
-                    {
-                        PrepareWorldAwareStage(
-                            actorId,
-                            renderFrame,
-                            presentationDeltaSeconds,
-                            in bodyFrame,
-                            in factFrame,
-                            footPlacement,
-                            completionIdentity,
-                            in stage);
-                    }
-                    if (!poseExecutor.ExecuteStage(
-                            stageIndex,
-                            presentationDeltaSeconds))
-                        break;
+                    poseExecutor.ExecuteSequencePreview(
+                        m_SequencePreviewOperationIndex);
                 }
-                poseExecutor.CompleteStagedEvaluation();
+                else
+                {
+                    for (int stageIndex = 0;
+                         stageIndex < m_PosePlan.Stages.Length;
+                         stageIndex++)
+                    {
+                        AnimationPoseGraphNativeStage stage =
+                            m_PosePlan.Stages[stageIndex];
+                        if (stage.ExecutionDomain ==
+                            CharacterPoseExecutionDomain.WorldAwareValue)
+                        {
+                            PrepareWorldAwareStage(
+                                actorId,
+                                renderFrame,
+                                presentationDeltaSeconds,
+                                in bodyFrame,
+                                in factFrame,
+                                footPlacement,
+                                completionIdentity,
+                                in stage);
+                        }
+                        if (!poseExecutor.ExecuteStage(
+                                stageIndex,
+                                presentationDeltaSeconds))
+                            break;
+                    }
+                    poseExecutor.CompleteStagedEvaluation();
+                }
                 m_Workspace.RequireStagesCompleted(completionIdentity);
             }
             using (FinalWriteMarker.Auto())
@@ -3034,7 +3066,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             AnimationSequencePlayerRuntime player =
                 m_PoseStateSources.SequencePlayers[playerIndex];
-            if (!IsPlayerActive(player.PlayerIndex) || !player.IsRelevant)
+            bool selectedPreview = m_HasSequencePreview &&
+                                   playerIndex == m_SequencePreviewPlayerIndex;
+            if (!selectedPreview && !IsPlayerActive(player.PlayerIndex) ||
+                !player.IsRelevant)
                 return;
             AnimationPhysicalSourceIdentity physical = m_PhysicalSources.Register(
                 player.SourceId,
@@ -3052,6 +3087,58 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ConnectSource(physical, prepared);
             m_SequencePhysicalSources[playerIndex] = physical;
             m_SequenceSourceIndices[playerIndex] = capture.SourceIndex;
+        }
+
+        internal void SetSequencePreview(
+            PresentationPoseSourceIndex sourceIndex,
+            double sampleTime,
+            bool resetContinuity)
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            if (!sourceIndex.IsValid || !double.IsFinite(sampleTime) || sampleTime < 0d)
+                throw new ArgumentException("Sequence Preview sample is invalid.");
+            int playerIndex = -1;
+            for (int i = 0; i < m_PoseStateSources.SequencePlayers.Length; i++)
+            {
+                if (m_PoseStateSources.SequencePlayers[i].SourceIndex != sourceIndex)
+                    continue;
+                playerIndex = i;
+                break;
+            }
+            if (playerIndex < 0)
+                throw new InvalidOperationException(
+                    $"Sequence Preview source #{sourceIndex.Value} has no compiled Sequence Player.");
+            int operationIndex = -1;
+            for (int i = 0; i < m_Projection.PosePlan.Operations.Count; i++)
+            {
+                CharacterPresentationPoseOperation operation =
+                    m_Projection.PosePlan.Operations[i];
+                if (operation.Code != CharacterPoseOperationCode.SequencePlayer ||
+                    operation.SequencePlayerIndex != playerIndex)
+                    continue;
+                operationIndex = operation.Index;
+                break;
+            }
+            if (operationIndex < 0)
+                throw new InvalidOperationException(
+                    $"Sequence Preview source #{sourceIndex.Value} has no compiled Pose operation.");
+            m_SequencePreviewPlayerIndex = playerIndex;
+            m_SequencePreviewOperationIndex = operationIndex;
+            m_SequencePreviewTime = sampleTime;
+            m_SequencePreviewReset = resetContinuity;
+            m_HasSequencePreview = true;
+        }
+
+        internal void ClearSequencePreview()
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_SequencePreviewPlayerIndex = -1;
+            m_SequencePreviewOperationIndex = -1;
+            m_SequencePreviewTime = 0d;
+            m_SequencePreviewReset = false;
+            m_HasSequencePreview = false;
         }
 
         void PrepareBlendSpaceSource(

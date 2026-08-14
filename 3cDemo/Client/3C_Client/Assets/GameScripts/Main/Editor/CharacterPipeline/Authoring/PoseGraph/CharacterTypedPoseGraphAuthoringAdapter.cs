@@ -1034,7 +1034,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 result.Add(new GraphAuthoringReadOnlyDetail("Duration", $"{sequence.Clip.length:0.###} s"));
                 result.Add(new GraphAuthoringReadOnlyDetail("Loop", sequence.Loop ? "Yes" : "No"));
-                result.Add(new GraphAuthoringReadOnlyDetail("Markers", sequence.Markers.Count.ToString()));
+                result.Add(new GraphAuthoringReadOnlyDetail("Markers", sequence.Sequence.SyncMarkers.Count.ToString()));
             }
             result.Add(new GraphAuthoringReadOnlyDetail("Foot Analysis", "Configured"));
             return result;

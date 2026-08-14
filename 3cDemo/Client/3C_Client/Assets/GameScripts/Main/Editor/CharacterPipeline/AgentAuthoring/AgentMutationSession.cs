@@ -24,7 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentGraphSnapshot snapshot,
             AgentMutationPlan plan,
             AgentCompileReport report,
-            bool apply)
+            bool apply,
+            AgentPresentationMutationPlan presentationPlan = null)
         {
             Definition = definition;
             Domain = AgentAuthoringSchema.CharacterControllerDomain;
@@ -32,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Plan = plan;
             Report = report;
             IsApply = apply;
+            PresentationPlan = presentationPlan;
             Resolver = new AgentAssetResolver(definition, snapshot);
             Index = new AgentGraphAuthoringIndex();
         }
@@ -60,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentMutationPlan Plan { get; }
         public AgentCompileReport Report { get; }
         public bool IsApply { get; }
+        public AgentPresentationMutationPlan PresentationPlan { get; }
         public AgentAssetResolver Resolver { get; }
         public AgentGraphAuthoringIndex Index { get; }
         public BaseTree RootTree { get; private set; }

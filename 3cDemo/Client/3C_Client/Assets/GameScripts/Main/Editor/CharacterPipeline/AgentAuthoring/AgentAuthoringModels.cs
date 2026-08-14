@@ -86,7 +86,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentSnapshotAnimationPresentation presentation = new AgentSnapshotAnimationPresentation();
         public List<AgentSnapshotBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
         public List<AgentSnapshotTimeline> timelines = new List<AgentSnapshotTimeline>();
-        public List<AgentSnapshotAnimationMarkerGroup> animationMarkerGroups = new List<AgentSnapshotAnimationMarkerGroup>();
         public List<AgentSnapshotTimelineTreeClip> timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
         public List<AgentSnapshotAsset> timelineAssets = new List<AgentSnapshotAsset>();
         public List<AgentSnapshotAsset> actionContextAssets = new List<AgentSnapshotAsset>();
@@ -329,6 +328,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int clipIndex;
         public int startFrame;
         public int endFrame;
+        public int clipInFrame;
+        public string extraPolationMode;
         public string phase;
         public string ownership;
         public string treeName;
@@ -349,7 +350,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string timelineAuthoringId;
         public string name;
         public List<AgentSnapshotTimelineCallSite> callSites = new List<AgentSnapshotTimelineCallSite>();
+        public List<AgentSnapshotTimelineSection> sections = new List<AgentSnapshotTimelineSection>();
         public List<AgentSnapshotTimelineTrack> tracks = new List<AgentSnapshotTimelineTrack>();
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotTimelineSection
+    {
+        public string sectionAuthoringId;
+        public string name;
+        public int frame;
     }
 
     [Serializable]
@@ -369,31 +379,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int index;
         public string animationChannelId;
         public bool motionWarpTrack;
-        public string syncMode;
-        public string syncGroupId;
-        public string sequenceTopology;
-        public string syncRole;
-        public List<AgentSnapshotAnimationMarker> markers = new List<AgentSnapshotAnimationMarker>();
-        public List<string> directedMarkerPairs = new List<string>();
         public List<AgentSnapshotTimelineClip> clips = new List<AgentSnapshotTimelineClip>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAnimationMarker
-    {
-        public string authoringId;
-        public string markerId;
-        public int frame;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAnimationMarkerGroup
-    {
-        public string animationChannelId;
-        public string syncGroupId;
-        public bool compatible;
-        public List<string> producerIds = new List<string>();
-        public List<string> directedMarkerPairs = new List<string>();
     }
 
     [Serializable]
@@ -410,8 +396,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int selfEaseOutFrame;
         public int easeInFrame;
         public int easeOutFrame;
-        public string animationClipAssetPath;
-        public string animationClipAssetGuid;
+        public int clipInFrame;
+        public string extraPolationMode;
+        public AgentPackageAssetReferenceV3 animationSequence;
         public string curveId;
         public int curveEndFrame;
         public string motionSpace;
@@ -739,10 +726,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string trackName;
         public string actionContextId;
         public string animationChannelId;
-        public string syncMode;
-        public string syncGroupId;
-        public string sequenceTopology;
-        public string syncRole;
         public string sourceAssetPath;
         public string sourceAssetGuid;
         public string sourceAssetType;
@@ -818,10 +801,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string flowEdgePlannedIdentity;
         public string timelineAuthoringId;
         public string timelinePlannedIdentity;
+        public string sectionAuthoringId;
         public string trackAuthoringId;
         public string trackPlannedIdentity;
-        public string markerAuthoringId;
-        public string markerPlannedIdentity;
         public string clipAuthoringId;
         public string clipPlannedIdentity;
         public string sourceMotionClipAuthoringId;
@@ -877,13 +859,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public float blackboardTargetYawValue;
         public int startFrame;
         public int endFrame;
-        public int markerFrame;
-        public string markerId;
+        public int clipInFrame;
+        public string extraPolationMode;
         public string animationChannelId;
-        public string animationSyncMode;
-        public string animationSyncGroupId;
-        public string animationMarkerSequenceTopology;
-        public string animationMarkerSyncRole;
+        public AgentPackageAssetReferenceV3 animationSequence;
         public int frameOffset;
         public int selfEaseInFrame;
         public int selfEaseOutFrame;

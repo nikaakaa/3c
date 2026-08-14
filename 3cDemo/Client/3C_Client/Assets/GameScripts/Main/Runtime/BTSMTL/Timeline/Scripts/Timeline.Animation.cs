@@ -16,7 +16,7 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             string trackName,
-            UnityEngine.AnimationClip clip,
+            AnimationSequenceAsset sequence,
             AnimationChannelId animationChannelId,
             float clipTime,
             float normalizedTime,
@@ -34,7 +34,8 @@ namespace BTSMTL.Timeline
             SourceId = sourceId;
             SourceName = sourceName;
             TrackName = trackName;
-            Clip = clip;
+            Sequence = sequence ? sequence : throw new ArgumentNullException(nameof(sequence));
+            Clip = sequence.Clip;
             AnimationChannelId = animationChannelId.IsValid
                 ? animationChannelId
                 : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
@@ -55,6 +56,7 @@ namespace BTSMTL.Timeline
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
+        public AnimationSequenceAsset Sequence { get; }
         public UnityEngine.AnimationClip Clip { get; }
         public AnimationChannelId AnimationChannelId { get; }
         public float ClipTime { get; }
@@ -67,7 +69,7 @@ namespace BTSMTL.Timeline
     }
 
     [TrackGroup("Base"), ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), IconGuid("e6435fa591ae4414eb0f26dc6410086e"), Ordered(0), Color(127, 253, 228)]
-    public partial class AnimationTrack : Track, ITimelineTrackOwnedAuthoringIdentity
+    public partial class AnimationTrack : Track
     {
         [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
         string m_AnimationChannelId = string.Empty;
@@ -118,7 +120,7 @@ namespace BTSMTL.Timeline
             for (int clipIndex = 0; clipIndex < Clips.Count; clipIndex++)
             {
                 Clip clip = Clips[clipIndex];
-                if (clip is not AnimationClip animationClip || !animationClip.Clip)
+                if (clip is not AnimationClip animationClip || !animationClip.Sequence)
                     continue;
 
                 if (!TrySampleClip(animationClip, timelineTime, out float clipTime, out float normalizedTime, out float weight))
@@ -133,7 +135,7 @@ namespace BTSMTL.Timeline
                     sourceId,
                     sourceName,
                     Name,
-                    animationClip.Clip,
+                    animationClip.Sequence,
                     AnimationChannelId,
                     clipTime,
                     normalizedTime,
@@ -187,14 +189,15 @@ namespace BTSMTL.Timeline
         public override Type ClipType => typeof(AnimationClip);
         public override Clip AddClip(UnityEngine.Object referenceObject, int frame)
         {
-            AnimationClip clip = new AnimationClip(referenceObject as UnityEngine.AnimationClip, this, frame);
+            AnimationClip clip = new AnimationClip(referenceObject as AnimationSequenceAsset, this, frame);
             clip.RegenerateAuthoringIdentity();
             m_Clips.Add(clip);
             return clip;
         }
         public override bool DragValid()
         {
-            return UnityEditor.DragAndDrop.objectReferences.Length == 1 && UnityEditor.DragAndDrop.objectReferences[0] as UnityEngine.AnimationClip;
+            return UnityEditor.DragAndDrop.objectReferences.Length == 1 &&
+                   UnityEditor.DragAndDrop.objectReferences[0] as AnimationSequenceAsset;
         }
 #endif
     }
@@ -203,7 +206,7 @@ namespace BTSMTL.Timeline
     public partial class AnimationClip : Clip
     {
         [ShowInInspector, OnValueChanged("OnClipChanged", "RebindTimeline")]
-        public UnityEngine.AnimationClip Clip;
+        public AnimationSequenceAsset Sequence;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public ExtraPolationMode ExtraPolationMode;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -212,58 +215,17 @@ namespace BTSMTL.Timeline
         public AnimationCurve EaseInCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-        [ShowInInspector, Group("Foot Placement"), OnValueChanged("RebindTimeline"), InspectorName("Foot Placement Weight")]
-        public AnimationCurve FootPlacementCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-
-        public void RequireFootPlacementWeightCurve()
-        {
-            RequireNormalizedCurve(FootPlacementCurve, nameof(FootPlacementCurve));
-        }
-
-#if UNITY_EDITOR
-        public void ConfigureFootPlacementWeightCurve(AnimationCurve curve)
-        {
-            FootPlacementCurve = CopyNormalizedCurve(curve, nameof(FootPlacementCurve));
-            RebindTimeline();
-        }
-
-        static AnimationCurve CopyNormalizedCurve(AnimationCurve source, string field)
-        {
-            RequireNormalizedCurve(source, field);
-            return new AnimationCurve(source.keys)
-            {
-                preWrapMode = source.preWrapMode,
-                postWrapMode = source.postWrapMode
-            };
-        }
-#endif
-
-        static void RequireNormalizedCurve(AnimationCurve curve, string field)
-        {
-            if (curve == null || curve.length == 0)
-                throw new InvalidOperationException($"Animation Clip '{field}' requires at least one key.");
-            Keyframe[] keys = curve.keys;
-            for (int i = 0; i < keys.Length; i++)
-            {
-                Keyframe key = keys[i];
-                if (!IsNormalized(key.time) || !IsNormalized(key.value) ||
-                    i > 0 && key.time < keys[i - 1].time)
-                    throw new InvalidOperationException($"Animation Clip '{field}' key {i} is outside normalized ordered range.");
-            }
-        }
-
-        static bool IsNormalized(float value) =>
-            !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f && value <= 1f;
-
 #if UNITY_EDITOR
 
-        public override string Name => Clip ? Clip.name : base.Name;
-        public override int Length => Clip ? Mathf.RoundToInt(Clip.length * TimelineUtility.FrameRate) : base.Length;
+        public override string Name => Sequence ? Sequence.name : base.Name;
+        public override int Length => Sequence && Sequence.Clip
+            ? Mathf.RoundToInt(Sequence.Clip.length * TimelineUtility.FrameRate)
+            : base.Length;
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable | ClipCapabilities.ClipInable;
         public AnimationClip(Track track, int frame) : base(track, frame) { }
-        public AnimationClip(UnityEngine.AnimationClip clip, Track track, int frame) : base(track, frame)
+        public AnimationClip(AnimationSequenceAsset sequence, Track track, int frame) : base(track, frame)
         {
-            Clip = clip;
+            Sequence = sequence;
             EndFrame = Length + frame;
         }
         void OnClipChanged()

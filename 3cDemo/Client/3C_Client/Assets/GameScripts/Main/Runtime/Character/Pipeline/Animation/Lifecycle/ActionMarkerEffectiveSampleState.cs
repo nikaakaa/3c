@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
@@ -31,6 +32,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal ActionMarkerRelationId RelationId;
             internal AnimationPlaybackId Source;
             internal AnimationPlaybackId Target;
+            internal AnimationSyncTimeMapping TimeMapping;
+            internal string PlanIdentity = string.Empty;
+            internal float LeaderFraction;
+            internal float FollowerFraction;
+            internal int LeaderOccurrenceIndex = -1;
+            internal int FollowerOccurrenceIndex = -1;
 
             internal void CopyFrom(Relation source)
             {
@@ -39,6 +46,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 RelationId = source.RelationId;
                 Source = source.Source;
                 Target = source.Target;
+                TimeMapping = source.TimeMapping;
+                PlanIdentity = source.PlanIdentity;
+                LeaderFraction = source.LeaderFraction;
+                FollowerFraction = source.FollowerFraction;
+                LeaderOccurrenceIndex = source.LeaderOccurrenceIndex;
+                FollowerOccurrenceIndex = source.FollowerOccurrenceIndex;
                 Cursor.Initialized = source.Cursor.Initialized;
                 Cursor.LeaderOrdinal = source.Cursor.LeaderOrdinal;
                 Cursor.FollowerOrdinal = source.Cursor.FollowerOrdinal;
@@ -51,6 +64,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 RelationId = default;
                 Source = default;
                 Target = default;
+                TimeMapping = AnimationSyncTimeMapping.Unspecified;
+                PlanIdentity = string.Empty;
+                LeaderFraction = 0f;
+                FollowerFraction = 0f;
+                LeaderOccurrenceIndex = -1;
+                FollowerOccurrenceIndex = -1;
                 Cursor.Initialized = false;
                 Cursor.LeaderOrdinal = 0;
                 Cursor.FollowerOrdinal = 0;
@@ -192,7 +211,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             AnimationMarkerSyncBinding sourceBinding,
             AnimationPlaybackId targetPlaybackId,
             AnimationMarkerSyncBinding targetBinding,
-            in PresentationPoseSampleTime targetProjectedRawSample)
+            in PresentationPoseSampleTime targetProjectedRawSample,
+            AnimationFootPhaseTimeWarpPlan footPhaseWarp)
         {
             RequireLease(lease);
             if (!relationId.IsValid ||
@@ -230,7 +250,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     sourceSample.EffectiveSample.ContinuousTime,
                     targetBinding,
                     targetProjectedRawSample.ContinuousTime,
-                    relation.Cursor);
+                    relation.Cursor,
+                    footPhaseWarp);
+            relation.TimeMapping = sourceBinding.TimeMapping;
+            relation.PlanIdentity = footPhaseWarp?.PlanIdentity ?? string.Empty;
+            relation.LeaderFraction = mapped.LeaderSegmentFraction;
+            relation.FollowerFraction = mapped.FollowerSegmentFraction;
+            relation.LeaderOccurrenceIndex = mapped.LeaderOccurrenceIndex;
+            relation.FollowerOccurrenceIndex = mapped.FollowerOccurrenceIndex;
             ActionMarkerEffectiveSample sample = CreateSample(
                 targetPlaybackId,
                 targetBinding,
@@ -765,7 +792,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     target.EffectiveSample,
                     target.PreviousMarkerId,
                     target.NextMarkerId,
-                    target.SegmentFraction));
+                    relation.TimeMapping,
+                    relation.PlanIdentity,
+                    relation.LeaderFraction,
+                    relation.FollowerFraction,
+                    relation.LeaderOccurrenceIndex,
+                    relation.FollowerOccurrenceIndex));
         }
 
         static ActionMarkerEffectiveSample CreateSample(

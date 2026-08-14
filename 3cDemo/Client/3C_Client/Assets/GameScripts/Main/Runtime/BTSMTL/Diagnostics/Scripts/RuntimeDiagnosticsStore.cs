@@ -291,6 +291,8 @@ namespace BTSMTL.Diagnostics
                    left.PlacementAlpha.Equals(right.PlacementAlpha) &&
                    left.PresentationDeltaSeconds.Equals(right.PresentationDeltaSeconds) &&
                    left.PoseRootVerticalDelta.Equals(right.PoseRootVerticalDelta) &&
+                   left.PoseRootWorldPosition.Equals(right.PoseRootWorldPosition) &&
+                   left.PoseRootWorldRotation.Equals(right.PoseRootWorldRotation) &&
                    left.PelvisLyraTargetOffset.Equals(right.PelvisLyraTargetOffset) &&
                    left.PelvisResolvedTargetOffset.Equals(right.PelvisResolvedTargetOffset) &&
                    left.CurrentPelvisOffset.Equals(right.CurrentPelvisOffset) &&
@@ -301,6 +303,26 @@ namespace BTSMTL.Diagnostics
                    left.PelvisGoalPositionWeight.Equals(right.PelvisGoalPositionWeight) &&
                    string.Equals(left.PelvisGoalApplication, right.PelvisGoalApplication, StringComparison.Ordinal) &&
                    string.Equals(left.PelvisGoalSourceKind, right.PelvisGoalSourceKind, StringComparison.Ordinal) &&
+                   left.PelvisSupportAvailable == right.PelvisSupportAvailable &&
+                   string.Equals(left.PelvisSupportSide, right.PelvisSupportSide, StringComparison.Ordinal) &&
+                   left.PelvisSupportSwitched == right.PelvisSupportSwitched &&
+                   left.PelvisSupportPlanSequence == right.PelvisSupportPlanSequence &&
+                   left.PelvisCurrentSupportTarget.Equals(right.PelvisCurrentSupportTarget) &&
+                   left.PelvisSelectedSupportTarget.Equals(right.PelvisSelectedSupportTarget) &&
+                   left.LeftPelvisHasActionConstraint == right.LeftPelvisHasActionConstraint &&
+                   string.Equals(left.LeftPelvisConstraintMode, right.LeftPelvisConstraintMode, StringComparison.Ordinal) &&
+                   string.Equals(left.LeftPelvisSupportPhase, right.LeftPelvisSupportPhase, StringComparison.Ordinal) &&
+                   string.Equals(left.LeftPelvisBodyPivotMode, right.LeftPelvisBodyPivotMode, StringComparison.Ordinal) &&
+                   left.LeftPelvisCandidate == right.LeftPelvisCandidate &&
+                   left.LeftPelvisPlanSequence == right.LeftPelvisPlanSequence &&
+                   left.LeftPelvisDisplacement.Equals(right.LeftPelvisDisplacement) &&
+                   left.RightPelvisHasActionConstraint == right.RightPelvisHasActionConstraint &&
+                   string.Equals(left.RightPelvisConstraintMode, right.RightPelvisConstraintMode, StringComparison.Ordinal) &&
+                   string.Equals(left.RightPelvisSupportPhase, right.RightPelvisSupportPhase, StringComparison.Ordinal) &&
+                   string.Equals(left.RightPelvisBodyPivotMode, right.RightPelvisBodyPivotMode, StringComparison.Ordinal) &&
+                   left.RightPelvisCandidate == right.RightPelvisCandidate &&
+                   left.RightPelvisPlanSequence == right.RightPelvisPlanSequence &&
+                   left.RightPelvisDisplacement.Equals(right.RightPelvisDisplacement) &&
                    string.Equals(left.LyraSourceIdentity, right.LyraSourceIdentity, StringComparison.Ordinal) &&
                    string.Equals(left.SpringIdentity, right.SpringIdentity, StringComparison.Ordinal) &&
                    string.Equals(left.RigId, right.RigId, StringComparison.Ordinal) &&
@@ -416,10 +438,34 @@ namespace BTSMTL.Diagnostics
                    left.RootLocalRouteSample4.Equals(right.RootLocalRouteSample4) &&
                    left.RootLocalRouteSample5.Equals(right.RootLocalRouteSample5) &&
                    left.RootLocalRouteSample6.Equals(right.RootLocalRouteSample6) &&
+                   left.RootLocalRouteSample7.Equals(right.RootLocalRouteSample7) &&
+                   left.RootLocalRouteSample8.Equals(right.RootLocalRouteSample8) &&
+                   left.RootLocalRouteSample9.Equals(right.RootLocalRouteSample9) &&
+                   left.RootLocalRouteSample10.Equals(right.RootLocalRouteSample10) &&
+                   left.RootLocalRouteSample11.Equals(right.RootLocalRouteSample11) &&
+                   left.RootLocalRouteSample12.Equals(right.RootLocalRouteSample12) &&
+                   left.RootLocalRouteSample13.Equals(right.RootLocalRouteSample13) &&
+                   left.RootLocalRouteSample14.Equals(right.RootLocalRouteSample14) &&
+                   left.RootLocalRouteSample15.Equals(right.RootLocalRouteSample15) &&
+                   left.RootLocalRouteSample16.Equals(right.RootLocalRouteSample16) &&
+                   left.RootLocalRouteSample17.Equals(right.RootLocalRouteSample17) &&
+                   left.RootLocalRouteSample18.Equals(right.RootLocalRouteSample18) &&
+                   left.RootLocalRouteSample19.Equals(right.RootLocalRouteSample19) &&
+                   left.RootLocalRouteSample20.Equals(right.RootLocalRouteSample20) &&
+                   left.RootLocalRouteSample21.Equals(right.RootLocalRouteSample21) &&
+                   left.RootLocalRouteSample22.Equals(right.RootLocalRouteSample22) &&
+                   left.RootLocalRouteSample23.Equals(right.RootLocalRouteSample23) &&
+                   left.RootLocalRouteSample24.Equals(right.RootLocalRouteSample24) &&
                    left.AuthoredFootRouteStart.Equals(right.AuthoredFootRouteStart) &&
                    left.AuthoredFootRouteLanding.Equals(right.AuthoredFootRouteLanding) &&
                    left.PredictivePlanSequence == right.PredictivePlanSequence &&
                    left.PredictivePlanGeneratedFrame == right.PredictivePlanGeneratedFrame &&
+                   left.PredictivePlanGenerationPhase.Equals(right.PredictivePlanGenerationPhase) &&
+                   left.IncomingPredictedStepValid == right.IncomingPredictedStepValid &&
+                   left.IncomingLandingEventIdentityValid == right.IncomingLandingEventIdentityValid &&
+                   left.IncomingLandingEventIdentity == right.IncomingLandingEventIdentity &&
+                   left.IncomingEventPhase.Equals(right.IncomingEventPhase) &&
+                   left.IncomingLiftOffPhase.Equals(right.IncomingLiftOffPhase) &&
                    string.Equals(left.PredictivePlanState, right.PredictivePlanState, StringComparison.Ordinal) &&
                    string.Equals(left.PredictivePlanTransitionReason, right.PredictivePlanTransitionReason, StringComparison.Ordinal) &&
                    string.Equals(left.PredictivePlanEndReason, right.PredictivePlanEndReason, StringComparison.Ordinal) &&
@@ -435,6 +481,10 @@ namespace BTSMTL.Diagnostics
                    left.PlanHasPathGeometry == right.PlanHasPathGeometry &&
                    left.PlanHasExecutablePath == right.PlanHasExecutablePath &&
                    left.FrozenPlanarVelocity.Equals(right.FrozenPlanarVelocity) &&
+                   left.MotionLinearLandingError.Equals(right.MotionLinearLandingError) &&
+                   left.MotionAngularLandingError.Equals(right.MotionAngularLandingError) &&
+                   left.MotionLandingError.Equals(right.MotionLandingError) &&
+                   left.MotionLandingTolerance.Equals(right.MotionLandingTolerance) &&
                    left.FixedPathStartWorldPosition.Equals(right.FixedPathStartWorldPosition) &&
                    left.FixedLandingWorldPosition.Equals(right.FixedLandingWorldPosition) &&
                    left.CurrentPathWorldPosition.Equals(right.CurrentPathWorldPosition) &&
@@ -448,6 +498,7 @@ namespace BTSMTL.Diagnostics
                    left.PredictiveAcceptedHitCount == right.PredictiveAcceptedHitCount &&
                    left.PredictiveEdgePlaneCandidateCount == right.PredictiveEdgePlaneCandidateCount &&
                    left.PredictiveAcceptedEdgePlaneCount == right.PredictiveAcceptedEdgePlaneCount &&
+                   left.SoleSupportRadius.Equals(right.SoleSupportRadius) &&
                    left.CurrentPathSurfaceIdentity == right.CurrentPathSurfaceIdentity &&
                    left.CurrentPathSupportPoint.Equals(right.CurrentPathSupportPoint) &&
                    left.CurrentPathSupportNormal.Equals(right.CurrentPathSupportNormal) &&

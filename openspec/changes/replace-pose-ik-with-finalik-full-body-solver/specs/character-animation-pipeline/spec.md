@@ -33,3 +33,10 @@ SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同�
 - **WHEN** consumer发布retirement permission且backend完成旧source物理释放
 - **THEN** Runtime MAY把workspace槽位分配给新source
 - **AND** 旧CaptureJob与新CaptureJob MUST不在同一次Evaluate写入同一槽位
+
+#### Scenario: Sequence在无Movement Clock期间继续后首次接入Clock
+
+- **WHEN** Committed Movement Sequence已通过continuation anchor保持Effective动画时间，但Movement Clock暂时无效且Raw时间继续推进，随后第一次取得有效Clock或切换Clock owner
+- **THEN** Runtime MUST保留当前Raw连续时间并只重建新Clock原点与offset
+- **AND** MUST不把Raw时间重置到`InitialTime`后继续套用旧anchor，产生负Effective Time或Presentation failure
+- **AND** MUST不通过清除anchor、钳制为零或吞掉异常伪造连续性

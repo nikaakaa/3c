@@ -22,6 +22,13 @@ PresentationFrame MUST消费committed Body/Intent、构造typed Presentation Fac
 - **THEN** AnimationSlot MUST按compiled pending/availability policy处理
 - **AND** Locomotion PoseState MUST继续来自同帧Fact而不是历史BaseLocomotion selection
 
+#### Scenario: Play Mode Assembly Reload恢复Session
+
+- **WHEN** Assembly Reload后Scene组件先于唯一GameplayTickSystem恢复静态生命周期
+- **THEN** Simulation Session Host MUST保持Uninitialized并允许Actor在Preparation前完成原Roster注册，不得把暂时顺序判为Composition失败
+- **AND** 唯一GameplayTickSystem恢复后Session Host MUST注册原有Tick Targets并按同一Preparation路径启动
+- **AND** Session Host MUST不自行创建第二Tick System，也不得在Preparation开始后接受新Actor
+
 ### Requirement: Pipeline domain debug 必须进入统一 Trace
 
 Input、ingress、Program operation、StateMachine、Timeline、Blackboard、WorldRequest/Result、Action、Effect、commit、Animation、Current Support、Stance Stabilization、Predictive GDC Path、Pelvis Resolve、FullBodyIK和Camera diagnostics MUST进入统一structured Trace/view model。Inspector MUST不遍历旧stage、FinalIK组件、FinalIK Grounding、TwoBoneIK/LegIK私有结果或runtime service私有集合形成平行调试链。FootPlacement与FullBodyIK trace MUST只读取正式Presentation snapshot，不得重新执行地面查询或solver。

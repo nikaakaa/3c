@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public static class MotionMatchingProjectionPayloadCodec
     {
-        const int SchemaVersion = 13;
+        const int SchemaVersion = 16;
 
         public static byte[] Encode(MotionMatchingProjectionPayload payload, out AnimationClip[] clips)
         {
@@ -620,11 +620,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             writer.Write(predicted.Confidence);
             writer.Write(predicted.TimeToLandingSeconds);
             writer.Write(predicted.EventPhase);
+            writer.Write(predicted.ReleasePhase);
             writer.Write(predicted.LiftOffPhase);
+            writer.Write(predicted.ApproachContactPhase);
             writer.Write(predicted.ActionStepClock.DurationSeconds);
             writer.Write(predicted.OpposingEventOrdinal);
             writer.Write(predicted.OpposingLandingDelaySeconds);
             writer.Write(predicted.OpposingLandingCycleOffset);
+            WriteVector3(writer, predicted.OpposingRootLocalLanding);
             for (int i = 0; i < predicted.RootLocalFootRoute.Length; i++)
                 WriteVector3(writer, predicted.RootLocalFootRoute[i]);
             for (int i = 0; i < predicted.RootLocalAnkleRoute.Length; i++)
@@ -635,14 +638,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 WriteVector3(writer, predicted.AuthoredFootPlanarRoute[i]);
             for (int i = 0; i < predicted.AnimationClearanceHeights.Length; i++)
                 writer.Write(predicted.AnimationClearanceHeights[i]);
-            for (int i = 0; i < predicted.ConstraintModes.Length; i++)
-                writer.Write(predicted.ConstraintModes[i]);
-            for (int i = 0; i < predicted.SupportPhases.Length; i++)
-                writer.Write(predicted.SupportPhases[i]);
-            for (int i = 0; i < predicted.FootOrientationPolicies.Length; i++)
-                writer.Write(predicted.FootOrientationPolicies[i]);
-            for (int i = 0; i < predicted.BodyRotationPivotModes.Length; i++)
-                writer.Write(predicted.BodyRotationPivotModes[i]);
         }
 
         static AnimationFootFeatureSample ReadFootSample(BinaryReader reader)
@@ -658,28 +653,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 reader.ReadSingle(),
                 reader.ReadSingle(),
                 reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
                 reader.ReadInt32(),
                 reader.ReadSingle(),
                 reader.ReadInt32(),
+                ReadVector3(reader),
                 ReadVector3Route(reader),
                 ReadVector3Route(reader),
                 ReadVector3Route(reader),
                 ReadVector3Route(reader),
-                ReadFloatRoute(reader),
-                ReadByteRoute(reader),
-                ReadByteRoute(reader),
-                ReadByteRoute(reader),
-                ReadByteRoute(reader))
+                ReadFloatRoute(reader))
                 : default;
             return new AnimationFootFeatureSample(
                 velocity,
                 soleHeight,
                 plantConfidence,
-                predicted);
+                predicted,
+                default);
         }
-        static FixedList128Bytes<Vector3> ReadVector3Route(BinaryReader reader)
+        static FixedList512Bytes<Vector3> ReadVector3Route(BinaryReader reader)
         {
-            var result = new FixedList128Bytes<Vector3>();
+            var result = new FixedList512Bytes<Vector3>();
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
                 result.Add(ReadVector3(reader));
             return result;
@@ -689,13 +684,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             var result = new FixedList128Bytes<float>();
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
                 result.Add(reader.ReadSingle());
-            return result;
-        }
-        static FixedList32Bytes<byte> ReadByteRoute(BinaryReader reader)
-        {
-            var result = new FixedList32Bytes<byte>();
-            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
-                result.Add(reader.ReadByte());
             return result;
         }
         static void WriteVector2(BinaryWriter writer, Vector2 value) { writer.Write(value.x); writer.Write(value.y); }

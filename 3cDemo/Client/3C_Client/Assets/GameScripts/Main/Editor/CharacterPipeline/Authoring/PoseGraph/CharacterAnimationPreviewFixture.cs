@@ -100,12 +100,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal Scene PreviewScene => m_Scene;
         internal bool HasEnvironment => m_EnvironmentInstance;
         internal RenderTexture PreviewTexture => m_PreviewTexture;
+        internal static bool CanCreate =>
+            !Application.isPlaying &&
+            !EditorApplication.isPlayingOrWillChangePlaymode;
 
         internal static CharacterAnimationPreviewFixtureSession Create(
             CharacterAnimationPreviewFixture fixture)
         {
             if (!fixture)
                 throw new ArgumentNullException(nameof(fixture));
+            if (!CanCreate)
+                throw new InvalidOperationException("Animation Preview Fixture is available only in Edit Mode.");
             fixture.RequireValid();
             Scene scene = SceneManager.CreateScene(
                 $"CharacterAnimationPreview/{fixture.name}/{Guid.NewGuid():N}",

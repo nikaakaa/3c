@@ -143,6 +143,8 @@ namespace ThirdPersonSimulation
         public bool IsStopping(OperationHandle operation) => m_Runtime.IsStopping(operation);
         public ulong ReadGeneration(OperationHandle operation) => m_Runtime.ReadGeneration(operation);
         public bool CurrentStateRootCompleted() => m_Runtime.CurrentStateRootCompleted();
+        public ProgramControlFlowEdge PredictCurrentStateRootCompletionTransition() =>
+            m_Runtime.PredictCurrentStateRootCompletionTransition();
         public int CurrentStateExitCause() => m_Runtime.CurrentStateExitCause();
         public string FindStateExecutionPath(OperationHandle state) => m_Runtime.FindStateExecutionPath(state);
         public bool TryGetCurrentStateExecutionPath(OperationHandle state, out string path) =>

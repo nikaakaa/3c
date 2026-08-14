@@ -64,26 +64,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static CharacterSequencePoseSourceSlot CreateSequencePoseSource(
             CharacterAnimationPresentationProfile profile,
             string displayName,
-            UnityEngine.AnimationClip clip,
-            bool loop)
+            CharacterAnimationSequenceAsset sequence)
         {
             RequirePoseSourceContext(profile, displayName);
+            if (!sequence)
+                throw new ArgumentNullException(nameof(sequence));
             var slot = UnityEngine.ScriptableObject.CreateInstance<CharacterSequencePoseSourceSlot>();
             slot.name = displayName.Trim();
             var binding = UnityEngine.ScriptableObject.CreateInstance<CharacterSequencePoseSourceBinding>();
             binding.name = slot.name + " Binding";
-            binding.Configure(
-                slot,
-                clip,
-                profile.RigDefinition,
-                loop,
-                1f,
-                string.Empty,
-                AnimationMarkerSequenceTopology.Unspecified,
-                AnimationMarkerSyncRole.Unspecified,
-                Array.Empty<PresentationPoseSourceMarker>(),
-                UnityEngine.AnimationCurve.Constant(0f, 1f, 1f),
-                ResolveFootAnalysisIdentity(profile));
+            binding.Configure(slot, sequence);
             CreatePoseSource(profile, slot, binding);
             return slot;
         }
@@ -133,39 +123,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static void ConfigureSequencePoseSourceBinding(
             CharacterAnimationPresentationProfile profile,
             CharacterSequencePoseSourceSlot slot,
-            UnityEngine.AnimationClip clip,
-            bool loop,
-            float defaultPlayRate,
-            string markerGroupId,
-            AnimationMarkerSequenceTopology markerTopology,
-            AnimationMarkerSyncRole syncRole,
-            PresentationPoseSourceMarker[] markers,
-            UnityEngine.AnimationCurve footPlacementWeightCurve)
+            CharacterAnimationSequenceAsset sequence)
         {
             if (!profile)
                 throw new ArgumentNullException(nameof(profile));
             if (!slot)
                 throw new ArgumentNullException(nameof(slot));
-            if (!clip)
-                throw new ArgumentNullException(nameof(clip));
+            if (!sequence)
+                throw new ArgumentNullException(nameof(sequence));
             if (!profile.RigDefinition)
                 throw new InvalidOperationException($"Animation Presentation Profile '{profile.name}' requires one formal Rig Definition.");
 
             CharacterPresentationPoseSourceBinding existing = profile.FindPoseSourceBinding(slot);
             var configured = UnityEngine.ScriptableObject.CreateInstance<CharacterSequencePoseSourceBinding>();
             configured.name = existing ? existing.name : slot.name + " Binding";
-            configured.Configure(
-                slot,
-                clip,
-                profile.RigDefinition,
-                loop,
-                defaultPlayRate,
-                markerGroupId,
-                markerTopology,
-                syncRole,
-                markers,
-                footPlacementWeightCurve,
-                ResolveFootAnalysisIdentity(profile));
+            configured.Configure(slot, sequence);
 
             SetPoseSourceBinding(profile, configured);
         }
@@ -540,7 +512,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     producerId.TimelineAuthoringId,
                     producerId.TrackAuthoringId,
                     clip.AuthoringId,
-                    clip.Clip));
+                    clip.Sequence.Clip));
             }
             return clips.ToArray();
         }

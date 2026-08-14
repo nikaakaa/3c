@@ -22,7 +22,6 @@ namespace BTSMTL.Timeline.Editor
 
         DropdownMenuHandler MenuHandler;
         bool m_RuntimeReadOnly;
-        Label m_MarkerSyncSummary;
         VisualElement m_AnimationCurvesHeader;
         VisualElement m_CurveChannelLabels;
         Label m_AnimationCurvesFold;
@@ -57,30 +56,12 @@ namespace BTSMTL.Timeline.Editor
                 Icon.style.backgroundImage = texture;
 
             style.height = TimelineTrackLayout.ContentHeight(Track);
-            m_MarkerSyncSummary = this.Q<Label>("marker-sync-summary");
-            m_MarkerSyncSummary.pickingMode = PickingMode.Ignore;
             m_AnimationCurvesHeader = this.Q("animation-curves-header");
             m_AnimationCurvesHeader.pickingMode = PickingMode.Position;
             m_AnimationCurvesFold = this.Q<Label>("animation-curves-fold");
             m_AnimationCurvesFold.pickingMode = PickingMode.Ignore;
             m_CurveChannelLabels = this.Q("curve-channel-labels");
             m_CurveChannelLabels.pickingMode = PickingMode.Ignore;
-            if (Track is AnimationTrack animationTrack)
-            {
-                m_MarkerSyncSummary.style.display = DisplayStyle.Flex;
-                m_MarkerSyncSummary.text = MarkerHeaderText(animationTrack);
-                m_MarkerSyncSummary.style.top = TimelineTrackLayout.MarkerHeaderTop;
-                m_MarkerSyncSummary.style.height = TimelineTrackLayout.MarkerHeaderHeight;
-                m_MarkerSyncSummary.pickingMode = PickingMode.Position;
-                TrackView.MarkerSyncSummaryChanged += RefreshMarkerSyncSummary;
-                m_MarkerSyncSummary.RegisterCallback<PointerDownEvent>(evt =>
-                {
-                    if (evt.button != 0)
-                        return;
-                    TrackView.ToggleMarkerLane();
-                    evt.StopImmediatePropagation();
-                });
-            }
             TimelineCurveChannelCatalog.CollectForTrack(Track, m_CurveChannels);
             if (m_CurveChannels.Count > 0)
             {
@@ -107,7 +88,6 @@ namespace BTSMTL.Timeline.Editor
             RegisterCallback<DetachFromPanelEvent>((e) =>
             {
                 FieldView.OnGeometryChangedCallback -= OnGeometryChanged;
-                TrackView.MarkerSyncSummaryChanged -= RefreshMarkerSyncSummary;
             });
             //RegisterCallback<PointerDownEvent>(OnPointerDown);
 
@@ -167,15 +147,6 @@ namespace BTSMTL.Timeline.Editor
             });
             this.AddManipulator(DragManipulator);
         }
-
-        void RefreshMarkerSyncSummary(string summary)
-        {
-            if (m_MarkerSyncSummary != null && Track is AnimationTrack animationTrack)
-                m_MarkerSyncSummary.text = MarkerHeaderText(animationTrack);
-        }
-
-        string MarkerHeaderText(AnimationTrack track) =>
-            $"{(TimelineTrackLayout.MarkersExpanded(track) ? "v" : ">") } SYNC MARKERS  {TimelineTrackView.MarkerSyncSummary(track)}";
 
         void PopulateCurveChannelLabels()
         {

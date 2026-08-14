@@ -8,11 +8,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterMotionMatchingPoseSourceBinding : CharacterPresentationPoseSourceBinding
     {
         [SerializeField] CharacterMotionMatchingProfile m_Profile;
+        [SerializeField] CharacterAnimationRigDefinition m_Rig;
+        [SerializeField] string m_FootAnalysisIdentity = string.Empty;
         [SerializeField] string m_SearchDomainId = string.Empty;
         [SerializeField] CharacterMotionMatchingDatabaseDefinition[] m_Databases = Array.Empty<CharacterMotionMatchingDatabaseDefinition>();
 
         public override PresentationPoseSourceKind SourceKind => PresentationPoseSourceKind.MotionMatching;
         public override UnityEngine.Object SourceAsset => m_Profile;
+        public override CharacterAnimationRigDefinition Rig => m_Rig;
+        public override string FootAnalysisIdentity => m_FootAnalysisIdentity ?? string.Empty;
         public CharacterMotionMatchingProfile Profile => m_Profile;
         public CharacterMotionMatchingSearchDomainId SearchDomainId =>
             string.IsNullOrWhiteSpace(m_SearchDomainId)
@@ -31,8 +35,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!profile || !searchDomainId.IsValid || databases == null || databases.Length == 0)
                 throw new ArgumentException("Motion Matching Pose source binding is incomplete.");
-            ConfigureCommon(slot, rig, footAnalysisIdentity);
+            ConfigureCommon(slot);
             m_Profile = profile;
+            m_Rig = rig;
+            m_FootAnalysisIdentity = footAnalysisIdentity?.Trim() ?? string.Empty;
             m_SearchDomainId = searchDomainId.Value;
             m_Databases = databases;
             RequireValid(rig);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Animancer;
 using BTSMTL.Timeline;
@@ -26,7 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string poseGraphOwnerId,
             CharacterPresentationMutationTransaction graphTransaction,
             CharacterPresentationMutationTransaction profileTransaction,
-            IReadOnlyList<AgentLinkedPoseGraphMutationPlan> linkedPoseGraphs)
+            IReadOnlyList<AgentLinkedPoseGraphMutationPlan> linkedPoseGraphs,
+            IReadOnlyList<AgentAnimationSequenceMutationPlan> animationSequences)
         {
             Profile = profile;
             PoseGraph = poseGraph;
@@ -36,6 +38,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ProfileTransaction = profileTransaction;
             LinkedPoseGraphs = linkedPoseGraphs ??
                                Array.Empty<AgentLinkedPoseGraphMutationPlan>();
+            AnimationSequences = animationSequences ??
+                                 Array.Empty<AgentAnimationSequenceMutationPlan>();
         }
 
         public CharacterAnimationPresentationProfile Profile { get; }
@@ -45,10 +49,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public CharacterPresentationMutationTransaction GraphTransaction { get; }
         public CharacterPresentationMutationTransaction ProfileTransaction { get; }
         public IReadOnlyList<AgentLinkedPoseGraphMutationPlan> LinkedPoseGraphs { get; }
+        public IReadOnlyList<AgentAnimationSequenceMutationPlan> AnimationSequences { get; }
         public bool IsEmpty =>
             GraphTransaction.Mutations.Count == 0 &&
             ProfileTransaction.Mutations.Count == 0 &&
-            LinkedPoseGraphs.All(value => value.Transaction.Mutations.Count == 0);
+            LinkedPoseGraphs.All(value => value.Transaction.Mutations.Count == 0) &&
+            AnimationSequences.Count == 0;
+    }
+
+    public enum AgentAnimationSequenceMutationKind : byte
+    {
+        Create = 1,
+        Update = 2,
+        Delete = 3
+    }
+
+    public sealed class AgentAnimationSequenceMutationPlan
+    {
+        internal AgentAnimationSequenceMutationPlan(
+            AgentAnimationSequenceMutationKind kind,
+            CharacterAnimationSequenceAsset asset,
+            string assetPath,
+            AgentPackageAnimationSequenceFile target,
+            AgentPackageAnimationSequenceCurvesFile curves,
+            AnimationClip clip,
+            CharacterAnimationRigDefinition rig,
+            ScriptableObject footAnalysisSource)
+        {
+            Kind = kind;
+            Asset = asset;
+            AssetPath = assetPath ?? string.Empty;
+            Target = target;
+            Curves = curves;
+            Clip = clip;
+            Rig = rig;
+            FootAnalysisSource = footAnalysisSource;
+        }
+
+        public AgentAnimationSequenceMutationKind Kind { get; }
+        public CharacterAnimationSequenceAsset Asset { get; }
+        public string AssetPath { get; }
+        public AgentPackageAnimationSequenceFile Target { get; }
+        public AgentPackageAnimationSequenceCurvesFile Curves { get; }
+        public AnimationClip Clip { get; }
+        public CharacterAnimationRigDefinition Rig { get; }
+        public ScriptableObject FootAnalysisSource { get; }
     }
 
     public sealed class AgentLinkedPoseGraphMutationPlan
@@ -194,6 +239,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 profileTransaction,
                 report);
 
+            IReadOnlyList<AgentAnimationSequenceMutationPlan>
+                animationSequences = BuildAnimationSequencePlan(
+                    current,
+                    normalized,
+                    profile,
+                    report);
+            if (report.HasErrors())
+                return false;
+
             PreparePoseSourceSlots(
                 current.profile,
                 normalized.profile,
@@ -244,7 +298,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 poseGraphGuid,
                 graphTransaction,
                 profileTransaction,
-                linkedPoseGraphs);
+                linkedPoseGraphs,
+                animationSequences);
             return true;
         }
 
@@ -273,6 +328,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             value.animationChannelId))
                     .Select(value => value.animationChannelId),
                 StringComparer.Ordinal);
+            var sequences = new HashSet<string>(
+                presentation.animationSequences.Select(value =>
+                    ReferenceIdentity(value.asset)),
+                StringComparer.Ordinal);
+            foreach (AgentSnapshotTimeline timeline in timelines.Values)
+            {
+                foreach (AgentSnapshotTimelineClip clip in timeline.tracks
+                             .SelectMany(value => value.clips)
+                             .Where(value => value.typeName?.EndsWith(
+                                 "AnimationClip",
+                                 StringComparison.Ordinal) == true))
+                {
+                    if (!sequences.Contains(ReferenceIdentity(clip.animationSequence)))
+                        report.Error(
+                            $"editable/timelines/{timeline.timelineAuthoringId}/clips/{clip.clipAuthoringId}.animationSequence",
+                            "presentation_animation_sequence_unresolved",
+                            "Timeline Sequence Segment引用不在Animation Sequence目标闭包中。");
+                }
+            }
             var sources = new HashSet<string>(
                 presentation.profile.poseSources.Select(value =>
                     ReferenceIdentity(value.slot)),
@@ -1684,6 +1758,142 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return valid;
         }
 
+        IReadOnlyList<AgentAnimationSequenceMutationPlan> BuildAnimationSequencePlan(
+            AgentDocumentPresentationEditable current,
+            AgentDocumentPresentationEditable target,
+            CharacterAnimationPresentationProfile profile,
+            AgentCompileReport report)
+        {
+            var result = new List<AgentAnimationSequenceMutationPlan>();
+            Dictionary<string, AgentPackageAnimationSequenceFile> oldSequences =
+                Index(current.animationSequences, value => value.id);
+            Dictionary<string, AgentPackageAnimationSequenceFile> newSequences =
+                Index(target.animationSequences, value => value.id);
+            Dictionary<string, AgentPackageAnimationSequenceCurvesFile> oldCurves =
+                Index(current.animationSequenceCurves, value => value.sequenceId);
+            Dictionary<string, AgentPackageAnimationSequenceCurvesFile> newCurves =
+                Index(target.animationSequenceCurves, value => value.sequenceId);
+
+            foreach (AgentPackageAnimationSequenceFile removed in
+                     current.animationSequences.Where(value => !newSequences.ContainsKey(value.id)))
+            {
+                CharacterAnimationSequenceAsset asset = Resolve<CharacterAnimationSequenceAsset>(
+                    removed.asset,
+                    SequencePath(removed.id) + ".asset",
+                    report);
+                if (!asset)
+                    continue;
+                result.Add(new AgentAnimationSequenceMutationPlan(
+                    AgentAnimationSequenceMutationKind.Delete,
+                    asset,
+                    AssetDatabase.GetAssetPath(asset),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null));
+                AddSequenceDiff(report, result.Count, "Delete", removed.id);
+            }
+
+            foreach (AgentPackageAnimationSequenceFile sequence in target.animationSequences)
+            {
+                string path = SequencePath(sequence.id);
+                if (!newCurves.TryGetValue(sequence.id, out AgentPackageAnimationSequenceCurvesFile curves))
+                {
+                    report.Error(path, "presentation_sequence_curves_missing", "Animation Sequence缺少同identity的curves.json。");
+                    continue;
+                }
+
+                bool created = !string.IsNullOrWhiteSpace(sequence.asset?.localId);
+                CharacterAnimationSequenceAsset asset;
+                string assetPath;
+                if (created)
+                {
+                    asset = ScriptableObject.CreateInstance<CharacterAnimationSequenceAsset>();
+                    asset.name = sequence.name;
+                    assetPath = BuildSequenceAssetPath(profile, sequence.name, sequence.id);
+                    if (AssetDatabase.LoadMainAssetAtPath(assetPath))
+                    {
+                        report.Error(path + ".asset", "presentation_sequence_asset_path_conflict", $"新增Animation Sequence目标路径已存在资产：{assetPath}");
+                        UnityEngine.Object.DestroyImmediate(asset);
+                        continue;
+                    }
+                    if (!m_LocalAssets.TryAdd(sequence.asset.localId, asset))
+                    {
+                        report.Error(path + ".asset.localId", "presentation_local_asset_identity_duplicate", "Animation Sequence local identity重复。");
+                        UnityEngine.Object.DestroyImmediate(asset);
+                        continue;
+                    }
+                }
+                else
+                {
+                    asset = Resolve<CharacterAnimationSequenceAsset>(sequence.asset, path + ".asset", report);
+                    assetPath = asset ? AssetDatabase.GetAssetPath(asset) : string.Empty;
+                    if (asset && !string.Equals(asset.AuthoringId, sequence.id, StringComparison.Ordinal))
+                    {
+                        report.Error(path + ".id", "presentation_sequence_identity_mismatch", "Animation Sequence文件identity与目标资产不一致。");
+                        asset = null;
+                    }
+                }
+
+                AnimationClip clip = Resolve<AnimationClip>(sequence.clip, path + ".clip", report);
+                CharacterAnimationRigDefinition rig = Resolve<CharacterAnimationRigDefinition>(sequence.rig, path + ".rig", report);
+                ScriptableObject footAnalysisSource = Resolve<ScriptableObject>(sequence.footAnalysisSource, path + ".footAnalysisSource", report);
+                if (!asset || !clip || !rig || !footAnalysisSource)
+                    continue;
+
+                oldSequences.TryGetValue(sequence.id, out AgentPackageAnimationSequenceFile previous);
+                oldCurves.TryGetValue(sequence.id, out AgentPackageAnimationSequenceCurvesFile previousCurves);
+                if (!created && Same(previous, sequence) && Same(previousCurves, curves))
+                    continue;
+
+                result.Add(new AgentAnimationSequenceMutationPlan(
+                    created ? AgentAnimationSequenceMutationKind.Create : AgentAnimationSequenceMutationKind.Update,
+                    asset,
+                    assetPath,
+                    sequence,
+                    curves,
+                    clip,
+                    rig,
+                    footAnalysisSource));
+                AddSequenceDiff(report, result.Count, created ? "Create" : "Update", sequence.id);
+            }
+            return result;
+        }
+
+        static void AddSequenceDiff(AgentCompileReport report, int index, string action, string sequenceId)
+        {
+            report.plannedDiff.Add(new AgentCompileDiffEntry
+            {
+                mutationId = "presentation-sequence-" + index.ToString("D4"),
+                action = action + "AnimationSequence",
+                graph = sequenceId,
+                target = SequencePath(sequenceId),
+                detail = action + " CharacterAnimationSequenceAsset"
+            });
+        }
+
+        static string BuildSequenceAssetPath(
+            CharacterAnimationPresentationProfile profile,
+            string name,
+            string identity)
+        {
+            string profilePath = AssetDatabase.GetAssetPath(profile).Replace('\\', '/');
+            string directory = Path.GetDirectoryName(profilePath)?.Replace('\\', '/') ?? "Assets";
+            string leaf = Path.GetFileName(directory);
+            if (string.Equals(leaf, "Profile", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(leaf, "Profiles", StringComparison.OrdinalIgnoreCase))
+                directory = Path.GetDirectoryName(directory)?.Replace('\\', '/') ?? "Assets";
+            string fileName = string.Concat(
+                (string.IsNullOrWhiteSpace(name) ? "AnimationSequence" : name)
+                .Where(value => !Path.GetInvalidFileNameChars().Contains(value)));
+            string suffix = identity.Length <= 8 ? identity : identity.Substring(0, 8);
+            return $"{directory}/Sequences/{fileName}.{suffix}.asset";
+        }
+
+        static string SequencePath(string id) =>
+            $"editable/animation-sequences/{id}";
+
         void BuildProfilePlan(
             AgentPackagePresentationProfileFile current,
             AgentPackagePresentationProfileFile target,
@@ -2051,19 +2261,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             string path =
                 $"editable/presentation/profile.json.poseSources[{value.name}]";
-            CharacterAnimationRigDefinition rig =
-                Resolve<CharacterAnimationRigDefinition>(
-                    value.rig,
-                    path + ".rig",
-                    report);
-            if (!rig || rig != profileRig)
-            {
-                report.Error(
-                    path + ".rig",
-                    "presentation_pose_source_rig_mismatch",
-                    "Pose source Rig必须与Presentation Profile Rig一致。");
+            CharacterAnimationRigDefinition rig = profileRig;
+            if (!rig)
                 return null;
-            }
             try
             {
                 PresentationPoseSourceKind kind =
@@ -2080,35 +2280,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     return null;
                 if (kind == PresentationPoseSourceKind.Sequence)
                 {
-                    AnimationClip clip = Resolve<AnimationClip>(
+                    CharacterAnimationSequenceAsset sequence = Resolve<CharacterAnimationSequenceAsset>(
                         value.source,
                         path + ".source",
                         report);
-                    if (!clip)
+                    if (!sequence || sequence.Rig != rig)
                         return null;
                     var binding = ScriptableObject.CreateInstance<
                         CharacterSequencePoseSourceBinding>();
                     binding.name = slot.name + " Binding";
-                    binding.Configure(
-                        (CharacterSequencePoseSourceSlot)slot,
-                        clip,
-                        rig,
-                        value.loop,
-                        value.defaultPlayRate,
-                        value.markerGroupId,
-                        Enum.Parse<AnimationMarkerSequenceTopology>(
-                            value.markerTopology,
-                            false),
-                        Enum.Parse<AnimationMarkerSyncRole>(
-                            value.syncRole,
-                            false),
-                        value.markers.Select(marker =>
-                            new PresentationPoseSourceMarker(
-                                marker.id,
-                                marker.markerId,
-                                marker.frame)).ToArray(),
-                        ConvertCurve(value.footPlacementWeight),
-                        value.footAnalysisIdentity);
+                    binding.Configure((CharacterSequencePoseSourceSlot)slot, sequence);
                     return RegisterLocalBinding(value.binding, binding, path, report);
                 }
                 if (kind == PresentationPoseSourceKind.BlendSpace)
@@ -2420,12 +2601,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             IdentityMap identities,
             AgentCompileReport report)
         {
-            foreach (AgentPackagePoseSourceBinding source in
-                     value.profile.poseSources)
+            foreach (AgentPackageAnimationSequenceFile sequence in value.animationSequences)
             {
-                foreach (AgentPackagePoseSourceMarker marker in source.markers)
-                    marker.id = identities.Map(marker.id);
+                sequence.id = identities.Map(sequence.id);
+                for (int markerIndex = 0; markerIndex < sequence.markers.Count; markerIndex++)
+                    sequence.markers[markerIndex].id = identities.Map(sequence.markers[markerIndex].id);
+                for (int notifyIndex = 0; notifyIndex < sequence.notifies.Count; notifyIndex++)
+                    sequence.notifies[notifyIndex].id = identities.Map(sequence.notifies[notifyIndex].id);
             }
+            foreach (AgentPackageAnimationSequenceCurvesFile curves in value.animationSequenceCurves)
+                curves.sequenceId = identities.Map(curves.sequenceId);
             foreach (AgentPackageAnimationProducerBinding producer in
                      value.profile.actionProducers)
             {
@@ -2597,8 +2782,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 yield return ReferenceIdentity(source.slot);
                 yield return ReferenceIdentity(source.binding);
-                foreach (AgentPackagePoseSourceMarker marker in source.markers)
+            }
+            foreach (AgentPackageAnimationSequenceFile sequence in value.animationSequences ??
+                         new List<AgentPackageAnimationSequenceFile>())
+            {
+                yield return sequence.id;
+                foreach (AgentPackageAnimationSequenceMarker marker in sequence.markers ??
+                             new List<AgentPackageAnimationSequenceMarker>())
                     yield return marker.id;
+                foreach (AgentPackageAnimationSequenceNotify notify in sequence.notifies ??
+                             new List<AgentPackageAnimationSequenceNotify>())
+                    yield return notify.id;
             }
             foreach (AgentPackageAnimationProducerBinding producer in
                      value.profile?.actionProducers ??

@@ -96,3 +96,7 @@ in-place支撑脚会相对Root向后移动；用Heel/Toe全三维局部速度判
 权威Root竖直位移负责把整个身体带上台阶，Pelvis spring只负责支撑腿产生的附加位移。不能在Root上移时从Pelvis spring状态中减去同样高度；这会让Root已经上楼而骨盆被旧负偏移留在楼下，并造成“上楼下陷、下楼相对正常”的方向性错误。
 
 `Ground Envelope`仍然只服务脚部净空，不能直接成为Pelvis Path。预测骨盆的输入必须来自权威Root位移、当前支撑腿和下一Landing身份；否则只是把脚部障碍包络复制成第二个骨盆owner。
+
+## 12. 碰撞KCC轨迹不等于身体支撑坡线
+
+Future Body Trajectory的Y已经包含KCC逐级跨台阶的碰撞结果。Query若再使用`SupportY - PlanStartSupportY`平移同相位Root/Hip，会把整段台阶高度重复叠加；正确残差只能是`SupportY - 同相位GroundProbeY`。同样，Body Support Path不能只是一个有效布尔值后继续转发原始KCC Root/Hip：那会把胶囊逐台阶离散抬升直接灌进Pelvis。正式Body Path应冻结当前支撑、可选对侧Landing和本脚Landing的支撑修正高度，按Action Step Phase分段插值Component Up；XZ仍来自同一冻结KCC，且不得消费Foot Ground Envelope。

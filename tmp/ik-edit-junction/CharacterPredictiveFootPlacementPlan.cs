@@ -17,9 +17,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             CharacterFutureBodyTrajectory futureBodyTrajectory,
-            Vector3 nativeSoleAtGeneration,
-            Vector3 nativeHipAtGeneration,
-            Vector3 nativeAnkleAtGeneration,
             Vector3 up,
             in AnimationPredictedFootStepSample step)
         {
@@ -30,8 +27,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !motionTimeline.IsValid || !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
                 futureBodyTrajectory == null ||
-                 !IsFinite(nativeSoleAtGeneration) ||
-                !IsFinite(nativeHipAtGeneration) || !IsFinite(nativeAnkleAtGeneration) ||
                 !IsFinite(up) || up.sqrMagnitude <= 0.000001f)
             {
                 throw new ArgumentException("Predictive Foot Root Trajectory origin is invalid.");
@@ -60,14 +55,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FrozenYawVelocityDegreesPerSecond = motionTimeline.YawVelocityDegreesPerSecond;
             FrozenTrajectoryYawRateDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
             PredictionLeadSeconds = step.PredictionLeadSeconds;
-            GenerationRotation = EvaluateBodyRotation(
-                StartRotation,
-                Up,
-                FrozenTrajectoryYawRateDegreesPerSecond,
-                PredictionLeadSeconds);
-            NativeSoleAtGeneration = nativeSoleAtGeneration;
-            NativeHipAtGeneration = nativeHipAtGeneration;
-            NativeAnkleAtGeneration = nativeAnkleAtGeneration;
             EventPhaseAtGeneration = step.ActionStepClock.Phase;
             LiftOffPhase = step.ActionStepClock.LiftOffPhase;
             PathStartPhase = Mathf.Max(EventPhaseAtGeneration, LiftOffPhase);
@@ -75,9 +62,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActionStepDurationSeconds = step.ActionStepClock.DurationSeconds;
             Step = step;
             FutureBodyTrajectory = futureBodyTrajectory;
-            RootLocalFullFootAtGeneration = step.EvaluateRootLocalFootRoute(EventPhaseAtGeneration);
-            RootLocalHipAtGeneration = step.EvaluateRootLocalHipRoute(EventPhaseAtGeneration);
-            RootLocalAnkleAtGeneration = step.EvaluateRootLocalAnkleRoute(EventPhaseAtGeneration);
             if (futureBodyTrajectory.DurationSeconds + 0.0001f <
                 PredictionLeadSeconds + LandingDelayAtGeneration)
             {
@@ -95,9 +79,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float FrozenTrajectoryYawRateDegreesPerSecond { get; }
         internal float CurrentSegmentSwitchDelaySeconds { get; }
         internal bool HasContinuation { get; }
-        internal Vector3 NativeSoleAtGeneration { get; }
-        internal Vector3 NativeHipAtGeneration { get; }
-        internal Vector3 NativeAnkleAtGeneration { get; }
         internal float ActionStepDurationSeconds { get; }
         internal float EventPhaseAtGeneration { get; }
         internal float LiftOffPhase { get; }
@@ -109,10 +90,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasContinuation && ContinuationPlanarVelocity.sqrMagnitude > 0.000001f;
         readonly AnimationPredictedFootStepSample Step { get; }
         readonly CharacterFutureBodyTrajectory FutureBodyTrajectory;
-        readonly Quaternion GenerationRotation;
-        readonly Vector3 RootLocalFullFootAtGeneration { get; }
-        readonly Vector3 RootLocalHipAtGeneration { get; }
-        readonly Vector3 RootLocalAnkleAtGeneration { get; }
         internal void EvaluateSwing(float progress, out Vector3 position, out Quaternion rotation)
         {
             float eventPhase = Mathf.Lerp(PathStartPhase, 1f, Mathf.Clamp01(progress));
@@ -131,15 +108,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             float phase = Mathf.Clamp(eventPhase, PathStartPhase, 1f);
             float elapsedSeconds = ResolveRawTravelElapsedSeconds(phase);
-            float pathStartElapsedSeconds = ResolveRawTravelElapsedSeconds(PathStartPhase);
             Quaternion rotation = EvaluateRotation(phase);
-            Quaternion pathStartRotation = EvaluateRotation(PathStartPhase);
-            Vector3 localDelta = rotation * Step.EvaluateAuthoredFootPlanarRoute(phase) -
-                                 pathStartRotation * Step.EvaluateAuthoredFootPlanarRoute(PathStartPhase);
-            Vector3 bodyDelta = ResolvePlanarTravel(elapsedSeconds) -
-                                ResolvePlanarTravel(pathStartElapsedSeconds);
-            return NativeSoleAtGeneration + bodyDelta +
-                   Vector3.ProjectOnPlane(localDelta, Up);
+            Vector3 root = StartPosition + ResolvePlanarTravel(elapsedSeconds);
+            Vector3 localFoot = Step.EvaluateRootLocalFootRoute(phase);
+            Vector3 localPlanar = Step.EvaluateAuthoredFootPlanarRoute(phase);
+            float virtualGroundHeight = localFoot.y - Step.EvaluateAnimationClearanceHeight(phase);
+            return root + rotation * new Vector3(
+                localPlanar.x,
+                virtualGroundHeight,
+                localPlanar.z);
+        }
+
+        internal Vector3 EvaluateAlignedFootRoute(Vector3 pathStart, float eventPhase)
+        {
+            float phase = Mathf.Clamp(eventPhase, PathStartPhase, 1f);
+            Vector3 route = EvaluateFootRoute(phase);
+            Vector3 sourceStart = EvaluateFootRoute(PathStartPhase);
+            Vector3 planarOffset = Vector3.ProjectOnPlane(pathStart - sourceStart, Up);
+            float progress = Mathf.InverseLerp(PathStartPhase, 1f, phase);
+            float blend = 1f - progress * progress * (3f - 2f * progress);
+            return route + planarOffset * blend;
         }
 
         internal float EvaluateRemainingPlanarDistance(float eventPhase)
@@ -155,10 +143,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float phase = Mathf.Clamp01(eventPhase);
             float elapsedSeconds = ResolveRawTravelElapsedSeconds(phase);
             Quaternion rotation = EvaluateRotation(phase);
-            Vector3 localDelta = rotation * Step.EvaluateRootLocalHipRoute(phase) -
-                                 GenerationRotation * RootLocalHipAtGeneration;
-            return NativeHipAtGeneration + ResolveRelativeBodyTravel(elapsedSeconds) +
-                   localDelta;
+            return StartPosition + ResolvePlanarTravel(elapsedSeconds) +
+                   rotation * Step.EvaluateRootLocalHipRoute(phase);
         }
 
         internal Vector3 EvaluateAnkleRoute(float eventPhase)
@@ -166,23 +152,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float phase = Mathf.Clamp01(eventPhase);
             float elapsedSeconds = ResolveRawTravelElapsedSeconds(phase);
             Quaternion rotation = EvaluateRotation(phase);
-            Vector3 localDelta = rotation * Step.EvaluateRootLocalAnkleRoute(phase) -
-                                 GenerationRotation * RootLocalAnkleAtGeneration;
-            return NativeAnkleAtGeneration + ResolveRelativeBodyTravel(elapsedSeconds) +
-                   localDelta;
+            return StartPosition + ResolvePlanarTravel(elapsedSeconds) +
+                   rotation * Step.EvaluateRootLocalAnkleRoute(phase);
         }
 
         internal Vector3 EvaluateSoleToAnkle(float eventPhase)
         {
             float phase = Mathf.Clamp01(eventPhase);
             Quaternion rotation = EvaluateRotation(phase);
-            Vector3 authoredAtGeneration = RootLocalAnkleAtGeneration -
-                                           RootLocalFullFootAtGeneration;
             Vector3 authored = Step.EvaluateRootLocalAnkleRoute(phase) -
                                Step.EvaluateRootLocalFootRoute(phase);
-            return NativeAnkleAtGeneration - NativeSoleAtGeneration +
-                   rotation * authored -
-                   GenerationRotation * authoredAtGeneration;
+            return rotation * authored;
         }
 
         internal float EvaluateAuthoredReach(float eventPhase) =>
@@ -220,10 +200,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 sample.RelativePositionZ);
         }
 
-        Vector3 ResolveRelativeBodyTravel(float elapsedSeconds) =>
-            ResolvePlanarTravel(elapsedSeconds) -
-            ResolvePlanarTravel(PredictionLeadSeconds);
-
         static bool IsFinite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
 
@@ -249,12 +225,53 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterPredictiveBodySupportPath
     {
-        internal CharacterPredictiveBodySupportPath(bool isValid)
+        internal CharacterPredictiveBodySupportPath(
+            float startPhase,
+            Vector3 up,
+            Vector3 startRoot,
+            Vector3 startHip,
+            bool hasSplit,
+            float splitPhase,
+            Vector3 splitRoot,
+            Vector3 splitHip,
+            Vector3 endRoot,
+            Vector3 endHip)
         {
-            IsValid = isValid;
+            if (!float.IsFinite(startPhase) || startPhase < 0f || startPhase >= 1f ||
+                !IsFinite(up) || up.sqrMagnitude <= 0.000001f ||
+                !IsFinite(startRoot) || !IsFinite(startHip) ||
+                !IsFinite(endRoot) || !IsFinite(endHip) ||
+                hasSplit &&
+                (!float.IsFinite(splitPhase) ||
+                 splitPhase <= startPhase || splitPhase >= 1f ||
+                 !IsFinite(splitRoot) || !IsFinite(splitHip)))
+            {
+                throw new ArgumentException("Predictive Body Support Path is invalid.");
+            }
+            IsValid = true;
+            StartPhase = startPhase;
+            Up = up.normalized;
+            StartRootHeight = Vector3.Dot(startRoot, Up);
+            StartHipHeight = Vector3.Dot(startHip, Up);
+            HasSplit = hasSplit;
+            SplitPhase = hasSplit ? splitPhase : 1f;
+            SplitRootHeight = hasSplit ? Vector3.Dot(splitRoot, Up) : StartRootHeight;
+            SplitHipHeight = hasSplit ? Vector3.Dot(splitHip, Up) : StartHipHeight;
+            EndRootHeight = Vector3.Dot(endRoot, Up);
+            EndHipHeight = Vector3.Dot(endHip, Up);
         }
 
         internal bool IsValid { get; }
+        readonly float StartPhase;
+        readonly Vector3 Up;
+        readonly float StartRootHeight;
+        readonly float StartHipHeight;
+        readonly bool HasSplit;
+        readonly float SplitPhase;
+        readonly float SplitRootHeight;
+        readonly float SplitHipHeight;
+        readonly float EndRootHeight;
+        readonly float EndHipHeight;
 
         internal void Evaluate(
             in CharacterPredictiveFootRootTrajectory rootTrajectory,
@@ -264,10 +281,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!IsValid)
                 throw new InvalidOperationException("Predictive Body Support Path is unavailable.");
-            float phase = Mathf.Clamp01(eventPhase);
+            float phase = Mathf.Clamp(eventPhase, StartPhase, 1f);
             rootTrajectory.EvaluateEventPhase(phase, out root, out _);
             hip = rootTrajectory.EvaluateHipRoute(phase);
+            ResolveHeights(phase, out float rootHeight, out float hipHeight);
+            root += Up * (rootHeight - Vector3.Dot(root, Up));
+            hip += Up * (hipHeight - Vector3.Dot(hip, Up));
         }
+
+        void ResolveHeights(float phase, out float rootHeight, out float hipHeight)
+        {
+            if (HasSplit && phase <= SplitPhase)
+            {
+                float progress = Mathf.InverseLerp(StartPhase, SplitPhase, phase);
+                rootHeight = Mathf.Lerp(StartRootHeight, SplitRootHeight, progress);
+                hipHeight = Mathf.Lerp(StartHipHeight, SplitHipHeight, progress);
+                return;
+            }
+            float segmentStartPhase = HasSplit ? SplitPhase : StartPhase;
+            float segmentStartRootHeight = HasSplit ? SplitRootHeight : StartRootHeight;
+            float segmentStartHipHeight = HasSplit ? SplitHipHeight : StartHipHeight;
+            float segmentProgress = Mathf.InverseLerp(segmentStartPhase, 1f, phase);
+            rootHeight = Mathf.Lerp(segmentStartRootHeight, EndRootHeight, segmentProgress);
+            hipHeight = Mathf.Lerp(segmentStartHipHeight, EndHipHeight, segmentProgress);
+        }
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 
     internal sealed class CharacterPredictiveFootPlacementPlan
@@ -393,6 +433,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    SourceSampleIdentity == step.SourceSampleIdentity &&
                    SourceSampleCycle == step.SourceSampleCycle &&
                    EventOrdinal == step.EventOrdinal;
+        }
+
+        internal void SynchronizePoseContribution(in AnimationPredictedFootStepSample step)
+        {
+            if (!MatchesAuthoritativeEvent(in step))
+                throw new ArgumentException("Predictive Foot Plan pose contribution does not belong to its action event.");
+            ContributionContinuityIdentity = step.ContributionContinuityIdentity;
         }
 
         internal void Commit(
@@ -739,7 +786,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out AnimationBodyRotationPivotMode bodyPivotMode)
         {
             float phase = Mathf.Clamp01(eventPhase);
-            planarSole = RootTrajectory.EvaluateFootRoute(phase);
+            planarSole = RootTrajectory.EvaluateAlignedFootRoute(Start, phase);
             animationClearanceHeight = Mathf.Max(
                 0f,
                 EvaluateFloatRoute(AnimationClearanceHeights, phase) +
@@ -814,7 +861,41 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out bodyPivotMode);
         }
 
+        internal void EvaluateActionState(
+            float eventPhase,
+            out AnimationFootConstraintMode constraintMode,
+            out AnimationFootSupportPhase supportPhase,
+            out AnimationFootOrientationPolicy orientationPolicy,
+            out AnimationBodyRotationPivotMode bodyPivotMode)
+        {
+            if (!OwnsEvent)
+                throw new InvalidOperationException("Predictive Foot Plan action state is unavailable.");
+            EvaluateResolvedActionState(
+                Mathf.Clamp01(eventPhase),
+                out constraintMode,
+                out supportPhase,
+                out orientationPolicy,
+                out bodyPivotMode);
+        }
+
         internal void EvaluateCurrentAnimationClearance(
+            out float authoredClearanceHeight,
+            out float continuityOffset,
+            out float continuityContribution,
+            out float reachClearanceHeight,
+            out float compositeClearanceHeight)
+        {
+            EvaluateAnimationClearance(
+                ActionStepPhase,
+                out authoredClearanceHeight,
+                out continuityOffset,
+                out continuityContribution,
+                out reachClearanceHeight,
+                out compositeClearanceHeight);
+        }
+
+        internal void EvaluateAnimationClearance(
+            float eventPhase,
             out float authoredClearanceHeight,
             out float continuityOffset,
             out float continuityContribution,
@@ -823,12 +904,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!HasExecutablePath)
                 throw new InvalidOperationException("Predictive Foot Plan clearance is unavailable.");
+            float phase = Mathf.Clamp01(eventPhase);
             authoredClearanceHeight = EvaluateFloatRoute(
                 AnimationClearanceHeights,
-                ActionStepPhase);
+                phase);
             continuityOffset = AnimationClearanceContinuityOffset;
             continuityContribution = EvaluateAnimationClearanceContinuity(
-                ResolveSwingProgress(ActionStepPhase));
+                ResolveSwingProgress(phase));
             reachClearanceHeight = 0f;
             compositeClearanceHeight = Mathf.Max(
                 0f,
@@ -1111,7 +1193,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float progress = i / (AuthoredFootPlanarRoute.Length - 1f);
                 float eventPhase = Mathf.Lerp(rootTrajectory.PathStartPhase, 1f, progress);
                 frozenWorldFootRoutePhases.Add(eventPhase);
-                frozenWorldFootRoute.Add(rootTrajectory.EvaluateFootRoute(eventPhase));
+                frozenWorldFootRoute.Add(rootTrajectory.EvaluateAlignedFootRoute(Start, eventPhase));
             }
             FrozenWorldFootRoute = frozenWorldFootRoute;
             FrozenWorldFootRoutePhases = frozenWorldFootRoutePhases;
@@ -1133,13 +1215,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 EvaluateGroundPathProgress(pathStartPhase),
                 out Vector3 envelopePoint,
                 out _);
-            float nativeClearance = Vector3.Dot(
-                RootTrajectory.NativeSoleAtGeneration - envelopePoint,
-                up);
+            float currentClearance = Vector3.Dot(Start - envelopePoint, up);
             float authoredClearance = EvaluateFloatRoute(
                 AnimationClearanceHeights,
                 pathStartPhase);
-            float offset = nativeClearance - authoredClearance;
+            float offset = currentClearance - authoredClearance;
             if (!float.IsFinite(offset))
                 throw new InvalidOperationException("Predictive Foot Plan clearance continuity is invalid.");
             AnimationClearanceContinuityOffset = offset;

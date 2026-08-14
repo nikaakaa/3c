@@ -108,3 +108,11 @@
 - [x] 13.4 ApproachingContact把同一Executing Plan的Ankle、旋转与冻结Contact Surface原子交给现有Stance/Anchor；权威事件接触不得再被in-place鞋底局部速度否决，也不得混用Current Query的另一踏面或静默切换支撑面。
 - [x] 13.5 双向run `d15cb7b7a2f0463c864a73605f8dfef4`证明上坡零Target区间Pelvis Current中位由约`-0.193m`改善为约`+0.0005m`；同时证明主路线Root仍与冻结KCC轨迹重合时，速度比较仍产生33次假中断，全部ApproachingContact仍因`4–6.7m/s`局部脚速无法捕获Anchor。
 - [ ] 13.6 用下一新run验证主路线假`ActionInterrupted`归零、ApproachingContact捕获完整Anchor、上坡Pelvis不回归，并继续定位同Plan Path/Goal Y剩余跳变。
+
+## 14. 身体支撑坡线与同采样地形残差
+
+- [x] 14.1 用自动双向run `df93b1fbbf0240a181a835cacd105e2f`证明Landing交接与旧Anchor问题改善后，同Plan上坡仍有约`35–43cm`的Component Goal逐采样跳变；实现中的`Predictive Body Support Path`只有布尔有效位并直接转发离散KCC Root/Hip，未实现Spec要求的身体支撑坡线。
+- [x] 14.2 Future Query改为只应用`合法支撑高度 - 同相位Ground Probe高度`残差；碰撞求解后的Future Body XYZ不得再叠加相对计划起点的整段地形高度。
+- [x] 14.3 每个Executable Plan冻结`当前合法支撑 -> 可选对侧Landing -> 本脚Landing`的Root/Hip支撑锚点；运行时按同一Action Step Phase分段插值Component Up高度，平面位置仍消费同一冻结KCC轨迹。
+- [ ] 14.4 用新双向run验证Body Support Path不再等于离散KCC Y、上坡Pelvis Target连续且同Plan Goal跳变显著下降，并对账Anchor、Heel/Toe、Current安全下界和FBBIK residual无回退。
+- [ ] 14.5 完成Runtime与Editor编译、精确Float32/Fixed Character Build、OpenSpec strict validate和单一路径静态搜索。

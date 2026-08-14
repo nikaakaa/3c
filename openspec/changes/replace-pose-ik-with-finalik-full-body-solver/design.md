@@ -109,6 +109,8 @@ Corin locomotion是in-place：支撑脚相对Root向后运动是抵消KCC前进�
 
 Predictive Body Support Path描述下一Landing对身体的未来地形位移，它与“该摆脚当前是否Supporting”是两个事实。Executable Plan进入Swing后，即使同一脚是`Unlocked / Unsupported`，其Body Support Path仍可作为唯一Pelvis owner候选；真实支撑腿身份继续只拥有Current支撑、Anchor与Reach。
 
+Future Body Trajectory已经是碰撞求解后的KCC XYZ。Future Query对正式支撑只能应用`SupportY - 同相位GroundProbeY`残差，不能再把`SupportY - PlanStartSupportY`叠加到KCC Root/Hip，否则上楼高度会被重复计算。Executable Plan必须冻结当前支撑、可选对侧Landing和本脚Landing对应的支撑修正Root/Hip；执行时平面位置继续来自同一冻结KCC轨迹，Component Up高度按Action Step Phase在这些锚点间分段插值。Foot Ground Envelope仍只服务脚部，不参与该身体坡线。
+
 权威Pose Root的世界竖直位移必须直接带动身体；Pelvis Spring只能输出Current支撑腿与选中Body Support Path要求的附加偏移。禁止在Root上移时从Spring Current中减去同样高度，也禁止用Foot Ground Envelope驱动骨盆。前者会把已经上楼的Root与仍滞留楼下的Pelvis人为分离，形成只在上坡出现的持续负偏移。
 
 ## 已验证约束

@@ -20,6 +20,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterPredictiveFootPlacementDiagnostics m_Diagnostics;
         CharacterPredictiveFootPlacementPlan m_LeftPlan;
         CharacterPredictiveFootPlacementPlan m_RightPlan;
+        CharacterPredictiveFootStanceInput m_LeftLandingHandoff;
+        CharacterPredictiveFootStanceInput m_RightLandingHandoff;
         ulong m_NextPlanSequence = 1;
         ulong m_PreparedRenderFrame;
         ulong m_PreparedCompletionIdentity;
@@ -54,7 +56,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void Prepare(
             in CharacterFootPlacementPlanningFrame frame,
-            in CharacterFootPlacementAnimatedPose pose)
+            in CharacterFootPlacementAnimatedPose pose,
+            Vector3 leftGroundProbeStart,
+            Vector3 rightGroundProbeStart)
         {
             if (frame.ActorId != m_ActorId || !frame.Body.IsValid ||
                 frame.RenderFrame == 0 || frame.CompletionIdentity == 0 ||
@@ -76,6 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_LeftPlan,
                 pose.Left,
                 leftFeature,
+                leftGroundProbeStart,
                 frame.RenderFrame,
                 rootWorldPosition,
                 rootWorldRotation,
@@ -84,12 +89,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 trajectoryCurvatureAvailable,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
-                m_Rig.LeftLegLength);
+                m_Rig.LeftLegLength,
+                frame.PresentationDeltaSeconds,
+                out m_LeftLandingHandoff);
             PrepareFoot(
                 CharacterFootSide.Right,
                 m_RightPlan,
                 pose.Right,
                 rightFeature,
+                rightGroundProbeStart,
                 frame.RenderFrame,
                 rootWorldPosition,
                 rootWorldRotation,
@@ -98,7 +106,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 trajectoryCurvatureAvailable,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
-                m_Rig.RightLegLength);
+                m_Rig.RightLegLength,
+                frame.PresentationDeltaSeconds,
+                out m_RightLandingHandoff);
             m_PreparedRenderFrame = frame.RenderFrame;
             m_PreparedCompletionIdentity = frame.CompletionIdentity;
         }
@@ -116,6 +126,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : side == CharacterFootSide.Right
                     ? m_RightPlan
                     : throw new ArgumentOutOfRangeException(nameof(side));
+            CharacterPredictiveFootStanceInput landingHandoff = side == CharacterFootSide.Left
+                ? m_LeftLandingHandoff
+                : m_RightLandingHandoff;
+            if (landingHandoff.HasContactTarget)
+                return landingHandoff;
             AnimationPredictedFootStepSample step = feature.PredictedStep;
             if (!step.IsAuthoritative && !plan.HasExecutablePath)
                 return default;
@@ -170,6 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportPhase == AnimationFootSupportPhase.ApproachingContact &&
                 TryEvaluateFootTarget(
                     plan,
+                    plan.ActionStepPhase,
                     pose,
                     m_Rig.PoseRoot.up.normalized,
                     pose.HipPosition,
@@ -193,6 +209,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.HasExecutablePath,
                 plan.State == CharacterPredictiveFootPlanState.Executing,
                 plan.Sequence,
+                plan.OwnsEvent ? plan.LandingEventIdentity : step.LandingEventIdentity,
                 hasContactTarget,
                 constraintMode,
                 supportPhase,
@@ -295,6 +312,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_LeftPlan.Reset(CharacterPredictiveFootPlanEndReason.PresentationReset);
             m_RightPlan.Reset(CharacterPredictiveFootPlanEndReason.PresentationReset);
             m_NextPlanSequence = 1;
+            m_LeftLandingHandoff = default;
+            m_RightLandingHandoff = default;
             m_PreparedRenderFrame = 0;
             m_PreparedCompletionIdentity = 0;
             m_Diagnostics = default;
@@ -364,7 +383,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Mathf.Clamp01(grounding.AnchorBlendWeight)
                 : 0f;
             float planPredictionBlend = predictiveOutputWeight * (1f - stanceTransitionBlend);
-            float poseSynchronizedPredictionBlend = planPredictionBlend;
+            float poseSynchronizedPredictionBlend = planPredictionBlend * currentEventFootPoseWeight;
             if (!stanceOwnsFoot && !currentSupportOwnsIdle)
             {
                 result = new CharacterFullBodyIkGoal(
@@ -379,6 +398,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             bool targetAvailable = TryEvaluateFootTarget(
                 plan,
+                plan.ActionStepPhase,
                 pose,
                 up,
                 appliedHip,
@@ -630,6 +650,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static bool TryEvaluateFootTarget(
             CharacterPredictiveFootPlacementPlan plan,
+            float eventPhase,
             CharacterFootPlacementAnimatedFootPose pose,
             Vector3 componentUp,
             Vector3 appliedHip,
@@ -641,14 +662,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             Vector3 up = componentUp.normalized;
             plan.EvaluateClearancePath(
-                plan.ActionStepPhase,
+                eventPhase,
                 out Vector3 pathPosition,
                 out Vector3 pathRoot,
                 out Vector3 pathHip,
                 out FootPlacementSurface pathSupport,
                 out Vector3 predictedSole);
-            ResolveCurrentActionState(
-                plan,
+            plan.EvaluateActionState(
+                eventPhase,
                 out _,
                 out _,
                 out AnimationFootOrientationPolicy orientationPolicy,
@@ -668,7 +689,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.AnklePosition,
                 pose.AnkleRotation);
             Vector3 nativeSole = (nativeContacts.HeelPosition + nativeContacts.ToePosition) * 0.5f;
-            plan.EvaluateCurrentAnimationClearance(
+            plan.EvaluateAnimationClearance(
+                eventPhase,
                 out float authoredAnimationClearance,
                 out float animationClearanceContinuityOffset,
                 out float animationClearanceContinuityContribution,
@@ -772,11 +794,78 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return float.IsFinite(clearance);
         }
 
+        static bool TryBuildLandingHandoff(
+            CharacterPredictiveFootPlacementPlan plan,
+            CharacterFootPlacementAnimatedFootPose pose,
+            float plantConfidence,
+            Vector3 up,
+            float presentationDeltaSeconds,
+            out CharacterPredictiveFootStanceInput handoff)
+        {
+            handoff = default;
+            if (plan.State != CharacterPredictiveFootPlanState.Executing ||
+                !plan.HasExecutablePath ||
+                !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds <= 0f)
+            {
+                return false;
+            }
+            float remainingSeconds = Mathf.Max(
+                0f,
+                (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
+            if (remainingSeconds > presentationDeltaSeconds + 0.00001f ||
+                !TryEvaluateFootTarget(
+                    plan,
+                    1f,
+                    pose,
+                    up,
+                    pose.HipPosition,
+                    0f,
+                    out CharacterPredictiveFootTarget target) ||
+                !target.Support.IsValid)
+            {
+                return false;
+            }
+            plan.EvaluateActionState(
+                1f,
+                out AnimationFootConstraintMode constraintMode,
+                out AnimationFootSupportPhase supportPhase,
+                out _,
+                out AnimationBodyRotationPivotMode bodyPivotMode);
+            if (supportPhase != AnimationFootSupportPhase.ApproachingContact)
+                return false;
+            plan.EvaluateBodyPath(
+                plan.RootTrajectory.PathStartPhase,
+                out Vector3 pathRootStart,
+                out _);
+            handoff = new CharacterPredictiveFootStanceInput(
+                true,
+                false,
+                false,
+                plan.Sequence,
+                plan.LandingEventIdentity,
+                true,
+                constraintMode,
+                supportPhase,
+                bodyPivotMode,
+                plantConfidence,
+                1f,
+                0f,
+                target.Support,
+                target.AnklePosition,
+                target.AnkleRotation,
+                target.PathPosition,
+                target.PathRoot,
+                pathRootStart,
+                target.PathHip);
+            return true;
+        }
+
         void PrepareFoot(
             CharacterFootSide side,
             CharacterPredictiveFootPlacementPlan plan,
             CharacterFootPlacementAnimatedFootPose pose,
             AnimationFootFeatureSample feature,
+            Vector3 groundProbeStart,
             ulong renderFrame,
             Vector3 rootWorldPosition,
             Quaternion rootWorldRotation,
@@ -785,8 +874,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool trajectoryCurvatureAvailable,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
-            float legLength)
+            float legLength,
+            float presentationDeltaSeconds,
+            out CharacterPredictiveFootStanceInput landingHandoff)
         {
+            landingHandoff = default;
             plan.BeginFrame();
             AnimationPredictedFootStepSample step = feature.PredictedStep;
             bool landingEventIdentityValid = step.HasConsistentLandingEventIdentity(side);
@@ -803,6 +895,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3.ProjectOnPlane(contacts.ToePosition - currentSole, up).magnitude);
             if (plan.OwnsEvent && !currentPlanMatches)
             {
+                TryBuildLandingHandoff(
+                    plan,
+                    pose,
+                    feature.PlantConfidence,
+                    up,
+                    presentationDeltaSeconds,
+                    out landingHandoff);
                 plan.Reset(ResolveReplacementEndReason(plan));
             }
             if (plan.HasExecutablePath)
@@ -814,6 +913,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 else
                 {
+                    plan.SynchronizePoseContribution(in step);
                     plan.SynchronizeActionClock(renderFrame, in step);
                     if (plan.HasExecutablePath &&
                         plan.ShouldInterruptWorldMotion(
@@ -838,10 +938,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     plan,
                     in step,
                     renderFrame,
-                    currentSole,
+                    groundProbeStart,
                     soleSupportRadius,
-                    pose.HipPosition,
-                    pose.AnklePosition,
                     rootWorldPosition,
                     rootWorldRotation,
                     committedBodyVelocity,
@@ -858,10 +956,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootPlacementPlan plan,
             in AnimationPredictedFootStepSample step,
             ulong renderFrame,
-            Vector3 currentSole,
+            Vector3 groundProbeStart,
             float soleSupportRadius,
-            Vector3 currentHip,
-            Vector3 currentAnkle,
             Vector3 rootStart,
             Quaternion rootStartRotation,
             Vector3 committedBodyVelocity,
@@ -904,12 +1000,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in motionTimeline,
                 movementPlaybackTime,
                 futureBodyTrajectory,
-                currentSole,
-                currentHip,
-                currentAnkle,
                 up,
                 in step);
-            Vector3 pathStart = rootTrajectory.EvaluateFootRoute(rootTrajectory.PathStartPhase);
+            Vector3 pathStart = groundProbeStart;
             rootTrajectory.EvaluateEventPhase(1f, out Vector3 rootLanding, out Quaternion rootLandingRotation);
             Vector3 landing = rootTrajectory.EvaluateFootRoute(1f);
             Vector3 predictedHip = rootTrajectory.EvaluateHipRoute(1f);
@@ -938,6 +1031,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     side == CharacterFootSide.Left ? 0 : 1,
                     in step,
                     in rootTrajectory,
+                    pathStart,
                     virtualGroundSplitEventPhase,
                     virtualGroundSplitLandingEventIdentity,
                     m_GroundLayerMask,

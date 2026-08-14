@@ -227,7 +227,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int layerMask,
             Vector3 up,
             Vector3 previousSupport,
-            float referenceSupportHeight,
             CharacterFootPlacementQueryPurpose purpose,
             float animationClearanceHeight,
             Vector3 soleToAnkle,
@@ -310,7 +309,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     sampleReject = hitReject;
                     continue;
                 }
-                float supportHeightOffset = Vector3.Dot(supportPoint, up) - referenceSupportHeight;
+                float supportHeightOffset =
+                    Vector3.Dot(supportPoint, up) - Vector3.Dot(route, up);
                 Vector3 supportRoot = root + up * supportHeightOffset;
                 Vector3 supportHip = hip + up * supportHeightOffset;
                 Vector3 reachableSole = supportPoint + up * animationClearanceHeight;
@@ -357,7 +357,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 end,
             Vector3 previousSupport,
             Vector3 nextSupport,
-            float referenceSupportHeight,
             float startFraction,
             float endFraction,
             Vector3 rootStart,
@@ -424,7 +423,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 root = Vector3.Lerp(rootStart, rootEnd, routeT);
                 Vector3 hip = Vector3.Lerp(hipStart, hipEnd, routeT);
                 Vector3 point = route + up * (soleHeight - routeHeight);
-                float supportHeightOffset = soleHeight - referenceSupportHeight;
+                float supportHeightOffset = soleHeight - routeHeight;
                 Vector3 supportRoot = root + up * supportHeightOffset;
                 Vector3 supportHip = hip + up * supportHeightOffset;
                 var surface = new FootPlacementSurface(hit.PhysicsHit.collider, point, normal);

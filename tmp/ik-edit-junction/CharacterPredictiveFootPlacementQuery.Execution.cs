@@ -21,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int footIndex,
             in AnimationPredictedFootStepSample step,
             in CharacterPredictiveFootRootTrajectory rootTrajectory,
+            Vector3 groundProbeStart,
             float virtualGroundSplitEventPhase,
             ulong virtualGroundSplitLandingEventIdentity,
             int layerMask,
@@ -33,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 footIndex,
                 in step,
                 in rootTrajectory,
+                groundProbeStart,
                 virtualGroundSplitEventPhase,
                 virtualGroundSplitLandingEventIdentity,
                 layerMask,
@@ -46,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int footIndex,
             in AnimationPredictedFootStepSample step,
             in CharacterPredictiveFootRootTrajectory rootTrajectory,
+            Vector3 groundProbeStart,
             float virtualGroundSplitEventPhase,
             ulong virtualGroundSplitLandingEventIdentity,
             int layerMask,
@@ -71,8 +74,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out Vector3 virtualGroundSplitRoutePoint,
                 out float virtualGroundSplitPlanarError);
             bool hasVirtualGroundSplit = virtualGroundSplitActionProgress > 0f;
-            Vector3 routeStart = rootTrajectory.EvaluateFootRoute(rootTrajectory.PathStartPhase);
-            Vector3 routeEnd = rootTrajectory.EvaluateFootRoute(1f);
+            Vector3 routeStart = groundProbeStart;
+            Vector3 routeEnd = rootTrajectory.EvaluateAlignedFootRoute(groundProbeStart, 1f);
             ResolveGroundProbeRouteMetrics(
                 routeStart,
                 routeEnd,
@@ -98,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int footRateSampleCount = hasGroundProbeRoute
                 ? BuildFootRate(
                     in rootTrajectory,
+                    groundProbeStart,
                     routeSampleCount,
                     virtualGroundSplitEventPhase,
                     virtualGroundSplitFraction)
@@ -106,6 +110,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementSurface future = default;
             FootPlacementSurface currentSupport = default;
             FootPlacementSurface virtualGroundSplitSupport = default;
+            Vector3 currentSupportRoot = default;
+            Vector3 currentSupportHip = default;
+            Vector3 futureSupportRoot = default;
+            Vector3 futureSupportHip = default;
+            Vector3 virtualGroundSplitRoot = default;
+            Vector3 virtualGroundSplitHip = default;
             CharacterFootPlacementQueryRequest futureLandingRequest = default;
             int pathSampleCount = 0;
             FootPlacementGroundEnvelopeRejectReason rejectReason =
@@ -113,7 +123,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (hasGroundProbeRoute)
             {
                 float startPhase = rootTrajectory.PathStartPhase;
-                float nativeSoleHeight = Vector3.Dot(routeStart, up);
                 float startClearance = EvaluateAnimationClearanceHeight(in step, startPhase);
                 Vector3 startSoleToAnkle = rootTrajectory.EvaluateSoleToAnkle(startPhase);
                 currentSupport = QuerySupport(
@@ -124,22 +133,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     layerMask,
                     up,
                     routeStart,
-                    nativeSoleHeight,
                     CharacterFootPlacementQueryPurpose.GroundEnvelope,
                     startClearance,
                     startSoleToAnkle,
-                    EvaluateSupportedAuthoredReach(
+                    EvaluateRouteAuthoredReach(
                         m_GroundProbeRoute[0],
                         m_HipRoutes[0],
-                        nativeSoleHeight,
                         up,
                         startClearance,
                         startSoleToAnkle),
                     maximumReach,
                     true,
                     false,
-                    out Vector3 currentSupportRoot,
-                    out Vector3 currentSupportHip,
+                    out currentSupportRoot,
+                    out currentSupportHip,
                     out rejectReason,
                     out _,
                     ref counters.QueryCount,
@@ -149,11 +156,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref counters.RejectCounts);
                 if (currentSupport.IsValid)
                 {
-                    float currentSupportHeight = Vector3.Dot(currentSupport.Point, up);
                     future = CollectGroundPath(
                         footIndex,
                         currentSupport.Point,
-                        nativeSoleHeight,
                         currentSupportRoot,
                         currentSupportHip,
                         routeSampleCount,
@@ -170,6 +175,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         out pathSampleCount,
                         out futureLandingRequest,
                         out virtualGroundSplitSupport,
+                        out futureSupportRoot,
+                        out futureSupportHip,
+                        out virtualGroundSplitRoot,
+                        out virtualGroundSplitHip,
                         out rejectReason);
                 }
             }
@@ -182,10 +191,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? BuildUpperEnvelope(pathSampleCount)
                 : 0;
             int segmentCount = future.IsValid ? discoveredSegmentCount : 0;
-            CharacterPredictiveBodySupportPath bodySupportPath =
-                currentSupport.IsValid && future.IsValid
-                    ? new CharacterPredictiveBodySupportPath(true)
-                    : default;
+            bool hasCompleteBodySupportPath =
+                currentSupport.IsValid &&
+                future.IsValid &&
+                (!hasVirtualGroundSplit || virtualGroundSplitSupport.IsValid);
+            CharacterPredictiveBodySupportPath bodySupportPath = hasCompleteBodySupportPath
+                ? new CharacterPredictiveBodySupportPath(
+                    rootTrajectory.PathStartPhase,
+                    up,
+                    currentSupportRoot,
+                    currentSupportHip,
+                    hasVirtualGroundSplit,
+                    virtualGroundSplitEventPhase,
+                    virtualGroundSplitRoot,
+                    virtualGroundSplitHip,
+                    futureSupportRoot,
+                    futureSupportHip)
+                : default;
             if (!future.IsValid && rejectReason == FootPlacementGroundEnvelopeRejectReason.None)
                 rejectReason = FootPlacementGroundEnvelopeRejectReason.NoCandidate;
             return new CharacterPredictiveFootPlacementQueryResult(
@@ -229,7 +251,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         FootPlacementSurface CollectGroundPath(
             int footIndex,
             Vector3 currentSupport,
-            float referenceSupportHeight,
             Vector3 currentSupportRoot,
             Vector3 currentSupportHip,
             int routeSampleCount,
@@ -246,6 +267,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out int pathSampleCount,
             out CharacterFootPlacementQueryRequest futureLandingRequest,
             out FootPlacementSurface virtualGroundSplitSupport,
+            out Vector3 futureSupportRoot,
+            out Vector3 futureSupportHip,
+            out Vector3 virtualGroundSplitRoot,
+            out Vector3 virtualGroundSplitHip,
             out FootPlacementGroundEnvelopeRejectReason rejectReason)
         {
             pathSampleCount = 1;
@@ -263,6 +288,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementSurface future = default;
             futureLandingRequest = default;
             virtualGroundSplitSupport = default;
+            futureSupportRoot = default;
+            futureSupportHip = default;
+            virtualGroundSplitRoot = default;
+            virtualGroundSplitHip = default;
             rejectReason = FootPlacementGroundEnvelopeRejectReason.None;
             for (int sampleIndex = 1; sampleIndex < routeSampleCount; sampleIndex++)
             {
@@ -281,16 +310,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     layerMask,
                     up,
                     previousSupport,
-                    referenceSupportHeight,
                     landingSample
                         ? CharacterFootPlacementQueryPurpose.FutureLanding
                         : CharacterFootPlacementQueryPurpose.GroundEnvelope,
                     animationClearance,
                     soleToAnkle,
-                    EvaluateSupportedAuthoredReach(
+                    EvaluateRouteAuthoredReach(
                         route,
                         m_HipRoutes[sampleIndex],
-                        referenceSupportHeight,
                         up,
                         animationClearance,
                         soleToAnkle),
@@ -315,6 +342,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (virtualGroundSample)
                     {
                         virtualGroundSplitSupport = selected;
+                        virtualGroundSplitRoot = selectedRoot;
+                        virtualGroundSplitHip = selectedHip;
                     }
                     AddSegmentHits(
                         footIndex,
@@ -322,7 +351,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         route,
                         previousSupport,
                         selected.Point,
-                        referenceSupportHeight,
                         previousFraction,
                         fraction,
                         m_RootRoutes[sampleIndex - 1],
@@ -354,7 +382,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         ref pathSampleCount);
                     previousSupport = selected.Point;
                     if (landingSample)
+                    {
                         future = selected;
+                        futureSupportRoot = selectedRoot;
+                        futureSupportHip = selectedHip;
+                    }
                 }
                 else
                 {
@@ -408,17 +440,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             count = write;
         }
 
-        static float EvaluateSupportedAuthoredReach(
+        static float EvaluateRouteAuthoredReach(
             Vector3 route,
             Vector3 hip,
-            float supportHeight,
             Vector3 up,
             float animationClearance,
             Vector3 soleToAnkle)
         {
-            Vector3 baselineSupport = route +
-                                      up * (supportHeight - Vector3.Dot(route, up));
-            Vector3 baselineAnkle = baselineSupport +
+            Vector3 baselineAnkle = route +
                                     up * animationClearance +
                                     soleToAnkle;
             return Vector3.Distance(hip, baselineAnkle);
@@ -494,6 +523,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         int BuildFootRate(
             in CharacterPredictiveFootRootTrajectory rootTrajectory,
+            Vector3 groundProbeStart,
             int routeSampleCount,
             float splitEventPhase,
             float splitFraction)
@@ -518,7 +548,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             for (int i = 0; i < count; i++)
             {
                 float phase = m_FootRateEventPhases[i];
-                Vector3 animatedFoot = rootTrajectory.EvaluateFootRoute(phase);
+                Vector3 animatedFoot = rootTrajectory.EvaluateAlignedFootRoute(
+                    groundProbeStart,
+                    phase);
                 float progress = ResolveGroundProbeProjection(
                     animatedFoot,
                     routeSampleCount,

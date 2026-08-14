@@ -10,6 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasExecutablePlan,
             bool isExecuting,
             ulong planSequence,
+            ulong landingEventIdentity,
             bool hasContactTarget,
             AnimationFootConstraintMode constraintMode,
             AnimationFootSupportPhase supportPhase,
@@ -29,6 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasExecutablePlan = hasExecutablePlan;
             IsExecuting = isExecuting;
             PlanSequence = planSequence;
+            LandingEventIdentity = landingEventIdentity;
             HasContactTarget = hasContactTarget;
             ConstraintMode = constraintMode;
             SupportPhase = supportPhase;
@@ -49,6 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasExecutablePlan { get; }
         internal bool IsExecuting { get; }
         internal ulong PlanSequence { get; }
+        internal ulong LandingEventIdentity { get; }
         internal bool HasContactTarget { get; }
         internal AnimationFootConstraintMode ConstraintMode { get; }
         internal AnimationFootSupportPhase SupportPhase { get; }

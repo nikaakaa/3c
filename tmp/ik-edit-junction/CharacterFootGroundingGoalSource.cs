@@ -168,6 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal float AnchorDistance = float.PositiveInfinity;
             internal bool AnchorDistanceAccepted;
             internal bool HasAnimationConstraint;
+            internal ulong AnimationConstraintEventIdentity;
             internal AnimationFootConstraintMode AnimationConstraintMode = AnimationFootConstraintMode.Locked;
             internal AnimationFootSupportPhase AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
             internal float PelvisSupportWeight;
@@ -184,6 +185,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         ? CharacterFootContactState.Contact
                         : CharacterFootContactState.Swing;
 
+            internal void PrepareActionEvent(AnimationPredictedFootStepSample step)
+            {
+                if (!step.IsAuthoritative)
+                {
+                    AnimationConstraintEventIdentity = 0;
+                    return;
+                }
+                float phase = step.ActionStepClock.Phase;
+                bool eventChanged = AnimationConstraintEventIdentity != 0 &&
+                                    AnimationConstraintEventIdentity != step.LandingEventIdentity;
+                bool newEventOwnsLockedSupport =
+                    step.EvaluateConstraintMode(phase) == AnimationFootConstraintMode.Locked &&
+                    step.EvaluateSupportPhase(phase) == AnimationFootSupportPhase.Supporting;
+                if (eventChanged && newEventOwnsLockedSupport && !PlantContact && HasAnchor)
+                    ClearAnchor();
+                AnimationConstraintEventIdentity = step.LandingEventIdentity;
+            }
+
             internal void UpdateContact(
                 AnimationFootFeatureSample feature,
                 float surfaceDistance,
@@ -197,6 +216,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     motionPhase == CharacterPresentationMotionPhase.GroundedStationary &&
                     !predictive.HasActionConstraint;
                 HasAnimationConstraint = predictive.HasActionConstraint;
+                AnimationConstraintEventIdentity = predictive.HasActionConstraint
+                    ? predictive.LandingEventIdentity
+                    : 0;
                 AnimationConstraintMode = predictive.HasActionConstraint
                     ? predictive.ConstraintMode
                     : AnimationFootConstraintMode.Locked;
@@ -466,6 +488,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnchorDistance = float.PositiveInfinity;
                 AnchorDistanceAccepted = false;
                 HasAnimationConstraint = false;
+                AnimationConstraintEventIdentity = 0;
                 AnimationConstraintMode = AnimationFootConstraintMode.Locked;
                 AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
                 PelvisSupportWeight = 0f;
@@ -569,6 +592,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
                 frame.RenderFrame,
                 animationPose.DenseComponentPoses);
+            m_Left.PrepareActionEvent(animationPose.LeftFootFeatures.PredictedStep);
+            m_Right.PrepareActionEvent(animationPose.RightFootFeatures.PredictedStep);
             Vector3 poseRootUp = m_Rig.PoseRoot.up.normalized;
             float poseRootVerticalDelta = m_HasPreviousPoseRootPosition
                 ? Vector3.Dot(
@@ -585,9 +610,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootStanceInput rightPredictive = default;
             if (m_SwingPrediction != null)
             {
+                Vector3 leftGroundProbeStart = ResolvePredictiveGroundProbeStart(
+                    m_Left,
+                    pose.Left);
+                Vector3 rightGroundProbeStart = ResolvePredictiveGroundProbeStart(
+                    m_Right,
+                    pose.Right);
                 m_SwingPrediction.Prepare(
                     in frame,
-                    in pose);
+                    in pose,
+                    leftGroundProbeStart,
+                    rightGroundProbeStart);
                 leftPredictive = m_SwingPrediction.GetStanceInput(
                     CharacterFootSide.Left,
                     frame.RenderFrame,
@@ -763,6 +796,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out result);
         }
 
+        Vector3 ResolvePredictiveGroundProbeStart(
+            FootState state,
+            CharacterFootPlacementAnimatedFootPose animated)
+        {
+            CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
+            if (state.TryResolve(
+                    m_Settings.CurrentGrounding.GroundLayerMask,
+                    m_Rig.PoseRoot.up,
+                    settings.MaximumSurfaceSlopeDegrees,
+                    out Vector3 anchorPosition,
+                    out Quaternion anchorRotation,
+                    out _))
+            {
+                CharacterFootPlacementSoleContactPose anchorContacts = animated.ResolveSoleContacts(
+                    anchorPosition,
+                    anchorRotation);
+                return (anchorContacts.HeelPosition + anchorContacts.ToePosition) * 0.5f;
+            }
+            CharacterFootPlacementSoleContactPose contacts = animated.ResolveSoleContacts(
+                animated.AnklePosition,
+                animated.AnkleRotation);
+            return (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
+        }
+
         internal void Reset(CharacterFootPlacementReset reset)
         {
             if (!m_Disposed)
@@ -816,6 +873,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
             Transform root = m_Rig.PoseRoot;
             Vector3 up = root.up.normalized;
+            bool hasResolvedAnchor = state.TryResolve(
+                m_Settings.CurrentGrounding.GroundLayerMask,
+                root.up,
+                settings.MaximumSurfaceSlopeDegrees,
+                out Vector3 anchorWorldPosition,
+                out Quaternion anchorWorldRotation,
+                out FootPlacementSurface anchorSurface);
+            if (state.HasAnchor && !hasResolvedAnchor)
+            {
+                state.Release(
+                    FootConstraintTransitionReason.SurfaceInvalid,
+                    CharacterFootContactDecision.ContactReleasedAnchorSurface);
+                state.ClearAnchor();
+            }
             SoleClearancePlan currentClearance = MeasureSoleClearance(
                 animated,
                 root.TransformPoint(lyra.ComponentPosition),
@@ -845,6 +916,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
             }
             bool usePredictiveContactTarget = hasPredictiveContactTarget && contactSurfaceValid;
+            bool lockedAnchorOwnsContact = hasResolvedAnchor && state.PlantContact &&
+                                           (!predictive.HasActionConstraint ||
+                                            predictive.ConstraintMode == AnimationFootConstraintMode.Locked);
+            if (!usePredictiveContactTarget && lockedAnchorOwnsContact)
+            {
+                contactSurface = anchorSurface;
+                contactSurfaceValid = true;
+                contactClearance = MeasureSoleClearance(
+                    animated,
+                    anchorWorldPosition,
+                    anchorWorldRotation,
+                    anchorSurface,
+                    root.up);
+            }
             float surfaceDistance = contactSurfaceValid
                 ? Mathf.Max(
                     Mathf.Abs(contactClearance.HeelPlaneDistance),
@@ -857,24 +942,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 predictive,
                 motionPhase,
                 settings);
-            Vector3 targetWorldPosition = usePredictiveContactTarget
-                ? predictive.ContactAnklePosition
-                : animated.AnklePosition + up * (trace.TargetOffset + lyra.SoleClearanceTarget);
+            Vector3 targetWorldPosition = lockedAnchorOwnsContact
+                ? anchorWorldPosition
+                : usePredictiveContactTarget
+                    ? predictive.ContactAnklePosition
+                    : animated.AnklePosition + up * (trace.TargetOffset + lyra.SoleClearanceTarget);
             bool hadAnchor = state.HasAnchor;
-            bool hasResolvedAnchor = state.TryResolve(
-                m_Settings.CurrentGrounding.GroundLayerMask,
-                root.up,
-                settings.MaximumSurfaceSlopeDegrees,
-                out Vector3 anchorWorldPosition,
-                out _,
-                out FootPlacementSurface anchorSurface);
-            if (state.HasAnchor && !hasResolvedAnchor)
-            {
-                state.Release(
-                    FootConstraintTransitionReason.SurfaceInvalid,
-                    CharacterFootContactDecision.ContactReleasedAnchorSurface);
-                state.ClearAnchor();
-            }
             if (state.PlantContact && hasResolvedAnchor)
             {
                 state.UpdateAnimationReference(
@@ -886,9 +959,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Vector3.Distance(anchorWorldPosition, targetWorldPosition)
                 : float.PositiveInfinity;
             state.AnchorDistanceAccepted = !hadAnchor ||
+                                           lockedAnchorOwnsContact ||
                                            hasResolvedAnchor &&
                                            state.AnchorDistance <= settings.MaximumAnchorDistance;
-            if (state.PlantContact && hasResolvedAnchor && !state.AnchorDistanceAccepted)
+            if (state.PlantContact && hasResolvedAnchor &&
+                !lockedAnchorOwnsContact && !state.AnchorDistanceAccepted)
             {
                 state.Release(
                     FootConstraintTransitionReason.AnchorDistanceExceeded,

@@ -173,12 +173,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal AnimationFootSupportPhase AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
             internal float PelvisSupportWeight;
             internal bool IdleCurrentSupport;
+            internal bool IdleAnchor;
+            internal bool IdleAnchorCaptureArmed = true;
 
             internal bool AllowsAnchor =>
-                !IdleCurrentSupport &&
-                (!HasAnimationConstraint ||
-                 AnimationConstraintMode == AnimationFootConstraintMode.Locked ||
-                 AnimationSupportPhase == AnimationFootSupportPhase.ApproachingContact);
+                IdleCurrentSupport
+                    ? IdleAnchor || !HasAnchor
+                    : !HasAnimationConstraint ||
+                      AnimationConstraintMode == AnimationFootConstraintMode.Locked ||
+                      AnimationSupportPhase == AnimationFootSupportPhase.ApproachingContact;
 
             internal CharacterFootContactState ContactState =>
                 PlantContact && AllowsAnchor && HasAnchor && AnchorBlendWeight >= 0.999999f
@@ -219,6 +222,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     !predictive.HasActionConstraint;
                 bool wasIdleCurrentSupport = IdleCurrentSupport;
                 IdleCurrentSupport = stationaryGroundContact;
+                if (!IdleCurrentSupport)
+                    IdleAnchorCaptureArmed = false;
                 HasAnimationConstraint = predictive.HasActionConstraint;
                 AnimationConstraintEventIdentity = predictive.HasActionConstraint
                     ? predictive.LandingEventIdentity
@@ -335,11 +340,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     bool enteredContact = !PlantContact;
                     PlantContact = true;
-                    if (HasAnchor)
+                    if (HasAnchor && !IdleAnchor)
                     {
                         if (!wasIdleCurrentSupport)
                             TransitionReason = FootConstraintTransitionReason.IdleCurrentSupportStarted;
                         ContactDecision = CharacterFootContactDecision.AnchorFading;
+                    }
+                    else if (HasAnchor)
+                    {
+                        ContactDecision = CharacterFootContactDecision.ContactRetained;
                     }
                     else if (enteredContact)
                     {
@@ -407,6 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     (Quaternion.Inverse(surface.Transform.rotation) * worldRotation).normalized;
                 UpdateAnimationReference(animatedWorldPosition, animatedWorldRotation, surface);
                 HasAnchor = true;
+                IdleAnchor = IdleCurrentSupport;
                 AnchorBlendWeight = 1f;
                 TransitionReason = FootConstraintTransitionReason.AnchorCaptured;
             }
@@ -497,6 +507,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnchorAnimationReferenceLocalRotation = Quaternion.identity;
                 HasAnchorAnimationReference = false;
                 HasAnchor = false;
+                IdleAnchor = false;
                 AnchorBlendWeight = 0f;
             }
 
@@ -518,6 +529,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
                 PelvisSupportWeight = 0f;
                 IdleCurrentSupport = false;
+                IdleAnchorCaptureArmed = true;
                 ClearAnchor();
             }
 
@@ -946,7 +958,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool idleCurrentSupport = motionPhase == CharacterPresentationMotionPhase.GroundedStationary &&
                                       !predictive.HasActionConstraint;
             bool lockedAnchorOwnsContact = hasResolvedAnchor && state.PlantContact &&
-                                           !idleCurrentSupport &&
+                                           (!idleCurrentSupport || state.IdleAnchor) &&
                                            (!predictive.HasActionConstraint ||
                                             predictive.ConstraintMode == AnimationFootConstraintMode.Locked);
             if (!usePredictiveContactTarget && lockedAnchorOwnsContact)
@@ -1039,13 +1051,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
             Transform root = m_Rig.PoseRoot;
-            Vector3 lyraWorldPosition = root.TransformPoint(lyra.ComponentPosition);
-            Quaternion lyraWorldRotation = (root.rotation * lyra.ComponentRotation).normalized;
-            if (state.PlantContact && state.AllowsAnchor && !state.HasAnchor && prepared.SurfaceValid)
+            Vector3 baselineWorldPosition = root.TransformPoint(lyra.ComponentPosition);
+            Quaternion baselineWorldRotation = (root.rotation * lyra.ComponentRotation).normalized;
+            bool resolvesIdleBaseline = state.IdleCurrentSupport &&
+                                        !state.IdleAnchor &&
+                                        !prepared.HasContactTarget &&
+                                        prepared.SurfaceValid;
+            if (resolvesIdleBaseline)
+            {
+                baselineWorldRotation = (
+                    Quaternion.FromToRotation(root.up.normalized, prepared.Surface.Normal.normalized) *
+                    animated.AnkleRotation).normalized;
+                baselineWorldPosition = ResolveSoleContactAnklePosition(
+                    animated,
+                    animated.AnklePosition,
+                    baselineWorldRotation,
+                    prepared.Surface,
+                    root.up);
+            }
+            float placementWeight = Mathf.Clamp01(alpha);
+            bool fullPlacementWeight = placementWeight >= 0.999999f;
+            if (state.IdleCurrentSupport && !fullPlacementWeight)
+                state.IdleAnchorCaptureArmed = true;
+            bool allowsIdleCapture = !state.IdleCurrentSupport ||
+                                     state.IdleAnchorCaptureArmed && fullPlacementWeight;
+            if (state.PlantContact && state.AllowsAnchor && allowsIdleCapture &&
+                !state.HasAnchor && prepared.SurfaceValid)
             {
                 Quaternion captureRotation = prepared.HasContactTarget
                     ? prepared.ContactAnkleRotation
-                    : lyraWorldRotation;
+                    : baselineWorldRotation;
                 Vector3 capturePosition = prepared.HasContactTarget
                     ? ResolveSoleContactAnklePosition(
                         animated,
@@ -1055,8 +1090,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         root.up)
                     : MeasureSoleClearance(
                         animated,
-                        lyraWorldPosition,
-                        lyraWorldRotation,
+                        baselineWorldPosition,
+                        baselineWorldRotation,
                         prepared.Surface,
                         root.up).SafeAnklePosition;
                 state.Capture(
@@ -1065,6 +1100,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     captureRotation,
                     animated.AnklePosition,
                     animated.AnkleRotation);
+                if (state.IdleAnchor)
+                    state.IdleAnchorCaptureArmed = false;
             }
             bool hasResolvedAnchor = state.TryResolve(
                 m_Settings.CurrentGrounding.GroundLayerMask,
@@ -1091,11 +1128,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Stance Anchor fade reference is invalid.");
             }
             Vector3 finalWorldPosition = hasResolvedAnchor
-                ? Vector3.Lerp(lyraWorldPosition, anchorWorldPosition, state.AnchorBlendWeight)
-                : lyraWorldPosition;
+                ? Vector3.Lerp(baselineWorldPosition, anchorWorldPosition, state.AnchorBlendWeight)
+                : baselineWorldPosition;
             Quaternion finalWorldRotation = hasResolvedAnchor
-                ? Quaternion.Slerp(lyraWorldRotation, anchorWorldRotation, state.AnchorBlendWeight).normalized
-                : lyraWorldRotation;
+                ? Quaternion.Slerp(baselineWorldRotation, anchorWorldRotation, state.AnchorBlendWeight).normalized
+                : baselineWorldRotation;
             SoleClearancePlan soleClearance = MeasureSoleClearance(
                 animated,
                 finalWorldPosition,
@@ -1105,7 +1142,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : prepared.Surface,
                 root.up);
             finalWorldPosition = soleClearance.SafeAnklePosition;
-            float placementWeight = Mathf.Clamp01(alpha);
             Vector3 componentPosition = Quaternion.Inverse(root.rotation) * (finalWorldPosition - root.position);
             Quaternion componentRotation = (Quaternion.Inverse(root.rotation) * finalWorldRotation).normalized;
             var goal = new CharacterFullBodyIkGoal(
@@ -1329,7 +1365,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             bool idleCurrentSupport = motionPhase == CharacterPresentationMotionPhase.GroundedStationary &&
                                       !predictive.HasActionConstraint;
-            if (state.HasAnchor && !idleCurrentSupport)
+            if (state.HasAnchor && (!idleCurrentSupport || state.IdleAnchor))
             {
                 CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
                 if (!state.TryResolve(

@@ -115,6 +115,16 @@ Landing是一个完整支撑事务。旧Step的冻结Landing、本步Stance、An
 
 再次推进时必须一次只改一个owner：先证明冻结Animation Foot Route与同相位Native Sole的XZ映射，再证明Foot Rate，然后证明Ground Envelope端点与边缘，随后闭合Landing支撑事务，最后才恢复`Ground Envelope + Animation Clearance`的有符号高度。每一步同时看自动CSV和现场观感；编译、Character Build及Console 0 Error不代表IK效果通过。
 
-## 14. 静止接触不等于永久锁脚
+## 14. 静止锁脚必须先更换旧步态身份
 
-`GroundedStationary`只说明角色当前可由Current Grounding维持支撑，不是一个新的Landing事件。若用它绕过速度与Plant Confidence后继续捕获Anchor，停步姿势会永久冻结在最后一步。正确退场是保留Contact和Current Grounding安全Baseline，同时用现有Anchor Blend释放完整世界Anchor；平地回原动画，斜坡只留下防穿透所需修正。全局降低IK权重会同时丢掉坡面安全，因此不是同一问题的解法。
+`GroundedStationary`既不能直接复用最后一步Landing Anchor，也不能永久禁止Anchor。前者会把停步姿势冻结在旧落点，后者只剩`PlantContact`而没有世界锁脚，Idle动画和Current Grounding每帧变化都会继续移动脚。正确边界是同一个Stance owner内的两段事务：旧运动Anchor先沿既有Blend退到Current Grounding安全Baseline，清零后再在该安全Goal原子捕获Idle Anchor。旧Anchor退场期间不拥有鞋底面与Pelvis Reach；Idle Anchor捕获后重新拥有同一支撑事实并保持世界Goal。这样没有第二Grounding、第二Anchor或速度权重，也不会把旧Landing直接改名成静止支撑。
+
+Idle安全Baseline不能等同于Lyra Offset Spring的当前值。Spring Current只表示收敛过程中的瞬时输出；在它尚未到达目标时捕获Idle Anchor，会把停步残差永久冻结，看起来就是“已经锁脚但没有归位”。Idle交接必须以同帧原动画Ankle保持XZ，以唯一Current支撑面决定旋转，再只沿Component Up把Heel/Toe贴到该面；旧Anchor向这个目标淡出，新Idle Anchor也捕获同一个目标，才能同时保证连续归位和静止世界锁定。
+
+## 15. 停止过渡不能冒充稳定Idle
+
+`GroundedStationary`是身体运动事实，不是动画已经到达Idle的证明。若RunEnd与Idle的`presentation.foot-placement-weight`都恒为`1`，速度先归零时Stance会把RunEnd中间姿势直接捕获成Idle Anchor；之后世界锁脚工作正常，角色却永久停在错误姿势。正式归位应让RunEnd源权重为`0`、Idle为`1`，利用动画图已有过渡得到连续淡出与淡入。Runtime还必须记录本次停步确实经历过非完整权重，只在Idle重新取得完整权重后捕获；否则无Anchor的停止首帧仍可能在曲线尚未下降前误锁。该门禁描述动画所有权交接，不使用速度阈值，也不建立第二IK权重系统。
+
+## 16. 冻结Plan用实际Root偏离失效
+
+A/D时摄像机缓动会让相邻表现帧的Desired Velocity方向导数持续变化。若执行期继续比较当前速度、曲率和生成帧冻结值，会把正常圆周运动误判为`ActionInterrupted`；Gizmo只画`Executing`，所以表象就是整条Path突然消失。GDC的Foot Path是本步冻结的环境下界，下载案例也只在实际落点偏差越过阈值时放弃预测点。正式失效证据应是LiftOff后当前权威Body Root已经偏离同相位冻结KCC Root超过鞋底物理半径；导数噪声不能取消或重规划本步。

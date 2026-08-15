@@ -47,7 +47,7 @@ MaximumYawVelocity：Movement节点允许的最大转向能力，只验证方向
 TrajectoryCurvature：正式平面速度方向的有符号变化率，决定未来圆弧
 ```
 
-A/D持续转向时，KCC用同一`TrajectoryCurvature`积分世界位移，Foot、Ankle、Hip和鞋底局部几何也沿该圆弧切线旋转。最大转速不能替代曲率；身体朝向与移动方向的单帧夹角也不能替代曲率。计划提交后不得读取Desired Input、Visible Velocity或Transform重写路线。它只可读取同源committed Body速度与Trajectory Curvature做失效判断：把剩余步时内的线速度和角速度偏差换算为Landing平面误差，只有误差超过现有鞋底查询半径才结束计划；小输入波动不得重算Landing或Path。
+A/D持续转向时，KCC用同一`TrajectoryCurvature`积分世界位移，Foot、Ankle、Hip和鞋底局部几何也沿该圆弧切线旋转。最大转速不能替代曲率；身体朝向与移动方向的单帧夹角也不能替代曲率。计划提交后不得读取Desired Input、Visible Velocity或逐帧Trajectory Curvature重写、验证路线。真实LiftOff后只对账当前权威Body Root与同一Action Step Clock下的冻结KCC Root位置和朝向；把实际Root偏差换算为Landing平面误差，只有误差超过现有鞋底查询半径才以`ActionInterrupted`结束。摄像机缓动造成的输入方向导数变化不得取消、重算Landing或Path。
 
 ## Swing Foot路线
 
@@ -105,7 +105,9 @@ Ground Envelope与Animation Clearance共同拥有唯一Swing高度；当前动�
 
 普通Current支撑只能在同帧Current Grounding证明合法支撑后捕获。Executing Plan进入`ApproachingContact`时，预测Ankle、旋转和该Plan冻结的Contact Surface属于同一个Landing事实；Stance必须重建并校验该Surface的Collider、Layer与坡度，再以当前鞋底到该平面的距离决定捕获。权威ApproachingContact不得被in-place鞋底相对Root速度否决；该速度不是世界接触速度。不得采用预测Ankle却改用Current Query的另一踏面，也不得在预测Surface无效时静默回退。捕获位置就是该帧已经完成鞋底安全约束的最终Goal，因此Stance可以在捕获帧原子取得完整世界Anchor所有权而不移动脚；只有`PlantContact + 有效Anchor + 完整Blend`可报告`Anchored`。LiftOff或失去支撑后的既有Blend只用于从旧Anchor连续释放，释放期间必须报告Contact而不是伪装成锁脚。
 
-`GroundedStationary + 无权威Step`不是新的锁脚事件。该状态只保留Current Grounding证明的Contact与坡面安全；若停步时仍有Anchor，现有Stance用同一个`AnchorBlendSpeed`把完整世界Anchor连续释放到Current Grounding Baseline，释放期间不得重新捕获Anchor、使用旧Anchor支撑面驱动鞋底净空或把旧Anchor继续计入Pelvis Reach。平地因此回到原动画脚，斜坡只保留当前支撑所必需的高度与旋转。重新移动或新权威Step到来后，仍按原有Stance/Landing规则取得Anchor，不增加速度曲线、第二Grounding或第二所有权。
+`GroundedStationary + 无权威Step`不复用最后一步Landing身份，但正常静止仍需要世界锁脚。进入该状态时，若仍有运动或Landing Anchor，现有Stance先用同一个`AnchorBlendSpeed`把它连续释放到Current Grounding安全Baseline；释放期间旧Anchor不得拥有鞋底支撑面或Pelvis Reach，也不得被直接改名为Idle支撑。该Baseline的平面位置必须来自同帧原动画Ankle，旋转来自唯一Current支撑面，并只沿Component Up把Calibration Heel/Toe贴到该面；不得把仍在收敛的Lyra Offset Spring Current捕获成Idle Anchor。
+
+停步归位使用既有正式`presentation.foot-placement-weight`，不新增速度权重：Locomotion保持`1`，RunEnd保持`0`，动画图现有过渡负责从`1 -> 0 -> 1`连续混合到Idle。进入过停止过程的Idle支撑必须先观察到权重离开完整所有权，随后等Idle把权重恢复为`1`，才允许在同一安全Baseline原子捕获Idle Anchor；不得在速度先归零但RunEnd姿势仍参与时捕获。初始直接处于Idle时可立即捕获。Idle Anchor继续使用同一Anchor存储、支撑面、鞋底净空和Pelvis Reach，并在静止期间保持完整世界Goal；新权威Step或移动约束到来后再按原有Stance规则释放或转交。该过程不增加第二Grounding、第二Anchor owner、配置或兼容路径。
 
 Corin locomotion是in-place：支撑脚相对Root向后运动是抵消KCC前进的动画事实，不能用该局部全速度判断世界锁定。离线Artifact从同一Plant区间提取精确`Release / LiftOff / ApproachContact`边界；Runtime按权威Action Phase唯一解析`Supporting=Locked、Releasing=Sliding、Swing=Unlocked`。连续几何仍使用25点路线，离散所有权状态不得再量化到该采样格。旧Artifact通过算法身份变更整体失效，不保留兼容改写。
 

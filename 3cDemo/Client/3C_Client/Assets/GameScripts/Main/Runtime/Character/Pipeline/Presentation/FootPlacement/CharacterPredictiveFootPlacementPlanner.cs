@@ -361,10 +361,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootFeatureSample leftFeature = frame.UpstreamPose.LeftFootFeatures;
             AnimationFootFeatureSample rightFeature = frame.UpstreamPose.RightFootFeatures;
             Vector3 committedBodyVelocity = frame.Body.TargetVelocity;
-            float trajectoryCurvatureDegreesPerSecond = frame.TrajectoryCurvatureAvailable
-                ? frame.TrajectoryCurvatureDegreesPerSecond
-                : 0f;
             CommittedLocomotionPlanarMotionTimeline motionTimeline = frame.LocomotionMotionTimeline;
+            float trajectoryCurvatureDegreesPerSecond = motionTimeline.IsValid
+                ? motionTimeline.YawVelocityDegreesPerSecond
+                : 0f;
             PrepareFoot(
                 CharacterFootSide.Left,
                 m_LeftPlan,

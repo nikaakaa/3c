@@ -216,3 +216,16 @@ Artifact重建原动画
 1217列诊断的成本主要取决于重复帧数，不取决于是否保留完整因果字段。定位A/D上楼问题时，优先运行一笔最小但完整的事务：进入第一段楼梯后执行`A 1秒 -> D 2秒 -> A 1秒`，记录完成帧后立即注销采样路由。它覆盖输入反转、Future Body Revision、Swing/Landing/Lock交接和楼梯边缘查询；双向、多场景和长时间静止只会放大文件，不能增加首个错误owner的证据质量。
 
 采样路由的结束不能按Fixed Tick立即注销。低渲染帧率下，同一Render Frame会连续执行多个Fixed Tick；如果第一个Tick发布Complete、下一个Tick立即Remove，Presentation Writer从未观察到Complete。结束快照必须至少保持到下一个Render Frame，随后再注销，才能同时保证结束因果可见和文件停止增长。
+
+## 15. 最小完整A/D样本已经足够定位首个错误owner
+
+正式短测run `08522dd60084489a9f39de8e048ad700`共155行、5个流式分块，每个Header和Value均为1217列。它完整记录了对齐、接近、稳定、楼梯内`A 60 tick -> D 120 tick -> A 60 tick`和输入归零后的Complete快照；Complete后采样没有继续增长。因此后续修复不需要扩大测试时长或删减诊断列。
+
+这份数据把首个错误owner限定在Predictive Plan Revision交接：
+
+- 左脚在tick 360和432分别出现约17.9cm和25.8cm的单采样Goal垂直修正跳变；当时没有Anchor和Contact换代，Revision Blend为0，Ground Path支撑高度已经切到另一踏面；
+- 多个Revision只经历`0 -> 约0.55`便被替换或晋升，没有保持输出位置与速度连续；
+- 当前样本中的Plan结束均记为`EventReplaced`，Landing、Anchor和后继Plan没有形成完成事务；
+- 大跳帧的FBBIK位置残差通常约为`1e-7m`，物理穿透接近零，说明Solver准确执行了已经跳变的输入。
+
+固定修复顺序是：先保证Active Plan到Successor Revision的C0位置连续和C1速度连续，再收口Landing、Anchor与后继Plan的同一事务；在此之前不调Ground Envelope、Pelvis spring或FBBIK参数。

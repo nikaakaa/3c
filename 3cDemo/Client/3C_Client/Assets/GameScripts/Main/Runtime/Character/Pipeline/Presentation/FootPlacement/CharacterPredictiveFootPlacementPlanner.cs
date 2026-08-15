@@ -361,6 +361,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootFeatureSample leftFeature = frame.UpstreamPose.LeftFootFeatures;
             AnimationFootFeatureSample rightFeature = frame.UpstreamPose.RightFootFeatures;
             Vector3 committedBodyVelocity = frame.Body.TargetVelocity;
+            float trajectoryCurvatureDegreesPerSecond = frame.TrajectoryCurvatureAvailable
+                ? frame.TrajectoryCurvatureDegreesPerSecond
+                : 0f;
             CommittedLocomotionPlanarMotionTimeline motionTimeline = frame.LocomotionMotionTimeline;
             PrepareFoot(
                 CharacterFootSide.Left,
@@ -374,6 +377,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootWorldRotation,
                 presentedBodyPosition,
                 committedBodyVelocity,
+                trajectoryCurvatureDegreesPerSecond,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
                 m_Rig.LeftLegLength,
@@ -391,6 +395,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootWorldRotation,
                 presentedBodyPosition,
                 committedBodyVelocity,
+                trajectoryCurvatureDegreesPerSecond,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
                 m_Rig.RightLegLength,
@@ -1554,6 +1559,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion rootWorldRotation,
             Vector3 presentedBodyPosition,
             Vector3 committedBodyVelocity,
+            float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             float legLength,
@@ -1660,6 +1666,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     presentedBodyPosition,
                     committedBodyVelocity,
+                    trajectoryCurvatureDegreesPerSecond,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1698,6 +1705,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     presentedBodyPosition,
                     committedBodyVelocity,
+                    trajectoryCurvatureDegreesPerSecond,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1712,6 +1720,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     step.PredictionLeadSeconds,
+                    trajectoryCurvatureDegreesPerSecond,
+                    presentedBodyPosition,
                     rootWorldRotation))
             {
                 if (!TryResolveIntentRevisionOrigin(
@@ -1737,6 +1747,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     presentedBodyPosition,
                     committedBodyVelocity,
+                    trajectoryCurvatureDegreesPerSecond,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1783,6 +1794,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             float predictionLeadSeconds,
+            float trajectoryCurvatureDegreesPerSecond,
+            Vector3 presentedBodyPosition,
             Quaternion rootWorldRotation)
         {
             if (plan.State != CharacterPredictiveFootPlanState.Executing ||
@@ -1802,24 +1815,86 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float remainingSeconds = Mathf.Max(
                 0f,
                 (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
-            Vector3 expected = plan.RootTrajectory.EvaluateRemainingPlannedIntentDisplacement(
-                plan.ActionStepPhase);
-            Vector3 current = ResolveTimelineIntentDisplacement(
-                in motionTimeline,
-                movementPlaybackTime,
-                predictionLeadSeconds,
-                remainingSeconds,
-                plan.RootTrajectory.Up);
+            float horizonSeconds = predictionLeadSeconds + remainingSeconds;
+            if (horizonSeconds <= 0.0001f || m_FutureBodyTrajectorySource == null)
+                return false;
+            Vector3 up = plan.RootTrajectory.Up;
+            float elapsedSinceGeneration = Mathf.Max(
+                0f,
+                (plan.ActionStepPhase - plan.RootTrajectory.EventPhaseAtGeneration) *
+                plan.ActionStepDurationSeconds);
+            Vector3 expectedVelocity = Vector3.ProjectOnPlane(
+                plan.RootTrajectory.EvaluatePresentedBodyVelocity(elapsedSinceGeneration),
+                up);
+            Vector3 currentVelocity = Vector3.ProjectOnPlane(
+                new Vector3(
+                    motionTimeline.CurrentVelocityX,
+                    0f,
+                    motionTimeline.CurrentVelocityZ),
+                up);
+            float velocityError = (currentVelocity - expectedVelocity).magnitude *
+                                  horizonSeconds;
+            float curvatureAngle = Mathf.Abs(
+                trajectoryCurvatureDegreesPerSecond -
+                plan.RootTrajectory.FrozenTrajectoryCurvatureDegreesPerSecond) *
+                Mathf.Deg2Rad * horizonSeconds;
+            float curvatureLever = Mathf.Max(
+                plan.SoleSupportRadius,
+                plan.RootTrajectory.EvaluateRemainingPlanarDistance(plan.ActionStepPhase));
+            float curvatureError = 2f * curvatureLever * Mathf.Sin(
+                Mathf.Min(Mathf.PI, curvatureAngle) * 0.5f);
+            float preflightError = Mathf.Max(
+                plan.MotionLandingError,
+                Mathf.Sqrt(
+                    velocityError * velocityError +
+                    curvatureError * curvatureError));
+            float enterThreshold = Mathf.Max(
+                plan.SoleSupportRadius,
+                Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
+            if (!float.IsFinite(preflightError) || preflightError <= enterThreshold)
+            {
+                runtime.ObserveIntentLandingDisplacement(preflightError, enterThreshold);
+                return false;
+            }
+            float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
+                ? Mathf.Max(
+                    0f,
+                    (float)(motionTimeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
+                : float.PositiveInfinity;
+            var trajectoryRequest = new CharacterFutureBodyTrajectoryRequest(
+                m_ActorId,
+                horizonSeconds,
+                motionTimeline.CurrentVelocityX,
+                motionTimeline.CurrentVelocityZ,
+                motionTimeline.ContinuationVelocityX,
+                motionTimeline.ContinuationVelocityZ,
+                currentSegmentRemainingSeconds,
+                motionTimeline.HasContinuation,
+                trajectoryCurvatureDegreesPerSecond,
+                motionTimeline.YawVelocityDegreesPerSecond,
+                motionTimeline.MaximumYawVelocityDegreesPerSecond);
+            if (!m_FutureBodyTrajectorySource.TryPredict(
+                    in trajectoryRequest,
+                    out CharacterFutureBodyTrajectory currentTrajectory))
+            {
+                runtime.ObserveIntentLandingDisplacement(preflightError, enterThreshold);
+                return false;
+            }
+            CharacterFutureBodyTrajectorySample landingSample =
+                currentTrajectory.Evaluate(horizonSeconds);
+            Vector3 currentLandingPosition = presentedBodyPosition + new Vector3(
+                landingSample.RelativePositionX,
+                landingSample.RelativePositionY,
+                landingSample.RelativePositionZ);
+            Vector3 expectedLandingPosition =
+                plan.RootTrajectory.EvaluatePresentedBodyLandingPosition();
             float linearError = Vector3.ProjectOnPlane(
-                    current - expected,
-                    plan.RootTrajectory.Up)
+                    currentLandingPosition - expectedLandingPosition,
+                    up)
                 .magnitude;
-            Quaternion currentLandingRotation = ResolveTimelineLandingRotation(
-                in motionTimeline,
-                movementPlaybackTime,
-                predictionLeadSeconds + remainingSeconds,
-                rootWorldRotation,
-                plan.RootTrajectory.Up);
+            Quaternion currentLandingRotation = (
+                Quaternion.AngleAxis(landingSample.RelativeYawDegrees, up) *
+                rootWorldRotation).normalized;
             float angularDifference = Quaternion.Angle(
                 plan.RootLandingRotation,
                 currentLandingRotation) * Mathf.Deg2Rad;
@@ -1827,104 +1902,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.SoleSupportRadius,
                 plan.RootTrajectory.EvaluateRemainingPlanarDistance(plan.ActionStepPhase));
             float angularError = 2f * angularLever * Mathf.Sin(angularDifference * 0.5f);
-            float intentError = Mathf.Sqrt(
+            float error = Mathf.Sqrt(
                 linearError * linearError +
                 angularError * angularError);
-            float enterThreshold = Mathf.Max(
-                plan.SoleSupportRadius,
-                Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
-            float error = Mathf.Max(intentError, plan.MotionLandingError);
             runtime.ObserveIntentLandingDisplacement(error, enterThreshold);
             return float.IsFinite(error) && error > enterThreshold;
-        }
-
-        static Vector3 ResolveTimelineIntentDisplacement(
-            in CommittedLocomotionPlanarMotionTimeline timeline,
-            double movementPlaybackTime,
-            float predictionLeadSeconds,
-            float durationSeconds,
-            Vector3 up)
-        {
-            Vector3 currentVelocity = Vector3.ProjectOnPlane(
-                new Vector3(timeline.CurrentVelocityX, 0f, timeline.CurrentVelocityZ),
-                up);
-            Vector3 continuationVelocity = Vector3.ProjectOnPlane(
-                new Vector3(timeline.ContinuationVelocityX, 0f, timeline.ContinuationVelocityZ),
-                up);
-            float switchDelay = timeline.CurrentSegmentDurationTicks > 0
-                ? Mathf.Max(0f, (float)(timeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
-                : float.PositiveInfinity;
-            float startSeconds = Mathf.Max(0f, predictionLeadSeconds);
-            float endSeconds = startSeconds + durationSeconds;
-            if (float.IsPositiveInfinity(switchDelay) || endSeconds <= switchDelay)
-                return currentVelocity * durationSeconds;
-            if (startSeconds >= switchDelay)
-            {
-                return timeline.HasContinuation
-                    ? continuationVelocity * durationSeconds
-                    : Vector3.zero;
-            }
-            Vector3 displacement = currentVelocity * (switchDelay - startSeconds);
-            return timeline.HasContinuation
-                ? displacement + continuationVelocity * (endSeconds - switchDelay)
-                : displacement;
-        }
-
-        static Quaternion ResolveTimelineLandingRotation(
-            in CommittedLocomotionPlanarMotionTimeline timeline,
-            double movementPlaybackTime,
-            float durationSeconds,
-            Quaternion startRotation,
-            Vector3 up)
-        {
-            float remaining = Mathf.Max(0f, durationSeconds);
-            Quaternion rotation = startRotation.normalized;
-            float switchDelay = timeline.CurrentSegmentDurationTicks > 0
-                ? Mathf.Max(0f, (float)(timeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
-                : float.PositiveInfinity;
-            float currentDuration = float.IsPositiveInfinity(switchDelay)
-                ? remaining
-                : Mathf.Min(remaining, switchDelay);
-            rotation = RotateTowardVelocity(
-                rotation,
-                new Vector3(timeline.CurrentVelocityX, 0f, timeline.CurrentVelocityZ),
-                timeline.YawVelocityDegreesPerSecond,
-                timeline.MaximumYawVelocityDegreesPerSecond,
-                currentDuration,
-                up);
-            remaining -= currentDuration;
-            if (remaining <= 0f || !timeline.HasContinuation)
-                return rotation;
-            return RotateTowardVelocity(
-                rotation,
-                new Vector3(timeline.ContinuationVelocityX, 0f, timeline.ContinuationVelocityZ),
-                timeline.YawVelocityDegreesPerSecond,
-                timeline.MaximumYawVelocityDegreesPerSecond,
-                remaining,
-                up);
-        }
-
-        static Quaternion RotateTowardVelocity(
-            Quaternion rotation,
-            Vector3 velocity,
-            float yawVelocityDegreesPerSecond,
-            float maximumYawVelocityDegreesPerSecond,
-            float durationSeconds,
-            Vector3 up)
-        {
-            Vector3 planar = Vector3.ProjectOnPlane(velocity, up);
-            if (planar.sqrMagnitude <= 0.00000001f)
-            {
-                return (Quaternion.AngleAxis(
-                            yawVelocityDegreesPerSecond * durationSeconds,
-                            up) *
-                        rotation).normalized;
-            }
-            Quaternion target = Quaternion.LookRotation(planar.normalized, up);
-            float maximumDelta = Mathf.Max(
-                Mathf.Abs(yawVelocityDegreesPerSecond),
-                maximumYawVelocityDegreesPerSecond) * durationSeconds;
-            return Quaternion.RotateTowards(rotation, target, maximumDelta).normalized;
         }
 
         bool CreatePlan(
@@ -1940,6 +1922,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion rootStartRotation,
             Vector3 presentedBodyStartPosition,
             Vector3 committedBodyVelocity,
+            float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             Vector3 up,
@@ -1963,6 +1946,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motionTimeline.ContinuationVelocityZ,
                 currentSegmentRemainingSeconds,
                 motionTimeline.HasContinuation,
+                trajectoryCurvatureDegreesPerSecond,
                 motionTimeline.YawVelocityDegreesPerSecond,
                 motionTimeline.MaximumYawVelocityDegreesPerSecond);
             if (!m_FutureBodyTrajectorySource.TryPredict(
@@ -1977,6 +1961,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentedBodyStartPosition,
                 animationSoleAtGeneration,
                 committedBodyVelocity,
+                trajectoryCurvatureDegreesPerSecond,
                 in motionTimeline,
                 movementPlaybackTime,
                 futureBodyTrajectory,

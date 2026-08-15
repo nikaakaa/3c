@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     public sealed partial class DeterministicKccWorldSolver
     {
         const string FutureBodyTrajectorySourceIdentity =
-            "thirdperson.simulation.solver.deterministic-kcc.future-body/v2";
+            "thirdperson.simulation.solver.deterministic-kcc.future-body/v3";
 
         public bool TryPredict(
             in CharacterFutureBodyTrajectoryRequest request,
@@ -56,11 +56,12 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     float deltaSeconds = elapsed - previousTime;
                     PlanarVelocity velocity = ResolveRequestedPlanarVelocity(
                         in request,
-                        (previousTime + elapsed) * 0.5f);
+                        elapsed);
                     FixedVector3 requestedDisplacement = ToFixed(
-                        new PlanarDisplacement(
-                            velocity.X * deltaSeconds,
-                            velocity.Z * deltaSeconds));
+                        IntegrateRequestedPlanarDisplacement(
+                            in request,
+                            previousTime,
+                            elapsed));
                     FixedVector3 previousPosition = position;
                     DeterministicKccMotorResult result = motor.Move(
                         position,
@@ -107,15 +108,98 @@ namespace ThirdPersonSimulation.DeterministicKcc
             float elapsedSeconds)
         {
             float switchTime = request.CurrentSegmentRemainingSeconds;
+            PlanarVelocity velocity;
             if (float.IsPositiveInfinity(switchTime) || elapsedSeconds < switchTime)
-                return new PlanarVelocity(
+            {
+                velocity = new PlanarVelocity(
                     request.CurrentVelocityX,
                     request.CurrentVelocityZ);
-            return request.HasContinuation
-                ? new PlanarVelocity(
+            }
+            else
+            {
+                velocity = request.HasContinuation
+                    ? new PlanarVelocity(
                     request.ContinuationVelocityX,
                     request.ContinuationVelocityZ)
-                : default;
+                    : default;
+            }
+            return RotateVelocity(
+                velocity,
+                request.TrajectoryCurvatureDegreesPerSecond * elapsedSeconds);
+        }
+
+        static PlanarDisplacement IntegrateRequestedPlanarDisplacement(
+            in CharacterFutureBodyTrajectoryRequest request,
+            float startSeconds,
+            float endSeconds)
+        {
+            float switchTime = request.CurrentSegmentRemainingSeconds;
+            if (float.IsPositiveInfinity(switchTime) || endSeconds <= switchTime)
+            {
+                return IntegrateRotatingVelocity(
+                    request.CurrentVelocityX,
+                    request.CurrentVelocityZ,
+                    request.TrajectoryCurvatureDegreesPerSecond,
+                    startSeconds,
+                    endSeconds);
+            }
+            if (startSeconds >= switchTime)
+            {
+                return request.HasContinuation
+                    ? IntegrateRotatingVelocity(
+                        request.ContinuationVelocityX,
+                        request.ContinuationVelocityZ,
+                        request.TrajectoryCurvatureDegreesPerSecond,
+                        startSeconds,
+                        endSeconds)
+                    : default;
+            }
+            PlanarDisplacement current = IntegrateRotatingVelocity(
+                request.CurrentVelocityX,
+                request.CurrentVelocityZ,
+                request.TrajectoryCurvatureDegreesPerSecond,
+                startSeconds,
+                switchTime);
+            return request.HasContinuation
+                ? current + IntegrateRotatingVelocity(
+                    request.ContinuationVelocityX,
+                    request.ContinuationVelocityZ,
+                    request.TrajectoryCurvatureDegreesPerSecond,
+                    switchTime,
+                    endSeconds)
+                : current;
+        }
+
+        static PlanarDisplacement IntegrateRotatingVelocity(
+            float velocityX,
+            float velocityZ,
+            float yawRateDegreesPerSecond,
+            float startSeconds,
+            float endSeconds)
+        {
+            double duration = Math.Max(0d, endSeconds - startSeconds);
+            if (duration <= 0d)
+                return default;
+            double angularVelocity = yawRateDegreesPerSecond * Math.PI / 180d;
+            if (Math.Abs(angularVelocity) <= 0.000001d)
+                return new PlanarDisplacement(velocityX * duration, velocityZ * duration);
+            double startAngle = angularVelocity * startSeconds;
+            double endAngle = angularVelocity * endSeconds;
+            double along = (Math.Sin(endAngle) - Math.Sin(startAngle)) / angularVelocity;
+            double across = (Math.Cos(startAngle) - Math.Cos(endAngle)) / angularVelocity;
+            return new PlanarDisplacement(
+                velocityX * along + velocityZ * across,
+                velocityZ * along - velocityX * across);
+        }
+
+        static PlanarVelocity RotateVelocity(PlanarVelocity velocity, float yawDegrees)
+        {
+            double angle = yawDegrees * Math.PI / 180d;
+            double sin = Math.Sin(angle);
+            double cos = Math.Cos(angle);
+            return new PlanarVelocity(
+                velocity.X * cos + velocity.Z * sin,
+                velocity.Z * cos - velocity.X * sin);
         }
 
         static double ResolveYawDelta(

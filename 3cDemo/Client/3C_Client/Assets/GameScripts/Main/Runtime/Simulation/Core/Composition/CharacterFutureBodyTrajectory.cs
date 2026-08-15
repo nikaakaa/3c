@@ -13,6 +13,7 @@ namespace ThirdPersonSimulation
             float continuationVelocityZ,
             float currentSegmentRemainingSeconds,
             bool hasContinuation,
+            float trajectoryCurvatureDegreesPerSecond,
             float yawVelocityDegreesPerSecond,
             float maximumYawVelocityDegreesPerSecond)
         {
@@ -22,6 +23,7 @@ namespace ThirdPersonSimulation
                 (!float.IsFinite(currentSegmentRemainingSeconds) &&
                  !float.IsPositiveInfinity(currentSegmentRemainingSeconds)) ||
                 currentSegmentRemainingSeconds < 0f ||
+                !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !float.IsFinite(yawVelocityDegreesPerSecond) ||
                 !float.IsFinite(maximumYawVelocityDegreesPerSecond) ||
                 maximumYawVelocityDegreesPerSecond < 0f)
@@ -36,6 +38,7 @@ namespace ThirdPersonSimulation
             ContinuationVelocityZ = continuationVelocityZ;
             CurrentSegmentRemainingSeconds = currentSegmentRemainingSeconds;
             HasContinuation = hasContinuation;
+            TrajectoryCurvatureDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
             YawVelocityDegreesPerSecond = yawVelocityDegreesPerSecond;
             MaximumYawVelocityDegreesPerSecond = maximumYawVelocityDegreesPerSecond;
         }
@@ -48,6 +51,7 @@ namespace ThirdPersonSimulation
         public float ContinuationVelocityZ { get; }
         public float CurrentSegmentRemainingSeconds { get; }
         public bool HasContinuation { get; }
+        public float TrajectoryCurvatureDegreesPerSecond { get; }
         public float YawVelocityDegreesPerSecond { get; }
         public float MaximumYawVelocityDegreesPerSecond { get; }
     }

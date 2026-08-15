@@ -347,8 +347,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     constraintMode,
                     supportPhase,
                     bodyPivotMode);
-                constraintWeight = step.EvaluateConstraintWeight(phase);
-                supportWeight = step.EvaluateSupportWeight(phase);
+                constraintWeight = step.CurrentConstraintWeight;
+                supportWeight = step.CurrentSupportWeight;
             }
             else
             {
@@ -453,9 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 true,
                 plan.HasExecutablePath,
                 plan.State == CharacterPredictiveFootPlanState.Executing,
-                revisionMatches && revision.State == CharacterPredictiveFootPlanState.Executing
-                    ? revision.Sequence
-                    : plan.Sequence,
+                plan.Sequence,
                 step.IsAuthoritative
                     ? step.LandingEventIdentity
                     : plan.LandingEventIdentity,
@@ -466,9 +464,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 constraintWeight,
                 supportWeight,
                 feature.PlantConfidence,
-                revisionMatches
-                    ? revision.ActionProgress
-                    : plan.ActionProgress,
+                plan.ActionProgress,
                 remainingSeconds,
                 contactSurface,
                 contactAnklePosition,
@@ -476,7 +472,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathPosition,
                 pathRoot,
                 pathRootStart,
-                pathHip);
+                pathHip,
+                pose.HipPosition,
+                step.IsAuthoritative ? step.BiomechanicalSample.SupportLegLength : 0f,
+                step.IsAuthoritative ? step.BiomechanicalSample.SupportLegCompressionReserve : 0f,
+                step.IsAuthoritative ? step.BiomechanicalSample.SupportKneeBendPlane : Vector3.zero,
+                step.IsAuthoritative ? step.BiomechanicalSample.SupportFootPivotPosition : Vector3.zero,
+                step.IsAuthoritative ? step.BiomechanicalSample.SupportFootPivotWeight : 0f);
         }
 
         internal void Resolve(
@@ -1236,7 +1238,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.PathPosition,
                 target.PathRoot,
                 pathRootStart,
-                target.PathHip);
+                target.PathHip,
+                pose.HipPosition,
+                0f,
+                0f,
+                Vector3.zero,
+                Vector3.zero,
+                0f);
             return true;
         }
 

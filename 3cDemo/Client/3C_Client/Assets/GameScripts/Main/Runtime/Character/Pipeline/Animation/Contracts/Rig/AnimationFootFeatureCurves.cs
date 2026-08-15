@@ -283,16 +283,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_AuthoredFootPlanarRouteZ[i].Evaluate(time)));
                 animationClearanceHeights.Add(m_AnimationClearanceHeight[i].Evaluate(time));
             }
+            float eventPhase = m_EventPhase.Evaluate(time);
             m_BiomechanicalStep.Sample(
                 time,
                 out float landingPhase,
                 out Quaternion opposingRootLocalSoleRotation,
-                out _);
+                out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> biomechanicalRoute);
+            float scaledBiomechanicalIndex = Mathf.Clamp01(eventPhase) * (biomechanicalRoute.Length - 1);
+            int firstBiomechanicalIndex = Mathf.Min(
+                biomechanicalRoute.Length - 1,
+                Mathf.FloorToInt(scaledBiomechanicalIndex));
+            int secondBiomechanicalIndex = Mathf.Min(
+                biomechanicalRoute.Length - 1,
+                firstBiomechanicalIndex + 1);
+            AnimationFootBiomechanicalRouteSample biomechanicalSample =
+                AnimationFootBiomechanicalRouteSample.Interpolate(
+                    biomechanicalRoute[firstBiomechanicalIndex],
+                    biomechanicalRoute[secondBiomechanicalIndex],
+                    scaledBiomechanicalIndex - firstBiomechanicalIndex);
             return new AnimationPredictedFootStepSample(
                 Mathf.Max(0, Mathf.RoundToInt(m_EventOrdinal.Evaluate(time))),
                 m_Confidence.Evaluate(time),
                 m_TimeToLandingSeconds.Evaluate(time),
-                m_EventPhase.Evaluate(time),
+                eventPhase,
                 m_ReleasePhase.Evaluate(time),
                 m_LiftOffPhase.Evaluate(time),
                 m_ApproachContactPhase.Evaluate(time),
@@ -310,7 +323,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 authoredFootPlanarRoute,
                 animationClearanceHeights,
                 landingPhase,
-                opposingRootLocalSoleRotation);
+                opposingRootLocalSoleRotation,
+                biomechanicalSample);
         }
 
         public void RequireValid()
@@ -491,7 +505,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FixedList512Bytes<Vector3> authoredFootPlanarRoute,
             FixedList128Bytes<float> animationClearanceHeights,
             float landingPhase,
-            Quaternion opposingRootLocalSoleRotation)
+            Quaternion opposingRootLocalSoleRotation,
+            AnimationFootBiomechanicalRouteSample biomechanicalSample)
             : this(
                 eventOrdinal,
                 confidence,
@@ -512,6 +527,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 animationClearanceHeights,
                 landingPhase,
                 opposingRootLocalSoleRotation,
+                biomechanicalSample,
                 0,
                 0,
                 0,
@@ -541,6 +557,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FixedList128Bytes<float> animationClearanceHeights,
             float landingPhase,
             Quaternion opposingRootLocalSoleRotation,
+            AnimationFootBiomechanicalRouteSample biomechanicalSample,
             ulong sourceSampleIdentity,
             int sourceSampleCycle,
             ulong contributionContinuityIdentity,
@@ -588,6 +605,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             OpposingRootLocalSoleRotation = RequireFinite(
                 opposingRootLocalSoleRotation,
                 nameof(opposingRootLocalSoleRotation));
+            if (!biomechanicalSample.IsValid)
+                throw new ArgumentException("Predicted biomechanical Foot sample is invalid.");
+            BiomechanicalSample = biomechanicalSample;
             if (!hasOpposingLanding && OpposingRootLocalLanding.sqrMagnitude > 0.000000000001f)
                 throw new ArgumentException("Predicted opposing landing position is unpaired.");
             if (!hasOpposingLanding && Quaternion.Angle(
@@ -642,6 +662,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int OpposingLandingCycleOffset { get; }
         public Vector3 OpposingRootLocalLanding { get; }
         public Quaternion OpposingRootLocalSoleRotation { get; }
+        public AnimationFootBiomechanicalRouteSample BiomechanicalSample { get; }
         public FixedList512Bytes<Vector3> RootLocalFootRoute { get; }
         public FixedList512Bytes<Vector3> RootLocalAnkleRoute { get; }
         public FixedList512Bytes<Vector3> RootLocalHipRoute { get; }
@@ -658,7 +679,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool IsValid => m_IsSpecified != 0;
         public bool HasLandingEvent => IsValid && EventOrdinal > 0 && Confidence > 0f;
         public bool IsSourceBound => HasLandingEvent && SourceSampleIdentity != 0;
-        public bool IsAuthoritative => IsSourceBound && ContributionContinuityIdentity != 0 && LandingEventIdentity != 0;
+        public bool IsAuthoritative => IsSourceBound && ContributionContinuityIdentity != 0 &&
+                                       LandingEventIdentity != 0 && BiomechanicalSample.IsValid;
         public bool HasOpposingLandingEvent => IsAuthoritative && OpposingEventOrdinal > 0 &&
                                                OpposingLandingDelaySeconds > 0.000001f &&
                                                OpposingLandingEventIdentity != 0;
@@ -725,6 +747,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             EvaluateIndices(AnimationClearanceHeights.Length, eventPhase, out int first, out int second, out float t);
             return Mathf.Lerp(AnimationClearanceHeights[first], AnimationClearanceHeights[second], t);
         }
+
+        public float CurrentConstraintWeight => BiomechanicalSample.IsValid
+            ? BiomechanicalSample.ConstraintWeight
+            : throw new InvalidOperationException("Predicted biomechanical Foot sample is unavailable.");
+
+        public float CurrentSupportWeight => BiomechanicalSample.IsValid
+            ? BiomechanicalSample.SupportWeight
+            : throw new InvalidOperationException("Predicted biomechanical Foot sample is unavailable.");
 
         public float EvaluateConstraintWeight(float eventPhase)
         {
@@ -820,6 +850,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
+                BiomechanicalSample,
                 sourceSampleIdentity,
                 sourceLandingCycle,
                 0,
@@ -856,6 +887,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
+                BiomechanicalSample,
                 0,
                 0,
                 0,
@@ -903,6 +935,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
+                BiomechanicalSample,
                 markerEpochIdentity,
                 landingMarkerOrdinal,
                 0,
@@ -960,6 +993,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
+                BiomechanicalSample,
                 SourceSampleIdentity,
                 SourceSampleCycle,
                 contributionContinuityIdentity,
@@ -994,6 +1028,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
+                BiomechanicalSample,
                 SourceSampleIdentity,
                 SourceSampleCycle,
                 ContributionContinuityIdentity,

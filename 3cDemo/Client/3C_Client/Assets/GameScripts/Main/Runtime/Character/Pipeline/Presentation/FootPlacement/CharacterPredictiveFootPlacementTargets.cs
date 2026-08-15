@@ -26,7 +26,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 pathPosition,
             Vector3 pathRoot,
             Vector3 pathRootStart,
-            Vector3 pathHip)
+            Vector3 pathHip,
+            Vector3 currentHip,
+            float supportLegLength,
+            float supportLegCompressionReserve,
+            Vector3 supportKneeBendPlane,
+            Vector3 supportFootPivotPosition,
+            float supportFootPivotWeight)
         {
             HasActionConstraint = hasActionConstraint;
             HasExecutablePlan = hasExecutablePlan;
@@ -49,6 +55,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathRoot = pathRoot;
             PathRootStart = pathRootStart;
             PathHip = pathHip;
+            CurrentHip = currentHip;
+            SupportLegLength = supportLegLength;
+            SupportLegCompressionReserve = supportLegCompressionReserve;
+            SupportKneeBendPlane = supportKneeBendPlane;
+            SupportFootPivotPosition = supportFootPivotPosition;
+            SupportFootPivotWeight = Mathf.Clamp01(supportFootPivotWeight);
         }
 
         internal bool HasActionConstraint { get; }
@@ -72,6 +84,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PathRoot { get; }
         internal Vector3 PathRootStart { get; }
         internal Vector3 PathHip { get; }
+        internal Vector3 CurrentHip { get; }
+        internal float SupportLegLength { get; }
+        internal float SupportLegCompressionReserve { get; }
+        internal Vector3 SupportKneeBendPlane { get; }
+        internal Vector3 SupportFootPivotPosition { get; }
+        internal float SupportFootPivotWeight { get; }
     }
 
     internal readonly struct CharacterPredictiveFootTarget

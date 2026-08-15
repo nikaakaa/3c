@@ -11,7 +11,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 targetAnklePosition,
             float goalWeight,
             float supportWeight,
-            float legLength)
+            float legLength,
+            float authoredSupportLegLength,
+            float supportLegCompressionReserve,
+            Vector3 supportKneeBendPlane)
         {
             Side = side;
             HipPosition = hipPosition;
@@ -19,6 +22,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GoalWeight = goalWeight;
             SupportWeight = supportWeight;
             LegLength = legLength;
+            AuthoredSupportLegLength = authoredSupportLegLength;
+            SupportLegCompressionReserve = supportLegCompressionReserve;
+            SupportKneeBendPlane = supportKneeBendPlane;
         }
 
         internal CharacterFootSide Side { get; }
@@ -27,6 +33,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float GoalWeight { get; }
         internal float SupportWeight { get; }
         internal float LegLength { get; }
+        internal float AuthoredSupportLegLength { get; }
+        internal float SupportLegCompressionReserve { get; }
+        internal Vector3 SupportKneeBendPlane { get; }
     }
 
     public readonly struct CharacterFootPlacementPelvisLegRange
@@ -108,16 +117,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementPelvisLegRange rightRange = BuildRange(in right, up, settings);
             bool useLeft = left.GoalWeight > Epsilon && left.SupportWeight > Epsilon;
             bool useRight = right.GoalWeight > Epsilon && right.SupportWeight > Epsilon;
-            bool leftReachable = !useLeft || Contains(leftRange, lyraCurrentOffset, settings);
-            bool rightReachable = !useRight || Contains(rightRange, lyraCurrentOffset, settings);
-            bool rejectLeftGoal = useLeft && !leftReachable;
-            bool rejectRightGoal = useRight && !rightReachable;
-            leftRange = SetContribution(leftRange, useLeft && leftReachable);
-            rightRange = SetContribution(rightRange, useRight && rightReachable);
+            bool leftCurrentReachable = useLeft && Contains(leftRange, lyraCurrentOffset, settings);
+            bool rightCurrentReachable = useRight && Contains(rightRange, lyraCurrentOffset, settings);
+            bool leftTargetReachable = useLeft && Contains(leftRange, lyraTargetOffset, settings);
+            bool rightTargetReachable = useRight && Contains(rightRange, lyraTargetOffset, settings);
+            bool rejectLeftGoal = useLeft && !leftCurrentReachable && !leftTargetReachable;
+            bool rejectRightGoal = useRight && !rightCurrentReachable && !rightTargetReachable;
+            bool contributeLeft = useLeft && !rejectLeftGoal;
+            bool contributeRight = useRight && !rejectRightGoal;
+            if (contributeLeft && contributeRight && !Intersects(leftRange, rightRange))
+            {
+                bool keepLeft = SelectLeftSupport(
+                    left,
+                    right,
+                    leftRange,
+                    rightRange,
+                    lyraCurrentOffset);
+                rejectLeftGoal = !keepLeft;
+                rejectRightGoal = keepLeft;
+                contributeLeft = keepLeft;
+                contributeRight = !keepLeft;
+            }
+            leftRange = SetContribution(leftRange, contributeLeft);
+            rightRange = SetContribution(rightRange, contributeRight);
+            float minimum = -settings.MaximumPelvisLowering;
+            float maximum = settings.MaximumPelvisRaising;
+            if (contributeLeft)
+            {
+                minimum = Mathf.Max(minimum, leftRange.MinimumOffset);
+                maximum = Mathf.Min(maximum, leftRange.MaximumOffset);
+            }
+            if (contributeRight)
+            {
+                minimum = Mathf.Max(minimum, rightRange.MinimumOffset);
+                maximum = Mathf.Min(maximum, rightRange.MaximumOffset);
+            }
+            float resolvedOffset = contributeLeft || contributeRight
+                ? Mathf.Clamp(lyraCurrentOffset, minimum, maximum)
+                : lyraCurrentOffset;
             return new CharacterFootPlacementPelvisPlan(
                 lyraTargetOffset,
                 lyraCurrentOffset,
-                lyraCurrentOffset,
+                resolvedOffset,
                 leftRange,
                 rightRange,
                 rejectLeftGoal,
@@ -143,7 +184,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 hipToTarget = input.TargetAnklePosition - input.HipPosition;
             float vertical = Vector3.Dot(hipToTarget, up);
             float horizontalSquared = Vector3.ProjectOnPlane(hipToTarget, up).sqrMagnitude;
-            float maximumLength = input.LegLength + Epsilon;
+            float compressionLimitedLength = input.SupportLegCompressionReserve > Epsilon
+                ? input.LegLength - input.SupportLegCompressionReserve
+                : input.AuthoredSupportLegLength > Epsilon
+                    ? input.AuthoredSupportLegLength
+                    : input.LegLength;
+            float maximumLength = Mathf.Min(input.LegLength, compressionLimitedLength) + Epsilon;
             float maximumVerticalSquared = maximumLength * maximumLength - horizontalSquared;
             if (maximumVerticalSquared < 0f)
             {
@@ -183,6 +229,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             range.IsValid &&
             offset >= Mathf.Max(range.MinimumOffset, -settings.MaximumPelvisLowering) - Epsilon &&
             offset <= Mathf.Min(range.MaximumOffset, settings.MaximumPelvisRaising) + Epsilon;
+
+        static bool Intersects(
+            CharacterFootPlacementPelvisLegRange left,
+            CharacterFootPlacementPelvisLegRange right) =>
+            left.IsValid && right.IsValid &&
+            Mathf.Max(left.MinimumOffset, right.MinimumOffset) <=
+            Mathf.Min(left.MaximumOffset, right.MaximumOffset) + Epsilon;
+
+        static bool SelectLeftSupport(
+            in CharacterFootPlacementPelvisLegInput left,
+            in CharacterFootPlacementPelvisLegInput right,
+            CharacterFootPlacementPelvisLegRange leftRange,
+            CharacterFootPlacementPelvisLegRange rightRange,
+            float currentOffset)
+        {
+            if (Mathf.Abs(left.SupportWeight - right.SupportWeight) > Epsilon)
+                return left.SupportWeight > right.SupportWeight;
+            float leftDistance = DistanceToRange(leftRange, currentOffset);
+            float rightDistance = DistanceToRange(rightRange, currentOffset);
+            return leftDistance <= rightDistance;
+        }
+
+        static float DistanceToRange(CharacterFootPlacementPelvisLegRange range, float value)
+        {
+            if (!range.IsValid)
+                return float.PositiveInfinity;
+            if (value < range.MinimumOffset)
+                return range.MinimumOffset - value;
+            return value > range.MaximumOffset ? value - range.MaximumOffset : 0f;
+        }
 
         static CharacterFootPlacementPelvisLegRange SetContribution(
             CharacterFootPlacementPelvisLegRange range,

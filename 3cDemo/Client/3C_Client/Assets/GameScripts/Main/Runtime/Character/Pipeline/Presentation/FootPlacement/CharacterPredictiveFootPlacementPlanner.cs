@@ -823,6 +823,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.LeftFoot,
                 baselineDiagnostics.Left,
                 frame.RenderFrame,
+                frame.PresentationDeltaSeconds,
                 m_Rig.LeftLegLength,
                 ResolveAppliedHip(pose.Left.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics leftDiagnostics,
@@ -838,6 +839,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.RightFoot,
                 baselineDiagnostics.Right,
                 frame.RenderFrame,
+                frame.PresentationDeltaSeconds,
                 m_Rig.RightLegLength,
                 ResolveAppliedHip(pose.Right.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics rightDiagnostics,
@@ -897,6 +899,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFullBodyIkGoal baseline,
             CharacterFootGroundingFootDiagnostics grounding,
             ulong renderFrame,
+            float presentationDeltaSeconds,
             float legLength,
             Vector3 appliedHip,
             out CharacterPredictiveFootPlacementFootDiagnostics diagnostics,
@@ -1301,8 +1304,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 targetAvailable || revisionTargetAvailable,
                 currentPathRoot,
                 currentPathHip,
-                frame.RenderFrame,
-                frame.PresentationDeltaSeconds);
+                renderFrame,
+                presentationDeltaSeconds);
             debugSnapshot = new CharacterPredictiveFootLegFrameSnapshot(
                 side,
                 plan.State,

@@ -134,13 +134,13 @@ Projection MUST把Simulation提交的Locomotion Motion Elapsed Ticks映射成当
 
 ### Requirement: Foot Analysis不得拥有角色平面位移
 
-Corin in-place Foot Analysis MUST不保存角色平面位移、速度或Action Motion Curve。Simulation Locomotion MUST唯一拥有作者Move Speed；Simulation/KCC MUST唯一发布按正式Movement Timeline、世界碰撞和Trajectory Curvature生成的未来可执行Body XYZ轨迹。Runtime在计划创建事务中 MAY冻结该轨迹、Movement最大转向能力与实际Trajectory Curvature，并和同一Pose Clip脚骨局部姿态差定义Future Query Route；脚骨局部姿态序列不是角色位移曲线。最终Swing Foot XZ MUST继续来自当前原动画Pose。计划提交后不得重读Body、键鼠输入幅值、地形三维弧长或当前脚投影改写该路线。
+Corin in-place Foot Analysis MUST不保存角色平面位移、速度或Action Motion Curve。Simulation Locomotion MUST唯一拥有作者Move Speed；Simulation/KCC MUST唯一按正式Movement Timeline世界速度段与世界碰撞发布未来可执行Body XYZ平移，Body Facing MUST独立以Maximum Yaw有限追随速度方向。Runtime在每个初始Plan或离散Revision创建事务中 MAY冻结该平移、Body Facing、Movement最大转向能力与实际Body Yaw诊断，并和同一Pose Clip脚骨局部姿态差定义Future Query Route；脚骨局部姿态序列不是角色位移曲线。最终Swing Foot XZ MUST继续来自当前原动画Pose。已提交Plan Revision不得重读Body、键鼠输入幅值、地形三维弧长或当前脚投影改写自身路线。
 
 #### Scenario: 同一Walk动作运行在平地与楼梯
 
 - **WHEN** 同一Landing Event分别在平地和楼梯建立计划
-- **THEN** 两次计划的Pose event identity、cycle、相位、创建帧Body Target Velocity、Simulation Continuation、最大转向能力与Trajectory Curvature MUST可明确对账
-- **AND** Runtime在平地与楼梯 MUST从同一Landing事件、冻结KCC轨迹和Trajectory Curvature建立Future Query Route；当前原动画Pose继续拥有最终Foot XZ，楼梯竖直变化只进入Ground Path高度和预测Hip
+- **THEN** 两次计划的Pose event identity、cycle、相位、创建帧Body Target Velocity、Simulation Continuation、最大转向能力与Body Yaw诊断 MUST可明确对账
+- **AND** Runtime在平地与楼梯 MUST从同一Landing事件、冻结KCC平移和有限Body Facing建立Future Query Route；当前原动画Pose继续拥有最终Foot XZ，楼梯竖直变化只进入Ground Path高度和预测Hip
 - **AND** Analyzer MUST不读取任何Body速度；Runtime只可在Plan创建事务中请求冻结KCC未来轨迹，Visible或Source速度不得进入预测
 
 ### Requirement: Definition Build必须精确消费新Artifact并发布Projection

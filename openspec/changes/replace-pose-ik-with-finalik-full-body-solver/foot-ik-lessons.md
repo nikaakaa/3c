@@ -2,7 +2,7 @@
 
 ## 1. 四条路线不能混为一个Path
 
-- `Future Body Trajectory`：KCC按正式速度、碰撞和轨迹曲率预测身体XYZ。
+- `Future Body Trajectory`：KCC按正式世界速度段和碰撞预测身体XYZ，Body Facing独立有限追随速度方向。
 - `Animation Foot Route`：in-place动画中脚相对身体的局部运动。
 - `Ground Probe`：本脚Swing起点、对侧Landing、本脚Landing组成的查询折线。
 - `Ground Envelope`：合法踏面形成的分段线性上包络，只是环境高度下界。
@@ -26,15 +26,15 @@ FootTravel = KccTravel(phase) - KccTravel(pathStartPhase)
 
 不能把生成到LiftOff的锁脚等待位移写进Swing，也不能把计划私有时钟和动画相位并行推进。高度还要在Path Start计算一次确定的连续偏移；否则PreSwing创建的Plan会在LiftOff把`Ground Envelope + Clearance`以权重1硬切进Goal。
 
-## 4. 转弯需要唯一轨迹曲率，不是最大转速
+## 4. 位移路线与身体朝向不能共用Yaw
 
-A/D持续输入时，真实平面速度方向每帧稳定转动。该有符号变化率是`Trajectory Curvature`：
+`8b8...`证明Committed Body Yaw达到`±720°/s`时，拿它积分位移圆弧会产生约`1.05m`单帧Goal跳变。当前Simulation的真实语义是：
 
-- KCC用它积分未来圆弧位移；
-- 同一曲率旋转未来Foot、Hip、Ankle和Sole-to-Ankle几何；
-- 对侧Landing和本脚Landing在同一圆弧上还原后组成Ground Probe。
+- Committed Movement Timeline当前段与Continuation世界速度分段积分Body平移；
+- Body Facing以`Maximum Yaw Velocity`有限追随各段速度方向，对齐后停止；
+- 实际YawVelocity只描述身体朝向变化，不是位移轨迹曲率。
 
-角色节点的`Maximum Yaw Velocity`只表示转向能力上限，用于拒绝不连续输入，不能拿`720°/s`生成路线。只旋转Debug线、只旋转终点或只弯Body位移都会让脚和地形查询分家。
+相邻Render Frame速度导数、Camera角度和Visible Body朝向同样不能生成路线。没有独立权威曲率源时，路径曲率就是零；局部Foot、Hip、Ankle只随有限Body Facing旋转。
 
 ## 5. 对侧Landing只提供空间拓扑
 
@@ -73,7 +73,7 @@ ExpandedEdgePoint = HitPoint + PlanarOutwardNormal * max(CapsuleRadius, SoleSupp
 
 ## 9. 最小闭环
 
-每个异常只对账：当前Landing身份与相位、冻结曲率与KCC圆弧、三点Ground Probe、单调Foot Rate、Envelope、Final Goal、Current安全下界、FBBIK结果和Heel/Toe物理距离。CSV不能只验总列数，还必须验列名唯一、左右脚字段对称以及Header/Value替换偏移一致；宽度正确但字段错位的数据同样作废。文档只保留会改变正式算法、诊断可信度或否决方案的证据。
+每个异常只对账：当前Landing身份与相位、冻结曲率与KCC圆弧、三点Ground Probe、单调Foot Rate、Envelope、Final Goal、Current安全下界、FBBIK结果和Heel/Toe物理距离。CSV不能只验总列数，还必须验列名唯一、左右脚字段对称以及Header/Value替换偏移一致；基础Writer扩列时必须同步耐久Writer的基础宽度、每脚宽度、序列前偏移和最终宽度，宽度正确但字段错位的数据同样作废。文档只保留会改变正式算法、诊断可信度或否决方案的证据。
 
 ## 10. 锁脚、Landing交接与骨盆是三个身份
 
@@ -81,7 +81,7 @@ ExpandedEdgePoint = HitPoint + PlanarOutwardNormal * max(CapsuleRadius, SoleSupp
 
 预测Body Path也不等于当前支撑腿。摆脚在Swing中必然是`Unlocked / Unsupported`，但它的下一Landing仍可驱动唯一预测Pelvis；若代码要求同一摆脚仍在Supporting才允许Body Path，预测骨盆会在最需要上楼时失效。
 
-冻结计划可以因输入变化失效，但不能用“是否转弯、速度是否为零、方向是否反号”三个布尔门直接切断。应把同源committed速度与曲率偏差乘以剩余步时，换算成Landing平面误差，再与既有鞋底查询半径比较；容差内继续同一计划，越界只结束而不重规划。
+冻结计划不解释原始输入。键鼠和摄像机变化必须先由Simulation形成新的Committed世界速度；Foot Placement只比较同一剩余时间内“旧Plan预定位移”和“最新Timeline预定位移”。误差超过现有鞋底/查询半径才创建离散Revision，回到半阈值后才重武装。Revision从上一帧最终鞋底和同一Action Phase重基并交叉淡化；Rejected时旧预测连续退场，不能永久把脚拉回旧落点。这是动作级计划修订，不是每帧自适应。
 
 in-place支撑脚会相对Root向后移动；用Heel/Toe全三维局部速度判断锁脚会把正常支撑长期误判为Sliding。锁定事实应来自步事件阶段：Supporting锁定、LiftOff前Releasing允许滑动、Swing解锁；运行时只验证，不修补旧烘焙。
 
@@ -89,7 +89,7 @@ in-place支撑脚会相对Root向后移动；用Heel/Toe全三维局部速度判
 
 ## 11. 动作所有权、Landing支撑面与Root位移不能跨时钟混用
 
-冻结KCC轨迹是否仍有效，不能用`Action Phase`推测Simulation何时切换Motion，也不能拿台阶碰撞后的瞬时`Body.TargetVelocity`与生成帧速度比较。固定run中真实Root与冻结KCC Root仍重合，瞬时平面速度却会因逐级升降在约`6m/s`与`5.36m/s`之间变化，并错误触发`ActionInterrupted`。执行期应在真实LiftOff后直接比较当前Root位置/朝向与同相位冻结KCC状态，偏离超过既有鞋底查询半径才结束计划；这同时覆盖速度和转向变化而不把地形响应误判为输入变化。
+冻结KCC轨迹是否仍有效，不能用`Action Phase`推测Simulation何时切换Motion，也不能拿台阶碰撞后的瞬时`Body.TargetVelocity`与生成帧速度比较。固定run中真实Root与冻结KCC Root仍重合，瞬时平面速度却会因逐级升降在约`6m/s`与`5.36m/s`之间变化。Visible Body朝向也不是位移轨迹切线；用两者夹角取消路线，会在实际平面位置几乎无误差时仍产生假中断。Root偏差可以进入诊断，但Plan结束只能来自权威事件生命周期。
 
 预测Landing的位置、旋转和支撑面是同一个冻结事实。Stance交接若采用预测Ankle却用Current Grounding本帧命中的另一个Surface，Anchor会在两个台阶面之间捕获，表现为接近落地时突然跳动，或者`AnchorBlend = 0`后由响应式路径接管。`ApproachingContact`也不能再用in-place鞋底相对Root速度做Capture门禁；该速度在真实落地附近仍可达`4–6.7m/s`，会否决全部预测Anchor。冻结Surface无效或鞋底距离未通过时必须保持Swing，不能静默换成Current Surface。
 
@@ -125,6 +125,10 @@ Idle安全Baseline不能等同于Lyra Offset Spring的当前值。Spring Current
 
 `GroundedStationary`是身体运动事实，不是动画已经到达Idle的证明。若RunEnd与Idle的`presentation.foot-placement-weight`都恒为`1`，速度先归零时Stance会把RunEnd中间姿势直接捕获成Idle Anchor；之后世界锁脚工作正常，角色却永久停在错误姿势。正式归位应让RunEnd源权重为`0`、Idle为`1`，利用动画图已有过渡得到连续淡出与淡入。Runtime还必须记录本次停步确实经历过非完整权重，只在Idle重新取得完整权重后捕获；否则无Anchor的停止首帧仍可能在曲线尚未下降前误锁。该门禁描述动画所有权交接，不使用速度阈值，也不建立第二IK权重系统。
 
-## 16. 冻结Plan用实际Root偏离失效
+## 16. Plan不能由表现导数取消，但允许Committed意图修订
 
-A/D时摄像机缓动会让相邻表现帧的Desired Velocity方向导数持续变化。若执行期继续比较当前速度、曲率和生成帧冻结值，会把正常圆周运动误判为`ActionInterrupted`；Gizmo只画`Executing`，所以表象就是整条Path突然消失。GDC的Foot Path是本步冻结的环境下界，下载案例也只在实际落点偏差越过阈值时放弃预测点。正式失效证据应是LiftOff后当前权威Body Root已经偏离同相位冻结KCC Root超过鞋底物理半径；导数噪声不能取消或重规划本步。
+A/D时摄像机缓动会让Render Frame方向导数持续变化；`99909...csv`中10个Executable Plan因此全部提前结束，Swing Goal最大单帧跳到左`27.1cm`、右`26.6cm`，而FBBIK残差约`1e-7m`。Visible Root偏差、Body朝向和Render导数只能诊断。真正的修订证据必须是Simulation已提交的剩余世界位移发生几何上足以改变落点的变化；旧、新Plan必须各自冻结且连续交接。
+
+## 17. Swing、Landing与Lock必须是一条所有权状态机
+
+唯一顺序是`Locked -> Releasing -> Swing -> Landing -> Locked`。`Releasing`不能只淡出Anchor、再在LiftOff把Predictive从0硬切到1；必须直接使用资产已有`ReleasePhase -> LiftOffPhase`做SmoothStep接管。事件身份变化不能硬清仍有权重的旧Anchor；Landing接触必须用当前动画Heel/Toe到冻结Surface的真实距离，不能用已贴地的预测Goal自证。Revision未提交完不能让旧Surface先捕获，冻结Landing Target缺失也不能退回Current Surface。Capture只提交同一安全Goal，Anchor从零以SmoothStep进入，Predictive同步退出；只有接触、有效Anchor和完整Blend同时成立才是`Anchored`。新Revision不可执行时也要把旧预测连续退场，不能硬切或继续锁住错误落点。

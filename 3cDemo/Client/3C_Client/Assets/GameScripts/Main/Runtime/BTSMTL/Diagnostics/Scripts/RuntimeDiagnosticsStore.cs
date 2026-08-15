@@ -481,10 +481,19 @@ namespace BTSMTL.Diagnostics
                    left.PlanHasPathGeometry == right.PlanHasPathGeometry &&
                    left.PlanHasExecutablePath == right.PlanHasExecutablePath &&
                    left.FrozenPlanarVelocity.Equals(right.FrozenPlanarVelocity) &&
+                   left.FrozenYawVelocityDegreesPerSecond.Equals(right.FrozenYawVelocityDegreesPerSecond) &&
+                   left.FrozenMaximumYawVelocityDegreesPerSecond.Equals(right.FrozenMaximumYawVelocityDegreesPerSecond) &&
                    left.MotionLinearLandingError.Equals(right.MotionLinearLandingError) &&
                    left.MotionAngularLandingError.Equals(right.MotionAngularLandingError) &&
                    left.MotionLandingError.Equals(right.MotionLandingError) &&
                    left.MotionLandingTolerance.Equals(right.MotionLandingTolerance) &&
+                   left.HasPlanRevision == right.HasPlanRevision &&
+                   left.RevisionPlanSequence == right.RevisionPlanSequence &&
+                   left.PlanRevisionBlendWeight.Equals(right.PlanRevisionBlendWeight) &&
+                   left.PlanFadingOut == right.PlanFadingOut &&
+                   left.PlanRetentionWeight.Equals(right.PlanRetentionWeight) &&
+                   left.IntentLandingDisplacementError.Equals(right.IntentLandingDisplacementError) &&
+                   left.IntentLandingDisplacementThreshold.Equals(right.IntentLandingDisplacementThreshold) &&
                    left.FixedPathStartWorldPosition.Equals(right.FixedPathStartWorldPosition) &&
                    left.FixedLandingWorldPosition.Equals(right.FixedLandingWorldPosition) &&
                    left.CurrentPathWorldPosition.Equals(right.CurrentPathWorldPosition) &&

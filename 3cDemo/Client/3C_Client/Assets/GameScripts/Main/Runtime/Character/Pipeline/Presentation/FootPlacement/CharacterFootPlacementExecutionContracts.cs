@@ -116,10 +116,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RenderFrame = renderFrame;
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Body = body;
-            LocomotionPlanarBasis = facts.LocomotionPlanarBasis;
-            DesiredPlanarVelocity = facts.DesiredPlanarVelocity;
-            TrajectoryCurvatureDegreesPerSecond = facts.TrajectoryCurvatureDegreesPerSecond;
-            TrajectoryCurvatureAvailable = facts.TrajectoryCurvatureAvailable;
             LocomotionMotionTimeline = facts.LocomotionMotionTimeline;
             MovementPlaybackTime = facts.MovementPlaybackTime;
             MotionPhase = facts.MotionPhase;
@@ -131,10 +127,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong CompletionIdentity => UpstreamPose.CompletionIdentity;
         public float PresentationDeltaSeconds { get; }
         public CharacterBodyPresentationFrame Body { get; }
-        public UnityEngine.Vector2 LocomotionPlanarBasis { get; }
-        public UnityEngine.Vector2 DesiredPlanarVelocity { get; }
-        public float TrajectoryCurvatureDegreesPerSecond { get; }
-        public bool TrajectoryCurvatureAvailable { get; }
         public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
         public double MovementPlaybackTime { get; }
         public CharacterPresentationMotionPhase MotionPhase { get; }

@@ -36,7 +36,7 @@
 ## 5. 诊断闭环
 
 - [x] 5.1 Scene、Game与CSV消费同一完成快照，保存Route、Probe、Envelope、Clearance、Landing、最大转向能力、Trajectory Curvature、Stance、Pelvis和FBBIK因果链。
-- [x] 5.2 CSV采用流式gzip分块与manifest；当前Writer合同为1199列，并显式记录每脚鞋底支撑半径。
+- [x] 5.2 CSV采用流式gzip分块与manifest；该轮耐久Writer合同为1199列，并显式记录每脚鞋底支撑半径；后续正式字段扩展继续由最新任务对账。
 - [x] 5.3 Gizmo不显示文字；Executable画完整冻结几何，Rejected只画真实查询与拒绝几何。
 - [x] 5.4 自动往返入口与普通Play分离，通过真实Gameplay输入在`teststart`和`testend`之间运行。
 - [x] 5.5 自动run `666c8155d1604914bc1cd0db4fb502b5`证明Landing附近实际Root到冻结Root的平面误差中位约左`10.0cm`、右`21.8cm`，P95约左`39.6cm`、右`46.6cm`。
@@ -153,6 +153,24 @@
 ## 20. A/D冻结Plan失效证据回归
 
 - [x] 20.1 证明现实现从相邻表现帧Desired Velocity重算Trajectory Curvature，并用逐帧速度/曲率差触发`ActionInterrupted`；Gizmo只绘制`Executing`，因此A/D时Path整体消失。
-- [x] 20.2 对照GDC冻结Foot Path与下载案例的小落点偏差阈值，明确Plan提交后不再用输入方向导数验证路线，唯一失效证据改为真实LiftOff后权威Body Root相对同相位冻结KCC Root的物理偏离。
-- [ ] 20.3 在现有Predictive Plan owner内替换失效计算并保持typed `ActionInterrupted`；不得逐帧重规划、平滑Path或增加第二输入阈值配置。
+- [x] 20.2 对照GDC冻结Foot Path与下载案例的小落点偏差阈值，明确Plan提交后不再用输入方向导数验证路线，唯一失效证据改为真实LiftOff后Body Presentation Visible Root相对同相位冻结KCC相对轨迹的物理偏离。
+- [x] 20.3 曾在现有Predictive Plan owner内把速度/曲率失效替换为Visible Root偏离并保持typed `ActionInterrupted`；该实验随后被第21节数据否决，未逐帧重规划、平滑Path或增加第二输入阈值配置。
 - [ ] 20.4 完成诊断字段对账、Runtime与Editor编译、精确Character Build、OpenSpec strict validate和Unity A/D回归。
+
+## 21. 路线生命周期与Simulation转向事实
+
+- [x] 21.1 只读分析`foot-ik-99909efdc0054d91ab485c0166eb9a0b.csv`的240帧、1101列，证明左右脚10个Executable Plan全部以`ActionInterrupted`结束，Predictive输出仅覆盖左5帧、右19帧，Plan消失后Swing Goal最大单帧位移达到左27.1cm、右26.6cm而FBBIK残差约`1e-7m`。
+- [x] 21.2 证明Visible Body朝向不是位移轨迹切线，相邻Render Frame Desired Velocity方向导数也不是稳定动作曲率；二者分别制造假中断和错误A/D圆弧。
+- [x] 21.3 统一使用创建Tick Committed Movement Timeline实际YawVelocity生成KCC、Foot、Hip与Ankle圆弧；已提交Plan只由权威事件生命周期结束，Visible Root偏差改为只读诊断，不新增输入阈值、逐帧重规划或第二路径。
+- [ ] 21.4 对账1105列基础Writer与1203列耐久Writer的Header/Value等宽、列名唯一、左右脚对称和序列替换偏移，完成Runtime/Editor编译、精确Float32/Fixed Character Build、OpenSpec strict validate和已打开Unity短测。
+
+## 22. 位移/朝向分离与Swing计划修订
+
+- [x] 22.1 用自动run `8b8ba82f8c254e95af838cdd792b6cc1`证明第21.3把Committed Body Yaw当轨迹曲率的实验错误：冻结值达到`±720°/s`，左右Final Goal最大逐帧位移约`1.05m`，并出现穿透和显著solver residual；不反勾历史任务，以本节正式取代该结论。
+- [x] 22.2 Future Body平移只消费Committed Movement Timeline世界速度与Continuation；Body朝向按Maximum Yaw有限追随速度方向并在对齐后停止，Body Yaw不再旋转位移路线。
+- [x] 22.3 在同一Predictive owner内加入Swing意图Revision：按剩余落点位移误差与现有鞋底/查询几何半径触发并迟滞重武装，旧新Plan从当前最终鞋底和同一Action Phase重基后连续交叉淡化；Rejected Revision使旧预测连续退场，不保留错误旧落点。
+- [x] 22.4 在现有Stance owner内显式收口`Locked -> Releasing -> Swing -> Landing -> Locked`；删除事件变化硬清Anchor，Predictive在`ReleasePhase -> LiftOffPhase`按SmoothStep接管，Landing用当前动画Heel/Toe对冻结Surface测距，Revision提交前及冻结目标缺失时禁止Current Surface代捕获，Anchor从零按同一SmoothStep连续取得所有权。
+- [x] 22.5 将Revision Sequence、Blend、退场权重、剩余落点位移误差与阈值贯穿Runtime Trace、Inspector和CSV；基础Writer更新为1119列，耐久Writer更新为1217列。
+- [x] 22.6 更新proposal、design、spec与压缩经验文档，明确第21.3已被数据否决，不再把Body Yaw描述为Trajectory Curvature。
+- [ ] 22.7 完成Runtime与Editor编译、精确Float32/Fixed Character Build、OpenSpec strict validate和单一路径静态搜索。
+- [ ] 22.8 用已打开Unity的新自动/自由输入run验证Header/Value均为1217列、Revision交接无硬切、A/D Path持续、Landing与Idle Anchor连续，并对账Goal、Heel/Toe和FBBIK residual。

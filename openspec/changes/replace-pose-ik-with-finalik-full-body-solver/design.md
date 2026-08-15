@@ -40,14 +40,17 @@ Corin是in-place动画。分析产物不保存角色位移、速度或Action Mot
 
 ### Simulation/KCC
 
-Plan创建时请求一次冻结未来Body轨迹。KCC按正式Movement Timeline、碰撞和地面约束输出XYZ位置样本。旋转事实分成能力上限和实际轨迹：
+Plan创建时请求一次冻结未来Body轨迹。KCC按正式Movement Timeline、碰撞和地面约束输出XYZ位置样本。世界位移和身体朝向是两个事实：
 
 ```text
-MaximumYawVelocity：Movement节点允许的最大转向能力，只验证方向变化是否连续
-TrajectoryCurvature：正式平面速度方向的有符号变化率，决定未来圆弧
+PlanarTranslation：Committed Movement Timeline当前段与Continuation的世界速度分段积分
+BodyFacing：从创建朝向以MaximumYawVelocity有限追随各段世界速度方向，对齐后停止
+YawVelocity：身体朝向变化诊断，不是位移轨迹曲率
 ```
 
-A/D持续转向时，KCC用同一`TrajectoryCurvature`积分世界位移，Foot、Ankle、Hip和鞋底局部几何也沿该圆弧切线旋转。最大转速不能替代曲率；身体朝向与移动方向的单帧夹角也不能替代曲率。计划提交后不得读取Desired Input、Visible Velocity或逐帧Trajectory Curvature重写、验证路线。真实LiftOff后只对账当前权威Body Root与同一Action Step Clock下的冻结KCC Root位置和朝向；把实际Root偏差换算为Landing平面误差，只有误差超过现有鞋底查询半径才以`ActionInterrupted`结束。摄像机缓动造成的输入方向导数变化不得取消、重算Landing或Path。
+当前Simulation把键鼠经Camera解释后的世界输入方向直接提交为世界速度，身体再独立转向该方向。因此最大转速、实际Body Yaw和相邻Render Frame方向导数都不能替代位移曲率；当前没有独立权威曲率时，路线曲率必须为零。Foot、Ankle、Hip和鞋底局部几何随有限Body Facing旋转，但KCC平移只按Committed世界速度积分。角色身体朝向与位移切线的夹角不得成为Plan失效证据。
+
+计划提交后不逐帧重写。但真实Swing期间，Simulation可能因A/D、W/S或Camera-relative输入变化提交新的世界速度。运行时比较“当前Plan剩余预定位移”和“同一剩余时间内最新Committed Movement Timeline预定位移”；误差超过`max(SoleSupportRadius, PathSphereRadius, SwingCapsuleRadius)`才创建离散Revision，回落到半阈值后才重新武装。Revision从上一帧最终鞋底与当前权威Action Phase重基，旧、新预测修正使用现有Stance过渡速度做SmoothStep交叉淡化；新查询Rejected时旧预测修正以同一曲线退到零并结束，不得继续拉向旧Landing。Camera或Visible Pose本身不是输入，只有已经提交成世界速度的变化才能触发该事务。
 
 ## Swing Foot路线
 
@@ -65,7 +68,7 @@ WorldFoot(phase) = SwingStartSole
 
 若计划在Swing中生成，`SwingStartPhase = GenerationPhase`，同一公式自然从当前脚开始。Root与Hip仍从Generation Phase预测，只有Swing Foot按锁脚事实重基。
 
-Plan提交时必须在`SwingStartPhase`计算一次高度连续偏移，使`GroundEnvelope + AnimationClearance + Continuity`在LiftOff等于同一个锁脚鞋底。该偏移只随Swing进度确定衰减，不读取当前Pose，也不把硬切交给FBBIK掩盖。
+Plan提交时必须在`SwingStartPhase`计算一次高度连续偏移，使`GroundEnvelope + AnimationClearance + Continuity`在LiftOff等于同一个锁脚鞋底。Predictive输出从资产正式`ReleasePhase`到`LiftOffPhase`按SmoothStep由零变为一，并与同一Stance Anchor退场权重相乘形成连续交接；该偏移只随Swing进度确定衰减，不读取当前Pose，也不把硬切交给FBBIK掩盖。
 
 ## Ground Probe与Foot Rate
 
@@ -103,7 +106,7 @@ Ground Envelope与Animation Clearance共同拥有唯一Swing高度；当前动�
 
 ## Stance与Pelvis所有权
 
-普通Current支撑只能在同帧Current Grounding证明合法支撑后捕获。Executing Plan进入`ApproachingContact`时，预测Ankle、旋转和该Plan冻结的Contact Surface属于同一个Landing事实；Stance必须重建并校验该Surface的Collider、Layer与坡度，再以当前鞋底到该平面的距离决定捕获。权威ApproachingContact不得被in-place鞋底相对Root速度否决；该速度不是世界接触速度。不得采用预测Ankle却改用Current Query的另一踏面，也不得在预测Surface无效时静默回退。捕获位置就是该帧已经完成鞋底安全约束的最终Goal，因此Stance可以在捕获帧原子取得完整世界Anchor所有权而不移动脚；只有`PlantContact + 有效Anchor + 完整Blend`可报告`Anchored`。LiftOff或失去支撑后的既有Blend只用于从旧Anchor连续释放，释放期间必须报告Contact而不是伪装成锁脚。
+普通Current支撑只能在同帧Current Grounding证明合法支撑后捕获。Executing Plan进入`ApproachingContact`时，预测Ankle、旋转和该Plan冻结的Contact Surface属于同一个Landing事实；Stance必须重建并校验该Surface的Collider、Layer与坡度，并用当前动画Heel/Toe到该冻结平面的真实距离决定接触，不能让已贴地的预测Ankle自证接触。权威ApproachingContact不得被in-place鞋底相对Root速度否决；该速度不是世界接触速度。不得采用预测Ankle却改用Current Query的另一踏面，也不得在预测Surface无效时静默回退。Revision未完成交叉淡化时Landing事实尚未唯一提交，不得用旧Plan Surface捕获；冻结Landing Target缺失时也不得改用Current Surface。`Releasing`阶段Predictive由`ReleasePhase -> LiftOffPhase`的SmoothStep权重接管，Landing捕获只提交Anchor目标且Anchor从零按现有Blend连续进入；Predictive与Anchor权重互补，只有`PlantContact + 有效Anchor + 完整Blend`可报告`Anchored`。`Locked -> Releasing -> Swing -> Landing -> Locked`是每脚唯一所有权顺序；旧Anchor未退场时不得硬清再以全权重新捕获。
 
 `GroundedStationary + 无权威Step`不复用最后一步Landing身份，但正常静止仍需要世界锁脚。进入该状态时，若仍有运动或Landing Anchor，现有Stance先用同一个`AnchorBlendSpeed`把它连续释放到Current Grounding安全Baseline；释放期间旧Anchor不得拥有鞋底支撑面或Pelvis Reach，也不得被直接改名为Idle支撑。该Baseline的平面位置必须来自同帧原动画Ankle，旋转来自唯一Current支撑面，并只沿Component Up把Calibration Heel/Toe贴到该面；不得把仍在收敛的Lyra Offset Spring Current捕获成Idle Anchor。
 
@@ -127,13 +130,14 @@ Future Body Trajectory已经是碰撞求解后的KCC XYZ。Future Query对正式
 - 单一全局抛物线为覆盖靠近路线端点的楼梯边缘，需要约6–18m拱高；不能替代分段线性Upper Envelope。
 - incoming世界计划晋升会让脚与Path在台阶边缘错位约28.8cm，并触发约22.7cm当前支撑补高；改为当前PreSwing唯一创建后，错位P95降到左约5.15cm、右约7.53cm，额外补高最大降到左约2.17cm、右约0.001cm。
 - v89去掉双高度分支后，两个边缘帧在鞋底/Path XZ仅差约0.1–0.6cm时仍需Current支撑补高约12.6–13.1cm。对应Envelope把`0.24m -> 0.477m`高差从墙面接触点之后继续线性插值，证明边缘Fraction使用了墙面点而不是胶囊中心接触点。
-- v90固定run保持1207列旧合同，v92删除无执行语义的Incoming Plan字段后保持1189列历史合同；两者均无超过1mm的Heel/Toe物理穿透，且有效权重帧FBBIK residual接近0。v92同时验证列名唯一和左右脚字段完全对称。当前1199列合同再加入每脚`SoleSupportRadius`与运动失效误差字段，必须重新通过宽度和语义对账。
+- v90固定run保持1207列旧合同，v92删除无执行语义的Incoming Plan字段后保持1189列历史合同；两者均无超过1mm的Heel/Toe物理穿透，且有效权重帧FBBIK residual接近0。回退后的`99909...csv`实际基础Writer为1101列；本轮加入每脚冻结Movement Yaw与最终路线Yaw后，基础Writer合同为1105列，加入完整序列与因果字段的耐久Writer合同为1203列，必须重新验证列名唯一、左右对称、Header/Value等宽和序列替换偏移。
 - c190固定run在恒定满输入下仍有26次`ActionInterrupted`，原因是用Action Phase猜Simulation Continuation边界；同一run上坡时Pelvis Target已为0而Current长期约`-0.195m`，证明旧Root向上换基在抵消权威身体上移。两者分别归属于Motion身份检查和Pelvis Spring基准，不是FBBIK或阈值问题。
 - d15固定run删除Root向上换基后，上坡且Pelvis Target接近0的Current中位由约`-0.193m`变为约`+0.0005m`。但主路线仍在真实Root与冻结KCC Root重合时因`Body.TargetVelocity`随台阶升降变化而产生33次假中断；全部ApproachingContact也因in-place局部脚速`4–6.7m/s`停在`WaitingForCaptureSpeed`。因此Plan有效性必须比较同相位Root状态，预测Landing捕获必须相信权威事件、冻结Surface和几何距离。
+- `99909...csv`共240帧、1101列，左右脚10个Executable Plan全部以`ActionInterrupted`提前结束，Predictive Final Source只覆盖左5帧、右19帧；结束后Swing Goal最大单帧位移为左27.1cm、右26.6cm，而FBBIK位置残差约`1e-7m`。其中多次中断的平面位置偏差接近0，主要误差来自把Visible Body朝向与冻结轨迹切线比较；另一些计划的冻结曲率与实际Root转向反号，证明相邻表现帧速度导数既不能生成稳定A/D路线，也不能取消本步。
 
 ## 尚未闭合
 
-- 连续A/D圆周运动已经证明实际轨迹曲率约`42–54°/s`，不能使用Movement节点`720°/s`最大转向能力。仍需在最终高度公式下复核KCC圆弧、三点Ground Probe和Animation Foot Route的同计划一致性。
+- 连续A/D圆周运动已经证明不能使用Movement节点`720°/s`最大转向能力，也不能使用相邻Render Frame速度方向导数。当前改为同Tick Committed Movement Timeline实际YawVelocity后，仍需复核KCC圆弧、三点Ground Probe和Animation Foot Route的同计划一致性。
 - Start、Loop、Stop、MovingTurn的当前Landing身份仍需统一；Foot Placement不再保存或晋升incoming世界计划。
 - 固定采样以66.7ms推进一帧，一帧可能跨过一级台阶；它适合因果对账，不能代替正常帧率下的视觉连续性验收。
 
@@ -142,6 +146,7 @@ Future Body Trajectory已经是碰撞求解后的KCC XYZ。Future Query对正式
 - 逐帧重算Landing、Path或当前脚投影：会退化成响应式并在边缘A-B-A切换。
 - 为尚未成为当前动作的incoming事件冻结世界路线并在下一动作晋升：会把旧动作相位和旧空间起点带入新Swing。
 - Visible Velocity、输入幅值或Action Motion Curve：会形成第二移动距离。
+- Visible Body朝向与冻结路线切线的夹角：两者不是同一物理量，会把正常转弯判为动作中断。
 - 对侧Landing只提供高度、不进入Ground Probe：会在错误XZ提前切换台阶。
 - 对侧事件相位强制本脚经过拐点：混淆两只脚的时间与空间事实。
 - 全局抛物线/样条直接充当最终脚轨迹：端点障碍需要巨大过抬，且吞掉动画抬脚轮廓。
@@ -153,7 +158,7 @@ Future Body Trajectory已经是碰撞求解后的KCC XYZ。Future Query对正式
 编译、Build和Console 0 Error只代表工程门禁。效果完成还要求：
 
 - 平地、上下楼与连续A/D都有身份稳定的Executable Plan；
-- 同一Plan的KCC轨迹、轨迹曲率、Ground Probe、Landing、Foot Rate和Envelope不变；
+- 同一Plan Revision的KCC平移、Body Facing、Ground Probe、Landing、Foot Rate和Envelope不变；Revision交接必须由Sequence、误差、阈值和Blend完整解释；
 - LiftOff处冻结Swing路线从锁脚点连续开始；
 - Foot Rate单调且不存在未解释的大跨度；
 - 上楼Goal无边缘正负往返，下楼Heel/Toe无下陷或浮空；

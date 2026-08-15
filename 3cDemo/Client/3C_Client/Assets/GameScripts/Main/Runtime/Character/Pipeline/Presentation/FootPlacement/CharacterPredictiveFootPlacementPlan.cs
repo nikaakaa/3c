@@ -12,9 +12,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterPredictiveFootRootTrajectory(
             Vector3 startPosition,
             Quaternion startRotation,
+            Vector3 presentedBodyStartPosition,
             Vector3 animationSoleAtGeneration,
             Vector3 committedBodyVelocity,
-            float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             CharacterFutureBodyTrajectory futureBodyTrajectory,
@@ -24,9 +24,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!step.IsAuthoritative)
                 throw new ArgumentException("Predictive Foot Root Trajectory requires an authoritative event.", nameof(step));
             if (!IsFinite(startPosition) || !IsFinite(startRotation) ||
+                !IsFinite(presentedBodyStartPosition) ||
                 !IsFinite(animationSoleAtGeneration) ||
                 !IsFinite(committedBodyVelocity) ||
-                !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !motionTimeline.IsValid || !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
                 futureBodyTrajectory == null ||
                 !IsFinite(up) || up.sqrMagnitude <= 0.000001f)
@@ -35,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             StartPosition = startPosition;
             StartRotation = startRotation.normalized;
+            PresentedBodyStartPosition = presentedBodyStartPosition;
             Up = up.normalized;
             Vector3 currentVelocity = Vector3.ProjectOnPlane(
                 committedBodyVelocity,
@@ -55,7 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentSegmentSwitchDelaySeconds = switchDelay;
             HasContinuation = hasContinuation;
             FrozenYawVelocityDegreesPerSecond = motionTimeline.YawVelocityDegreesPerSecond;
-            FrozenTrajectoryYawRateDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
+            FrozenMaximumYawVelocityDegreesPerSecond =
+                motionTimeline.MaximumYawVelocityDegreesPerSecond;
             PredictionLeadSeconds = step.PredictionLeadSeconds;
             EventPhaseAtGeneration = step.ActionStepClock.Phase;
             LiftOffPhase = step.ActionStepClock.LiftOffPhase;
@@ -77,12 +79,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal Vector3 StartPosition { get; }
         internal Quaternion StartRotation { get; }
+        internal Vector3 PresentedBodyStartPosition { get; }
         internal Vector3 Up { get; }
         internal Vector3 FrozenPlanarVelocity { get; }
         internal Vector3 FrozenMotionPlanarVelocity { get; }
         internal Vector3 ContinuationPlanarVelocity { get; }
         internal float FrozenYawVelocityDegreesPerSecond { get; }
-        internal float FrozenTrajectoryYawRateDegreesPerSecond { get; }
+        internal float FrozenMaximumYawVelocityDegreesPerSecond { get; }
         internal float CurrentSegmentSwitchDelaySeconds { get; }
         internal bool HasContinuation { get; }
         internal float ActionStepDurationSeconds { get; }
@@ -139,6 +142,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Vector3.ProjectOnPlane(landing - current, Up).magnitude;
         }
 
+        internal Vector3 EvaluatePresentedBodyPosition(float elapsedSinceGeneration)
+        {
+            float elapsedSeconds = Mathf.Max(0f, elapsedSinceGeneration);
+            return PresentedBodyStartPosition + ResolvePlanarTravel(elapsedSeconds);
+        }
+
         internal Vector3 EvaluateHipRoute(float eventPhase)
         {
             float phase = Mathf.Clamp01(eventPhase);
@@ -174,8 +183,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return EvaluateBodyRotation(
                 StartRotation,
                 Up,
-                FrozenTrajectoryYawRateDegreesPerSecond,
+                FrozenMotionPlanarVelocity,
+                ContinuationPlanarVelocity,
+                CurrentSegmentSwitchDelaySeconds,
+                HasContinuation,
+                FrozenMaximumYawVelocityDegreesPerSecond,
                 ResolveRawTravelElapsedSeconds(phase));
+        }
+
+        internal Vector3 EvaluateRemainingPlannedIntentDisplacement(float eventPhase)
+        {
+            float startSeconds = ResolveRawTravelElapsedSeconds(Mathf.Clamp01(eventPhase));
+            float endSeconds = ResolveRawTravelElapsedSeconds(1f);
+            if (endSeconds <= startSeconds)
+                return Vector3.zero;
+            if (float.IsPositiveInfinity(CurrentSegmentSwitchDelaySeconds) ||
+                endSeconds <= CurrentSegmentSwitchDelaySeconds)
+            {
+                return FrozenMotionPlanarVelocity * (endSeconds - startSeconds);
+            }
+            if (startSeconds >= CurrentSegmentSwitchDelaySeconds)
+            {
+                return HasContinuation
+                    ? ContinuationPlanarVelocity * (endSeconds - startSeconds)
+                    : Vector3.zero;
+            }
+            Vector3 current = FrozenMotionPlanarVelocity *
+                              (CurrentSegmentSwitchDelaySeconds - startSeconds);
+            return HasContinuation
+                ? current + ContinuationPlanarVelocity *
+                  (endSeconds - CurrentSegmentSwitchDelaySeconds)
+                : current;
         }
 
         float ResolveRawTravelElapsedSeconds(float phase)
@@ -212,14 +250,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static Quaternion EvaluateBodyRotation(
             Quaternion startRotation,
             Vector3 up,
-            float yawVelocityDegreesPerSecond,
+            Vector3 currentVelocity,
+            Vector3 continuationVelocity,
+            float switchDelaySeconds,
+            bool hasContinuation,
+            float maximumYawVelocityDegreesPerSecond,
             float elapsedSeconds)
         {
             float duration = Mathf.Max(0f, elapsedSeconds);
-            float yaw = yawVelocityDegreesPerSecond * duration;
-            if (Mathf.Abs(yaw) <= 0.000001f)
-                return startRotation;
-            return (Quaternion.AngleAxis(yaw, up) * startRotation).normalized;
+            float currentDuration = float.IsPositiveInfinity(switchDelaySeconds)
+                ? duration
+                : Mathf.Min(duration, Mathf.Max(0f, switchDelaySeconds));
+            Quaternion rotation = RotateTowardsPlanarDirection(
+                startRotation,
+                up,
+                currentVelocity,
+                maximumYawVelocityDegreesPerSecond * currentDuration);
+            if (!hasContinuation || duration <= switchDelaySeconds)
+                return rotation;
+            return RotateTowardsPlanarDirection(
+                rotation,
+                up,
+                continuationVelocity,
+                maximumYawVelocityDegreesPerSecond * (duration - switchDelaySeconds));
+        }
+
+        static Quaternion RotateTowardsPlanarDirection(
+            Quaternion rotation,
+            Vector3 up,
+            Vector3 velocity,
+            float maximumDegrees)
+        {
+            Vector3 target = Vector3.ProjectOnPlane(velocity, up);
+            Vector3 forward = Vector3.ProjectOnPlane(rotation * Vector3.forward, up);
+            if (target.sqrMagnitude <= 0.000001f || forward.sqrMagnitude <= 0.000001f ||
+                maximumDegrees <= 0f)
+            {
+                return rotation;
+            }
+            float delta = Vector3.SignedAngle(forward, target, up);
+            float applied = Mathf.Clamp(delta, -maximumDegrees, maximumDegrees);
+            return (Quaternion.AngleAxis(applied, up) * rotation).normalized;
         }
 
     }
@@ -677,17 +748,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!HasExecutablePath)
                 return 0f;
-            return ActionStepPhase >= LiftOffPhase ? 1f : 0f;
+            if (ActionStepPhase <= ReleasePhase)
+                return 0f;
+            if (ActionStepPhase >= LiftOffPhase)
+                return 1f;
+            float value = Mathf.InverseLerp(ReleasePhase, LiftOffPhase, ActionStepPhase);
+            return value * value * (3f - 2f * value);
         }
 
-        internal bool ShouldInterruptWorldMotion(
-            float trajectoryYawRateDegreesPerSecond,
-            bool trajectoryYawRateAvailable,
-            in CommittedLocomotionPlanarMotionTimeline motionTimeline,
+        internal void ObserveWorldMotionDeviation(
+            Vector3 currentPresentedBodyPosition,
             float landingPlanarTolerance)
         {
             if (!HasExecutablePath)
-                return false;
+                return;
             MotionLinearLandingError = 0f;
             MotionAngularLandingError = 0f;
             MotionLandingError = 0f;
@@ -695,62 +769,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                      landingPlanarTolerance > 0f
                 ? landingPlanarTolerance
                 : 0f;
-            if (!motionTimeline.IsValid ||
+            if (!IsFinite(currentPresentedBodyPosition) ||
                 !float.IsFinite(landingPlanarTolerance) ||
                 landingPlanarTolerance <= 0f)
             {
-                return true;
+                return;
             }
-            float remainingSeconds = Mathf.Max(
-                0f,
-                (1f - ActionStepPhase) * ActionStepDurationSeconds);
-            if (remainingSeconds <= 0.0001f)
-                return false;
-            Vector3 currentMotionVelocity = Vector3.ProjectOnPlane(
-                new Vector3(
-                    motionTimeline.CurrentVelocityX,
-                    0f,
-                    motionTimeline.CurrentVelocityZ),
-                RootTrajectory.Up);
+            if (ActionStepPhase + 0.000001f < LiftOffPhase ||
+                ActionStepPhase >= 0.9999f)
+                return;
             float elapsedSinceGeneration = Mathf.Max(
                 0f,
                 (ActionStepPhase - RootTrajectory.EventPhaseAtGeneration) *
                 ActionStepDurationSeconds);
-            Quaternion trajectoryRotation = Quaternion.AngleAxis(
-                RootTrajectory.FrozenTrajectoryYawRateDegreesPerSecond * elapsedSinceGeneration,
-                RootTrajectory.Up);
-            float velocityError = (
-                currentMotionVelocity -
-                trajectoryRotation * RootTrajectory.FrozenMotionPlanarVelocity).magnitude;
-            if (RootTrajectory.HasContinuation)
-            {
-                velocityError = Mathf.Min(
-                    velocityError,
-                    (currentMotionVelocity -
-                     trajectoryRotation * RootTrajectory.ContinuationPlanarVelocity).magnitude);
-            }
-            float linearLandingError = velocityError * remainingSeconds;
-            float angularLandingError = 0f;
-            if (trajectoryYawRateAvailable &&
-                float.IsFinite(trajectoryYawRateDegreesPerSecond))
-            {
-                float yawRateError = Mathf.Abs(
-                    trajectoryYawRateDegreesPerSecond -
-                    RootTrajectory.FrozenTrajectoryYawRateDegreesPerSecond);
-                angularLandingError = RootTrajectory.EvaluateRemainingPlanarDistance(ActionStepPhase) *
-                                      yawRateError * Mathf.Deg2Rad * remainingSeconds;
-            }
+            Vector3 expectedBodyPosition = RootTrajectory.EvaluatePresentedBodyPosition(
+                elapsedSinceGeneration);
+            float linearLandingError = Vector3.ProjectOnPlane(
+                    currentPresentedBodyPosition - expectedBodyPosition,
+                    RootTrajectory.Up)
+                .magnitude;
             MotionLinearLandingError = linearLandingError;
-            MotionAngularLandingError = angularLandingError;
-            MotionLandingError = linearLandingError + angularLandingError;
-            return MotionLandingError > landingPlanarTolerance;
-        }
-
-        internal void InterruptWorldMotion()
-        {
-            if (!HasExecutablePath)
-                return;
-            Complete(CharacterPredictiveFootPlanEndReason.ActionInterrupted);
+            MotionLandingError = linearLandingError;
         }
 
         internal void EvaluateGroundPath(
@@ -1092,7 +1131,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RootTrajectory.CurrentSegmentSwitchDelaySeconds,
                 RootTrajectory.HasContinuation,
                 RootTrajectory.FrozenYawVelocityDegreesPerSecond,
-                RootTrajectory.FrozenTrajectoryYawRateDegreesPerSecond,
+                RootTrajectory.FrozenMaximumYawVelocityDegreesPerSecond,
                 groundProbeRoute,
                 animationFootRoute,
                 footRate,

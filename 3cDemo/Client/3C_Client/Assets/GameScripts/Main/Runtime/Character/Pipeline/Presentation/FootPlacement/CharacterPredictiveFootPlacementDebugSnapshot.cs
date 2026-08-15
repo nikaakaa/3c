@@ -176,7 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float currentSegmentSwitchDelaySeconds,
             bool hasContinuation,
             float yawVelocityDegreesPerSecond,
-            float trajectoryYawRateDegreesPerSecond,
+            float maximumYawVelocityDegreesPerSecond,
             CharacterPredictiveFootRoutePointSnapshot[] groundProbeRoute,
             CharacterPredictiveFootRoutePointSnapshot[] animationFootRoute,
             CharacterPredictiveFootRatePointSnapshot[] footRate,
@@ -206,7 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentSegmentSwitchDelaySeconds = currentSegmentSwitchDelaySeconds;
             HasContinuation = hasContinuation;
             YawVelocityDegreesPerSecond = yawVelocityDegreesPerSecond;
-            TrajectoryYawRateDegreesPerSecond = trajectoryYawRateDegreesPerSecond;
+            MaximumYawVelocityDegreesPerSecond = maximumYawVelocityDegreesPerSecond;
             m_GroundProbeRoute = groundProbeRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
             m_AnimationFootRoute = animationFootRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
             m_FootRate = footRate ?? Array.Empty<CharacterPredictiveFootRatePointSnapshot>();
@@ -237,7 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float CurrentSegmentSwitchDelaySeconds { get; }
         public bool HasContinuation { get; }
         public float YawVelocityDegreesPerSecond { get; }
-        public float TrajectoryYawRateDegreesPerSecond { get; }
+        public float MaximumYawVelocityDegreesPerSecond { get; }
         public IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> GroundProbeRoute => m_GroundProbeRoute;
         public IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> AnimationFootRoute => m_AnimationFootRoute;
         public IReadOnlyList<CharacterPredictiveFootRatePointSnapshot> FootRate => m_FootRate;

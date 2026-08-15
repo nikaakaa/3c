@@ -19,11 +19,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [InitializeOnLoad]
     static class GameplayLabFootIkEnduranceCapture
     {
-        const int ColumnCount = 1199;
-        const int BaseColumnCount = 1101;
+        const int ColumnCount = 1217;
+        const int BaseColumnCount = 1119;
         const int GlobalColumnCount = 71;
-        const int LegColumnCount = 564;
-        const int BeforeSequenceColumnCount = 326;
+        const int LegColumnCount = 573;
+        const int BeforeSequenceColumnCount = 335;
         const int ReplacedSequenceColumnCount = 118;
         const int SequenceColumnCount = 146;
         const int CausalityColumnCount = 21;
@@ -204,7 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new[] { "count", "query_index_seq", "surface_seq", "position_x_seq", "position_y_seq", "position_z_seq", "normal_x_seq", "normal_y_seq", "normal_z_seq", "reason_seq", "min_y", "max_y", "first_query_index", "last_query_index" },
                 new[] { "count", "query_index_seq", "surface_seq", "reason_seq", "position_x_seq", "position_y_seq", "position_z_seq", "normal_x_seq", "normal_y_seq", "normal_z_seq", "min_y", "max_y", "first_query_index", "last_query_index" },
                 new[] { "plan_sequence", "generated_frame", "landing_event_identity", "executable", "landing_valid", "landing_x", "landing_y", "landing_z", "current_path_x", "current_path_y", "current_path_z", "clearance_evaluated", "rewritten", "action_progress", "ground_path_progress", "virtual_ground_split_valid", "virtual_ground_split_fraction", "virtual_ground_split_landing_event_identity", "virtual_ground_split_x", "virtual_ground_split_y", "virtual_ground_split_z" },
-                new[] { "route_phase", "route_direction", "route_lap", "route_actor_x", "route_actor_y", "route_actor_z", "route_actor_yaw", "input_x", "input_y", "actual_planar_speed", "simulation_tick", "tick_rate", "input_magnitude", "plan_hashes_seq", "current_planar_velocity_x", "current_planar_velocity_y", "current_planar_velocity_z", "continuation_planar_velocity_x", "continuation_planar_velocity_y", "continuation_planar_velocity_z", "current_segment_switch_delay_seconds", "has_continuation", "yaw_velocity_degrees_per_second", "trajectory_yaw_rate_degrees_per_second" },
+                new[] { "route_phase", "route_direction", "route_lap", "route_actor_x", "route_actor_y", "route_actor_z", "route_actor_yaw", "input_x", "input_y", "actual_planar_speed", "simulation_tick", "tick_rate", "input_magnitude", "plan_hashes_seq", "current_planar_velocity_x", "current_planar_velocity_y", "current_planar_velocity_z", "continuation_planar_velocity_x", "continuation_planar_velocity_y", "continuation_planar_velocity_z", "current_segment_switch_delay_seconds", "has_continuation", "yaw_velocity_degrees_per_second", "maximum_yaw_velocity_degrees_per_second" },
                 new[] { "count", "phase_seq", "x_seq", "y_seq", "z_seq", "min_y", "max_y", "start_x", "start_y", "start_z", "end_x", "end_y", "end_z", "hash" }
             };
             string[] names = { "ground_probe", "foot_rate", "ground_envelope", "clearance_path", "query_requests", "accepted_supports", "rejected_geometry", "landing", "plan_invariants", "animation_foot_route" };
@@ -520,7 +520,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(plan?.ContinuationPlanarVelocity.y ?? 0f), Number(plan?.ContinuationPlanarVelocity.z ?? 0f),
                 Number(plan?.CurrentSegmentSwitchDelaySeconds ?? 0f), Bool(plan?.HasContinuation ?? false),
                 Number(plan?.YawVelocityDegreesPerSecond ?? 0f),
-                Number(plan?.TrajectoryYawRateDegreesPerSecond ?? 0f)
+                Number(plan?.MaximumYawVelocityDegreesPerSecond ?? 0f)
             });
 
             BoundsY(

@@ -939,6 +939,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in step,
                     renderFrame,
                     groundProbeStart,
+                    currentSole,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -957,6 +958,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in AnimationPredictedFootStepSample step,
             ulong renderFrame,
             Vector3 groundProbeStart,
+            Vector3 animationSoleAtGeneration,
             float soleSupportRadius,
             Vector3 rootStart,
             Quaternion rootStartRotation,
@@ -995,6 +997,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var rootTrajectory = new CharacterPredictiveFootRootTrajectory(
                 rootStart,
                 rootStartRotation,
+                animationSoleAtGeneration,
                 committedBodyVelocity,
                 trajectoryCurvatureDegreesPerSecond,
                 in motionTimeline,

@@ -15,6 +15,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EventSuccessor = 2
         }
 
+        readonly struct BodySupportTransaction
+        {
+            internal BodySupportTransaction(CharacterPredictiveFootPlacementPlan plan)
+            {
+                IsValid = plan != null && plan.HasExecutablePath && plan.BodySupportPath.IsValid;
+                Sequence = IsValid ? plan.Sequence : 0;
+                RootTrajectory = IsValid ? plan.RootTrajectory : default;
+                Path = IsValid ? plan.BodySupportPath : default;
+            }
+
+            internal bool IsValid { get; }
+            internal ulong Sequence { get; }
+            readonly CharacterPredictiveFootRootTrajectory RootTrajectory;
+            readonly CharacterPredictiveBodySupportPath Path;
+
+            internal void Evaluate(float eventPhase, out Vector3 root, out Vector3 hip) =>
+                Path.Evaluate(in RootTrajectory, eventPhase, out root, out hip);
+
+            internal void EvaluateStart(out Vector3 root, out Vector3 hip) =>
+                Path.Evaluate(in RootTrajectory, RootTrajectory.PathStartPhase, out root, out hip);
+        }
+
         sealed class FootPlanRuntime
         {
             internal FootPlanRuntime(CharacterFootSide side, int pathCapacity)
@@ -61,6 +83,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool m_HasOwnershipContinuity;
             Vector3 m_OwnershipContinuityOffset;
             float m_OwnershipContinuityStartPhase;
+            BodySupportTransaction m_ActiveBodySupport;
+            BodySupportTransaction m_RevisionBodySupport;
 
             internal void BeginFrame()
             {
@@ -78,6 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 EventSuccessorBlendReady = false;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+                m_RevisionBodySupport = default;
             }
 
             internal void BeginEventSuccessor()
@@ -90,6 +115,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 EventSuccessorBlendReady = false;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+                m_RevisionBodySupport = new BodySupportTransaction(Revision);
+            }
+
+            internal void CommitInitialBodySupport()
+            {
+                m_ActiveBodySupport = new BodySupportTransaction(Active);
+                m_RevisionBodySupport = default;
             }
 
             internal void BeginEventSuccessorBlend()
@@ -103,6 +135,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!HasRevision || !Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
+                bool promoteBodySupport = TransitionKind == FootPlanTransitionKind.EventSuccessor &&
+                                          m_RevisionBodySupport.IsValid;
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 CharacterPredictiveFootPlacementPlan retired = Active;
                 Active = Revision;
@@ -111,6 +145,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
                 EventSuccessorBlendReady = false;
+                if (promoteBodySupport)
+                    m_ActiveBodySupport = m_RevisionBodySupport;
+                m_RevisionBodySupport = default;
             }
 
             internal void BeginFadeOut(CharacterPredictiveFootPlanEndReason reason)
@@ -121,6 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (!Active.HasExecutablePath)
                 {
                     Active.Reset(reason);
+                    m_ActiveBodySupport = default;
                     IsFadingOut = false;
                     FadeOutWeight = 0f;
                     return;
@@ -160,6 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (FadeOutWeight < 0.999999f)
                     return;
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
+                m_ActiveBodySupport = default;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
             }
@@ -172,6 +211,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
                 EventSuccessorBlendReady = false;
+                m_RevisionBodySupport = default;
+            }
+
+            internal bool TryEvaluateBodySupport(
+                out Vector3 root,
+                out Vector3 rootStart,
+                out Vector3 hip,
+                out ulong sequence)
+            {
+                root = default;
+                rootStart = default;
+                hip = default;
+                sequence = 0;
+                if (!m_ActiveBodySupport.IsValid || !Active.HasExecutablePath)
+                    return false;
+                m_ActiveBodySupport.Evaluate(Active.ActionStepPhase, out root, out hip);
+                m_ActiveBodySupport.EvaluateStart(out rootStart, out _);
+                sequence = m_ActiveBodySupport.Sequence;
+                if (!HasEventSuccessor || !EventSuccessorBlendReady ||
+                    !m_RevisionBodySupport.IsValid ||
+                    Revision.State != CharacterPredictiveFootPlanState.Executing)
+                {
+                    return true;
+                }
+                m_RevisionBodySupport.Evaluate(
+                    Revision.ActionStepPhase,
+                    out Vector3 revisionRoot,
+                    out Vector3 revisionHip);
+                m_RevisionBodySupport.EvaluateStart(out Vector3 revisionRootStart, out _);
+                float blend = SmoothedRevisionBlendWeight;
+                root = Vector3.Lerp(root, revisionRoot, blend);
+                rootStart = Vector3.Lerp(rootStart, revisionRootStart, blend);
+                hip = Vector3.Lerp(hip, revisionHip, blend);
+                if (blend >= 0.5f)
+                    sequence = m_RevisionBodySupport.Sequence;
+                return true;
             }
 
             internal bool HasCommittedLanding(ulong landingEventIdentity) =>
@@ -289,6 +364,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_HasOwnershipContinuity = false;
                 m_OwnershipContinuityOffset = Vector3.zero;
                 m_OwnershipContinuityStartPhase = 0f;
+                m_ActiveBodySupport = default;
+                m_RevisionBodySupport = default;
             }
 
             static bool IsFinite(Vector3 value) =>
@@ -517,14 +594,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     plan.GroundPathProgress,
                     out pathPosition,
                     out _);
-                plan.EvaluateBodyPath(
-                    plan.ActionStepPhase,
-                    out pathRoot,
-                    out pathHip);
-                plan.EvaluateBodyPath(
-                    plan.RootTrajectory.PathStartPhase,
-                    out pathRootStart,
-                    out _);
             }
             if (revisionContributes)
             {
@@ -532,19 +601,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     revision.GroundPathProgress,
                     out Vector3 revisionPathPosition,
                     out _);
-                revision.EvaluateBodyPath(
-                    revision.ActionStepPhase,
-                    out Vector3 revisionPathRoot,
-                    out Vector3 revisionPathHip);
-                revision.EvaluateBodyPath(
-                    revision.RootTrajectory.PathStartPhase,
-                    out Vector3 revisionPathRootStart,
-                    out _);
                 float blend = runtime.SmoothedRevisionBlendWeight;
                 pathPosition = Vector3.Lerp(pathPosition, revisionPathPosition, blend);
-                pathRoot = Vector3.Lerp(pathRoot, revisionPathRoot, blend);
-                pathRootStart = Vector3.Lerp(pathRootStart, revisionPathRootStart, blend);
-                pathHip = Vector3.Lerp(pathHip, revisionPathHip, blend);
             }
             bool activeTargetAvailable = TryEvaluateFootTarget(
                 plan,
@@ -611,9 +669,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 contactPlanSequence = contactPlan.Sequence;
                 contactLandingEventIdentity = contactPlan.LandingEventIdentity;
                 pathPosition = target.PathPosition;
-                pathRoot = target.PathRoot;
-                pathHip = target.PathHip;
             }
+            bool bodySupportAvailable = runtime.TryEvaluateBodySupport(
+                out pathRoot,
+                out pathRootStart,
+                out pathHip,
+                out ulong bodySupportSequence);
+            if (plan.HasExecutablePath && !bodySupportAvailable)
+                throw new InvalidOperationException("Predictive Body Support transaction is unavailable.");
             CharacterPredictiveFootPlacementPlan timingPlan = revisionContributes
                 ? revision
                 : plan;
@@ -669,6 +732,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRoot,
                 pathRootStart,
                 pathHip,
+                bodySupportSequence,
                 pose.HipPosition,
                 targetAnklePosition,
                 predictiveOutputWeight,
@@ -941,12 +1005,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentPathPosition = revisionTargetAvailable
                     ? Vector3.Lerp(targetData.PathPosition, revisionTargetData.PathPosition, revisionBlend)
                     : targetData.PathPosition;
-                currentPathRoot = revisionTargetAvailable
-                    ? Vector3.Lerp(targetData.PathRoot, revisionTargetData.PathRoot, revisionBlend)
-                    : targetData.PathRoot;
-                currentPathHip = revisionTargetAvailable
-                    ? Vector3.Lerp(targetData.PathHip, revisionTargetData.PathHip, revisionBlend)
-                    : targetData.PathHip;
                 currentPathSupport = revisionTargetAvailable && revisionBlend >= 0.5f
                     ? revisionTargetData.Support
                     : targetData.Support;
@@ -1138,6 +1196,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         currentPathPosition,
                         currentPathSupport.Normal))
                 : default;
+            bool bodySupportAvailable = runtime.TryEvaluateBodySupport(
+                out currentPathRoot,
+                out _,
+                out currentPathHip,
+                out _);
+            if (plan.HasExecutablePath && !bodySupportAvailable)
+                throw new InvalidOperationException("Predictive Body Support transaction is unavailable.");
             diagnostics = new CharacterPredictiveFootPlacementFootDiagnostics(
                 side,
                 rewritten,
@@ -1593,6 +1658,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.PathRoot,
                 pathRootStart,
                 target.PathHip,
+                plan.Sequence,
                 pose.HipPosition,
                 target.AnklePosition,
                 0f,
@@ -1757,7 +1823,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (planningCandidate && !plan.OwnsEvent && !runtime.HasRevision &&
                 !runtime.IsFadingOut && m_FutureBodyTrajectorySource != null)
             {
-                CreatePlan(
+                bool created = CreatePlan(
                     side,
                     plan,
                     in step,
@@ -1775,6 +1841,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     movementPlaybackTime,
                     up,
                     legLength);
+                if (created)
+                    runtime.CommitInitialBodySupport();
             }
             if (!runtime.HasRevision && !runtime.IsFadingOut && plan.HasExecutablePath &&
                 plan.MatchesAuthoritativeEvent(in step) &&

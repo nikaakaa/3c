@@ -1496,14 +1496,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             float goalWeight = Mathf.Clamp01(alpha);
             bool hasLockedSupport = state.PlantContact && state.AllowsAnchor && state.HasAnchor;
-            float supportWeight = hasLockedSupport
-                ? Mathf.Clamp01(state.PelvisSupportWeight) * goalWeight
+            float anchorBlend = hasLockedSupport
+                ? ResolveTransitionBlend(state.AnchorBlendWeight)
                 : 0f;
-            Vector3 targetAnklePosition = hasLockedSupport
-                ? resolved.AnchorWorldPosition
-                : predictive.HasExecutablePlan && predictive.IsExecuting
-                    ? predictive.TargetAnklePosition
-                    : m_Rig.PoseRoot.TransformPoint(resolved.BaselineComponentPosition);
+            float predictiveBlend = predictive.HasExecutablePlan && predictive.IsExecuting
+                ? predictive.PredictiveOutputWeight * (1f - anchorBlend)
+                : 0f;
+            float supportWeight = Mathf.Lerp(
+                    predictive.HasActionConstraint ? predictive.SupportWeight : 0f,
+                    hasLockedSupport ? Mathf.Clamp01(state.PelvisSupportWeight) : 0f,
+                    anchorBlend) *
+                goalWeight;
+            Vector3 groundingAnklePosition =
+                m_Rig.PoseRoot.TransformPoint(resolved.BaselineComponentPosition);
+            Vector3 targetAnklePosition = predictiveBlend > 0.000001f
+                ? Vector3.Lerp(
+                    groundingAnklePosition,
+                    predictive.TargetAnklePosition,
+                    predictiveBlend)
+                : groundingAnklePosition;
             return new CharacterFootPlacementPelvisLegInput(
                 side,
                 pose.HipPosition,

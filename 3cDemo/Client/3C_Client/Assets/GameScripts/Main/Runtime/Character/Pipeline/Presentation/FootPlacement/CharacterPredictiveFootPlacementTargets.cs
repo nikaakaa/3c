@@ -29,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 pathHip,
             Vector3 currentHip,
             Vector3 targetAnklePosition,
+            float predictiveOutputWeight,
             float supportLegLength,
             float supportLegCompressionReserve,
             Vector3 supportKneeBendPlane,
@@ -58,6 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathHip = pathHip;
             CurrentHip = currentHip;
             TargetAnklePosition = targetAnklePosition;
+            PredictiveOutputWeight = Mathf.Clamp01(predictiveOutputWeight);
             SupportLegLength = supportLegLength;
             SupportLegCompressionReserve = supportLegCompressionReserve;
             SupportKneeBendPlane = supportKneeBendPlane;
@@ -88,6 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PathHip { get; }
         internal Vector3 CurrentHip { get; }
         internal Vector3 TargetAnklePosition { get; }
+        internal float PredictiveOutputWeight { get; }
         internal float SupportLegLength { get; }
         internal float SupportLegCompressionReserve { get; }
         internal Vector3 SupportKneeBendPlane { get; }

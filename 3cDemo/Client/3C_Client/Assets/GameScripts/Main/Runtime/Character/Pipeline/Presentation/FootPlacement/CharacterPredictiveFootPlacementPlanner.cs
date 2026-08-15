@@ -472,6 +472,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootPlacementPlan timingPlan = revisionMatches
                 ? revision
                 : plan;
+            float activePredictiveOutputWeight = plan.State == CharacterPredictiveFootPlanState.Executing
+                ? plan.EvaluatePredictiveOutputWeight() * runtime.PredictiveRetentionWeight
+                : 0f;
+            float revisionPredictiveOutputWeight = revisionMatches &&
+                                                   revision.State == CharacterPredictiveFootPlanState.Executing
+                ? revision.EvaluatePredictiveOutputWeight()
+                : 0f;
+            float predictiveOutputWeight = revisionMatches
+                ? Mathf.Lerp(
+                    activePredictiveOutputWeight,
+                    revisionPredictiveOutputWeight,
+                    runtime.SmoothedRevisionBlendWeight)
+                : activePredictiveOutputWeight;
             float remainingSeconds = Mathf.Max(
                 0f,
                 step.IsAuthoritative
@@ -503,6 +516,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathHip,
                 pose.HipPosition,
                 targetAnklePosition,
+                predictiveOutputWeight,
                 step.IsAuthoritative ? step.BiomechanicalSample.SupportLegLength : 0f,
                 step.IsAuthoritative ? step.BiomechanicalSample.SupportLegCompressionReserve : 0f,
                 step.IsAuthoritative ? step.BiomechanicalSample.SupportKneeBendPlane : Vector3.zero,
@@ -1270,6 +1284,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.PathHip,
                 pose.HipPosition,
                 target.AnklePosition,
+                0f,
                 0f,
                 0f,
                 Vector3.zero,

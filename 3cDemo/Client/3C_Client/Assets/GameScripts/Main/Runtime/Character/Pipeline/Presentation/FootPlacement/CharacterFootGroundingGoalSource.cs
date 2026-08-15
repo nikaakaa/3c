@@ -165,6 +165,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal Vector3 AnchorAnimationReferenceLocalPosition;
             internal Quaternion AnchorAnimationReferenceLocalRotation = Quaternion.identity;
             internal bool HasAnchorAnimationReference;
+            internal ulong AnchorPlanSequence;
+            internal ulong AnchorLandingEventIdentity;
             internal float AnchorBlendWeight;
             internal bool HasAnchor;
             internal CharacterFootContactDecision ContactDecision;
@@ -423,13 +425,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 worldPosition,
                 Quaternion worldRotation,
                 Vector3 animatedWorldPosition,
-                Quaternion animatedWorldRotation)
+                Quaternion animatedWorldRotation,
+                ulong planSequence,
+                ulong landingEventIdentity)
             {
                 AnchorSurface = surface;
                 AnchorLocalPosition = surface.Transform.InverseTransformPoint(worldPosition);
                 AnchorLocalRotation =
                     (Quaternion.Inverse(surface.Transform.rotation) * worldRotation).normalized;
                 UpdateAnimationReference(animatedWorldPosition, animatedWorldRotation, surface);
+                AnchorPlanSequence = planSequence;
+                AnchorLandingEventIdentity = landingEventIdentity;
                 HasAnchor = true;
                 IdleAnchor = IdleCurrentSupport;
                 AnchorBlendWeight = 0f;
@@ -521,6 +527,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnchorAnimationReferenceLocalPosition = Vector3.zero;
                 AnchorAnimationReferenceLocalRotation = Quaternion.identity;
                 HasAnchorAnimationReference = false;
+                AnchorPlanSequence = 0;
+                AnchorLandingEventIdentity = 0;
                 HasAnchor = false;
                 IdleAnchor = false;
                 AnchorBlendWeight = 0f;
@@ -816,6 +824,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightPrepared,
                 features.Right,
                 features.Value);
+            if (m_SwingPrediction != null)
+            {
+                m_SwingPrediction.ObserveStance(
+                    CharacterFootSide.Left,
+                    m_Left.PlantContact && m_Left.HasAnchor,
+                    m_Left.AnchorPlanSequence,
+                    m_Left.AnchorLandingEventIdentity);
+                m_SwingPrediction.ObserveStance(
+                    CharacterFootSide.Right,
+                    m_Right.PlantContact && m_Right.HasAnchor,
+                    m_Right.AnchorPlanSequence,
+                    m_Right.AnchorLandingEventIdentity);
+            }
             CharacterFootPlacementPelvisPlan pelvisPlan = m_Pelvis.Plan(
                 pelvisTargetOffset,
                 lyra.CurrentPelvisOffset,
@@ -1101,7 +1122,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 usePredictiveContactTarget ? contactClearance : currentClearance,
                 usePredictiveContactTarget,
                 predictive.ContactAnklePosition,
-                predictive.ContactAnkleRotation);
+                predictive.ContactAnkleRotation,
+                predictive.ContactPlanSequence,
+                predictive.ContactLandingEventIdentity);
         }
 
         ResolvedFoot StabilizeFoot(
@@ -1162,7 +1185,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     capturePosition,
                     captureRotation,
                     animated.AnklePosition,
-                    animated.AnkleRotation);
+                    animated.AnkleRotation,
+                    prepared.ContactPlanSequence,
+                    prepared.ContactLandingEventIdentity);
                 if (state.IdleAnchor)
                     state.IdleAnchorCaptureArmed = false;
             }
@@ -1710,7 +1735,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 SoleClearancePlan currentClearance,
                 bool hasContactTarget = false,
                 Vector3 contactAnklePosition = default,
-                Quaternion contactAnkleRotation = default)
+                Quaternion contactAnkleRotation = default,
+                ulong contactPlanSequence = 0,
+                ulong contactLandingEventIdentity = 0)
             {
                 Surface = surface;
                 SurfaceValid = surfaceValid;
@@ -1719,6 +1746,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasContactTarget = hasContactTarget;
                 ContactAnklePosition = contactAnklePosition;
                 ContactAnkleRotation = contactAnkleRotation;
+                ContactPlanSequence = contactPlanSequence;
+                ContactLandingEventIdentity = contactLandingEventIdentity;
             }
 
             internal FootPlacementSurface Surface { get; }
@@ -1728,6 +1757,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal bool HasContactTarget { get; }
             internal Vector3 ContactAnklePosition { get; }
             internal Quaternion ContactAnkleRotation { get; }
+            internal ulong ContactPlanSequence { get; }
+            internal ulong ContactLandingEventIdentity { get; }
         }
 
         readonly struct ResolvedFoot

@@ -12,6 +12,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong planSequence,
             ulong landingEventIdentity,
             bool hasContactTarget,
+            ulong contactPlanSequence,
+            ulong contactLandingEventIdentity,
             AnimationFootConstraintMode constraintMode,
             AnimationFootSupportPhase supportPhase,
             AnimationBodyRotationPivotMode bodyPivotMode,
@@ -42,6 +44,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlanSequence = planSequence;
             LandingEventIdentity = landingEventIdentity;
             HasContactTarget = hasContactTarget;
+            ContactPlanSequence = contactPlanSequence;
+            ContactLandingEventIdentity = contactLandingEventIdentity;
             ConstraintMode = constraintMode;
             SupportPhase = supportPhase;
             BodyPivotMode = bodyPivotMode;
@@ -73,6 +77,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong PlanSequence { get; }
         internal ulong LandingEventIdentity { get; }
         internal bool HasContactTarget { get; }
+        internal ulong ContactPlanSequence { get; }
+        internal ulong ContactLandingEventIdentity { get; }
         internal AnimationFootConstraintMode ConstraintMode { get; }
         internal AnimationFootSupportPhase SupportPhase { get; }
         internal AnimationBodyRotationPivotMode BodyPivotMode { get; }

@@ -219,6 +219,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         int m_TraversalSegment;
         int m_Lap;
         int m_HoldTicksRemaining;
+        int m_FormalMoveMismatchFrames;
         ulong m_RenderFrame;
         ulong m_SimulationTick;
         ulong m_LastRouteUpdateTick;
@@ -299,6 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_Phase = GameplayLabFootIkRoutePhase.AlignStart;
             m_Scenario = GameplayLabFootIkInputScenario.Straight;
             m_TraversalSegment = 0;
+            m_FormalMoveMismatchFrames = 0;
         }
 
         public void Deactivate()
@@ -325,6 +327,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_TraversalSegment = 0;
             m_Lap = 0;
             m_HoldTicksRemaining = 0;
+            m_FormalMoveMismatchFrames = 0;
             GameplayLabFootIkRouteRegistry.Remove(m_ActorId);
         }
 
@@ -355,8 +358,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_PlayerInput.CaptureRenderFrame(renderFrame);
             if (!m_PlayerInput.TryGetLatchedVector2(m_MoveInputValueId, out Vector2 value))
                 throw new InvalidOperationException("GameplayLab Foot IK could not read Corin's formal Move Input Action.");
-            if (submittedCameraMovement.sqrMagnitude > 0.000001f && value.sqrMagnitude <= 0.000001f)
-                throw new InvalidOperationException("GameplayLab Foot IK formal Move Input Action ignored the virtual gamepad.");
+            if ((submittedCameraMovement - value).sqrMagnitude > 0.000001f)
+            {
+                m_FormalMoveMismatchFrames++;
+                if (m_FormalMoveMismatchFrames > 1)
+                {
+                    throw new InvalidOperationException(
+                        $"GameplayLab Foot IK formal Move Input Action did not converge to the virtual gamepad. Submitted={submittedCameraMovement}, Latched={value}.");
+                }
+            }
+            else
+            {
+                m_FormalMoveMismatchFrames = 0;
+            }
             m_LastCameraMovement = value;
             m_LastWorldMovement = ToWorldRelative(value, m_Owner.CameraRig.BasisSnapshot);
         }
@@ -411,7 +425,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             using var writer = new CanonicalWriter();
             writer.WriteUInt32(0x524b4946);
-            writer.WriteInt32(13);
+            writer.WriteInt32(14);
             writer.WriteString(m_RouteIdentity);
             writer.WriteByte((byte)m_Phase);
             writer.WriteByte((byte)m_Scenario);
@@ -425,6 +439,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             writer.WriteUInt64(m_LastCommittedSimulationTick);
             writer.WriteDouble(m_LastActualPlanarSpeed);
             writer.WriteUInt64(m_LastRouteUpdateTick);
+            writer.WriteInt32(m_FormalMoveMismatchFrames);
             writer.WriteBytes(m_PlayerInput.CaptureState());
             return writer.ToArray();
         }
@@ -432,7 +447,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public void RestoreState(byte[] state)
         {
             var reader = new CanonicalReader(state ?? throw new ArgumentNullException(nameof(state)));
-            if (reader.ReadUInt32() != 0x524b4946 || reader.ReadInt32() != 13 ||
+            if (reader.ReadUInt32() != 0x524b4946 || reader.ReadInt32() != 14 ||
                 !string.Equals(reader.ReadString(), m_RouteIdentity, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("GameplayLab Foot IK input state identity is invalid.");
@@ -450,11 +465,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ulong lastCommittedSimulationTick = reader.ReadUInt64();
             float actualPlanarSpeed = checked((float)reader.ReadDouble());
             ulong lastRouteUpdateTick = reader.ReadUInt64();
+            int formalMoveMismatchFrames = reader.ReadInt32();
             byte[] playerState = reader.ReadBytes();
             reader.RequireComplete();
             if (!Enum.IsDefined(typeof(GameplayLabFootIkRoutePhase), phase) ||
                 !Enum.IsDefined(typeof(GameplayLabFootIkInputScenario), scenario) ||
                 traversalSegment < 0 || lap < 0 || holdTicks < 0 ||
+                formalMoveMismatchFrames < 0 || formalMoveMismatchFrames > 1 ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y) || !float.IsFinite(position.z) ||
                 !float.IsFinite(yawDegrees) || !float.IsFinite(actualPlanarSpeed) || actualPlanarSpeed < 0f)
                 throw new InvalidOperationException("GameplayLab Foot IK input state is invalid.");
@@ -470,6 +487,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_LastCommittedSimulationTick = lastCommittedSimulationTick;
             m_LastActualPlanarSpeed = actualPlanarSpeed;
             m_LastRouteUpdateTick = lastRouteUpdateTick;
+            m_FormalMoveMismatchFrames = formalMoveMismatchFrames;
         }
 
         public void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition)

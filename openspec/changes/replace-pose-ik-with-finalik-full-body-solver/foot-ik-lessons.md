@@ -208,3 +208,5 @@ Artifact重建原动画
 普通Play与自动Variant必须分开；自动源只接管MoveAxis，LookAxis继续给观察者。场景同步必须生成课程和起终点并校验Collision/Foot Surface覆盖，否则CSV运行时间没有诊断价值。
 
 自动场中的所有Actor都属于同一Fixed世界事务。即使中立Target不参与路线，也必须出生在正式支撑面上；否则它持续下落越过World Bounds，会让玩家尚未进入楼梯时整笔世界求解失败，产生与IK无关的假失败。
+
+虚拟Input System设备与正式Input Action在`零输入 -> 移动`或`移动 -> 零输入`边界允许出现一帧状态传播差。该帧必须把正式Action实际读到的值提交给Simulation，并在下一帧要求它收敛到虚拟设备；不能把一次传播延迟当成永久断连，也不能绕过Action直接写Simulation输入。

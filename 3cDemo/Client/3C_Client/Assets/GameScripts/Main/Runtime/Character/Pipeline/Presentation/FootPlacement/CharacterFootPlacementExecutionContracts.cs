@@ -118,6 +118,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Body = body;
             LocomotionMotionTimeline = facts.LocomotionMotionTimeline;
             MovementPlaybackTime = facts.MovementPlaybackTime;
+            TrajectoryCurvatureDegreesPerSecond = facts.TrajectoryCurvatureDegreesPerSecond;
+            TrajectoryCurvatureAvailable = facts.TrajectoryCurvatureAvailable;
             MotionPhase = facts.MotionPhase;
             UpstreamPose = upstreamPose;
         }
@@ -129,6 +131,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterBodyPresentationFrame Body { get; }
         public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
         public double MovementPlaybackTime { get; }
+        public float TrajectoryCurvatureDegreesPerSecond { get; }
+        public bool TrajectoryCurvatureAvailable { get; }
         public CharacterPresentationMotionPhase MotionPhase { get; }
         internal CharacterFootPlacementPoseInput UpstreamPose { get; }
     }

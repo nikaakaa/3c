@@ -1439,7 +1439,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float remainingSeconds = Mathf.Max(
                 0f,
                 (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
-            if (remainingSeconds <= 0.0001f)
+            float transitionSeconds = 1f / m_TransitionBlendSpeed;
+            if (remainingSeconds <= transitionSeconds)
                 return false;
             Vector3 expected = plan.RootTrajectory.EvaluateRemainingPlannedIntentDisplacement(
                 plan.ActionStepPhase);

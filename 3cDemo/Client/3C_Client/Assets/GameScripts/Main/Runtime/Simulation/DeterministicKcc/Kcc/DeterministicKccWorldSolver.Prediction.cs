@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     public sealed partial class DeterministicKccWorldSolver
     {
         const string FutureBodyTrajectorySourceIdentity =
-            "thirdperson.simulation.solver.deterministic-kcc.future-body/v1";
+            "thirdperson.simulation.solver.deterministic-kcc.future-body/v2";
 
         public bool TryPredict(
             in CharacterFutureBodyTrajectoryRequest request,
@@ -22,13 +22,24 @@ namespace ThirdPersonSimulation.DeterministicKcc
             int stepCount = checked((int)Math.Ceiling(request.DurationSeconds * m_TickRate));
             if (stepCount <= 0 || stepCount > m_TickRate * 10)
                 return false;
+            WorldBodyState body = m_Current.Bodies[actorIndex];
             var samples = new List<CharacterFutureBodyTrajectorySample>(stepCount + 1)
             {
-                new CharacterFutureBodyTrajectorySample(0f, 0f, 0f, 0f)
+                new CharacterFutureBodyTrajectorySample(
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    request.CurrentVelocityX,
+                    body.Velocity.Y.ToSingle(),
+                    request.CurrentVelocityZ,
+                    request.YawVelocityDegreesPerSecond)
             };
-            WorldBodyState body = m_Current.Bodies[actorIndex];
             FixedVector3 origin = body.Position;
             FixedVector3 position = origin;
+            double yawDegrees = body.Yaw.Degrees.ToDouble();
+            double relativeYawDegrees = 0d;
             DeterministicKccBodyState state = m_KccStates[actorIndex];
             DeterministicKccMotor motor = m_PredictionMotors[actorIndex];
             float previousTime = 0f;
@@ -42,23 +53,42 @@ namespace ThirdPersonSimulation.DeterministicKcc
                         : tickElapsed;
                     if (elapsed <= previousTime)
                         continue;
+                    float deltaSeconds = elapsed - previousTime;
+                    PlanarVelocity velocity = ResolveRequestedPlanarVelocity(
+                        in request,
+                        (previousTime + elapsed) * 0.5f);
                     FixedVector3 requestedDisplacement = ToFixed(
-                        IntegrateRequestedPlanarDisplacement(
-                            in request,
-                            previousTime,
-                            elapsed));
+                        new PlanarDisplacement(
+                            velocity.X * deltaSeconds,
+                            velocity.Z * deltaSeconds));
+                    FixedVector3 previousPosition = position;
                     DeterministicKccMotorResult result = motor.Move(
                         position,
                         state,
                         requestedDisplacement);
                     position = result.Position;
                     state = CreateKccState(request.ActorId, result);
+                    double yawDelta = ResolveYawDelta(
+                        in request,
+                        velocity,
+                        yawDegrees,
+                        deltaSeconds);
+                    yawDegrees = NormalizeDegrees(yawDegrees + yawDelta);
+                    relativeYawDegrees += yawDelta;
                     FixedVector3 relative = position - origin;
+                    FixedVector3 appliedVelocity = (position - previousPosition) *
+                                                   (FixedScalar.One /
+                                                    FixedScalar.FromDouble(deltaSeconds));
                     samples.Add(new CharacterFutureBodyTrajectorySample(
                         elapsed,
                         relative.X.ToSingle(),
                         relative.Y.ToSingle(),
-                        relative.Z.ToSingle()));
+                        relative.Z.ToSingle(),
+                        (float)relativeYawDegrees,
+                        appliedVelocity.X.ToSingle(),
+                        appliedVelocity.Y.ToSingle(),
+                        appliedVelocity.Z.ToSingle(),
+                        (float)(yawDelta / deltaSeconds)));
                     previousTime = elapsed;
                 }
             }
@@ -72,68 +102,53 @@ namespace ThirdPersonSimulation.DeterministicKcc
             return true;
         }
 
-        static PlanarDisplacement IntegrateRequestedPlanarDisplacement(
+        static PlanarVelocity ResolveRequestedPlanarVelocity(
             in CharacterFutureBodyTrajectoryRequest request,
-            float startSeconds,
-            float endSeconds)
+            float elapsedSeconds)
         {
             float switchTime = request.CurrentSegmentRemainingSeconds;
-            if (float.IsPositiveInfinity(switchTime) || endSeconds <= switchTime)
-            {
-                return IntegrateRotatingVelocity(
+            if (float.IsPositiveInfinity(switchTime) || elapsedSeconds < switchTime)
+                return new PlanarVelocity(
                     request.CurrentVelocityX,
-                    request.CurrentVelocityZ,
-                    request.TrajectoryCurvatureDegreesPerSecond,
-                    startSeconds,
-                    endSeconds);
-            }
-            if (startSeconds >= switchTime)
-            {
-                if (!request.HasContinuation)
-                    return default;
-                return IntegrateRotatingVelocity(
+                    request.CurrentVelocityZ);
+            return request.HasContinuation
+                ? new PlanarVelocity(
                     request.ContinuationVelocityX,
-                    request.ContinuationVelocityZ,
-                    request.TrajectoryCurvatureDegreesPerSecond,
-                    startSeconds,
-                    endSeconds);
-            }
-            PlanarDisplacement current = IntegrateRotatingVelocity(
-                       request.CurrentVelocityX,
-                       request.CurrentVelocityZ,
-                       request.TrajectoryCurvatureDegreesPerSecond,
-                       startSeconds,
-                       switchTime);
-            return !request.HasContinuation
-                ? current
-                : current + IntegrateRotatingVelocity(
-                       request.ContinuationVelocityX,
-                       request.ContinuationVelocityZ,
-                       request.TrajectoryCurvatureDegreesPerSecond,
-                       switchTime,
-                       endSeconds);
+                    request.ContinuationVelocityZ)
+                : default;
         }
 
-        static PlanarDisplacement IntegrateRotatingVelocity(
-            float velocityX,
-            float velocityZ,
-            float yawRateDegreesPerSecond,
-            float startSeconds,
-            float endSeconds)
+        static double ResolveYawDelta(
+            in CharacterFutureBodyTrajectoryRequest request,
+            PlanarVelocity velocity,
+            double currentYawDegrees,
+            double deltaSeconds)
         {
-            double duration = Math.Max(0d, endSeconds - startSeconds);
-            if (duration <= 0d)
-                return default;
-            double angularVelocity = yawRateDegreesPerSecond * Math.PI / 180d;
-            if (Math.Abs(angularVelocity) <= 0.000001d)
-                return new PlanarDisplacement(velocityX * duration, velocityZ * duration);
-            double startAngle = angularVelocity * startSeconds;
-            double endAngle = angularVelocity * endSeconds;
-            double along = (Math.Sin(endAngle) - Math.Sin(startAngle)) / angularVelocity;
-            double across = (Math.Cos(startAngle) - Math.Cos(endAngle)) / angularVelocity;
-            return new PlanarDisplacement(
-                velocityX * along + velocityZ * across,
-                velocityZ * along - velocityX * across);
+            if (deltaSeconds <= 0d)
+                return 0d;
+            double speedSquared = velocity.X * velocity.X + velocity.Z * velocity.Z;
+            if (speedSquared <= 0.00000001d)
+                return request.YawVelocityDegreesPerSecond * deltaSeconds;
+            double targetYawDegrees = Math.Atan2(velocity.X, velocity.Z) * 180d / Math.PI;
+            double error = DeltaDegrees(currentYawDegrees, targetYawDegrees);
+            double maximumRate = request.MaximumYawVelocityDegreesPerSecond > 0f
+                ? request.MaximumYawVelocityDegreesPerSecond
+                : Math.Abs(request.YawVelocityDegreesPerSecond);
+            double maximumDelta = maximumRate * deltaSeconds;
+            return Math.Clamp(error, -maximumDelta, maximumDelta);
+        }
+
+        static double DeltaDegrees(double from, double to) =>
+            NormalizeDegrees(to - from);
+
+        static double NormalizeDegrees(double value)
+        {
+            double result = value % 360d;
+            if (result > 180d)
+                result -= 360d;
+            else if (result <= -180d)
+                result += 360d;
+            return result;
         }
 
         static FixedVector3 ToFixed(PlanarDisplacement value) => new FixedVector3(
@@ -156,6 +171,18 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 PlanarDisplacement left,
                 PlanarDisplacement right) =>
                 new PlanarDisplacement(left.X + right.X, left.Z + right.Z);
+        }
+
+        readonly struct PlanarVelocity
+        {
+            internal PlanarVelocity(double x, double z)
+            {
+                X = x;
+                Z = z;
+            }
+
+            internal double X { get; }
+            internal double Z { get; }
         }
     }
 }

@@ -393,12 +393,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationPredictedFootStepSample step = feature.PredictedStep;
             if (!step.IsAuthoritative && !plan.HasExecutablePath)
                 return default;
+            bool activePlanMatches = step.IsAuthoritative &&
+                                     plan.MatchesAuthoritativeEvent(in step);
             AnimationFootConstraintMode constraintMode;
             AnimationFootSupportPhase supportPhase;
             AnimationBodyRotationPivotMode bodyPivotMode;
             float constraintWeight;
             float supportWeight;
-            if (step.IsAuthoritative)
+            bool currentEventOwnsState = step.IsAuthoritative &&
+                                         (activePlanMatches || !plan.HasExecutablePath);
+            if (currentEventOwnsState)
             {
                 float phase = step.ActionStepClock.Phase;
                 constraintMode = step.EvaluateConstraintMode(phase);
@@ -412,7 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 constraintWeight = step.CurrentConstraintWeight;
                 supportWeight = step.CurrentSupportWeight;
             }
-            else
+            else if (plan.HasExecutablePath)
             {
                 ResolveCurrentActionState(
                     plan,
@@ -422,6 +426,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out bodyPivotMode);
                 constraintWeight = plan.RootTrajectory.EvaluateConstraintWeight(plan.ActionStepPhase);
                 supportWeight = plan.RootTrajectory.EvaluateSupportWeight(plan.ActionStepPhase);
+            }
+            else
+            {
+                constraintMode = AnimationFootConstraintMode.Unlocked;
+                supportPhase = AnimationFootSupportPhase.Unsupported;
+                bodyPivotMode = AnimationBodyRotationPivotMode.Pelvis;
+                constraintWeight = 0f;
+                supportWeight = 0f;
             }
             Vector3 pathPosition = default;
             Vector3 pathRoot = default;
@@ -500,11 +512,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         runtime.SmoothedRevisionBlendWeight)
                     : revisionTarget.AnklePosition;
             }
-            CharacterPredictiveFootPlacementPlan contactPlan = revisionMatches
-                ? revision
-                : plan.MatchesAuthoritativeEvent(in step)
+            CharacterPredictiveFootPlacementPlan contactPlan = runtime.HasEventSuccessor
+                ? activePlanMatches
                     ? plan
-                    : null;
+                    : null
+                : revisionMatches
+                    ? revision
+                    : activePlanMatches
+                        ? plan
+                        : null;
             if (landingHandoff.HasContactTarget)
             {
                 hasContactTarget = true;
@@ -564,7 +580,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : activePredictiveOutputWeight;
             float remainingSeconds = Mathf.Max(
                 0f,
-                step.IsAuthoritative
+                currentEventOwnsState
                     ? step.ActionStepClock.TimeToLandingSeconds
                     : (1f - timingPlan.ActionStepPhase) * timingPlan.ActionStepDurationSeconds);
             return new CharacterPredictiveFootStanceInput(
@@ -572,7 +588,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.HasExecutablePath,
                 plan.State == CharacterPredictiveFootPlanState.Executing,
                 plan.Sequence,
-                step.IsAuthoritative
+                currentEventOwnsState
                     ? step.LandingEventIdentity
                     : plan.LandingEventIdentity,
                 hasContactTarget,
@@ -596,11 +612,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.HipPosition,
                 targetAnklePosition,
                 predictiveOutputWeight,
-                step.IsAuthoritative ? step.BiomechanicalSample.SupportLegLength : 0f,
-                step.IsAuthoritative ? step.BiomechanicalSample.SupportLegCompressionReserve : 0f,
-                step.IsAuthoritative ? step.BiomechanicalSample.SupportKneeBendPlane : Vector3.zero,
-                step.IsAuthoritative ? step.BiomechanicalSample.SupportFootPivotPosition : Vector3.zero,
-                step.IsAuthoritative ? step.BiomechanicalSample.SupportFootPivotWeight : 0f);
+                currentEventOwnsState ? step.BiomechanicalSample.SupportLegLength : 0f,
+                currentEventOwnsState ? step.BiomechanicalSample.SupportLegCompressionReserve : 0f,
+                currentEventOwnsState ? step.BiomechanicalSample.SupportKneeBendPlane : Vector3.zero,
+                currentEventOwnsState ? step.BiomechanicalSample.SupportFootPivotPosition : Vector3.zero,
+                currentEventOwnsState ? step.BiomechanicalSample.SupportFootPivotWeight : 0f);
         }
 
         internal void Resolve(

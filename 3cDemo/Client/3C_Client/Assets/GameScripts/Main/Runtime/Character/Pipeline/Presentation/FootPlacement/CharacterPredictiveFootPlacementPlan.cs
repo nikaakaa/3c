@@ -180,8 +180,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float EvaluateAuthoredReach(float eventPhase) =>
             Vector3.Distance(EvaluateHipRoute(eventPhase), EvaluateAnkleRoute(eventPhase));
 
-        internal AnimationFootBiomechanicalRouteSample EvaluateBiomechanicalRoute(float eventPhase) =>
-            Step.EvaluateBiomechanicalRoute(Mathf.Clamp01(eventPhase));
+        internal float EvaluateConstraintWeight(float eventPhase) =>
+            Step.EvaluateConstraintWeight(Mathf.Clamp01(eventPhase));
+
+        internal float EvaluateSupportWeight(float eventPhase) =>
+            Step.EvaluateSupportWeight(Mathf.Clamp01(eventPhase));
 
         Quaternion EvaluateRotation(float phase)
         {

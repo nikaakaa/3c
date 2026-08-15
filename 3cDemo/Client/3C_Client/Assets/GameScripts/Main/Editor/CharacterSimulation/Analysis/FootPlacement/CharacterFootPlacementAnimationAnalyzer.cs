@@ -505,6 +505,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 float time = sourceIndex / (float)(sourceCount - 1);
                 AnimationPredictedFootStepSample step = curves.Sample(time).PredictedStep;
+                curves.PredictedStep.BiomechanicalStep.Sample(
+                    time,
+                    out _,
+                    out _,
+                    out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> biomechanicalRoute);
                 RequireReconstruction(
                     step.LandingPhase,
                     source.EventOrdinal[sourceIndex] > 0f ? 1f : 0f,
@@ -523,7 +528,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     "OpposingSoleRotation");
                 for (int routeIndex = 0; routeIndex < AnimationPredictedFootStepCurveSet.RouteSampleCount; routeIndex++)
                 {
-                    AnimationFootBiomechanicalRouteSample actual = step.BiomechanicalRoute[routeIndex];
+                    AnimationFootBiomechanicalRouteSample actual = biomechanicalRoute[routeIndex];
                     RequireReconstruction(step.RootLocalFootRoute[routeIndex], source.RootLocalFootRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Sole");
                     RequireReconstruction(step.RootLocalAnkleRoute[routeIndex], source.RootLocalAnkleRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Ankle");
                     RequireReconstruction(step.RootLocalHipRoute[routeIndex], source.RootLocalHipRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Hip");

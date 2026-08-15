@@ -17,15 +17,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     {
         AlignStart = 1,
         ApproachStart = 2,
-        HoldStart = 3,
+        SettleStart = 3,
         StartToEnd = 4,
-        HoldEnd = 5,
-        EndToStart = 6,
-        ExitEnd = 7,
-        ApproachEnd = 8,
-        ExitStart = 9,
-        SettleStart = 10,
-        SettleEnd = 11
+        Complete = 5
     }
 
     public readonly struct GameplayLabFootIkRouteSnapshot
@@ -87,24 +81,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 string phase = Phase switch
                 {
                     GameplayLabFootIkRoutePhase.StartToEnd => "start-to-end",
-                    GameplayLabFootIkRoutePhase.EndToStart => "end-to-start",
-                    GameplayLabFootIkRoutePhase.HoldStart => "hold-start",
-                    GameplayLabFootIkRoutePhase.HoldEnd => "hold-end",
                     GameplayLabFootIkRoutePhase.AlignStart => "align-start",
                     GameplayLabFootIkRoutePhase.ApproachStart => "approach-start",
-                    GameplayLabFootIkRoutePhase.ExitEnd => "exit-end",
-                    GameplayLabFootIkRoutePhase.ApproachEnd => "approach-end",
-                    GameplayLabFootIkRoutePhase.ExitStart => "exit-start",
                     GameplayLabFootIkRoutePhase.SettleStart => "settle-start",
-                    GameplayLabFootIkRoutePhase.SettleEnd => "settle-end",
+                    GameplayLabFootIkRoutePhase.Complete => "complete",
                     _ => throw new InvalidOperationException("GameplayLab Foot IK route phase is invalid.")
                 };
                 return $"{scenario}-{phase}";
             }
         }
-        public bool IsTraversal =>
-            Phase == GameplayLabFootIkRoutePhase.StartToEnd ||
-            Phase == GameplayLabFootIkRoutePhase.EndToStart;
+        public bool IsTraversal => Phase == GameplayLabFootIkRoutePhase.StartToEnd;
     }
 
     readonly struct GameplayLabFootIkResolvedInput
@@ -161,7 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField, Min(0f)] float m_EndpointHoldSeconds = 0.75f;
 
         public override string SourceIdentity =>
-            $"gameplay-lab-foot-ik/course-v3/{m_MoveInputValueId}/{(m_InputProfile ? m_InputProfile.name : "unconfigured")}";
+            $"gameplay-lab-foot-ik/course-v4/{m_MoveInputValueId}/{(m_InputProfile ? m_InputProfile.name : "unconfigured")}";
 
         public override IUnityFixedCharacterControlSourceRuntime Create(FixedCharacterControlSourceContext context)
         {
@@ -224,7 +210,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly Vector3 m_Start;
         readonly Vector3 m_End;
         readonly Vector3 m_StartAlignment;
-        readonly Vector3 m_EndAlignment;
         readonly Vector3 m_RouteDirection;
         readonly float m_ArrivalRadius;
         readonly float m_EndpointHoldSeconds;
@@ -233,9 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly UnityFixedCharacterInputAdapter m_PlayerInput;
         readonly string m_RunId = Guid.NewGuid().ToString("N");
         GameplayLabFootIkRoutePhase m_Phase = GameplayLabFootIkRoutePhase.AlignStart;
-        GameplayLabFootIkInputScenario m_Scenario = GameplayLabFootIkInputScenario.Straight;
         int m_TraversalSegment;
-        int m_Lap;
         int m_HoldTicksRemaining;
         int m_TraversalTicksRemaining;
         int m_FormalMoveMismatchFrames;
@@ -250,6 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         float m_LastActualPlanarSpeed;
         Gamepad m_Gamepad;
         bool m_Active;
+        bool m_CompletionSnapshotPublished;
         bool m_Disposed;
 
         internal GameplayLabFootIkInputSystemRuntime(
@@ -286,7 +270,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 route.magnitude * 0.5f);
             m_RouteDirection = route.normalized;
             m_StartAlignment = start - m_RouteDirection * alignmentDistance;
-            m_EndAlignment = end + m_RouteDirection * alignmentDistance;
             m_ArrivalRadius = arrivalRadius;
             m_EndpointHoldSeconds = endpointHoldSeconds;
             m_TickRate = program.Manifest.TickRate;
@@ -317,10 +300,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
             m_Active = true;
             m_Phase = GameplayLabFootIkRoutePhase.AlignStart;
-            m_Scenario = GameplayLabFootIkInputScenario.Straight;
             m_TraversalSegment = 0;
             m_TraversalTicksRemaining = 0;
             m_FormalMoveMismatchFrames = 0;
+            m_CompletionSnapshotPublished = false;
         }
 
         public void Deactivate()
@@ -343,12 +326,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_LastCommittedSimulationTick = 0;
             m_LastActualPlanarSpeed = 0f;
             m_Phase = GameplayLabFootIkRoutePhase.AlignStart;
-            m_Scenario = GameplayLabFootIkInputScenario.Straight;
             m_TraversalSegment = 0;
-            m_Lap = 0;
             m_HoldTicksRemaining = 0;
             m_TraversalTicksRemaining = 0;
             m_FormalMoveMismatchFrames = 0;
+            m_CompletionSnapshotPublished = false;
             GameplayLabFootIkRouteRegistry.Remove(m_ActorId);
         }
 
@@ -429,22 +411,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_LastCommittedYawDegrees = actor.Yaw.Degrees.ToSingle();
             m_SimulationTick = simulationTick;
             m_LastCommittedSimulationTick = simulationTick;
-            GameplayLabFootIkRouteRegistry.Publish(new GameplayLabFootIkRouteSnapshot(
-                m_RunId,
-                m_ActorId,
-                m_Phase,
-                m_Scenario,
-                m_TraversalSegment,
-                m_Lap,
-                m_RenderFrame,
-                m_SimulationTick,
-                m_Start,
-                m_End,
-                m_LastCommittedPosition,
-                m_LastCameraMovement,
-                m_LastCommittedYawDegrees,
-                m_LastActualPlanarSpeed,
-                m_TickRate));
+            bool completedWithZeroInput =
+                m_Phase == GameplayLabFootIkRoutePhase.Complete &&
+                m_LastCameraMovement.sqrMagnitude <= 0.000001f;
+            if (completedWithZeroInput && m_CompletionSnapshotPublished)
+            {
+                GameplayLabFootIkRouteRegistry.Remove(m_ActorId);
+            }
+            else
+            {
+                GameplayLabFootIkRouteRegistry.Publish(new GameplayLabFootIkRouteSnapshot(
+                    m_RunId,
+                    m_ActorId,
+                    m_Phase,
+                    GameplayLabFootIkInputScenario.CameraRelativeTurns,
+                    m_TraversalSegment,
+                    1,
+                    m_RenderFrame,
+                    m_SimulationTick,
+                    m_Start,
+                    m_End,
+                    m_LastCommittedPosition,
+                    m_LastCameraMovement,
+                    m_LastCommittedYawDegrees,
+                    m_LastActualPlanarSpeed,
+                    m_TickRate));
+                if (completedWithZeroInput)
+                    m_CompletionSnapshotPublished = true;
+            }
             return m_PlayerInput.BuildInput(context);
         }
 
@@ -452,14 +446,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             using var writer = new CanonicalWriter();
             writer.WriteUInt32(0x524b4946);
-            writer.WriteInt32(15);
+            writer.WriteInt32(16);
             writer.WriteString(m_RouteIdentity);
             writer.WriteByte((byte)m_Phase);
-            writer.WriteByte((byte)m_Scenario);
             writer.WriteInt32(m_TraversalSegment);
-            writer.WriteInt32(m_Lap);
             writer.WriteInt32(m_HoldTicksRemaining);
             writer.WriteInt32(m_TraversalTicksRemaining);
+            writer.WriteBoolean(m_CompletionSnapshotPublished);
             writer.WriteDouble(m_LastCommittedPosition.x);
             writer.WriteDouble(m_LastCommittedPosition.y);
             writer.WriteDouble(m_LastCommittedPosition.z);
@@ -475,17 +468,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public void RestoreState(byte[] state)
         {
             var reader = new CanonicalReader(state ?? throw new ArgumentNullException(nameof(state)));
-            if (reader.ReadUInt32() != 0x524b4946 || reader.ReadInt32() != 15 ||
+            if (reader.ReadUInt32() != 0x524b4946 || reader.ReadInt32() != 16 ||
                 !string.Equals(reader.ReadString(), m_RouteIdentity, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("GameplayLab Foot IK input state identity is invalid.");
             }
             var phase = (GameplayLabFootIkRoutePhase)reader.ReadByte();
-            var scenario = (GameplayLabFootIkInputScenario)reader.ReadByte();
             int traversalSegment = reader.ReadInt32();
-            int lap = reader.ReadInt32();
             int holdTicks = reader.ReadInt32();
             int traversalTicks = reader.ReadInt32();
+            bool completionSnapshotPublished = reader.ReadBoolean();
             var position = new Vector3(
                 checked((float)reader.ReadDouble()),
                 checked((float)reader.ReadDouble()),
@@ -498,19 +490,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             byte[] playerState = reader.ReadBytes();
             reader.RequireComplete();
             if (!Enum.IsDefined(typeof(GameplayLabFootIkRoutePhase), phase) ||
-                !Enum.IsDefined(typeof(GameplayLabFootIkInputScenario), scenario) ||
-                traversalSegment < 0 || lap < 0 || holdTicks < 0 || traversalTicks < 0 ||
+                traversalSegment < 0 || holdTicks < 0 || traversalTicks < 0 ||
                 formalMoveMismatchFrames < 0 || formalMoveMismatchFrames > 1 ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y) || !float.IsFinite(position.z) ||
                 !float.IsFinite(yawDegrees) || !float.IsFinite(actualPlanarSpeed) || actualPlanarSpeed < 0f)
                 throw new InvalidOperationException("GameplayLab Foot IK input state is invalid.");
             m_PlayerInput.RestoreState(playerState);
             m_Phase = phase;
-            m_Scenario = scenario;
             m_TraversalSegment = traversalSegment;
-            m_Lap = lap;
             m_HoldTicksRemaining = holdTicks;
             m_TraversalTicksRemaining = traversalTicks;
+            m_CompletionSnapshotPublished = completionSnapshotPublished;
             m_LastCommittedPosition = position;
             m_LastCommittedYawDegrees = yawDegrees;
             m_SimulationTick = lastCommittedSimulationTick;
@@ -559,21 +549,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 case GameplayLabFootIkRoutePhase.ApproachStart:
                     if (ReachedAlongRoute(position, m_Start, m_RouteDirection))
                     {
-                        if (m_Lap == 0)
-                            m_Lap = 1;
                         EnterHold(GameplayLabFootIkRoutePhase.SettleStart);
                         return GameplayLabFootIkResolvedInput.World(Vector2.zero);
                     }
-                    target = m_Start;
-                    break;
-                case GameplayLabFootIkRoutePhase.HoldStart:
-                    if (m_HoldTicksRemaining > elapsedTicks)
-                    {
-                        m_HoldTicksRemaining -= elapsedTicks;
-                        return GameplayLabFootIkResolvedInput.World(Vector2.zero);
-                    }
-                    m_HoldTicksRemaining = 0;
-                    m_Phase = GameplayLabFootIkRoutePhase.ApproachStart;
                     target = m_Start;
                     break;
                 case GameplayLabFootIkRoutePhase.SettleStart:
@@ -586,72 +564,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_Phase = GameplayLabFootIkRoutePhase.StartToEnd;
                     m_TraversalSegment = 0;
                     m_TraversalTicksRemaining = 0;
-                    return ResolveTraversalMovement(position, true, 0);
+                    return ResolveCameraRelativeTurnMovement(position, 0);
                 case GameplayLabFootIkRoutePhase.StartToEnd:
-                    if (ReachedAlongRoute(position, m_End, m_RouteDirection))
-                    {
-                        m_Phase = GameplayLabFootIkRoutePhase.ExitEnd;
-                        target = m_EndAlignment;
-                        break;
-                    }
-                    return ResolveTraversalMovement(position, true, elapsedTicks);
-                case GameplayLabFootIkRoutePhase.ExitEnd:
-                    if (ReachedAlongRoute(position, m_EndAlignment, m_RouteDirection))
-                    {
-                        EnterHold(GameplayLabFootIkRoutePhase.HoldEnd);
-                        return GameplayLabFootIkResolvedInput.World(Vector2.zero);
-                    }
-                    target = m_EndAlignment;
-                    break;
-                case GameplayLabFootIkRoutePhase.HoldEnd:
-                    if (m_HoldTicksRemaining > elapsedTicks)
-                    {
-                        m_HoldTicksRemaining -= elapsedTicks;
-                        return GameplayLabFootIkResolvedInput.World(Vector2.zero);
-                    }
-                    m_HoldTicksRemaining = 0;
-                    m_Phase = GameplayLabFootIkRoutePhase.ApproachEnd;
-                    target = m_End;
-                    break;
-                case GameplayLabFootIkRoutePhase.ApproachEnd:
-                    if (ReachedAlongRoute(position, m_End, -m_RouteDirection))
-                    {
-                        EnterHold(GameplayLabFootIkRoutePhase.SettleEnd);
-                        return GameplayLabFootIkResolvedInput.World(Vector2.zero);
-                    }
-                    target = m_End;
-                    break;
-                case GameplayLabFootIkRoutePhase.SettleEnd:
-                    if (m_HoldTicksRemaining > elapsedTicks)
-                    {
-                        m_HoldTicksRemaining -= elapsedTicks;
-                        return GameplayLabFootIkResolvedInput.World(Vector2.zero);
-                    }
-                    m_HoldTicksRemaining = 0;
-                    m_Phase = GameplayLabFootIkRoutePhase.EndToStart;
-                    m_TraversalSegment = 0;
-                    m_TraversalTicksRemaining = 0;
-                    return ResolveTraversalMovement(position, false, 0);
-                case GameplayLabFootIkRoutePhase.EndToStart:
-                    if (ReachedAlongRoute(position, m_Start, -m_RouteDirection))
-                    {
-                        m_Phase = GameplayLabFootIkRoutePhase.ExitStart;
-                        target = m_StartAlignment;
-                        break;
-                    }
-                    return ResolveTraversalMovement(position, false, elapsedTicks);
-                case GameplayLabFootIkRoutePhase.ExitStart:
-                    if (ReachedAlongRoute(position, m_StartAlignment, -m_RouteDirection))
-                    {
-                        m_Lap++;
-                        m_Scenario = GameplayLabFootIkRegressionCourse.NextScenario(m_Scenario);
-                        m_TraversalSegment = 0;
-                        m_TraversalTicksRemaining = 0;
-                        EnterHold(GameplayLabFootIkRoutePhase.HoldStart);
-                        return GameplayLabFootIkResolvedInput.World(Vector2.zero);
-                    }
-                    target = m_StartAlignment;
-                    break;
+                    return ResolveCameraRelativeTurnMovement(position, elapsedTicks);
+                case GameplayLabFootIkRoutePhase.Complete:
+                    return GameplayLabFootIkResolvedInput.World(Vector2.zero);
                 default:
                     throw new InvalidOperationException("GameplayLab Foot IK route phase is invalid.");
             }
@@ -662,50 +579,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     : direction.normalized);
         }
 
-        GameplayLabFootIkResolvedInput ResolveTraversalMovement(Vector3 position, bool startToEnd, int elapsedTicks)
-        {
-            Vector3 start = startToEnd ? m_Start : m_End;
-            Vector3 end = startToEnd ? m_End : m_Start;
-            if (m_Scenario == GameplayLabFootIkInputScenario.CameraRelativeTurns)
-                return ResolveCameraRelativeTurnMovement(position, start, end, elapsedTicks);
-            int segmentCount = TraversalSegmentCount(m_Scenario);
-            while (m_TraversalSegment < segmentCount)
-            {
-                Vector3 previous = m_TraversalSegment == 0
-                    ? start
-                    : TraversalWaypoint(start, end, m_Scenario, m_TraversalSegment - 1, segmentCount);
-                Vector3 target = TraversalWaypoint(start, end, m_Scenario, m_TraversalSegment, segmentCount);
-                Vector3 segment = Vector3.ProjectOnPlane(target - previous, Vector3.up);
-                if (segment.sqrMagnitude <= 0.000001f)
-                    throw new InvalidOperationException("GameplayLab Foot IK traversal segment is degenerate.");
-                if (!ReachedAlongRoute(position, target, segment.normalized))
-                {
-                    Vector2 direction = new Vector2(target.x - position.x, target.z - position.z);
-                    return GameplayLabFootIkResolvedInput.World(
-                        direction.sqrMagnitude <= 0.000001f ? Vector2.zero : direction.normalized);
-                }
-                m_TraversalSegment++;
-            }
-            Vector2 remaining = new Vector2(end.x - position.x, end.z - position.z);
-            return GameplayLabFootIkResolvedInput.World(
-                remaining.sqrMagnitude <= 0.000001f ? Vector2.zero : remaining.normalized);
-        }
-
         GameplayLabFootIkResolvedInput ResolveCameraRelativeTurnMovement(
             Vector3 position,
-            Vector3 start,
-            Vector3 end,
             int elapsedTicks)
         {
-            Vector3 direction = Vector3.ProjectOnPlane(end - start, Vector3.up).normalized;
+            Vector3 direction = Vector3.ProjectOnPlane(m_End - m_Start, Vector3.up).normalized;
             Vector3 first = Vector3.LerpUnclamped(
-                start,
-                end,
+                m_Start,
+                m_End,
                 GameplayLabFootIkRegressionCourse.TurnStressFirstFraction);
-            Vector3 second = Vector3.LerpUnclamped(
-                start,
-                end,
-                GameplayLabFootIkRegressionCourse.TurnStressSecondFraction);
             while (true)
             {
                 switch (m_TraversalSegment)
@@ -730,30 +612,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         if (RemainInTurnSegment(ref elapsedTicks))
                             return GameplayLabFootIkResolvedInput.Camera(Vector2.left);
                         m_TraversalSegment = 4;
-                        break;
+                        m_Phase = GameplayLabFootIkRoutePhase.Complete;
+                        return GameplayLabFootIkResolvedInput.World(Vector2.zero);
                     case 4:
-                        if (!ReachedAlongRoute(position, second, direction))
-                            return WorldDirection(position, second);
-                        BeginTurnSegment(5);
-                        elapsedTicks = 0;
-                        break;
-                    case 5:
-                        if (RemainInTurnSegment(ref elapsedTicks))
-                            return GameplayLabFootIkResolvedInput.Camera(Vector2.right);
-                        BeginTurnSegment(6, 2f);
-                        break;
-                    case 6:
-                        if (RemainInTurnSegment(ref elapsedTicks))
-                            return GameplayLabFootIkResolvedInput.Camera(Vector2.left);
-                        BeginTurnSegment(7);
-                        break;
-                    case 7:
-                        if (RemainInTurnSegment(ref elapsedTicks))
-                            return GameplayLabFootIkResolvedInput.Camera(Vector2.right);
-                        m_TraversalSegment = 8;
-                        break;
-                    case 8:
-                        return WorldDirection(position, end);
+                        m_Phase = GameplayLabFootIkRoutePhase.Complete;
+                        return GameplayLabFootIkResolvedInput.World(Vector2.zero);
                     default:
                         throw new InvalidOperationException("GameplayLab Foot IK camera-relative turn segment is invalid.");
                 }
@@ -785,35 +648,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Vector2 direction = new Vector2(target.x - position.x, target.z - position.z);
             return GameplayLabFootIkResolvedInput.World(
                 direction.sqrMagnitude <= 0.000001f ? Vector2.zero : direction.normalized);
-        }
-
-        static int TraversalSegmentCount(GameplayLabFootIkInputScenario scenario) => scenario switch
-        {
-            GameplayLabFootIkInputScenario.Straight => 1,
-            GameplayLabFootIkInputScenario.SmoothCurve => 12,
-            _ => throw new InvalidOperationException("GameplayLab Foot IK input scenario is invalid.")
-        };
-
-        static Vector3 TraversalWaypoint(
-            Vector3 start,
-            Vector3 end,
-            GameplayLabFootIkInputScenario scenario,
-            int segment,
-            int segmentCount)
-        {
-            if (segment < 0 || segment >= segmentCount)
-                throw new ArgumentOutOfRangeException(nameof(segment));
-            float fraction = (segment + 1f) / segmentCount;
-            Vector3 forward = Vector3.ProjectOnPlane(end - start, Vector3.up).normalized;
-            Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
-            float lateral = scenario switch
-            {
-                GameplayLabFootIkInputScenario.Straight => 0f,
-                GameplayLabFootIkInputScenario.SmoothCurve =>
-                    GameplayLabFootIkRegressionCourse.LateralAmplitude * Mathf.Sin(fraction * Mathf.PI * 2f),
-                _ => throw new InvalidOperationException("GameplayLab Foot IK input scenario is invalid.")
-            };
-            return Vector3.LerpUnclamped(start, end, fraction) + right * lateral;
         }
 
         bool ReachedAlongRoute(Vector3 position, Vector3 target, Vector3 direction)

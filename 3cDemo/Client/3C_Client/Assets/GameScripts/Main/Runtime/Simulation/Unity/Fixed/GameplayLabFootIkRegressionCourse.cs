@@ -7,9 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
     public enum GameplayLabFootIkInputScenario : byte
     {
-        Straight = 1,
-        CameraRelativeTurns = 2,
-        SmoothCurve = 3
+        CameraRelativeTurns = 1
     }
 
     public static class GameplayLabFootIkRegressionCourse
@@ -26,11 +24,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public const float StepRun = 0.52f;
         public const float CourseWidth = 30f;
         public const float TopLength = 6f;
-        public const float LateralAmplitude = 2f;
         public const float TurnStressHalfWidth = 10f;
-        public const float TurnStressFirstFraction = 0.25f;
-        public const float TurnStressSecondFraction = 0.75f;
-        public const float TurnStressLegSeconds = 1.25f;
+        public const float TurnStressFirstFraction = 0.16f;
+        public const float TurnStressLegSeconds = 1f;
         public const float LateralSafetyMargin = 0.5f;
         public const float EndpointMargin = 3f;
         public const float AlignmentDistance = 10f;
@@ -48,17 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public static string ScenarioIdentity(GameplayLabFootIkInputScenario scenario) => scenario switch
         {
-            GameplayLabFootIkInputScenario.Straight => "straight",
             GameplayLabFootIkInputScenario.CameraRelativeTurns => "camera-relative-turns",
-            GameplayLabFootIkInputScenario.SmoothCurve => "smooth-curve",
-            _ => throw new InvalidOperationException("GameplayLab Foot IK input scenario is invalid.")
-        };
-
-        public static GameplayLabFootIkInputScenario NextScenario(GameplayLabFootIkInputScenario scenario) => scenario switch
-        {
-            GameplayLabFootIkInputScenario.Straight => GameplayLabFootIkInputScenario.CameraRelativeTurns,
-            GameplayLabFootIkInputScenario.CameraRelativeTurns => GameplayLabFootIkInputScenario.SmoothCurve,
-            GameplayLabFootIkInputScenario.SmoothCurve => GameplayLabFootIkInputScenario.Straight,
             _ => throw new InvalidOperationException("GameplayLab Foot IK input scenario is invalid.")
         };
 
@@ -116,7 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Vector3 forward,
             Vector3 right)
         {
-            float requiredHalfWidth = Mathf.Max(LateralAmplitude, TurnStressHalfWidth) + LateralSafetyMargin;
+            float requiredHalfWidth = TurnStressHalfWidth + LateralSafetyMargin;
             for (int i = 0; i < treads.Count; i++)
             {
                 BoxCollider tread = treads[i];

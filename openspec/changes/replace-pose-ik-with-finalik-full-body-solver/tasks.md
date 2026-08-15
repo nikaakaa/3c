@@ -11,7 +11,7 @@
 
 - [ ] 1.7 在共享Character Movement Test Environment中生成正式宽楼梯课程：30米宽、24级上楼、6米平台、24级下楼，Gameplay使用斜坡碰撞，FootPlacement使用逐级踏面。
 - [ ] 1.8 保持Local Fixed普通Play为自由输入；唯一Foot IK Automatic Variant只接管MoveAxis，保留LookAxis相机控制并自动启动Diagnostics与流式采样。
-- [ ] 1.9 自动循环Straight、Camera-relative A/D Turns和Smooth Curve三种场景；A/D场景必须在双向路线的两段楼梯中直接提交正式`MoveAxis.x`，不得用世界空间横向路点冒充键盘转向，不改Transform、速度倍率或Time Scale。
+- [ ] 1.9 自动源只执行一次短单向Camera-relative A/D事务：对齐起点、进入第一段楼梯、正式提交`A 1秒 -> D 2秒 -> A 1秒`，随后输入归零并结束采样；不得用世界空间横向路点冒充键盘转向，不改Transform、速度倍率或Time Scale。
 - [ ] 1.10 启动前以场景中唯一Course和Start/End为权威验证全部踏面、A/D安全范围、两条Traversal Ramp和Collision World闭包；允许整体移动Course，但路线不覆盖故障地形时拒绝运行。
 
 ## 2. Animation Biomechanical Step Artifact

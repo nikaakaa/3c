@@ -100,3 +100,17 @@ in-place支撑脚会相对Root向后移动；用Heel/Toe全三维局部速度判
 ## 12. 碰撞KCC轨迹不等于身体支撑坡线
 
 Future Body Trajectory的Y已经包含KCC逐级跨台阶的碰撞结果。Query若再使用`SupportY - PlanStartSupportY`平移同相位Root/Hip，会把整段台阶高度重复叠加；正确残差只能是`SupportY - 同相位GroundProbeY`。同样，Body Support Path不能只是一个有效布尔值后继续转发原始KCC Root/Hip：那会把胶囊逐台阶离散抬升直接灌进Pelvis。正式Body Path应冻结当前支撑、可选对侧Landing和本脚Landing的支撑修正高度，按Action Step Phase分段插值Component Up；XZ仍来自同一冻结KCC，且不得消费Foot Ground Envelope。
+
+## 13. 回退实验保留结论
+
+本轮最终回到提交`bfb571868a58edf1b9d3c1b19844a57e4d022491`。回退不代表后续问题不存在，只表示后续多变量修改让观感持续退化，已经失去可比较的稳定基线。
+
+GDC语义必须保持简单：动画拥有脚的平面运动和相对脚下路径的抬脚轮廓，Ground Envelope只是不允许穿过的连续下界。in-place动画不能提供角色Root位移；烘焙路线只能表达脚相对身体的动画事实，未来身体位移与旋转必须来自正式Movement Timeline和同源Future KCC，不能用输入幅值缩放动画路线，也不能丢弃动画局部X。
+
+冻结路线必须在Plan创建帧以`GenerationPhase`的Native Sole对齐同相位烘焙样本，并整步保持同一变换；Foot Rate表示动画脚沿该路线的空间进度，Ground Probe只提供高度下界。Future Landing与普通Ground Probe的候选排序目的不同，Capsule擦到端点碰撞体或Box锐边不等于新的可站立面；起点和Landing体积内的边缘命中不得再次进入Upper Envelope，Envelope边法线也不得拥有脚掌方向。
+
+Landing是一个完整支撑事务。旧Step的冻结Landing、本步Stance、Anchor和后继Step必须消费同一位置与支撑面；`ApproachingContact`只表示动画接近落地，不是物理接触许可。Locked固定完整世界Goal，Sliding/Releasing只保留同一支撑面的垂直所有权，Unlocked才交给Predictive Swing。Pelvis必须在唯一owner内消费最终两脚Goal，FinalIK只执行该Goal；多数坏帧是FBBIK准确执行了错误输入。
+
+三个实验已被否决：`70c808...`在路线未闭环时开放有符号Swing高度，直接把路线误差压进地面；`7370fa...`把整个ApproachingContact当作Anchor捕获许可，产生数十厘米交接；`bf876c...`只增加下一表现帧LiftOff门禁，1495行、1205列完整采样仍表现浮空和鬼畜。平滑、迟滞和阈值不能修复错误路线、错误支撑身份或错误高度语义。
+
+再次推进时必须一次只改一个owner：先证明冻结Animation Foot Route与同相位Native Sole的XZ映射，再证明Foot Rate，然后证明Ground Envelope端点与边缘，随后闭合Landing支撑事务，最后才恢复`Ground Envelope + Animation Clearance`的有符号高度。每一步同时看自动CSV和现场观感；编译、Character Build及Console 0 Error不代表IK效果通过。

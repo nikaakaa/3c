@@ -12,6 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterPredictiveFootRootTrajectory(
             Vector3 startPosition,
             Quaternion startRotation,
+            Vector3 animationSoleAtGeneration,
             Vector3 committedBodyVelocity,
             float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
@@ -23,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!step.IsAuthoritative)
                 throw new ArgumentException("Predictive Foot Root Trajectory requires an authoritative event.", nameof(step));
             if (!IsFinite(startPosition) || !IsFinite(startRotation) ||
+                !IsFinite(animationSoleAtGeneration) ||
                 !IsFinite(committedBodyVelocity) ||
                 !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !motionTimeline.IsValid || !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
@@ -62,6 +64,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActionStepDurationSeconds = step.ActionStepClock.DurationSeconds;
             Step = step;
             FutureBodyTrajectory = futureBodyTrajectory;
+            FootRoutePlanarAlignment = Vector3.zero;
+            FootRoutePlanarAlignment = Vector3.ProjectOnPlane(
+                animationSoleAtGeneration - EvaluateUnalignedFootRoute(EventPhaseAtGeneration),
+                Up);
             if (futureBodyTrajectory.DurationSeconds + 0.0001f <
                 PredictionLeadSeconds + LandingDelayAtGeneration)
             {
@@ -85,6 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float PathStartPhase { get; }
         internal float LandingDelayAtGeneration { get; }
         internal float PredictionLeadSeconds { get; }
+        internal Vector3 FootRoutePlanarAlignment { get; }
         internal bool HasPlanarMotion =>
             FrozenPlanarVelocity.sqrMagnitude > 0.000001f ||
             HasContinuation && ContinuationPlanarVelocity.sqrMagnitude > 0.000001f;
@@ -106,7 +113,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal Vector3 EvaluateFootRoute(float eventPhase)
         {
-            float phase = Mathf.Clamp(eventPhase, PathStartPhase, 1f);
+            return EvaluateUnalignedFootRoute(eventPhase) + FootRoutePlanarAlignment;
+        }
+
+        Vector3 EvaluateUnalignedFootRoute(float eventPhase)
+        {
+            float phase = Mathf.Clamp01(eventPhase);
             float elapsedSeconds = ResolveRawTravelElapsedSeconds(phase);
             Quaternion rotation = EvaluateRotation(phase);
             Vector3 root = StartPosition + ResolvePlanarTravel(elapsedSeconds);
@@ -117,17 +129,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 localPlanar.x,
                 virtualGroundHeight,
                 localPlanar.z);
-        }
-
-        internal Vector3 EvaluateAlignedFootRoute(Vector3 pathStart, float eventPhase)
-        {
-            float phase = Mathf.Clamp(eventPhase, PathStartPhase, 1f);
-            Vector3 route = EvaluateFootRoute(phase);
-            Vector3 sourceStart = EvaluateFootRoute(PathStartPhase);
-            Vector3 planarOffset = Vector3.ProjectOnPlane(pathStart - sourceStart, Up);
-            float progress = Mathf.InverseLerp(PathStartPhase, 1f, phase);
-            float blend = 1f - progress * progress * (3f - 2f * progress);
-            return route + planarOffset * blend;
         }
 
         internal float EvaluateRemainingPlanarDistance(float eventPhase)
@@ -786,7 +787,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out AnimationBodyRotationPivotMode bodyPivotMode)
         {
             float phase = Mathf.Clamp01(eventPhase);
-            planarSole = RootTrajectory.EvaluateAlignedFootRoute(Start, phase);
+            planarSole = RootTrajectory.EvaluateFootRoute(phase);
             animationClearanceHeight = Mathf.Max(
                 0f,
                 EvaluateFloatRoute(AnimationClearanceHeights, phase) +
@@ -1193,7 +1194,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float progress = i / (AuthoredFootPlanarRoute.Length - 1f);
                 float eventPhase = Mathf.Lerp(rootTrajectory.PathStartPhase, 1f, progress);
                 frozenWorldFootRoutePhases.Add(eventPhase);
-                frozenWorldFootRoute.Add(rootTrajectory.EvaluateAlignedFootRoute(Start, eventPhase));
+                frozenWorldFootRoute.Add(rootTrajectory.EvaluateFootRoute(eventPhase));
             }
             FrozenWorldFootRoute = frozenWorldFootRoute;
             FrozenWorldFootRoutePhases = frozenWorldFootRoutePhases;

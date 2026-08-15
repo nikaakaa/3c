@@ -116,3 +116,9 @@
 - [x] 14.3 每个Executable Plan冻结`当前合法支撑 -> 可选对侧Landing -> 本脚Landing`的Root/Hip支撑锚点；运行时按同一Action Step Phase分段插值Component Up高度，平面位置仍消费同一冻结KCC轨迹。
 - [ ] 14.4 用新双向run验证Body Support Path不再等于离散KCC Y、上坡Pelvis Target连续且同Plan Goal跳变显著下降，并对账Anchor、Heel/Toe、Current安全下界和FBBIK residual无回退。
 - [ ] 14.5 完成Runtime与Editor编译、精确Float32/Fixed Character Build、OpenSpec strict validate和单一路径静态搜索。
+
+## 15. 回退基线后的路线对齐单变量修复
+
+- [x] 15.1 将代码、资产、场景与既有OpenSpec实现恢复到提交`bfb571868a58edf1b9d3c1b19844a57e4d022491`，只保留压缩后的失败经验；删除会继续参与Unity编译的未跟踪自动路线脚本。
+- [x] 15.2 区分创建帧原动画鞋底与Ground Probe支撑起点：Root Trajectory以`EventPhaseAtGeneration`的Native Sole对齐同相位未对齐动画路线，生成一次平面刚性偏移并整步冻结；删除从`PathStartPhase`开始向Landing衰减为零的路线偏移。Ground Probe继续只拥有地面查询起点，不取得动画路线坐标所有权。
+- [ ] 15.3 用同一版本新run对账创建帧Native Sole、冻结Animation Foot Route、Landing XZ、Foot Rate、Goal连续性、上楼/下楼Heel/Toe距离与FBBIK residual；未获得数据与观感改善前，不再修改Anchor、Pelvis、查询阈值或有符号高度。

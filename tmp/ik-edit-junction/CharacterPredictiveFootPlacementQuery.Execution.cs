@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out float virtualGroundSplitPlanarError);
             bool hasVirtualGroundSplit = virtualGroundSplitActionProgress > 0f;
             Vector3 routeStart = groundProbeStart;
-            Vector3 routeEnd = rootTrajectory.EvaluateAlignedFootRoute(groundProbeStart, 1f);
+            Vector3 routeEnd = rootTrajectory.EvaluateFootRoute(1f);
             ResolveGroundProbeRouteMetrics(
                 routeStart,
                 routeEnd,
@@ -548,9 +548,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             for (int i = 0; i < count; i++)
             {
                 float phase = m_FootRateEventPhases[i];
-                Vector3 animatedFoot = rootTrajectory.EvaluateAlignedFootRoute(
-                    groundProbeStart,
-                    phase);
+                Vector3 animatedFoot = rootTrajectory.EvaluateFootRoute(phase);
                 float progress = ResolveGroundProbeProjection(
                     animatedFoot,
                     routeSampleCount,

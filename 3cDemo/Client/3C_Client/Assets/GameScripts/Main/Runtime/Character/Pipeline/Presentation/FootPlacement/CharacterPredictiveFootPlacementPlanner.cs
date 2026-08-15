@@ -315,6 +315,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             ulong renderFrame,
             ulong completionIdentity,
+            in CharacterFootPlacementPoseInput upstreamPose,
             AnimationFootFeatureSample feature,
             CharacterFootPlacementAnimatedFootPose pose)
         {
@@ -473,11 +474,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? revision
                 : plan;
             float activePredictiveOutputWeight = plan.State == CharacterPredictiveFootPlanState.Executing
-                ? plan.EvaluatePredictiveOutputWeight() * runtime.PredictiveRetentionWeight
+                ? plan.EvaluatePredictiveOutputWeight() *
+                  runtime.PredictiveRetentionWeight *
+                  ResolveFootPoseWeight(
+                      in upstreamPose,
+                      side,
+                      plan.ContributionContinuityIdentity)
                 : 0f;
             float revisionPredictiveOutputWeight = revisionMatches &&
                                                    revision.State == CharacterPredictiveFootPlanState.Executing
-                ? revision.EvaluatePredictiveOutputWeight()
+                ? revision.EvaluatePredictiveOutputWeight() *
+                  ResolveFootPoseWeight(
+                      in upstreamPose,
+                      side,
+                      revision.ContributionContinuityIdentity)
                 : 0f;
             float predictiveOutputWeight = revisionMatches
                 ? Mathf.Lerp(
@@ -553,12 +563,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in upstreamPose,
                 CharacterFootSide.Right,
                 in rightStep);
+            float leftActivePlanPoseWeight = ResolveFootPoseWeight(
+                in upstreamPose,
+                CharacterFootSide.Left,
+                m_LeftPlan.Active.ContributionContinuityIdentity);
+            float leftRevisionPlanPoseWeight = m_LeftPlan.HasRevision
+                ? ResolveFootPoseWeight(
+                    in upstreamPose,
+                    CharacterFootSide.Left,
+                    m_LeftPlan.Revision.ContributionContinuityIdentity)
+                : 0f;
+            float rightActivePlanPoseWeight = ResolveFootPoseWeight(
+                in upstreamPose,
+                CharacterFootSide.Right,
+                m_RightPlan.Active.ContributionContinuityIdentity);
+            float rightRevisionPlanPoseWeight = m_RightPlan.HasRevision
+                ? ResolveFootPoseWeight(
+                    in upstreamPose,
+                    CharacterFootSide.Right,
+                    m_RightPlan.Revision.ContributionContinuityIdentity)
+                : 0f;
             CharacterFullBodyIkGoal left = ModifyFoot(
                 CharacterFootSide.Left,
                 m_LeftPlan,
                 pose.Left,
                 frame.UpstreamPose.LeftFootFeatures,
                 leftEventPoseWeight,
+                leftActivePlanPoseWeight,
+                leftRevisionPlanPoseWeight,
                 baseline.LeftFoot,
                 baselineDiagnostics.Left,
                 frame.RenderFrame,
@@ -572,6 +604,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.Right,
                 frame.UpstreamPose.RightFootFeatures,
                 rightEventPoseWeight,
+                rightActivePlanPoseWeight,
+                rightRevisionPlanPoseWeight,
                 baseline.RightFoot,
                 baselineDiagnostics.Right,
                 frame.RenderFrame,
@@ -629,6 +663,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose pose,
             AnimationFootFeatureSample feature,
             float currentEventFootPoseWeight,
+            float activePlanFootPoseWeight,
+            float revisionPlanFootPoseWeight,
             CharacterFullBodyIkGoal baseline,
             CharacterFootGroundingFootDiagnostics grounding,
             ulong renderFrame,
@@ -691,8 +727,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                               runtime.PredictiveRetentionWeight;
             float revisionPlanPredictionBlend = revisionPredictiveOutputWeight *
                                                 (1f - stanceTransitionBlend);
-            float activePoseSynchronizedPredictionBlend = activePlanPredictionBlend;
-            float revisionPoseSynchronizedPredictionBlend = revisionPlanPredictionBlend;
+            float activePoseSynchronizedPredictionBlend =
+                activePlanPredictionBlend * Mathf.Clamp01(activePlanFootPoseWeight);
+            float revisionPoseSynchronizedPredictionBlend =
+                revisionPlanPredictionBlend * Mathf.Clamp01(revisionPlanFootPoseWeight);
             float planPredictionBlend = Mathf.Lerp(
                 activePlanPredictionBlend,
                 revisionPlanPredictionBlend,
@@ -710,7 +748,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool stanceOwnsFoot = actionConstraintOwnsFoot || physicalStanceOwnsFoot;
             bool currentSupportOwnsIdle = !step.IsAuthoritative &&
                                           plan.State == CharacterPredictiveFootPlanState.Inactive;
-            bool baselineOwnsFoot = physicalStanceOwnsFoot || currentSupportOwnsIdle;
+            bool baselineOwnsFoot = stanceOwnsFoot || currentSupportOwnsIdle;
             if (!stanceOwnsFoot && !currentSupportOwnsIdle)
             {
                 result = new CharacterFullBodyIkGoal(
@@ -1028,14 +1066,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             in AnimationPredictedFootStepSample step)
         {
-            if (!step.IsAuthoritative)
+            return step.IsAuthoritative
+                ? ResolveFootPoseWeight(
+                    in upstreamPose,
+                    side,
+                    step.ContributionContinuityIdentity)
+                : 0f;
+        }
+
+        static float ResolveFootPoseWeight(
+            in CharacterFootPlacementPoseInput upstreamPose,
+            CharacterFootSide side,
+            ulong contributionContinuityIdentity)
+        {
+            if (contributionContinuityIdentity == 0)
                 return 0f;
             float weight = 0f;
             for (int i = 0; i < upstreamPose.ContributionCount; i++)
             {
                 AnimationPoseSourceContribution contribution = upstreamPose.Contributions[i];
                 if (contribution.ContributionContinuityIdentity !=
-                    step.ContributionContinuityIdentity)
+                    contributionContinuityIdentity)
                 {
                     continue;
                 }

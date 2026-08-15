@@ -590,11 +590,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                               runtime.PredictiveRetentionWeight;
             float revisionPlanPredictionBlend = revisionPredictiveOutputWeight *
                                                 (1f - stanceTransitionBlend);
-            float activePoseWeight = runtime.IsFadingOut
-                ? 1f
-                : currentEventFootPoseWeight;
-            float activePoseSynchronizedPredictionBlend = activePlanPredictionBlend * activePoseWeight;
-            float revisionPoseSynchronizedPredictionBlend = revisionPlanPredictionBlend * currentEventFootPoseWeight;
+            float activePoseSynchronizedPredictionBlend = activePlanPredictionBlend;
+            float revisionPoseSynchronizedPredictionBlend = revisionPlanPredictionBlend;
             float planPredictionBlend = Mathf.Lerp(
                 activePlanPredictionBlend,
                 revisionPlanPredictionBlend,
@@ -605,13 +602,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 revisionTransitionBlend);
             bool actionConstraintOwnsFoot = step.IsAuthoritative &&
                                            poseSynchronizedPredictionBlend <= 0.000001f;
-            bool stanceOwnsFoot = actionConstraintOwnsFoot ||
-                                  (grounding.ContactState != CharacterFootContactState.Swing &&
-                                   allowsStanceHandoff &&
-                                   grounding.AnchorBlendWeight >= 0.999999f);
+            bool physicalStanceOwnsFoot =
+                grounding.ContactState != CharacterFootContactState.Swing &&
+                allowsStanceHandoff &&
+                grounding.AnchorBlendWeight >= 0.999999f;
+            bool stanceOwnsFoot = actionConstraintOwnsFoot || physicalStanceOwnsFoot;
             bool currentSupportOwnsIdle = !step.IsAuthoritative &&
                                           plan.State == CharacterPredictiveFootPlanState.Inactive;
-            bool baselineOwnsFoot = stanceOwnsFoot || currentSupportOwnsIdle;
+            bool baselineOwnsFoot = physicalStanceOwnsFoot || currentSupportOwnsIdle;
             if (!stanceOwnsFoot && !currentSupportOwnsIdle)
             {
                 result = new CharacterFullBodyIkGoal(

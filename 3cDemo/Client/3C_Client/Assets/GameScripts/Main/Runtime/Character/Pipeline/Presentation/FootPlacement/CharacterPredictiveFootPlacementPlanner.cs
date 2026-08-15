@@ -11,8 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         enum FootPlanTransitionKind : byte
         {
             None = 0,
-            IntentRevision = 1,
-            EventSuccessor = 2
+            EventSuccessor = 1
         }
 
         sealed class FootPlanRuntime
@@ -61,15 +60,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Revision.BeginFrame();
             }
 
-            internal void BeginIntentRevision()
+            internal void PromoteIntentRevision()
             {
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision is not executable.");
                 HasRevision = true;
-                TransitionKind = FootPlanTransitionKind.IntentRevision;
-                RevisionBlendWeight = 0f;
-                IsFadingOut = false;
-                FadeOutWeight = 0f;
+                PromoteRevision();
             }
 
             internal void BeginEventSuccessor()
@@ -114,22 +110,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             internal void AdvanceTransition(float deltaSeconds, float blendSpeed)
             {
-                if (HasRevision && TransitionKind == FootPlanTransitionKind.IntentRevision)
-                {
-                    if (Revision.State != CharacterPredictiveFootPlanState.Executing)
-                    {
-                        RevisionBlendWeight = 0f;
-                        return;
-                    }
-                    RevisionBlendWeight = Mathf.MoveTowards(
-                        RevisionBlendWeight,
-                        1f,
-                        blendSpeed * deltaSeconds);
-                    if (RevisionBlendWeight < 0.999999f)
-                        return;
-                    PromoteRevision();
-                    return;
-                }
                 if (!IsFadingOut)
                     return;
                 FadeOutWeight = Mathf.MoveTowards(
@@ -1610,7 +1590,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up,
                     legLength);
                 if (created)
-                    runtime.BeginIntentRevision();
+                    runtime.PromoteIntentRevision();
                 else
                     runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
             }
@@ -1644,8 +1624,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float remainingSeconds = Mathf.Max(
                 0f,
                 (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
-            float transitionSeconds = 1f / m_TransitionBlendSpeed;
-            if (remainingSeconds <= transitionSeconds + presentationDeltaSeconds)
+            if (remainingSeconds <= presentationDeltaSeconds)
                 return false;
             Vector3 expected = plan.RootTrajectory.EvaluateRemainingPlannedIntentDisplacement(
                 plan.ActionStepPhase);

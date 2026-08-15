@@ -50,6 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal bool HasLastOutputGroundPath { get; private set; }
             internal Vector3 LastOutputGroundPath { get; private set; }
             internal FootPlacementSurface LastOutputGroundSupport { get; private set; }
+            internal ulong LastOutputGroundPlanSequence { get; private set; }
             internal ulong CommittedAnchorPlanSequence { get; private set; }
             internal ulong CommittedAnchorLandingEventIdentity { get; private set; }
             FootPlanTransitionKind TransitionKind { get; set; }
@@ -185,20 +186,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal void RememberOutput(
                 Vector3 sole,
                 Vector3 groundPath,
-                FootPlacementSurface groundSupport)
+                FootPlacementSurface groundSupport,
+                ulong groundPlanSequence)
             {
                 if (!IsFinite(sole))
                     return;
                 LastOutputSole = sole;
                 HasLastOutputSole = true;
-                if (!groundSupport.IsValid || !IsFinite(groundPath))
+                if (!groundSupport.IsValid || !IsFinite(groundPath) || groundPlanSequence == 0)
+                {
+                    HasLastOutputGroundPath = false;
+                    LastOutputGroundPath = Vector3.zero;
+                    LastOutputGroundSupport = default;
+                    LastOutputGroundPlanSequence = 0;
                     return;
+                }
                 LastOutputGroundPath = groundPath;
                 LastOutputGroundSupport = new FootPlacementSurface(
                     groundSupport.Collider,
                     groundPath,
                     groundSupport.Normal.normalized);
                 HasLastOutputGroundPath = LastOutputGroundSupport.IsValid;
+                LastOutputGroundPlanSequence = HasLastOutputGroundPath
+                    ? groundPlanSequence
+                    : 0;
             }
 
             internal Vector3 ResolveOwnershipContinuity(
@@ -252,6 +263,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasLastOutputGroundPath = false;
                 LastOutputGroundPath = Vector3.zero;
                 LastOutputGroundSupport = default;
+                LastOutputGroundPlanSequence = 0;
                 CommittedAnchorPlanSequence = 0;
                 CommittedAnchorLandingEventIdentity = 0;
                 m_BaselineOwnedLastFrame = false;
@@ -1139,7 +1151,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             runtime.RememberOutput(
                 (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f,
                 currentPathPosition,
-                currentPathSupport);
+                currentPathSupport,
+                revisionTargetAvailable && revisionTransitionBlend >= 0.5f
+                    ? revisionPlan.Sequence
+                    : targetAvailable
+                        ? plan.Sequence
+                        : 0);
             debugSnapshot = new CharacterPredictiveFootLegFrameSnapshot(
                 side,
                 plan.State,
@@ -1595,13 +1612,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationDeltaSeconds,
                     out landingHandoff);
             }
-            Vector3 successorSole = runtime.HasLastOutputSole
+            bool outgoingOutputAvailable = runtime.HasLastOutputGroundPath &&
+                                           runtime.LastOutputGroundPlanSequence == plan.Sequence;
+            Vector3 successorSole = outgoingOutputAvailable && runtime.HasLastOutputSole
                 ? runtime.LastOutputSole
                 : currentSole;
-            Vector3 successorProbeStart = runtime.HasLastOutputGroundPath
+            Vector3 successorProbeStart = outgoingOutputAvailable
                 ? runtime.LastOutputGroundPath
                 : groundProbeStart;
-            FootPlacementSurface successorProbeSupport = runtime.HasLastOutputGroundPath
+            FootPlacementSurface successorProbeSupport = outgoingOutputAvailable
                 ? runtime.LastOutputGroundSupport
                 : groundProbeSupport;
             if (landingHandoff.HasContactTarget)
@@ -1705,13 +1724,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     presentationDeltaSeconds))
             {
-                Vector3 revisionSole = runtime.HasLastOutputSole
+                bool activeOutputAvailable = runtime.HasLastOutputGroundPath &&
+                                             runtime.LastOutputGroundPlanSequence == plan.Sequence;
+                Vector3 revisionSole = activeOutputAvailable && runtime.HasLastOutputSole
                     ? runtime.LastOutputSole
                     : currentSole;
-                Vector3 revisionGroundPath = runtime.HasLastOutputGroundPath
+                Vector3 revisionGroundPath = activeOutputAvailable
                     ? runtime.LastOutputGroundPath
                     : groundProbeStart;
-                FootPlacementSurface revisionGroundSupport = runtime.HasLastOutputGroundPath
+                FootPlacementSurface revisionGroundSupport = activeOutputAvailable
                     ? runtime.LastOutputGroundSupport
                     : groundProbeSupport;
                 bool created = CreatePlan(
@@ -1796,12 +1817,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.SoleSupportRadius,
                 plan.RootTrajectory.EvaluateRemainingPlanarDistance(plan.ActionStepPhase));
             float angularError = 2f * angularLever * Mathf.Sin(angularDifference * 0.5f);
-            float error = Mathf.Sqrt(
+            float intentError = Mathf.Sqrt(
                 linearError * linearError +
                 angularError * angularError);
             float enterThreshold = Mathf.Max(
                 plan.SoleSupportRadius,
                 Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
+            float error = Mathf.Max(intentError, plan.MotionLandingError);
             runtime.ObserveIntentLandingDisplacement(error, enterThreshold);
             return float.IsFinite(error) && error > enterThreshold;
         }

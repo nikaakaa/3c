@@ -47,6 +47,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal float IntentLandingDisplacementThreshold { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
             internal Vector3 LastOutputSole { get; private set; }
+            internal bool HasLastOutputGroundPath { get; private set; }
+            internal Vector3 LastOutputGroundPath { get; private set; }
+            internal FootPlacementSurface LastOutputGroundSupport { get; private set; }
             internal ulong CommittedAnchorPlanSequence { get; private set; }
             internal ulong CommittedAnchorLandingEventIdentity { get; private set; }
             FootPlanTransitionKind TransitionKind { get; set; }
@@ -179,12 +182,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentLandingDisplacementThreshold = float.IsFinite(threshold) ? threshold : 0f;
             }
 
-            internal void RememberOutputSole(Vector3 sole)
+            internal void RememberOutput(
+                Vector3 sole,
+                Vector3 groundPath,
+                FootPlacementSurface groundSupport)
             {
                 if (!IsFinite(sole))
                     return;
                 LastOutputSole = sole;
                 HasLastOutputSole = true;
+                if (!groundSupport.IsValid || !IsFinite(groundPath))
+                    return;
+                LastOutputGroundPath = groundPath;
+                LastOutputGroundSupport = new FootPlacementSurface(
+                    groundSupport.Collider,
+                    groundPath,
+                    groundSupport.Normal.normalized);
+                HasLastOutputGroundPath = LastOutputGroundSupport.IsValid;
             }
 
             internal Vector3 ResolveOwnershipContinuity(
@@ -235,6 +249,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearIntentObservation();
                 HasLastOutputSole = false;
                 LastOutputSole = Vector3.zero;
+                HasLastOutputGroundPath = false;
+                LastOutputGroundPath = Vector3.zero;
+                LastOutputGroundSupport = default;
                 CommittedAnchorPlanSequence = 0;
                 CommittedAnchorLandingEventIdentity = 0;
                 m_BaselineOwnedLastFrame = false;
@@ -316,7 +333,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPlacementPlanningFrame frame,
             in CharacterFootPlacementAnimatedPose pose,
             Vector3 leftGroundProbeStart,
-            Vector3 rightGroundProbeStart)
+            FootPlacementSurface leftGroundProbeSupport,
+            Vector3 rightGroundProbeStart,
+            FootPlacementSurface rightGroundProbeSupport)
         {
             if (frame.ActorId != m_ActorId || !frame.Body.IsValid ||
                 frame.RenderFrame == 0 || frame.CompletionIdentity == 0 ||
@@ -340,6 +359,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.Left,
                 leftFeature,
                 leftGroundProbeStart,
+                leftGroundProbeSupport,
                 frame.RenderFrame,
                 rootWorldPosition,
                 rootWorldRotation,
@@ -357,6 +377,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.Right,
                 rightFeature,
                 rightGroundProbeStart,
+                rightGroundProbeSupport,
                 frame.RenderFrame,
                 rootWorldPosition,
                 rootWorldRotation,
@@ -1115,8 +1136,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementSoleContactPose finalContacts = pose.ResolveSoleContacts(
                 finalWorldPosition,
                 finalWorldRotation);
-            runtime.RememberOutputSole(
-                (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f);
+            runtime.RememberOutput(
+                (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f,
+                currentPathPosition,
+                currentPathSupport);
             debugSnapshot = new CharacterPredictiveFootLegFrameSnapshot(
                 side,
                 plan.State,
@@ -1513,6 +1536,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose pose,
             AnimationFootFeatureSample feature,
             Vector3 groundProbeStart,
+            FootPlacementSurface groundProbeSupport,
             ulong renderFrame,
             Vector3 rootWorldPosition,
             Quaternion rootWorldRotation,
@@ -1574,16 +1598,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 successorSole = runtime.HasLastOutputSole
                 ? runtime.LastOutputSole
                 : currentSole;
-            Vector3 successorProbeStart = runtime.HasLastOutputSole
-                ? successorSole
+            Vector3 successorProbeStart = runtime.HasLastOutputGroundPath
+                ? runtime.LastOutputGroundPath
                 : groundProbeStart;
+            FootPlacementSurface successorProbeSupport = runtime.HasLastOutputGroundPath
+                ? runtime.LastOutputGroundSupport
+                : groundProbeSupport;
             if (landingHandoff.HasContactTarget)
             {
                 CharacterFootPlacementSoleContactPose handoffContacts = pose.ResolveSoleContacts(
                     landingHandoff.ContactAnklePosition,
                     landingHandoff.ContactAnkleRotation);
-                successorProbeStart =
+                Vector3 handoffSole =
                     (handoffContacts.HeelPosition + handoffContacts.ToePosition) * 0.5f;
+                successorProbeSupport = ResolveSupportAtRoutePoint(
+                    landingHandoff.ContactSurface,
+                    handoffSole,
+                    up);
+                successorProbeStart = successorProbeSupport.IsValid
+                    ? successorProbeSupport.Point
+                    : handoffSole;
             }
             if (runtime.HasRevision)
             {
@@ -1606,6 +1640,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in step,
                     renderFrame,
                     successorProbeStart,
+                    successorProbeSupport,
                     successorSole,
                     soleSupportRadius,
                     rootWorldPosition,
@@ -1644,6 +1679,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in step,
                     renderFrame,
                     groundProbeStart,
+                    groundProbeSupport,
                     currentSole,
                     soleSupportRadius,
                     rootWorldPosition,
@@ -1672,12 +1708,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 revisionSole = runtime.HasLastOutputSole
                     ? runtime.LastOutputSole
                     : currentSole;
+                Vector3 revisionGroundPath = runtime.HasLastOutputGroundPath
+                    ? runtime.LastOutputGroundPath
+                    : groundProbeStart;
+                FootPlacementSurface revisionGroundSupport = runtime.HasLastOutputGroundPath
+                    ? runtime.LastOutputGroundSupport
+                    : groundProbeSupport;
                 bool created = CreatePlan(
                     side,
                     runtime.Revision,
                     in step,
                     renderFrame,
-                    revisionSole,
+                    revisionGroundPath,
+                    revisionGroundSupport,
                     revisionSole,
                     soleSupportRadius,
                     rootWorldPosition,
@@ -1845,6 +1888,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in AnimationPredictedFootStepSample step,
             ulong renderFrame,
             Vector3 groundProbeStart,
+            FootPlacementSurface groundProbeSupport,
             Vector3 animationSoleAtGeneration,
             float soleSupportRadius,
             Vector3 rootStart,
@@ -1924,6 +1968,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in step,
                     in rootTrajectory,
                     pathStart,
+                    groundProbeSupport,
                     virtualGroundSplitEventPhase,
                     virtualGroundSplitLandingEventIdentity,
                     m_GroundLayerMask,
@@ -2252,6 +2297,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             left.Application == right.Application &&
             left.SourceKind == right.SourceKind &&
             left.DiagnosticMetadataIndex == right.DiagnosticMetadataIndex;
+
+        static FootPlacementSurface ResolveSupportAtRoutePoint(
+            FootPlacementSurface surface,
+            Vector3 routePoint,
+            Vector3 componentUp)
+        {
+            if (!surface.IsValid)
+                return default;
+            Vector3 normal = surface.Normal.normalized;
+            Vector3 up = componentUp.normalized;
+            float denominator = Vector3.Dot(up, normal);
+            if (!float.IsFinite(denominator) || denominator <= 0.0001f)
+                return default;
+            Vector3 point = routePoint + up * (
+                Vector3.Dot(surface.Point - routePoint, normal) / denominator);
+            return IsFinite(point)
+                ? new FootPlacementSurface(surface.Collider, point, normal)
+                : default;
+        }
 
         static bool IsFinite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);

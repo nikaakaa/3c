@@ -341,10 +341,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out supportPhase,
                     out _,
                     out bodyPivotMode);
-                AnimationFootBiomechanicalRouteSample state =
-                    plan.RootTrajectory.EvaluateBiomechanicalRoute(plan.ActionStepPhase);
-                constraintWeight = state.ConstraintWeight;
-                supportWeight = state.SupportWeight;
+                constraintWeight = plan.RootTrajectory.EvaluateConstraintWeight(plan.ActionStepPhase);
+                supportWeight = plan.RootTrajectory.EvaluateSupportWeight(plan.ActionStepPhase);
             }
             else
             {
@@ -357,10 +355,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     constraintMode,
                     supportPhase,
                     bodyPivotMode);
-                AnimationFootBiomechanicalRouteSample state =
-                    step.EvaluateBiomechanicalRoute(phase);
-                constraintWeight = state.ConstraintWeight;
-                supportWeight = state.SupportWeight;
+                constraintWeight = step.EvaluateConstraintWeight(phase);
+                supportWeight = step.EvaluateSupportWeight(phase);
             }
             Vector3 pathPosition = default;
             Vector3 pathRoot = default;
@@ -1174,8 +1170,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out AnimationFootSupportPhase supportPhase,
                 out _,
                 out AnimationBodyRotationPivotMode bodyPivotMode);
-            AnimationFootBiomechanicalRouteSample state =
-                plan.RootTrajectory.EvaluateBiomechanicalRoute(1f);
             if (supportPhase != AnimationFootSupportPhase.ApproachingContact)
                 return false;
             plan.EvaluateBodyPath(
@@ -1192,8 +1186,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 constraintMode,
                 supportPhase,
                 bodyPivotMode,
-                state.ConstraintWeight,
-                state.SupportWeight,
+                plan.RootTrajectory.EvaluateConstraintWeight(1f),
+                plan.RootTrajectory.EvaluateSupportWeight(1f),
                 plantConfidence,
                 1f,
                 0f,

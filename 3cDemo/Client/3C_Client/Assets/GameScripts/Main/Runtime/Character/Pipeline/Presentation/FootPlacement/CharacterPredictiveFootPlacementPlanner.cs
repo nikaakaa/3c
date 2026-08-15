@@ -137,16 +137,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentLandingDisplacementThreshold = float.IsFinite(threshold) ? threshold : 0f;
             }
 
-            internal void RememberOutputSole(Vector3 sole, float deltaSeconds)
+            internal void RememberOutputSole(
+                Vector3 sole,
+                bool hasVelocity,
+                Vector3 velocity)
             {
                 if (!IsFinite(sole))
                     return;
-                HasLastOutputSoleVelocity = HasLastOutputSole &&
-                                            float.IsFinite(deltaSeconds) &&
-                                            deltaSeconds > 0.000001f;
-                LastOutputSoleVelocity = HasLastOutputSoleVelocity
-                    ? (sole - LastOutputSole) / deltaSeconds
-                    : Vector3.zero;
+                HasLastOutputSoleVelocity = hasVelocity && IsFinite(velocity);
+                LastOutputSoleVelocity = HasLastOutputSoleVelocity ? velocity : Vector3.zero;
                 LastOutputSole = sole;
                 HasLastOutputSole = true;
             }
@@ -471,7 +470,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.LeftFoot,
                 baselineDiagnostics.Left,
                 frame.RenderFrame,
-                frame.PresentationDeltaSeconds,
                 m_Rig.LeftLegLength,
                 ResolveAppliedHip(pose.Left.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics leftDiagnostics,
@@ -485,7 +483,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.RightFoot,
                 baselineDiagnostics.Right,
                 frame.RenderFrame,
-                frame.PresentationDeltaSeconds,
                 m_Rig.RightLegLength,
                 ResolveAppliedHip(pose.Right.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics rightDiagnostics,
@@ -543,7 +540,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFullBodyIkGoal baseline,
             CharacterFootGroundingFootDiagnostics grounding,
             ulong renderFrame,
-            float presentationDeltaSeconds,
             float legLength,
             Vector3 appliedHip,
             out CharacterPredictiveFootPlacementFootDiagnostics diagnostics,
@@ -904,9 +900,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementSoleContactPose finalContacts = pose.ResolveSoleContacts(
                 finalWorldPosition,
                 finalWorldRotation);
+            Vector3 executedSoleVelocity = Vector3.zero;
+            bool hasExecutedSoleVelocity = baselineOwnsFoot;
+            if (!baselineOwnsFoot && !runtime.HasRevision)
+            {
+                hasExecutedSoleVelocity = TryResolvePlanSoleVelocity(
+                    plan,
+                    targetAvailable,
+                    in targetData,
+                    pose,
+                    up,
+                    appliedHip,
+                    legLength * m_Settings.MaximumPredictionReachRatio,
+                    out executedSoleVelocity);
+            }
             runtime.RememberOutputSole(
                 (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f,
-                presentationDeltaSeconds);
+                hasExecutedSoleVelocity,
+                executedSoleVelocity);
             debugSnapshot = new CharacterPredictiveFootLegFrameSnapshot(
                 side,
                 plan.State,
@@ -1087,6 +1098,52 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 animationClearanceContinuityContribution,
                 reachClearance,
                 compositeAnimationClearance + reachClearance);
+            return true;
+        }
+
+        static bool TryResolvePlanSoleVelocity(
+            CharacterPredictiveFootPlacementPlan plan,
+            bool currentTargetAvailable,
+            in CharacterPredictiveFootTarget currentTarget,
+            CharacterFootPlacementAnimatedFootPose pose,
+            Vector3 up,
+            Vector3 appliedHip,
+            float maximumReach,
+            out Vector3 velocity)
+        {
+            velocity = Vector3.zero;
+            if (!currentTargetAvailable ||
+                plan.State != CharacterPredictiveFootPlanState.Executing ||
+                plan.ActionStepPhase >= 0.9999f)
+            {
+                return false;
+            }
+            float phaseStep = Mathf.Min(
+                1f - plan.ActionStepPhase,
+                1f / (AnimationPredictedFootStepCurveSet.RouteSampleCount - 1f));
+            float durationSeconds = phaseStep * plan.ActionStepDurationSeconds;
+            if (durationSeconds <= 0.000001f ||
+                !TryEvaluateFootTarget(
+                    plan,
+                    plan.ActionStepPhase + phaseStep,
+                    pose,
+                    up,
+                    appliedHip,
+                    maximumReach,
+                    out CharacterPredictiveFootTarget futureTarget))
+            {
+                return false;
+            }
+            Vector3 currentSole = (
+                currentTarget.Contacts.HeelPosition +
+                currentTarget.Contacts.ToePosition) * 0.5f;
+            Vector3 futureSole = (
+                futureTarget.Contacts.HeelPosition +
+                futureTarget.Contacts.ToePosition) * 0.5f;
+            float verticalVelocity = Vector3.Dot(futureSole - currentSole, up) / durationSeconds;
+            if (!float.IsFinite(verticalVelocity))
+                return false;
+            velocity = up * verticalVelocity;
             return true;
         }
 

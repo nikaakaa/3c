@@ -187,10 +187,66 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal Vector3 EvaluateRemainingPlannedIntentDisplacement(float eventPhase)
         {
-            Vector3 current = ResolvePlanarTravel(
-                ResolveRawTravelElapsedSeconds(Mathf.Clamp01(eventPhase)));
-            Vector3 landing = ResolvePlanarTravel(ResolveRawTravelElapsedSeconds(1f));
-            return Vector3.ProjectOnPlane(landing - current, Up);
+            float startSeconds = ResolveRawTravelElapsedSeconds(Mathf.Clamp01(eventPhase));
+            float endSeconds = ResolveRawTravelElapsedSeconds(1f);
+            if (endSeconds <= startSeconds)
+                return Vector3.zero;
+            if (float.IsPositiveInfinity(CurrentSegmentSwitchDelaySeconds) ||
+                endSeconds <= CurrentSegmentSwitchDelaySeconds)
+            {
+                return IntegrateRotatingVelocity(
+                    FrozenMotionPlanarVelocity,
+                    FrozenYawVelocityDegreesPerSecond,
+                    startSeconds,
+                    endSeconds,
+                    Up);
+            }
+            if (startSeconds >= CurrentSegmentSwitchDelaySeconds)
+            {
+                return HasContinuation
+                    ? IntegrateRotatingVelocity(
+                        ContinuationPlanarVelocity,
+                        FrozenYawVelocityDegreesPerSecond,
+                        startSeconds,
+                        endSeconds,
+                        Up)
+                    : Vector3.zero;
+            }
+            Vector3 current = IntegrateRotatingVelocity(
+                FrozenMotionPlanarVelocity,
+                FrozenYawVelocityDegreesPerSecond,
+                startSeconds,
+                CurrentSegmentSwitchDelaySeconds,
+                Up);
+            return HasContinuation
+                ? current + IntegrateRotatingVelocity(
+                    ContinuationPlanarVelocity,
+                    FrozenYawVelocityDegreesPerSecond,
+                    CurrentSegmentSwitchDelaySeconds,
+                    endSeconds,
+                    Up)
+                : current;
+        }
+
+        static Vector3 IntegrateRotatingVelocity(
+            Vector3 velocity,
+            float yawDegreesPerSecond,
+            float startSeconds,
+            float endSeconds,
+            Vector3 up)
+        {
+            float duration = Mathf.Max(0f, endSeconds - startSeconds);
+            if (duration <= 0f)
+                return Vector3.zero;
+            float angularVelocity = yawDegreesPerSecond * Mathf.Deg2Rad;
+            if (Mathf.Abs(angularVelocity) <= 0.000001f)
+                return velocity * duration;
+            float startAngle = angularVelocity * startSeconds;
+            float endAngle = angularVelocity * endSeconds;
+            float along = (Mathf.Sin(endAngle) - Mathf.Sin(startAngle)) / angularVelocity;
+            float across = (Mathf.Cos(startAngle) - Mathf.Cos(endAngle)) / angularVelocity;
+            Vector3 right = Vector3.Cross(up, velocity);
+            return velocity * along + right * across;
         }
 
         float ResolveRawTravelElapsedSeconds(float phase)

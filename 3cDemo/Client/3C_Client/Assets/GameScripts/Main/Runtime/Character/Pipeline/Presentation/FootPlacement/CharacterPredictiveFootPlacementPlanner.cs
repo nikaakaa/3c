@@ -19,7 +19,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal CharacterPredictiveFootPlacementPlan Active { get; private set; }
             internal CharacterPredictiveFootPlacementPlan Revision { get; private set; }
             internal bool HasRevision { get; private set; }
-            internal bool RevisionReplacesEvent { get; private set; }
             internal float RevisionBlendWeight { get; private set; }
             internal float SmoothedRevisionBlendWeight =>
                 RevisionBlendWeight * RevisionBlendWeight * (3f - 2f * RevisionBlendWeight);
@@ -46,15 +45,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Revision.BeginFrame();
             }
 
-            internal void BeginRevision(bool replacesEvent)
+            internal void BeginRevision()
             {
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision is not executable.");
                 HasRevision = true;
-                RevisionReplacesEvent = replacesEvent;
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+            }
+
+            internal void PromoteRevision()
+            {
+                if (!HasRevision || !Revision.HasExecutablePath)
+                    throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
+                Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
+                CharacterPredictiveFootPlacementPlan retired = Active;
+                Active = Revision;
+                Revision = retired;
+                HasRevision = false;
+                RevisionBlendWeight = 0f;
             }
 
             internal void BeginFadeOut(CharacterPredictiveFootPlanEndReason reason)
@@ -85,13 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         blendSpeed * deltaSeconds);
                     if (RevisionBlendWeight < 0.999999f)
                         return;
-                    Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
-                    CharacterPredictiveFootPlacementPlan retired = Active;
-                    Active = Revision;
-                    Revision = retired;
-                    HasRevision = false;
-                    RevisionReplacesEvent = false;
-                    RevisionBlendWeight = 0f;
+                    PromoteRevision();
                     return;
                 }
                 if (!IsFadingOut)
@@ -112,7 +116,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (Revision.OwnsEvent)
                     Revision.Reset(reason);
                 HasRevision = false;
-                RevisionReplacesEvent = false;
                 RevisionBlendWeight = 0f;
             }
 
@@ -141,7 +144,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Active.Reset(reason);
                 Revision.Reset(reason);
                 HasRevision = false;
-                RevisionReplacesEvent = false;
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
@@ -539,7 +541,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                               runtime.PredictiveRetentionWeight;
             float revisionPlanPredictionBlend = revisionPredictiveOutputWeight *
                                                 (1f - stanceTransitionBlend);
-            float activePoseWeight = runtime.RevisionReplacesEvent || runtime.IsFadingOut
+            float activePoseWeight = runtime.IsFadingOut
                 ? 1f
                 : currentEventFootPoseWeight;
             float activePoseSynchronizedPredictionBlend = activePlanPredictionBlend * activePoseWeight;
@@ -593,10 +595,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 revisionPlan.State == CharacterPredictiveFootPlanState.Executing &&
                 !revisionTargetAvailable)
             {
-                if (runtime.RevisionReplacesEvent)
-                    runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
-                else
-                    runtime.CancelRevision(CharacterPredictiveFootPlanEndReason.EventReplaced);
+                runtime.CancelRevision(CharacterPredictiveFootPlanEndReason.EventReplaced);
             }
             if (targetAvailable)
             {
@@ -1211,7 +1210,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up,
                     legLength);
                 if (created)
-                    runtime.BeginRevision(true);
+                {
+                    runtime.BeginRevision();
+                    runtime.PromoteRevision();
+                }
                 else
                     runtime.BeginFadeOut(replacementReason);
             }
@@ -1245,6 +1247,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in step,
                     in motionTimeline,
                     movementPlaybackTime,
+                    step.PredictionLeadSeconds,
                     rootWorldRotation))
             {
                 Vector3 revisionSole = runtime.HasLastOutputSole
@@ -1267,7 +1270,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up,
                     legLength);
                 if (created)
-                    runtime.BeginRevision(false);
+                    runtime.BeginRevision();
                 else
                     runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
             }
@@ -1279,6 +1282,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in AnimationPredictedFootStepSample step,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
+            float predictionLeadSeconds,
             Quaternion rootWorldRotation)
         {
             if (plan.State != CharacterPredictiveFootPlanState.Executing ||
@@ -1305,6 +1309,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 current = ResolveTimelineIntentDisplacement(
                 in motionTimeline,
                 movementPlaybackTime,
+                predictionLeadSeconds,
                 remainingSeconds,
                 plan.RootTrajectory.Up);
             float linearError = Vector3.ProjectOnPlane(
@@ -1313,7 +1318,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 .magnitude;
             Quaternion currentLandingRotation = (
                 Quaternion.AngleAxis(
-                    motionTimeline.YawVelocityDegreesPerSecond * remainingSeconds,
+                    motionTimeline.YawVelocityDegreesPerSecond *
+                    (predictionLeadSeconds + remainingSeconds),
                     plan.RootTrajectory.Up) *
                 rootWorldRotation).normalized;
             float angularDifference = Quaternion.Angle(
@@ -1336,6 +1342,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static Vector3 ResolveTimelineIntentDisplacement(
             in CommittedLocomotionPlanarMotionTimeline timeline,
             double movementPlaybackTime,
+            float predictionLeadSeconds,
             float durationSeconds,
             Vector3 up)
         {
@@ -1348,19 +1355,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float switchDelay = timeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(0f, (float)(timeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
                 : float.PositiveInfinity;
-            if (float.IsPositiveInfinity(switchDelay) || durationSeconds <= switchDelay)
+            float startSeconds = Mathf.Max(0f, predictionLeadSeconds);
+            float endSeconds = startSeconds + durationSeconds;
+            if (float.IsPositiveInfinity(switchDelay) || endSeconds <= switchDelay)
             {
                 return IntegrateRotatingVelocity(
                     currentVelocity,
                     timeline.YawVelocityDegreesPerSecond,
-                    0f,
-                    durationSeconds,
+                    startSeconds,
+                    endSeconds,
                     up);
+            }
+            if (startSeconds >= switchDelay)
+            {
+                return timeline.HasContinuation
+                    ? IntegrateRotatingVelocity(
+                        continuationVelocity,
+                        timeline.YawVelocityDegreesPerSecond,
+                        startSeconds,
+                        endSeconds,
+                        up)
+                    : Vector3.zero;
             }
             Vector3 displacement = IntegrateRotatingVelocity(
                 currentVelocity,
                 timeline.YawVelocityDegreesPerSecond,
-                0f,
+                startSeconds,
                 switchDelay,
                 up);
             return timeline.HasContinuation
@@ -1368,7 +1388,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     continuationVelocity,
                     timeline.YawVelocityDegreesPerSecond,
                     switchDelay,
-                    durationSeconds,
+                    endSeconds,
                     up)
                 : displacement;
         }

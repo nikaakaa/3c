@@ -9,7 +9,7 @@
 
 ## 1A. GameplayLab自动反馈环
 
-- [ ] 1.7 在共享Character Movement Test Environment中生成正式长楼梯课程：14级上楼、长平台、14级下楼，Gameplay使用斜坡碰撞，FootPlacement使用逐级踏面。
+- [ ] 1.7 在共享Character Movement Test Environment中生成正式长楼梯课程：24级上楼、6米平台、24级下楼，Gameplay使用斜坡碰撞，FootPlacement使用逐级踏面。
 - [ ] 1.8 保持Local Fixed普通Play为自由输入；唯一Foot IK Automatic Variant只接管MoveAxis，保留LookAxis相机控制并自动启动Diagnostics与流式采样。
 - [ ] 1.9 自动循环Straight、Alternating Lateral和Smooth Curve三种确定路线，每种双向穿过同一课程，不改Transform、速度倍率或Time Scale。
 - [ ] 1.10 启动前验证起终点、全部踏面、横向安全范围、两条Traversal Ramp和Collision World闭包；路线不覆盖故障地形时拒绝运行。

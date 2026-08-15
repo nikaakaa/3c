@@ -31,11 +31,13 @@ namespace ThirdPersonGameplay.Editor.Lab
             GameObject root = PrefabUtility.LoadPrefabContents(EnvironmentPrefabPath);
             try
             {
+                Transform existing = FindDirect(root.transform, GameplayLabFootIkRegressionCourse.RootName);
+                if (existing && CourseMatches(root))
+                    return;
                 Renderer template = root.GetComponentsInChildren<Renderer>(true)
                     .FirstOrDefault(value => string.Equals(value.name, "HighStep_01", StringComparison.Ordinal));
                 if (!template)
                     throw new InvalidOperationException("Character Movement Test Environment has no HighStep_01 visual template.");
-                Transform existing = FindDirect(root.transform, GameplayLabFootIkRegressionCourse.RootName);
                 if (existing)
                     Object.DestroyImmediate(existing.gameObject);
                 BuildCourse(root.transform, template.sharedMaterials);
@@ -48,6 +50,19 @@ namespace ThirdPersonGameplay.Editor.Lab
                 PrefabUtility.UnloadPrefabContents(root);
             }
             AssetDatabase.ImportAsset(EnvironmentPrefabPath, ImportAssetOptions.ForceUpdate);
+        }
+
+        static bool CourseMatches(GameObject root)
+        {
+            try
+            {
+                GameplayLabFootIkRegressionCourse.Resolve(root.scene, out _, out _);
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
         }
 
         internal static void SyncGameplayLabScene()

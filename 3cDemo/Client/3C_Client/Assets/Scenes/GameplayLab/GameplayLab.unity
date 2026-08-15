@@ -135,6 +135,16 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 479466153}
+    - target: {fileID: 2167311696292120832, guid: 897384c07dbf45a419bfefa4e6db42e1,
+        type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 2090751548}
+    - target: {fileID: 2198482575877593395, guid: 897384c07dbf45a419bfefa4e6db42e1,
+        type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 959508670}
     - target: {fileID: 3245518075969801523, guid: 897384c07dbf45a419bfefa4e6db42e1,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -228,6 +238,18 @@ MonoBehaviour:
   m_WorldBoundsSize: {x: 400, y: 60, z: 240}
   m_Output: {fileID: 11400000, guid: d0b6f91c641a9a94aaeabe7bb97263e6, type: 2}
 --- !u!134 &479466153
+PhysicMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  dynamicFriction: 0.6
+  staticFriction: 0.6
+  bounciness: 0
+  frictionCombine: 0
+  bounceCombine: 0
+--- !u!134 &959508670
 PhysicMaterial:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -408,6 +430,18 @@ Transform:
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!134 &1781897780
+PhysicMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  dynamicFriction: 0.6
+  staticFriction: 0.6
+  bounciness: 0
+  frictionCombine: 0
+  bounceCombine: 0
+--- !u!134 &2090751548
 PhysicMaterial:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

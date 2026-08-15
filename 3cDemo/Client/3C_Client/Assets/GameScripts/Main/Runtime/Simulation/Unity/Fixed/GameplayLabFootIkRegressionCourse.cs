@@ -21,15 +21,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public const string DescentStepPrefix = "FootIkRegressionDescent_";
         public const string AscentIdentity = "foot-ik-regression-ascent";
         public const string DescentIdentity = "foot-ik-regression-descent";
-        public const int StepCountPerFlight = 14;
+        public const int StepCountPerFlight = 24;
         public const float StepRise = 0.18f;
         public const float StepRun = 0.52f;
-        public const float CourseWidth = 5.5f;
-        public const float TopLength = 4f;
-        public const float LateralAmplitude = 1.1f;
-        public const float LateralSafetyMargin = 0.45f;
-        public const float EndpointMargin = 2f;
-        public const float AlignmentDistance = 8f;
+        public const float CourseWidth = 8f;
+        public const float TopLength = 6f;
+        public const float LateralAmplitude = 2f;
+        public const float LateralSafetyMargin = 0.5f;
+        public const float EndpointMargin = 3f;
+        public const float AlignmentDistance = 10f;
         public const float CourseX = 40f;
         public const float CourseStartZ = 0f;
 
@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public static Vector3 StartPosition => new Vector3(CourseX, 0f, CourseStartZ - EndpointMargin);
         public static Vector3 EndPosition => new Vector3(CourseX, 0f, CourseEndZ + EndpointMargin);
         public static Vector3 PlayerSpawnPosition => StartPosition - Vector3.forward * (AlignmentDistance - 0.75f);
-        public static Vector3 TargetSpawnPosition => PlayerSpawnPosition + Vector3.right * (CourseWidth + 2f);
+        public static Vector3 TargetSpawnPosition => PlayerSpawnPosition + Vector3.right * 3.2f;
 
         public static string ScenarioIdentity(GameplayLabFootIkInputScenario scenario) => scenario switch
         {

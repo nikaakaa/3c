@@ -1721,8 +1721,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     movementPlaybackTime,
                     step.PredictionLeadSeconds,
                     trajectoryCurvatureDegreesPerSecond,
-                    rootWorldRotation,
-                    presentationDeltaSeconds))
+                    rootWorldRotation))
             {
                 if (!TryResolveIntentRevisionOrigin(
                         plan,
@@ -1795,8 +1794,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             double movementPlaybackTime,
             float predictionLeadSeconds,
             float trajectoryCurvatureDegreesPerSecond,
-            Quaternion rootWorldRotation,
-            float presentationDeltaSeconds)
+            Quaternion rootWorldRotation)
         {
             if (plan.State != CharacterPredictiveFootPlanState.Executing ||
                 !step.IsAuthoritative || !motionTimeline.IsValid ||
@@ -1815,9 +1813,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float remainingSeconds = Mathf.Max(
                 0f,
                 (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
-            float transitionSeconds = 1f / m_TransitionBlendSpeed;
-            if (remainingSeconds <= transitionSeconds + presentationDeltaSeconds)
-                return false;
             Vector3 expected = plan.RootTrajectory.EvaluateRemainingPlannedIntentDisplacement(
                 plan.ActionStepPhase);
             Vector3 current = ResolveTimelineIntentDisplacement(

@@ -29,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 pathRoot,
             Vector3 pathRootStart,
             Vector3 pathHip,
+            ulong bodySupportSequence,
             Vector3 currentHip,
             Vector3 targetAnklePosition,
             float predictiveOutputWeight,
@@ -61,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathRoot = pathRoot;
             PathRootStart = pathRootStart;
             PathHip = pathHip;
+            BodySupportSequence = bodySupportSequence;
             CurrentHip = currentHip;
             TargetAnklePosition = targetAnklePosition;
             PredictiveOutputWeight = Mathf.Clamp01(predictiveOutputWeight);
@@ -94,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PathRoot { get; }
         internal Vector3 PathRootStart { get; }
         internal Vector3 PathHip { get; }
+        internal ulong BodySupportSequence { get; }
         internal Vector3 CurrentHip { get; }
         internal Vector3 TargetAnklePosition { get; }
         internal float PredictiveOutputWeight { get; }

@@ -1395,18 +1395,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     previousSide,
                     previousPlanSequence);
                 m_PelvisSupportPlanSequence = m_PelvisSupportSide == CharacterFootSide.Left
-                    ? left.PlanSequence
-                    : right.PlanSequence;
+                    ? left.BodySupportSequence
+                    : right.BodySupportSequence;
             }
             else if (leftValid)
             {
                 m_PelvisSupportSide = CharacterFootSide.Left;
-                m_PelvisSupportPlanSequence = left.PlanSequence;
+                m_PelvisSupportPlanSequence = left.BodySupportSequence;
             }
             else if (rightValid)
             {
                 m_PelvisSupportSide = CharacterFootSide.Right;
-                m_PelvisSupportPlanSequence = right.PlanSequence;
+                m_PelvisSupportPlanSequence = right.BodySupportSequence;
             }
             else
             {
@@ -1432,14 +1432,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 left.SupportPhase,
                 left.BodyPivotMode,
                 leftValid,
-                left.PlanSequence,
+                left.BodySupportSequence,
                 leftDisplacement,
                 right.HasActionConstraint,
                 right.ConstraintMode,
                 right.SupportPhase,
                 right.BodyPivotMode,
                 rightValid,
-                right.PlanSequence,
+                right.BodySupportSequence,
                 rightDisplacement);
             return resolvedTarget;
         }
@@ -1455,9 +1455,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float weightDifference = left.SupportWeight - right.SupportWeight;
             if (Mathf.Abs(weightDifference) <= weightTolerance && hadSelection)
             {
-                if (previousSide == CharacterFootSide.Left && left.PlanSequence == previousPlanSequence)
+                if (previousSide == CharacterFootSide.Left &&
+                    left.BodySupportSequence == previousPlanSequence)
                     return CharacterFootSide.Left;
-                if (previousSide == CharacterFootSide.Right && right.PlanSequence == previousPlanSequence)
+                if (previousSide == CharacterFootSide.Right &&
+                    right.BodySupportSequence == previousPlanSequence)
                     return CharacterFootSide.Right;
             }
             if (Mathf.Abs(weightDifference) > weightTolerance)
@@ -1542,6 +1544,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             displacement = 0f;
             if (!input.HasExecutablePlan || !input.IsExecuting || input.PlanSequence == 0 ||
+                input.BodySupportSequence == 0 ||
                 input.PredictiveOutputWeight <= 0.0001f ||
                 !float.IsFinite(currentTarget) ||
                 !float.IsFinite(input.RemainingSeconds) ||

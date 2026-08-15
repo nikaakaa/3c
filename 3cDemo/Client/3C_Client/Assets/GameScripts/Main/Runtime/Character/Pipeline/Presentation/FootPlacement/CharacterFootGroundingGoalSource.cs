@@ -1013,6 +1013,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementSurface contactSurface = prepared.Surface;
             bool contactSurfaceValid = prepared.SurfaceValid;
             SoleClearancePlan contactClearance = currentClearance;
+            SoleClearancePlan predictiveTargetClearance = currentClearance;
             bool hasPredictiveContactTarget = predictive.HasContactTarget;
             if (hasPredictiveContactTarget)
             {
@@ -1027,6 +1028,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         animated,
                         animated.AnklePosition,
                         animated.AnkleRotation,
+                        contactSurface,
+                        root.up);
+                    predictiveTargetClearance = MeasureSoleClearance(
+                        animated,
+                        predictive.ContactAnklePosition,
+                        predictive.ContactAnkleRotation,
                         contactSurface,
                         root.up);
                 }
@@ -1055,9 +1062,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (requiresFrozenLandingTarget && !usePredictiveContactTarget && !lockedAnchorOwnsContact)
                 contactSurfaceValid = false;
             float surfaceDistance = contactSurfaceValid
-                ? Mathf.Max(
-                    Mathf.Abs(contactClearance.HeelPlaneDistance),
-                    Mathf.Abs(contactClearance.ToePlaneDistance))
+                ? usePredictiveContactTarget
+                    ? Mathf.Max(
+                        ResolvePositiveSurfaceDistance(in contactClearance),
+                        ResolvePositiveSurfaceDistance(in predictiveTargetClearance))
+                    : Mathf.Max(
+                        Mathf.Abs(contactClearance.HeelPlaneDistance),
+                        Mathf.Abs(contactClearance.ToePlaneDistance))
                 : float.PositiveInfinity;
             state.UpdateContact(
                 feature,
@@ -1126,6 +1137,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 predictive.ContactPlanSequence,
                 predictive.ContactLandingEventIdentity);
         }
+
+        static float ResolvePositiveSurfaceDistance(in SoleClearancePlan clearance) =>
+            Mathf.Max(
+                0f,
+                Mathf.Max(
+                    clearance.HeelPlaneDistance,
+                    clearance.ToePlaneDistance));
 
         ResolvedFoot StabilizeFoot(
             FootState state,

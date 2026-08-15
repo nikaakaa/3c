@@ -748,7 +748,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool stanceOwnsFoot = actionConstraintOwnsFoot || physicalStanceOwnsFoot;
             bool currentSupportOwnsIdle = !step.IsAuthoritative &&
                                           plan.State == CharacterPredictiveFootPlanState.Inactive;
-            bool baselineOwnsFoot = stanceOwnsFoot || currentSupportOwnsIdle;
+            bool baselineOwnsFoot = physicalStanceOwnsFoot || currentSupportOwnsIdle;
             if (!stanceOwnsFoot && !currentSupportOwnsIdle)
             {
                 result = new CharacterFullBodyIkGoal(

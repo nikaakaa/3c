@@ -329,9 +329,9 @@ FinalIK只消费原始Component Pose和一个最终Goal Set：
 
 普通`Local Fixed`入口始终保留玩家自由输入。独立的`Foot IK Automatic` Variant只替换同一Fixed Character Host的Control Source，通过正式Input System提交`MoveAxis`，不接管`LookAxis`、不写Transform、不修改速度或Time Scale。
 
-共享测试环境提供一条正式长课程：24级上楼、6米平台、24级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费48个逐级踏面。每轮按`Straight -> Alternating Lateral -> Smooth Curve`执行双向路线；每种路线都必须覆盖同一组上楼与下楼，不允许把楼梯外的短时A/D当作转向回归证据。
+共享测试环境提供一条正式宽课程：30米宽、24级上楼、6米平台、24级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费48个逐级踏面。每轮按`Straight -> Camera-relative A/D Turns -> Smooth Curve`执行双向路线。A/D场景先沿路线进入每段楼梯中部，再直接通过正式Input System提交`MoveAxis.x=-1/+1`的`A->D->A`或`D->A->D`事务；它保留实时相机Basis和LookAxis，不用世界空间横向路点抵消相机缓动。课程整体位置由场景中的唯一Course与Start/End决定，不写死世界X坐标。
 
-课程启动门禁必须验证：唯一Course、唯一Start/End、28个踏面、横向路线与角色安全边界、两条Traversal Ramp和唯一Deterministic Collision World。路线阶段、场景方向、输入向量、实际速度和lap进入现有流式CSV/manifest，使输入变化与Plan Revision可以对账。
+课程启动门禁必须验证：唯一Course、唯一Start/End、48个踏面、A/D横向安全边界、两条Traversal Ramp和唯一Deterministic Collision World。路线阶段、场景方向、正式MoveAxis、实际速度和lap进入现有流式CSV/manifest，使输入变化与Plan Revision可以对账。
 
 ### Artifact阶段
 

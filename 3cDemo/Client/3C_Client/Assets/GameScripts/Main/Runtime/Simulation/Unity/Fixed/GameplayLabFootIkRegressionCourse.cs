@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     public enum GameplayLabFootIkInputScenario : byte
     {
         Straight = 1,
-        AlternatingLateral = 2,
+        CameraRelativeTurns = 2,
         SmoothCurve = 3
     }
 
@@ -24,9 +24,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public const int StepCountPerFlight = 24;
         public const float StepRise = 0.18f;
         public const float StepRun = 0.52f;
-        public const float CourseWidth = 8f;
+        public const float CourseWidth = 30f;
         public const float TopLength = 6f;
         public const float LateralAmplitude = 2f;
+        public const float TurnStressHalfWidth = 10f;
+        public const float TurnStressFirstFraction = 0.25f;
+        public const float TurnStressSecondFraction = 0.75f;
+        public const float TurnStressLegSeconds = 1.25f;
         public const float LateralSafetyMargin = 0.5f;
         public const float EndpointMargin = 3f;
         public const float AlignmentDistance = 10f;
@@ -45,15 +49,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public static string ScenarioIdentity(GameplayLabFootIkInputScenario scenario) => scenario switch
         {
             GameplayLabFootIkInputScenario.Straight => "straight",
-            GameplayLabFootIkInputScenario.AlternatingLateral => "alternating-lateral",
+            GameplayLabFootIkInputScenario.CameraRelativeTurns => "camera-relative-turns",
             GameplayLabFootIkInputScenario.SmoothCurve => "smooth-curve",
             _ => throw new InvalidOperationException("GameplayLab Foot IK input scenario is invalid.")
         };
 
         public static GameplayLabFootIkInputScenario NextScenario(GameplayLabFootIkInputScenario scenario) => scenario switch
         {
-            GameplayLabFootIkInputScenario.Straight => GameplayLabFootIkInputScenario.AlternatingLateral,
-            GameplayLabFootIkInputScenario.AlternatingLateral => GameplayLabFootIkInputScenario.SmoothCurve,
+            GameplayLabFootIkInputScenario.Straight => GameplayLabFootIkInputScenario.CameraRelativeTurns,
+            GameplayLabFootIkInputScenario.CameraRelativeTurns => GameplayLabFootIkInputScenario.SmoothCurve,
             GameplayLabFootIkInputScenario.SmoothCurve => GameplayLabFootIkInputScenario.Straight,
             _ => throw new InvalidOperationException("GameplayLab Foot IK input scenario is invalid.")
         };
@@ -70,15 +74,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         static void Validate(Transform root, Vector3 start, Vector3 end)
         {
-            if ((start - StartPosition).sqrMagnitude > 0.000001f ||
-                (end - EndPosition).sqrMagnitude > 0.000001f)
-            {
-                throw new InvalidOperationException(
-                    $"GameplayLab Foot IK course markers do not match the formal route. Start={start}/{StartPosition}, End={end}/{EndPosition}.");
-            }
             Vector3 route = Vector3.ProjectOnPlane(end - start, Vector3.up);
-            if (route.sqrMagnitude <= 1f)
+            float minimumRouteLength = FlightRun * 2f + TopLength;
+            if (route.sqrMagnitude < minimumRouteLength * minimumRouteLength)
                 throw new InvalidOperationException("GameplayLab Foot IK regression route is too short.");
+            if (Mathf.Abs(start.y - end.y) > 0.01f)
+                throw new InvalidOperationException("GameplayLab Foot IK regression route endpoints must share one ground height.");
             Vector3 forward = route.normalized;
             Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
             var ascent = new List<BoxCollider>(StepCountPerFlight);
@@ -115,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Vector3 forward,
             Vector3 right)
         {
-            float requiredHalfWidth = LateralAmplitude + LateralSafetyMargin;
+            float requiredHalfWidth = Mathf.Max(LateralAmplitude, TurnStressHalfWidth) + LateralSafetyMargin;
             for (int i = 0; i < treads.Count; i++)
             {
                 BoxCollider tread = treads[i];

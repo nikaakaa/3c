@@ -222,7 +222,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootFeatureSample leftFeature = frame.UpstreamPose.LeftFootFeatures;
             AnimationFootFeatureSample rightFeature = frame.UpstreamPose.RightFootFeatures;
             Vector3 committedBodyVelocity = frame.Body.TargetVelocity;
-            float committedBodyYawVelocity = frame.Body.TargetYawVelocityDegreesPerSecond;
+            float trajectoryCurvatureDegreesPerSecond = frame.TrajectoryCurvatureAvailable
+                ? frame.TrajectoryCurvatureDegreesPerSecond
+                : 0f;
             CommittedLocomotionPlanarMotionTimeline motionTimeline = frame.LocomotionMotionTimeline;
             PrepareFoot(
                 CharacterFootSide.Left,
@@ -235,7 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootWorldRotation,
                 presentedBodyPosition,
                 committedBodyVelocity,
-                committedBodyYawVelocity,
+                trajectoryCurvatureDegreesPerSecond,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
                 m_Rig.LeftLegLength,
@@ -252,7 +254,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootWorldRotation,
                 presentedBodyPosition,
                 committedBodyVelocity,
-                committedBodyYawVelocity,
+                trajectoryCurvatureDegreesPerSecond,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
                 m_Rig.RightLegLength,
@@ -1130,7 +1132,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion rootWorldRotation,
             Vector3 presentedBodyPosition,
             Vector3 committedBodyVelocity,
-            float committedBodyYawVelocity,
+            float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             float legLength,
@@ -1209,7 +1211,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     presentedBodyPosition,
                     committedBodyVelocity,
-                    committedBodyYawVelocity,
+                    trajectoryCurvatureDegreesPerSecond,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1239,7 +1241,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     presentedBodyPosition,
                     committedBodyVelocity,
-                    committedBodyYawVelocity,
+                    trajectoryCurvatureDegreesPerSecond,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1254,7 +1256,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     step.PredictionLeadSeconds,
-                    committedBodyYawVelocity,
+                    trajectoryCurvatureDegreesPerSecond,
                     rootWorldRotation))
             {
                 Vector3 revisionSole = runtime.HasLastOutputSole
@@ -1272,7 +1274,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     presentedBodyPosition,
                     committedBodyVelocity,
-                    committedBodyYawVelocity,
+                    trajectoryCurvatureDegreesPerSecond,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1291,7 +1293,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             float predictionLeadSeconds,
-            float committedBodyYawVelocity,
+            float trajectoryCurvatureDegreesPerSecond,
             Quaternion rootWorldRotation)
         {
             if (plan.State != CharacterPredictiveFootPlanState.Executing ||
@@ -1320,7 +1322,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 movementPlaybackTime,
                 predictionLeadSeconds,
                 remainingSeconds,
-                committedBodyYawVelocity,
+                trajectoryCurvatureDegreesPerSecond,
                 plan.RootTrajectory.Up);
             float linearError = Vector3.ProjectOnPlane(
                     current - expected,
@@ -1328,7 +1330,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 .magnitude;
             Quaternion currentLandingRotation = (
                 Quaternion.AngleAxis(
-                    committedBodyYawVelocity *
+                    trajectoryCurvatureDegreesPerSecond *
                     (predictionLeadSeconds + remainingSeconds),
                     plan.RootTrajectory.Up) *
                 rootWorldRotation).normalized;
@@ -1437,14 +1439,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion rootStartRotation,
             Vector3 presentedBodyStartPosition,
             Vector3 committedBodyVelocity,
-            float committedBodyYawVelocity,
+            float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             Vector3 up,
             float legLength)
         {
-            float trajectoryCurvatureDegreesPerSecond =
-                committedBodyYawVelocity;
             float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(0f, (float)(motionTimeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
                 : float.PositiveInfinity;
@@ -1476,7 +1476,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentedBodyStartPosition,
                 animationSoleAtGeneration,
                 committedBodyVelocity,
-                committedBodyYawVelocity,
+                trajectoryCurvatureDegreesPerSecond,
                 in motionTimeline,
                 movementPlaybackTime,
                 futureBodyTrajectory,

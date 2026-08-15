@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 presentedBodyStartPosition,
             Vector3 animationSoleAtGeneration,
             Vector3 committedBodyVelocity,
-            float committedBodyYawVelocityDegreesPerSecond,
+            float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             CharacterFutureBodyTrajectory futureBodyTrajectory,
@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !IsFinite(presentedBodyStartPosition) ||
                 !IsFinite(animationSoleAtGeneration) ||
                 !IsFinite(committedBodyVelocity) ||
-                !float.IsFinite(committedBodyYawVelocityDegreesPerSecond) ||
+                !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !motionTimeline.IsValid || !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
                 futureBodyTrajectory == null ||
                 !IsFinite(up) || up.sqrMagnitude <= 0.000001f)
@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContinuationPlanarVelocity = continuationVelocity;
             CurrentSegmentSwitchDelaySeconds = switchDelay;
             HasContinuation = hasContinuation;
-            FrozenYawVelocityDegreesPerSecond = committedBodyYawVelocityDegreesPerSecond;
+            FrozenYawVelocityDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
             FrozenMaximumYawVelocityDegreesPerSecond =
                 motionTimeline.MaximumYawVelocityDegreesPerSecond;
             PredictionLeadSeconds = step.PredictionLeadSeconds;

@@ -214,3 +214,5 @@ Artifact重建原动画
 虚拟Input System设备与正式Input Action在`零输入 -> 移动`或`移动 -> 零输入`边界允许出现一帧状态传播差。该帧必须把正式Action实际读到的值提交给Simulation，并在下一帧要求它收敛到虚拟设备；不能把一次传播延迟当成永久断连，也不能绕过Action直接写Simulation输入。
 
 1217列诊断的成本主要取决于重复帧数，不取决于是否保留完整因果字段。定位A/D上楼问题时，优先运行一笔最小但完整的事务：进入第一段楼梯后执行`A 1秒 -> D 2秒 -> A 1秒`，记录完成帧后立即注销采样路由。它覆盖输入反转、Future Body Revision、Swing/Landing/Lock交接和楼梯边缘查询；双向、多场景和长时间静止只会放大文件，不能增加首个错误owner的证据质量。
+
+采样路由的结束不能按Fixed Tick立即注销。低渲染帧率下，同一Render Frame会连续执行多个Fixed Tick；如果第一个Tick发布Complete、下一个Tick立即Remove，Presentation Writer从未观察到Complete。结束快照必须至少保持到下一个Render Frame，随后再注销，才能同时保证结束因果可见和文件停止增长。

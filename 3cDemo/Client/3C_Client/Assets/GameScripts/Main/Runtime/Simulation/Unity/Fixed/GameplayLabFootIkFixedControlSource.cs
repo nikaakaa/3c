@@ -234,6 +234,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         Gamepad m_Gamepad;
         bool m_Active;
         bool m_CompletionSnapshotPublished;
+        ulong m_CompletionSnapshotRenderFrame;
         bool m_Disposed;
 
         internal GameplayLabFootIkInputSystemRuntime(
@@ -304,6 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_TraversalTicksRemaining = 0;
             m_FormalMoveMismatchFrames = 0;
             m_CompletionSnapshotPublished = false;
+            m_CompletionSnapshotRenderFrame = 0;
         }
 
         public void Deactivate()
@@ -331,6 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_TraversalTicksRemaining = 0;
             m_FormalMoveMismatchFrames = 0;
             m_CompletionSnapshotPublished = false;
+            m_CompletionSnapshotRenderFrame = 0;
             GameplayLabFootIkRouteRegistry.Remove(m_ActorId);
         }
 
@@ -414,7 +417,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             bool completedWithZeroInput =
                 m_Phase == GameplayLabFootIkRoutePhase.Complete &&
                 m_LastCameraMovement.sqrMagnitude <= 0.000001f;
-            if (completedWithZeroInput && m_CompletionSnapshotPublished)
+            if (completedWithZeroInput && !m_CompletionSnapshotPublished)
+            {
+                m_CompletionSnapshotPublished = true;
+                m_CompletionSnapshotRenderFrame = m_RenderFrame;
+            }
+            else if (completedWithZeroInput && m_CompletionSnapshotRenderFrame == 0)
+            {
+                m_CompletionSnapshotRenderFrame = m_RenderFrame;
+            }
+            if (completedWithZeroInput && m_RenderFrame > m_CompletionSnapshotRenderFrame)
             {
                 GameplayLabFootIkRouteRegistry.Remove(m_ActorId);
             }
@@ -436,8 +448,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_LastCommittedYawDegrees,
                     m_LastActualPlanarSpeed,
                     m_TickRate));
-                if (completedWithZeroInput)
-                    m_CompletionSnapshotPublished = true;
             }
             return m_PlayerInput.BuildInput(context);
         }

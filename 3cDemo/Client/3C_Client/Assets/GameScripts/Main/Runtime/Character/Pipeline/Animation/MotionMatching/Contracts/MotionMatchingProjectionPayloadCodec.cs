@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public static class MotionMatchingProjectionPayloadCodec
     {
-        const int SchemaVersion = 18;
+        const int SchemaVersion = 19;
 
         public static byte[] Encode(MotionMatchingProjectionPayload payload, out AnimationClip[] clips)
         {
@@ -640,10 +640,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 writer.Write(predicted.AnimationClearanceHeights[i]);
             writer.Write(predicted.LandingPhase);
             WriteQuaternion(writer, predicted.OpposingRootLocalSoleRotation);
-            for (int i = 0; i < predicted.RootLocalKneeRoute.Length; i++)
-                WriteVector3(writer, predicted.RootLocalKneeRoute[i]);
-            for (int i = 0; i < predicted.RootLocalSoleRotationRoute.Length; i++)
-                WriteQuaternion(writer, predicted.RootLocalSoleRotationRoute[i]);
         }
 
         static AnimationFootFeatureSample ReadFootSample(BinaryReader reader)
@@ -671,9 +667,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 ReadVector3Route(reader),
                 ReadFloatRoute(reader),
                 reader.ReadSingle(),
-                ReadQuaternion(reader),
-                ReadVector3Route(reader),
-                ReadQuaternionRoute(reader))
+                ReadQuaternion(reader))
                 : default;
             return new AnimationFootFeatureSample(
                 velocity,
@@ -694,13 +688,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             var result = new FixedList128Bytes<float>();
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
                 result.Add(reader.ReadSingle());
-            return result;
-        }
-        static FixedList512Bytes<Quaternion> ReadQuaternionRoute(BinaryReader reader)
-        {
-            var result = new FixedList512Bytes<Quaternion>();
-            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
-                result.Add(ReadQuaternion(reader));
             return result;
         }
         static void WriteVector2(BinaryWriter writer, Vector2 value) { writer.Write(value.x); writer.Write(value.y); }

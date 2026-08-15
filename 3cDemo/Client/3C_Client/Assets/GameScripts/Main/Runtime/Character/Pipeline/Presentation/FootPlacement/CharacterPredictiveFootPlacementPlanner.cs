@@ -1261,6 +1261,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 predictedSoleHeight -
                 nativeSoleHeight);
             Vector3 anklePosition = targetSole + pose.AnklePosition - rotatedSole;
+            float authoredSoleHeight = Vector3.Dot(pathPosition, up) +
+                                       authoredAnimationClearance;
+            Vector3 authoredTargetSole = nativeSole + up * (
+                authoredSoleHeight -
+                nativeSoleHeight);
+            Vector3 authoredAnklePosition =
+                authoredTargetSole + pose.AnklePosition - rotatedSole;
             CharacterFootPlacementSoleContactPose contacts = pose.ResolveSoleContacts(
                 anklePosition,
                 ankleRotation);
@@ -1271,6 +1278,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (penetration > 0f && upNormalDot > 0.0001f)
             {
                 anklePosition += up * (penetration / upNormalDot);
+                contacts = pose.ResolveSoleContacts(anklePosition, ankleRotation);
+                heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, supportNormal);
+                toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, supportNormal);
+            }
+            CharacterFootPlacementSoleContactPose authoredContacts = pose.ResolveSoleContacts(
+                authoredAnklePosition,
+                ankleRotation);
+            float authoredPenetration = Mathf.Max(
+                0f,
+                -Mathf.Min(
+                    Vector3.Dot(authoredContacts.HeelPosition - pathPosition, supportNormal),
+                    Vector3.Dot(authoredContacts.ToePosition - pathPosition, supportNormal)));
+            if (authoredPenetration > 0f && upNormalDot > 0.0001f)
+                authoredAnklePosition += up * (authoredPenetration / upNormalDot);
+            if (!TryClampTransitionClearanceToReach(
+                    pose,
+                    appliedHip,
+                    authoredAnklePosition,
+                    up,
+                    maximumReach,
+                    ref anklePosition,
+                    out float transitionClearanceReduction))
+            {
+                return false;
+            }
+            if (transitionClearanceReduction > 0f)
+            {
+                animationClearanceContinuityContribution = Mathf.Max(
+                    0f,
+                    animationClearanceContinuityContribution - transitionClearanceReduction);
+                compositeAnimationClearance = Mathf.Max(
+                    authoredAnimationClearance,
+                    compositeAnimationClearance - transitionClearanceReduction);
                 contacts = pose.ResolveSoleContacts(anklePosition, ankleRotation);
                 heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, supportNormal);
                 toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, supportNormal);
@@ -1311,6 +1351,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 reachClearance,
                 compositeAnimationClearance + reachClearance);
             return true;
+        }
+
+        static bool TryClampTransitionClearanceToReach(
+            CharacterFootPlacementAnimatedFootPose pose,
+            Vector3 appliedHip,
+            Vector3 authoredAnklePosition,
+            Vector3 up,
+            float maximumReach,
+            ref Vector3 targetAnklePosition,
+            out float reduction)
+        {
+            reduction = 0f;
+            if (maximumReach <= 0f)
+                return true;
+            if (!IsFinite(appliedHip) || !IsFinite(authoredAnklePosition) ||
+                !IsFinite(targetAnklePosition) || !float.IsFinite(maximumReach))
+            {
+                return false;
+            }
+            float authoredReach = Vector3.Distance(appliedHip, pose.AnklePosition);
+            float allowedReach = Mathf.Max(maximumReach, authoredReach);
+            Vector3 hipToTarget = targetAnklePosition - appliedHip;
+            float horizontalSquared = Vector3.ProjectOnPlane(hipToTarget, up).sqrMagnitude;
+            float verticalSquared = allowedReach * allowedReach - horizontalSquared;
+            if (!float.IsFinite(authoredReach) || verticalSquared < -0.0001f)
+                return false;
+            float maximumVertical = Mathf.Sqrt(Mathf.Max(0f, verticalSquared));
+            float targetVertical = Vector3.Dot(hipToTarget, up);
+            if (!float.IsFinite(targetVertical) || targetVertical <= maximumVertical + 0.0001f)
+                return float.IsFinite(targetVertical);
+            float authoredVertical = Vector3.Dot(authoredAnklePosition - appliedHip, up);
+            if (!float.IsFinite(authoredVertical) || authoredVertical > maximumVertical + 0.0001f)
+                return false;
+            reduction = targetVertical - maximumVertical;
+            targetAnklePosition -= up * reduction;
+            return IsFinite(targetAnklePosition) && float.IsFinite(reduction);
         }
 
         Vector3 ResolveAppliedHip(

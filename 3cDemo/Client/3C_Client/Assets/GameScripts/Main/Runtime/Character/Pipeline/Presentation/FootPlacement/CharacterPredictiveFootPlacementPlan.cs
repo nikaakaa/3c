@@ -38,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             StartPosition = startPosition;
             StartRotation = startRotation.normalized;
             PresentedBodyStartPosition = presentedBodyStartPosition;
+            ExecutionSoleAtGeneration = animationSoleAtGeneration;
             Up = up.normalized;
             Vector3 currentVelocity = Vector3.ProjectOnPlane(
                 committedBodyVelocity,
@@ -82,6 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 StartPosition { get; }
         internal Quaternion StartRotation { get; }
         internal Vector3 PresentedBodyStartPosition { get; }
+        internal Vector3 ExecutionSoleAtGeneration { get; }
         internal Vector3 Up { get; }
         internal Vector3 FrozenPlanarVelocity { get; }
         internal Vector3 FrozenMotionPlanarVelocity { get; }
@@ -1267,7 +1269,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 EvaluateGroundPathProgress(pathStartPhase),
                 out Vector3 envelopePoint,
                 out _);
-            float currentClearance = Vector3.Dot(Start - envelopePoint, up);
+            float currentClearance = Vector3.Dot(
+                RootTrajectory.ExecutionSoleAtGeneration - envelopePoint,
+                up);
             float authoredClearance = EvaluateFloatRoute(
                 AnimationClearanceHeights,
                 pathStartPhase);

@@ -298,6 +298,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 WriteCurve(writer, value.GetAuthoredFootPlanarRouteZ(i));
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
                 WriteCurve(writer, value.GetAnimationClearanceHeight(i));
+            WriteBiomechanicalStepCurveSet(writer, value.BiomechanicalStep);
         }
 
         static AnimationPredictedFootStepCurveSet ReadPredictedStepCurveSet(BinaryReader reader)
@@ -328,6 +329,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationCurve[] authoredFootPlanarX = ReadRouteCurves(reader);
             AnimationCurve[] authoredFootPlanarZ = ReadRouteCurves(reader);
             AnimationCurve[] animationClearanceHeight = ReadRouteCurves(reader);
+            AnimationFootBiomechanicalStepCurveSet biomechanical =
+                ReadBiomechanicalStepCurveSet(reader);
             return new AnimationPredictedFootStepCurveSet(
                 confidence,
                 timeToLanding,
@@ -354,7 +357,72 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 hipRouteZ,
                 authoredFootPlanarX,
                 authoredFootPlanarZ,
-                animationClearanceHeight);
+                animationClearanceHeight,
+                biomechanical);
+        }
+
+        static void WriteBiomechanicalStepCurveSet(
+            BinaryWriter writer,
+            AnimationFootBiomechanicalStepCurveSet value)
+        {
+            value.RequireValid();
+            WriteCurve(writer, value.LandingPhase);
+            WriteCurve(writer, value.OpposingRootLocalSoleRotationX);
+            WriteCurve(writer, value.OpposingRootLocalSoleRotationY);
+            WriteCurve(writer, value.OpposingRootLocalSoleRotationZ);
+            WriteCurve(writer, value.OpposingRootLocalSoleRotationW);
+            for (int axis = 0; axis < 3; axis++)
+                WriteBiomechanicalRoute(writer, index => value.GetRootLocalHeelRoute(axis, index));
+            for (int axis = 0; axis < 3; axis++)
+                WriteBiomechanicalRoute(writer, index => value.GetRootLocalToeRoute(axis, index));
+            for (int axis = 0; axis < 3; axis++)
+                WriteBiomechanicalRoute(writer, index => value.GetRootLocalKneeRoute(axis, index));
+            for (int axis = 0; axis < 4; axis++)
+                WriteBiomechanicalRoute(writer, index => value.GetRootLocalSoleRotationRoute(axis, index));
+            for (int axis = 0; axis < 4; axis++)
+                WriteBiomechanicalRoute(writer, index => value.GetRootLocalAnkleRotationRoute(axis, index));
+            for (int axis = 0; axis < 3; axis++)
+                WriteBiomechanicalRoute(writer, index => value.GetSupportKneeBendPlane(axis, index));
+            for (int axis = 0; axis < 3; axis++)
+                WriteBiomechanicalRoute(writer, index => value.GetSupportFootPivotPosition(axis, index));
+            WriteBiomechanicalRoute(writer, value.GetConstraintWeight);
+            WriteBiomechanicalRoute(writer, value.GetSupportWeight);
+            WriteBiomechanicalRoute(writer, value.GetSupportLegLength);
+            WriteBiomechanicalRoute(writer, value.GetSupportLegCompressionReserve);
+            WriteBiomechanicalRoute(writer, value.GetSupportFootPivotWeight);
+        }
+
+        static AnimationFootBiomechanicalStepCurveSet ReadBiomechanicalStepCurveSet(
+            BinaryReader reader)
+        {
+            AnimationCurve landingPhase = ReadCurve(reader);
+            AnimationCurve opposingX = ReadCurve(reader);
+            AnimationCurve opposingY = ReadCurve(reader);
+            AnimationCurve opposingZ = ReadCurve(reader);
+            AnimationCurve opposingW = ReadCurve(reader);
+            var vectorRoutes = new AnimationCurve[23][];
+            for (int i = 0; i < vectorRoutes.Length; i++)
+                vectorRoutes[i] = ReadRouteCurves(reader);
+            return new AnimationFootBiomechanicalStepCurveSet(
+                landingPhase,
+                opposingX,
+                opposingY,
+                opposingZ,
+                opposingW,
+                vectorRoutes,
+                ReadRouteCurves(reader),
+                ReadRouteCurves(reader),
+                ReadRouteCurves(reader),
+                ReadRouteCurves(reader),
+                ReadRouteCurves(reader));
+        }
+
+        static void WriteBiomechanicalRoute(
+            BinaryWriter writer,
+            Func<int, AnimationCurve> resolve)
+        {
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, resolve(i));
         }
 
         static AnimationCurve[] ReadRouteCurves(BinaryReader reader)

@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     public static class CharacterMotionMatchingDatabaseArtifactCodec
     {
         const int Magic = 0x42444d4d;
-        const int FormatVersion = 11;
+        const int FormatVersion = 12;
 
         enum SectionId
         {
@@ -530,6 +530,10 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 WriteVector3(writer, predicted.AuthoredFootPlanarRoute[i]);
             for (int i = 0; i < predicted.AnimationClearanceHeights.Length; i++)
                 writer.Write(predicted.AnimationClearanceHeights[i]);
+            writer.Write(predicted.LandingPhase);
+            WriteQuaternion(writer, predicted.OpposingRootLocalSoleRotation);
+            for (int i = 0; i < predicted.BiomechanicalRoute.Length; i++)
+                WriteBiomechanicalRouteSample(writer, predicted.BiomechanicalRoute[i]);
         }
 
         static AnimationFootFeatureSample ReadFoot(BinaryReader reader)
@@ -555,7 +559,10 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 ReadVector3Route(reader),
                 ReadVector3Route(reader),
                 ReadVector3Route(reader),
-                ReadFloatRoute(reader))
+                ReadFloatRoute(reader),
+                reader.ReadSingle(),
+                ReadQuaternion(reader),
+                ReadBiomechanicalRoute(reader))
                 : default;
             return new AnimationFootFeatureSample(
                 velocity,
@@ -564,9 +571,9 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 predicted,
                 default);
         }
-        static FixedList128Bytes<Vector3> ReadVector3Route(BinaryReader reader)
+        static FixedList512Bytes<Vector3> ReadVector3Route(BinaryReader reader)
         {
-            var result = new FixedList128Bytes<Vector3>();
+            var result = new FixedList512Bytes<Vector3>();
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
                 result.Add(ReadVector3(reader));
             return result;
@@ -578,10 +585,48 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 result.Add(reader.ReadSingle());
             return result;
         }
+        static FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> ReadBiomechanicalRoute(BinaryReader reader)
+        {
+            var result = new FixedList4096Bytes<AnimationFootBiomechanicalRouteSample>();
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                result.Add(ReadBiomechanicalRouteSample(reader));
+            return result;
+        }
+        static void WriteBiomechanicalRouteSample(BinaryWriter writer, AnimationFootBiomechanicalRouteSample value)
+        {
+            WriteVector3(writer, value.RootLocalHeelPosition);
+            WriteVector3(writer, value.RootLocalToePosition);
+            WriteVector3(writer, value.RootLocalKneePosition);
+            WriteQuaternion(writer, value.RootLocalSoleRotation);
+            WriteQuaternion(writer, value.RootLocalAnkleRotation);
+            writer.Write(value.ConstraintWeight);
+            writer.Write(value.SupportWeight);
+            writer.Write(value.SupportLegLength);
+            writer.Write(value.SupportLegCompressionReserve);
+            WriteVector3(writer, value.SupportKneeBendPlane);
+            WriteVector3(writer, value.SupportFootPivotPosition);
+            writer.Write(value.SupportFootPivotWeight);
+        }
+        static AnimationFootBiomechanicalRouteSample ReadBiomechanicalRouteSample(BinaryReader reader) =>
+            new AnimationFootBiomechanicalRouteSample(
+                ReadVector3(reader),
+                ReadVector3(reader),
+                ReadVector3(reader),
+                ReadQuaternion(reader),
+                ReadQuaternion(reader),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                ReadVector3(reader),
+                ReadVector3(reader),
+                reader.ReadSingle());
         static void WriteVector2(BinaryWriter writer, Vector2 value) { writer.Write(value.x); writer.Write(value.y); }
         static void WriteVector3(BinaryWriter writer, Vector3 value) { writer.Write(value.x); writer.Write(value.y); writer.Write(value.z); }
         static Vector2 ReadVector2(BinaryReader reader) => new Vector2(reader.ReadSingle(), reader.ReadSingle());
         static Vector3 ReadVector3(BinaryReader reader) => new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+        static void WriteQuaternion(BinaryWriter writer, Quaternion value) { writer.Write(value.x); writer.Write(value.y); writer.Write(value.z); writer.Write(value.w); }
+        static Quaternion ReadQuaternion(BinaryReader reader) => new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
         static T ReadSection<T>(ArraySegment<byte> section, Func<BinaryReader, T> read)
         {
             using var stream = new MemoryStream(section.Array, section.Offset, section.Count, false);

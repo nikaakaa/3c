@@ -79,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class AnimationFootAnalysisArtifactIdentity
     {
-        public const int CurrentFormatVersion = 26;
+        public const int CurrentFormatVersion = 27;
 
         public AnimationFootAnalysisArtifactIdentity(
             string clipAssetGuid,
@@ -225,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             return new[]
             {
-                "animation-foot-analysis-artifact/v17", ClipAssetGuid, ClipDependencyHash,
+                "animation-foot-analysis-artifact/v18", ClipAssetGuid, ClipDependencyHash,
                 AnalysisSourceAssetGuid, AnalysisSourceDependencyHash, AnalysisSourceId,
                 AnalysisVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 RigAssetGuid, RigId, RigRevision, RigContentHash,

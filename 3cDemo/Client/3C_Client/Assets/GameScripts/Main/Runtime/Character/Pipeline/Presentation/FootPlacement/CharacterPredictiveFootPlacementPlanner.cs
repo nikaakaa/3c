@@ -38,6 +38,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal float IntentLandingDisplacementThreshold { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
             internal Vector3 LastOutputSole { get; private set; }
+            bool m_BaselineOwnedLastFrame;
+            bool m_HasOwnershipContinuity;
+            Vector3 m_OwnershipContinuityOffset;
+            float m_OwnershipContinuityStartPhase;
 
             internal void BeginFrame()
             {
@@ -139,6 +143,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasLastOutputSole = true;
             }
 
+            internal Vector3 ResolveOwnershipContinuity(
+                bool baselineOwnsFoot,
+                bool targetAvailable,
+                Vector3 targetSole,
+                float actionPhase)
+            {
+                if (baselineOwnsFoot)
+                {
+                    m_BaselineOwnedLastFrame = true;
+                    m_HasOwnershipContinuity = false;
+                    m_OwnershipContinuityOffset = Vector3.zero;
+                    return Vector3.zero;
+                }
+                if (m_BaselineOwnedLastFrame && targetAvailable && HasLastOutputSole)
+                {
+                    m_OwnershipContinuityOffset = LastOutputSole - targetSole;
+                    m_OwnershipContinuityStartPhase = Mathf.Clamp01(actionPhase);
+                    m_HasOwnershipContinuity = IsFinite(m_OwnershipContinuityOffset);
+                }
+                m_BaselineOwnedLastFrame = false;
+                if (!m_HasOwnershipContinuity)
+                    return Vector3.zero;
+                float progress = Mathf.InverseLerp(
+                    m_OwnershipContinuityStartPhase,
+                    1f,
+                    Mathf.Clamp01(actionPhase));
+                float retention = 1f - progress * progress * (3f - 2f * progress);
+                if (retention <= 0.0001f)
+                {
+                    m_HasOwnershipContinuity = false;
+                    m_OwnershipContinuityOffset = Vector3.zero;
+                    return Vector3.zero;
+                }
+                return m_OwnershipContinuityOffset * retention;
+            }
+
             internal void Reset(CharacterPredictiveFootPlanEndReason reason)
             {
                 Active.Reset(reason);
@@ -150,6 +190,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearIntentObservation();
                 HasLastOutputSole = false;
                 LastOutputSole = Vector3.zero;
+                m_BaselineOwnedLastFrame = false;
+                m_HasOwnershipContinuity = false;
+                m_OwnershipContinuityOffset = Vector3.zero;
+                m_OwnershipContinuityStartPhase = 0f;
             }
 
             static bool IsFinite(Vector3 value) =>
@@ -567,6 +611,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                    grounding.AnchorBlendWeight >= 0.999999f);
             bool currentSupportOwnsIdle = !step.IsAuthoritative &&
                                           plan.State == CharacterPredictiveFootPlanState.Inactive;
+            bool baselineOwnsFoot = stanceOwnsFoot || currentSupportOwnsIdle;
             if (!stanceOwnsFoot && !currentSupportOwnsIdle)
             {
                 result = new CharacterFullBodyIkGoal(
@@ -673,6 +718,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         revisionResolvedAnkleRotation,
                         revisionBlend).normalized;
                 }
+                CharacterFootPlacementSoleContactPose preContinuityContacts = pose.ResolveSoleContacts(
+                    resolvedAnklePosition,
+                    resolvedAnkleRotation);
+                Vector3 preContinuitySole =
+                    (preContinuityContacts.HeelPosition + preContinuityContacts.ToePosition) * 0.5f;
+                resolvedAnklePosition += runtime.ResolveOwnershipContinuity(
+                    baselineOwnsFoot,
+                    true,
+                    preContinuitySole,
+                    plan.ActionStepPhase);
                 CharacterFootPlacementSoleContactPose resolvedContacts = pose.ResolveSoleContacts(
                     resolvedAnklePosition,
                     resolvedAnkleRotation);
@@ -733,6 +788,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         baseline.DiagnosticMetadataIndex);
                     rewritten = true;
                 }
+            }
+            else
+            {
+                runtime.ResolveOwnershipContinuity(
+                    baselineOwnsFoot,
+                    false,
+                    Vector3.zero,
+                    plan.ActionStepPhase);
             }
             FootPredictionRejectReason rejectReason = ResolveRejectReason(
                 plan,

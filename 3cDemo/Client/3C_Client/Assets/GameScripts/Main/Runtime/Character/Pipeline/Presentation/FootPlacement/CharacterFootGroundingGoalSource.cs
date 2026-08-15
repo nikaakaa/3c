@@ -620,6 +620,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterFootSide m_PelvisSupportSide;
         ulong m_PelvisSupportPlanSequence;
         bool m_HasPelvisSupportSide;
+        Vector3 m_PreviousLeftPredictiveHip;
+        Vector3 m_PreviousRightPredictiveHip;
+        bool m_HasPreviousLeftPredictiveHip;
+        bool m_HasPreviousRightPredictiveHip;
+        bool m_PelvisDirectInitialized;
+        float m_PelvisDirectOutput;
+        float m_PelvisDirectVelocity;
+        bool m_PelvisDirectContinuityActive;
+        float m_PelvisDirectContinuityPositionOffset;
+        float m_PelvisDirectContinuityVelocityOffset;
+        float m_PelvisDirectContinuityElapsed;
+        float m_PelvisDirectContinuityDuration;
         CharacterFootGroundingDiagnostics m_Diagnostics;
         bool m_Disposed;
 
@@ -754,6 +766,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftPredictive,
                 rightPredictive,
                 poseRootUp,
+                frame.PresentationDeltaSeconds,
                 out CharacterFootPlacementPelvisSupportDiagnostics pelvisSupportDiagnostics);
             pelvisTargetOffset = Mathf.Clamp(
                 pelvisTargetOffset,
@@ -1369,19 +1382,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootStanceInput left,
             CharacterPredictiveFootStanceInput right,
             Vector3 componentUp,
+            float deltaSeconds,
             out CharacterFootPlacementPelvisSupportDiagnostics diagnostics)
         {
             Vector3 up = componentUp.normalized;
+            Vector3 leftCurrentHipVelocity = ResolvePredictiveHipVelocity(
+                left,
+                deltaSeconds,
+                ref m_PreviousLeftPredictiveHip,
+                ref m_HasPreviousLeftPredictiveHip);
+            Vector3 rightCurrentHipVelocity = ResolvePredictiveHipVelocity(
+                right,
+                deltaSeconds,
+                ref m_PreviousRightPredictiveHip,
+                ref m_HasPreviousRightPredictiveHip);
             bool leftValid = TryResolvePredictivePelvisDisplacement(
                 left,
+                leftCurrentHipVelocity,
                 up,
                 currentTarget,
-                out float leftDisplacement);
+                out float leftDisplacement,
+                out float leftVelocity);
             bool rightValid = TryResolvePredictivePelvisDisplacement(
                 right,
+                rightCurrentHipVelocity,
                 up,
                 currentTarget,
-                out float rightDisplacement);
+                out float rightDisplacement,
+                out float rightVelocity);
             bool hadSupport = m_HasPelvisSupportSide;
             CharacterFootSide previousSide = m_PelvisSupportSide;
             ulong previousPlanSequence = m_PelvisSupportPlanSequence;
@@ -1415,11 +1443,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool supportSwitched = hadSupport && m_HasPelvisSupportSide &&
                                    (previousSide != m_PelvisSupportSide ||
                                     previousPlanSequence != m_PelvisSupportPlanSequence);
-            float resolvedTarget = m_HasPelvisSupportSide
+            float rawTarget = m_HasPelvisSupportSide
                 ? m_PelvisSupportSide == CharacterFootSide.Left
                     ? leftDisplacement
                     : rightDisplacement
                 : currentTarget;
+            float rawVelocity = m_HasPelvisSupportSide
+                ? m_PelvisSupportSide == CharacterFootSide.Left
+                    ? leftVelocity
+                    : rightVelocity
+                : 0f;
+            bool ownerChanged = hadSupport != m_HasPelvisSupportSide ||
+                                hadSupport && m_HasPelvisSupportSide &&
+                                (previousSide != m_PelvisSupportSide ||
+                                 previousPlanSequence != m_PelvisSupportPlanSequence);
+            float resolvedTarget = ResolvePelvisDirectContinuity(
+                currentTarget,
+                rawTarget,
+                rawVelocity,
+                ownerChanged,
+                deltaSeconds);
             diagnostics = new CharacterFootPlacementPelvisSupportDiagnostics(
                 m_HasPelvisSupportSide,
                 m_PelvisSupportSide,
@@ -1534,23 +1577,107 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return float.IsFinite(target);
         }
 
+        static Vector3 ResolvePredictiveHipVelocity(
+            CharacterPredictiveFootStanceInput input,
+            float deltaSeconds,
+            ref Vector3 previousHip,
+            ref bool hasPreviousHip)
+        {
+            if (!input.HasExecutablePlan || !IsFiniteVector(input.CurrentHip) ||
+                !float.IsFinite(deltaSeconds) || deltaSeconds <= 0f)
+            {
+                previousHip = Vector3.zero;
+                hasPreviousHip = false;
+                return Vector3.zero;
+            }
+            Vector3 velocity = hasPreviousHip
+                ? (input.CurrentHip - previousHip) / deltaSeconds
+                : Vector3.zero;
+            previousHip = input.CurrentHip;
+            hasPreviousHip = true;
+            return IsFiniteVector(velocity) ? velocity : Vector3.zero;
+        }
+
+        float ResolvePelvisDirectContinuity(
+            float currentTarget,
+            float rawTarget,
+            float rawVelocity,
+            bool ownerChanged,
+            float deltaSeconds)
+        {
+            if (!float.IsFinite(currentTarget) || !float.IsFinite(rawTarget) ||
+                !float.IsFinite(rawVelocity) || !float.IsFinite(deltaSeconds) || deltaSeconds <= 0f)
+            {
+                return currentTarget;
+            }
+            if (!m_PelvisDirectInitialized)
+            {
+                m_PelvisDirectInitialized = true;
+                m_PelvisDirectOutput = currentTarget;
+                m_PelvisDirectVelocity = 0f;
+                ownerChanged = m_HasPelvisSupportSide;
+            }
+            if (ownerChanged)
+            {
+                float startPosition = m_PelvisDirectOutput + m_PelvisDirectVelocity * deltaSeconds;
+                m_PelvisDirectContinuityPositionOffset = startPosition - rawTarget;
+                m_PelvisDirectContinuityVelocityOffset = m_PelvisDirectVelocity - rawVelocity;
+                m_PelvisDirectContinuityElapsed = 0f;
+                m_PelvisDirectContinuityDuration = 1f /
+                    Mathf.Max(0.0001f, m_Settings.StanceStabilization.AnchorBlendSpeed);
+                m_PelvisDirectContinuityActive = true;
+            }
+            float output = rawTarget;
+            float outputVelocity = rawVelocity;
+            if (m_PelvisDirectContinuityActive)
+            {
+                float duration = Mathf.Max(0.0001f, m_PelvisDirectContinuityDuration);
+                float value = Mathf.Clamp01(m_PelvisDirectContinuityElapsed / duration);
+                float value2 = value * value;
+                float value3 = value2 * value;
+                float positionBasis = 2f * value3 - 3f * value2 + 1f;
+                float velocityBasis = value3 - 2f * value2 + value;
+                float positionDerivative = (6f * value2 - 6f * value) / duration;
+                float velocityDerivative = 3f * value2 - 4f * value + 1f;
+                output += m_PelvisDirectContinuityPositionOffset * positionBasis +
+                          m_PelvisDirectContinuityVelocityOffset * velocityBasis * duration;
+                outputVelocity += m_PelvisDirectContinuityPositionOffset * positionDerivative +
+                                  m_PelvisDirectContinuityVelocityOffset * velocityDerivative;
+                m_PelvisDirectContinuityElapsed = Mathf.Min(
+                    duration,
+                    m_PelvisDirectContinuityElapsed + deltaSeconds);
+                if (value >= 0.999999f)
+                    m_PelvisDirectContinuityActive = false;
+            }
+            m_PelvisDirectOutput = output;
+            m_PelvisDirectVelocity = outputVelocity;
+            return float.IsFinite(output) && float.IsFinite(outputVelocity)
+                ? output
+                : currentTarget;
+        }
+
         static bool TryResolvePredictivePelvisDisplacement(
             CharacterPredictiveFootStanceInput input,
+            Vector3 currentHipVelocity,
             Vector3 up,
             float currentTarget,
-            out float displacement)
+            out float displacement,
+            out float velocity)
         {
             displacement = 0f;
+            velocity = 0f;
             if (!input.HasExecutablePlan || !input.IsExecuting || input.PlanSequence == 0 ||
                 input.PredictiveOutputWeight <= 0.0001f ||
                 !float.IsFinite(currentTarget) ||
                 !float.IsFinite(input.RemainingSeconds) ||
-                !IsFiniteVector(input.PathHip) || !IsFiniteVector(input.CurrentHip))
+                !IsFiniteVector(input.PathHip) || !IsFiniteVector(input.PathHipVelocity) ||
+                !IsFiniteVector(input.CurrentHip) || !IsFiniteVector(currentHipVelocity))
                 return false;
             float pathDisplacement = Vector3.Dot(input.PathHip - input.CurrentHip, up);
             float weight = Mathf.Clamp01(input.PredictiveOutputWeight);
             displacement = Mathf.Lerp(currentTarget, pathDisplacement, weight);
-            return float.IsFinite(displacement);
+            velocity = Vector3.Dot(input.PathHipVelocity - currentHipVelocity, up) * weight;
+            return float.IsFinite(displacement) && float.IsFinite(velocity);
         }
 
         static bool IsFiniteVector(Vector3 value) =>
@@ -1647,6 +1774,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PelvisSupportSide = default;
             m_PelvisSupportPlanSequence = 0;
             m_HasPelvisSupportSide = false;
+            m_PreviousLeftPredictiveHip = Vector3.zero;
+            m_PreviousRightPredictiveHip = Vector3.zero;
+            m_HasPreviousLeftPredictiveHip = false;
+            m_HasPreviousRightPredictiveHip = false;
+            m_PelvisDirectInitialized = false;
+            m_PelvisDirectOutput = 0f;
+            m_PelvisDirectVelocity = 0f;
+            m_PelvisDirectContinuityActive = false;
+            m_PelvisDirectContinuityPositionOffset = 0f;
+            m_PelvisDirectContinuityVelocityOffset = 0f;
+            m_PelvisDirectContinuityElapsed = 0f;
+            m_PelvisDirectContinuityDuration = 0f;
             m_Diagnostics = default;
         }
 

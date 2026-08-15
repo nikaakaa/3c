@@ -830,6 +830,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out hip);
         }
 
+        internal Vector3 EvaluateBodyPathHipVelocity(float eventPhase)
+        {
+            if (!BodySupportPath.IsValid || ActionStepDurationSeconds <= 0f)
+                return Vector3.zero;
+            float phase = Mathf.Clamp01(eventPhase);
+            float phaseStep = Mathf.Min(
+                1f / (60f * ActionStepDurationSeconds),
+                Mathf.Max(0.0001f, 1f - phase));
+            float nextPhase = Mathf.Min(1f, phase + phaseStep);
+            if (nextPhase > phase + 0.000001f)
+            {
+                EvaluateBodyPath(phase, out _, out Vector3 hip);
+                EvaluateBodyPath(nextPhase, out _, out Vector3 nextHip);
+                return (nextHip - hip) /
+                       ((nextPhase - phase) * ActionStepDurationSeconds);
+            }
+            float previousPhase = Mathf.Max(0f, phase - phaseStep);
+            EvaluateBodyPath(previousPhase, out _, out Vector3 previousHip);
+            EvaluateBodyPath(phase, out _, out Vector3 currentHip);
+            return (currentHip - previousHip) /
+                   Mathf.Max(0.000001f, (phase - previousPhase) * ActionStepDurationSeconds);
+        }
+
         internal void EvaluateClearancePath(
             float eventPhase,
             out Vector3 groundPath,

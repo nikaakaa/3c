@@ -54,6 +54,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool m_HasOwnershipContinuity;
             Vector3 m_OwnershipContinuityOffset;
             float m_OwnershipContinuityStartPhase;
+            float m_RevisionBlendStartPhase;
+            float m_RevisionBlendEndPhase;
 
             internal void BeginFrame()
             {
@@ -65,9 +67,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision is not executable.");
+                float startPhase = Revision.ActionStepPhase;
+                float endPhase = Revision.ApproachContactPhase;
+                if (!float.IsFinite(startPhase) || !float.IsFinite(endPhase) ||
+                    endPhase <= startPhase + 0.000001f)
+                {
+                    throw new InvalidOperationException(
+                        "Predictive Foot revision has no action-owned transition window.");
+                }
                 HasRevision = true;
                 TransitionKind = FootPlanTransitionKind.IntentRevision;
                 RevisionBlendWeight = 0f;
+                m_RevisionBlendStartPhase = startPhase;
+                m_RevisionBlendEndPhase = endPhase;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
             }
@@ -79,6 +91,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasRevision = true;
                 TransitionKind = FootPlanTransitionKind.EventSuccessor;
                 RevisionBlendWeight = 0f;
+                m_RevisionBlendStartPhase = 0f;
+                m_RevisionBlendEndPhase = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
             }
@@ -94,6 +108,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasRevision = false;
                 TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
+                m_RevisionBlendStartPhase = 0f;
+                m_RevisionBlendEndPhase = 0f;
             }
 
             internal void BeginFadeOut(CharacterPredictiveFootPlanEndReason reason)
@@ -121,10 +137,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         RevisionBlendWeight = 0f;
                         return;
                     }
-                    RevisionBlendWeight = Mathf.MoveTowards(
-                        RevisionBlendWeight,
-                        1f,
-                        blendSpeed * deltaSeconds);
+                    RevisionBlendWeight = Mathf.InverseLerp(
+                        m_RevisionBlendStartPhase,
+                        m_RevisionBlendEndPhase,
+                        Revision.ActionStepPhase);
                     if (RevisionBlendWeight < 0.999999f)
                         return;
                     PromoteRevision();
@@ -150,6 +166,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasRevision = false;
                 TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
+                m_RevisionBlendStartPhase = 0f;
+                m_RevisionBlendEndPhase = 0f;
             }
 
             internal bool HasCommittedLanding(ulong landingEventIdentity) =>
@@ -1644,8 +1662,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float remainingSeconds = Mathf.Max(
                 0f,
                 (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
-            float transitionSeconds = 1f / m_TransitionBlendSpeed;
-            if (remainingSeconds <= transitionSeconds + presentationDeltaSeconds)
+            float transitionWindowSeconds = Mathf.Max(
+                0f,
+                (plan.ApproachContactPhase - plan.ActionStepPhase) *
+                plan.ActionStepDurationSeconds);
+            if (transitionWindowSeconds <= 2f * presentationDeltaSeconds)
                 return false;
             Vector3 expected = plan.RootTrajectory.EvaluateRemainingPlannedIntentDisplacement(
                 plan.ActionStepPhase);

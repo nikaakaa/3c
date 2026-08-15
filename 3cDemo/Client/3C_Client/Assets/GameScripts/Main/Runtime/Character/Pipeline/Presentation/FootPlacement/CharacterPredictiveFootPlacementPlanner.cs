@@ -19,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal CharacterPredictiveFootPlacementPlan Active { get; private set; }
             internal CharacterPredictiveFootPlacementPlan Revision { get; private set; }
             internal bool HasRevision { get; private set; }
+            internal bool RevisionReplacesEvent { get; private set; }
             internal float RevisionBlendWeight { get; private set; }
             internal float SmoothedRevisionBlendWeight =>
                 RevisionBlendWeight * RevisionBlendWeight * (3f - 2f * RevisionBlendWeight);
@@ -34,7 +35,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         : 1f;
                 }
             }
-            internal bool IntentRevisionArmed { get; set; } = true;
             internal float IntentLandingDisplacementError { get; private set; }
             internal float IntentLandingDisplacementThreshold { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
@@ -46,20 +46,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Revision.BeginFrame();
             }
 
-            internal void BeginRevision()
+            internal void BeginRevision(bool replacesEvent)
             {
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision is not executable.");
                 HasRevision = true;
+                RevisionReplacesEvent = replacesEvent;
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
-                IntentRevisionArmed = false;
             }
 
             internal void BeginFadeOut(CharacterPredictiveFootPlanEndReason reason)
             {
                 CancelRevision(reason);
+                if (IsFadingOut)
+                    return;
                 if (!Active.HasExecutablePath)
                 {
                     Active.Reset(reason);
@@ -69,13 +71,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 IsFadingOut = true;
                 FadeOutWeight = 0f;
-                IntentRevisionArmed = false;
             }
 
             internal void AdvanceTransition(float deltaSeconds, float blendSpeed)
             {
                 if (HasRevision)
                 {
+                    if (Revision.State != CharacterPredictiveFootPlanState.Executing)
+                        return;
                     RevisionBlendWeight = Mathf.MoveTowards(
                         RevisionBlendWeight,
                         1f,
@@ -87,6 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Active = Revision;
                     Revision = retired;
                     HasRevision = false;
+                    RevisionReplacesEvent = false;
                     RevisionBlendWeight = 0f;
                     return;
                 }
@@ -101,7 +105,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
-                IntentRevisionArmed = true;
             }
 
             internal void CancelRevision(CharacterPredictiveFootPlanEndReason reason)
@@ -109,6 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (Revision.OwnsEvent)
                     Revision.Reset(reason);
                 HasRevision = false;
+                RevisionReplacesEvent = false;
                 RevisionBlendWeight = 0f;
             }
 
@@ -137,10 +141,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Active.Reset(reason);
                 Revision.Reset(reason);
                 HasRevision = false;
+                RevisionReplacesEvent = false;
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
-                IntentRevisionArmed = true;
                 ClearIntentObservation();
                 HasLastOutputSole = false;
                 LastOutputSole = Vector3.zero;
@@ -516,23 +520,46 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float reachClearance = 0f;
             float compositeAnimationClearance = 0f;
             bool allowsStanceHandoff = AllowsStanceHandoff(plan);
+            CharacterPredictiveFootPlacementPlan revisionPlan = runtime.Revision;
             float predictiveOutputWeight = plan.State == CharacterPredictiveFootPlanState.Executing
                 ? plan.EvaluatePredictiveOutputWeight()
                 : 0f;
-            bool actionConstraintOwnsFoot = step.IsAuthoritative && predictiveOutputWeight <= 0.000001f;
+            float revisionPredictiveOutputWeight = runtime.HasRevision &&
+                                                   revisionPlan.State == CharacterPredictiveFootPlanState.Executing
+                ? revisionPlan.EvaluatePredictiveOutputWeight()
+                : 0f;
+            float revisionTransitionBlend = runtime.HasRevision
+                ? runtime.SmoothedRevisionBlendWeight
+                : 0f;
+            float stanceTransitionBlend = plan.State == CharacterPredictiveFootPlanState.Executing
+                ? Mathf.Clamp01(grounding.AnchorBlendWeight)
+                : 0f;
+            float activePlanPredictionBlend = predictiveOutputWeight *
+                                              (1f - stanceTransitionBlend) *
+                                              runtime.PredictiveRetentionWeight;
+            float revisionPlanPredictionBlend = revisionPredictiveOutputWeight *
+                                                (1f - stanceTransitionBlend);
+            float activePoseWeight = runtime.RevisionReplacesEvent || runtime.IsFadingOut
+                ? 1f
+                : currentEventFootPoseWeight;
+            float activePoseSynchronizedPredictionBlend = activePlanPredictionBlend * activePoseWeight;
+            float revisionPoseSynchronizedPredictionBlend = revisionPlanPredictionBlend * currentEventFootPoseWeight;
+            float planPredictionBlend = Mathf.Lerp(
+                activePlanPredictionBlend,
+                revisionPlanPredictionBlend,
+                revisionTransitionBlend);
+            float poseSynchronizedPredictionBlend = Mathf.Lerp(
+                activePoseSynchronizedPredictionBlend,
+                revisionPoseSynchronizedPredictionBlend,
+                revisionTransitionBlend);
+            bool actionConstraintOwnsFoot = step.IsAuthoritative &&
+                                           poseSynchronizedPredictionBlend <= 0.000001f;
             bool stanceOwnsFoot = actionConstraintOwnsFoot ||
                                   (grounding.ContactState != CharacterFootContactState.Swing &&
                                    allowsStanceHandoff &&
                                    grounding.AnchorBlendWeight >= 0.999999f);
             bool currentSupportOwnsIdle = !step.IsAuthoritative &&
                                           plan.State == CharacterPredictiveFootPlanState.Inactive;
-            float stanceTransitionBlend = plan.State == CharacterPredictiveFootPlanState.Executing
-                ? Mathf.Clamp01(grounding.AnchorBlendWeight)
-                : 0f;
-            float planPredictionBlend = predictiveOutputWeight *
-                                        (1f - stanceTransitionBlend) *
-                                        runtime.PredictiveRetentionWeight;
-            float poseSynchronizedPredictionBlend = planPredictionBlend * currentEventFootPoseWeight;
             if (!stanceOwnsFoot && !currentSupportOwnsIdle)
             {
                 result = new CharacterFullBodyIkGoal(
@@ -555,26 +582,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out CharacterPredictiveFootTarget targetData);
             CharacterPredictiveFootTarget revisionTargetData = default;
             bool revisionTargetAvailable = runtime.HasRevision && TryEvaluateFootTarget(
-                runtime.Revision,
-                runtime.Revision.ActionStepPhase,
+                revisionPlan,
+                revisionPlan.ActionStepPhase,
                 pose,
                 up,
                 appliedHip,
                 legLength * m_Settings.MaximumPredictionReachRatio,
                 out revisionTargetData);
-            if (runtime.HasRevision && !revisionTargetAvailable)
-                runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
+            if (runtime.HasRevision &&
+                revisionPlan.State == CharacterPredictiveFootPlanState.Executing &&
+                !revisionTargetAvailable)
+            {
+                if (runtime.RevisionReplacesEvent)
+                    runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
+                else
+                    runtime.CancelRevision(CharacterPredictiveFootPlanEndReason.EventReplaced);
+            }
             if (targetAvailable)
             {
                 float revisionBlend = revisionTargetAvailable
-                    ? runtime.SmoothedRevisionBlendWeight
+                    ? revisionTransitionBlend
                     : 0f;
                 Vector3 predictiveAnklePosition = revisionTargetAvailable
                     ? Vector3.Lerp(targetData.AnklePosition, revisionTargetData.AnklePosition, revisionBlend)
                     : targetData.AnklePosition;
-                Quaternion predictiveAnkleRotation = revisionTargetAvailable
-                    ? Quaternion.Slerp(targetData.AnkleRotation, revisionTargetData.AnkleRotation, revisionBlend).normalized
-                    : targetData.AnkleRotation;
                 clearanceEvaluated = true;
                 currentPathPosition = revisionTargetAvailable
                     ? Vector3.Lerp(targetData.PathPosition, revisionTargetData.PathPosition, revisionBlend)
@@ -609,15 +640,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 preHeelDistance = Vector3.Dot(baselineContacts.HeelPosition - currentPathPosition, supportNormal);
                 preToeDistance = Vector3.Dot(baselineContacts.ToePosition - currentPathPosition, supportNormal);
                 requiredLift = Vector3.Dot(predictiveAnklePosition - pose.AnklePosition, up);
-                float predictionBlend = poseSynchronizedPredictionBlend;
-                Vector3 resolvedAnklePosition = Vector3.Lerp(
+                Vector3 activeResolvedAnklePosition = Vector3.Lerp(
                     baselineWorldPosition,
-                    predictiveAnklePosition,
-                    predictionBlend);
-                Quaternion resolvedAnkleRotation = Quaternion.Slerp(
+                    targetData.AnklePosition,
+                    activePoseSynchronizedPredictionBlend);
+                Quaternion activeResolvedAnkleRotation = Quaternion.Slerp(
                     baselineWorldRotation,
-                    predictiveAnkleRotation,
-                    predictionBlend).normalized;
+                    targetData.AnkleRotation,
+                    activePoseSynchronizedPredictionBlend).normalized;
+                Vector3 resolvedAnklePosition = activeResolvedAnklePosition;
+                Quaternion resolvedAnkleRotation = activeResolvedAnkleRotation;
+                if (revisionTargetAvailable)
+                {
+                    Vector3 revisionResolvedAnklePosition = Vector3.Lerp(
+                        baselineWorldPosition,
+                        revisionTargetData.AnklePosition,
+                        revisionPoseSynchronizedPredictionBlend);
+                    Quaternion revisionResolvedAnkleRotation = Quaternion.Slerp(
+                        baselineWorldRotation,
+                        revisionTargetData.AnkleRotation,
+                        revisionPoseSynchronizedPredictionBlend).normalized;
+                    resolvedAnklePosition = Vector3.Lerp(
+                        activeResolvedAnklePosition,
+                        revisionResolvedAnklePosition,
+                        revisionBlend);
+                    resolvedAnkleRotation = Quaternion.Slerp(
+                        activeResolvedAnkleRotation,
+                        revisionResolvedAnkleRotation,
+                        revisionBlend).normalized;
+                }
                 CharacterFootPlacementSoleContactPose resolvedContacts = pose.ResolveSoleContacts(
                     resolvedAnklePosition,
                     resolvedAnkleRotation);
@@ -627,7 +678,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 postToeDistance = Vector3.Dot(
                     resolvedContacts.ToePosition - currentPathPosition,
                     supportNormal);
-                predictiveOwnsSoleClearance = !stanceOwnsFoot && predictionBlend >= 0.999999f;
+                predictiveOwnsSoleClearance = !stanceOwnsFoot &&
+                                              poseSynchronizedPredictionBlend >= 0.999999f;
                 if (!stanceOwnsFoot)
                 {
                     CharacterFootGroundingHitDiagnostics pathClearanceSupport =
@@ -782,6 +834,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.ActionProgress,
                 plan.GroundPathProgress,
                 plan.GeometrySnapshot,
+                runtime.HasRevision
+                    ? runtime.Revision.State
+                    : CharacterPredictiveFootPlanState.Inactive,
+                runtime.HasRevision
+                    ? runtime.Revision.GeometrySnapshot
+                    : null,
+                runtime.HasRevision
+                    ? runtime.SmoothedRevisionBlendWeight
+                    : 0f,
                 clearanceEvaluated,
                 rewritten,
                 requiredLift,
@@ -1090,7 +1151,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float soleSupportRadius = Mathf.Max(
                 Vector3.ProjectOnPlane(contacts.HeelPosition - currentSole, up).magnitude,
                 Vector3.ProjectOnPlane(contacts.ToePosition - currentSole, up).magnitude);
-            if (plan.OwnsEvent && !currentPlanMatches)
+            bool planningCandidate = landingEventIdentityValid &&
+                                     step.IsPreSwing &&
+                                     motionTimeline.IsValid &&
+                                     step.Confidence >= m_Settings.MinimumLandingConfidence &&
+                                     step.ActionStepClock.Phase < 0.9999f;
+            bool activeEventReplaced = plan.OwnsEvent && !currentPlanMatches;
+            CharacterPredictiveFootPlanEndReason replacementReason = activeEventReplaced
+                ? ResolveReplacementEndReason(plan)
+                : CharacterPredictiveFootPlanEndReason.None;
+            if (activeEventReplaced)
             {
                 TryBuildLandingHandoff(
                     plan,
@@ -1099,24 +1169,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up,
                     presentationDeltaSeconds,
                     out landingHandoff);
-                runtime.CancelRevision(ResolveReplacementEndReason(plan));
-                plan.Reset(ResolveReplacementEndReason(plan));
             }
-            if (plan.HasExecutablePath)
+            if (plan.HasExecutablePath && currentPlanMatches)
             {
-                if (!step.IsAuthoritative ||
-                    !plan.MatchesAuthoritativeEvent(in step))
-                {
-                    plan.Reset(ResolveReplacementEndReason(plan));
-                }
-                else
-                {
-                    plan.SynchronizePoseContribution(in step);
-                    plan.SynchronizeActionClock(renderFrame, in step);
-                    plan.ObserveWorldMotionDeviation(
-                        presentedBodyPosition,
-                        Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
-                }
+                plan.SynchronizePoseContribution(in step);
+                plan.SynchronizeActionClock(renderFrame, in step);
+                plan.ObserveWorldMotionDeviation(
+                    presentedBodyPosition,
+                    rootWorldRotation,
+                    Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
             }
             if (runtime.HasRevision)
             {
@@ -1131,16 +1192,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     revision.SynchronizeActionClock(renderFrame, in step);
                 }
             }
+            if (activeEventReplaced && !runtime.HasRevision && !runtime.IsFadingOut)
+            {
+                bool created = planningCandidate && m_FutureBodyTrajectorySource != null && CreatePlan(
+                    side,
+                    runtime.Revision,
+                    in step,
+                    renderFrame,
+                    groundProbeStart,
+                    currentSole,
+                    soleSupportRadius,
+                    rootWorldPosition,
+                    rootWorldRotation,
+                    presentedBodyPosition,
+                    committedBodyVelocity,
+                    in motionTimeline,
+                    movementPlaybackTime,
+                    up,
+                    legLength);
+                if (created)
+                    runtime.BeginRevision(true);
+                else
+                    runtime.BeginFadeOut(replacementReason);
+            }
             runtime.AdvanceTransition(presentationDeltaSeconds, m_TransitionBlendSpeed);
             plan = runtime.Active;
-            bool planningCandidate = landingEventIdentityValid &&
-                                     step.IsPreSwing &&
-                                     motionTimeline.IsValid &&
-                                     step.Confidence >= m_Settings.MinimumLandingConfidence &&
-                                     step.ActionStepClock.Phase < 0.9999f;
-            if (planningCandidate && !plan.OwnsEvent && m_FutureBodyTrajectorySource != null)
+            if (planningCandidate && !plan.OwnsEvent && !runtime.HasRevision &&
+                !runtime.IsFadingOut && m_FutureBodyTrajectorySource != null)
             {
-                if (CreatePlan(
+                CreatePlan(
                     side,
                     plan,
                     in step,
@@ -1155,23 +1235,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength))
-                {
-                    runtime.IntentRevisionArmed = true;
-                }
+                    legLength);
             }
             if (!runtime.HasRevision && !runtime.IsFadingOut && plan.HasExecutablePath &&
+                plan.MatchesAuthoritativeEvent(in step) &&
                 ShouldRequestIntentRevision(
                     runtime,
                     plan,
                     in step,
                     in motionTimeline,
-                    movementPlaybackTime))
+                    movementPlaybackTime,
+                    rootWorldRotation))
             {
                 Vector3 revisionSole = runtime.HasLastOutputSole
                     ? runtime.LastOutputSole
                     : currentSole;
-                runtime.IntentRevisionArmed = false;
                 bool created = CreatePlan(
                     side,
                     runtime.Revision,
@@ -1189,7 +1267,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up,
                     legLength);
                 if (created)
-                    runtime.BeginRevision();
+                    runtime.BeginRevision(false);
                 else
                     runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
             }
@@ -1200,7 +1278,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootPlacementPlan plan,
             in AnimationPredictedFootStepSample step,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
-            double movementPlaybackTime)
+            double movementPlaybackTime,
+            Quaternion rootWorldRotation)
         {
             if (plan.State != CharacterPredictiveFootPlanState.Executing ||
                 !step.IsAuthoritative || !motionTimeline.IsValid ||
@@ -1228,18 +1307,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 movementPlaybackTime,
                 remainingSeconds,
                 plan.RootTrajectory.Up);
-            float error = Vector3.ProjectOnPlane(current - expected, plan.RootTrajectory.Up).magnitude;
+            float linearError = Vector3.ProjectOnPlane(
+                    current - expected,
+                    plan.RootTrajectory.Up)
+                .magnitude;
+            Quaternion currentLandingRotation = (
+                Quaternion.AngleAxis(
+                    motionTimeline.YawVelocityDegreesPerSecond * remainingSeconds,
+                    plan.RootTrajectory.Up) *
+                rootWorldRotation).normalized;
+            float angularDifference = Quaternion.Angle(
+                plan.RootLandingRotation,
+                currentLandingRotation) * Mathf.Deg2Rad;
+            float angularLever = Mathf.Max(
+                plan.SoleSupportRadius,
+                plan.RootTrajectory.EvaluateRemainingPlanarDistance(plan.ActionStepPhase));
+            float angularError = 2f * angularLever * Mathf.Sin(angularDifference * 0.5f);
+            float error = Mathf.Sqrt(
+                linearError * linearError +
+                angularError * angularError);
             float enterThreshold = Mathf.Max(
                 plan.SoleSupportRadius,
                 Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
-            float exitThreshold = enterThreshold * 0.5f;
             runtime.ObserveIntentLandingDisplacement(error, enterThreshold);
-            if (!runtime.IntentRevisionArmed)
-            {
-                if (error <= exitThreshold)
-                    runtime.IntentRevisionArmed = true;
-                return false;
-            }
             return float.IsFinite(error) && error > enterThreshold;
         }
 
@@ -1259,11 +1349,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Mathf.Max(0f, (float)(timeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
                 : float.PositiveInfinity;
             if (float.IsPositiveInfinity(switchDelay) || durationSeconds <= switchDelay)
-                return currentVelocity * durationSeconds;
-            Vector3 displacement = currentVelocity * switchDelay;
+            {
+                return IntegrateRotatingVelocity(
+                    currentVelocity,
+                    timeline.YawVelocityDegreesPerSecond,
+                    0f,
+                    durationSeconds,
+                    up);
+            }
+            Vector3 displacement = IntegrateRotatingVelocity(
+                currentVelocity,
+                timeline.YawVelocityDegreesPerSecond,
+                0f,
+                switchDelay,
+                up);
             return timeline.HasContinuation
-                ? displacement + continuationVelocity * (durationSeconds - switchDelay)
+                ? displacement + IntegrateRotatingVelocity(
+                    continuationVelocity,
+                    timeline.YawVelocityDegreesPerSecond,
+                    switchDelay,
+                    durationSeconds,
+                    up)
                 : displacement;
+        }
+
+        static Vector3 IntegrateRotatingVelocity(
+            Vector3 velocity,
+            float yawDegreesPerSecond,
+            float startSeconds,
+            float endSeconds,
+            Vector3 up)
+        {
+            float duration = Mathf.Max(0f, endSeconds - startSeconds);
+            if (duration <= 0f)
+                return Vector3.zero;
+            float angularVelocity = yawDegreesPerSecond * Mathf.Deg2Rad;
+            if (Mathf.Abs(angularVelocity) <= 0.000001f)
+                return velocity * duration;
+            float startAngle = angularVelocity * startSeconds;
+            float endAngle = angularVelocity * endSeconds;
+            float along = (Mathf.Sin(endAngle) - Mathf.Sin(startAngle)) / angularVelocity;
+            float across = (Mathf.Cos(startAngle) - Mathf.Cos(endAngle)) / angularVelocity;
+            Vector3 right = Vector3.Cross(up, velocity);
+            return velocity * along + right * across;
         }
 
         bool CreatePlan(
@@ -1283,7 +1411,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up,
             float legLength)
         {
-            const float trajectoryCurvatureDegreesPerSecond = 0f;
+            float trajectoryCurvatureDegreesPerSecond =
+                motionTimeline.YawVelocityDegreesPerSecond;
             float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(0f, (float)(motionTimeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
                 : float.PositiveInfinity;

@@ -94,35 +94,66 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void DrawLeg(CharacterPredictiveFootLegFrameSnapshot leg, Color sideColor)
         {
-            CharacterPredictiveFootPlanGeometrySnapshot plan = leg.Plan;
-            if (plan == null)
+            if (leg.Plan == null && leg.RevisionPlan == null)
                 return;
             float markerSize = 0.11f;
-            PlanDrawCache cache = s_DrawCaches.GetValue(plan, CreateDrawCache);
-            if (leg.PlanState == CharacterPredictiveFootPlanState.Rejected)
-            {
-                DrawPath(cache.GroundProbePath, s_GroundProbeColor, 2f);
-                DrawLines(cache.QueryBoundaryLines, s_GroundProbeColor);
-                DrawLines(cache.AcceptedLines, s_AcceptColor);
-                DrawLines(cache.RejectedLines, s_RejectColor);
-                return;
-            }
-            if (leg.PlanState != CharacterPredictiveFootPlanState.Planned &&
-                leg.PlanState != CharacterPredictiveFootPlanState.Executing)
-                return;
-            DrawPath(cache.GroundProbePath, s_GroundProbeColor, 2f);
-            DrawPath(cache.AnimationFootRoutePath, s_AnimationRouteColor, 1.5f);
-            DrawLines(cache.EnvelopeLines, s_EnvelopeColor);
-            DrawPath(cache.ClearancePath, sideColor, 4f);
-            if (plan.LandingValid)
-                DrawMarker(plan.Landing, markerSize, s_LandingColor);
-            if (plan.VirtualGroundSplitValid)
-                DrawMarker(plan.VirtualGroundSplit, markerSize * 0.8f, s_VirtualGroundSplitColor);
+            float revisionBlend = leg.RevisionPlan != null
+                ? Mathf.Clamp01(leg.RevisionBlendWeight)
+                : 0f;
+            DrawPlan(
+                leg.Plan,
+                leg.PlanState,
+                sideColor,
+                1f - revisionBlend,
+                markerSize);
+            DrawPlan(
+                leg.RevisionPlan,
+                leg.RevisionPlanState,
+                sideColor,
+                revisionBlend,
+                markerSize);
             if (leg.ClearanceEvaluated)
                 DrawMarker(leg.CurrentPath, markerSize * 0.55f, s_LiftColor);
             if (leg.Rewritten)
                 DrawThickLine(leg.BaselineAnkle, leg.FinalAnkle, s_LiftColor, 4f);
         }
+
+        static void DrawPlan(
+            CharacterPredictiveFootPlanGeometrySnapshot plan,
+            CharacterPredictiveFootPlanState state,
+            Color sideColor,
+            float opacity,
+            float markerSize)
+        {
+            if (plan == null || opacity <= 0.000001f)
+                return;
+            PlanDrawCache cache = s_DrawCaches.GetValue(plan, CreateDrawCache);
+            if (state == CharacterPredictiveFootPlanState.Rejected)
+            {
+                DrawPath(cache.GroundProbePath, ScaleAlpha(s_GroundProbeColor, opacity), 2f);
+                DrawLines(cache.QueryBoundaryLines, ScaleAlpha(s_GroundProbeColor, opacity));
+                DrawLines(cache.AcceptedLines, ScaleAlpha(s_AcceptColor, opacity));
+                DrawLines(cache.RejectedLines, ScaleAlpha(s_RejectColor, opacity));
+                return;
+            }
+            if (state != CharacterPredictiveFootPlanState.Planned &&
+                state != CharacterPredictiveFootPlanState.Executing)
+                return;
+            DrawPath(cache.GroundProbePath, ScaleAlpha(s_GroundProbeColor, opacity), 2f);
+            DrawPath(cache.AnimationFootRoutePath, ScaleAlpha(s_AnimationRouteColor, opacity), 1.5f);
+            DrawLines(cache.EnvelopeLines, ScaleAlpha(s_EnvelopeColor, opacity));
+            DrawPath(cache.ClearancePath, ScaleAlpha(sideColor, opacity), 4f);
+            if (plan.LandingValid)
+                DrawMarker(plan.Landing, markerSize, ScaleAlpha(s_LandingColor, opacity));
+            if (plan.VirtualGroundSplitValid)
+                DrawMarker(
+                    plan.VirtualGroundSplit,
+                    markerSize * 0.8f,
+                    ScaleAlpha(s_VirtualGroundSplitColor, opacity));
+        }
+
+        static Color ScaleAlpha(Color color, float opacity) =>
+            new Color(color.r, color.g, color.b, color.a * Mathf.Clamp01(opacity));
 
         static PlanDrawCache CreateDrawCache(CharacterPredictiveFootPlanGeometrySnapshot plan) =>
             new PlanDrawCache(plan);

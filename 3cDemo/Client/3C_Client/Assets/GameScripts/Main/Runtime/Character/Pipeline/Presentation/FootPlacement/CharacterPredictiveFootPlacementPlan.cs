@@ -15,6 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 presentedBodyStartPosition,
             Vector3 animationSoleAtGeneration,
             Vector3 committedBodyVelocity,
+            float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             CharacterFutureBodyTrajectory futureBodyTrajectory,
@@ -27,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !IsFinite(presentedBodyStartPosition) ||
                 !IsFinite(animationSoleAtGeneration) ||
                 !IsFinite(committedBodyVelocity) ||
+                !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !motionTimeline.IsValid || !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
                 futureBodyTrajectory == null ||
                 !IsFinite(up) || up.sqrMagnitude <= 0.000001f)
@@ -53,6 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasContinuation = motionTimeline.HasContinuation;
             FrozenPlanarVelocity = currentVelocity;
             FrozenMotionPlanarVelocity = motionVelocity;
+            FrozenTrajectoryCurvatureDegreesPerSecond =
+                trajectoryCurvatureDegreesPerSecond;
             ContinuationPlanarVelocity = continuationVelocity;
             CurrentSegmentSwitchDelaySeconds = switchDelay;
             HasContinuation = hasContinuation;
@@ -87,6 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 Up { get; }
         internal Vector3 FrozenPlanarVelocity { get; }
         internal Vector3 FrozenMotionPlanarVelocity { get; }
+        internal float FrozenTrajectoryCurvatureDegreesPerSecond { get; }
         internal Vector3 ContinuationPlanarVelocity { get; }
         internal float FrozenYawVelocityDegreesPerSecond { get; }
         internal float FrozenMaximumYawVelocityDegreesPerSecond { get; }
@@ -151,6 +156,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float elapsedSeconds = Mathf.Max(0f, elapsedSinceGeneration);
             return PresentedBodyStartPosition + ResolvePlanarTravel(elapsedSeconds);
         }
+
+        internal Vector3 EvaluatePresentedBodyVelocity(float elapsedSinceGeneration)
+        {
+            CharacterFutureBodyTrajectorySample sample = FutureBodyTrajectory.Evaluate(
+                Mathf.Clamp(elapsedSinceGeneration, 0f, FutureBodyTrajectory.DurationSeconds));
+            return new Vector3(sample.VelocityX, sample.VelocityY, sample.VelocityZ);
+        }
+
+        internal Vector3 EvaluatePresentedBodyLandingPosition() =>
+            PresentedBodyStartPosition + ResolvePlanarTravel(
+                PredictionLeadSeconds + LandingDelayAtGeneration);
 
         internal Vector3 EvaluateHipRoute(float eventPhase)
         {

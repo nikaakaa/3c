@@ -28,6 +28,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal bool HasRevision { get; private set; }
             internal bool HasEventSuccessor =>
                 HasRevision && TransitionKind == FootPlanTransitionKind.EventSuccessor;
+            internal bool HasIntentRevision =>
+                HasRevision && TransitionKind == FootPlanTransitionKind.IntentRevision;
+            internal bool EventSuccessorBlendReady { get; private set; }
             internal float RevisionBlendWeight { get; private set; }
             internal float SmoothedRevisionBlendWeight =>
                 RevisionBlendWeight * RevisionBlendWeight * (3f - 2f * RevisionBlendWeight);
@@ -72,6 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasRevision = true;
                 TransitionKind = FootPlanTransitionKind.IntentRevision;
                 RevisionBlendWeight = 0f;
+                EventSuccessorBlendReady = false;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
             }
@@ -83,8 +87,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasRevision = true;
                 TransitionKind = FootPlanTransitionKind.EventSuccessor;
                 RevisionBlendWeight = 0f;
+                EventSuccessorBlendReady = false;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+            }
+
+            internal void BeginEventSuccessorBlend()
+            {
+                if (!HasEventSuccessor || Revision.State != CharacterPredictiveFootPlanState.Executing)
+                    throw new InvalidOperationException("Predictive Foot event successor cannot begin blending.");
+                EventSuccessorBlendReady = true;
             }
 
             internal void PromoteRevision()
@@ -98,6 +110,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasRevision = false;
                 TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
+                EventSuccessorBlendReady = false;
             }
 
             internal void BeginFadeOut(CharacterPredictiveFootPlanEndReason reason)
@@ -118,7 +131,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             internal void AdvanceTransition(float deltaSeconds, float blendSpeed)
             {
-                if (HasRevision && TransitionKind == FootPlanTransitionKind.IntentRevision)
+                bool blendRevision = HasRevision &&
+                                     (TransitionKind == FootPlanTransitionKind.IntentRevision ||
+                                      TransitionKind == FootPlanTransitionKind.EventSuccessor &&
+                                      EventSuccessorBlendReady);
+                if (blendRevision)
                 {
                     if (Revision.State != CharacterPredictiveFootPlanState.Executing)
                     {
@@ -154,6 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasRevision = false;
                 TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
+                EventSuccessorBlendReady = false;
             }
 
             internal bool HasCommittedLanding(ulong landingEventIdentity) =>
@@ -255,6 +273,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasRevision = false;
                 TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
+                EventSuccessorBlendReady = false;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
                 ClearIntentObservation();
@@ -428,13 +447,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return default;
             bool activePlanMatches = step.IsAuthoritative &&
                                      plan.MatchesAuthoritativeEvent(in step);
+            CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
+            bool revisionMatches = runtime.HasRevision &&
+                                   step.IsAuthoritative &&
+                                   revision.MatchesAuthoritativeEvent(in step);
+            bool outgoingIntentRevisionContributes = runtime.HasIntentRevision &&
+                                                       !activePlanMatches &&
+                                                       plan.OwnsEvent &&
+                                                       revision.OwnsEvent;
+            bool revisionContributes = runtime.HasRevision &&
+                                       revision.State == CharacterPredictiveFootPlanState.Executing &&
+                                       (revisionMatches || outgoingIntentRevisionContributes);
             AnimationFootConstraintMode constraintMode;
             AnimationFootSupportPhase supportPhase;
             AnimationBodyRotationPivotMode bodyPivotMode;
             float constraintWeight;
             float supportWeight;
             bool currentEventOwnsState = step.IsAuthoritative &&
-                                         (activePlanMatches || !plan.HasExecutablePath);
+                                         (activePlanMatches ||
+                                          !plan.HasExecutablePath ||
+                                          runtime.EventSuccessorBlendReady && revisionMatches);
             if (currentEventOwnsState)
             {
                 float phase = step.ActionStepClock.Phase;
@@ -494,11 +526,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out pathRootStart,
                     out _);
             }
-            CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
-            bool revisionMatches = runtime.HasRevision &&
-                                   step.IsAuthoritative &&
-                                   revision.MatchesAuthoritativeEvent(in step);
-            if (revisionMatches && revision.State == CharacterPredictiveFootPlanState.Executing)
+            if (revisionContributes)
             {
                 revision.EvaluateGroundPath(
                     revision.GroundPathProgress,
@@ -528,7 +556,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out CharacterPredictiveFootTarget activeTarget);
             if (activeTargetAvailable)
                 targetAnklePosition = activeTarget.AnklePosition;
-            if (revisionMatches &&
+            if (revisionContributes &&
                 TryEvaluateFootTarget(
                     revision,
                     revision.ActionStepPhase,
@@ -586,7 +614,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRoot = target.PathRoot;
                 pathHip = target.PathHip;
             }
-            CharacterPredictiveFootPlacementPlan timingPlan = revisionMatches
+            CharacterPredictiveFootPlacementPlan timingPlan = revisionContributes
                 ? revision
                 : plan;
             float activePredictiveOutputWeight = plan.State == CharacterPredictiveFootPlanState.Executing
@@ -597,15 +625,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                       side,
                       plan.ContributionContinuityIdentity)
                 : 0f;
-            float revisionPredictiveOutputWeight = revisionMatches &&
-                                                   revision.State == CharacterPredictiveFootPlanState.Executing
+            float revisionPredictiveOutputWeight = revisionContributes
                 ? revision.EvaluatePredictiveOutputWeight() *
                   ResolveFootPoseWeight(
                       in upstreamPose,
                       side,
                       revision.ContributionContinuityIdentity)
                 : 0f;
-            float predictiveOutputWeight = revisionMatches
+            float predictiveOutputWeight = revisionContributes
                 ? Mathf.Lerp(
                     activePredictiveOutputWeight,
                     revisionPredictiveOutputWeight,
@@ -1671,9 +1698,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (runtime.HasRevision)
             {
                 CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
+                bool retainOutgoingIntentRevision = activeEventReplaced &&
+                                                    runtime.HasIntentRevision &&
+                                                    revision.State == CharacterPredictiveFootPlanState.Executing;
                 if (!step.IsAuthoritative || !revision.MatchesAuthoritativeEvent(in step))
                 {
-                    runtime.CancelRevision(ResolveReplacementEndReason(revision));
+                    if (!retainOutgoingIntentRevision)
+                        runtime.CancelRevision(ResolveReplacementEndReason(revision));
                 }
                 else
                 {
@@ -1714,8 +1745,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 AnimationFootSupportPhase successorSupportPhase =
                     step.EvaluateSupportPhase(step.ActionStepClock.Phase);
-                if (successorSupportPhase == AnimationFootSupportPhase.Unsupported)
-                    runtime.PromoteRevision();
+                if (successorSupportPhase == AnimationFootSupportPhase.Unsupported &&
+                    runtime.Revision.State == CharacterPredictiveFootPlanState.Executing &&
+                    !runtime.EventSuccessorBlendReady)
+                {
+                    runtime.BeginEventSuccessorBlend();
+                }
             }
             runtime.AdvanceTransition(presentationDeltaSeconds, m_TransitionBlendSpeed);
             plan = runtime.Active;

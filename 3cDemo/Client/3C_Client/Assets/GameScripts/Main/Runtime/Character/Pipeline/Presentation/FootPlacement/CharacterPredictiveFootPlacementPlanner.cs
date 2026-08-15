@@ -1459,7 +1459,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootPlanEndReason replacementReason = activeEventReplaced
                 ? ResolveReplacementEndReason(plan)
                 : CharacterPredictiveFootPlanEndReason.None;
-            if (activeEventReplaced && step.IsPreSwing)
+            if (plan.HasExecutablePath && currentPlanMatches)
+            {
+                plan.SynchronizePoseContribution(in step);
+                plan.SynchronizeActionClock(renderFrame, in step);
+                plan.ObserveWorldMotionDeviation(
+                    presentedBodyPosition,
+                    rootWorldRotation,
+                    Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
+            }
+            if ((currentPlanMatches || activeEventReplaced && step.IsPreSwing) &&
+                plan.HasExecutablePath)
             {
                 TryBuildLandingHandoff(
                     plan,
@@ -1483,15 +1493,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 successorSole =
                     (handoffContacts.HeelPosition + handoffContacts.ToePosition) * 0.5f;
                 successorProbeStart = landingHandoff.PathPosition;
-            }
-            if (plan.HasExecutablePath && currentPlanMatches)
-            {
-                plan.SynchronizePoseContribution(in step);
-                plan.SynchronizeActionClock(renderFrame, in step);
-                plan.ObserveWorldMotionDeviation(
-                    presentedBodyPosition,
-                    rootWorldRotation,
-                    Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
             }
             if (runtime.HasRevision)
             {

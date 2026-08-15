@@ -1556,19 +1556,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationFootSupportPhase successorSupportPhase =
                     step.EvaluateSupportPhase(step.ActionStepClock.Phase);
                 if (successorSupportPhase == AnimationFootSupportPhase.Unsupported)
-                {
-                    if (runtime.HasCommittedLanding(plan.LandingEventIdentity))
-                    {
-                        runtime.PromoteRevision();
-                    }
-                    else
-                    {
-                        runtime.CancelRevision(
-                            CharacterPredictiveFootPlanEndReason.LandingTransactionUnavailable);
-                        runtime.BeginFadeOut(
-                            CharacterPredictiveFootPlanEndReason.LandingTransactionUnavailable);
-                    }
-                }
+                    runtime.PromoteRevision();
             }
             runtime.AdvanceTransition(presentationDeltaSeconds, m_TransitionBlendSpeed);
             plan = runtime.Active;

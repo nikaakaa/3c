@@ -245,6 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     HasAnimationConstraint,
                     AnimationConstraintMode,
                     AnimationSupportPhase,
+                    predictive.HasContactTarget,
                     HasAnchor,
                     AnchorBlendWeight,
                     IdleAnchor);
@@ -555,6 +556,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool hasAnimationConstraint,
                 AnimationFootConstraintMode constraintMode,
                 AnimationFootSupportPhase supportPhase,
+                bool hasLandingTarget,
                 bool hasAnchor,
                 float anchorBlendWeight,
                 bool idleAnchor)
@@ -565,6 +567,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         : FootOwnershipState.Locked;
                 if (!hasAnimationConstraint)
                     return FootOwnershipState.Locked;
+                if (hasLandingTarget)
+                    return FootOwnershipState.Landing;
                 if (supportPhase == AnimationFootSupportPhase.ApproachingContact)
                     return FootOwnershipState.Landing;
                 if (supportPhase == AnimationFootSupportPhase.Unsupported)
@@ -985,8 +989,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementSurface contactSurface = prepared.Surface;
             bool contactSurfaceValid = prepared.SurfaceValid;
             SoleClearancePlan contactClearance = currentClearance;
-            bool hasPredictiveContactTarget = predictive.HasContactTarget &&
-                                              predictive.SupportPhase == AnimationFootSupportPhase.ApproachingContact;
+            bool hasPredictiveContactTarget = predictive.HasContactTarget;
             if (hasPredictiveContactTarget)
             {
                 contactSurface = predictive.ContactSurface.Rebuild();
@@ -1022,7 +1025,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     anchorSurface,
                     root.up);
             }
-            bool requiresFrozenLandingTarget = predictive.HasActionConstraint &&
+            bool requiresFrozenLandingTarget = predictive.HasContactTarget ||
+                                               predictive.HasActionConstraint &&
                                                predictive.SupportPhase == AnimationFootSupportPhase.ApproachingContact;
             if (requiresFrozenLandingTarget && !usePredictiveContactTarget && !lockedAnchorOwnsContact)
                 contactSurfaceValid = false;

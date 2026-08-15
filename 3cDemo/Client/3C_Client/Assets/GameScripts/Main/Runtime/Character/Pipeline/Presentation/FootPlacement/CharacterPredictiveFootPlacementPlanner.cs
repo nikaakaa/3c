@@ -91,6 +91,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (HasRevision)
                 {
+                    if (Revision.State != CharacterPredictiveFootPlanState.Executing)
+                    {
+                        RevisionBlendWeight = 0f;
+                        return;
+                    }
                     RevisionBlendWeight = Mathf.MoveTowards(
                         RevisionBlendWeight,
                         1f,
@@ -323,8 +328,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootStanceInput landingHandoff = side == CharacterFootSide.Left
                 ? m_LeftLandingHandoff
                 : m_RightLandingHandoff;
-            if (landingHandoff.HasContactTarget)
-                return landingHandoff;
             AnimationPredictedFootStepSample step = feature.PredictedStep;
             if (!step.IsAuthoritative && !plan.HasExecutablePath)
                 return default;
@@ -333,18 +336,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationBodyRotationPivotMode bodyPivotMode;
             float constraintWeight;
             float supportWeight;
-            if (plan.HasExecutablePath)
-            {
-                ResolveCurrentActionState(
-                    plan,
-                    out constraintMode,
-                    out supportPhase,
-                    out _,
-                    out bodyPivotMode);
-                constraintWeight = plan.RootTrajectory.EvaluateConstraintWeight(plan.ActionStepPhase);
-                supportWeight = plan.RootTrajectory.EvaluateSupportWeight(plan.ActionStepPhase);
-            }
-            else
+            if (step.IsAuthoritative)
             {
                 float phase = step.ActionStepClock.Phase;
                 constraintMode = step.EvaluateConstraintMode(phase);
@@ -357,6 +349,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     bodyPivotMode);
                 constraintWeight = step.EvaluateConstraintWeight(phase);
                 supportWeight = step.EvaluateSupportWeight(phase);
+            }
+            else
+            {
+                ResolveCurrentActionState(
+                    plan,
+                    out constraintMode,
+                    out supportPhase,
+                    out _,
+                    out bodyPivotMode);
+                constraintWeight = plan.RootTrajectory.EvaluateConstraintWeight(plan.ActionStepPhase);
+                supportWeight = plan.RootTrajectory.EvaluateSupportWeight(plan.ActionStepPhase);
             }
             Vector3 pathPosition = default;
             Vector3 pathRoot = default;
@@ -381,12 +384,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out pathRootStart,
                     out _);
             }
-            if (!runtime.HasRevision &&
-                plan.State == CharacterPredictiveFootPlanState.Executing &&
+            CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
+            bool revisionMatches = runtime.HasRevision &&
+                                   step.IsAuthoritative &&
+                                   revision.MatchesAuthoritativeEvent(in step);
+            if (revisionMatches && revision.State == CharacterPredictiveFootPlanState.Executing)
+            {
+                revision.EvaluateGroundPath(
+                    revision.GroundPathProgress,
+                    out Vector3 revisionPathPosition,
+                    out _);
+                revision.EvaluateBodyPath(
+                    revision.ActionStepPhase,
+                    out Vector3 revisionPathRoot,
+                    out Vector3 revisionPathHip);
+                revision.EvaluateBodyPath(
+                    revision.RootTrajectory.PathStartPhase,
+                    out Vector3 revisionPathRootStart,
+                    out _);
+                float blend = runtime.SmoothedRevisionBlendWeight;
+                pathPosition = Vector3.Lerp(pathPosition, revisionPathPosition, blend);
+                pathRoot = Vector3.Lerp(pathRoot, revisionPathRoot, blend);
+                pathRootStart = Vector3.Lerp(pathRootStart, revisionPathRootStart, blend);
+                pathHip = Vector3.Lerp(pathHip, revisionPathHip, blend);
+            }
+            CharacterPredictiveFootPlacementPlan contactPlan = revisionMatches
+                ? revision
+                : plan.MatchesAuthoritativeEvent(in step)
+                    ? plan
+                    : null;
+            if (landingHandoff.HasContactTarget)
+            {
+                hasContactTarget = true;
+                contactSurface = landingHandoff.ContactSurface;
+                contactAnklePosition = landingHandoff.ContactAnklePosition;
+                contactAnkleRotation = landingHandoff.ContactAnkleRotation;
+            }
+            else if (contactPlan != null &&
+                contactPlan.State == CharacterPredictiveFootPlanState.Executing &&
                 supportPhase == AnimationFootSupportPhase.ApproachingContact &&
                 TryEvaluateFootTarget(
-                    plan,
-                    plan.ActionStepPhase,
+                    contactPlan,
+                    contactPlan.ActionStepPhase,
                     pose,
                     m_Rig.PoseRoot.up.normalized,
                     pose.HipPosition,
@@ -402,15 +441,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRoot = target.PathRoot;
                 pathHip = target.PathHip;
             }
+            CharacterPredictiveFootPlacementPlan timingPlan = revisionMatches
+                ? revision
+                : plan;
             float remainingSeconds = Mathf.Max(
                 0f,
-                (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
+                step.IsAuthoritative
+                    ? step.ActionStepClock.TimeToLandingSeconds
+                    : (1f - timingPlan.ActionStepPhase) * timingPlan.ActionStepDurationSeconds);
             return new CharacterPredictiveFootStanceInput(
                 true,
                 plan.HasExecutablePath,
                 plan.State == CharacterPredictiveFootPlanState.Executing,
-                plan.Sequence,
-                plan.OwnsEvent ? plan.LandingEventIdentity : step.LandingEventIdentity,
+                revisionMatches && revision.State == CharacterPredictiveFootPlanState.Executing
+                    ? revision.Sequence
+                    : plan.Sequence,
+                step.IsAuthoritative
+                    ? step.LandingEventIdentity
+                    : plan.LandingEventIdentity,
                 hasContactTarget,
                 constraintMode,
                 supportPhase,
@@ -418,7 +466,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 constraintWeight,
                 supportWeight,
                 feature.PlantConfidence,
-                plan.ActionProgress,
+                revisionMatches
+                    ? revision.ActionProgress
+                    : plan.ActionProgress,
                 remainingSeconds,
                 contactSurface,
                 contactAnklePosition,
@@ -721,17 +771,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         activeResolvedAnkleRotation,
                         revisionResolvedAnkleRotation,
                         revisionBlend).normalized;
-                }
-                else if (runtime.HasRevision)
-                {
-                    resolvedAnklePosition = Vector3.Lerp(
-                        activeResolvedAnklePosition,
-                        baselineWorldPosition,
-                        revisionTransitionBlend);
-                    resolvedAnkleRotation = Quaternion.Slerp(
-                        activeResolvedAnkleRotation,
-                        baselineWorldRotation,
-                        revisionTransitionBlend).normalized;
                 }
                 CharacterFootPlacementSoleContactPose preContinuityContacts = pose.ResolveSoleContacts(
                     resolvedAnklePosition,
@@ -1245,7 +1284,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootPlanEndReason replacementReason = activeEventReplaced
                 ? ResolveReplacementEndReason(plan)
                 : CharacterPredictiveFootPlanEndReason.None;
-            if (activeEventReplaced)
+            if (activeEventReplaced && step.IsPreSwing)
             {
                 TryBuildLandingHandoff(
                     plan,

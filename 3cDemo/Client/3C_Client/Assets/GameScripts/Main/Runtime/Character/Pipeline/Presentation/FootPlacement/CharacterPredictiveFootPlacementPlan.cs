@@ -432,7 +432,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedList512Bytes<float> GroundPathRatePhases { get; private set; }
         internal FixedList512Bytes<float> GroundPathRates { get; private set; }
         internal float AnimationClearanceContinuityOffset { get; private set; }
-        internal float AnimationClearanceContinuityVelocityOffset { get; private set; }
         internal float LandingDelayAtGeneration { get; private set; }
         internal float EventPhaseAtGeneration { get; private set; }
         internal float LiftOffPhase { get; private set; }
@@ -512,8 +511,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 landing,
             in CharacterPredictiveFootRootTrajectory rootTrajectory,
             Vector3 predictedHip,
-            bool preserveStartSoleVelocity,
-            Vector3 startSoleVelocity,
             in CharacterPredictiveFootPlacementQueryResult query)
         {
             RequireIdentity(sequence, generatedFrame, in step);
@@ -552,9 +549,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CopyQuerySnapshots(in query);
             ResolveGroundPathRates();
             GroundPathProgress = 0f;
-            ResolveAnimationClearanceContinuity(
-                preserveStartSoleVelocity,
-                startSoleVelocity);
+            ResolveAnimationClearanceContinuity();
             GeometrySnapshot = BuildGeometrySnapshot();
         }
 
@@ -1015,7 +1010,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GroundPathRatePhases = default;
             GroundPathRates = default;
             AnimationClearanceContinuityOffset = 0f;
-            AnimationClearanceContinuityVelocityOffset = 0f;
             LandingDelayAtGeneration = 0f;
             EventPhaseAtGeneration = 0f;
             LiftOffPhase = 0f;
@@ -1256,12 +1250,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RootLandingRotation = rootLandingRotation;
         }
 
-        void ResolveAnimationClearanceContinuity(
-            bool preserveStartSoleVelocity,
-            Vector3 startSoleVelocity)
+        void ResolveAnimationClearanceContinuity()
         {
             AnimationClearanceContinuityOffset = 0f;
-            AnimationClearanceContinuityVelocityOffset = 0f;
             if (!HasExecutablePath || GroundEnvelopeSegmentCount <= 0)
                 return;
             float pathStartPhase = RootTrajectory.PathStartPhase;
@@ -1278,41 +1269,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!float.IsFinite(offset))
                 throw new InvalidOperationException("Predictive Foot Plan clearance continuity is invalid.");
             AnimationClearanceContinuityOffset = offset;
-            if (!preserveStartSoleVelocity)
-                return;
-            if (!IsFinite(startSoleVelocity))
-                throw new InvalidOperationException("Predictive Foot Plan start Sole velocity is invalid.");
-            float phaseStep = Mathf.Min(
-                1f - pathStartPhase,
-                1f / (AnimationPredictedFootStepCurveSet.RouteSampleCount - 1f));
-            float durationSeconds = phaseStep * ActionStepDurationSeconds;
-            if (durationSeconds <= 0.000001f)
-                return;
-            float futurePhase = pathStartPhase + phaseStep;
-            EvaluateGroundPath(
-                EvaluateGroundPathProgress(futurePhase),
-                out Vector3 futureEnvelopePoint,
-                out _);
-            float startHeight = Vector3.Dot(envelopePoint, up) + authoredClearance;
-            float futureHeight = Vector3.Dot(futureEnvelopePoint, up) +
-                                 EvaluateFloatRoute(AnimationClearanceHeights, futurePhase);
-            float baseVelocity = (futureHeight - startHeight) / durationSeconds;
-            float velocityOffset = Vector3.Dot(startSoleVelocity, up) - baseVelocity;
-            if (!float.IsFinite(velocityOffset))
-                throw new InvalidOperationException("Predictive Foot Plan clearance velocity continuity is invalid.");
-            AnimationClearanceContinuityVelocityOffset = velocityOffset;
         }
 
         float EvaluateAnimationClearanceContinuity(float progress)
         {
             float value = Mathf.Clamp01(progress);
-            float positionBasis = 1f - value * value * (3f - 2f * value);
-            float velocityBasis = value * (1f - value) * (1f - value);
-            float remainingSeconds = Mathf.Max(
-                0f,
-                (1f - RootTrajectory.PathStartPhase) * ActionStepDurationSeconds);
-            return AnimationClearanceContinuityOffset * positionBasis +
-                   AnimationClearanceContinuityVelocityOffset * remainingSeconds * velocityBasis;
+            float blend = 1f - value * value * (3f - 2f * value);
+            return AnimationClearanceContinuityOffset * blend;
         }
 
         float ResolveSwingProgress(float eventPhase) => Mathf.Clamp01(

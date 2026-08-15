@@ -115,8 +115,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up = componentUp.normalized;
             CharacterFootPlacementPelvisLegRange leftRange = BuildRange(in left, up, settings);
             CharacterFootPlacementPelvisLegRange rightRange = BuildRange(in right, up, settings);
-            bool useLeft = left.GoalWeight > Epsilon && left.SupportWeight > Epsilon;
-            bool useRight = right.GoalWeight > Epsilon && right.SupportWeight > Epsilon;
+            bool useLeft = left.GoalWeight > Epsilon && leftRange.IsValid;
+            bool useRight = right.GoalWeight > Epsilon && rightRange.IsValid;
             bool leftCurrentReachable = useLeft && Contains(leftRange, lyraCurrentOffset, settings);
             bool rightCurrentReachable = useRight && Contains(rightRange, lyraCurrentOffset, settings);
             bool leftTargetReachable = useLeft && Contains(leftRange, lyraTargetOffset, settings);

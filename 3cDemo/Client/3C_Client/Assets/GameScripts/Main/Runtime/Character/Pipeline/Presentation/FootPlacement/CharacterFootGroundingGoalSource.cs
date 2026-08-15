@@ -1501,7 +1501,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 0f;
             Vector3 targetAnklePosition = hasLockedSupport
                 ? resolved.AnchorWorldPosition
-                : m_Rig.PoseRoot.TransformPoint(resolved.BaselineComponentPosition);
+                : predictive.HasExecutablePlan && predictive.IsExecuting
+                    ? predictive.TargetAnklePosition
+                    : m_Rig.PoseRoot.TransformPoint(resolved.BaselineComponentPosition);
             return new CharacterFootPlacementPelvisLegInput(
                 side,
                 pose.HipPosition,

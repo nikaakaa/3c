@@ -287,14 +287,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 time,
                 out float landingPhase,
                 out Quaternion opposingRootLocalSoleRotation,
-                out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> biomechanicalRoute);
-            var rootLocalKneeRoute = new FixedList512Bytes<Vector3>();
-            var rootLocalSoleRotationRoute = new FixedList512Bytes<Quaternion>();
-            for (int i = 0; i < biomechanicalRoute.Length; i++)
-            {
-                rootLocalKneeRoute.Add(biomechanicalRoute[i].RootLocalKneePosition);
-                rootLocalSoleRotationRoute.Add(biomechanicalRoute[i].RootLocalSoleRotation);
-            }
+                out _);
             return new AnimationPredictedFootStepSample(
                 Mathf.Max(0, Mathf.RoundToInt(m_EventOrdinal.Evaluate(time))),
                 m_Confidence.Evaluate(time),
@@ -317,9 +310,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 authoredFootPlanarRoute,
                 animationClearanceHeights,
                 landingPhase,
-                opposingRootLocalSoleRotation,
-                rootLocalKneeRoute,
-                rootLocalSoleRotationRoute);
+                opposingRootLocalSoleRotation);
         }
 
         public void RequireValid()
@@ -500,9 +491,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FixedList512Bytes<Vector3> authoredFootPlanarRoute,
             FixedList128Bytes<float> animationClearanceHeights,
             float landingPhase,
-            Quaternion opposingRootLocalSoleRotation,
-            FixedList512Bytes<Vector3> rootLocalKneeRoute,
-            FixedList512Bytes<Quaternion> rootLocalSoleRotationRoute)
+            Quaternion opposingRootLocalSoleRotation)
             : this(
                 eventOrdinal,
                 confidence,
@@ -523,8 +512,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 animationClearanceHeights,
                 landingPhase,
                 opposingRootLocalSoleRotation,
-                rootLocalKneeRoute,
-                rootLocalSoleRotationRoute,
                 0,
                 0,
                 0,
@@ -554,8 +541,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FixedList128Bytes<float> animationClearanceHeights,
             float landingPhase,
             Quaternion opposingRootLocalSoleRotation,
-            FixedList512Bytes<Vector3> rootLocalKneeRoute,
-            FixedList512Bytes<Quaternion> rootLocalSoleRotationRoute,
             ulong sourceSampleIdentity,
             int sourceSampleCycle,
             ulong contributionContinuityIdentity,
@@ -615,9 +600,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
                 rootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
                 authoredFootPlanarRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                animationClearanceHeights.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                rootLocalKneeRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                rootLocalSoleRotationRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                animationClearanceHeights.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
             {
                 throw new ArgumentException("Predicted foot route sample counts are invalid.");
             }
@@ -626,8 +609,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 RequireFinite(rootLocalFootRoute[i], nameof(rootLocalFootRoute));
                 RequireFinite(rootLocalAnkleRoute[i], nameof(rootLocalAnkleRoute));
                 RequireFinite(rootLocalHipRoute[i], nameof(rootLocalHipRoute));
-                RequireFinite(rootLocalKneeRoute[i], nameof(rootLocalKneeRoute));
-                RequireFinite(rootLocalSoleRotationRoute[i], nameof(rootLocalSoleRotationRoute));
                 RequirePlanar(authoredFootPlanarRoute[i], nameof(authoredFootPlanarRoute));
                 RequireNonNegative(animationClearanceHeights[i], nameof(animationClearanceHeights));
             }
@@ -636,8 +617,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RootLocalHipRoute = rootLocalHipRoute;
             AuthoredFootPlanarRoute = authoredFootPlanarRoute;
             AnimationClearanceHeights = animationClearanceHeights;
-            RootLocalKneeRoute = rootLocalKneeRoute;
-            RootLocalSoleRotationRoute = rootLocalSoleRotationRoute;
             SourceSampleIdentity = sourceSampleIdentity;
             SourceSampleCycle = sourceSampleCycle;
             ContributionContinuityIdentity = contributionContinuityIdentity;
@@ -668,8 +647,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public FixedList512Bytes<Vector3> RootLocalHipRoute { get; }
         public FixedList512Bytes<Vector3> AuthoredFootPlanarRoute { get; }
         public FixedList128Bytes<float> AnimationClearanceHeights { get; }
-        public FixedList512Bytes<Vector3> RootLocalKneeRoute { get; }
-        public FixedList512Bytes<Quaternion> RootLocalSoleRotationRoute { get; }
         public Vector3 RootLocalLanding => RootLocalFootRoute.Length > 0
             ? RootLocalFootRoute[RootLocalFootRoute.Length - 1]
             : Vector3.zero;
@@ -747,18 +724,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             EvaluateIndices(AnimationClearanceHeights.Length, eventPhase, out int first, out int second, out float t);
             return Mathf.Lerp(AnimationClearanceHeights[first], AnimationClearanceHeights[second], t);
-        }
-
-        public Vector3 EvaluateRootLocalKneeRoute(float eventPhase) =>
-            EvaluateVectorRoute(RootLocalKneeRoute, eventPhase, nameof(RootLocalKneeRoute));
-
-        public Quaternion EvaluateRootLocalSoleRotationRoute(float eventPhase)
-        {
-            EvaluateIndices(RootLocalSoleRotationRoute.Length, eventPhase, out int first, out int second, out float t);
-            return Quaternion.Slerp(
-                RootLocalSoleRotationRoute[first],
-                RootLocalSoleRotationRoute[second],
-                t).normalized;
         }
 
         public float EvaluateConstraintWeight(float eventPhase)
@@ -855,8 +820,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                RootLocalKneeRoute,
-                RootLocalSoleRotationRoute,
                 sourceSampleIdentity,
                 sourceLandingCycle,
                 0,
@@ -893,8 +856,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                RootLocalKneeRoute,
-                RootLocalSoleRotationRoute,
                 0,
                 0,
                 0,
@@ -942,8 +903,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                RootLocalKneeRoute,
-                RootLocalSoleRotationRoute,
                 markerEpochIdentity,
                 landingMarkerOrdinal,
                 0,
@@ -1001,8 +960,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                RootLocalKneeRoute,
-                RootLocalSoleRotationRoute,
                 SourceSampleIdentity,
                 SourceSampleCycle,
                 contributionContinuityIdentity,
@@ -1037,8 +994,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationClearanceHeights,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                RootLocalKneeRoute,
-                RootLocalSoleRotationRoute,
                 SourceSampleIdentity,
                 SourceSampleCycle,
                 ContributionContinuityIdentity,

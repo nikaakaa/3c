@@ -170,8 +170,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 value.RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
                 value.AuthoredFootPlanarRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
                 value.AnimationClearanceHeights.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.RootLocalKneeRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.RootLocalSoleRotationRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
                 !IsNormalized(value.LandingPhase) ||
                 !IsFinite(value.OpposingRootLocalSoleRotation) ||
                 Quaternion.Dot(value.OpposingRootLocalSoleRotation, value.OpposingRootLocalSoleRotation) <= 0.000001f)
@@ -181,9 +179,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (!AnimationPoseMath.IsFinite(value.RootLocalFootRoute[i]) ||
                     !AnimationPoseMath.IsFinite(value.RootLocalAnkleRoute[i]) ||
                     !AnimationPoseMath.IsFinite(value.RootLocalHipRoute[i]) ||
-                    !AnimationPoseMath.IsFinite(value.RootLocalKneeRoute[i]) ||
-                    !IsFinite(value.RootLocalSoleRotationRoute[i]) ||
-                    Quaternion.Dot(value.RootLocalSoleRotationRoute[i], value.RootLocalSoleRotationRoute[i]) <= 0.000001f ||
                     !AnimationPoseMath.IsFinite(value.AuthoredFootPlanarRoute[i]) ||
                     !float.IsFinite(value.AnimationClearanceHeights[i]) ||
                     value.AnimationClearanceHeights[i] < 0f)

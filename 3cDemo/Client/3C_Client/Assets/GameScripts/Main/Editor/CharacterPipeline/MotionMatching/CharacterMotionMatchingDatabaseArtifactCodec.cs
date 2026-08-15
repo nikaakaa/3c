@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     public static class CharacterMotionMatchingDatabaseArtifactCodec
     {
         const int Magic = 0x42444d4d;
-        const int FormatVersion = 13;
+        const int FormatVersion = 14;
 
         enum SectionId
         {
@@ -532,10 +532,6 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 writer.Write(predicted.AnimationClearanceHeights[i]);
             writer.Write(predicted.LandingPhase);
             WriteQuaternion(writer, predicted.OpposingRootLocalSoleRotation);
-            for (int i = 0; i < predicted.RootLocalKneeRoute.Length; i++)
-                WriteVector3(writer, predicted.RootLocalKneeRoute[i]);
-            for (int i = 0; i < predicted.RootLocalSoleRotationRoute.Length; i++)
-                WriteQuaternion(writer, predicted.RootLocalSoleRotationRoute[i]);
         }
 
         static AnimationFootFeatureSample ReadFoot(BinaryReader reader)
@@ -563,9 +559,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 ReadVector3Route(reader),
                 ReadFloatRoute(reader),
                 reader.ReadSingle(),
-                ReadQuaternion(reader),
-                ReadVector3Route(reader),
-                ReadQuaternionRoute(reader))
+                ReadQuaternion(reader))
                 : default;
             return new AnimationFootFeatureSample(
                 velocity,
@@ -586,13 +580,6 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             var result = new FixedList128Bytes<float>();
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
                 result.Add(reader.ReadSingle());
-            return result;
-        }
-        static FixedList512Bytes<Quaternion> ReadQuaternionRoute(BinaryReader reader)
-        {
-            var result = new FixedList512Bytes<Quaternion>();
-            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
-                result.Add(ReadQuaternion(reader));
             return result;
         }
         static void WriteVector2(BinaryWriter writer, Vector2 value) { writer.Write(value.x); writer.Write(value.y); }

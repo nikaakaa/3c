@@ -98,6 +98,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     .ToArray();
                 if (sessionHosts.Length != 0)
                     throw new InvalidOperationException("Gameplay Lab scene cannot contain a pre-instantiated SimulationSessionHost.");
+                GameplayLabFootIkRegressionCourseBuilder.ValidateScene(scene);
                 ValidatePlayerPresentation();
                 ValidateVariants(bootstrap);
             }

@@ -325,6 +325,14 @@ FinalIK只消费原始Component Pose和一个最终Goal Set：
 
 ## 11. 诊断闭环
 
+### GameplayLab自动反馈环
+
+普通`Local Fixed`入口始终保留玩家自由输入。独立的`Foot IK Automatic` Variant只替换同一Fixed Character Host的Control Source，通过正式Input System提交`MoveAxis`，不接管`LookAxis`、不写Transform、不修改速度或Time Scale。
+
+共享测试环境提供一条正式长课程：14级上楼、长平台、14级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费28个逐级踏面。每轮按`Straight -> Alternating Lateral -> Smooth Curve`执行双向路线；每种路线都必须覆盖同一组上楼与下楼，不允许把楼梯外的短时A/D当作转向回归证据。
+
+课程启动门禁必须验证：唯一Course、唯一Start/End、28个踏面、横向路线与角色安全边界、两条Traversal Ramp和唯一Deterministic Collision World。路线阶段、场景方向、输入向量、实际速度和lap进入现有流式CSV/manifest，使输入变化与Plan Revision可以对账。
+
 ### Artifact阶段
 
 - 原Clip与Artifact重建路线；

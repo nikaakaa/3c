@@ -591,6 +591,13 @@ namespace BTSMTL.Diagnostics
         public float CurrentEventFootPoseWeight;
         public float PlanPredictionBlend;
         public float PoseSynchronizedPredictionBlend;
+        public bool HasPlanRevision;
+        public ulong RevisionPlanSequence;
+        public float PlanRevisionBlendWeight;
+        public bool PlanFadingOut;
+        public float PlanRetentionWeight;
+        public float IntentLandingDisplacementError;
+        public float IntentLandingDisplacementThreshold;
         public float LandingConfidence;
         public float AuthoredLandingDelaySeconds;
         public float LandingEventPhase;
@@ -647,6 +654,8 @@ namespace BTSMTL.Diagnostics
         public bool PlanHasPathGeometry;
         public bool PlanHasExecutablePath;
         public Vector3 FrozenPlanarVelocity;
+        public float FrozenYawVelocityDegreesPerSecond;
+        public float FrozenMaximumYawVelocityDegreesPerSecond;
         public float MotionLinearLandingError;
         public float MotionAngularLandingError;
         public float MotionLandingError;

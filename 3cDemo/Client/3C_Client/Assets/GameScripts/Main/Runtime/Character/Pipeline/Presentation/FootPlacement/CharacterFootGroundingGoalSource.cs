@@ -144,6 +144,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterFootGroundingPlanner : IDisposable
     {
+        enum FootOwnershipState : byte
+        {
+            Locked = 1,
+            Releasing = 2,
+            Swing = 3,
+            Landing = 4
+        }
+
         sealed class FootState
         {
             internal FootState(CharacterFootSide side) => Side = side;
@@ -175,13 +183,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal bool IdleCurrentSupport;
             internal bool IdleAnchor;
             internal bool IdleAnchorCaptureArmed = true;
+            internal FootOwnershipState OwnershipState = FootOwnershipState.Locked;
 
             internal bool AllowsAnchor =>
-                IdleCurrentSupport
-                    ? IdleAnchor || !HasAnchor
-                    : !HasAnimationConstraint ||
-                      AnimationConstraintMode == AnimationFootConstraintMode.Locked ||
-                      AnimationSupportPhase == AnimationFootSupportPhase.ApproachingContact;
+                OwnershipState == FootOwnershipState.Locked ||
+                OwnershipState == FootOwnershipState.Landing;
 
             internal CharacterFootContactState ContactState =>
                 PlantContact && AllowsAnchor && HasAnchor && AnchorBlendWeight >= 0.999999f
@@ -197,14 +203,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     AnimationConstraintEventIdentity = 0;
                     return;
                 }
-                float phase = step.ActionStepClock.Phase;
-                bool eventChanged = AnimationConstraintEventIdentity != 0 &&
-                                    AnimationConstraintEventIdentity != step.LandingEventIdentity;
-                bool newEventOwnsLockedSupport =
-                    step.EvaluateConstraintMode(phase) == AnimationFootConstraintMode.Locked &&
-                    step.EvaluateSupportPhase(phase) == AnimationFootSupportPhase.Supporting;
-                if (eventChanged && newEventOwnsLockedSupport && !PlantContact && HasAnchor)
-                    ClearAnchor();
                 AnimationConstraintEventIdentity = step.LandingEventIdentity;
             }
 
@@ -234,6 +232,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationSupportPhase = predictive.HasActionConstraint
                     ? predictive.SupportPhase
                     : AnimationFootSupportPhase.Supporting;
+                OwnershipState = ResolveOwnershipState(
+                    stationaryGroundContact,
+                    HasAnimationConstraint,
+                    AnimationConstraintMode,
+                    AnimationSupportPhase,
+                    HasAnchor,
+                    AnchorBlendWeight,
+                    IdleAnchor);
                 ContactSurfaceValid = surfaceValid;
                 ContactSurfaceDistanceAccepted = surfaceValid &&
                                                    float.IsFinite(surfaceDistance) &&
@@ -417,7 +423,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 UpdateAnimationReference(animatedWorldPosition, animatedWorldRotation, surface);
                 HasAnchor = true;
                 IdleAnchor = IdleCurrentSupport;
-                AnchorBlendWeight = 1f;
+                AnchorBlendWeight = 0f;
                 TransitionReason = FootConstraintTransitionReason.AnchorCaptured;
             }
 
@@ -530,7 +536,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PelvisSupportWeight = 0f;
                 IdleCurrentSupport = false;
                 IdleAnchorCaptureArmed = true;
+                OwnershipState = FootOwnershipState.Locked;
                 ClearAnchor();
+            }
+
+            static FootOwnershipState ResolveOwnershipState(
+                bool stationaryGroundContact,
+                bool hasAnimationConstraint,
+                AnimationFootConstraintMode constraintMode,
+                AnimationFootSupportPhase supportPhase,
+                bool hasAnchor,
+                float anchorBlendWeight,
+                bool idleAnchor)
+            {
+                if (stationaryGroundContact)
+                    return hasAnchor && !idleAnchor
+                        ? FootOwnershipState.Releasing
+                        : FootOwnershipState.Locked;
+                if (!hasAnimationConstraint)
+                    return FootOwnershipState.Locked;
+                if (supportPhase == AnimationFootSupportPhase.ApproachingContact)
+                    return FootOwnershipState.Landing;
+                if (supportPhase == AnimationFootSupportPhase.Unsupported)
+                {
+                    return hasAnchor || anchorBlendWeight > 0.0001f
+                        ? FootOwnershipState.Releasing
+                        : FootOwnershipState.Swing;
+                }
+                if (supportPhase == AnimationFootSupportPhase.Releasing ||
+                    constraintMode == AnimationFootConstraintMode.Sliding)
+                {
+                    return FootOwnershipState.Releasing;
+                }
+                return FootOwnershipState.Locked;
             }
 
             static bool IsFinite(Vector3 value) =>
@@ -606,7 +644,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             m_Settings.ApplyTuning(currentGrounding, stanceStabilization, predictiveExtension);
             m_CurrentGrounding.ApplyTuning(currentGrounding);
-            m_SwingPrediction.ApplyTuning(predictiveExtension);
+            m_SwingPrediction.ApplyTuning(
+                predictiveExtension,
+                stanceStabilization.AnchorBlendSpeed);
             if (resetOwnerState)
                 ResetInternal(m_ResetSequence, FootConstraintTransitionReason.PresentationReset);
         }
@@ -948,8 +988,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     contactClearance = MeasureSoleClearance(
                         animated,
-                        predictive.ContactAnklePosition,
-                        predictive.ContactAnkleRotation,
+                        animated.AnklePosition,
+                        animated.AnkleRotation,
                         contactSurface,
                         root.up);
                 }
@@ -972,6 +1012,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     anchorSurface,
                     root.up);
             }
+            bool requiresFrozenLandingTarget = predictive.HasActionConstraint &&
+                                               predictive.SupportPhase == AnimationFootSupportPhase.ApproachingContact;
+            if (requiresFrozenLandingTarget && !usePredictiveContactTarget && !lockedAnchorOwnsContact)
+                contactSurfaceValid = false;
             float surfaceDistance = contactSurfaceValid
                 ? Mathf.Max(
                     Mathf.Abs(contactClearance.HeelPlaneDistance),
@@ -1127,11 +1171,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 throw new InvalidOperationException("Stance Anchor fade reference is invalid.");
             }
+            float anchorBlendWeight = ResolveTransitionBlend(state.AnchorBlendWeight);
             Vector3 finalWorldPosition = hasResolvedAnchor
-                ? Vector3.Lerp(baselineWorldPosition, anchorWorldPosition, state.AnchorBlendWeight)
+                ? Vector3.Lerp(baselineWorldPosition, anchorWorldPosition, anchorBlendWeight)
                 : baselineWorldPosition;
             Quaternion finalWorldRotation = hasResolvedAnchor
-                ? Quaternion.Slerp(baselineWorldRotation, anchorWorldRotation, state.AnchorBlendWeight).normalized
+                ? Quaternion.Slerp(baselineWorldRotation, anchorWorldRotation, anchorBlendWeight).normalized
                 : baselineWorldRotation;
             SoleClearancePlan soleClearance = MeasureSoleClearance(
                 animated,
@@ -1203,7 +1248,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resolved.AnchorWorldPosition,
                 resolved.AnchorWorldRotation,
                 state.HasAnchor,
-                state.AnchorBlendWeight,
+                ResolveTransitionBlend(state.AnchorBlendWeight),
                 resolved.PlacementWeight,
                 state.PlantContact,
                 resolved.AnimationFootSpeed,
@@ -1219,6 +1264,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resolved.BaselineComponentPosition,
                 resolved.BaselineComponentRotation,
                 resolved.Goal);
+
+        static float ResolveTransitionBlend(float progress)
+        {
+            float value = Mathf.Clamp01(progress);
+            return value * value * (3f - 2f * value);
+        }
 
         float ResolvePelvisTargetOffset(
             float currentTarget,

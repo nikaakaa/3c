@@ -425,8 +425,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         EventReplaced = 1,
         PresentationReset = 2,
         ActionCompleted = 3,
-        ActionInterrupted = 4,
-        ActionClockInvalid = 5
+        ActionClockInvalid = 4
     }
 
     public readonly struct CharacterPredictiveFootPathSampleDiagnostics
@@ -608,8 +607,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasExecutablePath = plan.HasExecutablePath && plan.HasPathGeometry;
             FrozenPlanarVelocity = plan.RootTrajectory.FrozenPlanarVelocity;
             FrozenYawVelocityDegreesPerSecond = plan.RootTrajectory.FrozenYawVelocityDegreesPerSecond;
-            FrozenTrajectoryYawRateDegreesPerSecond =
-                plan.RootTrajectory.FrozenTrajectoryYawRateDegreesPerSecond;
+            FrozenMaximumYawVelocityDegreesPerSecond =
+                plan.RootTrajectory.FrozenMaximumYawVelocityDegreesPerSecond;
             MotionLinearLandingError = plan.MotionLinearLandingError;
             MotionAngularLandingError = plan.MotionAngularLandingError;
             MotionLandingError = plan.MotionLandingError;
@@ -635,7 +634,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool HasExecutablePath { get; }
         public Vector3 FrozenPlanarVelocity { get; }
         public float FrozenYawVelocityDegreesPerSecond { get; }
-        public float FrozenTrajectoryYawRateDegreesPerSecond { get; }
+        public float FrozenMaximumYawVelocityDegreesPerSecond { get; }
         public float MotionLinearLandingError { get; }
         public float MotionAngularLandingError { get; }
         public float MotionLandingError { get; }
@@ -655,6 +654,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float currentEventFootPoseWeight,
             float planPredictionBlend,
             float poseSynchronizedPredictionBlend,
+            bool hasPlanRevision,
+            ulong revisionPlanSequence,
+            float planRevisionBlendWeight,
+            bool planFadingOut,
+            float planRetentionWeight,
+            float intentLandingDisplacementError,
+            float intentLandingDisplacementThreshold,
             float predictionHorizon,
             float predictionDistance,
             in CharacterPredictiveFootPlanLifecycleDiagnostics plan,
@@ -710,6 +716,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentEventFootPoseWeight = currentEventFootPoseWeight;
             PlanPredictionBlend = planPredictionBlend;
             PoseSynchronizedPredictionBlend = poseSynchronizedPredictionBlend;
+            HasPlanRevision = hasPlanRevision;
+            RevisionPlanSequence = revisionPlanSequence;
+            PlanRevisionBlendWeight = planRevisionBlendWeight;
+            PlanFadingOut = planFadingOut;
+            PlanRetentionWeight = planRetentionWeight;
+            IntentLandingDisplacementError = intentLandingDisplacementError;
+            IntentLandingDisplacementThreshold = intentLandingDisplacementThreshold;
             PredictionHorizon = predictionHorizon;
             PredictionDistance = predictionDistance;
             Plan = plan;
@@ -773,6 +786,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float CurrentEventFootPoseWeight { get; }
         public float PlanPredictionBlend { get; }
         public float PoseSynchronizedPredictionBlend { get; }
+        public bool HasPlanRevision { get; }
+        public ulong RevisionPlanSequence { get; }
+        public float PlanRevisionBlendWeight { get; }
+        public bool PlanFadingOut { get; }
+        public float PlanRetentionWeight { get; }
+        public float IntentLandingDisplacementError { get; }
+        public float IntentLandingDisplacementThreshold { get; }
         public bool HasAuthoritativeLandingEvent => CurrentEvent.IsAuthoritative;
         public ulong LandingEventIdentity => CurrentEvent.LandingEventIdentity;
         public ulong SourceSampleIdentity => CurrentEvent.SourceSampleIdentity;
@@ -799,8 +819,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float PlanExecutionProgress => Plan.ExecutionProgress;
         public Vector3 FrozenPlanarVelocity => Plan.FrozenPlanarVelocity;
         public float FrozenYawVelocityDegreesPerSecond => Plan.FrozenYawVelocityDegreesPerSecond;
-        public float FrozenTrajectoryYawRateDegreesPerSecond =>
-            Plan.FrozenTrajectoryYawRateDegreesPerSecond;
+        public float FrozenMaximumYawVelocityDegreesPerSecond =>
+            Plan.FrozenMaximumYawVelocityDegreesPerSecond;
         public float MotionLinearLandingError => Plan.MotionLinearLandingError;
         public float MotionAngularLandingError => Plan.MotionAngularLandingError;
         public float MotionLandingError => Plan.MotionLandingError;

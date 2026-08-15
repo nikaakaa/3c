@@ -414,6 +414,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PoseSynchronizedPredictionBlend = hasModifier
                     ? modifier.PoseSynchronizedPredictionBlend
                     : 0f,
+                HasPlanRevision = hasModifier && modifier.HasPlanRevision,
+                RevisionPlanSequence = hasModifier ? modifier.RevisionPlanSequence : 0,
+                PlanRevisionBlendWeight = hasModifier ? modifier.PlanRevisionBlendWeight : 0f,
+                PlanFadingOut = hasModifier && modifier.PlanFadingOut,
+                PlanRetentionWeight = hasModifier ? modifier.PlanRetentionWeight : 0f,
+                IntentLandingDisplacementError = hasModifier
+                    ? modifier.IntentLandingDisplacementError
+                    : 0f,
+                IntentLandingDisplacementThreshold = hasModifier
+                    ? modifier.IntentLandingDisplacementThreshold
+                    : 0f,
                 LandingConfidence = hasModifier ? modifier.LandingConfidence : 0f,
                 AuthoredLandingDelaySeconds = hasModifier ? modifier.AuthoredLandingDelaySeconds : 0f,
                 LandingEventPhase = hasModifier ? modifier.EventPhase : 0f,
@@ -478,6 +489,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PlanHasPathGeometry = hasModifier && modifier.Plan.HasPathGeometry,
                 PlanHasExecutablePath = hasModifier && modifier.Plan.HasExecutablePath,
                 FrozenPlanarVelocity = hasModifier ? modifier.FrozenPlanarVelocity : default,
+                FrozenYawVelocityDegreesPerSecond = hasModifier
+                    ? modifier.FrozenYawVelocityDegreesPerSecond
+                    : 0f,
+                FrozenMaximumYawVelocityDegreesPerSecond = hasModifier
+                    ? modifier.FrozenMaximumYawVelocityDegreesPerSecond
+                    : 0f,
                 MotionLinearLandingError = hasModifier ? modifier.MotionLinearLandingError : 0f,
                 MotionAngularLandingError = hasModifier ? modifier.MotionAngularLandingError : 0f,
                 MotionLandingError = hasModifier ? modifier.MotionLandingError : 0f,

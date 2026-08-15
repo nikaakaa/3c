@@ -13,11 +13,11 @@
 
 ### Requirement: Footprint prediction 必须保留动画水平脚步
 
-统一Foot Placement MUST在当前权威Landing事件进入PreSwing后请求并冻结覆盖Landing的Simulation/KCC未来可执行Body XYZ轨迹，同时冻结世界Root、Native Sole、同相位脚骨局部姿态、Movement最大转向能力和实际Trajectory Curvature。KCC轨迹 MUST消费正式Movement Timeline并执行与运行时同源的世界碰撞；Trajectory Curvature MUST来自连续正式平面速度方向的有符号变化率，并同时驱动KCC未来圆弧以及Foot、Hip、Ankle和Sole-to-Ankle的root-local几何旋转。Movement最大转向能力 MUST只验证方向变化是否连续，不得作为路线曲率。系统 MUST不使用包含Presentation插值或纠错的Visible Velocity，不得用输入幅值建立第二速度模型，也不得把Body朝向与移动方向的单帧夹角写回路线。`planGenerationPhase = generationPhase`，`swingPathStartPhase = max(generationPhase, liftOffPhase)`；Swing Foot Route MUST以生成帧Native Sole和同一Generation Phase的KCC/root-local Foot共同重基。`Locked / Sliding`期间 MUST由同一Stance owner拥有脚部输出，Predictive MUST只在真实LiftOff后通过既有Anchor Blend连续接管。
+统一Foot Placement MUST在当前权威Landing事件进入PreSwing后请求并冻结覆盖Landing的Simulation/KCC未来可执行Body XYZ轨迹，同时冻结世界Root、Native Sole、同相位脚骨局部姿态、Movement最大转向能力和创建Tick Committed Movement Timeline世界速度段。KCC平移 MUST消费正式Movement Timeline并执行与运行时同源的世界碰撞；Body Facing MUST从创建朝向以Maximum Yaw有限追随各段世界速度方向并在对齐后停止。实际Body Yaw、Movement最大转向能力和相邻Render Frame的Desired Velocity方向导数都 MUST不得作为位移轨迹曲率。系统 MUST不使用包含Presentation插值或纠错的Visible Velocity，也不得把Body朝向与移动方向或路线切线的夹角写回路线。`planGenerationPhase = generationPhase`，`swingPathStartPhase = max(generationPhase, liftOffPhase)`；Swing Foot Route MUST以生成帧Native Sole和同一Generation Phase的KCC/root-local Foot共同重基。`Locked`期间 MUST由同一Stance owner拥有脚部输出；Predictive MUST使用正式`ReleasePhase -> LiftOffPhase`区间的SmoothStep权重从零连续接管，且不得在LiftOff边界从零硬切到完整权重。
 
 计划创建使用的root-local Foot、Ankle、Hip、平面路线和Animation Clearance MUST直接消费同一原子事件的25点Action Phase路线，不得降采样到7点或用当前Pose逐帧修补烘焙误差。Foot Rate投影的输入路线若不能保留原动画落地前回摆，计划 MUST在进入Future Query之前视为无效输入，不能让错误水平位置读取Ground Envelope高度。
 
-唯一Future Query owner MUST在同一个Plan创建事务中沿当前Swing接触、权威对侧Landing和本脚Landing组成的非自交Ground Probe Polyline取得合法支撑并构造唯一连续Upper Envelope。查询采样与Foot Rate MUST是两个冻结结果：查询按Polyline平面长度采样；Foot Rate把同一冻结动画脚路线按各Action Phase投影到整条Polyline的最近平面点，再按Action Phase单调化。对侧Landing MUST只成为Polyline空间顶点，不得按其事件Phase强迫本脚Foot Rate经过该顶点。近竖直边缘 MUST使用同一Calibration Heel/Toe相对鞋底中点的最大平面范围与Swing Capsule半径中的较大值，把墙面接触点扩张到鞋底中心接触位置后再生成Edge Fraction；`MaximumEdgeGap`不得被解释为鞋底安全边距。Foot Rate MUST在`generationPhase -> swingPathStartPhase`保持0，并把`swingPathStartPhase -> Landing`映射为`0 -> 1`。无法形成正向有效区间的计划 MUST在Commit前以typed原因Rejected。执行期Action Phase只采样该冻结Foot Rate，不得以当前Pose、当前Root、Body速度、当前输入或新查询反推Ground Path Progress。计划进入真实LiftOff后，运行时 MUST按同一Action Phase求值冻结KCC Root位置与朝向，并将当前Root的平面位置偏差及剩余路线上的朝向偏差换算为Landing平面误差；只有总误差超过现有鞋底查询半径时才可结束计划。系统 MUST不以Action Phase猜测Simulation段切换，不得以台阶碰撞后瞬时`Body.TargetVelocity`变化或Motion Generation变化单独结束计划。Animation Clearance、Constraint与Support MUST继续直接按权威Action Phase采样；Ground Envelope MUST只作为地形下界，不得以自身三维弧长改变动作时钟。
+唯一Future Query owner MUST在同一个Plan创建事务中沿当前Swing接触、权威对侧Landing和本脚Landing组成的非自交Ground Probe Polyline取得合法支撑并构造唯一连续Upper Envelope。查询采样与Foot Rate MUST是两个冻结结果：查询按Polyline平面长度采样；Foot Rate把同一冻结动画脚路线按各Action Phase投影到整条Polyline的最近平面点，再按Action Phase单调化。对侧Landing MUST只成为Polyline空间顶点，不得按其事件Phase强迫本脚Foot Rate经过该顶点。近竖直边缘 MUST使用同一Calibration Heel/Toe相对鞋底中点的最大平面范围与Swing Capsule半径中的较大值，把墙面接触点扩张到鞋底中心接触位置后再生成Edge Fraction；`MaximumEdgeGap`不得被解释为鞋底安全边距。Foot Rate MUST在`generationPhase -> swingPathStartPhase`保持0，并把`swingPathStartPhase -> Landing`映射为`0 -> 1`。无法形成正向有效区间的计划 MUST在Commit前以typed原因Rejected。执行期Action Phase只采样该冻结Foot Rate，不得以当前Pose、当前Root、Body速度、Body朝向或当前输入反推Ground Path Progress。当前Visible Root相对同相位冻结KCC位置的平面偏差 MAY作为只读诊断，但 MUST不单独结束或移动已提交Plan。只有同一事件的离散Revision事务 MAY重新查询；它必须由Committed剩余预定位移误差跨越正式几何阈值触发，并产生新Sequence。系统 MUST不以Action Phase猜测Simulation段切换，不得以台阶碰撞后瞬时`Body.TargetVelocity`变化、Motion Generation变化、相邻Render Frame方向导数或Visible Body朝向单独结束计划。Animation Clearance、Constraint与Support MUST继续直接按权威Action Phase采样；Ground Envelope MUST只作为地形下界，不得以自身三维弧长改变动作时钟。
 
 Swing最终Foot Goal的XZ与基础旋转 MUST来自当前上游原动画Component Pose；Ground Path MUST只提供高度、法线、边缘和可达性。唯一预测鞋底高度 MUST等于`GroundPathY + AnimationClearanceY`，不得再与当前动画完整鞋底世界Y逐帧取较高者或形成第二高度owner。系统 MUST不把冻结Query Route完整XYZ写入最终Goal。随后系统 MUST同时验证预测Path支撑面和同帧Current Grounding已经命中的合法鞋底支撑面，并只沿Component Up应用满足两者所需的最大最小物理净空平移；Current Grounding不得参与预测高度选择、移动Landing或重建Path。
 
@@ -43,27 +43,27 @@ Swing最终Foot Goal的XZ与基础旋转 MUST来自当前上游原动画Componen
 - **AND** Swing Foot Route在LiftOff MUST等于Stance锁定的Native Sole，生成相位到LiftOff的Body位移与绝对投影距离 MUST不进入Swing Ground Path Progress
 - **AND** 若LiftOff到Landing无法形成正向空间区间，Plan MUST以`FootRateInvalid`结束为Rejected且不得进入FBBIK输入
 
-#### Scenario: 角色在下一步内转向
+#### Scenario: 身体朝向在下一步内追随世界移动方向
 
-- **WHEN** 角色以A/D持续输入形成稳定圆周运动
-- **THEN** 正式Query Route MUST沿冻结Trajectory Curvature同时积分KCC位置圆弧并旋转root-local Foot、Hip与Ankle
-- **AND** Native Foot与Query Path相对各自Root的运动方向 MUST保持一致
-- **AND** 计划不得使用Movement最大转向能力替代实际曲率、逐帧读取当前Transform重写朝向或继续沿生成帧旧切线查询脚不会经过的地面
+- **WHEN** 创建Tick的Committed世界速度方向与Body Facing不一致
+- **THEN** KCC平移 MUST继续按该世界速度积分，Body Facing MUST以Maximum Yaw有限追随并在对齐后停止
+- **AND** root-local Foot、Hip与Ankle MUST消费同一有限Body Facing，Native Foot与Query Path相对各自Root的空间语义 MUST保持一致
+- **AND** 计划不得把Maximum Yaw或实际Body Yaw积分成位移圆弧，也不得逐帧读取当前Transform重写朝向
 
-#### Scenario: 输入变化仍在冻结Landing容差内
+#### Scenario: 本步提交后摄像机缓动未改变Committed世界意图
 
-- **WHEN** 摄像机缓动或输入采样令当前committed Body速度或Trajectory Curvature相对计划创建帧发生变化，但当前权威Body Root仍与同一Action Step Clock下的冻结KCC Root保持在现有鞋底查询半径内
+- **WHEN** 摄像机或Visible Body仍在缓动，但Committed Movement Timeline的剩余世界预定位移未跨越Revision阈值
 - **THEN** 当前Plan MUST继续按原Action Step Clock采样同一冻结Route、Foot Rate与Envelope
 - **AND** 系统 MUST不因Desired Input为零、转向布尔变化或角速度符号测试结束计划
 - **AND** Action Phase跨过某个比例、Motion Generation变化或台阶碰撞改变瞬时Target Velocity MUST不被单独解释为输入已经改变
-- **AND** Plan提交后系统 MUST不再用逐帧Desired Velocity方向导数、速度差或Trajectory Curvature差验证冻结路线
-- **AND** 只有真实LiftOff后的权威Body Root相对同相位冻结KCC位置/朝向所形成的Landing平面误差越过该物理容差时，才可用typed `ActionInterrupted`结束计划，不得原地重规划
+- **AND** Plan提交后系统 MUST不再用逐帧Desired Velocity方向导数、速度差或Body Yaw差验证冻结路线
+- **AND** Body Presentation Visible Root相对同相位冻结KCC位置的偏差只可进入诊断，不得取消或原地改写本步
 
 ### Requirement: 地面查询必须形成有限连续 Support Envelope
 
 统一Foot Placement MUST只有一个World Query owner。Current查询只用于当前合法支撑与Stance接触证据；Future Query只允许在同一Plan创建事务内完成发现Envelope与正式Route两阶段，计划提交后不得再次查询。Future Query逐点Sphere与相邻点Capsule的向下Sweep顶面 MUST不低于同相位预测Hip高度；Foot Route加固定`CastAbove`只能形成更高的覆盖，MUST不限制骨盆工作区内未来踏面的发现。每个路线采样 MUST先选出与上一正式支撑连通的唯一正式支撑；相邻正式支撑之间的连续Sweep命中只有在同时可连接前后两端时才可进入Ground Envelope，近竖直命中 MUST只作为Edge Plane。查询 MUST先得到合法支撑高度，并只以`合法支撑高度 - 同相位Ground Probe高度`残差平移同相位预测Root/Hip，再执行相邻Step、Edge和Ankle Reach过滤；碰撞求解后的Future Body XYZ已经包含台阶位移，MUST不得再叠加相对计划起点的整段地形高度。每个正式支撑的同采样Root/Hip残差 MUST进入冻结Body Support Path，后续支撑不得被重设为新的零高度参考。Ground高度 MUST只来自地形接触，不得被Query Route或无IK脚高度向上钳制；Reach MUST不使用尚未应用地形残差的Hip。不可通行候选 MUST在Convex Hull之前删除。
 
-本脚前后Landing之间若存在权威对侧脚Landing，Future Query MUST以Swing起点、该对侧接触空间点和本脚预测Landing构造按平面弧长采样的分段直线Ground Probe Polyline。对侧点 MUST以本脚原子事件携带的对侧root-local落点和Phase，经同一冻结KCC位置轨迹与Trajectory Curvature还原并成为Polyline精确顶点；MUST不使用“该Phase上的本脚位置”、不得逐帧移动、不得把对侧Landing冒充本脚终点。逐点Sphere和相邻Capsule Sweep MUST只消费该Polyline。Capsule Sweep命中近竖直Edge Plane时，Edge Fraction MUST以`Hit Point + 平面外法线 * Swing Capsule Radius`对应的胶囊中心接触位置投影，MUST不把墙面接触点直接当作脚中心路径位置。删除不可通行点后，完整同脚事件的全部合法样本 MUST共同构造一次连续Upper Hull；对侧样本只有位于上包络时 MAY成为Ground Envelope顶点，MUST不作为强制断点分别构造两个Hull。
+本脚前后Landing之间若存在权威对侧脚Landing，Future Query MUST以Swing起点、该对侧接触空间点和本脚预测Landing构造按平面弧长采样的分段直线Ground Probe Polyline。对侧点 MUST以本脚原子事件携带的对侧root-local落点和Phase，经同一冻结KCC位置轨迹与有限Body Facing还原并成为Polyline精确顶点；MUST不使用“该Phase上的本脚位置”、不得逐帧移动、不得把对侧Landing冒充本脚终点。逐点Sphere和相邻Capsule Sweep MUST只消费该Polyline。Capsule Sweep命中近竖直Edge Plane时，Edge Fraction MUST以`Hit Point + 平面外法线 * Swing Capsule Radius`对应的胶囊中心接触位置投影，MUST不把墙面接触点直接当作脚中心路径位置。删除不可通行点后，完整同脚事件的全部合法样本 MUST共同构造一次连续Upper Hull；对侧样本只有位于上包络时 MAY成为Ground Envelope顶点，MUST不作为强制断点分别构造两个Hull。
 
 末端Landing失败 MUST保留具体无命中或几何拒绝原因，MUST不把所有失败只表示为`NoFutureLanding`。Rejected计划 MUST不发布Executable Path或悬空Landing。
 
@@ -117,7 +117,7 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
 
 当本帧没有权威Landing Event、Plan为`Inactive`且Motion Phase为`GroundedStationary`时，统一Foot Placement MUST进入Idle Current Support模式，继续消费同一个Current Grounding安全Baseline。该Baseline MUST保持同帧原动画Ankle的平面位置，使用唯一Current支撑面决定旋转，并只沿Component Up把Calibration Heel/Toe约束到该面；它 MUST不直接采用仍在收敛的Lyra Offset Spring Current。进入该模式时，已有的非Idle Anchor MUST先通过现有Stance Blend连续释放到该Baseline，释放期间不得继续拥有鞋底支撑面或Pelvis Reach，也不得直接改名为Idle Anchor。经过停步动作进入Idle时，既有`presentation.foot-placement-weight` MUST由Locomotion的`1`通过RunEnd的`0`连续淡出，再由Idle的`1`连续淡入；Runtime MUST只在本次停止已经观察到非完整权重且Idle重新取得完整权重后，于同一安全Goal原子捕获Idle Anchor。初始直接进入Idle MAY立即捕获。Idle Anchor MUST在静止期间保持完整世界Goal并继续拥有同一支撑面、鞋底净空和Pelvis Reach。该模式 MUST不创建第二Grounding、响应式前置、速度权重、新参数或第二Anchor owner，也 MUST不在权威动作存在但Plan为`Rejected`时介入；Rejected仍须显式暴露预测失败。
 
-事件身份替换、Phase回退、动作中断或Stance捕获Landing MUST结束旧当前计划。新当前事件只有在自身PreSwing边界 MAY创建一次新计划；相同事件不得重试、晋升旧世界候选或逐帧重映射。
+事件身份替换、Phase回退、动作中断或Stance捕获Landing MUST结束旧当前计划。新当前事件在自身PreSwing边界创建初始计划；同一事件不得晋升旧世界候选或逐帧重映射。真实Swing期间，只有最新Committed Movement Timeline使剩余预定位移相对当前Plan超过现有鞋底/查询几何半径时，MAY创建同一事件的离散Revision；误差回落到半阈值前不得再次武装。
 
 #### Scenario: Pose Contribution被替换
 
@@ -128,8 +128,15 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
 #### Scenario: 循环步态的新当前事件
 
 - **WHEN** 下一同脚Landing成为当前离散事实并进入PreSwing
-- **THEN** 统一Foot Placement MUST以该帧Native Sole、KCC未来圆弧和同相位动画几何创建唯一新Plan
-- **AND** MUST不晋升上一动作期间冻结的世界候选，也不得在LiftOff后重新查询、读取当前Pose投影或在台阶边缘改换Landing
+- **THEN** 统一Foot Placement MUST以该帧Native Sole、KCC未来平移、有限Body Facing和同相位动画几何创建唯一新Plan
+- **AND** MUST不晋升上一动作期间冻结的世界候选，也不得按当前Pose投影、台阶边缘命中或Render Frame输入导数重算Landing
+
+#### Scenario: Swing期间Committed世界意图发生实质变化
+
+- **WHEN** 当前Plan处于`Unlocked + Unsupported`，且同一剩余动作时间内最新Committed Movement Timeline预定位移与冻结Plan剩余位移之差超过`max(SoleSupportRadius, PathSphereRadius, SwingCapsuleRadius)`
+- **THEN** 同一Predictive owner MUST从上一帧最终鞋底和当前权威Action Phase创建一个新Revision，不得修改旧Plan几何
+- **AND** 旧、新预测修正 MUST使用现有Stance过渡速度和SmoothStep连续交叉淡化；Camera变化只有已被Simulation提交成新的世界速度后才可触发
+- **AND** 若Revision查询Rejected，旧预测修正 MUST连续淡出到零并结束，不得继续把脚拉向旧Landing，也不得把Current Grounding冒充预测Path
 
 #### Scenario: in-place动作烘焙支撑约束
 
@@ -167,16 +174,17 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
 #### Scenario: 预测Landing按同一支撑面交给Stance
 
 - **WHEN** Executing Plan进入`Unlocked + ApproachingContact`并提供冻结的Landing Ankle、旋转与Contact Surface
-- **THEN** Stance MUST把三者作为同一个Landing事实，重建并校验该Surface的Collider、Layer与坡度，再检查当前鞋底到该平面的距离
+- **THEN** Stance MUST把三者作为同一个Landing事实，重建并校验该Surface的Collider、Layer与坡度，再用当前动画Heel/Toe检查到该平面的真实距离；不得用已经贴地的预测Ankle自证接触
 - **AND** 权威`ApproachingContact` MUST不被in-place鞋底相对Root速度否决；该局部速度只能保留为诊断，不能作为世界接触门禁
 - **AND** Stance MUST不采用预测Ankle却切换到Current Query的另一踏面；预测Surface无效时不得静默回退为Current Surface
-- **AND** 捕获帧 MUST在该预测Surface上的安全Goal处原子建立完整Anchor；条件未通过时保持Swing，不得把响应式Goal伪装为预测Landing
+- **AND** 同一事件的Revision尚未完成交叉淡化时，Stance MUST等待新Sequence正式提交后才开放Landing捕获；冻结Landing Target缺失时 MUST保持未捕获，不能改用Current Surface
+- **AND** 捕获帧 MUST在该预测Surface上的安全Goal处提交Anchor目标，并从零按既有Blend连续取得所有权；条件未通过时保持Swing，不得把响应式Goal伪装为预测Landing
 
 #### Scenario: Current Anchor在安全Goal处捕获
 
 - **WHEN** 同帧Current Grounding、距离和Capture条件共同通过且Stance捕获Anchor
-- **THEN** Anchor MUST存储该帧已经完成鞋底安全约束的世界Goal并原子取得完整位置所有权
-- **AND** 捕获不得因为从零推进Anchor Blend而让已接触脚继续移动
+- **THEN** Anchor MUST存储该帧已经完成鞋底安全约束的世界Goal，Predictive/Current与Anchor MUST用互补SmoothStep权重连续交接
+- **AND** 捕获时Anchor Blend MUST从零推进；只有合法接触、有效Anchor与完整Blend共同成立时才可报告`Anchored`
 - **AND** 只有`PlantContact + 有效Anchor + 完整Blend` MAY报告`Anchored`；释放Blend期间 MUST报告Contact
 
 #### Scenario: 权威支撑不被in-place残余脚速否决
@@ -234,7 +242,7 @@ Stance Stabilization MUST是唯一Anchor与Pelvis owner。它 MAY消费当前支
 
 ### Requirement: Animation Clip Foot Placement曲线必须沿正式表现投影采样
 
-Action Step Fact MUST与生成当前Component Pose的Pose Contribution同源，原子携带Landing身份、Action Step Clock、root-local Foot、Ankle、Hip、Clearance、约束策略，以及本脚下一次Landing前的对侧Landing身份与时间，不得携带Action Root或运行速度。Locomotion Sequence、Pose、Step Fact与Clearance MUST从Simulation提交的Locomotion elapsed tick投影到同一相位；Presentation只能插值，不得独立累计第二动作时间。Plan创建帧 MUST从同帧committed Body读取碰撞求解后的Target Velocity和Movement最大转向能力，并消费Presentation Fact已由连续正式速度方向确认的Trajectory Curvature；提交后不得重读。Blend或source替换 MUST生成明确新身份。Virtual Ground MUST只消费本脚Action Step Fact携带的原子对侧配对，不得独立选择或混合另一只脚的事实。
+Action Step Fact MUST与生成当前Component Pose的Pose Contribution同源，原子携带Landing身份、Action Step Clock、root-local Foot、Ankle、Hip、Clearance、约束策略，以及本脚下一次Landing前的对侧Landing身份与时间，不得携带Action Root或运行速度。Locomotion Sequence、Pose、Step Fact与Clearance MUST从Simulation提交的Locomotion elapsed tick投影到同一相位；Presentation只能插值，不得独立累计第二动作时间。Plan创建帧 MUST从同帧committed Body读取碰撞求解后的Target Velocity，并从同一Committed Movement Timeline读取当前段、Continuation、实际YawVelocity与MaximumYawVelocity；世界速度段只拥有平移，MaximumYawVelocity只限制Body Facing，实际YawVelocity只进入诊断。Blend或source替换 MUST生成明确新身份。Virtual Ground MUST只消费本脚Action Step Fact携带的原子对侧配对，不得独立选择或混合另一只脚的事实。
 
 #### Scenario: Blend winner改变
 
@@ -323,7 +331,7 @@ FullBodyIK MUST复用FinalIK FBBIK核心数学，在同一Pending Component Pose
 
 Scene、Game、CSV MUST只读同一完成快照。该快照中的Ground Probe MUST直接复制Query实际使用的全部Route Fraction和世界点，不得按点数重新生成均匀近似路线；Virtual Ground插入点 MUST保留。Executable只画真实完整Ground Probe、动画脚路线、Ground Envelope与Clearance Path；Rejected只画真实查询与拒绝几何；Completed或Inactive不得继续画旧Path；不得显示文字。
 
-诊断 MUST同时保存计划创建帧committed Body Target Velocity、Simulation Continuation、Movement最大转向能力、Trajectory Curvature、Generation/Plan Start/LiftOff/Landing Phase、Constraint Mode、剩余时间、冻结Ground Probe、动画脚路线、Foot Rate、Ground Envelope、预测Root位移、生成帧Native Sole、当前Ground Path采样和最终Goal。Ground Probe被画成最终脚轨迹、最大转向能力被用作路线曲率、Foot Rate随帧变化、Action Progress与Ground Path Progress无法区分、PreSwing Ground Path Progress不为0、Locked或Sliding期间Predictive Final Goal被改写、Clearance Path未使用Foot Rate或同一Plan的几何Hash变化时 MUST是明确invalid，不得只显示一条看似合法的线。
+诊断 MUST同时保存计划创建帧committed Body Target Velocity、Simulation Continuation、Movement最大转向能力、Body Yaw诊断、Generation/Plan Start/LiftOff/Landing Phase、Constraint Mode、剩余时间、冻结Ground Probe、动画脚路线、Foot Rate、Ground Envelope、预测Root位移、生成帧Native Sole、当前Ground Path采样和最终Goal。发生Revision时还 MUST保存旧/新Sequence、Blend、退场权重、剩余预定位移误差与阈值。Ground Probe被画成最终脚轨迹、Body Yaw或最大转向能力被用作路线曲率、Foot Rate随帧变化、Action Progress与Ground Path Progress无法区分、PreSwing Ground Path Progress不为0、Locked或Sliding期间Predictive Final Goal被改写、Clearance Path未使用Foot Rate或同一Plan Revision的几何Hash变化时 MUST是明确invalid，不得只显示一条看似合法的线。
 
 #### Scenario: Debug Path与脚目标对账
 

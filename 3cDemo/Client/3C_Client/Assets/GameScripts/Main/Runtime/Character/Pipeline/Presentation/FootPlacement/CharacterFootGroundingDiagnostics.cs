@@ -425,7 +425,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         EventReplaced = 1,
         PresentationReset = 2,
         ActionCompleted = 3,
-        ActionClockInvalid = 4
+        ActionClockInvalid = 4,
+        LandingTransactionUnavailable = 5
     }
 
     public readonly struct CharacterPredictiveFootPathSampleDiagnostics

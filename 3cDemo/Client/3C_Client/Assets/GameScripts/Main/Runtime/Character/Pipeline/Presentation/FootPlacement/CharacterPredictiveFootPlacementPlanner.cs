@@ -8,6 +8,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal sealed class CharacterPredictiveFootPlacementPlanner
     {
+        enum FootPlanTransitionKind : byte
+        {
+            None = 0,
+            IntentRevision = 1,
+            EventSuccessor = 2
+        }
+
         sealed class FootPlanRuntime
         {
             internal FootPlanRuntime(CharacterFootSide side, int pathCapacity)
@@ -19,6 +26,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal CharacterPredictiveFootPlacementPlan Active { get; private set; }
             internal CharacterPredictiveFootPlacementPlan Revision { get; private set; }
             internal bool HasRevision { get; private set; }
+            internal bool HasEventSuccessor =>
+                HasRevision && TransitionKind == FootPlanTransitionKind.EventSuccessor;
             internal float RevisionBlendWeight { get; private set; }
             internal float SmoothedRevisionBlendWeight =>
                 RevisionBlendWeight * RevisionBlendWeight * (3f - 2f * RevisionBlendWeight);
@@ -38,6 +47,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal float IntentLandingDisplacementThreshold { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
             internal Vector3 LastOutputSole { get; private set; }
+            internal ulong CommittedAnchorPlanSequence { get; private set; }
+            internal ulong CommittedAnchorLandingEventIdentity { get; private set; }
+            FootPlanTransitionKind TransitionKind { get; set; }
             bool m_BaselineOwnedLastFrame;
             bool m_HasOwnershipContinuity;
             Vector3 m_OwnershipContinuityOffset;
@@ -49,11 +61,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Revision.BeginFrame();
             }
 
-            internal void BeginRevision()
+            internal void BeginIntentRevision()
             {
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision is not executable.");
                 HasRevision = true;
+                TransitionKind = FootPlanTransitionKind.IntentRevision;
+                RevisionBlendWeight = 0f;
+                IsFadingOut = false;
+                FadeOutWeight = 0f;
+            }
+
+            internal void BeginEventSuccessor()
+            {
+                if (!Revision.HasExecutablePath)
+                    throw new InvalidOperationException("Predictive Foot successor is not executable.");
+                HasRevision = true;
+                TransitionKind = FootPlanTransitionKind.EventSuccessor;
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
@@ -68,6 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Active = Revision;
                 Revision = retired;
                 HasRevision = false;
+                TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
             }
 
@@ -89,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             internal void AdvanceTransition(float deltaSeconds, float blendSpeed)
             {
-                if (HasRevision)
+                if (HasRevision && TransitionKind == FootPlanTransitionKind.IntentRevision)
                 {
                     if (Revision.State != CharacterPredictiveFootPlanState.Executing)
                     {
@@ -123,7 +148,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (Revision.OwnsEvent)
                     Revision.Reset(reason);
                 HasRevision = false;
+                TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
+            }
+
+            internal bool HasCommittedLanding(ulong landingEventIdentity) =>
+                landingEventIdentity != 0 &&
+                CommittedAnchorLandingEventIdentity == landingEventIdentity;
+
+            internal void ObserveStance(
+                bool hasCommittedAnchor,
+                ulong anchorPlanSequence,
+                ulong anchorLandingEventIdentity)
+            {
+                CommittedAnchorPlanSequence = hasCommittedAnchor ? anchorPlanSequence : 0;
+                CommittedAnchorLandingEventIdentity = hasCommittedAnchor
+                    ? anchorLandingEventIdentity
+                    : 0;
             }
 
             internal void ClearIntentObservation()
@@ -187,12 +228,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Active.Reset(reason);
                 Revision.Reset(reason);
                 HasRevision = false;
+                TransitionKind = FootPlanTransitionKind.None;
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
                 ClearIntentObservation();
                 HasLastOutputSole = false;
                 LastOutputSole = Vector3.zero;
+                CommittedAnchorPlanSequence = 0;
+                CommittedAnchorLandingEventIdentity = 0;
                 m_BaselineOwnedLastFrame = false;
                 m_HasOwnershipContinuity = false;
                 m_OwnershipContinuityOffset = Vector3.zero;
@@ -250,6 +294,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal CharacterPredictiveFootPlacementDiagnostics Diagnostics => m_Diagnostics;
+
+        internal void ObserveStance(
+            CharacterFootSide side,
+            bool hasCommittedAnchor,
+            ulong anchorPlanSequence,
+            ulong anchorLandingEventIdentity)
+        {
+            FootPlanRuntime runtime = side == CharacterFootSide.Left
+                ? m_LeftPlan
+                : side == CharacterFootSide.Right
+                    ? m_RightPlan
+                    : throw new ArgumentOutOfRangeException(nameof(side));
+            runtime.ObserveStance(
+                hasCommittedAnchor,
+                anchorPlanSequence,
+                anchorLandingEventIdentity);
+        }
 
         internal void Prepare(
             in CharacterFootPlacementPlanningFrame frame,
@@ -369,6 +430,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementSurface contactSurface = default;
             Vector3 contactAnklePosition = default;
             Quaternion contactAnkleRotation = default;
+            ulong contactPlanSequence = 0;
+            ulong contactLandingEventIdentity = 0;
             Vector3 targetAnklePosition = pose.AnklePosition;
             bool hasContactTarget = false;
             if (plan.HasExecutablePath)
@@ -448,6 +511,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 contactSurface = landingHandoff.ContactSurface;
                 contactAnklePosition = landingHandoff.ContactAnklePosition;
                 contactAnkleRotation = landingHandoff.ContactAnkleRotation;
+                contactPlanSequence = landingHandoff.ContactPlanSequence;
+                contactLandingEventIdentity = landingHandoff.ContactLandingEventIdentity;
             }
             else if (contactPlan != null &&
                 contactPlan.State == CharacterPredictiveFootPlanState.Executing &&
@@ -466,6 +531,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 contactSurface = target.Support;
                 contactAnklePosition = target.AnklePosition;
                 contactAnkleRotation = target.AnkleRotation;
+                contactPlanSequence = contactPlan.Sequence;
+                contactLandingEventIdentity = contactPlan.LandingEventIdentity;
                 pathPosition = target.PathPosition;
                 pathRoot = target.PathRoot;
                 pathHip = target.PathHip;
@@ -509,6 +576,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? step.LandingEventIdentity
                     : plan.LandingEventIdentity,
                 hasContactTarget,
+                contactPlanSequence,
+                contactLandingEventIdentity,
                 constraintMode,
                 supportPhase,
                 bodyPivotMode,
@@ -1318,6 +1387,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.Sequence,
                 plan.LandingEventIdentity,
                 true,
+                plan.Sequence,
+                plan.LandingEventIdentity,
                 constraintMode,
                 supportPhase,
                 bodyPivotMode,
@@ -1456,10 +1527,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     legLength);
                 if (created)
                 {
-                    runtime.BeginRevision();
+                    runtime.BeginEventSuccessor();
                 }
                 else
                     runtime.BeginFadeOut(replacementReason);
+            }
+            if (runtime.HasEventSuccessor &&
+                step.IsAuthoritative &&
+                runtime.Revision.MatchesAuthoritativeEvent(in step))
+            {
+                AnimationFootSupportPhase successorSupportPhase =
+                    step.EvaluateSupportPhase(step.ActionStepClock.Phase);
+                if (successorSupportPhase == AnimationFootSupportPhase.Unsupported)
+                {
+                    if (runtime.HasCommittedLanding(plan.LandingEventIdentity))
+                    {
+                        runtime.PromoteRevision();
+                    }
+                    else
+                    {
+                        runtime.CancelRevision(
+                            CharacterPredictiveFootPlanEndReason.LandingTransactionUnavailable);
+                        runtime.BeginFadeOut(
+                            CharacterPredictiveFootPlanEndReason.LandingTransactionUnavailable);
+                    }
+                }
             }
             runtime.AdvanceTransition(presentationDeltaSeconds, m_TransitionBlendSpeed);
             plan = runtime.Active;
@@ -1494,7 +1586,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     movementPlaybackTime,
                     step.PredictionLeadSeconds,
                     trajectoryCurvatureDegreesPerSecond,
-                    rootWorldRotation))
+                    rootWorldRotation,
+                    presentationDeltaSeconds))
             {
                 Vector3 revisionSole = runtime.HasLastOutputSole
                     ? runtime.LastOutputSole
@@ -1517,7 +1610,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up,
                     legLength);
                 if (created)
-                    runtime.BeginRevision();
+                    runtime.BeginIntentRevision();
                 else
                     runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
             }
@@ -1531,7 +1624,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             double movementPlaybackTime,
             float predictionLeadSeconds,
             float trajectoryCurvatureDegreesPerSecond,
-            Quaternion rootWorldRotation)
+            Quaternion rootWorldRotation,
+            float presentationDeltaSeconds)
         {
             if (plan.State != CharacterPredictiveFootPlanState.Executing ||
                 !step.IsAuthoritative || !motionTimeline.IsValid ||
@@ -1551,7 +1645,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
             float transitionSeconds = 1f / m_TransitionBlendSpeed;
-            if (remainingSeconds <= transitionSeconds)
+            if (remainingSeconds <= transitionSeconds + presentationDeltaSeconds)
                 return false;
             Vector3 expected = plan.RootTrajectory.EvaluateRemainingPlannedIntentDisplacement(
                 plan.ActionStepPhase);

@@ -93,7 +93,8 @@ namespace ThirdPersonGameplay.Editor.Lab
                 throw new InvalidOperationException($"GameplayLab requires one deterministic collision world, found {worlds.Length}.");
             StairTraversalWorldValidationReport report = StairTraversalSurfaceValidator.ValidateWorld(worlds[0]);
             if (report.HasErrors)
-                throw new InvalidOperationException($"GameplayLab stair validation failed:{Environment.NewLine}{report.FormatErrors()}");
+                throw new InvalidOperationException(
+                    $"GameplayLab stair validation failed: {report.FormatErrors().Replace(Environment.NewLine, " | ")}");
         }
 
         static void BuildCourse(Transform environment, Material[] materials)

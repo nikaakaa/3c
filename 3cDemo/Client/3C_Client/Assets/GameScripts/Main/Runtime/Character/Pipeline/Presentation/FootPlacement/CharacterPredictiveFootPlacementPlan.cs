@@ -15,7 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 presentedBodyStartPosition,
             Vector3 animationSoleAtGeneration,
             Vector3 committedBodyVelocity,
-            float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             CharacterFutureBodyTrajectory futureBodyTrajectory,
@@ -28,7 +27,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !IsFinite(presentedBodyStartPosition) ||
                 !IsFinite(animationSoleAtGeneration) ||
                 !IsFinite(committedBodyVelocity) ||
-                !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !motionTimeline.IsValid || !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
                 futureBodyTrajectory == null ||
                 !IsFinite(up) || up.sqrMagnitude <= 0.000001f)
@@ -58,7 +56,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContinuationPlanarVelocity = continuationVelocity;
             CurrentSegmentSwitchDelaySeconds = switchDelay;
             HasContinuation = hasContinuation;
-            FrozenYawVelocityDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
+            FrozenYawVelocityDegreesPerSecond = futureBodyTrajectory
+                .Evaluate(step.PredictionLeadSeconds)
+                .YawVelocityDegreesPerSecond;
             FrozenMaximumYawVelocityDegreesPerSecond =
                 motionTimeline.MaximumYawVelocityDegreesPerSecond;
             PredictionLeadSeconds = step.PredictionLeadSeconds;
@@ -115,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float phase = Mathf.Clamp01(eventPhase);
             float elapsedSeconds = ResolveRawTravelElapsedSeconds(phase);
             position = StartPosition + ResolvePlanarTravel(elapsedSeconds);
-            rotation = EvaluateRotation(phase);
+            rotation = EvaluateRotation(elapsedSeconds);
         }
 
         internal Vector3 EvaluateFootRoute(float eventPhase)
@@ -127,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             float phase = Mathf.Clamp01(eventPhase);
             float elapsedSeconds = ResolveRawTravelElapsedSeconds(phase);
-            Quaternion rotation = EvaluateRotation(phase);
+            Quaternion rotation = EvaluateRotation(elapsedSeconds);
             Vector3 root = StartPosition + ResolvePlanarTravel(elapsedSeconds);
             Vector3 localFoot = Step.EvaluateRootLocalFootRoute(phase);
             Vector3 localPlanar = Step.EvaluateAuthoredFootPlanarRoute(phase);
@@ -156,7 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             float phase = Mathf.Clamp01(eventPhase);
             float elapsedSeconds = ResolveRawTravelElapsedSeconds(phase);
-            Quaternion rotation = EvaluateRotation(phase);
+            Quaternion rotation = EvaluateRotation(elapsedSeconds);
             return StartPosition + ResolvePlanarTravel(elapsedSeconds) +
                    rotation * Step.EvaluateRootLocalHipRoute(phase);
         }
@@ -165,7 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             float phase = Mathf.Clamp01(eventPhase);
             float elapsedSeconds = ResolveRawTravelElapsedSeconds(phase);
-            Quaternion rotation = EvaluateRotation(phase);
+            Quaternion rotation = EvaluateRotation(elapsedSeconds);
             return StartPosition + ResolvePlanarTravel(elapsedSeconds) +
                    rotation * Step.EvaluateRootLocalAnkleRoute(phase);
         }
@@ -173,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 EvaluateSoleToAnkle(float eventPhase)
         {
             float phase = Mathf.Clamp01(eventPhase);
-            Quaternion rotation = EvaluateRotation(phase);
+            Quaternion rotation = EvaluateRotation(ResolveRawTravelElapsedSeconds(phase));
             Vector3 authored = Step.EvaluateRootLocalAnkleRoute(phase) -
                                Step.EvaluateRootLocalFootRoute(phase);
             return rotation * authored;
@@ -188,10 +188,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float EvaluateSupportWeight(float eventPhase) =>
             Step.EvaluateSupportWeight(Mathf.Clamp01(eventPhase));
 
-        Quaternion EvaluateRotation(float phase)
+        Quaternion EvaluateRotation(float elapsedSeconds)
         {
-            float yawDegrees = FrozenYawVelocityDegreesPerSecond *
-                               ResolveRawTravelElapsedSeconds(phase);
+            float yawDegrees = FutureBodyTrajectory
+                .Evaluate(elapsedSeconds)
+                .RelativeYawDegrees;
             return (Quaternion.AngleAxis(yawDegrees, Up) * StartRotation).normalized;
         }
 
@@ -201,62 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float endSeconds = ResolveRawTravelElapsedSeconds(1f);
             if (endSeconds <= startSeconds)
                 return Vector3.zero;
-            if (float.IsPositiveInfinity(CurrentSegmentSwitchDelaySeconds) ||
-                endSeconds <= CurrentSegmentSwitchDelaySeconds)
-            {
-                return IntegrateRotatingVelocity(
-                    FrozenMotionPlanarVelocity,
-                    FrozenYawVelocityDegreesPerSecond,
-                    startSeconds,
-                    endSeconds,
-                    Up);
-            }
-            if (startSeconds >= CurrentSegmentSwitchDelaySeconds)
-            {
-                return HasContinuation
-                    ? IntegrateRotatingVelocity(
-                        ContinuationPlanarVelocity,
-                        FrozenYawVelocityDegreesPerSecond,
-                        startSeconds,
-                        endSeconds,
-                        Up)
-                    : Vector3.zero;
-            }
-            Vector3 current = IntegrateRotatingVelocity(
-                FrozenMotionPlanarVelocity,
-                FrozenYawVelocityDegreesPerSecond,
-                startSeconds,
-                CurrentSegmentSwitchDelaySeconds,
-                Up);
-            return HasContinuation
-                ? current + IntegrateRotatingVelocity(
-                    ContinuationPlanarVelocity,
-                    FrozenYawVelocityDegreesPerSecond,
-                    CurrentSegmentSwitchDelaySeconds,
-                    endSeconds,
-                    Up)
-                : current;
-        }
-
-        static Vector3 IntegrateRotatingVelocity(
-            Vector3 velocity,
-            float yawDegreesPerSecond,
-            float startSeconds,
-            float endSeconds,
-            Vector3 up)
-        {
-            float duration = Mathf.Max(0f, endSeconds - startSeconds);
-            if (duration <= 0f)
-                return Vector3.zero;
-            float angularVelocity = yawDegreesPerSecond * Mathf.Deg2Rad;
-            if (Mathf.Abs(angularVelocity) <= 0.000001f)
-                return velocity * duration;
-            float startAngle = angularVelocity * startSeconds;
-            float endAngle = angularVelocity * endSeconds;
-            float along = (Mathf.Sin(endAngle) - Mathf.Sin(startAngle)) / angularVelocity;
-            float across = (Mathf.Cos(startAngle) - Mathf.Cos(endAngle)) / angularVelocity;
-            Vector3 right = Vector3.Cross(up, velocity);
-            return velocity * along + right * across;
+            return ResolvePlanarTravel(endSeconds) - ResolvePlanarTravel(startSeconds);
         }
 
         float ResolveRawTravelElapsedSeconds(float phase)

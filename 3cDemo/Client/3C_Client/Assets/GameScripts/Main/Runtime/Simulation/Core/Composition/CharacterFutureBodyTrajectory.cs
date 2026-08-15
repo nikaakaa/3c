@@ -13,7 +13,8 @@ namespace ThirdPersonSimulation
             float continuationVelocityZ,
             float currentSegmentRemainingSeconds,
             bool hasContinuation,
-            float trajectoryCurvatureDegreesPerSecond)
+            float yawVelocityDegreesPerSecond,
+            float maximumYawVelocityDegreesPerSecond)
         {
             if (!actorId.IsValid || !float.IsFinite(durationSeconds) || durationSeconds <= 0f ||
                 !float.IsFinite(currentVelocityX) || !float.IsFinite(currentVelocityZ) ||
@@ -21,7 +22,9 @@ namespace ThirdPersonSimulation
                 (!float.IsFinite(currentSegmentRemainingSeconds) &&
                  !float.IsPositiveInfinity(currentSegmentRemainingSeconds)) ||
                 currentSegmentRemainingSeconds < 0f ||
-                !float.IsFinite(trajectoryCurvatureDegreesPerSecond))
+                !float.IsFinite(yawVelocityDegreesPerSecond) ||
+                !float.IsFinite(maximumYawVelocityDegreesPerSecond) ||
+                maximumYawVelocityDegreesPerSecond < 0f)
             {
                 throw new ArgumentException("Future Body Trajectory request is invalid.");
             }
@@ -33,7 +36,8 @@ namespace ThirdPersonSimulation
             ContinuationVelocityZ = continuationVelocityZ;
             CurrentSegmentRemainingSeconds = currentSegmentRemainingSeconds;
             HasContinuation = hasContinuation;
-            TrajectoryCurvatureDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
+            YawVelocityDegreesPerSecond = yawVelocityDegreesPerSecond;
+            MaximumYawVelocityDegreesPerSecond = maximumYawVelocityDegreesPerSecond;
         }
 
         public ActorId ActorId { get; }
@@ -44,7 +48,8 @@ namespace ThirdPersonSimulation
         public float ContinuationVelocityZ { get; }
         public float CurrentSegmentRemainingSeconds { get; }
         public bool HasContinuation { get; }
-        public float TrajectoryCurvatureDegreesPerSecond { get; }
+        public float YawVelocityDegreesPerSecond { get; }
+        public float MaximumYawVelocityDegreesPerSecond { get; }
     }
 
     public readonly struct CharacterFutureBodyTrajectorySample
@@ -53,11 +58,20 @@ namespace ThirdPersonSimulation
             float elapsedSeconds,
             float relativePositionX,
             float relativePositionY,
-            float relativePositionZ)
+            float relativePositionZ,
+            float relativeYawDegrees,
+            float velocityX,
+            float velocityY,
+            float velocityZ,
+            float yawVelocityDegreesPerSecond)
         {
             if (!float.IsFinite(elapsedSeconds) || elapsedSeconds < 0f ||
                 !float.IsFinite(relativePositionX) || !float.IsFinite(relativePositionY) ||
-                !float.IsFinite(relativePositionZ))
+                !float.IsFinite(relativePositionZ) ||
+                !float.IsFinite(relativeYawDegrees) ||
+                !float.IsFinite(velocityX) || !float.IsFinite(velocityY) ||
+                !float.IsFinite(velocityZ) ||
+                !float.IsFinite(yawVelocityDegreesPerSecond))
             {
                 throw new ArgumentException("Future Body Trajectory sample is invalid.");
             }
@@ -65,12 +79,22 @@ namespace ThirdPersonSimulation
             RelativePositionX = relativePositionX;
             RelativePositionY = relativePositionY;
             RelativePositionZ = relativePositionZ;
+            RelativeYawDegrees = relativeYawDegrees;
+            VelocityX = velocityX;
+            VelocityY = velocityY;
+            VelocityZ = velocityZ;
+            YawVelocityDegreesPerSecond = yawVelocityDegreesPerSecond;
         }
 
         public float ElapsedSeconds { get; }
         public float RelativePositionX { get; }
         public float RelativePositionY { get; }
         public float RelativePositionZ { get; }
+        public float RelativeYawDegrees { get; }
+        public float VelocityX { get; }
+        public float VelocityY { get; }
+        public float VelocityZ { get; }
+        public float YawVelocityDegreesPerSecond { get; }
     }
 
     public sealed class CharacterFutureBodyTrajectory
@@ -131,7 +155,15 @@ namespace ThirdPersonSimulation
                     time,
                     Lerp(start.RelativePositionX, end.RelativePositionX, t),
                     Lerp(start.RelativePositionY, end.RelativePositionY, t),
-                    Lerp(start.RelativePositionZ, end.RelativePositionZ, t));
+                    Lerp(start.RelativePositionZ, end.RelativePositionZ, t),
+                    Lerp(start.RelativeYawDegrees, end.RelativeYawDegrees, t),
+                    Lerp(start.VelocityX, end.VelocityX, t),
+                    Lerp(start.VelocityY, end.VelocityY, t),
+                    Lerp(start.VelocityZ, end.VelocityZ, t),
+                    Lerp(
+                        start.YawVelocityDegreesPerSecond,
+                        end.YawVelocityDegreesPerSecond,
+                        t));
             }
             return m_Samples[m_Samples.Length - 1];
         }

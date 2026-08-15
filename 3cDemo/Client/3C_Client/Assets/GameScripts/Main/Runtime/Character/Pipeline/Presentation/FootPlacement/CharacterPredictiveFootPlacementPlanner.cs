@@ -15,28 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EventSuccessor = 2
         }
 
-        readonly struct BodySupportContinuityOrigin
-        {
-            internal BodySupportContinuityOrigin(
-                Vector3 root,
-                Vector3 hip,
-                Vector3 rootVelocity,
-                Vector3 hipVelocity)
-            {
-                IsValid = true;
-                Root = root;
-                Hip = hip;
-                RootVelocity = rootVelocity;
-                HipVelocity = hipVelocity;
-            }
-
-            internal bool IsValid { get; }
-            internal Vector3 Root { get; }
-            internal Vector3 Hip { get; }
-            internal Vector3 RootVelocity { get; }
-            internal Vector3 HipVelocity { get; }
-        }
-
         sealed class FootPlanRuntime
         {
             internal FootPlanRuntime(CharacterFootSide side, int pathCapacity)
@@ -76,12 +54,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal Vector3 LastOutputGroundPath { get; private set; }
             internal FootPlacementSurface LastOutputGroundSupport { get; private set; }
             internal ulong LastOutputGroundPlanSequence { get; private set; }
-            internal bool HasLastOutputBodySupport { get; private set; }
-            internal Vector3 LastOutputBodyRoot { get; private set; }
-            internal Vector3 LastOutputBodyHip { get; private set; }
-            internal Vector3 LastOutputBodyRootVelocity { get; private set; }
-            internal Vector3 LastOutputBodyHipVelocity { get; private set; }
-            internal ulong LastOutputBodyFrame { get; private set; }
             internal ulong CommittedAnchorPlanSequence { get; private set; }
             internal ulong CommittedAnchorLandingEventIdentity { get; private set; }
             FootPlanTransitionKind TransitionKind { get; set; }
@@ -233,12 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 sole,
                 Vector3 groundPath,
                 FootPlacementSurface groundSupport,
-                ulong groundPlanSequence,
-                bool bodySupportAvailable,
-                Vector3 bodyRoot,
-                Vector3 bodyHip,
-                ulong renderFrame,
-                float deltaSeconds)
+                ulong groundPlanSequence)
             {
                 if (!IsFinite(sole))
                     return;
@@ -250,62 +217,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     LastOutputGroundPath = Vector3.zero;
                     LastOutputGroundSupport = default;
                     LastOutputGroundPlanSequence = 0;
-                }
-                else
-                {
-                    LastOutputGroundPath = groundPath;
-                    LastOutputGroundSupport = new FootPlacementSurface(
-                        groundSupport.Collider,
-                        groundPath,
-                        groundSupport.Normal.normalized);
-                    HasLastOutputGroundPath = LastOutputGroundSupport.IsValid;
-                    LastOutputGroundPlanSequence = HasLastOutputGroundPath
-                        ? groundPlanSequence
-                        : 0;
-                }
-                if (!bodySupportAvailable || !IsFinite(bodyRoot) || !IsFinite(bodyHip) ||
-                    renderFrame == 0 || !float.IsFinite(deltaSeconds) || deltaSeconds <= 0f)
-                {
-                    HasLastOutputBodySupport = false;
-                    LastOutputBodyRoot = Vector3.zero;
-                    LastOutputBodyHip = Vector3.zero;
-                    LastOutputBodyRootVelocity = Vector3.zero;
-                    LastOutputBodyHipVelocity = Vector3.zero;
-                    LastOutputBodyFrame = 0;
                     return;
                 }
-                Vector3 rootVelocity = HasLastOutputBodySupport && renderFrame > LastOutputBodyFrame
-                    ? (bodyRoot - LastOutputBodyRoot) / deltaSeconds
-                    : Vector3.zero;
-                Vector3 hipVelocity = HasLastOutputBodySupport && renderFrame > LastOutputBodyFrame
-                    ? (bodyHip - LastOutputBodyHip) / deltaSeconds
-                    : Vector3.zero;
-                LastOutputBodyRoot = bodyRoot;
-                LastOutputBodyHip = bodyHip;
-                LastOutputBodyRootVelocity = IsFinite(rootVelocity) ? rootVelocity : Vector3.zero;
-                LastOutputBodyHipVelocity = IsFinite(hipVelocity) ? hipVelocity : Vector3.zero;
-                LastOutputBodyFrame = renderFrame;
-                HasLastOutputBodySupport = true;
-            }
-
-            internal BodySupportContinuityOrigin ResolveBodySupportContinuityOrigin(
-                ulong renderFrame,
-                float deltaSeconds)
-            {
-                if (!HasLastOutputBodySupport || renderFrame <= LastOutputBodyFrame ||
-                    !float.IsFinite(deltaSeconds) || deltaSeconds <= 0f)
-                {
-                    return default;
-                }
-                Vector3 root = LastOutputBodyRoot + LastOutputBodyRootVelocity * deltaSeconds;
-                Vector3 hip = LastOutputBodyHip + LastOutputBodyHipVelocity * deltaSeconds;
-                return IsFinite(root) && IsFinite(hip)
-                    ? new BodySupportContinuityOrigin(
-                        root,
-                        hip,
-                        LastOutputBodyRootVelocity,
-                        LastOutputBodyHipVelocity)
-                    : default;
+                LastOutputGroundPath = groundPath;
+                LastOutputGroundSupport = new FootPlacementSurface(
+                    groundSupport.Collider,
+                    groundPath,
+                    groundSupport.Normal.normalized);
+                HasLastOutputGroundPath = LastOutputGroundSupport.IsValid;
+                LastOutputGroundPlanSequence = HasLastOutputGroundPath
+                    ? groundPlanSequence
+                    : 0;
             }
 
             internal Vector3 ResolveOwnershipContinuity(
@@ -361,12 +283,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LastOutputGroundPath = Vector3.zero;
                 LastOutputGroundSupport = default;
                 LastOutputGroundPlanSequence = 0;
-                HasLastOutputBodySupport = false;
-                LastOutputBodyRoot = Vector3.zero;
-                LastOutputBodyHip = Vector3.zero;
-                LastOutputBodyRootVelocity = Vector3.zero;
-                LastOutputBodyHipVelocity = Vector3.zero;
-                LastOutputBodyFrame = 0;
                 CommittedAnchorPlanSequence = 0;
                 CommittedAnchorLandingEventIdentity = 0;
                 m_BaselineOwnedLastFrame = false;
@@ -823,7 +739,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.LeftFoot,
                 baselineDiagnostics.Left,
                 frame.RenderFrame,
-                frame.PresentationDeltaSeconds,
                 m_Rig.LeftLegLength,
                 ResolveAppliedHip(pose.Left.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics leftDiagnostics,
@@ -839,7 +754,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.RightFoot,
                 baselineDiagnostics.Right,
                 frame.RenderFrame,
-                frame.PresentationDeltaSeconds,
                 m_Rig.RightLegLength,
                 ResolveAppliedHip(pose.Right.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics rightDiagnostics,
@@ -899,7 +813,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFullBodyIkGoal baseline,
             CharacterFootGroundingFootDiagnostics grounding,
             ulong renderFrame,
-            float presentationDeltaSeconds,
             float legLength,
             Vector3 appliedHip,
             out CharacterPredictiveFootPlacementFootDiagnostics diagnostics,
@@ -1300,12 +1213,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? revisionPlan.Sequence
                     : targetAvailable
                         ? plan.Sequence
-                        : 0,
-                targetAvailable || revisionTargetAvailable,
-                currentPathRoot,
-                currentPathHip,
-                renderFrame,
-                presentationDeltaSeconds);
+                        : 0);
             debugSnapshot = new CharacterPredictiveFootLegFrameSnapshot(
                 side,
                 plan.State,
@@ -1787,8 +1695,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? successorProbeSupport.Point
                     : handoffSole;
             }
-            BodySupportContinuityOrigin bodySupportContinuityOrigin =
-                runtime.ResolveBodySupportContinuityOrigin(renderFrame, presentationDeltaSeconds);
             if (runtime.HasRevision)
             {
                 CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
@@ -1816,7 +1722,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     successorProbeStart,
                     successorProbeSupport,
                     successorSole,
-                    in bodySupportContinuityOrigin,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -1860,7 +1765,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     groundProbeStart,
                     groundProbeSupport,
                     currentSole,
-                    default,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -1903,7 +1807,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     revisionGroundPath,
                     revisionGroundSupport,
                     revisionSole,
-                    in bodySupportContinuityOrigin,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -2079,7 +1982,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 groundProbeStart,
             FootPlacementSurface groundProbeSupport,
             Vector3 animationSoleAtGeneration,
-            in BodySupportContinuityOrigin bodySupportContinuityOrigin,
             float soleSupportRadius,
             Vector3 rootStart,
             Quaternion rootStartRotation,
@@ -2136,7 +2038,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 predictedHip = rootTrajectory.EvaluateHipRoute(1f);
             FootPredictionRejectReason rejectReason = FootPredictionRejectReason.None;
             CharacterPredictiveFootPlacementQueryResult query = default;
-            CharacterPredictiveBodySupportContinuity bodySupportContinuity = default;
             ResolveVirtualGroundSplitEvent(
                 side,
                 in step,
@@ -2193,16 +2094,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         rejectReason = FootPredictionRejectReason.FootRateInvalid;
                     }
-                    else
-                    {
-                        bodySupportContinuity = ResolveBodySupportContinuity(
-                            in bodySupportContinuityOrigin,
-                            query.BodySupportPath,
-                            in rootTrajectory,
-                            step.ActionStepClock.Phase,
-                            step.ActionStepClock.DurationSeconds,
-                            up);
-                    }
                 }
             }
             ulong sequence = AllocatePlanSequence();
@@ -2216,8 +2107,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landing,
                     in rootTrajectory,
                     predictedHip,
-                    in query,
-                    in bodySupportContinuity);
+                    in query);
             }
             else
             {
@@ -2233,80 +2123,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in query);
             }
             return plan.HasExecutablePath;
-        }
-
-        static CharacterPredictiveBodySupportContinuity ResolveBodySupportContinuity(
-            in BodySupportContinuityOrigin origin,
-            in CharacterPredictiveBodySupportPath path,
-            in CharacterPredictiveFootRootTrajectory rootTrajectory,
-            float eventPhase,
-            float durationSeconds,
-            Vector3 up)
-        {
-            if (!origin.IsValid || !path.IsValid || !float.IsFinite(eventPhase) ||
-                eventPhase < 0f || eventPhase >= 1f ||
-                !float.IsFinite(durationSeconds) || durationSeconds <= 0f)
-            {
-                return default;
-            }
-            path.Evaluate(in rootTrajectory, eventPhase, out Vector3 root, out Vector3 hip);
-            EvaluateBodySupportVelocity(
-                in path,
-                in rootTrajectory,
-                eventPhase,
-                durationSeconds,
-                root,
-                hip,
-                out Vector3 rootVelocity,
-                out Vector3 hipVelocity);
-            float remainingSeconds = (1f - eventPhase) * durationSeconds;
-            if (!IsFinite(root) || !IsFinite(hip) ||
-                !IsFinite(rootVelocity) || !IsFinite(hipVelocity) ||
-                remainingSeconds <= 0.0001f)
-            {
-                return default;
-            }
-            return new CharacterPredictiveBodySupportContinuity(
-                eventPhase,
-                remainingSeconds,
-                up,
-                origin.Root - root,
-                origin.Hip - hip,
-                origin.RootVelocity - rootVelocity,
-                origin.HipVelocity - hipVelocity);
-        }
-
-        static void EvaluateBodySupportVelocity(
-            in CharacterPredictiveBodySupportPath path,
-            in CharacterPredictiveFootRootTrajectory rootTrajectory,
-            float eventPhase,
-            float durationSeconds,
-            Vector3 root,
-            Vector3 hip,
-            out Vector3 rootVelocity,
-            out Vector3 hipVelocity)
-        {
-            float phaseStep = Mathf.Min(
-                1f / (60f * durationSeconds),
-                Mathf.Max(0.0001f, 1f - eventPhase));
-            float nextPhase = Mathf.Min(1f, eventPhase + phaseStep);
-            if (nextPhase > eventPhase + 0.000001f)
-            {
-                path.Evaluate(in rootTrajectory, nextPhase, out Vector3 nextRoot, out Vector3 nextHip);
-                float seconds = (nextPhase - eventPhase) * durationSeconds;
-                rootVelocity = (nextRoot - root) / seconds;
-                hipVelocity = (nextHip - hip) / seconds;
-                return;
-            }
-            float previousPhase = Mathf.Max(0f, eventPhase - phaseStep);
-            path.Evaluate(
-                in rootTrajectory,
-                previousPhase,
-                out Vector3 previousRoot,
-                out Vector3 previousHip);
-            float previousSeconds = Mathf.Max(0.000001f, (eventPhase - previousPhase) * durationSeconds);
-            rootVelocity = (root - previousRoot) / previousSeconds;
-            hipVelocity = (hip - previousHip) / previousSeconds;
         }
 
         static void ResolveVirtualGroundSplitEvent(

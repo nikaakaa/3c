@@ -341,66 +341,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 
-    internal readonly struct CharacterPredictiveBodySupportContinuity
-    {
-        internal CharacterPredictiveBodySupportContinuity(
-            float startPhase,
-            float remainingSeconds,
-            Vector3 up,
-            Vector3 rootOffset,
-            Vector3 hipOffset,
-            Vector3 rootVelocityOffset,
-            Vector3 hipVelocityOffset)
-        {
-            if (!float.IsFinite(startPhase) || startPhase < 0f || startPhase >= 1f ||
-                !float.IsFinite(remainingSeconds) || remainingSeconds <= 0f ||
-                !IsFinite(up) || up.sqrMagnitude <= 0.000001f ||
-                !IsFinite(rootOffset) || !IsFinite(hipOffset) ||
-                !IsFinite(rootVelocityOffset) || !IsFinite(hipVelocityOffset))
-            {
-                throw new ArgumentException("Predictive Body Support continuity is invalid.");
-            }
-            IsValid = true;
-            StartPhase = startPhase;
-            RemainingSeconds = remainingSeconds;
-            Vector3 normalizedUp = up.normalized;
-            RootOffset = normalizedUp * Vector3.Dot(rootOffset, normalizedUp);
-            HipOffset = normalizedUp * Vector3.Dot(hipOffset, normalizedUp);
-            RootVelocityOffset = normalizedUp * Vector3.Dot(rootVelocityOffset, normalizedUp);
-            HipVelocityOffset = normalizedUp * Vector3.Dot(hipVelocityOffset, normalizedUp);
-        }
-
-        internal bool IsValid { get; }
-        readonly float StartPhase;
-        readonly float RemainingSeconds;
-        readonly Vector3 RootOffset;
-        readonly Vector3 HipOffset;
-        readonly Vector3 RootVelocityOffset;
-        readonly Vector3 HipVelocityOffset;
-
-        internal void Evaluate(float eventPhase, out Vector3 root, out Vector3 hip)
-        {
-            if (!IsValid)
-            {
-                root = Vector3.zero;
-                hip = Vector3.zero;
-                return;
-            }
-            float value = Mathf.InverseLerp(StartPhase, 1f, Mathf.Clamp01(eventPhase));
-            float value2 = value * value;
-            float value3 = value2 * value;
-            float positionBasis = 2f * value3 - 3f * value2 + 1f;
-            float velocityBasis = value3 - 2f * value2 + value;
-            root = RootOffset * positionBasis +
-                   RootVelocityOffset * (velocityBasis * RemainingSeconds);
-            hip = HipOffset * positionBasis +
-                  HipVelocityOffset * (velocityBasis * RemainingSeconds);
-        }
-
-        static bool IsFinite(Vector3 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
-    }
-
     internal sealed class CharacterPredictiveFootPlacementPlan
     {
         readonly CharacterFootSide m_Side;
@@ -452,7 +392,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PredictedHip { get; private set; }
         internal CharacterPredictiveFootRootTrajectory RootTrajectory { get; private set; }
         internal CharacterPredictiveBodySupportPath BodySupportPath { get; private set; }
-        internal CharacterPredictiveBodySupportContinuity BodySupportContinuity { get; private set; }
         internal FixedList512Bytes<Vector3> AuthoredFootPlanarRoute { get; private set; }
         internal FixedList512Bytes<Vector3> RootLocalHipRoute { get; private set; }
         internal FixedList128Bytes<float> AnimationClearanceHeights { get; private set; }
@@ -542,8 +481,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 landing,
             in CharacterPredictiveFootRootTrajectory rootTrajectory,
             Vector3 predictedHip,
-            in CharacterPredictiveFootPlacementQueryResult query,
-            in CharacterPredictiveBodySupportContinuity bodySupportContinuity)
+            in CharacterPredictiveFootPlacementQueryResult query)
         {
             RequireIdentity(sequence, generatedFrame, in step);
             AssignEvent(sequence, generatedFrame, in step);
@@ -566,7 +504,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             VirtualGroundSplitSupport = query.VirtualGroundSplitSupport;
             VirtualGroundSplitLandingEventIdentity = query.VirtualGroundSplitLandingEventIdentity;
             BodySupportPath = query.BodySupportPath;
-            BodySupportContinuity = bodySupportContinuity;
             SoleSupportRadius = query.SoleSupportRadius;
             GroundEnvelopeSegmentCount = query.GroundEnvelope.CopyTo(m_PathSegments);
             GroundEnvelopeRejectReason = query.GroundEnvelope.RejectReason;
@@ -618,7 +555,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             VirtualGroundSplitSupport = query.VirtualGroundSplitSupport;
             VirtualGroundSplitLandingEventIdentity = query.VirtualGroundSplitLandingEventIdentity;
             BodySupportPath = query.BodySupportPath;
-            BodySupportContinuity = default;
             GroundEnvelopeSegmentCount = query.GroundEnvelope.Count;
             GroundEnvelopeRejectReason = query.GroundEnvelope.RejectReason;
             QueryCount = query.QueryCount;
@@ -892,9 +828,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Mathf.Clamp01(eventPhase),
                 out root,
                 out hip);
-            BodySupportContinuity.Evaluate(eventPhase, out Vector3 rootContinuity, out Vector3 hipContinuity);
-            root += rootContinuity;
-            hip += hipContinuity;
         }
 
         internal void EvaluateClearancePath(
@@ -1063,7 +996,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FutureSupport = default;
             FutureLandingRequest = default;
             BodySupportPath = default;
-            BodySupportContinuity = default;
             VirtualGroundSplitEventPhase = 0f;
             VirtualGroundOpposingLanding = default;
             VirtualGroundSplitRoutePoint = default;

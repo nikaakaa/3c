@@ -169,6 +169,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 layers.Ground,
                 materials);
 
+            Physics.SyncTransforms();
             CreateStair(
                 GameplayLabFootIkRegressionCourse.AscentIdentity,
                 gameplayRoot.transform,

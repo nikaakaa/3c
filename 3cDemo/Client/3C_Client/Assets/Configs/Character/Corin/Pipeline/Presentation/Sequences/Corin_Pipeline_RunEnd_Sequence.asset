@@ -30,7 +30,7 @@ MonoBehaviour:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 1
+        value: 0
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -39,7 +39,7 @@ MonoBehaviour:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 1
+        value: 0
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -50,7 +50,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   m_Notifies: []
-  m_ContentRevision: 373aebf15d4048d184090c5496b98977
+  m_ContentRevision: 52d021c9f0fa4c46b3213b79bb6f3eea
   m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
   m_FootAnalysisSource: {fileID: 11400000, guid: 2487156154864bb5b49cb283c2583808,
     type: 2}

@@ -129,3 +129,30 @@
 - [x] 16.2 在现有Stance owner中让已有Anchor通过原有Blend连续释放到Current Grounding，并从旧Anchor鞋底面与Pelvis Reach中同步退场。
 - [x] 16.3 完成单一路径静态搜索、Runtime与Editor编译、OpenSpec strict validate，并在Unity效果验证前提交该单变量版本。
 - [ ] 16.4 在已打开GameplayLab验证平地停步回原动画、斜坡静止不穿透、重新起步恢复正式Stance规则；运行生命周期错误若阻断验证，作为独立根因处理。
+
+## 17. 静止旧Anchor退场后的Idle锁脚
+
+- [x] 17.1 用当前实现证明静止状态把`IdleCurrentSupport`直接排除在`AllowsAnchor`之外，导致`PlantContact=true`但无法捕获或保持世界Anchor；修正第16节“静止永不捕获Anchor”的过度约束。
+- [x] 17.2 在同一个Stance/Anchor owner中区分非Idle Anchor与Idle Anchor：进入静止先把旧运动Anchor连续释放到Current Grounding，清零后在同一安全Goal原子捕获Idle Anchor并恢复支撑面、鞋底净空与Pelvis Reach所有权。
+- [x] 17.3 完成单一路径静态搜索、Runtime与Editor编译、OpenSpec strict validate和已打开GameplayLab短时运行检查。
+
+## 18. Idle Anchor归位目标修复
+
+- [x] 18.1 证明Idle Anchor此前直接捕获仍在收敛的Lyra Current Offset，导致停步残差被永久冻结；该实现只完成锁脚，没有完成归位。
+- [x] 18.2 让旧运动Anchor淡出目标与新Idle Anchor捕获目标统一为`同帧Idle原动画Ankle XZ + 唯一Current支撑面旋转 + Heel/Toe沿Component Up接触修正`；不新增查询、参数、Spring或Anchor owner。
+- [x] 18.3 完成单一路径静态搜索、Runtime编译和OpenSpec strict validate；Unity Editor域编译与GameplayLab效果继续按验收口径检查，不写入任务清单。
+
+## 19. Stop到Idle权重交接
+
+- [x] 19.1 证明RunEnd与Idle的`presentation.foot-placement-weight`都恒为`1`，`GroundedStationary`会在停止动画尚未归位时捕获Idle Anchor并永久冻结过渡姿势。
+- [x] 19.2 将RunEnd正式权重改为`0`，复用动画图现有混合完成Locomotion到RunEnd淡出、RunEnd到Idle淡入；不新增速度曲线、运行时配置或第二权重owner。
+- [x] 19.3 在现有Stance状态内记录停止过程的权重交接，只允许经历过非完整权重并由Idle恢复完整权重后捕获Idle Anchor；初始Idle仍可立即锁脚。
+- [x] 19.4 完成Runtime与Editor编译、OpenSpec strict validate和单一路径静态搜索。
+- [x] 19.5 通过已连接的Unity Editor完成精确Float32与Fixed Character Build，确认生成的Presentation Projection消费RunEnd新revision。
+
+## 20. A/D冻结Plan失效证据回归
+
+- [x] 20.1 证明现实现从相邻表现帧Desired Velocity重算Trajectory Curvature，并用逐帧速度/曲率差触发`ActionInterrupted`；Gizmo只绘制`Executing`，因此A/D时Path整体消失。
+- [x] 20.2 对照GDC冻结Foot Path与下载案例的小落点偏差阈值，明确Plan提交后不再用输入方向导数验证路线，唯一失效证据改为真实LiftOff后权威Body Root相对同相位冻结KCC Root的物理偏离。
+- [ ] 20.3 在现有Predictive Plan owner内替换失效计算并保持typed `ActionInterrupted`；不得逐帧重规划、平滑Path或增加第二输入阈值配置。
+- [ ] 20.4 完成诊断字段对账、Runtime与Editor编译、精确Character Build、OpenSpec strict validate和Unity A/D回归。

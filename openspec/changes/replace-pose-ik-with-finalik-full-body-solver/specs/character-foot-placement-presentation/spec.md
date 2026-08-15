@@ -52,12 +52,12 @@ Swing最终Foot Goal的XZ与基础旋转 MUST来自当前上游原动画Componen
 
 #### Scenario: 输入变化仍在冻结Landing容差内
 
-- **WHEN** committed Body速度或Trajectory Curvature相对计划创建帧发生变化，但按剩余步时积分后的Landing平面误差仍不超过现有鞋底查询半径
+- **WHEN** 摄像机缓动或输入采样令当前committed Body速度或Trajectory Curvature相对计划创建帧发生变化，但当前权威Body Root仍与同一Action Step Clock下的冻结KCC Root保持在现有鞋底查询半径内
 - **THEN** 当前Plan MUST继续按原Action Step Clock采样同一冻结Route、Foot Rate与Envelope
 - **AND** 系统 MUST不因Desired Input为零、转向布尔变化或角速度符号测试结束计划
 - **AND** Action Phase跨过某个比例、Motion Generation变化或台阶碰撞改变瞬时Target Velocity MUST不被单独解释为输入已经改变
-- **AND** 当前Root仍与同相位冻结KCC位置/朝向保持在现有鞋底查询半径内时，计划 MUST继续执行
-- **AND** 只有积分误差越过该物理容差时才可用typed `ActionInterrupted`结束计划，不得原地重规划
+- **AND** Plan提交后系统 MUST不再用逐帧Desired Velocity方向导数、速度差或Trajectory Curvature差验证冻结路线
+- **AND** 只有真实LiftOff后的权威Body Root相对同相位冻结KCC位置/朝向所形成的Landing平面误差越过该物理容差时，才可用typed `ActionInterrupted`结束计划，不得原地重规划
 
 ### Requirement: 地面查询必须形成有限连续 Support Envelope
 
@@ -115,7 +115,7 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
 - **AND** 同一个Foot Offset连续状态 MUST同步到修正后位置，FBBIK MUST只执行该最终Goal
 - **AND** 系统 MUST不等待Swing用Grounding Spring跨多个接触帧回落
 
-当本帧没有权威Landing Event、Plan为`Inactive`且Motion Phase为`GroundedStationary`时，统一Foot Placement MUST进入Idle Current Support模式，继续消费同一个Current Grounding安全Baseline。该模式只证明Contact，不得捕获新的完整世界Anchor；已有Anchor MUST通过现有Stance Blend连续释放到Current Grounding，释放期间不得继续拥有鞋底支撑面或Pelvis Reach。该模式 MUST不创建第二Grounding、响应式前置、速度权重或新参数，也 MUST不在权威动作存在但Plan为`Rejected`时介入；Rejected仍须显式暴露预测失败。
+当本帧没有权威Landing Event、Plan为`Inactive`且Motion Phase为`GroundedStationary`时，统一Foot Placement MUST进入Idle Current Support模式，继续消费同一个Current Grounding安全Baseline。该Baseline MUST保持同帧原动画Ankle的平面位置，使用唯一Current支撑面决定旋转，并只沿Component Up把Calibration Heel/Toe约束到该面；它 MUST不直接采用仍在收敛的Lyra Offset Spring Current。进入该模式时，已有的非Idle Anchor MUST先通过现有Stance Blend连续释放到该Baseline，释放期间不得继续拥有鞋底支撑面或Pelvis Reach，也不得直接改名为Idle Anchor。经过停步动作进入Idle时，既有`presentation.foot-placement-weight` MUST由Locomotion的`1`通过RunEnd的`0`连续淡出，再由Idle的`1`连续淡入；Runtime MUST只在本次停止已经观察到非完整权重且Idle重新取得完整权重后，于同一安全Goal原子捕获Idle Anchor。初始直接进入Idle MAY立即捕获。Idle Anchor MUST在静止期间保持完整世界Goal并继续拥有同一支撑面、鞋底净空和Pelvis Reach。该模式 MUST不创建第二Grounding、响应式前置、速度权重、新参数或第二Anchor owner，也 MUST不在权威动作存在但Plan为`Rejected`时介入；Rejected仍须显式暴露预测失败。
 
 事件身份替换、Phase回退、动作中断或Stance捕获Landing MUST结束旧当前计划。新当前事件只有在自身PreSwing边界 MAY创建一次新计划；相同事件不得重试、晋升旧世界候选或逐帧重映射。
 
@@ -138,12 +138,15 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
   - **AND** MUST不以Heel/Toe相对Root的全三维速度幅值把正常支撑误判为Sliding或Unlocked
   - **AND** Runtime MUST不从25点几何路线近邻采样该离散事实，禁止为兼容旧Artifact临时改写Constraint
 
-#### Scenario: 停步后Anchor连续回到Current Grounding
+#### Scenario: 停步后旧Anchor退场并重新锁定
 
 - **WHEN** Locomotion Landing Event已经退出、Plan为`Inactive`、Motion Phase为`GroundedStationary`且Current Query提供合法支撑
 - **THEN** Stance MUST保持Contact并用现有Anchor Blend把已有完整世界Anchor连续释放到Current Grounding安全Baseline
-- **AND** 静止期间 MUST不捕获新Anchor；平地最终回到原动画脚，斜坡只保留Current Grounding所需修正
-- **AND** 旧Anchor MUST不再拥有鞋底支撑面或Pelvis Reach，系统 MUST不把Goal改回会穿过当前支撑面的原动画脚
+- **AND** 该Baseline MUST保持当前Idle原动画Ankle XZ、消费唯一Current支撑面，并且不得把Lyra Offset Spring的中途Current值冻结成Idle Anchor
+- **AND** RunEnd Foot Placement权重 MUST为`0`，动画图 MUST把Locomotion的`1`连续淡出并把Idle的`1`连续淡入
+- **AND** 旧Anchor清零后，现有Stance MUST等待本次停止的权重离开完整所有权并由Idle恢复为完整所有权，再在同一Current Grounding安全Goal处原子捕获Idle Anchor
+- **AND** 旧Anchor释放期间 MUST不再拥有鞋底支撑面或Pelvis Reach；新Idle Anchor捕获后 MUST接管同一支撑面、鞋底净空与Pelvis Reach
+- **AND** 系统 MUST不把Idle Anchor捕获位置改回会穿过当前支撑面的原动画脚，也不得把最后一步Landing Anchor直接改名继续使用
 - **AND** 重新移动或新权威Step到来后 MUST恢复原有Stance与Landing捕获规则
 
 #### Scenario: 固定计划按权威动作时钟执行并保留当前支撑安全下界
@@ -158,7 +161,7 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
 
 - **WHEN** Motion Phase为`GroundedStationary`、没有权威Action Constraint且Current Query提供合法近距离支撑
 - **THEN** 现有Stance MUST允许该真实接触成立，不得仅因in-place动画残余鞋底速度或Plant Confidence丢失Contact
-- **AND** 该接触 MUST不捕获或维持完整世界Anchor；已有Anchor MUST连续释放到Current Grounding
+- **AND** 已有非Idle Anchor MUST先连续释放；清零后 MUST允许同一Stance在Current Grounding安全Goal捕获并维持Idle Anchor
 - **AND** Surface坡度、距离与唯一World Query有效性门禁 MUST继续生效
 
 #### Scenario: 预测Landing按同一支撑面交给Stance

@@ -28,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 pathRootStart,
             Vector3 pathHip,
             Vector3 currentHip,
+            Vector3 targetAnklePosition,
             float supportLegLength,
             float supportLegCompressionReserve,
             Vector3 supportKneeBendPlane,
@@ -56,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathRootStart = pathRootStart;
             PathHip = pathHip;
             CurrentHip = currentHip;
+            TargetAnklePosition = targetAnklePosition;
             SupportLegLength = supportLegLength;
             SupportLegCompressionReserve = supportLegCompressionReserve;
             SupportKneeBendPlane = supportKneeBendPlane;
@@ -85,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PathRootStart { get; }
         internal Vector3 PathHip { get; }
         internal Vector3 CurrentHip { get; }
+        internal Vector3 TargetAnklePosition { get; }
         internal float SupportLegLength { get; }
         internal float SupportLegCompressionReserve { get; }
         internal Vector3 SupportKneeBendPlane { get; }

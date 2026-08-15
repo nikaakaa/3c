@@ -368,6 +368,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementSurface contactSurface = default;
             Vector3 contactAnklePosition = default;
             Quaternion contactAnkleRotation = default;
+            Vector3 targetAnklePosition = pose.AnklePosition;
             bool hasContactTarget = false;
             if (plan.HasExecutablePath)
             {
@@ -407,6 +408,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRoot = Vector3.Lerp(pathRoot, revisionPathRoot, blend);
                 pathRootStart = Vector3.Lerp(pathRootStart, revisionPathRootStart, blend);
                 pathHip = Vector3.Lerp(pathHip, revisionPathHip, blend);
+            }
+            bool activeTargetAvailable = TryEvaluateFootTarget(
+                plan,
+                plan.ActionStepPhase,
+                pose,
+                m_Rig.PoseRoot.up.normalized,
+                pose.HipPosition,
+                0f,
+                out CharacterPredictiveFootTarget activeTarget);
+            if (activeTargetAvailable)
+                targetAnklePosition = activeTarget.AnklePosition;
+            if (revisionMatches &&
+                TryEvaluateFootTarget(
+                    revision,
+                    revision.ActionStepPhase,
+                    pose,
+                    m_Rig.PoseRoot.up.normalized,
+                    pose.HipPosition,
+                    0f,
+                    out CharacterPredictiveFootTarget revisionTarget))
+            {
+                targetAnklePosition = activeTargetAvailable
+                    ? Vector3.Lerp(
+                        activeTarget.AnklePosition,
+                        revisionTarget.AnklePosition,
+                        runtime.SmoothedRevisionBlendWeight)
+                    : revisionTarget.AnklePosition;
             }
             CharacterPredictiveFootPlacementPlan contactPlan = revisionMatches
                 ? revision
@@ -474,6 +502,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRootStart,
                 pathHip,
                 pose.HipPosition,
+                targetAnklePosition,
                 step.IsAuthoritative ? step.BiomechanicalSample.SupportLegLength : 0f,
                 step.IsAuthoritative ? step.BiomechanicalSample.SupportLegCompressionReserve : 0f,
                 step.IsAuthoritative ? step.BiomechanicalSample.SupportKneeBendPlane : Vector3.zero,
@@ -1240,6 +1269,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRootStart,
                 target.PathHip,
                 pose.HipPosition,
+                target.AnklePosition,
                 0f,
                 0f,
                 Vector3.zero,

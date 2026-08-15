@@ -180,40 +180,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         Quaternion EvaluateRotation(float phase)
         {
-            return EvaluateBodyRotation(
-                StartRotation,
-                Up,
-                FrozenMotionPlanarVelocity,
-                ContinuationPlanarVelocity,
-                CurrentSegmentSwitchDelaySeconds,
-                HasContinuation,
-                FrozenMaximumYawVelocityDegreesPerSecond,
-                ResolveRawTravelElapsedSeconds(phase));
+            float yawDegrees = FrozenYawVelocityDegreesPerSecond *
+                               ResolveRawTravelElapsedSeconds(phase);
+            return (Quaternion.AngleAxis(yawDegrees, Up) * StartRotation).normalized;
         }
 
         internal Vector3 EvaluateRemainingPlannedIntentDisplacement(float eventPhase)
         {
-            float startSeconds = ResolveRawTravelElapsedSeconds(Mathf.Clamp01(eventPhase));
-            float endSeconds = ResolveRawTravelElapsedSeconds(1f);
-            if (endSeconds <= startSeconds)
-                return Vector3.zero;
-            if (float.IsPositiveInfinity(CurrentSegmentSwitchDelaySeconds) ||
-                endSeconds <= CurrentSegmentSwitchDelaySeconds)
-            {
-                return FrozenMotionPlanarVelocity * (endSeconds - startSeconds);
-            }
-            if (startSeconds >= CurrentSegmentSwitchDelaySeconds)
-            {
-                return HasContinuation
-                    ? ContinuationPlanarVelocity * (endSeconds - startSeconds)
-                    : Vector3.zero;
-            }
-            Vector3 current = FrozenMotionPlanarVelocity *
-                              (CurrentSegmentSwitchDelaySeconds - startSeconds);
-            return HasContinuation
-                ? current + ContinuationPlanarVelocity *
-                  (endSeconds - CurrentSegmentSwitchDelaySeconds)
-                : current;
+            Vector3 current = ResolvePlanarTravel(
+                ResolveRawTravelElapsedSeconds(Mathf.Clamp01(eventPhase)));
+            Vector3 landing = ResolvePlanarTravel(ResolveRawTravelElapsedSeconds(1f));
+            return Vector3.ProjectOnPlane(landing - current, Up);
         }
 
         float ResolveRawTravelElapsedSeconds(float phase)
@@ -246,52 +223,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float.IsFinite(value.x) && float.IsFinite(value.y) &&
             float.IsFinite(value.z) && float.IsFinite(value.w) &&
             Quaternion.Dot(value, value) > 0.000001f;
-
-        static Quaternion EvaluateBodyRotation(
-            Quaternion startRotation,
-            Vector3 up,
-            Vector3 currentVelocity,
-            Vector3 continuationVelocity,
-            float switchDelaySeconds,
-            bool hasContinuation,
-            float maximumYawVelocityDegreesPerSecond,
-            float elapsedSeconds)
-        {
-            float duration = Mathf.Max(0f, elapsedSeconds);
-            float currentDuration = float.IsPositiveInfinity(switchDelaySeconds)
-                ? duration
-                : Mathf.Min(duration, Mathf.Max(0f, switchDelaySeconds));
-            Quaternion rotation = RotateTowardsPlanarDirection(
-                startRotation,
-                up,
-                currentVelocity,
-                maximumYawVelocityDegreesPerSecond * currentDuration);
-            if (!hasContinuation || duration <= switchDelaySeconds)
-                return rotation;
-            return RotateTowardsPlanarDirection(
-                rotation,
-                up,
-                continuationVelocity,
-                maximumYawVelocityDegreesPerSecond * (duration - switchDelaySeconds));
-        }
-
-        static Quaternion RotateTowardsPlanarDirection(
-            Quaternion rotation,
-            Vector3 up,
-            Vector3 velocity,
-            float maximumDegrees)
-        {
-            Vector3 target = Vector3.ProjectOnPlane(velocity, up);
-            Vector3 forward = Vector3.ProjectOnPlane(rotation * Vector3.forward, up);
-            if (target.sqrMagnitude <= 0.000001f || forward.sqrMagnitude <= 0.000001f ||
-                maximumDegrees <= 0f)
-            {
-                return rotation;
-            }
-            float delta = Vector3.SignedAngle(forward, target, up);
-            float applied = Mathf.Clamp(delta, -maximumDegrees, maximumDegrees);
-            return (Quaternion.AngleAxis(applied, up) * rotation).normalized;
-        }
 
     }
 
@@ -758,6 +689,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void ObserveWorldMotionDeviation(
             Vector3 currentPresentedBodyPosition,
+            Quaternion currentPresentedBodyRotation,
             float landingPlanarTolerance)
         {
             if (!HasExecutablePath)
@@ -770,6 +702,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? landingPlanarTolerance
                 : 0f;
             if (!IsFinite(currentPresentedBodyPosition) ||
+                !IsFinite(currentPresentedBodyRotation) ||
                 !float.IsFinite(landingPlanarTolerance) ||
                 landingPlanarTolerance <= 0f)
             {
@@ -789,7 +722,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     RootTrajectory.Up)
                 .magnitude;
             MotionLinearLandingError = linearLandingError;
-            MotionLandingError = linearLandingError;
+            RootTrajectory.EvaluateEventPhase(
+                ActionStepPhase,
+                out _,
+                out Quaternion expectedBodyRotation);
+            float angularDifference = Quaternion.Angle(
+                expectedBodyRotation,
+                currentPresentedBodyRotation) * Mathf.Deg2Rad;
+            float angularLever = Mathf.Max(
+                SoleSupportRadius,
+                RootTrajectory.EvaluateRemainingPlanarDistance(ActionStepPhase));
+            float angularLandingError =
+                2f * angularLever * Mathf.Sin(angularDifference * 0.5f);
+            MotionAngularLandingError = angularLandingError;
+            MotionLandingError = Mathf.Sqrt(
+                linearLandingError * linearLandingError +
+                angularLandingError * angularLandingError);
         }
 
         internal void EvaluateGroundPath(
@@ -1273,8 +1221,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         float ResolveSwingProgress(float eventPhase) => Mathf.Clamp01(
-            (eventPhase - LiftOffPhase) /
-            Mathf.Max(0.000001f, 1f - LiftOffPhase));
+            (eventPhase - RootTrajectory.PathStartPhase) /
+            Mathf.Max(0.000001f, 1f - RootTrajectory.PathStartPhase));
 
         void EvaluateResolvedActionState(
             float eventPhase,

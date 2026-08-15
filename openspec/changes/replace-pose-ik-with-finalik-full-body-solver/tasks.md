@@ -1,176 +1,69 @@
-## 1. 唯一执行链
+## 1. 已有基础与文档收口
 
-- [x] 1.1 收敛为`FootGrounding -> optional PredictiveFootPlacementModifier -> FinalIK FBBIK`。
-- [x] 1.2 删除独立Predictive作者节点、第二Grounding、LegIK/TwoBoneIK、第二Pelvis和旧兼容ABI。
-- [x] 1.3 保持一个World Query、一个Stance/Anchor、一个Pelvis Spring和一次FBBIK。
-- [x] 1.4 FinalIK只执行统一Goal；Goal或Path先跳且solver residual接近零时归责Foot Placement。
+- [x] 1.1 保持`FootGrounding -> optional PredictiveFootPlacementModifier -> FinalIK FBBIK`唯一正式链，不增加第二Grounding、Heel/Toe Current Query、第二Pelvis、LegIK、TwoBoneIK或FBBIK后处理。
+- [x] 1.2 已接入Rig v4、Calibration v4、Heel/Toe/Sole几何、唯一World Query backend、Stance/Anchor/Pelvis owner和FinalIK Pose Buffer FBBIK。
+- [x] 1.3 已建立Action Step Fact、基础Foot/Ankle/Hip/Clearance路线、Ground Probe、Ground Envelope、Revision、Gizmo、Runtime Trace与CSV诊断框架。
+- [x] 1.4 用最新压力采样和源码证明当前首个错误owner位于Artifact/Plan/所有权交接而非FBBIK；Executing失去Predictive输出、计划陈旧、Revision硬边与不可达Goal均有数据证据。
+- [x] 1.5 对照本地GDC 2016原始幻灯片，重写proposal、design、delta spec和经验文档；旧逐轮补丁不再定义目标架构。
+- [x] 1.6 对重写后的change执行strict validate并清除全部delta冲突。
 
-## 2. 动画与动作事实
+## 2. Animation Biomechanical Step Artifact
 
-- [x] 2.1 Corin Locomotion保持in-place；Simulation唯一拥有作者Move Speed，Foot Analysis不再发布Action Root位移。
-- [x] 2.2 Foot Analysis发布同脚Landing时钟、25点Foot/Ankle/Hip路线、Clearance、Constraint、Support与Orientation。
-- [x] 2.3 Locomotion Sequence、Pose和Foot Fact共同消费Simulation Movement Clock，不保留Plan私有累计时钟。
-- [x] 2.4 左右脚Landing使用稳定Marker身份并按同脚前后Landing定义线性Action Phase。
-- [ ] 2.5 让当前StateMachine目标唯一拥有离散Foot Action Fact；Stored Pose、退出源和Inertial History不得复活旧事件。
-- [ ] 2.6 Start、Loop、Stop和MovingTurn的Marker Epoch与Occurrence必须连续，状态切换不得让Cycle或Phase倒退。
-- [ ] 2.7 Start、Loop、Stop和MovingTurn必须让当前同脚事件在LiftOff前成为权威PreSwing事实；Foot Placement不得按下一动作预造世界计划、运行时补造事件或逐帧重规划。
+- [ ] 2.1 提升`AnimationFootAnalysisArtifact` format与algorithm identity，删除v26兼容reader、位置-only payload和旧generated产品读取路径。
+- [ ] 2.2 在同一Action Phase采样域烘焙Heel、Toe、Sole、Ankle、Knee、Hip的root-local位置路线。
+- [ ] 2.3 烘焙Sole与Ankle的root-local旋转路线，并保存动画脚掌朝向基准。
+- [ ] 2.4 从同一动作区间生成Animation Foot Planar Route与相对参考Foot Path的Clearance，不保存世界高度或KCC位移。
+- [ ] 2.5 生成精确Release、LiftOff、ApproachContact、Landing边界，以及Locked/Sliding/Unlocked区间和连续Constraint Weight。
+- [ ] 2.6 生成Support Weight、Support Leg Length、Compression Reserve、Knee Bend Plane、Support Foot Pivot位置与权重。
+- [ ] 2.7 原子保存对侧Landing identity、time、cycle和root-local Sole pose。
+- [ ] 2.8 更新artifact codec、hash、store、inspector与analysis source identity；未知字段、非有限值和旧版本必须明确失败。
+- [ ] 2.9 建立Artifact Flat Reconstruction Gate，逐相位输出Foot/Sole/Ankle/Knee/Hip位置与Sole/Ankle旋转误差，并阻止超过固定容差的artifact进入Projection。
+- [ ] 2.10 重新生成Corin Start、Loop、Stop、MovingTurn全部可达Foot Analysis artifact，不保留旧资产或运行时补建。
 
-## 3. 冻结预测路径
+## 3. Projection与Action Step事实
 
-- [x] 3.1 删除Action Root、输入幅值二次缩放、Terrain三维弧长重定时和`FootRouteWorldAlignment`。
-- [x] 3.2 Ground Probe按`本脚Swing起点 -> 权威对侧Landing -> 本脚Landing`冻结为唯一分段直线；转弯顶点由同一KCC未来位置与Body旋转还原。
-- [x] 3.3 冻结Animation Foot Route只负责投影出单调Foot Rate；对侧Landing塑造查询路线，但不得按对侧事件Phase强制本脚经过拐点。
-- [x] 3.4 逐点Sphere与相邻Capsule Sweep取得踏面；先过滤Slope、Step、Edge、Center和Reach，再构造一次Upper Envelope。
-- [x] 3.5 Plan冻结单调`Action Phase -> Path Fraction`，运行时不从当前Pose、Root或最近线段反推进度。
-- [x] 3.6 Action Phase到达Landing后以`ActionCompleted`结束旧Plan。
-- [x] 3.7 恢复Current Grounding合法支撑面作为最终只向上安全下界；删除该下界的run出现约左`7.3cm`、右`19.3cm`穿透。
+- [ ] 3.1 扩展`AnimationPredictedFootStepSample`和Projection payload，使完整Biomechanical Step Event以不可拆分值发布。
+- [ ] 3.2 Pose字段可按正式Blend混合；Landing identity、Clock、路线、Constraint、Support Leg、Orientation与Pivot必须从一个权威source原子选择。
+- [ ] 3.3 删除Stored Pose、退出source、Inertial History和逐脚Pose Weight复活旧事件或拆开混合字段的路径。
+- [ ] 3.4 统一Start、Loop、Stop、MovingTurn的左右脚Marker Epoch、Occurrence、Cycle与Phase，使每个当前事件在LiftOff前成为PreSwing事实。
+- [ ] 3.5 更新Definition Build校验和Projection schema；缺少新字段、Flat Reconstruction失败或event不连续必须阻止Float32/Fixed产品发布。
 
-## 4. Stance与Pelvis
+## 4. Committed Future Body Transform Trajectory
 
-- [x] 4.1 PreSwing由Stance拥有，LiftOff后Predictive接管，ApproachingContact通过同一个Anchor Blend交接。
-- [x] 4.2 Current Query只提供当前支撑和接触事实，不重建Future Path或移动Landing。
-- [x] 4.3 Predictive Foot Ground Envelope保持feet-only；Current与Predictive Body候选只进入现有唯一Pelvis owner。
-- [x] 4.4 Pelvis保持一个连续Spring；旧的Pose Root单向向上换基已由第13节数据证伪并删除。
-- [ ] 4.5 用新run继续定位楼梯结束后的Pelvis上移、Anchor释放循环和踏空交接，不通过新增Spring或调参掩盖。
+- [ ] 4.1 由Simulation/KCC发布覆盖剩余Action Step的Position、Facing、Linear Velocity、Angular Velocity和trajectory identity；Foot Placement不得自行解释输入或Visible导数。
+- [ ] 4.2 删除Predictive planner中固定`trajectoryCurvatureDegreesPerSecond = 0`与Body Yaw猜曲率语义，使位移与有限Facing来自同一committed trajectory。
+- [ ] 4.3 用Future Body Transform与Artifact root-local Sole/Ankle/Hip路线建立唯一未来世界路线，保留动画局部X、Z和旋转。
+- [ ] 4.4 Plan创建帧只允许一次刚性重基，使同相位Artifact Sole与Native Sole重合；重基整步冻结。
+- [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
+- [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
+- [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 
-## 5. 诊断闭环
+## 5. GDC Foot Path与Ground Envelope
 
-- [x] 5.1 Scene、Game与CSV消费同一完成快照，保存Route、Probe、Envelope、Clearance、Landing、最大转向能力、Trajectory Curvature、Stance、Pelvis和FBBIK因果链。
-- [x] 5.2 CSV采用流式gzip分块与manifest；该轮耐久Writer合同为1199列，并显式记录每脚鞋底支撑半径；后续正式字段扩展继续由最新任务对账。
-- [x] 5.3 Gizmo不显示文字；Executable画完整冻结几何，Rejected只画真实查询与拒绝几何。
-- [x] 5.4 自动往返入口与普通Play分离，通过真实Gameplay输入在`teststart`和`testend`之间运行。
-- [x] 5.5 自动run `666c8155d1604914bc1cd0db4fb502b5`证明Landing附近实际Root到冻结Root的平面误差中位约左`10.0cm`、右`21.8cm`，P95约左`39.6cm`、右`46.6cm`。
+- [ ] 5.1 由本脚动画Foot Path和权威对侧接触构造Virtual Ground分段路线；对侧接触只提供空间拓扑，不强迫本脚按对侧phase经过。
+- [ ] 5.2 沿完整未来Foot Path执行唯一Capsule检测并保存全部位置、法线与query identity。
+- [ ] 5.3 按前后和高低排序命中，验证法线并建立Edge Plane。
+- [ ] 5.4 在Convex Hull前按垂直边高差、gap、坡度、鞋底范围和Support Leg Reach删除不可通行点。
+- [ ] 5.5 对剩余点构造连续二维上侧Convex Hull；Ground Envelope保持feet-only，不驱动Pelvis。
+- [ ] 5.6 最终Swing保持Native Sole XZ，唯一Y为`GroundEnvelopeHeight + AnimationClearance`；禁止冻结Path XYZ拉脚和Native/Predicted Y双owner。
+- [ ] 5.7 使用Calibration Heel/Toe验证唯一支撑平面物理净空，不增加Heel/Toe Current Query、固定高度或默认地面。
 
-## 6. 当前路径修复
+## 6. Constraint、Landing与GDC身体层
 
-- [x] 6.1 将当前段冻结切线从碰撞前请求速度改为创建帧committed `Body.TargetVelocity`；禁止使用包含Presentation纠错的`VisibleVelocity`。
-- [x] 6.2 保留Simulation Motion Timeline描述Timed段剩余时间与确定Continuation，Plan创建后不再读取Body或输入。
-- [x] 6.3 将Movement最大转向能力与实际轨迹曲率拆开：前者只验证速度方向变化是否连续，后者同时驱动KCC未来圆弧和root-local动画几何旋转。
-- [x] 6.4 Runtime C#构建通过，0 error，并关闭.NET build server。
-- [x] 6.5 完成精确Float32与Fixed Character Build、OpenSpec strict validate和单一路径静态搜索。
-- [x] 6.6 运行新的自动双向短run，验证Header与每行均为1207列、Console 0 Error、Plan几何冻结。
-- [x] 6.7 对账新旧run的Foot Rate、Ground Probe拐点、Goal Y、Final XZ、Heel/Toe物理残差和FBBIK residual。
-- [x] 6.8 复用不污染普通Play的确定A/D连续转向段，证明实际轨迹曲率约`42–54°/s`，Movement节点`720°/s`只是能力上限；直行曲率保持零。
-- [x] 6.9 Simulation/KCC发布一次冻结的碰撞求解后未来Body XYZ轨迹，并以同一Trajectory Curvature积分圆弧；不得改用逐帧重规划、当前Pose投影、阈值调参或响应式兜底。
-- [ ] 6.10 数据指标显著优于失败基线后，再进行30分钟回归与长期耐久；编译、Build和无报错不得替代效果验收。
+- [ ] 6.1 在现有Stance owner中用Artifact事实收口`Locked -> Sliding/Releasing -> Unlocked Swing -> Approaching -> LandingBlend -> Locked`，连续Constraint Weight不得在事件边界硬切。
+- [ ] 6.2 Landing提交同一Plan Landing Pose、Surface identity、Anchor local point/normal、Committed Sole Pose与Successor Step Start，不允许Current Surface替换预测支撑。
+- [ ] 6.3 Locked保持完整世界Goal；Sliding只允许支撑面内有限移动；Unlocked不消费旧Anchor；Idle继续使用现有单一Stance owner归位和锁脚。
+- [ ] 6.4 构造独立Body Support Path：`last support -> opposing support -> predicted landing`，不得复制Foot Ground Envelope或离散KCC台阶Y。
+- [ ] 6.5 用Animation Hip relative path、Support Leg Weight、Length、Compression Reserve和Knee Bend Plane生成预测Hip与可达区间。
+- [ ] 6.6 直接应用Body Support Path位移，临界spring只增加support-leg pull并消除bounce；输出一个Pelvis Pre-Solve Transform。
+- [ ] 6.7 实现上坡脚掌趋于水平、下坡脚掌贴坡、跑步保留动画的Foot Orientation策略，并受同一reach约束。
+- [ ] 6.8 临近接触时按Artifact pivot weight围绕Locked Support Foot应用有限body/pelvis rotation，不移动锁定Foot Goal或创建第二body owner。
 
-## 7. Ground Probe与Swing起点修复
+## 7. 集成、诊断与发布
 
-- [x] 7.1 将对侧Landing从“本脚同相位位置上的高度样本”改为Ground Probe精确空间顶点；固定run中旧平面错位约`0.59–0.81m`，新顶点坐标误差为0。
-- [x] 7.2 将查询路线采样与Foot Rate映射拆开；查询沿三点折线按空间长度采样，Foot Rate由本脚冻结动画路线对整条折线做最近投影并单调化。
-- [x] 7.3 删除按对侧事件Phase强制本脚穿过折线顶点的映射；该方案会产生约20%的离散进度跳变。
-- [x] 7.4 计划早于LiftOff创建时，以Stance锁脚点重基Swing Foot路线，排除生成到LiftOff期间的Body位移；固定双向run首步最大Foot Rate跳变降至左约`8.1%`、右约`7.4%`。
-- [x] 7.5 Predictive Modifier保留当前动画XZ和Sole-to-Ankle几何，Swing Y直接消费`Ground Envelope + Animation Clearance`；不得把冻结Query Route XYZ写入Goal。
-- [x] 7.6 将设计与经验文档压缩为现行所有权、公式、数据约束和已否决方案，不再追加逐轮修复流水账。
-- [x] 7.7 用不污染普通Play的连续A/D圆周段验证KCC位置圆弧、轨迹切线旋转、三点Ground Probe和Animation Foot Route消费同一冻结Trajectory Curvature。
-- [ ] 7.8 继续收口Start、Loop、Stop和MovingTurn的当前Landing身份；不得保存、晋升incoming世界计划，不得在状态切换后补造当前事件或重查同一Landing。
-
-## 8. 台阶边缘旧计划修复
-
-- [x] 8.1 用v87固定run证明边缘跳变不是Surface A-B-A：旧incoming计划在Landing附近让实际鞋底与冻结Path错位约`28.8cm`，同帧Current安全下界补高约`22.7cm`。
-- [x] 8.2 删除左右脚incoming计划存储、Future Query、晋升、交换和对应End Reason；当前权威PreSwing成为每脚唯一计划创建边界。
-- [x] 8.3 v88固定双向run保持1207列且无宽度错误；台阶段鞋底/Path错位P95降到左约`5.15cm`、右约`7.53cm`，额外Current补高最大降到左约`2.17cm`、右约`0.001cm`，同计划Surface A-B-A与Progress回退均为0。
-
-## 9. 唯一Swing高度
-
-- [x] 9.1 用v88证明`max(CurrentAnimatedSoleY, PredictedSoleY)`在楼梯段左右脚分别切换59和58次，并出现26和16次往返；该分支是两个高度owner竞争，不是GDC Ground Path合成。
-- [x] 9.2 删除Native Y与Predicted Y的逐帧`max`；最终Swing Y唯一等于`Ground Envelope + Animation Clearance`，Current Grounding只保留最终向上物理安全下界。
-- [x] 9.3 v90固定双向run共768行、1207列且无宽度错误；Heel/Toe物理穿透均小于`0.001mm`，左/右Current额外补高最大约`2.15cm/0.96cm`，FBBIK residual保持近零。
-
-## 10. 鞋底配置空间边缘
-
-- [x] 10.1 用v89定位两个约`12.6–13.1cm`Current补高帧：鞋底/Path XZ只差约`0.1–0.6cm`，但Envelope仍在墙面之后插值低高踏面，错误发生在Edge Fraction而非时钟、Surface切换或FBBIK。
-- [x] 10.2 Future Capsule的近竖直命中沿平面外法线扩张现有`SwingCapsuleRadius`，以胶囊中心接触位置生成Edge Fraction；不新增查询、参数或高度补偿。
-- [x] 10.3 v90固定双向run验证边缘斜段已按胶囊中心接触位置前移；大于`5cm`的Current追高帧由v89的2帧降为0，左/右最大追高由约`13.15cm/2.81cm`降为`2.15cm/0.96cm`，未新增超过`1mm`的Heel/Toe穿透。
-
-## 11. 诊断合同收口
-
-- [x] 11.1 删除已不存在执行计划的Incoming Plan生命周期、速度、CSV和Inspector字段；保留Incoming动画事件事实用于状态切换诊断。
-- [x] 11.2 v92短run c0cf76a5036741c2a4235c86524c381f 共640行；Header与每行均为1189列、列名唯一、左右脚各566个字段完全对称、Console 0 Error，Heel/Toe穿透、Lift与FBBIK residual相对v90未回退；v91因删除旧字段后序列偏移仍沿用旧宽度而作废。
-
-## 12. 所有权连续性回归
-
-- [x] 12.1 用v92证明当前回归不在FBBIK：正常PreSwing计划的LiftOff连续偏移几乎始终为0，左右脚首帧预测/基线高度最大错位约`19.72cm/26.37cm`；提前退出的20个计划均以`AnchorBlend=0`交接；上楼有效Plan只有约`1.1%`可提供预测Pelvis。
-- [x] 12.2 Swing Foot Route从`PathStartPhase`锁定鞋底同时减去Body与局部脚基值；Plan无论在PreSwing还是Swing创建，都在提交时建立LiftOff高度连续偏移。
-- [x] 12.3 Plan提交后只用同源committed Body速度与Trajectory Curvature计算剩余Landing平面误差，并与现有鞋底查询半径比较；删除Desired Input零值、转向布尔和方向符号中断。
-- [x] 12.4 Predictive Body Support Path不再要求同一摆脚仍处于Supporting/Releasing；下一Executable Landing可独立进入现有唯一Pelvis owner。
-- [x] 12.5 Anchor在当前安全Goal处原子取得完整世界所有权；只有`PlantContact + 有效Anchor + 完整Blend`报告Anchored，释放Blend期间报告Contact。
-- [x] 12.6 删除以in-place脚相对Root全速度推断锁定的错误烘焙；从同一Plant区间提取精确`Release / LiftOff / ApproachContact`边界，并提升Artifact算法身份使旧产物失效。
-- [x] 12.7 用当前Calibration重建的Heel/Toe计算鞋底平面支撑半径，台阶立面沿外法线按`max(SwingCapsuleRadius, SoleSupportRadius)`扩张后再生成Edge Fraction；`MaximumEdgeGap`仍只表达几何间隙，未新增查询、参数或固定高度。
-- [x] 12.8 删除25点`Constraint / Support / Orientation / Body Pivot`离散路线；Runtime只按同一权威Action Phase和精确事件边界解析`Locked / Sliding / Unlocked`与`Supporting / Releasing / Unsupported / ApproachingContact`，不允许采样格把真实LiftOff推迟到相邻帧。
-- [ ] 12.9 完成Runtime与Editor编译、精确Float32/Fixed Character Build、OpenSpec strict validate、单一路径静态搜索和新双向CSV对账后，才判定本节实现是否改善。
-
-## 13. 动作所有权、Landing交接与上坡骨盆回归
-
-- [x] 13.1 用固定双向run `c19024e53faf4c7eafa78ad8a696d67e`证明恒定输入下仍有26次假`ActionInterrupted`；上坡Root逐帧抬升时Pelvis Target已回到0，Current却长期停在约`-0.195m`，FBBIK仍准确执行Goal。
-- [x] 13.2 Plan失效检查改为在真实LiftOff后对账当前Root位置/朝向与同相位冻结KCC状态；不得用Action Phase猜Simulation段切换，也不得用台阶碰撞后的瞬时Target Velocity误判输入变化。
-- [x] 13.3 删除Pelvis Spring对Pose Root向上位移的单向反向换基；权威Root位移直接移动身体，唯一Spring只输出支撑腿附加位移。
-- [x] 13.4 ApproachingContact把同一Executing Plan的Ankle、旋转与冻结Contact Surface原子交给现有Stance/Anchor；权威事件接触不得再被in-place鞋底局部速度否决，也不得混用Current Query的另一踏面或静默切换支撑面。
-- [x] 13.5 双向run `d15cb7b7a2f0463c864a73605f8dfef4`证明上坡零Target区间Pelvis Current中位由约`-0.193m`改善为约`+0.0005m`；同时证明主路线Root仍与冻结KCC轨迹重合时，速度比较仍产生33次假中断，全部ApproachingContact仍因`4–6.7m/s`局部脚速无法捕获Anchor。
-- [ ] 13.6 用下一新run验证主路线假`ActionInterrupted`归零、ApproachingContact捕获完整Anchor、上坡Pelvis不回归，并继续定位同Plan Path/Goal Y剩余跳变。
-
-## 14. 身体支撑坡线与同采样地形残差
-
-- [x] 14.1 用自动双向run `df93b1fbbf0240a181a835cacd105e2f`证明Landing交接与旧Anchor问题改善后，同Plan上坡仍有约`35–43cm`的Component Goal逐采样跳变；实现中的`Predictive Body Support Path`只有布尔有效位并直接转发离散KCC Root/Hip，未实现Spec要求的身体支撑坡线。
-- [x] 14.2 Future Query改为只应用`合法支撑高度 - 同相位Ground Probe高度`残差；碰撞求解后的Future Body XYZ不得再叠加相对计划起点的整段地形高度。
-- [x] 14.3 每个Executable Plan冻结`当前合法支撑 -> 可选对侧Landing -> 本脚Landing`的Root/Hip支撑锚点；运行时按同一Action Step Phase分段插值Component Up高度，平面位置仍消费同一冻结KCC轨迹。
-- [ ] 14.4 用新双向run验证Body Support Path不再等于离散KCC Y、上坡Pelvis Target连续且同Plan Goal跳变显著下降，并对账Anchor、Heel/Toe、Current安全下界和FBBIK residual无回退。
-- [ ] 14.5 完成Runtime与Editor编译、精确Float32/Fixed Character Build、OpenSpec strict validate和单一路径静态搜索。
-
-## 15. 回退基线后的路线对齐单变量修复
-
-- [x] 15.1 将代码、资产、场景与既有OpenSpec实现恢复到提交`bfb571868a58edf1b9d3c1b19844a57e4d022491`，只保留压缩后的失败经验；删除会继续参与Unity编译的未跟踪自动路线脚本。
-- [x] 15.2 区分创建帧原动画鞋底与Ground Probe支撑起点：Root Trajectory以`EventPhaseAtGeneration`的Native Sole对齐同相位未对齐动画路线，生成一次平面刚性偏移并整步冻结；删除从`PathStartPhase`开始向Landing衰减为零的路线偏移。Ground Probe继续只拥有地面查询起点，不取得动画路线坐标所有权。
-- [ ] 15.3 用同一版本新run对账创建帧Native Sole、冻结Animation Foot Route、Landing XZ、Foot Rate、Goal连续性、上楼/下楼Heel/Toe距离与FBBIK residual；未获得数据与观感改善前，不再修改Anchor、Pelvis、查询阈值或有符号高度。
-
-## 16. 静止回原动画的单一Stance修复
-
-- [x] 16.1 明确`GroundedStationary + 无权威Step`只保留Current Grounding接触与坡面安全，不再把静止接触定义为新Anchor捕获。
-- [x] 16.2 在现有Stance owner中让已有Anchor通过原有Blend连续释放到Current Grounding，并从旧Anchor鞋底面与Pelvis Reach中同步退场。
-- [x] 16.3 完成单一路径静态搜索、Runtime与Editor编译、OpenSpec strict validate，并在Unity效果验证前提交该单变量版本。
-- [ ] 16.4 在已打开GameplayLab验证平地停步回原动画、斜坡静止不穿透、重新起步恢复正式Stance规则；运行生命周期错误若阻断验证，作为独立根因处理。
-
-## 17. 静止旧Anchor退场后的Idle锁脚
-
-- [x] 17.1 用当前实现证明静止状态把`IdleCurrentSupport`直接排除在`AllowsAnchor`之外，导致`PlantContact=true`但无法捕获或保持世界Anchor；修正第16节“静止永不捕获Anchor”的过度约束。
-- [x] 17.2 在同一个Stance/Anchor owner中区分非Idle Anchor与Idle Anchor：进入静止先把旧运动Anchor连续释放到Current Grounding，清零后在同一安全Goal原子捕获Idle Anchor并恢复支撑面、鞋底净空与Pelvis Reach所有权。
-- [x] 17.3 完成单一路径静态搜索、Runtime与Editor编译、OpenSpec strict validate和已打开GameplayLab短时运行检查。
-
-## 18. Idle Anchor归位目标修复
-
-- [x] 18.1 证明Idle Anchor此前直接捕获仍在收敛的Lyra Current Offset，导致停步残差被永久冻结；该实现只完成锁脚，没有完成归位。
-- [x] 18.2 让旧运动Anchor淡出目标与新Idle Anchor捕获目标统一为`同帧Idle原动画Ankle XZ + 唯一Current支撑面旋转 + Heel/Toe沿Component Up接触修正`；不新增查询、参数、Spring或Anchor owner。
-- [x] 18.3 完成单一路径静态搜索、Runtime编译和OpenSpec strict validate；Unity Editor域编译与GameplayLab效果继续按验收口径检查，不写入任务清单。
-
-## 19. Stop到Idle权重交接
-
-- [x] 19.1 证明RunEnd与Idle的`presentation.foot-placement-weight`都恒为`1`，`GroundedStationary`会在停止动画尚未归位时捕获Idle Anchor并永久冻结过渡姿势。
-- [x] 19.2 将RunEnd正式权重改为`0`，复用动画图现有混合完成Locomotion到RunEnd淡出、RunEnd到Idle淡入；不新增速度曲线、运行时配置或第二权重owner。
-- [x] 19.3 在现有Stance状态内记录停止过程的权重交接，只允许经历过非完整权重并由Idle恢复完整权重后捕获Idle Anchor；初始Idle仍可立即锁脚。
-- [x] 19.4 完成Runtime与Editor编译、OpenSpec strict validate和单一路径静态搜索。
-- [x] 19.5 通过已连接的Unity Editor完成精确Float32与Fixed Character Build，确认生成的Presentation Projection消费RunEnd新revision。
-
-## 20. A/D冻结Plan失效证据回归
-
-- [x] 20.1 证明现实现从相邻表现帧Desired Velocity重算Trajectory Curvature，并用逐帧速度/曲率差触发`ActionInterrupted`；Gizmo只绘制`Executing`，因此A/D时Path整体消失。
-- [x] 20.2 对照GDC冻结Foot Path与下载案例的小落点偏差阈值，明确Plan提交后不再用输入方向导数验证路线，唯一失效证据改为真实LiftOff后Body Presentation Visible Root相对同相位冻结KCC相对轨迹的物理偏离。
-- [x] 20.3 曾在现有Predictive Plan owner内把速度/曲率失效替换为Visible Root偏离并保持typed `ActionInterrupted`；该实验随后被第21节数据否决，未逐帧重规划、平滑Path或增加第二输入阈值配置。
-- [ ] 20.4 完成诊断字段对账、Runtime与Editor编译、精确Character Build、OpenSpec strict validate和Unity A/D回归。
-
-## 21. 路线生命周期与Simulation转向事实
-
-- [x] 21.1 只读分析`foot-ik-99909efdc0054d91ab485c0166eb9a0b.csv`的240帧、1101列，证明左右脚10个Executable Plan全部以`ActionInterrupted`结束，Predictive输出仅覆盖左5帧、右19帧，Plan消失后Swing Goal最大单帧位移达到左27.1cm、右26.6cm而FBBIK残差约`1e-7m`。
-- [x] 21.2 证明Visible Body朝向不是位移轨迹切线，相邻Render Frame Desired Velocity方向导数也不是稳定动作曲率；二者分别制造假中断和错误A/D圆弧。
-- [x] 21.3 统一使用创建Tick Committed Movement Timeline实际YawVelocity生成KCC、Foot、Hip与Ankle圆弧；已提交Plan只由权威事件生命周期结束，Visible Root偏差改为只读诊断，不新增输入阈值、逐帧重规划或第二路径。
-- [ ] 21.4 对账1105列基础Writer与1203列耐久Writer的Header/Value等宽、列名唯一、左右脚对称和序列替换偏移，完成Runtime/Editor编译、精确Float32/Fixed Character Build、OpenSpec strict validate和已打开Unity短测。
-
-## 22. 位移/朝向分离与Swing计划修订
-
-- [x] 22.1 用自动run `8b8ba82f8c254e95af838cdd792b6cc1`证明第21.3把Committed Body Yaw当轨迹曲率的实验错误：冻结值达到`±720°/s`，左右Final Goal最大逐帧位移约`1.05m`，并出现穿透和显著solver residual；不反勾历史任务，以本节正式取代该结论。
-- [x] 22.2 Future Body平移只消费Committed Movement Timeline世界速度与Continuation；Body朝向按Maximum Yaw有限追随速度方向并在对齐后停止，Body Yaw不再旋转位移路线。
-- [x] 22.3 在同一Predictive owner内加入Swing意图Revision：按剩余落点位移误差与现有鞋底/查询几何半径触发并迟滞重武装，旧新Plan从当前最终鞋底和同一Action Phase重基后连续交叉淡化；Rejected Revision使旧预测连续退场，不保留错误旧落点。
-- [x] 22.4 在现有Stance owner内显式收口`Locked -> Releasing -> Swing -> Landing -> Locked`；删除事件变化硬清Anchor，Predictive在`ReleasePhase -> LiftOffPhase`按SmoothStep接管，Landing用当前动画Heel/Toe对冻结Surface测距，Revision提交前及冻结目标缺失时禁止Current Surface代捕获，Anchor从零按同一SmoothStep连续取得所有权。
-- [x] 22.5 将Revision Sequence、Blend、退场权重、剩余落点位移误差与阈值贯穿Runtime Trace、Inspector和CSV；基础Writer更新为1119列，耐久Writer更新为1217列。
-- [x] 22.6 更新proposal、design、spec与压缩经验文档，明确第21.3已被数据否决，不再把Body Yaw描述为Trajectory Curvature。
-- [ ] 22.7 完成Runtime与Editor编译、精确Float32/Fixed Character Build、OpenSpec strict validate和单一路径静态搜索。
-- [ ] 22.8 用已打开Unity的新自动/自由输入run验证Header/Value均为1217列、Revision交接无硬切、A/D Path持续、Landing与Idle Anchor连续，并对账Goal、Heel/Toe和FBBIK residual。
+- [ ] 7.1 更新统一Foot Placement输入、Plan、Query、Stance、Pelvis与Final Goal合同；FinalIK继续只执行一次FBBIK。
+- [ ] 7.2 更新Scene/Game Gizmo：完整绘制Artifact Route、Future Body Transform、Virtual Ground、Capsule Query、Ground Envelope、实际消费点、Revision和Body Support Path，不显示文字或伪Path。
+- [ ] 7.3 更新Runtime Trace、Inspector和CSV，覆盖Artifact重建误差、事件所有权、Future Body Position/Facing/速度、query/reach、Goal、Support Leg、Pelvis、Pivot和FBBIK两层残差。
+- [ ] 7.4 保证CSV Header/Value等宽、列名唯一、左右脚字段对称，更新流式耐久writer与manifest合同。
+- [ ] 7.5 删除旧artifact、旧Projection、旧Plan字段、旧诊断列、旧配置和失效命名，不保留fallback或兼容路径。
+- [ ] 7.6 完成单一路径静态搜索、OpenSpec strict validate、Runtime/Editor编译和精确Float32/Fixed Character Build；构建服务器按项目规则关闭。

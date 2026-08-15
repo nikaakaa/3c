@@ -208,19 +208,9 @@ namespace ThirdPersonGameplay.Editor.Lab
                 LoadRequired<DeterministicKccWorldSolverDefinition>(FixedSolverPath);
             DeterministicCollisionWorldAsset collision =
                 LoadRequired<DeterministicCollisionWorldAsset>(CollisionPath);
-            GameObject fixedRoot = BuildFixedRuntimeRoot(fixedComposition, false);
             GameObject enduranceRoot = BuildFixedRuntimeRoot(fixedComposition, true);
-            GameplayLabSessionVariantDefinition fixedVariant = BuildVariant(
-                FixedVariantPath,
-                "gameplay-lab.local-fixed-q32.32",
-                fixedRoot,
-                fixedComposition,
-                definition,
-                fixedProgram,
-                projection,
-                solver,
-                collision,
-                string.Empty);
+            GameplayLabSessionVariantDefinition fixedVariant =
+                LoadRequired<GameplayLabSessionVariantDefinition>(FixedVariantPath);
             GameplayLabSessionVariantDefinition enduranceVariant = BuildVariant(
                 FootIkEnduranceVariantPath,
                 GameplayLabEditorLauncher.FootIkEnduranceVariantId,
@@ -241,7 +231,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
-            Debug.Log("Gameplay Lab manual Fixed and Foot IK Endurance launch assets synchronized.");
+            Debug.Log("Gameplay Lab Foot IK Endurance launch assets synchronized without rebuilding manual Fixed.");
         }
 
         static void EnsureVariantProgram(

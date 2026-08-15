@@ -712,15 +712,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 Vector3 leftGroundProbeStart = ResolvePredictiveGroundProbeStart(
                     m_Left,
-                    pose.Left);
+                    pose.Left,
+                    trace.Left,
+                    out FootPlacementSurface leftGroundProbeSupport);
                 Vector3 rightGroundProbeStart = ResolvePredictiveGroundProbeStart(
                     m_Right,
-                    pose.Right);
+                    pose.Right,
+                    trace.Right,
+                    out FootPlacementSurface rightGroundProbeSupport);
                 m_SwingPrediction.Prepare(
                     in frame,
                     in pose,
                     leftGroundProbeStart,
-                    rightGroundProbeStart);
+                    leftGroundProbeSupport,
+                    rightGroundProbeStart,
+                    rightGroundProbeSupport);
                 leftPredictive = m_SwingPrediction.GetStanceInput(
                     CharacterFootSide.Left,
                     frame.RenderFrame,
@@ -915,7 +921,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         Vector3 ResolvePredictiveGroundProbeStart(
             FootState state,
-            CharacterFootPlacementAnimatedFootPose animated)
+            CharacterFootPlacementAnimatedFootPose animated,
+            CharacterLyraFootTraceResult trace,
+            out FootPlacementSurface support)
         {
             CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
             if (state.TryResolve(
@@ -924,17 +932,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     settings.MaximumSurfaceSlopeDegrees,
                     out Vector3 anchorPosition,
                     out Quaternion anchorRotation,
-                    out _))
+                    out FootPlacementSurface anchorSurface))
             {
                 CharacterFootPlacementSoleContactPose anchorContacts = animated.ResolveSoleContacts(
                     anchorPosition,
                     anchorRotation);
-                return (anchorContacts.HeelPosition + anchorContacts.ToePosition) * 0.5f;
+                Vector3 anchorSole = (anchorContacts.HeelPosition + anchorContacts.ToePosition) * 0.5f;
+                support = ResolveSupportAtRoutePoint(anchorSurface, anchorSole, m_Rig.PoseRoot.up);
+                return support.IsValid ? support.Point : anchorSole;
             }
             CharacterFootPlacementSoleContactPose contacts = animated.ResolveSoleContacts(
                 animated.AnklePosition,
                 animated.AnkleRotation);
-            return (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
+            Vector3 sole = (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
+            support = ResolveSupportAtRoutePoint(BuildSurface(trace.Hit), sole, m_Rig.PoseRoot.up);
+            return support.IsValid ? support.Point : sole;
+        }
+
+        static FootPlacementSurface ResolveSupportAtRoutePoint(
+            FootPlacementSurface surface,
+            Vector3 routePoint,
+            Vector3 componentUp)
+        {
+            if (!surface.IsValid)
+                return default;
+            Vector3 normal = surface.Normal.normalized;
+            Vector3 up = componentUp.normalized;
+            float denominator = Vector3.Dot(up, normal);
+            if (!float.IsFinite(denominator) || denominator <= 0.0001f)
+                return default;
+            float translation = Vector3.Dot(surface.Point - routePoint, normal) / denominator;
+            Vector3 point = routePoint + up * translation;
+            return float.IsFinite(point.x) && float.IsFinite(point.y) && float.IsFinite(point.z)
+                ? new FootPlacementSurface(surface.Collider, point, normal)
+                : default;
         }
 
         internal void Reset(CharacterFootPlacementReset reset)

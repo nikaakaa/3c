@@ -229,3 +229,11 @@ Artifact重建原动画
 - 大跳帧的FBBIK位置残差通常约为`1e-7m`，物理穿透接近零，说明Solver准确执行了已经跳变的输入。
 
 固定修复顺序是：先保证Active Plan到Successor Revision的C0位置连续和C1速度连续，再收口Landing、Anchor与后继Plan的同一事务；在此之前不调Ground Envelope、Pelvis spring或FBBIK参数。
+
+## 16. Revision连续性必须来自同一可微Step轨迹
+
+身体转向角速度与移动轨迹曲率不是同一事实。Simulation提交的Body Yaw可在A/D反转时达到约`±720°/s`，直接把它积分为Foot Path会画出错误圆弧；正式`TrajectoryCurvature`约为`±84°/s`，接入后Revision数量与P95跳变明显下降。Pose source的逐脚权重也不能拥有Landing Event：source混合中权重短暂变成0，不代表Step身份结束。
+
+物理Anchor释放后，Predictive恢复必须先保持上一实际Sole位置；该C0交接已经消除了`PolicyReleased`同帧的大跳。但C1不能从相邻表现帧差分，也不能在当前分段Ground Envelope外再套Hermite。实验run `a864d239f8c84f0f82759a5d43a8c93c`把修正P95恶化到左/右`18.1/17.2cm`；改用旧Plan解析切线的`b50830992f1242cf8cc00abba03503c7`仍为`15.2/15.4cm`，都差于有效基线`11.9/10.8cm`。原因是v26的Animation Clearance与Surface Envelope在段交界只有位置连续，强加速度边界会把折点放大成过冲。
+
+因此C1的前提是同一个Biomechanical Step Artifact原子发布路线、净空、约束和支撑事实，并由Ground Path合成出一条有明确分段语义的执行轨迹。后继Revision必须从该轨迹的当前值和切线重基；不能从Final Goal历史、Visible骨骼或额外平滑器猜切线。上述两个失败实验已撤销，不保留配置或兼容分支。

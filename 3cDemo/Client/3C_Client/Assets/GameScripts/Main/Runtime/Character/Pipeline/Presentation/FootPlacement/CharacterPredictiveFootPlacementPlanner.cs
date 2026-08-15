@@ -1302,6 +1302,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationDeltaSeconds,
                     out landingHandoff);
             }
+            Vector3 successorSole = runtime.HasLastOutputSole
+                ? runtime.LastOutputSole
+                : currentSole;
+            Vector3 successorProbeStart = runtime.HasLastOutputSole
+                ? successorSole
+                : groundProbeStart;
+            if (landingHandoff.HasContactTarget)
+            {
+                CharacterFootPlacementSoleContactPose handoffContacts = pose.ResolveSoleContacts(
+                    landingHandoff.ContactAnklePosition,
+                    landingHandoff.ContactAnkleRotation);
+                successorSole =
+                    (handoffContacts.HeelPosition + handoffContacts.ToePosition) * 0.5f;
+                successorProbeStart = landingHandoff.PathPosition;
+            }
             if (plan.HasExecutablePath && currentPlanMatches)
             {
                 plan.SynchronizePoseContribution(in step);
@@ -1331,8 +1346,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     runtime.Revision,
                     in step,
                     renderFrame,
-                    groundProbeStart,
-                    currentSole,
+                    successorProbeStart,
+                    successorSole,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,

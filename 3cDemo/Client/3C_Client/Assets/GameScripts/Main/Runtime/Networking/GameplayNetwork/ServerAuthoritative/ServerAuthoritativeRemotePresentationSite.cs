@@ -306,6 +306,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 m_Runtime.CaptureBodyInterval(
                     CharacterPresentationBodyInterval.FromFloat32(
                         sample,
+                        m_TickRate,
                         batch.ResetBodyStream && i == 0
                             ? CharacterPresentationBodyStreamUpdateKind.Reset
                             : CharacterPresentationBodyStreamUpdateKind.Append));

@@ -235,11 +235,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 var intervals = new List<CharacterPresentationBodyInterval>(m_PendingBodySamples.Count);
                 foreach (FixedCharacterBodySample sample in m_PendingBodySamples.Values)
                 {
+                    float yawVelocityDegreesPerSecond =
+                        sample.AppliedYawDegrees.ToSingle() * Program.Manifest.TickRate;
                     intervals.Add(new CharacterPresentationBodyInterval(
                         sample.Tick.Value - 1,
                         FixedUnityPresentationBoundary.Convert(sample.BeforeBody),
                         sample.Tick.Value,
-                        FixedUnityPresentationBoundary.Convert(sample.FinalBody)));
+                        FixedUnityPresentationBoundary.Convert(sample.FinalBody),
+                        yawVelocityDegreesPerSecond));
                 }
                 m_PresentationRuntime.CaptureBodyTransaction(intervals);
                 foreach (FixedSimulationActorTickResult result in m_PendingTrajectoryResults.Values)

@@ -167,13 +167,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             if (value.RootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
                 value.RootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                value.RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.AuthoredFootPlanarRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.AnimationClearanceHeights.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.BiomechanicalRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                !IsNormalized(value.LandingPhase) ||
+                !IsFinite(value.OpposingRootLocalSoleRotation) ||
+                Quaternion.Dot(value.OpposingRootLocalSoleRotation, value.OpposingRootLocalSoleRotation) <= 0.000001f)
                 return false;
             for (int i = 0; i < value.RootLocalFootRoute.Length; i++)
             {
+                AnimationFootBiomechanicalRouteSample sample = value.BiomechanicalRoute[i];
                 if (!AnimationPoseMath.IsFinite(value.RootLocalFootRoute[i]) ||
                     !AnimationPoseMath.IsFinite(value.RootLocalAnkleRoute[i]) ||
-                    !AnimationPoseMath.IsFinite(value.RootLocalHipRoute[i]))
+                    !AnimationPoseMath.IsFinite(value.RootLocalHipRoute[i]) ||
+                    !AnimationPoseMath.IsFinite(value.AuthoredFootPlanarRoute[i]) ||
+                    !float.IsFinite(value.AnimationClearanceHeights[i]) ||
+                    value.AnimationClearanceHeights[i] < 0f ||
+                    !AnimationPoseMath.IsFinite(sample.RootLocalHeelPosition) ||
+                    !AnimationPoseMath.IsFinite(sample.RootLocalToePosition) ||
+                    !AnimationPoseMath.IsFinite(sample.RootLocalKneePosition) ||
+                    !IsFinite(sample.RootLocalSoleRotation) ||
+                    !IsFinite(sample.RootLocalAnkleRotation) ||
+                    Quaternion.Dot(sample.RootLocalSoleRotation, sample.RootLocalSoleRotation) <= 0.000001f ||
+                    Quaternion.Dot(sample.RootLocalAnkleRotation, sample.RootLocalAnkleRotation) <= 0.000001f ||
+                    !IsNormalized(sample.ConstraintWeight) ||
+                    !IsNormalized(sample.SupportWeight) ||
+                    !float.IsFinite(sample.SupportLegLength) || sample.SupportLegLength < 0f ||
+                    !float.IsFinite(sample.SupportLegCompressionReserve) || sample.SupportLegCompressionReserve < 0f ||
+                    !AnimationPoseMath.IsFinite(sample.SupportKneeBendPlane) ||
+                    !AnimationPoseMath.IsFinite(sample.SupportFootPivotPosition) ||
+                    !IsNormalized(sample.SupportFootPivotWeight))
                     return false;
             }
             return true;

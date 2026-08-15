@@ -22,6 +22,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public Vector3[] AnklePositions;
             public Vector3[] KneePositions;
             public Vector3[] HipPositions;
+            public Quaternion[] SoleRotations;
+            public Quaternion[] AnkleRotations;
+            public float RigLegLength;
             public Vector3[] Velocities;
             public float[] Heights;
             public float[] PlantConfidence;
@@ -37,11 +40,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public float[] OpposingEventOrdinal;
             public float[] OpposingLandingCycleOffset;
             public Vector3[] OpposingRootLocalLanding;
+            public Quaternion[] OpposingRootLocalLandingRotation;
             public Vector3[][] RootLocalFootRoute;
+            public Vector3[][] RootLocalHeelRoute;
+            public Vector3[][] RootLocalToeRoute;
             public Vector3[][] RootLocalAnkleRoute;
+            public Vector3[][] RootLocalKneeRoute;
             public Vector3[][] RootLocalHipRoute;
+            public Quaternion[][] RootLocalSoleRotationRoute;
+            public Quaternion[][] RootLocalAnkleRotationRoute;
             public Vector3[][] AuthoredFootPlanarRoute;
             public float[][] AnimationClearanceHeight;
+            public float[][] ConstraintWeight;
+            public float[][] SupportWeight;
+            public float[][] SupportLegLength;
+            public float[][] SupportLegCompressionReserve;
+            public Vector3[][] SupportKneeBendPlane;
+            public Vector3[][] SupportFootPivotPosition;
+            public float[][] SupportFootPivotWeight;
         }
 
         sealed class SamplingContext : IDisposable
@@ -61,6 +77,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
             public float GroundReferenceHeight { get; private set; }
             public CharacterFootPlacementRigGeometryReport CalibrationGeometryReport { get; private set; }
+            public float LeftLegLength => m_Binding.LeftLegLength;
+            public float RightLegLength => m_Binding.RightLegLength;
 
             public SamplingContext(GameObject rigPrefab, CharacterFootPlacementAnalysisSource source)
                 : this(rigPrefab, source, false)
@@ -217,6 +235,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public Vector3 ToVisualRootLocal(Vector3 worldPosition) =>
                 m_Binding.VisualRoot.InverseTransformPoint(worldPosition);
 
+            public Quaternion ToVisualRootLocal(Quaternion worldRotation) =>
+                (Quaternion.Inverse(m_Binding.VisualRoot.rotation) * worldRotation).normalized;
+
             public void Dispose()
             {
                 if (m_ComponentPoses.IsCreated)
@@ -310,6 +331,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var rightKneePositions = new Vector3[sampleCount];
             var leftHipPositions = new Vector3[sampleCount];
             var rightHipPositions = new Vector3[sampleCount];
+            var leftSoleRotations = new Quaternion[sampleCount];
+            var rightSoleRotations = new Quaternion[sampleCount];
+            var leftAnkleRotations = new Quaternion[sampleCount];
+            var rightAnkleRotations = new Quaternion[sampleCount];
             var rootPositions = new Vector3[sampleCount];
             var rootRotations = new Quaternion[sampleCount];
             for (int i = 0; i < sampleCount; i++)
@@ -325,6 +350,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 rightKneePositions[i] = samplingContext.ToVisualRootLocal(pose.Right.KneePosition);
                 leftHipPositions[i] = samplingContext.ToVisualRootLocal(pose.Left.HipPosition);
                 rightHipPositions[i] = samplingContext.ToVisualRootLocal(pose.Right.HipPosition);
+                leftSoleRotations[i] = samplingContext.ToVisualRootLocal(pose.Left.SemanticRotation);
+                rightSoleRotations[i] = samplingContext.ToVisualRootLocal(pose.Right.SemanticRotation);
+                leftAnkleRotations[i] = samplingContext.ToVisualRootLocal(pose.Left.AnkleRotation);
+                rightAnkleRotations[i] = samplingContext.ToVisualRootLocal(pose.Right.AnkleRotation);
                 rootPositions[i] = Vector3.zero;
                 rootRotations[i] = Quaternion.identity;
                 RequireFinite(leftHeelPositions[i], "left heel position", i);
@@ -337,6 +366,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 RequireFinite(rightKneePositions[i], "right knee position", i);
                 RequireFinite(leftHipPositions[i], "left hip position", i);
                 RequireFinite(rightHipPositions[i], "right hip position", i);
+                RequireFinite(leftSoleRotations[i], "left Sole rotation", i);
+                RequireFinite(rightSoleRotations[i], "right Sole rotation", i);
+                RequireFinite(leftAnkleRotations[i], "left Ankle rotation", i);
+                RequireFinite(rightAnkleRotations[i], "right Ankle rotation", i);
                 RequireFinite(rootPositions[i], "animation root position", i);
                 RequireFinite(rootRotations[i], "animation root rotation", i);
             }
@@ -347,6 +380,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 leftAnklePositions,
                 leftKneePositions,
                 leftHipPositions,
+                leftSoleRotations,
+                leftAnkleRotations,
+                samplingContext.LeftLegLength,
                 rootPositions,
                 rootRotations);
             SampledFoot right = AnalyzeFoot(
@@ -355,6 +391,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 rightAnklePositions,
                 rightKneePositions,
                 rightHipPositions,
+                rightSoleRotations,
+                rightAnkleRotations,
+                samplingContext.RightLegLength,
                 rootPositions,
                 rootRotations);
             BuildContactFeatures(
@@ -436,6 +475,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootFeaturePair features = new AnimationFootFeaturePair(
                 BuildCurveSet(left, source.Reduction),
                 BuildCurveSet(right, source.Reduction));
+            ValidateFlatReconstruction(features.Left, left, source.Reduction, "Left");
+            ValidateFlatReconstruction(features.Right, right, source.Reduction, "Right");
             return new AnimationFootAnalysisBuildResult(
                 features,
                 new AnimationFootSynchronizationDescriptor(
@@ -448,6 +489,113 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         right,
                         samplingContext.GroundReferenceHeight)));
         }
+
+        static void ValidateFlatReconstruction(
+            AnimationFootFeatureCurveSet curves,
+            SampledFoot source,
+            CharacterFootPlacementCurveReductionSettings reduction,
+            string side)
+        {
+            int sourceCount = source.SolePositions.Length;
+            float positionTolerance = reduction.LandingOffsetTolerance + 0.00001f;
+            float heightTolerance = reduction.HeightTolerance + 0.00001f;
+            float weightTolerance = reduction.ConfidenceTolerance + 0.00001f;
+            const float rotationToleranceDegrees = 0.5f;
+            for (int sourceIndex = 0; sourceIndex < sourceCount; sourceIndex++)
+            {
+                float time = sourceIndex / (float)(sourceCount - 1);
+                AnimationPredictedFootStepSample step = curves.Sample(time).PredictedStep;
+                RequireReconstruction(
+                    step.LandingPhase,
+                    source.EventOrdinal[sourceIndex] > 0f ? 1f : 0f,
+                    weightTolerance,
+                    side,
+                    sourceIndex,
+                    -1,
+                    "LandingPhase");
+                RequireReconstruction(
+                    step.OpposingRootLocalSoleRotation,
+                    source.OpposingRootLocalLandingRotation[sourceIndex],
+                    rotationToleranceDegrees,
+                    side,
+                    sourceIndex,
+                    -1,
+                    "OpposingSoleRotation");
+                for (int routeIndex = 0; routeIndex < AnimationPredictedFootStepCurveSet.RouteSampleCount; routeIndex++)
+                {
+                    AnimationFootBiomechanicalRouteSample actual = step.BiomechanicalRoute[routeIndex];
+                    RequireReconstruction(step.RootLocalFootRoute[routeIndex], source.RootLocalFootRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Sole");
+                    RequireReconstruction(step.RootLocalAnkleRoute[routeIndex], source.RootLocalAnkleRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Ankle");
+                    RequireReconstruction(step.RootLocalHipRoute[routeIndex], source.RootLocalHipRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Hip");
+                    RequireReconstruction(step.AuthoredFootPlanarRoute[routeIndex], source.AuthoredFootPlanarRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "PlanarRoute");
+                    RequireReconstruction(step.AnimationClearanceHeights[routeIndex], source.AnimationClearanceHeight[routeIndex][sourceIndex], heightTolerance, side, sourceIndex, routeIndex, "Clearance");
+                    RequireReconstruction(actual.RootLocalHeelPosition, source.RootLocalHeelRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Heel");
+                    RequireReconstruction(actual.RootLocalToePosition, source.RootLocalToeRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Toe");
+                    RequireReconstruction(actual.RootLocalKneePosition, source.RootLocalKneeRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Knee");
+                    RequireReconstruction(actual.RootLocalSoleRotation, source.RootLocalSoleRotationRoute[routeIndex][sourceIndex], rotationToleranceDegrees, side, sourceIndex, routeIndex, "SoleRotation");
+                    RequireReconstruction(actual.RootLocalAnkleRotation, source.RootLocalAnkleRotationRoute[routeIndex][sourceIndex], rotationToleranceDegrees, side, sourceIndex, routeIndex, "AnkleRotation");
+                    RequireReconstruction(actual.ConstraintWeight, source.ConstraintWeight[routeIndex][sourceIndex], weightTolerance, side, sourceIndex, routeIndex, "ConstraintWeight");
+                    RequireReconstruction(actual.SupportWeight, source.SupportWeight[routeIndex][sourceIndex], weightTolerance, side, sourceIndex, routeIndex, "SupportWeight");
+                    RequireReconstruction(actual.SupportLegLength, source.SupportLegLength[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "SupportLegLength");
+                    RequireReconstruction(actual.SupportLegCompressionReserve, source.SupportLegCompressionReserve[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "CompressionReserve");
+                    RequireReconstruction(actual.SupportKneeBendPlane, source.SupportKneeBendPlane[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "KneeBendPlane");
+                    RequireReconstruction(actual.SupportFootPivotPosition, source.SupportFootPivotPosition[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "SupportPivot");
+                    RequireReconstruction(actual.SupportFootPivotWeight, source.SupportFootPivotWeight[routeIndex][sourceIndex], weightTolerance, side, sourceIndex, routeIndex, "SupportPivotWeight");
+                }
+            }
+        }
+
+        static void RequireReconstruction(
+            Vector3 actual,
+            Vector3 expected,
+            float tolerance,
+            string side,
+            int sourceIndex,
+            int routeIndex,
+            string field)
+        {
+            float error = Vector3.Distance(actual, expected);
+            if (!float.IsFinite(error) || error > tolerance)
+                throw ReconstructionFailure(side, sourceIndex, routeIndex, field, error, tolerance);
+        }
+
+        static void RequireReconstruction(
+            Quaternion actual,
+            Quaternion expected,
+            float tolerance,
+            string side,
+            int sourceIndex,
+            int routeIndex,
+            string field)
+        {
+            float error = Quaternion.Angle(actual, expected);
+            if (!float.IsFinite(error) || error > tolerance)
+                throw ReconstructionFailure(side, sourceIndex, routeIndex, field, error, tolerance);
+        }
+
+        static void RequireReconstruction(
+            float actual,
+            float expected,
+            float tolerance,
+            string side,
+            int sourceIndex,
+            int routeIndex,
+            string field)
+        {
+            float error = Mathf.Abs(actual - expected);
+            if (!float.IsFinite(error) || error > tolerance)
+                throw ReconstructionFailure(side, sourceIndex, routeIndex, field, error, tolerance);
+        }
+
+        static InvalidOperationException ReconstructionFailure(
+            string side,
+            int sourceIndex,
+            int routeIndex,
+            string field,
+            float error,
+            float tolerance) =>
+            new InvalidOperationException(
+                $"{side} Foot Analysis flat reconstruction failed for {field} at source {sourceIndex}, route {routeIndex}: {error} > {tolerance}.");
 
         static AnimationFootSynchronizationFootDescriptor BuildSynchronizationFoot(
             SampledFoot foot,
@@ -474,13 +622,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Vector3[] anklePositions,
             Vector3[] kneePositions,
             Vector3[] hipPositions,
+            Quaternion[] soleRotations,
+            Quaternion[] ankleRotations,
+            float rigLegLength,
             Vector3[] rootPositions,
             Quaternion[] rootRotations)
         {
             if (heelPositions == null || toePositions == null || hipPositions == null ||
+                soleRotations == null || ankleRotations == null ||
                 rootPositions == null || rootRotations == null ||
                 heelPositions.Length != toePositions.Length || heelPositions.Length != rootPositions.Length ||
-                heelPositions.Length != hipPositions.Length || heelPositions.Length != rootRotations.Length)
+                heelPositions.Length != hipPositions.Length || heelPositions.Length != rootRotations.Length ||
+                heelPositions.Length != soleRotations.Length || heelPositions.Length != ankleRotations.Length ||
+                !float.IsFinite(rigLegLength) || rigLegLength <= 0f)
             {
                 throw new ArgumentException("Foot Analysis foot/root sample counts do not match.");
             }
@@ -494,6 +648,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 AnklePositions = anklePositions,
                 KneePositions = kneePositions,
                 HipPositions = hipPositions,
+                SoleRotations = soleRotations,
+                AnkleRotations = ankleRotations,
+                RigLegLength = rigLegLength,
                 Velocities = new Vector3[positions.Length],
                 Heights = new float[positions.Length],
                 PlantConfidence = new float[positions.Length],
@@ -509,11 +666,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 OpposingEventOrdinal = new float[positions.Length],
                 OpposingLandingCycleOffset = new float[positions.Length],
                 OpposingRootLocalLanding = new Vector3[positions.Length],
+                OpposingRootLocalLandingRotation = CreateIdentityRotations(positions.Length),
                 RootLocalFootRoute = CreateVectorRoute(positions.Length),
+                RootLocalHeelRoute = CreateVectorRoute(positions.Length),
+                RootLocalToeRoute = CreateVectorRoute(positions.Length),
                 RootLocalAnkleRoute = CreateVectorRoute(positions.Length),
+                RootLocalKneeRoute = CreateVectorRoute(positions.Length),
                 RootLocalHipRoute = CreateVectorRoute(positions.Length),
+                RootLocalSoleRotationRoute = CreateQuaternionRoute(positions.Length),
+                RootLocalAnkleRotationRoute = CreateQuaternionRoute(positions.Length),
                 AuthoredFootPlanarRoute = CreateVectorRoute(positions.Length),
-                AnimationClearanceHeight = CreateScalarRoute(positions.Length)
+                AnimationClearanceHeight = CreateScalarRoute(positions.Length),
+                ConstraintWeight = CreateScalarRoute(positions.Length),
+                SupportWeight = CreateScalarRoute(positions.Length),
+                SupportLegLength = CreateScalarRoute(positions.Length),
+                SupportLegCompressionReserve = CreateScalarRoute(positions.Length),
+                SupportKneeBendPlane = CreateVectorRoute(positions.Length),
+                SupportFootPivotPosition = CreateVectorRoute(positions.Length),
+                SupportFootPivotWeight = CreateScalarRoute(positions.Length)
             };
             for (int i = 0; i <= last; i++)
             {
@@ -925,21 +1095,36 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentException("Foot Analysis opposing sole samples do not match.");
             }
             var rootLocalSole = new Vector3[foot.SolePositions.Length];
+            var rootLocalHeel = new Vector3[foot.HeelPositions.Length];
+            var rootLocalToe = new Vector3[foot.ToePositions.Length];
             var opposingRootLocalSole = new Vector3[opposingFoot.SolePositions.Length];
             var rootLocalAnkle = new Vector3[foot.AnklePositions.Length];
+            var rootLocalKnee = new Vector3[foot.KneePositions.Length];
             var rootLocalHip = new Vector3[foot.HipPositions.Length];
+            var rootLocalSoleRotation = new Quaternion[foot.SoleRotations.Length];
+            var rootLocalAnkleRotation = new Quaternion[foot.AnkleRotations.Length];
             for (int i = 0; i < rootLocalSole.Length; i++)
             {
                 Quaternion rootInverse = Quaternion.Inverse(authoredRootRotations[i]);
                 rootLocalSole[i] = rootInverse *
                                    (foot.SolePositions[i] - authoredRootPositions[i]);
+                rootLocalHeel[i] = rootInverse *
+                                   (foot.HeelPositions[i] - authoredRootPositions[i]);
+                rootLocalToe[i] = rootInverse *
+                                  (foot.ToePositions[i] - authoredRootPositions[i]);
                 opposingRootLocalSole[i] = rootInverse *
                                            (opposingFoot.SolePositions[i] - authoredRootPositions[i]);
                 rootLocalAnkle[i] = rootInverse *
                                     (foot.AnklePositions[i] - authoredRootPositions[i]);
+                rootLocalKnee[i] = rootInverse *
+                                   (foot.KneePositions[i] - authoredRootPositions[i]);
                 rootLocalHip[i] = rootInverse *
                                   (foot.HipPositions[i] - authoredRootPositions[i]);
+                rootLocalSoleRotation[i] = (rootInverse * foot.SoleRotations[i]).normalized;
+                rootLocalAnkleRotation[i] = (rootInverse * foot.AnkleRotations[i]).normalized;
             }
+            PreserveQuaternionContinuity(rootLocalSoleRotation);
+            PreserveQuaternionContinuity(rootLocalAnkleRotation);
 
             for (int i = 0; i <= intervals; i++)
             {
@@ -1010,8 +1195,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         loop,
                         intervals);
                     foot.RootLocalFootRoute[routeIndex][i] = rootLocalFoot;
+                    foot.RootLocalHeelRoute[routeIndex][i] = SampleRootLocalRoute(
+                        rootLocalHeel,
+                        routeSample,
+                        loop,
+                        intervals);
+                    foot.RootLocalToeRoute[routeIndex][i] = SampleRootLocalRoute(
+                        rootLocalToe,
+                        routeSample,
+                        loop,
+                        intervals);
                     foot.RootLocalAnkleRoute[routeIndex][i] = SampleRootLocalRoute(
                         rootLocalAnkle,
+                        routeSample,
+                        loop,
+                        intervals);
+                    foot.RootLocalKneeRoute[routeIndex][i] = SampleRootLocalRoute(
+                        rootLocalKnee,
                         routeSample,
                         loop,
                         intervals);
@@ -1020,11 +1220,46 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         routeSample,
                         loop,
                         intervals);
+                    foot.RootLocalSoleRotationRoute[routeIndex][i] = SampleRootLocalRotation(
+                        rootLocalSoleRotation,
+                        routeSample,
+                        loop,
+                        intervals);
+                    foot.RootLocalAnkleRotationRoute[routeIndex][i] = SampleRootLocalRotation(
+                        rootLocalAnkleRotation,
+                        routeSample,
+                        loop,
+                        intervals);
                     foot.AuthoredFootPlanarRoute[routeIndex][i] = new Vector3(
                         rootLocalFoot.x,
                         0f,
                         rootLocalFoot.z);
                     authoredSoleHeights[routeIndex] = rootLocalFoot.y;
+                    float constraintWeight = ResolveConstraintWeight(
+                        routePhase,
+                        foot.ReleasePhase[i],
+                        foot.LiftOffPhase[i],
+                        foot.ApproachContactPhase[i]);
+                    float supportWeight = ResolveSupportWeight(
+                        routePhase,
+                        foot.ReleasePhase[i],
+                        foot.LiftOffPhase[i]);
+                    Vector3 routeHip = foot.RootLocalHipRoute[routeIndex][i];
+                    Vector3 routeKnee = foot.RootLocalKneeRoute[routeIndex][i];
+                    Vector3 routeAnkle = foot.RootLocalAnkleRoute[routeIndex][i];
+                    float supportLegLength = Vector3.Distance(routeHip, routeAnkle);
+                    foot.ConstraintWeight[routeIndex][i] = constraintWeight;
+                    foot.SupportWeight[routeIndex][i] = supportWeight;
+                    foot.SupportLegLength[routeIndex][i] = supportLegLength;
+                    foot.SupportLegCompressionReserve[routeIndex][i] = Mathf.Max(
+                        0f,
+                        foot.RigLegLength - supportLegLength);
+                    foot.SupportKneeBendPlane[routeIndex][i] = ResolveKneeBendPlane(
+                        routeHip,
+                        routeKnee,
+                        routeAnkle);
+                    foot.SupportFootPivotPosition[routeIndex][i] = rootLocalFoot;
+                    foot.SupportFootPivotWeight[routeIndex][i] = supportWeight;
 
                 }
 
@@ -1138,6 +1373,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 foot.OpposingRootLocalLanding[sample] =
                     Quaternion.Inverse(rootRotations[landingSample]) *
                     (opposingFoot.SolePositions[landingSample] - rootPositions[landingSample]);
+                foot.OpposingRootLocalLandingRotation[sample] = (
+                    Quaternion.Inverse(rootRotations[landingSample]) *
+                    opposingFoot.SoleRotations[landingSample]).normalized;
             }
         }
 
@@ -1177,6 +1415,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int i = 0; i < route.Length; i++)
                 route[i] = new Vector3[sampleCount];
             return route;
+        }
+
+        static Quaternion[][] CreateQuaternionRoute(int sampleCount)
+        {
+            var route = new Quaternion[AnimationPredictedFootStepCurveSet.RouteSampleCount][];
+            for (int i = 0; i < route.Length; i++)
+                route[i] = CreateIdentityRotations(sampleCount);
+            return route;
+        }
+
+        static Quaternion[] CreateIdentityRotations(int sampleCount)
+        {
+            var result = new Quaternion[sampleCount];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = Quaternion.identity;
+            return result;
         }
 
         static float[][] CreateScalarRoute(int sampleCount)
@@ -1227,6 +1481,79 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             int start = Mathf.FloorToInt(wrapped);
             int end = (start + 1) % intervals;
             return Vector3.Lerp(rootLocalSole[start], rootLocalSole[end], wrapped - start);
+        }
+
+        static Quaternion SampleRootLocalRotation(
+            Quaternion[] rotations,
+            float sample,
+            bool loop,
+            int intervals)
+        {
+            if (!loop)
+            {
+                float clamped = Mathf.Clamp(sample, 0f, intervals);
+                int first = Mathf.FloorToInt(clamped);
+                int second = Mathf.Min(intervals, first + 1);
+                return Quaternion.Slerp(rotations[first], rotations[second], clamped - first).normalized;
+            }
+            float wrapped = sample % intervals;
+            if (wrapped < 0f)
+                wrapped += intervals;
+            int start = Mathf.FloorToInt(wrapped);
+            int end = (start + 1) % intervals;
+            return Quaternion.Slerp(rotations[start], rotations[end], wrapped - start).normalized;
+        }
+
+        static void PreserveQuaternionContinuity(Quaternion[] rotations)
+        {
+            for (int i = 1; i < rotations.Length; i++)
+            {
+                if (Quaternion.Dot(rotations[i - 1], rotations[i]) >= 0f)
+                    continue;
+                Quaternion value = rotations[i];
+                rotations[i] = new Quaternion(-value.x, -value.y, -value.z, -value.w);
+            }
+        }
+
+        static float ResolveConstraintWeight(
+            float phase,
+            float releasePhase,
+            float liftOffPhase,
+            float approachContactPhase)
+        {
+            if (phase < releasePhase)
+                return 1f;
+            if (phase < liftOffPhase)
+                return 1f - Mathf.InverseLerp(releasePhase, liftOffPhase, phase);
+            if (phase < approachContactPhase)
+                return 0f;
+            return Mathf.InverseLerp(approachContactPhase, 1f, phase);
+        }
+
+        static float ResolveSupportWeight(
+            float phase,
+            float releasePhase,
+            float liftOffPhase)
+        {
+            if (phase < releasePhase)
+                return 1f;
+            return phase < liftOffPhase
+                ? 1f - Mathf.InverseLerp(releasePhase, liftOffPhase, phase)
+                : 0f;
+        }
+
+        static Vector3 ResolveKneeBendPlane(
+            Vector3 hip,
+            Vector3 knee,
+            Vector3 ankle)
+        {
+            Vector3 leg = ankle - hip;
+            float denominator = leg.sqrMagnitude;
+            if (denominator <= 0.00000001f)
+                throw new InvalidOperationException("Foot Analysis support leg has zero length.");
+            Vector3 projected = hip + leg * Mathf.Clamp01(Vector3.Dot(knee - hip, leg) / denominator);
+            Vector3 bend = knee - projected;
+            return bend.sqrMagnitude > 0.00000001f ? bend.normalized : Vector3.zero;
         }
 
         static float SampleScalarRoute(
@@ -1333,6 +1660,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             float[] opposingLandingX = new float[count];
             float[] opposingLandingY = new float[count];
             float[] opposingLandingZ = new float[count];
+            float[] opposingLandingRotationX = new float[count];
+            float[] opposingLandingRotationY = new float[count];
+            float[] opposingLandingRotationZ = new float[count];
+            float[] opposingLandingRotationW = new float[count];
+            float[] landingPhase = new float[count];
             for (int i = 0; i < count; i++)
             {
                 x[i] = foot.Velocities[i].x;
@@ -1341,6 +1673,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 opposingLandingX[i] = foot.OpposingRootLocalLanding[i].x;
                 opposingLandingY[i] = foot.OpposingRootLocalLanding[i].y;
                 opposingLandingZ[i] = foot.OpposingRootLocalLanding[i].z;
+                opposingLandingRotationX[i] = foot.OpposingRootLocalLandingRotation[i].x;
+                opposingLandingRotationY[i] = foot.OpposingRootLocalLandingRotation[i].y;
+                opposingLandingRotationZ[i] = foot.OpposingRootLocalLandingRotation[i].z;
+                opposingLandingRotationW[i] = foot.OpposingRootLocalLandingRotation[i].w;
+                landingPhase[i] = foot.EventOrdinal[i] > 0f ? 1f : 0f;
             }
             bool[] eventBoundaries = ResolveEventBoundaries(foot.EventPhase, foot.EventOrdinal);
             AnimationCurve[] routeX = BuildRouteCurves(foot.RootLocalFootRoute, 0, reduction.LandingOffsetTolerance, eventBoundaries);
@@ -1355,6 +1692,49 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationCurve[] authoredFootPlanarX = BuildRouteCurves(foot.AuthoredFootPlanarRoute, 0, reduction.LandingOffsetTolerance, eventBoundaries);
             AnimationCurve[] authoredFootPlanarZ = BuildRouteCurves(foot.AuthoredFootPlanarRoute, 2, reduction.LandingOffsetTolerance, eventBoundaries);
             AnimationCurve[] animationClearanceHeight = BuildRouteCurves(foot.AnimationClearanceHeight, reduction.HeightTolerance, eventBoundaries);
+            AnimationCurve[] heelRouteX = BuildRouteCurves(foot.RootLocalHeelRoute, 0, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] heelRouteY = BuildRouteCurves(foot.RootLocalHeelRoute, 1, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] heelRouteZ = BuildRouteCurves(foot.RootLocalHeelRoute, 2, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] toeRouteX = BuildRouteCurves(foot.RootLocalToeRoute, 0, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] toeRouteY = BuildRouteCurves(foot.RootLocalToeRoute, 1, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] toeRouteZ = BuildRouteCurves(foot.RootLocalToeRoute, 2, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] kneeRouteX = BuildRouteCurves(foot.RootLocalKneeRoute, 0, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] kneeRouteY = BuildRouteCurves(foot.RootLocalKneeRoute, 1, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] kneeRouteZ = BuildRouteCurves(foot.RootLocalKneeRoute, 2, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[][] soleRotation = BuildRouteCurves(foot.RootLocalSoleRotationRoute, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[][] ankleRotation = BuildRouteCurves(foot.RootLocalAnkleRotationRoute, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] constraintWeight = BuildRouteCurves(foot.ConstraintWeight, reduction.ConfidenceTolerance, eventBoundaries);
+            AnimationCurve[] supportWeight = BuildRouteCurves(foot.SupportWeight, reduction.ConfidenceTolerance, eventBoundaries);
+            AnimationCurve[] supportLegLength = BuildRouteCurves(foot.SupportLegLength, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] supportLegCompressionReserve = BuildRouteCurves(foot.SupportLegCompressionReserve, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] kneeBendPlaneX = BuildRouteCurves(foot.SupportKneeBendPlane, 0, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] kneeBendPlaneY = BuildRouteCurves(foot.SupportKneeBendPlane, 1, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] kneeBendPlaneZ = BuildRouteCurves(foot.SupportKneeBendPlane, 2, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] pivotPositionX = BuildRouteCurves(foot.SupportFootPivotPosition, 0, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] pivotPositionY = BuildRouteCurves(foot.SupportFootPivotPosition, 1, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] pivotPositionZ = BuildRouteCurves(foot.SupportFootPivotPosition, 2, reduction.LandingOffsetTolerance, eventBoundaries);
+            AnimationCurve[] pivotWeight = BuildRouteCurves(foot.SupportFootPivotWeight, reduction.ConfidenceTolerance, eventBoundaries);
+            var biomechanical = new AnimationFootBiomechanicalStepCurveSet(
+                ReduceEventScoped(landingPhase, 0f, eventBoundaries),
+                ReduceStep(opposingLandingRotationX),
+                ReduceStep(opposingLandingRotationY),
+                ReduceStep(opposingLandingRotationZ),
+                ReduceStep(opposingLandingRotationW),
+                new[]
+                {
+                    heelRouteX, heelRouteY, heelRouteZ,
+                    toeRouteX, toeRouteY, toeRouteZ,
+                    kneeRouteX, kneeRouteY, kneeRouteZ,
+                    soleRotation[0], soleRotation[1], soleRotation[2], soleRotation[3],
+                    ankleRotation[0], ankleRotation[1], ankleRotation[2], ankleRotation[3],
+                    kneeBendPlaneX, kneeBendPlaneY, kneeBendPlaneZ,
+                    pivotPositionX, pivotPositionY, pivotPositionZ
+                },
+                constraintWeight,
+                supportWeight,
+                supportLegLength,
+                supportLegCompressionReserve,
+                pivotWeight);
             return new AnimationFootFeatureCurveSet(
                 Reduce(x, reduction.VelocityTolerance),
                 Reduce(y, reduction.VelocityTolerance),
@@ -1387,7 +1767,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     hipRouteZ,
                     authoredFootPlanarX,
                     authoredFootPlanarZ,
-                    animationClearanceHeight));
+                    animationClearanceHeight,
+                    biomechanical));
         }
 
         static AnimationCurve[] BuildRouteCurves(
@@ -1423,6 +1804,37 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int routeIndex = 0; routeIndex < route.Length; routeIndex++)
                 curves[routeIndex] = ReduceEventScoped(route[routeIndex], tolerance, eventBoundaries);
             return curves;
+        }
+
+        static AnimationCurve[][] BuildRouteCurves(
+            Quaternion[][] route,
+            float tolerance,
+            bool[] eventBoundaries)
+        {
+            var result = new AnimationCurve[4][];
+            for (int axis = 0; axis < result.Length; axis++)
+            {
+                var curves = new AnimationCurve[route.Length];
+                for (int routeIndex = 0; routeIndex < route.Length; routeIndex++)
+                {
+                    Quaternion[] samples = route[routeIndex];
+                    var values = new float[samples.Length];
+                    for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex++)
+                    {
+                        Quaternion value = samples[sampleIndex];
+                        values[sampleIndex] = axis == 0
+                            ? value.x
+                            : axis == 1
+                                ? value.y
+                                : axis == 2
+                                    ? value.z
+                                    : value.w;
+                    }
+                    curves[routeIndex] = ReduceEventScoped(values, tolerance, eventBoundaries);
+                }
+                result[axis] = curves;
+            }
+            return result;
         }
 
         static bool[] ResolveEventBoundaries(float[] eventPhase, float[] eventOrdinal)

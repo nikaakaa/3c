@@ -122,3 +122,10 @@
 - [x] 15.1 将代码、资产、场景与既有OpenSpec实现恢复到提交`bfb571868a58edf1b9d3c1b19844a57e4d022491`，只保留压缩后的失败经验；删除会继续参与Unity编译的未跟踪自动路线脚本。
 - [x] 15.2 区分创建帧原动画鞋底与Ground Probe支撑起点：Root Trajectory以`EventPhaseAtGeneration`的Native Sole对齐同相位未对齐动画路线，生成一次平面刚性偏移并整步冻结；删除从`PathStartPhase`开始向Landing衰减为零的路线偏移。Ground Probe继续只拥有地面查询起点，不取得动画路线坐标所有权。
 - [ ] 15.3 用同一版本新run对账创建帧Native Sole、冻结Animation Foot Route、Landing XZ、Foot Rate、Goal连续性、上楼/下楼Heel/Toe距离与FBBIK residual；未获得数据与观感改善前，不再修改Anchor、Pelvis、查询阈值或有符号高度。
+
+## 16. 静止回原动画的单一Stance修复
+
+- [x] 16.1 明确`GroundedStationary + 无权威Step`只保留Current Grounding接触与坡面安全，不再把静止接触定义为新Anchor捕获。
+- [x] 16.2 在现有Stance owner中让已有Anchor通过原有Blend连续释放到Current Grounding，并从旧Anchor鞋底面与Pelvis Reach中同步退场。
+- [x] 16.3 完成单一路径静态搜索、Runtime与Editor编译、OpenSpec strict validate，并在Unity效果验证前提交该单变量版本。
+- [ ] 16.4 在已打开GameplayLab验证平地停步回原动画、斜坡静止不穿透、重新起步恢复正式Stance规则；运行生命周期错误若阻断验证，作为独立根因处理。

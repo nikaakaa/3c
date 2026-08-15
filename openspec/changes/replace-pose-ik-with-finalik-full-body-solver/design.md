@@ -105,6 +105,8 @@ Ground Envelope与Animation Clearance共同拥有唯一Swing高度；当前动�
 
 普通Current支撑只能在同帧Current Grounding证明合法支撑后捕获。Executing Plan进入`ApproachingContact`时，预测Ankle、旋转和该Plan冻结的Contact Surface属于同一个Landing事实；Stance必须重建并校验该Surface的Collider、Layer与坡度，再以当前鞋底到该平面的距离决定捕获。权威ApproachingContact不得被in-place鞋底相对Root速度否决；该速度不是世界接触速度。不得采用预测Ankle却改用Current Query的另一踏面，也不得在预测Surface无效时静默回退。捕获位置就是该帧已经完成鞋底安全约束的最终Goal，因此Stance可以在捕获帧原子取得完整世界Anchor所有权而不移动脚；只有`PlantContact + 有效Anchor + 完整Blend`可报告`Anchored`。LiftOff或失去支撑后的既有Blend只用于从旧Anchor连续释放，释放期间必须报告Contact而不是伪装成锁脚。
 
+`GroundedStationary + 无权威Step`不是新的锁脚事件。该状态只保留Current Grounding证明的Contact与坡面安全；若停步时仍有Anchor，现有Stance用同一个`AnchorBlendSpeed`把完整世界Anchor连续释放到Current Grounding Baseline，释放期间不得重新捕获Anchor、使用旧Anchor支撑面驱动鞋底净空或把旧Anchor继续计入Pelvis Reach。平地因此回到原动画脚，斜坡只保留当前支撑所必需的高度与旋转。重新移动或新权威Step到来后，仍按原有Stance/Landing规则取得Anchor，不增加速度曲线、第二Grounding或第二所有权。
+
 Corin locomotion是in-place：支撑脚相对Root向后运动是抵消KCC前进的动画事实，不能用该局部全速度判断世界锁定。离线Artifact从同一Plant区间提取精确`Release / LiftOff / ApproachContact`边界；Runtime按权威Action Phase唯一解析`Supporting=Locked、Releasing=Sliding、Swing=Unlocked`。连续几何仍使用25点路线，离散所有权状态不得再量化到该采样格。旧Artifact通过算法身份变更整体失效，不保留兼容改写。
 
 Predictive Body Support Path描述下一Landing对身体的未来地形位移，它与“该摆脚当前是否Supporting”是两个事实。Executable Plan进入Swing后，即使同一脚是`Unlocked / Unsupported`，其Body Support Path仍可作为唯一Pelvis owner候选；真实支撑腿身份继续只拥有Current支撑、Anchor与Reach。

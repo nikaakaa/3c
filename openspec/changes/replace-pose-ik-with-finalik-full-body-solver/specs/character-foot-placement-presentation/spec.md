@@ -115,7 +115,7 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
 - **AND** 同一个Foot Offset连续状态 MUST同步到修正后位置，FBBIK MUST只执行该最终Goal
 - **AND** 系统 MUST不等待Swing用Grounding Spring跨多个接触帧回落
 
-当本帧没有权威Landing Event且Plan为`Inactive`时，统一Foot Placement MUST进入Idle Current Support模式，继续消费同一个Current Grounding安全Baseline，直到现有Stance捕获真实接触。该模式 MUST不创建第二Grounding或响应式前置，也 MUST不在权威动作存在但Plan为`Rejected`时介入；Rejected仍须显式暴露预测失败。
+当本帧没有权威Landing Event、Plan为`Inactive`且Motion Phase为`GroundedStationary`时，统一Foot Placement MUST进入Idle Current Support模式，继续消费同一个Current Grounding安全Baseline。该模式只证明Contact，不得捕获新的完整世界Anchor；已有Anchor MUST通过现有Stance Blend连续释放到Current Grounding，释放期间不得继续拥有鞋底支撑面或Pelvis Reach。该模式 MUST不创建第二Grounding、响应式前置、速度权重或新参数，也 MUST不在权威动作存在但Plan为`Rejected`时介入；Rejected仍须显式暴露预测失败。
 
 事件身份替换、Phase回退、动作中断或Stance捕获Landing MUST结束旧当前计划。新当前事件只有在自身PreSwing边界 MAY创建一次新计划；相同事件不得重试、晋升旧世界候选或逐帧重映射。
 
@@ -138,12 +138,13 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
   - **AND** MUST不以Heel/Toe相对Root的全三维速度幅值把正常支撑误判为Sliding或Unlocked
   - **AND** Runtime MUST不从25点几何路线近邻采样该离散事实，禁止为兼容旧Artifact临时改写Constraint
 
-#### Scenario: 停步后等待Stance捕获
+#### Scenario: 停步后Anchor连续回到Current Grounding
 
-- **WHEN** Locomotion Landing Event已经退出、Plan为`Inactive`且该脚尚未满足现有Stance捕获条件
-- **THEN** Final Foot Goal MUST保留同帧Current Grounding已经计算的安全Baseline
-- **AND** 系统 MUST不把Goal改回可能穿过当前支撑面的原动画脚
-- **AND** 该所有权 MUST在Stance捕获后由同一个Anchor正常接管
+- **WHEN** Locomotion Landing Event已经退出、Plan为`Inactive`、Motion Phase为`GroundedStationary`且Current Query提供合法支撑
+- **THEN** Stance MUST保持Contact并用现有Anchor Blend把已有完整世界Anchor连续释放到Current Grounding安全Baseline
+- **AND** 静止期间 MUST不捕获新Anchor；平地最终回到原动画脚，斜坡只保留Current Grounding所需修正
+- **AND** 旧Anchor MUST不再拥有鞋底支撑面或Pelvis Reach，系统 MUST不把Goal改回会穿过当前支撑面的原动画脚
+- **AND** 重新移动或新权威Step到来后 MUST恢复原有Stance与Landing捕获规则
 
 #### Scenario: 固定计划按权威动作时钟执行并保留当前支撑安全下界
 
@@ -156,7 +157,8 @@ PreSwing的`Locked / Sliding`区间 MUST由同一个Current Support/Stance安全
 #### Scenario: 静止动作仍有残余鞋底速度
 
 - **WHEN** Motion Phase为`GroundedStationary`、没有权威Action Constraint且Current Query提供合法近距离支撑
-- **THEN** 现有Stance MUST允许捕获该真实接触，不得仅因in-place动画残余鞋底速度或Plant Confidence拒绝锁脚
+- **THEN** 现有Stance MUST允许该真实接触成立，不得仅因in-place动画残余鞋底速度或Plant Confidence丢失Contact
+- **AND** 该接触 MUST不捕获或维持完整世界Anchor；已有Anchor MUST连续释放到Current Grounding
 - **AND** Surface坡度、距离与唯一World Query有效性门禁 MUST继续生效
 
 #### Scenario: 预测Landing按同一支撑面交给Stance

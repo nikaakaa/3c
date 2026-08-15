@@ -114,3 +114,7 @@ Landing是一个完整支撑事务。旧Step的冻结Landing、本步Stance、An
 三个实验已被否决：`70c808...`在路线未闭环时开放有符号Swing高度，直接把路线误差压进地面；`7370fa...`把整个ApproachingContact当作Anchor捕获许可，产生数十厘米交接；`bf876c...`只增加下一表现帧LiftOff门禁，1495行、1205列完整采样仍表现浮空和鬼畜。平滑、迟滞和阈值不能修复错误路线、错误支撑身份或错误高度语义。
 
 再次推进时必须一次只改一个owner：先证明冻结Animation Foot Route与同相位Native Sole的XZ映射，再证明Foot Rate，然后证明Ground Envelope端点与边缘，随后闭合Landing支撑事务，最后才恢复`Ground Envelope + Animation Clearance`的有符号高度。每一步同时看自动CSV和现场观感；编译、Character Build及Console 0 Error不代表IK效果通过。
+
+## 14. 静止接触不等于永久锁脚
+
+`GroundedStationary`只说明角色当前可由Current Grounding维持支撑，不是一个新的Landing事件。若用它绕过速度与Plant Confidence后继续捕获Anchor，停步姿势会永久冻结在最后一步。正确退场是保留Contact和Current Grounding安全Baseline，同时用现有Anchor Blend释放完整世界Anchor；平地回原动画，斜坡只留下防穿透所需修正。全局降低IK权重会同时丢掉坡面安全，因此不是同一问题的解法。

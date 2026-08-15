@@ -172,14 +172,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal AnimationFootConstraintMode AnimationConstraintMode = AnimationFootConstraintMode.Locked;
             internal AnimationFootSupportPhase AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
             internal float PelvisSupportWeight;
+            internal bool IdleCurrentSupport;
 
             internal bool AllowsAnchor =>
-                !HasAnimationConstraint ||
-                AnimationConstraintMode == AnimationFootConstraintMode.Locked ||
-                AnimationSupportPhase == AnimationFootSupportPhase.ApproachingContact;
+                !IdleCurrentSupport &&
+                (!HasAnimationConstraint ||
+                 AnimationConstraintMode == AnimationFootConstraintMode.Locked ||
+                 AnimationSupportPhase == AnimationFootSupportPhase.ApproachingContact);
 
             internal CharacterFootContactState ContactState =>
-                PlantContact && HasAnchor && AnchorBlendWeight >= 0.999999f
+                PlantContact && AllowsAnchor && HasAnchor && AnchorBlendWeight >= 0.999999f
                     ? CharacterFootContactState.Anchored
                     : PlantContact || HasAnchor || AnchorBlendWeight > 0.0001f
                         ? CharacterFootContactState.Contact
@@ -215,6 +217,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool stationaryGroundContact =
                     motionPhase == CharacterPresentationMotionPhase.GroundedStationary &&
                     !predictive.HasActionConstraint;
+                bool wasIdleCurrentSupport = IdleCurrentSupport;
+                IdleCurrentSupport = stationaryGroundContact;
                 HasAnimationConstraint = predictive.HasActionConstraint;
                 AnimationConstraintEventIdentity = predictive.HasActionConstraint
                     ? predictive.LandingEventIdentity
@@ -325,6 +329,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         ContactDecision = CharacterFootContactDecision.WaitingForDistance;
                     }
                     PlantContact = false;
+                    return;
+                }
+                if (stationaryGroundContact)
+                {
+                    bool enteredContact = !PlantContact;
+                    PlantContact = true;
+                    if (HasAnchor)
+                    {
+                        if (!wasIdleCurrentSupport)
+                            TransitionReason = FootConstraintTransitionReason.IdleCurrentSupportStarted;
+                        ContactDecision = CharacterFootContactDecision.AnchorFading;
+                    }
+                    else if (enteredContact)
+                    {
+                        TransitionReason = FootConstraintTransitionReason.ContactEntered;
+                        ContactDecision = CharacterFootContactDecision.ContactEntered;
+                    }
+                    else
+                    {
+                        ContactDecision = CharacterFootContactDecision.ContactRetained;
+                    }
                     return;
                 }
                 if (!ContactRetentionSpeedAccepted)
@@ -492,6 +517,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationConstraintMode = AnimationFootConstraintMode.Locked;
                 AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
                 PelvisSupportWeight = 0f;
+                IdleCurrentSupport = false;
                 ClearAnchor();
             }
 
@@ -639,7 +665,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Left,
                 m_Right,
                 leftPredictive,
-                rightPredictive);
+                rightPredictive,
+                frame.MotionPhase);
             float pelvisTargetOffset = ResolvePelvisTargetOffset(
                 currentPelvisTargetOffset,
                 leftPredictive,
@@ -916,7 +943,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
             }
             bool usePredictiveContactTarget = hasPredictiveContactTarget && contactSurfaceValid;
+            bool idleCurrentSupport = motionPhase == CharacterPresentationMotionPhase.GroundedStationary &&
+                                      !predictive.HasActionConstraint;
             bool lockedAnchorOwnsContact = hasResolvedAnchor && state.PlantContact &&
+                                           !idleCurrentSupport &&
                                            (!predictive.HasActionConstraint ||
                                             predictive.ConstraintMode == AnimationFootConstraintMode.Locked);
             if (!usePredictiveContactTarget && lockedAnchorOwnsContact)
@@ -948,7 +978,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? predictive.ContactAnklePosition
                     : animated.AnklePosition + up * (trace.TargetOffset + lyra.SoleClearanceTarget);
             bool hadAnchor = state.HasAnchor;
-            if (state.PlantContact && hasResolvedAnchor)
+            if (state.PlantContact && hasResolvedAnchor && state.AllowsAnchor)
             {
                 state.UpdateAnimationReference(
                     animated.AnklePosition,
@@ -959,10 +989,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Vector3.Distance(anchorWorldPosition, targetWorldPosition)
                 : float.PositiveInfinity;
             state.AnchorDistanceAccepted = !hadAnchor ||
+                                           state.IdleCurrentSupport ||
                                            lockedAnchorOwnsContact ||
                                            hasResolvedAnchor &&
                                            state.AnchorDistance <= settings.MaximumAnchorDistance;
             if (state.PlantContact && hasResolvedAnchor &&
+                !state.IdleCurrentSupport &&
                 !lockedAnchorOwnsContact && !state.AnchorDistanceAccepted)
             {
                 state.Release(
@@ -974,7 +1006,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.AnchorBlendWeight,
                 targetBlend,
                 settings.AnchorBlendSpeed * deltaSeconds);
-            float pelvisSupportTarget = state.PlantContact && hasResolvedAnchor
+            float pelvisSupportTarget = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor
                 ? 1f
                 : 0f;
             state.PelvisSupportWeight = Mathf.MoveTowards(
@@ -1068,7 +1100,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 animated,
                 finalWorldPosition,
                 finalWorldRotation,
-                state.PlantContact && hasResolvedAnchor ? anchorSurface : prepared.Surface,
+                state.PlantContact && state.AllowsAnchor && hasResolvedAnchor
+                    ? anchorSurface
+                    : prepared.Surface,
                 root.up);
             finalWorldPosition = soleClearance.SafeAnklePosition;
             float placementWeight = Mathf.Clamp01(alpha);
@@ -1257,17 +1291,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootState leftState,
             FootState rightState,
             CharacterPredictiveFootStanceInput leftPredictive,
-            CharacterPredictiveFootStanceInput rightPredictive)
+            CharacterPredictiveFootStanceInput rightPredictive,
+            CharacterPresentationMotionPhase motionPhase)
         {
             bool leftValid = TryResolveCurrentPelvisSupport(
                 leftState,
                 trace.Left,
                 leftPredictive,
+                motionPhase,
                 out float leftTarget);
             bool rightValid = TryResolveCurrentPelvisSupport(
                 rightState,
                 trace.Right,
                 rightPredictive,
+                motionPhase,
                 out float rightTarget);
             if (leftValid && rightValid)
                 return Mathf.Min(leftTarget, rightTarget);
@@ -1280,6 +1317,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootState state,
             CharacterLyraFootTraceResult trace,
             CharacterPredictiveFootStanceInput predictive,
+            CharacterPresentationMotionPhase motionPhase,
             out float target)
         {
             target = 0f;
@@ -1289,7 +1327,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                          predictive.SupportPhase == AnimationFootSupportPhase.Releasing);
             if (predictive.HasActionConstraint ? !authoritativeSupport : !state.PlantContact)
                 return false;
-            if (state.HasAnchor)
+            bool idleCurrentSupport = motionPhase == CharacterPresentationMotionPhase.GroundedStationary &&
+                                      !predictive.HasActionConstraint;
+            if (state.HasAnchor && !idleCurrentSupport)
             {
                 CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
                 if (!state.TryResolve(
@@ -1349,7 +1389,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float legLength)
         {
             float goalWeight = Mathf.Clamp01(alpha);
-            bool hasLockedSupport = state.PlantContact && state.HasAnchor;
+            bool hasLockedSupport = state.PlantContact && state.AllowsAnchor && state.HasAnchor;
             float supportWeight = hasLockedSupport
                 ? Mathf.Clamp01(state.PelvisSupportWeight) * goalWeight
                 : 0f;

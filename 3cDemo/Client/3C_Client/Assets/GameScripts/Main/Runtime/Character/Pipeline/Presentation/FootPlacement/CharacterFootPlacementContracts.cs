@@ -31,7 +31,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         PresentationReset = 10,
         MissingAnimationOutput = 11,
         InvalidPose = 12,
-        PelvisRangeConflictReleased = 17
+        PelvisRangeConflictReleased = 17,
+        IdleCurrentSupportStarted = 18
     }
 
     public enum CharacterFootContactDecision : byte

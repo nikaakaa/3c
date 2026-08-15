@@ -282,6 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentedBodyPosition,
                 committedBodyVelocity,
                 trajectoryCurvatureDegreesPerSecond,
+                frame.TrajectoryCurvatureAvailable,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
                 m_Rig.LeftLegLength,
@@ -299,6 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentedBodyPosition,
                 committedBodyVelocity,
                 trajectoryCurvatureDegreesPerSecond,
+                frame.TrajectoryCurvatureAvailable,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
                 m_Rig.RightLegLength,
@@ -1194,6 +1196,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 presentedBodyPosition,
             Vector3 committedBodyVelocity,
             float trajectoryCurvatureDegreesPerSecond,
+            bool trajectoryCurvatureAvailable,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             float legLength,
@@ -1318,6 +1321,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     movementPlaybackTime,
                     step.PredictionLeadSeconds,
                     trajectoryCurvatureDegreesPerSecond,
+                    trajectoryCurvatureAvailable,
                     rootWorldRotation))
             {
                 Vector3 revisionSole = runtime.HasLastOutputSole
@@ -1355,10 +1359,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             double movementPlaybackTime,
             float predictionLeadSeconds,
             float trajectoryCurvatureDegreesPerSecond,
+            bool trajectoryCurvatureAvailable,
             Quaternion rootWorldRotation)
         {
             if (plan.State != CharacterPredictiveFootPlanState.Executing ||
                 !step.IsAuthoritative || !motionTimeline.IsValid ||
+                !trajectoryCurvatureAvailable ||
                 step.ActionStepClock.Phase >= 0.9999f)
             {
                 return false;

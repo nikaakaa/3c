@@ -1502,14 +1502,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? successorSole
                 : groundProbeStart;
             if (landingHandoff.HasContactTarget)
-            {
-                CharacterFootPlacementSoleContactPose handoffContacts = pose.ResolveSoleContacts(
-                    landingHandoff.ContactAnklePosition,
-                    landingHandoff.ContactAnkleRotation);
-                successorSole =
-                    (handoffContacts.HeelPosition + handoffContacts.ToePosition) * 0.5f;
                 successorProbeStart = landingHandoff.PathPosition;
-            }
             if (runtime.HasRevision)
             {
                 CharacterPredictiveFootPlacementPlan revision = runtime.Revision;

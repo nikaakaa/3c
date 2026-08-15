@@ -504,6 +504,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 pathRoot = default;
             Vector3 pathRootStart = default;
             Vector3 pathHip = default;
+            Vector3 pathHipVelocity = default;
             FootPlacementSurface contactSurface = default;
             Vector3 contactAnklePosition = default;
             Quaternion contactAnkleRotation = default;
@@ -521,6 +522,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     plan.ActionStepPhase,
                     out pathRoot,
                     out pathHip);
+                pathHipVelocity = plan.EvaluateBodyPathHipVelocity(plan.ActionStepPhase);
                 plan.EvaluateBodyPath(
                     plan.RootTrajectory.PathStartPhase,
                     out pathRootStart,
@@ -536,6 +538,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     revision.ActionStepPhase,
                     out Vector3 revisionPathRoot,
                     out Vector3 revisionPathHip);
+                Vector3 revisionPathHipVelocity =
+                    revision.EvaluateBodyPathHipVelocity(revision.ActionStepPhase);
                 revision.EvaluateBodyPath(
                     revision.RootTrajectory.PathStartPhase,
                     out Vector3 revisionPathRootStart,
@@ -545,6 +549,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRoot = Vector3.Lerp(pathRoot, revisionPathRoot, blend);
                 pathRootStart = Vector3.Lerp(pathRootStart, revisionPathRootStart, blend);
                 pathHip = Vector3.Lerp(pathHip, revisionPathHip, blend);
+                pathHipVelocity = Vector3.Lerp(pathHipVelocity, revisionPathHipVelocity, blend);
             }
             bool activeTargetAvailable = TryEvaluateFootTarget(
                 plan,
@@ -613,6 +618,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathPosition = target.PathPosition;
                 pathRoot = target.PathRoot;
                 pathHip = target.PathHip;
+                pathHipVelocity = contactPlan.EvaluateBodyPathHipVelocity(contactPlan.ActionStepPhase);
             }
             CharacterPredictiveFootPlacementPlan timingPlan = revisionContributes
                 ? revision
@@ -669,6 +675,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRoot,
                 pathRootStart,
                 pathHip,
+                pathHipVelocity,
                 pose.HipPosition,
                 targetAnklePosition,
                 predictiveOutputWeight,
@@ -1593,6 +1600,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.PathRoot,
                 pathRootStart,
                 target.PathHip,
+                Vector3.zero,
                 pose.HipPosition,
                 target.AnklePosition,
                 0f,

@@ -200,3 +200,9 @@ Artifact重建原动画
 ```
 
 前一层未通过时，不修改后一层参数。编译、Character Build、Console 0 Error和CSV列数正确都不能代替运动效果闭环。
+
+## 14. 自动输入只有穿过故障地形才是证据
+
+曾经的自动源在角色出生点先跑1.2秒左转和右转，之后才对齐短楼梯。它能证明Input Action收到值，却不能复现“A/D上楼时Plan取消、跳变或浮空”。自动反馈环必须把Straight、持续横向意图切换和连续曲线都放进同一长楼梯路线，并分别双向穿过全部踏面。
+
+普通Play与自动Variant必须分开；自动源只接管MoveAxis，LookAxis继续给观察者。场景同步必须生成课程和起终点并校验Collision/Foot Surface覆盖，否则CSV运行时间没有诊断价值。

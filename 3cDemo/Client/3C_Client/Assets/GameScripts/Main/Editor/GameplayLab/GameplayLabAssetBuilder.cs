@@ -78,6 +78,7 @@ namespace ThirdPersonGameplay.Editor.Lab
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be rebuilt in Play Mode.");
+            GameplayLabFootIkRegressionCourseBuilder.SyncEnvironmentPrefab();
             EnsureFolders();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram =
@@ -143,6 +144,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 collision,
                 string.Empty);
             BuildScene(fixedVariant, floatVariant, footIkEnduranceVariant, rollbackVariant);
+            GameplayLabFootIkRegressionCourseBuilder.SyncGameplayLabScene();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
@@ -192,6 +194,7 @@ namespace ThirdPersonGameplay.Editor.Lab
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be synchronized in Play Mode.");
+            GameplayLabFootIkRegressionCourseBuilder.SyncEnvironmentPrefab();
             EnsureFolders();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram =
@@ -234,6 +237,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             GameplayLabSessionVariantDefinition rollbackVariant =
                 LoadRequired<GameplayLabSessionVariantDefinition>(RollbackVariantPath);
             SyncSceneVariants(fixedVariant, floatVariant, enduranceVariant, rollbackVariant);
+            GameplayLabFootIkRegressionCourseBuilder.SyncGameplayLabScene();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
@@ -484,7 +488,9 @@ namespace ThirdPersonGameplay.Editor.Lab
                     root.transform,
                     "Gameplay Lab Fixed Player",
                     new ActorId(PlayerActorId),
-                    s_PlayerPosition,
+                    footIkEndurance
+                        ? GameplayLabFootIkRegressionCourse.PlayerSpawnPosition
+                        : s_PlayerPosition,
                     Quaternion.identity,
                     sessionHost,
                     fixedProgram,
@@ -498,7 +504,9 @@ namespace ThirdPersonGameplay.Editor.Lab
                     root.transform,
                     "Gameplay Lab Fixed Target",
                     new ActorId(TargetActorId),
-                    s_TargetPosition,
+                    footIkEndurance
+                        ? GameplayLabFootIkRegressionCourse.TargetSpawnPosition
+                        : s_TargetPosition,
                     Quaternion.Euler(0f, 180f, 0f),
                     sessionHost,
                     fixedProgram,
@@ -744,8 +752,6 @@ namespace ThirdPersonGameplay.Editor.Lab
                 {
                     var enduranceSource = instance.AddComponent<GameplayLabFootIkFixedControlSource>();
                     enduranceSource.SetAuthoring(
-                        "teststart",
-                        "testend",
                         definition.InputProfile,
                         ActionTargetInputId,
                         provider,

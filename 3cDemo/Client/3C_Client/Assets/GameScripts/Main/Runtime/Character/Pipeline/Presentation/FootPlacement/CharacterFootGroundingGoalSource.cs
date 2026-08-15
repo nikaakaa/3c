@@ -1344,10 +1344,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool leftValid = TryResolvePredictivePelvisDisplacement(
                 left,
                 up,
+                currentTarget,
                 out float leftDisplacement);
             bool rightValid = TryResolvePredictivePelvisDisplacement(
                 right,
                 up,
+                currentTarget,
                 out float rightDisplacement);
             bool hadSupport = m_HasPelvisSupportSide;
             CharacterFootSide previousSide = m_PelvisSupportSide;
@@ -1504,15 +1506,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static bool TryResolvePredictivePelvisDisplacement(
             CharacterPredictiveFootStanceInput input,
             Vector3 up,
+            float currentTarget,
             out float displacement)
         {
             displacement = 0f;
             if (!input.HasExecutablePlan || !input.IsExecuting || input.PlanSequence == 0 ||
                 input.SupportWeight <= 0.0001f ||
+                !float.IsFinite(currentTarget) ||
                 !float.IsFinite(input.RemainingSeconds) ||
                 !IsFiniteVector(input.PathHip) || !IsFiniteVector(input.CurrentHip))
                 return false;
-            displacement = Vector3.Dot(input.PathHip - input.CurrentHip, up);
+            float pathDisplacement = Vector3.Dot(input.PathHip - input.CurrentHip, up);
+            float weight = Mathf.Clamp01(input.SupportWeight) *
+                           Mathf.Clamp01(input.PredictiveOutputWeight);
+            displacement = Mathf.Lerp(currentTarget, pathDisplacement, weight);
             return float.IsFinite(displacement);
         }
 

@@ -1542,14 +1542,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             displacement = 0f;
             if (!input.HasExecutablePlan || !input.IsExecuting || input.PlanSequence == 0 ||
-                input.SupportWeight <= 0.0001f ||
+                input.PredictiveOutputWeight <= 0.0001f ||
                 !float.IsFinite(currentTarget) ||
                 !float.IsFinite(input.RemainingSeconds) ||
                 !IsFiniteVector(input.PathHip) || !IsFiniteVector(input.CurrentHip))
                 return false;
             float pathDisplacement = Vector3.Dot(input.PathHip - input.CurrentHip, up);
-            float weight = Mathf.Clamp01(input.SupportWeight) *
-                           Mathf.Clamp01(input.PredictiveOutputWeight);
+            float weight = Mathf.Clamp01(input.PredictiveOutputWeight);
             displacement = Mathf.Lerp(currentTarget, pathDisplacement, weight);
             return float.IsFinite(displacement);
         }

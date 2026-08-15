@@ -117,14 +117,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementPelvisLegRange rightRange = BuildRange(in right, up, settings);
             bool useLeft = left.GoalWeight > Epsilon && leftRange.IsValid;
             bool useRight = right.GoalWeight > Epsilon && rightRange.IsValid;
-            bool leftCurrentReachable = useLeft && Contains(leftRange, lyraCurrentOffset, settings);
-            bool rightCurrentReachable = useRight && Contains(rightRange, lyraCurrentOffset, settings);
-            bool leftTargetReachable = useLeft && Contains(leftRange, lyraTargetOffset, settings);
-            bool rightTargetReachable = useRight && Contains(rightRange, lyraTargetOffset, settings);
-            bool rejectLeftGoal = useLeft && !leftCurrentReachable && !leftTargetReachable;
-            bool rejectRightGoal = useRight && !rightCurrentReachable && !rightTargetReachable;
-            bool contributeLeft = useLeft && !rejectLeftGoal;
-            bool contributeRight = useRight && !rejectRightGoal;
+            bool rejectLeftGoal = false;
+            bool rejectRightGoal = false;
+            bool contributeLeft = useLeft;
+            bool contributeRight = useRight;
             if (contributeLeft && contributeRight && !Intersects(leftRange, rightRange))
             {
                 bool keepLeft = SelectLeftSupport(
@@ -221,14 +217,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 input.SupportWeight,
                 false);
         }
-
-        static bool Contains(
-            CharacterFootPlacementPelvisLegRange range,
-            float offset,
-            CharacterStanceStabilizationSettings settings) =>
-            range.IsValid &&
-            offset >= Mathf.Max(range.MinimumOffset, -settings.MaximumPelvisLowering) - Epsilon &&
-            offset <= Mathf.Min(range.MaximumOffset, settings.MaximumPelvisRaising) + Epsilon;
 
         static bool Intersects(
             CharacterFootPlacementPelvisLegRange left,

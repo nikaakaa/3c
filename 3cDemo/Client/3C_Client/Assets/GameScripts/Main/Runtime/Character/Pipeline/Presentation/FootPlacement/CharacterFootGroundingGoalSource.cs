@@ -737,7 +737,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentPelvisTargetOffset,
                 leftPredictive,
                 rightPredictive,
-                m_Rig.PoseRoot.position,
                 poseRootUp,
                 out CharacterFootPlacementPelvisSupportDiagnostics pelvisSupportDiagnostics);
             pelvisTargetOffset = Mathf.Clamp(
@@ -823,6 +822,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootSide.Left,
                     pose.Left,
                     left,
+                    leftPredictive,
                     features.Value,
                     m_Rig.LeftLegLength),
                 BuildPelvisInput(
@@ -830,6 +830,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootSide.Right,
                     pose.Right,
                     right,
+                    rightPredictive,
                     features.Value,
                     m_Rig.RightLegLength),
                 m_Rig.PoseRoot.up,
@@ -1291,19 +1292,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float currentTarget,
             CharacterPredictiveFootStanceInput left,
             CharacterPredictiveFootStanceInput right,
-            Vector3 currentRoot,
             Vector3 componentUp,
             out CharacterFootPlacementPelvisSupportDiagnostics diagnostics)
         {
             Vector3 up = componentUp.normalized;
             bool leftValid = TryResolvePredictivePelvisDisplacement(
                 left,
-                currentRoot,
                 up,
                 out float leftDisplacement);
             bool rightValid = TryResolvePredictivePelvisDisplacement(
                 right,
-                currentRoot,
                 up,
                 out float rightDisplacement);
             bool hadSupport = m_HasPelvisSupportSide;
@@ -1375,16 +1373,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide previousSide,
             ulong previousPlanSequence)
         {
-            const float landingTimeTolerance = 0.0001f;
-            float difference = left.RemainingSeconds - right.RemainingSeconds;
-            if (Mathf.Abs(difference) <= landingTimeTolerance && hadSelection)
+            const float weightTolerance = 0.0001f;
+            float weightDifference = left.SupportWeight - right.SupportWeight;
+            if (Mathf.Abs(weightDifference) <= weightTolerance && hadSelection)
             {
                 if (previousSide == CharacterFootSide.Left && left.PlanSequence == previousPlanSequence)
                     return CharacterFootSide.Left;
                 if (previousSide == CharacterFootSide.Right && right.PlanSequence == previousPlanSequence)
                     return CharacterFootSide.Right;
             }
-            return difference <= 0f
+            if (Mathf.Abs(weightDifference) > weightTolerance)
+                return weightDifference > 0f
+                    ? CharacterFootSide.Left
+                    : CharacterFootSide.Right;
+            return left.RemainingSeconds <= right.RemainingSeconds
                 ? CharacterFootSide.Left
                 : CharacterFootSide.Right;
         }
@@ -1456,16 +1458,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static bool TryResolvePredictivePelvisDisplacement(
             CharacterPredictiveFootStanceInput input,
-            Vector3 currentRoot,
             Vector3 up,
             out float displacement)
         {
             displacement = 0f;
             if (!input.HasExecutablePlan || !input.IsExecuting || input.PlanSequence == 0 ||
+                input.SupportWeight <= 0.0001f ||
                 !float.IsFinite(input.RemainingSeconds) ||
-                !IsFiniteVector(input.PathRoot) || !IsFiniteVector(currentRoot))
+                !IsFiniteVector(input.PathHip) || !IsFiniteVector(input.CurrentHip))
                 return false;
-            displacement = Vector3.Dot(input.PathRoot - currentRoot, up);
+            displacement = Vector3.Dot(input.PathHip - input.CurrentHip, up);
             return float.IsFinite(displacement);
         }
 
@@ -1488,6 +1490,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             CharacterFootPlacementAnimatedFootPose pose,
             ResolvedFoot resolved,
+            CharacterPredictiveFootStanceInput predictive,
             float alpha,
             float legLength)
         {
@@ -1505,7 +1508,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 targetAnklePosition,
                 goalWeight,
                 supportWeight,
-                legLength);
+                legLength,
+                predictive.HasActionConstraint ? predictive.SupportLegLength : 0f,
+                predictive.HasActionConstraint ? predictive.SupportLegCompressionReserve : 0f,
+                predictive.HasActionConstraint ? predictive.SupportKneeBendPlane : Vector3.zero);
         }
 
         CharacterFootPlacementFeatureFrame ResolveFeatures(

@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public static class MotionMatchingProjectionPayloadCodec
     {
-        const int SchemaVersion = 19;
+        const int SchemaVersion = 20;
 
         public static byte[] Encode(MotionMatchingProjectionPayload payload, out AnimationClip[] clips)
         {
@@ -640,6 +640,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 writer.Write(predicted.AnimationClearanceHeights[i]);
             writer.Write(predicted.LandingPhase);
             WriteQuaternion(writer, predicted.OpposingRootLocalSoleRotation);
+            WriteBiomechanicalSample(writer, predicted.BiomechanicalSample);
         }
 
         static AnimationFootFeatureSample ReadFootSample(BinaryReader reader)
@@ -667,7 +668,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 ReadVector3Route(reader),
                 ReadFloatRoute(reader),
                 reader.ReadSingle(),
-                ReadQuaternion(reader))
+                ReadQuaternion(reader),
+                ReadBiomechanicalSample(reader))
                 : default;
             return new AnimationFootFeatureSample(
                 velocity,
@@ -683,6 +685,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 result.Add(ReadVector3(reader));
             return result;
         }
+
+        static void WriteBiomechanicalSample(
+            BinaryWriter writer,
+            AnimationFootBiomechanicalRouteSample value)
+        {
+            if (!value.IsValid)
+                throw new InvalidOperationException("Motion Matching biomechanical Foot sample is invalid.");
+            WriteVector3(writer, value.RootLocalHeelPosition);
+            WriteVector3(writer, value.RootLocalToePosition);
+            WriteVector3(writer, value.RootLocalKneePosition);
+            WriteQuaternion(writer, value.RootLocalSoleRotation);
+            WriteQuaternion(writer, value.RootLocalAnkleRotation);
+            writer.Write(value.ConstraintWeight);
+            writer.Write(value.SupportWeight);
+            writer.Write(value.SupportLegLength);
+            writer.Write(value.SupportLegCompressionReserve);
+            WriteVector3(writer, value.SupportKneeBendPlane);
+            WriteVector3(writer, value.SupportFootPivotPosition);
+            writer.Write(value.SupportFootPivotWeight);
+        }
+
+        static AnimationFootBiomechanicalRouteSample ReadBiomechanicalSample(BinaryReader reader) =>
+            new AnimationFootBiomechanicalRouteSample(
+                ReadVector3(reader),
+                ReadVector3(reader),
+                ReadVector3(reader),
+                ReadQuaternion(reader),
+                ReadQuaternion(reader),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                ReadVector3(reader),
+                ReadVector3(reader),
+                reader.ReadSingle());
         static FixedList128Bytes<float> ReadFloatRoute(BinaryReader reader)
         {
             var result = new FixedList128Bytes<float>();

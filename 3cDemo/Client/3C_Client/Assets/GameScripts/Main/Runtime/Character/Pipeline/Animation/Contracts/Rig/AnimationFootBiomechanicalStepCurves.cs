@@ -38,8 +38,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SupportFootPivotWeight = RequireWeight(
                 supportFootPivotWeight,
                 nameof(supportFootPivotWeight));
+            m_IsSpecified = 1;
         }
 
+        readonly byte m_IsSpecified;
         public Vector3 RootLocalHeelPosition { get; }
         public Vector3 RootLocalToePosition { get; }
         public Vector3 RootLocalKneePosition { get; }
@@ -52,6 +54,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector3 SupportKneeBendPlane { get; }
         public Vector3 SupportFootPivotPosition { get; }
         public float SupportFootPivotWeight { get; }
+        public bool IsValid => m_IsSpecified != 0;
+
+        public static AnimationFootBiomechanicalRouteSample Interpolate(
+            AnimationFootBiomechanicalRouteSample first,
+            AnimationFootBiomechanicalRouteSample second,
+            float t)
+        {
+            if (!first.IsValid || !second.IsValid || !float.IsFinite(t))
+                throw new ArgumentException("Biomechanical Foot route interpolation is invalid.");
+            float value = Mathf.Clamp01(t);
+            return new AnimationFootBiomechanicalRouteSample(
+                Vector3.Lerp(first.RootLocalHeelPosition, second.RootLocalHeelPosition, value),
+                Vector3.Lerp(first.RootLocalToePosition, second.RootLocalToePosition, value),
+                Vector3.Lerp(first.RootLocalKneePosition, second.RootLocalKneePosition, value),
+                Quaternion.Slerp(first.RootLocalSoleRotation, second.RootLocalSoleRotation, value),
+                Quaternion.Slerp(first.RootLocalAnkleRotation, second.RootLocalAnkleRotation, value),
+                Mathf.Lerp(first.ConstraintWeight, second.ConstraintWeight, value),
+                Mathf.Lerp(first.SupportWeight, second.SupportWeight, value),
+                Mathf.Lerp(first.SupportLegLength, second.SupportLegLength, value),
+                Mathf.Lerp(
+                    first.SupportLegCompressionReserve,
+                    second.SupportLegCompressionReserve,
+                    value),
+                Vector3.Lerp(first.SupportKneeBendPlane, second.SupportKneeBendPlane, value),
+                Vector3.Lerp(first.SupportFootPivotPosition, second.SupportFootPivotPosition, value),
+                Mathf.Lerp(first.SupportFootPivotWeight, second.SupportFootPivotWeight, value));
+        }
 
         static Vector3 RequireFinite(Vector3 value, string field)
         {

@@ -38,6 +38,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal float IntentLandingDisplacementThreshold { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
             internal Vector3 LastOutputSole { get; private set; }
+            internal bool HasLastOutputSoleVelocity { get; private set; }
+            internal Vector3 LastOutputSoleVelocity { get; private set; }
             bool m_BaselineOwnedLastFrame;
             bool m_HasOwnershipContinuity;
             Vector3 m_OwnershipContinuityOffset;
@@ -135,10 +137,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentLandingDisplacementThreshold = float.IsFinite(threshold) ? threshold : 0f;
             }
 
-            internal void RememberOutputSole(Vector3 sole)
+            internal void RememberOutputSole(Vector3 sole, float deltaSeconds)
             {
                 if (!IsFinite(sole))
                     return;
+                HasLastOutputSoleVelocity = HasLastOutputSole &&
+                                            float.IsFinite(deltaSeconds) &&
+                                            deltaSeconds > 0.000001f;
+                LastOutputSoleVelocity = HasLastOutputSoleVelocity
+                    ? (sole - LastOutputSole) / deltaSeconds
+                    : Vector3.zero;
                 LastOutputSole = sole;
                 HasLastOutputSole = true;
             }
@@ -190,6 +198,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearIntentObservation();
                 HasLastOutputSole = false;
                 LastOutputSole = Vector3.zero;
+                HasLastOutputSoleVelocity = false;
+                LastOutputSoleVelocity = Vector3.zero;
                 m_BaselineOwnedLastFrame = false;
                 m_HasOwnershipContinuity = false;
                 m_OwnershipContinuityOffset = Vector3.zero;
@@ -461,6 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.LeftFoot,
                 baselineDiagnostics.Left,
                 frame.RenderFrame,
+                frame.PresentationDeltaSeconds,
                 m_Rig.LeftLegLength,
                 ResolveAppliedHip(pose.Left.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics leftDiagnostics,
@@ -474,6 +485,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.RightFoot,
                 baselineDiagnostics.Right,
                 frame.RenderFrame,
+                frame.PresentationDeltaSeconds,
                 m_Rig.RightLegLength,
                 ResolveAppliedHip(pose.Right.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics rightDiagnostics,
@@ -531,6 +543,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFullBodyIkGoal baseline,
             CharacterFootGroundingFootDiagnostics grounding,
             ulong renderFrame,
+            float presentationDeltaSeconds,
             float legLength,
             Vector3 appliedHip,
             out CharacterPredictiveFootPlacementFootDiagnostics diagnostics,
@@ -892,7 +905,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 finalWorldPosition,
                 finalWorldRotation);
             runtime.RememberOutputSole(
-                (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f);
+                (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f,
+                presentationDeltaSeconds);
             debugSnapshot = new CharacterPredictiveFootLegFrameSnapshot(
                 side,
                 plan.State,
@@ -1260,13 +1274,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (activeEventReplaced && !runtime.HasRevision && !runtime.IsFadingOut)
             {
+                Vector3 replacementSole = runtime.HasLastOutputSole
+                    ? runtime.LastOutputSole
+                    : currentSole;
                 bool created = planningCandidate && m_FutureBodyTrajectorySource != null && CreatePlan(
                     side,
                     runtime.Revision,
                     in step,
                     renderFrame,
-                    groundProbeStart,
-                    currentSole,
+                    replacementSole,
+                    replacementSole,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -1276,7 +1293,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength);
+                    legLength,
+                    runtime.HasLastOutputSoleVelocity,
+                    runtime.LastOutputSoleVelocity);
                 if (created)
                 {
                     runtime.BeginRevision();
@@ -1306,7 +1325,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength);
+                    legLength,
+                    false,
+                    Vector3.zero);
             }
             if (!runtime.HasRevision && !runtime.IsFadingOut && plan.HasExecutablePath &&
                 plan.MatchesAuthoritativeEvent(in step) &&
@@ -1339,7 +1360,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength);
+                    legLength,
+                    runtime.HasLastOutputSoleVelocity,
+                    runtime.LastOutputSoleVelocity);
                 if (created)
                     runtime.BeginRevision();
                 else
@@ -1504,7 +1527,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             Vector3 up,
-            float legLength)
+            float legLength,
+            bool preserveStartSoleVelocity,
+            Vector3 startSoleVelocity)
         {
             float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(0f, (float)(motionTimeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
@@ -1617,6 +1642,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landing,
                     in rootTrajectory,
                     predictedHip,
+                    preserveStartSoleVelocity,
+                    startSoleVelocity,
                     in query);
             }
             else

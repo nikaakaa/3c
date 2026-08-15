@@ -1027,9 +1027,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 if (!stanceOwnsFoot)
                     appliedLift = Vector3.Dot(resolvedAnklePosition - pose.AnklePosition, up);
+                bool finalReachValid = true;
+                if (!stanceOwnsFoot)
+                {
+                    finalReachValid = TryResolveAppliedReachClearance(
+                        pose,
+                        appliedHip,
+                        resolvedAnklePosition,
+                        up,
+                        legLength * m_Settings.MaximumPredictionReachRatio,
+                        out float finalReachClearance);
+                    if (finalReachValid && finalReachClearance > 0f)
+                    {
+                        resolvedAnklePosition += up * finalReachClearance;
+                        reachClearance += finalReachClearance;
+                        compositeAnimationClearance += finalReachClearance;
+                        appliedLift = Vector3.Dot(
+                            resolvedAnklePosition - pose.AnklePosition,
+                            up);
+                        resolvedContacts = pose.ResolveSoleContacts(
+                            resolvedAnklePosition,
+                            resolvedAnkleRotation);
+                        postHeelDistance = Vector3.Dot(
+                            resolvedContacts.HeelPosition - currentPathPosition,
+                            supportNormal);
+                        postToeDistance = Vector3.Dot(
+                            resolvedContacts.ToePosition - currentPathPosition,
+                            supportNormal);
+                    }
+                }
                 predictionReachRatio = Vector3.Distance(appliedHip, resolvedAnklePosition) / legLength;
                 if (IsFinite(resolvedAnklePosition) && IsFinite(resolvedAnkleRotation) &&
                     float.IsFinite(predictionReachRatio) &&
+                    finalReachValid &&
                     !stanceOwnsFoot)
                 {
                     result = new CharacterFullBodyIkGoal(
@@ -1848,7 +1878,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Mathf.Sqrt(
                     velocityError * velocityError +
                     curvatureError * curvatureError));
-            float enterThreshold = Mathf.Max(
+            float enterThreshold = 2f * Mathf.Max(
                 plan.SoleSupportRadius,
                 Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
             if (!float.IsFinite(preflightError) || preflightError <= enterThreshold)

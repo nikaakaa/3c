@@ -122,6 +122,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly SortedDictionary<ulong, CharacterPresentationBodyState> m_CommittedBodies =
             new SortedDictionary<ulong, CharacterPresentationBodyState>();
+        readonly SortedDictionary<ulong, float> m_CommittedYawVelocities =
+            new SortedDictionary<ulong, float>();
         readonly Queue<CharacterPresentationBodyInterval> m_SelectedIntervals =
             new Queue<CharacterPresentationBodyInterval>();
 
@@ -376,13 +378,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     obsolete.Add(tick);
             }
             for (int i = 0; i < obsolete.Count; i++)
+            {
                 m_CommittedBodies.Remove(obsolete[i]);
+                m_CommittedYawVelocities.Remove(obsolete[i]);
+            }
         }
 
         void StoreCommitted(CharacterPresentationBodyInterval interval)
         {
             m_CommittedBodies[interval.PreviousTick] = interval.PreviousBody;
             m_CommittedBodies[interval.CurrentTick] = interval.CurrentBody;
+            m_CommittedYawVelocities[interval.CurrentTick] = interval.YawVelocityDegreesPerSecond;
             m_LatestTick = interval.CurrentTick;
         }
 
@@ -484,6 +490,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_SelectedInterval.PreviousBody,
                 m_SelectedInterval.CurrentTick,
                 m_SelectedInterval.CurrentBody,
+                m_SelectedInterval.YawVelocityDegreesPerSecond,
                 alpha);
             CharacterVisualTrajectoryResult visible = m_Follower.Evaluate(target.Sample, deltaSeconds);
             return BuildFrame(target, visible);
@@ -509,10 +516,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     continue;
                 }
                 float alpha = Mathf.Clamp01((float)((sampleTick - previousTick) / (pair.Key - previousTick)));
-                target = BuildTarget(previousTick, previousBody, pair.Key, pair.Value, alpha);
+                target = BuildTarget(
+                    previousTick,
+                    previousBody,
+                    pair.Key,
+                    pair.Value,
+                    CommittedYawVelocity(pair.Key),
+                    alpha);
                 return true;
             }
-            target = BuildTarget(previousTick, previousBody, previousTick, previousBody, 1f);
+            target = BuildTarget(
+                previousTick,
+                previousBody,
+                previousTick,
+                previousBody,
+                CommittedYawVelocity(previousTick),
+                1f);
             return true;
         }
 
@@ -521,18 +540,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationBodyState previousBody,
             ulong currentTick,
             CharacterPresentationBodyState currentBody,
+            float yawVelocityDegreesPerSecond,
             float alpha)
         {
             float clampedAlpha = Mathf.Clamp01(alpha);
-            float yawVelocity = currentTick == previousTick
-                ? 0f
-                : Mathf.DeltaAngle(previousBody.Rotation.eulerAngles.y, currentBody.Rotation.eulerAngles.y) /
-                  ((currentTick - previousTick) * m_TickDurationSeconds);
             var sample = new CharacterVisualTrajectorySample(
                 Vector3.Lerp(previousBody.Position, currentBody.Position, clampedAlpha),
                 Quaternion.Slerp(previousBody.Rotation, currentBody.Rotation, clampedAlpha),
                 Vector3.Lerp(previousBody.LinearVelocity, currentBody.LinearVelocity, clampedAlpha),
-                yawVelocity,
+                yawVelocityDegreesPerSecond,
                 clampedAlpha < 1f
                     ? previousBody.Grounded && currentBody.Grounded
                     : currentBody.Grounded);
@@ -611,6 +627,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void InitializeState()
         {
             m_CommittedBodies.Clear();
+            m_CommittedYawVelocities.Clear();
             m_CommittedPresentationTick = 0d;
             m_CommittedClockInitialized = false;
             m_CommittedClockNeedsReset = true;
@@ -685,7 +702,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void TrimCommittedBodies(ulong retainTick)
         {
             while (m_CommittedBodies.Count > 2 && FirstCommittedTick() < retainTick)
-                m_CommittedBodies.Remove(FirstCommittedTick());
+            {
+                ulong firstTick = FirstCommittedTick();
+                m_CommittedBodies.Remove(firstTick);
+                m_CommittedYawVelocities.Remove(firstTick);
+            }
+        }
+
+        float CommittedYawVelocity(ulong currentTick)
+        {
+            return m_CommittedYawVelocities.TryGetValue(currentTick, out float velocity)
+                ? velocity
+                : 0f;
         }
 
         void RequireAlive()

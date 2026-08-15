@@ -187,7 +187,7 @@ namespace ThirdPersonCharacter.Pipeline
 			if (result == null || result.ActorId != ActorId)
 				throw new ArgumentException("Published Presentation result targets another Actor.", nameof(result));
 			PresentationRuntime.CaptureBodyInterval(
-				CharacterPresentationBodyInterval.FromFloat32(result.BodySample));
+				CharacterPresentationBodyInterval.FromFloat32(result.BodySample, Program.Manifest.TickRate));
 			if (PresentationRuntime.AcceptsTrajectoryIntent)
 			{
 				PresentationRuntime.CaptureTrajectoryIntent(

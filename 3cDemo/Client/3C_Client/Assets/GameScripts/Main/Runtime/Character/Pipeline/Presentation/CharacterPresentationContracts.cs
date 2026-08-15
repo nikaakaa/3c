@@ -243,6 +243,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationBodyState previousBody,
             ulong currentTick,
             CharacterPresentationBodyState currentBody,
+            float yawVelocityDegreesPerSecond,
             CharacterPresentationBodyStreamUpdateKind updateKind = CharacterPresentationBodyStreamUpdateKind.Append)
         {
             if (!previousBody.ActorId.IsValid || previousBody.ActorId != currentBody.ActorId)
@@ -254,10 +255,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 throw new ArgumentOutOfRangeException(nameof(updateKind));
             }
+            if (float.IsNaN(yawVelocityDegreesPerSecond) || float.IsInfinity(yawVelocityDegreesPerSecond))
+                throw new ArgumentOutOfRangeException(nameof(yawVelocityDegreesPerSecond));
             PreviousTick = previousTick;
             PreviousBody = previousBody;
             CurrentTick = currentTick;
             CurrentBody = currentBody;
+            YawVelocityDegreesPerSecond = yawVelocityDegreesPerSecond;
             UpdateKind = updateKind;
         }
 
@@ -266,17 +270,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterPresentationBodyState PreviousBody { get; }
         public ulong CurrentTick { get; }
         public CharacterPresentationBodyState CurrentBody { get; }
+        public float YawVelocityDegreesPerSecond { get; }
         public CharacterPresentationBodyStreamUpdateKind UpdateKind { get; }
 
         public static CharacterPresentationBodyInterval FromFloat32(
             CharacterBodySample sample,
+            int simulationTickRate,
             CharacterPresentationBodyStreamUpdateKind updateKind = CharacterPresentationBodyStreamUpdateKind.Append)
         {
+            if (simulationTickRate <= 0)
+                throw new ArgumentOutOfRangeException(nameof(simulationTickRate));
             return new CharacterPresentationBodyInterval(
                 sample.Tick.Value - 1,
                 CharacterPresentationBodyState.FromFloat32(sample.BeforeBody),
                 sample.Tick.Value,
                 CharacterPresentationBodyState.FromFloat32(sample.FinalBody),
+                sample.AppliedYawDegrees.ToSingle() * simulationTickRate,
                 updateKind);
         }
     }

@@ -1724,17 +1724,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     presentationDeltaSeconds))
             {
-                bool activeOutputAvailable = runtime.HasLastOutputGroundPath &&
-                                             runtime.LastOutputGroundPlanSequence == plan.Sequence;
-                Vector3 revisionSole = activeOutputAvailable && runtime.HasLastOutputSole
-                    ? runtime.LastOutputSole
-                    : currentSole;
-                Vector3 revisionGroundPath = activeOutputAvailable
-                    ? runtime.LastOutputGroundPath
-                    : groundProbeStart;
-                FootPlacementSurface revisionGroundSupport = activeOutputAvailable
-                    ? runtime.LastOutputGroundSupport
-                    : groundProbeSupport;
+                if (!TryResolveIntentRevisionOrigin(
+                        plan,
+                        pose,
+                        up,
+                        out Vector3 revisionSole,
+                        out Vector3 revisionGroundPath,
+                        out FootPlacementSurface revisionGroundSupport))
+                {
+                    return;
+                }
                 bool created = CreatePlan(
                     side,
                     runtime.Revision,
@@ -1758,6 +1757,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 else
                     runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
             }
+        }
+
+        static bool TryResolveIntentRevisionOrigin(
+            CharacterPredictiveFootPlacementPlan plan,
+            CharacterFootPlacementAnimatedFootPose pose,
+            Vector3 up,
+            out Vector3 sole,
+            out Vector3 groundPath,
+            out FootPlacementSurface support)
+        {
+            sole = default;
+            groundPath = default;
+            support = default;
+            if (!TryEvaluateFootTarget(
+                    plan,
+                    plan.ActionStepPhase,
+                    pose,
+                    up,
+                    pose.HipPosition,
+                    0f,
+                    out CharacterPredictiveFootTarget target))
+            {
+                return false;
+            }
+            sole = (target.Contacts.HeelPosition + target.Contacts.ToePosition) * 0.5f;
+            groundPath = target.PathPosition;
+            support = target.Support;
+            return support.IsValid && IsFinite(sole) && IsFinite(groundPath);
         }
 
         bool ShouldRequestIntentRevision(

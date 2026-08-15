@@ -179,6 +179,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal ulong AnimationConstraintEventIdentity;
             internal AnimationFootConstraintMode AnimationConstraintMode = AnimationFootConstraintMode.Locked;
             internal AnimationFootSupportPhase AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
+            internal float AnimationConstraintWeight = 1f;
+            internal float AnimationSupportWeight = 1f;
             internal float PelvisSupportWeight;
             internal bool IdleCurrentSupport;
             internal bool IdleAnchor;
@@ -232,6 +234,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationSupportPhase = predictive.HasActionConstraint
                     ? predictive.SupportPhase
                     : AnimationFootSupportPhase.Supporting;
+                AnimationConstraintWeight = predictive.HasActionConstraint
+                    ? predictive.ConstraintWeight
+                    : 1f;
+                AnimationSupportWeight = predictive.HasActionConstraint
+                    ? predictive.SupportWeight
+                    : 1f;
                 OwnershipState = ResolveOwnershipState(
                     stationaryGroundContact,
                     HasAnimationConstraint,
@@ -533,6 +541,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationConstraintEventIdentity = 0;
                 AnimationConstraintMode = AnimationFootConstraintMode.Locked;
                 AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
+                AnimationConstraintWeight = 1f;
+                AnimationSupportWeight = 1f;
                 PelvisSupportWeight = 0f;
                 IdleCurrentSupport = false;
                 IdleAnchorCaptureArmed = true;
@@ -1057,13 +1067,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     FootConstraintTransitionReason.AnchorDistanceExceeded,
                     CharacterFootContactDecision.ContactReleasedAnchorDistance);
             }
-            float targetBlend = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor ? 1f : 0f;
+            float targetBlend = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor
+                ? state.AnimationConstraintWeight
+                : 0f;
             state.AnchorBlendWeight = Mathf.MoveTowards(
                 state.AnchorBlendWeight,
                 targetBlend,
                 settings.AnchorBlendSpeed * deltaSeconds);
             float pelvisSupportTarget = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor
-                ? 1f
+                ? state.AnimationSupportWeight
                 : 0f;
             state.PelvisSupportWeight = Mathf.MoveTowards(
                 state.PelvisSupportWeight,

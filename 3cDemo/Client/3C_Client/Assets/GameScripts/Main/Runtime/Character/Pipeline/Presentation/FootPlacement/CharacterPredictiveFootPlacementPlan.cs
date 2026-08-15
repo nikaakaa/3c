@@ -180,6 +180,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float EvaluateAuthoredReach(float eventPhase) =>
             Vector3.Distance(EvaluateHipRoute(eventPhase), EvaluateAnkleRoute(eventPhase));
 
+        internal AnimationFootBiomechanicalRouteSample EvaluateBiomechanicalRoute(float eventPhase) =>
+            Step.EvaluateBiomechanicalRoute(Mathf.Clamp01(eventPhase));
+
         Quaternion EvaluateRotation(float phase)
         {
             float yawDegrees = FrozenYawVelocityDegreesPerSecond *

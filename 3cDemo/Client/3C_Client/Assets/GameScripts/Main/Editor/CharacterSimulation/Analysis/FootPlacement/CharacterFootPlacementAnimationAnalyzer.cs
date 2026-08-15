@@ -1243,7 +1243,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     float supportWeight = ResolveSupportWeight(
                         routePhase,
                         foot.ReleasePhase[i],
-                        foot.LiftOffPhase[i]);
+                        foot.LiftOffPhase[i],
+                        foot.ApproachContactPhase[i]);
                     Vector3 routeHip = foot.RootLocalHipRoute[routeIndex][i];
                     Vector3 routeKnee = foot.RootLocalKneeRoute[routeIndex][i];
                     Vector3 routeAnkle = foot.RootLocalAnkleRoute[routeIndex][i];
@@ -1533,13 +1534,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static float ResolveSupportWeight(
             float phase,
             float releasePhase,
-            float liftOffPhase)
+            float liftOffPhase,
+            float approachContactPhase)
         {
             if (phase < releasePhase)
                 return 1f;
-            return phase < liftOffPhase
-                ? 1f - Mathf.InverseLerp(releasePhase, liftOffPhase, phase)
-                : 0f;
+            if (phase < liftOffPhase)
+                return 1f - Mathf.InverseLerp(releasePhase, liftOffPhase, phase);
+            if (phase < approachContactPhase)
+                return 0f;
+            return Mathf.InverseLerp(approachContactPhase, 1f, phase);
         }
 
         static Vector3 ResolveKneeBendPlane(

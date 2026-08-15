@@ -15,6 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootConstraintMode constraintMode,
             AnimationFootSupportPhase supportPhase,
             AnimationBodyRotationPivotMode bodyPivotMode,
+            float constraintWeight,
+            float supportWeight,
             float plantConfidence,
             float actionProgress,
             float remainingSeconds,
@@ -35,6 +37,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ConstraintMode = constraintMode;
             SupportPhase = supportPhase;
             BodyPivotMode = bodyPivotMode;
+            ConstraintWeight = Mathf.Clamp01(constraintWeight);
+            SupportWeight = Mathf.Clamp01(supportWeight);
             PlantConfidence = plantConfidence;
             ActionProgress = actionProgress;
             RemainingSeconds = remainingSeconds;
@@ -56,6 +60,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal AnimationFootConstraintMode ConstraintMode { get; }
         internal AnimationFootSupportPhase SupportPhase { get; }
         internal AnimationBodyRotationPivotMode BodyPivotMode { get; }
+        internal float ConstraintWeight { get; }
+        internal float SupportWeight { get; }
         internal float PlantConfidence { get; }
         internal float ActionProgress { get; }
         internal float RemainingSeconds { get; }

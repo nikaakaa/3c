@@ -91,8 +91,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (HasRevision)
                 {
-                    if (Revision.State != CharacterPredictiveFootPlanState.Executing)
-                        return;
                     RevisionBlendWeight = Mathf.MoveTowards(
                         RevisionBlendWeight,
                         1f,
@@ -333,6 +331,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootConstraintMode constraintMode;
             AnimationFootSupportPhase supportPhase;
             AnimationBodyRotationPivotMode bodyPivotMode;
+            float constraintWeight;
+            float supportWeight;
             if (plan.HasExecutablePath)
             {
                 ResolveCurrentActionState(
@@ -341,6 +341,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out supportPhase,
                     out _,
                     out bodyPivotMode);
+                AnimationFootBiomechanicalRouteSample state =
+                    plan.RootTrajectory.EvaluateBiomechanicalRoute(plan.ActionStepPhase);
+                constraintWeight = state.ConstraintWeight;
+                supportWeight = state.SupportWeight;
             }
             else
             {
@@ -353,6 +357,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     constraintMode,
                     supportPhase,
                     bodyPivotMode);
+                AnimationFootBiomechanicalRouteSample state =
+                    step.EvaluateBiomechanicalRoute(phase);
+                constraintWeight = state.ConstraintWeight;
+                supportWeight = state.SupportWeight;
             }
             Vector3 pathPosition = default;
             Vector3 pathRoot = default;
@@ -411,6 +419,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 constraintMode,
                 supportPhase,
                 bodyPivotMode,
+                constraintWeight,
+                supportWeight,
                 feature.PlantConfidence,
                 plan.ActionProgress,
                 remainingSeconds,
@@ -715,6 +725,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         activeResolvedAnkleRotation,
                         revisionResolvedAnkleRotation,
                         revisionBlend).normalized;
+                }
+                else if (runtime.HasRevision)
+                {
+                    resolvedAnklePosition = Vector3.Lerp(
+                        activeResolvedAnklePosition,
+                        baselineWorldPosition,
+                        revisionTransitionBlend);
+                    resolvedAnkleRotation = Quaternion.Slerp(
+                        activeResolvedAnkleRotation,
+                        baselineWorldRotation,
+                        revisionTransitionBlend).normalized;
                 }
                 CharacterFootPlacementSoleContactPose preContinuityContacts = pose.ResolveSoleContacts(
                     resolvedAnklePosition,
@@ -1153,6 +1174,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out AnimationFootSupportPhase supportPhase,
                 out _,
                 out AnimationBodyRotationPivotMode bodyPivotMode);
+            AnimationFootBiomechanicalRouteSample state =
+                plan.RootTrajectory.EvaluateBiomechanicalRoute(1f);
             if (supportPhase != AnimationFootSupportPhase.ApproachingContact)
                 return false;
             plan.EvaluateBodyPath(
@@ -1169,6 +1192,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 constraintMode,
                 supportPhase,
                 bodyPivotMode,
+                state.ConstraintWeight,
+                state.SupportWeight,
                 plantConfidence,
                 1f,
                 0f,
@@ -1280,7 +1305,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (created)
                 {
                     runtime.BeginRevision();
-                    runtime.PromoteRevision();
                 }
                 else
                     runtime.BeginFadeOut(replacementReason);

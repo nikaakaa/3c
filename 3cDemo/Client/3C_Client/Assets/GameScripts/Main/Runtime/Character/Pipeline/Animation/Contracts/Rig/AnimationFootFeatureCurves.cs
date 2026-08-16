@@ -257,6 +257,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationPredictedFootStepSample Sample(float normalizedTime)
         {
             RequireValid();
+            return SamplePrepared(normalizedTime);
+        }
+
+        internal AnimationPredictedFootStepSample SamplePrepared(float normalizedTime)
+        {
             float time = Mathf.Clamp01(normalizedTime);
             var rootLocalFootRoute = new FixedList512Bytes<Vector3>();
             var rootLocalAnkleRoute = new FixedList512Bytes<Vector3>();
@@ -325,6 +330,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 landingPhase,
                 opposingRootLocalSoleRotation,
                 biomechanicalSample);
+        }
+
+        internal bool IsFollowingPredictionCandidate(
+            float normalizedTime,
+            float minimumTimeToLandingSeconds)
+        {
+            float time = Mathf.Clamp01(normalizedTime);
+            return Mathf.RoundToInt(m_EventOrdinal.Evaluate(time)) > 0 &&
+                   m_Confidence.Evaluate(time) > 0f &&
+                   m_EventPhase.Evaluate(time) < m_LiftOffPhase.Evaluate(time) &&
+                   m_TimeToLandingSeconds.Evaluate(time) > minimumTimeToLandingSeconds;
         }
 
         public void RequireValid()
@@ -453,6 +469,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationFootFeatureSample Sample(float normalizedTime)
         {
             RequireValid();
+            return SamplePrepared(normalizedTime);
+        }
+
+        internal AnimationFootFeatureSample SamplePrepared(float normalizedTime)
+        {
             float time = Mathf.Clamp01(normalizedTime);
             return new AnimationFootFeatureSample(
                 new Vector3(
@@ -461,7 +482,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_SoleLocalVelocityZ.Evaluate(time)),
                 m_SoleHeight.Evaluate(time),
                 m_PlantConfidence.Evaluate(time),
-                m_PredictedStep.Sample(time),
+                m_PredictedStep.SamplePrepared(time),
                 default);
         }
 

@@ -348,6 +348,8 @@ FinalIK只消费原始Component Pose和一个最终Goal Set：
 
 动画Source的Clip Catalog属于编译后不可变结构，只能在Source创建或换代时完整校验并建立索引。逐帧Prepare只校验会变化的采样计划、时间和权重，只清理上一帧实际激活及本帧实际写入的Clip；禁止按完整Catalog或最大容量重复遍历、重复校验和重复清空。
 
+Foot Feature与Biomechanical Step曲线同样属于已编译Source的不可变数据。Sequence Player创建时必须完整校验一次；运行帧只采样当前相位。同脚同Landing事件的后继事件只允许搜索一次并缓存绝对候选时刻，后续帧只计算该时刻相对当前权威时钟的剩余时间。Source、Continuity或Landing occurrence变化时才允许重新搜索。
+
 共享测试环境提供一条正式宽课程：30米宽、24级上楼、6米平台、24级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费48个逐级踏面。自动源不再循环双向长路线，而是对齐起点后进入第一段楼梯，直接通过正式Input System提交`MoveAxis.x=-1/+1`的`A 1秒 -> D 2秒 -> A 1秒`事务。事务完成后提交零输入，写入完成快照并注销采样路由，避免1217列CSV在无新信息时继续增长。它保留实时相机Basis和LookAxis，不用世界空间横向路点抵消相机缓动。课程整体位置由场景中的唯一Course与Start/End决定，不写死世界X坐标。
 
 课程启动门禁必须验证：唯一Course、唯一Start/End、48个踏面、A/D横向安全边界、两条Traversal Ramp和唯一Deterministic Collision World。路线阶段、正式MoveAxis、实际速度和事务分段进入现有流式CSV/manifest，使输入变化与Plan Revision可以对账。短事务仍保留Step、Future Body、Ground、Path、Landing、Anchor、Pelvis与FBBIK完整因果列；缩短的是重复时间，不是诊断字段。

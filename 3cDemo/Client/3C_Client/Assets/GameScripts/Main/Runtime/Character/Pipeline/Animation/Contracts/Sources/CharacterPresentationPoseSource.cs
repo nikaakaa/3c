@@ -152,6 +152,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float SampleFootPlacementWeight(float normalizedTime)
         {
             RequireValid();
+            return SampleFootPlacementWeightPrepared(normalizedTime);
+        }
+
+        internal float SampleFootPlacementWeightPrepared(float normalizedTime)
+        {
             float value = m_FootPlacementWeightCurve.Evaluate(Mathf.Clamp01(normalizedTime));
             if (!float.IsFinite(value))
                 throw new InvalidOperationException($"Presentation Pose source '{DisplayName}' produced an invalid Foot Placement Weight.");

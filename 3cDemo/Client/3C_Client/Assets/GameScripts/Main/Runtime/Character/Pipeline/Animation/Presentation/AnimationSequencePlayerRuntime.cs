@@ -211,6 +211,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
     internal sealed class AnimationSequencePlayerRuntime : IDisposable
     {
+        struct FollowingPredictionCache
+        {
+            internal AnimationPoseSourceId SourceId;
+            internal ulong ContinuityIdentity;
+            internal ulong CurrentSourceSampleIdentity;
+            internal int CurrentSourceSampleCycle;
+            internal int CurrentEventOrdinal;
+            internal double CandidateSampleContinuousTime;
+            internal AnimationPredictedFootStepSample Candidate;
+            internal bool IsResolved;
+            internal bool HasCandidate;
+
+            internal bool Matches(
+                AnimationPoseSourceId sourceId,
+                ulong continuityIdentity,
+                in AnimationPredictedFootStepSample current) =>
+                IsResolved &&
+                SourceId.Equals(sourceId) &&
+                ContinuityIdentity == continuityIdentity &&
+                CurrentSourceSampleIdentity == current.SourceSampleIdentity &&
+                CurrentSourceSampleCycle == current.SourceSampleCycle &&
+                CurrentEventOrdinal == current.EventOrdinal;
+
+            internal void Resolve(
+                AnimationPoseSourceId sourceId,
+                ulong continuityIdentity,
+                in AnimationPredictedFootStepSample current,
+                in AnimationPredictedFootStepSample candidate,
+                double candidateSampleContinuousTime)
+            {
+                SourceId = sourceId;
+                ContinuityIdentity = continuityIdentity;
+                CurrentSourceSampleIdentity = current.SourceSampleIdentity;
+                CurrentSourceSampleCycle = current.SourceSampleCycle;
+                CurrentEventOrdinal = current.EventOrdinal;
+                Candidate = candidate;
+                CandidateSampleContinuousTime = candidateSampleContinuousTime;
+                IsResolved = true;
+                HasCandidate = candidate.HasLandingEvent;
+            }
+        }
+
         struct State
         {
             internal double RawContinuousTime;
@@ -252,6 +294,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly byte[] m_ParameterAvailability;
         readonly ClipSamplePlan[] m_ClipSamples = new ClipSamplePlan[1];
         readonly AnimationPlayerReleaseJournal m_Releases;
+        FollowingPredictionCache m_LeftFollowingPrediction;
+        FollowingPredictionCache m_RightFollowingPrediction;
         float m_PlayRate;
         State m_CommittedState;
         State m_PendingState;
@@ -321,6 +365,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 throw new InvalidOperationException($"Sequence Player '{descriptor.NodeId}' source binding does not match its compiled descriptor.");
             }
+            source.LeftFootFeatures.RequireValid();
+            source.RightFootFeatures.RequireValid();
             m_Parameters = new float[posePlan.Parameters.Count];
             m_ParameterAvailability = new byte[posePlan.Parameters.Count];
             for (int i = 0; i < posePlan.Parameters.Count; i++)
@@ -696,7 +742,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!m_Relevant)
                 throw new InvalidOperationException($"Sequence Player '{NodeId}' is not relevant.");
             float normalizedTime = m_Source.Clip.length > 0f ? m_SampleTime / m_Source.Clip.length : 0f;
-            m_Parameters[FootPlacementWeightParameterIndex] = m_Source.SampleFootPlacementWeight(normalizedTime);
+            m_Parameters[FootPlacementWeightParameterIndex] =
+                m_Source.SampleFootPlacementWeightPrepared(normalizedTime);
             m_ClipSamples[0] = new ClipSamplePlan(
                 0,
                 m_Source.Clip,
@@ -731,21 +778,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             float normalizedTime,
             CharacterFootSide side)
         {
-            AnimationFootFeatureSample feature = curves.Sample(normalizedTime);
-            AnimationPredictedFootStepSample step = feature.PredictedStep;
+            AnimationFootFeatureSample feature = curves.SamplePrepared(normalizedTime);
+            AnimationPredictedFootStepSample rawStep = feature.PredictedStep;
+            AnimationFootFeatureSample bound = BindPredictionSource(feature, side);
+            AnimationPredictedFootStepSample step = bound.PredictedStep;
             float duration = m_Source.Clip.length;
-            if (m_Descriptor.Loop && step.HasLandingEvent && duration > 0f &&
-                TrySampleFollowingPrediction(
+            if (!m_Descriptor.Loop || !step.HasLandingEvent || duration <= 0f)
+                return bound;
+
+            ref FollowingPredictionCache cache = ref FollowingPrediction(side);
+            if (!cache.Matches(m_SourceId, m_ContinuityIdentity, in step))
+            {
+                bool found = TrySampleFollowingPrediction(
                     curves,
-                    in step,
+                    in rawStep,
                     duration,
                     out AnimationPredictedFootStepSample incoming,
-                    out float incomingSampleDelay))
-            {
-                feature = feature.WithIncomingPredictedStep(
-                    incoming.ScheduleAfter(incomingSampleDelay));
+                    out float incomingSampleDelay);
+                cache.Resolve(
+                    m_SourceId,
+                    m_ContinuityIdentity,
+                    in step,
+                    in incoming,
+                    found ? m_ContinuousTime + incomingSampleDelay : 0d);
             }
+
+            if (!cache.HasCandidate)
+                return bound;
+            float remainingDelay = (float)Math.Max(
+                0d,
+                cache.CandidateSampleContinuousTime - m_ContinuousTime);
+            feature = feature.WithIncomingPredictedStep(
+                cache.Candidate.ScheduleAfter(remainingDelay));
             return BindPredictionSource(feature, side);
+        }
+
+        ref FollowingPredictionCache FollowingPrediction(CharacterFootSide side)
+        {
+            if (side == CharacterFootSide.Left)
+                return ref m_LeftFollowingPrediction;
+            if (side == CharacterFootSide.Right)
+                return ref m_RightFollowingPrediction;
+            throw new ArgumentOutOfRangeException(nameof(side));
         }
 
         bool TrySampleFollowingPrediction(
@@ -762,15 +836,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 float delay = landingDelay + i * searchStep;
                 float futureTime = Mathf.Repeat(m_SampleTime + delay, duration);
-                AnimationPredictedFootStepSample candidate = curves
-                    .Sample(futureTime / duration)
-                    .PredictedStep;
-                if (!candidate.HasLandingEvent ||
-                    !candidate.ActionStepClock.IsPreSwing ||
-                    candidate.TimeToLandingSeconds <= searchStep)
-                {
+                float normalizedTime = futureTime / duration;
+                if (!curves.PredictedStep.IsFollowingPredictionCandidate(
+                        normalizedTime,
+                        searchStep))
                     continue;
-                }
+                AnimationPredictedFootStepSample candidate =
+                    curves.PredictedStep.SamplePrepared(normalizedTime);
                 incoming = candidate;
                 sampleDelay = delay;
                 return true;

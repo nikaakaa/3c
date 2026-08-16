@@ -16,6 +16,7 @@
 - [x] 1.11 自动writer只消费`LiveState`完成帧流并后台压缩CSV；删除自动附加`RuntimeDebugSession Continuous`造成的第二份无界内存捕获。
 - [x] 1.12 Foot IK Automatic Variant只运行唯一玩家表现，ActionTarget正式提交`None`；普通Local Fixed继续保留中立Target。
 - [x] 1.13 将动画Source不可变Clip Catalog的全量校验和索引建立收敛到Source创建/换代，逐帧Prepare只处理动态采样计划与实际激活Clip。
+- [x] 1.14 将Foot Feature曲线合法性校验收敛到Sequence Player创建；同脚同Landing事件的后继事件搜索只执行一次，后续帧只按绝对候选时刻更新剩余时间。
 
 ## 2. Animation Biomechanical Step Artifact
 

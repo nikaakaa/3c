@@ -1297,9 +1297,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 compositeAnimationClearance = revisionTargetAvailable
                     ? Mathf.Lerp(targetData.CompositeAnimationClearance, revisionTargetData.CompositeAnimationClearance, revisionBlend)
                     : targetData.CompositeAnimationClearance;
-                Vector3 envelopeNormal = up;
-                preHeelDistance = Vector3.Dot(baselineContacts.HeelPosition - currentPathPosition, envelopeNormal);
-                preToeDistance = Vector3.Dot(baselineContacts.ToePosition - currentPathPosition, envelopeNormal);
+                Vector3 pathSurfaceNormal = currentPathSupport.IsValid
+                    ? currentPathSupport.Normal.normalized
+                    : up;
+                Vector3 baselineSole = (baselineContacts.HeelPosition + baselineContacts.ToePosition) * 0.5f;
+                Vector3 preEnvelopeNormal = ResolvePathClearanceNormal(
+                    baselineSole,
+                    currentPathPosition,
+                    pathSurfaceNormal,
+                    up,
+                    plan.SoleSupportRadius);
+                preHeelDistance = Vector3.Dot(
+                    baselineContacts.HeelPosition - currentPathPosition,
+                    preEnvelopeNormal);
+                preToeDistance = Vector3.Dot(
+                    baselineContacts.ToePosition - currentPathPosition,
+                    preEnvelopeNormal);
                 requiredLift = Vector3.Dot(predictiveAnklePosition - pose.AnklePosition, up);
                 Vector3 activeResolvedAnklePosition = hasTransitionOrigin
                     ? runtime.IsFadingOut
@@ -1367,6 +1380,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootPlacementSoleContactPose resolvedContacts = pose.ResolveSoleContacts(
                     resolvedAnklePosition,
                     resolvedAnkleRotation);
+                Vector3 resolvedSole = (resolvedContacts.HeelPosition + resolvedContacts.ToePosition) * 0.5f;
+                Vector3 envelopeNormal = ResolvePathClearanceNormal(
+                    resolvedSole,
+                    currentPathPosition,
+                    pathSurfaceNormal,
+                    up,
+                    plan.SoleSupportRadius);
                 postHeelDistance = Vector3.Dot(
                     resolvedContacts.HeelPosition - currentPathPosition,
                     envelopeNormal);
@@ -1379,7 +1399,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (!stanceOwnsFoot && !runtime.IsFadingOut)
                 {
                     CharacterFootGroundingHitDiagnostics pathClearanceSupport =
-                        BuildPathSupportDiagnostics(currentPathSupport, currentPathPosition, up);
+                        BuildPathSupportDiagnostics(
+                            currentPathSupport,
+                            currentPathPosition,
+                            envelopeNormal);
                     CharacterFootGroundingHitDiagnostics currentClearanceSupport =
                         grounding.SoleSupport;
                     float clearanceTranslation = Mathf.Max(
@@ -1663,11 +1686,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static CharacterFootGroundingHitDiagnostics BuildPathSupportDiagnostics(
             FootPlacementSurface support,
             Vector3 pathPosition,
-            Vector3 up) =>
+            Vector3 clearanceNormal) =>
             support.IsValid
                 ? new CharacterFootGroundingHitDiagnostics(
-                    new FootPlacementSurface(support.Collider, pathPosition, up.normalized))
+                    new FootPlacementSurface(
+                        support.Collider,
+                        pathPosition,
+                        clearanceNormal.normalized))
                 : default;
+
+        static Vector3 ResolvePathClearanceNormal(
+            Vector3 sole,
+            Vector3 pathPosition,
+            Vector3 surfaceNormal,
+            Vector3 up,
+            float soleSupportRadius)
+        {
+            Vector3 normalizedUp = up.normalized;
+            Vector3 normal = surfaceNormal.normalized;
+            float planarDistance = Vector3.ProjectOnPlane(
+                sole - pathPosition,
+                normalizedUp).magnitude;
+            return planarDistance <= Mathf.Max(0.0001f, soleSupportRadius) &&
+                   Vector3.Dot(normalizedUp, normal) > 0.0001f
+                ? normal
+                : normalizedUp;
+        }
 
         static float ResolveSoleClearanceTranslation(
             in CharacterFootPlacementSoleContactPose contacts,
@@ -1741,7 +1785,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? new FootPlacementSurface(pathSupport.Collider, pathPosition, pathSupport.Normal.normalized)
                 : default;
             Vector3 supportNormal = support.IsValid ? support.Normal : up;
-            Vector3 envelopeNormal = up;
             Quaternion ankleRotation = orientationPolicy == AnimationFootOrientationPolicy.LandingSurface
                 ? (Quaternion.FromToRotation(up, supportNormal) * pose.AnkleRotation).normalized
                 : pose.AnkleRotation;
@@ -1753,6 +1796,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.AnklePosition,
                 pose.AnkleRotation);
             Vector3 nativeSole = (nativeContacts.HeelPosition + nativeContacts.ToePosition) * 0.5f;
+            Vector3 envelopeNormal = ResolvePathClearanceNormal(
+                nativeSole,
+                pathPosition,
+                supportNormal,
+                up,
+                plan.SoleSupportRadius);
             plan.EvaluateAnimationClearance(
                 eventPhase,
                 out float authoredAnimationClearance,
@@ -1779,7 +1828,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, envelopeNormal);
             float toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, envelopeNormal);
             float penetration = Mathf.Max(0f, -Mathf.Min(heelDistance, toeDistance));
-            float upNormalDot = 1f;
+            float upNormalDot = Vector3.Dot(up, envelopeNormal);
             if (penetration > 0f && upNormalDot > 0.0001f)
             {
                 anklePosition += up * (penetration / upNormalDot);

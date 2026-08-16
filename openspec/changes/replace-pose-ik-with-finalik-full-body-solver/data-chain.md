@@ -77,7 +77,9 @@ run `9a7cf93abf044e7eb15d8eaa7eca491d`的左脚frame 197把新事件路线与旧
 
 schema v97回归run `f9335d62431949a59cab0943c898eaaa`共749行、1279列，Header唯一且每行等宽。173次PlanAttempt的Origin Ground Path与本次Attempt Ground Probe起点错配为0，Current Event Replacement使用Projected Landing为0，Origin Ground Path偏离其Support Plane为0。数据链原子性已可直接验收。
 
-该run同时把下一处问题从混合数据中分离出来：同一Event Successor会在连续authority tick从同一个Projected Landing重复构建，并连续得到`StepExceeded`；例如右脚frame 475至478使用同一来源Plan 97和同一Ground Path，连续生成Plan 99至102。后续应检查支撑链和重试资格，不得再归因于CSV错列或放宽Step阈值。
+该run同时把下一处问题从混合数据中分离出来：右脚frame 363的Current Event Replacement以`CurrentFrameSupport`创建Origin，Sole Y为`1.267m`、Origin Support Y为`1.800m`，鞋底位于该支撑面下方`53.3cm`；Predictive Query从同一个Origin Ground Path开始后，首个合法踏面却是`1.080m`。同一空间起点的Current Support与Predictive Support相差`72cm`，随后明确触发`StepExceeded`。这证明下一owner是当前支撑事实与预测查询起点的空间一致性，不是FinalIK或阈值。
+
+同一Event Successor还会在连续authority tick从同一个Projected Landing重复构建并重复得到`StepExceeded`；例如右脚frame 475至478使用同一来源Plan 97和同一Ground Path，连续生成Plan 99至102。支撑一致性修复后还要检查重试资格，禁止重复查询同一份未变化事实。
 
 ## 下一步诊断顺序
 

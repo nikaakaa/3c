@@ -48,9 +48,9 @@
 ## 5. GDC Foot Path与Ground Envelope
 
 - [ ] 5.1 由本脚动画Foot Path和权威对侧接触构造Virtual Ground分段路线；对侧接触只提供空间拓扑，不强迫本脚按对侧phase经过。
-- [ ] 5.2 沿完整未来Foot Path执行唯一Capsule检测并保存全部位置、法线与query identity。
+- [ ] 5.2 沿`当前本脚支撑 -> 对侧接触 -> 本脚预测落点`的Virtual Ground各分段执行唯一Sphere/Capsule检测，并在可达性判断前保存全部位置、法线与query identity。
 - [ ] 5.3 按前后和高低排序命中，验证法线并建立Edge Plane。
-- [ ] 5.4 在Convex Hull前按垂直边高差、gap、坡度、鞋底范围和Support Leg Reach删除不可通行点。
+- [ ] 5.4 在Convex Hull前对排序后的正式支撑链验证Step Up/Down、gap、坡度、鞋底范围和Support Leg Reach；Height Discontinuity只判断真实Edge Plane，不得在中间踏面尚未收集前用稀疏端点提前拒绝整条Plan。
 - [ ] 5.5 对剩余点构造连续二维上侧Convex Hull；Ground Envelope保持feet-only，不驱动Pelvis。
 - [ ] 5.6 最终Swing保持Native Sole XZ，唯一Y为`GroundEnvelopeHeight + AnimationClearance`；禁止冻结Path XYZ拉脚和Native/Predicted Y双owner。
 - [ ] 5.7 使用Calibration Heel/Toe验证唯一支撑平面物理净空，不增加Heel/Toe Current Query、固定高度或默认地面。

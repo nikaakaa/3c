@@ -260,3 +260,9 @@ Clearance Continuity = 当前已执行Sole相对该Ground Probe Start的高度
 事件生成相位早于LiftOff时，不能在生成相位对齐路线、却从LiftOff开始采样；意图Revision也不能用旧Envelope上不同XZ的点作为新查询起点。对侧落点只提供Virtual Ground拓扑，不替代本脚由动画与Future Body共同形成的曲线。
 
 另有两个实验已经由数据否决：冻结旧脚计划的世界Body Support会使支撑目标最大跳到约155cm；只修改Revision混合相位或提前结束旧事件，仍会留下约126cm的目标跳变。它们证明问题不是Blend速度，而是新旧计划的几何起点和路线语义不一致。
+
+## 18. 可达性必须发生在完整地面采集之后
+
+`Ground Probe Start`与冻结动画路线起点的最大偏差已从`82.4cm`降为`0cm`，但A/D反向时仍出现`FutureLandingHeightDiscontinuity`。失败帧的旧Plan落点在`Y=0`，同一输入反向后的有效后继落点在`Y=0.72m`；楼梯踏面间隔约`0.18m`，原Query却在Capsule段扫描前直接比较稀疏Sphere端点。路线一旦横跨两个踏面，`0.36m`端点差会先触发`0.35m`断裂判定，中间踏面永远没有机会进入排序与Hull。
+
+GDC顺序要求先沿Virtual Ground收集位置、法线和Edge Plane，再按前后与高低排序，最后删除不可通行点。`MaximumHeightDiscontinuity`应判断真实边缘平面的断裂；正式支撑链使用Step Up/Down、gap与reach。提前用稀疏端点判断Height Discontinuity会把可跨越楼梯误判为悬崖，导致Revision消失；保留旧Plan也不可取，实验已使Pelvis P95从`4.95cm`恶化到`7.06cm`、最大值从`9.21cm`恶化到`13.17cm`。

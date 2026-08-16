@@ -233,7 +233,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float authoredReach,
             float maximumReach,
             bool validateReach,
-            bool requireTransition,
             out Vector3 selectedRoot,
             out Vector3 selectedHip,
             out FootPlacementGroundEnvelopeRejectReason sampleReject,
@@ -300,15 +299,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     hit.PhysicsHit.collider,
                     supportPoint,
                     hit.Normal.normalized);
-                if (requireTransition &&
-                    !AcceptTransition(previousSupport, candidate.Point, up, out hitReject))
-                {
-                    rejectedCount++;
-                    rejectCounts.Add(hitReject);
-                    RecordRejected(queryIndex, in hit, hitReject);
-                    sampleReject = hitReject;
-                    continue;
-                }
                 float supportHeightOffset =
                     Vector3.Dot(supportPoint, up) - Vector3.Dot(route, up);
                 Vector3 supportRoot = root + up * supportHeightOffset;
@@ -356,7 +346,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 start,
             Vector3 end,
             Vector3 previousSupport,
-            Vector3 nextSupport,
             float startFraction,
             float endFraction,
             Vector3 rootStart,
@@ -430,22 +419,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float groundDot = Vector3.Dot(normal, up);
                 if (groundDot >= minimumGroundNormalDot)
                 {
-                    if (!AcceptTransition(
-                            previousSupport,
-                            point,
-                            up,
-                            out FootPlacementGroundEnvelopeRejectReason transitionReject) ||
-                        !AcceptTransition(
-                            point,
-                            nextSupport,
-                            up,
-                            out transitionReject))
-                    {
-                        rejectedCount++;
-                        rejectCounts.Add(transitionReject);
-                        RecordRejected(queryIndex, in hit, transitionReject);
-                        continue;
-                    }
                     AddPathSample(
                         new FootPathSample(
                             fraction,
@@ -829,7 +802,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return segmentCount;
         }
 
-        bool AcceptTransition(
+        bool AcceptSupportTransition(
             Vector3 previous,
             Vector3 current,
             Vector3 up,
@@ -841,11 +814,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rejectReason = FootPlacementGroundEnvelopeRejectReason.StepExceeded;
                 return false;
             }
-            if (Mathf.Abs(height) > m_Settings.MaximumHeightDiscontinuity)
-            {
-                rejectReason = FootPlacementGroundEnvelopeRejectReason.HeightDiscontinuity;
-                return false;
-            }
             float planarGap = Vector3.ProjectOnPlane(current - previous, up).magnitude;
             if (planarGap > m_Settings.MaximumEdgeGap)
             {
@@ -854,6 +822,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             rejectReason = FootPlacementGroundEnvelopeRejectReason.None;
             return true;
+        }
+
+        bool ValidateSupportChain(
+            int pathSampleCount,
+            Vector3 up,
+            out FootPlacementGroundEnvelopeRejectReason rejectReason)
+        {
+            int previousSupportIndex = -1;
+            for (int i = 0; i < pathSampleCount; i++)
+            {
+                if (!m_PathSamples[i].IsSupport)
+                    continue;
+                if (previousSupportIndex >= 0 &&
+                    !AcceptSupportTransition(
+                        m_PathSamples[previousSupportIndex].Point,
+                        m_PathSamples[i].Point,
+                        up,
+                        out rejectReason))
+                {
+                    return false;
+                }
+                previousSupportIndex = i;
+            }
+            rejectReason = previousSupportIndex >= 0
+                ? FootPlacementGroundEnvelopeRejectReason.None
+                : FootPlacementGroundEnvelopeRejectReason.NoCandidate;
+            return previousSupportIndex >= 0;
         }
 
         static float Cross(FootPathSample first, FootPathSample second, FootPathSample third) =>

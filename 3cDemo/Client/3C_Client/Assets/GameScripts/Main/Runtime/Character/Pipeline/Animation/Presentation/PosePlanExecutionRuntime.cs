@@ -71,6 +71,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     {
         static readonly ProfilerMarker PrepareMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare");
+        static readonly ProfilerMarker PrepareWorkspaceMarker =
+            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Workspace");
+        static readonly ProfilerMarker PrepareStackMarker =
+            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Stack");
+        static readonly ProfilerMarker PrepareDirectMarker =
+            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Direct");
+        static readonly ProfilerMarker PrepareSequenceMarker =
+            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Sequence");
+        static readonly ProfilerMarker PrepareBlendSpaceMarker =
+            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.BlendSpace");
         static readonly ProfilerMarker ValidateMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Validate");
         static readonly ProfilerMarker GraphEvaluateMarker =
@@ -2313,65 +2323,80 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ReleasedSourceCount = 0;
                 m_RecordReleaseDiagnostics = recordDiagnostics;
                 m_ActionSlotReleaseCompletions.Clear();
-                frame = m_Workspace.BeginFrame(completionIdentity);
-                for (int i = 0; i < m_Stacks.Length; i++)
-                    m_Stacks[i].BeginSourceFrame(completionIdentity);
-                for (int i = 0; i < m_DirectPlayers.Length; i++)
+                using (PrepareWorkspaceMarker.Auto())
                 {
-                    m_DirectPlayers[i].BeginFrame(completionIdentity);
-                    m_DirectPhysicalSources[i] = default;
-                    m_DirectSourceIndices[i] = -1;
-                }
-                for (int i = 0;
-                     i < m_PoseStateSources.SequencePlayers.Length;
-                     i++)
-                {
-                    m_PoseStateSources.SequencePlayers[i]
-                        .BeginFrame(completionIdentity);
-                    m_SequencePhysicalSources[i] = default;
-                    m_SequenceSourceIndices[i] = -1;
-                }
-                for (int i = 0;
-                     i < m_PoseStateSources.BlendSpacePlayers.Length;
-                     i++)
-                {
-                    m_PoseStateSources.BlendSpacePlayers[i]
-                        .BeginFrame(completionIdentity);
-                    m_BlendSpacePhysicalSources[i] = default;
-                    m_BlendSpaceSourceIndices[i] = -1;
-                }
-                for (int stackIndex = 0; stackIndex < m_Stacks.Length; stackIndex++)
-                {
-                    if (IsPlayerActive(m_Stacks[stackIndex].PlayerIndex))
+                    frame = m_Workspace.BeginFrame(completionIdentity);
+                    for (int i = 0; i < m_Stacks.Length; i++)
+                        m_Stacks[i].BeginSourceFrame(completionIdentity);
+                    for (int i = 0; i < m_DirectPlayers.Length; i++)
                     {
-                        PrepareStackSources(
-                            m_Stacks[stackIndex],
-                            presentationDeltaSeconds,
-                            actionSourceSamples,
-                            providerSourceSamples);
+                        m_DirectPlayers[i].BeginFrame(completionIdentity);
+                        m_DirectPhysicalSources[i] = default;
+                        m_DirectSourceIndices[i] = -1;
+                    }
+                    for (int i = 0;
+                         i < m_PoseStateSources.SequencePlayers.Length;
+                         i++)
+                    {
+                        m_PoseStateSources.SequencePlayers[i]
+                            .BeginFrame(completionIdentity);
+                        m_SequencePhysicalSources[i] = default;
+                        m_SequenceSourceIndices[i] = -1;
+                    }
+                    for (int i = 0;
+                         i < m_PoseStateSources.BlendSpacePlayers.Length;
+                         i++)
+                    {
+                        m_PoseStateSources.BlendSpacePlayers[i]
+                            .BeginFrame(completionIdentity);
+                        m_BlendSpacePhysicalSources[i] = default;
+                        m_BlendSpaceSourceIndices[i] = -1;
                     }
                 }
-                for (int playerIndex = 0; playerIndex < m_DirectPlayers.Length; playerIndex++)
+                using (PrepareStackMarker.Auto())
                 {
-                    if (IsPlayerActive(m_DirectPlayers[playerIndex].PlayerIndex))
+                    for (int stackIndex = 0; stackIndex < m_Stacks.Length; stackIndex++)
                     {
-                        PrepareDirectSource(
-                            playerIndex,
-                            presentationDeltaSeconds,
-                            providerSourceSamples);
+                        if (IsPlayerActive(m_Stacks[stackIndex].PlayerIndex))
+                        {
+                            PrepareStackSources(
+                                m_Stacks[stackIndex],
+                                presentationDeltaSeconds,
+                                actionSourceSamples,
+                                providerSourceSamples);
+                        }
                     }
                 }
-                for (int playerIndex = 0;
-                     playerIndex <
-                     m_PoseStateSources.SequencePlayers.Length;
-                     playerIndex++)
-                    PrepareSequenceSource(playerIndex, presentationDeltaSeconds);
-                for (int playerIndex = 0;
-                     playerIndex <
-                     m_PoseStateSources.BlendSpacePlayers.Length;
-                     playerIndex++)
+                using (PrepareDirectMarker.Auto())
                 {
-                    PrepareBlendSpaceSource(playerIndex, presentationDeltaSeconds);
+                    for (int playerIndex = 0; playerIndex < m_DirectPlayers.Length; playerIndex++)
+                    {
+                        if (IsPlayerActive(m_DirectPlayers[playerIndex].PlayerIndex))
+                        {
+                            PrepareDirectSource(
+                                playerIndex,
+                                presentationDeltaSeconds,
+                                providerSourceSamples);
+                        }
+                    }
+                }
+                using (PrepareSequenceMarker.Auto())
+                {
+                    for (int playerIndex = 0;
+                         playerIndex <
+                         m_PoseStateSources.SequencePlayers.Length;
+                         playerIndex++)
+                        PrepareSequenceSource(playerIndex, presentationDeltaSeconds);
+                }
+                using (PrepareBlendSpaceMarker.Auto())
+                {
+                    for (int playerIndex = 0;
+                         playerIndex <
+                         m_PoseStateSources.BlendSpacePlayers.Length;
+                         playerIndex++)
+                    {
+                        PrepareBlendSpaceSource(playerIndex, presentationDeltaSeconds);
+                    }
                 }
             }
 

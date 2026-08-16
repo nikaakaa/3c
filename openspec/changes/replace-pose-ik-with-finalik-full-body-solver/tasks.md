@@ -57,15 +57,15 @@
 - [x] 4A.1 定义不可变`CharacterFootPlacementFrameInput`与`CharacterFootPlacementFrameResult`，使Pose Plan每帧只通过`CharacterFootPlacementRuntime.EvaluateFrame`提交一次world-aware Goal计算。
 - [x] 4A.2 建立每脚唯一`CharacterFootExecutionState`，迁入Constraint Phase、Current Support filter state、Anchor、Active Plan引用、唯一Transition槽、上一完成Original/Final输出、Landing Commit和Query Attempt identity。
 - [x] 4A.3 把Current Support Trace/Resolve改为显式request/result与对`CharacterFootExecutionState`中filter state的数值求值；它不得拥有Swing、Plan、Anchor、Pelvis或Goal生命周期。
-- [ ] 4A.4 将`CharacterPredictiveFootPlacementPlan`拆成Builder提交的不可变Plan与无状态Evaluator；把Active/Revision/Fade、Action Clock推进、world projection current、Anchor观察和输出连续性全部迁出Plan。
-- [ ] 4A.5 将Intent Revision与Event Successor收敛为`CharacterFootExecutionState`内部唯一`CharacterFootPlanTransition`，只保存旧/新不可变Plan、transition kind、唯一Blend及相对Original动画的连续性修正。
+- [x] 4A.4 将`CharacterPredictiveFootPlacementPlan`拆成Builder提交的不可变Plan与无状态Evaluator；把Active/Revision/Fade、Action Clock推进、world projection current、Anchor观察和输出连续性全部迁出Plan。
+- [x] 4A.5 将Intent Revision与Event Successor收敛为`CharacterFootExecutionState`内部唯一`CharacterFootPlanTransition`，只保存旧/新不可变Plan、transition kind、唯一Blend及相对Original动画的连续性修正。
 - [x] 4A.6 保持`CharacterFootPlacementWorldQueryBackend`为唯一PhysicsScene adapter，使Current Support Query与Predictive Ground Path Query只消费显式request并返回事实result；Query不得读取或修改Foot状态、Plan Transition、Anchor、Pelvis或Goals。
 - [x] 4A.7 用单次Frame事务替换`Prepare -> GetStanceInput -> ObserveStance -> Resolve`协议：从同一Committed左右脚状态生成Pending约束提案，禁止Predictive与Grounding跨阶段回调。
 - [x] 4A.8 建立`CharacterFootLandingCommit`原子值，完整包含Plan/Event、Landing Sole、Support Surface/local plane、Anchor local pose、Committed Sole和Successor origin；任一字段无效时整笔不提交。
 - [x] 4A.9 让唯一Pelvis resolver同时消费左右脚约束提案并返回Pelvis结果与左右constraint disposition；它不得直接改写Foot状态，Finalize只按该结果一次接受或释放约束并提交Landing/Anchor。
 - [x] 4A.10 删除Grounding baseline再由Predictive覆盖的路径；左右脚与Pelvis全部完成后一次写入Pelvis、Left Foot、Right Foot三个最终Goal槽。
 - [x] 4A.11 把左右脚Pending状态和诊断接入现有Presentation帧事务；只有Goal Set、FullBodyIK及后续Pose Plan完成时才Seal，Discard、Reset或Fault不得留下部分Plan、Anchor、Landing或单脚换代。
-- [ ] 4A.12 删除`CharacterFootGroundingGoalSource`、`CharacterFootGroundingPlan`、Grounding/Predictive旧owner字段、旧多阶段接口和失效诊断字段；保留一个正式`CharacterFootPlacementRuntime`入口，不留兼容adapter。
+- [x] 4A.12 删除`CharacterFootGroundingGoalSource`、`CharacterFootGroundingPlan`、Grounding/Predictive旧owner字段、旧多阶段接口和失效诊断字段；保留一个正式`CharacterFootPlacementRuntime`入口，不留兼容adapter。
 
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
 - [x] 4.5A 历史实验已证明“每个权威Landing Event至多一笔Intent Revision”能阻止同一源Plan反复换路；自动A/D run `35d23e6892f24566808e0276a3ec28be`中，每个事件最多只出现原Plan加一个Revision。后续run证明该事件级限制会让再次偏离的后继Plan继续过期执行，本规则由4.5B替代，不反勾历史完成项。

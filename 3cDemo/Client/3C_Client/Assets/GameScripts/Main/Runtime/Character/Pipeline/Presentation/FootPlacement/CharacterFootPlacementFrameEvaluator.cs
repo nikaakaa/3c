@@ -512,13 +512,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal CharacterFootExecutionState(CharacterFootSide side)
             {
                 Stance = new FootState(side);
-                Plan = new CharacterPredictiveFootPlacementPlanner.FootPlanRuntime(
+                PlanState = new CharacterPredictiveFootPlacementPlanner.CharacterFootPlanExecutionState(
                     side,
                     CharacterPredictiveFootPlacementQuery.MaximumPathPointCapacity);
             }
 
             internal FootState Stance { get; }
-            internal CharacterPredictiveFootPlacementPlanner.FootPlanRuntime Plan { get; }
+            internal CharacterPredictiveFootPlacementPlanner.CharacterFootPlanExecutionState PlanState { get; }
+            internal CharacterFootPlanTransition PlanTransition => PlanState.Transition;
             internal CharacterFootCurrentSupportFilterState CurrentSupportFilter;
             internal CharacterFootLandingCommit LandingCommit { get; private set; }
             internal ulong QueryAttemptIdentity { get; private set; }
@@ -531,7 +532,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (source == null)
                     throw new ArgumentNullException(nameof(source));
                 Stance.CopyFrom(source.Stance);
-                Plan.CopyFrom(source.Plan);
+                PlanState.CopyFrom(source.PlanState);
                 CurrentSupportFilter = source.CurrentSupportFilter;
                 LandingCommit = source.LandingCommit;
                 QueryAttemptIdentity = source.QueryAttemptIdentity;
@@ -542,11 +543,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             internal void ObserveQueryAttempt(ulong renderFrame)
             {
-                CharacterPredictiveFootPlacementPlan attempt =
-                    Plan.Revision.GeneratedFrame == renderFrame
-                        ? Plan.Revision
-                        : Plan.Active.GeneratedFrame == renderFrame
-                            ? Plan.Active
+                CharacterPredictiveFootPlanExecution attempt =
+                    PlanState.Revision.GeneratedFrame == renderFrame
+                        ? PlanState.Revision
+                        : PlanState.Active.GeneratedFrame == renderFrame
+                            ? PlanState.Active
                             : null;
                 if (attempt?.HasAttempt == true)
                     QueryAttemptIdentity = attempt.Sequence;
@@ -580,7 +581,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal void Reset(FootConstraintTransitionReason reason)
             {
                 Stance.Reset(reason);
-                Plan.Reset(CharacterPredictiveFootPlanEndReason.PresentationReset);
+                PlanState.Reset(CharacterPredictiveFootPlanEndReason.PresentationReset);
                 CurrentSupportFilter.Reset();
                 LandingCommit = default;
                 QueryAttemptIdentity = 0;
@@ -658,9 +659,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rig,
                 settings,
                 m_World,
-                futureBodyTrajectorySource,
-                m_Left.Plan,
-                m_Right.Plan);
+                futureBodyTrajectorySource);
             ResetInternal(0, FootConstraintTransitionReason.PresentationReset);
         }
 
@@ -758,6 +757,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_SwingPrediction.EvaluateFrame(
                     in frame,
                     in pose,
+                    m_Left.PlanState,
+                    m_Right.PlanState,
                     in leftLandingCommit,
                     leftGroundProbeStart,
                     leftGroundProbeSupport,
@@ -915,6 +916,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_SwingPrediction.ResolveFootGoals(
                 in frame,
                 in predictionEvaluation,
+                m_Left.PlanState,
+                m_Right.PlanState,
                 in ownerHeader,
                 pelvis,
                 left.Goal,

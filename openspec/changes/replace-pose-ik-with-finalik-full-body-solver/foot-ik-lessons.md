@@ -72,6 +72,7 @@
 57. “一个owner”不能只写在文档里。当前`Prepare -> GetStanceInput -> Grounding Update -> ObserveStance -> baseline Goals -> Predictive Resolve`让Grounding与Predictive互相观察半完成状态，且`FootState`、`FootPlanRuntime`和可变Plan共同持有生命周期。正式结构必须改成一个Frame Input/Result事务、一个每脚执行状态、不可变Plan/Query和一次最终Goal写入。
 58. Ground Envelope几何连续不等于Foot Rate采样连续。run `4bded9ad...`左脚同一Plan的权威phase仅从`0.6875`到`0.7222`，旧全局最近段却把progress从`0.3492`跳到`0.8756`，frame `709 -> 710` Path Y下降`46.97cm`、Goal Y下降`57.98cm`。Foot Rate只能在权威phase对应的局部路线段投影，不能跨整条自交或回折路线找最近点。
 59. Foot Placement状态必须与Final Pose共用提交边界。若Evaluate阶段直接推进Plan、Anchor、Landing或Current spring，随后FBBIK或Final Pose失败，下一帧会从不存在的半完成历史继续。正式做法是保存完整Committed状态、只在Pending上求值，并在Presentation Seal后保留；Discard与Fault恢复全部左右脚和Pelvis filter状态。
+60. Plan事实与Plan执行状态必须物理分离。冻结路线、查询几何和Landing候选属于不可变Plan；当前相位、world projection、运动误差、结束原因和Blend属于每脚执行状态。Intent Revision、Event Successor与Predictive Exit共用一个`CharacterFootPlanTransition`，CSV直接记录kind，禁止再从Plan消失或响应式输出猜换代原因。
 
 ## 当前证据与下一owner
 

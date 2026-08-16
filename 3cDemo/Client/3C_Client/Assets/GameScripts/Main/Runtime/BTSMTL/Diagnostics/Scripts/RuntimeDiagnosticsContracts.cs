@@ -594,6 +594,7 @@ namespace BTSMTL.Diagnostics
         public bool HasPlanRevision;
         public ulong RevisionPlanSequence;
         public float PlanRevisionBlendWeight;
+        public string PlanTransitionKind;
         public bool PlanFadingOut;
         public float PlanRetentionWeight;
         public float IntentLandingDisplacementError;

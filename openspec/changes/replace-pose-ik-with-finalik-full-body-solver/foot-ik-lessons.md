@@ -17,13 +17,13 @@
 3. 四条路线必须分开：Animation Foot Route、Future Body Transform、Virtual Ground Query Route、feet-only Ground Envelope不能互相冒充。
 4. In-place动画不提供世界位移；输入幅值、Action Motion、Visible速度、Body Yaw和Render差分都不能重建KCC世界运动。
 5. 楼梯前先证明Artifact可按同一相位还原Heel/Toe/Sole/Ankle/Knee/Hip位置、旋转、弧长、侧向范围和事件边界。
-6. 冻结Plan与输入变化不冲突：committed trajectory实质变化后创建新的不可变Revision，而不是逐帧自适应或永远锁死旧Plan。
+6. 冻结Plan与输入变化不冲突：Artifact、Clock和Ground Query结果不可变；每帧用正式Root做廉价平面刚体投影，只有committed trajectory误差跨界才创建昂贵Revision。
 7. 曲线内部连续不等于跨owner连续；Active/Revision、Event、Predictive/Grounding、Swing/Anchor、Reach和Pelvis换边都可跳。
 8. GDC Ground Path顺序固定为采集位置/法线 -> 排序 -> Edge Plane -> Reachability -> 删除不可达 -> 上侧Hull；顺序颠倒会先承诺错误路线。
 9. Foot Lock是数据意图加世界验证；Landing必须原子提交Pose、Surface、Anchor local、Committed Sole和Successor Start。
 10. Pelvis必须消费独立Body Support Path与Support Leg事实，不能平均左右Foot Envelope或把spring current当目标。
 11. 上坡、下坡、跑步Foot Orientation与Support Foot Pivot是正式求解事实，不是诊断装饰。
-12. 已否决：逐帧重规划、旧世界Plan直接晋升、Route接管Foot XYZ、双Y owner、全局抛物线、平滑错误Path、响应式fallback、FBBIK后处理和第二套owner。
+12. 已否决：逐Render帧Physics重规划、旧世界Plan直接晋升、Route接管Foot XYZ、双Y owner、全局抛物线、平滑错误Path、响应式fallback、FBBIK后处理和第二套owner；逐帧无Physics执行投影不属于重规划。
 13. 编译、Character Build、Console 0 Error和CSV等宽都不是运动效果通过。
 14. 自动输入必须真实穿过故障地形；普通Play与自动Variant分开，自动只接管MoveAxis并保留LookAxis。
 15. 最小完整A/D事务足以定位owner；扩大运行时间只增加重复数据。
@@ -43,12 +43,15 @@
 29. Future Body曲率只来自相邻Simulation committed Intent和Tick时长；Presentation不拥有导数。
 30. 原子Step不等于10KB巨型值类型复制；完整事实进入预分配Workspace页，Action Frame只携带lease快照。
 31. Incoming事件边界需要离散Source Landing Cycle Offset；连续Clock插值曾让Incoming提前跨到N+2并造成1.6m断点。
-32. 弹簧不能修复同一步多次换路；Revision资格属于不可变源Plan，每个源Plan至多尝试一次，新Active可再次离散修订。
+32. 弹簧不能修复同一步多次换路；查询必须按正式trajectory authority tick限流。源Plan一生只尝试一次会让单次Rejected封死整步，同一tick至多一次、后续tick可重试才同时满足性能和可恢复性。
 33. 接触净空不能逐帧累加进Current spring；删除重复`offset += constraint`后Current Offset从米级降到约0.4m内。
 34. Plan在ReleasePhase开始所有权淡入，Ground Path到PathStartPhase才开始推进；用几何起点门控状态会制造LiftOff硬切。
 35. 运动偏差必须是提交边界：过期Plan不得输出Landing、Anchor或Successor；run `2755132...`曾在误差0.99m至2.61m时继续执行并产生`+65/-116/+100cm`跳变。
 36. Idle Capture不能依赖权重先低于1：run `32d8bff...`静止段两脚`Contact=true`但`HasAnchor=false`；改为进入`GroundedStationary`显式武装后，run `d6ee145...`两脚frame76捕获、frame82权重到1并持续Anchored到frame97，Final XZ不再跟随Idle动画漂移。
 37. Revision权重连续不等于旧侧目标连续：run `d6ee145...`中旧Active已偏离0.51m至4.82m仍在Blend期间继续求值。Revision旧侧必须冻结上一完成输出；本Plan从未输出时则没有预测历史可保留，必须先退出再从当前事实重建。
+38. Swing交接不能冻结绝对世界Ankle：run `2633c9...`中动画与Pelvis继续运动，绝对冻结导致Reach单帧补高53.9cm、Final Goal跳72.4cm。必须冻结相对Original Animated Ankle/Hip的修正，保留原动画运动；只有Ground Path与Support保持世界事实。
+39. 参考文章4明确区分廉价预测更新与昂贵路径重建：每帧让已提交路线跟随正式Root位移/转向，误差跨界才重新Capsule Sweep。世界Path完全冻结会与角色分离；每帧查询又会抖动且浪费性能。
+40. Traditional与Predictive必须在Release前按整步选择并保持粘滞。Traditional可处理急加减速、低速急转、无历史和空中状态，但不能成为Query Rejected后的中途fallback。
 
 ## 当前证据与下一owner
 

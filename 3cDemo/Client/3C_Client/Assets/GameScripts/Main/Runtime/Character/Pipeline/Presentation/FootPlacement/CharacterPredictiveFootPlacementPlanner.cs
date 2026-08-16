@@ -48,8 +48,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal float IntentLandingDisplacementError { get; private set; }
             internal float IntentLandingDisplacementThreshold { get; private set; }
             internal ulong IntentRevisionAttemptPlanSequence { get; private set; }
+            internal ulong IntentRevisionAttemptTrajectoryGeneration { get; private set; }
+            internal ulong IntentRevisionAttemptAuthorityTick { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
             internal Vector3 LastOutputSole { get; private set; }
+            internal Vector3 LastOutputAnimatedAnklePosition { get; private set; }
+            internal Quaternion LastOutputAnimatedAnkleRotation { get; private set; }
+            internal Vector3 LastOutputCurrentHip { get; private set; }
             internal Vector3 LastOutputAnklePosition { get; private set; }
             internal Quaternion LastOutputAnkleRotation { get; private set; }
             internal bool HasLastOutputGroundPath { get; private set; }
@@ -60,14 +65,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal Vector3 LastOutputPathRootStart { get; private set; }
             internal Vector3 LastOutputPathHip { get; private set; }
             internal bool HasIntentRevisionOrigin { get; private set; }
-            internal Vector3 IntentRevisionOriginAnklePosition { get; private set; }
-            internal Quaternion IntentRevisionOriginAnkleRotation { get; private set; }
-            internal Vector3 IntentRevisionOriginSole { get; private set; }
+            internal Vector3 IntentRevisionOriginAnkleOffset { get; private set; }
+            internal Quaternion IntentRevisionOriginAnkleRotationOffset { get; private set; }
             internal Vector3 IntentRevisionOriginGroundPath { get; private set; }
             internal FootPlacementSurface IntentRevisionOriginGroundSupport { get; private set; }
-            internal Vector3 IntentRevisionOriginPathRoot { get; private set; }
-            internal Vector3 IntentRevisionOriginPathRootStart { get; private set; }
-            internal Vector3 IntentRevisionOriginPathHip { get; private set; }
+            internal Vector3 IntentRevisionOriginPathRootOffset { get; private set; }
+            internal Vector3 IntentRevisionOriginPathRootStartOffset { get; private set; }
+            internal Vector3 IntentRevisionOriginPathHipOffset { get; private set; }
             internal ulong CommittedAnchorPlanSequence { get; private set; }
             internal ulong CommittedAnchorLandingEventIdentity { get; private set; }
             internal Vector3 CommittedAnchorSole { get; private set; }
@@ -232,18 +236,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentLandingDisplacementThreshold = float.IsFinite(threshold) ? threshold : 0f;
             }
 
-            internal bool HasAttemptedIntentRevision(ulong planSequence) =>
+            internal bool HasAttemptedIntentRevision(
+                ulong planSequence,
+                ulong trajectoryGeneration,
+                ulong authorityTick) =>
                 planSequence != 0 &&
-                IntentRevisionAttemptPlanSequence == planSequence;
+                trajectoryGeneration != 0 &&
+                authorityTick != 0 &&
+                IntentRevisionAttemptPlanSequence == planSequence &&
+                IntentRevisionAttemptTrajectoryGeneration == trajectoryGeneration &&
+                IntentRevisionAttemptAuthorityTick == authorityTick;
 
-            internal void MarkIntentRevisionAttempt(ulong planSequence)
+            internal void MarkIntentRevisionAttempt(
+                ulong planSequence,
+                in CommittedLocomotionPlanarMotionTimeline motionTimeline)
             {
-                if (planSequence == 0)
+                if (planSequence == 0 || !motionTimeline.IsValid)
                     throw new ArgumentOutOfRangeException(nameof(planSequence));
                 IntentRevisionAttemptPlanSequence = planSequence;
+                IntentRevisionAttemptTrajectoryGeneration = motionTimeline.Generation;
+                IntentRevisionAttemptAuthorityTick = motionTimeline.AuthorityTick.Value;
             }
 
             internal void RememberOutput(
+                Vector3 animatedAnklePosition,
+                Quaternion animatedAnkleRotation,
+                Vector3 currentHip,
                 Vector3 anklePosition,
                 Quaternion ankleRotation,
                 Vector3 sole,
@@ -254,8 +272,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 pathRootStart,
                 Vector3 pathHip)
             {
-                if (!IsFinite(anklePosition) || !IsFinite(ankleRotation) || !IsFinite(sole))
+                if (!IsFinite(animatedAnklePosition) || !IsFinite(animatedAnkleRotation) ||
+                    !IsFinite(currentHip) || !IsFinite(anklePosition) ||
+                    !IsFinite(ankleRotation) || !IsFinite(sole))
                     return;
+                LastOutputAnimatedAnklePosition = animatedAnklePosition;
+                LastOutputAnimatedAnkleRotation = animatedAnkleRotation.normalized;
+                LastOutputCurrentHip = currentHip;
                 LastOutputAnklePosition = anklePosition;
                 LastOutputAnkleRotation = ankleRotation.normalized;
                 LastOutputSole = sole;
@@ -291,18 +314,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasLastOutputSole &&
                 HasLastOutputGroundPath &&
                 LastOutputGroundPlanSequence == planSequence &&
+                IsFinite(LastOutputAnimatedAnklePosition) &&
+                IsFinite(LastOutputAnimatedAnkleRotation) &&
+                IsFinite(LastOutputCurrentHip) &&
                 IsFinite(LastOutputAnklePosition) &&
                 IsFinite(LastOutputAnkleRotation) &&
                 IsFinite(LastOutputPathRoot) &&
                 IsFinite(LastOutputPathRootStart) &&
                 IsFinite(LastOutputPathHip);
 
-            internal void RetireUncommittedActive(CharacterPredictiveFootPlanEndReason reason)
+            internal void PromoteUncommittedRevision(CharacterPredictiveFootPlanEndReason reason)
             {
-                CancelRevision(reason);
+                if (!Revision.HasExecutablePath)
+                    throw new InvalidOperationException("Predictive Foot uncommitted revision is not executable.");
                 Active.Reset(reason);
+                CharacterPredictiveFootPlacementPlan retired = Active;
+                Active = Revision;
+                Revision = retired;
+                HasRevision = false;
+                TransitionKind = FootPlanTransitionKind.None;
+                RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+                ClearIntentRevisionOrigin();
                 ClearIntentObservation();
             }
 
@@ -362,6 +396,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearIntentObservation();
                 HasLastOutputSole = false;
                 LastOutputSole = Vector3.zero;
+                LastOutputAnimatedAnklePosition = Vector3.zero;
+                LastOutputAnimatedAnkleRotation = Quaternion.identity;
+                LastOutputCurrentHip = Vector3.zero;
                 LastOutputAnklePosition = Vector3.zero;
                 LastOutputAnkleRotation = Quaternion.identity;
                 HasLastOutputGroundPath = false;
@@ -377,6 +414,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CommittedAnchorSole = default;
                 CommittedAnchorSupport = default;
                 IntentRevisionAttemptPlanSequence = 0;
+                IntentRevisionAttemptTrajectoryGeneration = 0;
+                IntentRevisionAttemptAuthorityTick = 0;
                 m_BaselineOwnedLastFrame = false;
                 m_HasOwnershipContinuity = false;
                 m_OwnershipContinuityOffset = Vector3.zero;
@@ -395,27 +434,59 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (!HasCompleteOutputForPlan(Active.Sequence))
                     throw new InvalidOperationException("Predictive Foot revision origin is unavailable.");
                 HasIntentRevisionOrigin = true;
-                IntentRevisionOriginAnklePosition = LastOutputAnklePosition;
-                IntentRevisionOriginAnkleRotation = LastOutputAnkleRotation;
-                IntentRevisionOriginSole = LastOutputSole;
+                IntentRevisionOriginAnkleOffset =
+                    LastOutputAnklePosition - LastOutputAnimatedAnklePosition;
+                IntentRevisionOriginAnkleRotationOffset = (
+                    LastOutputAnkleRotation *
+                    Quaternion.Inverse(LastOutputAnimatedAnkleRotation)).normalized;
                 IntentRevisionOriginGroundPath = LastOutputGroundPath;
                 IntentRevisionOriginGroundSupport = LastOutputGroundSupport.Rebuild();
-                IntentRevisionOriginPathRoot = LastOutputPathRoot;
-                IntentRevisionOriginPathRootStart = LastOutputPathRootStart;
-                IntentRevisionOriginPathHip = LastOutputPathHip;
+                IntentRevisionOriginPathRootOffset = LastOutputPathRoot - LastOutputCurrentHip;
+                IntentRevisionOriginPathRootStartOffset =
+                    LastOutputPathRootStart - LastOutputCurrentHip;
+                IntentRevisionOriginPathHipOffset = LastOutputPathHip - LastOutputCurrentHip;
+            }
+
+            internal void ResolveIntentRevisionOriginAnkle(
+                Vector3 animatedAnklePosition,
+                Quaternion animatedAnkleRotation,
+                out Vector3 anklePosition,
+                out Quaternion ankleRotation)
+            {
+                if (!HasIntentRevisionOrigin || !IsFinite(animatedAnklePosition) ||
+                    !IsFinite(animatedAnkleRotation))
+                {
+                    throw new InvalidOperationException("Predictive Foot revision ankle origin is unavailable.");
+                }
+                anklePosition = animatedAnklePosition + IntentRevisionOriginAnkleOffset;
+                ankleRotation = (
+                    IntentRevisionOriginAnkleRotationOffset *
+                    animatedAnkleRotation).normalized;
+            }
+
+            internal void ResolveIntentRevisionOriginBodyPath(
+                Vector3 currentHip,
+                out Vector3 pathRoot,
+                out Vector3 pathRootStart,
+                out Vector3 pathHip)
+            {
+                if (!HasIntentRevisionOrigin || !IsFinite(currentHip))
+                    throw new InvalidOperationException("Predictive Foot revision body origin is unavailable.");
+                pathRoot = currentHip + IntentRevisionOriginPathRootOffset;
+                pathRootStart = currentHip + IntentRevisionOriginPathRootStartOffset;
+                pathHip = currentHip + IntentRevisionOriginPathHipOffset;
             }
 
             void ClearIntentRevisionOrigin()
             {
                 HasIntentRevisionOrigin = false;
-                IntentRevisionOriginAnklePosition = Vector3.zero;
-                IntentRevisionOriginAnkleRotation = Quaternion.identity;
-                IntentRevisionOriginSole = Vector3.zero;
+                IntentRevisionOriginAnkleOffset = Vector3.zero;
+                IntentRevisionOriginAnkleRotationOffset = Quaternion.identity;
                 IntentRevisionOriginGroundPath = Vector3.zero;
                 IntentRevisionOriginGroundSupport = default;
-                IntentRevisionOriginPathRoot = Vector3.zero;
-                IntentRevisionOriginPathRootStart = Vector3.zero;
-                IntentRevisionOriginPathHip = Vector3.zero;
+                IntentRevisionOriginPathRootOffset = Vector3.zero;
+                IntentRevisionOriginPathRootStartOffset = Vector3.zero;
+                IntentRevisionOriginPathHipOffset = Vector3.zero;
             }
         }
 
@@ -660,12 +731,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             bool hasIntentRevisionOrigin = runtime.HasIntentRevision &&
                                            runtime.HasIntentRevisionOrigin;
+            Vector3 intentRevisionOriginAnklePosition = default;
             if (hasIntentRevisionOrigin)
             {
+                runtime.ResolveIntentRevisionOriginAnkle(
+                    pose.AnklePosition,
+                    pose.AnkleRotation,
+                    out intentRevisionOriginAnklePosition,
+                    out _);
+                runtime.ResolveIntentRevisionOriginBodyPath(
+                    pose.HipPosition,
+                    out pathRoot,
+                    out pathRootStart,
+                    out pathHip);
                 pathPosition = runtime.IntentRevisionOriginGroundPath;
-                pathRoot = runtime.IntentRevisionOriginPathRoot;
-                pathRootStart = runtime.IntentRevisionOriginPathRootStart;
-                pathHip = runtime.IntentRevisionOriginPathHip;
             }
             if (revisionContributes)
             {
@@ -698,7 +777,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (activeTargetAvailable)
                 targetAnklePosition = activeTarget.AnklePosition;
             if (hasIntentRevisionOrigin)
-                targetAnklePosition = runtime.IntentRevisionOriginAnklePosition;
+                targetAnklePosition = intentRevisionOriginAnklePosition;
             if (revisionContributes &&
                 TryEvaluateFootTarget(
                     revision,
@@ -712,7 +791,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 targetAnklePosition = activeTargetAvailable || hasIntentRevisionOrigin
                     ? Vector3.Lerp(
                         hasIntentRevisionOrigin
-                            ? runtime.IntentRevisionOriginAnklePosition
+                            ? intentRevisionOriginAnklePosition
                             : activeTarget.AnklePosition,
                         revisionTarget.AnklePosition,
                         runtime.SmoothedRevisionBlendWeight)
@@ -1050,26 +1129,44 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float revisionBlend = revisionTargetAvailable
                     ? revisionTransitionBlend
                     : 0f;
+                Vector3 intentRevisionOriginAnklePosition = default;
+                Quaternion intentRevisionOriginAnkleRotation = default;
+                Vector3 intentRevisionOriginPathRoot = default;
+                Vector3 intentRevisionOriginPathRootStart = default;
+                Vector3 intentRevisionOriginPathHip = default;
+                if (hasIntentRevisionOrigin)
+                {
+                    runtime.ResolveIntentRevisionOriginAnkle(
+                        pose.AnklePosition,
+                        pose.AnkleRotation,
+                        out intentRevisionOriginAnklePosition,
+                        out intentRevisionOriginAnkleRotation);
+                    runtime.ResolveIntentRevisionOriginBodyPath(
+                        pose.HipPosition,
+                        out intentRevisionOriginPathRoot,
+                        out intentRevisionOriginPathRootStart,
+                        out intentRevisionOriginPathHip);
+                }
                 Vector3 outgoingAnklePosition = hasIntentRevisionOrigin
-                    ? runtime.IntentRevisionOriginAnklePosition
+                    ? intentRevisionOriginAnklePosition
                     : targetData.AnklePosition;
                 Quaternion outgoingAnkleRotation = hasIntentRevisionOrigin
-                    ? runtime.IntentRevisionOriginAnkleRotation
+                    ? intentRevisionOriginAnkleRotation
                     : targetData.AnkleRotation;
                 Vector3 outgoingPathPosition = hasIntentRevisionOrigin
                     ? runtime.IntentRevisionOriginGroundPath
                     : targetData.PathPosition;
                 Vector3 outgoingPathRoot = hasIntentRevisionOrigin
-                    ? runtime.IntentRevisionOriginPathRoot
+                    ? intentRevisionOriginPathRoot
                     : targetData.PathRoot;
                 Vector3 outgoingPathHip = hasIntentRevisionOrigin
-                    ? runtime.IntentRevisionOriginPathHip
+                    ? intentRevisionOriginPathHip
                     : targetData.PathHip;
                 FootPlacementSurface outgoingPathSupport = hasIntentRevisionOrigin
                     ? runtime.IntentRevisionOriginGroundSupport
                     : targetData.Support;
                 if (hasIntentRevisionOrigin)
-                    currentPathRootStart = runtime.IntentRevisionOriginPathRootStart;
+                    currentPathRootStart = intentRevisionOriginPathRootStart;
                 else
                     plan.EvaluateBodyPath(
                         plan.RootTrajectory.PathStartPhase,
@@ -1298,7 +1395,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 side,
                 rewritten,
                 rejectReason,
-                new CharacterFootGroundingHitDiagnostics(plan.FutureSupport),
+                new CharacterFootGroundingHitDiagnostics(plan.ProjectedFutureSupport),
                 in queryDiagnostics,
                 in currentEventDiagnostics,
                 in incomingEventDiagnostics,
@@ -1315,19 +1412,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 runtime.IntentLandingDisplacementError,
                 runtime.IntentLandingDisplacementThreshold,
                 plan.LandingDelayAtGeneration,
-                plan.OwnsEvent ? Vector3.Distance(plan.Start, plan.Landing) : 0f,
+                plan.OwnsEvent
+                    ? Vector3.Distance(plan.ProjectedStart, plan.ProjectedLanding)
+                    : 0f,
                 in planLifecycleDiagnostics,
                 currentSole,
-                plan.Start,
-                plan.Landing,
+                plan.ProjectedStart,
+                plan.ProjectedLanding,
                 currentPathPosition,
                 currentPathRoot,
                 currentPathHip,
-                plan.PredictedHip,
-                plan.RootStart,
-                plan.RootStartRotation,
-                plan.RootLanding,
-                plan.RootLandingRotation,
+                plan.ProjectedPredictedHip,
+                plan.ProjectedRootStart,
+                plan.ProjectedRootStartRotation,
+                plan.ProjectedRootLanding,
+                plan.ProjectedRootLandingRotation,
                 up,
                 m_Settings.MinimumLandingConfidence,
                 m_Settings.MaximumPredictionReachRatio,
@@ -1364,6 +1463,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 finalWorldPosition,
                 finalWorldRotation);
             runtime.RememberOutput(
+                pose.AnklePosition,
+                pose.AnkleRotation,
+                pose.HipPosition,
                 finalWorldPosition,
                 finalWorldRotation,
                 (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f,
@@ -1383,12 +1485,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.ActionProgress,
                 plan.GroundPathProgress,
                 plan.GeometrySnapshot,
+                plan.WorldProjectionMatrix,
                 runtime.HasRevision
                     ? runtime.Revision.State
                     : CharacterPredictiveFootPlanState.Inactive,
                 runtime.HasRevision
                     ? runtime.Revision.GeometrySnapshot
                     : null,
+                runtime.HasRevision
+                    ? runtime.Revision.WorldProjectionMatrix
+                    : Matrix4x4.identity,
                 runtime.HasRevision
                     ? runtime.SmoothedRevisionBlendWeight
                     : 0f,
@@ -1825,17 +1931,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 plan.SynchronizePoseContribution(in step);
                 plan.SynchronizeActionClock(renderFrame, in step);
+                plan.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
                 plan.ObserveWorldMotionDeviation(
                     presentedBodyPosition,
                     rootWorldRotation,
                     Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
-            }
-            if (currentPlanMatches && plan.HasExecutablePath &&
-                !IsMotionWithinCommitTolerance(plan) &&
-                IsApproachingContact(plan) &&
-                !runtime.HasRevision && !runtime.IsFadingOut)
-            {
-                runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
             }
             if ((currentPlanMatches || activeEventReplaced && step.IsPreSwing) &&
                 plan.HasExecutablePath &&
@@ -1864,12 +1964,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (plan.HasExecutablePath && plan.FutureSupport.IsValid)
             {
                 FootPlacementSurface plannedLandingSupport = ResolveSupportAtRoutePoint(
-                    plan.FutureSupport,
-                    plan.Landing,
+                    plan.ProjectedFutureSupport,
+                    plan.ProjectedLanding,
                     up);
                 if (plannedLandingSupport.IsValid)
                 {
-                    successorSole = plan.Landing;
+                    successorSole = plan.ProjectedLanding;
                     successorProbeSupport = plannedLandingSupport;
                     successorProbeStart = plannedLandingSupport.Point;
                 }
@@ -1901,12 +2001,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? successorProbeSupport.Point
                     : handoffSole;
             }
-            if (plan.HasExecutablePath && !IsMotionWithinCommitTolerance(plan))
-            {
-                successorSole = currentSole;
-                successorProbeStart = groundProbeStart;
-                successorProbeSupport = groundProbeSupport;
-            }
             if (runtime.HasRevision)
             {
                 CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
@@ -1920,6 +2014,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         revision.SynchronizePoseContribution(in step);
                         revision.SynchronizeActionClock(renderFrame, in step);
+                        revision.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
                         revision.ObserveWorldMotionDeviation(
                             presentedBodyPosition,
                             rootWorldRotation,
@@ -1942,6 +2037,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         revision.SynchronizePoseContribution(in incomingStep);
                         revision.SynchronizeActionClock(renderFrame, in incomingStep);
+                        revision.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
                     }
                     else
                     {
@@ -1962,6 +2058,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         revision.SynchronizePoseContribution(in step);
                         revision.SynchronizeActionClock(renderFrame, in step);
+                        revision.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
                     }
                 }
             }
@@ -2045,8 +2142,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentationDeltaSeconds,
                 m_TransitionBlendSpeed);
             plan = runtime.Active;
-            if (planningCandidate && !plan.OwnsEvent && !runtime.HasRevision &&
-                !runtime.IsFadingOut && m_FutureBodyTrajectorySource != null)
+            bool needsInitialPlan = !plan.OwnsEvent ||
+                                    plan.State == CharacterPredictiveFootPlanState.Rejected &&
+                                    plan.MatchesAuthoritativeEvent(in step);
+            ulong initialAttemptIdentity = plan.Sequence != 0
+                ? plan.Sequence
+                : step.LandingEventIdentity;
+            if (planningCandidate && needsInitialPlan && !runtime.HasRevision &&
+                !runtime.IsFadingOut && m_FutureBodyTrajectorySource != null &&
+                !runtime.HasAttemptedIntentRevision(
+                    initialAttemptIdentity,
+                    motionTimeline.Generation,
+                    motionTimeline.AuthorityTick.Value))
             {
                 CreatePlan(
                     side,
@@ -2067,6 +2174,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     movementPlaybackTime,
                     up,
                     legLength);
+                runtime.MarkIntentRevisionAttempt(
+                    plan.Sequence != 0 ? plan.Sequence : initialAttemptIdentity,
+                    in motionTimeline);
+                if (plan.HasExecutablePath)
+                    plan.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
             }
             if (!runtime.HasRevision && !runtime.IsFadingOut && plan.HasExecutablePath &&
                 plan.MatchesAuthoritativeEvent(in step) &&
@@ -2089,33 +2201,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         out Vector3 revisionGroundPath,
                         out FootPlacementSurface revisionGroundSupport))
                 {
-                    runtime.RetireUncommittedActive(
-                        CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
-                    if (planningCandidate && m_FutureBodyTrajectorySource != null)
-                    {
-                        CreatePlan(
-                            side,
-                            runtime.Active,
-                            in step,
-                            renderFrame,
-                            groundProbeStart,
-                            groundProbeSupport,
-                            currentSole,
-                            soleSupportRadius,
-                            rootWorldPosition,
-                            rootWorldRotation,
-                            presentedBodyPosition,
-                            committedBodyVelocity,
-                            trajectoryCurvatureDegreesPerSecond,
-                            trajectoryCurvatureAvailable,
-                            in motionTimeline,
-                            movementPlaybackTime,
-                            up,
-                            legLength);
-                    }
-                    return;
+                    revisionSole = currentSole;
+                    revisionGroundPath = groundProbeStart;
+                    revisionGroundSupport = groundProbeSupport;
                 }
-                runtime.MarkIntentRevisionAttempt(plan.Sequence);
+                runtime.MarkIntentRevisionAttempt(plan.Sequence, in motionTimeline);
                 bool created = CreatePlan(
                     side,
                     runtime.Revision,
@@ -2136,7 +2226,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up,
                     legLength);
                 if (created)
-                    runtime.BeginIntentRevision();
+                {
+                    runtime.Revision.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
+                    if (runtime.HasCompleteOutputForPlan(plan.Sequence))
+                        runtime.BeginIntentRevision();
+                    else
+                        runtime.PromoteUncommittedRevision(
+                            CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
+                }
             }
         }
 
@@ -2259,7 +2356,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             }
             runtime.ObserveIntentLandingDisplacement(preflightError, enterThreshold);
-            if (runtime.HasAttemptedIntentRevision(plan.Sequence))
+            if (runtime.HasAttemptedIntentRevision(
+                    plan.Sequence,
+                    motionTimeline.Generation,
+                    motionTimeline.AuthorityTick.Value))
                 return false;
             float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(
@@ -2301,7 +2401,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Quaternion.AngleAxis(landingSample.RelativeYawDegrees, up) *
                 rootWorldRotation).normalized;
             float angularDifference = Quaternion.Angle(
-                plan.RootLandingRotation,
+                plan.ProjectedRootLandingRotation,
                 currentLandingRotation) * Mathf.Deg2Rad;
             float angularLever = Mathf.Max(
                 plan.SoleSupportRadius,

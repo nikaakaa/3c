@@ -201,9 +201,15 @@ PredictedHipWorld(t) = B(t) * RootLocalHip(t)
 
 Trajectory Curvature必须由相邻Simulation committed Intent的Desired Planar Velocity、Authority Tick和正式Tick Rate计算，并在整个Simulation tick区间保持同一值。Presentation插值只采样该已提交曲率；禁止对相邻Render Frame的插值速度再次求导，否则表现帧率和摄像机缓动会成为Future Body路线输入。
 
-### 6.1 离散Revision
+### 6.1 Step模式、执行投影与离散Revision
 
-新的committed trajectory只有在剩余Landing位置或朝向误差超过鞋底/查询几何边界时创建后继Revision。每个Revision仍是不可变计划，同一时刻每只脚仍只能有一个Active与一个过渡槽。Revision资格归属于不可变源Plan而不是整个Landing Event：一个源Plan至多尝试一次Revision；Revision提升为新的Active后，若新的committed trajectory再次越过几何边界，新Active MAY再产生一次后继Revision。这样既禁止同一帧或同一源Plan反复换路，又不会让已经偏离数米的旧Plan因“本事件用过一次Revision”继续支配Swing。
+参考文章4把“每帧预测”拆成两种成本完全不同的工作：Foot Lock到Foot Unlock建立一次可执行路径；之后每帧只把该路径对账到当前角色运动，只有误差超过边界才重新执行Capsule Sweep和Ground Path构造。本项目采用同一分层，不把逐帧显示更新误写成逐帧Physics重规划。
+
+每个Action Step在Release前原子选择`Predictive`或`Traditional`模式。接近最大加速、接近最大减速、低速急转、没有有效前一步历史、空中或动作事实过期时可选择Traditional；其余选择Predictive。模式在整个Step内保持不变。Traditional属于统一Foot Placement owner的正式策略，不是Predictive Query失败后临时交给Current Grounding的fallback。
+
+Predictive Plan冻结Step identity、Action Clock、Artifact路线、查询结果与Ground Envelope。运行帧读取Simulation/KCC发布的当前正式Root，并与同相位Future Body Expected Root比较，得到只含Component Up轴Yaw和水平位移的刚体差。Foot Route、Ground Envelope、Landing、Future Support与Body Path统一消费这一变换；不重新查询、不改写Plan、不读取Camera或Visible导数。进入`ApproachingContact`时冻结最后一次执行投影，使Landing、Anchor候选和后继Step起点在接触窗口内保持同一个世界事实。
+
+只有新的committed trajectory使剩余Landing位置或朝向误差超过鞋底/查询几何边界，才创建昂贵Revision。查询资格按`源Plan sequence + trajectory generation + authority tick`记账：同一权威tick至多查询一次，下一正式tick若误差仍存在可以重试。一个Rejected候选不能永久封死该源Plan，也不能删除仍有效Active。
 
 Plan创建时必须原子冻结Action Step时长、Future Body轨迹时间范围和`phase -> trajectory time`映射。运行时Action Step Clock只推进同一事件的权威phase；若正式动作时长变化会改变剩余Landing，则它属于新的committed trajectory输入，必须经Revision替换，不能直接改写旧Plan的时间尺度。否则新时长会超出旧Future Body范围，或在不报错时悄悄改变冻结路线的采样位置。
 
@@ -215,9 +221,9 @@ LinearVelocity_new(phase0) = CurrentExecutedSoleVelocity
 AngularVelocity_new(phase0) = CurrentExecutedBodyAngularVelocity
 ```
 
-旧、新计划交叉期间同时保留各自geometry和identity。新计划未进入Executing前不能删除仍在运动有效性边界内的旧输出；Intent Revision被Rejected时，旧Plan仍有效才可保留到正常Landing边界。若旧Plan自身已经越过运动几何边界，必须以`MotionDeviationExceeded`进入现有连续FadeOut，并禁止它提交Landing、Anchor或Event Successor；不得因保留唯一输出而继续执行一个已经不可达的世界路径，也不得让Current Grounding伪造一条新预测Path。
+旧、新计划交叉期间同时保留各自geometry和identity。Revision必须先在过渡槽完成Query并Commit，成功后才允许参与Blend或提升。Rejected候选只发布精确原因并等待下一权威tick；它不得清空Active、清除完整Debug Path或使Grounding接管Swing。初始候选Rejected时，当前Step仍保留Predictive身份并继续正式重试，直至成功或Step结束；不得把一次查询失败解释成Traditional模式切换。
 
-意图Revision的创建起点只能读取上一完成帧已经送入唯一FBBIK的Final Ankle/Sole、该输出所属Active Plan的Ground Path与支撑面，以及同一完成帧的Body Path Root/Hip。Ground Probe由Final Sole沿Component Up投影到该支撑面；不得重新求值旧Plan的理论Target冒充已执行结果。Revision创建时必须冻结上述完成快照作为过渡原点，Blend期间旧侧始终读取该快照，不能继续推进已经越过运动边界的旧Active。Revision创建帧保持Blend为0，下一完成帧才允许推进Revision Blend，避免低表现帧率下在创建帧直接跳到大权重。若旧Plan尚未产生属于自身的完成输出，则没有需要保留的预测连续性；它必须在首次贡献Goal前以`MotionDeviationExceeded`退出，并从当前真实Sole、Support与committed trajectory原子重建Current Event计划。
+意图Revision的创建起点只能读取上一完成帧已经送入唯一FBBIK的Final Ankle/Sole、同帧Original Animated Ankle/Hip、该输出所属Active Plan的Ground Path与支撑面，以及同一完成帧的Body Path Root/Hip。Ground Probe由Final Sole沿Component Up投影到该支撑面；不得重新求值旧Plan的理论Target冒充已执行结果。Revision创建时冻结的是`Final Ankle - Animated Ankle`、对应旋转差与`Body Path - Animated Hip`，Ground Path与Support继续保持环境世界事实；Blend期间旧侧由当前同相位Original动画加上述冻结修正组成。禁止把Swing的世界Ankle绝对锁死，否则动画继续运动或Pelvis变化时会形成腿长误差并触发Reach抬升。Revision创建帧保持Blend为0，下一完成帧才允许推进Revision Blend。若旧Plan尚未产生属于自身的完成输出，则没有需要保留的预测连续性；它必须在首次贡献Goal前以`MotionDeviationExceeded`退出，并从当前真实Sole、Support与committed trajectory原子重建Current Event计划。
 
 同脚的下一Landing Event由Projection提前发布为`IncomingPredictedStep`。Planner必须在当前Plan进入`ApproachingContact`、Intent Revision已经结束且现有Revision槽空闲时，为仍处于PreSwing的Incoming生成唯一Event Successor，并以Stance上一完成帧已经提交的真实Anchor Sole与Surface作为下一步Ground Path起点，不能再次使用Plan理论Landing。Intent Revision与Event Successor只可先后复用同一槽，不能并存，也不能让提前准备的Successor阻断当前Active Plan的意图修订。
 
@@ -235,7 +241,7 @@ Plan输出所有权起点与Ground Path几何起点是两个不同边界。Plan�
 FutureFootRoute = FutureBodyTransform * RootLocalAnimationFootRoute
 ```
 
-局部X、Z和旋转都必须保留。Plan的查询路线从`PathStartPhase`开始，一次刚性重基必须使该相位的Artifact Foot Route与当前已提交的接触点或已执行Sole正下方重合；该变换整步冻结，不随当前脚逐帧更新。事件生成相位早于LiftOff时，不得拿更早的Native Sole去对齐更晚的路线起点。
+局部X、Z和旋转都必须保留。Plan的查询路线从`PathStartPhase`开始，一次Artifact平面刚性重基必须使该相位的Foot Route与当前已提交的接触点或已执行Sole正下方重合；该Artifact对齐整步冻结，不能拿当前脚逐帧改写。除此之外，执行层每帧还必须应用当前正式Root相对Expected Root的平面刚体投影，使同一不可变路线跟随真实角色位移和转向；该投影不改变Artifact语义，也不执行Physics Query。事件生成相位早于LiftOff时，不得拿更早的Native Sole去对齐更晚的路线起点。
 
 地面路线起点和净空连续性是两个事实：
 

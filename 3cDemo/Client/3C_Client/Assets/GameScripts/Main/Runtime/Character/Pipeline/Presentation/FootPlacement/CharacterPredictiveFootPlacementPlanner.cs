@@ -1590,6 +1590,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     revisionPredictiveOutputWeight,
                     runtime.SmoothedTransitionBlendWeight)
                 : activePredictiveOutputWeight;
+            if (hasEventSuccessorHandoff || runtime.IsAwaitingReplacement)
+                predictiveOutputWeight = 1f;
             float remainingSeconds = Mathf.Max(
                 0f,
                 currentEventOwnsState
@@ -2309,40 +2311,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                               authoritativePredictionBlend >= 0.999999f;
                 if (!stanceOwnsFoot)
                     appliedLift = Vector3.Dot(resolvedAnklePosition - pose.AnklePosition, up);
-                bool finalReachValid = true;
-                if (!stanceOwnsFoot && !runtime.IsFadingOut &&
-                    !runtime.IsAwaitingReplacement)
-                {
-                    finalReachValid = TryResolveAppliedReachClearance(
-                        pose,
-                        appliedHip,
-                        resolvedAnklePosition,
-                        up,
-                        legLength * m_Settings.MaximumPredictionReachRatio,
-                        out float finalReachClearance);
-                    if (finalReachValid && finalReachClearance > 0f)
-                    {
-                        resolvedAnklePosition += up * finalReachClearance;
-                        reachClearance += finalReachClearance;
-                        compositeAnimationClearance += finalReachClearance;
-                        appliedLift = Vector3.Dot(
-                            resolvedAnklePosition - pose.AnklePosition,
-                            up);
-                        resolvedContacts = pose.ResolveSoleContacts(
-                            resolvedAnklePosition,
-                            resolvedAnkleRotation);
-                        postHeelDistance = Vector3.Dot(
-                            resolvedContacts.HeelPosition - currentPathPosition,
-                            up);
-                        postToeDistance = Vector3.Dot(
-                            resolvedContacts.ToePosition - currentPathPosition,
-                            up);
-                    }
-                }
                 predictionReachRatio = Vector3.Distance(appliedHip, resolvedAnklePosition) / legLength;
                 if (IsFinite(resolvedAnklePosition) && IsFinite(resolvedAnkleRotation) &&
                     float.IsFinite(predictionReachRatio) &&
-                    finalReachValid &&
                     !stanceOwnsFoot)
                 {
                     result = new CharacterFullBodyIkGoal(
@@ -3475,22 +3446,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         }
                     }
                 }
-                else if (!runtime.IsAwaitingReplacement && !runtime.IsFadingOut)
+                else if (predictiveSwing &&
+                         runtime.HasCompleteOutputForPlan(plan.Sequence))
                 {
-                    if (predictiveSwing &&
-                        runtime.HasCompleteOutputForPlan(plan.Sequence))
-                    {
+                    if (!runtime.IsAwaitingReplacement)
                         runtime.BeginAwaitingReplacement(
                             replacementReason,
                             in transitionCapture);
-                    }
-                    else
-                    {
-                        runtime.BeginFadeOut(
-                            replacementReason,
-                            renderFrame,
-                            in transitionCapture);
-                    }
+                }
+                else if (!runtime.IsAwaitingReplacement && !runtime.IsFadingOut)
+                {
+                    runtime.BeginFadeOut(
+                        replacementReason,
+                        renderFrame,
+                        in transitionCapture);
                 }
             }
             runtime.AdvanceTransition(

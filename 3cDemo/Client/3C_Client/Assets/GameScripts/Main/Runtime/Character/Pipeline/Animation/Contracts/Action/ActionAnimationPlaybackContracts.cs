@@ -224,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    public readonly struct ActionAnimationPlaybackFrame
+    public sealed class ActionAnimationPlaybackFrame
     {
         public const string SchemaVersion = "action-animation-playback-frame/v2";
 

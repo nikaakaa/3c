@@ -216,13 +216,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         public void SetActionFrame(
             PresentationFrameWorkspaceLease lease,
-            in ActionAnimationPlaybackFrame frame)
+            ActionAnimationPlaybackFrame frame)
         {
             RequireLease(lease);
             Dictionary<AnimationPlaybackId,
                 ActionAnimationPlaybackFrame> frames =
                     PendingPage.ActionFrames;
-            if (!frame.IsValid ||
+            if (frame == null ||
+                !frame.IsValid ||
                 frames.Count == PendingPage.ActionCapacity ||
                 !frames.TryAdd(frame.PlaybackId, frame))
             {

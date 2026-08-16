@@ -49,6 +49,12 @@ Foot Placement MUST不读取AnimationClip、Library Artifact、Tree、Blackboard
 - **THEN** FootGrounding MAY报告只读安全平面，但 MUST不向下吸脚或捕获Anchor
 - **AND** Predictive或原动画 MUST继续拥有Swing
 
+#### Scenario: 从运动进入Idle且Foot Placement权重保持为1
+
+- **WHEN** Motion Phase首次进入`GroundedStationary`且唯一Current Support合法
+- **THEN** Stance MUST显式武装Idle Anchor捕获，不得等待Foot Placement权重先低于1
+- **AND** 若旧运动Anchor仍存在，MUST先沿同一Stance淡出，再从Current Support约束后的安全Baseline捕获并淡入Idle Anchor
+
 ### Requirement: Footprint prediction 必须保留动画水平脚步
 
 PredictiveFootPlacementModifier MUST只在当前权威Landing Event进入PreSwing后创建不可变Plan。Plan MUST冻结同一Action Step的Future Body Position、Facing、Linear Velocity与Angular Velocity路线，并通过该Transform与Artifact root-local Sole、Ankle、Hip路线建立未来世界Foot Route。Foot Route MUST保留动画局部X、Z和旋转，不得使用输入幅值缩放、丢弃局部X、读取Action Motion Curve或把Foot Route当角色位移。

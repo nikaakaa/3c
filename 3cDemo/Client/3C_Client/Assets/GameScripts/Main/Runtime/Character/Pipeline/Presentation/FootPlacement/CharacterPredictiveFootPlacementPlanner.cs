@@ -23,11 +23,116 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CurrentEventReplacement = 4
     }
 
+    public enum CharacterFootPlanOriginKind : byte
+    {
+        None = 0,
+        CurrentFrameSupport = 1,
+        ActivePlanOutput = 2,
+        ProjectedLanding = 3,
+        LandingHandoff = 4,
+        CommittedLanding = 5
+    }
+
+    internal readonly struct CharacterFootPlanBuildOrigin
+    {
+        internal CharacterFootPlanBuildOrigin(
+            CharacterFootPlanOriginKind kind,
+            ulong sourcePlanSequence,
+            ulong sourceLandingEventIdentity,
+            Vector3 sole,
+            Vector3 groundPath,
+            FootPlacementSurface support,
+            Vector3 up)
+        {
+            Kind = kind;
+            SourcePlanSequence = sourcePlanSequence;
+            SourceLandingEventIdentity = sourceLandingEventIdentity;
+            Sole = sole;
+            GroundPath = groundPath;
+            Support = support;
+            SoleHeightAboveSupport = support.IsValid
+                ? Vector3.Dot(sole - support.Point, up.normalized)
+                : 0f;
+        }
+
+        internal CharacterFootPlanOriginKind Kind { get; }
+        internal ulong SourcePlanSequence { get; }
+        internal ulong SourceLandingEventIdentity { get; }
+        internal Vector3 Sole { get; }
+        internal Vector3 GroundPath { get; }
+        internal FootPlacementSurface Support { get; }
+        internal float SoleHeightAboveSupport { get; }
+        internal bool IsAvailable => Kind != CharacterFootPlanOriginKind.None &&
+                                     IsFinite(Sole) &&
+                                     IsFinite(GroundPath);
+        internal bool HasSupport => IsAvailable && Support.IsValid;
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+    }
+
+    internal readonly struct CharacterFootPlanBuildRequest
+    {
+        internal CharacterFootPlanBuildRequest(
+            CharacterFootPlanAttemptKind attemptKind,
+            CharacterFootSide side,
+            in AnimationPredictedFootStepSample step,
+            ulong renderFrame,
+            in CharacterFootPlanBuildOrigin origin,
+            float soleSupportRadius,
+            Vector3 rootStart,
+            Quaternion rootStartRotation,
+            Vector3 presentedBodyStartPosition,
+            Vector3 committedBodyVelocity,
+            float trajectoryCurvatureDegreesPerSecond,
+            bool trajectoryCurvatureAvailable,
+            in CommittedLocomotionPlanarMotionTimeline motionTimeline,
+            double movementPlaybackTime,
+            Vector3 up,
+            float legLength)
+        {
+            AttemptKind = attemptKind;
+            Side = side;
+            Step = step;
+            RenderFrame = renderFrame;
+            Origin = origin;
+            SoleSupportRadius = soleSupportRadius;
+            RootStart = rootStart;
+            RootStartRotation = rootStartRotation;
+            PresentedBodyStartPosition = presentedBodyStartPosition;
+            CommittedBodyVelocity = committedBodyVelocity;
+            TrajectoryCurvatureDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
+            TrajectoryCurvatureAvailable = trajectoryCurvatureAvailable;
+            MotionTimeline = motionTimeline;
+            MovementPlaybackTime = movementPlaybackTime;
+            Up = up;
+            LegLength = legLength;
+        }
+
+        internal CharacterFootPlanAttemptKind AttemptKind { get; }
+        internal CharacterFootSide Side { get; }
+        internal AnimationPredictedFootStepSample Step { get; }
+        internal ulong RenderFrame { get; }
+        internal CharacterFootPlanBuildOrigin Origin { get; }
+        internal float SoleSupportRadius { get; }
+        internal Vector3 RootStart { get; }
+        internal Quaternion RootStartRotation { get; }
+        internal Vector3 PresentedBodyStartPosition { get; }
+        internal Vector3 CommittedBodyVelocity { get; }
+        internal float TrajectoryCurvatureDegreesPerSecond { get; }
+        internal bool TrajectoryCurvatureAvailable { get; }
+        internal CommittedLocomotionPlanarMotionTimeline MotionTimeline { get; }
+        internal double MovementPlaybackTime { get; }
+        internal Vector3 Up { get; }
+        internal float LegLength { get; }
+    }
+
     public readonly struct CharacterFootPlanAttemptDiagnostics
     {
         internal CharacterFootPlanAttemptDiagnostics(
             CharacterFootPlanAttemptKind kind,
-            CharacterPredictiveFootPlanExecution plan)
+            CharacterPredictiveFootPlanExecution plan,
+            in CharacterFootPlanBuildOrigin origin)
             : this(
                 kind,
                 plan.Sequence,
@@ -39,7 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.QueryCount,
                 plan.RawHitCount,
                 plan.RejectedQueryCount,
-                plan.GeometrySnapshot)
+                plan.GeometrySnapshot,
+                in origin)
         {
         }
 
@@ -54,7 +160,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int queryCount,
             int rawHitCount,
             int rejectedQueryCount,
-            CharacterPredictiveFootPlanGeometrySnapshot geometrySnapshot)
+            CharacterPredictiveFootPlanGeometrySnapshot geometrySnapshot,
+            in CharacterFootPlanBuildOrigin origin)
         {
             Kind = kind;
             Sequence = sequence;
@@ -67,6 +174,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RawHitCount = rawHitCount;
             RejectedQueryCount = rejectedQueryCount;
             GeometrySnapshot = geometrySnapshot;
+            OriginKind = origin.Kind;
+            OriginPlanSequence = origin.SourcePlanSequence;
+            OriginLandingEventIdentity = origin.SourceLandingEventIdentity;
+            OriginSole = origin.Sole;
+            OriginGroundPath = origin.GroundPath;
+            OriginSupportSurfaceIdentity = origin.Support.Identity;
+            OriginSupportPoint = origin.Support.IsValid ? origin.Support.Point : default;
+            OriginSupportNormal = origin.Support.IsValid ? origin.Support.Normal : default;
+            OriginSoleHeightAboveSupport = origin.SoleHeightAboveSupport;
         }
 
         public CharacterFootPlanAttemptKind Kind { get; }
@@ -80,6 +196,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int RawHitCount { get; }
         public int RejectedQueryCount { get; }
         public CharacterPredictiveFootPlanGeometrySnapshot GeometrySnapshot { get; }
+        public CharacterFootPlanOriginKind OriginKind { get; }
+        public ulong OriginPlanSequence { get; }
+        public ulong OriginLandingEventIdentity { get; }
+        public Vector3 OriginSole { get; }
+        public Vector3 OriginGroundPath { get; }
+        public int OriginSupportSurfaceIdentity { get; }
+        public Vector3 OriginSupportPoint { get; }
+        public Vector3 OriginSupportNormal { get; }
+        public float OriginSoleHeightAboveSupport { get; }
         public bool IsAvailable => Kind != CharacterFootPlanAttemptKind.None && Sequence != 0;
     }
 
@@ -2401,15 +2526,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             bool outgoingOutputAvailable = runtime.HasLastOutputGroundPath &&
                                            runtime.LastOutputGroundPlanSequence == plan.Sequence;
-            Vector3 successorSole = outgoingOutputAvailable && runtime.HasLastOutputSole
-                ? runtime.LastOutputSole
-                : currentSole;
-            Vector3 successorProbeStart = outgoingOutputAvailable
-                ? runtime.LastOutputGroundPath
-                : groundProbeStart;
-            FootPlacementSurface successorProbeSupport = outgoingOutputAvailable
-                ? runtime.LastOutputGroundSupport
-                : groundProbeSupport;
+            CharacterFootPlanBuildOrigin currentFrameOrigin = BuildPlanOrigin(
+                CharacterFootPlanOriginKind.CurrentFrameSupport,
+                plan.Sequence,
+                step.LandingEventIdentity,
+                currentSole,
+                groundProbeStart,
+                groundProbeSupport,
+                up);
+            CharacterFootPlanBuildOrigin activeOutputOrigin = outgoingOutputAvailable &&
+                                                               runtime.HasLastOutputSole
+                ? BuildPlanOrigin(
+                    CharacterFootPlanOriginKind.ActivePlanOutput,
+                    plan.Sequence,
+                    plan.LandingEventIdentity,
+                    runtime.LastOutputSole,
+                    runtime.LastOutputGroundPath,
+                    runtime.LastOutputGroundSupport,
+                    up)
+                : default;
+            CharacterFootPlanBuildOrigin projectedLandingOrigin = default;
             if (plan.HasExecutablePath && plan.FutureSupport.IsValid)
             {
                 FootPlacementSurface plannedLandingSupport = ResolveSupportAtRoutePoint(
@@ -2418,23 +2554,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up);
                 if (plannedLandingSupport.IsValid)
                 {
-                    successorSole = plan.ProjectedLanding;
-                    successorProbeSupport = plannedLandingSupport;
-                    successorProbeStart = plannedLandingSupport.Point;
+                    projectedLandingOrigin = BuildPlanOrigin(
+                        CharacterFootPlanOriginKind.ProjectedLanding,
+                        plan.Sequence,
+                        plan.LandingEventIdentity,
+                        plan.ProjectedLanding,
+                        plannedLandingSupport.Point,
+                        plannedLandingSupport,
+                        up);
                 }
             }
-            if (outgoingOutputAvailable && runtime.HasLastOutputSole)
-            {
-                FootPlacementSurface projectedSupport = ResolveSupportAtRoutePoint(
-                    successorProbeSupport,
-                    successorSole,
-                    up);
-                if (projectedSupport.IsValid)
-                {
-                    successorProbeSupport = projectedSupport;
-                    successorProbeStart = projectedSupport.Point;
-                }
-            }
+            CharacterFootPlanBuildOrigin handoffOrigin = default;
             if (landingHandoff.HasContactTarget &&
                 step.IsAuthoritative &&
                 landingHandoff.ContactLandingEventIdentity == step.LandingEventIdentity)
@@ -2444,13 +2574,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landingHandoff.ContactAnkleRotation);
                 Vector3 handoffSole =
                     (handoffContacts.HeelPosition + handoffContacts.ToePosition) * 0.5f;
-                successorProbeSupport = ResolveSupportAtRoutePoint(
+                FootPlacementSurface handoffSupport = ResolveSupportAtRoutePoint(
                     landingHandoff.ContactSurface,
                     handoffSole,
                     up);
-                successorProbeStart = successorProbeSupport.IsValid
-                    ? successorProbeSupport.Point
-                    : handoffSole;
+                handoffOrigin = BuildPlanOrigin(
+                    CharacterFootPlanOriginKind.LandingHandoff,
+                    plan.Sequence,
+                    plan.LandingEventIdentity,
+                    handoffSole,
+                    handoffSupport.IsValid ? handoffSupport.Point : handoffSole,
+                    handoffSupport,
+                    up);
             }
             bool incomingSuccessorNeedsSlot = currentPlanMatches &&
                                               plan.HasExecutablePath &&
@@ -2549,63 +2684,52 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                 }
             }
-            bool hasSuccessorOrigin = successorProbeSupport.IsValid &&
-                                      IsFinite(successorProbeStart) &&
-                                      IsFinite(successorSole);
             bool hasCommittedLanding = landingCommit.TryResolve(
                 plan.LandingEventIdentity,
                 out Vector3 committedLandingSole,
                 out FootPlacementSurface committedLandingSupport);
+            CharacterFootPlanBuildOrigin committedLandingOrigin = default;
             if (hasCommittedLanding)
             {
-                successorSole = committedLandingSole;
-                successorProbeSupport = ResolveSupportAtRoutePoint(
+                FootPlacementSurface resolvedCommittedSupport = ResolveSupportAtRoutePoint(
                     committedLandingSupport,
                     committedLandingSole,
                     up);
-                successorProbeStart = successorProbeSupport.IsValid
-                    ? successorProbeSupport.Point
-                    : default;
-                hasCommittedLanding = successorProbeSupport.IsValid;
-                hasSuccessorOrigin = hasCommittedLanding;
-            }
-            else if (activeEventReplaced && !hasSuccessorOrigin)
-            {
-                FootPlacementSurface currentOriginSupport = ResolveSupportAtRoutePoint(
-                    groundProbeSupport,
-                    currentSole,
+                committedLandingOrigin = BuildPlanOrigin(
+                    CharacterFootPlanOriginKind.CommittedLanding,
+                    plan.Sequence,
+                    plan.LandingEventIdentity,
+                    committedLandingSole,
+                    resolvedCommittedSupport.IsValid
+                        ? resolvedCommittedSupport.Point
+                        : committedLandingSole,
+                    resolvedCommittedSupport,
                     up);
-                if (currentOriginSupport.IsValid)
-                {
-                    successorSole = currentSole;
-                    successorProbeSupport = currentOriginSupport;
-                    successorProbeStart = currentOriginSupport.Point;
-                    hasSuccessorOrigin = true;
-                }
-                else
-                {
-                    hasSuccessorOrigin = false;
-                }
             }
+            CharacterFootPlanBuildOrigin eventSuccessorOrigin = committedLandingOrigin.HasSupport
+                ? committedLandingOrigin
+                : handoffOrigin.HasSupport
+                    ? handoffOrigin
+                    : projectedLandingOrigin;
+            CharacterFootPlanBuildOrigin replacementOrigin = committedLandingOrigin.HasSupport
+                ? committedLandingOrigin
+                : currentFrameOrigin;
             if (currentPlanMatches && plan.HasExecutablePath &&
                 !intentRevisionRequested &&
                 CanPrepareEventSuccessor(plan) &&
                 IsMotionWithinCommitTolerance(plan) &&
-                hasSuccessorOrigin &&
+                eventSuccessorOrigin.HasSupport &&
                 incomingPlanningCandidate &&
                 !plan.MatchesAuthoritativeEvent(in incomingStep) &&
                 runtime.CanBeginTransition &&
                 m_FutureBodyTrajectorySource != null)
             {
-                bool created = CreatePlan(
+                var request = new CharacterFootPlanBuildRequest(
                     CharacterFootPlanAttemptKind.EventSuccessor,
                     side,
-                    runtime.Revision,
                     in incomingStep,
                     renderFrame,
-                    successorProbeStart,
-                    successorProbeSupport,
-                    successorSole,
+                    in eventSuccessorOrigin,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -2616,7 +2740,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength,
+                    legLength);
+                bool created = CreatePlan(
+                    runtime.Revision,
+                    in request,
                     out CharacterFootPlanAttemptDiagnostics planAttempt);
                 runtime.RecordPlanAttempt(in planAttempt);
                 if (created)
@@ -2627,7 +2754,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 ulong sourceSequence = step.LandingEventIdentity;
                 bool canAttempt = planningCandidate &&
-                                  hasSuccessorOrigin &&
+                                  replacementOrigin.IsAvailable &&
                                   m_FutureBodyTrajectorySource != null &&
                                   !runtime.HasAttemptedIntentRevision(
                                       sourceSequence,
@@ -2636,15 +2763,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool created = false;
                 if (canAttempt)
                 {
-                    created = CreatePlan(
+                    var request = new CharacterFootPlanBuildRequest(
                         CharacterFootPlanAttemptKind.CurrentEventReplacement,
                         side,
-                        runtime.Revision,
                         in step,
                         renderFrame,
-                        successorProbeStart,
-                        successorProbeSupport,
-                        successorSole,
+                        in replacementOrigin,
                         soleSupportRadius,
                         rootWorldPosition,
                         rootWorldRotation,
@@ -2655,7 +2779,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in motionTimeline,
                         movementPlaybackTime,
                         up,
-                        legLength,
+                        legLength);
+                    created = CreatePlan(
+                        runtime.Revision,
+                        in request,
                         out CharacterFootPlanAttemptDiagnostics planAttempt);
                     runtime.RecordPlanAttempt(in planAttempt);
                     runtime.MarkIntentRevisionAttempt(sourceSequence, in motionTimeline);
@@ -2701,15 +2828,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     motionTimeline.Generation,
                     motionTimeline.AuthorityTick.Value))
             {
-                CreatePlan(
+                var request = new CharacterFootPlanBuildRequest(
                     CharacterFootPlanAttemptKind.Initial,
                     side,
-                    plan,
                     in step,
                     renderFrame,
-                    groundProbeStart,
-                    groundProbeSupport,
-                    currentSole,
+                    in currentFrameOrigin,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -2720,7 +2844,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength,
+                    legLength);
+                CreatePlan(
+                    plan,
+                    in request,
                     out CharacterFootPlanAttemptDiagnostics planAttempt);
                 runtime.RecordPlanAttempt(in planAttempt);
                 runtime.MarkIntentRevisionAttempt(
@@ -2733,28 +2860,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.MatchesAuthoritativeEvent(in step) &&
                 intentRevisionRequested)
             {
-                if (!TryResolveIntentRevisionOrigin(
-                        runtime,
-                        plan,
-                        up,
-                        out Vector3 revisionSole,
-                        out Vector3 revisionGroundPath,
-                        out FootPlacementSurface revisionGroundSupport))
-                {
-                    revisionSole = currentSole;
-                    revisionGroundPath = groundProbeStart;
-                    revisionGroundSupport = groundProbeSupport;
-                }
+                CharacterFootPlanBuildOrigin revisionOrigin = activeOutputOrigin.IsAvailable
+                    ? activeOutputOrigin
+                    : currentFrameOrigin;
                 runtime.MarkIntentRevisionAttempt(plan.Sequence, in motionTimeline);
-                bool created = CreatePlan(
+                var request = new CharacterFootPlanBuildRequest(
                     CharacterFootPlanAttemptKind.IntentRevision,
                     side,
-                    runtime.Revision,
                     in step,
                     renderFrame,
-                    revisionGroundPath,
-                    revisionGroundSupport,
-                    revisionSole,
+                    in revisionOrigin,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -2765,7 +2880,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength,
+                    legLength);
+                bool created = CreatePlan(
+                    runtime.Revision,
+                    in request,
                     out CharacterFootPlanAttemptDiagnostics planAttempt);
                 runtime.RecordPlanAttempt(in planAttempt);
                 if (created)
@@ -2835,28 +2953,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.SoleSupportRadius,
                 Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
 
-        static bool TryResolveIntentRevisionOrigin(
-            CharacterFootPlanExecutionState runtime,
-            CharacterPredictiveFootPlanExecution plan,
-            Vector3 up,
-            out Vector3 sole,
-            out Vector3 groundPath,
-            out FootPlacementSurface support)
+        static CharacterFootPlanBuildOrigin BuildPlanOrigin(
+            CharacterFootPlanOriginKind kind,
+            ulong sourcePlanSequence,
+            ulong sourceLandingEventIdentity,
+            Vector3 sole,
+            Vector3 fallbackGroundPath,
+            FootPlacementSurface sourceSupport,
+            Vector3 up)
         {
-            sole = default;
-            groundPath = default;
-            support = default;
-            if (!runtime.HasCompleteOutputForPlan(plan.Sequence))
-            {
-                return false;
-            }
-            sole = runtime.LastOutputSole;
-            support = ResolveSupportAtRoutePoint(
-                runtime.LastOutputGroundSupport,
+            FootPlacementSurface support = ResolveSupportAtRoutePoint(
+                sourceSupport,
                 sole,
                 up);
-            groundPath = support.IsValid ? support.Point : default;
-            return support.IsValid && IsFinite(sole) && IsFinite(groundPath);
+            Vector3 groundPath = support.IsValid ? support.Point : fallbackGroundPath;
+            return new CharacterFootPlanBuildOrigin(
+                kind,
+                sourcePlanSequence,
+                sourceLandingEventIdentity,
+                sole,
+                groundPath,
+                support,
+                up);
         }
 
         bool ShouldRequestIntentRevision(
@@ -2990,29 +3108,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         bool CreatePlan(
-            CharacterFootPlanAttemptKind attemptKind,
-            CharacterFootSide side,
             CharacterPredictiveFootPlanExecution plan,
-            in AnimationPredictedFootStepSample step,
-            ulong renderFrame,
-            Vector3 groundProbeStart,
-            FootPlacementSurface groundProbeSupport,
-            Vector3 animationSoleAtGeneration,
-            float soleSupportRadius,
-            Vector3 rootStart,
-            Quaternion rootStartRotation,
-            Vector3 presentedBodyStartPosition,
-            Vector3 committedBodyVelocity,
-            float trajectoryCurvatureDegreesPerSecond,
-            bool trajectoryCurvatureAvailable,
-            in CommittedLocomotionPlanarMotionTimeline motionTimeline,
-            double movementPlaybackTime,
-            Vector3 up,
-            float legLength,
+            in CharacterFootPlanBuildRequest request,
             out CharacterFootPlanAttemptDiagnostics attempt)
         {
+            CharacterFootPlanAttemptKind attemptKind = request.AttemptKind;
+            CharacterFootSide side = request.Side;
+            AnimationPredictedFootStepSample step = request.Step;
+            ulong renderFrame = request.RenderFrame;
+            CharacterFootPlanBuildOrigin origin = request.Origin;
+            float soleSupportRadius = request.SoleSupportRadius;
+            Vector3 rootStart = request.RootStart;
+            Quaternion rootStartRotation = request.RootStartRotation;
+            Vector3 presentedBodyStartPosition = request.PresentedBodyStartPosition;
+            Vector3 committedBodyVelocity = request.CommittedBodyVelocity;
+            float trajectoryCurvatureDegreesPerSecond =
+                request.TrajectoryCurvatureDegreesPerSecond;
+            bool trajectoryCurvatureAvailable = request.TrajectoryCurvatureAvailable;
+            CommittedLocomotionPlanarMotionTimeline motionTimeline = request.MotionTimeline;
+            double movementPlaybackTime = request.MovementPlaybackTime;
+            Vector3 up = request.Up;
+            float legLength = request.LegLength;
             if (attemptKind == CharacterFootPlanAttemptKind.None)
                 throw new ArgumentOutOfRangeException(nameof(attemptKind));
+            if (!origin.IsAvailable)
+                throw new ArgumentException("Predictive Foot Plan build origin is unavailable.", nameof(request));
             ulong sequence = AllocatePlanSequence();
             float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(0f, (float)(motionTimeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
@@ -3050,15 +3170,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     0,
                     0,
                     0,
-                    null);
+                    null,
+                    in origin);
                 return false;
             }
             var rootTrajectory = new CharacterPredictiveFootRootTrajectory(
                 rootStart,
                 rootStartRotation,
                 presentedBodyStartPosition,
-                groundProbeStart,
-                animationSoleAtGeneration,
+                origin.GroundPath,
+                origin.Sole,
                 committedBodyVelocity,
                 trajectoryCurvatureDegreesPerSecond,
                 trajectoryCurvatureAvailable,
@@ -3067,7 +3188,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 futureBodyTrajectory,
                 up,
                 in step);
-            Vector3 pathStart = groundProbeStart;
+            Vector3 pathStart = origin.GroundPath;
             rootTrajectory.EvaluateEventPhase(1f, out Vector3 rootLanding, out Quaternion rootLandingRotation);
             Vector3 landing = rootTrajectory.EvaluateFootRoute(1f);
             Vector3 predictedHip = rootTrajectory.EvaluateHipRoute(1f);
@@ -3097,7 +3218,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in step,
                     in rootTrajectory,
                     pathStart,
-                    groundProbeSupport,
+                    origin.Support,
                     virtualGroundSplitEventPhase,
                     virtualGroundSplitLandingEventIdentity,
                     m_GroundLayerMask,
@@ -3156,7 +3277,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason,
                     in query);
             }
-            attempt = new CharacterFootPlanAttemptDiagnostics(attemptKind, plan);
+            attempt = new CharacterFootPlanAttemptDiagnostics(attemptKind, plan, in origin);
             return plan.HasExecutablePath;
         }
 

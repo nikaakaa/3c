@@ -606,6 +606,15 @@ namespace BTSMTL.Diagnostics
         public int PlanAttemptQueryCount;
         public int PlanAttemptRawHitCount;
         public int PlanAttemptRejectedQueryCount;
+        public string PlanAttemptOriginKind;
+        public ulong PlanAttemptOriginPlanSequence;
+        public ulong PlanAttemptOriginLandingEventIdentity;
+        public Vector3 PlanAttemptOriginSole;
+        public Vector3 PlanAttemptOriginGroundPath;
+        public int PlanAttemptOriginSupportSurfaceIdentity;
+        public Vector3 PlanAttemptOriginSupportPoint;
+        public Vector3 PlanAttemptOriginSupportNormal;
+        public float PlanAttemptOriginSoleHeightAboveSupport;
         public bool PlanFadingOut;
         public float PlanRetentionWeight;
         public float IntentLandingDisplacementError;

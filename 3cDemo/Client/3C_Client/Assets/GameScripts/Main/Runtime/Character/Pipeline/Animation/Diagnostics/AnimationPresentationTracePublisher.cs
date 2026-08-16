@@ -443,6 +443,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PlanAttemptRejectedQueryCount = hasModifier
                     ? modifier.PlanAttempt.RejectedQueryCount
                     : 0,
+                PlanAttemptOriginKind = hasModifier
+                    ? modifier.PlanAttempt.OriginKind.ToString()
+                    : CharacterFootPlanOriginKind.None.ToString(),
+                PlanAttemptOriginPlanSequence = hasModifier
+                    ? modifier.PlanAttempt.OriginPlanSequence
+                    : 0,
+                PlanAttemptOriginLandingEventIdentity = hasModifier
+                    ? modifier.PlanAttempt.OriginLandingEventIdentity
+                    : 0,
+                PlanAttemptOriginSole = hasModifier
+                    ? modifier.PlanAttempt.OriginSole
+                    : default,
+                PlanAttemptOriginGroundPath = hasModifier
+                    ? modifier.PlanAttempt.OriginGroundPath
+                    : default,
+                PlanAttemptOriginSupportSurfaceIdentity = hasModifier
+                    ? modifier.PlanAttempt.OriginSupportSurfaceIdentity
+                    : 0,
+                PlanAttemptOriginSupportPoint = hasModifier
+                    ? modifier.PlanAttempt.OriginSupportPoint
+                    : default,
+                PlanAttemptOriginSupportNormal = hasModifier
+                    ? modifier.PlanAttempt.OriginSupportNormal
+                    : default,
+                PlanAttemptOriginSoleHeightAboveSupport = hasModifier
+                    ? modifier.PlanAttempt.OriginSoleHeightAboveSupport
+                    : 0f,
                 PlanFadingOut = hasModifier && modifier.PlanFadingOut,
                 PlanRetentionWeight = hasModifier ? modifier.PlanRetentionWeight : 0f,
                 IntentLandingDisplacementError = hasModifier

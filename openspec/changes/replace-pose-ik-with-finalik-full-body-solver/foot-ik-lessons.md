@@ -52,6 +52,8 @@
 38. Swing交接不能冻结绝对世界Ankle：run `2633c9...`中动画与Pelvis继续运动，绝对冻结导致Reach单帧补高53.9cm、Final Goal跳72.4cm。必须冻结相对Original Animated Ankle/Hip的修正，保留原动画运动；只有Ground Path与Support保持世界事实。
 39. 参考文章4明确区分廉价预测更新与昂贵路径重建：每帧让已提交路线跟随正式Root位移/转向，误差跨界才重新Capsule Sweep。世界Path完全冻结会与角色分离；每帧查询又会抖动且浪费性能。
 40. Traditional与Predictive必须在Release前按整步选择并保持粘滞。Traditional可处理急加减速、低速急转、无历史和空中状态，但不能成为Query Rejected后的中途fallback。
+41. 执行投影之后，偏差判断也必须进入同一投影坐标域。run `db699e86...`仍用当前身体位置对比未投影冻结Landing，正常位移被累计成左脚7.67m误差，136帧内左右脚分别生成23/27个Plan；这不是意图真的改变，而是比较域错误。
+42. 唯一Revision槽必须有交接截止时间。run `db699e86...`中左脚旧事件在phase 0.944仍创建Intent Revision，直到新事件成为Current仍占槽，随后产生frame148-157共10帧Swing无Path；Intent Revision若不能在`ApproachingContact`前完成就不应启动，交接边界必须让Incoming Successor优先。
 
 ## 当前证据与下一owner
 
@@ -61,3 +63,4 @@
 - frame172出现`AnchorCaptured`，frame173立即`AnchorDistanceExceeded`；Landing后的Locked所有权尚未与事件边界形成同一事务。
 - Pelvis 244行内换支撑44次，是次级抖动owner；先闭合脚部Plan与Anchor事务，再处理Pelvis。
 - Idle锁脚入口已由run `d6ee145...`闭环，不再把后续运动跳变归因于Idle权重曲线。
+- run `db699e86...`的231行全部满足1221列合同；压力段左/右Swing无Executable Path分别为21/10帧，Revision占用51/65帧，骨盆Y单帧最大跳21.4cm。FinalIK位置残差仅`3.3e-7m/3.4e-5m`且最终物理穿透约`1e-7m`，首因已确认在Plan误差域与事件槽交接。

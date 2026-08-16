@@ -473,6 +473,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Quaternion ProjectedRootStartRotation =>
             (m_WorldProjectionRotation * RootStartRotation).normalized;
         internal Vector3 ProjectedRootLanding => ProjectWorldPoint(RootLanding);
+        internal Vector3 ProjectedPresentedBodyLanding => ProjectWorldPoint(
+            RootTrajectory.EvaluatePresentedBodyLandingPosition());
         internal FootPlacementSurface ProjectedFutureSupport => ProjectSurface(FutureSupport);
         internal Quaternion ProjectedRootLandingRotation =>
             (m_WorldProjectionRotation * RootLandingRotation).normalized;
@@ -783,7 +785,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 expectedBodyPosition = RootTrajectory
                 .EvaluatePresentedBodyPositionAtEventPhase(ActionStepPhase);
             float linearLandingError = Vector3.ProjectOnPlane(
-                    currentPresentedBodyPosition - expectedBodyPosition,
+                    currentPresentedBodyPosition - ProjectWorldPoint(expectedBodyPosition),
                     RootTrajectory.Up)
                 .magnitude;
             MotionLinearLandingError = linearLandingError;
@@ -792,7 +794,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out _,
                 out Quaternion expectedBodyRotation);
             float angularDifference = Quaternion.Angle(
-                expectedBodyRotation,
+                (m_WorldProjectionRotation * expectedBodyRotation).normalized,
                 currentPresentedBodyRotation) * Mathf.Deg2Rad;
             float angularLever = Mathf.Max(
                 SoleSupportRadius,

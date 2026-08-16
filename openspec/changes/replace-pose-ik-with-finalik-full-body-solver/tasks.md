@@ -61,6 +61,7 @@
 - [ ] 4.9A Event Successor成为Current前不得参与Goal或Blend；事件identity换代时必须原子提升为Active，并只由新Plan自身`Release -> LiftOff`权重与旧Landing Stance/Anchor完成交接，禁止在新Swing中按Render Delta混合旧Landing目标。
 - [ ] 4.9B Plan必须在`ReleasePhase`进入Executing并执行`Release -> LiftOff`连续输出权重；Ground Path进度独立保持到`PathStartPhase`才开始，禁止用几何起点截断所有权淡入。
 - [ ] 4.9C Event Successor成为Current前必须按当前身体位置和朝向重新验证冻结轨迹；过期Successor不得提升、提交Landing/Anchor或产生下一Successor，必须以`MotionDeviationExceeded`退出并从当前真实Sole与Support创建Current Event计划。
+- [ ] 4.9D Intent Revision只有在现有Blend可于`ApproachingContact`前完成时才允许创建；进入接触交接边界后Incoming Event Successor优先占用唯一过渡槽，过晚的旧事件Intent Revision必须退出，禁止其占槽直到新事件进入Swing并制造无Path空窗。
 
 ## 5. GDC Foot Path与Ground Envelope
 

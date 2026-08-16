@@ -2001,6 +2001,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? successorProbeSupport.Point
                     : handoffSole;
             }
+            bool incomingSuccessorNeedsSlot = currentPlanMatches &&
+                                              plan.HasExecutablePath &&
+                                              CanPrepareEventSuccessor(plan) &&
+                                              incomingPlanningCandidate &&
+                                              !plan.MatchesAuthoritativeEvent(in incomingStep);
+            if (runtime.HasIntentRevision &&
+                (incomingSuccessorNeedsSlot || activeEventReplaced))
+            {
+                runtime.CancelRevision(CharacterPredictiveFootPlanEndReason.EventReplaced);
+            }
             if (runtime.HasRevision)
             {
                 CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
@@ -2315,6 +2325,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out _);
             if (supportPhase != AnimationFootSupportPhase.Unsupported)
                 return false;
+            float secondsToApproachContact = Mathf.Max(
+                0f,
+                (plan.ApproachContactPhase - plan.ActionStepPhase) *
+                plan.RootTrajectory.ActionStepDurationSeconds);
+            float revisionBlendSeconds = 1f / Mathf.Max(0.0001f, m_TransitionBlendSpeed);
+            if (secondsToApproachContact <= revisionBlendSeconds)
+                return false;
             float remainingSeconds = Mathf.Max(
                 0f,
                 (1f - plan.ActionStepPhase) *
@@ -2391,8 +2408,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 landingSample.RelativePositionX,
                 landingSample.RelativePositionY,
                 landingSample.RelativePositionZ);
-            Vector3 expectedLandingPosition =
-                plan.RootTrajectory.EvaluatePresentedBodyLandingPosition();
+            Vector3 expectedLandingPosition = plan.ProjectedPresentedBodyLanding;
             float linearError = Vector3.ProjectOnPlane(
                     currentLandingPosition - expectedLandingPosition,
                     up)

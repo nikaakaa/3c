@@ -163,9 +163,10 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 #### Scenario: Intent Revision与Event Successor复用过渡槽
 
 - **WHEN** 当前Swing因committed意图改变需要Intent Revision，且同脚Incoming事件也已可见
-- **THEN** 当前Swing的Intent Revision MUST优先在Unsupported阶段完成
-- **AND** Event Successor MUST等当前Plan进入ApproachingContact且过渡槽空闲后预建
-- **AND** 两者 MUST只顺序复用同一槽，不得并存或让Successor阻断当前Swing的唯一Intent Revision
+- **THEN** Intent Revision只有在现有Blend可于`ApproachingContact`前完成时才可创建
+- **AND** 当前Plan进入`ApproachingContact`后，Incoming Event Successor MUST优先占用唯一过渡槽并在事件换代前预建
+- **AND** 过晚且尚未完成的旧事件Intent Revision MUST退出，不得占槽直到新事件进入Swing
+- **AND** 两者 MUST只顺序复用同一槽，不得并存
 
 #### Scenario: Plan输出所有权先于Ground Path空间推进
 

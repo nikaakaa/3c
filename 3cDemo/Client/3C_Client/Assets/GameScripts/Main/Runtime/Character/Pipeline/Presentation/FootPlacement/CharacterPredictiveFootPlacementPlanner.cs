@@ -83,6 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float m_OutputContinuityWeight;
             Vector3 m_OutputContinuityPositionOffset;
             Quaternion m_OutputContinuityRotationOffset = Quaternion.identity;
+            bool m_SuppressNextOutputContinuityCapture;
 
             internal void BeginFrame()
             {
@@ -95,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision is not executable.");
                 CaptureTransitionOrigin();
+                ClearOutputContinuity();
                 HasRevision = true;
                 TransitionKind = FootPlanTransitionKind.IntentRevision;
                 RevisionBlendWeight = 0f;
@@ -120,6 +122,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!HasRevision || !Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
+                ClearOutputContinuity();
+                m_SuppressNextOutputContinuityCapture = true;
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 CharacterPredictiveFootPlacementPlan retired = Active;
                 Active = Revision;
@@ -368,6 +372,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float deltaSeconds,
                 float blendSpeed,
                 bool baselineOwnsFoot,
+                bool allowOwnerChangeCapture,
                 bool targetAvailable,
                 ulong targetPlanSequence,
                 Vector3 targetPosition,
@@ -377,8 +382,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 resolvedPosition = targetPosition;
                 resolvedRotation = targetRotation;
+                bool suppressCapture = m_SuppressNextOutputContinuityCapture;
+                m_SuppressNextOutputContinuityCapture = false;
                 if (baselineOwnsFoot || !targetAvailable || targetPlanSequence == 0 ||
                     !IsFinite(targetPosition) || !IsFinite(targetRotation))
+                {
+                    ClearOutputContinuity();
+                    return;
+                }
+                if (!allowOwnerChangeCapture || suppressCapture)
                 {
                     ClearOutputContinuity();
                     return;
@@ -461,6 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentRevisionAttemptTrajectoryGeneration = 0;
                 IntentRevisionAttemptAuthorityTick = 0;
                 ClearOutputContinuity();
+                m_SuppressNextOutputContinuityCapture = false;
             }
 
             static bool IsFinite(Vector3 value) =>
@@ -1278,9 +1291,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         revisionPathRootStart,
                         revisionBlend);
                 }
-                currentPathSupport = revisionTargetAvailable && revisionBlend >= 0.5f
-                    ? revisionTargetData.Support
-                    : outgoingPathSupport;
+                currentPathSupport = outgoingPathSupport;
                 authoredAnimationClearance = revisionTargetAvailable
                     ? Mathf.Lerp(targetData.AuthoredAnimationClearance, revisionTargetData.AuthoredAnimationClearance, revisionBlend)
                     : targetData.AuthoredAnimationClearance;
@@ -1296,22 +1307,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 compositeAnimationClearance = revisionTargetAvailable
                     ? Mathf.Lerp(targetData.CompositeAnimationClearance, revisionTargetData.CompositeAnimationClearance, revisionBlend)
                     : targetData.CompositeAnimationClearance;
-                Vector3 pathSurfaceNormal = currentPathSupport.IsValid
-                    ? currentPathSupport.Normal.normalized
-                    : up;
-                Vector3 baselineSole = (baselineContacts.HeelPosition + baselineContacts.ToePosition) * 0.5f;
-                Vector3 preEnvelopeNormal = ResolvePathClearanceNormal(
-                    baselineSole,
-                    currentPathPosition,
-                    pathSurfaceNormal,
-                    up,
-                    plan.SoleSupportRadius);
                 preHeelDistance = Vector3.Dot(
                     baselineContacts.HeelPosition - currentPathPosition,
-                    preEnvelopeNormal);
+                    up);
                 preToeDistance = Vector3.Dot(
                     baselineContacts.ToePosition - currentPathPosition,
-                    preEnvelopeNormal);
+                    up);
                 requiredLift = Vector3.Dot(predictiveAnklePosition - pose.AnklePosition, up);
                 Vector3 activeResolvedAnklePosition = hasTransitionOrigin
                     ? runtime.IsFadingOut
@@ -1362,14 +1363,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         revisionResolvedAnkleRotation,
                         revisionBlend).normalized;
                 }
-                ulong outputPlanSequence = revisionTargetAvailable && revisionTransitionBlend >= 0.5f
-                    ? revisionPlan.Sequence
-                    : plan.Sequence;
+                ulong outputPlanSequence = plan.Sequence;
                 runtime.ResolveOutputContinuity(
                     renderFrame,
                     presentationDeltaSeconds,
                     m_TransitionBlendSpeed,
                     baselineOwnsFoot,
+                    !revisionTargetAvailable,
                     true,
                     outputPlanSequence,
                     resolvedAnklePosition,
@@ -1379,56 +1379,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootPlacementSoleContactPose resolvedContacts = pose.ResolveSoleContacts(
                     resolvedAnklePosition,
                     resolvedAnkleRotation);
-                Vector3 resolvedSole = (resolvedContacts.HeelPosition + resolvedContacts.ToePosition) * 0.5f;
-                Vector3 envelopeNormal = ResolvePathClearanceNormal(
-                    resolvedSole,
-                    currentPathPosition,
-                    pathSurfaceNormal,
-                    up,
-                    plan.SoleSupportRadius);
                 postHeelDistance = Vector3.Dot(
                     resolvedContacts.HeelPosition - currentPathPosition,
-                    envelopeNormal);
+                    up);
                 postToeDistance = Vector3.Dot(
                     resolvedContacts.ToePosition - currentPathPosition,
-                    envelopeNormal);
+                    up);
                 predictiveOwnsSoleClearance = !stanceOwnsFoot &&
                                               !runtime.IsFadingOut &&
                                               authoritativePredictionBlend >= 0.999999f;
-                if (!stanceOwnsFoot && !runtime.IsFadingOut)
-                {
-                    CharacterFootGroundingHitDiagnostics pathClearanceSupport =
-                        BuildPathSupportDiagnostics(
-                            currentPathSupport,
-                            currentPathPosition,
-                            envelopeNormal);
-                    CharacterFootGroundingHitDiagnostics currentClearanceSupport =
-                        grounding.SoleSupport;
-                    float clearanceTranslation = Mathf.Max(
-                        predictiveOwnsSoleClearance
-                            ? ResolveSoleClearanceTranslation(
-                                in resolvedContacts,
-                                up,
-                                in pathClearanceSupport)
-                            : 0f,
-                        ResolveSoleClearanceTranslation(
-                            in resolvedContacts,
-                            up,
-                            in currentClearanceSupport));
-                    if (clearanceTranslation > 0f)
-                    {
-                        resolvedAnklePosition += up * clearanceTranslation;
-                        resolvedContacts = pose.ResolveSoleContacts(
-                            resolvedAnklePosition,
-                            resolvedAnkleRotation);
-                        postHeelDistance = Vector3.Dot(
-                            resolvedContacts.HeelPosition - currentPathPosition,
-                            envelopeNormal);
-                        postToeDistance = Vector3.Dot(
-                            resolvedContacts.ToePosition - currentPathPosition,
-                            envelopeNormal);
-                    }
-                }
                 if (!stanceOwnsFoot)
                     appliedLift = Vector3.Dot(resolvedAnklePosition - pose.AnklePosition, up);
                 bool finalReachValid = true;
@@ -1454,10 +1413,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             resolvedAnkleRotation);
                         postHeelDistance = Vector3.Dot(
                             resolvedContacts.HeelPosition - currentPathPosition,
-                            envelopeNormal);
+                            up);
                         postToeDistance = Vector3.Dot(
                             resolvedContacts.ToePosition - currentPathPosition,
-                            envelopeNormal);
+                            up);
                     }
                 }
                 predictionReachRatio = Vector3.Distance(appliedHip, resolvedAnklePosition) / legLength;
@@ -1485,6 +1444,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationDeltaSeconds,
                     m_TransitionBlendSpeed,
                     baselineOwnsFoot,
+                    true,
                     false,
                     0,
                     Vector3.zero,
@@ -1603,11 +1563,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f,
                 currentPathPosition,
                 currentPathSupport,
-                revisionTargetAvailable && revisionTransitionBlend >= 0.5f
-                    ? revisionPlan.Sequence
-                    : targetAvailable
-                        ? plan.Sequence
-                        : 0,
+                targetAvailable ? plan.Sequence : 0,
                 currentPathRoot,
                 currentPathRootStart,
                 currentPathHip);
@@ -1682,18 +1638,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Mathf.Clamp01(weight);
         }
 
-        static CharacterFootGroundingHitDiagnostics BuildPathSupportDiagnostics(
-            FootPlacementSurface support,
-            Vector3 pathPosition,
-            Vector3 clearanceNormal) =>
-            support.IsValid
-                ? new CharacterFootGroundingHitDiagnostics(
-                    new FootPlacementSurface(
-                        support.Collider,
-                        pathPosition,
-                        clearanceNormal.normalized))
-                : default;
-
         static Vector3 ResolvePathClearanceNormal(
             Vector3 sole,
             Vector3 pathPosition,
@@ -1710,23 +1654,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    Vector3.Dot(normalizedUp, normal) > 0.0001f
                 ? normal
                 : normalizedUp;
-        }
-
-        static float ResolveSoleClearanceTranslation(
-            in CharacterFootPlacementSoleContactPose contacts,
-            Vector3 up,
-            in CharacterFootGroundingHitDiagnostics support)
-        {
-            if (!support.HasHit)
-                return 0f;
-            Vector3 normal = support.Normal.normalized;
-            float upNormalDot = Vector3.Dot(up, normal);
-            if (upNormalDot <= 0.0001f)
-                return 0f;
-            float heelDistance = Vector3.Dot(contacts.HeelPosition - support.Point, normal);
-            float toeDistance = Vector3.Dot(contacts.ToePosition - support.Point, normal);
-            float penetration = Mathf.Max(0f, -Mathf.Min(heelDistance, toeDistance));
-            return penetration / upNormalDot;
         }
 
         static bool TryEvaluateFootTarget(

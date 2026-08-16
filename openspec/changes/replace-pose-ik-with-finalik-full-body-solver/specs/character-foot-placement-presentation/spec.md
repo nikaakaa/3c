@@ -88,6 +88,7 @@ Plan创建帧 MAY执行一次Artifact平面刚性重基，使同相位Artifact S
 - **WHEN** 新Future Body trajectory使剩余Landing误差跨越正式几何阈值
 - **THEN** 后继Revision MUST从当前已执行Sole位置、线速度和Body角速度连续重基
 - **AND** Revision过渡旧侧 MUST冻结上一完成帧Final Ankle相对同帧Original Animated Ankle的修正、Body Path相对Animated Hip的修正，以及Ground Path与Support；本帧旧侧 MUST由当前同相位Original动画加冻结修正组成，不得锁死Swing世界Ankle或继续求值已经过期的Active Path
+- **AND** 新Revision MUST先对自己的Ground Envelope、动画净空、方向与Reach完整求出安全Ankle，再与旧侧按唯一Revision Blend混合；MUST不因Plan Sequence在Blend中变化而启动第二层Output Continuity
 - **AND** 尚未产生本Plan完成输出的过期Plan MUST在首次贡献Goal前退出，并从当前真实Sole、Support与committed trajectory重建Current Event计划
 - **AND** 新Revision未Commit前，旧Active MUST继续以本帧执行投影输出；Rejected候选 MUST只记录失败并在下一正式tick保留重试资格
 - **AND** MUST不在后继尚未有效时清空旧Plan、清除完整Path或切换到Grounding Swing Goal
@@ -187,11 +188,11 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 - **AND** 新Plan首次参与Goal时 MUST从上一完成帧实际Ankle位置与旋转连续接管，再按正式过渡曲线收敛到新Plan输出
 - **AND** MUST不先暴露一帧Current Grounding或Original后再跳入新Plan
 
-#### Scenario: Revision提升为Active
+#### Scenario: Revision以唯一连续层提升为Active
 
-- **WHEN** Intent Revision在Blend期间已经从上一完成帧实际Ankle位置与旋转建立输出连续修正，随后Revision达到提升边界
-- **THEN** `PromoteRevision` MUST只原子替换Plan identity与geometry
-- **AND** 已建立的输出连续修正 MUST跨越Promotion继续按同一曲线衰减到零，不得在提升帧提前清除并暴露新Plan原始Goal
+- **WHEN** Intent Revision已从上一完成帧实际Ankle修正连续混合到新Plan完整安全目标，随后Revision达到提升边界
+- **THEN** `PromoteRevision` MUST只原子替换Plan identity、geometry与Support identity
+- **AND** Blend期间 MUST不在0.5边界硬切Support或启动额外Sequence连续层，Promotion后 MUST不保留第二个历史偏移继续拉回新Plan Goal
 
 #### Scenario: Plan输出所有权先于Ground Path空间推进
 
@@ -275,6 +276,7 @@ Body branch、Presentation reset、Rig/Projection replacement、Artifact identit
 - **WHEN** 一只脚处于Unlocked Swing且Plan Executing
 - **THEN** Final Ankle MUST由Native Sole XZ、Ground Envelope、Animation Clearance、Sole/Ankle旋转和当前Sole-to-Ankle几何重建
 - **AND** Current Grounding与冻结Query XYZ MUST不成为Swing空间基准
+- **AND** Plan完成Heel/Toe净空与连续交接后，Current Support MUST不再对该Swing Goal追加无时间状态的向上改写
 
 #### Scenario: Rejected Predictive候选
 
@@ -308,7 +310,7 @@ FinalSoleY = GroundHeight + Clearance
 
 - **WHEN** FootRate沿合法包络下降
 - **THEN** FinalSoleY MUST沿该包络下降并保留Animation Clearance
-- **AND** Current Grounding只可执行真实当前支撑的向上物理安全修正，不得规划另一条下降路径
+- **AND** Current Grounding只可在Current/Stance所有权内执行真实当前支撑的向上物理安全修正，不得在Executable Swing末端覆盖预测下降路径
 
 ### Requirement: Foot Orientation与Body Pivot必须进入同一全身Goal事务
 

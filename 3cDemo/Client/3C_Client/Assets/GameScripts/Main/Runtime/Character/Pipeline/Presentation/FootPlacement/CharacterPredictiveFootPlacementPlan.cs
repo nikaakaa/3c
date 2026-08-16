@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 executionSoleAtGeneration,
             Vector3 committedBodyVelocity,
             float trajectoryCurvatureDegreesPerSecond,
+            bool trajectoryCurvatureAvailable,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             CharacterFutureBodyTrajectory futureBodyTrajectory,
@@ -59,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FrozenMotionPlanarVelocity = motionVelocity;
             FrozenTrajectoryCurvatureDegreesPerSecond =
                 trajectoryCurvatureDegreesPerSecond;
+            FrozenTrajectoryCurvatureAvailable = trajectoryCurvatureAvailable;
             ContinuationPlanarVelocity = continuationVelocity;
             CurrentSegmentSwitchDelaySeconds = switchDelay;
             HasContinuation = hasContinuation;
@@ -94,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 FrozenPlanarVelocity { get; }
         internal Vector3 FrozenMotionPlanarVelocity { get; }
         internal float FrozenTrajectoryCurvatureDegreesPerSecond { get; }
+        internal bool FrozenTrajectoryCurvatureAvailable { get; }
         internal Vector3 ContinuationPlanarVelocity { get; }
         internal float FrozenYawVelocityDegreesPerSecond { get; }
         internal float FrozenMaximumYawVelocityDegreesPerSecond { get; }

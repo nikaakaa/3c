@@ -349,6 +349,8 @@ Projection与输出权重收口后，剩余大跳集中在Revision首帧：新�
 
 短测`3fd444fe57bf4c0082252a55e506b34b`运行稳定，但不能证明曲率修复有效：楼梯A/D段仍有左/右`27/23`次Revision，Final Goal相对Baseline的额外单帧变化最大约`28.2/25.9cm`。现有1217列只记录Future Body朝向Yaw和最大转速，没有记录本次新增的平面Trajectory Curvature及availability；二者不能混为一列。补齐该输入与Plan冻结值前，不得把`±720°/s`的朝向列当作曲率证据，也不得继续修改Revision阈值。
 
+正式诊断现已同时发布每帧committed Trajectory Curvature、其availability、Active Plan冻结曲率和冻结availability，流式CSV schema由1217列增至1225列。该改动不改变Future Body或Revision行为；只有新run证明这些字段如何换代后，才能判断是上游曲率不稳定、Unavailable被映射为零，还是Revision另有owner。
+
 ## 30. 原子Step payload不能等同于巨型值类型复制
 
 Current与Incoming同时进入左右脚Feature后，`ActionAnimationPlaybackFrame`达到10072字节。它仍作为值类型进入托管`Dictionary`时，Unity Mono在ActionSampling首次执行泛型传参便抛出`InvalidProgramException: Passing an argument of size '10072'`；C#编译和静态校验都无法发现这个运行时边界。

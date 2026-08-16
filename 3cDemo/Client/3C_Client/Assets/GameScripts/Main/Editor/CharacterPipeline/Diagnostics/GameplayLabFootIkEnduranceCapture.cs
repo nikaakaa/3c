@@ -18,11 +18,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [InitializeOnLoad]
     static class GameplayLabFootIkEnduranceCapture
     {
-        const int ColumnCount = 1217;
-        const int BaseColumnCount = 1119;
+        const int ColumnCount = 1225;
+        const int BaseColumnCount = 1127;
         const int GlobalColumnCount = 71;
-        const int LegColumnCount = 573;
-        const int BeforeSequenceColumnCount = 335;
+        const int LegColumnCount = 577;
+        const int BeforeSequenceColumnCount = 339;
         const int ReplacedSequenceColumnCount = 118;
         const int SequenceColumnCount = 146;
         const int CausalityColumnCount = 21;

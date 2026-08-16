@@ -327,6 +327,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ulong m_NextPlanSequence = 1;
         ulong m_PreparedRenderFrame;
         ulong m_PreparedCompletionIdentity;
+        float m_TrajectoryCurvatureDegreesPerSecond;
+        bool m_TrajectoryCurvatureAvailable;
 
         internal CharacterPredictiveFootPlacementPlanner(
             ActorId actorId,
@@ -394,6 +396,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootFeatureSample leftFeature = frame.UpstreamPose.LeftFootFeatures;
             AnimationFootFeatureSample rightFeature = frame.UpstreamPose.RightFootFeatures;
             Vector3 committedBodyVelocity = frame.Body.TargetVelocity;
+            m_TrajectoryCurvatureDegreesPerSecond = frame.TrajectoryCurvatureDegreesPerSecond;
+            m_TrajectoryCurvatureAvailable = frame.TrajectoryCurvatureAvailable;
             float trajectoryCurvatureDegreesPerSecond = frame.TrajectoryCurvatureAvailable
                 ? frame.TrajectoryCurvatureDegreesPerSecond
                 : 0f;
@@ -411,6 +415,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentedBodyPosition,
                 committedBodyVelocity,
                 trajectoryCurvatureDegreesPerSecond,
+                frame.TrajectoryCurvatureAvailable,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
                 m_Rig.LeftLegLength,
@@ -429,6 +434,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentedBodyPosition,
                 committedBodyVelocity,
                 trajectoryCurvatureDegreesPerSecond,
+                frame.TrajectoryCurvatureAvailable,
                 in motionTimeline,
                 frame.MovementPlaybackTime,
                 m_Rig.RightLegLength,
@@ -779,6 +785,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RightLandingHandoff = default;
             m_PreparedRenderFrame = 0;
             m_PreparedCompletionIdentity = 0;
+            m_TrajectoryCurvatureDegreesPerSecond = 0f;
+            m_TrajectoryCurvatureAvailable = false;
             m_Diagnostics = default;
             CharacterPredictiveFootPlacementDebugSnapshotRegistry.Remove(m_ActorId);
         }
@@ -1125,6 +1133,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in currentEventDiagnostics,
                 in incomingEventDiagnostics,
                 currentEventFootPoseWeight,
+                m_TrajectoryCurvatureDegreesPerSecond,
+                m_TrajectoryCurvatureAvailable,
                 planPredictionBlend,
                 authoritativePredictionBlend,
                 runtime.HasRevision,
@@ -1595,6 +1605,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 presentedBodyPosition,
             Vector3 committedBodyVelocity,
             float trajectoryCurvatureDegreesPerSecond,
+            bool trajectoryCurvatureAvailable,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             float legLength,
@@ -1767,6 +1778,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentedBodyPosition,
                     committedBodyVelocity,
                     trajectoryCurvatureDegreesPerSecond,
+                    trajectoryCurvatureAvailable,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1790,6 +1802,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentedBodyPosition,
                     committedBodyVelocity,
                     trajectoryCurvatureDegreesPerSecond,
+                    trajectoryCurvatureAvailable,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1836,6 +1849,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentedBodyPosition,
                     committedBodyVelocity,
                     trajectoryCurvatureDegreesPerSecond,
+                    trajectoryCurvatureAvailable,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -1878,6 +1892,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentedBodyPosition,
                     committedBodyVelocity,
                     trajectoryCurvatureDegreesPerSecond,
+                    trajectoryCurvatureAvailable,
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
@@ -2049,6 +2064,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 presentedBodyStartPosition,
             Vector3 committedBodyVelocity,
             float trajectoryCurvatureDegreesPerSecond,
+            bool trajectoryCurvatureAvailable,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             Vector3 up,
@@ -2089,6 +2105,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 animationSoleAtGeneration,
                 committedBodyVelocity,
                 trajectoryCurvatureDegreesPerSecond,
+                trajectoryCurvatureAvailable,
                 in motionTimeline,
                 movementPlaybackTime,
                 futureBodyTrajectory,

@@ -78,7 +78,7 @@
 
 - [ ] 7.1 更新统一Foot Placement输入、Plan、Query、Stance、Pelvis与Final Goal合同；FinalIK继续只执行一次FBBIK。
 - [ ] 7.2 更新Scene/Game Gizmo：完整绘制Artifact Route、Future Body Transform、Virtual Ground、Capsule Query、Ground Envelope、实际消费点、Revision和Body Support Path，不显示文字或伪Path。
-- [ ] 7.3 更新Runtime Trace、Inspector和CSV，覆盖Artifact重建误差、事件所有权、Future Body Position/Facing/速度、query/reach、Goal、Support Leg、Pelvis、Pivot和FBBIK两层残差。
+- [ ] 7.3 更新Runtime Trace、Inspector和CSV，覆盖Artifact重建误差、事件所有权、Future Body Position/Facing/速度、当前与Plan冻结Trajectory Curvature及availability、query/reach、Goal、Support Leg、Pelvis、Pivot和FBBIK两层残差。
 - [ ] 7.4 保证CSV Header/Value等宽、列名唯一、左右脚字段对称，更新流式耐久writer与manifest合同。
 - [ ] 7.5 删除旧artifact、旧Projection、旧Plan字段、旧诊断列、旧配置和失效命名，不保留fallback或兼容路径。
 - [ ] 7.6 完成单一路径静态搜索、OpenSpec strict validate、Runtime/Editor编译和精确Float32/Fixed Character Build；构建服务器按项目规则关闭。

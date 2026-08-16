@@ -654,6 +654,10 @@ namespace BTSMTL.Diagnostics
         public bool PlanHasPathGeometry;
         public bool PlanHasExecutablePath;
         public Vector3 FrozenPlanarVelocity;
+        public float TrajectoryCurvatureDegreesPerSecond;
+        public bool TrajectoryCurvatureAvailable;
+        public float FrozenTrajectoryCurvatureDegreesPerSecond;
+        public bool FrozenTrajectoryCurvatureAvailable;
         public float FrozenYawVelocityDegreesPerSecond;
         public float FrozenMaximumYawVelocityDegreesPerSecond;
         public float MotionLinearLandingError;

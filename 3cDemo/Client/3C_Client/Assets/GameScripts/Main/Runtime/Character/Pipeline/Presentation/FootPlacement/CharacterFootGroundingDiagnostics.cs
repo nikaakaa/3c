@@ -666,6 +666,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong revisionPlanSequence,
             float planRevisionBlendWeight,
             CharacterFootPlanTransitionKind planTransitionKind,
+            in CharacterFootPlanAttemptDiagnostics planAttempt,
             bool planFadingOut,
             float planRetentionWeight,
             float intentLandingDisplacementError,
@@ -731,6 +732,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RevisionPlanSequence = revisionPlanSequence;
             PlanRevisionBlendWeight = planRevisionBlendWeight;
             PlanTransitionKind = planTransitionKind;
+            PlanAttempt = planAttempt;
             PlanFadingOut = planFadingOut;
             PlanRetentionWeight = planRetentionWeight;
             IntentLandingDisplacementError = intentLandingDisplacementError;
@@ -804,6 +806,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong RevisionPlanSequence { get; }
         public float PlanRevisionBlendWeight { get; }
         public CharacterFootPlanTransitionKind PlanTransitionKind { get; }
+        public CharacterFootPlanAttemptDiagnostics PlanAttempt { get; }
         public bool PlanFadingOut { get; }
         public float PlanRetentionWeight { get; }
         public float IntentLandingDisplacementError { get; }

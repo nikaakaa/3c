@@ -420,6 +420,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PlanTransitionKind = hasModifier
                     ? modifier.PlanTransitionKind.ToString()
                     : CharacterFootPlanTransitionKind.None.ToString(),
+                PlanAttemptAvailable = hasModifier && modifier.PlanAttempt.IsAvailable,
+                PlanAttemptKind = hasModifier
+                    ? modifier.PlanAttempt.Kind.ToString()
+                    : CharacterFootPlanAttemptKind.None.ToString(),
+                PlanAttemptSequence = hasModifier ? modifier.PlanAttempt.Sequence : 0,
+                PlanAttemptGeneratedFrame = hasModifier ? modifier.PlanAttempt.GeneratedFrame : 0,
+                PlanAttemptLandingEventIdentity = hasModifier
+                    ? modifier.PlanAttempt.LandingEventIdentity
+                    : 0,
+                PlanAttemptState = hasModifier
+                    ? modifier.PlanAttempt.State.ToString()
+                    : CharacterPredictiveFootPlanState.Inactive.ToString(),
+                PlanAttemptRejectReason = hasModifier
+                    ? modifier.PlanAttempt.RejectReason.ToString()
+                    : FootPredictionRejectReason.None.ToString(),
+                PlanAttemptGroundEnvelopeRejectReason = hasModifier
+                    ? modifier.PlanAttempt.GroundEnvelopeRejectReason.ToString()
+                    : FootPlacementGroundEnvelopeRejectReason.None.ToString(),
+                PlanAttemptQueryCount = hasModifier ? modifier.PlanAttempt.QueryCount : 0,
+                PlanAttemptRawHitCount = hasModifier ? modifier.PlanAttempt.RawHitCount : 0,
+                PlanAttemptRejectedQueryCount = hasModifier
+                    ? modifier.PlanAttempt.RejectedQueryCount
+                    : 0,
                 PlanFadingOut = hasModifier && modifier.PlanFadingOut,
                 PlanRetentionWeight = hasModifier ? modifier.PlanRetentionWeight : 0f,
                 IntentLandingDisplacementError = hasModifier

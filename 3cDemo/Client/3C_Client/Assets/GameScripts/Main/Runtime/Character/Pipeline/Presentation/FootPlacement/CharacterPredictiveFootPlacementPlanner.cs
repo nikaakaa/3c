@@ -14,6 +14,71 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         PredictiveExit = 3
     }
 
+    public enum CharacterFootPlanAttemptKind : byte
+    {
+        None = 0,
+        Initial = 1,
+        IntentRevision = 2,
+        EventSuccessor = 3,
+        CurrentEventReplacement = 4
+    }
+
+    public readonly struct CharacterFootPlanAttemptDiagnostics
+    {
+        internal CharacterFootPlanAttemptDiagnostics(
+            CharacterFootPlanAttemptKind kind,
+            CharacterPredictiveFootPlanExecution plan)
+            : this(
+                kind,
+                plan.Sequence,
+                plan.GeneratedFrame,
+                plan.LandingEventIdentity,
+                plan.State,
+                plan.CreationRejectReason,
+                plan.GroundEnvelopeRejectReason,
+                plan.QueryCount,
+                plan.RawHitCount,
+                plan.RejectedQueryCount)
+        {
+        }
+
+        internal CharacterFootPlanAttemptDiagnostics(
+            CharacterFootPlanAttemptKind kind,
+            ulong sequence,
+            ulong generatedFrame,
+            ulong landingEventIdentity,
+            CharacterPredictiveFootPlanState state,
+            FootPredictionRejectReason rejectReason,
+            FootPlacementGroundEnvelopeRejectReason groundEnvelopeRejectReason,
+            int queryCount,
+            int rawHitCount,
+            int rejectedQueryCount)
+        {
+            Kind = kind;
+            Sequence = sequence;
+            GeneratedFrame = generatedFrame;
+            LandingEventIdentity = landingEventIdentity;
+            State = state;
+            RejectReason = rejectReason;
+            GroundEnvelopeRejectReason = groundEnvelopeRejectReason;
+            QueryCount = queryCount;
+            RawHitCount = rawHitCount;
+            RejectedQueryCount = rejectedQueryCount;
+        }
+
+        public CharacterFootPlanAttemptKind Kind { get; }
+        public ulong Sequence { get; }
+        public ulong GeneratedFrame { get; }
+        public ulong LandingEventIdentity { get; }
+        public CharacterPredictiveFootPlanState State { get; }
+        public FootPredictionRejectReason RejectReason { get; }
+        public FootPlacementGroundEnvelopeRejectReason GroundEnvelopeRejectReason { get; }
+        public int QueryCount { get; }
+        public int RawHitCount { get; }
+        public int RejectedQueryCount { get; }
+        public bool IsAvailable => Kind != CharacterFootPlanAttemptKind.None && Sequence != 0;
+    }
+
     internal readonly struct CharacterFootPlanTransition
     {
         CharacterFootPlanTransition(
@@ -211,6 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal CharacterPredictiveFootPlanExecution Revision { get; private set; }
             CharacterFootPlanTransition m_Transition;
             internal CharacterFootPlanTransition Transition => m_Transition;
+            internal CharacterFootPlanAttemptDiagnostics PlanAttempt { get; private set; }
             internal bool HasRevision => m_Transition.IsRevision;
             internal bool HasEventSuccessor =>
                 m_Transition.Kind == CharacterFootPlanTransitionKind.EventSuccessor &&
@@ -305,12 +371,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_OutputContinuityPositionOffset = source.m_OutputContinuityPositionOffset;
                 m_OutputContinuityRotationOffset = source.m_OutputContinuityRotationOffset;
                 m_SuppressNextOutputContinuityCapture = source.m_SuppressNextOutputContinuityCapture;
+                PlanAttempt = source.PlanAttempt;
             }
 
             internal void BeginFrame()
             {
                 Active.BeginFrame();
                 Revision.BeginFrame();
+                PlanAttempt = default;
+            }
+
+            internal void RecordPlanAttempt(in CharacterFootPlanAttemptDiagnostics attempt)
+            {
+                if (!attempt.IsAvailable)
+                    throw new InvalidOperationException("Predictive Foot plan attempt is invalid.");
+                PlanAttempt = attempt;
             }
 
             internal void BeginIntentRevision()
@@ -1691,6 +1766,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 side,
                 feature.IsValid,
                 incomingStep);
+            CharacterFootPlanAttemptDiagnostics planAttempt = runtime.PlanAttempt;
             var planLifecycleDiagnostics = new CharacterPredictiveFootPlanLifecycleDiagnostics(plan);
             var queryDiagnostics = new CharacterPredictiveFootQueryDiagnostics(plan);
             CharacterFootGroundingHitDiagnostics pathSupportDiagnostics = currentPathSupport.IsValid
@@ -1717,6 +1793,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 runtime.HasRevision ? runtime.Revision.Sequence : 0,
                 runtime.SmoothedRevisionBlendWeight,
                 runtime.Transition.Kind,
+                in planAttempt,
                 runtime.IsFadingOut,
                 runtime.PredictiveRetentionWeight,
                 runtime.IntentLandingDisplacementError,
@@ -2510,6 +2587,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_FutureBodyTrajectorySource != null)
             {
                 bool created = CreatePlan(
+                    CharacterFootPlanAttemptKind.EventSuccessor,
                     side,
                     runtime.Revision,
                     in incomingStep,
@@ -2527,7 +2605,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength);
+                    legLength,
+                    out CharacterFootPlanAttemptDiagnostics planAttempt);
+                runtime.RecordPlanAttempt(in planAttempt);
                 if (created)
                     runtime.BeginEventSuccessor();
             }
@@ -2546,6 +2626,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (canAttempt)
                 {
                     created = CreatePlan(
+                        CharacterFootPlanAttemptKind.CurrentEventReplacement,
                         side,
                         runtime.Revision,
                         in step,
@@ -2563,7 +2644,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in motionTimeline,
                         movementPlaybackTime,
                         up,
-                        legLength);
+                        legLength,
+                        out CharacterFootPlanAttemptDiagnostics planAttempt);
+                    runtime.RecordPlanAttempt(in planAttempt);
                     runtime.MarkIntentRevisionAttempt(sourceSequence, in motionTimeline);
                 }
                 if (created)
@@ -2608,6 +2691,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     motionTimeline.AuthorityTick.Value))
             {
                 CreatePlan(
+                    CharacterFootPlanAttemptKind.Initial,
                     side,
                     plan,
                     in step,
@@ -2625,7 +2709,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength);
+                    legLength,
+                    out CharacterFootPlanAttemptDiagnostics planAttempt);
+                runtime.RecordPlanAttempt(in planAttempt);
                 runtime.MarkIntentRevisionAttempt(
                     plan.Sequence != 0 ? plan.Sequence : initialAttemptIdentity,
                     in motionTimeline);
@@ -2650,6 +2736,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 runtime.MarkIntentRevisionAttempt(plan.Sequence, in motionTimeline);
                 bool created = CreatePlan(
+                    CharacterFootPlanAttemptKind.IntentRevision,
                     side,
                     runtime.Revision,
                     in step,
@@ -2667,7 +2754,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in motionTimeline,
                     movementPlaybackTime,
                     up,
-                    legLength);
+                    legLength,
+                    out CharacterFootPlanAttemptDiagnostics planAttempt);
+                runtime.RecordPlanAttempt(in planAttempt);
                 if (created)
                 {
                     runtime.Revision.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
@@ -2890,6 +2979,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         bool CreatePlan(
+            CharacterFootPlanAttemptKind attemptKind,
             CharacterFootSide side,
             CharacterPredictiveFootPlanExecution plan,
             in AnimationPredictedFootStepSample step,
@@ -2907,8 +2997,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
             double movementPlaybackTime,
             Vector3 up,
-            float legLength)
+            float legLength,
+            out CharacterFootPlanAttemptDiagnostics attempt)
         {
+            if (attemptKind == CharacterFootPlanAttemptKind.None)
+                throw new ArgumentOutOfRangeException(nameof(attemptKind));
+            ulong sequence = AllocatePlanSequence();
             float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(0f, (float)(motionTimeline.CurrentSegmentDurationSeconds - movementPlaybackTime))
                 : float.PositiveInfinity;
@@ -2934,6 +3028,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in trajectoryRequest,
                     out CharacterFutureBodyTrajectory futureBodyTrajectory))
             {
+                attempt = new CharacterFootPlanAttemptDiagnostics(
+                    attemptKind,
+                    sequence,
+                    renderFrame,
+                    step.LandingEventIdentity,
+                    CharacterPredictiveFootPlanState.Rejected,
+                    FootPredictionRejectReason.MotionTimelineUnavailable,
+                    FootPlacementGroundEnvelopeRejectReason.None,
+                    0,
+                    0,
+                    0);
                 return false;
             }
             var rootTrajectory = new CharacterPredictiveFootRootTrajectory(
@@ -3014,7 +3119,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                 }
             }
-            ulong sequence = AllocatePlanSequence();
             if (rejectReason == FootPredictionRejectReason.None)
             {
                 plan.Commit(
@@ -3040,6 +3144,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason,
                     in query);
             }
+            attempt = new CharacterFootPlanAttemptDiagnostics(attemptKind, plan);
             return plan.HasExecutablePath;
         }
 

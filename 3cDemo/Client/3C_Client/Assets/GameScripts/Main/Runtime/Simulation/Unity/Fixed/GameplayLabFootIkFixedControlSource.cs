@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField, Min(0f)] float m_EndpointHoldSeconds = 0.75f;
 
         public override string SourceIdentity =>
-            $"gameplay-lab-foot-ik/course-v6/{m_MoveInputValueId}/{(m_InputProfile ? m_InputProfile.name : "unconfigured")}";
+            $"gameplay-lab-foot-ik/course-v7/{m_MoveInputValueId}/{(m_InputProfile ? m_InputProfile.name : "unconfigured")}";
 
         public override IUnityFixedCharacterControlSourceRuntime Create(FixedCharacterControlSourceContext context)
         {
@@ -220,7 +220,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         int m_Lap = 1;
         int m_HoldTicksRemaining;
         int m_TraversalTicksRemaining;
-        int m_FormalMoveMismatchFrames;
         ulong m_RenderFrame;
         ulong m_SimulationTick;
         ulong m_LastRouteUpdateTick;
@@ -228,6 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         Vector3 m_LastCommittedPosition;
         Vector2 m_LastWorldMovement;
         Vector2 m_LastCameraMovement;
+        Vector2 m_SubmittedCameraMovement;
         float m_LastCommittedYawDegrees;
         float m_LastActualPlanarSpeed;
         Gamepad m_Gamepad;
@@ -301,7 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_TraversalSegment = 0;
             m_Lap = 1;
             m_TraversalTicksRemaining = 0;
-            m_FormalMoveMismatchFrames = 0;
+            m_SubmittedCameraMovement = Vector2.zero;
         }
 
         public void Deactivate()
@@ -328,7 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_Lap = 1;
             m_HoldTicksRemaining = 0;
             m_TraversalTicksRemaining = 0;
-            m_FormalMoveMismatchFrames = 0;
+            m_SubmittedCameraMovement = Vector2.zero;
             GameplayLabFootIkRouteRegistry.Remove(m_ActorId);
         }
 
@@ -344,42 +344,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             int elapsedTicks = elapsedTickCount > int.MaxValue ? int.MaxValue : (int)elapsedTickCount;
             m_LastRouteUpdateTick = m_SimulationTick;
             CameraBasisSnapshot cameraBasis = m_Owner.CameraRig.BasisSnapshot;
-            GameplayLabFootIkResolvedInput resolved = ResolveMovement(m_LastCommittedPosition, elapsedTicks);
-            m_LastCameraMovement = resolved.CameraRelative
-                ? resolved.Value
-                : ToCameraRelative(resolved.Value, cameraBasis);
-            m_LastWorldMovement = resolved.CameraRelative
-                ? ToWorldRelative(resolved.Value, cameraBasis)
-                : resolved.Value;
             if (m_Gamepad == null || !m_Gamepad.added)
                 throw new InvalidOperationException("GameplayLab Foot IK virtual gamepad is unavailable.");
-            Vector2 submittedCameraMovement = m_LastCameraMovement;
             m_Gamepad.MakeCurrent();
-            ApplyGamepadState(submittedCameraMovement);
-            Vector2 deviceMovement = m_Gamepad.leftStick.ReadUnprocessedValue();
-            if ((deviceMovement - submittedCameraMovement).sqrMagnitude > 0.000001f)
-            {
-                throw new InvalidOperationException(
-                    $"GameplayLab Foot IK virtual gamepad did not accept the route input. Submitted={submittedCameraMovement}, Device={deviceMovement}.");
-            }
             m_PlayerInput.CaptureRenderFrame(renderFrame);
             if (!m_PlayerInput.TryGetLatchedVector2(m_MoveInputValueId, out Vector2 value))
                 throw new InvalidOperationException("GameplayLab Foot IK could not read Corin's formal Move Input Action.");
-            if ((submittedCameraMovement - value).sqrMagnitude > 0.000001f)
-            {
-                m_FormalMoveMismatchFrames++;
-                if (m_FormalMoveMismatchFrames > 1)
-                {
-                    throw new InvalidOperationException(
-                        $"GameplayLab Foot IK formal Move Input Action did not converge to the virtual gamepad. Submitted={submittedCameraMovement}, Latched={value}.");
-                }
-            }
-            else
-            {
-                m_FormalMoveMismatchFrames = 0;
-            }
+            if ((m_SubmittedCameraMovement - value).sqrMagnitude > 0.000001f)
+                throw new InvalidOperationException(
+                    $"GameplayLab Foot IK formal Move Input Action did not consume the previously submitted virtual gamepad state. Submitted={m_SubmittedCameraMovement}, Latched={value}.");
             m_LastCameraMovement = value;
             m_LastWorldMovement = ToWorldRelative(value, cameraBasis);
+            GameplayLabFootIkResolvedInput resolved = ResolveMovement(m_LastCommittedPosition, elapsedTicks);
+            Vector2 nextCameraMovement = resolved.CameraRelative
+                ? resolved.Value
+                : ToCameraRelative(resolved.Value, cameraBasis);
+            ApplyGamepadState(nextCameraMovement);
+            Vector2 deviceMovement = m_Gamepad.leftStick.ReadUnprocessedValue();
+            if ((deviceMovement - nextCameraMovement).sqrMagnitude > 0.000001f)
+            {
+                throw new InvalidOperationException(
+                    $"GameplayLab Foot IK virtual gamepad did not accept the next route input. Submitted={nextCameraMovement}, Device={deviceMovement}.");
+            }
+            m_SubmittedCameraMovement = nextCameraMovement;
         }
 
         public FixedCharacterSimulationInput BuildInput(FixedCharacterInputBuildContext context)
@@ -432,7 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             using var writer = new CanonicalWriter();
             writer.WriteUInt32(0x524b4946);
-            writer.WriteInt32(18);
+            writer.WriteInt32(19);
             writer.WriteString(m_RouteIdentity);
             writer.WriteByte((byte)m_Phase);
             writer.WriteInt32(m_TraversalSegment);
@@ -446,7 +433,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             writer.WriteUInt64(m_LastCommittedSimulationTick);
             writer.WriteDouble(m_LastActualPlanarSpeed);
             writer.WriteUInt64(m_LastRouteUpdateTick);
-            writer.WriteInt32(m_FormalMoveMismatchFrames);
+            writer.WriteDouble(m_SubmittedCameraMovement.x);
+            writer.WriteDouble(m_SubmittedCameraMovement.y);
             writer.WriteBytes(m_PlayerInput.CaptureState());
             return writer.ToArray();
         }
@@ -454,7 +442,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public void RestoreState(byte[] state)
         {
             var reader = new CanonicalReader(state ?? throw new ArgumentNullException(nameof(state)));
-            if (reader.ReadUInt32() != 0x524b4946 || reader.ReadInt32() != 18 ||
+            if (reader.ReadUInt32() != 0x524b4946 || reader.ReadInt32() != 19 ||
                 !string.Equals(reader.ReadString(), m_RouteIdentity, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("GameplayLab Foot IK input state identity is invalid.");
@@ -472,14 +460,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ulong lastCommittedSimulationTick = reader.ReadUInt64();
             float actualPlanarSpeed = checked((float)reader.ReadDouble());
             ulong lastRouteUpdateTick = reader.ReadUInt64();
-            int formalMoveMismatchFrames = reader.ReadInt32();
+            var submittedCameraMovement = new Vector2(
+                checked((float)reader.ReadDouble()),
+                checked((float)reader.ReadDouble()));
             byte[] playerState = reader.ReadBytes();
             reader.RequireComplete();
             if (!Enum.IsDefined(typeof(GameplayLabFootIkRoutePhase), phase) ||
                 traversalSegment < 0 || lap <= 0 || holdTicks < 0 || traversalTicks < 0 ||
-                formalMoveMismatchFrames < 0 || formalMoveMismatchFrames > 1 ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y) || !float.IsFinite(position.z) ||
-                !float.IsFinite(yawDegrees) || !float.IsFinite(actualPlanarSpeed) || actualPlanarSpeed < 0f)
+                !float.IsFinite(yawDegrees) || !float.IsFinite(actualPlanarSpeed) || actualPlanarSpeed < 0f ||
+                !float.IsFinite(submittedCameraMovement.x) || !float.IsFinite(submittedCameraMovement.y) ||
+                submittedCameraMovement.sqrMagnitude > 1.000001f)
                 throw new InvalidOperationException("GameplayLab Foot IK input state is invalid.");
             m_PlayerInput.RestoreState(playerState);
             m_Phase = phase;
@@ -493,7 +484,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_LastCommittedSimulationTick = lastCommittedSimulationTick;
             m_LastActualPlanarSpeed = actualPlanarSpeed;
             m_LastRouteUpdateTick = lastRouteUpdateTick;
-            m_FormalMoveMismatchFrames = formalMoveMismatchFrames;
+            m_SubmittedCameraMovement = submittedCameraMovement;
+            if (m_Gamepad != null && m_Gamepad.added)
+                ApplyGamepadState(submittedCameraMovement);
         }
 
         public void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition)

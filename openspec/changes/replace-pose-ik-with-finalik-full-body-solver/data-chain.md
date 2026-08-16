@@ -75,6 +75,10 @@ run `9a7cf93abf044e7eb15d8eaa7eca491d`的左脚frame 197把新事件路线与旧
 
 重构后run `a8ebac33e0794600bc328f002481bd3e`共1059行、1279列，Header唯一且每行等宽。84次Current Event Replacement中，Projected Landing来源为0；每个Origin Ground Path都位于其Support Plane上。该run也暴露旧CSV观察链在成功Attempt帧仍输出Active Plan几何，因此schema v97进一步改为Attempt帧选择Attempt geometry，禁止把两份Plan写进同一组序列列。
 
+schema v97回归run `f9335d62431949a59cab0943c898eaaa`共749行、1279列，Header唯一且每行等宽。173次PlanAttempt的Origin Ground Path与本次Attempt Ground Probe起点错配为0，Current Event Replacement使用Projected Landing为0，Origin Ground Path偏离其Support Plane为0。数据链原子性已可直接验收。
+
+该run同时把下一处问题从混合数据中分离出来：同一Event Successor会在连续authority tick从同一个Projected Landing重复构建，并连续得到`StepExceeded`；例如右脚frame 475至478使用同一来源Plan 97和同一Ground Path，连续生成Plan 99至102。后续应检查支撑链和重试资格，不得再归因于CSV错列或放宽Step阈值。
+
 ## 下一步诊断顺序
 
 1. 先验证Attempt Sequence、Origin、Ground Probe和Landing属于同一Plan。

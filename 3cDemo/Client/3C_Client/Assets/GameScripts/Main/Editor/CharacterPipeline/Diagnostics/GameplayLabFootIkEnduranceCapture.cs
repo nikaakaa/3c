@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const int BaseColumnCount = 1321;
         const int GlobalColumnCount = 71;
         const int LegColumnCount = 674;
-        const int BeforeSequenceColumnCount = 423;
+        const int BeforeSequenceColumnCount = 438;
         const int ReplacedSequenceColumnCount = 118;
         const int SequenceColumnCount = 146;
         const int CausalityColumnCount = 21;

@@ -304,7 +304,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         soleToAnkle),
                     maximumReach,
                     landingSample,
-                    true,
                     out Vector3 selectedRoot,
                     out Vector3 selectedHip,
                     out FootPlacementGroundEnvelopeRejectReason sampleReject,
@@ -331,7 +330,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         previousRoute,
                         route,
                         previousSupport,
-                        selected.Point,
                         previousFraction,
                         fraction,
                         m_RootRoutes[sampleIndex - 1],
@@ -389,6 +387,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref counters.RejectCounts);
             RemoveCoincidentNonSupportSamples(ref pathSampleCount);
             SortAndCollapsePathSamples(ref pathSampleCount);
+            if (!ValidateSupportChain(pathSampleCount, up, out FootPlacementGroundEnvelopeRejectReason chainReject))
+            {
+                counters.RejectedCount++;
+                counters.RejectCounts.Add(chainReject);
+                rejectReason = chainReject;
+                future = default;
+            }
             return future;
         }
 

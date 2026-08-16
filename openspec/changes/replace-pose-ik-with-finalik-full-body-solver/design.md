@@ -235,14 +235,14 @@ Current/Previous Own Contact
 
 对侧点是空间拓扑，不是强迫本脚在对侧事件时刻经过该点。
 
-Ground Probe必须沿完整`FutureFootRoute`采样。Current Contact、Opposing Contact和Predicted Landing只对同一路线施加端点或拓扑约束；不得用三点折线替换动画/身体曲线。
+`Virtual Ground`就是上述分段直线查询拓扑；它与`FutureFootRoute`是两个事实。前者只用于发现脚下地面与构造包络，后者保留动画脚的平面运动、落点和Foot Rate。最终脚XZ不得沿Virtual Ground移动，对侧接触也不得改写本脚动作时钟。
 
 ### 7.3 GDC Ground Path顺序
 
-1. 沿未来Foot Path执行Capsule检测，保存位置与法线；
+1. 沿Virtual Ground各分段执行Sphere/Capsule检测，先保存全部位置与法线，不对尚未收集完整的相邻端点提前判不可达；
 2. 按路线前后排序，再按同位置的高低排序；
 3. 验证坡度法线并建立Edge Plane；
-4. 检查每条边的垂直高差、间隙、鞋底范围和腿长可达性；
+4. 对排序后的正式支撑链检查Step Up/Down、间隙与腿长，对真实Edge Plane检查垂直断裂；
 5. 删除不可通行点或将计划标记为明确Rejected；
 6. 对剩余点构造二维上侧Convex Hull；
 7. 得到连续分段直线Ground Envelope。

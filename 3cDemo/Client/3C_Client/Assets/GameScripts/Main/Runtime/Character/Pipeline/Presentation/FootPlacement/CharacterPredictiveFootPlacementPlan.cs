@@ -501,8 +501,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AssignEvent(sequence, generatedFrame, in step);
             Start = start;
             Landing = landing;
-            AssignTiming(in step, rootTrajectory.PathStartPhase);
-            State = step.ActionStepClock.Phase + 0.000001f < rootTrajectory.PathStartPhase
+            AssignTiming(in step);
+            State = step.ActionStepClock.Phase + 0.000001f < ReleasePhase
                 ? CharacterPredictiveFootPlanState.Planned
                 : CharacterPredictiveFootPlanState.Executing;
             TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanGenerated;
@@ -556,7 +556,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanRejected;
             Start = start;
             Landing = landing;
-            AssignTiming(in step, rootTrajectory.PathStartPhase);
+            AssignTiming(in step);
             AssignTrajectory(in rootTrajectory, in step);
             PredictedHip = predictedHip;
             FutureSupport = query.FutureLandingSupport;
@@ -611,7 +611,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 GroundPathProgress = 1f;
                 return;
             }
-            if (ActionStepPhase + 0.000001f < RootTrajectory.PathStartPhase)
+            if (ActionStepPhase + 0.000001f < ReleasePhase)
             {
                 ActionProgress = 0f;
                 GroundPathProgress = 0f;
@@ -621,6 +621,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 State = CharacterPredictiveFootPlanState.Executing;
                 TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanExecutionStarted;
+            }
+            if (ActionStepPhase + 0.000001f < RootTrajectory.PathStartPhase)
+            {
+                ActionProgress = 0f;
+                GroundPathProgress = 0f;
+                return;
             }
             ActionProgress = ResolveActionProgress();
             GroundPathProgress = EvaluateGroundPathProgress(ActionStepPhase);
@@ -1209,7 +1215,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AuthoredFootPlanarRoute = step.AuthoredFootPlanarRoute;
             RootLocalHipRoute = step.RootLocalHipRoute;
             AnimationClearanceHeights = step.AnimationClearanceHeights;
-            ReleasePhase = step.ReleasePhase;
             ApproachContactPhase = step.ApproachContactPhase;
             var frozenWorldFootRoute = new FixedList512Bytes<Vector3>();
             var frozenWorldFootRoutePhases = new FixedList128Bytes<float>();
@@ -1349,10 +1354,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EndReason = reason;
         }
 
-        void AssignTiming(in AnimationPredictedFootStepSample step, float pathStartPhase)
+        void AssignTiming(in AnimationPredictedFootStepSample step)
         {
             LandingDelayAtGeneration = step.ActionStepClock.TimeToLandingSeconds;
             EventPhaseAtGeneration = step.ActionStepClock.Phase;
+            ReleasePhase = step.ReleasePhase;
             LiftOffPhase = step.ActionStepClock.LiftOffPhase;
             ActionStepDurationSeconds = step.ActionStepClock.DurationSeconds;
             ActionStepPhase = EventPhaseAtGeneration;

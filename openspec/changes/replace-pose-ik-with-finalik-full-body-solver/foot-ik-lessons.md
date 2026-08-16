@@ -380,3 +380,17 @@ run `4fe6c339ed5946658dd582ec103ecaff`证明曲率不是本轮首因：运动中
 正式链只保留一次鞋底安全：`Lyra Current spring -> Anchor混合 -> 最终鞋底单边投影 -> Pelvis Reach -> FBBIK`。接触距离只许可状态，不写回spring；最终投影从当帧实际混合Goal重新测量，不保存第二时间状态。删除重复约束比限制数值或增加阻尼更可靠。
 
 删除重复回写后的run `a1882780179345429fff99a2701ce0a9`共266行、1221列、坏行0、Unity 0 Error。左/右Current Offset最大绝对值从`3.224/2.568m`降至`0.356/0.396m`，Anchor捕获后不再逐帧增长，证明累积根因已消除。Final Goal仍有`48.8/77.1cm`最大单帧变化，且左右脚仍分别出现`AnchorCaptured 8/10`、`PolicyReleased 12/22`与`AnchorDistanceExceeded 2/2`；剩余问题已与Current spring分离，下一owner是Landing事务与Anchor生命周期，不能继续调spring。
+
+## 34. Plan所有权起点不能被Ground Path几何起点截断
+
+Plan若到`PathStartPhase/LiftOffPhase`才从Planned变成Executing，已有的`Release -> LiftOff`预测权重曲线整段不会执行。结果是LiftOff首帧直接获得完整预测权重，目标即使正确也会产生硬起步。正式语义必须分开：`ReleasePhase`开始输出所有权淡入，Ground Path空间进度仍在`PathStartPhase`前保持零；状态与几何不能共用一个门。
+
+run `2755132ccef64e008ed59dd3eaf9fe47`中，该修复把左右脚修正逐帧变化p95降到约`2.90/3.10cm`，但右脚仍出现`+65.49cm -> -116.02cm -> +100.08cm`的灾难跳变，因此只能证明硬起步改善，不能把它解释为Landing闭环。
+
+## 35. 运动偏差必须是提交边界，不只是诊断
+
+同一run的右脚Plan 27在frame 638执行时，冻结路线与真实身体的Landing误差已接近`0.99m`，随后增长到`1.62m`和`2.61m`；它仍消费高度约`3.42m`的旧路径、提交预测目标，并在目标失效时当帧退回Original Pose，之后又重新出现。它的前驱Plan 24生成于frame 538，至frame 624真实Root与冻结Landing的平面误差已约`2.18m`，却仍捕获高台Anchor并预建后继。这就是“弹簧腿、闪烁、落点回弹”的同一上游原因，FBBIK除失效帧外都准确执行Goal，不是首因。
+
+“每个Landing Event只允许一次Revision”因此被数据否决：它虽然防止同一源Plan逐帧换路，却让Revision提升后的新Plan失去再次修订资格。正式边界改为每个不可变源Plan至多尝试一次；新Plan成为Active后可在新的committed轨迹再次越界时继续离散换代，但同一时刻仍只有一个Active和一个过渡槽。
+
+过期Plan不得进入Landing事务。它不能捕获Anchor、不能预建Event Successor，也不能用理论Landing作为下一步起点；进入ApproachingContact前仍无法获得有效Revision时，只能以`MotionDeviationExceeded`走已有连续FadeOut。Event Successor在成为Current时也必须重新对账身体轨迹；Stance提交的真实Anchor Sole与Surface才是后继路线唯一合法起点。

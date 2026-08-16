@@ -55,7 +55,7 @@ PredictiveFootPlacementModifier MUST只在当前权威Landing Event进入PreSwin
 
 Plan创建帧 MAY执行一次平面刚性重基，使同相位Artifact Sole与Native Sole重合；该变换 MUST整步冻结。最终Swing Sole XZ MUST继续来自同相位Original Component Pose。计划当前样本与Native Sole的平面偏差 MUST进入有效性与诊断，不能通过冻结世界XYZ水平拉脚。
 
-已提交Plan MUST不按Render Delta、当前Pose、Visible Root、Body Yaw、Camera变化或相邻帧速度导数逐帧改写。只有Simulation提交新的Future Body trajectory且剩余Landing位置或朝向误差超过`max(SoleSupportRadius, PathSphereRadius, SwingCapsuleRadius)`时，MAY创建一个离散后继Revision。每个权威Landing Event MUST至多消费一笔Intent Revision事务；成功或Rejected后，后续连续意图变化 MUST等下一Landing Event重新冻结，不能在同一Swing内反复换代Active Plan。
+已提交Plan MUST不按Render Delta、当前Pose、Visible Root、Body Yaw、Camera变化或相邻帧速度导数逐帧改写。只有Simulation提交新的Future Body trajectory且剩余Landing位置或朝向误差超过`max(SoleSupportRadius, PathSphereRadius, SwingCapsuleRadius)`时，MAY创建一个离散后继Revision。每个不可变源Plan MUST至多尝试一次Intent Revision；Revision提升为新的Active后，新Plan MAY在committed trajectory再次越过同一几何边界时继续离散修订。每只脚同一时刻 MUST仍只有一个Active与一个过渡槽，不得逐帧改写Plan或并行执行多条Swing路径。
 
 #### Scenario: 平地直行预测步
 
@@ -79,7 +79,7 @@ Plan创建帧 MAY执行一次平面刚性重基，使同相位Artifact Sole与Na
 
 - **WHEN** 新Future Body trajectory使剩余Landing误差跨越正式几何阈值
 - **THEN** 后继Revision MUST从当前已执行Sole位置、线速度和Body角速度连续重基
-- **AND** 新Revision未进入Executing前旧输出 MUST保持；Intent Revision被Rejected时本事件原Executable Plan MUST保持到正常Landing边界
+- **AND** 新Revision未进入Executing前，仍在运动有效性边界内的旧输出 MUST保持；Intent Revision被Rejected但旧Plan已经过期时 MUST以`MotionDeviationExceeded`连续撤出
 - **AND** MUST不在后继尚未有效时清空旧Plan或切换到Grounding Swing Goal
 
 ### Requirement: 地面查询必须形成有限连续 Support Envelope
@@ -132,7 +132,7 @@ Locked -> Sliding/Releasing -> Unlocked Swing -> Approaching -> LandingBlend -> 
 
 Locked MUST保持完整世界Goal；Sliding MUST保持同一支撑面垂直接触并只允许有限面内移动；Unlocked MUST完全释放旧Anchor；LandingBlend MUST用同一冻结Landing Pose与Surface identity连续交给Anchor。Constraint Weight、Support Weight与Pivot Weight MUST来自同一Biomechanical Step Clock。
 
-Landing MUST作为一笔事务提交Plan Landing Sole Pose、Surface identity、Anchor local point/normal、Committed Sole Pose与Successor Step Start。上述事实任一不一致时 MUST保持未捕获或明确失败，不得换用Current Query的另一踏面。
+Landing MUST作为一笔事务提交Plan Landing Sole Pose、Surface identity、Anchor local point/normal、Committed Sole Pose与Successor Step Start。Successor MUST消费Stance上一完成帧真实提交的Anchor Sole与Surface，而不是重新求值Plan理论Landing。上述事实任一不一致，或Plan身体轨迹已经越过正式运动几何边界时，MUST保持未捕获或明确失败，不得换用Current Query的另一踏面。
 
 Current Grounding spring MUST只消费Current Query与Current Sole Clearance target。动画鞋底到冻结Landing Surface的接触许可距离 MUST NOT作为逐帧增量写入该spring状态。鞋底安全 MUST在Current Grounding与Anchor混合后只执行一次最终单边平面投影，且不得建立第二套Grounding或第二时间状态。
 
@@ -146,7 +146,8 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 
 - **WHEN** 当前事件结束而下一事件事实已出现
 - **THEN** Event Successor成为Current前 MUST只保存不可变geometry和时钟，不得参与Goal或Revision Blend
-- **AND** 事件identity换代时 MUST原子提升Successor为Active，由新Plan自身`Release -> LiftOff`权重和旧Landing Anchor互补交接
+- **AND** 事件identity换代时 MUST先按当前身体位置和朝向验证Successor；有效时才原子提升为Active，由新Plan自身`Release -> LiftOff`权重和旧Landing Anchor互补交接
+- **AND** 已过期Successor MUST以`MotionDeviationExceeded`拒绝，并从当前真实Sole、Support与committed trajectory重新创建Current Event计划
 - **AND** MUST不在新事件已经进入Swing后按Render Delta混合旧Landing世界目标与新Swing世界目标；Successor不可执行时 MUST连续退到Original Component Pose
 
 #### Scenario: Intent Revision与Event Successor复用过渡槽
@@ -155,6 +156,13 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 - **THEN** 当前Swing的Intent Revision MUST优先在Unsupported阶段完成
 - **AND** Event Successor MUST等当前Plan进入ApproachingContact且过渡槽空闲后预建
 - **AND** 两者 MUST只顺序复用同一槽，不得并存或让Successor阻断当前Swing的唯一Intent Revision
+
+#### Scenario: Plan输出所有权先于Ground Path空间推进
+
+- **WHEN** 权威Step位于`ReleasePhase`与`LiftOffPhase/PathStartPhase`之间
+- **THEN** Plan MUST已经进入Executing并按`Release -> LiftOff`连续增加预测输出权重
+- **AND** Ground Path空间进度 MUST保持为零直到`PathStartPhase`
+- **AND** MUST不因几何路径尚未推进而把预测权重压为零，并在LiftOff首帧直接切到全权重
 
 #### Scenario: Landing Surface与Current Surface不同
 

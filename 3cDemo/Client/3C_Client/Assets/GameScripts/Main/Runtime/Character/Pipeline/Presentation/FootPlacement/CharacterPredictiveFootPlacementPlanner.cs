@@ -142,10 +142,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         RevisionBlendWeight = 0f;
                         return;
                     }
-                    RevisionBlendWeight = Mathf.MoveTowards(
+                    RevisionBlendWeight = Mathf.Max(
                         RevisionBlendWeight,
-                        1f,
-                        blendSpeed * deltaSeconds);
+                        Revision.ActionProgress);
                     if (RevisionBlendWeight < 0.999999f)
                         return;
                     PromoteRevision();

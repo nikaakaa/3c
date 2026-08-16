@@ -116,6 +116,7 @@ SupportFootPivotWeightRoute
 
 OrientationPolicy
 OpposingLandingIdentity / Time / RootLocalSolePose
+IncomingStepEvent / Clock / Route / BiomechanicalFacts
 ```
 
 连续路线使用由schema固定的等Action Phase采样域。采样数不是作者参数；若当前采样数无法通过重建容差，提升schema与format version并整体重建，不允许Runtime插值补点掩盖。
@@ -156,7 +157,7 @@ Editor必须用artifact和同一Action Phase重建原AnimationClip的Heel、Toe�
 
 ## 5. Projection与Action Step所有权
 
-Pose允许连续混合；Biomechanical Step Fact必须原子选择。
+Pose允许连续混合；Biomechanical Step Fact必须原子选择。Artifact的每个采样点同时提供Current与Incoming Step；Incoming不是Runtime向未来扫描Current曲线得到的临时结果，而是Analyzer在同一事件分段、同一Action Phase域中生成的完整后继事实。
 
 ```text
 同一脚本帧输出 = 一个Source的完整Landing Event + 同一个Action Step Clock
@@ -348,7 +349,7 @@ FinalIK只消费原始Component Pose和一个最终Goal Set：
 
 动画Source的Clip Catalog属于编译后不可变结构，只能在Source创建或换代时完整校验并建立索引。逐帧Prepare只校验会变化的采样计划、时间和权重，只清理上一帧实际激活及本帧实际写入的Clip；禁止按完整Catalog或最大容量重复遍历、重复校验和重复清空。
 
-Foot Feature与Biomechanical Step曲线同样属于已编译Source的不可变数据。Sequence Player创建时必须完整校验一次；运行帧只采样当前相位。同脚同Landing事件的后继事件只允许搜索一次并缓存绝对候选时刻，后续帧只计算该时刻相对当前权威时钟的剩余时间。Source、Continuity或Landing occurrence变化时才允许重新搜索。
+Foot Feature与Biomechanical Step曲线同样属于已编译Source的不可变数据。Sequence Player创建时必须完整校验一次；运行帧只从同一normalized sample原子读取Current与Incoming Step并绑定同一source occurrence。后继事件选择、相对当前采样的Landing时间和完整路线在Artifact Build中一次确定；Runtime不得扫描曲线、缓存候选或从当前事件补建Incoming。
 
 共享测试环境提供一条正式宽课程：30米宽、24级上楼、6米平台、24级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费48个逐级踏面。自动源不再循环双向长路线，而是对齐起点后进入第一段楼梯，直接通过正式Input System提交`MoveAxis.x=-1/+1`的`A 1秒 -> D 2秒 -> A 1秒`事务。事务完成后提交零输入，写入完成快照并注销采样路由，避免1217列CSV在无新信息时继续增长。它保留实时相机Basis和LookAxis，不用世界空间横向路点抵消相机缓动。课程整体位置由场景中的唯一Course与Start/End决定，不写死世界X坐标。
 

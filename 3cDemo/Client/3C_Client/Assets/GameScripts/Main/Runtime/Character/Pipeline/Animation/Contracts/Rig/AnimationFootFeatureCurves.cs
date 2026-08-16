@@ -332,17 +332,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 biomechanicalSample);
         }
 
-        internal bool IsFollowingPredictionCandidate(
-            float normalizedTime,
-            float minimumTimeToLandingSeconds)
-        {
-            float time = Mathf.Clamp01(normalizedTime);
-            return Mathf.RoundToInt(m_EventOrdinal.Evaluate(time)) > 0 &&
-                   m_Confidence.Evaluate(time) > 0f &&
-                   m_EventPhase.Evaluate(time) < m_LiftOffPhase.Evaluate(time) &&
-                   m_TimeToLandingSeconds.Evaluate(time) > minimumTimeToLandingSeconds;
-        }
-
         public void RequireValid()
         {
             RequireCurve(m_Confidence, nameof(m_Confidence), true, false);
@@ -441,6 +430,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationCurve m_SoleHeight;
         [SerializeField] AnimationCurve m_PlantConfidence;
         [SerializeField] AnimationPredictedFootStepCurveSet m_PredictedStep;
+        [SerializeField] AnimationPredictedFootStepCurveSet m_IncomingPredictedStep;
 
         public AnimationFootFeatureCurveSet(
             AnimationCurve soleLocalVelocityX,
@@ -448,7 +438,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve soleLocalVelocityZ,
             AnimationCurve soleHeight,
             AnimationCurve plantConfidence,
-            AnimationPredictedFootStepCurveSet predictedStep)
+            AnimationPredictedFootStepCurveSet predictedStep,
+            AnimationPredictedFootStepCurveSet incomingPredictedStep)
         {
             m_SoleLocalVelocityX = Copy(soleLocalVelocityX);
             m_SoleLocalVelocityY = Copy(soleLocalVelocityY);
@@ -456,6 +447,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SoleHeight = Copy(soleHeight);
             m_PlantConfidence = Copy(plantConfidence);
             m_PredictedStep = predictedStep ?? throw new ArgumentNullException(nameof(predictedStep));
+            m_IncomingPredictedStep = incomingPredictedStep ??
+                throw new ArgumentNullException(nameof(incomingPredictedStep));
             RequireValid();
         }
 
@@ -465,6 +458,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationCurve SoleHeight => m_SoleHeight;
         public AnimationCurve PlantConfidence => m_PlantConfidence;
         public AnimationPredictedFootStepCurveSet PredictedStep => m_PredictedStep;
+        public AnimationPredictedFootStepCurveSet IncomingPredictedStep => m_IncomingPredictedStep;
 
         public AnimationFootFeatureSample Sample(float normalizedTime)
         {
@@ -483,7 +477,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SoleHeight.Evaluate(time),
                 m_PlantConfidence.Evaluate(time),
                 m_PredictedStep.SamplePrepared(time),
-                default);
+                m_IncomingPredictedStep.SamplePrepared(time));
         }
 
         public void RequireValid()
@@ -493,9 +487,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireCurve(m_SoleLocalVelocityZ, nameof(m_SoleLocalVelocityZ), false, false);
             RequireCurve(m_SoleHeight, nameof(m_SoleHeight), false, false);
             RequireCurve(m_PlantConfidence, nameof(m_PlantConfidence), true, false);
-            if (m_PredictedStep == null)
-                throw new InvalidOperationException("Foot Analysis predicted step curves are missing.");
+            if (m_PredictedStep == null || m_IncomingPredictedStep == null)
+                throw new InvalidOperationException("Foot Analysis current or incoming step curves are missing.");
             m_PredictedStep.RequireValid();
+            m_IncomingPredictedStep.RequireValid();
         }
 
         static void RequireCurve(AnimationCurve curve, string field, bool normalized, bool nonNegative) =>

@@ -458,6 +458,14 @@ Successor Step Start
 
 这五项不能分别查询、分别换代或用Current Surface代替。
 
+Landing交接只允许一层互补所有权。Anchor开始淡入后，本帧已经完成Transition与Reach裁决的预测输出是旧侧，已提交Anchor的世界Ankle Pose是新侧：
+
+```text
+LandingGoal = Lerp(ResolvedPredictiveOrTransitionGoal, CommittedAnchorGoal, AnchorBlend)
+```
+
+`AnchorBlend`同时约束Foot Goal与Pelvis支撑权重。实现不得先把Predictive权重乘以`1 - AnchorBlend`，再从Original动画重新补足剩余权重；这种组合会在部分Anchor期间形成`Predictive -> Original -> Anchor`三个owner，并把动画空中脚重新暴露到已经提交的支撑事务中。只有没有合法Plan/Transition且没有合法Stance/Anchor时，Original动画才能独占该脚。
+
 ## 9. Predictive Body、Support Leg与Pelvis
 
 Foot Ground Envelope不能驱动身体。身体使用独立但同源的Body Support Path：

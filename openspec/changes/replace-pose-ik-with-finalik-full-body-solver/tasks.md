@@ -57,7 +57,7 @@
 - [ ] 4.5D Revision必须先在过渡槽完整Query并Commit，成功后才原子参与Blend或提升；Rejected候选不得清空仍有效Active、不得删除完整Debug Path、不得让Grounding接管Swing。初始候选Rejected时，当前Step在后续权威tick继续重试，直至计划成功或Step明确结束。
 - [ ] 4.5E 在Release前按加减速、低速急转、无有效前一步历史和空中状态原子选择整步`Predictive`或`Traditional`模式；模式整步粘滞。Traditional是统一Foot Placement内的正式执行策略，不是Predictive Query失败后的fallback。
 - [ ] 4.5F 当前Step仍为`Unsupported Swing`且偏差已跨越几何边界时，Intent Revision必须优先于尚未生效的Event Successor；当前权威Swing没有Executable Plan时必须在同一事件内重建。Plan identity换代首帧必须从上一完成帧实际Ankle输出连续接管，不得先暴露Current Grounding/Original再跳入新Plan。
-- [ ] 4.5G Revision Blend中建立的上一完成帧输出连续性必须跨越`PromoteRevision`保持到自身权重衰减为零；Promotion只替换Plan identity，不得中途清除尚未完成的位置与旋转连续修正。
+- [ ] 4.5G Intent Revision必须只执行一层连续交接：创建时以上一完成帧Final Ankle相对Original动画的冻结修正作为旧侧，新Plan完整求解自身Ground Envelope安全目标作为新侧，再按唯一Revision Blend混合。Blend期间和`PromoteRevision`后不得因Plan Sequence变化启动第二层Output Continuity；支撑面identity只随Plan原子提升，不得在Blend 0.5硬切。
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ。新计划未Commit前保持旧Active经执行投影后的输出，成功后才连续Blend；Rejected候选只记录失败并等待下一正式重试机会。
 - [ ] 4.6A Intent Revision创建时冻结上一完成帧实际输出相对同帧Original Animated Ankle/Hip的修正，以及Ground Path与Support作为唯一过渡原点；Blend期间以当前同相位Original动画加冻结修正组成旧侧，不得锁死Swing世界Ankle或继续求值已经越过运动边界的旧Active。尚未产生本Plan完成输出的过期Plan必须先退出，再从当前真实Sole、Support与committed trajectory原子重建，禁止先输出一帧旧Path。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径；Executing求值失败时必须保留上一完成输出相对当前Original动画的修正并连续退出，同时为Reach、非有限值和身份失配分别发布typed reason，禁止当帧归还Grounding Baseline后下一帧再恢复预测。
@@ -79,7 +79,7 @@
 - [ ] 5.5A 每条Ground Envelope Segment必须原子保存Start/End Surface；全局起点使用Committed Landing Surface，终点使用该段实际支撑，禁止用End Surface冒充整段并导致Successor原点身份误判。
 - [ ] 5.6 最终Swing保持Native Sole XZ，唯一Y为`GroundEnvelopeHeight + AnimationClearance`；禁止冻结Path XYZ拉脚和Native/Predicted Y双owner。
 - [ ] 5.7 使用Calibration Heel/Toe验证唯一支撑平面物理净空，不增加Heel/Toe Current Query、固定高度或默认地面。
-- [ ] 5.7A Ground Envelope采样提供当前Foot Rate的Component Up高度下界；Segment Surface法线只可在Native Sole仍位于现有SoleSupportRadius局部覆盖内时参与坡面净空与Foot Orientation，不得把局部斜面无限外推到远处后生成额外抬升。Current Grounding仍只对其当前真实查询平面执行唯一物理净空。
+- [ ] 5.7A Ground Envelope采样提供当前Foot Rate的Component Up高度下界；Segment Surface法线只可在Native Sole仍位于现有SoleSupportRadius局部覆盖内时参与坡面净空与Foot Orientation，不得把局部斜面无限外推到远处后生成额外抬升。Current Grounding只在Current/Stance所有权内对其真实查询平面执行唯一物理净空；Executable Swing的完整Plan目标不得在连续性处理后再次被Current Support抬升。
 - [ ] 5.8 台阶边缘Sphere多命中必须以前一支撑做有向可达选择；同Foot Rate合并保留正式支撑身份，Landing、Body Support终点与Ground Envelope终点从验证后的同一链末端原子提交。
 
 ## 6. Constraint、Landing与GDC身体层

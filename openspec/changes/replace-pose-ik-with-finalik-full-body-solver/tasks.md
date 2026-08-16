@@ -20,17 +20,17 @@
 
 ## 2. Animation Biomechanical Step Artifact
 
-- [ ] 2.1 提升`AnimationFootAnalysisArtifact` format与algorithm identity，删除v26兼容reader、位置-only payload和旧generated产品读取路径。
-- [ ] 2.2 在同一Action Phase采样域烘焙Heel、Toe、Sole、Ankle、Knee、Hip的root-local位置路线。
-- [ ] 2.3 烘焙Sole与Ankle的root-local旋转路线，并保存动画脚掌朝向基准。
-- [ ] 2.4 从同一动作区间生成Animation Foot Planar Route与相对参考Foot Path的Clearance，不保存世界高度或KCC位移。
+- [x] 2.1 提升`AnimationFootAnalysisArtifact` format与algorithm identity，删除v26兼容reader、位置-only payload和旧generated产品读取路径。
+- [x] 2.2 在同一Action Phase采样域烘焙Heel、Toe、Sole、Ankle、Knee、Hip的root-local位置路线。
+- [x] 2.3 烘焙Sole与Ankle的root-local旋转路线，并保存动画脚掌朝向基准。
+- [x] 2.4 从同一动作区间生成Animation Foot Planar Route与相对参考Foot Path的Clearance，不保存世界高度或KCC位移。
 - [ ] 2.5 生成精确Release、LiftOff、ApproachContact、Landing边界，以及Locked/Sliding/Unlocked区间和连续Constraint Weight。
-- [ ] 2.6 生成Support Weight、Support Leg Length、Compression Reserve、Knee Bend Plane、Support Foot Pivot位置与权重。
-- [ ] 2.7 原子保存对侧Landing identity、time、cycle和root-local Sole pose。
+- [x] 2.6 生成Support Weight、Support Leg Length、Compression Reserve、Knee Bend Plane、Support Foot Pivot位置与权重。
+- [x] 2.7 原子保存对侧Landing identity、time、cycle和root-local Sole pose。
 - [ ] 2.8 更新artifact codec、hash、store、inspector与analysis source identity；未知字段、非有限值和旧版本必须明确失败。
-- [ ] 2.8A 在同一Artifact采样点原子保存Current与Incoming Step；Incoming必须携带完整事件、时钟、路线、Biomechanical事实和相对当前采样的Landing时间，不允许Runtime搜索、补建或缓存猜测。
+- [x] 2.8A 在同一Artifact采样点原子保存Current与Incoming Step；Incoming必须携带完整事件、时钟、路线、Biomechanical事实和相对当前采样的Landing时间，不允许Runtime搜索、补建或缓存猜测。
 - [ ] 2.9 建立Artifact Flat Reconstruction Gate，逐相位输出Foot/Sole/Ankle/Knee/Hip位置与Sole/Ankle旋转误差，并阻止超过固定容差的artifact进入Projection。
-- [ ] 2.10 重新生成Corin Start、Loop、Stop、MovingTurn全部可达Foot Analysis artifact，不保留旧资产或运行时补建。
+- [x] 2.10 重新生成Corin Start、Loop、Stop、MovingTurn全部可达Foot Analysis artifact，不保留旧资产或运行时补建。
 
 ## 3. Projection与Action Step事实
 

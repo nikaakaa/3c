@@ -168,27 +168,6 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void ValidateRuntimeRoot(GameplayLabSessionVariantDefinition variant)
         {
             GameObject root = variant.RuntimeRootPrefab;
-            if (CountMissingScripts(root) != 0)
-                throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' contains a missing MonoBehaviour script.");
-            SimulationSessionHost[] hosts = root.GetComponentsInChildren<SimulationSessionHost>(true);
-            if (hosts.Length != 1)
-                throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one Session Host.");
-            ISimulationSessionActorHost[] actors = root
-                .GetComponentsInChildren<MonoBehaviour>(true)
-                .OfType<ISimulationSessionActorHost>()
-                .ToArray();
-            int distinctActorCount = actors.Select(actor => actor.SimulationActorId).Distinct().Count();
-            if (actors.Length != 2 || distinctActorCount != 2)
-            {
-                string actorSummary = actors.Length == 0
-                    ? "none"
-                    : string.Join(", ", actors.Select(actor => $"{actor.GetType().FullName}:{actor.SimulationActorId}"));
-                throw new InvalidOperationException(
-                    $"Gameplay Lab Variant '{variant.VariantId}' requires two distinct Session Actors. " +
-                    $"Found={actors.Length}; Distinct={distinctActorCount}; Actors=[{actorSummary}].");
-            }
-            if (actors.Any(actor => !ReferenceEquals(actor.SessionHost, hosts[0])))
-                throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' contains an Actor outside its Session Host.");
             bool rollbackVariant = string.Equals(
                 variant.VariantId,
                 "gameplay-lab.deterministic-rollback",
@@ -201,6 +180,28 @@ namespace ThirdPersonGameplay.Editor.Lab
                 variant.VariantId,
                 FootIkEnduranceVariantId,
                 StringComparison.Ordinal);
+            if (CountMissingScripts(root) != 0)
+                throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' contains a missing MonoBehaviour script.");
+            SimulationSessionHost[] hosts = root.GetComponentsInChildren<SimulationSessionHost>(true);
+            if (hosts.Length != 1)
+                throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one Session Host.");
+            ISimulationSessionActorHost[] actors = root
+                .GetComponentsInChildren<MonoBehaviour>(true)
+                .OfType<ISimulationSessionActorHost>()
+                .ToArray();
+            int distinctActorCount = actors.Select(actor => actor.SimulationActorId).Distinct().Count();
+            int expectedActorCount = footIkEnduranceVariant ? 1 : 2;
+            if (actors.Length != expectedActorCount || distinctActorCount != expectedActorCount)
+            {
+                string actorSummary = actors.Length == 0
+                    ? "none"
+                    : string.Join(", ", actors.Select(actor => $"{actor.GetType().FullName}:{actor.SimulationActorId}"));
+                throw new InvalidOperationException(
+                    $"Gameplay Lab Variant '{variant.VariantId}' requires {expectedActorCount} distinct Session Actor(s). " +
+                    $"Found={actors.Length}; Distinct={distinctActorCount}; Actors=[{actorSummary}].");
+            }
+            if (actors.Any(actor => !ReferenceEquals(actor.SessionHost, hosts[0])))
+                throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' contains an Actor outside its Session Host.");
             if (!rollbackVariant)
             {
                 int localOwners = root.GetComponentsInChildren<FixedCharacterHost>(true)
@@ -211,8 +212,12 @@ namespace ThirdPersonGameplay.Editor.Lab
                     throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one local owner.");
                 SessionActorActionTargetInputProvider[] providers =
                     root.GetComponentsInChildren<SessionActorActionTargetInputProvider>(true);
-                if (providers.Length != 1 || providers[0].Target == null)
-                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one bound committed Actor target provider.");
+                if ((footIkEnduranceVariant && providers.Length != 0) ||
+                    (!footIkEnduranceVariant && (providers.Length != 1 || providers[0].Target == null)))
+                    throw new InvalidOperationException(
+                        footIkEnduranceVariant
+                            ? $"Gameplay Lab Variant '{variant.VariantId}' requires ActionTarget None."
+                            : $"Gameplay Lab Variant '{variant.VariantId}' requires one bound committed Actor target provider.");
             }
             if (root.GetComponentsInChildren<ThirdPersonCameraController>(true).Length != 1)
                 throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one gameplay camera controller.");
@@ -220,7 +225,8 @@ namespace ThirdPersonGameplay.Editor.Lab
             int fixedHosts = root.GetComponentsInChildren<FixedCharacterHost>(true).Length;
             int rollbackHosts = root.GetComponentsInChildren<DeterministicRollbackCharacterHost>(true).Length;
             if ((floatVariant && (floatHosts != 2 || fixedHosts != 0 || rollbackHosts != 0)) ||
-                (!floatVariant && !rollbackVariant && (fixedHosts != 2 || rollbackHosts != 0 || floatHosts != 0)) ||
+                (!floatVariant && !rollbackVariant &&
+                 (fixedHosts != (footIkEnduranceVariant ? 1 : 2) || rollbackHosts != 0 || floatHosts != 0)) ||
                 (rollbackVariant && (rollbackHosts != 2 || fixedHosts != 0 || floatHosts != 0)))
             {
                 throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' Actor host model does not match its numeric profile.");
@@ -233,11 +239,12 @@ namespace ThirdPersonGameplay.Editor.Lab
                     (footIkEnduranceVariant ? 0 : 1) ||
                     characters.Count(character => character.ControlSource is GameplayLabFootIkFixedControlSource) !=
                     (footIkEnduranceVariant ? 1 : 0) ||
-                    characters.Count(character => character.ControlSource is FixedNeutralCharacterControlSource) != 1)
+                    characters.Count(character => character.ControlSource is FixedNeutralCharacterControlSource) !=
+                    (footIkEnduranceVariant ? 0 : 1))
                 {
                     throw new InvalidOperationException(
                         footIkEnduranceVariant
-                            ? $"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Foot IK Endurance Control Source and one persisted Fixed Neutral Control Source."
+                            ? $"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Foot IK Endurance Control Source."
                             : $"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Fixed Player Control Source and one persisted Fixed Neutral Control Source.");
                 }
             }

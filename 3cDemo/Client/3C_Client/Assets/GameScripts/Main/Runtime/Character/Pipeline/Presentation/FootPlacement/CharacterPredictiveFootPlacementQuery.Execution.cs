@@ -559,18 +559,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterPredictiveFootRootTrajectory rootTrajectory)
         {
             float pathStartPhase = rootTrajectory.PathStartPhase;
+            Vector3 predicted = rootTrajectory.EvaluateFootRoute(eventPhase);
+            Vector3 predictedStart = rootTrajectory.EvaluateFootRoute(pathStartPhase);
+            Vector3 predictedEnd = rootTrajectory.EvaluateFootRoute(1f);
             if (splitFraction <= 0f || splitFraction >= 1f)
             {
                 float progress = Mathf.InverseLerp(pathStartPhase, 1f, eventPhase);
-                return Vector3.Lerp(routeStart, routeEnd, progress);
+                Vector3 correction = Vector3.Lerp(
+                    routeStart - predictedStart,
+                    routeEnd - predictedEnd,
+                    progress);
+                return predicted + correction;
             }
+            Vector3 predictedSplit = rootTrajectory.EvaluateFootRoute(splitEventPhase);
             if (eventPhase <= splitEventPhase)
             {
                 float progress = Mathf.InverseLerp(pathStartPhase, splitEventPhase, eventPhase);
-                return Vector3.Lerp(routeStart, splitPoint, progress);
+                Vector3 correction = Vector3.Lerp(
+                    routeStart - predictedStart,
+                    splitPoint - predictedSplit,
+                    progress);
+                return predicted + correction;
             }
             float remainingProgress = Mathf.InverseLerp(splitEventPhase, 1f, eventPhase);
-            return Vector3.Lerp(splitPoint, routeEnd, remainingProgress);
+            Vector3 remainingCorrection = Vector3.Lerp(
+                splitPoint - predictedSplit,
+                routeEnd - predictedEnd,
+                remainingProgress);
+            return predicted + remainingCorrection;
         }
 
         float ResolveGroundProbeProjection(

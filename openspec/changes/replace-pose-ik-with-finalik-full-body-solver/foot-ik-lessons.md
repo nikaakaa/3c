@@ -347,8 +347,12 @@ Projection与输出权重收口后，剩余大跳集中在Revision首帧：新�
 
 正式曲率改为只使用相邻Simulation committed Intent：`SignedAngle(previous desired velocity, current desired velocity) / committed tick duration`，并由同一Motion Timeline的最大转速验证。该值在整个Simulation tick区间保持不变，Presentation不再拥有导数。瞬时反向或Timeline换代没有有限曲率时明确标为Unavailable，不用Body Yaw冒充脚下移动轨迹曲率。
 
+短测`3fd444fe57bf4c0082252a55e506b34b`运行稳定，但不能证明曲率修复有效：楼梯A/D段仍有左/右`27/23`次Revision，Final Goal相对Baseline的额外单帧变化最大约`28.2/25.9cm`。现有1217列只记录Future Body朝向Yaw和最大转速，没有记录本次新增的平面Trajectory Curvature及availability；二者不能混为一列。补齐该输入与Plan冻结值前，不得把`±720°/s`的朝向列当作曲率证据，也不得继续修改Revision阈值。
+
 ## 30. 原子Step payload不能等同于巨型值类型复制
 
 Current与Incoming同时进入左右脚Feature后，`ActionAnimationPlaybackFrame`达到10072字节。它仍作为值类型进入托管`Dictionary`时，Unity Mono在ActionSampling首次执行泛型传参便抛出`InvalidProgramException: Passing an argument of size '10072'`；C#编译和静态校验都无法发现这个运行时边界。
 
 正式分层是：单脚`AnimationFootFeatureSample`继续保持固定布局值类型，供NativeArray、Pose Graph和作业链使用；包含左右脚完整事实、字符串身份和托管Buffer的Action Frame改为不可变引用快照。引用只改变托管传输成本，不改变原子事实、双缓冲提交或唯一执行链。以后扩展Artifact时必须分别审计Native数据布局和托管快照传输，不能用“原子”作为整块结构按值复制的理由。
+
+修复后同一自动入口完整产生run `3fd444fe57bf4c0082252a55e506b34b`：257行、5个压缩分块、Header/Value均为1217列，Unity Console为0 Error，未再出现第3帧ActionSampling失败。该结果只证明运行合同修复，不代表IK效果完成。

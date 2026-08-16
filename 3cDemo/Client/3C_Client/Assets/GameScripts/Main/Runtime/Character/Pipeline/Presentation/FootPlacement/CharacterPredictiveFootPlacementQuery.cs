@@ -199,6 +199,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly float[] m_FootRateEventPhases = new float[MaximumRouteSampleCount];
         readonly float[] m_FootRateProgress = new float[MaximumRouteSampleCount];
         readonly int[] m_UpperHullIndices = new int[MaximumPathPointCapacity];
+        readonly bool[] m_ForwardReachable = new bool[MaximumPathPointCapacity];
+        readonly bool[] m_BackwardReachable = new bool[MaximumPathPointCapacity];
         readonly EdgePlaneCandidate[] m_EdgePlanes =
             new EdgePlaneCandidate[(MaximumRouteSampleCount - 1) * 32];
         readonly CharacterPredictiveFootQueryRequestSnapshot[] m_QueryRequests =
@@ -824,88 +826,149 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return true;
         }
 
-        bool ValidateSupportChain(
-            int pathSampleCount,
+        bool RetainReachableSupportChain(
+            ref int pathSampleCount,
             Vector3 up,
+            ref int rejectedCount,
+            ref CharacterPredictiveFootQueryRejectCounts rejectCounts,
             out FootPlacementGroundEnvelopeRejectReason rejectReason)
         {
-            int previousSupportIndex = -1;
+            int firstSupportIndex = -1;
+            int lastSupportIndex = -1;
             for (int i = 0; i < pathSampleCount; i++)
             {
                 if (!m_PathSamples[i].IsSupport)
                     continue;
-                if (previousSupportIndex >= 0 &&
-                    !AcceptSupportTransition(
-                        m_PathSamples[previousSupportIndex].Point,
-                        m_PathSamples[i].Point,
-                        up,
-                        out rejectReason))
-                {
-                    return false;
-                }
-                previousSupportIndex = i;
+                if (firstSupportIndex < 0)
+                    firstSupportIndex = i;
+                lastSupportIndex = i;
             }
-            rejectReason = previousSupportIndex >= 0
-                ? FootPlacementGroundEnvelopeRejectReason.None
-                : FootPlacementGroundEnvelopeRejectReason.NoCandidate;
-            return previousSupportIndex >= 0;
-        }
-
-        void RemoveUnreachableNonSupportSamples(
-            ref int pathSampleCount,
-            Vector3 up,
-            ref int rejectedCount,
-            ref CharacterPredictiveFootQueryRejectCounts rejectCounts)
-        {
-            int write = 0;
-            for (int i = 0; i < pathSampleCount; i++)
+            if (firstSupportIndex < 0 || lastSupportIndex <= firstSupportIndex)
             {
-                FootPathSample candidate = m_PathSamples[i];
-                if (candidate.IsSupport)
+                rejectReason = FootPlacementGroundEnvelopeRejectReason.NoCandidate;
+                return false;
+            }
+            Array.Clear(m_ForwardReachable, 0, pathSampleCount);
+            Array.Clear(m_BackwardReachable, 0, pathSampleCount);
+            m_ForwardReachable[firstSupportIndex] = true;
+            FootPlacementGroundEnvelopeRejectReason finalReject =
+                FootPlacementGroundEnvelopeRejectReason.NoCandidate;
+            for (int current = firstSupportIndex + 1; current <= lastSupportIndex; current++)
+            {
+                FootPlacementGroundEnvelopeRejectReason currentReject =
+                    FootPlacementGroundEnvelopeRejectReason.NoCandidate;
+                for (int previous = current - 1; previous >= firstSupportIndex; previous--)
                 {
-                    m_PathSamples[write++] = candidate;
-                    continue;
-                }
-                int beforeIndex = -1;
-                int afterIndex = -1;
-                for (int supportIndex = 0; supportIndex < pathSampleCount; supportIndex++)
-                {
-                    FootPathSample support = m_PathSamples[supportIndex];
-                    if (!support.IsSupport)
+                    if (!m_ForwardReachable[previous])
                         continue;
-                    if (support.Fraction < candidate.Fraction &&
-                        (beforeIndex < 0 || support.Fraction > m_PathSamples[beforeIndex].Fraction))
+                    if (AcceptSupportTransition(
+                            m_PathSamples[previous].Point,
+                            m_PathSamples[current].Point,
+                            up,
+                            out FootPlacementGroundEnvelopeRejectReason transitionReject))
                     {
-                        beforeIndex = supportIndex;
+                        m_ForwardReachable[current] = true;
+                        break;
                     }
-                    if (support.Fraction > candidate.Fraction &&
-                        (afterIndex < 0 || support.Fraction < m_PathSamples[afterIndex].Fraction))
-                    {
-                        afterIndex = supportIndex;
-                    }
+                    currentReject = PreferReachabilityReject(currentReject, transitionReject);
                 }
-                FootPlacementGroundEnvelopeRejectReason rejectReason =
-                    FootPlacementGroundEnvelopeRejectReason.EdgeGap;
-                bool reachable = beforeIndex >= 0 && afterIndex >= 0 &&
-                                 AcceptSupportTransition(
-                                     m_PathSamples[beforeIndex].Point,
-                                     candidate.Point,
-                                     up,
-                                     out rejectReason) &&
-                                 AcceptSupportTransition(
-                                     candidate.Point,
-                                     m_PathSamples[afterIndex].Point,
-                                     up,
-                                     out rejectReason);
-                if (reachable)
+                if (current == lastSupportIndex)
+                    finalReject = currentReject;
+            }
+            if (!m_ForwardReachable[lastSupportIndex])
+            {
+                rejectReason = finalReject == FootPlacementGroundEnvelopeRejectReason.NoCandidate
+                    ? FootPlacementGroundEnvelopeRejectReason.EdgeGap
+                    : finalReject;
+                return false;
+            }
+            m_BackwardReachable[lastSupportIndex] = true;
+            for (int current = lastSupportIndex - 1; current >= firstSupportIndex; current--)
+            {
+                for (int next = current + 1; next <= lastSupportIndex; next++)
                 {
-                    m_PathSamples[write++] = candidate;
+                    if (!m_BackwardReachable[next] ||
+                        !AcceptSupportTransition(
+                            m_PathSamples[current].Point,
+                            m_PathSamples[next].Point,
+                            up,
+                            out _))
+                    {
+                        continue;
+                    }
+                    m_BackwardReachable[current] = true;
+                    break;
+                }
+            }
+            int write = 0;
+            for (int i = firstSupportIndex; i <= lastSupportIndex; i++)
+            {
+                if (m_ForwardReachable[i] && m_BackwardReachable[i])
+                {
+                    m_PathSamples[write++] = m_PathSamples[i];
                     continue;
                 }
                 rejectedCount++;
-                rejectCounts.Add(rejectReason);
+                rejectCounts.Add(ResolveUnreachableSampleReject(
+                    i,
+                    firstSupportIndex,
+                    lastSupportIndex,
+                    up));
             }
             pathSampleCount = write;
+            rejectReason = FootPlacementGroundEnvelopeRejectReason.None;
+            return pathSampleCount >= 2;
+        }
+
+        FootPlacementGroundEnvelopeRejectReason ResolveUnreachableSampleReject(
+            int sampleIndex,
+            int firstSupportIndex,
+            int lastSupportIndex,
+            Vector3 up)
+        {
+            FootPlacementGroundEnvelopeRejectReason result =
+                FootPlacementGroundEnvelopeRejectReason.NoCandidate;
+            for (int previous = sampleIndex - 1; previous >= firstSupportIndex; previous--)
+            {
+                if (!m_ForwardReachable[previous])
+                    continue;
+                if (!AcceptSupportTransition(
+                        m_PathSamples[previous].Point,
+                        m_PathSamples[sampleIndex].Point,
+                        up,
+                        out FootPlacementGroundEnvelopeRejectReason transitionReject))
+                {
+                    result = PreferReachabilityReject(result, transitionReject);
+                }
+            }
+            for (int next = sampleIndex + 1; next <= lastSupportIndex; next++)
+            {
+                if (!m_BackwardReachable[next])
+                    continue;
+                if (!AcceptSupportTransition(
+                        m_PathSamples[sampleIndex].Point,
+                        m_PathSamples[next].Point,
+                        up,
+                        out FootPlacementGroundEnvelopeRejectReason transitionReject))
+                {
+                    result = PreferReachabilityReject(result, transitionReject);
+                }
+            }
+            return result == FootPlacementGroundEnvelopeRejectReason.NoCandidate
+                ? FootPlacementGroundEnvelopeRejectReason.EdgeGap
+                : result;
+        }
+
+        static FootPlacementGroundEnvelopeRejectReason PreferReachabilityReject(
+            FootPlacementGroundEnvelopeRejectReason current,
+            FootPlacementGroundEnvelopeRejectReason candidate)
+        {
+            if (candidate == FootPlacementGroundEnvelopeRejectReason.StepExceeded ||
+                current == FootPlacementGroundEnvelopeRejectReason.NoCandidate)
+            {
+                return candidate;
+            }
+            return current;
         }
 
         static float Cross(FootPathSample first, FootPathSample second, FootPathSample third) =>

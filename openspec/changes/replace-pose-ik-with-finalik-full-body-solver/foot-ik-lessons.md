@@ -267,6 +267,8 @@ Clearance Continuity = 当前已执行Sole相对该Ground Probe Start的高度
 
 GDC顺序要求先沿Virtual Ground收集位置、法线和Edge Plane，再按前后与高低排序，最后删除不可通行点。`MaximumHeightDiscontinuity`应判断真实边缘平面的断裂；正式支撑链使用Step Up/Down、gap与reach。提前用稀疏端点判断Height Discontinuity会把可跨越楼梯误判为悬崖，导致Revision消失；保留旧Plan也不可取，实验已使Pelvis P95从`4.95cm`恶化到`7.06cm`、最大值从`9.21cm`恶化到`13.17cm`。
 
+`84dc902`随后尝试裁剪不可达的Capsule中间点，但错误地要求每个中间点同时一步连接前后两个正式Sphere支撑。正式支撑跨越三至四级台阶时，逐级踏面本应共同组成可达链，却会因任何单点无法直连两端而被全部删除，造成Ground Envelope缺踏面、Plan拒绝和踏空。可达性必须在排序点集上计算从当前支撑到Landing的完整有向链，只保留同时可由起点到达且可继续到终点的点；不能把多段路径压缩成每个点的双端直连测试。
+
 ## 19. 冻结Plan不能同步改写时间尺度
 
 失败run `e7996d5c9acf4563bb8176e44c86aa7a`在frame 209触发`CharacterFutureBodyTrajectory.Evaluate`越界。右脚同一个Plan sequence 22创建时Action Step时长为`0.5167s`，运行中被同事件Clock改成`0.5471s`；Future Body轨迹仍只覆盖创建时范围，`ObserveWorldMotionDeviation`却用新时长计算旧轨迹采样时间。

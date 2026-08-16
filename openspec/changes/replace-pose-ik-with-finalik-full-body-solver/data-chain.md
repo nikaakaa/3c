@@ -102,6 +102,18 @@ schema v98回归run `945b9dda31174d54abb62cf3fd043b70`共1460行、1345列，Hea
 
 schema v99回归run `45cb06dce2704500b26b3ac3a1b8a20c`共848行、1389列，Header唯一且每行等宽。左右脚共189次正式Attempt；每次Attempt的Candidate Kind、Landing Event、Motion Generation、Authority Tick都与同帧不可变Build Request一致，合同错配为0，同Build Revision重复Attempt为0。所有1696个逐脚帧决策都有非空typed reason，`EligibleButNotAttempted=0`。左脚主要阻断为`ActivePlanExecuting=302`、`MotionOutsideCommitTolerance=223`、`TransitionOccupied=169`；右脚分别为269、215、220。此结果证明“本帧为何没有新Plan”已经成为可直接统计的正式数据，不再需要从Path消失、响应式输出或上一Attempt反推。
 
+同一run进一步定位到Event Successor的轨迹时间域不一致。预建事件的`PredictionLeadSeconds`约为`0.3s`：Foot Route按`Lead + 相位增量`采样，但Expected Body省略Lead，Landing和Future Body覆盖时长又在已经包含Lead的`TimeToLandingSeconds`上重复加Lead。角色速度约`6m/s`时，系统因此稳定制造约`1.8m`假运动偏差；右脚frame `412 -> 414`的Motion Error为`1.8365m -> 2.1619m`，旧Plan仍以100%输出并产生最高`52.9cm`物理穿透。左脚frame `538 -> 539`同一Plan的Path Surface换代、Path Y上跳`50.1cm`、Final Goal Y上跳`36.4cm`。这不是输入真实偏离、Physics漏检或FBBIK放大，而是Route、Expected Body与Landing没有消费同一时间坐标。
+
+正式时间合同为：
+
+```text
+TrajectoryElapsed(phase) = PredictionLeadSeconds
+                         + (phase - GenerationPhase) * ActionStepDuration
+LandingElapsed = TrajectoryElapsed(1) = TimeToLandingSeconds
+```
+
+schema v100新增每脚`PredictionLead`、Planned Landing Elapsed、world projection冻结状态、Expected/Current Root以及Expected/Projected Expected Body共15列，使路线生成、运动偏差和执行投影可以逐帧对账。任何一层都不得省略或重复累计Lead。
+
 该run在自动输入层仍出现独立的`formal Move Input Action did not consume...`错误；错误发生前的所有完成帧已正常封口。它不改变Foot Placement数据链结论，但在继续做运动效果回归前必须单独修复测试输入锁存，不能把输入测试失败记成Plan或IK失败。
 
 ## 下一步诊断顺序

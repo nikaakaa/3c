@@ -487,6 +487,13 @@ namespace BTSMTL.Diagnostics
                    left.FrozenTrajectoryCurvatureAvailable == right.FrozenTrajectoryCurvatureAvailable &&
                    left.FrozenYawVelocityDegreesPerSecond.Equals(right.FrozenYawVelocityDegreesPerSecond) &&
                    left.FrozenMaximumYawVelocityDegreesPerSecond.Equals(right.FrozenMaximumYawVelocityDegreesPerSecond) &&
+                   left.PredictionLeadSeconds.Equals(right.PredictionLeadSeconds) &&
+                   left.PlannedLandingElapsedSeconds.Equals(right.PlannedLandingElapsedSeconds) &&
+                   left.WorldProjectionFrozen == right.WorldProjectionFrozen &&
+                   left.WorldProjectionExpectedRoot.Equals(right.WorldProjectionExpectedRoot) &&
+                   left.WorldProjectionCurrentRoot.Equals(right.WorldProjectionCurrentRoot) &&
+                   left.ExpectedPresentedBodyPosition.Equals(right.ExpectedPresentedBodyPosition) &&
+                   left.ProjectedExpectedPresentedBodyPosition.Equals(right.ProjectedExpectedPresentedBodyPosition) &&
                    left.MotionLinearLandingError.Equals(right.MotionLinearLandingError) &&
                    left.MotionAngularLandingError.Equals(right.MotionAngularLandingError) &&
                    left.MotionLandingError.Equals(right.MotionLandingError) &&

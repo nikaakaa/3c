@@ -82,7 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 routeStart - EvaluateUnalignedFootRoute(PathStartPhase),
                 Up);
             if (futureBodyTrajectory.DurationSeconds + 0.0001f <
-                PredictionLeadSeconds + LandingDelayAtGeneration)
+                ResolveRawTravelElapsedSeconds(1f))
             {
                 throw new ArgumentException("Future Body Trajectory does not cover the landing event.", nameof(futureBodyTrajectory));
             }
@@ -108,6 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float PathStartPhase { get; }
         internal float LandingDelayAtGeneration { get; }
         internal float PredictionLeadSeconds { get; }
+        internal float PlannedLandingElapsedSeconds => ResolveRawTravelElapsedSeconds(1f);
         internal Vector3 FootRoutePlanarAlignment { get; }
         internal bool HasPlanarMotion =>
             FrozenPlanarVelocity.sqrMagnitude > 0.000001f ||
@@ -158,13 +159,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal Vector3 EvaluatePresentedBodyPositionAtEventPhase(float eventPhase)
         {
-            float elapsedSeconds = ResolveElapsedSinceGeneration(eventPhase);
+            float elapsedSeconds = ResolveRawTravelElapsedSeconds(Mathf.Clamp01(eventPhase));
             return PresentedBodyStartPosition + ResolvePlanarTravel(elapsedSeconds);
         }
 
         internal Vector3 EvaluatePresentedBodyVelocityAtEventPhase(float eventPhase)
         {
-            float elapsedSinceGeneration = ResolveElapsedSinceGeneration(eventPhase);
+            float elapsedSinceGeneration = ResolveRawTravelElapsedSeconds(
+                Mathf.Clamp01(eventPhase));
             CharacterFutureBodyTrajectorySample sample = FutureBodyTrajectory.Evaluate(
                 elapsedSinceGeneration);
             return new Vector3(sample.VelocityX, sample.VelocityY, sample.VelocityZ);
@@ -172,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal Vector3 EvaluatePresentedBodyLandingPosition() =>
             PresentedBodyStartPosition + ResolvePlanarTravel(
-                PredictionLeadSeconds + LandingDelayAtGeneration);
+                ResolveRawTravelElapsedSeconds(1f));
 
         internal Vector3 EvaluateHipRoute(float eventPhase)
         {
@@ -233,14 +235,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 PredictionLeadSeconds +
                 (phase - EventPhaseAtGeneration) * ActionStepDurationSeconds);
-        }
-
-        float ResolveElapsedSinceGeneration(float eventPhase)
-        {
-            return Mathf.Max(
-                0f,
-                (Mathf.Clamp01(eventPhase) - EventPhaseAtGeneration) *
-                ActionStepDurationSeconds);
         }
 
         internal bool CanCoverEventPhase(float eventPhase)
@@ -1690,6 +1684,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float MotionAngularLandingError => m_State.MotionAngularLandingError;
         internal float MotionLandingError => m_State.MotionLandingError;
         internal float MotionLandingTolerance => m_State.MotionLandingTolerance;
+        internal bool WorldProjectionFrozen => m_State.WorldProjectionFrozen;
+        internal Vector3 WorldProjectionExpectedRoot => m_State.WorldProjectionExpectedRoot;
+        internal Vector3 WorldProjectionCurrentRoot => m_State.WorldProjectionCurrentRoot;
+        internal Vector3 ExpectedPresentedBodyPosition =>
+            RootTrajectory.EvaluatePresentedBodyPositionAtEventPhase(ActionStepPhase);
+        internal Vector3 ProjectedExpectedPresentedBodyPosition =>
+            ProjectWorldPoint(ExpectedPresentedBodyPosition);
         internal float SoleSupportRadius => m_Plan.SoleSupportRadius;
         internal ulong ActionClockFrame => m_State.ActionClockFrame;
         internal FootPlacementSurface FutureSupport => m_Plan.FutureSupport;

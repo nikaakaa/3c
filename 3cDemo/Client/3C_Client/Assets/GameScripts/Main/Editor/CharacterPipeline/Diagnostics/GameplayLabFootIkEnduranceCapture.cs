@@ -350,20 +350,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool hasRejectedAttempt = leg.RevisionPlanState ==
                                       CharacterPredictiveFootPlanState.Rejected &&
                                       leg.RevisionPlan != null;
+            CharacterPredictiveFootPlanGeometrySnapshot queryPlan = hasRejectedAttempt
+                ? leg.RevisionPlan
+                : plan;
             if (!hasRejectedAttempt && cache.TryGet(plan, out string[] cached))
             {
                 var result = new List<string>(cached);
                 UpdateDynamicSequenceValues(result, leg, route);
                 return result;
             }
-            IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> footRoute = plan?.GroundProbeRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> animationFootRoute = plan?.AnimationFootRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> footRoute = queryPlan?.GroundProbeRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> animationFootRoute = queryPlan?.AnimationFootRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
             IReadOnlyList<CharacterPredictiveFootRatePointSnapshot> footRate = plan?.FootRate ?? Array.Empty<CharacterPredictiveFootRatePointSnapshot>();
             IReadOnlyList<CharacterPredictiveFootClearanceSegmentSnapshot> clearancePath = plan?.ClearancePath ?? Array.Empty<CharacterPredictiveFootClearanceSegmentSnapshot>();
             IReadOnlyList<CharacterPredictiveFootEnvelopeSegmentSnapshot> envelope = plan?.GroundEnvelope ?? Array.Empty<CharacterPredictiveFootEnvelopeSegmentSnapshot>();
-            CharacterPredictiveFootPlanGeometrySnapshot queryPlan = hasRejectedAttempt
-                ? leg.RevisionPlan
-                : plan;
             IReadOnlyList<CharacterPredictiveFootQueryRequestSnapshot> requests = queryPlan?.QueryRequests ?? Array.Empty<CharacterPredictiveFootQueryRequestSnapshot>();
             IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> accepted = queryPlan?.AcceptedSupports ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
             IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> rejected = queryPlan?.RejectedGeometry ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();

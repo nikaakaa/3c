@@ -302,3 +302,5 @@ Git历史证明两种局部修法各自只解决了一半。旧Query直接采用
 自动Foot IK writer曾在登记`LiveState`兴趣并流式写1217列CSV的同时，又自动启动`RuntimeDebugSession Continuous`。两条观察路径消费同一完成帧，但后者继续把完整帧历史保存在内存，实测即使Profiler关闭仍持续分配约10MB/帧；运行越久，GC与临时录制越重，低帧率又会改变Presentation采样密度，使IK数据失去比较价值。
 
 正式自动采样只保留一条链：`LiveState -> Completed Frame Stream -> 后台压缩CSV`。手动Inspector Capture只能由用户显式启动，不能被自动回归隐式附加。性能验收先关闭全局Profiler，再看稳定帧时间与每帧分配；Profiler的`recording=false`不代表Profiler本身已经Disabled。
+
+Foot IK专项Variant曾同时运行玩家与中立Target的完整Animation/PoseGraph/FBBIK，性能报告因此每个渲染帧恰好出现两次Animation事务。Target不参与路线、支撑或CSV因果链，却消耗近一半表现预算。专项Variant应只运行唯一玩家并把ActionTarget输入正式提交为`None`；普通Local Fixed仍保留Target，不能为了专项性能改变自由测试入口。

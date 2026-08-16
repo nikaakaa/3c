@@ -344,7 +344,7 @@ FinalIK只消费原始Component Pose和一个最终Goal Set：
 
 ### GameplayLab自动反馈环
 
-普通`Local Fixed`入口始终保留玩家自由输入。独立的`Foot IK Automatic` Variant只替换同一Fixed Character Host的Control Source，通过正式Input System提交`MoveAxis`，不接管`LookAxis`、不写Transform、不修改速度或Time Scale。
+普通`Local Fixed`入口始终保留玩家自由输入和中立Target。独立的`Foot IK Automatic` Variant只实例化同一玩家Fixed Character Host并替换其Control Source，通过正式Input System提交`MoveAxis`，ActionTarget输入正式为`None`；它不接管`LookAxis`、不写Transform、不修改速度或Time Scale，也不运行与脚步回归无关的第二套角色表现。
 
 共享测试环境提供一条正式宽课程：30米宽、24级上楼、6米平台、24级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费48个逐级踏面。自动源不再循环双向长路线，而是对齐起点后进入第一段楼梯，直接通过正式Input System提交`MoveAxis.x=-1/+1`的`A 1秒 -> D 2秒 -> A 1秒`事务。事务完成后提交零输入，写入完成快照并注销采样路由，避免1217列CSV在无新信息时继续增长。它保留实时相机Basis和LookAxis，不用世界空间横向路点抵消相机缓动。课程整体位置由场景中的唯一Course与Start/End决定，不写死世界X坐标。
 

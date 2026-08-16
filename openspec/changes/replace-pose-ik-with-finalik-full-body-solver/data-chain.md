@@ -100,6 +100,10 @@ schema v97回归run `f9335d62431949a59cab0943c898eaaa`共749行、1279列，Head
 
 schema v98回归run `945b9dda31174d54abb62cf3fd043b70`共1460行、1345列，Header唯一且每行等宽。左右脚共347次PlanAttempt均带完整Build Request快照；精确重复请求为0，同一authority tick重复请求为0。右脚frame `971 -> 972`虽然属于同一Event Successor Family并连续`StepExceeded`，但authority tick由`1602 -> 1606`、Root移动约`38.5cm`、剩余落地时间减少约`64.6ms`，属于新的Build Revision；frame `977`又从Projected Landing切换为Landing Handoff，Origin事实也发生变化。由此排除“Builder重复执行同一份输入”，下一处可观察缺口是Planner未发布每帧的资格与阻断原因，而不是继续压制合法的新tick重试。
 
+schema v99回归run `45cb06dce2704500b26b3ac3a1b8a20c`共848行、1389列，Header唯一且每行等宽。左右脚共189次正式Attempt；每次Attempt的Candidate Kind、Landing Event、Motion Generation、Authority Tick都与同帧不可变Build Request一致，合同错配为0，同Build Revision重复Attempt为0。所有1696个逐脚帧决策都有非空typed reason，`EligibleButNotAttempted=0`。左脚主要阻断为`ActivePlanExecuting=302`、`MotionOutsideCommitTolerance=223`、`TransitionOccupied=169`；右脚分别为269、215、220。此结果证明“本帧为何没有新Plan”已经成为可直接统计的正式数据，不再需要从Path消失、响应式输出或上一Attempt反推。
+
+该run在自动输入层仍出现独立的`formal Move Input Action did not consume...`错误；错误发生前的所有完成帧已正常封口。它不改变Foot Placement数据链结论，但在继续做运动效果回归前必须单独修复测试输入锁存，不能把输入测试失败记成Plan或IK失败。
+
 ## 下一步诊断顺序
 
 1. 先验证Frame资格、Build Family、Build Revision和typed阻断原因。

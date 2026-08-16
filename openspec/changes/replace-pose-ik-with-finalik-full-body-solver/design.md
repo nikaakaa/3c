@@ -190,6 +190,8 @@ PredictedHipWorld(t) = B(t) * RootLocalHip(t)
 
 新的committed trajectory只有在剩余Landing位置或朝向误差超过鞋底/查询几何边界时创建后继Revision。每个Revision仍是不可变计划。
 
+Plan创建时必须原子冻结Action Step时长、Future Body轨迹时间范围和`phase -> trajectory time`映射。运行时Action Step Clock只推进同一事件的权威phase；若正式动作时长变化会改变剩余Landing，则它属于新的committed trajectory输入，必须经Revision替换，不能直接改写旧Plan的时间尺度。否则新时长会超出旧Future Body范围，或在不报错时悄悄改变冻结路线的采样位置。
+
 后继计划从当前已执行结果连续重基：
 
 ```text

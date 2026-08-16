@@ -1903,17 +1903,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             float remainingSeconds = Mathf.Max(
                 0f,
-                (1f - plan.ActionStepPhase) * plan.ActionStepDurationSeconds);
+                (1f - plan.ActionStepPhase) *
+                plan.RootTrajectory.ActionStepDurationSeconds);
             float horizonSeconds = predictionLeadSeconds + remainingSeconds;
             if (horizonSeconds <= 0.0001f || m_FutureBodyTrajectorySource == null)
                 return false;
             Vector3 up = plan.RootTrajectory.Up;
-            float elapsedSinceGeneration = Mathf.Max(
-                0f,
-                (plan.ActionStepPhase - plan.RootTrajectory.EventPhaseAtGeneration) *
-                plan.ActionStepDurationSeconds);
             Vector3 expectedVelocity = Vector3.ProjectOnPlane(
-                plan.RootTrajectory.EvaluatePresentedBodyVelocity(elapsedSinceGeneration),
+                plan.RootTrajectory.EvaluatePresentedBodyVelocityAtEventPhase(
+                    plan.ActionStepPhase),
                 up);
             Vector3 currentVelocity = Vector3.ProjectOnPlane(
                 new Vector3(

@@ -44,6 +44,7 @@
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
+- [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。
 
 ## 5. GDC Foot Path与Ground Envelope
 

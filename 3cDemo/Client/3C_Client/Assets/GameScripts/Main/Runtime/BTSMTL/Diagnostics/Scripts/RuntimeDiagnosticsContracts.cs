@@ -791,6 +791,16 @@ namespace BTSMTL.Diagnostics
         public RuntimeFootIkPathSampleSnapshot PredictivePathSample7;
         public float RequiredLift;
         public float AppliedLift;
+        public string GoalOwner;
+        public Vector3 OriginalGoalWorldPosition;
+        public Vector3 StanceGoalWorldPosition;
+        public bool ActivePlanGoalAvailable;
+        public Vector3 ActivePlanGoalWorldPosition;
+        public bool RevisionPlanGoalAvailable;
+        public Vector3 RevisionPlanGoalWorldPosition;
+        public bool TransitionOriginGoalAvailable;
+        public Vector3 TransitionOriginGoalWorldPosition;
+        public Vector3 PreContinuityGoalWorldPosition;
         public Vector3 BaselineGoalWorldPosition;
         public Vector3 FinalGoalWorldPosition;
         public string BaselineGoalApplication;

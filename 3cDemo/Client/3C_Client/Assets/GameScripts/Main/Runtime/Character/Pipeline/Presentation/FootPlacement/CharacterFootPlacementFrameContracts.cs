@@ -112,6 +112,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFullBodyIkGoal Right { get; }
     }
 
+    internal readonly struct CharacterFootPlacementFootGoalInput
+    {
+        internal CharacterFootPlacementFootGoalInput(
+            CharacterFootSide side,
+            in CharacterFootPlacementAnimatedFootPose originalPose,
+            AnimationFootFeatureSample feature,
+            float currentEventFootPoseWeight,
+            CharacterFullBodyIkGoal stanceGoal,
+            in CharacterFootGroundingFootDiagnostics stanceDiagnostics)
+        {
+            if (!stanceGoal.IsValid || stanceDiagnostics.Side != side ||
+                !float.IsFinite(currentEventFootPoseWeight) ||
+                currentEventFootPoseWeight < 0f || currentEventFootPoseWeight > 1f)
+            {
+                throw new ArgumentException("Foot Placement foot Goal input is invalid.");
+            }
+            Side = side;
+            OriginalPose = originalPose;
+            Feature = feature;
+            CurrentEventFootPoseWeight = currentEventFootPoseWeight;
+            StanceGoal = stanceGoal;
+            StanceDiagnostics = stanceDiagnostics;
+        }
+
+        internal CharacterFootSide Side { get; }
+        internal CharacterFootPlacementAnimatedFootPose OriginalPose { get; }
+        internal AnimationFootFeatureSample Feature { get; }
+        internal float CurrentEventFootPoseWeight { get; }
+        internal CharacterFullBodyIkGoal StanceGoal { get; }
+        internal CharacterFootGroundingFootDiagnostics StanceDiagnostics { get; }
+    }
+
     internal readonly struct CharacterFootLandingCommit
     {
         internal CharacterFootLandingCommit(
@@ -181,6 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterPredictiveFootFrameEvaluation(
             ulong renderFrame,
             ulong completionIdentity,
+            in CharacterFootPlacementAnimatedPose originalPose,
             in CharacterPredictiveFootStanceInput left,
             in CharacterPredictiveFootStanceInput right)
         {
@@ -188,12 +221,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentException("Predictive Foot frame identity is invalid.");
             RenderFrame = renderFrame;
             CompletionIdentity = completionIdentity;
+            OriginalPose = originalPose;
             Left = left;
             Right = right;
         }
 
         internal ulong RenderFrame { get; }
         internal ulong CompletionIdentity { get; }
+        internal CharacterFootPlacementAnimatedPose OriginalPose { get; }
         internal CharacterPredictiveFootStanceInput Left { get; }
         internal CharacterPredictiveFootStanceInput Right { get; }
 

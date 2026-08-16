@@ -784,6 +784,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PredictivePathSample7 = BuildPathSample(in modifier, hasModifier, 7),
                 RequiredLift = hasModifier ? modifier.RequiredLift : 0f,
                 AppliedLift = hasModifier ? modifier.AppliedLift : 0f,
+                GoalOwner = hasModifier ? modifier.GoalOwner.ToString() : "Stance",
+                OriginalGoalWorldPosition = hasModifier
+                    ? modifier.OriginalGoalWorldPosition
+                    : baselineGoalWorldPosition,
+                StanceGoalWorldPosition = hasModifier
+                    ? modifier.StanceGoalWorldPosition
+                    : baselineGoalWorldPosition,
+                ActivePlanGoalAvailable = hasModifier && modifier.ActivePlanGoalAvailable,
+                ActivePlanGoalWorldPosition = hasModifier
+                    ? modifier.ActivePlanGoalWorldPosition
+                    : default,
+                RevisionPlanGoalAvailable = hasModifier && modifier.RevisionPlanGoalAvailable,
+                RevisionPlanGoalWorldPosition = hasModifier
+                    ? modifier.RevisionPlanGoalWorldPosition
+                    : default,
+                TransitionOriginGoalAvailable = hasModifier && modifier.TransitionOriginGoalAvailable,
+                TransitionOriginGoalWorldPosition = hasModifier
+                    ? modifier.TransitionOriginGoalWorldPosition
+                    : default,
+                PreContinuityGoalWorldPosition = hasModifier
+                    ? modifier.PreContinuityGoalWorldPosition
+                    : baselineGoalWorldPosition,
                 BaselineGoalWorldPosition = baselineGoalWorldPosition,
                 FinalGoalWorldPosition = finalGoalWorldPosition,
                 BaselineGoalApplication = grounding.Goal.Application.ToString(),

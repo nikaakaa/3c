@@ -1,7 +1,7 @@
 ## 1. 已有基础与文档收口
 
-- [x] 1.1 保持`FootGrounding -> optional PredictiveFootPlacementModifier -> FinalIK FBBIK`唯一正式链，不增加第二Grounding、Heel/Toe Current Query、第二Pelvis、LegIK、TwoBoneIK或FBBIK后处理。
-- [x] 1.2 已接入Rig v4、Calibration v4、Heel/Toe/Sole几何、唯一World Query backend、Stance/Anchor/Pelvis owner和FinalIK Pose Buffer FBBIK。
+- [x] 1.1 保持作者拓扑只有`FootPlacement Final Goals -> FinalIK FBBIK`一条正式链，不增加独立Predictive节点、第二Grounding、Heel/Toe Current Query、第二Pelvis、LegIK、TwoBoneIK或FBBIK后处理。
+- [x] 1.2 已接入Rig v4、Calibration v4、Heel/Toe/Sole几何、唯一World Query backend、Stance/Anchor/Pelvis算法基础和FinalIK Pose Buffer FBBIK。
 - [x] 1.3 已建立Action Step Fact、基础Foot/Ankle/Hip/Clearance路线、Ground Probe、Ground Envelope、Revision、Gizmo、Runtime Trace与CSV诊断框架。
 - [x] 1.4 用最新压力采样和源码证明当前首个错误owner位于Artifact/Plan/所有权交接而非FBBIK；Executing失去Predictive输出、计划陈旧、Revision硬边与不可达Goal均有数据证据。
 - [x] 1.5 对照本地GDC 2016原始幻灯片，重写proposal、design、delta spec和经验文档；旧逐轮补丁不再定义目标架构。
@@ -18,6 +18,7 @@
 - [x] 1.13 将动画Source不可变Clip Catalog的全量校验和索引建立收敛到Source创建/换代，逐帧Prepare只处理动态采样计划与实际激活Clip。
 - [x] 1.14 将Foot Feature曲线合法性校验收敛到Sequence Player创建；删除Runtime后继事件搜索与缓存，由Artifact在同一采样域原子烘焙Current与Incoming Step，运行帧只采样并绑定权威source。
 - [x] 1.15 Foot IK Endurance进入压力区后持续循环`A 1秒 -> D 2秒 -> A 1秒`，每轮结束后通过同一正式MoveAxis回到压力区起点再递增lap；持续发布采样路由，不得传送、自动归零、注销路由或退出Play，只有手动停止测试才释放虚拟输入并封口流式CSV。
+- [x] 1.15A 自动输入改为一帧Input System流水线：本帧只消费上一帧已提交并由正式Move Action锁存的值，再向虚拟Gamepad提交下一帧状态；A/D换向不得要求同一FrameUpdate内Action立即收敛，也不得绕过正式Input Action。
 - [ ] 1.16 以用户调整后的GameplayLab大楼梯和Traversal Ramp重新烘焙唯一Deterministic Collision World；普通Free Play出生点对齐场景`teststart`但继续使用自由键鼠和相机，Foot IK Automatic保持独立自动输入；证明两者共用该碰撞资产且KCC不会再从楼梯区域掉出世界。
 
 ## 2. Animation Biomechanical Step Artifact
@@ -50,6 +51,22 @@
 - [ ] 4.2 删除Predictive planner中固定`trajectoryCurvatureDegreesPerSecond = 0`与Body Yaw猜曲率语义，使位移与有限Facing来自同一committed trajectory。
 - [ ] 4.3 用Future Body Transform与Artifact root-local Sole/Ankle/Hip路线建立唯一未来世界路线，保留动画局部X、Z和旋转。
 - [ ] 4.4 Plan创建帧只允许一次刚性重基，使`PathStartPhase`的Artifact Foot Route与已提交接触点或已执行Sole正下方重合；执行Sole另行保存净空连续性，重基整步冻结。
+
+## 4A. 统一Foot Placement运行事务与状态所有权
+
+- [x] 4A.1 定义不可变`CharacterFootPlacementFrameInput`与`CharacterFootPlacementFrameResult`，使Pose Plan每帧只通过`CharacterFootPlacementRuntime.EvaluateFrame`提交一次world-aware Goal计算。
+- [x] 4A.2 建立每脚唯一`CharacterFootExecutionState`，迁入Constraint Phase、Current Support filter state、Anchor、Active Plan引用、唯一Transition槽、上一完成Original/Final输出、Landing Commit和Query Attempt identity。
+- [x] 4A.3 把Current Support Trace/Resolve改为显式request/result与对`CharacterFootExecutionState`中filter state的数值求值；它不得拥有Swing、Plan、Anchor、Pelvis或Goal生命周期。
+- [ ] 4A.4 将`CharacterPredictiveFootPlacementPlan`拆成Builder提交的不可变Plan与无状态Evaluator；把Active/Revision/Fade、Action Clock推进、world projection current、Anchor观察和输出连续性全部迁出Plan。
+- [ ] 4A.5 将Intent Revision与Event Successor收敛为`CharacterFootExecutionState`内部唯一`CharacterFootPlanTransition`，只保存旧/新不可变Plan、transition kind、唯一Blend及相对Original动画的连续性修正。
+- [x] 4A.6 保持`CharacterFootPlacementWorldQueryBackend`为唯一PhysicsScene adapter，使Current Support Query与Predictive Ground Path Query只消费显式request并返回事实result；Query不得读取或修改Foot状态、Plan Transition、Anchor、Pelvis或Goals。
+- [x] 4A.7 用单次Frame事务替换`Prepare -> GetStanceInput -> ObserveStance -> Resolve`协议：从同一Committed左右脚状态生成Pending约束提案，禁止Predictive与Grounding跨阶段回调。
+- [x] 4A.8 建立`CharacterFootLandingCommit`原子值，完整包含Plan/Event、Landing Sole、Support Surface/local plane、Anchor local pose、Committed Sole和Successor origin；任一字段无效时整笔不提交。
+- [x] 4A.9 让唯一Pelvis resolver同时消费左右脚约束提案并返回Pelvis结果与左右constraint disposition；它不得直接改写Foot状态，Finalize只按该结果一次接受或释放约束并提交Landing/Anchor。
+- [x] 4A.10 删除Grounding baseline再由Predictive覆盖的路径；左右脚与Pelvis全部完成后一次写入Pelvis、Left Foot、Right Foot三个最终Goal槽。
+- [x] 4A.11 把左右脚Pending状态和诊断接入现有Presentation帧事务；只有Goal Set、FullBodyIK及后续Pose Plan完成时才Seal，Discard、Reset或Fault不得留下部分Plan、Anchor、Landing或单脚换代。
+- [ ] 4A.12 删除`CharacterFootGroundingGoalSource`、`CharacterFootGroundingPlan`、Grounding/Predictive旧owner字段、旧多阶段接口和失效诊断字段；保留一个正式`CharacterFootPlacementRuntime`入口，不留兼容adapter。
+
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
 - [x] 4.5A 历史实验已证明“每个权威Landing Event至多一笔Intent Revision”能阻止同一源Plan反复换路；自动A/D run `35d23e6892f24566808e0276a3ec28be`中，每个事件最多只出现原Plan加一个Revision。后续run证明该事件级限制会让再次偏离的后继Plan继续过期执行，本规则由4.5B替代，不反勾历史完成项。
 - [ ] 4.5B 已提交Step Plan每帧必须用当前正式Root相对该相位Expected Root的平面刚体差重投影Foot Route、Ground Envelope、Landing与Body Path；这只是无Physics的廉价执行投影，不得改写Artifact、Clock、Plan identity或重新查询。进入`ApproachingContact`后冻结最终投影，保证Landing不再漂移。
@@ -78,6 +95,7 @@
 - [ ] 5.5 对剩余点构造连续二维上侧Convex Hull；Ground Envelope保持feet-only，不驱动Pelvis。
 - [ ] 5.5A 每条Ground Envelope Segment必须原子保存Start/End Surface；全局起点使用Committed Landing Surface，终点使用该段实际支撑，禁止用End Surface冒充整段并导致Successor原点身份误判。
 - [ ] 5.6 最终Swing保持Native Sole XZ，唯一Y为`GroundEnvelopeHeight + AnimationClearance`；禁止冻结Path XYZ拉脚和Native/Predicted Y双owner。
+- [x] 5.6A Foot Rate必须由权威Action Phase先定位同相位Ground Probe Segment，再只在该局部Segment投影Animation Foot Route并生成单调Route Fraction；删除整条Virtual Ground全局最近点重新关联远处Segment的路径。
 - [ ] 5.7 使用Calibration Heel/Toe验证唯一支撑平面物理净空，不增加Heel/Toe Current Query、固定高度或默认地面。
 - [ ] 5.7A Ground Envelope采样提供当前Foot Rate的Component Up高度下界；Segment Surface法线只可在Native Sole仍位于现有SoleSupportRadius局部覆盖内时参与坡面净空与Foot Orientation，不得把局部斜面无限外推到远处后生成额外抬升。Current Grounding只在Current/Stance所有权内对其真实查询平面执行唯一物理净空；Executable Swing的完整Plan目标不得在连续性处理后再次被Current Support抬升。
 - [ ] 5.8 台阶边缘Sphere多命中必须以前一支撑做有向可达选择；同Foot Rate合并保留正式支撑身份，Landing、Body Support终点与Ground Envelope终点从验证后的同一链末端原子提交。
@@ -96,7 +114,7 @@
 
 ## 7. 集成、诊断与发布
 
-- [ ] 7.1 更新统一Foot Placement输入、Plan、Query、Stance、Pelvis与Final Goal合同；FinalIK继续只执行一次FBBIK。
+- [ ] 7.1 将4A形成的统一Frame Input/Result、每脚Pending状态与最终Goal Set接入generated Pose Plan workspace和completion lineage；FinalIK继续只消费结果并执行一次FBBIK。
 - [ ] 7.2 更新Scene/Game Gizmo：完整绘制Artifact Route、Future Body Transform、Virtual Ground、Capsule Query、Ground Envelope、实际消费点、Revision和Body Support Path，不显示文字或伪Path。
 - [ ] 7.3 更新Runtime Trace、Inspector和CSV，覆盖Artifact重建误差、事件所有权、Future Body Position/Facing/速度、当前与Plan冻结Trajectory Curvature及availability、query/reach、Goal、Support Leg、Pelvis、Pivot和FBBIK两层残差。
 - [ ] 7.4 保证CSV Header/Value等宽、列名唯一、左右脚字段对称，更新流式耐久writer与manifest合同。

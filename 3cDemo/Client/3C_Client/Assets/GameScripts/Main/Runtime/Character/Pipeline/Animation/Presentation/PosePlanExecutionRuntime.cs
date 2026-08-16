@@ -2724,7 +2724,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_FootPlacementContributions,
                     contributionCount);
                 var planningFrame =
-                    new CharacterFootPlacementPlanningFrame(
+                    new CharacterFootPlacementFrameInput(
                         actorId,
                         renderFrame,
                         presentationDeltaSeconds,
@@ -2735,7 +2735,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PosePlan.FullBodyIkGoals,
                     descriptor.GoalWorkspaceOffset,
                     CharacterPresentationFootGroundingDescriptor.GoalCount);
-                goalSet = footPlacement.ProduceGrounding(
+                goalSet = footPlacement.EvaluateFrame(
                     in planningFrame,
                     goalOutput,
                     descriptor.GoalWorkspaceOffset,

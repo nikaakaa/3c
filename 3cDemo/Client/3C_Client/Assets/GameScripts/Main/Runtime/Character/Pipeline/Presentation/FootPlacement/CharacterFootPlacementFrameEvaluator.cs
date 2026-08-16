@@ -6,143 +6,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    internal readonly struct CharacterFootGroundingPlan
-    {
-        internal CharacterFootGroundingPlan(
-            CharacterFullBodyIkGoal pelvis,
-            CharacterFullBodyIkGoal leftFoot,
-            CharacterFullBodyIkGoal rightFoot)
-        {
-            Pelvis = pelvis;
-            LeftFoot = leftFoot;
-            RightFoot = rightFoot;
-            if (!pelvis.IsValid || !leftFoot.IsValid || !rightFoot.IsValid)
-                throw new ArgumentException("Foot Grounding plan is invalid.");
-        }
-
-        internal CharacterFullBodyIkGoal Pelvis { get; }
-        internal CharacterFullBodyIkGoal LeftFoot { get; }
-        internal CharacterFullBodyIkGoal RightFoot { get; }
-
-        internal void WriteGoals(NativeSlice<CharacterFullBodyIkGoal> output)
-        {
-            if (output.Length != 3)
-                throw new ArgumentException("Foot Grounding requires exactly three Goal slots.", nameof(output));
-            output[0] = Pelvis;
-            output[1] = LeftFoot;
-            output[2] = RightFoot;
-        }
-    }
-
-    internal sealed class CharacterFootGroundingGoalSource : IDisposable
-    {
-        readonly CharacterFootPlacementPoseRig m_Rig;
-        readonly CharacterFootGroundingPlanner m_Planner;
-
-        internal CharacterFootGroundingGoalSource(
-            ActorId actorId,
-            CharacterFootPlacementRuntimeSettings settings,
-            CharacterFootPlacementPoseRig rig,
-            PhysicsScene physicsScene,
-            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource)
-        {
-            m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            m_Planner = new CharacterFootGroundingPlanner(
-                actorId,
-                settings,
-                rig,
-                physicsScene,
-                futureBodyTrajectorySource);
-        }
-
-        internal CharacterFootGroundingDiagnostics Diagnostics => m_Planner.Diagnostics;
-        internal CharacterPredictiveFootPlacementDiagnostics PredictionDiagnostics =>
-            m_Planner.PredictionDiagnostics;
-        internal CharacterFootPlacementRuntimeSettings Settings => m_Planner.Settings;
-
-        internal string ApplyTuning(
-            CharacterLyraCurrentGroundingSettings currentGrounding,
-            CharacterStanceStabilizationSettings stanceStabilization,
-            CharacterPredictiveFootPlacementRuntimeSettings predictiveExtension,
-            bool resetOwnerState)
-        {
-            try
-            {
-                m_Planner.ApplyTuning(
-                    currentGrounding,
-                    stanceStabilization,
-                    predictiveExtension,
-                    resetOwnerState);
-                return string.Empty;
-            }
-            catch (Exception exception)
-            {
-                return exception.Message;
-            }
-        }
-
-        internal string ApplyTuning(
-            CharacterPoseTuningLayout layout,
-            CharacterPoseTuningParameterBlock block,
-            bool resetOwnerState)
-        {
-            try
-            {
-                string error = CharacterFootPlacementTuningDecoder.Apply(
-                    m_Planner.Settings,
-                    layout,
-                    block);
-                if (!string.IsNullOrEmpty(error))
-                    return error;
-                m_Planner.ApplyTuning(
-                    m_Planner.Settings.CurrentGrounding,
-                    m_Planner.Settings.StanceStabilization,
-                    m_Planner.Settings.PredictiveExtension,
-                    resetOwnerState);
-                return string.Empty;
-            }
-            catch (Exception exception)
-            {
-                return exception.Message;
-            }
-        }
-
-        internal CharacterFullBodyIkGoalSetHeader Produce(
-            in CharacterFootPlacementPlanningFrame frame,
-            NativeSlice<CharacterFullBodyIkGoal> goalOutput,
-            int goalWorkspaceOffset,
-            int producerOperationIndex,
-            int producerCallSiteIndex,
-            int weightParameterIndex)
-        {
-            var header = new CharacterFullBodyIkGoalSetHeader(
-                frame.RenderFrame,
-                frame.CompletionIdentity,
-                m_Rig.Rig.RigId,
-                m_Rig.Rig.RigRevision,
-                producerOperationIndex,
-                producerCallSiteIndex,
-                goalWorkspaceOffset,
-                3,
-                CharacterFullBodyIkGoalSetAvailability.Ready);
-            m_Planner.Plan(
-                in frame,
-                in header,
-                weightParameterIndex,
-                out CharacterFootGroundingPlan plan);
-            plan.WriteGoals(goalOutput);
-            return header;
-        }
-
-        internal void Reset(CharacterFootPlacementReset reset) => m_Planner.Reset(reset);
-
-        internal void RetargetBodyBranch(ulong resetSequence) =>
-            m_Planner.RetargetBodyBranch(resetSequence);
-
-        public void Dispose() => m_Planner.Dispose();
-    }
-
-    internal sealed class CharacterFootGroundingPlanner : IDisposable
+    internal sealed class CharacterFootPlacementFrameEvaluator : IDisposable
     {
         enum FootOwnershipState : byte
         {
@@ -199,6 +63,43 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : PlantContact || HasAnchor || AnchorBlendWeight > 0.0001f
                         ? CharacterFootContactState.Contact
                         : CharacterFootContactState.Swing;
+
+            internal void CopyFrom(FootState source)
+            {
+                if (source == null || source.Side != Side)
+                    throw new ArgumentException("Foot execution state copy is incompatible.", nameof(source));
+                PlantContact = source.PlantContact;
+                TransitionReason = source.TransitionReason;
+                AnchorSurface = source.AnchorSurface;
+                AnchorLocalPosition = source.AnchorLocalPosition;
+                AnchorLocalRotation = source.AnchorLocalRotation;
+                AnchorAnimationReferenceLocalPosition = source.AnchorAnimationReferenceLocalPosition;
+                AnchorAnimationReferenceLocalRotation = source.AnchorAnimationReferenceLocalRotation;
+                HasAnchorAnimationReference = source.HasAnchorAnimationReference;
+                AnchorPlanSequence = source.AnchorPlanSequence;
+                AnchorLandingEventIdentity = source.AnchorLandingEventIdentity;
+                AnchorBlendWeight = source.AnchorBlendWeight;
+                HasAnchor = source.HasAnchor;
+                ContactDecision = source.ContactDecision;
+                ContactSurfaceValid = source.ContactSurfaceValid;
+                ContactSurfaceDistanceAccepted = source.ContactSurfaceDistanceAccepted;
+                ContactCaptureSpeedAccepted = source.ContactCaptureSpeedAccepted;
+                ContactRetentionSpeedAccepted = source.ContactRetentionSpeedAccepted;
+                ContactConfidenceAccepted = source.ContactConfidenceAccepted;
+                AnchorDistance = source.AnchorDistance;
+                AnchorDistanceAccepted = source.AnchorDistanceAccepted;
+                HasAnimationConstraint = source.HasAnimationConstraint;
+                AnimationConstraintEventIdentity = source.AnimationConstraintEventIdentity;
+                AnimationConstraintMode = source.AnimationConstraintMode;
+                AnimationSupportPhase = source.AnimationSupportPhase;
+                AnimationConstraintWeight = source.AnimationConstraintWeight;
+                AnimationSupportWeight = source.AnimationSupportWeight;
+                PelvisSupportWeight = source.PelvisSupportWeight;
+                IdleCurrentSupport = source.IdleCurrentSupport;
+                IdleAnchor = source.IdleAnchor;
+                IdleAnchorCaptureArmed = source.IdleAnchorCaptureArmed;
+                OwnershipState = source.OwnershipState;
+            }
 
             internal void PrepareActionEvent(AnimationPredictedFootStepSample step)
             {
@@ -606,6 +507,92 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        sealed class CharacterFootExecutionState
+        {
+            internal CharacterFootExecutionState(CharacterFootSide side)
+            {
+                Stance = new FootState(side);
+                Plan = new CharacterPredictiveFootPlacementPlanner.FootPlanRuntime(
+                    side,
+                    CharacterPredictiveFootPlacementQuery.MaximumPathPointCapacity);
+            }
+
+            internal FootState Stance { get; }
+            internal CharacterPredictiveFootPlacementPlanner.FootPlanRuntime Plan { get; }
+            internal CharacterFootCurrentSupportFilterState CurrentSupportFilter;
+            internal CharacterFootLandingCommit LandingCommit { get; private set; }
+            internal ulong QueryAttemptIdentity { get; private set; }
+            internal ulong LastOutputFrame { get; private set; }
+            internal Vector3 LastOriginalAnklePosition { get; private set; }
+            internal Vector3 LastFinalAnklePosition { get; private set; }
+
+            internal void CopyFrom(CharacterFootExecutionState source)
+            {
+                if (source == null)
+                    throw new ArgumentNullException(nameof(source));
+                Stance.CopyFrom(source.Stance);
+                Plan.CopyFrom(source.Plan);
+                CurrentSupportFilter = source.CurrentSupportFilter;
+                LandingCommit = source.LandingCommit;
+                QueryAttemptIdentity = source.QueryAttemptIdentity;
+                LastOutputFrame = source.LastOutputFrame;
+                LastOriginalAnklePosition = source.LastOriginalAnklePosition;
+                LastFinalAnklePosition = source.LastFinalAnklePosition;
+            }
+
+            internal void ObserveQueryAttempt(ulong renderFrame)
+            {
+                CharacterPredictiveFootPlacementPlan attempt =
+                    Plan.Revision.GeneratedFrame == renderFrame
+                        ? Plan.Revision
+                        : Plan.Active.GeneratedFrame == renderFrame
+                            ? Plan.Active
+                            : null;
+                if (attempt?.HasAttempt == true)
+                    QueryAttemptIdentity = attempt.Sequence;
+            }
+
+            internal void RecordOutput(
+                ulong renderFrame,
+                Vector3 originalAnklePosition,
+                Vector3 finalAnklePosition)
+            {
+                if (renderFrame == 0 ||
+                    !IsFinite(originalAnklePosition) ||
+                    !IsFinite(finalAnklePosition))
+                {
+                    throw new ArgumentException("Foot execution output is invalid.");
+                }
+                LastOutputFrame = renderFrame;
+                LastOriginalAnklePosition = originalAnklePosition;
+                LastFinalAnklePosition = finalAnklePosition;
+            }
+
+            internal void CommitLanding(in CharacterFootLandingCommit landingCommit)
+            {
+                if (!landingCommit.IsValid)
+                    throw new ArgumentException("Foot Landing Commit is invalid.", nameof(landingCommit));
+                LandingCommit = landingCommit;
+            }
+
+            internal void ClearLandingCommit() => LandingCommit = default;
+
+            internal void Reset(FootConstraintTransitionReason reason)
+            {
+                Stance.Reset(reason);
+                Plan.Reset(CharacterPredictiveFootPlanEndReason.PresentationReset);
+                CurrentSupportFilter.Reset();
+                LandingCommit = default;
+                QueryAttemptIdentity = 0;
+                LastOutputFrame = 0;
+                LastOriginalAnklePosition = Vector3.zero;
+                LastFinalAnklePosition = Vector3.zero;
+            }
+
+            static bool IsFinite(Vector3 value) =>
+                float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+        }
+
         readonly ActorId m_ActorId;
         readonly CharacterFootPlacementRuntimeSettings m_Settings;
         readonly CharacterFootPlacementPoseRig m_Rig;
@@ -613,8 +600,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterLyraCurrentGroundingSolver m_CurrentGrounding;
         readonly CharacterPredictiveFootPlacementPlanner m_SwingPrediction;
         readonly CharacterFootPlacementPelvisPlanner m_Pelvis = new CharacterFootPlacementPelvisPlanner();
-        readonly FootState m_Left = new FootState(CharacterFootSide.Left);
-        readonly FootState m_Right = new FootState(CharacterFootSide.Right);
+        readonly CharacterFootExecutionState m_Left;
+        readonly CharacterFootExecutionState m_Right;
+        readonly CharacterFootExecutionState m_LeftRollback;
+        readonly CharacterFootExecutionState m_RightRollback;
         ulong m_LastRenderFrame;
         ulong m_ResetSequence;
         Vector3 m_PreviousPoseRootPosition;
@@ -623,9 +612,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ulong m_PelvisSupportPlanSequence;
         bool m_HasPelvisSupportSide;
         CharacterFootGroundingDiagnostics m_Diagnostics;
+        CharacterPredictiveFootPlacementPlanner.StateSnapshot m_PredictionRollback;
+        CharacterFootCurrentFloatFilterState m_PelvisFilter;
+        CharacterFootCurrentFloatFilterState m_PelvisFilterRollback;
+        ulong m_LastRenderFrameRollback;
+        ulong m_ResetSequenceRollback;
+        Vector3 m_PreviousPoseRootPositionRollback;
+        bool m_HasPreviousPoseRootPositionRollback;
+        CharacterFootSide m_PelvisSupportSideRollback;
+        ulong m_PelvisSupportPlanSequenceRollback;
+        bool m_HasPelvisSupportSideRollback;
+        CharacterFootGroundingDiagnostics m_DiagnosticsRollback;
+        ulong m_PendingRenderFrame;
+        ulong m_PendingCompletionIdentity;
+        bool m_HasPendingFrame;
         bool m_Disposed;
 
-        internal CharacterFootGroundingPlanner(
+        internal CharacterFootPlacementFrameEvaluator(
             ActorId actorId,
             CharacterFootPlacementRuntimeSettings settings,
             CharacterFootPlacementPoseRig rig,
@@ -638,6 +641,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Settings = settings ?? throw new ArgumentNullException(nameof(settings));
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             m_Rig.RequireValid();
+            m_Left = new CharacterFootExecutionState(CharacterFootSide.Left);
+            m_Right = new CharacterFootExecutionState(CharacterFootSide.Right);
+            m_LeftRollback = new CharacterFootExecutionState(CharacterFootSide.Left);
+            m_RightRollback = new CharacterFootExecutionState(CharacterFootSide.Right);
             m_World = new CharacterFootPlacementWorldQueryBackend(
                 physicsScene,
                 rig,
@@ -651,14 +658,41 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rig,
                 settings,
                 m_World,
-                futureBodyTrajectorySource);
+                futureBodyTrajectorySource,
+                m_Left.Plan,
+                m_Right.Plan);
             ResetInternal(0, FootConstraintTransitionReason.PresentationReset);
         }
 
         internal CharacterFootGroundingDiagnostics Diagnostics => m_Diagnostics;
         internal CharacterPredictiveFootPlacementDiagnostics PredictionDiagnostics =>
             m_SwingPrediction.Diagnostics;
+        internal FixedString64Bytes RigId => m_Rig.Rig.RigId;
+        internal FixedString64Bytes RigRevision => m_Rig.Rig.RigRevision;
         internal CharacterFootPlacementRuntimeSettings Settings => m_Settings;
+
+        internal string ApplyTuning(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block,
+            bool resetOwnerState)
+        {
+            try
+            {
+                string error = CharacterFootPlacementTuningDecoder.Apply(m_Settings, layout, block);
+                if (!string.IsNullOrEmpty(error))
+                    return error;
+                ApplyTuning(
+                    m_Settings.CurrentGrounding,
+                    m_Settings.StanceStabilization,
+                    m_Settings.PredictiveExtension,
+                    resetOwnerState);
+                return string.Empty;
+            }
+            catch (Exception exception)
+            {
+                return exception.Message;
+            }
+        }
 
         internal void ApplyTuning(
             CharacterLyraCurrentGroundingSettings currentGrounding,
@@ -675,17 +709,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ResetInternal(m_ResetSequence, FootConstraintTransitionReason.PresentationReset);
         }
 
-        internal void Plan(
-            in CharacterFootPlacementPlanningFrame frame,
+        internal CharacterFootPlacementFrameResult EvaluateFrame(
+            in CharacterFootPlacementFrameInput frame,
             in CharacterFullBodyIkGoalSetHeader ownerHeader,
-            int weightParameterIndex,
-            out CharacterFootGroundingPlan result)
+            int weightParameterIndex)
         {
             RequireAlive();
             if (frame.ActorId != m_ActorId || frame.RenderFrame == m_LastRenderFrame)
                 throw new InvalidOperationException("Foot Grounding frame identity is invalid or duplicated.");
             if (!frame.Body.IsValid || frame.PresentationDeltaSeconds <= 0f)
                 throw new InvalidOperationException("Foot Grounding requires valid body and delta inputs.");
+            BeginPendingFrame(in frame);
             if (frame.Body.ResetSequence != m_ResetSequence)
                 ResetInternal(frame.Body.ResetSequence, FootConstraintTransitionReason.BodyReset);
 
@@ -694,8 +728,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
                 frame.RenderFrame,
                 animationPose.DenseComponentPoses);
-            m_Left.PrepareActionEvent(animationPose.LeftFootFeatures.PredictedStep);
-            m_Right.PrepareActionEvent(animationPose.RightFootFeatures.PredictedStep);
+            m_Left.Stance.PrepareActionEvent(animationPose.LeftFootFeatures.PredictedStep);
+            m_Right.Stance.PrepareActionEvent(animationPose.RightFootFeatures.PredictedStep);
             Vector3 poseRootUp = m_Rig.PoseRoot.up.normalized;
             float poseRootVerticalDelta = m_HasPreviousPoseRootPosition
                 ? Vector3.Dot(
@@ -708,44 +742,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingTrace trace = m_CurrentGrounding.Trace(
                 pose,
                 minimumGroundNormalDot);
-            CharacterPredictiveFootStanceInput leftPredictive = default;
-            CharacterPredictiveFootStanceInput rightPredictive = default;
-            if (m_SwingPrediction != null)
-            {
-                Vector3 leftGroundProbeStart = ResolvePredictiveGroundProbeStart(
-                    m_Left,
-                    pose.Left,
-                    trace.Left,
-                    out FootPlacementSurface leftGroundProbeSupport);
-                Vector3 rightGroundProbeStart = ResolvePredictiveGroundProbeStart(
-                    m_Right,
-                    pose.Right,
-                    trace.Right,
-                    out FootPlacementSurface rightGroundProbeSupport);
-                m_SwingPrediction.Prepare(
+            Vector3 leftGroundProbeStart = ResolvePredictiveGroundProbeStart(
+                m_Left.Stance,
+                pose.Left,
+                trace.Left,
+                out FootPlacementSurface leftGroundProbeSupport);
+            Vector3 rightGroundProbeStart = ResolvePredictiveGroundProbeStart(
+                m_Right.Stance,
+                pose.Right,
+                trace.Right,
+                out FootPlacementSurface rightGroundProbeSupport);
+            CharacterFootLandingCommit leftLandingCommit = m_Left.LandingCommit;
+            CharacterFootLandingCommit rightLandingCommit = m_Right.LandingCommit;
+            CharacterPredictiveFootFrameEvaluation predictionEvaluation =
+                m_SwingPrediction.EvaluateFrame(
                     in frame,
                     in pose,
+                    in leftLandingCommit,
                     leftGroundProbeStart,
                     leftGroundProbeSupport,
+                    in rightLandingCommit,
                     rightGroundProbeStart,
                     rightGroundProbeSupport);
-                leftPredictive = m_SwingPrediction.GetStanceInput(
-                    CharacterFootSide.Left,
-                    frame.RenderFrame,
-                    frame.CompletionIdentity,
-                    frame.UpstreamPose.LeftFootFeatures,
-                    pose.Left);
-                rightPredictive = m_SwingPrediction.GetStanceInput(
-                    CharacterFootSide.Right,
-                    frame.RenderFrame,
-                    frame.CompletionIdentity,
-                    frame.UpstreamPose.RightFootFeatures,
-                    pose.Right);
-            }
+            m_Left.ObserveQueryAttempt(frame.RenderFrame);
+            m_Right.ObserveQueryAttempt(frame.RenderFrame);
+            CharacterPredictiveFootStanceInput leftPredictive = predictionEvaluation.Left;
+            CharacterPredictiveFootStanceInput rightPredictive = predictionEvaluation.Right;
             float currentPelvisTargetOffset = ResolveCurrentPelvisTargetOffset(
                 trace,
-                m_Left,
-                m_Right,
+                m_Left.Stance,
+                m_Right.Stance,
                 leftPredictive,
                 rightPredictive,
                 frame.MotionPhase);
@@ -760,10 +786,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 -m_Settings.StanceStabilization.MaximumPelvisLowering,
                 m_Settings.StanceStabilization.MaximumPelvisRaising);
             PreparedFoot leftPrepared = PrepareFoot(
-                m_Left,
+                m_Left.Stance,
                 trace.Left);
             PreparedFoot rightPrepared = PrepareFoot(
-                m_Right,
+                m_Right.Stance,
                 trace.Right);
             float leftSoleClearanceTarget = ResolveSoleClearanceTarget(
                 pose.Left,
@@ -778,12 +804,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingResult lyra = m_CurrentGrounding.Resolve(
                 trace,
                 pose,
+                ref m_Left.CurrentSupportFilter,
+                ref m_Right.CurrentSupportFilter,
+                ref m_PelvisFilter,
                 pelvisTargetOffset,
                 leftSoleClearanceTarget,
                 rightSoleClearanceTarget,
                 frame.PresentationDeltaSeconds);
             leftPrepared = UpdateStance(
-                m_Left,
+                m_Left.Stance,
                 pose.Left,
                 trace.Left,
                 lyra.Left,
@@ -793,7 +822,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.MotionPhase,
                 frame.PresentationDeltaSeconds);
             rightPrepared = UpdateStance(
-                m_Right,
+                m_Right.Stance,
                 pose.Right,
                 trace.Right,
                 lyra.Right,
@@ -803,47 +832,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.MotionPhase,
                 frame.PresentationDeltaSeconds);
             ResolvedFoot left = StabilizeFoot(
-                m_Left,
+                m_Left.Stance,
                 pose.Left,
                 lyra.Left,
                 leftPrepared,
                 features.Left,
                 features.Value);
             ResolvedFoot right = StabilizeFoot(
-                m_Right,
+                m_Right.Stance,
                 pose.Right,
                 lyra.Right,
                 rightPrepared,
                 features.Right,
                 features.Value);
-            if (m_SwingPrediction != null)
-            {
-                bool leftCommitted = m_Left.PlantContact && m_Left.HasAnchor;
-                bool rightCommitted = m_Right.PlantContact && m_Right.HasAnchor;
-                m_SwingPrediction.ObserveStance(
-                    CharacterFootSide.Left,
-                    leftCommitted,
-                    m_Left.AnchorPlanSequence,
-                    m_Left.AnchorLandingEventIdentity,
-                    leftCommitted
-                        ? ResolveSoleCenter(pose.Left, left.AnchorWorldPosition, left.AnchorWorldRotation)
-                        : default,
-                    leftCommitted ? m_Left.AnchorSurface.Rebuild() : default);
-                m_SwingPrediction.ObserveStance(
-                    CharacterFootSide.Right,
-                    rightCommitted,
-                    m_Right.AnchorPlanSequence,
-                    m_Right.AnchorLandingEventIdentity,
-                    rightCommitted
-                        ? ResolveSoleCenter(pose.Right, right.AnchorWorldPosition, right.AnchorWorldRotation)
-                        : default,
-                    rightCommitted ? m_Right.AnchorSurface.Rebuild() : default);
-            }
             CharacterFootPlacementPelvisPlan pelvisPlan = m_Pelvis.Plan(
                 pelvisTargetOffset,
                 lyra.CurrentPelvisOffset,
                 BuildPelvisInput(
-                    m_Left,
+                    m_Left.Stance,
                     CharacterFootSide.Left,
                     pose.Left,
                     left,
@@ -851,7 +857,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     features.Value,
                     m_Rig.LeftLegLength),
                 BuildPelvisInput(
-                    m_Right,
+                    m_Right.Stance,
                     CharacterFootSide.Right,
                     pose.Right,
                     right,
@@ -860,18 +866,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_Rig.RightLegLength),
                 m_Rig.PoseRoot.up,
                 m_Settings.StanceStabilization);
-            if (pelvisPlan.RejectLeftGoal)
+            if (pelvisPlan.LeftDisposition == CharacterFootConstraintDisposition.Release)
             {
-                m_Left.Release(
+                m_Left.Stance.Release(
                     FootConstraintTransitionReason.PelvisRangeConflictReleased,
                     CharacterFootContactDecision.ContactReleasedPelvisConflict);
             }
-            if (pelvisPlan.RejectRightGoal)
+            if (pelvisPlan.RightDisposition == CharacterFootConstraintDisposition.Release)
             {
-                m_Right.Release(
+                m_Right.Stance.Release(
                     FootConstraintTransitionReason.PelvisRangeConflictReleased,
                     CharacterFootContactDecision.ContactReleasedPelvisConflict);
             }
+            UpdateLandingCommit(m_Left, pose.Left, left);
+            UpdateLandingCommit(m_Right, pose.Right, right);
             var pelvis = new CharacterFullBodyIkGoal(
                 CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation,
                 Vector3.up * pelvisPlan.ResolvedOffset,
@@ -897,22 +905,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Rig,
                 m_World.PhysicsScene.GetHashCode(),
                 m_Rig.SelfColliderRoot.GetInstanceID(),
-                BuildDiagnostics(m_Left, pose.Left, lyra.Left, features.Left, left),
-                BuildDiagnostics(m_Right, pose.Right, lyra.Right, features.Right, right));
+                BuildDiagnostics(m_Left.Stance, pose.Left, lyra.Left, features.Left, left),
+                BuildDiagnostics(m_Right.Stance, pose.Right, lyra.Right, features.Right, right));
             m_LastRenderFrame = frame.RenderFrame;
             m_ResetSequence = frame.Body.ResetSequence;
             m_PreviousPoseRootPosition = m_Rig.PoseRoot.position;
             m_HasPreviousPoseRootPosition = true;
-            var baseline = new CharacterFootGroundingPlan(
+            CharacterFootPlacementFootGoalResolution footGoals =
+                m_SwingPrediction.ResolveFootGoals(
+                in frame,
+                in predictionEvaluation,
+                in ownerHeader,
                 pelvis,
                 left.Goal,
-                right.Goal);
-            m_SwingPrediction.Resolve(
-                in frame,
+                right.Goal,
+                in m_Diagnostics);
+            CharacterPredictiveFootPlacementDiagnostics predictionDiagnostics =
+                m_SwingPrediction.Diagnostics;
+            m_Left.RecordOutput(
+                frame.RenderFrame,
+                pose.Left.AnklePosition,
+                m_Rig.PoseRoot.TransformPoint(footGoals.Left.ComponentPosition));
+            m_Right.RecordOutput(
+                frame.RenderFrame,
+                pose.Right.AnklePosition,
+                m_Rig.PoseRoot.TransformPoint(footGoals.Right.ComponentPosition));
+            return new CharacterFootPlacementFrameResult(
                 in ownerHeader,
-                in baseline,
+                pelvis,
+                footGoals.Left,
+                footGoals.Right,
                 in m_Diagnostics,
-                out result);
+                in predictionDiagnostics);
         }
 
         Vector3 ResolvePredictiveGroundProbeStart(
@@ -964,10 +988,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : default;
         }
 
+        internal bool HasPendingFrame => m_HasPendingFrame;
+
+        internal void SealFrame(ulong renderFrame, ulong completionIdentity)
+        {
+            RequireAlive();
+            if (!m_HasPendingFrame ||
+                renderFrame != m_PendingRenderFrame ||
+                completionIdentity != m_PendingCompletionIdentity)
+            {
+                throw new InvalidOperationException("Foot Placement Pending frame identity is invalid.");
+            }
+            m_SwingPrediction.SealFrame();
+            ClearPendingFrame();
+        }
+
+        internal void DiscardPendingFrame()
+        {
+            RequireAlive();
+            if (!m_HasPendingFrame)
+                return;
+            m_Left.CopyFrom(m_LeftRollback);
+            m_Right.CopyFrom(m_RightRollback);
+            m_PelvisFilter = m_PelvisFilterRollback;
+            m_SwingPrediction.RestoreState(in m_PredictionRollback);
+            m_LastRenderFrame = m_LastRenderFrameRollback;
+            m_ResetSequence = m_ResetSequenceRollback;
+            m_PreviousPoseRootPosition = m_PreviousPoseRootPositionRollback;
+            m_HasPreviousPoseRootPosition = m_HasPreviousPoseRootPositionRollback;
+            m_PelvisSupportSide = m_PelvisSupportSideRollback;
+            m_PelvisSupportPlanSequence = m_PelvisSupportPlanSequenceRollback;
+            m_HasPelvisSupportSide = m_HasPelvisSupportSideRollback;
+            m_Diagnostics = m_DiagnosticsRollback;
+            ClearPendingFrame();
+        }
+
         internal void Reset(CharacterFootPlacementReset reset)
         {
             if (!m_Disposed)
+            {
+                if (m_HasPendingFrame)
+                    DiscardPendingFrame();
                 ResetInternal(reset.ResetSequence, ToTransitionReason(reset.Reason));
+            }
         }
 
         internal void RetargetBodyBranch(ulong resetSequence)
@@ -975,6 +1038,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireAlive();
             if (resetSequence == 0)
                 throw new ArgumentOutOfRangeException(nameof(resetSequence));
+            if (m_HasPendingFrame)
+                DiscardPendingFrame();
             ResetInternal(resetSequence, FootConstraintTransitionReason.BodyReset);
         }
 
@@ -982,6 +1047,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (m_Disposed)
                 return;
+            if (m_HasPendingFrame)
+                DiscardPendingFrame();
             ResetInternal(m_ResetSequence, FootConstraintTransitionReason.PresentationReset);
             m_Disposed = true;
         }
@@ -1181,6 +1248,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 anklePosition,
                 ankleRotation);
             return (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
+        }
+
+        static void UpdateLandingCommit(
+            CharacterFootExecutionState execution,
+            CharacterFootPlacementAnimatedFootPose animated,
+            ResolvedFoot resolved)
+        {
+            FootState state = execution.Stance;
+            FootPlacementSurface support = state.HasAnchor
+                ? state.AnchorSurface.Rebuild()
+                : default;
+            if (!state.PlantContact || !state.HasAnchor ||
+                state.AnchorPlanSequence == 0 || state.AnchorLandingEventIdentity == 0 ||
+                !support.IsValid)
+            {
+                execution.ClearLandingCommit();
+                return;
+            }
+            Vector3 sole = ResolveSoleCenter(
+                animated,
+                resolved.AnchorWorldPosition,
+                resolved.AnchorWorldRotation);
+            execution.CommitLanding(new CharacterFootLandingCommit(
+                state.AnchorPlanSequence,
+                state.AnchorLandingEventIdentity,
+                sole,
+                resolved.AnchorWorldRotation,
+                support,
+                state.AnchorLocalPosition,
+                state.AnchorLocalRotation,
+                sole,
+                sole));
         }
 
         ResolvedFoot StabilizeFoot(
@@ -1640,11 +1739,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 animationPose.RightFootFeatures);
         }
 
+        void BeginPendingFrame(in CharacterFootPlacementFrameInput frame)
+        {
+            if (m_HasPendingFrame)
+                throw new InvalidOperationException("Foot Placement already has a Pending frame.");
+            m_LeftRollback.CopyFrom(m_Left);
+            m_RightRollback.CopyFrom(m_Right);
+            m_PredictionRollback = m_SwingPrediction.CaptureState();
+            m_PelvisFilterRollback = m_PelvisFilter;
+            m_LastRenderFrameRollback = m_LastRenderFrame;
+            m_ResetSequenceRollback = m_ResetSequence;
+            m_PreviousPoseRootPositionRollback = m_PreviousPoseRootPosition;
+            m_HasPreviousPoseRootPositionRollback = m_HasPreviousPoseRootPosition;
+            m_PelvisSupportSideRollback = m_PelvisSupportSide;
+            m_PelvisSupportPlanSequenceRollback = m_PelvisSupportPlanSequence;
+            m_HasPelvisSupportSideRollback = m_HasPelvisSupportSide;
+            m_DiagnosticsRollback = m_Diagnostics;
+            m_PendingRenderFrame = frame.RenderFrame;
+            m_PendingCompletionIdentity = frame.CompletionIdentity;
+            m_HasPendingFrame = true;
+        }
+
+        void ClearPendingFrame()
+        {
+            m_PendingRenderFrame = 0;
+            m_PendingCompletionIdentity = 0;
+            m_HasPendingFrame = false;
+        }
+
         void ResetInternal(ulong resetSequence, FootConstraintTransitionReason reason)
         {
-            m_CurrentGrounding.Reset();
+            m_PelvisFilter.Reset();
             m_Pelvis.Reset();
-            m_SwingPrediction.Reset();
+            m_SwingPrediction.Reset(!m_HasPendingFrame);
             m_Left.Reset(reason);
             m_Right.Reset(reason);
             m_ResetSequence = resetSequence;
@@ -1660,7 +1787,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void RequireAlive()
         {
             if (m_Disposed)
-                throw new ObjectDisposedException(nameof(CharacterFootGroundingPlanner));
+                throw new ObjectDisposedException(nameof(CharacterFootPlacementFrameEvaluator));
         }
 
         static bool ResolveBodyGrounded(CharacterBodyPresentationFrame body) =>

@@ -117,49 +117,41 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PelvisSpringInitialized { get; }
     }
 
+    internal struct CharacterFootCurrentFloatFilterState
+    {
+        internal float Value;
+        internal float Velocity;
+        internal float PreviousTarget;
+        internal bool Initialized;
+
+        internal void Reset() => this = default;
+    }
+
+    internal struct CharacterFootCurrentVectorFilterState
+    {
+        internal Vector3 Value;
+        internal Vector3 Velocity;
+        internal Vector3 PreviousTarget;
+        internal bool Initialized;
+
+        internal void Reset() => this = default;
+    }
+
+    internal struct CharacterFootCurrentSupportFilterState
+    {
+        internal CharacterFootCurrentFloatFilterState Offset;
+        internal CharacterFootCurrentVectorFilterState Normal;
+
+        internal void Reset() => this = default;
+    }
+
     internal sealed class CharacterLyraCurrentGroundingSolver
     {
         internal const string SourceIdentity = "lyra-5.7/ABP_Mannequin_Base/CR_Mannequin_FootPlant";
         internal const string SpringIdentity = "unreal-engine-5.7/SpringInterpV2/FMath.SpringDamper";
-        sealed class FloatSpringState
-        {
-            internal float Value;
-            internal float Velocity;
-            internal float PreviousTarget;
-            internal bool Initialized;
-
-            internal void Reset()
-            {
-                Value = 0f;
-                Velocity = 0f;
-                PreviousTarget = 0f;
-                Initialized = false;
-            }
-        }
-
-        sealed class VectorSpringState
-        {
-            internal Vector3 Value;
-            internal Vector3 Velocity;
-            internal Vector3 PreviousTarget;
-            internal bool Initialized;
-
-            internal void Reset()
-            {
-                Value = Vector3.zero;
-                Velocity = Vector3.zero;
-                PreviousTarget = Vector3.zero;
-                Initialized = false;
-            }
-        }
 
         readonly CharacterFootPlacementPoseRig m_Rig;
         readonly CharacterFootPlacementWorldQueryBackend m_World;
-        readonly FloatSpringState m_LeftOffset = new FloatSpringState();
-        readonly FloatSpringState m_RightOffset = new FloatSpringState();
-        readonly FloatSpringState m_PelvisOffset = new FloatSpringState();
-        readonly VectorSpringState m_LeftNormal = new VectorSpringState();
-        readonly VectorSpringState m_RightNormal = new VectorSpringState();
         CharacterLyraCurrentGroundingSettings m_Settings;
 
         internal CharacterLyraCurrentGroundingSolver(
@@ -197,6 +189,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterLyraCurrentGroundingResult Resolve(
             in CharacterLyraCurrentGroundingTrace trace,
             in CharacterFootPlacementAnimatedPose pose,
+            ref CharacterFootCurrentSupportFilterState leftFilter,
+            ref CharacterFootCurrentSupportFilterState rightFilter,
+            ref CharacterFootCurrentFloatFilterState pelvisFilter,
             float resolvedPelvisTarget,
             float leftSoleClearanceTarget,
             float rightSoleClearanceTarget,
@@ -205,7 +200,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireSoleClearanceTarget(leftSoleClearanceTarget, nameof(leftSoleClearanceTarget));
             RequireSoleClearanceTarget(rightSoleClearanceTarget, nameof(rightSoleClearanceTarget));
             float pelvis = Spring(
-                m_PelvisOffset,
+                ref pelvisFilter,
                 resolvedPelvisTarget,
                 m_Settings.PelvisOffsetSpringStrength,
                 m_Settings.PelvisOffsetCriticalDamping,
@@ -214,16 +209,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingFootResult left = ResolveFoot(
                 trace.Left,
                 pose.Left,
-                m_LeftOffset,
-                m_LeftNormal,
+                ref leftFilter,
                 pelvis,
                 leftSoleClearanceTarget,
                 deltaSeconds);
             CharacterLyraCurrentGroundingFootResult right = ResolveFoot(
                 trace.Right,
                 pose.Right,
-                m_RightOffset,
-                m_RightNormal,
+                ref rightFilter,
                 pelvis,
                 rightSoleClearanceTarget,
                 deltaSeconds);
@@ -232,9 +225,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 right,
                 resolvedPelvisTarget,
                 pelvis,
-                m_PelvisOffset.Velocity,
-                m_PelvisOffset.PreviousTarget,
-                m_PelvisOffset.Initialized);
+                pelvisFilter.Velocity,
+                pelvisFilter.PreviousTarget,
+                pelvisFilter.Initialized);
         }
 
         internal void ApplyTuning(CharacterLyraCurrentGroundingSettings settings)
@@ -243,15 +236,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (settings.HitCapacity != m_Settings.HitCapacity)
                 throw new InvalidOperationException("Lyra Current Grounding tuning cannot change hit capacity.");
             m_Settings = settings;
-        }
-
-        internal void Reset()
-        {
-            m_LeftOffset.Reset();
-            m_RightOffset.Reset();
-            m_PelvisOffset.Reset();
-            m_LeftNormal.Reset();
-            m_RightNormal.Reset();
         }
 
         CharacterLyraFootTraceResult TraceFoot(
@@ -283,8 +267,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterLyraCurrentGroundingFootResult ResolveFoot(
             CharacterLyraFootTraceResult trace,
             CharacterFootPlacementAnimatedFootPose pose,
-            FloatSpringState offsetState,
-            VectorSpringState normalState,
+            ref CharacterFootCurrentSupportFilterState filter,
             float pelvisOffset,
             float soleClearanceTarget,
             float deltaSeconds)
@@ -292,7 +275,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up = m_Rig.PoseRoot.up.normalized;
             Vector3 targetNormal = trace.DidTraceHit ? trace.Hit.Normal.normalized : up;
             Vector3 currentNormal = Spring(
-                normalState,
+                ref filter.Normal,
                 targetNormal,
                 m_Settings.HitNormalSpringStrength,
                 m_Settings.HitNormalCriticalDamping,
@@ -305,7 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float relativeTarget =
                 (trace.DidTraceHit ? trace.TargetOffset + soleClearanceTarget : 0f) - pelvisOffset;
             float currentOffset = Spring(
-                offsetState,
+                ref filter.Offset,
                 relativeTarget,
                 m_Settings.FootOffsetSpringStrength,
                 m_Settings.FootOffsetCriticalDamping,
@@ -322,13 +305,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 soleClearanceTarget,
                 relativeTarget,
                 currentOffset,
-                offsetState.Velocity,
-                offsetState.PreviousTarget,
-                offsetState.Initialized,
+                filter.Offset.Velocity,
+                filter.Offset.PreviousTarget,
+                filter.Offset.Initialized,
                 currentNormal,
-                normalState.Velocity,
-                normalState.PreviousTarget,
-                normalState.Initialized);
+                filter.Normal.Velocity,
+                filter.Normal.PreviousTarget,
+                filter.Normal.Initialized);
         }
 
         static void RequireSoleClearanceTarget(float value, string parameterName)
@@ -338,7 +321,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static float Spring(
-            FloatSpringState state,
+            ref CharacterFootCurrentFloatFilterState state,
             float target,
             float strength,
             float damping,
@@ -366,7 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static Vector3 Spring(
-            VectorSpringState state,
+            ref CharacterFootCurrentVectorFilterState state,
             Vector3 target,
             float strength,
             float damping,

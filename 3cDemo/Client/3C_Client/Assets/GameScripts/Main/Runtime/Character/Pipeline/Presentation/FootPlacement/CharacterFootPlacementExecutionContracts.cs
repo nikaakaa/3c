@@ -92,48 +92,4 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal int ContributionCount { get; }
     }
 
-    internal readonly struct CharacterFootPlacementPlanningFrame
-    {
-        public CharacterFootPlacementPlanningFrame(
-            ActorId actorId,
-            ulong renderFrame,
-            float presentationDeltaSeconds,
-            CharacterBodyPresentationFrame body,
-            in CharacterPresentationFactFrame facts,
-            in CharacterFootPlacementPoseInput upstreamPose)
-        {
-            if (!actorId.IsValid)
-                throw new ArgumentException("Foot Placement Actor identity is invalid.", nameof(actorId));
-            if (renderFrame == 0)
-                throw new ArgumentOutOfRangeException(nameof(renderFrame));
-            if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
-                throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
-            if (upstreamPose.CompletionIdentity == 0)
-                throw new ArgumentException("Foot Placement upstream completion identity is invalid.", nameof(upstreamPose));
-            if (!facts.IsValid)
-                throw new ArgumentException("Foot Placement Presentation Facts are invalid.", nameof(facts));
-            ActorId = actorId;
-            RenderFrame = renderFrame;
-            PresentationDeltaSeconds = presentationDeltaSeconds;
-            Body = body;
-            LocomotionMotionTimeline = facts.LocomotionMotionTimeline;
-            MovementPlaybackTime = facts.MovementPlaybackTime;
-            TrajectoryCurvatureDegreesPerSecond = facts.TrajectoryCurvatureDegreesPerSecond;
-            TrajectoryCurvatureAvailable = facts.TrajectoryCurvatureAvailable;
-            MotionPhase = facts.MotionPhase;
-            UpstreamPose = upstreamPose;
-        }
-
-        public ActorId ActorId { get; }
-        public ulong RenderFrame { get; }
-        public ulong CompletionIdentity => UpstreamPose.CompletionIdentity;
-        public float PresentationDeltaSeconds { get; }
-        public CharacterBodyPresentationFrame Body { get; }
-        public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
-        public double MovementPlaybackTime { get; }
-        public float TrajectoryCurvatureDegreesPerSecond { get; }
-        public bool TrajectoryCurvatureAvailable { get; }
-        public CharacterPresentationMotionPhase MotionPhase { get; }
-        internal CharacterFootPlacementPoseInput UpstreamPose { get; }
-    }
 }

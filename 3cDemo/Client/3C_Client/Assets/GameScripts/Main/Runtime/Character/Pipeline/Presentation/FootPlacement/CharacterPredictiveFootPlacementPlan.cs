@@ -488,6 +488,99 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             State == CharacterPredictiveFootPlanState.Planned ||
             State == CharacterPredictiveFootPlanState.Executing;
         internal bool HasPathGeometry => GroundEnvelopeSegmentCount > 0;
+
+        internal void CopyFrom(CharacterPredictiveFootPlacementPlan source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            if (source.m_Side != m_Side ||
+                source.m_PathSegments.Length != m_PathSegments.Length)
+            {
+                throw new ArgumentException("Predictive Foot Plan copy layout is incompatible.", nameof(source));
+            }
+            Sequence = source.Sequence;
+            LandingEventIdentity = source.LandingEventIdentity;
+            SourceSampleIdentity = source.SourceSampleIdentity;
+            SourceSampleCycle = source.SourceSampleCycle;
+            EventOrdinal = source.EventOrdinal;
+            ContributionContinuityIdentity = source.ContributionContinuityIdentity;
+            GeneratedFrame = source.GeneratedFrame;
+            State = source.State;
+            TransitionReason = source.TransitionReason;
+            EndReason = source.EndReason;
+            Start = source.Start;
+            Landing = source.Landing;
+            RootStart = source.RootStart;
+            RootStartRotation = source.RootStartRotation;
+            RootLanding = source.RootLanding;
+            RootLandingRotation = source.RootLandingRotation;
+            PredictedHip = source.PredictedHip;
+            RootTrajectory = source.RootTrajectory;
+            BodySupportPath = source.BodySupportPath;
+            AuthoredFootPlanarRoute = source.AuthoredFootPlanarRoute;
+            RootLocalHipRoute = source.RootLocalHipRoute;
+            AnimationClearanceHeights = source.AnimationClearanceHeights;
+            ReleasePhase = source.ReleasePhase;
+            ApproachContactPhase = source.ApproachContactPhase;
+            FrozenWorldFootRoute = source.FrozenWorldFootRoute;
+            FrozenWorldFootRoutePhases = source.FrozenWorldFootRoutePhases;
+            GroundPathRatePhases = source.GroundPathRatePhases;
+            GroundPathRates = source.GroundPathRates;
+            AnimationClearanceContinuityOffset = source.AnimationClearanceContinuityOffset;
+            LandingDelayAtGeneration = source.LandingDelayAtGeneration;
+            EventPhaseAtGeneration = source.EventPhaseAtGeneration;
+            LiftOffPhase = source.LiftOffPhase;
+            ActionStepDurationSeconds = source.ActionStepDurationSeconds;
+            ActionStepPhase = source.ActionStepPhase;
+            ActionProgress = source.ActionProgress;
+            GroundPathProgress = source.GroundPathProgress;
+            MotionLinearLandingError = source.MotionLinearLandingError;
+            MotionAngularLandingError = source.MotionAngularLandingError;
+            MotionLandingError = source.MotionLandingError;
+            MotionLandingTolerance = source.MotionLandingTolerance;
+            SoleSupportRadius = source.SoleSupportRadius;
+            ActionClockFrame = source.ActionClockFrame;
+            FutureSupport = source.FutureSupport;
+            FutureLandingRequest = source.FutureLandingRequest;
+            VirtualGroundSplitEventPhase = source.VirtualGroundSplitEventPhase;
+            VirtualGroundOpposingLanding = source.VirtualGroundOpposingLanding;
+            VirtualGroundSplitRoutePoint = source.VirtualGroundSplitRoutePoint;
+            VirtualGroundSplitPlanarError = source.VirtualGroundSplitPlanarError;
+            VirtualGroundSplitFraction = source.VirtualGroundSplitFraction;
+            VirtualGroundSplitSupport = source.VirtualGroundSplitSupport;
+            VirtualGroundSplitLandingEventIdentity = source.VirtualGroundSplitLandingEventIdentity;
+            GroundEnvelopeSegmentCount = source.GroundEnvelopeSegmentCount;
+            GroundEnvelopeRejectReason = source.GroundEnvelopeRejectReason;
+            QueryCount = source.QueryCount;
+            RawHitCount = source.RawHitCount;
+            RouteSampleCount = source.RouteSampleCount;
+            FootRateSampleCount = source.FootRateSampleCount;
+            AcceptedHitCount = source.AcceptedHitCount;
+            EdgePlaneCandidateCount = source.EdgePlaneCandidateCount;
+            AcceptedEdgePlaneCount = source.AcceptedEdgePlaneCount;
+            RejectedQueryCount = source.RejectedQueryCount;
+            QueryRejectCounts = source.QueryRejectCounts;
+            CreationRejectReason = source.CreationRejectReason;
+            QueryRequestSnapshotCount = source.QueryRequestSnapshotCount;
+            AcceptedSupportSnapshotCount = source.AcceptedSupportSnapshotCount;
+            RejectedGeometrySnapshotCount = source.RejectedGeometrySnapshotCount;
+            GeometrySnapshot = source.GeometrySnapshot;
+            m_WorldProjectionExpectedRoot = source.m_WorldProjectionExpectedRoot;
+            m_WorldProjectionCurrentRoot = source.m_WorldProjectionCurrentRoot;
+            m_WorldProjectionRotation = source.m_WorldProjectionRotation;
+            m_HasWorldProjection = source.m_HasWorldProjection;
+            m_WorldProjectionFrozen = source.m_WorldProjectionFrozen;
+            Array.Copy(source.m_PathSegments, m_PathSegments, m_PathSegments.Length);
+            Array.Copy(source.m_QueryRouteEventPhases, m_QueryRouteEventPhases, m_QueryRouteEventPhases.Length);
+            Array.Copy(source.m_QueryRouteFractions, m_QueryRouteFractions, m_QueryRouteFractions.Length);
+            Array.Copy(source.m_GroundProbeRoute, m_GroundProbeRoute, m_GroundProbeRoute.Length);
+            Array.Copy(source.m_FootRateEventPhases, m_FootRateEventPhases, m_FootRateEventPhases.Length);
+            Array.Copy(source.m_FootRateProgress, m_FootRateProgress, m_FootRateProgress.Length);
+            Array.Copy(source.m_QueryRequests, m_QueryRequests, m_QueryRequests.Length);
+            Array.Copy(source.m_AcceptedSupports, m_AcceptedSupports, m_AcceptedSupports.Length);
+            Array.Copy(source.m_RejectedGeometry, m_RejectedGeometry, m_RejectedGeometry.Length);
+        }
+
         internal void BeginFrame()
         {
             TransitionReason = CharacterPredictiveFootPlanTransitionReason.None;

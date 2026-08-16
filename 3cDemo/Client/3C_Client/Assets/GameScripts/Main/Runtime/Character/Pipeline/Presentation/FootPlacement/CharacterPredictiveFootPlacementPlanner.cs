@@ -170,12 +170,64 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float LegLength { get; }
     }
 
+    public readonly struct CharacterFootPlanBuildRequestDiagnostics
+    {
+        internal CharacterFootPlanBuildRequestDiagnostics(in CharacterFootPlanBuildRequest request)
+        {
+            AnimationPredictedFootStepSample step = request.Step;
+            CommittedLocomotionPlanarMotionTimeline motion = request.MotionTimeline;
+            SourceSampleIdentity = step.SourceSampleIdentity;
+            SourceSampleCycle = step.SourceSampleCycle;
+            EventOrdinal = step.EventOrdinal;
+            EventPhase = step.ActionStepClock.Phase;
+            TimeToLandingSeconds = step.ActionStepClock.TimeToLandingSeconds;
+            MotionGeneration = motion.Generation;
+            MotionAuthorityTick = motion.AuthorityTick.Value;
+            MotionCurrentVelocity = new Vector2(motion.CurrentVelocityX, motion.CurrentVelocityZ);
+            MotionContinuationVelocity = new Vector2(
+                motion.ContinuationVelocityX,
+                motion.ContinuationVelocityZ);
+            MotionYawVelocityDegreesPerSecond = motion.YawVelocityDegreesPerSecond;
+            RootStart = request.RootStart;
+            RootStartRotation = request.RootStartRotation;
+            PresentedBodyStartPosition = request.PresentedBodyStartPosition;
+            CommittedBodyVelocity = request.CommittedBodyVelocity;
+            TrajectoryCurvatureDegreesPerSecond = request.TrajectoryCurvatureDegreesPerSecond;
+            TrajectoryCurvatureAvailable = request.TrajectoryCurvatureAvailable;
+            MovementPlaybackTime = request.MovementPlaybackTime;
+            Up = request.Up;
+            SoleSupportRadius = request.SoleSupportRadius;
+            LegLength = request.LegLength;
+        }
+
+        public ulong SourceSampleIdentity { get; }
+        public int SourceSampleCycle { get; }
+        public int EventOrdinal { get; }
+        public float EventPhase { get; }
+        public float TimeToLandingSeconds { get; }
+        public ulong MotionGeneration { get; }
+        public ulong MotionAuthorityTick { get; }
+        public Vector2 MotionCurrentVelocity { get; }
+        public Vector2 MotionContinuationVelocity { get; }
+        public float MotionYawVelocityDegreesPerSecond { get; }
+        public Vector3 RootStart { get; }
+        public Quaternion RootStartRotation { get; }
+        public Vector3 PresentedBodyStartPosition { get; }
+        public Vector3 CommittedBodyVelocity { get; }
+        public float TrajectoryCurvatureDegreesPerSecond { get; }
+        public bool TrajectoryCurvatureAvailable { get; }
+        public double MovementPlaybackTime { get; }
+        public Vector3 Up { get; }
+        public float SoleSupportRadius { get; }
+        public float LegLength { get; }
+    }
+
     public readonly struct CharacterFootPlanAttemptDiagnostics
     {
         internal CharacterFootPlanAttemptDiagnostics(
             CharacterFootPlanAttemptKind kind,
             CharacterPredictiveFootPlanExecution plan,
-            in CharacterFootPlanBuildOrigin origin)
+            in CharacterFootPlanBuildRequest request)
             : this(
                 kind,
                 plan.Sequence,
@@ -188,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.RawHitCount,
                 plan.RejectedQueryCount,
                 plan.GeometrySnapshot,
-                in origin)
+                in request)
         {
         }
 
@@ -204,8 +256,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int rawHitCount,
             int rejectedQueryCount,
             CharacterPredictiveFootPlanGeometrySnapshot geometrySnapshot,
-            in CharacterFootPlanBuildOrigin origin)
+            in CharacterFootPlanBuildRequest request)
         {
+            CharacterFootPlanBuildOrigin origin = request.Origin;
             Kind = kind;
             Sequence = sequence;
             GeneratedFrame = generatedFrame;
@@ -226,6 +279,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OriginSupportPoint = origin.Support.IsValid ? origin.Support.Point : default;
             OriginSupportNormal = origin.Support.IsValid ? origin.Support.Normal : default;
             OriginSoleHeightAboveSupport = origin.SoleHeightAboveSupport;
+            BuildRequest = new CharacterFootPlanBuildRequestDiagnostics(in request);
         }
 
         public CharacterFootPlanAttemptKind Kind { get; }
@@ -248,6 +302,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 OriginSupportPoint { get; }
         public Vector3 OriginSupportNormal { get; }
         public float OriginSoleHeightAboveSupport { get; }
+        public CharacterFootPlanBuildRequestDiagnostics BuildRequest { get; }
         public bool IsAvailable => Kind != CharacterFootPlanAttemptKind.None && Sequence != 0;
     }
 
@@ -3242,7 +3297,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     0,
                     0,
                     null,
-                    in origin);
+                    in request);
                 return false;
             }
             var rootTrajectory = new CharacterPredictiveFootRootTrajectory(
@@ -3348,7 +3403,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason,
                     in query);
             }
-            attempt = new CharacterFootPlanAttemptDiagnostics(attemptKind, plan, in origin);
+            attempt = new CharacterFootPlanAttemptDiagnostics(attemptKind, plan, in request);
             return plan.HasExecutablePath;
         }
 

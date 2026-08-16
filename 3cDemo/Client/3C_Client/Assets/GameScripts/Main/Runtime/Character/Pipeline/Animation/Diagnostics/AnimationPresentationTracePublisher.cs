@@ -470,6 +470,65 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PlanAttemptOriginSoleHeightAboveSupport = hasModifier
                     ? modifier.PlanAttempt.OriginSoleHeightAboveSupport
                     : 0f,
+                PlanAttemptRequestSourceSampleIdentity = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.SourceSampleIdentity
+                    : 0,
+                PlanAttemptRequestSourceSampleCycle = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.SourceSampleCycle
+                    : 0,
+                PlanAttemptRequestEventOrdinal = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.EventOrdinal
+                    : 0,
+                PlanAttemptRequestEventPhase = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.EventPhase
+                    : 0f,
+                PlanAttemptRequestTimeToLandingSeconds = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.TimeToLandingSeconds
+                    : 0f,
+                PlanAttemptRequestMotionGeneration = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.MotionGeneration
+                    : 0,
+                PlanAttemptRequestMotionAuthorityTick = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.MotionAuthorityTick
+                    : 0,
+                PlanAttemptRequestMotionCurrentVelocity = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.MotionCurrentVelocity
+                    : default,
+                PlanAttemptRequestMotionContinuationVelocity = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.MotionContinuationVelocity
+                    : default,
+                PlanAttemptRequestMotionYawVelocityDegreesPerSecond = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.MotionYawVelocityDegreesPerSecond
+                    : 0f,
+                PlanAttemptRequestRootStart = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.RootStart
+                    : default,
+                PlanAttemptRequestRootStartRotation = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.RootStartRotation
+                    : default,
+                PlanAttemptRequestPresentedBodyStartPosition = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.PresentedBodyStartPosition
+                    : default,
+                PlanAttemptRequestCommittedBodyVelocity = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.CommittedBodyVelocity
+                    : default,
+                PlanAttemptRequestTrajectoryCurvatureDegreesPerSecond = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.TrajectoryCurvatureDegreesPerSecond
+                    : 0f,
+                PlanAttemptRequestTrajectoryCurvatureAvailable = hasModifier &&
+                                                                  modifier.PlanAttempt.BuildRequest.TrajectoryCurvatureAvailable,
+                PlanAttemptRequestMovementPlaybackTime = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.MovementPlaybackTime
+                    : 0d,
+                PlanAttemptRequestUp = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.Up
+                    : default,
+                PlanAttemptRequestSoleSupportRadius = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.SoleSupportRadius
+                    : 0f,
+                PlanAttemptRequestLegLength = hasModifier
+                    ? modifier.PlanAttempt.BuildRequest.LegLength
+                    : 0f,
                 PlanFadingOut = hasModifier && modifier.PlanFadingOut,
                 PlanRetentionWeight = hasModifier ? modifier.PlanRetentionWeight : 0f,
                 IntentLandingDisplacementError = hasModifier

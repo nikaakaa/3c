@@ -1680,6 +1680,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementSurface successorProbeSupport = outgoingOutputAvailable
                 ? runtime.LastOutputGroundSupport
                 : groundProbeSupport;
+            if (outgoingOutputAvailable && runtime.HasLastOutputSole)
+            {
+                FootPlacementSurface projectedSupport = ResolveSupportAtRoutePoint(
+                    successorProbeSupport,
+                    successorSole,
+                    up);
+                if (projectedSupport.IsValid)
+                {
+                    successorProbeSupport = projectedSupport;
+                    successorProbeStart = projectedSupport.Point;
+                }
+            }
             if (landingHandoff.HasContactTarget)
             {
                 CharacterFootPlacementSoleContactPose handoffContacts = pose.ResolveSoleContacts(
@@ -1847,8 +1859,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             }
             sole = (target.Contacts.HeelPosition + target.Contacts.ToePosition) * 0.5f;
-            groundPath = target.PathPosition;
-            support = target.Support;
+            support = ResolveSupportAtRoutePoint(target.Support, sole, up);
+            groundPath = support.IsValid ? support.Point : default;
             return support.IsValid && IsFinite(sole) && IsFinite(groundPath);
         }
 
@@ -2024,6 +2036,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootStart,
                 rootStartRotation,
                 presentedBodyStartPosition,
+                groundProbeStart,
                 animationSoleAtGeneration,
                 committedBodyVelocity,
                 trajectoryCurvatureDegreesPerSecond,

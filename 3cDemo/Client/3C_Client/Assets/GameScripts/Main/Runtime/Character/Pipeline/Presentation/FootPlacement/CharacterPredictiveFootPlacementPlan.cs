@@ -153,16 +153,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Vector3.ProjectOnPlane(landing - current, Up).magnitude;
         }
 
-        internal Vector3 EvaluatePresentedBodyPosition(float elapsedSinceGeneration)
+        internal Vector3 EvaluatePresentedBodyPositionAtEventPhase(float eventPhase)
         {
-            float elapsedSeconds = Mathf.Max(0f, elapsedSinceGeneration);
+            float elapsedSeconds = ResolveElapsedSinceGeneration(eventPhase);
             return PresentedBodyStartPosition + ResolvePlanarTravel(elapsedSeconds);
         }
 
-        internal Vector3 EvaluatePresentedBodyVelocity(float elapsedSinceGeneration)
+        internal Vector3 EvaluatePresentedBodyVelocityAtEventPhase(float eventPhase)
         {
+            float elapsedSinceGeneration = ResolveElapsedSinceGeneration(eventPhase);
             CharacterFutureBodyTrajectorySample sample = FutureBodyTrajectory.Evaluate(
-                Mathf.Clamp(elapsedSinceGeneration, 0f, FutureBodyTrajectory.DurationSeconds));
+                elapsedSinceGeneration);
             return new Vector3(sample.VelocityX, sample.VelocityY, sample.VelocityZ);
         }
 
@@ -229,6 +230,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 PredictionLeadSeconds +
                 (phase - EventPhaseAtGeneration) * ActionStepDurationSeconds);
+        }
+
+        float ResolveElapsedSinceGeneration(float eventPhase)
+        {
+            return Mathf.Max(
+                0f,
+                (Mathf.Clamp01(eventPhase) - EventPhaseAtGeneration) *
+                ActionStepDurationSeconds);
         }
 
         internal bool CanCoverEventPhase(float eventPhase)
@@ -590,7 +599,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Complete(CharacterPredictiveFootPlanEndReason.ActionClockInvalid);
                 return;
             }
-            ActionStepDurationSeconds = clock.DurationSeconds;
             ActionStepPhase = clock.Phase;
             ActionClockFrame = renderFrame;
             if (ActionStepPhase >= 0.9999f)
@@ -741,12 +749,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (ActionStepPhase + 0.000001f < LiftOffPhase ||
                 ActionStepPhase >= 0.9999f)
                 return;
-            float elapsedSinceGeneration = Mathf.Max(
-                0f,
-                (ActionStepPhase - RootTrajectory.EventPhaseAtGeneration) *
-                ActionStepDurationSeconds);
-            Vector3 expectedBodyPosition = RootTrajectory.EvaluatePresentedBodyPosition(
-                elapsedSinceGeneration);
+            Vector3 expectedBodyPosition = RootTrajectory
+                .EvaluatePresentedBodyPositionAtEventPhase(ActionStepPhase);
             float linearLandingError = Vector3.ProjectOnPlane(
                     currentPresentedBodyPosition - expectedBodyPosition,
                     RootTrajectory.Up)

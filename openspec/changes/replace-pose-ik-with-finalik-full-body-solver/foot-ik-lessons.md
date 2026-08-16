@@ -266,3 +266,9 @@ Clearance Continuity = 当前已执行Sole相对该Ground Probe Start的高度
 `Ground Probe Start`与冻结动画路线起点的最大偏差已从`82.4cm`降为`0cm`，但A/D反向时仍出现`FutureLandingHeightDiscontinuity`。失败帧的旧Plan落点在`Y=0`，同一输入反向后的有效后继落点在`Y=0.72m`；楼梯踏面间隔约`0.18m`，原Query却在Capsule段扫描前直接比较稀疏Sphere端点。路线一旦横跨两个踏面，`0.36m`端点差会先触发`0.35m`断裂判定，中间踏面永远没有机会进入排序与Hull。
 
 GDC顺序要求先沿Virtual Ground收集位置、法线和Edge Plane，再按前后与高低排序，最后删除不可通行点。`MaximumHeightDiscontinuity`应判断真实边缘平面的断裂；正式支撑链使用Step Up/Down、gap与reach。提前用稀疏端点判断Height Discontinuity会把可跨越楼梯误判为悬崖，导致Revision消失；保留旧Plan也不可取，实验已使Pelvis P95从`4.95cm`恶化到`7.06cm`、最大值从`9.21cm`恶化到`13.17cm`。
+
+## 19. 冻结Plan不能同步改写时间尺度
+
+失败run `e7996d5c9acf4563bb8176e44c86aa7a`在frame 209触发`CharacterFutureBodyTrajectory.Evaluate`越界。右脚同一个Plan sequence 22创建时Action Step时长为`0.5167s`，运行中被同事件Clock改成`0.5471s`；Future Body轨迹仍只覆盖创建时范围，`ObserveWorldMotionDeviation`却用新时长计算旧轨迹采样时间。
+
+这不是浮点容差、Query或FBBIK问题，而是冻结Plan内部出现两个时钟owner：路线与Future Body使用创建时长，Plan诊断与偏差检测使用运行时长。正确合同是Plan创建时原子冻结Action Step时长、Future Body时间范围和相位到秒的映射；运行时只同步权威phase。动作时长变化若足以改变Landing，应创建离散Revision并完成连续交接，不能原地修改旧Plan，也不能用clamp把越界隐藏成轨迹末端停滞。

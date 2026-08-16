@@ -66,6 +66,7 @@
 52. Ground Envelope分段必须同时保存起点与终点Surface。run `ea0e2e2...`中第一段起点坐标来自已提交Landing，但旧段只携带终点Surface，台阶边缘因此把连续Successor误判为Surface不兼容并取消。GDC的连续Hull是feet-only下界，不允许用终点踏面身份冒充整段或FootLock起点。
 53. Event Successor不能无条件阻塞当前Swing的Intent Revision。run `451c2adb...`中旧Active的`MotionLandingError`已达`2.59m~2.81m`、正式容差仅`0.08m`，但预建Successor占据唯一Revision槽，旧Path仍以100%权重改写脚；事件换代后Goal单帧跳`60cm`以上。当前Step仍为Unsupported时必须先修正当前Plan，进入ApproachingContact后才由Successor优先；当前Swing无Plan必须原事件重建并从上一完成输出连续接管。
 54. Ground Envelope样本是有限高度下界，不是可无限外推的Surface Plane。run `b33c501f...` frame `24103 -> 24104`中Path Y只下降`1.62cm`，但前一Segment法线约为`(0.035,0.585,-0.810)`，Native Sole与采样点相距约`1.13m`；把该局部斜面外推后Heel/Toe平面距离达到`-0.684m/-0.691m`，Required Lift被放大到`1.215m`，下一帧切水平面后Final Goal单帧下降`1.156m`、Pelvis Translation下降`38.7cm`。Surface法线只可在现有SoleSupportRadius局部覆盖内参与坡面净空与方向，超出范围后必须按Ground Envelope高度沿Component Up计算；远距离偏差交给Revision，不能交给净空补偿。
+55. Plan identity提升不能清除仍在工作的输出连续性。旧实现从Revision Blend约0.5开始用上一完成Ankle修正新owner，但Blend到1时`PromoteRevision`立即清零该修正；同速率下它此时只衰减了约一半，提升帧会直接暴露新Plan原始Goal。连续修正必须独立于Active/Revision槽交换并保持到自身权重归零。
 
 ## 当前证据与下一owner
 

@@ -187,6 +187,12 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 - **AND** 新Plan首次参与Goal时 MUST从上一完成帧实际Ankle位置与旋转连续接管，再按正式过渡曲线收敛到新Plan输出
 - **AND** MUST不先暴露一帧Current Grounding或Original后再跳入新Plan
 
+#### Scenario: Revision提升为Active
+
+- **WHEN** Intent Revision在Blend期间已经从上一完成帧实际Ankle位置与旋转建立输出连续修正，随后Revision达到提升边界
+- **THEN** `PromoteRevision` MUST只原子替换Plan identity与geometry
+- **AND** 已建立的输出连续修正 MUST跨越Promotion继续按同一曲线衰减到零，不得在提升帧提前清除并暴露新Plan原始Goal
+
 #### Scenario: Plan输出所有权先于Ground Path空间推进
 
 - **WHEN** 权威Step位于`ReleasePhase`与`LiftOffPhase/PathStartPhase`之间

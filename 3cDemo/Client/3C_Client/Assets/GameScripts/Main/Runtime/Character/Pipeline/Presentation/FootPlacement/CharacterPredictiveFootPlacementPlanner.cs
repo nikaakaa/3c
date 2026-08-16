@@ -120,7 +120,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!HasRevision || !Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
-                ClearOutputContinuity();
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 CharacterPredictiveFootPlacementPlan retired = Active;
                 Active = Revision;

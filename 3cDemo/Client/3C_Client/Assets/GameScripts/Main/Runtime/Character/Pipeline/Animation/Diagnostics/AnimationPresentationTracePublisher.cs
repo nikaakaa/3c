@@ -100,8 +100,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     FinalWeight = footIk.Right.FinalGoalPositionWeight,
                     Flag = solver.Succeeded,
                     Cause = $"PelvisReach({grounding.PelvisPlan.LyraCurrentOffset:0.###}->{grounding.PelvisPlan.ResolvedOffset:0.###})",
-                    Detail = $"L contact {grounding.Left.ContactState} placement {grounding.Left.PlacementWeight:0.###} anchor {grounding.Left.AnchorBlendWeight:0.###} soleTarget {grounding.Left.SoleClearanceTarget:0.###} constraint {grounding.Left.SoleConstraintOffset:0.###} groundingResidual {grounding.Left.ResidualSolePenetration:0.###} final {footIk.Left.FinalGoalPositionWeight:0.###} residual {snapshot.LeftFoot.PositionResidual:0.###} | " +
-                             $"R contact {grounding.Right.ContactState} placement {grounding.Right.PlacementWeight:0.###} anchor {grounding.Right.AnchorBlendWeight:0.###} soleTarget {grounding.Right.SoleClearanceTarget:0.###} constraint {grounding.Right.SoleConstraintOffset:0.###} groundingResidual {grounding.Right.ResidualSolePenetration:0.###} final {footIk.Right.FinalGoalPositionWeight:0.###} residual {snapshot.RightFoot.PositionResidual:0.###}",
+                    Detail = $"L contact {grounding.Left.ContactState} placement {grounding.Left.PlacementWeight:0.###} anchor {grounding.Left.AnchorBlendWeight:0.###} soleTarget {grounding.Left.SoleClearanceTarget:0.###} groundingResidual {grounding.Left.ResidualSolePenetration:0.###} final {footIk.Left.FinalGoalPositionWeight:0.###} residual {snapshot.LeftFoot.PositionResidual:0.###} | " +
+                             $"R contact {grounding.Right.ContactState} placement {grounding.Right.PlacementWeight:0.###} anchor {grounding.Right.AnchorBlendWeight:0.###} soleTarget {grounding.Right.SoleClearanceTarget:0.###} groundingResidual {grounding.Right.ResidualSolePenetration:0.###} final {footIk.Right.FinalGoalPositionWeight:0.###} residual {snapshot.RightFoot.PositionResidual:0.###}",
                     FootIk = footIk
                 });
         }
@@ -646,8 +646,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 FinalGoalRotationWeight = finalGoal.RotationWeight,
                 TargetOffset = grounding.TargetOffset,
                 OffsetTarget = grounding.OffsetTarget,
-                UnconstrainedOffset = grounding.UnconstrainedOffset,
-                SoleConstraintOffset = grounding.SoleConstraintOffset,
                 CurrentOffset = grounding.CurrentOffset,
                 OffsetSpringVelocity = grounding.OffsetSpringVelocity,
                 PreviousOffsetTarget = grounding.PreviousOffsetTarget,

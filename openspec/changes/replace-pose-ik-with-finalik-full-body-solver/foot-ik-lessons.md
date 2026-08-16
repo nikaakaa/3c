@@ -370,3 +370,11 @@ run `4fe6c339ed5946658dd582ec103ecaff`证明曲率不是本轮首因：运动中
 修复离散Landing cycle后的run `c63017bdf0564e90aa0c0ec86dbbe29c`证明运动事件的`Previous Incoming == New Current`已经闭合，但248帧内左/右仍有`198/187`帧携带Revision，同一Landing Event内Active Plan分别换代`31/26`次。左脚Applied Lift曾单帧从`50.4cm`降到`9.2cm`，右脚Offset spring速度达到`-5.38m/s`。弹簧只是在追逐不断替换的目标，增加阻尼不能恢复确定路径。
 
 正式Step因此每个Landing Event至多消费一笔Intent Revision事务；成功或Rejected都要等下一事件重新取得资格。Rejected Intent Revision保留原Executable Plan到正常Landing边界，不能淡出唯一输出。该规则用不超过一个剩余Step的意图响应延迟，换取GDC所需的单步确定路径；后续仍需由Simulation提交真正离散的Future Body trajectory identity，不能把这条事件边界误报为完整4.1。
+
+## 33. 接触净空不能逐帧累加进Current spring
+
+修订限次后的run `35d23e6892f24566808e0276a3ec28be`共263行、1225列、坏行0、Unity 0 Error。按Plan自身Landing identity统计，每个事件最多只有原Plan和一个Revision，说明单步换路已收口；但左脚frame 149至153的Offset target始终约为`-0.21~-0.11m`，Current Offset却从`-0.12m`连续冲到`0.75/1.61/2.44/3.22m`。
+
+根因不是弹簧公式或阻尼：接触许可使用动画Ankle到冻结Landing Surface的完整平面修正，旧实现又在每帧执行`offsetState.Value += constraintOffset`。该距离不包含上一帧已经写入的修正，所以同一Landing接触会重复累加。随后Anchor释放或Plan结束清除修正，视觉上就形成弹簧腿、闪烁和落点回弹。
+
+正式链只保留一次鞋底安全：`Lyra Current spring -> Anchor混合 -> 最终鞋底单边投影 -> Pelvis Reach -> FBBIK`。接触距离只许可状态，不写回spring；最终投影从当帧实际混合Goal重新测量，不保存第二时间状态。删除重复约束比限制数值或增加阻尼更可靠。

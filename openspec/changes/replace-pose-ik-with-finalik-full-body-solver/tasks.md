@@ -48,7 +48,7 @@
 - [ ] 4.3 用Future Body Transform与Artifact root-local Sole/Ankle/Hip路线建立唯一未来世界路线，保留动画局部X、Z和旋转。
 - [ ] 4.4 Plan创建帧只允许一次刚性重基，使`PathStartPhase`的Artifact Foot Route与已提交接触点或已执行Sole正下方重合；执行Sole另行保存净空连续性，重基整步冻结。
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
-- [ ] 4.5A 每个权威Landing Event至多消费一笔Intent Revision事务；Rejected修订保留原Executable Plan到Landing边界，自动A/D数据中同事件Active Plan换代必须从左/右`31/26`次降到最多一次。
+- [x] 4.5A 每个权威Landing Event至多消费一笔Intent Revision事务；Rejected修订保留原Executable Plan到Landing边界。自动A/D run `35d23e6892f24566808e0276a3ec28be`中，按Plan自身Landing identity统计，每个事件最多只出现原Plan加一个Revision。
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 - [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。

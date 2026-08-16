@@ -202,6 +202,8 @@ AngularVelocity_new(phase0) = CurrentExecutedBodyAngularVelocity
 
 旧、新计划交叉期间同时保留各自geometry和identity。新计划未进入Executing前不能删除旧输出；Rejected后继只允许旧输出连续退到原动画，不允许Current Grounding伪造一条新预测Path。
 
+同脚的下一Landing Event由Projection提前发布为`IncomingPredictedStep`。Planner必须在该事件仍为PreSwing时使用现有Revision槽生成唯一Event Successor，并以旧Plan已经查询提交的Landing Sole与Surface作为下一步Ground Path起点。Successor成为Current事件前只冻结geometry和时钟，不参与Goal；事件换代后按同一权威phase进入Executing并与旧输出连续交接。若等旧Plan结束后才为Current事件创建计划，低表现帧率下事件可能已经越过LiftOff，随后整段Swing只能返回原动画或Current Grounding，形成上坡踏空与迟到托举。
+
 ## 7. Foot Route与Ground Envelope
 
 ### 7.1 动画Foot Route
@@ -248,6 +250,8 @@ Current/Previous Own Contact
 5. 删除不可通行点或将计划标记为明确Rejected；
 6. 对剩余点构造二维上侧Convex Hull；
 7. 得到连续分段直线Ground Envelope。
+
+同一个Sphere查询在台阶边缘可能同时返回上下两个踏面。Physics Cast的距离排序只表示先撞到谁，不表示路线所有权；正式采样必须按前一已提交支撑做有向可达筛选，并在可达候选中选择最高踏面。Capsule命中与正式Sphere支撑落在同一Foot Rate时可以合并高度，但必须保留正式支撑身份。最终Landing Surface、Body Support终点和Ground Envelope终点必须从可达链的同一个末端样本提交，禁止继续使用排序前预选的另一份Landing。
 
 Ground Envelope只属于feet。它不保存动画Clearance、不改变Foot XZ、不驱动Pelvis、不产生默认支撑。
 

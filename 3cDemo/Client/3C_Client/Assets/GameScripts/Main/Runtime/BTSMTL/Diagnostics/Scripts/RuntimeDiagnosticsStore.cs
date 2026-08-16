@@ -506,6 +506,15 @@ namespace BTSMTL.Diagnostics
                    left.PlanAttemptQueryCount == right.PlanAttemptQueryCount &&
                    left.PlanAttemptRawHitCount == right.PlanAttemptRawHitCount &&
                    left.PlanAttemptRejectedQueryCount == right.PlanAttemptRejectedQueryCount &&
+                   string.Equals(left.PlanAttemptOriginKind, right.PlanAttemptOriginKind, StringComparison.Ordinal) &&
+                   left.PlanAttemptOriginPlanSequence == right.PlanAttemptOriginPlanSequence &&
+                   left.PlanAttemptOriginLandingEventIdentity == right.PlanAttemptOriginLandingEventIdentity &&
+                   left.PlanAttemptOriginSole.Equals(right.PlanAttemptOriginSole) &&
+                   left.PlanAttemptOriginGroundPath.Equals(right.PlanAttemptOriginGroundPath) &&
+                   left.PlanAttemptOriginSupportSurfaceIdentity == right.PlanAttemptOriginSupportSurfaceIdentity &&
+                   left.PlanAttemptOriginSupportPoint.Equals(right.PlanAttemptOriginSupportPoint) &&
+                   left.PlanAttemptOriginSupportNormal.Equals(right.PlanAttemptOriginSupportNormal) &&
+                   left.PlanAttemptOriginSoleHeightAboveSupport.Equals(right.PlanAttemptOriginSoleHeightAboveSupport) &&
                    left.PlanFadingOut == right.PlanFadingOut &&
                    left.PlanRetentionWeight.Equals(right.PlanRetentionWeight) &&
                    left.IntentLandingDisplacementError.Equals(right.IntentLandingDisplacementError) &&

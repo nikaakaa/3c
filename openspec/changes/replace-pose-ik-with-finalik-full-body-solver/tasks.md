@@ -73,7 +73,8 @@
 - [x] 4A.17 Active与Revision每帧各只允许一次无Pelvis Reach约束的Geometry求值；Stance观察、Landing候选、Pelvis输入和Goal合成必须消费同一个不可变候选，禁止在Pelvis前后重复求值Plan、Ground Path或鞋底净空。
 - [x] 4A.18 Pelvis完成后只对已封存Geometry Candidate执行Reach阶段，并保留同一个Plan Sequence；随后按唯一Transition合成Pre-Continuity Goal并一次生成Final Goal，任何阶段不得回读上游状态拼装第二条数据链。
 - [x] 4A.19 Runtime Trace与CSV schema v102必须逐脚同时发布Active/Revision的Geometry Candidate、Reach-resolved Candidate及typed reject reason，使`Geometry -> Pelvis -> Reach -> Transition -> Final -> FBBIK`可以按同一Completion逐级对账。
-- [ ] 4A.20 当前事件仍处于Unsupported Swing时，Executable Plan求值失败、Revision拒绝或Successor换代不得启动向Original的Render Delta Predictive Exit；旧完成输出必须保留为待替换事务，直到同事件重建成功、合法Stance原子接管或Step明确结束。
+- [x] 4A.20 当前事件仍处于Unsupported Swing时，Executable Plan求值失败、Revision拒绝或Successor换代不得启动向Original的Render Delta Predictive Exit；旧完成输出必须保留为待替换事务，直到同事件重建成功、合法Stance原子接管或Step明确结束。
+- [ ] 4A.21 Landing Anchor开始接管后，唯一Goal合成必须以同一Anchor Blend把上一完成Predictive/Transition输出直接交给已提交Stance/Anchor Goal；不得先衰减Predictive权重再让Original动画拥有剩余权重，也不得让Foot与Pelvis消费不同的交接权重。Anchor未满权重时仍属于同一Landing事务，只有交接完成后才由Stance独占。
 
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
 - [x] 4.5A 历史实验已证明“每个权威Landing Event至多一笔Intent Revision”能阻止同一源Plan反复换路；自动A/D run `35d23e6892f24566808e0276a3ec28be`中，每个事件最多只出现原Plan加一个Revision。后续run证明该事件级限制会让再次偏离的后继Plan继续过期执行，本规则由4.5B替代，不反勾历史完成项。

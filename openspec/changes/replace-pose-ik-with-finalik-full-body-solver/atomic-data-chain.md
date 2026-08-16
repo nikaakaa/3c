@@ -27,6 +27,7 @@ Stance Candidate不是Unlocked Swing的基线。Swing从同一份Original Animat
 - `CharacterFootCompletedOutput`原子保存上一完成帧Original、Final、Sole、Ground Path、Support、Plan identity和Body Path；不得再用分散字段拼接跨帧历史。
 - Transition Origin只在所有权换代帧，用上一完成Final相对当前帧Original捕获；禁止混用旧事件Original与新事件Original。
 - schema v102为每脚发布Original、Stance、Active/Revision Geometry、Active/Revision Reach、typed reject reason、Transition Origin、Pre-Continuity、Final和唯一Goal Owner，共1483列，Header唯一且逐行等宽。
+- Transition合成后的Goal不再执行第二次完整Reach改写；Pelvis候选在Event Successor与待替换事务期间继续与Foot旧侧属于同一个完成输出。
 
 ## Event Successor唯一交接
 
@@ -47,6 +48,14 @@ run `628412c3a53e421b9a45ef3210231875`的左脚frame 385在Pelvis前仍有Execut
 v102回归run `6712da2be2d740d18158ad34f44d08dd`共1190行、1483列、Header唯一且所有分块逐行等宽。左右脚分别有22/23帧`Geometry Candidate有效、Reach Candidate无效`，与22/23帧`PredictiveExit`完全一一对应；最大Final Goal Y单帧下降为`77.6cm/96.6cm`。这把当前最大跳变确定在Pelvis后的Reach裁决到Transition所有权之间，而不是Geometry Path或FBBIK。
 
 修正“FadeOut状态短路Reach诊断”后，run `89996fbc87fb4dd5bc02116537ecea11`共814行、7个流式压缩分块、1483列，Header唯一且每行等宽，Unity Console为0 Error/0 Warning。右脚frame 250至254中Geometry Candidate持续有效且Y约为`2.42m`，Reach Candidate连续以`ReachExceeded`拒绝；Transition仍以`PredictiveExit`拥有Final Goal，并在frame 254单帧下降`1.078m`。左脚frame 725至726的Geometry与Reach Candidate均有效，但`PredictiveExit`仍把Final Goal单帧下降`44.2cm`。因此v102已经能区分两种独立错误：Reach拒绝触发错误退出，以及候选仍有效但Transition主动退出；二者都位于Transition所有权，不得再归责Ground Path或FBBIK。
+
+待替换事务修复后的run `fec7a6b685c449ae9446b9181da2ad06`共881行、8个流式分块、1483列且逐行等宽。Unsupported Swing中的Active求值失败已经进入`AwaitingReplacement`并保留上一完成输出，但同帧仍暴露两处数据链分裂：Transition之后存在第二次Reach改写，`Pre-Continuity -> Final`最大额外变化约`34.89cm`；Event Successor保留Foot旧侧时，Pelvis候选会暂时消失。
+
+移除第二Reach并统一交接期Pelvis候选后的run `79dfec002859417790ba827bf7a2872f`共1561行、12个流式分块、1483列，Header唯一且逐行等宽。`Pre-Continuity -> Final`最大额外变化降至左`2.192cm`、右`0.982cm`，主要Event Successor跳变帧的Pelvis候选保持有效；权威Unsupported Swing中不再出现向Original启动的`PredictiveExit`，因此4A.20闭环。
+
+该run把下一处错误确定为Landing部分接管：右脚frame `246 -> 250`与`837 -> 840`中，Anchor Blend从约`0.303/0.046`上升到`0.593/0.706`时，Final Goal分别下降约`82.48cm/63.59cm`，最大物理下陷达到约`1.330m`。代码在Anchor部分权重时先以`1 - AnchorBlend`衰减Predictive，再把剩余权重隐式交给Original动画；它没有把旧预测完成输出直接混合到Committed Stance/Anchor。该异常已经位于Goal Owner合成层，FBBIK位置残差多数约为`1e-7m`，不是Solver放大。
+
+Landing互补交接修复后，下一owner才是新Plan自身Ground Path/Clock：左脚frame `1338 -> 1341`的`Pre-Continuity`已经随Path连续两帧下降约`50.78cm/49.03cm`。该问题必须按Ground Path与权威Phase对账，不能再由Landing Blend、Current Grounding或FBBIK掩盖。
 
 ## 固定诊断顺序
 

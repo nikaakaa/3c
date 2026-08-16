@@ -77,6 +77,9 @@
 62. Event Successor连续性不能在候选预建时冻结。run `cbf1f30...`右脚frame `19 -> 20 -> 21`中候选提前保存了旧脚仍在空中的修正；事件晋升时动画Ankle只轻微变化，Final Goal却从`0.081m`跳到`0.430m`，单帧回弹`34.86cm`，随后新Plan执行又回到`0.170m`。候选阶段只能保存geometry与时钟；连续性必须在Promotion边界从紧邻上一完成帧捕获。修复后run `b91013d...`的晋升最大跳变降为左`12.71cm`、右`15.23cm`，证明捕获时点是根因之一，但同Plan跳变和穿透仍需继续定位。
 63. 同一Plan不能在Pelvis前后执行两次完整Goal求值。run `628412c...`左脚frame 385在Stance/Pelvis输入阶段仍有合法Geometry，随后同帧Goal阶段因应用Pelvis后`ReachExceeded`；旧诊断只留下末次布尔结果，把Geometry、Pelvis和Reach三个owner混在一起。正式链必须封存一次Geometry Candidate，Pelvis后只追加同Plan Sequence的Reach裁决。
 64. `PredictiveExit`不是Unsupported Swing中候选失败的合法替代owner。run `628412c...`左右脚在`FutureLandingNoCandidate`或`ReachExceeded`后由Render Delta推进退出，长帧中Final Goal分别出现约`70.9cm`和`47.0cm`下降；这不是Path曲线自身抖动，也不是FBBIK放大，而是尚未完成重建时把脚暴露给Original的所有权错误。修复应保留上一完成输出为待替换事务并继续正式重建，不能调淡出速度或让Current Grounding接管Swing。
+65. 自动Input Action的锁存边界属于Input System update sequence，不属于Render Frame。只有`InputSystem.onAfterUpdate`确认正式Action消费了上一提交状态后才能校验；要求每个表现帧都出现新Input update会制造与Foot Placement无关的假失败。
+66. Foot与Pelvis必须在同一个Transition边界保留旧完成输出。run `fec7a6b...`证明仅保留Foot而暂时移除Pelvis候选，或在Transition之后再次执行Reach，都会让同一Completion出现两个owner；移除第二Reach后run `79dfec...`的`Pre-Continuity -> Final`最大额外变化降至左`2.192cm`、右`0.982cm`。
+67. Anchor部分权重不是Original动画的空档。run `79dfec...`中Anchor Blend约`0.303~0.706`时出现`63.59~82.48cm`Goal下降和最高约`1.330m`物理下陷；根因是先以`1 - AnchorBlend`衰减Predictive，再让Original补足。正式Landing必须只做`Resolved Predictive/Transition -> Committed Anchor`的互补混合，并让Foot与Pelvis消费同一权重。
 
 ## 当前证据与下一owner
 

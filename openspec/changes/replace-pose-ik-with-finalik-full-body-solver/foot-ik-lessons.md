@@ -64,6 +64,7 @@
 50. Executing Plan单帧求值失败后直接保留Baseline，就是隐式响应式fallback。run `dc44e9d...`右脚frame `1441 -> 1442 -> 1443`在同一Plan内出现`预测有效 -> NonFinite且Path归零 -> 预测恢复`，frame1442物理穿透`12.14cm`。失败帧必须保留上一完成输出相对当前Original动画的修正并连续淡出，同时发布`ReachExceeded`或`NonFinite`等typed reason；不得形成`预测 -> Baseline -> 预测`。
 51. 权威事件存在且预测权重为零不等于Stance拥有脚。只有Locked/Sliding动作约束或真实Anchor可以保留Grounding目标；Unlocked Swing没有可执行Plan时必须保持Original动画并明确暴露失败，不能用Current Grounding伪装预测成功。
 52. Ground Envelope分段必须同时保存起点与终点Surface。run `ea0e2e2...`中第一段起点坐标来自已提交Landing，但旧段只携带终点Surface，台阶边缘因此把连续Successor误判为Surface不兼容并取消。GDC的连续Hull是feet-only下界，不允许用终点踏面身份冒充整段或FootLock起点。
+53. Event Successor不能无条件阻塞当前Swing的Intent Revision。run `451c2adb...`中旧Active的`MotionLandingError`已达`2.59m~2.81m`、正式容差仅`0.08m`，但预建Successor占据唯一Revision槽，旧Path仍以100%权重改写脚；事件换代后Goal单帧跳`60cm`以上。当前Step仍为Unsupported时必须先修正当前Plan，进入ApproachingContact后才由Successor优先；当前Swing无Plan必须原事件重建并从上一完成输出连续接管。
 
 ## 当前证据与下一owner
 
@@ -72,4 +73,6 @@
 - Event Successor起点坐标正确但Surface取自Envelope第一段终点，解释了台阶边缘Promotion取消与剩余无Path窗口；修复必须进入Envelope数据合同，不能放宽身份阈值。
 - Reach Clearance仍达左`0.678m`、右`0.780m`，说明低层旧Path身份仍未完全退出；端点Surface和换代闭环后必须继续以该指标验收。
 - FinalIK历史残差仍远小于Goal跳变；在Goal连续性闭环前不修改FBBIK。
-- 下一次数据回归先验证四项：Anchor接管帧物理下陷、台阶边缘Successor取消、Swing无Path和Reach Clearance；通过后再进入Landing事务与Pelvis支撑切换。
+- 第二轮run `451c2adb...`共2278行、1221列且逐行等宽；互补Fade使最大物理下陷从左`55.54cm`/右`59.14cm`降到左`18.71cm`/右`7.02cm`，证明Fade修复有效但尚未闭环。
+- 同一run左右Swing无Executable Path为`136/48`帧，左frame `820 -> 821`由旧Path `Y=0`、100%预测权重切到新Plan `Y=0.893m`、预测权重`0.0055`，Final Goal单帧跳`64.40cm`；这不是FBBIK放大，而是旧Plan过期、Revision槽被Successor占用和换代输出不连续叠加。
+- 下一次数据回归先验证四项：过期Active不再在米级偏差下100%输出、当前Swing无Plan可原事件重建、Plan换代首帧Goal连续、Successor起点不再被Current Query覆盖；通过后再进入Landing事务与Pelvis支撑切换。

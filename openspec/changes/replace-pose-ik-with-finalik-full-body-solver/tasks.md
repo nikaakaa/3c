@@ -18,7 +18,7 @@
 - [x] 1.13 将动画Source不可变Clip Catalog的全量校验和索引建立收敛到Source创建/换代，逐帧Prepare只处理动态采样计划与实际激活Clip。
 - [x] 1.14 将Foot Feature曲线合法性校验收敛到Sequence Player创建；删除Runtime后继事件搜索与缓存，由Artifact在同一采样域原子烘焙Current与Incoming Step，运行帧只采样并绑定权威source。
 - [x] 1.15 Foot IK Endurance进入压力区后持续循环`A 1秒 -> D 2秒 -> A 1秒`，每轮结束后通过同一正式MoveAxis回到压力区起点再递增lap；持续发布采样路由，不得传送、自动归零、注销路由或退出Play，只有手动停止测试才释放虚拟输入并封口流式CSV。
-- [ ] 1.16 以用户调整后的GameplayLab大楼梯和Traversal Ramp重新烘焙唯一Deterministic Collision World，并证明普通Free Play与Foot IK Automatic共用该资产且KCC不会再从楼梯区域掉出世界。
+- [ ] 1.16 以用户调整后的GameplayLab大楼梯和Traversal Ramp重新烘焙唯一Deterministic Collision World；普通Free Play出生点对齐场景`teststart`但继续使用自由键鼠和相机，Foot IK Automatic保持独立自动输入；证明两者共用该碰撞资产且KCC不会再从楼梯区域掉出世界。
 
 ## 2. Animation Biomechanical Step Artifact
 

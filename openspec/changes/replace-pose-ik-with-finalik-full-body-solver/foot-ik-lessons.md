@@ -4,7 +4,8 @@
 
 ## 不变量
 
-- 唯一链：`FootGrounding -> optional PredictiveFootPlacementModifier -> FinalIK FBBIK`。
+- 唯一链：`Original Component Pose + Step/Body/World Facts -> CharacterFootPlacementRuntime单帧事务 -> 一个Foot Placement Final Goal Set -> 一次FinalIK FBBIK`。
+- 每只脚只有一个`CharacterFootExecutionState`；Current Support、Predictive Plan、Query和Pelvis只返回事实或提案，不拥有第二份脚生命周期。
 - Ground Envelope只提供feet-only安全下界；最终Swing保留动画XZ与动画净空。
 - Plan、Revision、Landing、Anchor、Pelvis都必须有唯一owner；Rejected不得由响应式Swing伪装成功。
 - FBBIK只执行最终Goal。Goal先跳而solver residual很小时，首因不在FBBIK。
@@ -68,6 +69,9 @@
 54. Ground Envelope样本是有限高度下界，不是可无限外推的Surface Plane。run `b33c501f...` frame `24103 -> 24104`中Path Y只下降`1.62cm`，但前一Segment法线约为`(0.035,0.585,-0.810)`，Native Sole与采样点相距约`1.13m`；把该局部斜面外推后Heel/Toe平面距离达到`-0.684m/-0.691m`，Required Lift被放大到`1.215m`，下一帧切水平面后Final Goal单帧下降`1.156m`、Pelvis Translation下降`38.7cm`。Surface法线只可在现有SoleSupportRadius局部覆盖内参与坡面净空与方向，超出范围后必须按Ground Envelope高度沿Component Up计算；远距离偏差交给Revision，不能交给净空补偿。
 55. 历史方案曾让Plan identity提升后继续保留Sequence Output Continuity，以避免Promotion帧暴露新Goal；后续静态复核证明这会与已存在的Revision Blend重复，形成拉回、滞后和弹簧感，本规则由56替代。
 56. Intent Revision只能有一层连续性：旧侧是上一完成Final Ankle相对Original动画的冻结修正，新侧是新Plan完整安全目标，二者只做一次Revision Blend。Support identity随Promotion原子替换；Executable Swing完成Plan净空后不得再被Current Grounding末端顶脚。
+57. “一个owner”不能只写在文档里。当前`Prepare -> GetStanceInput -> Grounding Update -> ObserveStance -> baseline Goals -> Predictive Resolve`让Grounding与Predictive互相观察半完成状态，且`FootState`、`FootPlanRuntime`和可变Plan共同持有生命周期。正式结构必须改成一个Frame Input/Result事务、一个每脚执行状态、不可变Plan/Query和一次最终Goal写入。
+58. Ground Envelope几何连续不等于Foot Rate采样连续。run `4bded9ad...`左脚同一Plan的权威phase仅从`0.6875`到`0.7222`，旧全局最近段却把progress从`0.3492`跳到`0.8756`，frame `709 -> 710` Path Y下降`46.97cm`、Goal Y下降`57.98cm`。Foot Rate只能在权威phase对应的局部路线段投影，不能跨整条自交或回折路线找最近点。
+59. Foot Placement状态必须与Final Pose共用提交边界。若Evaluate阶段直接推进Plan、Anchor、Landing或Current spring，随后FBBIK或Final Pose失败，下一帧会从不存在的半完成历史继续。正式做法是保存完整Committed状态、只在Pending上求值，并在Presentation Seal后保留；Discard与Fault恢复全部左右脚和Pelvis filter状态。
 
 ## 当前证据与下一owner
 

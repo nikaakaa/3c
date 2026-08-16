@@ -664,7 +664,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     CommitFrameTransaction(
                         transaction,
-                        linkedPose);
+                        linkedPose,
+                        footPlacement,
+                        presentationFrame,
+                        preparedPose.CompletionIdentity);
                     composedPose =
                         m_PoseRuntime.FinalizeCommittedFrame();
                 }
@@ -727,7 +730,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Exception discardFailure =
                         DiscardFrameTransaction(
                             transaction,
-                            linkedPose);
+                            linkedPose,
+                            footPlacement);
                     if (discardFailure != null)
                     {
                         throw new AggregateException(
@@ -738,6 +742,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 else
                 {
+                    if (footPlacement?.HasPendingFrame == true)
+                        footPlacement.DiscardPendingFrame();
                     MarkFaulted(transaction);
                     linkedPose.Discard();
                 }
@@ -1364,7 +1370,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void CommitFrameTransaction(
             AnimationPresentationFrameTransaction transaction,
-            CharacterLinkedPoseRuntimeSession linkedPose)
+            CharacterLinkedPoseRuntimeSession linkedPose,
+            CharacterFootPlacementRuntime footPlacement,
+            ulong renderFrame,
+            ulong completionIdentity)
         {
             if (transaction == null ||
                 !transaction.IsValid)
@@ -1388,12 +1397,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseRuntime.SealFrame(
                 transaction.PoseLease);
             linkedPose.Seal();
+            if (footPlacement?.HasPendingFrame == true)
+                footPlacement.SealFrame(renderFrame, completionIdentity);
             transaction.MarkSealed();
         }
 
         Exception DiscardFrameTransaction(
             AnimationPresentationFrameTransaction transaction,
-            CharacterLinkedPoseRuntimeSession linkedPose)
+            CharacterLinkedPoseRuntimeSession linkedPose,
+            CharacterFootPlacementRuntime footPlacement)
         {
             if (transaction == null ||
                 transaction.Closed)
@@ -1401,6 +1413,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return null;
             }
             Exception failure = null;
+            if (footPlacement?.HasPendingFrame == true)
+            {
+                DiscardStep(
+                    footPlacement.DiscardPendingFrame,
+                    ref failure);
+            }
             DiscardStep(
                 () => m_PoseRuntime.DiscardPendingFrame(
                     transaction.PoseLease),

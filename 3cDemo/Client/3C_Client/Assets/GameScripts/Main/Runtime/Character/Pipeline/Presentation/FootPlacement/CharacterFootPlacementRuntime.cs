@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal sealed class CharacterFootPlacementRuntime : IDisposable
     {
-        readonly CharacterFootGroundingGoalSource m_FootPlacement;
+        readonly CharacterFootPlacementFrameEvaluator m_Evaluator;
 
         internal CharacterFootPlacementRuntime(
             ActorId actorId,
@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PhysicsScene physicsScene,
             ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource)
         {
-            m_FootPlacement = new CharacterFootGroundingGoalSource(
+            m_Evaluator = new CharacterFootPlacementFrameEvaluator(
                 actorId,
                 settings,
                 rig,
@@ -26,38 +26,57 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal CharacterFootGroundingDiagnostics GroundingDiagnostics =>
-            m_FootPlacement.Diagnostics;
+            m_Evaluator.Diagnostics;
 
         internal CharacterPredictiveFootPlacementDiagnostics PredictionDiagnostics =>
-            m_FootPlacement.PredictionDiagnostics;
+            m_Evaluator.PredictionDiagnostics;
 
-        internal CharacterFullBodyIkGoalSetHeader ProduceGrounding(
-            in CharacterFootPlacementPlanningFrame frame,
+        internal bool HasPendingFrame => m_Evaluator.HasPendingFrame;
+
+        internal CharacterFullBodyIkGoalSetHeader EvaluateFrame(
+            in CharacterFootPlacementFrameInput frame,
             NativeSlice<CharacterFullBodyIkGoal> output,
             int goalWorkspaceOffset,
             int producerOperationIndex,
             int producerCallSiteIndex,
-            int weightParameterIndex) =>
-            m_FootPlacement.Produce(
-                frame,
-                output,
-                goalWorkspaceOffset,
+            int weightParameterIndex)
+        {
+            var owner = new CharacterFullBodyIkGoalSetHeader(
+                frame.RenderFrame,
+                frame.CompletionIdentity,
+                m_Evaluator.RigId,
+                m_Evaluator.RigRevision,
                 producerOperationIndex,
                 producerCallSiteIndex,
+                goalWorkspaceOffset,
+                3,
+                CharacterFullBodyIkGoalSetAvailability.Ready);
+            CharacterFootPlacementFrameResult result = m_Evaluator.EvaluateFrame(
+                in frame,
+                in owner,
                 weightParameterIndex);
+            result.WriteGoals(output);
+            return result.GoalSet;
+        }
+
+        internal void SealFrame(ulong renderFrame, ulong completionIdentity) =>
+            m_Evaluator.SealFrame(renderFrame, completionIdentity);
+
+        internal void DiscardPendingFrame() =>
+            m_Evaluator.DiscardPendingFrame();
 
         internal string ApplyTuning(
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock block,
             bool resetOwnerState) =>
-            m_FootPlacement.ApplyTuning(layout, block, resetOwnerState);
+            m_Evaluator.ApplyTuning(layout, block, resetOwnerState);
 
         internal void Reset(CharacterFootPlacementReset reset) =>
-            m_FootPlacement.Reset(reset);
+            m_Evaluator.Reset(reset);
 
         internal void RetargetBodyBranch(ulong resetSequence) =>
-            m_FootPlacement.RetargetBodyBranch(resetSequence);
+            m_Evaluator.RetargetBodyBranch(resetSequence);
 
-        public void Dispose() => m_FootPlacement.Dispose();
+        public void Dispose() => m_Evaluator.Dispose();
     }
 }

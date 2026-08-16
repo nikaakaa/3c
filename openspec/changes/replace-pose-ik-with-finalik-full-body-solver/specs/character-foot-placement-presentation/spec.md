@@ -31,6 +31,26 @@ Foot Placement MUST不读取AnimationClip、Library Artifact、Tree、Blackboard
 - **THEN** world-aware stage MUST报告typed Unavailable并阻止Predictive执行
 - **AND** MUST不从当前骨骼、速度阈值或默认腿长现场补建
 
+### Requirement: 统一Foot Placement必须使用单帧事务和唯一状态所有权
+
+Pose Plan MUST每帧只调用一次`CharacterFootPlacementRuntime.EvaluateFrame`。该入口 MUST消费不可变`CharacterFootPlacementFrameInput`，从上一完成帧左右`CharacterFootExecutionState`生成Pending状态，并返回不可变`CharacterFootPlacementFrameResult`。Current Support filter、Constraint、Anchor、Active/Revision、Transition、上一Original/Final输出、Landing Commit和Query Attempt identity MUST属于对应脚的同一个执行状态。
+
+Current Support和Predictive Query MUST只消费显式request并返回事实result。唯一Pelvis resolver MUST同时消费左右脚提案，返回Pelvis结果与左右constraint disposition；随后Finalizer MUST原子接受或释放约束与Landing。系统 MUST在左右脚与Pelvis完成后一次写入三个Goal槽，不得先发布Grounding baseline再由Predictive覆盖。
+
+Pending Foot状态 MUST只在Goal Set、FullBodyIK、Final Pose与外层Presentation事务全部完成后Seal。TypedInvalid、异常、Discard、Reset或Fault MUST恢复上一完成状态，不得留下单脚Plan换代、部分Anchor、Landing、Current Support filter或spring推进。Scene、Game和CSV MUST只读取Seal后的完成诊断。
+
+#### Scenario: FBBIK拒绝本帧Goal Set
+
+- **WHEN** Foot Placement已经生成Pending左右脚状态，但FullBodyIK返回typed invalid
+- **THEN** 本帧Plan、Anchor、Landing、Current Support filter与上一输出 MUST全部Discard
+- **AND** 下一帧 MUST从前一完成帧状态继续，不得消费失败帧的半完成换代
+
+#### Scenario: 本帧完整提交
+
+- **WHEN** 左右脚提案、Pelvis仲裁、三个Goal、FullBodyIK和Final Pose全部成功
+- **THEN** Pending左右脚状态与完成诊断 MUST随同一个Presentation事务Seal
+- **AND** Goal workspace MUST只出现一次Pelvis、Left Foot、Right Foot最终写入
+
 ### Requirement: Foot contact必须由动作约束与世界支撑共同确认
 
 每只脚的Locked、Sliding、Unlocked期望模式和连续Constraint Weight MUST来自同一个Biomechanical Step Event。FootGrounding MUST只通过唯一Current Query发布当前合法支撑平面、surface identity、距离、坡度与Body Grounded证据。Heel与Toe MUST由Calibration从同一Sole/Ankle Pose重建并只对该唯一平面计算距离；系统 MUST不增加Heel Current Query、Toe Current Query或第二Grounding。
@@ -291,7 +311,7 @@ Body branch、Presentation reset、Rig/Projection replacement、Artifact identit
 
 ```text
 FutureFootRoute = FutureBodyTransform * RootLocalAnimationFootRoute
-FootRate = FrozenMonotonicProjection(AnimationFootRoute, VirtualGroundRoute)
+FootRate = PhaseLocalMonotonicProjection(AnimationFootRoute, VirtualGroundRoute)
 GroundHeight = Sample(GroundEnvelope, FootRate(ActionPhase))
 Clearance = Sample(AnimationClearance, ActionPhase)
 FinalSoleXZ = NativeAnimatedSoleXZ

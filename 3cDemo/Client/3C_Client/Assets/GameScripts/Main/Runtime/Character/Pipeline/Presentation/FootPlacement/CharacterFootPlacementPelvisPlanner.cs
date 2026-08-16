@@ -3,6 +3,12 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    public enum CharacterFootConstraintDisposition : byte
+    {
+        Keep = 1,
+        Release = 2
+    }
+
     internal readonly struct CharacterFootPlacementPelvisLegInput
     {
         internal CharacterFootPlacementPelvisLegInput(
@@ -74,16 +80,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float resolvedOffset,
             CharacterFootPlacementPelvisLegRange leftRange,
             CharacterFootPlacementPelvisLegRange rightRange,
-            bool rejectLeftGoal,
-            bool rejectRightGoal)
+            CharacterFootConstraintDisposition leftDisposition,
+            CharacterFootConstraintDisposition rightDisposition)
         {
             LyraTargetOffset = lyraTargetOffset;
             LyraCurrentOffset = lyraCurrentOffset;
             ResolvedOffset = resolvedOffset;
             LeftRange = leftRange;
             RightRange = rightRange;
-            RejectLeftGoal = rejectLeftGoal;
-            RejectRightGoal = rejectRightGoal;
+            LeftDisposition = leftDisposition;
+            RightDisposition = rightDisposition;
         }
 
         public float LyraTargetOffset { get; }
@@ -91,8 +97,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ResolvedOffset { get; }
         public CharacterFootPlacementPelvisLegRange LeftRange { get; }
         public CharacterFootPlacementPelvisLegRange RightRange { get; }
-        public bool RejectLeftGoal { get; }
-        public bool RejectRightGoal { get; }
+        public CharacterFootConstraintDisposition LeftDisposition { get; }
+        public CharacterFootConstraintDisposition RightDisposition { get; }
+        public bool RejectLeftGoal => LeftDisposition == CharacterFootConstraintDisposition.Release;
+        public bool RejectRightGoal => RightDisposition == CharacterFootConstraintDisposition.Release;
         public Vector3 ComponentTranslation => Vector3.up * ResolvedOffset;
     }
 
@@ -157,8 +165,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resolvedOffset,
                 leftRange,
                 rightRange,
-                rejectLeftGoal,
-                rejectRightGoal);
+                rejectLeftGoal
+                    ? CharacterFootConstraintDisposition.Release
+                    : CharacterFootConstraintDisposition.Keep,
+                rejectRightGoal
+                    ? CharacterFootConstraintDisposition.Release
+                    : CharacterFootConstraintDisposition.Keep);
         }
 
         static CharacterFootPlacementPelvisLegRange BuildRange(

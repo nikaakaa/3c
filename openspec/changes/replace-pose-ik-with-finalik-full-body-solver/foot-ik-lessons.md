@@ -326,3 +326,9 @@ Foot IK专项Variant曾同时运行玩家与中立Target的完整Animation/PoseG
 Artifact同时保存Current与Incoming仍不足以保证运行时原子性。旧Projection在两个位置再次拆分这对事实：Foot Feature Blend按两个独立score分别选择Current和Incoming；StateMachine Predictive Target保留输出source的Current，再从待切换source中挑“更早Incoming”，甚至把该Incoming单独升格为Current。这样每个子结构本身都合法，但Step Event、Clock、Route、Constraint和下一事件不再属于同一个source。
 
 正式规则是把`Current + Incoming`当作一个Projection值。BlendSpace、TreeClip、StateMachine预取、Slot和Marker绑定都只能一次选择整对；连续Sole速度、高度和Plant Confidence仍可混合。已同步的Predictive Target即使Pose权重暂时为0，也只能整对接管事件事实，不能通过逐字段择优构造一个从未被任何Artifact发布过的Step。
+
+## 27. Step事实不能再乘Pose贡献权重
+
+Projection原子选择新Step后，旧实现仍用该Step所属动画贡献的逐脚Pose weight乘预测输出。目标source在权重0时已拥有事件，但Foot Placement输出仍为0；随后Pose weight上升，预测输出再次从0升到1，期间Stance、旧Plan与新Plan轮流取得脚的控制。事件换代因此被错误地执行了两次。
+
+正式输出只消费权威Step的Release/LiftOff、Plan生命周期、Revision与Stance交接。Pose contribution weight继续作为动画混合诊断，但不再是Foot Placement所有权曲线。

@@ -590,7 +590,7 @@ namespace BTSMTL.Diagnostics
         public ulong ContributionContinuityIdentity;
         public float CurrentEventFootPoseWeight;
         public float PlanPredictionBlend;
-        public float PoseSynchronizedPredictionBlend;
+        public float AuthoritativePredictionBlend;
         public bool HasPlanRevision;
         public ulong RevisionPlanSequence;
         public float PlanRevisionBlendWeight;

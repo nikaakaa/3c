@@ -400,6 +400,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool IsAvailable => Reason != CharacterFootPlanBuildDecisionReason.None;
     }
 
+    internal readonly struct CharacterFootPlanTransitionCapture
+    {
+        internal CharacterFootPlanTransitionCapture(
+            Vector3 originalAnklePosition,
+            Quaternion originalAnkleRotation,
+            Vector3 originalHipPosition)
+        {
+            if (!IsFinite(originalAnklePosition) || !IsUnit(originalAnkleRotation) ||
+                !IsFinite(originalHipPosition))
+            {
+                throw new ArgumentException("Foot Plan transition capture is invalid.");
+            }
+            OriginalAnklePosition = originalAnklePosition;
+            OriginalAnkleRotation = originalAnkleRotation.normalized;
+            OriginalHipPosition = originalHipPosition;
+        }
+
+        internal Vector3 OriginalAnklePosition { get; }
+        internal Quaternion OriginalAnkleRotation { get; }
+        internal Vector3 OriginalHipPosition { get; }
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+
+        static bool IsUnit(Quaternion value)
+        {
+            float magnitude = value.x * value.x + value.y * value.y +
+                              value.z * value.z + value.w * value.w;
+            return float.IsFinite(magnitude) && Mathf.Abs(magnitude - 1f) <= 0.01f;
+        }
+    }
+
     internal readonly struct CharacterFootPlanTransition
     {
         CharacterFootPlanTransition(
@@ -585,6 +617,55 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal CharacterPredictiveFootPlacementDiagnostics Diagnostics { get; }
         }
 
+        internal readonly struct CharacterFootCompletedOutput
+        {
+            internal CharacterFootCompletedOutput(
+                Vector3 originalAnklePosition,
+                Quaternion originalAnkleRotation,
+                Vector3 originalHipPosition,
+                Vector3 finalAnklePosition,
+                Quaternion finalAnkleRotation,
+                Vector3 finalSolePosition,
+                bool hasGroundPath,
+                Vector3 groundPathPosition,
+                in FootPlacementSurface groundSupport,
+                ulong planSequence,
+                Vector3 pathRootPosition,
+                Vector3 pathRootStartPosition,
+                Vector3 pathHipPosition)
+            {
+                IsAvailable = true;
+                OriginalAnklePosition = originalAnklePosition;
+                OriginalAnkleRotation = originalAnkleRotation.normalized;
+                OriginalHipPosition = originalHipPosition;
+                FinalAnklePosition = finalAnklePosition;
+                FinalAnkleRotation = finalAnkleRotation.normalized;
+                FinalSolePosition = finalSolePosition;
+                HasGroundPath = hasGroundPath;
+                GroundPathPosition = hasGroundPath ? groundPathPosition : Vector3.zero;
+                GroundSupport = hasGroundPath ? groundSupport : default;
+                PlanSequence = hasGroundPath ? planSequence : 0;
+                PathRootPosition = hasGroundPath ? pathRootPosition : Vector3.zero;
+                PathRootStartPosition = hasGroundPath ? pathRootStartPosition : Vector3.zero;
+                PathHipPosition = hasGroundPath ? pathHipPosition : Vector3.zero;
+            }
+
+            internal bool IsAvailable { get; }
+            internal Vector3 OriginalAnklePosition { get; }
+            internal Quaternion OriginalAnkleRotation { get; }
+            internal Vector3 OriginalHipPosition { get; }
+            internal Vector3 FinalAnklePosition { get; }
+            internal Quaternion FinalAnkleRotation { get; }
+            internal Vector3 FinalSolePosition { get; }
+            internal bool HasGroundPath { get; }
+            internal Vector3 GroundPathPosition { get; }
+            internal FootPlacementSurface GroundSupport { get; }
+            internal ulong PlanSequence { get; }
+            internal Vector3 PathRootPosition { get; }
+            internal Vector3 PathRootStartPosition { get; }
+            internal Vector3 PathHipPosition { get; }
+        }
+
         internal sealed class CharacterFootPlanExecutionState
         {
             internal CharacterFootPlanExecutionState(CharacterFootSide side, int pathCapacity)
@@ -633,20 +714,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal ulong LastPlanBuildAttemptSourceIdentity { get; private set; }
             internal ulong LastPlanBuildAttemptMotionGeneration { get; private set; }
             internal ulong LastPlanBuildAttemptAuthorityTick { get; private set; }
-            internal bool HasLastOutputSole { get; private set; }
-            internal Vector3 LastOutputSole { get; private set; }
-            internal Vector3 LastOutputAnimatedAnklePosition { get; private set; }
-            internal Quaternion LastOutputAnimatedAnkleRotation { get; private set; }
-            internal Vector3 LastOutputCurrentHip { get; private set; }
-            internal Vector3 LastOutputAnklePosition { get; private set; }
-            internal Quaternion LastOutputAnkleRotation { get; private set; }
-            internal bool HasLastOutputGroundPath { get; private set; }
-            internal Vector3 LastOutputGroundPath { get; private set; }
-            internal FootPlacementSurface LastOutputGroundSupport { get; private set; }
-            internal ulong LastOutputGroundPlanSequence { get; private set; }
-            internal Vector3 LastOutputPathRoot { get; private set; }
-            internal Vector3 LastOutputPathRootStart { get; private set; }
-            internal Vector3 LastOutputPathHip { get; private set; }
+            internal CharacterFootCompletedOutput LastOutput { get; private set; }
             internal bool HasTransitionOrigin => m_Transition.HasContinuity;
             internal Vector3 TransitionOriginGroundPath => m_Transition.GroundPath;
             internal FootPlacementSurface TransitionOriginGroundSupport =>
@@ -675,20 +743,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LastPlanBuildAttemptSourceIdentity = source.LastPlanBuildAttemptSourceIdentity;
                 LastPlanBuildAttemptMotionGeneration = source.LastPlanBuildAttemptMotionGeneration;
                 LastPlanBuildAttemptAuthorityTick = source.LastPlanBuildAttemptAuthorityTick;
-                HasLastOutputSole = source.HasLastOutputSole;
-                LastOutputSole = source.LastOutputSole;
-                LastOutputAnimatedAnklePosition = source.LastOutputAnimatedAnklePosition;
-                LastOutputAnimatedAnkleRotation = source.LastOutputAnimatedAnkleRotation;
-                LastOutputCurrentHip = source.LastOutputCurrentHip;
-                LastOutputAnklePosition = source.LastOutputAnklePosition;
-                LastOutputAnkleRotation = source.LastOutputAnkleRotation;
-                HasLastOutputGroundPath = source.HasLastOutputGroundPath;
-                LastOutputGroundPath = source.LastOutputGroundPath;
-                LastOutputGroundSupport = source.LastOutputGroundSupport;
-                LastOutputGroundPlanSequence = source.LastOutputGroundPlanSequence;
-                LastOutputPathRoot = source.LastOutputPathRoot;
-                LastOutputPathRootStart = source.LastOutputPathRootStart;
-                LastOutputPathHip = source.LastOutputPathHip;
+                LastOutput = source.LastOutput;
                 m_OutputContinuityPlanSequence = source.m_OutputContinuityPlanSequence;
                 m_OutputContinuityStartedFrame = source.m_OutputContinuityStartedFrame;
                 m_OutputContinuityWeight = source.m_OutputContinuityWeight;
@@ -722,7 +777,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PlanBuildDecision = decision;
             }
 
-            internal void BeginIntentRevision()
+            internal void BeginIntentRevision(in CharacterFootPlanTransitionCapture capture)
             {
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision is not executable.");
@@ -731,7 +786,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootPlanTransition.Begin(
                         CharacterFootPlanTransitionKind.IntentRevision,
                         Active.ImmutablePlan,
-                        Revision.ImmutablePlan));
+                        Revision.ImmutablePlan),
+                    in capture);
             }
 
             internal void BeginEventSuccessor()
@@ -744,7 +800,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Revision.ImmutablePlan);
             }
 
-            internal void PromoteRevision()
+            internal void PromoteRevision(in CharacterFootPlanTransitionCapture capture)
             {
                 if (!HasRevision || !Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
@@ -752,7 +808,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool preserveSuccessorHandoff = HasEventSuccessor &&
                                                 HasCompleteOutputForPlan(Active.Sequence);
                 if (preserveSuccessorHandoff)
-                    transition = CaptureTransitionOrigin(transition);
+                    transition = CaptureTransitionOrigin(transition, in capture);
                 ClearOutputContinuity();
                 m_SuppressNextOutputContinuityCapture = !preserveSuccessorHandoff;
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
@@ -772,7 +828,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             internal void BeginFadeOut(
                 CharacterPredictiveFootPlanEndReason reason,
-                ulong renderFrame)
+                ulong renderFrame,
+                in CharacterFootPlanTransitionCapture capture)
             {
                 if (renderFrame == 0)
                     throw new ArgumentOutOfRangeException(nameof(renderFrame));
@@ -794,13 +851,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterFootPlanTransitionKind.PredictiveExit,
                         Active.ImmutablePlan,
                         null,
-                        renderFrame));
+                        renderFrame),
+                    in capture);
             }
 
             internal void AdvanceTransition(
                 ulong renderFrame,
                 float deltaSeconds,
-                float blendSpeed)
+                float blendSpeed,
+                in CharacterFootPlanTransitionCapture capture)
             {
                 bool blendRevision = HasIntentRevision;
                 if (blendRevision)
@@ -818,7 +877,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         blendSpeed * deltaSeconds));
                     if (RevisionBlendWeight < 0.999999f)
                         return;
-                    PromoteRevision();
+                    PromoteRevision(in capture);
                     return;
                 }
                 if (!IsFadingOut)
@@ -904,52 +963,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     !IsFinite(currentHip) || !IsFinite(anklePosition) ||
                     !IsFinite(ankleRotation) || !IsFinite(sole))
                     return;
-                LastOutputAnimatedAnklePosition = animatedAnklePosition;
-                LastOutputAnimatedAnkleRotation = animatedAnkleRotation.normalized;
-                LastOutputCurrentHip = currentHip;
-                LastOutputAnklePosition = anklePosition;
-                LastOutputAnkleRotation = ankleRotation.normalized;
-                LastOutputSole = sole;
-                HasLastOutputSole = true;
-                if (!groundSupport.IsValid || !IsFinite(groundPath) || groundPlanSequence == 0 ||
-                    !IsFinite(pathRoot) || !IsFinite(pathRootStart) || !IsFinite(pathHip))
-                {
-                    HasLastOutputGroundPath = false;
-                    LastOutputGroundPath = Vector3.zero;
-                    LastOutputGroundSupport = default;
-                    LastOutputGroundPlanSequence = 0;
-                    LastOutputPathRoot = Vector3.zero;
-                    LastOutputPathRootStart = Vector3.zero;
-                    LastOutputPathHip = Vector3.zero;
-                    return;
-                }
-                LastOutputGroundPath = groundPath;
-                LastOutputGroundSupport = new FootPlacementSurface(
-                    groundSupport.Collider,
+                bool hasGroundPath = groundSupport.IsValid && IsFinite(groundPath) &&
+                                     groundPlanSequence != 0 && IsFinite(pathRoot) &&
+                                     IsFinite(pathRootStart) && IsFinite(pathHip);
+                FootPlacementSurface outputSupport = hasGroundPath
+                    ? new FootPlacementSurface(
+                        groundSupport.Collider,
+                        groundPath,
+                        groundSupport.Normal.normalized)
+                    : default;
+                hasGroundPath = outputSupport.IsValid;
+                LastOutput = new CharacterFootCompletedOutput(
+                    animatedAnklePosition,
+                    animatedAnkleRotation,
+                    currentHip,
+                    anklePosition,
+                    ankleRotation,
+                    sole,
+                    hasGroundPath,
                     groundPath,
-                    groundSupport.Normal.normalized);
-                HasLastOutputGroundPath = LastOutputGroundSupport.IsValid;
-                LastOutputGroundPlanSequence = HasLastOutputGroundPath
-                    ? groundPlanSequence
-                    : 0;
-                LastOutputPathRoot = pathRoot;
-                LastOutputPathRootStart = pathRootStart;
-                LastOutputPathHip = pathHip;
+                    in outputSupport,
+                    groundPlanSequence,
+                    pathRoot,
+                    pathRootStart,
+                    pathHip);
             }
 
             internal bool HasCompleteOutputForPlan(ulong planSequence) =>
                 planSequence != 0 &&
-                HasLastOutputSole &&
-                HasLastOutputGroundPath &&
-                LastOutputGroundPlanSequence == planSequence &&
-                IsFinite(LastOutputAnimatedAnklePosition) &&
-                IsFinite(LastOutputAnimatedAnkleRotation) &&
-                IsFinite(LastOutputCurrentHip) &&
-                IsFinite(LastOutputAnklePosition) &&
-                IsFinite(LastOutputAnkleRotation) &&
-                IsFinite(LastOutputPathRoot) &&
-                IsFinite(LastOutputPathRootStart) &&
-                IsFinite(LastOutputPathHip);
+                LastOutput.IsAvailable &&
+                LastOutput.HasGroundPath &&
+                LastOutput.PlanSequence == planSequence &&
+                IsFinite(LastOutput.OriginalAnklePosition) &&
+                IsFinite(LastOutput.OriginalAnkleRotation) &&
+                IsFinite(LastOutput.OriginalHipPosition) &&
+                IsFinite(LastOutput.FinalAnklePosition) &&
+                IsFinite(LastOutput.FinalAnkleRotation) &&
+                IsFinite(LastOutput.PathRootPosition) &&
+                IsFinite(LastOutput.PathRootStartPosition) &&
+                IsFinite(LastOutput.PathHipPosition);
 
             internal void PromoteUncommittedRevision(CharacterPredictiveFootPlanEndReason reason)
             {
@@ -991,18 +1043,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ClearOutputContinuity();
                     return;
                 }
-                bool outputOwnerChanged = LastOutputGroundPlanSequence != targetPlanSequence;
+                bool outputOwnerChanged = LastOutput.PlanSequence != targetPlanSequence;
                 if (outputOwnerChanged &&
                     m_OutputContinuityPlanSequence != targetPlanSequence &&
-                    HasLastOutputSole && IsFinite(LastOutputAnklePosition) &&
-                    IsFinite(LastOutputAnkleRotation))
+                    LastOutput.IsAvailable && IsFinite(LastOutput.FinalAnklePosition) &&
+                    IsFinite(LastOutput.FinalAnkleRotation))
                 {
                     m_OutputContinuityPlanSequence = targetPlanSequence;
                     m_OutputContinuityStartedFrame = renderFrame;
                     m_OutputContinuityWeight = 1f;
-                    m_OutputContinuityPositionOffset = LastOutputAnklePosition - targetPosition;
+                    m_OutputContinuityPositionOffset = LastOutput.FinalAnklePosition - targetPosition;
                     m_OutputContinuityRotationOffset = (
-                        LastOutputAnkleRotation * Quaternion.Inverse(targetRotation)).normalized;
+                        LastOutput.FinalAnkleRotation * Quaternion.Inverse(targetRotation)).normalized;
                 }
                 else if (m_OutputContinuityWeight > 0f &&
                          renderFrame > m_OutputContinuityStartedFrame)
@@ -1041,20 +1093,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Revision.Reset(reason);
                 m_Transition = default;
                 ClearIntentObservation();
-                HasLastOutputSole = false;
-                LastOutputSole = Vector3.zero;
-                LastOutputAnimatedAnklePosition = Vector3.zero;
-                LastOutputAnimatedAnkleRotation = Quaternion.identity;
-                LastOutputCurrentHip = Vector3.zero;
-                LastOutputAnklePosition = Vector3.zero;
-                LastOutputAnkleRotation = Quaternion.identity;
-                HasLastOutputGroundPath = false;
-                LastOutputGroundPath = Vector3.zero;
-                LastOutputGroundSupport = default;
-                LastOutputGroundPlanSequence = 0;
-                LastOutputPathRoot = Vector3.zero;
-                LastOutputPathRootStart = Vector3.zero;
-                LastOutputPathHip = Vector3.zero;
+                LastOutput = default;
                 LastPlanBuildAttemptKind = CharacterFootPlanAttemptKind.None;
                 LastPlanBuildAttemptSourceIdentity = 0;
                 LastPlanBuildAttemptMotionGeneration = 0;
@@ -1073,19 +1112,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float.IsFinite(value.z) && float.IsFinite(value.w);
 
             CharacterFootPlanTransition CaptureTransitionOrigin(
-                CharacterFootPlanTransition transition)
+                CharacterFootPlanTransition transition,
+                in CharacterFootPlanTransitionCapture capture)
             {
                 if (!HasCompleteOutputForPlan(Active.Sequence))
                     throw new InvalidOperationException("Predictive Foot transition origin is unavailable.");
                 return transition.WithContinuity(
-                    LastOutputAnklePosition - LastOutputAnimatedAnklePosition,
-                    (LastOutputAnkleRotation *
-                     Quaternion.Inverse(LastOutputAnimatedAnkleRotation)).normalized,
-                    LastOutputGroundPath,
-                    LastOutputGroundSupport.Rebuild(),
-                    LastOutputPathRoot - LastOutputCurrentHip,
-                    LastOutputPathRootStart - LastOutputCurrentHip,
-                    LastOutputPathHip - LastOutputCurrentHip);
+                    LastOutput.FinalAnklePosition - capture.OriginalAnklePosition,
+                    (LastOutput.FinalAnkleRotation *
+                     Quaternion.Inverse(capture.OriginalAnkleRotation)).normalized,
+                    LastOutput.GroundPathPosition,
+                    LastOutput.GroundSupport.Rebuild(),
+                    LastOutput.PathRootPosition - capture.OriginalHipPosition,
+                    LastOutput.PathRootStartPosition - capture.OriginalHipPosition,
+                    LastOutput.PathHipPosition - capture.OriginalHipPosition);
             }
 
             internal void ResolveTransitionOriginAnkle(
@@ -1236,6 +1276,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return new CharacterPredictiveFootFrameEvaluation(
                 frame.RenderFrame,
                 frame.CompletionIdentity,
+                in pose,
                 in left,
                 in right);
         }
@@ -1525,43 +1566,52 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlanExecutionState rightPlanState,
             in CharacterFullBodyIkGoalSetHeader ownerHeader,
             CharacterFullBodyIkGoal currentPelvis,
-            CharacterFullBodyIkGoal currentLeft,
-            CharacterFullBodyIkGoal currentRight,
-            in CharacterFootGroundingDiagnostics currentDiagnostics)
+            CharacterFullBodyIkGoal stanceLeft,
+            CharacterFullBodyIkGoal stanceRight,
+            in CharacterFootGroundingDiagnostics stanceDiagnostics)
         {
             RequireValidInput(
                 in frame,
                 in ownerHeader,
                 currentPelvis,
-                currentLeft,
-                currentRight,
-                in currentDiagnostics);
+                stanceLeft,
+                stanceRight,
+                in stanceDiagnostics);
             if (!evaluation.Matches(in frame))
                 throw new InvalidOperationException("Predictive Foot frame evaluation identity is invalid.");
-            CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
-                frame.RenderFrame,
-                frame.UpstreamPose.DenseComponentPoses);
+            CharacterFootPlacementAnimatedPose pose = evaluation.OriginalPose;
             CharacterFootPlacementPoseInput upstreamPose = frame.UpstreamPose;
             AnimationPredictedFootStepSample leftStep =
                 upstreamPose.LeftFootFeatures.PredictedStep;
             AnimationPredictedFootStepSample rightStep =
                 upstreamPose.RightFootFeatures.PredictedStep;
-            float leftEventPoseWeight = ResolveCurrentEventFootPoseWeight(
-                in upstreamPose,
+            CharacterFootPlacementAnimatedFootPose leftPose = pose.Left;
+            CharacterFootPlacementAnimatedFootPose rightPose = pose.Right;
+            CharacterFootGroundingFootDiagnostics leftStanceDiagnostics = stanceDiagnostics.Left;
+            CharacterFootGroundingFootDiagnostics rightStanceDiagnostics = stanceDiagnostics.Right;
+            var leftInput = new CharacterFootPlacementFootGoalInput(
                 CharacterFootSide.Left,
-                in leftStep);
-            float rightEventPoseWeight = ResolveCurrentEventFootPoseWeight(
-                in upstreamPose,
+                in leftPose,
+                upstreamPose.LeftFootFeatures,
+                ResolveCurrentEventFootPoseWeight(
+                    in upstreamPose,
+                    CharacterFootSide.Left,
+                in leftStep),
+                stanceLeft,
+                in leftStanceDiagnostics);
+            var rightInput = new CharacterFootPlacementFootGoalInput(
                 CharacterFootSide.Right,
-                in rightStep);
+                in rightPose,
+                upstreamPose.RightFootFeatures,
+                ResolveCurrentEventFootPoseWeight(
+                    in upstreamPose,
+                    CharacterFootSide.Right,
+                in rightStep),
+                stanceRight,
+                in rightStanceDiagnostics);
             CharacterFullBodyIkGoal left = ModifyFoot(
-                CharacterFootSide.Left,
                 leftPlanState,
-                pose.Left,
-                frame.UpstreamPose.LeftFootFeatures,
-                leftEventPoseWeight,
-                currentLeft,
-                currentDiagnostics.Left,
+                in leftInput,
                 frame.RenderFrame,
                 frame.PresentationDeltaSeconds,
                 m_Rig.LeftLegLength,
@@ -1569,13 +1619,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out CharacterPredictiveFootPlacementFootDiagnostics leftDiagnostics,
                 out CharacterPredictiveFootLegFrameSnapshot leftDebugSnapshot);
             CharacterFullBodyIkGoal right = ModifyFoot(
-                CharacterFootSide.Right,
                 rightPlanState,
-                pose.Right,
-                frame.UpstreamPose.RightFootFeatures,
-                rightEventPoseWeight,
-                currentRight,
-                currentDiagnostics.Right,
+                in rightInput,
                 frame.RenderFrame,
                 frame.PresentationDeltaSeconds,
                 m_Rig.RightLegLength,
@@ -1644,13 +1689,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         CharacterFullBodyIkGoal ModifyFoot(
-            CharacterFootSide side,
             CharacterFootPlanExecutionState runtime,
-            CharacterFootPlacementAnimatedFootPose pose,
-            AnimationFootFeatureSample feature,
-            float currentEventFootPoseWeight,
-            CharacterFullBodyIkGoal baseline,
-            CharacterFootGroundingFootDiagnostics grounding,
+            in CharacterFootPlacementFootGoalInput input,
             ulong renderFrame,
             float presentationDeltaSeconds,
             float legLength,
@@ -1658,21 +1698,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out CharacterPredictiveFootPlacementFootDiagnostics diagnostics,
             out CharacterPredictiveFootLegFrameSnapshot debugSnapshot)
         {
+            CharacterFootSide side = input.Side;
+            CharacterFootPlacementAnimatedFootPose pose = input.OriginalPose;
+            AnimationFootFeatureSample feature = input.Feature;
+            float currentEventFootPoseWeight = input.CurrentEventFootPoseWeight;
+            CharacterFullBodyIkGoal stanceGoal = input.StanceGoal;
+            CharacterFootGroundingFootDiagnostics grounding = input.StanceDiagnostics;
+            var transitionCapture = new CharacterFootPlanTransitionCapture(
+                pose.AnklePosition,
+                pose.AnkleRotation,
+                pose.HipPosition);
             CharacterPredictiveFootPlanExecution plan = runtime.Active;
             AnimationPredictedFootStepSample step = feature.PredictedStep;
             bool landingEventIdentityValid = step.HasConsistentLandingEventIdentity(side);
             Transform component = m_Rig.PoseRoot;
             Vector3 up = component.up.normalized;
-            Vector3 baselineWorldPosition = component.TransformPoint(baseline.ComponentPosition);
-            Quaternion baselineWorldRotation = (component.rotation * baseline.ComponentRotation).normalized;
+            Vector3 stanceWorldPosition = component.TransformPoint(stanceGoal.ComponentPosition);
+            Quaternion stanceWorldRotation = (component.rotation * stanceGoal.ComponentRotation).normalized;
             CharacterFootPlacementSoleContactPose baselineContacts = pose.ResolveSoleContacts(
-                baselineWorldPosition,
-                baselineWorldRotation);
+                stanceWorldPosition,
+                stanceWorldRotation);
             CharacterFootPlacementSoleContactPose nativeContacts = pose.ResolveSoleContacts(
                 pose.AnklePosition,
                 pose.AnkleRotation);
             Vector3 currentSole = (nativeContacts.HeelPosition + nativeContacts.ToePosition) * 0.5f;
-            CharacterFullBodyIkGoal result = baseline;
+            CharacterFullBodyIkGoal result = stanceGoal;
             bool rewritten = false;
             float appliedLift = 0f;
             float requiredLift = 0f;
@@ -1746,15 +1796,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!stanceOwnsFoot && !currentSupportOwnsIdle)
             {
                 result = new CharacterFullBodyIkGoal(
-                    baseline.Slot,
+                    stanceGoal.Slot,
                     component.InverseTransformPoint(pose.AnklePosition),
                     (Quaternion.Inverse(component.rotation) * pose.AnkleRotation).normalized,
-                    baseline.PositionWeight,
-                    baseline.RotationWeight,
-                    baseline.Application,
-                    baseline.SourceKind,
-                    baseline.DiagnosticMetadataIndex);
+                    stanceGoal.PositionWeight,
+                    stanceGoal.RotationWeight,
+                    stanceGoal.Application,
+                    stanceGoal.SourceKind,
+                    stanceGoal.DiagnosticMetadataIndex);
             }
+            CharacterFootPlacementGoalOwner goalOwner = stanceOwnsFoot || currentSupportOwnsIdle
+                ? CharacterFootPlacementGoalOwner.Stance
+                : CharacterFootPlacementGoalOwner.OriginalAnimation;
+            Vector3 preContinuityGoalWorldPosition = component.TransformPoint(result.ComponentPosition);
+            Vector3 transitionOriginAnklePosition = default;
+            Quaternion transitionOriginAnkleRotation = default;
+            Vector3 transitionOriginPathRoot = default;
+            Vector3 transitionOriginPathRootStart = default;
+            Vector3 transitionOriginPathHip = default;
             CharacterPredictiveFootTarget targetData = default;
             FootPredictionRejectReason activeEvaluationRejectReason = FootPredictionRejectReason.None;
             bool activeTargetAvailable = !runtime.IsFadingOut &&
@@ -1777,7 +1836,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     activeEvaluationRejectReason == FootPredictionRejectReason.ReachExceeded
                         ? CharacterPredictiveFootPlanEndReason.TargetReachExceeded
                         : CharacterPredictiveFootPlanEndReason.TargetEvaluationInvalid,
-                    renderFrame);
+                    renderFrame,
+                    in transitionCapture);
                 hasIntentRevision = false;
                 hasTransitionOrigin = runtime.HasTransitionOrigin && runtime.IsFadingOut;
                 revisionTransitionBlend = 0f;
@@ -1821,11 +1881,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float revisionBlend = revisionTargetAvailable
                     ? revisionTransitionBlend
                     : 0f;
-                Vector3 transitionOriginAnklePosition = default;
-                Quaternion transitionOriginAnkleRotation = default;
-                Vector3 transitionOriginPathRoot = default;
-                Vector3 transitionOriginPathRootStart = default;
-                Vector3 transitionOriginPathHip = default;
                 if (hasTransitionOrigin)
                 {
                     runtime.ResolveTransitionOriginAnkle(
@@ -1954,7 +2009,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             activePlanPredictionBlend)
                         : outgoingAnklePosition
                     : Vector3.Lerp(
-                        baselineWorldPosition,
+                        pose.AnklePosition,
                         targetData.AnklePosition,
                         activePlanPredictionBlend);
                 Quaternion activeResolvedAnkleRotation = hasEventSuccessorHandoff
@@ -1972,7 +2027,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             activePlanPredictionBlend).normalized
                         : outgoingAnkleRotation
                     : Quaternion.Slerp(
-                        baselineWorldRotation,
+                        pose.AnkleRotation,
                         targetData.AnkleRotation,
                         activePlanPredictionBlend).normalized;
                 Vector3 resolvedAnklePosition = activeResolvedAnklePosition;
@@ -1980,11 +2035,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (revisionTargetAvailable)
                 {
                     Vector3 revisionResolvedAnklePosition = Vector3.Lerp(
-                        baselineWorldPosition,
+                        pose.AnklePosition,
                         revisionTargetData.AnklePosition,
                         revisionPlanPredictionBlend);
                     Quaternion revisionResolvedAnkleRotation = Quaternion.Slerp(
-                        baselineWorldRotation,
+                        pose.AnkleRotation,
                         revisionTargetData.AnkleRotation,
                         revisionPlanPredictionBlend).normalized;
                     resolvedAnklePosition = Vector3.Lerp(
@@ -1997,6 +2052,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         revisionBlend).normalized;
                 }
                 ulong outputPlanSequence = plan.Sequence;
+                preContinuityGoalWorldPosition = resolvedAnklePosition;
                 runtime.ResolveOutputContinuity(
                     renderFrame,
                     presentationDeltaSeconds,
@@ -2059,15 +2115,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     !stanceOwnsFoot)
                 {
                     result = new CharacterFullBodyIkGoal(
-                        baseline.Slot,
+                        stanceGoal.Slot,
                         component.InverseTransformPoint(resolvedAnklePosition),
                         (Quaternion.Inverse(component.rotation) * resolvedAnkleRotation).normalized,
-                        baseline.PositionWeight,
-                        baseline.RotationWeight,
+                        stanceGoal.PositionWeight,
+                        stanceGoal.RotationWeight,
                         CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget,
-                        baseline.SourceKind | CharacterFullBodyIkGoalSourceKind.PredictiveExtension,
-                        baseline.DiagnosticMetadataIndex);
+                        stanceGoal.SourceKind | CharacterFullBodyIkGoalSourceKind.PredictiveExtension,
+                        stanceGoal.DiagnosticMetadataIndex);
                     rewritten = true;
+                    goalOwner = hasTransitionOrigin
+                        ? CharacterFootPlacementGoalOwner.PlanTransition
+                        : revisionTargetAvailable
+                            ? CharacterFootPlacementGoalOwner.RevisionPlan
+                            : CharacterFootPlacementGoalOwner.ActivePlan;
                 }
             }
             else
@@ -2182,9 +2243,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 appliedLift,
                 in plannedFootRouteWorld,
                 in pathSamples,
-                baselineWorldPosition,
+                goalOwner,
+                pose.AnklePosition,
+                stanceWorldPosition,
+                activeTargetAvailable,
+                activeTargetAvailable ? targetData.AnklePosition : default,
+                revisionTargetAvailable,
+                revisionTargetAvailable ? revisionTargetData.AnklePosition : default,
+                hasTransitionOrigin,
+                hasTransitionOrigin ? transitionOriginAnklePosition : default,
+                preContinuityGoalWorldPosition,
+                stanceWorldPosition,
                 component.TransformPoint(result.ComponentPosition),
-                baseline,
+                stanceGoal,
                 result);
             Vector3 finalWorldPosition = component.TransformPoint(result.ComponentPosition);
             Quaternion finalWorldRotation = (component.rotation * result.ComponentRotation).normalized;
@@ -2240,7 +2311,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 requiredLift,
                 appliedLift,
                 currentPathPosition,
-                baselineWorldPosition,
+                stanceWorldPosition,
                 baselineContacts.HeelPosition,
                 baselineContacts.ToePosition,
                 finalWorldPosition,
@@ -2664,6 +2735,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             landingHandoff = default;
             runtime.BeginFrame();
             runtime.ClearIntentObservation();
+            var transitionCapture = new CharacterFootPlanTransitionCapture(
+                pose.AnklePosition,
+                pose.AnkleRotation,
+                pose.HipPosition);
             CharacterPredictiveFootPlanExecution plan = runtime.Active;
             AnimationPredictedFootStepSample step = feature.PredictedStep;
             AnimationPredictedFootStepSample incomingStep = feature.IncomingPredictedStep;
@@ -2736,8 +2811,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationDeltaSeconds,
                     out landingHandoff);
             }
-            bool outgoingOutputAvailable = runtime.HasLastOutputGroundPath &&
-                                           runtime.LastOutputGroundPlanSequence == plan.Sequence;
+            CharacterFootCompletedOutput lastOutput = runtime.LastOutput;
+            bool outgoingOutputAvailable = lastOutput.HasGroundPath &&
+                                           lastOutput.PlanSequence == plan.Sequence;
             CharacterFootPlanSupportFact currentQueryFact = supportFacts.CurrentQuery;
             CharacterFootPlanSupportFact committedStanceFact = supportFacts.CommittedStance;
             CharacterFootPlanBuildOrigin currentFrameOrigin = BuildPlanOrigin(
@@ -2751,14 +2827,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 step.LandingEventIdentity,
                 up);
             CharacterFootPlanBuildOrigin activeOutputOrigin = outgoingOutputAvailable &&
-                                                               runtime.HasLastOutputSole
+                                                               lastOutput.IsAvailable
                 ? BuildPlanOrigin(
                     CharacterFootPlanOriginKind.ActivePlanOutput,
                     plan.Sequence,
                     plan.LandingEventIdentity,
-                    runtime.LastOutputSole,
-                    runtime.LastOutputGroundPath,
-                    runtime.LastOutputGroundSupport,
+                    lastOutput.FinalSolePosition,
+                    lastOutput.GroundPathPosition,
+                    lastOutput.GroundSupport,
                     up)
                 : default;
             CharacterFootPlanBuildOrigin projectedLandingOrigin = default;
@@ -2856,7 +2932,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         }
                         if (IsMotionWithinCommitTolerance(revision) && successorOriginValid)
                         {
-                            runtime.PromoteRevision();
+                            runtime.PromoteRevision(in transitionCapture);
                             plan = runtime.Active;
                             currentPlanMatches = true;
                             activeEventReplaced = false;
@@ -3028,7 +3104,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (runtime.Revision.MatchesAuthoritativeEvent(in step) &&
                         IsMotionWithinCommitTolerance(runtime.Revision))
                     {
-                        runtime.PromoteRevision();
+                        runtime.PromoteRevision(in transitionCapture);
                         plan = runtime.Active;
                         currentPlanMatches = true;
                         activeEventReplaced = false;
@@ -3038,16 +3114,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         runtime.CancelRevision(
                             CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
-                        runtime.BeginFadeOut(replacementReason, renderFrame);
+                        runtime.BeginFadeOut(
+                            replacementReason,
+                            renderFrame,
+                            in transitionCapture);
                     }
                 }
                 else if (!runtime.IsFadingOut)
-                    runtime.BeginFadeOut(replacementReason, renderFrame);
+                    runtime.BeginFadeOut(
+                        replacementReason,
+                        renderFrame,
+                        in transitionCapture);
             }
             runtime.AdvanceTransition(
                 renderFrame,
                 presentationDeltaSeconds,
-                m_TransitionBlendSpeed);
+                m_TransitionBlendSpeed,
+                in transitionCapture);
             plan = runtime.Active;
             bool needsInitialPlan = !plan.OwnsEvent ||
                                     plan.State == CharacterPredictiveFootPlanState.Rejected &&
@@ -3129,7 +3212,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     runtime.Revision.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
                     if (runtime.HasCompleteOutputForPlan(plan.Sequence))
-                        runtime.BeginIntentRevision();
+                        runtime.BeginIntentRevision(in transitionCapture);
                     else
                         runtime.PromoteUncommittedRevision(
                             CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);

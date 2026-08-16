@@ -665,6 +665,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float MotionLandingTolerance { get; }
     }
 
+    public enum CharacterFootPlacementGoalOwner : byte
+    {
+        OriginalAnimation = 0,
+        Stance = 1,
+        ActivePlan = 2,
+        RevisionPlan = 3,
+        PlanTransition = 4
+    }
+
     public readonly struct CharacterPredictiveFootPlacementFootDiagnostics
     {
         internal CharacterPredictiveFootPlacementFootDiagnostics(
@@ -730,6 +739,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float appliedLift,
             in FixedList128Bytes<Vector3> plannedFootRouteWorld,
             in FixedList512Bytes<CharacterPredictiveFootPathSampleDiagnostics> pathSamples,
+            CharacterFootPlacementGoalOwner goalOwner,
+            Vector3 originalGoalWorldPosition,
+            Vector3 stanceGoalWorldPosition,
+            bool activePlanGoalAvailable,
+            Vector3 activePlanGoalWorldPosition,
+            bool revisionPlanGoalAvailable,
+            Vector3 revisionPlanGoalWorldPosition,
+            bool transitionOriginGoalAvailable,
+            Vector3 transitionOriginGoalWorldPosition,
+            Vector3 preContinuityGoalWorldPosition,
             Vector3 baselineGoalWorldPosition,
             Vector3 finalGoalWorldPosition,
             CharacterFullBodyIkGoal baselineGoal,
@@ -797,6 +816,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AppliedLift = appliedLift;
             PlannedFootRouteWorld = plannedFootRouteWorld;
             PathSamples = pathSamples;
+            GoalOwner = goalOwner;
+            OriginalGoalWorldPosition = originalGoalWorldPosition;
+            StanceGoalWorldPosition = stanceGoalWorldPosition;
+            ActivePlanGoalAvailable = activePlanGoalAvailable;
+            ActivePlanGoalWorldPosition = activePlanGoalWorldPosition;
+            RevisionPlanGoalAvailable = revisionPlanGoalAvailable;
+            RevisionPlanGoalWorldPosition = revisionPlanGoalWorldPosition;
+            TransitionOriginGoalAvailable = transitionOriginGoalAvailable;
+            TransitionOriginGoalWorldPosition = transitionOriginGoalWorldPosition;
+            PreContinuityGoalWorldPosition = preContinuityGoalWorldPosition;
             BaselineGoalWorldPosition = baselineGoalWorldPosition;
             FinalGoalWorldPosition = finalGoalWorldPosition;
             BaselineGoal = baselineGoal;
@@ -917,6 +946,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float AppliedLift { get; }
         public FixedList128Bytes<Vector3> PlannedFootRouteWorld { get; }
         public FixedList512Bytes<CharacterPredictiveFootPathSampleDiagnostics> PathSamples { get; }
+        public CharacterFootPlacementGoalOwner GoalOwner { get; }
+        public Vector3 OriginalGoalWorldPosition { get; }
+        public Vector3 StanceGoalWorldPosition { get; }
+        public bool ActivePlanGoalAvailable { get; }
+        public Vector3 ActivePlanGoalWorldPosition { get; }
+        public bool RevisionPlanGoalAvailable { get; }
+        public Vector3 RevisionPlanGoalWorldPosition { get; }
+        public bool TransitionOriginGoalAvailable { get; }
+        public Vector3 TransitionOriginGoalWorldPosition { get; }
+        public Vector3 PreContinuityGoalWorldPosition { get; }
         public Vector3 BaselineGoalWorldPosition { get; }
         public Vector3 FinalGoalWorldPosition { get; }
         public CharacterFullBodyIkGoal BaselineGoal { get; }

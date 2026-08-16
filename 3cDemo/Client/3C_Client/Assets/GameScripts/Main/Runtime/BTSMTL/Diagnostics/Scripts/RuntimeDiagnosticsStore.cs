@@ -494,6 +494,7 @@ namespace BTSMTL.Diagnostics
                    left.HasPlanRevision == right.HasPlanRevision &&
                    left.RevisionPlanSequence == right.RevisionPlanSequence &&
                    left.PlanRevisionBlendWeight.Equals(right.PlanRevisionBlendWeight) &&
+                   string.Equals(left.PlanTransitionKind, right.PlanTransitionKind, StringComparison.Ordinal) &&
                    left.PlanFadingOut == right.PlanFadingOut &&
                    left.PlanRetentionWeight.Equals(right.PlanRetentionWeight) &&
                    left.IntentLandingDisplacementError.Equals(right.IntentLandingDisplacementError) &&

@@ -489,7 +489,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterPredictiveFootQueryDiagnostics
     {
         internal CharacterPredictiveFootQueryDiagnostics(
-            CharacterPredictiveFootPlacementPlan plan)
+            CharacterPredictiveFootPlanExecution plan)
         {
             FutureLandingQuery = plan.FutureLandingRequest.MaximumDistance > 0f
                 ? new CharacterFootGroundingQueryDiagnostics(plan.FutureLandingRequest)
@@ -586,7 +586,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterPredictiveFootPlanLifecycleDiagnostics
     {
         internal CharacterPredictiveFootPlanLifecycleDiagnostics(
-            CharacterPredictiveFootPlacementPlan plan)
+            CharacterPredictiveFootPlanExecution plan)
         {
             Sequence = plan.Sequence;
             GeneratedFrame = plan.GeneratedFrame;
@@ -665,6 +665,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasPlanRevision,
             ulong revisionPlanSequence,
             float planRevisionBlendWeight,
+            CharacterFootPlanTransitionKind planTransitionKind,
             bool planFadingOut,
             float planRetentionWeight,
             float intentLandingDisplacementError,
@@ -729,6 +730,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasPlanRevision = hasPlanRevision;
             RevisionPlanSequence = revisionPlanSequence;
             PlanRevisionBlendWeight = planRevisionBlendWeight;
+            PlanTransitionKind = planTransitionKind;
             PlanFadingOut = planFadingOut;
             PlanRetentionWeight = planRetentionWeight;
             IntentLandingDisplacementError = intentLandingDisplacementError;
@@ -801,6 +803,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool HasPlanRevision { get; }
         public ulong RevisionPlanSequence { get; }
         public float PlanRevisionBlendWeight { get; }
+        public CharacterFootPlanTransitionKind PlanTransitionKind { get; }
         public bool PlanFadingOut { get; }
         public float PlanRetentionWeight { get; }
         public float IntentLandingDisplacementError { get; }

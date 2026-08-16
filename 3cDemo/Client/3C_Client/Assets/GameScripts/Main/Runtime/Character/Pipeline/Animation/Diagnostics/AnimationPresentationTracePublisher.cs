@@ -417,6 +417,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 HasPlanRevision = hasModifier && modifier.HasPlanRevision,
                 RevisionPlanSequence = hasModifier ? modifier.RevisionPlanSequence : 0,
                 PlanRevisionBlendWeight = hasModifier ? modifier.PlanRevisionBlendWeight : 0f,
+                PlanTransitionKind = hasModifier
+                    ? modifier.PlanTransitionKind.ToString()
+                    : CharacterFootPlanTransitionKind.None.ToString(),
                 PlanFadingOut = hasModifier && modifier.PlanFadingOut,
                 PlanRetentionWeight = hasModifier ? modifier.PlanRetentionWeight : 0f,
                 IntentLandingDisplacementError = hasModifier

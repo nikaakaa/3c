@@ -367,11 +367,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterPredictiveFootQueryRequestSnapshot[] m_QueryRequests;
         readonly CharacterPredictiveFootQueryGeometrySnapshot[] m_AcceptedSupports;
         readonly CharacterPredictiveFootQueryGeometrySnapshot[] m_RejectedGeometry;
-        Vector3 m_WorldProjectionExpectedRoot;
-        Vector3 m_WorldProjectionCurrentRoot;
-        Quaternion m_WorldProjectionRotation = Quaternion.identity;
-        bool m_HasWorldProjection;
-        bool m_WorldProjectionFrozen;
 
         internal CharacterPredictiveFootPlacementPlan(CharacterFootSide side, int pathCapacity)
         {
@@ -392,16 +387,75 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterPredictiveFootPlacementQuery.MaximumRejectedGeometryCount];
         }
 
+        internal sealed class Builder
+        {
+            readonly CharacterPredictiveFootPlacementPlan m_Target;
+
+            internal Builder(CharacterPredictiveFootPlacementPlan target)
+            {
+                m_Target = target ?? throw new ArgumentNullException(nameof(target));
+            }
+
+            internal void CopyFrom(CharacterPredictiveFootPlacementPlan source) =>
+                m_Target.CopyFrom(source);
+
+            internal void BuildExecutable(
+                ulong sequence,
+                ulong generatedFrame,
+                in AnimationPredictedFootStepSample step,
+                Vector3 start,
+                Vector3 landing,
+                in CharacterPredictiveFootRootTrajectory rootTrajectory,
+                Vector3 predictedHip,
+                in CharacterPredictiveFootPlacementQueryResult query)
+            {
+                m_Target.ClearForBuild();
+                m_Target.Commit(
+                    sequence,
+                    generatedFrame,
+                    in step,
+                    start,
+                    landing,
+                    in rootTrajectory,
+                    predictedHip,
+                    in query);
+            }
+
+            internal void BuildRejected(
+                ulong sequence,
+                ulong generatedFrame,
+                in AnimationPredictedFootStepSample step,
+                Vector3 start,
+                Vector3 landing,
+                in CharacterPredictiveFootRootTrajectory rootTrajectory,
+                Vector3 predictedHip,
+                FootPredictionRejectReason rejectReason,
+                in CharacterPredictiveFootPlacementQueryResult query)
+            {
+                m_Target.ClearForBuild();
+                m_Target.Reject(
+                    sequence,
+                    generatedFrame,
+                    in step,
+                    start,
+                    landing,
+                    in rootTrajectory,
+                    predictedHip,
+                    rejectReason,
+                    in query);
+            }
+
+            internal void Clear() => m_Target.ClearForBuild();
+        }
+
         internal ulong Sequence { get; private set; }
         internal ulong LandingEventIdentity { get; private set; }
         internal ulong SourceSampleIdentity { get; private set; }
         internal int SourceSampleCycle { get; private set; }
         internal int EventOrdinal { get; private set; }
-        internal ulong ContributionContinuityIdentity { get; private set; }
+        internal ulong InitialContributionContinuityIdentity { get; private set; }
         internal ulong GeneratedFrame { get; private set; }
-        internal CharacterPredictiveFootPlanState State { get; private set; }
-        internal CharacterPredictiveFootPlanTransitionReason TransitionReason { get; private set; }
-        internal CharacterPredictiveFootPlanEndReason EndReason { get; private set; }
+        internal CharacterPredictiveFootPlanState CreationState { get; private set; }
         internal Vector3 Start { get; private set; }
         internal Vector3 Landing { get; private set; }
         internal Vector3 RootStart { get; private set; }
@@ -425,15 +479,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float EventPhaseAtGeneration { get; private set; }
         internal float LiftOffPhase { get; private set; }
         internal float ActionStepDurationSeconds { get; private set; }
-        internal float ActionStepPhase { get; private set; }
-        internal float ActionProgress { get; private set; }
-        internal float GroundPathProgress { get; private set; }
-        internal float MotionLinearLandingError { get; private set; }
-        internal float MotionAngularLandingError { get; private set; }
-        internal float MotionLandingError { get; private set; }
-        internal float MotionLandingTolerance { get; private set; }
         internal float SoleSupportRadius { get; private set; }
-        internal ulong ActionClockFrame { get; private set; }
         internal FootPlacementSurface FutureSupport { get; private set; }
         internal CharacterFootPlacementQueryRequest FutureLandingRequest { get; private set; }
         internal float VirtualGroundSplitEventPhase { get; private set; }
@@ -459,37 +505,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal int AcceptedSupportSnapshotCount { get; private set; }
         internal int RejectedGeometrySnapshotCount { get; private set; }
         internal CharacterPredictiveFootPlanGeometrySnapshot GeometrySnapshot { get; private set; }
-        internal Matrix4x4 WorldProjectionMatrix => m_HasWorldProjection
-            ? Matrix4x4.TRS(
-                  m_WorldProjectionCurrentRoot,
-                  m_WorldProjectionRotation,
-                  Vector3.one) *
-              Matrix4x4.Translate(-m_WorldProjectionExpectedRoot)
-            : Matrix4x4.identity;
-        internal Vector3 ProjectedStart => ProjectWorldPoint(Start);
-        internal Vector3 ProjectedLanding => ProjectWorldPoint(Landing);
-        internal Vector3 ProjectedPredictedHip => ProjectWorldPoint(PredictedHip);
-        internal Vector3 ProjectedRootStart => ProjectWorldPoint(RootStart);
-        internal Quaternion ProjectedRootStartRotation =>
-            (m_WorldProjectionRotation * RootStartRotation).normalized;
-        internal Vector3 ProjectedRootLanding => ProjectWorldPoint(RootLanding);
-        internal Vector3 ProjectedPresentedBodyLanding => ProjectWorldPoint(
-            RootTrajectory.EvaluatePresentedBodyLandingPosition());
-        internal FootPlacementSurface ProjectedFutureSupport => ProjectSurface(FutureSupport);
-        internal Quaternion ProjectedRootLandingRotation =>
-            (m_WorldProjectionRotation * RootLandingRotation).normalized;
         internal bool OwnsEvent => LandingEventIdentity != 0;
         internal bool HasAttempt =>
-            State == CharacterPredictiveFootPlanState.Planned ||
-            State == CharacterPredictiveFootPlanState.Executing ||
-            State == CharacterPredictiveFootPlanState.Rejected ||
-            State == CharacterPredictiveFootPlanState.Completed;
-        internal bool HasExecutablePath =>
-            State == CharacterPredictiveFootPlanState.Planned ||
-            State == CharacterPredictiveFootPlanState.Executing;
+            CreationState == CharacterPredictiveFootPlanState.Planned ||
+            CreationState == CharacterPredictiveFootPlanState.Executing ||
+            CreationState == CharacterPredictiveFootPlanState.Rejected;
+        internal bool WasBuiltExecutable =>
+            CreationState == CharacterPredictiveFootPlanState.Planned ||
+            CreationState == CharacterPredictiveFootPlanState.Executing;
         internal bool HasPathGeometry => GroundEnvelopeSegmentCount > 0;
 
-        internal void CopyFrom(CharacterPredictiveFootPlacementPlan source)
+        void CopyFrom(CharacterPredictiveFootPlacementPlan source)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -503,11 +529,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceSampleIdentity = source.SourceSampleIdentity;
             SourceSampleCycle = source.SourceSampleCycle;
             EventOrdinal = source.EventOrdinal;
-            ContributionContinuityIdentity = source.ContributionContinuityIdentity;
+            InitialContributionContinuityIdentity = source.InitialContributionContinuityIdentity;
             GeneratedFrame = source.GeneratedFrame;
-            State = source.State;
-            TransitionReason = source.TransitionReason;
-            EndReason = source.EndReason;
+            CreationState = source.CreationState;
             Start = source.Start;
             Landing = source.Landing;
             RootStart = source.RootStart;
@@ -531,15 +555,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EventPhaseAtGeneration = source.EventPhaseAtGeneration;
             LiftOffPhase = source.LiftOffPhase;
             ActionStepDurationSeconds = source.ActionStepDurationSeconds;
-            ActionStepPhase = source.ActionStepPhase;
-            ActionProgress = source.ActionProgress;
-            GroundPathProgress = source.GroundPathProgress;
-            MotionLinearLandingError = source.MotionLinearLandingError;
-            MotionAngularLandingError = source.MotionAngularLandingError;
-            MotionLandingError = source.MotionLandingError;
-            MotionLandingTolerance = source.MotionLandingTolerance;
             SoleSupportRadius = source.SoleSupportRadius;
-            ActionClockFrame = source.ActionClockFrame;
             FutureSupport = source.FutureSupport;
             FutureLandingRequest = source.FutureLandingRequest;
             VirtualGroundSplitEventPhase = source.VirtualGroundSplitEventPhase;
@@ -565,11 +581,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AcceptedSupportSnapshotCount = source.AcceptedSupportSnapshotCount;
             RejectedGeometrySnapshotCount = source.RejectedGeometrySnapshotCount;
             GeometrySnapshot = source.GeometrySnapshot;
-            m_WorldProjectionExpectedRoot = source.m_WorldProjectionExpectedRoot;
-            m_WorldProjectionCurrentRoot = source.m_WorldProjectionCurrentRoot;
-            m_WorldProjectionRotation = source.m_WorldProjectionRotation;
-            m_HasWorldProjection = source.m_HasWorldProjection;
-            m_WorldProjectionFrozen = source.m_WorldProjectionFrozen;
             Array.Copy(source.m_PathSegments, m_PathSegments, m_PathSegments.Length);
             Array.Copy(source.m_QueryRouteEventPhases, m_QueryRouteEventPhases, m_QueryRouteEventPhases.Length);
             Array.Copy(source.m_QueryRouteFractions, m_QueryRouteFractions, m_QueryRouteFractions.Length);
@@ -579,12 +590,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Array.Copy(source.m_QueryRequests, m_QueryRequests, m_QueryRequests.Length);
             Array.Copy(source.m_AcceptedSupports, m_AcceptedSupports, m_AcceptedSupports.Length);
             Array.Copy(source.m_RejectedGeometry, m_RejectedGeometry, m_RejectedGeometry.Length);
-        }
-
-        internal void BeginFrame()
-        {
-            TransitionReason = CharacterPredictiveFootPlanTransitionReason.None;
-            EndReason = CharacterPredictiveFootPlanEndReason.None;
         }
 
         internal bool MatchesAuthoritativeEvent(in AnimationPredictedFootStepSample step)
@@ -597,14 +602,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    EventOrdinal == step.EventOrdinal;
         }
 
-        internal void SynchronizePoseContribution(in AnimationPredictedFootStepSample step)
-        {
-            if (!MatchesAuthoritativeEvent(in step))
-                throw new ArgumentException("Predictive Foot Plan pose contribution does not belong to its action event.");
-            ContributionContinuityIdentity = step.ContributionContinuityIdentity;
-        }
-
-        internal void Commit(
+        void Commit(
             ulong sequence,
             ulong generatedFrame,
             in AnimationPredictedFootStepSample step,
@@ -619,10 +617,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Start = start;
             Landing = landing;
             AssignTiming(in step);
-            State = step.ActionStepClock.Phase + 0.000001f < ReleasePhase
+            CreationState = step.ActionStepClock.Phase + 0.000001f < ReleasePhase
                 ? CharacterPredictiveFootPlanState.Planned
                 : CharacterPredictiveFootPlanState.Executing;
-            TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanGenerated;
             AssignTrajectory(in rootTrajectory, in step);
             PredictedHip = predictedHip;
             FutureSupport = query.FutureLandingSupport;
@@ -649,12 +646,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CreationRejectReason = FootPredictionRejectReason.None;
             CopyQuerySnapshots(in query);
             ResolveGroundPathRates();
-            GroundPathProgress = 0f;
             ResolveAnimationClearanceContinuity();
             GeometrySnapshot = BuildGeometrySnapshot();
         }
 
-        internal void Reject(
+        void Reject(
             ulong sequence,
             ulong generatedFrame,
             in AnimationPredictedFootStepSample step,
@@ -669,8 +665,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (rejectReason == FootPredictionRejectReason.None)
                 throw new ArgumentOutOfRangeException(nameof(rejectReason));
             AssignEvent(sequence, generatedFrame, in step);
-            State = CharacterPredictiveFootPlanState.Rejected;
-            TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanRejected;
+            CreationState = CharacterPredictiveFootPlanState.Rejected;
             Start = start;
             Landing = landing;
             AssignTiming(in step);
@@ -701,57 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GeometrySnapshot = BuildGeometrySnapshot();
         }
 
-        internal void SynchronizeActionClock(
-            ulong renderFrame,
-            in AnimationPredictedFootStepSample step)
-        {
-            if (!HasExecutablePath)
-                return;
-            if (renderFrame == 0 || renderFrame <= ActionClockFrame ||
-                !MatchesAuthoritativeEvent(in step))
-            {
-                throw new ArgumentException("Predictive Foot Plan action clock input is invalid.");
-            }
-            AnimationActionStepClockSample clock = step.ActionStepClock;
-            if (!float.IsFinite(clock.DurationSeconds) || clock.DurationSeconds <= 0f ||
-                clock.Phase + 0.00001f < ActionStepPhase)
-            {
-                Complete(CharacterPredictiveFootPlanEndReason.ActionClockInvalid);
-                return;
-            }
-            ActionStepPhase = clock.Phase;
-            ActionClockFrame = renderFrame;
-            if (ActionStepPhase >= 0.9999f)
-            {
-                ActionStepPhase = 1f;
-                ActionProgress = 1f;
-                GroundPathProgress = 1f;
-                return;
-            }
-            if (ActionStepPhase + 0.000001f < ReleasePhase)
-            {
-                ActionProgress = 0f;
-                GroundPathProgress = 0f;
-                return;
-            }
-            if (State == CharacterPredictiveFootPlanState.Planned)
-            {
-                State = CharacterPredictiveFootPlanState.Executing;
-                TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanExecutionStarted;
-            }
-            if (ActionStepPhase + 0.000001f < RootTrajectory.PathStartPhase)
-            {
-                ActionProgress = 0f;
-                GroundPathProgress = 0f;
-                return;
-            }
-            ActionProgress = ResolveActionProgress();
-            GroundPathProgress = EvaluateGroundPathProgress(ActionStepPhase);
-        }
-
-        float ResolveActionProgress() => ResolveActionProgress(ActionStepPhase);
-
-        float ResolveActionProgress(float eventPhase) => Mathf.Clamp01(
+        internal float ResolveActionProgress(float eventPhase) => Mathf.Clamp01(
             (eventPhase - RootTrajectory.PathStartPhase) /
             Mathf.Max(0.000001f, 1f - RootTrajectory.PathStartPhase));
 
@@ -839,106 +784,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static float ResolveActionProgress(float pathStartPhase, float eventPhase) => Mathf.Clamp01(
             (eventPhase - pathStartPhase) / Mathf.Max(0.000001f, 1f - pathStartPhase));
 
-        internal float EvaluatePredictiveOutputWeight()
-        {
-            if (!HasExecutablePath)
-                return 0f;
-            if (ActionStepPhase <= ReleasePhase)
-                return 0f;
-            if (ActionStepPhase >= LiftOffPhase)
-                return 1f;
-            float value = Mathf.InverseLerp(ReleasePhase, LiftOffPhase, ActionStepPhase);
-            return value * value * (3f - 2f * value);
-        }
-
-        internal void ObserveWorldMotionDeviation(
-            Vector3 currentPresentedBodyPosition,
-            Quaternion currentPresentedBodyRotation,
-            float landingPlanarTolerance)
-        {
-            if (!HasExecutablePath)
-                return;
-            MotionLinearLandingError = 0f;
-            MotionAngularLandingError = 0f;
-            MotionLandingError = 0f;
-            MotionLandingTolerance = float.IsFinite(landingPlanarTolerance) &&
-                                     landingPlanarTolerance > 0f
-                ? landingPlanarTolerance
-                : 0f;
-            if (!IsFinite(currentPresentedBodyPosition) ||
-                !IsFinite(currentPresentedBodyRotation) ||
-                !float.IsFinite(landingPlanarTolerance) ||
-                landingPlanarTolerance <= 0f)
-            {
-                return;
-            }
-            if (ActionStepPhase + 0.000001f < LiftOffPhase ||
-                ActionStepPhase >= 0.9999f)
-                return;
-            Vector3 expectedBodyPosition = RootTrajectory
-                .EvaluatePresentedBodyPositionAtEventPhase(ActionStepPhase);
-            float linearLandingError = Vector3.ProjectOnPlane(
-                    currentPresentedBodyPosition - ProjectWorldPoint(expectedBodyPosition),
-                    RootTrajectory.Up)
-                .magnitude;
-            MotionLinearLandingError = linearLandingError;
-            RootTrajectory.EvaluateEventPhase(
-                ActionStepPhase,
-                out _,
-                out Quaternion expectedBodyRotation);
-            float angularDifference = Quaternion.Angle(
-                (m_WorldProjectionRotation * expectedBodyRotation).normalized,
-                currentPresentedBodyRotation) * Mathf.Deg2Rad;
-            float angularLever = Mathf.Max(
-                SoleSupportRadius,
-                RootTrajectory.EvaluateRemainingPlanarDistance(ActionStepPhase));
-            float angularLandingError =
-                2f * angularLever * Mathf.Sin(angularDifference * 0.5f);
-            MotionAngularLandingError = angularLandingError;
-            MotionLandingError = Mathf.Sqrt(
-                linearLandingError * linearLandingError +
-                angularLandingError * angularLandingError);
-        }
-
-        internal void UpdateWorldProjection(
-            Vector3 currentRootPosition,
-            Quaternion currentRootRotation)
-        {
-            if (!HasExecutablePath || m_WorldProjectionFrozen)
-                return;
-            if (!IsFinite(currentRootPosition) || !IsFinite(currentRootRotation))
-                throw new ArgumentException("Predictive Foot world projection input is invalid.");
-            RootTrajectory.EvaluateEventPhase(
-                ActionStepPhase,
-                out Vector3 expectedRootPosition,
-                out Quaternion expectedRootRotation);
-            Vector3 up = RootTrajectory.Up;
-            Vector3 expectedForward = Vector3.ProjectOnPlane(
-                expectedRootRotation * Vector3.forward,
-                up);
-            Vector3 currentForward = Vector3.ProjectOnPlane(
-                currentRootRotation * Vector3.forward,
-                up);
-            float yaw = expectedForward.sqrMagnitude > 0.000001f &&
-                        currentForward.sqrMagnitude > 0.000001f
-                ? Vector3.SignedAngle(expectedForward, currentForward, up)
-                : 0f;
-            m_WorldProjectionExpectedRoot = expectedRootPosition;
-            m_WorldProjectionCurrentRoot = expectedRootPosition + Vector3.ProjectOnPlane(
-                currentRootPosition - expectedRootPosition,
-                up);
-            m_WorldProjectionRotation = Quaternion.AngleAxis(yaw, up);
-            m_HasWorldProjection = true;
-            if (ActionStepPhase + 0.000001f >= ApproachContactPhase)
-                m_WorldProjectionFrozen = true;
-        }
-
-        internal void EvaluateGroundPath(
+        internal void EvaluateGroundPathLocal(
             float progress,
             out Vector3 pathPosition,
             out FootPlacementSurface support)
         {
-            if (!HasExecutablePath || GroundEnvelopeSegmentCount <= 0)
+            if (!WasBuiltExecutable || GroundEnvelopeSegmentCount <= 0)
                 throw new InvalidOperationException("Predictive Foot Plan has no executable path.");
             float value = Mathf.Clamp01(progress);
             FootPlacementGroundEnvelopeSegment segment = m_PathSegments[0];
@@ -953,15 +804,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float t = length > 0.000001f
                 ? Mathf.Clamp01((value - segment.StartFraction) / length)
                 : 1f;
-            pathPosition = ProjectWorldPoint(
-                Vector3.Lerp(segment.EdgeStart, segment.EdgeEnd, t));
-            support = ProjectSurface(
-                t <= 0.000001f
-                    ? segment.StartSurface
-                    : segment.EndSurface);
+            pathPosition = Vector3.Lerp(segment.EdgeStart, segment.EdgeEnd, t);
+            support = t <= 0.000001f
+                ? segment.StartSurface
+                : segment.EndSurface;
         }
 
-        internal void EvaluateFootMotion(
+        internal void EvaluateFootMotionLocal(
             float eventPhase,
             out Vector3 planarSole,
             out float animationClearanceHeight,
@@ -971,7 +820,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out AnimationBodyRotationPivotMode bodyPivotMode)
         {
             float phase = Mathf.Clamp01(eventPhase);
-            planarSole = ProjectWorldPoint(RootTrajectory.EvaluateFootRoute(phase));
+            planarSole = RootTrajectory.EvaluateFootRoute(phase);
             animationClearanceHeight = Mathf.Max(
                 0f,
                 EvaluateFloatRoute(AnimationClearanceHeights, phase) +
@@ -984,7 +833,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out bodyPivotMode);
         }
 
-        internal void EvaluateBodyPath(
+        internal void EvaluateBodyPathLocal(
             float eventPhase,
             out Vector3 root,
             out Vector3 hip)
@@ -997,11 +846,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Mathf.Clamp01(eventPhase),
                 out root,
                 out hip);
-            root = ProjectWorldPoint(root);
-            hip = ProjectWorldPoint(hip);
         }
 
-        internal void EvaluateClearancePath(
+        internal void EvaluateClearancePathLocal(
             float eventPhase,
             out Vector3 groundPath,
             out Vector3 root,
@@ -1010,12 +857,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out Vector3 sole)
         {
             float phase = Mathf.Clamp01(eventPhase);
-            EvaluateGroundPath(
+            EvaluateGroundPathLocal(
                 EvaluateGroundPathProgress(phase),
                 out Vector3 envelopePoint,
                 out support);
-            EvaluateBodyPath(phase, out root, out hip);
-            EvaluateFootMotion(
+            EvaluateBodyPathLocal(phase, out root, out hip);
+            EvaluateFootMotionLocal(
                 phase,
                 out Vector3 planarSole,
                 out float animationClearanceHeight,
@@ -1033,22 +880,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal void EvaluateActionState(
-            out AnimationFootConstraintMode constraintMode,
-            out AnimationFootSupportPhase supportPhase,
-            out AnimationFootOrientationPolicy orientationPolicy,
-            out AnimationBodyRotationPivotMode bodyPivotMode)
-        {
-            if (!OwnsEvent)
-                throw new InvalidOperationException("Predictive Foot Plan action state is unavailable.");
-            EvaluateResolvedActionState(
-                ActionStepPhase,
-                out constraintMode,
-                out supportPhase,
-                out orientationPolicy,
-                out bodyPivotMode);
-        }
-
-        internal void EvaluateActionState(
             float eventPhase,
             out AnimationFootConstraintMode constraintMode,
             out AnimationFootSupportPhase supportPhase,
@@ -1065,22 +896,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out bodyPivotMode);
         }
 
-        internal void EvaluateCurrentAnimationClearance(
-            out float authoredClearanceHeight,
-            out float continuityOffset,
-            out float continuityContribution,
-            out float reachClearanceHeight,
-            out float compositeClearanceHeight)
-        {
-            EvaluateAnimationClearance(
-                ActionStepPhase,
-                out authoredClearanceHeight,
-                out continuityOffset,
-                out continuityContribution,
-                out reachClearanceHeight,
-                out compositeClearanceHeight);
-        }
-
         internal void EvaluateAnimationClearance(
             float eventPhase,
             out float authoredClearanceHeight,
@@ -1089,7 +904,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out float reachClearanceHeight,
             out float compositeClearanceHeight)
         {
-            if (!HasExecutablePath)
+            if (!WasBuiltExecutable)
                 throw new InvalidOperationException("Predictive Foot Plan clearance is unavailable.");
             float phase = Mathf.Clamp01(eventPhase);
             authoredClearanceHeight = EvaluateFloatRoute(
@@ -1105,43 +920,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 continuityContribution);
         }
 
-        internal FootPlacementGroundEnvelopeSegment GetPathSegment(int index)
+        internal FootPlacementGroundEnvelopeSegment GetPathSegmentLocal(int index)
         {
             if (index < 0 || index >= GroundEnvelopeSegmentCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
             FootPlacementGroundEnvelopeSegment segment = m_PathSegments[index];
-            return new FootPlacementGroundEnvelopeSegment(
-                segment.StartFraction,
-                segment.EndFraction,
-                ProjectSurface(segment.StartSurface),
-                ProjectSurface(segment.EndSurface),
-                ProjectWorldPoint(segment.EdgeStart),
-                ProjectWorldPoint(segment.EdgeEnd),
-                segment.StartSoleHeight,
-                segment.EndSoleHeight,
-                segment.IsVirtualPlane);
+            return segment;
         }
 
-        internal Vector3 GetPlannedFootRouteSample(int index)
+        internal Vector3 GetPlannedFootRouteSampleLocal(int index)
         {
             if (!OwnsEvent || index < 0 || index >= FrozenWorldFootRoute.Length)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return ProjectWorldPoint(FrozenWorldFootRoute[index]);
+            return FrozenWorldFootRoute[index];
         }
 
-        internal void Reset(CharacterPredictiveFootPlanEndReason reason)
+        void ClearForBuild()
         {
-            if (reason == CharacterPredictiveFootPlanEndReason.None)
-                throw new ArgumentOutOfRangeException(nameof(reason));
-            State = CharacterPredictiveFootPlanState.Inactive;
-            TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanEnded;
-            EndReason = reason;
+            CreationState = CharacterPredictiveFootPlanState.Inactive;
             Sequence = 0;
             LandingEventIdentity = 0;
             SourceSampleIdentity = 0;
             SourceSampleCycle = 0;
             EventOrdinal = 0;
-            ContributionContinuityIdentity = 0;
+            InitialContributionContinuityIdentity = 0;
             GeneratedFrame = 0;
             Start = Vector3.zero;
             Landing = Vector3.zero;
@@ -1165,15 +967,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EventPhaseAtGeneration = 0f;
             LiftOffPhase = 0f;
             ActionStepDurationSeconds = 0f;
-            ActionStepPhase = 0f;
-            ActionProgress = 0f;
-            GroundPathProgress = 0f;
-            MotionLinearLandingError = 0f;
-            MotionAngularLandingError = 0f;
-            MotionLandingError = 0f;
-            MotionLandingTolerance = 0f;
             SoleSupportRadius = 0f;
-            ActionClockFrame = 0;
             FutureSupport = default;
             FutureLandingRequest = default;
             BodySupportPath = default;
@@ -1200,7 +994,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AcceptedSupportSnapshotCount = 0;
             RejectedGeometrySnapshotCount = 0;
             GeometrySnapshot = null;
-            ResetWorldProjection();
         }
 
         void CopyQuerySnapshots(in CharacterPredictiveFootPlacementQueryResult query)
@@ -1254,7 +1047,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     GroundPathRatePhases[i],
                     GroundPathRates[i]);
             }
-            int envelopeCount = HasExecutablePath ? GroundEnvelopeSegmentCount : 0;
+            int envelopeCount = WasBuiltExecutable ? GroundEnvelopeSegmentCount : 0;
             var envelope = new CharacterPredictiveFootEnvelopeSegmentSnapshot[envelopeCount];
             for (int i = 0; i < envelope.Length; i++)
                 envelope[i] = new CharacterPredictiveFootEnvelopeSegmentSnapshot(in m_PathSegments[i]);
@@ -1271,17 +1064,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Sequence,
                 GeneratedFrame,
                 LandingEventIdentity,
-                HasExecutablePath,
-                HasExecutablePath && FutureSupport.IsValid,
-                HasExecutablePath && FutureSupport.IsValid ? Landing : Vector3.zero,
-                HasExecutablePath && VirtualGroundSplitSupport.IsValid,
+                WasBuiltExecutable,
+                WasBuiltExecutable && FutureSupport.IsValid,
+                WasBuiltExecutable && FutureSupport.IsValid ? Landing : Vector3.zero,
+                WasBuiltExecutable && VirtualGroundSplitSupport.IsValid,
                 VirtualGroundSplitEventPhase,
                 VirtualGroundOpposingLanding,
                 VirtualGroundSplitRoutePoint,
                 VirtualGroundSplitPlanarError,
                 VirtualGroundSplitFraction,
                 VirtualGroundSplitLandingEventIdentity,
-                HasExecutablePath && VirtualGroundSplitSupport.IsValid
+                WasBuiltExecutable && VirtualGroundSplitSupport.IsValid
                     ? VirtualGroundSplitSupport.Point
                     : Vector3.zero,
                 RootTrajectory.FrozenMotionPlanarVelocity,
@@ -1302,7 +1095,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterPredictiveFootClearanceSegmentSnapshot[] BuildClearancePathSnapshot()
         {
-            if (!HasExecutablePath || GroundEnvelopeSegmentCount <= 0)
+            if (!WasBuiltExecutable || GroundEnvelopeSegmentCount <= 0)
                 return Array.Empty<CharacterPredictiveFootClearanceSegmentSnapshot>();
             const int uniformCount = CharacterPredictiveFootPlacementQuery.MaximumRouteSampleCount;
             var phases = new List<float>(uniformCount + GroundPathRatePhases.Length);
@@ -1327,14 +1120,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 float startPhase = uniquePhases[i];
                 float endPhase = uniquePhases[i + 1];
-                EvaluateClearancePath(
+                EvaluateClearancePathLocal(
                     startPhase,
                     out _,
                     out Vector3 rootStart,
                     out Vector3 hipStart,
                     out FootPlacementSurface startSupport,
                     out Vector3 start);
-                EvaluateClearancePath(
+                EvaluateClearancePathLocal(
                     endPhase,
                     out _,
                     out Vector3 rootEnd,
@@ -1399,50 +1192,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             rootTrajectory.EvaluateEventPhase(1f, out Vector3 rootLanding, out Quaternion rootLandingRotation);
             RootLanding = rootLanding;
             RootLandingRotation = rootLandingRotation;
-            ResetWorldProjection();
-        }
-
-        Vector3 ProjectWorldPoint(Vector3 point)
-        {
-            if (!m_HasWorldProjection)
-                return point;
-            return m_WorldProjectionCurrentRoot +
-                   m_WorldProjectionRotation * (point - m_WorldProjectionExpectedRoot);
-        }
-
-        Vector3 ProjectWorldDirection(Vector3 direction) =>
-            m_HasWorldProjection
-                ? m_WorldProjectionRotation * direction
-                : direction;
-
-        FootPlacementSurface ProjectSurface(FootPlacementSurface surface)
-        {
-            if (!surface.IsValid || !m_HasWorldProjection)
-                return surface;
-            Vector3 normal = ProjectWorldDirection(surface.Normal);
-            return new FootPlacementSurface(
-                surface.Collider,
-                ProjectWorldPoint(surface.Point),
-                normal.normalized);
-        }
-
-        void ResetWorldProjection()
-        {
-            m_WorldProjectionExpectedRoot = Vector3.zero;
-            m_WorldProjectionCurrentRoot = Vector3.zero;
-            m_WorldProjectionRotation = Quaternion.identity;
-            m_HasWorldProjection = false;
-            m_WorldProjectionFrozen = false;
         }
 
         void ResolveAnimationClearanceContinuity()
         {
             AnimationClearanceContinuityOffset = 0f;
-            if (!HasExecutablePath || GroundEnvelopeSegmentCount <= 0)
+            if (!WasBuiltExecutable || GroundEnvelopeSegmentCount <= 0)
                 return;
             float pathStartPhase = RootTrajectory.PathStartPhase;
             Vector3 up = RootTrajectory.Up;
-            EvaluateGroundPath(
+            EvaluateGroundPathLocal(
                 EvaluateGroundPathProgress(pathStartPhase),
                 out Vector3 envelopePoint,
                 out _);
@@ -1541,18 +1300,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceSampleIdentity = step.SourceSampleIdentity;
             SourceSampleCycle = step.SourceSampleCycle;
             EventOrdinal = step.EventOrdinal;
-            ContributionContinuityIdentity = step.ContributionContinuityIdentity;
+            InitialContributionContinuityIdentity = step.ContributionContinuityIdentity;
             GeneratedFrame = generatedFrame;
-            EndReason = CharacterPredictiveFootPlanEndReason.None;
-        }
-
-        void Complete(CharacterPredictiveFootPlanEndReason reason)
-        {
-            if (reason == CharacterPredictiveFootPlanEndReason.None)
-                throw new ArgumentOutOfRangeException(nameof(reason));
-            State = CharacterPredictiveFootPlanState.Completed;
-            TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanEnded;
-            EndReason = reason;
         }
 
         void AssignTiming(in AnimationPredictedFootStepSample step)
@@ -1562,9 +1311,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ReleasePhase = step.ReleasePhase;
             LiftOffPhase = step.ActionStepClock.LiftOffPhase;
             ActionStepDurationSeconds = step.ActionStepClock.DurationSeconds;
-            ActionStepPhase = EventPhaseAtGeneration;
-            ActionProgress = 0f;
-            ActionClockFrame = GeneratedFrame;
         }
 
         static float EvaluateFloatRoute(FixedList128Bytes<float> route, float phase)
@@ -1604,5 +1350,650 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (sequence == 0 || generatedFrame == 0 || !step.IsAuthoritative)
                 throw new ArgumentException("Predictive Foot Plan identity is invalid.");
         }
+    }
+
+    internal struct CharacterPredictiveFootPlanExecutionState
+    {
+        internal CharacterPredictiveFootPlanState State;
+        internal CharacterPredictiveFootPlanTransitionReason TransitionReason;
+        internal CharacterPredictiveFootPlanEndReason EndReason;
+        internal ulong ContributionContinuityIdentity;
+        internal float ActionStepPhase;
+        internal float ActionProgress;
+        internal float GroundPathProgress;
+        internal float MotionLinearLandingError;
+        internal float MotionAngularLandingError;
+        internal float MotionLandingError;
+        internal float MotionLandingTolerance;
+        internal ulong ActionClockFrame;
+        internal Vector3 WorldProjectionExpectedRoot;
+        internal Vector3 WorldProjectionCurrentRoot;
+        internal Quaternion WorldProjectionRotation;
+        internal bool HasWorldProjection;
+        internal bool WorldProjectionFrozen;
+
+        internal void Initialize(CharacterPredictiveFootPlacementPlan plan)
+        {
+            State = plan.CreationState;
+            TransitionReason = plan.CreationState == CharacterPredictiveFootPlanState.Rejected
+                ? CharacterPredictiveFootPlanTransitionReason.PlanRejected
+                : CharacterPredictiveFootPlanTransitionReason.PlanGenerated;
+            EndReason = CharacterPredictiveFootPlanEndReason.None;
+            ContributionContinuityIdentity = plan.InitialContributionContinuityIdentity;
+            ActionStepPhase = plan.EventPhaseAtGeneration;
+            ActionProgress = 0f;
+            GroundPathProgress = 0f;
+            MotionLinearLandingError = 0f;
+            MotionAngularLandingError = 0f;
+            MotionLandingError = 0f;
+            MotionLandingTolerance = 0f;
+            ActionClockFrame = plan.GeneratedFrame;
+            WorldProjectionExpectedRoot = Vector3.zero;
+            WorldProjectionCurrentRoot = Vector3.zero;
+            WorldProjectionRotation = Quaternion.identity;
+            HasWorldProjection = false;
+            WorldProjectionFrozen = false;
+        }
+
+        internal void Reset(CharacterPredictiveFootPlanEndReason reason)
+        {
+            if (reason == CharacterPredictiveFootPlanEndReason.None)
+                throw new ArgumentOutOfRangeException(nameof(reason));
+            this = default;
+            State = CharacterPredictiveFootPlanState.Inactive;
+            TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanEnded;
+            EndReason = reason;
+            WorldProjectionRotation = Quaternion.identity;
+        }
+    }
+
+    internal static class CharacterPredictiveFootPlanEvaluator
+    {
+        internal static void BeginFrame(ref CharacterPredictiveFootPlanExecutionState state)
+        {
+            state.TransitionReason = CharacterPredictiveFootPlanTransitionReason.None;
+            state.EndReason = CharacterPredictiveFootPlanEndReason.None;
+        }
+
+        internal static void SynchronizePoseContribution(
+            CharacterPredictiveFootPlacementPlan plan,
+            ref CharacterPredictiveFootPlanExecutionState state,
+            in AnimationPredictedFootStepSample step)
+        {
+            if (!plan.MatchesAuthoritativeEvent(in step))
+                throw new ArgumentException("Predictive Foot Plan pose contribution does not belong to its action event.");
+            state.ContributionContinuityIdentity = step.ContributionContinuityIdentity;
+        }
+
+        internal static void SynchronizeActionClock(
+            CharacterPredictiveFootPlacementPlan plan,
+            ref CharacterPredictiveFootPlanExecutionState state,
+            ulong renderFrame,
+            in AnimationPredictedFootStepSample step)
+        {
+            if (!IsExecutable(in state))
+                return;
+            if (renderFrame == 0 || renderFrame <= state.ActionClockFrame ||
+                !plan.MatchesAuthoritativeEvent(in step))
+            {
+                throw new ArgumentException("Predictive Foot Plan action clock input is invalid.");
+            }
+            AnimationActionStepClockSample clock = step.ActionStepClock;
+            if (!float.IsFinite(clock.DurationSeconds) || clock.DurationSeconds <= 0f ||
+                clock.Phase + 0.00001f < state.ActionStepPhase)
+            {
+                Complete(ref state, CharacterPredictiveFootPlanEndReason.ActionClockInvalid);
+                return;
+            }
+            state.ActionStepPhase = clock.Phase;
+            state.ActionClockFrame = renderFrame;
+            if (state.ActionStepPhase >= 0.9999f)
+            {
+                state.ActionStepPhase = 1f;
+                state.ActionProgress = 1f;
+                state.GroundPathProgress = 1f;
+                return;
+            }
+            if (state.ActionStepPhase + 0.000001f < plan.ReleasePhase)
+            {
+                state.ActionProgress = 0f;
+                state.GroundPathProgress = 0f;
+                return;
+            }
+            if (state.State == CharacterPredictiveFootPlanState.Planned)
+            {
+                state.State = CharacterPredictiveFootPlanState.Executing;
+                state.TransitionReason =
+                    CharacterPredictiveFootPlanTransitionReason.PlanExecutionStarted;
+            }
+            if (state.ActionStepPhase + 0.000001f < plan.RootTrajectory.PathStartPhase)
+            {
+                state.ActionProgress = 0f;
+                state.GroundPathProgress = 0f;
+                return;
+            }
+            state.ActionProgress = plan.ResolveActionProgress(state.ActionStepPhase);
+            state.GroundPathProgress = plan.EvaluateGroundPathProgress(state.ActionStepPhase);
+        }
+
+        internal static void UpdateWorldProjection(
+            CharacterPredictiveFootPlacementPlan plan,
+            ref CharacterPredictiveFootPlanExecutionState state,
+            Vector3 currentRootPosition,
+            Quaternion currentRootRotation)
+        {
+            if (!IsExecutable(in state) || state.WorldProjectionFrozen)
+                return;
+            if (!IsFinite(currentRootPosition) || !IsFinite(currentRootRotation))
+                throw new ArgumentException("Predictive Foot world projection input is invalid.");
+            plan.RootTrajectory.EvaluateEventPhase(
+                state.ActionStepPhase,
+                out Vector3 expectedRootPosition,
+                out Quaternion expectedRootRotation);
+            Vector3 up = plan.RootTrajectory.Up;
+            Vector3 expectedForward = Vector3.ProjectOnPlane(
+                expectedRootRotation * Vector3.forward,
+                up);
+            Vector3 currentForward = Vector3.ProjectOnPlane(
+                currentRootRotation * Vector3.forward,
+                up);
+            float yaw = expectedForward.sqrMagnitude > 0.000001f &&
+                        currentForward.sqrMagnitude > 0.000001f
+                ? Vector3.SignedAngle(expectedForward, currentForward, up)
+                : 0f;
+            state.WorldProjectionExpectedRoot = expectedRootPosition;
+            state.WorldProjectionCurrentRoot = expectedRootPosition + Vector3.ProjectOnPlane(
+                currentRootPosition - expectedRootPosition,
+                up);
+            state.WorldProjectionRotation = Quaternion.AngleAxis(yaw, up);
+            state.HasWorldProjection = true;
+            if (state.ActionStepPhase + 0.000001f >= plan.ApproachContactPhase)
+                state.WorldProjectionFrozen = true;
+        }
+
+        internal static void ObserveWorldMotionDeviation(
+            CharacterPredictiveFootPlacementPlan plan,
+            ref CharacterPredictiveFootPlanExecutionState state,
+            Vector3 currentPresentedBodyPosition,
+            Quaternion currentPresentedBodyRotation,
+            float landingPlanarTolerance)
+        {
+            if (!IsExecutable(in state))
+                return;
+            state.MotionLinearLandingError = 0f;
+            state.MotionAngularLandingError = 0f;
+            state.MotionLandingError = 0f;
+            state.MotionLandingTolerance = float.IsFinite(landingPlanarTolerance) &&
+                                           landingPlanarTolerance > 0f
+                ? landingPlanarTolerance
+                : 0f;
+            if (!IsFinite(currentPresentedBodyPosition) ||
+                !IsFinite(currentPresentedBodyRotation) ||
+                !float.IsFinite(landingPlanarTolerance) ||
+                landingPlanarTolerance <= 0f ||
+                state.ActionStepPhase + 0.000001f < plan.LiftOffPhase ||
+                state.ActionStepPhase >= 0.9999f)
+            {
+                return;
+            }
+            Vector3 expectedBodyPosition = plan.RootTrajectory
+                .EvaluatePresentedBodyPositionAtEventPhase(state.ActionStepPhase);
+            float linearLandingError = Vector3.ProjectOnPlane(
+                    currentPresentedBodyPosition - ProjectWorldPoint(in state, expectedBodyPosition),
+                    plan.RootTrajectory.Up)
+                .magnitude;
+            state.MotionLinearLandingError = linearLandingError;
+            plan.RootTrajectory.EvaluateEventPhase(
+                state.ActionStepPhase,
+                out _,
+                out Quaternion expectedBodyRotation);
+            float angularDifference = Quaternion.Angle(
+                (state.WorldProjectionRotation * expectedBodyRotation).normalized,
+                currentPresentedBodyRotation) * Mathf.Deg2Rad;
+            float angularLever = Mathf.Max(
+                plan.SoleSupportRadius,
+                plan.RootTrajectory.EvaluateRemainingPlanarDistance(state.ActionStepPhase));
+            float angularLandingError =
+                2f * angularLever * Mathf.Sin(angularDifference * 0.5f);
+            state.MotionAngularLandingError = angularLandingError;
+            state.MotionLandingError = Mathf.Sqrt(
+                linearLandingError * linearLandingError +
+                angularLandingError * angularLandingError);
+        }
+
+        internal static Matrix4x4 ResolveWorldProjectionMatrix(
+            in CharacterPredictiveFootPlanExecutionState state) =>
+            state.HasWorldProjection
+                ? Matrix4x4.TRS(
+                      state.WorldProjectionCurrentRoot,
+                      state.WorldProjectionRotation,
+                      Vector3.one) *
+                  Matrix4x4.Translate(-state.WorldProjectionExpectedRoot)
+                : Matrix4x4.identity;
+
+        internal static Vector3 ProjectWorldPoint(
+            in CharacterPredictiveFootPlanExecutionState state,
+            Vector3 point) =>
+            state.HasWorldProjection
+                ? state.WorldProjectionCurrentRoot +
+                  state.WorldProjectionRotation * (point - state.WorldProjectionExpectedRoot)
+                : point;
+
+        internal static Quaternion ProjectWorldRotation(
+            in CharacterPredictiveFootPlanExecutionState state,
+            Quaternion rotation) =>
+            state.HasWorldProjection
+                ? (state.WorldProjectionRotation * rotation).normalized
+                : rotation;
+
+        internal static FootPlacementSurface ProjectSurface(
+            in CharacterPredictiveFootPlanExecutionState state,
+            FootPlacementSurface surface)
+        {
+            if (!surface.IsValid || !state.HasWorldProjection)
+                return surface;
+            Vector3 normal = state.WorldProjectionRotation * surface.Normal;
+            return new FootPlacementSurface(
+                surface.Collider,
+                ProjectWorldPoint(in state, surface.Point),
+                normal.normalized);
+        }
+
+        internal static bool IsExecutable(in CharacterPredictiveFootPlanExecutionState state) =>
+            state.State == CharacterPredictiveFootPlanState.Planned ||
+            state.State == CharacterPredictiveFootPlanState.Executing;
+
+        static void Complete(
+            ref CharacterPredictiveFootPlanExecutionState state,
+            CharacterPredictiveFootPlanEndReason reason)
+        {
+            if (reason == CharacterPredictiveFootPlanEndReason.None)
+                throw new ArgumentOutOfRangeException(nameof(reason));
+            state.State = CharacterPredictiveFootPlanState.Completed;
+            state.TransitionReason = CharacterPredictiveFootPlanTransitionReason.PlanEnded;
+            state.EndReason = reason;
+        }
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+
+        static bool IsFinite(Quaternion value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) &&
+            float.IsFinite(value.z) && float.IsFinite(value.w) &&
+            Quaternion.Dot(value, value) > 0.000001f;
+    }
+
+    internal sealed class CharacterPredictiveFootPlanExecution
+    {
+        readonly CharacterPredictiveFootPlacementPlan m_Plan;
+        readonly CharacterPredictiveFootPlacementPlan.Builder m_Builder;
+        CharacterPredictiveFootPlanExecutionState m_State;
+
+        internal CharacterPredictiveFootPlanExecution(CharacterFootSide side, int pathCapacity)
+        {
+            m_Plan = new CharacterPredictiveFootPlacementPlan(side, pathCapacity);
+            m_Builder = new CharacterPredictiveFootPlacementPlan.Builder(m_Plan);
+            m_State.Reset(CharacterPredictiveFootPlanEndReason.PresentationReset);
+        }
+
+        internal ulong Sequence => m_Plan.Sequence;
+        internal ulong LandingEventIdentity => m_Plan.LandingEventIdentity;
+        internal ulong SourceSampleIdentity => m_Plan.SourceSampleIdentity;
+        internal int SourceSampleCycle => m_Plan.SourceSampleCycle;
+        internal int EventOrdinal => m_Plan.EventOrdinal;
+        internal ulong ContributionContinuityIdentity => m_State.ContributionContinuityIdentity;
+        internal ulong GeneratedFrame => m_Plan.GeneratedFrame;
+        internal CharacterPredictiveFootPlanState State => m_State.State;
+        internal CharacterPredictiveFootPlanTransitionReason TransitionReason =>
+            m_State.TransitionReason;
+        internal CharacterPredictiveFootPlanEndReason EndReason => m_State.EndReason;
+        internal Vector3 Start => m_Plan.Start;
+        internal Vector3 Landing => m_Plan.Landing;
+        internal Vector3 RootStart => m_Plan.RootStart;
+        internal Quaternion RootStartRotation => m_Plan.RootStartRotation;
+        internal Vector3 RootLanding => m_Plan.RootLanding;
+        internal Quaternion RootLandingRotation => m_Plan.RootLandingRotation;
+        internal Vector3 PredictedHip => m_Plan.PredictedHip;
+        internal CharacterPredictiveFootRootTrajectory RootTrajectory => m_Plan.RootTrajectory;
+        internal CharacterPredictiveBodySupportPath BodySupportPath => m_Plan.BodySupportPath;
+        internal FixedList512Bytes<Vector3> AuthoredFootPlanarRoute => m_Plan.AuthoredFootPlanarRoute;
+        internal FixedList512Bytes<Vector3> RootLocalHipRoute => m_Plan.RootLocalHipRoute;
+        internal FixedList128Bytes<float> AnimationClearanceHeights =>
+            m_Plan.AnimationClearanceHeights;
+        internal float ReleasePhase => m_Plan.ReleasePhase;
+        internal float ApproachContactPhase => m_Plan.ApproachContactPhase;
+        internal FixedList512Bytes<Vector3> FrozenWorldFootRoute => m_Plan.FrozenWorldFootRoute;
+        internal FixedList128Bytes<float> FrozenWorldFootRoutePhases =>
+            m_Plan.FrozenWorldFootRoutePhases;
+        internal FixedList512Bytes<float> GroundPathRatePhases => m_Plan.GroundPathRatePhases;
+        internal FixedList512Bytes<float> GroundPathRates => m_Plan.GroundPathRates;
+        internal float AnimationClearanceContinuityOffset =>
+            m_Plan.AnimationClearanceContinuityOffset;
+        internal float LandingDelayAtGeneration => m_Plan.LandingDelayAtGeneration;
+        internal float EventPhaseAtGeneration => m_Plan.EventPhaseAtGeneration;
+        internal float LiftOffPhase => m_Plan.LiftOffPhase;
+        internal float ActionStepDurationSeconds => m_Plan.ActionStepDurationSeconds;
+        internal float ActionStepPhase => m_State.ActionStepPhase;
+        internal float ActionProgress => m_State.ActionProgress;
+        internal float GroundPathProgress => m_State.GroundPathProgress;
+        internal float MotionLinearLandingError => m_State.MotionLinearLandingError;
+        internal float MotionAngularLandingError => m_State.MotionAngularLandingError;
+        internal float MotionLandingError => m_State.MotionLandingError;
+        internal float MotionLandingTolerance => m_State.MotionLandingTolerance;
+        internal float SoleSupportRadius => m_Plan.SoleSupportRadius;
+        internal ulong ActionClockFrame => m_State.ActionClockFrame;
+        internal FootPlacementSurface FutureSupport => m_Plan.FutureSupport;
+        internal CharacterFootPlacementQueryRequest FutureLandingRequest =>
+            m_Plan.FutureLandingRequest;
+        internal float VirtualGroundSplitEventPhase => m_Plan.VirtualGroundSplitEventPhase;
+        internal Vector3 VirtualGroundOpposingLanding => m_Plan.VirtualGroundOpposingLanding;
+        internal Vector3 VirtualGroundSplitRoutePoint => m_Plan.VirtualGroundSplitRoutePoint;
+        internal float VirtualGroundSplitPlanarError => m_Plan.VirtualGroundSplitPlanarError;
+        internal float VirtualGroundSplitFraction => m_Plan.VirtualGroundSplitFraction;
+        internal FootPlacementSurface VirtualGroundSplitSupport =>
+            m_Plan.VirtualGroundSplitSupport;
+        internal ulong VirtualGroundSplitLandingEventIdentity =>
+            m_Plan.VirtualGroundSplitLandingEventIdentity;
+        internal int GroundEnvelopeSegmentCount => m_Plan.GroundEnvelopeSegmentCount;
+        internal FootPlacementGroundEnvelopeRejectReason GroundEnvelopeRejectReason =>
+            m_Plan.GroundEnvelopeRejectReason;
+        internal int QueryCount => m_Plan.QueryCount;
+        internal int RawHitCount => m_Plan.RawHitCount;
+        internal int RouteSampleCount => m_Plan.RouteSampleCount;
+        internal int FootRateSampleCount => m_Plan.FootRateSampleCount;
+        internal int AcceptedHitCount => m_Plan.AcceptedHitCount;
+        internal int EdgePlaneCandidateCount => m_Plan.EdgePlaneCandidateCount;
+        internal int AcceptedEdgePlaneCount => m_Plan.AcceptedEdgePlaneCount;
+        internal int RejectedQueryCount => m_Plan.RejectedQueryCount;
+        internal CharacterPredictiveFootQueryRejectCounts QueryRejectCounts =>
+            m_Plan.QueryRejectCounts;
+        internal FootPredictionRejectReason CreationRejectReason => m_Plan.CreationRejectReason;
+        internal int QueryRequestSnapshotCount => m_Plan.QueryRequestSnapshotCount;
+        internal int AcceptedSupportSnapshotCount => m_Plan.AcceptedSupportSnapshotCount;
+        internal int RejectedGeometrySnapshotCount => m_Plan.RejectedGeometrySnapshotCount;
+        internal CharacterPredictiveFootPlanGeometrySnapshot GeometrySnapshot =>
+            m_Plan.GeometrySnapshot;
+        internal Matrix4x4 WorldProjectionMatrix =>
+            CharacterPredictiveFootPlanEvaluator.ResolveWorldProjectionMatrix(in m_State);
+        internal Vector3 ProjectedStart => ProjectWorldPoint(Start);
+        internal Vector3 ProjectedLanding => ProjectWorldPoint(Landing);
+        internal Vector3 ProjectedPredictedHip => ProjectWorldPoint(PredictedHip);
+        internal Vector3 ProjectedRootStart => ProjectWorldPoint(RootStart);
+        internal Quaternion ProjectedRootStartRotation => ProjectWorldRotation(RootStartRotation);
+        internal Vector3 ProjectedRootLanding => ProjectWorldPoint(RootLanding);
+        internal Vector3 ProjectedPresentedBodyLanding => ProjectWorldPoint(
+            RootTrajectory.EvaluatePresentedBodyLandingPosition());
+        internal FootPlacementSurface ProjectedFutureSupport => ProjectSurface(FutureSupport);
+        internal Quaternion ProjectedRootLandingRotation => ProjectWorldRotation(RootLandingRotation);
+        internal bool OwnsEvent => m_Plan.OwnsEvent;
+        internal bool HasAttempt => m_Plan.HasAttempt;
+        internal bool HasExecutablePath =>
+            m_Plan.WasBuiltExecutable &&
+            CharacterPredictiveFootPlanEvaluator.IsExecutable(in m_State);
+        internal bool HasPathGeometry => m_Plan.HasPathGeometry;
+        internal CharacterPredictiveFootPlacementPlan ImmutablePlan => m_Plan;
+
+        internal void CopyFrom(CharacterPredictiveFootPlanExecution source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            m_Builder.CopyFrom(source.m_Plan);
+            m_State = source.m_State;
+        }
+
+        internal void BeginFrame() =>
+            CharacterPredictiveFootPlanEvaluator.BeginFrame(ref m_State);
+
+        internal bool MatchesAuthoritativeEvent(in AnimationPredictedFootStepSample step) =>
+            m_Plan.MatchesAuthoritativeEvent(in step);
+
+        internal void SynchronizePoseContribution(in AnimationPredictedFootStepSample step) =>
+            CharacterPredictiveFootPlanEvaluator.SynchronizePoseContribution(
+                m_Plan,
+                ref m_State,
+                in step);
+
+        internal void Commit(
+            ulong sequence,
+            ulong generatedFrame,
+            in AnimationPredictedFootStepSample step,
+            Vector3 start,
+            Vector3 landing,
+            in CharacterPredictiveFootRootTrajectory rootTrajectory,
+            Vector3 predictedHip,
+            in CharacterPredictiveFootPlacementQueryResult query)
+        {
+            m_Builder.BuildExecutable(
+                sequence,
+                generatedFrame,
+                in step,
+                start,
+                landing,
+                in rootTrajectory,
+                predictedHip,
+                in query);
+            m_State.Initialize(m_Plan);
+        }
+
+        internal void Reject(
+            ulong sequence,
+            ulong generatedFrame,
+            in AnimationPredictedFootStepSample step,
+            Vector3 start,
+            Vector3 landing,
+            in CharacterPredictiveFootRootTrajectory rootTrajectory,
+            Vector3 predictedHip,
+            FootPredictionRejectReason rejectReason,
+            in CharacterPredictiveFootPlacementQueryResult query)
+        {
+            m_Builder.BuildRejected(
+                sequence,
+                generatedFrame,
+                in step,
+                start,
+                landing,
+                in rootTrajectory,
+                predictedHip,
+                rejectReason,
+                in query);
+            m_State.Initialize(m_Plan);
+        }
+
+        internal void SynchronizeActionClock(
+            ulong renderFrame,
+            in AnimationPredictedFootStepSample step) =>
+            CharacterPredictiveFootPlanEvaluator.SynchronizeActionClock(
+                m_Plan,
+                ref m_State,
+                renderFrame,
+                in step);
+
+        internal float EvaluateGroundPathProgress(float eventPhase) =>
+            m_Plan.EvaluateGroundPathProgress(eventPhase);
+
+        internal float EvaluatePredictiveOutputWeight()
+        {
+            if (!HasExecutablePath || ActionStepPhase <= ReleasePhase)
+                return 0f;
+            if (ActionStepPhase >= LiftOffPhase)
+                return 1f;
+            float value = Mathf.InverseLerp(ReleasePhase, LiftOffPhase, ActionStepPhase);
+            return value * value * (3f - 2f * value);
+        }
+
+        internal void ObserveWorldMotionDeviation(
+            Vector3 currentPresentedBodyPosition,
+            Quaternion currentPresentedBodyRotation,
+            float landingPlanarTolerance) =>
+            CharacterPredictiveFootPlanEvaluator.ObserveWorldMotionDeviation(
+                m_Plan,
+                ref m_State,
+                currentPresentedBodyPosition,
+                currentPresentedBodyRotation,
+                landingPlanarTolerance);
+
+        internal void UpdateWorldProjection(
+            Vector3 currentRootPosition,
+            Quaternion currentRootRotation) =>
+            CharacterPredictiveFootPlanEvaluator.UpdateWorldProjection(
+                m_Plan,
+                ref m_State,
+                currentRootPosition,
+                currentRootRotation);
+
+        internal void EvaluateGroundPath(
+            float progress,
+            out Vector3 pathPosition,
+            out FootPlacementSurface support)
+        {
+            m_Plan.EvaluateGroundPathLocal(progress, out pathPosition, out support);
+            pathPosition = ProjectWorldPoint(pathPosition);
+            support = ProjectSurface(support);
+        }
+
+        internal void EvaluateFootMotion(
+            float eventPhase,
+            out Vector3 planarSole,
+            out float animationClearanceHeight,
+            out AnimationFootConstraintMode constraintMode,
+            out AnimationFootSupportPhase supportPhase,
+            out AnimationFootOrientationPolicy orientationPolicy,
+            out AnimationBodyRotationPivotMode bodyPivotMode)
+        {
+            m_Plan.EvaluateFootMotionLocal(
+                eventPhase,
+                out planarSole,
+                out animationClearanceHeight,
+                out constraintMode,
+                out supportPhase,
+                out orientationPolicy,
+                out bodyPivotMode);
+            planarSole = ProjectWorldPoint(planarSole);
+        }
+
+        internal void EvaluateBodyPath(float eventPhase, out Vector3 root, out Vector3 hip)
+        {
+            m_Plan.EvaluateBodyPathLocal(eventPhase, out root, out hip);
+            root = ProjectWorldPoint(root);
+            hip = ProjectWorldPoint(hip);
+        }
+
+        internal void EvaluateClearancePath(
+            float eventPhase,
+            out Vector3 groundPath,
+            out Vector3 root,
+            out Vector3 hip,
+            out FootPlacementSurface support,
+            out Vector3 sole)
+        {
+            float phase = Mathf.Clamp01(eventPhase);
+            EvaluateGroundPath(
+                EvaluateGroundPathProgress(phase),
+                out Vector3 envelopePoint,
+                out support);
+            EvaluateBodyPath(phase, out root, out hip);
+            EvaluateFootMotion(
+                phase,
+                out Vector3 planarSole,
+                out float animationClearanceHeight,
+                out _,
+                out AnimationFootSupportPhase supportPhase,
+                out _,
+                out _);
+            Vector3 up = RootTrajectory.Up;
+            groundPath = planarSole + up * (
+                Vector3.Dot(envelopePoint, up) -
+                Vector3.Dot(planarSole, up));
+            sole = groundPath + up * animationClearanceHeight;
+            if (support.IsValid && supportPhase == AnimationFootSupportPhase.Unsupported)
+                support = new FootPlacementSurface(support.Collider, groundPath, up);
+        }
+
+        internal void EvaluateActionState(
+            out AnimationFootConstraintMode constraintMode,
+            out AnimationFootSupportPhase supportPhase,
+            out AnimationFootOrientationPolicy orientationPolicy,
+            out AnimationBodyRotationPivotMode bodyPivotMode) =>
+            m_Plan.EvaluateActionState(
+                ActionStepPhase,
+                out constraintMode,
+                out supportPhase,
+                out orientationPolicy,
+                out bodyPivotMode);
+
+        internal void EvaluateActionState(
+            float eventPhase,
+            out AnimationFootConstraintMode constraintMode,
+            out AnimationFootSupportPhase supportPhase,
+            out AnimationFootOrientationPolicy orientationPolicy,
+            out AnimationBodyRotationPivotMode bodyPivotMode) =>
+            m_Plan.EvaluateActionState(
+                eventPhase,
+                out constraintMode,
+                out supportPhase,
+                out orientationPolicy,
+                out bodyPivotMode);
+
+        internal void EvaluateCurrentAnimationClearance(
+            out float authoredClearanceHeight,
+            out float continuityOffset,
+            out float continuityContribution,
+            out float reachClearanceHeight,
+            out float compositeClearanceHeight) =>
+            m_Plan.EvaluateAnimationClearance(
+                ActionStepPhase,
+                out authoredClearanceHeight,
+                out continuityOffset,
+                out continuityContribution,
+                out reachClearanceHeight,
+                out compositeClearanceHeight);
+
+        internal void EvaluateAnimationClearance(
+            float eventPhase,
+            out float authoredClearanceHeight,
+            out float continuityOffset,
+            out float continuityContribution,
+            out float reachClearanceHeight,
+            out float compositeClearanceHeight) =>
+            m_Plan.EvaluateAnimationClearance(
+                eventPhase,
+                out authoredClearanceHeight,
+                out continuityOffset,
+                out continuityContribution,
+                out reachClearanceHeight,
+                out compositeClearanceHeight);
+
+        internal FootPlacementGroundEnvelopeSegment GetPathSegment(int index)
+        {
+            FootPlacementGroundEnvelopeSegment segment = m_Plan.GetPathSegmentLocal(index);
+            return new FootPlacementGroundEnvelopeSegment(
+                segment.StartFraction,
+                segment.EndFraction,
+                ProjectSurface(segment.StartSurface),
+                ProjectSurface(segment.EndSurface),
+                ProjectWorldPoint(segment.EdgeStart),
+                ProjectWorldPoint(segment.EdgeEnd),
+                segment.StartSoleHeight,
+                segment.EndSoleHeight,
+                segment.IsVirtualPlane);
+        }
+
+        internal Vector3 GetPlannedFootRouteSample(int index) =>
+            ProjectWorldPoint(m_Plan.GetPlannedFootRouteSampleLocal(index));
+
+        internal void Reset(CharacterPredictiveFootPlanEndReason reason)
+        {
+            m_Builder.Clear();
+            m_State.Reset(reason);
+        }
+
+        Vector3 ProjectWorldPoint(Vector3 point) =>
+            CharacterPredictiveFootPlanEvaluator.ProjectWorldPoint(in m_State, point);
+
+        Quaternion ProjectWorldRotation(Quaternion rotation) =>
+            CharacterPredictiveFootPlanEvaluator.ProjectWorldRotation(in m_State, rotation);
+
+        FootPlacementSurface ProjectSurface(FootPlacementSurface surface) =>
+            CharacterPredictiveFootPlanEvaluator.ProjectSurface(in m_State, surface);
     }
 }

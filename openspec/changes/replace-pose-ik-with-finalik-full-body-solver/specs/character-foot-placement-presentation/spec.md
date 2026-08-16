@@ -51,6 +51,12 @@ Pending Foot状态 MUST只在Goal Set、FullBodyIK、Final Pose与外层Presenta
 - **THEN** Pending左右脚状态与完成诊断 MUST随同一个Presentation事务Seal
 - **AND** Goal workspace MUST只出现一次Pelvis、Left Foot、Right Foot最终写入
 
+#### Scenario: 诊断区分唯一Plan交接类型
+
+- **WHEN** 单脚执行状态进入Intent Revision、Event Successor或Predictive Exit
+- **THEN** Runtime Trace和CSV MUST发布同一`PlanTransitionKind`
+- **AND** 不得用`HasRevision`或响应式结果反推交接类型
+
 ### Requirement: Foot contact必须由动作约束与世界支撑共同确认
 
 每只脚的Locked、Sliding、Unlocked期望模式和连续Constraint Weight MUST来自同一个Biomechanical Step Event。FootGrounding MUST只通过唯一Current Query发布当前合法支撑平面、surface identity、距离、坡度与Body Grounded证据。Heel与Toe MUST由Calibration从同一Sole/Ankle Pose重建并只对该唯一平面计算距离；系统 MUST不增加Heel Current Query、Toe Current Query或第二Grounding。

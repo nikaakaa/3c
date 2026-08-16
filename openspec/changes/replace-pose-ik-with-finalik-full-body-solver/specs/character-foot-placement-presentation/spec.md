@@ -145,8 +145,16 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 #### Scenario: 事件换代但后继Plan未Executing
 
 - **WHEN** 当前事件结束而下一事件事实已出现
-- **THEN** 旧Plan MUST保留最后权威输出直到后继Plan Executing或连续退到原动画
-- **AND** Landing Anchor MUST按自身Blend互补接管，不能制造Predictive、Anchor和原动画都无所有权的空帧
+- **THEN** Event Successor成为Current前 MUST只保存不可变geometry和时钟，不得参与Goal或Revision Blend
+- **AND** 事件identity换代时 MUST原子提升Successor为Active，由新Plan自身`Release -> LiftOff`权重和旧Landing Anchor互补交接
+- **AND** MUST不在新事件已经进入Swing后按Render Delta混合旧Landing世界目标与新Swing世界目标；Successor不可执行时 MUST连续退到Original Component Pose
+
+#### Scenario: Intent Revision与Event Successor复用过渡槽
+
+- **WHEN** 当前Swing因committed意图改变需要Intent Revision，且同脚Incoming事件也已可见
+- **THEN** 当前Swing的Intent Revision MUST优先在Unsupported阶段完成
+- **AND** Event Successor MUST等当前Plan进入ApproachingContact且过渡槽空闲后预建
+- **AND** 两者 MUST只顺序复用同一槽，不得并存或让Successor阻断当前Swing的唯一Intent Revision
 
 #### Scenario: Landing Surface与Current Surface不同
 

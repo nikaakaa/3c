@@ -338,3 +338,11 @@ Projection原子选择新Step后，旧实现仍用该Step所属动画贡献的�
 Projection与输出权重收口后，剩余大跳集中在Revision首帧：新计划从旧Plan重新求值出的理论Target开始，而不是从上一完成帧真正送入FBBIK的Final Sole开始；同一帧又立即推进Blend，低帧率时首个权重可直接达到约`0.38~0.68`。smoothstep只能平滑权重，不能消除两个目标原本已有的空间差。
 
 正式意图Revision只消费`Last Final Sole + 同Active Plan Support`。Ground Probe是该Sole沿Component Up投影到支撑面的位置；输出身份与Active Plan不一致时不得创建Revision。创建帧Blend固定为0，从下一完成帧才推进。这个规则只闭合C0位置所有权；C1仍必须来自同一Artifact与Future Body执行轨迹的当前切线，不能重新引入表现帧差分或额外Hermite修正。
+
+短测`dbe66bccb11143bd83c56b0141b596cc`否决了“只修Revision起点即可闭环”：楼梯A/D段左/右仍创建`26/22`次Revision，部分Intent Landing误差达到约`5~8.5m`，Goal相对Baseline的额外单帧变化仍达约`20.8/38.3cm`。同时物理穿透与FBBIK位置残差仍只有约`0.12/0.25µm`，错误继续位于Future Body与Revision输入。
+
+## 29. Future Body曲率不能由Render Frame速度差分
+
+旧Fact Projector先在Simulation Intent之间插值Desired Velocity，再用相邻Render Frame的插值结果除以`presentationDeltaSeconds`生成Trajectory Curvature。同一Simulation事实会因显示帧率、帧间隔和Camera-relative输入插值方式得到不同曲率；Foot Placement随后把它当成Future Body的冻结输入，导致同一步反复Revision。
+
+正式曲率改为只使用相邻Simulation committed Intent：`SignedAngle(previous desired velocity, current desired velocity) / committed tick duration`，并由同一Motion Timeline的最大转速验证。该值在整个Simulation tick区间保持不变，Presentation不再拥有导数。瞬时反向或Timeline换代没有有限曲率时明确标为Unavailable，不用Body Yaw冒充脚下移动轨迹曲率。

@@ -131,21 +131,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             internal void AdvanceTransition(float deltaSeconds, float blendSpeed)
             {
-                bool blendIntentRevision = HasIntentRevision;
-                bool blendEventSuccessor = HasEventSuccessor && EventSuccessorBlendReady;
-                if (blendIntentRevision || blendEventSuccessor)
+                bool blendRevision = HasRevision &&
+                                     (TransitionKind == FootPlanTransitionKind.IntentRevision ||
+                                      TransitionKind == FootPlanTransitionKind.EventSuccessor &&
+                                      EventSuccessorBlendReady);
+                if (blendRevision)
                 {
                     if (Revision.State != CharacterPredictiveFootPlanState.Executing)
                     {
                         RevisionBlendWeight = 0f;
                         return;
                     }
-                    RevisionBlendWeight = blendIntentRevision
-                        ? Mathf.Max(RevisionBlendWeight, Revision.ActionProgress)
-                        : Mathf.MoveTowards(
-                            RevisionBlendWeight,
-                            1f,
-                            blendSpeed * deltaSeconds);
+                    RevisionBlendWeight = Mathf.MoveTowards(
+                        RevisionBlendWeight,
+                        1f,
+                        blendSpeed * deltaSeconds);
                     if (RevisionBlendWeight < 0.999999f)
                         return;
                     PromoteRevision();
@@ -1670,8 +1670,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out landingHandoff);
             }
             bool outgoingOutputAvailable = runtime.HasLastOutputGroundPath &&
-                                           (runtime.LastOutputGroundPlanSequence == plan.Sequence ||
-                                            activeEventReplaced && runtime.HasIntentRevision);
+                                           runtime.LastOutputGroundPlanSequence == plan.Sequence;
             Vector3 successorSole = outgoingOutputAvailable && runtime.HasLastOutputSole
                 ? runtime.LastOutputSole
                 : currentSole;
@@ -1688,22 +1687,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landingHandoff.ContactAnkleRotation);
                 Vector3 handoffSole =
                     (handoffContacts.HeelPosition + handoffContacts.ToePosition) * 0.5f;
-                if (!outgoingOutputAvailable)
-                {
-                    successorProbeSupport = ResolveSupportAtRoutePoint(
-                        landingHandoff.ContactSurface,
-                        handoffSole,
-                        up);
-                    successorProbeStart = successorProbeSupport.IsValid
-                        ? successorProbeSupport.Point
-                        : handoffSole;
-                }
+                successorProbeSupport = ResolveSupportAtRoutePoint(
+                    landingHandoff.ContactSurface,
+                    handoffSole,
+                    up);
+                successorProbeStart = successorProbeSupport.IsValid
+                    ? successorProbeSupport.Point
+                    : handoffSole;
             }
             if (runtime.HasRevision)
             {
                 CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
+                bool retainOutgoingIntentRevision = activeEventReplaced &&
+                                                    runtime.HasIntentRevision &&
+                                                    revision.State == CharacterPredictiveFootPlanState.Executing;
                 if (!step.IsAuthoritative || !revision.MatchesAuthoritativeEvent(in step))
-                    runtime.CancelRevision(ResolveReplacementEndReason(revision));
+                {
+                    if (!retainOutgoingIntentRevision)
+                        runtime.CancelRevision(ResolveReplacementEndReason(revision));
+                }
                 else
                 {
                     revision.SynchronizePoseContribution(in step);

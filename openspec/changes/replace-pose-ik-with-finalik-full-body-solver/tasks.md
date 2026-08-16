@@ -45,6 +45,7 @@
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 - [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。
+- [ ] 4.9 `IncomingPredictedStep`在PreSwing期间必须使用现有Revision槽预建唯一Event Successor，并从旧Plan已提交Landing支撑连续重基；事件成为Current前不得输出，换代后不得因已过LiftOff再丢失整段Swing Plan。
 
 ## 5. GDC Foot Path与Ground Envelope
 
@@ -55,6 +56,7 @@
 - [ ] 5.5 对剩余点构造连续二维上侧Convex Hull；Ground Envelope保持feet-only，不驱动Pelvis。
 - [ ] 5.6 最终Swing保持Native Sole XZ，唯一Y为`GroundEnvelopeHeight + AnimationClearance`；禁止冻结Path XYZ拉脚和Native/Predicted Y双owner。
 - [ ] 5.7 使用Calibration Heel/Toe验证唯一支撑平面物理净空，不增加Heel/Toe Current Query、固定高度或默认地面。
+- [ ] 5.8 台阶边缘Sphere多命中必须以前一支撑做有向可达选择；同Foot Rate合并保留正式支撑身份，Landing、Body Support终点与Ground Envelope终点从验证后的同一链末端原子提交。
 
 ## 6. Constraint、Landing与GDC身体层
 

@@ -274,3 +274,25 @@ GDC顺序要求先沿Virtual Ground收集位置、法线和Edge Plane，再按�
 失败run `e7996d5c9acf4563bb8176e44c86aa7a`在frame 209触发`CharacterFutureBodyTrajectory.Evaluate`越界。右脚同一个Plan sequence 22创建时Action Step时长为`0.5167s`，运行中被同事件Clock改成`0.5471s`；Future Body轨迹仍只覆盖创建时范围，`ObserveWorldMotionDeviation`却用新时长计算旧轨迹采样时间。
 
 这不是浮点容差、Query或FBBIK问题，而是冻结Plan内部出现两个时钟owner：路线与Future Body使用创建时长，Plan诊断与偏差检测使用运行时长。正确合同是Plan创建时原子冻结Action Step时长、Future Body时间范围和相位到秒的映射；运行时只同步权威phase。动作时长变化若足以改变Landing，应创建离散Revision并完成连续交接，不能原地修改旧Plan，也不能用clamp把越界隐藏成轨迹末端停滞。
+
+## 20. 下一事件必须在Incoming阶段预建
+
+run `0bbeaa210a994a1d96de17d6bec0ca2b`中右脚有`21/80`个正式路线帧没有Predictive Plan，拒绝原因为`LandingEventNotPreSwing`。frame 77至82已经连续发布下一Landing Event `8202675261206838019`，phase为`0.03125 -> 0.07911`且仍早于LiftOff；Planner却继续只维护旧Plan sequence 20。frame 83该事件成为Current时phase已为`0.09158`并越过该贡献的LiftOff `0.08824`，frame 84旧Plan被移除后Current phase已到`0.20922`，因此新Plan不再具备PreSwing创建资格，直到下一事件才恢复。
+
+这段空窗中FBBIK没有收到预测Ground Envelope，Current Grounding只能看当前脚下支撑；上楼时脚会先穿过或踏空前方踏面，移动到踏面上方后才由鞋底安全下界迟到托起。旧的立即鞋底净空修复能阻止最终穿透，却会把离散踏面切换直接写入Goal而产生抖动；两者不能互相替代。
+
+正式合同是：Projection提前提供Incoming事件，Planner在PreSwing内用现有Revision槽预建Event Successor，起点使用旧Plan已提交的Landing Sole与Surface；预建计划在成为Current前不输出，换代后按权威phase连续接管。不能放宽“Current过LiftOff仍可临时建Plan”，那只是把缺失预测改成迟到响应式计划。
+
+## 21. 不踏空与不抖动不能分别靠“全收”或“全拒”
+
+Git历史证明两种局部修法各自只解决了一半。旧Query直接采用向下Cast按距离排序的第一个合法命中；上楼时它通常是最高踏面，因此预测Plan不容易缺席，但路线轻微变化就可能把首选从下一级切到上一级，离散高度直接进入Goal后表现为抖动和跳变。`84dc902`随后删除无法同时直连前后两个正式端点的中间点，又把逐级楼梯误删成稀疏端点，形成明确踏空回归。`4882895`改为前后可达图后保住了逐级链，但正式Sphere采样仍沿用“第一个命中”语义；首选支撑与完整链冲突时，后继Plan会以`FutureLandingStepExceeded`被拒绝并淡出，脚再次退回Current Grounding。
+
+自动课程每级实际升高约`0.18m`，正式`MaximumStepUp=0.45m`，因此正常单级台阶并未超过配置能力。问题是查询所有权而不是阈值：Physics Cast距离只表示几何命中顺序，不表示沿路线应提交哪个支撑。正式采样应以前一支撑筛出有向可达候选，并在其中选择最高踏面；随后仍由完整点集的前后可达图验证整条路线，不能跳过最终链校验。
+
+同一Foot Rate还可能同时存在正式Sphere支撑与Capsule地面命中。高度折叠可以保留较高的安全下界，但不得丢掉正式支撑身份；否则可达图的最后一个Support不再是Landing，包络终点、Body Support终点和Plan保存的Future Support会分裂。最终三者必须从验证后可达链的同一个末端样本提交。
+
+## 22. 单次查询内贪心选择只会转移错误
+
+逐Sphere“从前一支撑可达的候选里立即选最高点”实验已经撤销。相同上楼区间中，它把左脚无Plan空窗从34帧降到0，却把右脚空窗从16帧增到22；右Heel浮空P95/最大值从约`0.77/1.14m`恶化到`1.03/1.27m`。这证明局部选择会改变后续Cast范围并把错误从一只脚搬到另一只脚，不能代表完整Ground Path。
+
+正式实现必须先保留每个路线采样的全部合法Sphere命中和每段Capsule/Edge几何，再以相邻路线采样组构造从当前真实支撑到Landing的唯一有向链。只允许该链的正式支撑进入包络；Capsule几何仍只提供feet-only安全下界。Landing Surface、Body Support终点和Envelope终点必须从链末端一次提交，不能继续引用收集阶段的临时候选。

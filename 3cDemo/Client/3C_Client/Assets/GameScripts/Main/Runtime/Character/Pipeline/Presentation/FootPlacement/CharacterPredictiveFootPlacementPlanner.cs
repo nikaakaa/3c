@@ -1640,7 +1640,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             runtime.ClearIntentObservation();
             CharacterPredictiveFootPlacementPlan plan = runtime.Active;
             AnimationPredictedFootStepSample step = feature.PredictedStep;
+            AnimationPredictedFootStepSample incomingStep = feature.IncomingPredictedStep;
             bool landingEventIdentityValid = step.HasConsistentLandingEventIdentity(side);
+            bool incomingLandingEventIdentityValid =
+                incomingStep.HasConsistentLandingEventIdentity(side);
             bool currentPlanMatches = landingEventIdentityValid &&
                                       plan.MatchesAuthoritativeEvent(in step);
             Transform component = m_Rig.PoseRoot;
@@ -1657,6 +1660,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                      motionTimeline.IsValid &&
                                      step.Confidence >= m_Settings.MinimumLandingConfidence &&
                                      step.ActionStepClock.Phase < 0.9999f;
+            bool incomingPlanningCandidate = incomingLandingEventIdentityValid &&
+                                             incomingStep.IsPreSwing &&
+                                             motionTimeline.IsValid &&
+                                             incomingStep.Confidence >= m_Settings.MinimumLandingConfidence &&
+                                             incomingStep.ActionStepClock.Phase < 0.9999f;
             bool activeEventReplaced = plan.OwnsEvent && !currentPlanMatches;
             CharacterPredictiveFootPlanEndReason replacementReason = activeEventReplaced
                 ? ResolveReplacementEndReason(plan)
@@ -1692,6 +1700,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementSurface successorProbeSupport = outgoingOutputAvailable
                 ? runtime.LastOutputGroundSupport
                 : groundProbeSupport;
+            if (plan.HasExecutablePath && plan.FutureSupport.IsValid)
+            {
+                FootPlacementSurface committedLandingSupport = ResolveSupportAtRoutePoint(
+                    plan.FutureSupport,
+                    plan.Landing,
+                    up);
+                if (committedLandingSupport.IsValid)
+                {
+                    successorSole = plan.Landing;
+                    successorProbeSupport = committedLandingSupport;
+                    successorProbeStart = committedLandingSupport.Point;
+                }
+            }
             if (outgoingOutputAvailable && runtime.HasLastOutputSole)
             {
                 FootPlacementSurface projectedSupport = ResolveSupportAtRoutePoint(
@@ -1722,19 +1743,70 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (runtime.HasRevision)
             {
                 CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
-                bool retainOutgoingIntentRevision = activeEventReplaced &&
-                                                    runtime.HasIntentRevision &&
-                                                    revision.State == CharacterPredictiveFootPlanState.Executing;
-                if (!step.IsAuthoritative || !revision.MatchesAuthoritativeEvent(in step))
+                if (runtime.HasEventSuccessor)
                 {
-                    if (!retainOutgoingIntentRevision)
+                    bool revisionMatchesCurrent = landingEventIdentityValid &&
+                                                  revision.MatchesAuthoritativeEvent(in step);
+                    bool revisionMatchesIncoming = incomingLandingEventIdentityValid &&
+                                                   revision.MatchesAuthoritativeEvent(in incomingStep);
+                    if (revisionMatchesCurrent)
+                    {
+                        revision.SynchronizePoseContribution(in step);
+                        revision.SynchronizeActionClock(renderFrame, in step);
+                    }
+                    else if (currentPlanMatches && revisionMatchesIncoming)
+                    {
+                        revision.SynchronizePoseContribution(in incomingStep);
+                        revision.SynchronizeActionClock(renderFrame, in incomingStep);
+                    }
+                    else
+                    {
                         runtime.CancelRevision(ResolveReplacementEndReason(revision));
+                    }
                 }
                 else
                 {
-                    revision.SynchronizePoseContribution(in step);
-                    revision.SynchronizeActionClock(renderFrame, in step);
+                    bool retainOutgoingIntentRevision = activeEventReplaced &&
+                                                        runtime.HasIntentRevision &&
+                                                        revision.State == CharacterPredictiveFootPlanState.Executing;
+                    if (!step.IsAuthoritative || !revision.MatchesAuthoritativeEvent(in step))
+                    {
+                        if (!retainOutgoingIntentRevision)
+                            runtime.CancelRevision(ResolveReplacementEndReason(revision));
+                    }
+                    else
+                    {
+                        revision.SynchronizePoseContribution(in step);
+                        revision.SynchronizeActionClock(renderFrame, in step);
+                    }
                 }
+            }
+            if (currentPlanMatches && plan.HasExecutablePath &&
+                incomingPlanningCandidate &&
+                !plan.MatchesAuthoritativeEvent(in incomingStep) &&
+                !runtime.HasRevision && !runtime.IsFadingOut &&
+                m_FutureBodyTrajectorySource != null)
+            {
+                bool created = CreatePlan(
+                    side,
+                    runtime.Revision,
+                    in incomingStep,
+                    renderFrame,
+                    successorProbeStart,
+                    successorProbeSupport,
+                    successorSole,
+                    soleSupportRadius,
+                    rootWorldPosition,
+                    rootWorldRotation,
+                    presentedBodyPosition,
+                    committedBodyVelocity,
+                    trajectoryCurvatureDegreesPerSecond,
+                    in motionTimeline,
+                    movementPlaybackTime,
+                    up,
+                    legLength);
+                if (created)
+                    runtime.BeginEventSuccessor();
             }
             if (activeEventReplaced && !runtime.HasRevision && !runtime.IsFadingOut)
             {

@@ -262,9 +262,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentSupportRoot,
                 currentSupportHip,
                 Vector3.Dot(currentSupport.Point, up),
-                true);
+                FootPathSampleRole.RouteSupport | FootPathSampleRole.StartSupport);
+            m_RouteSupportStarts[0] = 0;
+            m_RouteSupportCounts[0] = 1;
+            m_RouteSupportRejects[0] = FootPlacementGroundEnvelopeRejectReason.None;
             Vector3 previousRoute = m_GroundProbeRoute[0];
-            Vector3 previousSupport = currentSupport.Point;
+            Vector3 supportDiscoveryReference = currentSupport.Point;
             float previousFraction = 0f;
             FootPlacementSurface future = default;
             futureLandingRequest = default;
@@ -283,14 +286,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float eventPhase = m_RouteEventPhases[sampleIndex];
                 Vector3 soleToAnkle = rootTrajectory.EvaluateSoleToAnkle(eventPhase);
                 float animationClearance = EvaluateAnimationClearanceHeight(in step, eventPhase);
-                FootPlacementSurface selected = QuerySupport(
+                bool virtualGroundSample = virtualGroundSplitFraction > 0f &&
+                                           Mathf.Abs(eventPhase - virtualGroundSplitEventPhase) <= 0.00001f;
+                FootPathSampleRole role = FootPathSampleRole.RouteSupport;
+                if (virtualGroundSample)
+                    role |= FootPathSampleRole.VirtualGroundSupport;
+                if (landingSample)
+                    role |= FootPathSampleRole.LandingSupport;
+                int supportStart = pathSampleCount;
+                QuerySupport(
                     footIndex,
+                    fraction,
+                    role,
                     route,
                     m_RootRoutes[sampleIndex],
                     m_HipRoutes[sampleIndex],
                     layerMask,
                     up,
-                    previousSupport,
+                    supportDiscoveryReference,
                     landingSample
                         ? CharacterFootPlacementQueryPurpose.FutureLanding
                         : CharacterFootPlacementQueryPurpose.GroundEnvelope,
@@ -304,77 +317,68 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         soleToAnkle),
                     maximumReach,
                     landingSample,
-                    out Vector3 selectedRoot,
-                    out Vector3 selectedHip,
                     out FootPlacementGroundEnvelopeRejectReason sampleReject,
                     out CharacterFootPlacementQueryRequest request,
                     ref counters.QueryCount,
                     ref counters.RawHitCount,
                     ref counters.AcceptedHitCount,
                     ref counters.RejectedCount,
-                    ref counters.RejectCounts);
+                    ref counters.RejectCounts,
+                    ref pathSampleCount);
+                m_RouteSupportStarts[sampleIndex] = supportStart;
+                m_RouteSupportCounts[sampleIndex] = pathSampleCount - supportStart;
+                m_RouteSupportRejects[sampleIndex] = sampleReject;
                 if (landingSample)
                     futureLandingRequest = request;
-                if (selected.IsValid)
-                {
-                    bool virtualGroundSample = virtualGroundSplitFraction > 0f &&
-                                               Mathf.Abs(eventPhase - virtualGroundSplitEventPhase) <= 0.00001f;
-                    if (virtualGroundSample)
-                    {
-                        virtualGroundSplitSupport = selected;
-                        virtualGroundSplitRoot = selectedRoot;
-                        virtualGroundSplitHip = selectedHip;
-                    }
-                    AddSegmentHits(
-                        footIndex,
-                        previousRoute,
-                        route,
-                        previousSupport,
-                        previousFraction,
-                        fraction,
-                        m_RootRoutes[sampleIndex - 1],
-                        m_RootRoutes[sampleIndex],
-                        m_HipRoutes[sampleIndex - 1],
-                        m_HipRoutes[sampleIndex],
-                        in rootTrajectory,
-                        in step,
-                        layerMask,
-                        up,
-                        soleSupportRadius,
-                        maximumReach,
-                        ref pathSampleCount,
-                        ref counters.QueryCount,
-                        ref counters.RawHitCount,
-                        ref counters.AcceptedHitCount,
-                        ref counters.EdgePlaneCandidateCount,
-                        ref counters.RejectedCount,
-                        ref counters.RejectCounts);
-                    AddPathSample(
-                        new FootPathSample(
-                            fraction,
-                            selected,
-                            selected.Point,
-                            selectedRoot,
-                            selectedHip,
-                            Vector3.Dot(selected.Point, up),
-                            true),
-                        ref pathSampleCount);
-                    previousSupport = selected.Point;
-                    if (landingSample)
-                    {
-                        future = selected;
-                        futureSupportRoot = selectedRoot;
-                        futureSupportHip = selectedHip;
-                    }
-                }
-                else
-                {
-                    rejectReason = sampleReject;
-                    future = default;
-                    break;
-                }
+                AddSegmentHits(
+                    footIndex,
+                    previousRoute,
+                    route,
+                    supportDiscoveryReference,
+                    previousFraction,
+                    fraction,
+                    m_RootRoutes[sampleIndex - 1],
+                    m_RootRoutes[sampleIndex],
+                    m_HipRoutes[sampleIndex - 1],
+                    m_HipRoutes[sampleIndex],
+                    in rootTrajectory,
+                    in step,
+                    layerMask,
+                    up,
+                    soleSupportRadius,
+                    maximumReach,
+                    ref pathSampleCount,
+                    ref counters.QueryCount,
+                    ref counters.RawHitCount,
+                    ref counters.AcceptedHitCount,
+                    ref counters.EdgePlaneCandidateCount,
+                    ref counters.RejectedCount,
+                    ref counters.RejectCounts);
                 previousRoute = rawRoute;
                 previousFraction = fraction;
+            }
+            if (!RetainReachableSupportChain(
+                    routeSampleCount,
+                    ref pathSampleCount,
+                    up,
+                    virtualGroundSplitFraction > 0f,
+                    out FootPathSample selectedLanding,
+                    out FootPathSample selectedVirtualGround,
+                    out FootPlacementGroundEnvelopeRejectReason chainReject))
+            {
+                counters.RejectedCount++;
+                counters.RejectCounts.Add(chainReject);
+                rejectReason = chainReject;
+                return default;
+            }
+            future = selectedLanding.Surface;
+            futureSupportRoot = selectedLanding.Root;
+            futureSupportHip = selectedLanding.Hip;
+            if (selectedVirtualGround.IsVirtualGroundSupport)
+            {
+                virtualGroundSplitSupport = selectedVirtualGround.Surface;
+                virtualGroundSplitRoot = selectedVirtualGround.Root;
+                virtualGroundSplitHip = selectedVirtualGround.Hip;
             }
             ResolveEdgePlanes(
                 counters.EdgePlaneCandidateCount,
@@ -385,50 +389,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref counters.AcceptedEdgePlaneCount,
                 ref counters.RejectedCount,
                 ref counters.RejectCounts);
-            RemoveCoincidentNonSupportSamples(ref pathSampleCount);
             SortAndCollapsePathSamples(ref pathSampleCount);
-            if (!RetainReachableSupportChain(
-                ref pathSampleCount,
-                up,
-                ref counters.RejectedCount,
-                ref counters.RejectCounts,
-                out FootPlacementGroundEnvelopeRejectReason chainReject))
-            {
-                counters.RejectedCount++;
-                counters.RejectCounts.Add(chainReject);
-                rejectReason = chainReject;
-                future = default;
-            }
             return future;
-        }
-
-        void RemoveCoincidentNonSupportSamples(ref int count)
-        {
-            const float fractionTolerance = 0.00001f;
-            int write = 0;
-            for (int read = 0; read < count; read++)
-            {
-                FootPathSample candidate = m_PathSamples[read];
-                if (!candidate.IsSupport)
-                {
-                    bool hasOfficialSupport = false;
-                    for (int supportIndex = 0; supportIndex < count; supportIndex++)
-                    {
-                        FootPathSample support = m_PathSamples[supportIndex];
-                        if (!support.IsSupport ||
-                            Mathf.Abs(support.Fraction - candidate.Fraction) > fractionTolerance)
-                        {
-                            continue;
-                        }
-                        hasOfficialSupport = true;
-                        break;
-                    }
-                    if (hasOfficialSupport)
-                        continue;
-                }
-                m_PathSamples[write++] = candidate;
-            }
-            count = write;
         }
 
         static float EvaluateRouteAuthoredReach(

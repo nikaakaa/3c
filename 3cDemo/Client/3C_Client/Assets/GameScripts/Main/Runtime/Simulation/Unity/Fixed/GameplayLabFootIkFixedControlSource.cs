@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField, Min(0f)] float m_EndpointHoldSeconds = 0.75f;
 
         public override string SourceIdentity =>
-            $"gameplay-lab-foot-ik/course-v5/{m_MoveInputValueId}/{(m_InputProfile ? m_InputProfile.name : "unconfigured")}";
+            $"gameplay-lab-foot-ik/course-v6/{m_MoveInputValueId}/{(m_InputProfile ? m_InputProfile.name : "unconfigured")}";
 
         public override IUnityFixedCharacterControlSourceRuntime Create(FixedCharacterControlSourceContext context)
         {
@@ -432,7 +432,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             using var writer = new CanonicalWriter();
             writer.WriteUInt32(0x524b4946);
-            writer.WriteInt32(17);
+            writer.WriteInt32(18);
             writer.WriteString(m_RouteIdentity);
             writer.WriteByte((byte)m_Phase);
             writer.WriteInt32(m_TraversalSegment);
@@ -454,7 +454,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public void RestoreState(byte[] state)
         {
             var reader = new CanonicalReader(state ?? throw new ArgumentNullException(nameof(state)));
-            if (reader.ReadUInt32() != 0x524b4946 || reader.ReadInt32() != 17 ||
+            if (reader.ReadUInt32() != 0x524b4946 || reader.ReadInt32() != 18 ||
                 !string.Equals(reader.ReadString(), m_RouteIdentity, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("GameplayLab Foot IK input state identity is invalid.");
@@ -595,8 +595,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     case 3:
                         if (RemainInTurnSegment(ref elapsedTicks))
                             return GameplayLabFootIkResolvedInput.Camera(Vector2.left);
+                        m_TraversalSegment = 4;
+                        break;
+                    case 4:
+                        if (!ReachedPosition(position, first))
+                            return WorldDirection(position, first);
                         m_Lap++;
                         BeginTurnSegment(1);
+                        elapsedTicks = 0;
                         break;
                     default:
                         throw new InvalidOperationException("GameplayLab Foot IK camera-relative turn segment is invalid.");
@@ -637,6 +643,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (delta.sqrMagnitude <= m_ArrivalRadius * m_ArrivalRadius)
                 return true;
             return Vector3.Dot(Vector3.ProjectOnPlane(target - position, Vector3.up), direction) <= 0f;
+        }
+
+        bool ReachedPosition(Vector3 position, Vector3 target)
+        {
+            Vector2 delta = new Vector2(target.x - position.x, target.z - position.z);
+            return delta.sqrMagnitude <= m_ArrivalRadius * m_ArrivalRadius;
         }
 
         void EnterHold(GameplayLabFootIkRoutePhase phase)

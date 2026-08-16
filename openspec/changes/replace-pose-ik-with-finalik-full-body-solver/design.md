@@ -379,7 +379,7 @@ FinalIK只消费原始Component Pose和一个最终Goal Set：
 
 Foot Feature与Biomechanical Step曲线同样属于已编译Source的不可变数据。Sequence Player创建时必须完整校验一次；运行帧只从同一normalized sample原子读取Current与Incoming Step并绑定同一source occurrence。后继事件选择、相对当前采样的Landing时间和完整路线在Artifact Build中一次确定；Runtime不得扫描曲线、缓存候选或从当前事件补建Incoming。
 
-共享测试环境提供一条正式宽课程：30米宽、24级上楼、6米平台、24级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费48个逐级踏面。自动源不再循环双向长路线，而是对齐起点后进入第一段楼梯，直接通过正式Input System持续循环提交`MoveAxis.x=-1/+1`的`A 1秒 -> D 2秒 -> A 1秒`压力事务。每轮递增lap并持续发布同一run的采样路由，CSV继续流式分块写盘；只有手动停止Play才释放虚拟输入、注销路由并封口manifest，不得在一轮事务结束时自动归零或退出。它保留实时相机Basis和LookAxis，不用世界空间横向路点抵消相机缓动。课程整体位置由场景中的唯一Course与Start/End决定，不写死世界X坐标。
+共享测试环境提供一条正式宽课程：30米宽、24级上楼、6米平台、24级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费48个逐级踏面。自动源不再循环双向长路线，而是对齐起点后进入第一段楼梯，直接通过正式Input System持续循环提交`MoveAxis.x=-1/+1`的`A 1秒 -> D 2秒 -> A 1秒`压力事务。由于角色朝向和相机Basis变化后该输入的世界位移不会天然闭合，每轮压力事务结束后必须通过同一正式MoveAxis驱动角色回到压力区起点，禁止直接改Transform；回归完成才递增lap。采样路由在同一run内持续发布，CSV继续流式分块写盘；只有手动停止Play才释放虚拟输入、注销路由并封口manifest，不得在一轮事务结束时自动归零或退出。它保留实时相机Basis和LookAxis，不用世界空间横向路点抵消相机缓动。课程整体位置由场景中的唯一Course与Start/End决定，不写死世界X坐标。
 
 课程启动门禁必须验证：唯一Course、唯一Start/End、48个踏面、A/D横向安全边界、两条Traversal Ramp和唯一Deterministic Collision World。路线阶段、正式MoveAxis、实际速度、事务分段与lap进入现有流式CSV/manifest，使输入变化与Plan Revision可以对账。每个lap都保留Step、Future Body、Ground、Path、Landing、Anchor、Pelvis与FBBIK完整因果列；持续运行通过分块写盘约束内存，不得靠删减诊断字段或自动停测控制数据量。
 

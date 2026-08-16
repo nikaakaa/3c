@@ -107,7 +107,8 @@ MonoBehaviour:
   - {fileID: 6504318256320000002}
   - {fileID: 7604318256320000002}
   - {fileID: 8704318256320000002}
-  m_RendererFeatureMap: adc0de57c6d2eee5b1a65a920bd73d9ab3a65a920bd73d9a0347b9bd8494e2d502b05bb1df77dc4a02b00a26fefa435a02b0f82a2af7876902b0e62f56f3cb78
+  - {fileID: 7552278860609959437}
+  m_RendererFeatureMap: adc0de57c6d2eee5b1a65a920bd73d9ab3a65a920bd73d9a0347b9bd8494e2d502b05bb1df77dc4a02b00a26fefa435a02b0f82a2af7876902b0e62f56f3cb780d36592b9c15cf68
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -186,6 +187,20 @@ MonoBehaviour:
   m_Active: 1
   shader: {fileID: 4800000, guid: a05ef7bd7ed24ab28fa86e457398bf34, type: 3}
   injectionPoint: 550
+--- !u!114 &7552278860609959437
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b19f2057447f7bb4286084b93dfa83c2, type: 3}
+  m_Name: ZZZ Toon Outline
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  outlineMaterial: {fileID: 2100000, guid: 85d0b61fd38da7f4fb23ec428e121c7e, type: 2}
 --- !u!114 &7604318256320000002
 MonoBehaviour:
   m_ObjectHideFlags: 0

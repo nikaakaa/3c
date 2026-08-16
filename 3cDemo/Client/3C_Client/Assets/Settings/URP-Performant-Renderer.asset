@@ -32,6 +32,20 @@ MonoBehaviour:
   maskShader: {fileID: 4800000, guid: 3ad786e179c1482da3dcc22ec570e72e, type: 3}
   targetRenderingLayerMask: 2
   injectionPoint: 550
+--- !u!114 &-6096153076352072083
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b19f2057447f7bb4286084b93dfa83c2, type: 3}
+  m_Name: ZZZ Toon Outline
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  outlineMaterial: {fileID: 2100000, guid: 85d0b61fd38da7f4fb23ec428e121c7e, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -56,7 +70,8 @@ MonoBehaviour:
   - {fileID: 6504318256320000003}
   - {fileID: 7604318256320000003}
   - {fileID: 8704318256320000003}
-  m_RendererFeatureMap: b0a65a920bd73d9ab2a65a920bd73d9a682ec67db0c3462503b05bb1df77dc4a03b00a26fefa435a03b0f82a2af7876903b0e62f56f3cb78
+  - {fileID: -6096153076352072083}
+  m_RendererFeatureMap: b0a65a920bd73d9ab2a65a920bd73d9a682ec67db0c3462503b05bb1df77dc4a03b00a26fefa435a03b0f82a2af7876903b0e62f56f3cb786d46a16b131d66ab
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}

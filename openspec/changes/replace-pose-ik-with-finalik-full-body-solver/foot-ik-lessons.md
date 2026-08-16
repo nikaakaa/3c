@@ -73,6 +73,7 @@
 58. Ground Envelope几何连续不等于Foot Rate采样连续。run `4bded9ad...`左脚同一Plan的权威phase仅从`0.6875`到`0.7222`，旧全局最近段却把progress从`0.3492`跳到`0.8756`，frame `709 -> 710` Path Y下降`46.97cm`、Goal Y下降`57.98cm`。Foot Rate只能在权威phase对应的局部路线段投影，不能跨整条自交或回折路线找最近点。
 59. Foot Placement状态必须与Final Pose共用提交边界。若Evaluate阶段直接推进Plan、Anchor、Landing或Current spring，随后FBBIK或Final Pose失败，下一帧会从不存在的半完成历史继续。正式做法是保存完整Committed状态、只在Pending上求值，并在Presentation Seal后保留；Discard与Fault恢复全部左右脚和Pelvis filter状态。
 60. Plan事实与Plan执行状态必须物理分离。冻结路线、查询几何和Landing候选属于不可变Plan；当前相位、world projection、运动误差、结束原因和Blend属于每脚执行状态。Intent Revision、Event Successor与Predictive Exit共用一个`CharacterFootPlanTransition`，CSV直接记录kind，禁止再从Plan消失或响应式输出猜换代原因。
+61. Event Successor提升不能清空Transition再等Sequence Continuity补洞。run `e31ff918...`中左脚frame `2041 -> 2042 -> 2043`发生`旧预测Goal 0.994m -> 新Plan低权重Grounding 1.849m -> 新预测1.226m`，而Path首帧基本未变、FBBIK残差接近0；另有新Plan先处于`Planned`而Goal单帧下降`46~72cm`。正式交接必须由同一Transition保留上一完成输出相对Original动画的修正，跨过`Planned`空档，再由新Plan自身`Release -> LiftOff`权重接管。
 
 ## 当前证据与下一owner
 
@@ -81,6 +82,7 @@
 - Event Successor起点坐标正确但Surface取自Envelope第一段终点，解释了台阶边缘Promotion取消与剩余无Path窗口；修复必须进入Envelope数据合同，不能放宽身份阈值。
 - Reach Clearance仍达左`0.678m`、右`0.780m`，说明低层旧Path身份仍未完全退出；端点Surface和换代闭环后必须继续以该指标验收。
 - FinalIK历史残差仍远小于Goal跳变；在Goal连续性闭环前不修改FBBIK。
+- 4A重构后的run `e31ff918...`共2767行、1223列且Header唯一、逐行等宽。最大换代异常不是Ground Envelope或FBBIK：Event Successor提升会清空Transition并禁止Sequence连续性，左右脚分别有`75/78`次大跳发生在Plan换代；大量同Plan最大Path Y变化约`1.6m`实际是`Planned -> Executing`诊断空档。修复口径是保留唯一Successor交接并让已过Release的Plan当帧Executing，不增加第二平滑层。
 - 第二轮run `451c2adb...`共2278行、1221列且逐行等宽；互补Fade使最大物理下陷从左`55.54cm`/右`59.14cm`降到左`18.71cm`/右`7.02cm`，证明Fade修复有效但尚未闭环。
 - 同一run左右Swing无Executable Path为`136/48`帧，左frame `820 -> 821`由旧Path `Y=0`、100%预测权重切到新Plan `Y=0.893m`、预测权重`0.0055`，Final Goal单帧跳`64.40cm`；这不是FBBIK放大，而是旧Plan过期、Revision槽被Successor占用和换代输出不连续叠加。
 - 下一次数据回归先验证四项：过期Active不再在米级偏差下100%输出、当前Swing无Plan可原事件重建、Plan换代首帧Goal连续、Successor起点不再被Current Query覆盖；通过后再进入Landing事务与Pelvis支撑切换。

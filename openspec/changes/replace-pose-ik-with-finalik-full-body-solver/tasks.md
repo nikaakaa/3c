@@ -52,7 +52,8 @@
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 - [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。
-- [ ] 4.9 `IncomingPredictedStep`在PreSwing期间必须使用现有Revision槽预建唯一Event Successor，并从旧Plan已提交Landing支撑连续重基；事件成为Current前不得输出，换代后不得因已过LiftOff再丢失整段Swing Plan。
+- [ ] 4.9 当前Plan进入`ApproachingContact`、Intent Revision结束且现有Revision槽空闲时，`IncomingPredictedStep`必须预建唯一Event Successor，并从旧Plan已提交Landing支撑连续重基；Intent Revision与Event Successor只允许顺序复用同一槽。
+- [ ] 4.9A Event Successor成为Current前不得参与Goal或Blend；事件identity换代时必须原子提升为Active，并只由新Plan自身`Release -> LiftOff`权重与旧Landing Stance/Anchor完成交接，禁止在新Swing中按Render Delta混合旧Landing目标。
 
 ## 5. GDC Foot Path与Ground Envelope
 

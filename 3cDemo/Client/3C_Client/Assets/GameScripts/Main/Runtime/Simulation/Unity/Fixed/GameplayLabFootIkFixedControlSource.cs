@@ -224,6 +224,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         ulong m_SimulationTick;
         ulong m_LastRouteUpdateTick;
         ulong m_LastCommittedSimulationTick;
+        ulong m_InputUpdateSequence;
+        ulong m_SubmissionInputUpdateSequence;
         Vector3 m_LastCommittedPosition;
         Vector2 m_LastWorldMovement;
         Vector2 m_LastCameraMovement;
@@ -231,6 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         float m_LastCommittedYawDegrees;
         float m_LastActualPlanarSpeed;
         Gamepad m_Gamepad;
+        bool m_HasSubmittedInput;
         bool m_Active;
         bool m_Disposed;
 
@@ -289,6 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             try
             {
                 m_PlayerInput.Activate();
+                InputSystem.onAfterUpdate += OnAfterInputUpdate;
             }
             catch
             {
@@ -302,12 +306,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_Lap = 1;
             m_TraversalTicksRemaining = 0;
             m_SubmittedCameraMovement = Vector2.zero;
+            m_SubmissionInputUpdateSequence = m_InputUpdateSequence;
+            m_HasSubmittedInput = true;
         }
 
         public void Deactivate()
         {
             if (!m_Active)
                 return;
+            InputSystem.onAfterUpdate -= OnAfterInputUpdate;
             if (m_Gamepad != null && m_Gamepad.added)
                 ApplyGamepadState(Vector2.zero);
             m_PlayerInput.Deactivate();
@@ -323,12 +330,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_LastCommittedYawDegrees = 0f;
             m_LastCommittedSimulationTick = 0;
             m_LastActualPlanarSpeed = 0f;
+            m_InputUpdateSequence = 0;
+            m_SubmissionInputUpdateSequence = 0;
             m_Phase = GameplayLabFootIkRoutePhase.AlignStart;
             m_TraversalSegment = 0;
             m_Lap = 1;
             m_HoldTicksRemaining = 0;
             m_TraversalTicksRemaining = 0;
             m_SubmittedCameraMovement = Vector2.zero;
+            m_HasSubmittedInput = false;
             GameplayLabFootIkRouteRegistry.Remove(m_ActorId);
         }
 
@@ -338,11 +348,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (!m_Active || renderFrame == 0 || renderFrame <= m_RenderFrame)
                 throw new InvalidOperationException("GameplayLab Foot IK input requires an active, strictly increasing render frame.");
             m_RenderFrame = renderFrame;
-            ulong elapsedTickCount = m_SimulationTick > m_LastRouteUpdateTick
-                ? m_SimulationTick - m_LastRouteUpdateTick
-                : 0UL;
-            int elapsedTicks = elapsedTickCount > int.MaxValue ? int.MaxValue : (int)elapsedTickCount;
-            m_LastRouteUpdateTick = m_SimulationTick;
             CameraBasisSnapshot cameraBasis = m_Owner.CameraRig.BasisSnapshot;
             if (m_Gamepad == null || !m_Gamepad.added)
                 throw new InvalidOperationException("GameplayLab Foot IK virtual gamepad is unavailable.");
@@ -350,11 +355,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_PlayerInput.CaptureRenderFrame(renderFrame);
             if (!m_PlayerInput.TryGetLatchedVector2(m_MoveInputValueId, out Vector2 value))
                 throw new InvalidOperationException("GameplayLab Foot IK could not read Corin's formal Move Input Action.");
+            if (m_HasSubmittedInput && m_InputUpdateSequence <= m_SubmissionInputUpdateSequence)
+            {
+                m_LastCameraMovement = value;
+                m_LastWorldMovement = ToWorldRelative(value, cameraBasis);
+                return;
+            }
             if ((m_SubmittedCameraMovement - value).sqrMagnitude > 0.000001f)
                 throw new InvalidOperationException(
                     $"GameplayLab Foot IK formal Move Input Action did not consume the previously submitted virtual gamepad state. Submitted={m_SubmittedCameraMovement}, Latched={value}.");
             m_LastCameraMovement = value;
             m_LastWorldMovement = ToWorldRelative(value, cameraBasis);
+            ulong elapsedTickCount = m_SimulationTick > m_LastRouteUpdateTick
+                ? m_SimulationTick - m_LastRouteUpdateTick
+                : 0UL;
+            int elapsedTicks = elapsedTickCount > int.MaxValue ? int.MaxValue : (int)elapsedTickCount;
+            m_LastRouteUpdateTick = m_SimulationTick;
             GameplayLabFootIkResolvedInput resolved = ResolveMovement(m_LastCommittedPosition, elapsedTicks);
             Vector2 nextCameraMovement = resolved.CameraRelative
                 ? resolved.Value
@@ -367,6 +383,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     $"GameplayLab Foot IK virtual gamepad did not accept the next route input. Submitted={nextCameraMovement}, Device={deviceMovement}.");
             }
             m_SubmittedCameraMovement = nextCameraMovement;
+            m_SubmissionInputUpdateSequence = m_InputUpdateSequence;
+            m_HasSubmittedInput = true;
         }
 
         public FixedCharacterSimulationInput BuildInput(FixedCharacterInputBuildContext context)
@@ -486,7 +504,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_LastRouteUpdateTick = lastRouteUpdateTick;
             m_SubmittedCameraMovement = submittedCameraMovement;
             if (m_Gamepad != null && m_Gamepad.added)
+            {
                 ApplyGamepadState(submittedCameraMovement);
+                m_SubmissionInputUpdateSequence = m_InputUpdateSequence;
+                m_HasSubmittedInput = true;
+            }
         }
 
         public void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition)
@@ -689,6 +711,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_Gamepad,
                 new GamepadState { leftStick = movement },
                 InputState.currentUpdateType);
+        }
+
+        void OnAfterInputUpdate()
+        {
+            m_InputUpdateSequence++;
+            if (m_InputUpdateSequence == 0)
+                throw new OverflowException("GameplayLab Foot IK input update sequence overflowed.");
         }
 
         void RequireAlive()

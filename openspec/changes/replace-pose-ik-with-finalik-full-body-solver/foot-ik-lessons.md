@@ -353,6 +353,6 @@ Projection与输出权重收口后，剩余大跳集中在Revision首帧：新�
 
 Current与Incoming同时进入左右脚Feature后，`ActionAnimationPlaybackFrame`达到10072字节。它仍作为值类型进入托管`Dictionary`时，Unity Mono在ActionSampling首次执行泛型传参便抛出`InvalidProgramException: Passing an argument of size '10072'`；C#编译和静态校验都无法发现这个运行时边界。
 
-正式分层是：单脚`AnimationFootFeatureSample`继续保持固定布局值类型，供NativeArray、Pose Graph和作业链使用；包含左右脚完整事实、字符串身份和托管Buffer的Action Frame改为不可变引用快照。引用只改变托管传输成本，不改变原子事实、双缓冲提交或唯一执行链。以后扩展Artifact时必须分别审计Native数据布局和托管快照传输，不能用“原子”作为整块结构按值复制的理由。
+正式分层是：单脚`AnimationFootFeatureSample`继续保持固定布局值类型，供NativeArray、Pose Graph和作业链使用；左右脚完整事实写入既有Action Sample Workspace的预分配Foot Feature页，Action Frame恢复为只携带leased Buffer的轻量值快照。把10KB帧直接改成class虽能绕开JIT限制，却会产生逐Action、逐表现帧的大对象分配，因此不作为正式实现保留。以后扩展Artifact时必须分别审计Native数据布局、Workspace生命周期和托管快照尺寸，不能用“原子”作为整块结构按值复制或逐帧分配的理由。
 
 修复后同一自动入口完整产生run `3fd444fe57bf4c0082252a55e506b34b`：257行、5个压缩分块、Header/Value均为1217列，Unity Console为0 Error，未再出现第3帧ActionSampling失败。该结果只证明运行合同修复，不代表IK效果完成。

@@ -11,6 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ClipSamplePlan[] clips,
             int clipOffset,
             int clipCapacity,
+            AnimationFootFeatureSample[] footFeatures,
+            int footFeatureOffset,
             float[] poseParameters,
             byte[] poseParameterAvailability,
             int parameterOffset,
@@ -22,6 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Clips = clips;
             ClipOffset = clipOffset;
             ClipCapacity = clipCapacity;
+            FootFeatures = footFeatures;
+            FootFeatureOffset = footFeatureOffset;
             PoseParameters = poseParameters;
             PoseParameterAvailability = poseParameterAvailability;
             ParameterOffset = parameterOffset;
@@ -34,6 +38,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal ClipSamplePlan[] Clips { get; }
         internal int ClipOffset { get; }
         internal int ClipCapacity { get; }
+        internal AnimationFootFeatureSample[] FootFeatures { get; }
+        internal int FootFeatureOffset { get; }
         internal float[] PoseParameters { get; }
         internal byte[] PoseParameterAvailability { get; }
         internal int ParameterOffset { get; }
@@ -48,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly int m_ParameterStride;
         readonly AnimationPlaybackId[] m_PlaybackIds;
         readonly ClipSamplePlan[] m_Clips;
+        readonly AnimationFootFeatureSample[] m_FootFeatures;
         readonly float[] m_PoseParameters;
         readonly byte[] m_PoseParameterAvailability;
         ulong m_LeaseIdentity;
@@ -67,6 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_ParameterStride = parameterStride;
             m_PlaybackIds = new AnimationPlaybackId[playbackCapacity];
             m_Clips = new ClipSamplePlan[checked(playbackCapacity * clipStride)];
+            m_FootFeatures = new AnimationFootFeatureSample[checked(playbackCapacity * 2)];
             m_PoseParameters = new float[checked(playbackCapacity * parameterStride)];
             m_PoseParameterAvailability = new byte[m_PoseParameters.Length];
         }
@@ -118,6 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     $"Action presentation sample workspace capacity '{m_PlaybackCapacity}' was exceeded by playback '{playbackId}'.");
             m_PlaybackIds[rowIndex] = playbackId;
             int clipOffset = checked(rowIndex * m_ClipStride);
+            int footFeatureOffset = checked(rowIndex * 2);
             int parameterOffset = checked(rowIndex * m_ParameterStride);
             return new ActionPresentationSampleWorkspaceRow(
                 playbackId,
@@ -126,6 +135,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_Clips,
                 clipOffset,
                 m_ClipStride,
+                m_FootFeatures,
+                footFeatureOffset,
                 m_PoseParameters,
                 m_PoseParameterAvailability,
                 parameterOffset,
@@ -158,6 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             Array.Clear(m_PlaybackIds, 0, m_PlaybackIds.Length);
             Array.Clear(m_Clips, 0, m_Clips.Length);
+            Array.Clear(m_FootFeatures, 0, m_FootFeatures.Length);
             Array.Clear(m_PoseParameters, 0, m_PoseParameters.Length);
             Array.Clear(
                 m_PoseParameterAvailability,

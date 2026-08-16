@@ -643,7 +643,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in projected,
                         in effective,
                         m_FootPlacementWeightParameterIndex);
-                frameWorkspace.SetActionFrame(frameLease, frame);
+                frameWorkspace.SetActionFrame(frameLease, in frame);
             }
         }
 

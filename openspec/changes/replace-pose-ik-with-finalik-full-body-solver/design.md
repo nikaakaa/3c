@@ -175,6 +175,8 @@ Start、Loop、Stop与MovingTurn必须在LiftOff前提供当前脚PreSwing事件
 
 Sequence Player把Artifact occurrence绑定到Locomotion Marker时，必须直接使用source-bound Landing Cycle与Event Ordinal选择正式Marker occurrence。`TimeToLanding`只负责连续动作时钟，不得再次通过`ContinuousTime + delay`就近搜索Marker；否则同一事件会同时拥有Artifact cycle和Runtime时间距离两个身份判定。
 
+Analyzer必须为Current与Incoming分别烘焙离散`SourceLandingCycleOffset`。该字段与Event Ordinal共同定义事件分段，事件换代处的Clock、路线、Clearance、Constraint和Biomechanical事实必须整组阶跃，禁止跨两个occurrence线性插值。Runtime只把该offset加到当前source cycle，不得从插值后的`TimeToLanding`反推cycle。
+
 ## 6. Committed Future Body Transform Trajectory
 
 Simulation/KCC为剩余Action Step提供：

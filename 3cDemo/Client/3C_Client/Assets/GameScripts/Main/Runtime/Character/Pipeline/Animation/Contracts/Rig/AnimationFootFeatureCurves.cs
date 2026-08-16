@@ -146,6 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationCurve m_ApproachContactPhase;
         [SerializeField] AnimationCurve m_ActionStepDurationSeconds;
         [SerializeField] AnimationCurve m_EventOrdinal;
+        [SerializeField] AnimationCurve m_SourceLandingCycleOffset;
         [SerializeField] AnimationCurve m_OpposingLandingDelaySeconds;
         [SerializeField] AnimationCurve m_OpposingEventOrdinal;
         [SerializeField] AnimationCurve m_OpposingLandingCycleOffset;
@@ -175,6 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve approachContactPhase,
             AnimationCurve actionStepDurationSeconds,
             AnimationCurve eventOrdinal,
+            AnimationCurve sourceLandingCycleOffset,
             AnimationCurve opposingLandingDelaySeconds,
             AnimationCurve opposingEventOrdinal,
             AnimationCurve opposingLandingCycleOffset,
@@ -203,6 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ApproachContactPhase = Copy(approachContactPhase);
             m_ActionStepDurationSeconds = Copy(actionStepDurationSeconds);
             m_EventOrdinal = Copy(eventOrdinal);
+            m_SourceLandingCycleOffset = Copy(sourceLandingCycleOffset);
             m_OpposingLandingDelaySeconds = Copy(opposingLandingDelaySeconds);
             m_OpposingEventOrdinal = Copy(opposingEventOrdinal);
             m_OpposingLandingCycleOffset = Copy(opposingLandingCycleOffset);
@@ -234,6 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationCurve ApproachContactPhase => m_ApproachContactPhase;
         public AnimationCurve ActionStepDurationSeconds => m_ActionStepDurationSeconds;
         public AnimationCurve EventOrdinal => m_EventOrdinal;
+        public AnimationCurve SourceLandingCycleOffset => m_SourceLandingCycleOffset;
         public AnimationCurve OpposingLandingDelaySeconds => m_OpposingLandingDelaySeconds;
         public AnimationCurve OpposingEventOrdinal => m_OpposingEventOrdinal;
         public AnimationCurve OpposingLandingCycleOffset => m_OpposingLandingCycleOffset;
@@ -308,6 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     scaledBiomechanicalIndex - firstBiomechanicalIndex);
             return new AnimationPredictedFootStepSample(
                 Mathf.Max(0, Mathf.RoundToInt(m_EventOrdinal.Evaluate(time))),
+                Mathf.Max(0, Mathf.RoundToInt(m_SourceLandingCycleOffset.Evaluate(time))),
                 m_Confidence.Evaluate(time),
                 m_TimeToLandingSeconds.Evaluate(time),
                 eventPhase,
@@ -342,6 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireCurve(m_ApproachContactPhase, nameof(m_ApproachContactPhase), true, false);
             RequireCurve(m_ActionStepDurationSeconds, nameof(m_ActionStepDurationSeconds), false, true);
             RequireCurve(m_EventOrdinal, nameof(m_EventOrdinal), false, true);
+            RequireCurve(m_SourceLandingCycleOffset, nameof(m_SourceLandingCycleOffset), false, true);
             RequireCurve(m_OpposingLandingDelaySeconds, nameof(m_OpposingLandingDelaySeconds), false, true);
             RequireCurve(m_OpposingEventOrdinal, nameof(m_OpposingEventOrdinal), false, true);
             RequireCurve(m_OpposingLandingCycleOffset, nameof(m_OpposingLandingCycleOffset), false, false);
@@ -504,6 +510,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         public AnimationPredictedFootStepSample(
             int eventOrdinal,
+            int sourceLandingCycleOffset,
             float confidence,
             float timeToLandingSeconds,
             float eventPhase,
@@ -525,6 +532,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationFootBiomechanicalRouteSample biomechanicalSample)
             : this(
                 eventOrdinal,
+                sourceLandingCycleOffset,
                 confidence,
                 timeToLandingSeconds,
                 eventPhase,
@@ -555,6 +563,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         AnimationPredictedFootStepSample(
             int eventOrdinal,
+            int sourceLandingCycleOffset,
             float confidence,
             float timeToLandingSeconds,
             float eventPhase,
@@ -583,9 +592,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (eventOrdinal < 0)
                 throw new ArgumentOutOfRangeException(nameof(eventOrdinal));
+            if (sourceLandingCycleOffset < 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceLandingCycleOffset));
             if (opposingEventOrdinal < 0 || opposingLandingCycleOffset < -1 || opposingLandingCycleOffset > 1)
                 throw new ArgumentOutOfRangeException(nameof(opposingEventOrdinal));
             EventOrdinal = eventOrdinal;
+            SourceLandingCycleOffset = sourceLandingCycleOffset;
             Confidence = RequireNormalized(confidence, nameof(confidence));
             TimeToLandingSeconds = RequireNonNegative(timeToLandingSeconds, nameof(timeToLandingSeconds));
             EventPhase = RequireNormalized(eventPhase, nameof(eventPhase));
@@ -665,6 +677,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly byte m_IsSpecified;
         readonly byte m_UsesSynchronizedMarkerIdentity;
         public int EventOrdinal { get; }
+        public int SourceLandingCycleOffset { get; }
         public float Confidence { get; }
         public float TimeToLandingSeconds { get; }
         public float EventPhase { get; }
@@ -826,28 +839,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public AnimationPredictedFootStepSample BindSource(
             ulong sourceSampleIdentity,
-            int sourceSampleCycle,
-            float sourceSampleTimeSeconds,
-            float sourceDurationSeconds,
-            bool sourceLooping)
+            int sourceSampleCycle)
         {
             if (!HasLandingEvent)
                 return this;
-            if (sourceSampleIdentity == 0 || sourceSampleCycle < 0 ||
-                !float.IsFinite(sourceSampleTimeSeconds) || sourceSampleTimeSeconds < 0f ||
-                !float.IsFinite(sourceDurationSeconds) || sourceDurationSeconds <= 0f)
+            if (sourceSampleIdentity == 0 || sourceSampleCycle < 0)
             {
                 throw new ArgumentException("Predicted foot step source occurrence is invalid.");
             }
-            int landingCycleOffset = sourceLooping
-                ? ResolveLandingCycleOffset(
-                    sourceSampleTimeSeconds,
-                    TimeToLandingSeconds,
-                    sourceDurationSeconds)
-                : 0;
-            int sourceLandingCycle = checked(sourceSampleCycle + landingCycleOffset);
+            int sourceLandingCycle = checked(sourceSampleCycle + SourceLandingCycleOffset);
             return new AnimationPredictedFootStepSample(
                 EventOrdinal,
+                SourceLandingCycleOffset,
                 Confidence,
                 TimeToLandingSeconds,
                 EventPhase,
@@ -875,43 +878,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 false);
         }
 
-        public AnimationPredictedFootStepSample ScheduleAfter(float delaySeconds)
-        {
-            if (!HasLandingEvent)
-                return this;
-            if (!float.IsFinite(delaySeconds) || delaySeconds < 0f)
-                throw new ArgumentOutOfRangeException(nameof(delaySeconds));
-            return new AnimationPredictedFootStepSample(
-                EventOrdinal,
-                Confidence,
-                TimeToLandingSeconds + delaySeconds,
-                EventPhase,
-                ReleasePhase,
-                LiftOffPhase,
-                ApproachContactPhase,
-                ActionStepClock.DurationSeconds,
-                OpposingEventOrdinal,
-                OpposingEventOrdinal > 0
-                    ? OpposingLandingDelaySeconds + delaySeconds
-                    : 0f,
-                OpposingLandingCycleOffset,
-                OpposingRootLocalLanding,
-                RootLocalFootRoute,
-                RootLocalAnkleRoute,
-                RootLocalHipRoute,
-                AuthoredFootPlanarRoute,
-                AnimationClearanceHeights,
-                LandingPhase,
-                OpposingRootLocalSoleRotation,
-                BiomechanicalSample,
-                0,
-                0,
-                0,
-                0,
-                0,
-                false);
-        }
-
         public AnimationPredictedFootStepSample BindSynchronizedMarkerSource(
             ulong markerEpochIdentity,
             int landingMarkerOrdinal,
@@ -933,6 +899,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             return new AnimationPredictedFootStepSample(
                 1,
+                SourceLandingCycleOffset,
                 Confidence,
                 TimeToLandingSeconds,
                 EventPhase,
@@ -991,6 +958,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : 0;
             return new AnimationPredictedFootStepSample(
                 EventOrdinal,
+                SourceLandingCycleOffset,
                 Confidence,
                 TimeToLandingSeconds,
                 EventPhase,
@@ -1026,6 +994,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return default;
             return new AnimationPredictedFootStepSample(
                 EventOrdinal,
+                SourceLandingCycleOffset,
                 Confidence,
                 TimeToLandingSeconds / visualTimeScale,
                 EventPhase,
@@ -1141,19 +1110,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ? 0
                 : ContributionContinuityIdentity;
 
-        static int ResolveLandingCycleOffset(
-            float sourceSampleTimeSeconds,
-            float timeToLandingSeconds,
-            float sourceDurationSeconds)
-        {
-            double normalizedLanding =
-                ((double)sourceSampleTimeSeconds + timeToLandingSeconds) / sourceDurationSeconds;
-            double nearestBoundary = Math.Round(normalizedLanding);
-            if (Math.Abs(normalizedLanding - nearestBoundary) <= 0.00001d)
-                normalizedLanding = nearestBoundary;
-            return checked((int)Math.Floor(normalizedLanding));
-        }
-
         static ulong HashText(string value)
         {
             const ulong offset = 14695981039346656037UL;
@@ -1242,26 +1198,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public AnimationFootFeatureSample BindPredictionSource(
             ulong sourceIdentity,
-            int sourceCycle,
-            float sourceSampleTimeSeconds,
-            float sourceDurationSeconds,
-            bool sourceLooping) =>
+            int sourceCycle) =>
             new AnimationFootFeatureSample(
                 SoleLocalVelocity,
                 SoleHeight,
                 PlantConfidence,
                 PredictedStep.BindSource(
                     sourceIdentity,
-                    sourceCycle,
-                    sourceSampleTimeSeconds,
-                    sourceDurationSeconds,
-                    sourceLooping),
+                    sourceCycle),
                 IncomingPredictedStep.BindSource(
                     sourceIdentity,
-                    sourceCycle,
-                    sourceSampleTimeSeconds,
-                    sourceDurationSeconds,
-                    sourceLooping));
+                    sourceCycle));
 
         public AnimationFootFeatureSample BindPredictionContribution(
             ulong contributionContinuityIdentity,

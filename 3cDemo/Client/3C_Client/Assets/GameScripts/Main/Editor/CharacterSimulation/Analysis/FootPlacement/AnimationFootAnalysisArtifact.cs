@@ -79,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class AnimationFootAnalysisArtifactIdentity
     {
-        public const int CurrentFormatVersion = 28;
+        public const int CurrentFormatVersion = 29;
 
         public AnimationFootAnalysisArtifactIdentity(
             string clipAssetGuid,

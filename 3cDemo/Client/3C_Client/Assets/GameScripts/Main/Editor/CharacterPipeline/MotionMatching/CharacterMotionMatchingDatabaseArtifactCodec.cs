@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     public static class CharacterMotionMatchingDatabaseArtifactCodec
     {
         const int Magic = 0x42444d4d;
-        const int FormatVersion = 15;
+        const int FormatVersion = 16;
 
         enum SectionId
         {
@@ -509,6 +509,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             if (!predicted.IsValid)
                 return;
             writer.Write(predicted.EventOrdinal);
+            writer.Write(predicted.SourceLandingCycleOffset);
             writer.Write(predicted.Confidence);
             writer.Write(predicted.TimeToLandingSeconds);
             writer.Write(predicted.EventPhase);
@@ -542,6 +543,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             float plantConfidence = reader.ReadSingle();
             AnimationPredictedFootStepSample predicted = reader.ReadBoolean()
                 ? new AnimationPredictedFootStepSample(
+                reader.ReadInt32(),
                 reader.ReadInt32(),
                 reader.ReadSingle(),
                 reader.ReadSingle(),

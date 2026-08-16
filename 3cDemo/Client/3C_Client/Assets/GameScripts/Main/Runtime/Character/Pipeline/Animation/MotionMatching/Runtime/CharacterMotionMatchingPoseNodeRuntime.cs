@@ -530,16 +530,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 footWeight.Value,
                 sample.LeftFoot.BindPredictionSource(
                     AnimationPredictedFootStepSample.SourceIdentity(clip.SourceClipId.Value),
-                    selection.PoseTime.Cycle,
-                    clipSample.ClipTime,
-                    clip.Clip.length,
-                    true),
+                    selection.PoseTime.Cycle),
                 sample.RightFoot.BindPredictionSource(
                     AnimationPredictedFootStepSample.SourceIdentity(clip.SourceClipId.Value),
-                    selection.PoseTime.Cycle,
-                    clipSample.ClipTime,
-                    clip.Clip.length,
-                    true));
+                    selection.PoseTime.Cycle));
             var sourceLineage = new CharacterMotionMatchingSourceLineage(
                 NodeId,
                 m_Binding.BindingId,

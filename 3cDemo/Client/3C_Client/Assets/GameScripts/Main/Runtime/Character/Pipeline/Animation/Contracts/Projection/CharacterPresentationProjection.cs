@@ -932,16 +932,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 EvaluateRequired(m_FootPlacementWeightCurve, animationNormalized, nameof(m_FootPlacementWeightCurve)),
                 m_LeftFootFeatures.Sample(animationNormalized).BindPredictionSource(
                     AnimationPredictedFootStepSample.SourceIdentity(m_ClipAuthoringId),
-                    checked((int)Math.Floor(continuousClipTime / m_Clip.length)),
-                    clipTime,
-                    m_Clip.length,
-                    isLooping),
+                    checked((int)Math.Floor(continuousClipTime / m_Clip.length))),
                 m_RightFootFeatures.Sample(animationNormalized).BindPredictionSource(
                     AnimationPredictedFootStepSample.SourceIdentity(m_ClipAuthoringId),
-                    checked((int)Math.Floor(continuousClipTime / m_Clip.length)),
-                    clipTime,
-                    m_Clip.length,
-                    isLooping));
+                    checked((int)Math.Floor(continuousClipTime / m_Clip.length))));
 
             destination[destinationIndex] = plan;
             totalWeight += plan.Weight;

@@ -270,6 +270,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             WriteCurve(writer, value.ApproachContactPhase);
             WriteCurve(writer, value.ActionStepDurationSeconds);
             WriteCurve(writer, value.EventOrdinal);
+            WriteCurve(writer, value.SourceLandingCycleOffset);
             WriteCurve(writer, value.OpposingLandingDelaySeconds);
             WriteCurve(writer, value.OpposingEventOrdinal);
             WriteCurve(writer, value.OpposingLandingCycleOffset);
@@ -313,6 +314,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationCurve approachContactPhase = ReadCurve(reader);
             AnimationCurve actionStepDurationSeconds = ReadCurve(reader);
             AnimationCurve eventOrdinal = ReadCurve(reader);
+            AnimationCurve sourceLandingCycleOffset = ReadCurve(reader);
             AnimationCurve opposingLandingDelaySeconds = ReadCurve(reader);
             AnimationCurve opposingEventOrdinal = ReadCurve(reader);
             AnimationCurve opposingLandingCycleOffset = ReadCurve(reader);
@@ -342,6 +344,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 approachContactPhase,
                 actionStepDurationSeconds,
                 eventOrdinal,
+                sourceLandingCycleOffset,
                 opposingLandingDelaySeconds,
                 opposingEventOrdinal,
                 opposingLandingCycleOffset,

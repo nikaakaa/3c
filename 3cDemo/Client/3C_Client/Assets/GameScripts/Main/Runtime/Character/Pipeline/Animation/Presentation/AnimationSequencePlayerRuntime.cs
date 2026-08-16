@@ -744,10 +744,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             AnimationFootFeatureSample bound = feature.BindPredictionSource(
                 AnimationPredictedFootStepSample.SourceIdentity(m_SourceId),
-                m_Cycle,
-                m_SampleTime,
-                m_Source.Clip.length,
-                m_Descriptor.Loop);
+                m_Cycle);
             AnimationPredictedFootStepSample step = bound.PredictedStep;
             if (!step.IsSourceBound || !m_HasMovementMarkerEpoch)
                 return bound;

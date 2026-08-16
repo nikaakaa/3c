@@ -329,13 +329,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot successor is not executable.");
-                CharacterFootPlanTransition transition = CharacterFootPlanTransition.Begin(
+                m_Transition = CharacterFootPlanTransition.Begin(
                     CharacterFootPlanTransitionKind.EventSuccessor,
                     Active.ImmutablePlan,
                     Revision.ImmutablePlan);
-                m_Transition = HasCompleteOutputForPlan(Active.Sequence)
-                    ? CaptureTransitionOrigin(transition)
-                    : transition;
             }
 
             internal void PromoteRevision()
@@ -343,7 +340,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (!HasRevision || !Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
                 CharacterFootPlanTransition transition = m_Transition;
-                bool preserveSuccessorHandoff = HasEventSuccessor && transition.HasContinuity;
+                bool preserveSuccessorHandoff = HasEventSuccessor &&
+                                                HasCompleteOutputForPlan(Active.Sequence);
+                if (preserveSuccessorHandoff)
+                    transition = CaptureTransitionOrigin(transition);
                 ClearOutputContinuity();
                 m_SuppressNextOutputContinuityCapture = !preserveSuccessorHandoff;
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);

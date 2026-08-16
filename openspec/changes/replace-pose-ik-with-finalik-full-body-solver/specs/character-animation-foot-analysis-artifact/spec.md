@@ -80,11 +80,19 @@ Analyzer MUST在Artifact Build时同时生成Current与Incoming Step。Runtime M
 
 Current与Incoming的Source Landing Cycle Offset MUST由Analyzer从确切Landing occurrence生成，并与Event Ordinal共同切分全部事件字段。`TimeToLanding` MUST只表达连续时钟；Runtime MUST不通过`source sample time + TimeToLanding`反推Landing cycle。两个occurrence边界之间 MUST不线性插值Clock、路线、Clearance、Constraint或Biomechanical事实。
 
+Analyzer MUST从同一参考Foot Path上的动画Clearance轮廓确定`ApproachContactPhase`：在LiftOff至Landing之间，进入最终下降段的Clearance峰值采样 MUST作为ApproachContact。它 MUST不固定为Landing前一个采样点，也不得由Runtime按帧数、Presentation Delta或Plan状态补建。
+
 #### Scenario: Loop边界的Incoming换代
 
 - **WHEN** 当前Landing仍属于cycle N而Immediate Incoming将在后一个采样点换为cycle N+2
 - **THEN** Current与Incoming MUST分别在各自确切事件边界原子换代
 - **AND** Incoming MUST不因TimeToLanding线性插值而提前跨到N+2并取消cycle N+1的后继Plan
+
+#### Scenario: Swing下降段跨越多个运行帧
+
+- **WHEN** 动画Sole相对参考Foot Path在步中达到Clearance峰值后连续下降至Landing
+- **THEN** ApproachContact MUST位于该峰值采样而不是Landing前一个离散采样
+- **AND** Projection MUST在该下降区间持续发布`ApproachingContact`，使后继事件可在当前事件换代前预建
 
 #### Scenario: Blend的两个source具有不同右脚事件
 

@@ -1225,14 +1225,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 int liftOff = ResolveLiftOff(foot.PlantConfidence, previous, next, intervals, loop);
                 int release = ResolveRelease(foot.PlantConfidence, previous, liftOff, intervals, loop);
+                int approachContact = ResolveApproachContact(
+                    previous,
+                    opposing,
+                    liftOff,
+                    next,
+                    rootLocalSole,
+                    opposingRootLocalSole,
+                    loop,
+                    intervals);
                 float eventLength = Mathf.Max(1f, next - previous);
                 foot.EventPhase[i] = Mathf.InverseLerp(previous, next, sample);
                 foot.ReleasePhase[i] = Mathf.InverseLerp(previous, next, release);
                 foot.LiftOffPhase[i] = Mathf.InverseLerp(previous, next, liftOff);
-                foot.ApproachContactPhase[i] = Mathf.InverseLerp(
-                    previous,
-                    next,
-                    Mathf.Max(liftOff, next - 1));
+                foot.ApproachContactPhase[i] = Mathf.InverseLerp(previous, next, approachContact);
                 foot.ActionStepDurationSeconds[i] = eventLength * step;
                 var authoredSoleHeights = new float[AnimationPredictedFootStepCurveSet.RouteSampleCount];
 
@@ -1376,6 +1382,46 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     splitHeight,
                     endHeight,
                     Mathf.InverseLerp(splitPhase, 1f, routePhase));
+        }
+
+        static int ResolveApproachContact(
+            int previous,
+            int opposing,
+            int liftOff,
+            int next,
+            Vector3[] rootLocalSole,
+            Vector3[] opposingRootLocalSole,
+            bool loop,
+            int intervals)
+        {
+            if (liftOff >= next)
+                return next;
+            int approachContact = liftOff;
+            float maximumClearance = float.NegativeInfinity;
+            for (int sample = liftOff; sample < next; sample++)
+            {
+                float routePhase = Mathf.InverseLerp(previous, next, sample);
+                float footPathHeight = EvaluateVirtualGroundHeight(
+                    routePhase,
+                    previous,
+                    opposing,
+                    next,
+                    rootLocalSole,
+                    opposingRootLocalSole,
+                    loop,
+                    intervals);
+                float soleHeight = SampleRootLocalRoute(
+                    rootLocalSole,
+                    sample,
+                    loop,
+                    intervals).y;
+                float clearance = Mathf.Max(0f, soleHeight - footPathHeight);
+                if (clearance <= maximumClearance)
+                    continue;
+                maximumClearance = clearance;
+                approachContact = sample;
+            }
+            return approachContact;
         }
 
         static void BuildPairedLandingFeatures(

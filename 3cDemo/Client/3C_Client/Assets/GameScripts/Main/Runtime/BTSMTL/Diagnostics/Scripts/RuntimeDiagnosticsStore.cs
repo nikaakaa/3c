@@ -580,8 +580,6 @@ namespace BTSMTL.Diagnostics
                    left.FinalGoalRotationWeight.Equals(right.FinalGoalRotationWeight) &&
                    left.TargetOffset.Equals(right.TargetOffset) &&
                    left.OffsetTarget.Equals(right.OffsetTarget) &&
-                   left.UnconstrainedOffset.Equals(right.UnconstrainedOffset) &&
-                   left.SoleConstraintOffset.Equals(right.SoleConstraintOffset) &&
                    left.CurrentOffset.Equals(right.CurrentOffset) &&
                    left.OffsetSpringVelocity.Equals(right.OffsetSpringVelocity) &&
                    left.PreviousOffsetTarget.Equals(right.PreviousOffsetTarget) &&

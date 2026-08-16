@@ -764,8 +764,6 @@ namespace BTSMTL.Diagnostics
         public float FinalGoalRotationWeight;
         public float TargetOffset;
         public float OffsetTarget;
-        public float UnconstrainedOffset;
-        public float SoleConstraintOffset;
         public float CurrentOffset;
         public float OffsetSpringVelocity;
         public float PreviousOffsetTarget;

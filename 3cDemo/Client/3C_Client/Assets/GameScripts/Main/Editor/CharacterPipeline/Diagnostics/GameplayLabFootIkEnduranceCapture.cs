@@ -18,10 +18,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [InitializeOnLoad]
     static class GameplayLabFootIkEnduranceCapture
     {
-        const int ColumnCount = 1225;
-        const int BaseColumnCount = 1127;
+        const int ColumnCount = 1221;
+        const int BaseColumnCount = 1123;
         const int GlobalColumnCount = 71;
-        const int LegColumnCount = 577;
+        const int LegColumnCount = 575;
         const int BeforeSequenceColumnCount = 339;
         const int ReplacedSequenceColumnCount = 118;
         const int SequenceColumnCount = 146;
@@ -652,7 +652,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Manifest = new CaptureManifest
                 {
                     runId = runId,
-                    schema = "foot-ik-1189-se2-piecewise-virtual-ground-v93",
+                    schema = "foot-ik-1189-se2-piecewise-virtual-ground-v94",
                     columnCount = ColumnCount,
                     startedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                     status = "running"

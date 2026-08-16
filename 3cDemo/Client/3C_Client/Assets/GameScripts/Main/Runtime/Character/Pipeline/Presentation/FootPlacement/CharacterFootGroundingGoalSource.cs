@@ -800,20 +800,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightPredictive,
                 frame.MotionPhase,
                 frame.PresentationDeltaSeconds);
-            float leftSoleConstraintOffset = m_Left.PlantContact
-                ? ResolveStanceSoleConstraintOffset(
-                    leftPrepared.CurrentClearance,
-                    m_Rig.PoseRoot.up)
-                : 0f;
-            float rightSoleConstraintOffset = m_Right.PlantContact
-                ? ResolveStanceSoleConstraintOffset(
-                    rightPrepared.CurrentClearance,
-                    m_Rig.PoseRoot.up)
-                : 0f;
-            lyra = m_CurrentGrounding.ApplySoleConstraints(
-                lyra,
-                leftSoleConstraintOffset,
-                rightSoleConstraintOffset);
             ResolvedFoot left = StabilizeFoot(
                 m_Left,
                 pose.Left,
@@ -1755,20 +1741,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float toeDistance = Vector3.Dot(contacts.ToePosition - support.Point, normal);
             float penetration = Mathf.Max(0f, -Mathf.Min(heelDistance, toeDistance));
             return penetration / upNormalDot;
-        }
-
-        static float ResolveStanceSoleConstraintOffset(
-            in SoleClearancePlan clearance,
-            Vector3 componentUp)
-        {
-            Vector3 up = componentUp.normalized;
-            Vector3 normal = clearance.Support.Normal.normalized;
-            float upNormalDot = Vector3.Dot(up, normal);
-            if (!clearance.Support.IsValid || !float.IsFinite(upNormalDot) || upNormalDot <= 0.0001f)
-                throw new InvalidOperationException("Stance sole support is invalid.");
-            return -Mathf.Min(
-                clearance.HeelPlaneDistance,
-                clearance.ToePlaneDistance) / upNormalDot;
         }
 
         static FootConstraintTransitionReason ToTransitionReason(CharacterFootPlacementResetReason reason) => reason switch

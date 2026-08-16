@@ -122,8 +122,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TargetOffset = lyra.Trace.TargetOffset;
             SoleClearanceTarget = lyra.SoleClearanceTarget;
             OffsetTarget = lyra.OffsetTarget;
-            UnconstrainedOffset = lyra.UnconstrainedOffset;
-            SoleConstraintOffset = lyra.SoleConstraintOffset;
             CurrentOffset = lyra.CurrentOffset;
             OffsetSpringVelocity = lyra.OffsetVelocity;
             PreviousOffsetTarget = lyra.PreviousOffsetTarget;
@@ -185,8 +183,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float TargetOffset { get; }
         public float SoleClearanceTarget { get; }
         public float OffsetTarget { get; }
-        public float UnconstrainedOffset { get; }
-        public float SoleConstraintOffset { get; }
         public float CurrentOffset { get; }
         public float OffsetSpringVelocity { get; }
         public float PreviousOffsetTarget { get; }

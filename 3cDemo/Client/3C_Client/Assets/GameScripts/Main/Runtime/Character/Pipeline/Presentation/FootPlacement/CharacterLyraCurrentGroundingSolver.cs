@@ -49,8 +49,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion componentRotation,
             float soleClearanceTarget,
             float offsetTarget,
-            float unconstrainedOffset,
-            float soleConstraintOffset,
             float currentOffset,
             float offsetVelocity,
             float previousOffsetTarget,
@@ -65,8 +63,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ComponentRotation = componentRotation;
             SoleClearanceTarget = soleClearanceTarget;
             OffsetTarget = offsetTarget;
-            UnconstrainedOffset = unconstrainedOffset;
-            SoleConstraintOffset = soleConstraintOffset;
             CurrentOffset = currentOffset;
             OffsetVelocity = offsetVelocity;
             PreviousOffsetTarget = previousOffsetTarget;
@@ -82,8 +78,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Quaternion ComponentRotation { get; }
         internal float SoleClearanceTarget { get; }
         internal float OffsetTarget { get; }
-        internal float UnconstrainedOffset { get; }
-        internal float SoleConstraintOffset { get; }
         internal float CurrentOffset { get; }
         internal float OffsetVelocity { get; }
         internal float PreviousOffsetTarget { get; }
@@ -243,31 +237,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_PelvisOffset.Initialized);
         }
 
-        internal CharacterLyraCurrentGroundingResult ApplySoleConstraints(
-            in CharacterLyraCurrentGroundingResult result,
-            float leftConstraintOffset,
-            float rightConstraintOffset)
-        {
-            RequireFinite(leftConstraintOffset, nameof(leftConstraintOffset));
-            RequireFinite(rightConstraintOffset, nameof(rightConstraintOffset));
-            CharacterLyraCurrentGroundingFootResult left = ApplySoleConstraint(
-                result.Left,
-                m_LeftOffset,
-                leftConstraintOffset);
-            CharacterLyraCurrentGroundingFootResult right = ApplySoleConstraint(
-                result.Right,
-                m_RightOffset,
-                rightConstraintOffset);
-            return new CharacterLyraCurrentGroundingResult(
-                left,
-                right,
-                result.TargetPelvisOffset,
-                result.CurrentPelvisOffset,
-                result.PelvisVelocity,
-                result.PreviousPelvisTarget,
-                result.PelvisSpringInitialized);
-        }
-
         internal void ApplyTuning(CharacterLyraCurrentGroundingSettings settings)
         {
             settings.RequireValid();
@@ -353,8 +322,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 soleClearanceTarget,
                 relativeTarget,
                 currentOffset,
-                0f,
-                currentOffset,
                 offsetState.Velocity,
                 offsetState.PreviousTarget,
                 offsetState.Initialized,
@@ -364,44 +331,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 normalState.Initialized);
         }
 
-        static CharacterLyraCurrentGroundingFootResult ApplySoleConstraint(
-            CharacterLyraCurrentGroundingFootResult result,
-            FloatSpringState offsetState,
-            float constraintOffset)
-        {
-            if (!float.IsFinite(constraintOffset))
-                throw new ArgumentOutOfRangeException(nameof(constraintOffset));
-            if (Mathf.Abs(constraintOffset) <= 0.000001f)
-                return result;
-            offsetState.Value += constraintOffset;
-            offsetState.Velocity = 0f;
-            return new CharacterLyraCurrentGroundingFootResult(
-                result.Trace,
-                result.ComponentPosition + Vector3.up * constraintOffset,
-                result.ComponentRotation,
-                result.SoleClearanceTarget,
-                result.OffsetTarget,
-                result.UnconstrainedOffset,
-                result.SoleConstraintOffset + constraintOffset,
-                offsetState.Value,
-                offsetState.Velocity,
-                offsetState.PreviousTarget,
-                offsetState.Initialized,
-                result.CurrentHitNormal,
-                result.NormalVelocity,
-                result.PreviousNormalTarget,
-                result.NormalSpringInitialized);
-        }
-
         static void RequireSoleClearanceTarget(float value, string parameterName)
         {
             if (!float.IsFinite(value) || value < 0f)
-                throw new ArgumentOutOfRangeException(parameterName);
-        }
-
-        static void RequireFinite(float value, string parameterName)
-        {
-            if (!float.IsFinite(value))
                 throw new ArgumentOutOfRangeException(parameterName);
         }
 

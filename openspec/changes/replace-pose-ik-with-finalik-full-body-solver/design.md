@@ -53,6 +53,8 @@ One Final Goal Set -> One FBBIK Solve
 
 `FootGrounding`只拥有Current Support、surface identity、接触平面和鞋底安全事实。它不得先创建响应式Swing Goal。Predictive关闭、Unavailable或Rejected时，Swing保持上游原动画；Stance仍可约束真实接触脚，但不得把该结果标记为预测成功。
 
+Current Grounding spring只连续追踪唯一Current Query与Current Sole Clearance target。Landing接触许可可以读取动画鞋底到冻结Landing Surface的距离，但该距离不得作为增量反复写回Current spring。唯一鞋底安全投影必须发生在Lyra Current与Anchor混合完成之后；它只约束本帧最终Ankle Goal不穿过已提交支撑平面，不建立第二时间状态。
+
 Predictive可以作为统一FootPlacement节点内部模块存在，不要求恢复独立作者节点。模块边界和数据所有权必须保留，不能把它重新写成Current Goal后的高度补丁。
 
 ## 3. 所有权

@@ -134,6 +134,14 @@ Locked MUST保持完整世界Goal；Sliding MUST保持同一支撑面垂直接�
 
 Landing MUST作为一笔事务提交Plan Landing Sole Pose、Surface identity、Anchor local point/normal、Committed Sole Pose与Successor Step Start。上述事实任一不一致时 MUST保持未捕获或明确失败，不得换用Current Query的另一踏面。
 
+Current Grounding spring MUST只消费Current Query与Current Sole Clearance target。动画鞋底到冻结Landing Surface的接触许可距离 MUST NOT作为逐帧增量写入该spring状态。鞋底安全 MUST在Current Grounding与Anchor混合后只执行一次最终单边平面投影，且不得建立第二套Grounding或第二时间状态。
+
+#### Scenario: Landing接触连续保持期间
+
+- **WHEN** 同一Landing Surface连续多帧保持接触且动画鞋底仍低于该平面
+- **THEN** 每帧安全投影 MUST从当帧实际混合后的Ankle Goal重新求值
+- **AND** MUST不得把完整平面修正累加到前一帧spring state，造成Current Offset逐帧增长
+
 #### Scenario: 事件换代但后继Plan未Executing
 
 - **WHEN** 当前事件结束而下一事件事实已出现

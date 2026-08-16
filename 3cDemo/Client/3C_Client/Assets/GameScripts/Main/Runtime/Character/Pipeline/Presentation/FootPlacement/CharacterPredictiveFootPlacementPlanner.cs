@@ -130,7 +130,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 FadeOutWeight = 0f;
             }
 
-            internal void AdvanceTransition(float deltaSeconds, float blendSpeed)
+            internal void AdvanceTransition(
+                ulong renderFrame,
+                float deltaSeconds,
+                float blendSpeed)
             {
                 bool blendRevision = HasRevision &&
                                      (TransitionKind == FootPlanTransitionKind.IntentRevision ||
@@ -143,6 +146,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         RevisionBlendWeight = 0f;
                         return;
                     }
+                    if (renderFrame <= Revision.GeneratedFrame)
+                        return;
                     RevisionBlendWeight = Mathf.MoveTowards(
                         RevisionBlendWeight,
                         1f,
@@ -1809,7 +1814,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     runtime.BeginEventSuccessorBlend();
                 }
             }
-            runtime.AdvanceTransition(presentationDeltaSeconds, m_TransitionBlendSpeed);
+            runtime.AdvanceTransition(
+                renderFrame,
+                presentationDeltaSeconds,
+                m_TransitionBlendSpeed);
             plan = runtime.Active;
             if (planningCandidate && !plan.OwnsEvent && !runtime.HasRevision &&
                 !runtime.IsFadingOut && m_FutureBodyTrajectorySource != null)
@@ -1847,8 +1855,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation))
             {
                 if (!TryResolveIntentRevisionOrigin(
+                        runtime,
                         plan,
-                        pose,
                         up,
                         out Vector3 revisionSole,
                         out Vector3 revisionGroundPath,
@@ -1882,8 +1890,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static bool TryResolveIntentRevisionOrigin(
+            FootPlanRuntime runtime,
             CharacterPredictiveFootPlacementPlan plan,
-            CharacterFootPlacementAnimatedFootPose pose,
             Vector3 up,
             out Vector3 sole,
             out Vector3 groundPath,
@@ -1892,19 +1900,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             sole = default;
             groundPath = default;
             support = default;
-            if (!TryEvaluateFootTarget(
-                    plan,
-                    plan.ActionStepPhase,
-                    pose,
-                    up,
-                    pose.HipPosition,
-                    0f,
-                    out CharacterPredictiveFootTarget target))
+            if (!runtime.HasLastOutputSole ||
+                !runtime.HasLastOutputGroundPath ||
+                runtime.LastOutputGroundPlanSequence != plan.Sequence)
             {
                 return false;
             }
-            sole = (target.Contacts.HeelPosition + target.Contacts.ToePosition) * 0.5f;
-            support = ResolveSupportAtRoutePoint(target.Support, sole, up);
+            sole = runtime.LastOutputSole;
+            support = ResolveSupportAtRoutePoint(
+                runtime.LastOutputGroundSupport,
+                sole,
+                up);
             groundPath = support.IsValid ? support.Point : default;
             return support.IsValid && IsFinite(sole) && IsFinite(groundPath);
         }

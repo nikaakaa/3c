@@ -332,3 +332,9 @@ Artifact同时保存Current与Incoming仍不足以保证运行时原子性。旧
 Projection原子选择新Step后，旧实现仍用该Step所属动画贡献的逐脚Pose weight乘预测输出。目标source在权重0时已拥有事件，但Foot Placement输出仍为0；随后Pose weight上升，预测输出再次从0升到1，期间Stance、旧Plan与新Plan轮流取得脚的控制。事件换代因此被错误地执行了两次。
 
 正式输出只消费权威Step的Release/LiftOff、Plan生命周期、Revision与Stance交接。Pose contribution weight继续作为动画混合诊断，但不再是Foot Placement所有权曲线。
+
+## 28. Revision不能从旧Plan理论Target冒充已执行Sole
+
+Projection与输出权重收口后，剩余大跳集中在Revision首帧：新计划从旧Plan重新求值出的理论Target开始，而不是从上一完成帧真正送入FBBIK的Final Sole开始；同一帧又立即推进Blend，低帧率时首个权重可直接达到约`0.38~0.68`。smoothstep只能平滑权重，不能消除两个目标原本已有的空间差。
+
+正式意图Revision只消费`Last Final Sole + 同Active Plan Support`。Ground Probe是该Sole沿Component Up投影到支撑面的位置；输出身份与Active Plan不一致时不得创建Revision。创建帧Blend固定为0，从下一完成帧才推进。这个规则只闭合C0位置所有权；C1仍必须来自同一Artifact与Future Body执行轨迹的当前切线，不能重新引入表现帧差分或额外Hermite修正。

@@ -296,3 +296,9 @@ Git历史证明两种局部修法各自只解决了一半。旧Query直接采用
 逐Sphere“从前一支撑可达的候选里立即选最高点”实验已经撤销。相同上楼区间中，它把左脚无Plan空窗从34帧降到0，却把右脚空窗从16帧增到22；右Heel浮空P95/最大值从约`0.77/1.14m`恶化到`1.03/1.27m`。这证明局部选择会改变后续Cast范围并把错误从一只脚搬到另一只脚，不能代表完整Ground Path。
 
 正式实现必须先保留每个路线采样的全部合法Sphere命中和每段Capsule/Edge几何，再以相邻路线采样组构造从当前真实支撑到Landing的唯一有向链。只允许该链的正式支撑进入包络；Capsule几何仍只提供feet-only安全下界。Landing Surface、Body Support终点和Envelope终点必须从链末端一次提交，不能继续引用收集阶段的临时候选。
+
+## 23. 流式CSV不能同时开启无界内存Capture
+
+自动Foot IK writer曾在登记`LiveState`兴趣并流式写1217列CSV的同时，又自动启动`RuntimeDebugSession Continuous`。两条观察路径消费同一完成帧，但后者继续把完整帧历史保存在内存，实测即使Profiler关闭仍持续分配约10MB/帧；运行越久，GC与临时录制越重，低帧率又会改变Presentation采样密度，使IK数据失去比较价值。
+
+正式自动采样只保留一条链：`LiveState -> Completed Frame Stream -> 后台压缩CSV`。手动Inspector Capture只能由用户显式启动，不能被自动回归隐式附加。性能验收先关闭全局Profiler，再看稳定帧时间与每帧分配；Profiler的`recording=false`不代表Profiler本身已经Disabled。

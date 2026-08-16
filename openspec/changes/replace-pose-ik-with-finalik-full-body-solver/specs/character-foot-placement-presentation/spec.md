@@ -142,7 +142,7 @@ Locked -> Sliding/Releasing -> Unlocked Swing -> Approaching -> LandingBlend -> 
 
 Locked MUST保持完整世界Goal；Sliding MUST保持同一支撑面垂直接触并只允许有限面内移动；Unlocked MUST完全释放旧Anchor；LandingBlend MUST用同一冻结Landing Pose与Surface identity连续交给Anchor。Constraint Weight、Support Weight与Pivot Weight MUST来自同一Biomechanical Step Clock。
 
-Landing MUST作为一笔事务提交Plan Landing Sole Pose、Surface identity、Anchor local point/normal、Committed Sole Pose与Successor Step Start。Successor MUST消费Stance上一完成帧真实提交的Anchor Sole与Surface，而不是重新求值Plan理论Landing。上述事实任一不一致，或Plan身体轨迹已经越过正式运动几何边界时，MUST保持未捕获或明确失败，不得换用Current Query的另一踏面。
+Landing MUST作为一笔事务提交Plan Landing Sole Pose、Surface identity、Anchor local point/normal、Committed Sole Pose与Successor Step Start。Planner早于本帧Stance提交时，Successor MAY使用当前Active已验证并冻结的Projected Landing Sole与Surface预建不参与Goal的geometry；成为Current前 MUST消费Stance上一完成帧真实提交的Anchor Sole与Surface完成同Surface和几何边界验证，不得重新求值Plan理论Landing冒充Committed事实。上述事实任一不一致，或Plan身体轨迹已经越过正式运动几何边界时，MUST保持未捕获或明确失败，不得换用Current Query的另一踏面。
 
 Current Grounding spring MUST只消费Current Query与Current Sole Clearance target。动画鞋底到冻结Landing Surface的接触许可距离 MUST NOT作为逐帧增量写入该spring状态。鞋底安全 MUST在Current Grounding与Anchor混合后只执行一次最终单边平面投影，且不得建立第二套Grounding或第二时间状态。
 
@@ -158,6 +158,7 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 - **THEN** Event Successor成为Current前 MUST只保存不可变geometry和时钟，不得参与Goal或Revision Blend
 - **AND** 事件identity换代时 MUST先按当前身体位置和朝向验证Successor；有效时才原子提升为Active，由新Plan自身`Release -> LiftOff`权重和旧Landing Anchor互补交接
 - **AND** 已过期Successor MUST以`MotionDeviationExceeded`拒绝，并从当前真实Sole、Support与committed trajectory重新创建Current Event计划
+- **AND** Successor查询失败导致旧Plan开始退回Original Pose时，下一正式trajectory authority tick MUST仍可在PreSwing内重试；成功候选 MUST在当前事件同帧原子提升，不得再输出旧Landing目标
 - **AND** MUST不在新事件已经进入Swing后按Render Delta混合旧Landing世界目标与新Swing世界目标；Successor不可执行时 MUST连续退到Original Component Pose
 
 #### Scenario: Intent Revision与Event Successor复用过渡槽

@@ -515,6 +515,26 @@ namespace BTSMTL.Diagnostics
                    left.PlanAttemptOriginSupportPoint.Equals(right.PlanAttemptOriginSupportPoint) &&
                    left.PlanAttemptOriginSupportNormal.Equals(right.PlanAttemptOriginSupportNormal) &&
                    left.PlanAttemptOriginSoleHeightAboveSupport.Equals(right.PlanAttemptOriginSoleHeightAboveSupport) &&
+                   left.PlanAttemptRequestSourceSampleIdentity == right.PlanAttemptRequestSourceSampleIdentity &&
+                   left.PlanAttemptRequestSourceSampleCycle == right.PlanAttemptRequestSourceSampleCycle &&
+                   left.PlanAttemptRequestEventOrdinal == right.PlanAttemptRequestEventOrdinal &&
+                   left.PlanAttemptRequestEventPhase.Equals(right.PlanAttemptRequestEventPhase) &&
+                   left.PlanAttemptRequestTimeToLandingSeconds.Equals(right.PlanAttemptRequestTimeToLandingSeconds) &&
+                   left.PlanAttemptRequestMotionGeneration == right.PlanAttemptRequestMotionGeneration &&
+                   left.PlanAttemptRequestMotionAuthorityTick == right.PlanAttemptRequestMotionAuthorityTick &&
+                   left.PlanAttemptRequestMotionCurrentVelocity.Equals(right.PlanAttemptRequestMotionCurrentVelocity) &&
+                   left.PlanAttemptRequestMotionContinuationVelocity.Equals(right.PlanAttemptRequestMotionContinuationVelocity) &&
+                   left.PlanAttemptRequestMotionYawVelocityDegreesPerSecond.Equals(right.PlanAttemptRequestMotionYawVelocityDegreesPerSecond) &&
+                   left.PlanAttemptRequestRootStart.Equals(right.PlanAttemptRequestRootStart) &&
+                   left.PlanAttemptRequestRootStartRotation.Equals(right.PlanAttemptRequestRootStartRotation) &&
+                   left.PlanAttemptRequestPresentedBodyStartPosition.Equals(right.PlanAttemptRequestPresentedBodyStartPosition) &&
+                   left.PlanAttemptRequestCommittedBodyVelocity.Equals(right.PlanAttemptRequestCommittedBodyVelocity) &&
+                   left.PlanAttemptRequestTrajectoryCurvatureDegreesPerSecond.Equals(right.PlanAttemptRequestTrajectoryCurvatureDegreesPerSecond) &&
+                   left.PlanAttemptRequestTrajectoryCurvatureAvailable == right.PlanAttemptRequestTrajectoryCurvatureAvailable &&
+                   left.PlanAttemptRequestMovementPlaybackTime.Equals(right.PlanAttemptRequestMovementPlaybackTime) &&
+                   left.PlanAttemptRequestUp.Equals(right.PlanAttemptRequestUp) &&
+                   left.PlanAttemptRequestSoleSupportRadius.Equals(right.PlanAttemptRequestSoleSupportRadius) &&
+                   left.PlanAttemptRequestLegLength.Equals(right.PlanAttemptRequestLegLength) &&
                    left.PlanFadingOut == right.PlanFadingOut &&
                    left.PlanRetentionWeight.Equals(right.PlanRetentionWeight) &&
                    left.IntentLandingDisplacementError.Equals(right.IntentLandingDisplacementError) &&

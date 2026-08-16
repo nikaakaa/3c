@@ -83,6 +83,10 @@ schema v97回归run `f9335d62431949a59cab0943c898eaaa`共749行、1279列，Head
 
 同一Event Successor还会在连续authority tick从同一个Projected Landing重复构建并重复得到`StepExceeded`；例如右脚frame 475至478使用同一来源Plan 97和同一Ground Path，连续生成Plan 99至102。支撑一致性修复后还要检查重试资格，禁止重复查询同一份未变化事实。
 
+拆分支撑事实后的run `4f8be741a8d84c41a3a61479f23eb7cd`共1816行、1279列，Header唯一且每行等宽。66次`CurrentFrameSupport` Attempt的Origin Surface与同帧Current Query Surface错配为0，Origin Support Point Y最大差为`2.89cm`且来自同一斜面投影；Current Event Replacement中`StepExceeded`由3次降为0，旧run中`-53.30cm`的错误Origin Sole高度不再出现。唯一`CommittedStanceSupport`只发生在仍受Stance约束的Initial，Surface与Current Query一致、Anchor距离为0。
+
+该run仍有3组连续帧重复的Rejected Event Successor：frame `1212~1214`从同一Projected Landing和源Plan 288重复得到`FutureLandingStepExceeded`，frame `1215~1216`又从同一Landing Handoff重复拒绝。下一步必须让Attempt公开完整Build Request identity，并按权威事实变化决定重试资格；不能通过放宽Step阈值或让Current Grounding接管Swing隐藏重复失败。
+
 ## 下一步诊断顺序
 
 1. 先验证Attempt Sequence、Origin、Ground Probe和Landing属于同一Plan。

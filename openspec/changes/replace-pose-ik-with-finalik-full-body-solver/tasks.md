@@ -58,12 +58,12 @@
 - [ ] 4.5E 在Release前按加减速、低速急转、无有效前一步历史和空中状态原子选择整步`Predictive`或`Traditional`模式；模式整步粘滞。Traditional是统一Foot Placement内的正式执行策略，不是Predictive Query失败后的fallback。
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ。新计划未Commit前保持旧Active经执行投影后的输出，成功后才连续Blend；Rejected候选只记录失败并等待下一正式重试机会。
 - [ ] 4.6A Intent Revision创建时冻结上一完成帧实际输出相对同帧Original Animated Ankle/Hip的修正，以及Ground Path与Support作为唯一过渡原点；Blend期间以当前同相位Original动画加冻结修正组成旧侧，不得锁死Swing世界Ankle或继续求值已经越过运动边界的旧Active。尚未产生本Plan完成输出的过期Plan必须先退出，再从当前真实Sole、Support与committed trajectory原子重建，禁止先输出一帧旧Path。
-- [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
+- [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径；Executing求值失败时必须保留上一完成输出相对当前Original动画的修正并连续退出，同时为Reach、非有限值和身份失配分别发布typed reason，禁止当帧归还Grounding Baseline后下一帧再恢复预测。
 - [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。
 - [ ] 4.9 当前Plan进入`ApproachingContact`、Intent Revision结束且现有Revision槽空闲时，`IncomingPredictedStep`必须预建唯一Event Successor。Stance尚未在上一完成帧提交Anchor时，只允许用当前Active已经验证并冻结的Projected Landing Sole与Surface预建不可执行geometry；事件换代提升前必须用真实Committed Anchor Sole与Surface验证，失配则丢弃候选并从Committed事实重建。Intent Revision与Event Successor只允许顺序复用同一槽。
 - [ ] 4.9A Event Successor成为Current前不得参与Goal或Blend；事件identity换代时必须原子提升为Active，并只由新Plan自身`Release -> LiftOff`权重与旧Landing Stance/Anchor完成交接，禁止在新Swing中按Render Delta混合旧Landing目标。
 - [ ] 4.9B Plan必须在`ReleasePhase`进入Executing并执行`Release -> LiftOff`连续输出权重；Ground Path进度独立保持到`PathStartPhase`才开始，禁止用几何起点截断所有权淡入。
-- [ ] 4.9C Event Successor成为Current前必须按当前身体位置和朝向重新验证冻结轨迹；过期Successor不得提升、提交Landing/Anchor或产生下一Successor，必须以`MotionDeviationExceeded`退出并从当前真实Sole与Support创建Current Event计划。
+- [ ] 4.9C Event Successor成为Current前必须按当前身体位置和朝向重新验证冻结轨迹；过期Successor不得提升、提交Landing/Anchor或产生下一Successor，必须以`MotionDeviationExceeded`退出。若上一完成帧没有Committed Anchor，Current事件仍处于PreSwing时必须在同帧从当前真实Sole、唯一Current Support与committed trajectory创建Current Event计划，不得把Committed Anchor同时作为Promotion和重建的前提。
 - [ ] 4.9D Intent Revision只有在现有Blend可于`ApproachingContact`前完成时才允许创建；进入接触交接边界后Incoming Event Successor优先占用唯一过渡槽，过晚的旧事件Intent Revision必须退出，禁止其占槽直到新事件进入Swing并制造无Path空窗。
 - [ ] 4.9E Event Successor候选Rejected不得触发不可重入FadeOut：旧Active可连续退回Original Pose，但Planner必须按新的trajectory authority tick继续尝试当前PreSwing事件；候选成功且已验证Committed起点时，当前事件必须同帧原子提升，不能再输出一帧旧Landing目标。
 

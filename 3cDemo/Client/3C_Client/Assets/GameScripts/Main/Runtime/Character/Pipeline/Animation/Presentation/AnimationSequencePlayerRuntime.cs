@@ -766,7 +766,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             int landingOrdinal = checked((int)ResolveLandingMarkerOrdinal(
                 side,
-                step.TimeToLandingSeconds));
+                step.SourceSampleCycle,
+                step.EventOrdinal));
             int opposingOrdinal = -1;
             if (step.OpposingEventOrdinal > 0)
             {
@@ -774,7 +775,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     side == CharacterFootSide.Left
                         ? CharacterFootSide.Right
                         : CharacterFootSide.Left,
-                    step.OpposingLandingDelaySeconds));
+                    checked(step.SourceSampleCycle + step.OpposingLandingCycleOffset),
+                    step.OpposingEventOrdinal));
             }
             return step.BindSynchronizedMarkerSource(
                 m_MovementMarkerEpochIdentity,
@@ -784,11 +786,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         long ResolveLandingMarkerOrdinal(
             CharacterFootSide side,
-            float delaySeconds)
+            int sourceLandingCycle,
+            int eventOrdinal)
         {
             if (side != CharacterFootSide.Left &&
                 side != CharacterFootSide.Right ||
-                !float.IsFinite(delaySeconds) || delaySeconds < 0f)
+                sourceLandingCycle < 0 || eventOrdinal <= 0)
             {
                 throw new ArgumentException(
                     "Locomotion landing marker request is invalid.");
@@ -797,73 +800,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             string markerId = side == CharacterFootSide.Left
                 ? "LeftFootContact"
                 : "RightFootContact";
-            double landingTime = binding.SequenceTopology ==
-                                 BTSMTL.Timeline.AnimationMarkerSequenceTopology.Finite
-                ? m_SampleTime + delaySeconds
-                : m_ContinuousTime + delaySeconds;
-            long bestOrdinal = long.MinValue;
-            double bestDistance = double.MaxValue;
-            if (binding.SequenceTopology ==
-                BTSMTL.Timeline.AnimationMarkerSequenceTopology.Finite)
-            {
-                SelectLandingMarkerCandidate(
-                    binding,
-                    markerId,
-                    landingTime,
-                    0,
-                    ref bestOrdinal,
-                    ref bestDistance);
-            }
-            else
-            {
-                long centerCycle = (long)Math.Floor(
-                    landingTime / binding.DurationSeconds);
-                for (long cycle = Math.Max(0, centerCycle - 1);
-                     cycle <= centerCycle + 1;
-                     cycle++)
-                {
-                    SelectLandingMarkerCandidate(
-                        binding,
-                        markerId,
-                        landingTime,
-                        cycle,
-                        ref bestOrdinal,
-                        ref bestDistance);
-                }
-            }
-            if (bestOrdinal == long.MinValue || bestDistance > 0.025d)
-            {
-                throw new InvalidOperationException(
-                    $"Sequence Player '{NodeId}' predicted {markerId} landing does not resolve to its authored locomotion marker.");
-            }
-            return checked(bestOrdinal + m_MovementMarkerOrdinalOffset);
-        }
-
-        static void SelectLandingMarkerCandidate(
-            AnimationMarkerSyncBinding binding,
-            string markerId,
-            double landingTime,
-            long cycle,
-            ref long bestOrdinal,
-            ref double bestDistance)
-        {
+            int sourceEventOrdinal = 0;
+            int markerIndex = -1;
             for (int i = 0; i < binding.Markers.Count; i++)
             {
-                AnimationMarkerSyncMarkerBinding marker = binding.Markers[i];
-                if (!string.Equals(marker.MarkerId, markerId, StringComparison.Ordinal))
+                if (!string.Equals(binding.Markers[i].MarkerId, markerId, StringComparison.Ordinal))
                     continue;
-                double candidate = cycle * binding.DurationSeconds +
-                                   marker.TimeSeconds;
-                double distance = Math.Abs(candidate - landingTime);
-                long ordinal = checked(cycle * binding.Markers.Count + i);
-                if (distance < bestDistance - 0.0000001d ||
-                    Math.Abs(distance - bestDistance) <= 0.0000001d &&
-                    (bestOrdinal == long.MinValue || ordinal < bestOrdinal))
+                sourceEventOrdinal++;
+                if (sourceEventOrdinal == eventOrdinal)
                 {
-                    bestOrdinal = ordinal;
-                    bestDistance = distance;
+                    markerIndex = i;
+                    break;
                 }
             }
+            bool finite = binding.SequenceTopology ==
+                          BTSMTL.Timeline.AnimationMarkerSequenceTopology.Finite;
+            if (markerIndex < 0 || finite && sourceLandingCycle != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Sequence Player '{NodeId}' {markerId} occurrence " +
+                    $"cycle={sourceLandingCycle}, event={eventOrdinal} does not resolve to its authored locomotion marker.");
+            }
+            long sourceCycle = finite ? 0 : sourceLandingCycle;
+            long ordinal = checked(sourceCycle * binding.Markers.Count + markerIndex);
+            return checked(ordinal + m_MovementMarkerOrdinalOffset);
         }
 
         long ResolveCurrentMarkerOrdinal() => checked(

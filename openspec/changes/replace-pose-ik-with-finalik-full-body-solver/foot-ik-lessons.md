@@ -314,3 +314,9 @@ Foot IK专项Variant曾同时运行玩家与中立Target的完整Animation/PoseG
 `IncomingPredictedStep`不是Planner优化，也不是低帧率补丁。它决定下一步的Event identity、Clock、Foot Route、Landing和Biomechanical约束；若它由Runtime扫描Current曲线获得，就会与Analyzer事件分段、Projection source选择和当前sample occurrence形成第四个所有权。
 
 正式Artifact因此升级为同时保存Current与Incoming。Incoming完整复制下一事件的路线、Heel/Toe/Ankle/Knee/Hip、旋转、Clearance、Constraint、Support Leg、Pivot与对侧Landing事实，只把Time To Landing换算为相对当前Artifact采样点的时间。Runtime不再寻找“后面第一个看起来像PreSwing的采样”，也不保留候选缓存。这样事件身份、时钟和路线在同一次Artifact采样中换代，后续才能判断Projection是否又把不同source的Current与Incoming拆开。
+
+## 25. Marker occurrence不能再由时间距离反推
+
+双步Artifact首次运行在Walk Loop第27帧明确失败：Incoming已经带有正确的Source Landing Cycle和Event Ordinal，Sequence Player却仍用`ContinuousTime + TimeToLanding`寻找25ms内最近的Marker。这样Artifact occurrence与Runtime连续时间各自决定一次Landing身份；同步中的预测source只要两个时间表示不完全重合，完整合法的Incoming也会被拒绝。
+
+正式绑定直接使用`Source Landing Cycle + Event Ordinal + Foot Side`选择作者Marker occurrence，再叠加已对齐的Marker Epoch ordinal offset。`TimeToLanding`继续驱动连续时钟，但不再拥有事件身份。有限Sequence要求cycle为0；循环Sequence按source-bound cycle选择同一作者Marker。对侧Landing使用同一Owned cycle加Artifact提供的Opposing cycle offset，不做第二次时间搜索。

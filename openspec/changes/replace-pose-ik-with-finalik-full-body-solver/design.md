@@ -167,6 +167,8 @@ Pose允许连续混合；Biomechanical Step Fact必须原子选择。Artifact的
 
 Start、Loop、Stop与MovingTurn必须在LiftOff前提供当前脚PreSwing事件。目标source在Pose权重暂时为0时仍可拥有事件事实；退出源、Stored Pose和Inertial History不能夺回事件时钟。
 
+Sequence Player把Artifact occurrence绑定到Locomotion Marker时，必须直接使用source-bound Landing Cycle与Event Ordinal选择正式Marker occurrence。`TimeToLanding`只负责连续动作时钟，不得再次通过`ContinuousTime + delay`就近搜索Marker；否则同一事件会同时拥有Artifact cycle和Runtime时间距离两个身份判定。
+
 ## 6. Committed Future Body Transform Trajectory
 
 Simulation/KCC为剩余Action Step提供：

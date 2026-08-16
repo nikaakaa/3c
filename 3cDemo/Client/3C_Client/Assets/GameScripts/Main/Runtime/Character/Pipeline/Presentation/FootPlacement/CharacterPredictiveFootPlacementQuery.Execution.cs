@@ -104,7 +104,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int footRateSampleCount = hasGroundProbeRoute
                 ? BuildFootRate(
                     in rootTrajectory,
-                    groundProbeStart,
                     routeSampleCount,
                     virtualGroundSplitEventPhase,
                     virtualGroundSplitFraction)
@@ -476,7 +475,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         int BuildFootRate(
             in CharacterPredictiveFootRootTrajectory rootTrajectory,
-            Vector3 groundProbeStart,
             int routeSampleCount,
             float splitEventPhase,
             float splitFraction)
@@ -502,10 +500,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 float phase = m_FootRateEventPhases[i];
                 Vector3 animatedFoot = rootTrajectory.EvaluateFootRoute(phase);
-                float progress = ResolveGroundProbeProjection(
+                float progress = ResolvePhaseLocalGroundProbeProjection(
                     animatedFoot,
+                    phase,
                     routeSampleCount,
-                    previous,
                     rootTrajectory.Up);
                 if (!float.IsFinite(progress))
                     return 0;
@@ -544,47 +542,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Vector3.Lerp(splitPoint, routeEnd, remainingProgress);
         }
 
-        float ResolveGroundProbeProjection(
+        float ResolvePhaseLocalGroundProbeProjection(
             Vector3 point,
+            float eventPhase,
             int routeSampleCount,
-            float minimumProgress,
             Vector3 up)
         {
             if (routeSampleCount < 2 || routeSampleCount > MaximumRouteSampleCount)
                 return float.NaN;
-            Vector3 planarPoint = Vector3.ProjectOnPlane(point, up);
-            float bestProgress = minimumProgress;
-            float bestDistance = float.PositiveInfinity;
-            for (int i = 1; i < routeSampleCount; i++)
+            int segmentEnd = 1;
+            while (segmentEnd < routeSampleCount - 1 &&
+                   eventPhase > m_RouteEventPhases[segmentEnd] + 0.000001f)
             {
-                float segmentStartProgress = m_RouteFractions[i - 1];
-                float segmentEndProgress = m_RouteFractions[i];
-                if (segmentEndProgress + 0.000001f < minimumProgress)
-                    continue;
-                Vector3 start = Vector3.ProjectOnPlane(m_GroundProbeRoute[i - 1], up);
-                Vector3 end = Vector3.ProjectOnPlane(m_GroundProbeRoute[i], up);
-                Vector3 segment = end - start;
-                float lengthSquared = segment.sqrMagnitude;
-                float t = lengthSquared > 0.000001f
-                    ? Mathf.Clamp01(Vector3.Dot(planarPoint - start, segment) / lengthSquared)
-                    : 0f;
-                float progress = Mathf.Lerp(segmentStartProgress, segmentEndProgress, t);
-                if (progress < minimumProgress)
-                {
-                    progress = minimumProgress;
-                    float range = segmentEndProgress - segmentStartProgress;
-                    t = range > 0.000001f
-                        ? Mathf.Clamp01((progress - segmentStartProgress) / range)
-                        : 1f;
-                }
-                Vector3 projected = Vector3.Lerp(start, end, t);
-                float distance = (planarPoint - projected).sqrMagnitude;
-                if (distance + 0.000001f >= bestDistance)
-                    continue;
-                bestDistance = distance;
-                bestProgress = progress;
+                segmentEnd++;
             }
-            return bestProgress;
+            int segmentStart = segmentEnd - 1;
+            Vector3 planarPoint = Vector3.ProjectOnPlane(point, up);
+            Vector3 start = Vector3.ProjectOnPlane(m_GroundProbeRoute[segmentStart], up);
+            Vector3 end = Vector3.ProjectOnPlane(m_GroundProbeRoute[segmentEnd], up);
+            Vector3 segment = end - start;
+            float lengthSquared = segment.sqrMagnitude;
+            float t = lengthSquared > 0.000001f
+                ? Mathf.Clamp01(Vector3.Dot(planarPoint - start, segment) / lengthSquared)
+                : Mathf.InverseLerp(
+                    m_RouteEventPhases[segmentStart],
+                    m_RouteEventPhases[segmentEnd],
+                    eventPhase);
+            return Mathf.Lerp(
+                m_RouteFractions[segmentStart],
+                m_RouteFractions[segmentEnd],
+                t);
         }
 
         float ResolveVirtualGroundSplitActionProgress(

@@ -378,3 +378,5 @@ run `4fe6c339ed5946658dd582ec103ecaff`证明曲率不是本轮首因：运动中
 根因不是弹簧公式或阻尼：接触许可使用动画Ankle到冻结Landing Surface的完整平面修正，旧实现又在每帧执行`offsetState.Value += constraintOffset`。该距离不包含上一帧已经写入的修正，所以同一Landing接触会重复累加。随后Anchor释放或Plan结束清除修正，视觉上就形成弹簧腿、闪烁和落点回弹。
 
 正式链只保留一次鞋底安全：`Lyra Current spring -> Anchor混合 -> 最终鞋底单边投影 -> Pelvis Reach -> FBBIK`。接触距离只许可状态，不写回spring；最终投影从当帧实际混合Goal重新测量，不保存第二时间状态。删除重复约束比限制数值或增加阻尼更可靠。
+
+删除重复回写后的run `a1882780179345429fff99a2701ce0a9`共266行、1221列、坏行0、Unity 0 Error。左/右Current Offset最大绝对值从`3.224/2.568m`降至`0.356/0.396m`，Anchor捕获后不再逐帧增长，证明累积根因已消除。Final Goal仍有`48.8/77.1cm`最大单帧变化，且左右脚仍分别出现`AnchorCaptured 8/10`、`PolicyReleased 12/22`与`AnchorDistanceExceeded 2/2`；剩余问题已与Current spring分离，下一owner是Landing事务与Anchor生命周期，不能继续调spring。

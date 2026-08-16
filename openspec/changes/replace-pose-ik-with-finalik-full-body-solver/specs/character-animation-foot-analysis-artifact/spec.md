@@ -72,8 +72,11 @@ Definition Build MUST删除旧Projection payload和旧generated产品，不得�
 - Support Foot Pivot位置与权重；
 - Foot Orientation Policy；
 - 本脚下一Landing前的权威对侧Landing identity、time、cycle和root-local Sole pose。
+- 同脚下一Landing的完整Incoming Step Event、Clock、路线与全部Biomechanical事实，以及相对当前Artifact采样点的Landing time。
 
 Projection source selection MUST完整选择一个事件。系统 MUST不分别混合Landing、路线、Clearance、Constraint、Support Leg、Orientation或Pivot。Pose MAY连续Blend，但离散Biomechanical Step事实 MUST保持同源。
+
+Analyzer MUST在Artifact Build时同时生成Current与Incoming Step。Runtime MUST只按同一effective sample time读取二者并绑定同一source occurrence，不得扫描未来曲线、缓存后继候选或从Current Step补建Incoming。
 
 #### Scenario: Blend的两个source具有不同右脚事件
 

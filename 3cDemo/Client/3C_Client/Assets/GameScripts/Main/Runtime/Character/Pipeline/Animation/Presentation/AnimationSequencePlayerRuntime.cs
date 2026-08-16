@@ -211,48 +211,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
     internal sealed class AnimationSequencePlayerRuntime : IDisposable
     {
-        struct FollowingPredictionCache
-        {
-            internal AnimationPoseSourceId SourceId;
-            internal ulong ContinuityIdentity;
-            internal ulong CurrentSourceSampleIdentity;
-            internal int CurrentSourceSampleCycle;
-            internal int CurrentEventOrdinal;
-            internal double CandidateSampleContinuousTime;
-            internal AnimationPredictedFootStepSample Candidate;
-            internal bool IsResolved;
-            internal bool HasCandidate;
-
-            internal bool Matches(
-                AnimationPoseSourceId sourceId,
-                ulong continuityIdentity,
-                in AnimationPredictedFootStepSample current) =>
-                IsResolved &&
-                SourceId.Equals(sourceId) &&
-                ContinuityIdentity == continuityIdentity &&
-                CurrentSourceSampleIdentity == current.SourceSampleIdentity &&
-                CurrentSourceSampleCycle == current.SourceSampleCycle &&
-                CurrentEventOrdinal == current.EventOrdinal;
-
-            internal void Resolve(
-                AnimationPoseSourceId sourceId,
-                ulong continuityIdentity,
-                in AnimationPredictedFootStepSample current,
-                in AnimationPredictedFootStepSample candidate,
-                double candidateSampleContinuousTime)
-            {
-                SourceId = sourceId;
-                ContinuityIdentity = continuityIdentity;
-                CurrentSourceSampleIdentity = current.SourceSampleIdentity;
-                CurrentSourceSampleCycle = current.SourceSampleCycle;
-                CurrentEventOrdinal = current.EventOrdinal;
-                Candidate = candidate;
-                CandidateSampleContinuousTime = candidateSampleContinuousTime;
-                IsResolved = true;
-                HasCandidate = candidate.HasLandingEvent;
-            }
-        }
-
         struct State
         {
             internal double RawContinuousTime;
@@ -294,8 +252,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly byte[] m_ParameterAvailability;
         readonly ClipSamplePlan[] m_ClipSamples = new ClipSamplePlan[1];
         readonly AnimationPlayerReleaseJournal m_Releases;
-        FollowingPredictionCache m_LeftFollowingPrediction;
-        FollowingPredictionCache m_RightFollowingPrediction;
         float m_PlayRate;
         State m_CommittedState;
         State m_PendingState;
@@ -779,77 +735,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFootSide side)
         {
             AnimationFootFeatureSample feature = curves.SamplePrepared(normalizedTime);
-            AnimationPredictedFootStepSample rawStep = feature.PredictedStep;
-            AnimationFootFeatureSample bound = BindPredictionSource(feature, side);
-            AnimationPredictedFootStepSample step = bound.PredictedStep;
-            float duration = m_Source.Clip.length;
-            if (!m_Descriptor.Loop || !step.HasLandingEvent || duration <= 0f)
-                return bound;
-
-            ref FollowingPredictionCache cache = ref FollowingPrediction(side);
-            if (!cache.Matches(m_SourceId, m_ContinuityIdentity, in step))
-            {
-                bool found = TrySampleFollowingPrediction(
-                    curves,
-                    in rawStep,
-                    duration,
-                    out AnimationPredictedFootStepSample incoming,
-                    out float incomingSampleDelay);
-                cache.Resolve(
-                    m_SourceId,
-                    m_ContinuityIdentity,
-                    in step,
-                    in incoming,
-                    found ? m_ContinuousTime + incomingSampleDelay : 0d);
-            }
-
-            if (!cache.HasCandidate)
-                return bound;
-            float remainingDelay = (float)Math.Max(
-                0d,
-                cache.CandidateSampleContinuousTime - m_ContinuousTime);
-            feature = feature.WithIncomingPredictedStep(
-                cache.Candidate.ScheduleAfter(remainingDelay));
             return BindPredictionSource(feature, side);
-        }
-
-        ref FollowingPredictionCache FollowingPrediction(CharacterFootSide side)
-        {
-            if (side == CharacterFootSide.Left)
-                return ref m_LeftFollowingPrediction;
-            if (side == CharacterFootSide.Right)
-                return ref m_RightFollowingPrediction;
-            throw new ArgumentOutOfRangeException(nameof(side));
-        }
-
-        bool TrySampleFollowingPrediction(
-            AnimationFootFeatureCurveSet curves,
-            in AnimationPredictedFootStepSample current,
-            float duration,
-            out AnimationPredictedFootStepSample incoming,
-            out float sampleDelay)
-        {
-            const int searchIntervals = 256;
-            float searchStep = duration / searchIntervals;
-            float landingDelay = current.TimeToLandingSeconds;
-            for (int i = 1; i <= searchIntervals; i++)
-            {
-                float delay = landingDelay + i * searchStep;
-                float futureTime = Mathf.Repeat(m_SampleTime + delay, duration);
-                float normalizedTime = futureTime / duration;
-                if (!curves.PredictedStep.IsFollowingPredictionCandidate(
-                        normalizedTime,
-                        searchStep))
-                    continue;
-                AnimationPredictedFootStepSample candidate =
-                    curves.PredictedStep.SamplePrepared(normalizedTime);
-                incoming = candidate;
-                sampleDelay = delay;
-                return true;
-            }
-            incoming = default;
-            sampleDelay = 0f;
-            return false;
         }
 
         AnimationFootFeatureSample BindPredictionSource(

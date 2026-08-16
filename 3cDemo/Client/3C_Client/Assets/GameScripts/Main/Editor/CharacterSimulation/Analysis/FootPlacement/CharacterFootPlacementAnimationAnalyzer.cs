@@ -473,10 +473,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     clip.isLooping);
             }
             AnimationFootFeaturePair features = new AnimationFootFeaturePair(
-                BuildCurveSet(left, source.Reduction),
-                BuildCurveSet(right, source.Reduction));
-            ValidateFlatReconstruction(features.Left, left, source.Reduction, "Left");
-            ValidateFlatReconstruction(features.Right, right, source.Reduction, "Right");
+                BuildCurveSet(left, source.Reduction, clip.isLooping, step),
+                BuildCurveSet(right, source.Reduction, clip.isLooping, step));
+            ValidateFlatReconstruction(
+                features.Left,
+                left,
+                source.Reduction,
+                clip.isLooping,
+                step,
+                "Left");
+            ValidateFlatReconstruction(
+                features.Right,
+                right,
+                source.Reduction,
+                clip.isLooping,
+                step,
+                "Right");
             return new AnimationFootAnalysisBuildResult(
                 features,
                 new AnimationFootSynchronizationDescriptor(
@@ -494,22 +506,55 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootFeatureCurveSet curves,
             SampledFoot source,
             CharacterFootPlacementCurveReductionSettings reduction,
+            bool loop,
+            float sampleStep,
             string side)
         {
-            int sourceCount = source.SolePositions.Length;
+            ValidatePredictionReconstruction(
+                curves.PredictedStep,
+                source,
+                reduction,
+                side);
+            ValidatePredictionReconstruction(
+                curves.IncomingPredictedStep,
+                BuildIncomingPrediction(source, loop, sampleStep),
+                reduction,
+                side + " Incoming");
+        }
+
+        static void ValidatePredictionReconstruction(
+            AnimationPredictedFootStepCurveSet curves,
+            SampledFoot source,
+            CharacterFootPlacementCurveReductionSettings reduction,
+            string side)
+        {
+            int sourceCount = source.EventOrdinal.Length;
             float positionTolerance = reduction.LandingOffsetTolerance + 0.00001f;
             float heightTolerance = reduction.HeightTolerance + 0.00001f;
             float weightTolerance = reduction.ConfidenceTolerance + 0.00001f;
+            float delayTolerance = reduction.LandingDelayTolerance + 0.00001f;
             const float rotationToleranceDegrees = 0.5f;
             for (int sourceIndex = 0; sourceIndex < sourceCount; sourceIndex++)
             {
                 float time = sourceIndex / (float)(sourceCount - 1);
-                AnimationPredictedFootStepSample step = curves.Sample(time).PredictedStep;
-                curves.PredictedStep.BiomechanicalStep.Sample(
+                AnimationPredictedFootStepSample step = curves.Sample(time);
+                curves.BiomechanicalStep.Sample(
                     time,
                     out _,
                     out _,
                     out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> biomechanicalRoute);
+                RequireReconstruction(step.Confidence, source.LandingConfidence[sourceIndex], weightTolerance, side, sourceIndex, -1, "Confidence");
+                RequireReconstruction(step.TimeToLandingSeconds, source.LandingDelay[sourceIndex], delayTolerance, side, sourceIndex, -1, "TimeToLanding");
+                RequireReconstruction(step.EventPhase, source.EventPhase[sourceIndex], weightTolerance, side, sourceIndex, -1, "EventPhase");
+                RequireReconstruction(step.ReleasePhase, source.ReleasePhase[sourceIndex], weightTolerance, side, sourceIndex, -1, "ReleasePhase");
+                RequireReconstruction(step.LiftOffPhase, source.LiftOffPhase[sourceIndex], weightTolerance, side, sourceIndex, -1, "LiftOffPhase");
+                RequireReconstruction(step.ApproachContactPhase, source.ApproachContactPhase[sourceIndex], weightTolerance, side, sourceIndex, -1, "ApproachContactPhase");
+                RequireReconstruction(step.ActionStepClock.DurationSeconds, source.ActionStepDurationSeconds[sourceIndex], delayTolerance, side, sourceIndex, -1, "StepDuration");
+                RequireReconstruction(step.EventOrdinal, source.EventOrdinal[sourceIndex], 0.00001f, side, sourceIndex, -1, "EventOrdinal");
+                RequireReconstruction(step.OpposingLandingDelaySeconds, source.OpposingLandingDelaySeconds[sourceIndex], delayTolerance, side, sourceIndex, -1, "OpposingLandingDelay");
+                RequireReconstruction(step.OpposingEventOrdinal, source.OpposingEventOrdinal[sourceIndex], 0.00001f, side, sourceIndex, -1, "OpposingEventOrdinal");
+                RequireReconstruction(step.OpposingLandingCycleOffset, source.OpposingLandingCycleOffset[sourceIndex], 0.00001f, side, sourceIndex, -1, "OpposingCycleOffset");
+                RequireReconstruction(step.OpposingRootLocalLanding, source.OpposingRootLocalLanding[sourceIndex], positionTolerance, side, sourceIndex, -1, "OpposingLanding");
                 RequireReconstruction(
                     step.LandingPhase,
                     source.EventOrdinal[sourceIndex] > 0f ? 1f : 0f,
@@ -1660,12 +1705,163 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static AnimationFootFeatureCurveSet BuildCurveSet(
             SampledFoot foot,
-            CharacterFootPlacementCurveReductionSettings reduction)
+            CharacterFootPlacementCurveReductionSettings reduction,
+            bool loop,
+            float sampleStep)
         {
-            int count = foot.SolePositions.Length;
+            int count = foot.Velocities.Length;
             float[] x = new float[count];
             float[] y = new float[count];
             float[] z = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                x[i] = foot.Velocities[i].x;
+                y[i] = foot.Velocities[i].y;
+                z[i] = foot.Velocities[i].z;
+            }
+            return new AnimationFootFeatureCurveSet(
+                Reduce(x, reduction.VelocityTolerance),
+                Reduce(y, reduction.VelocityTolerance),
+                Reduce(z, reduction.VelocityTolerance),
+                Reduce(foot.Heights, reduction.HeightTolerance),
+                Reduce(foot.PlantConfidence, reduction.ConfidenceTolerance),
+                BuildPredictedStepCurveSet(foot, reduction),
+                BuildPredictedStepCurveSet(
+                    BuildIncomingPrediction(foot, loop, sampleStep),
+                    reduction));
+        }
+
+        static SampledFoot BuildIncomingPrediction(
+            SampledFoot source,
+            bool loop,
+            float sampleStep)
+        {
+            if (!float.IsFinite(sampleStep) || sampleStep <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(sampleStep));
+            int count = source.EventOrdinal.Length;
+            int intervals = count - 1;
+            var result = CreatePredictionFoot(count);
+            for (int sample = 0; sample < count; sample++)
+            {
+                if (source.EventOrdinal[sample] <= 0f)
+                    continue;
+                int currentLanding = sample + Mathf.Max(
+                    0,
+                    Mathf.RoundToInt(source.LandingDelay[sample] / sampleStep));
+                int lastCandidate = loop
+                    ? currentLanding + intervals
+                    : intervals;
+                for (int candidate = currentLanding + 1; candidate <= lastCandidate; candidate++)
+                {
+                    int candidateIndex = loop ? candidate % intervals : candidate;
+                    if (source.EventOrdinal[candidateIndex] <= 0f ||
+                        source.LandingConfidence[candidateIndex] <= 0f ||
+                        source.EventPhase[candidateIndex] >= source.LiftOffPhase[candidateIndex] ||
+                        source.LandingDelay[candidateIndex] <= sampleStep)
+                    {
+                        continue;
+                    }
+                    int candidateLanding = candidate + Mathf.Max(
+                        0,
+                        Mathf.RoundToInt(source.LandingDelay[candidateIndex] / sampleStep));
+                    if (candidateLanding <= currentLanding)
+                        continue;
+                    CopyPredictionSample(
+                        source,
+                        candidateIndex,
+                        result,
+                        sample,
+                        (candidate - sample) * sampleStep);
+                    break;
+                }
+            }
+            return result;
+        }
+
+        static SampledFoot CreatePredictionFoot(int sampleCount) => new SampledFoot
+        {
+            LandingConfidence = new float[sampleCount],
+            LandingDelay = new float[sampleCount],
+            EventPhase = new float[sampleCount],
+            ReleasePhase = new float[sampleCount],
+            LiftOffPhase = new float[sampleCount],
+            ApproachContactPhase = new float[sampleCount],
+            ActionStepDurationSeconds = new float[sampleCount],
+            EventOrdinal = new float[sampleCount],
+            OpposingLandingDelaySeconds = new float[sampleCount],
+            OpposingEventOrdinal = new float[sampleCount],
+            OpposingLandingCycleOffset = new float[sampleCount],
+            OpposingRootLocalLanding = new Vector3[sampleCount],
+            OpposingRootLocalLandingRotation = CreateIdentityRotations(sampleCount),
+            RootLocalFootRoute = CreateVectorRoute(sampleCount),
+            RootLocalHeelRoute = CreateVectorRoute(sampleCount),
+            RootLocalToeRoute = CreateVectorRoute(sampleCount),
+            RootLocalAnkleRoute = CreateVectorRoute(sampleCount),
+            RootLocalKneeRoute = CreateVectorRoute(sampleCount),
+            RootLocalHipRoute = CreateVectorRoute(sampleCount),
+            RootLocalSoleRotationRoute = CreateQuaternionRoute(sampleCount),
+            RootLocalAnkleRotationRoute = CreateQuaternionRoute(sampleCount),
+            AuthoredFootPlanarRoute = CreateVectorRoute(sampleCount),
+            AnimationClearanceHeight = CreateScalarRoute(sampleCount),
+            ConstraintWeight = CreateScalarRoute(sampleCount),
+            SupportWeight = CreateScalarRoute(sampleCount),
+            SupportLegLength = CreateScalarRoute(sampleCount),
+            SupportLegCompressionReserve = CreateScalarRoute(sampleCount),
+            SupportKneeBendPlane = CreateVectorRoute(sampleCount),
+            SupportFootPivotPosition = CreateVectorRoute(sampleCount),
+            SupportFootPivotWeight = CreateScalarRoute(sampleCount)
+        };
+
+        static void CopyPredictionSample(
+            SampledFoot source,
+            int sourceIndex,
+            SampledFoot destination,
+            int destinationIndex,
+            float scheduleDelay)
+        {
+            destination.LandingConfidence[destinationIndex] = source.LandingConfidence[sourceIndex];
+            destination.LandingDelay[destinationIndex] = source.LandingDelay[sourceIndex] + scheduleDelay;
+            destination.EventPhase[destinationIndex] = source.EventPhase[sourceIndex];
+            destination.ReleasePhase[destinationIndex] = source.ReleasePhase[sourceIndex];
+            destination.LiftOffPhase[destinationIndex] = source.LiftOffPhase[sourceIndex];
+            destination.ApproachContactPhase[destinationIndex] = source.ApproachContactPhase[sourceIndex];
+            destination.ActionStepDurationSeconds[destinationIndex] = source.ActionStepDurationSeconds[sourceIndex];
+            destination.EventOrdinal[destinationIndex] = source.EventOrdinal[sourceIndex];
+            destination.OpposingLandingDelaySeconds[destinationIndex] =
+                source.OpposingEventOrdinal[sourceIndex] > 0f
+                    ? source.OpposingLandingDelaySeconds[sourceIndex] + scheduleDelay
+                    : 0f;
+            destination.OpposingEventOrdinal[destinationIndex] = source.OpposingEventOrdinal[sourceIndex];
+            destination.OpposingLandingCycleOffset[destinationIndex] = source.OpposingLandingCycleOffset[sourceIndex];
+            destination.OpposingRootLocalLanding[destinationIndex] = source.OpposingRootLocalLanding[sourceIndex];
+            destination.OpposingRootLocalLandingRotation[destinationIndex] = source.OpposingRootLocalLandingRotation[sourceIndex];
+            for (int routeIndex = 0; routeIndex < AnimationPredictedFootStepCurveSet.RouteSampleCount; routeIndex++)
+            {
+                destination.RootLocalFootRoute[routeIndex][destinationIndex] = source.RootLocalFootRoute[routeIndex][sourceIndex];
+                destination.RootLocalHeelRoute[routeIndex][destinationIndex] = source.RootLocalHeelRoute[routeIndex][sourceIndex];
+                destination.RootLocalToeRoute[routeIndex][destinationIndex] = source.RootLocalToeRoute[routeIndex][sourceIndex];
+                destination.RootLocalAnkleRoute[routeIndex][destinationIndex] = source.RootLocalAnkleRoute[routeIndex][sourceIndex];
+                destination.RootLocalKneeRoute[routeIndex][destinationIndex] = source.RootLocalKneeRoute[routeIndex][sourceIndex];
+                destination.RootLocalHipRoute[routeIndex][destinationIndex] = source.RootLocalHipRoute[routeIndex][sourceIndex];
+                destination.RootLocalSoleRotationRoute[routeIndex][destinationIndex] = source.RootLocalSoleRotationRoute[routeIndex][sourceIndex];
+                destination.RootLocalAnkleRotationRoute[routeIndex][destinationIndex] = source.RootLocalAnkleRotationRoute[routeIndex][sourceIndex];
+                destination.AuthoredFootPlanarRoute[routeIndex][destinationIndex] = source.AuthoredFootPlanarRoute[routeIndex][sourceIndex];
+                destination.AnimationClearanceHeight[routeIndex][destinationIndex] = source.AnimationClearanceHeight[routeIndex][sourceIndex];
+                destination.ConstraintWeight[routeIndex][destinationIndex] = source.ConstraintWeight[routeIndex][sourceIndex];
+                destination.SupportWeight[routeIndex][destinationIndex] = source.SupportWeight[routeIndex][sourceIndex];
+                destination.SupportLegLength[routeIndex][destinationIndex] = source.SupportLegLength[routeIndex][sourceIndex];
+                destination.SupportLegCompressionReserve[routeIndex][destinationIndex] = source.SupportLegCompressionReserve[routeIndex][sourceIndex];
+                destination.SupportKneeBendPlane[routeIndex][destinationIndex] = source.SupportKneeBendPlane[routeIndex][sourceIndex];
+                destination.SupportFootPivotPosition[routeIndex][destinationIndex] = source.SupportFootPivotPosition[routeIndex][sourceIndex];
+                destination.SupportFootPivotWeight[routeIndex][destinationIndex] = source.SupportFootPivotWeight[routeIndex][sourceIndex];
+            }
+        }
+
+        static AnimationPredictedFootStepCurveSet BuildPredictedStepCurveSet(
+            SampledFoot foot,
+            CharacterFootPlacementCurveReductionSettings reduction)
+        {
+            int count = foot.EventOrdinal.Length;
             float[] opposingLandingX = new float[count];
             float[] opposingLandingY = new float[count];
             float[] opposingLandingZ = new float[count];
@@ -1676,9 +1872,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             float[] landingPhase = new float[count];
             for (int i = 0; i < count; i++)
             {
-                x[i] = foot.Velocities[i].x;
-                y[i] = foot.Velocities[i].y;
-                z[i] = foot.Velocities[i].z;
                 opposingLandingX[i] = foot.OpposingRootLocalLanding[i].x;
                 opposingLandingY[i] = foot.OpposingRootLocalLanding[i].y;
                 opposingLandingZ[i] = foot.OpposingRootLocalLanding[i].z;
@@ -1744,40 +1937,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 supportLegLength,
                 supportLegCompressionReserve,
                 pivotWeight);
-            return new AnimationFootFeatureCurveSet(
-                Reduce(x, reduction.VelocityTolerance),
-                Reduce(y, reduction.VelocityTolerance),
-                Reduce(z, reduction.VelocityTolerance),
-                Reduce(foot.Heights, reduction.HeightTolerance),
-                Reduce(foot.PlantConfidence, reduction.ConfidenceTolerance),
-                new AnimationPredictedFootStepCurveSet(
-                    ReduceEventScoped(foot.LandingConfidence, reduction.ConfidenceTolerance, eventBoundaries),
-                    ReduceEventScoped(foot.LandingDelay, reduction.LandingDelayTolerance, eventBoundaries),
-                    ReduceEventScoped(foot.EventPhase, reduction.ConfidenceTolerance, eventBoundaries),
-                    ReduceEventScoped(foot.ReleasePhase, reduction.ConfidenceTolerance, eventBoundaries),
-                    ReduceEventScoped(foot.LiftOffPhase, reduction.ConfidenceTolerance, eventBoundaries),
-                    ReduceEventScoped(foot.ApproachContactPhase, reduction.ConfidenceTolerance, eventBoundaries),
-                    ReduceEventScoped(foot.ActionStepDurationSeconds, reduction.LandingDelayTolerance, eventBoundaries),
-                    ReduceEventScoped(foot.EventOrdinal, 0f, eventBoundaries),
-                    ReduceEventScoped(foot.OpposingLandingDelaySeconds, reduction.LandingDelayTolerance, eventBoundaries),
-                    ReduceDiscrete(foot.OpposingEventOrdinal),
-                    ReduceDiscrete(foot.OpposingLandingCycleOffset),
-                    ReduceStep(opposingLandingX),
-                    ReduceStep(opposingLandingY),
-                    ReduceStep(opposingLandingZ),
-                    routeX,
-                    routeY,
-                    routeZ,
-                    ankleRouteX,
-                    ankleRouteY,
-                    ankleRouteZ,
-                    hipRouteX,
-                    hipRouteY,
-                    hipRouteZ,
-                    authoredFootPlanarX,
-                    authoredFootPlanarZ,
-                    animationClearanceHeight,
-                    biomechanical));
+            return new AnimationPredictedFootStepCurveSet(
+                ReduceEventScoped(foot.LandingConfidence, reduction.ConfidenceTolerance, eventBoundaries),
+                ReduceEventScoped(foot.LandingDelay, reduction.LandingDelayTolerance, eventBoundaries),
+                ReduceEventScoped(foot.EventPhase, reduction.ConfidenceTolerance, eventBoundaries),
+                ReduceEventScoped(foot.ReleasePhase, reduction.ConfidenceTolerance, eventBoundaries),
+                ReduceEventScoped(foot.LiftOffPhase, reduction.ConfidenceTolerance, eventBoundaries),
+                ReduceEventScoped(foot.ApproachContactPhase, reduction.ConfidenceTolerance, eventBoundaries),
+                ReduceEventScoped(foot.ActionStepDurationSeconds, reduction.LandingDelayTolerance, eventBoundaries),
+                ReduceEventScoped(foot.EventOrdinal, 0f, eventBoundaries),
+                ReduceEventScoped(foot.OpposingLandingDelaySeconds, reduction.LandingDelayTolerance, eventBoundaries),
+                ReduceDiscrete(foot.OpposingEventOrdinal),
+                ReduceDiscrete(foot.OpposingLandingCycleOffset),
+                ReduceStep(opposingLandingX),
+                ReduceStep(opposingLandingY),
+                ReduceStep(opposingLandingZ),
+                routeX,
+                routeY,
+                routeZ,
+                ankleRouteX,
+                ankleRouteY,
+                ankleRouteZ,
+                hipRouteX,
+                hipRouteY,
+                hipRouteZ,
+                authoredFootPlanarX,
+                authoredFootPlanarZ,
+                animationClearanceHeight,
+                biomechanical);
         }
 
         static AnimationCurve[] BuildRouteCurves(

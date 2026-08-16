@@ -16,7 +16,7 @@
 - [x] 1.11 自动writer只消费`LiveState`完成帧流并后台压缩CSV；删除自动附加`RuntimeDebugSession Continuous`造成的第二份无界内存捕获。
 - [x] 1.12 Foot IK Automatic Variant只运行唯一玩家表现，ActionTarget正式提交`None`；普通Local Fixed继续保留中立Target。
 - [x] 1.13 将动画Source不可变Clip Catalog的全量校验和索引建立收敛到Source创建/换代，逐帧Prepare只处理动态采样计划与实际激活Clip。
-- [x] 1.14 将Foot Feature曲线合法性校验收敛到Sequence Player创建；同脚同Landing事件的后继事件搜索只执行一次，后续帧只按绝对候选时刻更新剩余时间。
+- [x] 1.14 将Foot Feature曲线合法性校验收敛到Sequence Player创建；删除Runtime后继事件搜索与缓存，由Artifact在同一采样域原子烘焙Current与Incoming Step，运行帧只采样并绑定权威source。
 
 ## 2. Animation Biomechanical Step Artifact
 
@@ -28,6 +28,7 @@
 - [ ] 2.6 生成Support Weight、Support Leg Length、Compression Reserve、Knee Bend Plane、Support Foot Pivot位置与权重。
 - [ ] 2.7 原子保存对侧Landing identity、time、cycle和root-local Sole pose。
 - [ ] 2.8 更新artifact codec、hash、store、inspector与analysis source identity；未知字段、非有限值和旧版本必须明确失败。
+- [ ] 2.8A 在同一Artifact采样点原子保存Current与Incoming Step；Incoming必须携带完整事件、时钟、路线、Biomechanical事实和相对当前采样的Landing时间，不允许Runtime搜索、补建或缓存猜测。
 - [ ] 2.9 建立Artifact Flat Reconstruction Gate，逐相位输出Foot/Sole/Ankle/Knee/Hip位置与Sole/Ankle旋转误差，并阻止超过固定容差的artifact进入Projection。
 - [ ] 2.10 重新生成Corin Start、Loop、Stop、MovingTurn全部可达Foot Analysis artifact，不保留旧资产或运行时补建。
 

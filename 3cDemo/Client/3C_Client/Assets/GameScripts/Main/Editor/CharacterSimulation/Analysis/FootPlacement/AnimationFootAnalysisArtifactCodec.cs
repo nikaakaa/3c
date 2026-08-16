@@ -248,11 +248,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             WriteCurve(writer, value.SoleHeight);
             WriteCurve(writer, value.PlantConfidence);
             WritePredictedStepCurveSet(writer, value.PredictedStep);
+            WritePredictedStepCurveSet(writer, value.IncomingPredictedStep);
         }
 
         static AnimationFootFeatureCurveSet ReadCurveSet(BinaryReader reader) =>
             new AnimationFootFeatureCurveSet(
                 ReadCurve(reader), ReadCurve(reader), ReadCurve(reader), ReadCurve(reader), ReadCurve(reader),
+                ReadPredictedStepCurveSet(reader),
                 ReadPredictedStepCurveSet(reader));
 
         static void WritePredictedStepCurveSet(

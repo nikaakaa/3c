@@ -495,6 +495,17 @@ namespace BTSMTL.Diagnostics
                    left.RevisionPlanSequence == right.RevisionPlanSequence &&
                    left.PlanRevisionBlendWeight.Equals(right.PlanRevisionBlendWeight) &&
                    string.Equals(left.PlanTransitionKind, right.PlanTransitionKind, StringComparison.Ordinal) &&
+                   left.PlanAttemptAvailable == right.PlanAttemptAvailable &&
+                   string.Equals(left.PlanAttemptKind, right.PlanAttemptKind, StringComparison.Ordinal) &&
+                   left.PlanAttemptSequence == right.PlanAttemptSequence &&
+                   left.PlanAttemptGeneratedFrame == right.PlanAttemptGeneratedFrame &&
+                   left.PlanAttemptLandingEventIdentity == right.PlanAttemptLandingEventIdentity &&
+                   string.Equals(left.PlanAttemptState, right.PlanAttemptState, StringComparison.Ordinal) &&
+                   string.Equals(left.PlanAttemptRejectReason, right.PlanAttemptRejectReason, StringComparison.Ordinal) &&
+                   string.Equals(left.PlanAttemptGroundEnvelopeRejectReason, right.PlanAttemptGroundEnvelopeRejectReason, StringComparison.Ordinal) &&
+                   left.PlanAttemptQueryCount == right.PlanAttemptQueryCount &&
+                   left.PlanAttemptRawHitCount == right.PlanAttemptRawHitCount &&
+                   left.PlanAttemptRejectedQueryCount == right.PlanAttemptRejectedQueryCount &&
                    left.PlanFadingOut == right.PlanFadingOut &&
                    left.PlanRetentionWeight.Equals(right.PlanRetentionWeight) &&
                    left.IntentLandingDisplacementError.Equals(right.IntentLandingDisplacementError) &&

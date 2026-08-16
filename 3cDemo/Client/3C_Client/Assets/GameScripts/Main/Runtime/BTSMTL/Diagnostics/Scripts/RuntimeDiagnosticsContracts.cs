@@ -595,6 +595,17 @@ namespace BTSMTL.Diagnostics
         public ulong RevisionPlanSequence;
         public float PlanRevisionBlendWeight;
         public string PlanTransitionKind;
+        public bool PlanAttemptAvailable;
+        public string PlanAttemptKind;
+        public ulong PlanAttemptSequence;
+        public ulong PlanAttemptGeneratedFrame;
+        public ulong PlanAttemptLandingEventIdentity;
+        public string PlanAttemptState;
+        public string PlanAttemptRejectReason;
+        public string PlanAttemptGroundEnvelopeRejectReason;
+        public int PlanAttemptQueryCount;
+        public int PlanAttemptRawHitCount;
+        public int PlanAttemptRejectedQueryCount;
         public bool PlanFadingOut;
         public float PlanRetentionWeight;
         public float IntentLandingDisplacementError;

@@ -741,16 +741,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingTrace trace = m_CurrentGrounding.Trace(
                 pose,
                 minimumGroundNormalDot);
-            Vector3 leftGroundProbeStart = ResolvePredictiveGroundProbeStart(
+            CharacterFootPlanSupportFacts leftPlanSupportFacts = ResolvePredictivePlanSupportFacts(
                 m_Left.Stance,
                 pose.Left,
-                trace.Left,
-                out FootPlacementSurface leftGroundProbeSupport);
-            Vector3 rightGroundProbeStart = ResolvePredictiveGroundProbeStart(
+                trace.Left);
+            CharacterFootPlanSupportFacts rightPlanSupportFacts = ResolvePredictivePlanSupportFacts(
                 m_Right.Stance,
                 pose.Right,
-                trace.Right,
-                out FootPlacementSurface rightGroundProbeSupport);
+                trace.Right);
             CharacterFootLandingCommit leftLandingCommit = m_Left.LandingCommit;
             CharacterFootLandingCommit rightLandingCommit = m_Right.LandingCommit;
             CharacterPredictiveFootFrameEvaluation predictionEvaluation =
@@ -760,11 +758,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_Left.PlanState,
                     m_Right.PlanState,
                     in leftLandingCommit,
-                    leftGroundProbeStart,
-                    leftGroundProbeSupport,
+                    in leftPlanSupportFacts,
                     in rightLandingCommit,
-                    rightGroundProbeStart,
-                    rightGroundProbeSupport);
+                    in rightPlanSupportFacts);
             m_Left.ObserveQueryAttempt(frame.RenderFrame);
             m_Right.ObserveQueryAttempt(frame.RenderFrame);
             CharacterPredictiveFootStanceInput leftPredictive = predictionEvaluation.Left;
@@ -942,12 +938,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in predictionDiagnostics);
         }
 
-        Vector3 ResolvePredictiveGroundProbeStart(
+        CharacterFootPlanSupportFacts ResolvePredictivePlanSupportFacts(
             FootState state,
             CharacterFootPlacementAnimatedFootPose animated,
-            CharacterLyraFootTraceResult trace,
-            out FootPlacementSurface support)
+            CharacterLyraFootTraceResult trace)
         {
+            CharacterFootPlacementSoleContactPose contacts = animated.ResolveSoleContacts(
+                animated.AnklePosition,
+                animated.AnkleRotation);
+            Vector3 sole = (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
+            FootPlacementSurface currentSupport = ResolveSupportAtRoutePoint(
+                BuildSurface(trace.Hit),
+                sole,
+                m_Rig.PoseRoot.up);
+            var currentQuery = new CharacterFootPlanSupportFact(
+                CharacterFootPlanOriginKind.CurrentFrameSupport,
+                0,
+                0,
+                sole,
+                currentSupport);
+            CharacterFootPlanSupportFact committedStance = default;
             CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
             if (state.TryResolve(
                     m_Settings.CurrentGrounding.GroundLayerMask,
@@ -961,15 +971,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     anchorPosition,
                     anchorRotation);
                 Vector3 anchorSole = (anchorContacts.HeelPosition + anchorContacts.ToePosition) * 0.5f;
-                support = ResolveSupportAtRoutePoint(anchorSurface, anchorSole, m_Rig.PoseRoot.up);
-                return support.IsValid ? support.Point : anchorSole;
+                FootPlacementSurface support = ResolveSupportAtRoutePoint(
+                    anchorSurface,
+                    anchorSole,
+                    m_Rig.PoseRoot.up);
+                committedStance = new CharacterFootPlanSupportFact(
+                    CharacterFootPlanOriginKind.CommittedStanceSupport,
+                    state.AnchorPlanSequence,
+                    state.AnchorLandingEventIdentity,
+                    anchorSole,
+                    support);
             }
-            CharacterFootPlacementSoleContactPose contacts = animated.ResolveSoleContacts(
-                animated.AnklePosition,
-                animated.AnkleRotation);
-            Vector3 sole = (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
-            support = ResolveSupportAtRoutePoint(BuildSurface(trace.Hit), sole, m_Rig.PoseRoot.up);
-            return support.IsValid ? support.Point : sole;
+            return new CharacterFootPlanSupportFacts(in currentQuery, in committedStance);
         }
 
         static FootPlacementSurface ResolveSupportAtRoutePoint(

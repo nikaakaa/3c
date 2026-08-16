@@ -30,7 +30,50 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ActivePlanOutput = 2,
         ProjectedLanding = 3,
         LandingHandoff = 4,
-        CommittedLanding = 5
+        CommittedLanding = 5,
+        CommittedStanceSupport = 6
+    }
+
+    internal readonly struct CharacterFootPlanSupportFact
+    {
+        internal CharacterFootPlanSupportFact(
+            CharacterFootPlanOriginKind kind,
+            ulong sourcePlanSequence,
+            ulong sourceLandingEventIdentity,
+            Vector3 sole,
+            FootPlacementSurface support)
+        {
+            Kind = kind;
+            SourcePlanSequence = sourcePlanSequence;
+            SourceLandingEventIdentity = sourceLandingEventIdentity;
+            Sole = sole;
+            Support = support;
+        }
+
+        internal CharacterFootPlanOriginKind Kind { get; }
+        internal ulong SourcePlanSequence { get; }
+        internal ulong SourceLandingEventIdentity { get; }
+        internal Vector3 Sole { get; }
+        internal FootPlacementSurface Support { get; }
+        internal bool IsAvailable => Kind != CharacterFootPlanOriginKind.None && IsFinite(Sole);
+        internal bool HasSupport => IsAvailable && Support.IsValid;
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+    }
+
+    internal readonly struct CharacterFootPlanSupportFacts
+    {
+        internal CharacterFootPlanSupportFacts(
+            in CharacterFootPlanSupportFact currentQuery,
+            in CharacterFootPlanSupportFact committedStance)
+        {
+            CurrentQuery = currentQuery;
+            CommittedStance = committedStance;
+        }
+
+        internal CharacterFootPlanSupportFact CurrentQuery { get; }
+        internal CharacterFootPlanSupportFact CommittedStance { get; }
     }
 
     internal readonly struct CharacterFootPlanBuildOrigin
@@ -948,11 +991,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlanExecutionState leftPlanState,
             CharacterFootPlanExecutionState rightPlanState,
             in CharacterFootLandingCommit leftLandingCommit,
-            Vector3 leftGroundProbeStart,
-            FootPlacementSurface leftGroundProbeSupport,
+            in CharacterFootPlanSupportFacts leftSupportFacts,
             in CharacterFootLandingCommit rightLandingCommit,
-            Vector3 rightGroundProbeStart,
-            FootPlacementSurface rightGroundProbeSupport)
+            in CharacterFootPlanSupportFacts rightSupportFacts)
         {
             if (frame.ActorId != m_ActorId || !frame.Body.IsValid ||
                 frame.RenderFrame == 0 || frame.CompletionIdentity == 0)
@@ -977,8 +1018,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.Left,
                 leftFeature,
                 in leftLandingCommit,
-                leftGroundProbeStart,
-                leftGroundProbeSupport,
+                in leftSupportFacts,
                 frame.RenderFrame,
                 rootWorldPosition,
                 rootWorldRotation,
@@ -997,8 +1037,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.Right,
                 rightFeature,
                 in rightLandingCommit,
-                rightGroundProbeStart,
-                rightGroundProbeSupport,
+                in rightSupportFacts,
                 frame.RenderFrame,
                 rootWorldPosition,
                 rootWorldRotation,
@@ -2434,8 +2473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose pose,
             AnimationFootFeatureSample feature,
             in CharacterFootLandingCommit landingCommit,
-            Vector3 groundProbeStart,
-            FootPlacementSurface groundProbeSupport,
+            in CharacterFootPlanSupportFacts supportFacts,
             ulong renderFrame,
             Vector3 rootWorldPosition,
             Quaternion rootWorldRotation,
@@ -2526,13 +2564,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             bool outgoingOutputAvailable = runtime.HasLastOutputGroundPath &&
                                            runtime.LastOutputGroundPlanSequence == plan.Sequence;
+            CharacterFootPlanSupportFact currentQueryFact = supportFacts.CurrentQuery;
+            CharacterFootPlanSupportFact committedStanceFact = supportFacts.CommittedStance;
             CharacterFootPlanBuildOrigin currentFrameOrigin = BuildPlanOrigin(
-                CharacterFootPlanOriginKind.CurrentFrameSupport,
+                in currentQueryFact,
                 plan.Sequence,
                 step.LandingEventIdentity,
-                currentSole,
-                groundProbeStart,
-                groundProbeSupport,
+                up);
+            CharacterFootPlanBuildOrigin committedStanceOrigin = BuildPlanOrigin(
+                in committedStanceFact,
+                plan.Sequence,
+                step.LandingEventIdentity,
                 up);
             CharacterFootPlanBuildOrigin activeOutputOrigin = outgoingOutputAvailable &&
                                                                runtime.HasLastOutputSole
@@ -2630,15 +2672,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         }
                         else
                         {
-                            FootPlacementSurface currentOriginSupport = ResolveSupportAtRoutePoint(
-                                groundProbeSupport,
-                                currentSole,
-                                up);
-                            successorOriginValid = currentOriginSupport.IsValid &&
+                            CharacterFootPlanSupportFact currentQuery = supportFacts.CurrentQuery;
+                            successorOriginValid = currentQuery.HasSupport &&
                                                    IsEventSuccessorOriginCompatible(
                                                        revision,
-                                                       currentSole,
-                                                       currentOriginSupport,
+                                                       currentQuery.Sole,
+                                                       currentQuery.Support,
                                                        up);
                         }
                         if (IsMotionWithinCommitTolerance(revision) && successorOriginValid)
@@ -2713,6 +2752,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : projectedLandingOrigin;
             CharacterFootPlanBuildOrigin replacementOrigin = committedLandingOrigin.HasSupport
                 ? committedLandingOrigin
+                : currentFrameOrigin;
+            bool currentStepOwnsCommittedStance = step.IsAuthoritative &&
+                                                   step.EvaluateConstraintMode(
+                                                       step.ActionStepClock.Phase) !=
+                                                   AnimationFootConstraintMode.Unlocked;
+            CharacterFootPlanBuildOrigin initialOrigin =
+                currentStepOwnsCommittedStance && committedStanceOrigin.HasSupport
+                ? committedStanceOrigin
                 : currentFrameOrigin;
             if (currentPlanMatches && plan.HasExecutablePath &&
                 !intentRevisionRequested &&
@@ -2833,7 +2880,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     side,
                     in step,
                     renderFrame,
-                    in currentFrameOrigin,
+                    in initialOrigin,
                     soleSupportRadius,
                     rootWorldPosition,
                     rootWorldRotation,
@@ -2952,6 +2999,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             2f * Mathf.Max(
                 plan.SoleSupportRadius,
                 Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
+
+        static CharacterFootPlanBuildOrigin BuildPlanOrigin(
+            in CharacterFootPlanSupportFact source,
+            ulong fallbackPlanSequence,
+            ulong fallbackLandingEventIdentity,
+            Vector3 up)
+        {
+            if (!source.IsAvailable)
+                return default;
+            ulong sourcePlanSequence = source.SourcePlanSequence != 0
+                ? source.SourcePlanSequence
+                : fallbackPlanSequence;
+            ulong sourceLandingEventIdentity = source.SourceLandingEventIdentity != 0
+                ? source.SourceLandingEventIdentity
+                : fallbackLandingEventIdentity;
+            return BuildPlanOrigin(
+                source.Kind,
+                sourcePlanSequence,
+                sourceLandingEventIdentity,
+                source.Sole,
+                source.Support.IsValid ? source.Support.Point : source.Sole,
+                source.Support,
+                up);
+        }
 
         static CharacterFootPlanBuildOrigin BuildPlanOrigin(
             CharacterFootPlanOriginKind kind,

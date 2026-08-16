@@ -45,12 +45,14 @@ Ground Path由同一个Sole投影到同一个Support得到。任一项无效时�
 
 | Attempt | Origin |
 |---|---|
-| Initial | Current Frame Sole + Current Support |
+| Initial | 当前Step仍由Stance约束时使用Committed Stance Support；否则使用Current Query Support |
 | Intent Revision | Active Plan上一完成输出；不存在时使用Current Frame |
 | Event Successor | Committed Landing；否则Landing Handoff；再否则使用已验证Projected Landing预建geometry |
-| Current Event Replacement | Committed Landing；否则Current Frame |
+| Current Event Replacement | Committed Landing；否则Current Query Support |
 
 Current Event Replacement禁止继承未提交的旧Projected Landing。Projected Landing只属于原Plan对未来落点的承诺，不能与新事件路线拼成一笔不存在的事实。
+
+`Current Query Support`与`Committed Stance Support`必须是两份显式不可变事实。前者只来自本帧唯一Current Query；后者只来自上一完成帧Anchor及其Surface。调用方不得用一个来源不明的`groundProbeStart + support`在两者之间隐式择优，也不得把旧Anchor标记成`CurrentFrameSupport`。进入Unlocked Swing后的Current Event Replacement不能再使用待释放旧Anchor作为起点。
 
 ## PlanAttempt观察合同
 
@@ -77,7 +79,7 @@ run `9a7cf93abf044e7eb15d8eaa7eca491d`的左脚frame 197把新事件路线与旧
 
 schema v97回归run `f9335d62431949a59cab0943c898eaaa`共749行、1279列，Header唯一且每行等宽。173次PlanAttempt的Origin Ground Path与本次Attempt Ground Probe起点错配为0，Current Event Replacement使用Projected Landing为0，Origin Ground Path偏离其Support Plane为0。数据链原子性已可直接验收。
 
-该run同时把下一处问题从混合数据中分离出来：右脚frame 363的Current Event Replacement以`CurrentFrameSupport`创建Origin，Sole Y为`1.267m`、Origin Support Y为`1.800m`，鞋底位于该支撑面下方`53.3cm`；Predictive Query从同一个Origin Ground Path开始后，首个合法踏面却是`1.080m`。同一空间起点的Current Support与Predictive Support相差`72cm`，随后明确触发`StepExceeded`。这证明下一owner是当前支撑事实与预测查询起点的空间一致性，不是FinalIK或阈值。
+该run同时把下一处问题从混合数据中分离出来：右脚frame 363的Current Event Replacement以`CurrentFrameSupport`创建Origin，Sole Y为`1.267m`、Origin Support Y为`1.800m`，鞋底位于该支撑面下方`53.3cm`；Predictive Query首个合法踏面却是`1.080m`。进一步对账证明`Y=1.800m`来自Planner执行时尚未验证的上一帧旧Anchor，而本帧真正Current Query是Surface `-316164`、`Y=1.080m`；Stance随后才因Anchor距离`0.844m`将旧Anchor释放。也就是同一帧发生了“先用旧Anchor建Plan，后验证并释放旧Anchor”，且诊断把旧Anchor错误标成Current Frame。该错序直接制造`72cm`假台阶并触发`StepExceeded`，不是FinalIK、阈值或Physics漏检。
 
 同一Event Successor还会在连续authority tick从同一个Projected Landing重复构建并重复得到`StepExceeded`；例如右脚frame 475至478使用同一来源Plan 97和同一Ground Path，连续生成Plan 99至102。支撑一致性修复后还要检查重试资格，禁止重复查询同一份未变化事实。
 

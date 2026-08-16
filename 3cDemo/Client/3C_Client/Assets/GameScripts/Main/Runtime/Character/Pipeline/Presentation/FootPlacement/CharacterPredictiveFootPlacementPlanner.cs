@@ -48,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             internal float IntentLandingDisplacementError { get; private set; }
             internal float IntentLandingDisplacementThreshold { get; private set; }
+            internal ulong IntentRevisionAttemptEventIdentity { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
             internal Vector3 LastOutputSole { get; private set; }
             internal bool HasLastOutputGroundPath { get; private set; }
@@ -207,6 +208,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentLandingDisplacementThreshold = float.IsFinite(threshold) ? threshold : 0f;
             }
 
+            internal bool HasAttemptedIntentRevision(ulong landingEventIdentity) =>
+                landingEventIdentity != 0 &&
+                IntentRevisionAttemptEventIdentity == landingEventIdentity;
+
+            internal void MarkIntentRevisionAttempt(ulong landingEventIdentity)
+            {
+                if (landingEventIdentity == 0)
+                    throw new ArgumentOutOfRangeException(nameof(landingEventIdentity));
+                IntentRevisionAttemptEventIdentity = landingEventIdentity;
+            }
+
             internal void RememberOutput(
                 Vector3 sole,
                 Vector3 groundPath,
@@ -299,6 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LastOutputGroundPlanSequence = 0;
                 CommittedAnchorPlanSequence = 0;
                 CommittedAnchorLandingEventIdentity = 0;
+                IntentRevisionAttemptEventIdentity = 0;
                 m_BaselineOwnedLastFrame = false;
                 m_HasOwnershipContinuity = false;
                 m_OwnershipContinuityOffset = Vector3.zero;
@@ -1878,6 +1891,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     return;
                 }
+                runtime.MarkIntentRevisionAttempt(step.LandingEventIdentity);
                 bool created = CreatePlan(
                     side,
                     runtime.Revision,
@@ -1899,8 +1913,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     legLength);
                 if (created)
                     runtime.BeginIntentRevision();
-                else
-                    runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
             }
         }
 
@@ -1997,6 +2009,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 runtime.ObserveIntentLandingDisplacement(preflightError, enterThreshold);
                 return false;
             }
+            runtime.ObserveIntentLandingDisplacement(preflightError, enterThreshold);
+            if (runtime.HasAttemptedIntentRevision(step.LandingEventIdentity))
+                return false;
             float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(
                     0f,

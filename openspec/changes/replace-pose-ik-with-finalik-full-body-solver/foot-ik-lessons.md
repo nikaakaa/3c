@@ -364,3 +364,9 @@ Current与Incoming同时进入左右脚Feature后，`ActionAnimationPlaybackFram
 run `4fe6c339ed5946658dd582ec103ecaff`证明曲率不是本轮首因：运动中Current曲率仅5帧Unavailable，全部Active Plan均保存有效冻结曲率。真正的左脚断点发生在frame 236：Current仍是cycle N，Incoming却提前从N+1跨到N+2，已预建Successor因此被取消；frame 239预测输出归零，Final Goal单帧变化约`1.60m`。生成资产给出直接原因：Current的`TimeToLanding`在事件边界为阶跃，Incoming却从`0.6s`线性斜插到`1.183s`，而二者的Event Phase与Event Ordinal不足以区分同脚Loop occurrence。
 
 此前“Marker occurrence已由Artifact拥有”的记录不完整：Marker查找虽已删除，`BindSource`仍用插值后的`sample time + TimeToLanding`反推Landing cycle。正式修复必须把`SourceLandingCycleOffset`作为Current/Incoming Artifact字段，以`cycle offset + event ordinal`切分全部事件曲线，Runtime只绑定该离散身份。右脚同run另有独立问题：Intent Revision创建失败会立即淡出唯一Active Plan；必须在事件身份修复并重新采样后单独处理，不能把两种错误混成一个平滑参数。
+
+## 32. 弹簧不能修复同一步多次换路
+
+修复离散Landing cycle后的run `c63017bdf0564e90aa0c0ec86dbbe29c`证明运动事件的`Previous Incoming == New Current`已经闭合，但248帧内左/右仍有`198/187`帧携带Revision，同一Landing Event内Active Plan分别换代`31/26`次。左脚Applied Lift曾单帧从`50.4cm`降到`9.2cm`，右脚Offset spring速度达到`-5.38m/s`。弹簧只是在追逐不断替换的目标，增加阻尼不能恢复确定路径。
+
+正式Step因此每个Landing Event至多消费一笔Intent Revision事务；成功或Rejected都要等下一事件重新取得资格。Rejected Intent Revision保留原Executable Plan到正常Landing边界，不能淡出唯一输出。该规则用不超过一个剩余Step的意图响应延迟，换取GDC所需的单步确定路径；后续仍需由Simulation提交真正离散的Future Body trajectory identity，不能把这条事件边界误报为完整4.1。

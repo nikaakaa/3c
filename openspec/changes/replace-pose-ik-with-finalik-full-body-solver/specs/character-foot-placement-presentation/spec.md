@@ -55,7 +55,7 @@ PredictiveFootPlacementModifier MUST只在当前权威Landing Event进入PreSwin
 
 Plan创建帧 MAY执行一次平面刚性重基，使同相位Artifact Sole与Native Sole重合；该变换 MUST整步冻结。最终Swing Sole XZ MUST继续来自同相位Original Component Pose。计划当前样本与Native Sole的平面偏差 MUST进入有效性与诊断，不能通过冻结世界XYZ水平拉脚。
 
-已提交Plan MUST不按Render Delta、当前Pose、Visible Root、Body Yaw、Camera变化或相邻帧速度导数逐帧改写。只有Simulation提交新的Future Body trajectory且剩余Landing位置或朝向误差超过`max(SoleSupportRadius, PathSphereRadius, SwingCapsuleRadius)`时，MAY创建一个离散后继Revision。
+已提交Plan MUST不按Render Delta、当前Pose、Visible Root、Body Yaw、Camera变化或相邻帧速度导数逐帧改写。只有Simulation提交新的Future Body trajectory且剩余Landing位置或朝向误差超过`max(SoleSupportRadius, PathSphereRadius, SwingCapsuleRadius)`时，MAY创建一个离散后继Revision。每个权威Landing Event MUST至多消费一笔Intent Revision事务；成功或Rejected后，后续连续意图变化 MUST等下一Landing Event重新冻结，不能在同一Swing内反复换代Active Plan。
 
 #### Scenario: 平地直行预测步
 
@@ -79,7 +79,7 @@ Plan创建帧 MAY执行一次平面刚性重基，使同相位Artifact Sole与Na
 
 - **WHEN** 新Future Body trajectory使剩余Landing误差跨越正式几何阈值
 - **THEN** 后继Revision MUST从当前已执行Sole位置、线速度和Body角速度连续重基
-- **AND** 新Revision未进入Executing前旧输出 MUST保持；Rejected后继 MUST让旧输出连续退到原动画
+- **AND** 新Revision未进入Executing前旧输出 MUST保持；Intent Revision被Rejected时本事件原Executable Plan MUST保持到正常Landing边界
 - **AND** MUST不在后继尚未有效时清空旧Plan或切换到Grounding Swing Goal
 
 ### Requirement: 地面查询必须形成有限连续 Support Envelope

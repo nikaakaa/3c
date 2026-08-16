@@ -29,7 +29,7 @@
 - [x] 2.7 原子保存对侧Landing identity、time、cycle和root-local Sole pose。
 - [ ] 2.8 更新artifact codec、hash、store、inspector与analysis source identity；未知字段、非有限值和旧版本必须明确失败。
 - [x] 2.8A 在同一Artifact采样点原子保存Current与Incoming Step；Incoming必须携带完整事件、时钟、路线、Biomechanical事实和相对当前采样的Landing时间，不允许Runtime搜索、补建或缓存猜测。
-- [ ] 2.8B 为Current与Incoming显式烘焙离散Source Landing Cycle Offset，以该identity切分全部事件字段并删除Runtime从TimeToLanding反推cycle；重建Corin Projection后验证每次Current换代的前一完成帧Incoming恰为该事件。
+- [x] 2.8B 为Current与Incoming显式烘焙离散Source Landing Cycle Offset，以该identity切分全部事件字段并删除Runtime从TimeToLanding反推cycle；重建Corin Projection后验证每次Current换代的前一完成帧Incoming恰为该事件。
 - [ ] 2.9 建立Artifact Flat Reconstruction Gate，逐相位输出Foot/Sole/Ankle/Knee/Hip位置与Sole/Ankle旋转误差，并阻止超过固定容差的artifact进入Projection。
 - [x] 2.10 重新生成Corin Start、Loop、Stop、MovingTurn全部可达Foot Analysis artifact，不保留旧资产或运行时补建。
 
@@ -48,6 +48,7 @@
 - [ ] 4.3 用Future Body Transform与Artifact root-local Sole/Ankle/Hip路线建立唯一未来世界路线，保留动画局部X、Z和旋转。
 - [ ] 4.4 Plan创建帧只允许一次刚性重基，使`PathStartPhase`的Artifact Foot Route与已提交接触点或已执行Sole正下方重合；执行Sole另行保存净空连续性，重基整步冻结。
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
+- [ ] 4.5A 每个权威Landing Event至多消费一笔Intent Revision事务；Rejected修订保留原Executable Plan到Landing边界，自动A/D数据中同事件Active Plan换代必须从左/右`31/26`次降到最多一次。
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 - [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。

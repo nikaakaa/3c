@@ -57,6 +57,7 @@
 - [ ] 4.5D Revision必须先在过渡槽完整Query并Commit，成功后才原子参与Blend或提升；Rejected候选不得清空仍有效Active、不得删除完整Debug Path、不得让Grounding接管Swing。初始候选Rejected时，当前Step在后续权威tick继续重试，直至计划成功或Step明确结束。
 - [ ] 4.5E 在Release前按加减速、低速急转、无有效前一步历史和空中状态原子选择整步`Predictive`或`Traditional`模式；模式整步粘滞。Traditional是统一Foot Placement内的正式执行策略，不是Predictive Query失败后的fallback。
 - [ ] 4.5F 当前Step仍为`Unsupported Swing`且偏差已跨越几何边界时，Intent Revision必须优先于尚未生效的Event Successor；当前权威Swing没有Executable Plan时必须在同一事件内重建。Plan identity换代首帧必须从上一完成帧实际Ankle输出连续接管，不得先暴露Current Grounding/Original再跳入新Plan。
+- [ ] 4.5G Revision Blend中建立的上一完成帧输出连续性必须跨越`PromoteRevision`保持到自身权重衰减为零；Promotion只替换Plan identity，不得中途清除尚未完成的位置与旋转连续修正。
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ。新计划未Commit前保持旧Active经执行投影后的输出，成功后才连续Blend；Rejected候选只记录失败并等待下一正式重试机会。
 - [ ] 4.6A Intent Revision创建时冻结上一完成帧实际输出相对同帧Original Animated Ankle/Hip的修正，以及Ground Path与Support作为唯一过渡原点；Blend期间以当前同相位Original动画加冻结修正组成旧侧，不得锁死Swing世界Ankle或继续求值已经越过运动边界的旧Active。尚未产生本Plan完成输出的过期Plan必须先退出，再从当前真实Sole、Support与committed trajectory原子重建，禁止先输出一帧旧Path。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径；Executing求值失败时必须保留上一完成输出相对当前Original动画的修正并连续退出，同时为Reach、非有限值和身份失配分别发布typed reason，禁止当帧归还Grounding Baseline后下一帧再恢复预测。

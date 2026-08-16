@@ -85,6 +85,8 @@ Plan创建帧 MAY执行一次平面刚性重基，使同相位Artifact Sole与Na
 
 - **WHEN** 新Future Body trajectory使剩余Landing误差跨越正式几何阈值
 - **THEN** 后继Revision MUST从当前已执行Sole位置、线速度和Body角速度连续重基
+- **AND** Revision过渡旧侧 MUST冻结上一完成帧实际输出的Ankle、Sole、Ground Path、Support与Body Path Root/Hip，不得继续求值已经过期的Active Path
+- **AND** 尚未产生本Plan完成输出的过期Plan MUST在首次贡献Goal前退出，并从当前真实Sole、Support与committed trajectory重建Current Event计划
 - **AND** 新Revision未进入Executing前，仍在运动有效性边界内的旧输出 MUST保持；Intent Revision被Rejected但旧Plan已经过期时 MUST以`MotionDeviationExceeded`连续撤出
 - **AND** MUST不在后继尚未有效时清空旧Plan或切换到Grounding Swing Goal
 

@@ -481,6 +481,10 @@ namespace BTSMTL.Diagnostics
                    left.PlanHasPathGeometry == right.PlanHasPathGeometry &&
                    left.PlanHasExecutablePath == right.PlanHasExecutablePath &&
                    left.FrozenPlanarVelocity.Equals(right.FrozenPlanarVelocity) &&
+                   left.TrajectoryCurvatureDegreesPerSecond.Equals(right.TrajectoryCurvatureDegreesPerSecond) &&
+                   left.TrajectoryCurvatureAvailable == right.TrajectoryCurvatureAvailable &&
+                   left.FrozenTrajectoryCurvatureDegreesPerSecond.Equals(right.FrozenTrajectoryCurvatureDegreesPerSecond) &&
+                   left.FrozenTrajectoryCurvatureAvailable == right.FrozenTrajectoryCurvatureAvailable &&
                    left.FrozenYawVelocityDegreesPerSecond.Equals(right.FrozenYawVelocityDegreesPerSecond) &&
                    left.FrozenMaximumYawVelocityDegreesPerSecond.Equals(right.FrozenMaximumYawVelocityDegreesPerSecond) &&
                    left.MotionLinearLandingError.Equals(right.MotionLinearLandingError) &&

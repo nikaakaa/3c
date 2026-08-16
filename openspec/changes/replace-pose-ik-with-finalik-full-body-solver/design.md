@@ -379,11 +379,11 @@ Foot Feature与Biomechanical Step曲线同样属于已编译Source的不可变�
 ### Runtime阶段
 
 - authoritative source、event与Action Phase；
-- Future Body Position/Facing/Linear/Angular路线；
+- Future Body Position/Facing/Linear/Angular路线、当前Trajectory Curvature及availability；
 - Native、Predicted与Final Sole/Ankle；
 - Virtual Ground、全部Capsule request/hit、法线、Edge Plane、Rejected原因；
 - Reachability过滤前后点集与Ground Envelope；
-- Active/Revision identity、交接位置/线速度/角速度和Blend；
+- Active/Revision identity、冻结Trajectory Curvature及availability、交接位置/线速度/角速度和Blend；
 - Constraint、Anchor、Support Leg、Body Support Path、Pelvis、Orientation、Pivot；
 - FBBIK Goal、solver node、physical foot与两层residual。
 

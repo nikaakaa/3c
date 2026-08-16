@@ -489,6 +489,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PlanHasPathGeometry = hasModifier && modifier.Plan.HasPathGeometry,
                 PlanHasExecutablePath = hasModifier && modifier.Plan.HasExecutablePath,
                 FrozenPlanarVelocity = hasModifier ? modifier.FrozenPlanarVelocity : default,
+                TrajectoryCurvatureDegreesPerSecond = hasModifier
+                    ? modifier.TrajectoryCurvatureDegreesPerSecond
+                    : 0f,
+                TrajectoryCurvatureAvailable = hasModifier && modifier.TrajectoryCurvatureAvailable,
+                FrozenTrajectoryCurvatureDegreesPerSecond = hasModifier
+                    ? modifier.FrozenTrajectoryCurvatureDegreesPerSecond
+                    : 0f,
+                FrozenTrajectoryCurvatureAvailable = hasModifier &&
+                                                     modifier.FrozenTrajectoryCurvatureAvailable,
                 FrozenYawVelocityDegreesPerSecond = hasModifier
                     ? modifier.FrozenYawVelocityDegreesPerSecond
                     : 0f,

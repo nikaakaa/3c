@@ -607,6 +607,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasPathGeometry = plan.HasPathGeometry;
             HasExecutablePath = plan.HasExecutablePath && plan.HasPathGeometry;
             FrozenPlanarVelocity = plan.RootTrajectory.FrozenPlanarVelocity;
+            FrozenTrajectoryCurvatureDegreesPerSecond =
+                plan.RootTrajectory.FrozenTrajectoryCurvatureDegreesPerSecond;
+            FrozenTrajectoryCurvatureAvailable =
+                plan.RootTrajectory.FrozenTrajectoryCurvatureAvailable;
             FrozenYawVelocityDegreesPerSecond = plan.RootTrajectory.FrozenYawVelocityDegreesPerSecond;
             FrozenMaximumYawVelocityDegreesPerSecond =
                 plan.RootTrajectory.FrozenMaximumYawVelocityDegreesPerSecond;
@@ -634,6 +638,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool HasPathGeometry { get; }
         public bool HasExecutablePath { get; }
         public Vector3 FrozenPlanarVelocity { get; }
+        public float FrozenTrajectoryCurvatureDegreesPerSecond { get; }
+        public bool FrozenTrajectoryCurvatureAvailable { get; }
         public float FrozenYawVelocityDegreesPerSecond { get; }
         public float FrozenMaximumYawVelocityDegreesPerSecond { get; }
         public float MotionLinearLandingError { get; }
@@ -653,6 +659,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterPredictiveFootEventDiagnostics currentEvent,
             in CharacterPredictiveFootEventDiagnostics incomingEvent,
             float currentEventFootPoseWeight,
+            float trajectoryCurvatureDegreesPerSecond,
+            bool trajectoryCurvatureAvailable,
             float planPredictionBlend,
             float authoritativePredictionBlend,
             bool hasPlanRevision,
@@ -715,6 +723,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentEvent = currentEvent;
             IncomingEvent = incomingEvent;
             CurrentEventFootPoseWeight = currentEventFootPoseWeight;
+            TrajectoryCurvatureDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
+            TrajectoryCurvatureAvailable = trajectoryCurvatureAvailable;
             PlanPredictionBlend = planPredictionBlend;
             AuthoritativePredictionBlend = authoritativePredictionBlend;
             HasPlanRevision = hasPlanRevision;
@@ -785,6 +795,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterPredictiveFootEventDiagnostics CurrentEvent { get; }
         public CharacterPredictiveFootEventDiagnostics IncomingEvent { get; }
         public float CurrentEventFootPoseWeight { get; }
+        public float TrajectoryCurvatureDegreesPerSecond { get; }
+        public bool TrajectoryCurvatureAvailable { get; }
         public float PlanPredictionBlend { get; }
         public float AuthoritativePredictionBlend { get; }
         public bool HasPlanRevision { get; }
@@ -819,6 +831,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterPredictiveFootPlanEndReason PlanEndReason => Plan.EndReason;
         public float PlanExecutionProgress => Plan.ExecutionProgress;
         public Vector3 FrozenPlanarVelocity => Plan.FrozenPlanarVelocity;
+        public float FrozenTrajectoryCurvatureDegreesPerSecond =>
+            Plan.FrozenTrajectoryCurvatureDegreesPerSecond;
+        public bool FrozenTrajectoryCurvatureAvailable =>
+            Plan.FrozenTrajectoryCurvatureAvailable;
         public float FrozenYawVelocityDegreesPerSecond => Plan.FrozenYawVelocityDegreesPerSecond;
         public float FrozenMaximumYawVelocityDegreesPerSecond =>
             Plan.FrozenMaximumYawVelocityDegreesPerSecond;

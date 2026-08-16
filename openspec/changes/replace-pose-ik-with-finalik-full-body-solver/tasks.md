@@ -36,7 +36,7 @@
 
 - [ ] 3.1 扩展`AnimationPredictedFootStepSample`和Projection payload，使完整Biomechanical Step Event以不可拆分值发布。
 - [x] 3.2 Pose字段可按正式Blend混合；Landing identity、Clock、路线、Constraint、Support Leg、Orientation与Pivot必须从一个权威source原子选择。
-- [ ] 3.3 删除Stored Pose、退出source、Inertial History和逐脚Pose Weight复活旧事件或拆开混合字段的路径。
+- [x] 3.3 删除Stored Pose、退出source、Inertial History和逐脚Pose Weight复活旧事件或拆开混合字段的路径。
 - [ ] 3.4 统一Start、Loop、Stop、MovingTurn的左右脚Marker Epoch、Occurrence、Cycle与Phase，使每个当前事件在LiftOff前成为PreSwing事实。
 - [ ] 3.5 更新Definition Build校验和Projection schema；缺少新字段、Flat Reconstruction失败或event不连续必须阻止Float32/Fixed产品发布。
 

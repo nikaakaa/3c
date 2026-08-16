@@ -654,7 +654,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterPredictiveFootEventDiagnostics incomingEvent,
             float currentEventFootPoseWeight,
             float planPredictionBlend,
-            float poseSynchronizedPredictionBlend,
+            float authoritativePredictionBlend,
             bool hasPlanRevision,
             ulong revisionPlanSequence,
             float planRevisionBlendWeight,
@@ -716,7 +716,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             IncomingEvent = incomingEvent;
             CurrentEventFootPoseWeight = currentEventFootPoseWeight;
             PlanPredictionBlend = planPredictionBlend;
-            PoseSynchronizedPredictionBlend = poseSynchronizedPredictionBlend;
+            AuthoritativePredictionBlend = authoritativePredictionBlend;
             HasPlanRevision = hasPlanRevision;
             RevisionPlanSequence = revisionPlanSequence;
             PlanRevisionBlendWeight = planRevisionBlendWeight;
@@ -786,7 +786,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterPredictiveFootEventDiagnostics IncomingEvent { get; }
         public float CurrentEventFootPoseWeight { get; }
         public float PlanPredictionBlend { get; }
-        public float PoseSynchronizedPredictionBlend { get; }
+        public float AuthoritativePredictionBlend { get; }
         public bool HasPlanRevision { get; }
         public ulong RevisionPlanSequence { get; }
         public float PlanRevisionBlendWeight { get; }

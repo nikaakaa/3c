@@ -652,7 +652,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Manifest = new CaptureManifest
                 {
                     runId = runId,
-                    schema = "foot-ik-1189-se2-piecewise-virtual-ground-v92",
+                    schema = "foot-ik-1189-se2-piecewise-virtual-ground-v93",
                     columnCount = ColumnCount,
                     startedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                     status = "running"

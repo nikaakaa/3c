@@ -731,14 +731,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootSide.Left,
                     frame.RenderFrame,
                     frame.CompletionIdentity,
-                    in animationPose,
                     frame.UpstreamPose.LeftFootFeatures,
                     pose.Left);
                 rightPredictive = m_SwingPrediction.GetStanceInput(
                     CharacterFootSide.Right,
                     frame.RenderFrame,
                     frame.CompletionIdentity,
-                    in animationPose,
                     frame.UpstreamPose.RightFootFeatures,
                     pose.Right);
             }

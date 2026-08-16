@@ -411,8 +411,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PlanPredictionBlend = hasModifier
                     ? modifier.PlanPredictionBlend
                     : 0f,
-                PoseSynchronizedPredictionBlend = hasModifier
-                    ? modifier.PoseSynchronizedPredictionBlend
+                AuthoritativePredictionBlend = hasModifier
+                    ? modifier.AuthoritativePredictionBlend
                     : 0f,
                 HasPlanRevision = hasModifier && modifier.HasPlanRevision,
                 RevisionPlanSequence = hasModifier ? modifier.RevisionPlanSequence : 0,

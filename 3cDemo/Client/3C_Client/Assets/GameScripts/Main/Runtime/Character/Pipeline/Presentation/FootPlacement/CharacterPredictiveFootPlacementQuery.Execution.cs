@@ -387,6 +387,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref counters.RejectCounts);
             RemoveCoincidentNonSupportSamples(ref pathSampleCount);
             SortAndCollapsePathSamples(ref pathSampleCount);
+            RemoveUnreachableNonSupportSamples(
+                ref pathSampleCount,
+                up,
+                ref counters.RejectedCount,
+                ref counters.RejectCounts);
             if (!ValidateSupportChain(pathSampleCount, up, out FootPlacementGroundEnvelopeRejectReason chainReject))
             {
                 counters.RejectedCount++;

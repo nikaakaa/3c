@@ -11,7 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         IntentRevision = 1,
         EventSuccessor = 2,
-        PredictiveExit = 3
+        PredictiveExit = 3,
+        AwaitingReplacement = 4
     }
 
     public enum CharacterFootPlanAttemptKind : byte
@@ -706,6 +707,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Transition.IsSuccessorHandoff;
             internal bool CanBeginTransition =>
                 m_Transition.Kind == CharacterFootPlanTransitionKind.None;
+            internal bool CanBeginCurrentReplacement =>
+                CanBeginTransition || IsAwaitingReplacement;
             internal bool HasIntentRevision =>
                 m_Transition.Kind == CharacterFootPlanTransitionKind.IntentRevision;
             internal float TransitionBlendWeight => m_Transition.Blend;
@@ -716,6 +719,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 1f;
             internal bool IsFadingOut =>
                 m_Transition.Kind == CharacterFootPlanTransitionKind.PredictiveExit;
+            internal bool IsAwaitingReplacement =>
+                m_Transition.Kind == CharacterFootPlanTransitionKind.AwaitingReplacement;
             internal float FadeOutWeight => IsFadingOut ? m_Transition.Blend : 0f;
             internal ulong FadeOutStartedFrame => IsFadingOut ? m_Transition.StartedFrame : 0;
             internal float PredictiveRetentionWeight
@@ -843,6 +848,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal void CompleteEventSuccessorHandoff()
             {
                 if (HasEventSuccessorHandoff)
+                    m_Transition = default;
+            }
+
+            internal void BeginAwaitingReplacement(
+                CharacterPredictiveFootPlanEndReason reason,
+                in CharacterFootPlanTransitionCapture capture)
+            {
+                CancelRevision(reason);
+                if (!Active.HasExecutablePath || !HasCompleteOutputForPlan(Active.Sequence))
+                    throw new InvalidOperationException("Predictive Foot replacement retention output is unavailable.");
+                m_Transition = CaptureTransitionOrigin(
+                    CharacterFootPlanTransition.Begin(
+                        CharacterFootPlanTransitionKind.AwaitingReplacement,
+                        Active.ImmutablePlan,
+                        null),
+                    in capture);
+            }
+
+            internal void AdvanceAwaitingReplacement(
+                ulong renderFrame,
+                float deltaSeconds,
+                float blendSpeed)
+            {
+                if (!IsAwaitingReplacement)
+                    return;
+                if (m_Transition.StartedFrame == 0)
+                {
+                    m_Transition = m_Transition.WithStartedFrame(renderFrame);
+                    return;
+                }
+                if (renderFrame <= m_Transition.StartedFrame)
+                    return;
+                m_Transition = m_Transition.WithBlend(Mathf.MoveTowards(
+                    TransitionBlendWeight,
+                    1f,
+                    blendSpeed * deltaSeconds));
+            }
+
+            internal void CompleteAwaitingReplacement()
+            {
+                if (IsAwaitingReplacement)
                     m_Transition = default;
             }
 
@@ -1350,6 +1396,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool currentEventOwnsState = step.IsAuthoritative &&
                                           (activePlanMatches ||
                                            runtime.IsFadingOut ||
+                                           runtime.IsAwaitingReplacement ||
                                            !plan.HasExecutablePath);
             if (currentEventOwnsState)
             {
@@ -1415,6 +1462,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasTransitionOrigin = runtime.HasTransitionOrigin &&
                                        (runtime.HasIntentRevision ||
                                         hasEventSuccessorHandoff ||
+                                        runtime.IsAwaitingReplacement ||
                                         runtime.IsFadingOut);
             Vector3 transitionOriginAnklePosition = default;
             if (hasTransitionOrigin)
@@ -1826,9 +1874,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasIntentRevision = runtime.HasIntentRevision;
             bool hasEventSuccessorHandoff = runtime.HasEventSuccessorHandoff &&
                                             runtime.HasTransitionOrigin;
+            bool hasAwaitingReplacement = runtime.IsAwaitingReplacement &&
+                                           runtime.HasTransitionOrigin;
+            float awaitingReplacementBlend = 0f;
             bool hasTransitionOrigin = runtime.HasTransitionOrigin &&
                                        (hasIntentRevision ||
                                         hasEventSuccessorHandoff ||
+                                        hasAwaitingReplacement ||
                                         runtime.IsFadingOut);
             float predictiveOutputWeight = plan.State == CharacterPredictiveFootPlanState.Executing
                 ? plan.EvaluatePredictiveOutputWeight()
@@ -1859,9 +1911,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootConstraintMode currentConstraintMode = step.IsAuthoritative
                 ? step.EvaluateConstraintMode(step.ActionStepClock.Phase)
                 : AnimationFootConstraintMode.Unlocked;
+            AnimationFootSupportPhase currentSupportPhase = step.IsAuthoritative
+                ? step.EvaluateSupportPhase(step.ActionStepClock.Phase)
+                : AnimationFootSupportPhase.Unsupported;
+            bool predictiveSwing = step.IsAuthoritative &&
+                                   step.ActionStepClock.IsSwing &&
+                                   currentConstraintMode == AnimationFootConstraintMode.Unlocked &&
+                                   currentSupportPhase == AnimationFootSupportPhase.Unsupported;
             bool actionConstraintOwnsFoot = step.IsAuthoritative &&
-                                           currentConstraintMode != AnimationFootConstraintMode.Unlocked &&
-                                           authoritativePredictionBlend <= 0.000001f;
+                                            currentConstraintMode != AnimationFootConstraintMode.Unlocked &&
+                                            (authoritativePredictionBlend <= 0.000001f ||
+                                             runtime.IsAwaitingReplacement);
             bool physicalStanceOwnsFoot =
                 grounding.ContactState != CharacterFootContactState.Swing &&
                 allowsStanceHandoff &&
@@ -1915,18 +1975,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !stanceOwnsFoot &&
                 runtime.HasCompleteOutputForPlan(plan.Sequence))
             {
-                runtime.BeginFadeOut(
+                CharacterPredictiveFootPlanEndReason failureReason =
                     activeEvaluationRejectReason == FootPredictionRejectReason.ReachExceeded
                         ? CharacterPredictiveFootPlanEndReason.TargetReachExceeded
-                        : CharacterPredictiveFootPlanEndReason.TargetEvaluationInvalid,
-                    renderFrame,
-                    in transitionCapture);
+                        : CharacterPredictiveFootPlanEndReason.TargetEvaluationInvalid;
+                if (predictiveSwing)
+                    runtime.BeginAwaitingReplacement(failureReason, in transitionCapture);
+                else
+                    runtime.BeginFadeOut(failureReason, renderFrame, in transitionCapture);
                 hasIntentRevision = false;
-                hasTransitionOrigin = runtime.HasTransitionOrigin && runtime.IsFadingOut;
+                hasAwaitingReplacement = runtime.IsAwaitingReplacement &&
+                                         runtime.HasTransitionOrigin;
+                hasTransitionOrigin = runtime.HasTransitionOrigin &&
+                                      (runtime.IsFadingOut || hasAwaitingReplacement);
                 revisionTransitionBlend = 0f;
                 revisionPlanPredictionBlend = 0f;
                 planPredictionBlend = activePlanPredictionBlend;
                 authoritativePredictionBlend = activePlanPredictionBlend;
+            }
+            else if (runtime.IsAwaitingReplacement)
+            {
+                if (stanceOwnsFoot)
+                    runtime.CompleteAwaitingReplacement();
+                else if (activeTargetAvailable)
+                {
+                    runtime.AdvanceAwaitingReplacement(
+                        renderFrame,
+                        presentationDeltaSeconds,
+                        m_TransitionBlendSpeed);
+                }
+                hasAwaitingReplacement = runtime.IsAwaitingReplacement &&
+                                         runtime.HasTransitionOrigin;
+                hasTransitionOrigin = runtime.HasTransitionOrigin && hasAwaitingReplacement;
             }
             bool targetAvailable = activeTargetAvailable || hasTransitionOrigin;
             CharacterPredictiveFootTarget revisionTargetData = default;
@@ -2011,6 +2091,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float successorBlend = hasEventSuccessorHandoff && activeTargetAvailable
                     ? activePlanPredictionBlend * runtime.EventSuccessorHandoffBlendWeight
                     : 0f;
+                float replacementBlend = hasAwaitingReplacement && activeTargetAvailable
+                    ? runtime.SmoothedTransitionBlendWeight
+                    : 0f;
+                awaitingReplacementBlend = replacementBlend;
+                Vector3 replacementTargetAnklePosition = activeTargetAvailable
+                    ? Vector3.Lerp(
+                        pose.AnklePosition,
+                        targetData.AnklePosition,
+                        activePlanPredictionBlend)
+                    : outgoingAnklePosition;
+                Quaternion replacementTargetAnkleRotation = activeTargetAvailable
+                    ? Quaternion.Slerp(
+                        pose.AnkleRotation,
+                        targetData.AnkleRotation,
+                        activePlanPredictionBlend).normalized
+                    : outgoingAnkleRotation;
                 Vector3 predictiveAnklePosition = revisionTargetAvailable
                     ? Vector3.Lerp(outgoingAnklePosition, revisionTargetData.AnklePosition, revisionBlend)
                     : hasEventSuccessorHandoff && activeTargetAvailable
@@ -2018,6 +2114,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             outgoingAnklePosition,
                             targetData.AnklePosition,
                             successorBlend)
+                        : hasAwaitingReplacement && activeTargetAvailable
+                            ? Vector3.Lerp(
+                                outgoingAnklePosition,
+                                replacementTargetAnklePosition,
+                                replacementBlend)
                         : outgoingAnklePosition;
                 clearanceEvaluated = true;
                 currentPathPosition = revisionTargetAvailable
@@ -2027,6 +2128,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             outgoingPathPosition,
                             targetData.PathPosition,
                             successorBlend)
+                        : hasAwaitingReplacement && activeTargetAvailable
+                            ? Vector3.Lerp(
+                                outgoingPathPosition,
+                                targetData.PathPosition,
+                                replacementBlend)
                         : outgoingPathPosition;
                 currentPathRoot = revisionTargetAvailable
                     ? Vector3.Lerp(outgoingPathRoot, revisionTargetData.PathRoot, revisionBlend)
@@ -2035,6 +2141,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             outgoingPathRoot,
                             targetData.PathRoot,
                             successorBlend)
+                        : hasAwaitingReplacement && activeTargetAvailable
+                            ? Vector3.Lerp(
+                                outgoingPathRoot,
+                                targetData.PathRoot,
+                                replacementBlend)
                         : outgoingPathRoot;
                 currentPathHip = revisionTargetAvailable
                     ? Vector3.Lerp(outgoingPathHip, revisionTargetData.PathHip, revisionBlend)
@@ -2043,6 +2154,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             outgoingPathHip,
                             targetData.PathHip,
                             successorBlend)
+                        : hasAwaitingReplacement && activeTargetAvailable
+                            ? Vector3.Lerp(
+                                outgoingPathHip,
+                                targetData.PathHip,
+                                replacementBlend)
                         : outgoingPathHip;
                 if (revisionTargetAvailable)
                 {
@@ -2058,6 +2174,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentPathSupport = outgoingPathSupport;
                 if (hasEventSuccessorHandoff && activeTargetAvailable &&
                     successorBlend >= 0.5f)
+                {
+                    currentPathSupport = targetData.Support;
+                }
+                else if (hasAwaitingReplacement && activeTargetAvailable &&
+                         replacementBlend >= 0.5f)
                 {
                     currentPathSupport = targetData.Support;
                 }
@@ -2083,42 +2204,61 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     baselineContacts.ToePosition - currentPathPosition,
                     up);
                 requiredLift = Vector3.Dot(predictiveAnklePosition - pose.AnklePosition, up);
-                Vector3 activeResolvedAnklePosition = hasEventSuccessorHandoff
-                    ? activeTargetAvailable
-                        ? Vector3.Lerp(
-                            outgoingAnklePosition,
-                            targetData.AnklePosition,
-                            successorBlend)
-                        : outgoingAnklePosition
-                    : hasTransitionOrigin
-                    ? runtime.IsFadingOut
-                        ? Vector3.Lerp(
-                            pose.AnklePosition,
-                            outgoingAnklePosition,
-                            activePlanPredictionBlend)
-                        : outgoingAnklePosition
-                    : Vector3.Lerp(
-                        pose.AnklePosition,
-                        targetData.AnklePosition,
-                        activePlanPredictionBlend);
-                Quaternion activeResolvedAnkleRotation = hasEventSuccessorHandoff
-                    ? activeTargetAvailable
+                Vector3 activeResolvedAnklePosition;
+                Quaternion activeResolvedAnkleRotation;
+                if (hasEventSuccessorHandoff)
+                {
+                    activeResolvedAnklePosition = activeTargetAvailable
+                        ? Vector3.Lerp(outgoingAnklePosition, targetData.AnklePosition, successorBlend)
+                        : outgoingAnklePosition;
+                    activeResolvedAnkleRotation = activeTargetAvailable
                         ? Quaternion.Slerp(
                             outgoingAnkleRotation,
                             targetData.AnkleRotation,
                             successorBlend).normalized
-                        : outgoingAnkleRotation
-                    : hasTransitionOrigin
-                    ? runtime.IsFadingOut
+                        : outgoingAnkleRotation;
+                }
+                else if (hasAwaitingReplacement)
+                {
+                    activeResolvedAnklePosition = activeTargetAvailable
+                        ? Vector3.Lerp(
+                            outgoingAnklePosition,
+                            replacementTargetAnklePosition,
+                            replacementBlend)
+                        : outgoingAnklePosition;
+                    activeResolvedAnkleRotation = activeTargetAvailable
+                        ? Quaternion.Slerp(
+                            outgoingAnkleRotation,
+                            replacementTargetAnkleRotation,
+                            replacementBlend).normalized
+                        : outgoingAnkleRotation;
+                }
+                else if (hasTransitionOrigin)
+                {
+                    activeResolvedAnklePosition = runtime.IsFadingOut
+                        ? Vector3.Lerp(
+                            pose.AnklePosition,
+                            outgoingAnklePosition,
+                            activePlanPredictionBlend)
+                        : outgoingAnklePosition;
+                    activeResolvedAnkleRotation = runtime.IsFadingOut
                         ? Quaternion.Slerp(
                             pose.AnkleRotation,
                             outgoingAnkleRotation,
                             activePlanPredictionBlend).normalized
-                        : outgoingAnkleRotation
-                    : Quaternion.Slerp(
+                        : outgoingAnkleRotation;
+                }
+                else
+                {
+                    activeResolvedAnklePosition = Vector3.Lerp(
+                        pose.AnklePosition,
+                        targetData.AnklePosition,
+                        activePlanPredictionBlend);
+                    activeResolvedAnkleRotation = Quaternion.Slerp(
                         pose.AnkleRotation,
                         targetData.AnkleRotation,
                         activePlanPredictionBlend).normalized;
+                }
                 Vector3 resolvedAnklePosition = activeResolvedAnklePosition;
                 Quaternion resolvedAnkleRotation = activeResolvedAnkleRotation;
                 if (revisionTargetAvailable)
@@ -2147,7 +2287,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationDeltaSeconds,
                     m_TransitionBlendSpeed,
                     baselineOwnsFoot,
-                    !revisionTargetAvailable && !hasEventSuccessorHandoff,
+                    !revisionTargetAvailable && !hasEventSuccessorHandoff && !hasAwaitingReplacement,
                     true,
                     outputPlanSequence,
                     resolvedAnklePosition,
@@ -2165,11 +2305,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up);
                 predictiveOwnsSoleClearance = !stanceOwnsFoot &&
                                               !runtime.IsFadingOut &&
+                                              !runtime.IsAwaitingReplacement &&
                                               authoritativePredictionBlend >= 0.999999f;
                 if (!stanceOwnsFoot)
                     appliedLift = Vector3.Dot(resolvedAnklePosition - pose.AnklePosition, up);
                 bool finalReachValid = true;
-                if (!stanceOwnsFoot && !runtime.IsFadingOut)
+                if (!stanceOwnsFoot && !runtime.IsFadingOut &&
+                    !runtime.IsAwaitingReplacement)
                 {
                     finalReachValid = TryResolveAppliedReachClearance(
                         pose,
@@ -2334,6 +2476,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 finalContacts.HeelPosition,
                 finalContacts.ToePosition,
                 out debugSnapshot);
+            if (hasAwaitingReplacement && activeTargetAvailable &&
+                awaitingReplacementBlend >= 0.999999f)
+            {
+                runtime.CompleteAwaitingReplacement();
+            }
             return result;
         }
 
@@ -2994,10 +3141,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                              motionTimeline.IsValid &&
                                              incomingStep.Confidence >= m_Settings.MinimumLandingConfidence &&
                                              incomingStep.ActionStepClock.Phase < 0.9999f;
+            bool predictiveSwing = IsUnsupportedPredictiveSwing(in step);
             bool activeEventReplaced = plan.OwnsEvent && !currentPlanMatches;
+            bool replacementPending = runtime.IsAwaitingReplacement &&
+                                      currentPlanMatches &&
+                                      predictiveSwing;
             CharacterPredictiveFootPlanEndReason replacementReason = activeEventReplaced
                 ? ResolveReplacementEndReason(plan)
-                : CharacterPredictiveFootPlanEndReason.None;
+                : replacementPending
+                    ? CharacterPredictiveFootPlanEndReason.TargetEvaluationInvalid
+                    : CharacterPredictiveFootPlanEndReason.None;
             if (plan.HasExecutablePath && currentPlanMatches)
             {
                 plan.SynchronizePoseContribution(in step);
@@ -3011,6 +3164,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool intentRevisionRequested = currentPlanMatches &&
                                            plan.HasExecutablePath &&
                                            !runtime.IsFadingOut &&
+                                           !runtime.IsAwaitingReplacement &&
                                            ShouldRequestIntentRevision(
                                                runtime,
                                                plan,
@@ -3245,8 +3399,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (created)
                     runtime.BeginEventSuccessor();
             }
-            if (activeEventReplaced &&
-                (runtime.CanBeginTransition || runtime.IsFadingOut))
+            bool replacementRequested = activeEventReplaced || replacementPending;
+            if (replacementRequested &&
+                (runtime.CanBeginCurrentReplacement || runtime.IsFadingOut))
             {
                 ulong sourceSequence = step.LandingEventIdentity;
                 bool canAttempt = planningCandidate &&
@@ -3304,17 +3459,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         runtime.CancelRevision(
                             CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
+                        if (predictiveSwing &&
+                            runtime.HasCompleteOutputForPlan(plan.Sequence))
+                        {
+                            runtime.BeginAwaitingReplacement(
+                                replacementReason,
+                                in transitionCapture);
+                        }
+                        else
+                        {
+                            runtime.BeginFadeOut(
+                                replacementReason,
+                                renderFrame,
+                                in transitionCapture);
+                        }
+                    }
+                }
+                else if (!runtime.IsAwaitingReplacement && !runtime.IsFadingOut)
+                {
+                    if (predictiveSwing &&
+                        runtime.HasCompleteOutputForPlan(plan.Sequence))
+                    {
+                        runtime.BeginAwaitingReplacement(
+                            replacementReason,
+                            in transitionCapture);
+                    }
+                    else
+                    {
                         runtime.BeginFadeOut(
                             replacementReason,
                             renderFrame,
                             in transitionCapture);
                     }
                 }
-                else if (!runtime.IsFadingOut)
-                    runtime.BeginFadeOut(
-                        replacementReason,
-                        renderFrame,
-                        in transitionCapture);
             }
             runtime.AdvanceTransition(
                 renderFrame,
@@ -3472,7 +3649,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     _ => default
                 };
             }
-            else if (activeEventReplaced)
+            else if (activeEventReplaced || runtime.IsAwaitingReplacement)
             {
                 candidateKind = CharacterFootPlanAttemptKind.CurrentEventReplacement;
                 landingEventIdentity = step.LandingEventIdentity;
@@ -3572,7 +3749,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return CharacterFootPlanBuildDecisionReason.IncomingEventAlreadyOwned;
             if (usesIncoming && !motionWithinCommitTolerance)
                 return CharacterFootPlanBuildDecisionReason.MotionOutsideCommitTolerance;
-            if (!runtime.CanBeginTransition)
+            bool currentReplacement =
+                candidateKind == CharacterFootPlanAttemptKind.CurrentEventReplacement;
+            if (currentReplacement
+                    ? !runtime.CanBeginCurrentReplacement
+                    : !runtime.CanBeginTransition)
                 return CharacterFootPlanBuildDecisionReason.TransitionOccupied;
             if (!origin.IsAvailable || usesIncoming && !origin.HasSupport)
                 return CharacterFootPlanBuildDecisionReason.OriginUnavailable;
@@ -4196,6 +4377,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out orientationPolicy,
                 out bodyPivotMode);
         }
+
+        static bool IsUnsupportedPredictiveSwing(
+            in AnimationPredictedFootStepSample step) =>
+            step.IsAuthoritative &&
+            step.ActionStepClock.IsSwing &&
+            step.EvaluateConstraintMode(step.ActionStepClock.Phase) ==
+            AnimationFootConstraintMode.Unlocked &&
+            step.EvaluateSupportPhase(step.ActionStepClock.Phase) ==
+            AnimationFootSupportPhase.Unsupported;
 
         static void RequireAuthoritativeConstraint(
             in AnimationPredictedFootStepSample step,

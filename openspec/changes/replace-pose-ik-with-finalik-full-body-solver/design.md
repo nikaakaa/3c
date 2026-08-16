@@ -295,7 +295,7 @@ FinalSoleXZ = NativeAnimatedSoleXZ
 FinalSoleY = GroundHeight + Clearance
 ```
 
-Heel/Toe只使用Calibration在该Sole Pose上重建，并沿Component Up满足唯一支撑平面的最小物理净空；禁止第二Heel/Toe Current Query。
+Heel/Toe只使用Calibration在该Sole Pose上重建。Ground Envelope样本是当前Foot Rate处的有限高度下界，预测净空沿Component Up比较Heel/Toe与该样本高度；Segment Surface法线只参与支撑身份和Foot Orientation，不得离开采样区间后作为无限平面外推。Current Grounding只对当前真实查询平面执行一次最小物理净空；禁止第二Heel/Toe Current Query。
 
 ## 8. Constraint、Landing与Anchor
 

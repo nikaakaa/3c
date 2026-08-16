@@ -65,6 +65,7 @@
 51. 权威事件存在且预测权重为零不等于Stance拥有脚。只有Locked/Sliding动作约束或真实Anchor可以保留Grounding目标；Unlocked Swing没有可执行Plan时必须保持Original动画并明确暴露失败，不能用Current Grounding伪装预测成功。
 52. Ground Envelope分段必须同时保存起点与终点Surface。run `ea0e2e2...`中第一段起点坐标来自已提交Landing，但旧段只携带终点Surface，台阶边缘因此把连续Successor误判为Surface不兼容并取消。GDC的连续Hull是feet-only下界，不允许用终点踏面身份冒充整段或FootLock起点。
 53. Event Successor不能无条件阻塞当前Swing的Intent Revision。run `451c2adb...`中旧Active的`MotionLandingError`已达`2.59m~2.81m`、正式容差仅`0.08m`，但预建Successor占据唯一Revision槽，旧Path仍以100%权重改写脚；事件换代后Goal单帧跳`60cm`以上。当前Step仍为Unsupported时必须先修正当前Plan，进入ApproachingContact后才由Successor优先；当前Swing无Plan必须原事件重建并从上一完成输出连续接管。
+54. Ground Envelope样本是有限的Component Up高度下界，不是可无限外推的Surface Plane。run `b33c501f...` frame `24103 -> 24104`中Path Y只下降`1.62cm`，但前一Segment法线约为`(0.035,0.585,-0.810)`，Native Sole与采样点相距约`1.13m`；把该局部斜面外推后Heel/Toe平面距离达到`-0.684m/-0.691m`，Required Lift被放大到`1.215m`，下一帧切水平面后Final Goal单帧下降`1.156m`、Pelvis Translation下降`38.7cm`。Surface法线只用于支撑身份与方向，预测净空必须按Ground Envelope高度沿Component Up计算；远距离偏差交给Revision，不能交给净空补偿。
 
 ## 当前证据与下一owner
 
@@ -76,3 +77,4 @@
 - 第二轮run `451c2adb...`共2278行、1221列且逐行等宽；互补Fade使最大物理下陷从左`55.54cm`/右`59.14cm`降到左`18.71cm`/右`7.02cm`，证明Fade修复有效但尚未闭环。
 - 同一run左右Swing无Executable Path为`136/48`帧，左frame `820 -> 821`由旧Path `Y=0`、100%预测权重切到新Plan `Y=0.893m`、预测权重`0.0055`，Final Goal单帧跳`64.40cm`；这不是FBBIK放大，而是旧Plan过期、Revision槽被Successor占用和换代输出不连续叠加。
 - 下一次数据回归先验证四项：过期Active不再在米级偏差下100%输出、当前Swing无Plan可原事件重建、Plan换代首帧Goal连续、Successor起点不再被Current Query覆盖；通过后再进入Landing事务与Pelvis支撑切换。
+- run `b33c501f...`共27915行、1221列且逐行等宽；左右最大Goal Y单帧变化为`1.156m/0.660m`，最大Pelvis Y单帧变化为`0.387m`。最坏帧发生在Executing、rewritten且预测权重为1时，证明局部斜面无限外推是预测owner自身错误；左右另有`232/110`帧Swing无Executable Plan，分别产生最大`15.29cm/8.25cm`物理穿透，仍需独立验收Plan空窗。

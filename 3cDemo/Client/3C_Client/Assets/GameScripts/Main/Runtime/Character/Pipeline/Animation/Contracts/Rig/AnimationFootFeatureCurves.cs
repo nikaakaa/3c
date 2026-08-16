@@ -1230,22 +1230,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationPredictedFootStepSample IncomingPredictedStep { get; }
         public bool IsValid => m_IsSpecified != 0;
 
-        public AnimationFootFeatureSample WithPredictedStep(AnimationPredictedFootStepSample value) =>
+        public AnimationFootFeatureSample WithPredictionPair(
+            AnimationPredictedFootStepSample predictedStep,
+            AnimationPredictedFootStepSample incomingPredictedStep) =>
             new AnimationFootFeatureSample(
                 SoleLocalVelocity,
                 SoleHeight,
                 PlantConfidence,
-                value,
-                IncomingPredictedStep);
-
-        public AnimationFootFeatureSample WithIncomingPredictedStep(
-            AnimationPredictedFootStepSample value) =>
-            new AnimationFootFeatureSample(
-                SoleLocalVelocity,
-                SoleHeight,
-                PlantConfidence,
-                PredictedStep,
-                value);
+                predictedStep,
+                incomingPredictedStep);
 
         public AnimationFootFeatureSample BindPredictionSource(
             ulong sourceIdentity,
@@ -1324,9 +1317,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         float m_Height;
         float m_PlantConfidence;
         AnimationPredictedFootStepSample m_PredictedStep;
-        float m_PredictedStepScore;
         AnimationPredictedFootStepSample m_IncomingPredictedStep;
-        float m_IncomingPredictedStepScore;
+        float m_PredictionPairScore;
 
         public void Add(AnimationFootFeatureSample sample, float weight)
         {
@@ -1344,31 +1336,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PlantConfidence += sample.PlantConfidence * weight;
             AnimationPredictedFootStepSample candidate =
                 sample.PredictedStep.ApplyTimeScale(visualTimeScale);
-            float score = candidate.HasLandingEvent ? weight * candidate.Confidence : 0f;
-            AnimationPredictedFootStepSample selected = AnimationPredictedFootStepSample.Select(
-                m_PredictedStep,
-                m_PredictedStepScore,
-                candidate,
-                score,
-                out bool candidateSelected);
-            m_PredictedStep = selected;
-            if (candidateSelected)
-                m_PredictedStepScore = score;
             AnimationPredictedFootStepSample incomingCandidate =
                 sample.IncomingPredictedStep.ApplyTimeScale(visualTimeScale);
-            float incomingScore = incomingCandidate.HasLandingEvent
-                ? weight * incomingCandidate.Confidence
+            AnimationPredictedFootStepSample currentAuthority =
+                m_PredictedStep.HasLandingEvent
+                    ? m_PredictedStep
+                    : m_IncomingPredictedStep;
+            AnimationPredictedFootStepSample candidateAuthority =
+                candidate.HasLandingEvent
+                    ? candidate
+                    : incomingCandidate;
+            float pairScore = candidateAuthority.HasLandingEvent
+                ? weight * candidateAuthority.Confidence
                 : 0f;
-            AnimationPredictedFootStepSample selectedIncoming =
-                AnimationPredictedFootStepSample.Select(
-                    m_IncomingPredictedStep,
-                    m_IncomingPredictedStepScore,
-                    incomingCandidate,
-                    incomingScore,
-                    out bool incomingCandidateSelected);
-            m_IncomingPredictedStep = selectedIncoming;
-            if (incomingCandidateSelected)
-                m_IncomingPredictedStepScore = incomingScore;
+            AnimationPredictedFootStepSample.Select(
+                currentAuthority,
+                m_PredictionPairScore,
+                candidateAuthority,
+                pairScore,
+                out bool candidatePairSelected);
+            if (candidatePairSelected)
+            {
+                m_PredictedStep = candidate;
+                m_IncomingPredictedStep = incomingCandidate;
+                m_PredictionPairScore = pairScore;
+            }
         }
 
         public AnimationFootFeatureSample Resolve()

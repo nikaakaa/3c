@@ -2721,77 +2721,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static AnimationFootFeatureSample ApplyStateMachinePrediction(
             AnimationFootFeatureSample output,
-            AnimationFootFeatureSample prediction)
-        {
-            AnimationPredictedFootStepSample incoming = SelectIncomingPrediction(
-                output.PredictedStep,
-                output.IncomingPredictedStep,
+            AnimationFootFeatureSample prediction) =>
+            output.WithPredictionPair(
                 prediction.PredictedStep,
                 prediction.IncomingPredictedStep);
-            if (output.PredictedStep.IsAuthoritative ||
-                !incoming.IsAuthoritative ||
-                incoming.PredictionLeadSeconds > 0.0001f)
-            {
-                return output.WithIncomingPredictedStep(incoming);
-            }
-            AnimationPredictedFootStepSample following = SelectIncomingPrediction(
-                incoming,
-                default,
-                prediction.PredictedStep,
-                prediction.IncomingPredictedStep);
-            return output
-                .WithPredictedStep(incoming)
-                .WithIncomingPredictedStep(following);
-        }
-
-        static AnimationPredictedFootStepSample SelectIncomingPrediction(
-            AnimationPredictedFootStepSample current,
-            AnimationPredictedFootStepSample incoming,
-            AnimationPredictedFootStepSample successor,
-            AnimationPredictedFootStepSample following)
-        {
-            AnimationPredictedFootStepSample result = SelectIncomingCandidate(
-                current,
-                incoming,
-                successor);
-            return SelectIncomingCandidate(current, result, following);
-        }
-
-        static AnimationPredictedFootStepSample SelectIncomingCandidate(
-            AnimationPredictedFootStepSample current,
-            AnimationPredictedFootStepSample incoming,
-            AnimationPredictedFootStepSample candidate)
-        {
-            if (!candidate.IsAuthoritative ||
-                current.IsAuthoritative &&
-                current.LandingEventIdentity == candidate.LandingEventIdentity)
-                return incoming;
-            if (!current.IsAuthoritative)
-                return SelectEarlierIncoming(incoming, candidate);
-            float successorTimeToLiftOff = Mathf.Max(
-                0f,
-                candidate.PredictionLeadSeconds) +
-                Mathf.Max(0f, candidate.LiftOffPhase - candidate.EventPhase) *
-                candidate.ActionStepClock.DurationSeconds;
-            if (current.TimeToLandingSeconds <=
-                successorTimeToLiftOff + 0.00001f)
-                return SelectEarlierIncoming(incoming, candidate);
-            return candidate.TimeToLandingSeconds + 0.00001f <
-                   current.TimeToLandingSeconds
-                ? SelectEarlierIncoming(incoming, candidate)
-                : incoming;
-        }
-
-        static AnimationPredictedFootStepSample SelectEarlierIncoming(
-            AnimationPredictedFootStepSample current,
-            AnimationPredictedFootStepSample candidate)
-        {
-            if (!current.IsAuthoritative ||
-                candidate.TimeToLandingSeconds + 0.00001f <
-                current.TimeToLandingSeconds)
-                return candidate;
-            return current;
-        }
 
         void EvaluateLayeredBoneBlend(AnimationPoseGraphNativeOperation operation)
         {

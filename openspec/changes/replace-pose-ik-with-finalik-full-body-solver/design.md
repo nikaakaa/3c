@@ -165,6 +165,8 @@ Pose允许连续混合；Biomechanical Step Fact必须原子选择。Artifact的
 
 禁止分别混合路线、Clearance、约束、支撑腿、orientation或pivot。逐脚Pose权重可以混合当前Heel/Toe/Sole运动，但不能改变离散event identity。
 
+`Current + Incoming`是一个不可拆分的Projection值。Sequence绑定Marker occurrence、BlendSpace/TreeClip贡献竞选、StateMachine target预取和Slot选择都必须一次选择同一source的整对事实。禁止Current按一个score竞选、Incoming按另一个score竞选，也禁止保留当前source的Current后从待切换source挑选“更早Incoming”。StateMachine已同步的Predictive Target即使Pose权重为0，也只能整对接管Step事实；连续Sole速度、高度和Plant Confidence仍可按Pose规则混合。
+
 Start、Loop、Stop与MovingTurn必须在LiftOff前提供当前脚PreSwing事件。目标source在Pose权重暂时为0时仍可拥有事件事实；退出源、Stored Pose和Inertial History不能夺回事件时钟。
 
 Sequence Player把Artifact occurrence绑定到Locomotion Marker时，必须直接使用source-bound Landing Cycle与Event Ordinal选择正式Marker occurrence。`TimeToLanding`只负责连续动作时钟，不得再次通过`ContinuousTime + delay`就近搜索Marker；否则同一事件会同时拥有Artifact cycle和Runtime时间距离两个身份判定。

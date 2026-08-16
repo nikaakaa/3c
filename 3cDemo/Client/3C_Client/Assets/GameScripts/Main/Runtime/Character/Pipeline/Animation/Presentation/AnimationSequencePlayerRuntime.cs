@@ -752,12 +752,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!step.IsSourceBound || !m_HasMovementMarkerEpoch)
                 return bound;
             AnimationPredictedFootStepSample incoming = bound.IncomingPredictedStep;
-            return bound
-                .WithPredictedStep(BindSynchronizedMarkerSource(side, in step))
-                .WithIncomingPredictedStep(
-                    incoming.IsSourceBound
-                        ? BindSynchronizedMarkerSource(side, in incoming)
-                        : incoming);
+            return bound.WithPredictionPair(
+                BindSynchronizedMarkerSource(side, in step),
+                incoming.IsSourceBound
+                    ? BindSynchronizedMarkerSource(side, in incoming)
+                    : incoming);
         }
 
         AnimationPredictedFootStepSample BindSynchronizedMarkerSource(

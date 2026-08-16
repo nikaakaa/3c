@@ -320,3 +320,9 @@ Foot IK专项Variant曾同时运行玩家与中立Target的完整Animation/PoseG
 双步Artifact首次运行在Walk Loop第27帧明确失败：Incoming已经带有正确的Source Landing Cycle和Event Ordinal，Sequence Player却仍用`ContinuousTime + TimeToLanding`寻找25ms内最近的Marker。这样Artifact occurrence与Runtime连续时间各自决定一次Landing身份；同步中的预测source只要两个时间表示不完全重合，完整合法的Incoming也会被拒绝。
 
 正式绑定直接使用`Source Landing Cycle + Event Ordinal + Foot Side`选择作者Marker occurrence，再叠加已对齐的Marker Epoch ordinal offset。`TimeToLanding`继续驱动连续时钟，但不再拥有事件身份。有限Sequence要求cycle为0；循环Sequence按source-bound cycle选择同一作者Marker。对侧Landing使用同一Owned cycle加Artifact提供的Opposing cycle offset，不做第二次时间搜索。
+
+## 26. Projection不能把完整Artifact重新拆开
+
+Artifact同时保存Current与Incoming仍不足以保证运行时原子性。旧Projection在两个位置再次拆分这对事实：Foot Feature Blend按两个独立score分别选择Current和Incoming；StateMachine Predictive Target保留输出source的Current，再从待切换source中挑“更早Incoming”，甚至把该Incoming单独升格为Current。这样每个子结构本身都合法，但Step Event、Clock、Route、Constraint和下一事件不再属于同一个source。
+
+正式规则是把`Current + Incoming`当作一个Projection值。BlendSpace、TreeClip、StateMachine预取、Slot和Marker绑定都只能一次选择整对；连续Sole速度、高度和Plant Confidence仍可混合。已同步的Predictive Target即使Pose权重暂时为0，也只能整对接管事件事实，不能通过逐字段择优构造一个从未被任何Artifact发布过的Step。

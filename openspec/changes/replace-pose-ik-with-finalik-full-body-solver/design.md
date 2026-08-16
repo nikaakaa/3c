@@ -193,6 +193,8 @@ PredictedHipWorld(t) = B(t) * RootLocalHip(t)
 
 `B(t)`包含位置与旋转，不能把Facing固定为创建帧，也不能把最大转速或Body Yaw直接积分成位移圆弧。
 
+Trajectory Curvature必须由相邻Simulation committed Intent的Desired Planar Velocity、Authority Tick和正式Tick Rate计算，并在整个Simulation tick区间保持同一值。Presentation插值只采样该已提交曲率；禁止对相邻Render Frame的插值速度再次求导，否则表现帧率和摄像机缓动会成为Future Body路线输入。
+
 ### 6.1 离散Revision
 
 新的committed trajectory只有在剩余Landing位置或朝向误差超过鞋底/查询几何边界时创建后继Revision。每个Revision仍是不可变计划。

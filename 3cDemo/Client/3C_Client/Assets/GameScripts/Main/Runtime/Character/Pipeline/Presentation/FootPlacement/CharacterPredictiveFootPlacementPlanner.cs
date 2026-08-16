@@ -1845,7 +1845,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     runtime.BeginIntentRevision();
                 else
                 {
-                    Debug.Log($"Predictive Foot Revision Rejected Side={side}, Reason={runtime.Revision.CreationRejectReason}, Envelope={runtime.Revision.GroundEnvelopeRejectReason}, Frame={renderFrame}, Event={step.LandingEventIdentity}");
+                    Debug.LogWarning($"Predictive Foot Revision Rejected Side={side}, Reason={runtime.Revision.CreationRejectReason}, Envelope={runtime.Revision.GroundEnvelopeRejectReason}, Frame={renderFrame}, Event={step.LandingEventIdentity}");
                     runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 }
             }

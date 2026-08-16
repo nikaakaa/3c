@@ -1844,7 +1844,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (created)
                     runtime.BeginIntentRevision();
                 else
-                    runtime.Revision.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
+                    runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.EventReplaced);
             }
         }
 

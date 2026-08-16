@@ -224,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    public sealed class ActionAnimationPlaybackFrame
+    public readonly struct ActionAnimationPlaybackFrame
     {
         public const string SchemaVersion = "action-animation-playback-frame/v2";
 
@@ -250,8 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationParameterPageId parameterPageId,
             AnimationReadOnlyBuffer<float> poseParameters,
             AnimationReadOnlyBuffer<byte> poseParameterAvailability,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures)
+            AnimationReadOnlyBuffer<AnimationFootFeatureSample> footFeatures)
         {
             LatestEventId = latestEventId;
             PlaybackId = playbackId;
@@ -274,8 +273,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ParameterPageId = parameterPageId;
             PoseParameters = poseParameters;
             PoseParameterAvailability = poseParameterAvailability;
-            LeftFootFeatures = leftFootFeatures;
-            RightFootFeatures = rightFootFeatures;
+            FootFeatures = footFeatures;
             if (!IsValid)
                 throw new ArgumentException("Action animation playback frame is invalid.");
         }
@@ -301,8 +299,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public PresentationParameterPageId ParameterPageId { get; }
         public AnimationReadOnlyBuffer<float> PoseParameters { get; }
         public AnimationReadOnlyBuffer<byte> PoseParameterAvailability { get; }
-        public AnimationFootFeatureSample LeftFootFeatures { get; }
-        public AnimationFootFeatureSample RightFootFeatures { get; }
+        public AnimationReadOnlyBuffer<AnimationFootFeatureSample> FootFeatures { get; }
+        public AnimationFootFeatureSample LeftFootFeatures => FootFeatures[0];
+        public AnimationFootFeatureSample RightFootFeatures => FootFeatures[1];
 
         public bool IsValid
         {
@@ -334,6 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     !ParameterPageId.IsValid ||
                     PoseParameters.Count == 0 ||
                     PoseParameters.Count != PoseParameterAvailability.Count ||
+                    FootFeatures.Count != 2 ||
                     !LeftFootFeatures.IsValid ||
                     !RightFootFeatures.IsValid)
                 {

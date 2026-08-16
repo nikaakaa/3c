@@ -68,6 +68,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             row.PoseParameters[
                 row.ParameterOffset + footPlacementWeightParameterIndex] =
                     footPlacement.Weight;
+            row.FootFeatures[row.FootFeatureOffset] = footPlacement.Left;
+            row.FootFeatures[row.FootFeatureOffset + 1] = footPlacement.Right;
 
             return new ActionAnimationPlaybackFrame(
                 lifecycle.LatestEventId,
@@ -106,8 +108,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     parameterCount,
                     workspace,
                     row.LeaseIdentity),
-                footPlacement.Left,
-                footPlacement.Right);
+                new AnimationReadOnlyBuffer<AnimationFootFeatureSample>(
+                    row.FootFeatures,
+                    row.FootFeatureOffset,
+                    2,
+                    workspace,
+                    row.LeaseIdentity));
         }
     }
 }

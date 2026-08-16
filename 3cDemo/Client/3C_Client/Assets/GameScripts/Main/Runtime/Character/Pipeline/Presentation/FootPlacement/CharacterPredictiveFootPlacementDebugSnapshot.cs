@@ -256,8 +256,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float actionProgress,
             float groundPathProgress,
             CharacterPredictiveFootPlanGeometrySnapshot plan,
+            Matrix4x4 planWorldProjection,
             CharacterPredictiveFootPlanState revisionPlanState,
             CharacterPredictiveFootPlanGeometrySnapshot revisionPlan,
+            Matrix4x4 revisionPlanWorldProjection,
             float revisionBlendWeight,
             bool clearanceEvaluated,
             bool rewritten,
@@ -276,8 +278,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActionProgress = actionProgress;
             GroundPathProgress = groundPathProgress;
             Plan = plan;
+            PlanWorldProjection = planWorldProjection;
             RevisionPlanState = revisionPlanState;
             RevisionPlan = revisionPlan;
+            RevisionPlanWorldProjection = revisionPlanWorldProjection;
             RevisionBlendWeight = Mathf.Clamp01(revisionBlendWeight);
             ClearanceEvaluated = clearanceEvaluated;
             Rewritten = rewritten;
@@ -297,8 +301,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ActionProgress { get; }
         public float GroundPathProgress { get; }
         public CharacterPredictiveFootPlanGeometrySnapshot Plan { get; }
+        public Matrix4x4 PlanWorldProjection { get; }
         public CharacterPredictiveFootPlanState RevisionPlanState { get; }
         public CharacterPredictiveFootPlanGeometrySnapshot RevisionPlan { get; }
+        public Matrix4x4 RevisionPlanWorldProjection { get; }
         public float RevisionBlendWeight { get; }
         public bool ClearanceEvaluated { get; }
         public bool Rewritten { get; }

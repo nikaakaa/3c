@@ -59,9 +59,11 @@ Foot Placement MUST不读取AnimationClip、Library Artifact、Tree、Blackboard
 
 PredictiveFootPlacementModifier MUST只在当前权威Landing Event进入PreSwing后创建不可变Plan。Plan MUST冻结同一Action Step的Future Body Position、Facing、Linear Velocity与Angular Velocity路线，并通过该Transform与Artifact root-local Sole、Ankle、Hip路线建立未来世界Foot Route。Foot Route MUST保留动画局部X、Z和旋转，不得使用输入幅值缩放、丢弃局部X、读取Action Motion Curve或把Foot Route当角色位移。
 
-Plan创建帧 MAY执行一次平面刚性重基，使同相位Artifact Sole与Native Sole重合；该变换 MUST整步冻结。最终Swing Sole XZ MUST继续来自同相位Original Component Pose。计划当前样本与Native Sole的平面偏差 MUST进入有效性与诊断，不能通过冻结世界XYZ水平拉脚。
+Plan创建帧 MAY执行一次Artifact平面刚性重基，使同相位Artifact Sole与Native Sole重合；该Artifact对齐 MUST整步冻结。运行帧 MUST使用当前正式Root相对同相位Expected Root的水平位移和Yaw，对Foot Route、Ground Envelope、Landing、Future Support与Body Path应用同一个平面刚体投影；该投影 MUST不执行Physics Query、不改写Plan identity或Action Clock，并在`ApproachingContact`冻结。最终Swing Sole XZ MUST继续来自同相位Original Component Pose。
 
-已提交Plan MUST不按Render Delta、当前Pose、Visible Root、Body Yaw、Camera变化或相邻帧速度导数逐帧改写。只有Simulation提交新的Future Body trajectory且剩余Landing位置或朝向误差超过`max(SoleSupportRadius, PathSphereRadius, SwingCapsuleRadius)`时，MAY创建一个离散后继Revision。每个不可变源Plan MUST至多尝试一次Intent Revision；Revision提升为新的Active后，新Plan MAY在committed trajectory再次越过同一几何边界时继续离散修订。每只脚同一时刻 MUST仍只有一个Active与一个过渡槽，不得逐帧改写Plan或并行执行多条Swing路径。
+已提交Plan MUST不按Render Delta、当前Pose、Visible Root、Camera变化或相邻帧速度导数逐帧改写，但 MUST按当前正式Root执行上述廉价刚体投影。只有Simulation提交新的Future Body trajectory且剩余Landing位置或朝向误差超过`max(SoleSupportRadius, PathSphereRadius, SwingCapsuleRadius)`时，MAY创建离散后继Revision。查询资格 MUST按`源Plan + trajectory generation + authority tick`记账，同一权威tick至多一次，下一正式tick可重试。每只脚同一时刻 MUST仍只有一个Active与一个过渡槽，不得逐帧执行Physics Query或并行执行多条Swing路径。
+
+在Release前，统一Foot Placement MUST按正式加减速、低速急转、有效前一步历史和空中状态原子选择整步`Predictive`或`Traditional`模式，并在Step内保持不变。Traditional MUST是同一owner内的正式策略；Predictive Query被Rejected MUST不触发中途模式切换或Grounding Swing fallback。
 
 #### Scenario: 平地直行预测步
 
@@ -78,21 +80,21 @@ Plan创建帧 MAY执行一次平面刚性重基，使同相位Artifact Sole与Na
 #### Scenario: camera缓动但committed trajectory未实质改变
 
 - **WHEN** Camera或Visible Body仍变化而Landing位置和朝向误差未跨越几何阈值
-- **THEN** 当前Plan MUST继续执行同一不可变几何
-- **AND** MUST不创建Revision或重画一条自适应Path
+- **THEN** 当前Plan MUST继续执行同一不可变Artifact与Ground Envelope，并按正式Root更新本帧刚体投影
+- **AND** MUST不创建Revision或重新执行Ground Query
 
 #### Scenario: committed意图实质改变
 
 - **WHEN** 新Future Body trajectory使剩余Landing误差跨越正式几何阈值
 - **THEN** 后继Revision MUST从当前已执行Sole位置、线速度和Body角速度连续重基
-- **AND** Revision过渡旧侧 MUST冻结上一完成帧实际输出的Ankle、Sole、Ground Path、Support与Body Path Root/Hip，不得继续求值已经过期的Active Path
+- **AND** Revision过渡旧侧 MUST冻结上一完成帧Final Ankle相对同帧Original Animated Ankle的修正、Body Path相对Animated Hip的修正，以及Ground Path与Support；本帧旧侧 MUST由当前同相位Original动画加冻结修正组成，不得锁死Swing世界Ankle或继续求值已经过期的Active Path
 - **AND** 尚未产生本Plan完成输出的过期Plan MUST在首次贡献Goal前退出，并从当前真实Sole、Support与committed trajectory重建Current Event计划
-- **AND** 新Revision未进入Executing前，仍在运动有效性边界内的旧输出 MUST保持；Intent Revision被Rejected但旧Plan已经过期时 MUST以`MotionDeviationExceeded`连续撤出
-- **AND** MUST不在后继尚未有效时清空旧Plan或切换到Grounding Swing Goal
+- **AND** 新Revision未Commit前，旧Active MUST继续以本帧执行投影输出；Rejected候选 MUST只记录失败并在下一正式tick保留重试资格
+- **AND** MUST不在后继尚未有效时清空旧Plan、清除完整Path或切换到Grounding Swing Goal
 
 ### Requirement: 地面查询必须形成有限连续 Support Envelope
 
-统一Foot Placement MUST只有一个World Query owner。Current Query只属于FootGrounding当前支撑；Future Query只在Plan或Revision创建事务中执行一次。Future Query MUST沿Future Foot Route和权威对侧接触构成的Virtual Ground Polyline执行Capsule检测并保存位置与法线。
+统一Foot Placement MUST只有一个World Query owner。Current Query只属于FootGrounding当前支撑；Future Query只在Plan或Revision创建事务中执行，同一`源Plan + trajectory generation + authority tick`最多一次。Future Query MUST沿Future Foot Route和权威对侧接触构成的Virtual Ground Polyline执行Capsule检测并保存位置与法线。Rejected候选不得永久占用事件或删除仍有效计划，下一正式tick在条件仍满足时 MUST可重新创建候选。
 
 正式Query Mask MUST包含共享`Ground`与真实踏面`FootPlacementSurface`，并排除Gameplay专用`CharacterTraversal`。KCC Traversal Ramp、Collision Artifact support identity、隐藏Collider、默认平面和无IK脚高度 MUST不成为Current Support、Future Landing或Ground Envelope。系统 MUST不同时查询Ramp与真实踏面后按命中优先级选择。
 
@@ -248,11 +250,12 @@ Body branch、Presentation reset、Rig/Projection replacement、Artifact identit
 - **THEN** Final Ankle MUST由Native Sole XZ、Ground Envelope、Animation Clearance、Sole/Ankle旋转和当前Sole-to-Ankle几何重建
 - **AND** Current Grounding与冻结Query XYZ MUST不成为Swing空间基准
 
-#### Scenario: Rejected Swing Plan
+#### Scenario: Rejected Predictive候选
 
-- **WHEN** Plan因Landing或Reachability失败而Rejected
-- **THEN** Swing MUST保持Original Component Pose并明确报告无预测输出
-- **AND** MUST不把响应式Goal、默认地面或旧Plan描述为预测结果
+- **WHEN** 初始Plan或Revision候选因Landing或Reachability失败而Rejected
+- **THEN** Rejected候选 MUST明确报告无预测输出并保留下一正式tick重试资格
+- **AND** 已有Active时 MUST继续消费同一Active的执行投影；无Active时 MUST保持本Step的显式Predictive失败状态
+- **AND** MUST不把响应式Goal、默认地面或查询失败后的Traditional切换描述为预测结果
 
 ### Requirement: 最终Foot Motion必须组合Ground Path与动画净空
 

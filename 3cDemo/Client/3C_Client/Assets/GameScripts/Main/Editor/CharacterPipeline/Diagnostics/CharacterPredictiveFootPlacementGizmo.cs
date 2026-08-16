@@ -102,12 +102,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : 0f;
             DrawPlan(
                 leg.Plan,
+                leg.PlanWorldProjection,
                 leg.PlanState,
                 sideColor,
                 1f - revisionBlend,
                 markerSize);
             DrawPlan(
                 leg.RevisionPlan,
+                leg.RevisionPlanWorldProjection,
                 leg.RevisionPlanState,
                 sideColor,
                 revisionBlend,
@@ -120,6 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void DrawPlan(
             CharacterPredictiveFootPlanGeometrySnapshot plan,
+            Matrix4x4 worldProjection,
             CharacterPredictiveFootPlanState state,
             Color sideColor,
             float opacity,
@@ -128,28 +131,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (plan == null || opacity <= 0.000001f)
                 return;
             PlanDrawCache cache = s_DrawCaches.GetValue(plan, CreateDrawCache);
-            if (state == CharacterPredictiveFootPlanState.Rejected)
+            Matrix4x4 previousGizmosMatrix = Gizmos.matrix;
+            Matrix4x4 previousHandlesMatrix = Handles.matrix;
+            Gizmos.matrix = worldProjection;
+            Handles.matrix = worldProjection;
+            try
             {
+                if (state == CharacterPredictiveFootPlanState.Rejected)
+                {
+                    DrawPath(cache.GroundProbePath, ScaleAlpha(s_GroundProbeColor, opacity), 2f);
+                    DrawLines(cache.QueryBoundaryLines, ScaleAlpha(s_GroundProbeColor, opacity));
+                    DrawLines(cache.AcceptedLines, ScaleAlpha(s_AcceptColor, opacity));
+                    DrawLines(cache.RejectedLines, ScaleAlpha(s_RejectColor, opacity));
+                    return;
+                }
+                if (state != CharacterPredictiveFootPlanState.Planned &&
+                    state != CharacterPredictiveFootPlanState.Executing)
+                    return;
                 DrawPath(cache.GroundProbePath, ScaleAlpha(s_GroundProbeColor, opacity), 2f);
-                DrawLines(cache.QueryBoundaryLines, ScaleAlpha(s_GroundProbeColor, opacity));
-                DrawLines(cache.AcceptedLines, ScaleAlpha(s_AcceptColor, opacity));
-                DrawLines(cache.RejectedLines, ScaleAlpha(s_RejectColor, opacity));
-                return;
+                DrawPath(cache.AnimationFootRoutePath, ScaleAlpha(s_AnimationRouteColor, opacity), 1.5f);
+                DrawLines(cache.EnvelopeLines, ScaleAlpha(s_EnvelopeColor, opacity));
+                DrawPath(cache.ClearancePath, ScaleAlpha(sideColor, opacity), 4f);
+                if (plan.LandingValid)
+                    DrawMarker(plan.Landing, markerSize, ScaleAlpha(s_LandingColor, opacity));
+                if (plan.VirtualGroundSplitValid)
+                    DrawMarker(
+                        plan.VirtualGroundSplit,
+                        markerSize * 0.8f,
+                        ScaleAlpha(s_VirtualGroundSplitColor, opacity));
             }
-            if (state != CharacterPredictiveFootPlanState.Planned &&
-                state != CharacterPredictiveFootPlanState.Executing)
-                return;
-            DrawPath(cache.GroundProbePath, ScaleAlpha(s_GroundProbeColor, opacity), 2f);
-            DrawPath(cache.AnimationFootRoutePath, ScaleAlpha(s_AnimationRouteColor, opacity), 1.5f);
-            DrawLines(cache.EnvelopeLines, ScaleAlpha(s_EnvelopeColor, opacity));
-            DrawPath(cache.ClearancePath, ScaleAlpha(sideColor, opacity), 4f);
-            if (plan.LandingValid)
-                DrawMarker(plan.Landing, markerSize, ScaleAlpha(s_LandingColor, opacity));
-            if (plan.VirtualGroundSplitValid)
-                DrawMarker(
-                    plan.VirtualGroundSplit,
-                    markerSize * 0.8f,
-                    ScaleAlpha(s_VirtualGroundSplitColor, opacity));
+            finally
+            {
+                Gizmos.matrix = previousGizmosMatrix;
+                Handles.matrix = previousHandlesMatrix;
+            }
         }
 
         static Color ScaleAlpha(Color color, float opacity) =>

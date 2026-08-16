@@ -367,6 +367,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterPredictiveFootQueryRequestSnapshot[] m_QueryRequests;
         readonly CharacterPredictiveFootQueryGeometrySnapshot[] m_AcceptedSupports;
         readonly CharacterPredictiveFootQueryGeometrySnapshot[] m_RejectedGeometry;
+        Vector3 m_WorldProjectionExpectedRoot;
+        Vector3 m_WorldProjectionCurrentRoot;
+        Quaternion m_WorldProjectionRotation = Quaternion.identity;
+        bool m_HasWorldProjection;
+        bool m_WorldProjectionFrozen;
 
         internal CharacterPredictiveFootPlacementPlan(CharacterFootSide side, int pathCapacity)
         {
@@ -454,6 +459,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal int AcceptedSupportSnapshotCount { get; private set; }
         internal int RejectedGeometrySnapshotCount { get; private set; }
         internal CharacterPredictiveFootPlanGeometrySnapshot GeometrySnapshot { get; private set; }
+        internal Matrix4x4 WorldProjectionMatrix => m_HasWorldProjection
+            ? Matrix4x4.TRS(
+                  m_WorldProjectionCurrentRoot,
+                  m_WorldProjectionRotation,
+                  Vector3.one) *
+              Matrix4x4.Translate(-m_WorldProjectionExpectedRoot)
+            : Matrix4x4.identity;
+        internal Vector3 ProjectedStart => ProjectWorldPoint(Start);
+        internal Vector3 ProjectedLanding => ProjectWorldPoint(Landing);
+        internal Vector3 ProjectedPredictedHip => ProjectWorldPoint(PredictedHip);
+        internal Vector3 ProjectedRootStart => ProjectWorldPoint(RootStart);
+        internal Quaternion ProjectedRootStartRotation =>
+            (m_WorldProjectionRotation * RootStartRotation).normalized;
+        internal Vector3 ProjectedRootLanding => ProjectWorldPoint(RootLanding);
+        internal FootPlacementSurface ProjectedFutureSupport => ProjectSurface(FutureSupport);
+        internal Quaternion ProjectedRootLandingRotation =>
+            (m_WorldProjectionRotation * RootLandingRotation).normalized;
         internal bool OwnsEvent => LandingEventIdentity != 0;
         internal bool HasAttempt =>
             State == CharacterPredictiveFootPlanState.Planned ||
@@ -783,6 +805,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 angularLandingError * angularLandingError);
         }
 
+        internal void UpdateWorldProjection(
+            Vector3 currentRootPosition,
+            Quaternion currentRootRotation)
+        {
+            if (!HasExecutablePath || m_WorldProjectionFrozen)
+                return;
+            if (!IsFinite(currentRootPosition) || !IsFinite(currentRootRotation))
+                throw new ArgumentException("Predictive Foot world projection input is invalid.");
+            RootTrajectory.EvaluateEventPhase(
+                ActionStepPhase,
+                out Vector3 expectedRootPosition,
+                out Quaternion expectedRootRotation);
+            Vector3 up = RootTrajectory.Up;
+            Vector3 expectedForward = Vector3.ProjectOnPlane(
+                expectedRootRotation * Vector3.forward,
+                up);
+            Vector3 currentForward = Vector3.ProjectOnPlane(
+                currentRootRotation * Vector3.forward,
+                up);
+            float yaw = expectedForward.sqrMagnitude > 0.000001f &&
+                        currentForward.sqrMagnitude > 0.000001f
+                ? Vector3.SignedAngle(expectedForward, currentForward, up)
+                : 0f;
+            m_WorldProjectionExpectedRoot = expectedRootPosition;
+            m_WorldProjectionCurrentRoot = expectedRootPosition + Vector3.ProjectOnPlane(
+                currentRootPosition - expectedRootPosition,
+                up);
+            m_WorldProjectionRotation = Quaternion.AngleAxis(yaw, up);
+            m_HasWorldProjection = true;
+            if (ActionStepPhase + 0.000001f >= ApproachContactPhase)
+                m_WorldProjectionFrozen = true;
+        }
+
         internal void EvaluateGroundPath(
             float progress,
             out Vector3 pathPosition,
@@ -803,8 +858,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float t = length > 0.000001f
                 ? Mathf.Clamp01((value - segment.StartFraction) / length)
                 : 1f;
-            pathPosition = Vector3.Lerp(segment.EdgeStart, segment.EdgeEnd, t);
-            support = segment.Surface;
+            pathPosition = ProjectWorldPoint(
+                Vector3.Lerp(segment.EdgeStart, segment.EdgeEnd, t));
+            support = ProjectSurface(segment.Surface);
         }
 
         internal void EvaluateFootMotion(
@@ -817,7 +873,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out AnimationBodyRotationPivotMode bodyPivotMode)
         {
             float phase = Mathf.Clamp01(eventPhase);
-            planarSole = RootTrajectory.EvaluateFootRoute(phase);
+            planarSole = ProjectWorldPoint(RootTrajectory.EvaluateFootRoute(phase));
             animationClearanceHeight = Mathf.Max(
                 0f,
                 EvaluateFloatRoute(AnimationClearanceHeights, phase) +
@@ -843,6 +899,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Mathf.Clamp01(eventPhase),
                 out root,
                 out hip);
+            root = ProjectWorldPoint(root);
+            hip = ProjectWorldPoint(hip);
         }
 
         internal void EvaluateClearancePath(
@@ -953,14 +1011,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (index < 0 || index >= GroundEnvelopeSegmentCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_PathSegments[index];
+            FootPlacementGroundEnvelopeSegment segment = m_PathSegments[index];
+            return new FootPlacementGroundEnvelopeSegment(
+                segment.StartFraction,
+                segment.EndFraction,
+                ProjectSurface(segment.Surface),
+                ProjectWorldPoint(segment.EdgeStart),
+                ProjectWorldPoint(segment.EdgeEnd),
+                segment.StartSoleHeight,
+                segment.EndSoleHeight,
+                segment.IsVirtualPlane);
         }
 
         internal Vector3 GetPlannedFootRouteSample(int index)
         {
             if (!OwnsEvent || index < 0 || index >= FrozenWorldFootRoute.Length)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return FrozenWorldFootRoute[index];
+            return ProjectWorldPoint(FrozenWorldFootRoute[index]);
         }
 
         internal void Reset(CharacterPredictiveFootPlanEndReason reason)
@@ -1034,6 +1101,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AcceptedSupportSnapshotCount = 0;
             RejectedGeometrySnapshotCount = 0;
             GeometrySnapshot = null;
+            ResetWorldProjection();
         }
 
         void CopyQuerySnapshots(in CharacterPredictiveFootPlacementQueryResult query)
@@ -1232,6 +1300,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             rootTrajectory.EvaluateEventPhase(1f, out Vector3 rootLanding, out Quaternion rootLandingRotation);
             RootLanding = rootLanding;
             RootLandingRotation = rootLandingRotation;
+            ResetWorldProjection();
+        }
+
+        Vector3 ProjectWorldPoint(Vector3 point)
+        {
+            if (!m_HasWorldProjection)
+                return point;
+            return m_WorldProjectionCurrentRoot +
+                   m_WorldProjectionRotation * (point - m_WorldProjectionExpectedRoot);
+        }
+
+        Vector3 ProjectWorldDirection(Vector3 direction) =>
+            m_HasWorldProjection
+                ? m_WorldProjectionRotation * direction
+                : direction;
+
+        FootPlacementSurface ProjectSurface(FootPlacementSurface surface)
+        {
+            if (!surface.IsValid || !m_HasWorldProjection)
+                return surface;
+            Vector3 normal = ProjectWorldDirection(surface.Normal);
+            return new FootPlacementSurface(
+                surface.Collider,
+                ProjectWorldPoint(surface.Point),
+                normal.normalized);
+        }
+
+        void ResetWorldProjection()
+        {
+            m_WorldProjectionExpectedRoot = Vector3.zero;
+            m_WorldProjectionCurrentRoot = Vector3.zero;
+            m_WorldProjectionRotation = Quaternion.identity;
+            m_HasWorldProjection = false;
+            m_WorldProjectionFrozen = false;
         }
 
         void ResolveAnimationClearanceContinuity()

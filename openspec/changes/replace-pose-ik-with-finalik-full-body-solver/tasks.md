@@ -49,9 +49,12 @@
 - [ ] 4.4 Plan创建帧只允许一次刚性重基，使`PathStartPhase`的Artifact Foot Route与已提交接触点或已执行Sole正下方重合；执行Sole另行保存净空连续性，重基整步冻结。
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
 - [x] 4.5A 历史实验已证明“每个权威Landing Event至多一笔Intent Revision”能阻止同一源Plan反复换路；自动A/D run `35d23e6892f24566808e0276a3ec28be`中，每个事件最多只出现原Plan加一个Revision。后续run证明该事件级限制会让再次偏离的后继Plan继续过期执行，本规则由4.5B替代，不反勾历史完成项。
-- [ ] 4.5B Revision资格改为每个不可变源Plan至多一次；Revision提升后新的Active Plan可在committed轨迹再次越过几何边界时继续离散修订，但每只脚同一时刻仍只有一个Active与一个过渡槽。
-- [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
-- [ ] 4.6A Intent Revision创建时冻结上一完成帧实际输出的Ankle、Sole、Ground Path、Support、Body Path Root/Hip作为唯一过渡原点；Blend期间不得继续求值已经越过运动边界的旧Active。尚未产生本Plan完成输出的过期Plan必须先退出，再从当前真实Sole、Support与committed trajectory原子重建，禁止先输出一帧旧Path。
+- [ ] 4.5B 已提交Step Plan每帧必须用当前正式Root相对该相位Expected Root的平面刚体差重投影Foot Route、Ground Envelope、Landing与Body Path；这只是无Physics的廉价执行投影，不得改写Artifact、Clock、Plan identity或重新查询。进入`ApproachingContact`后冻结最终投影，保证Landing不再漂移。
+- [ ] 4.5C 当committed trajectory使剩余Landing位置或朝向误差超过鞋底/查询几何边界时才创建昂贵Revision。查询资格按`源Plan + trajectory generation + authority tick`记账，同一权威tick至多一次，后续正式tick仍可重试；不得用“源Plan一生只试一次”让Rejected占据整步。
+- [ ] 4.5D Revision必须先在过渡槽完整Query并Commit，成功后才原子参与Blend或提升；Rejected候选不得清空仍有效Active、不得删除完整Debug Path、不得让Grounding接管Swing。初始候选Rejected时，当前Step在后续权威tick继续重试，直至计划成功或Step明确结束。
+- [ ] 4.5E 在Release前按加减速、低速急转、无有效前一步历史和空中状态原子选择整步`Predictive`或`Traditional`模式；模式整步粘滞。Traditional是统一Foot Placement内的正式执行策略，不是Predictive Query失败后的fallback。
+- [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ。新计划未Commit前保持旧Active经执行投影后的输出，成功后才连续Blend；Rejected候选只记录失败并等待下一正式重试机会。
+- [ ] 4.6A Intent Revision创建时冻结上一完成帧实际输出相对同帧Original Animated Ankle/Hip的修正，以及Ground Path与Support作为唯一过渡原点；Blend期间以当前同相位Original动画加冻结修正组成旧侧，不得锁死Swing世界Ankle或继续求值已经越过运动边界的旧Active。尚未产生本Plan完成输出的过期Plan必须先退出，再从当前真实Sole、Support与committed trajectory原子重建，禁止先输出一帧旧Path。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 - [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。
 - [ ] 4.9 当前Plan进入`ApproachingContact`、Intent Revision结束且现有Revision槽空闲时，`IncomingPredictedStep`必须预建唯一Event Successor，并从Stance上一完成帧真实提交的Anchor Sole与Surface连续重基；Intent Revision与Event Successor只允许顺序复用同一槽。

@@ -56,6 +56,7 @@
 42. 唯一Revision槽必须有交接截止时间。run `db699e86...`中左脚旧事件在phase 0.944仍创建Intent Revision，直到新事件成为Current仍占槽，随后产生frame148-157共10帧Swing无Path；Intent Revision若不能在`ApproachingContact`前完成就不应启动，交接边界必须让Incoming Successor优先。
 43. Planner准备早于同帧Stance提交，若Event Successor硬等Committed Anchor，唯一预建窗口会天然晚一帧。允许用旧Active已验证的Projected Landing预建不参与Goal的geometry，但提升前必须用上一完成帧Committed Anchor验证；候选Rejected后的FadeOut不能封死后续authority tick重试。
 44. 自动压力测试的A/D事务不能把“一轮结束”当作“运行结束”：旧实现进入Complete后先提交零输入、再等正式Input Action收敛，既截断CSV又会在锁存输入尚未更新时抛异常。Endurance必须持续循环并按lap分段，只有手动停止Play才负责释放输入和封口数据。
+45. Camera-relative的`A 1秒 -> D 2秒 -> A 1秒`只在输入时间上对称；角色朝向和相机Basis持续变化时，世界位移不会闭合。无限重复会把角色漂出Deterministic Collision World。每轮必须用正式MoveAxis回到压力区起点后再递增lap，不能靠自动停测或Transform传送规避边界。
 
 ## 当前证据与下一owner
 

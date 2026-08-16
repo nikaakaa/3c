@@ -17,7 +17,7 @@
 - [x] 1.12 Foot IK Automatic Variant只运行唯一玩家表现，ActionTarget正式提交`None`；普通Local Fixed继续保留中立Target。
 - [x] 1.13 将动画Source不可变Clip Catalog的全量校验和索引建立收敛到Source创建/换代，逐帧Prepare只处理动态采样计划与实际激活Clip。
 - [x] 1.14 将Foot Feature曲线合法性校验收敛到Sequence Player创建；删除Runtime后继事件搜索与缓存，由Artifact在同一采样域原子烘焙Current与Incoming Step，运行帧只采样并绑定权威source。
-- [x] 1.15 Foot IK Endurance进入压力区后持续循环`A 1秒 -> D 2秒 -> A 1秒`，每轮递增lap并持续发布采样路由；不得自动归零、注销路由或退出Play，只有手动停止测试才释放虚拟输入并封口流式CSV。
+- [x] 1.15 Foot IK Endurance进入压力区后持续循环`A 1秒 -> D 2秒 -> A 1秒`，每轮结束后通过同一正式MoveAxis回到压力区起点再递增lap；持续发布采样路由，不得传送、自动归零、注销路由或退出Play，只有手动停止测试才释放虚拟输入并封口流式CSV。
 
 ## 2. Animation Biomechanical Step Artifact
 

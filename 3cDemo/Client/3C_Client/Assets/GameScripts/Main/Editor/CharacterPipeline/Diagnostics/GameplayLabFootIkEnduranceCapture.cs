@@ -272,13 +272,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPredictiveFootLegFrameSnapshot right = completed.HasPredictiveSnapshot
                 ? completed.Predictive.Right
                 : default;
-            ReplaceSequenceValues(values, GlobalColumnCount, left, route, leftCache);
+            ReplaceSequenceValues(values, GlobalColumnCount, snapshot.Left, left, route, leftCache);
             InsertCausalityValues(
                 values,
                 GlobalColumnCount + BeforeSequenceColumnCount + SequenceColumnCount,
                 snapshot.Left,
                 in left);
-            ReplaceSequenceValues(values, GlobalColumnCount + LegColumnCount, right, route, rightCache);
+            ReplaceSequenceValues(values, GlobalColumnCount + LegColumnCount, snapshot.Right, right, route, rightCache);
             InsertCausalityValues(
                 values,
                 GlobalColumnCount + LegColumnCount + BeforeSequenceColumnCount + SequenceColumnCount,
@@ -327,11 +327,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void ReplaceSequenceValues(
             List<string> values,
             int legOffset,
+            in RuntimeFootIkLegTraceSnapshot trace,
             in CharacterPredictiveFootLegFrameSnapshot leg,
             in GameplayLabFootIkRouteSnapshot route,
             SequenceValueCache cache)
         {
-            List<string> replacement = BuildSequenceValues(leg, route, cache);
+            List<string> replacement = BuildSequenceValues(trace, leg, route, cache);
             if (replacement.Count != SequenceColumnCount)
                 throw new InvalidOperationException($"Foot IK complete sequence has {replacement.Count} columns instead of {SequenceColumnCount}.");
             int offset = legOffset + BeforeSequenceColumnCount;
@@ -342,31 +343,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static List<string> BuildSequenceValues(
+            in RuntimeFootIkLegTraceSnapshot trace,
             in CharacterPredictiveFootLegFrameSnapshot leg,
             in GameplayLabFootIkRouteSnapshot route,
             SequenceValueCache cache)
         {
             CharacterPredictiveFootPlanGeometrySnapshot plan = leg.Plan;
-            bool hasRejectedAttempt = leg.RevisionPlanState ==
-                                      CharacterPredictiveFootPlanState.Rejected &&
-                                      leg.RevisionPlan != null;
-            CharacterPredictiveFootPlanGeometrySnapshot queryPlan = hasRejectedAttempt
-                ? leg.RevisionPlan
+            CharacterPredictiveFootPlanGeometrySnapshot revision = leg.RevisionPlan;
+            bool attemptMatchesActive = trace.PlanAttemptAvailable && MatchesAttempt(trace, plan);
+            bool attemptMatchesRevision = trace.PlanAttemptAvailable && MatchesAttempt(trace, revision);
+            CharacterPredictiveFootPlanGeometrySnapshot geometryPlan = trace.PlanAttemptAvailable
+                ? attemptMatchesRevision
+                    ? revision
+                    : attemptMatchesActive
+                        ? plan
+                        : null
                 : plan;
-            if (!hasRejectedAttempt && cache.TryGet(plan, out string[] cached))
+            bool activeGeometrySelected = geometryPlan != null && ReferenceEquals(geometryPlan, plan);
+            if (geometryPlan != null && cache.TryGet(geometryPlan, out string[] cached))
             {
                 var result = new List<string>(cached);
-                UpdateDynamicSequenceValues(result, leg, route);
+                UpdateDynamicSequenceValues(result, leg, route, activeGeometrySelected);
                 return result;
             }
-            IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> footRoute = queryPlan?.GroundProbeRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> animationFootRoute = queryPlan?.AnimationFootRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootRatePointSnapshot> footRate = plan?.FootRate ?? Array.Empty<CharacterPredictiveFootRatePointSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootClearanceSegmentSnapshot> clearancePath = plan?.ClearancePath ?? Array.Empty<CharacterPredictiveFootClearanceSegmentSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootEnvelopeSegmentSnapshot> envelope = plan?.GroundEnvelope ?? Array.Empty<CharacterPredictiveFootEnvelopeSegmentSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootQueryRequestSnapshot> requests = queryPlan?.QueryRequests ?? Array.Empty<CharacterPredictiveFootQueryRequestSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> accepted = queryPlan?.AcceptedSupports ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
-            IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> rejected = queryPlan?.RejectedGeometry ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
+            IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> footRoute = geometryPlan?.GroundProbeRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootRoutePointSnapshot> animationFootRoute = geometryPlan?.AnimationFootRoute ?? Array.Empty<CharacterPredictiveFootRoutePointSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootRatePointSnapshot> footRate = geometryPlan?.FootRate ?? Array.Empty<CharacterPredictiveFootRatePointSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootClearanceSegmentSnapshot> clearancePath = geometryPlan?.ClearancePath ?? Array.Empty<CharacterPredictiveFootClearanceSegmentSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootEnvelopeSegmentSnapshot> envelope = geometryPlan?.GroundEnvelope ?? Array.Empty<CharacterPredictiveFootEnvelopeSegmentSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootQueryRequestSnapshot> requests = geometryPlan?.QueryRequests ?? Array.Empty<CharacterPredictiveFootQueryRequestSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> accepted = geometryPlan?.AcceptedSupports ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
+            IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> rejected = geometryPlan?.RejectedGeometry ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
             var values = new List<string>(SequenceColumnCount);
 
             string routeFractions = Join(footRoute, value => Number(value.Fraction));
@@ -477,16 +484,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             values.AddRange(new[]
             {
-                Number(plan?.PlanSequence ?? 0UL), Number(plan?.GeneratedFrame ?? 0UL), Number(plan?.LandingEventIdentity ?? 0UL),
-                Bool(plan?.Executable ?? false), Bool(plan?.LandingValid ?? false),
-                Number(plan?.Landing.x ?? 0f), Number(plan?.Landing.y ?? 0f), Number(plan?.Landing.z ?? 0f),
-                Number(leg.CurrentPath.x), Number(leg.CurrentPath.y), Number(leg.CurrentPath.z),
-                Bool(leg.ClearanceEvaluated), Bool(leg.Rewritten), Number(leg.ActionProgress),
-                Number(leg.GroundPathProgress),
-                Bool(plan?.VirtualGroundSplitValid ?? false), Number(plan?.VirtualGroundSplitFraction ?? 0f),
-                Number(plan?.VirtualGroundSplitLandingEventIdentity ?? 0UL),
-                Number(plan?.VirtualGroundSplit.x ?? 0f), Number(plan?.VirtualGroundSplit.y ?? 0f),
-                Number(plan?.VirtualGroundSplit.z ?? 0f)
+                Number(geometryPlan?.PlanSequence ?? 0UL), Number(geometryPlan?.GeneratedFrame ?? 0UL), Number(geometryPlan?.LandingEventIdentity ?? 0UL),
+                Bool(geometryPlan?.Executable ?? false), Bool(geometryPlan?.LandingValid ?? false),
+                Number(geometryPlan?.Landing.x ?? 0f), Number(geometryPlan?.Landing.y ?? 0f), Number(geometryPlan?.Landing.z ?? 0f),
+                activeGeometrySelected ? Number(leg.CurrentPath.x) : string.Empty,
+                activeGeometrySelected ? Number(leg.CurrentPath.y) : string.Empty,
+                activeGeometrySelected ? Number(leg.CurrentPath.z) : string.Empty,
+                activeGeometrySelected ? Bool(leg.ClearanceEvaluated) : string.Empty,
+                activeGeometrySelected ? Bool(leg.Rewritten) : string.Empty,
+                activeGeometrySelected ? Number(leg.ActionProgress) : string.Empty,
+                activeGeometrySelected ? Number(leg.GroundPathProgress) : string.Empty,
+                Bool(geometryPlan?.VirtualGroundSplitValid ?? false), Number(geometryPlan?.VirtualGroundSplitFraction ?? 0f),
+                Number(geometryPlan?.VirtualGroundSplitLandingEventIdentity ?? 0UL),
+                Number(geometryPlan?.VirtualGroundSplit.x ?? 0f), Number(geometryPlan?.VirtualGroundSplit.y ?? 0f),
+                Number(geometryPlan?.VirtualGroundSplit.z ?? 0f)
             });
 
             string planHashes = string.Join(";", new[]
@@ -509,12 +520,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(route.ActorYawDegrees), Number(route.Movement.x), Number(route.Movement.y),
                 Number(route.ActualPlanarSpeed), Number(route.SimulationTick), Number(route.TickRate), Number(route.Movement.magnitude),
                 planHashes,
-                Number(plan?.CurrentPlanarVelocity.x ?? 0f), Number(plan?.CurrentPlanarVelocity.y ?? 0f),
-                Number(plan?.CurrentPlanarVelocity.z ?? 0f), Number(plan?.ContinuationPlanarVelocity.x ?? 0f),
-                Number(plan?.ContinuationPlanarVelocity.y ?? 0f), Number(plan?.ContinuationPlanarVelocity.z ?? 0f),
-                Number(plan?.CurrentSegmentSwitchDelaySeconds ?? 0f), Bool(plan?.HasContinuation ?? false),
-                Number(plan?.YawVelocityDegreesPerSecond ?? 0f),
-                Number(plan?.MaximumYawVelocityDegreesPerSecond ?? 0f)
+                Number(geometryPlan?.CurrentPlanarVelocity.x ?? 0f), Number(geometryPlan?.CurrentPlanarVelocity.y ?? 0f),
+                Number(geometryPlan?.CurrentPlanarVelocity.z ?? 0f), Number(geometryPlan?.ContinuationPlanarVelocity.x ?? 0f),
+                Number(geometryPlan?.ContinuationPlanarVelocity.y ?? 0f), Number(geometryPlan?.ContinuationPlanarVelocity.z ?? 0f),
+                Number(geometryPlan?.CurrentSegmentSwitchDelaySeconds ?? 0f), Bool(geometryPlan?.HasContinuation ?? false),
+                Number(geometryPlan?.YawVelocityDegreesPerSecond ?? 0f),
+                Number(geometryPlan?.MaximumYawVelocityDegreesPerSecond ?? 0f)
             });
 
             BoundsY(
@@ -543,23 +554,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(animationRouteEnd.Position.z),
                 animationRouteHash
             });
-            if (!hasRejectedAttempt)
-                cache.Store(plan, values);
+            if (geometryPlan != null)
+                cache.Store(geometryPlan, values);
             return values;
         }
+
+        static bool MatchesAttempt(
+            in RuntimeFootIkLegTraceSnapshot trace,
+            CharacterPredictiveFootPlanGeometrySnapshot plan) =>
+            plan != null &&
+            plan.PlanSequence == trace.PlanAttemptSequence &&
+            plan.GeneratedFrame == trace.PlanAttemptGeneratedFrame &&
+            plan.LandingEventIdentity == trace.PlanAttemptLandingEventIdentity;
 
         static void UpdateDynamicSequenceValues(
             List<string> values,
             in CharacterPredictiveFootLegFrameSnapshot leg,
-            in GameplayLabFootIkRouteSnapshot route)
+            in GameplayLabFootIkRouteSnapshot route,
+            bool activeGeometrySelected)
         {
-            values[95] = Number(leg.CurrentPath.x);
-            values[96] = Number(leg.CurrentPath.y);
-            values[97] = Number(leg.CurrentPath.z);
-            values[98] = Bool(leg.ClearanceEvaluated);
-            values[99] = Bool(leg.Rewritten);
-            values[100] = Number(leg.ActionProgress);
-            values[101] = Number(leg.GroundPathProgress);
+            values[95] = activeGeometrySelected ? Number(leg.CurrentPath.x) : string.Empty;
+            values[96] = activeGeometrySelected ? Number(leg.CurrentPath.y) : string.Empty;
+            values[97] = activeGeometrySelected ? Number(leg.CurrentPath.z) : string.Empty;
+            values[98] = activeGeometrySelected ? Bool(leg.ClearanceEvaluated) : string.Empty;
+            values[99] = activeGeometrySelected ? Bool(leg.Rewritten) : string.Empty;
+            values[100] = activeGeometrySelected ? Number(leg.ActionProgress) : string.Empty;
+            values[101] = activeGeometrySelected ? Number(leg.GroundPathProgress) : string.Empty;
             values[108] = route.Phase.ToString();
             values[109] = route.Direction;
             values[110] = Number(route.Lap);
@@ -659,7 +679,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Manifest = new CaptureManifest
                 {
                     runId = runId,
-                    schema = "foot-ik-1279-plan-build-origin-v96",
+                    schema = "foot-ik-1279-plan-attempt-geometry-v97",
                     columnCount = ColumnCount,
                     startedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                     status = "running"

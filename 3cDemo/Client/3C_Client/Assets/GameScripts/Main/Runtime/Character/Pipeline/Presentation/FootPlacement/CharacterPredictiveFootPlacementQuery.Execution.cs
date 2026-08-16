@@ -456,7 +456,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     splitEventPhase,
                     splitPoint,
                     splitFraction,
-                    in rootTrajectory);
+                    rootTrajectory.PathStartPhase);
                 rootTrajectory.EvaluateEventPhase(eventPhase, out Vector3 root, out _);
                 Vector3 hip = rootTrajectory.EvaluateHipRoute(eventPhase);
                 if (!IsFinite(foot) || !IsFinite(root) || !IsFinite(hip))
@@ -556,37 +556,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float splitEventPhase,
             Vector3 splitPoint,
             float splitFraction,
-            in CharacterPredictiveFootRootTrajectory rootTrajectory)
+            float pathStartPhase)
         {
-            float pathStartPhase = rootTrajectory.PathStartPhase;
-            Vector3 predicted = rootTrajectory.EvaluateFootRoute(eventPhase);
-            Vector3 predictedStart = rootTrajectory.EvaluateFootRoute(pathStartPhase);
-            Vector3 predictedEnd = rootTrajectory.EvaluateFootRoute(1f);
             if (splitFraction <= 0f || splitFraction >= 1f)
             {
                 float progress = Mathf.InverseLerp(pathStartPhase, 1f, eventPhase);
-                Vector3 correction = Vector3.Lerp(
-                    routeStart - predictedStart,
-                    routeEnd - predictedEnd,
-                    progress);
-                return predicted + correction;
+                return Vector3.Lerp(routeStart, routeEnd, progress);
             }
-            Vector3 predictedSplit = rootTrajectory.EvaluateFootRoute(splitEventPhase);
             if (eventPhase <= splitEventPhase)
             {
                 float progress = Mathf.InverseLerp(pathStartPhase, splitEventPhase, eventPhase);
-                Vector3 correction = Vector3.Lerp(
-                    routeStart - predictedStart,
-                    splitPoint - predictedSplit,
-                    progress);
-                return predicted + correction;
+                return Vector3.Lerp(routeStart, splitPoint, progress);
             }
             float remainingProgress = Mathf.InverseLerp(splitEventPhase, 1f, eventPhase);
-            Vector3 remainingCorrection = Vector3.Lerp(
-                splitPoint - predictedSplit,
-                routeEnd - predictedEnd,
-                remainingProgress);
-            return predicted + remainingCorrection;
+            return Vector3.Lerp(splitPoint, routeEnd, remainingProgress);
         }
 
         float ResolveGroundProbeProjection(

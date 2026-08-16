@@ -1533,10 +1533,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : hasTransitionOrigin
                     ? runtime.IsFadingOut
                         ? Vector3.Lerp(
-                            grounding.ContactState != CharacterFootContactState.Swing ||
-                            grounding.AnchorBlendWeight > 0.0001f
-                                ? baselineWorldPosition
-                                : pose.AnklePosition,
+                            pose.AnklePosition,
                             outgoingAnklePosition,
                             activePlanPredictionBlend)
                         : outgoingAnklePosition
@@ -1554,10 +1551,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : hasTransitionOrigin
                     ? runtime.IsFadingOut
                         ? Quaternion.Slerp(
-                            grounding.ContactState != CharacterFootContactState.Swing ||
-                            grounding.AnchorBlendWeight > 0.0001f
-                                ? baselineWorldRotation
-                                : pose.AnkleRotation,
+                            pose.AnkleRotation,
                             outgoingAnkleRotation,
                             activePlanPredictionBlend).normalized
                         : outgoingAnkleRotation

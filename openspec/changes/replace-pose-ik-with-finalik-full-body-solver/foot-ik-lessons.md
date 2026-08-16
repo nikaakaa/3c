@@ -47,7 +47,7 @@
 33. 接触净空不能逐帧累加进Current spring；删除重复`offset += constraint`后Current Offset从米级降到约0.4m内。
 34. Plan在ReleasePhase开始所有权淡入，Ground Path到PathStartPhase才开始推进；用几何起点门控状态会制造LiftOff硬切。
 35. 运动偏差必须是提交边界：过期Plan不得输出Landing、Anchor或Successor；run `2755132...`曾在误差0.99m至2.61m时继续执行并产生`+65/-116/+100cm`跳变。
-36. Idle Capture不能依赖权重先低于1：run `32d8bff...`静止段两脚`Contact=true`但`HasAnchor=false`、Final等于Baseline；进入`GroundedStationary`必须显式武装Idle Anchor。
+36. Idle Capture不能依赖权重先低于1：run `32d8bff...`静止段两脚`Contact=true`但`HasAnchor=false`；改为进入`GroundedStationary`显式武装后，run `d6ee145...`两脚frame76捕获、frame82权重到1并持续Anchored到frame97，Final XZ不再跟随Idle动画漂移。
 
 ## 当前证据与下一owner
 
@@ -56,3 +56,4 @@
 - 右脚frame224在Revision Blend从`0.456`升到`0.760`时Path Y跳`21.96cm`、预测修正跳`19.36cm`；两个绝对目标虽用连续权重混合，但空间与切线未连续。
 - frame172出现`AnchorCaptured`，frame173立即`AnchorDistanceExceeded`；Landing后的Locked所有权尚未与事件边界形成同一事务。
 - Pelvis 244行内换支撑44次，是次级抖动owner；先闭合脚部Plan与Anchor事务，再处理Pelvis。
+- Idle锁脚入口已由run `d6ee145...`闭环，不再把后续运动跳变归因于Idle权重曲线。

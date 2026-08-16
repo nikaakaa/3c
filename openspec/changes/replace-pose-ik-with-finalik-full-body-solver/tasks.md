@@ -74,7 +74,7 @@
 - [ ] 6.1 在现有Stance owner中用Artifact事实收口`Locked -> Sliding/Releasing -> Unlocked Swing -> Approaching -> LandingBlend -> Locked`，连续Constraint Weight不得在事件边界硬切。
 - [ ] 6.2 Landing提交同一Plan Landing Pose、Surface identity、Anchor local point/normal、Committed Sole Pose与Successor Step Start，不允许Current Surface替换预测支撑。
 - [ ] 6.3 Locked保持完整世界Goal；Sliding只允许支撑面内有限移动；Unlocked不消费旧Anchor；Idle继续使用现有单一Stance owner归位和锁脚。
-- [ ] 6.3A 从运动进入`GroundedStationary`时必须显式武装Idle Anchor捕获；不得依赖Foot Placement权重先降到1以下。旧运动Anchor先沿现有淡出退出，再从Current Support约束后的安全Baseline捕获Idle Anchor。
+- [x] 6.3A 从运动进入`GroundedStationary`时必须显式武装Idle Anchor捕获；不得依赖Foot Placement权重先降到1以下。旧运动Anchor先沿现有淡出退出，再从Current Support约束后的安全Baseline捕获Idle Anchor。
 - [ ] 6.4 构造独立Body Support Path：`last support -> opposing support -> predicted landing`，不得复制Foot Ground Envelope或离散KCC台阶Y。
 - [ ] 6.5 用Animation Hip relative path、Support Leg Weight、Length、Compression Reserve和Knee Bend Plane生成预测Hip与可达区间。
 - [ ] 6.6 直接应用Body Support Path位移，临界spring只增加support-leg pull并消除bounce；输出一个Pelvis Pre-Solve Transform。

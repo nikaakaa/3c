@@ -909,13 +909,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "authored_animation_clearance", "animation_clearance_continuity_offset",
                 "animation_clearance_continuity_contribution", "reach_clearance", "composite_animation_clearance",
                 "required_lift", "applied_lift",
-                "goal_owner",
-                "original_goal_world_x", "original_goal_world_y", "original_goal_world_z",
-                "stance_goal_world_x", "stance_goal_world_y", "stance_goal_world_z",
-                "active_plan_goal_available", "active_plan_goal_world_x", "active_plan_goal_world_y", "active_plan_goal_world_z",
-                "revision_plan_goal_available", "revision_plan_goal_world_x", "revision_plan_goal_world_y", "revision_plan_goal_world_z",
-                "transition_origin_goal_available", "transition_origin_goal_world_x", "transition_origin_goal_world_y", "transition_origin_goal_world_z",
-                "pre_continuity_goal_world_x", "pre_continuity_goal_world_y", "pre_continuity_goal_world_z",
                 "baseline_goal_world_x", "baseline_goal_world_y", "baseline_goal_world_z",
                 "final_goal_world_x", "final_goal_world_y", "final_goal_world_z",
                 "baseline_application", "final_source", "solver_result_available", "plant_confidence", "plant_contact", "sole_height",
@@ -934,7 +927,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "normal_spring_velocity_x", "normal_spring_velocity_y", "normal_spring_velocity_z",
                 "previous_normal_target_x", "previous_normal_target_y", "previous_normal_target_z", "normal_spring_initialized",
                 "current_grounding_x", "current_grounding_y", "current_grounding_z", "baseline_x", "baseline_y", "baseline_z", "final_x", "final_y", "final_z",
-                "solved_x", "solved_y", "solved_z", "position_residual", "rotation_residual_degrees"
+                "solved_x", "solved_y", "solved_z", "position_residual", "rotation_residual_degrees",
+                "goal_owner",
+                "original_goal_world_x", "original_goal_world_y", "original_goal_world_z",
+                "stance_goal_world_x", "stance_goal_world_y", "stance_goal_world_z",
+                "active_plan_goal_available", "active_plan_goal_world_x", "active_plan_goal_world_y", "active_plan_goal_world_z",
+                "revision_plan_goal_available", "revision_plan_goal_world_x", "revision_plan_goal_world_y", "revision_plan_goal_world_z",
+                "transition_origin_goal_available", "transition_origin_goal_world_x", "transition_origin_goal_world_y", "transition_origin_goal_world_z",
+                "pre_continuity_goal_world_x", "pre_continuity_goal_world_y", "pre_continuity_goal_world_z"
             };
             for (int i = 0; i < afterPath.Length; i++)
                 values.Add($"{prefix}_{afterPath[i]}");
@@ -1113,16 +1113,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(leg.AnimationClearanceContinuityContribution), Number(leg.ReachClearance),
                 Number(leg.CompositeAnimationClearance),
                 Number(leg.RequiredLift), Number(leg.AppliedLift),
-                leg.GoalOwner,
-                Number(leg.OriginalGoalWorldPosition.x), Number(leg.OriginalGoalWorldPosition.y), Number(leg.OriginalGoalWorldPosition.z),
-                Number(leg.StanceGoalWorldPosition.x), Number(leg.StanceGoalWorldPosition.y), Number(leg.StanceGoalWorldPosition.z),
-                Bool(leg.ActivePlanGoalAvailable),
-                Number(leg.ActivePlanGoalWorldPosition.x), Number(leg.ActivePlanGoalWorldPosition.y), Number(leg.ActivePlanGoalWorldPosition.z),
-                Bool(leg.RevisionPlanGoalAvailable),
-                Number(leg.RevisionPlanGoalWorldPosition.x), Number(leg.RevisionPlanGoalWorldPosition.y), Number(leg.RevisionPlanGoalWorldPosition.z),
-                Bool(leg.TransitionOriginGoalAvailable),
-                Number(leg.TransitionOriginGoalWorldPosition.x), Number(leg.TransitionOriginGoalWorldPosition.y), Number(leg.TransitionOriginGoalWorldPosition.z),
-                Number(leg.PreContinuityGoalWorldPosition.x), Number(leg.PreContinuityGoalWorldPosition.y), Number(leg.PreContinuityGoalWorldPosition.z),
                 Number(leg.BaselineGoalWorldPosition.x), Number(leg.BaselineGoalWorldPosition.y), Number(leg.BaselineGoalWorldPosition.z),
                 Number(leg.FinalGoalWorldPosition.x), Number(leg.FinalGoalWorldPosition.y), Number(leg.FinalGoalWorldPosition.z),
                 leg.BaselineGoalApplication, leg.FinalGoalSourceKind, Bool(leg.SolverResultAvailable),
@@ -1149,7 +1139,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(leg.BaselineGoalComponentPosition.x), Number(leg.BaselineGoalComponentPosition.y), Number(leg.BaselineGoalComponentPosition.z),
                 Number(leg.FinalGoalComponentPosition.x), Number(leg.FinalGoalComponentPosition.y), Number(leg.FinalGoalComponentPosition.z),
                 Number(leg.SolvedComponentPosition.x), Number(leg.SolvedComponentPosition.y), Number(leg.SolvedComponentPosition.z),
-                Number(leg.PositionResidual), Number(leg.RotationResidualDegrees)
+                Number(leg.PositionResidual), Number(leg.RotationResidualDegrees),
+                leg.GoalOwner,
+                Number(leg.OriginalGoalWorldPosition.x), Number(leg.OriginalGoalWorldPosition.y), Number(leg.OriginalGoalWorldPosition.z),
+                Number(leg.StanceGoalWorldPosition.x), Number(leg.StanceGoalWorldPosition.y), Number(leg.StanceGoalWorldPosition.z),
+                Bool(leg.ActivePlanGoalAvailable),
+                Number(leg.ActivePlanGoalWorldPosition.x), Number(leg.ActivePlanGoalWorldPosition.y), Number(leg.ActivePlanGoalWorldPosition.z),
+                Bool(leg.RevisionPlanGoalAvailable),
+                Number(leg.RevisionPlanGoalWorldPosition.x), Number(leg.RevisionPlanGoalWorldPosition.y), Number(leg.RevisionPlanGoalWorldPosition.z),
+                Bool(leg.TransitionOriginGoalAvailable),
+                Number(leg.TransitionOriginGoalWorldPosition.x), Number(leg.TransitionOriginGoalWorldPosition.y), Number(leg.TransitionOriginGoalWorldPosition.z),
+                Number(leg.PreContinuityGoalWorldPosition.x), Number(leg.PreContinuityGoalWorldPosition.y), Number(leg.PreContinuityGoalWorldPosition.z)
             });
         }
 

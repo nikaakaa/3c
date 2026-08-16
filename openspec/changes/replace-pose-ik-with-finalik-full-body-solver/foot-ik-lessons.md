@@ -62,12 +62,14 @@
 48. Event Successor已经预建不等于换代已经闭环。run `dc44e9d...`中Successor在旧事件下降期存在，但事件成为Current时因没有Committed Anchor被取消；同一分支又把Committed Anchor当作Current PreSwing重建前提，最终左右脚分别出现547/549帧Swing无Executable Path。换代时若没有Landing事务，只能拒绝旧Successor，并在同帧用当前真实Sole、唯一Current Support和committed trajectory创建Current Event Plan；不能等待到Swing后再由响应式Grounding托脚。
 49. Reach Clearance出现接近腿长的数值不是参数不足，而是Ground/Body Path身份过期的证据。run `dc44e9d...`中左右最大Reach Clearance为`0.792m/0.910m`，对应Path仍在`Y=0`而身体已到`Y=0.99m/1.14m`；Reach只能验证同一Plan的小范围可达性，不能把低一层的旧Path抬到当前角色附近。
 50. Executing Plan单帧求值失败后直接保留Baseline，就是隐式响应式fallback。run `dc44e9d...`右脚frame `1441 -> 1442 -> 1443`在同一Plan内出现`预测有效 -> NonFinite且Path归零 -> 预测恢复`，frame1442物理穿透`12.14cm`。失败帧必须保留上一完成输出相对当前Original动画的修正并连续淡出，同时发布`ReachExceeded`或`NonFinite`等typed reason；不得形成`预测 -> Baseline -> 预测`。
+51. 权威事件存在且预测权重为零不等于Stance拥有脚。只有Locked/Sliding动作约束或真实Anchor可以保留Grounding目标；Unlocked Swing没有可执行Plan时必须保持Original动画并明确暴露失败，不能用Current Grounding伪装预测成功。
+52. Ground Envelope分段必须同时保存起点与终点Surface。run `ea0e2e2...`中第一段起点坐标来自已提交Landing，但旧段只携带终点Surface，台阶边缘因此把连续Successor误判为Surface不兼容并取消。GDC的连续Hull是feet-only下界，不允许用终点踏面身份冒充整段或FootLock起点。
 
 ## 当前证据与下一owner
 
-- run `dc44e9d...`共1850行、1221列且Header唯一；左右脚Swing无Executable Path分别为547/549帧，首因是Successor换代失败后错过Current PreSwing重建窗口。
-- 同一run的Successor在旧事件阶段已经存在，问题不是“没有预建”，而是Promotion、Landing Anchor和Current Event重建使用了互相矛盾的前提。
-- 右脚frame `1441 -> 1442 -> 1443`证明Executing求值失败仍会单帧归还Baseline；这是当前可见闪烁的直接owner，不是FBBIK放大。
-- 旧Plan Ground Path停在低层时，Reach Clearance最高达到`0.910m`并把脚抬向空中；必须先结束旧Plan并从当前Sole/Support重建，不能平滑或放宽Reach。
+- 首轮换代修复后的run `ea0e2e2...`共2021行、1221列且逐行等宽；左右Swing无Executable Path从`547/549`降到`85/8`，同一Executing Plan的单帧`rewritten=false`降为0。
+- 同一run左脚frame `197 -> 198`在Anchor开始接管时，预测Fade仍覆盖Baseline，单帧产生`55.54cm`物理下陷；Fade必须使用Predictive Output与Anchor的互补权重，开始帧不得先推进Render Delta。
+- Event Successor起点坐标正确但Surface取自Envelope第一段终点，解释了台阶边缘Promotion取消与剩余无Path窗口；修复必须进入Envelope数据合同，不能放宽身份阈值。
+- Reach Clearance仍达左`0.678m`、右`0.780m`，说明低层旧Path身份仍未完全退出；端点Surface和换代闭环后必须继续以该指标验收。
 - FinalIK历史残差仍远小于Goal跳变；在Goal连续性闭环前不修改FBBIK。
-- 下一次数据回归只先验证三项：Swing无Path是否下降、Executing是否仍出现单帧`rewritten=false`、Reach Clearance是否仍出现米级补高；通过后再进入Landing/Anchor原子提交和Pelvis支撑切换。
+- 下一次数据回归先验证四项：Anchor接管帧物理下陷、台阶边缘Successor取消、Swing无Path和Reach Clearance；通过后再进入Landing事务与Pelvis支撑切换。

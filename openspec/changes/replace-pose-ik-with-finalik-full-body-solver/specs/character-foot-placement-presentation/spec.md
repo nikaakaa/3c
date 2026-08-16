@@ -130,6 +130,8 @@ Ground Envelope MUST只作为feet-only地形下界。它 MUST不携带Animation 
 
 - **WHEN** Capsule路径取得连续合法踏面且所有边可达
 - **THEN** Ground Envelope MUST形成连续分段直线上侧包络
+- **AND** 每条Segment MUST同时保存Start Surface与End Surface，起点采样 MUST返回Committed起点支撑身份，终点采样 MUST返回该段实际终点支撑身份
+- **AND** MUST不以End Surface冒充整个Segment并使Successor起点在台阶边缘被误判为Surface不兼容
 - **AND** Scene、Game与CSV MUST从同一Plan快照显示完整路线和实际消费点
 
 ### Requirement: 每只脚必须使用有限约束生命周期
@@ -160,6 +162,7 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 - **AND** 已过期Successor MUST以`MotionDeviationExceeded`拒绝，并从当前真实Sole、Support与committed trajectory重新创建Current Event计划
 - **AND** Successor查询失败导致旧Plan开始退回Original Pose时，下一正式trajectory authority tick MUST仍可在PreSwing内重试；成功候选 MUST在当前事件同帧原子提升，不得再输出旧Landing目标
 - **AND** MUST不在新事件已经进入Swing后按Render Delta混合旧Landing世界目标与新Swing世界目标；Successor不可执行时 MUST连续退到Original Component Pose
+- **AND** 旧预测修正淡出与Landing Anchor接管 MUST使用互补权重；Anchor已经参与Baseline时，Predictor MUST不以独立Retention再次覆盖同一Ankle
 
 #### Scenario: Intent Revision与Event Successor复用过渡槽
 

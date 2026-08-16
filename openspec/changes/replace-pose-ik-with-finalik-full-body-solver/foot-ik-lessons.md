@@ -304,3 +304,5 @@ Git历史证明两种局部修法各自只解决了一半。旧Query直接采用
 正式自动采样只保留一条链：`LiveState -> Completed Frame Stream -> 后台压缩CSV`。手动Inspector Capture只能由用户显式启动，不能被自动回归隐式附加。性能验收先关闭全局Profiler，再看稳定帧时间与每帧分配；Profiler的`recording=false`不代表Profiler本身已经Disabled。
 
 Foot IK专项Variant曾同时运行玩家与中立Target的完整Animation/PoseGraph/FBBIK，性能报告因此每个渲染帧恰好出现两次Animation事务。Target不参与路线、支撑或CSV因果链，却消耗近一半表现预算。专项Variant应只运行唯一玩家并把ActionTarget输入正式提交为`None`；普通Local Fixed仍保留Target，不能为了专项性能改变自由测试入口。
+
+单角色后运动帧仍曾在`Animation.Prepare`消耗约60ms。直接代码审计确认，同一Source的编译后Clip Catalog被每帧重建、做重复索引检查、逐计划线性搜索，并按Catalog最大容量清权重和临时数组。Catalog合法性与Clip引用一致性是Source创建/换代合同，不是逐帧事实；运行帧只需要验证动态采样时间、权重和实际使用的Clip。正式实现应在创建时建立ClipBindingIndex到ClipState的固定索引，后续按实际激活数量更新和清理，不能用防御性全量校验替代正确生命周期所有权。

@@ -15,6 +15,7 @@
 - [x] 1.10 启动前以场景中唯一Course和Start/End为权威验证全部踏面、A/D安全范围、两条Traversal Ramp和Collision World闭包；允许整体移动Course，但路线不覆盖故障地形时拒绝运行。
 - [x] 1.11 自动writer只消费`LiveState`完成帧流并后台压缩CSV；删除自动附加`RuntimeDebugSession Continuous`造成的第二份无界内存捕获。
 - [x] 1.12 Foot IK Automatic Variant只运行唯一玩家表现，ActionTarget正式提交`None`；普通Local Fixed继续保留中立Target。
+- [x] 1.13 将动画Source不可变Clip Catalog的全量校验和索引建立收敛到Source创建/换代，逐帧Prepare只处理动态采样计划与实际激活Clip。
 
 ## 2. Animation Biomechanical Step Artifact
 

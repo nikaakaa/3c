@@ -3001,10 +3001,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPoseSourceCaptureBinding capture = stack.PrepareCapture(
                 in sourceSample,
                 presentationDeltaSeconds);
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog =
-                sourceId.SourceKind == AnimationPoseSourceKind.Timeline
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
+            if (!m_SourceBackend.ContainsCommitted(sourceId, stack.PoseNodeId))
+            {
+                clipCatalog = sourceId.SourceKind == AnimationPoseSourceKind.Timeline
                     ? BuildActionClipCatalog(request.SourceOwnerIndex)
                     : BuildMotionMatchingClipCatalog(providerSourceSamples[key]);
+            }
             AnimationPoseSourcePrepareResult prepared = m_SourceBackend.PrepareOrUpdate(
                 in request,
                 clipCatalog,
@@ -3032,8 +3035,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 player.NodeId,
                 player.SourceOwnerIndex);
             AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(in sample, presentationDeltaSeconds);
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog =
-                BuildMotionMatchingClipCatalog(sample);
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
+            if (!m_SourceBackend.ContainsCommitted(player.SourceId, player.NodeId))
+                clipCatalog = BuildMotionMatchingClipCatalog(sample);
             AnimationPoseSourcePrepareResult prepared = m_SourceBackend.PrepareOrUpdate(
                 player.SourceId,
                 sample.Clips,
@@ -3101,8 +3105,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 player.NodeId,
                 player.PlayerIndex);
             AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(presentationDeltaSeconds);
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog =
-                BuildSequenceClipCatalog(player.SourceId);
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
+            if (!m_SourceBackend.ContainsCommitted(player.SourceId, player.NodeId))
+                clipCatalog = BuildSequenceClipCatalog(player.SourceId);
             AnimationPoseSourcePrepareResult prepared = m_SourceBackend.PrepareOrUpdate(
                 player.SourceId,
                 player.ClipSamples,
@@ -3181,8 +3186,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 player.PlayerIndex);
             AnimationPoseSourceCaptureBinding capture =
                 player.PrepareCapture(presentationDeltaSeconds);
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog =
-                BuildBlendSpaceClipCatalog(playerIndex);
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
+            if (!m_SourceBackend.ContainsCommitted(player.SourceId, player.NodeId))
+                clipCatalog = BuildBlendSpaceClipCatalog(playerIndex);
             AnimationPoseSourcePrepareResult prepared =
                 m_SourceBackend.PrepareOrUpdate(
                     player.SourceId,

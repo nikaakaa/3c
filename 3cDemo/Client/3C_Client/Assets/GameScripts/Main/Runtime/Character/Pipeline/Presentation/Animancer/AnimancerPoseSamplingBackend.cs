@@ -368,8 +368,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             RequireAvailable();
             RequireFramePhase(SourceFramePhase.Preparing);
             if (!sourceId.IsValid || !playerNodeId.IsValid ||
-                clips.Count <= 0 || clips.Count > m_ClipCapacity ||
-                clipCatalog.Count <= 0 || clipCatalog.Count > m_ClipCapacity)
+                clips.Count <= 0 || clips.Count > m_ClipCapacity)
             {
                 throw new ArgumentException("Resolved animation pose source request exceeds its compiled capacity.");
             }
@@ -378,15 +377,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
             var key = new AnimationPlayerSourceKey(sourceId, playerNodeId);
             RequireNoFrameMutation(key);
-            ValidateClipCatalog(clipCatalog);
-            float inverseTotalWeight = ValidateClipPlans(
-                clips,
-                clipCatalog);
             if (m_FrameMutationCount >= m_FrameMutations.Length)
                 throw new InvalidOperationException("Animancer pose source mutation capacity was exceeded.");
 
             int ownerSlotIndex = FindCommittedSourceSlot(key);
             bool preparedResource = ownerSlotIndex < 0;
+            if (preparedResource)
+            {
+                if (clipCatalog.Count <= 0 || clipCatalog.Count > m_ClipCapacity)
+                    throw new ArgumentException("New animation pose source has no compiled clip catalog.");
+                ValidateClipCatalog(clipCatalog);
+            }
+            else if (clipCatalog.Count != 0)
+            {
+                throw new ArgumentException("Committed animation pose source must not resubmit its immutable clip catalog.");
+            }
             if (preparedResource && checked(m_CommittedSourceCount + CountPreparedResources()) >= m_SourceCapacity)
                 throw new InvalidOperationException("Animancer committed and prepared source capacity was exceeded.");
             SourceVisual visual = preparedResource
@@ -397,15 +402,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 ownerSlotIndex = FindFreeOwnerSlot();
                 m_PendingOwnerSlotReservations[ownerSlotIndex] = 1;
             }
-            else
-            {
-                visual.RequireClipCatalog(clipCatalog);
-            }
             int mutationIndex = m_FrameMutationCount;
             try
             {
                 if (preparedResource)
                     visual = CreateSource(key, clipCatalog);
+                float inverseTotalWeight = ValidateClipPlans(
+                    clips,
+                    visual);
                 int clipOffset = checked(mutationIndex * m_ClipCapacity);
                 for (int i = 0; i < clips.Count; i++)
                 {
@@ -441,12 +445,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             catch
             {
                 int clipOffset = checked(mutationIndex * m_ClipCapacity);
-                Array.Clear(m_PendingClipPlans, clipOffset, m_ClipCapacity);
-                Array.Clear(m_PendingClipStates, clipOffset, m_ClipCapacity);
+                Array.Clear(m_PendingClipPlans, clipOffset, clips.Count);
+                Array.Clear(m_PendingClipStates, clipOffset, clips.Count);
                 Array.Clear(
                     m_PendingNormalizedClipWeights,
                     clipOffset,
-                    m_ClipCapacity);
+                    clips.Count);
                 if (preparedResource && visual != null)
                     visual.Destroy(m_Graph.PlayableGraph);
                 if (preparedResource)
@@ -816,7 +820,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         static float ValidateClipPlans(
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
+            SourceVisual visual)
         {
             float totalWeight = 0f;
             for (int i = 0; i < clips.Count; i++)
@@ -824,19 +828,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 ClipSamplePlan plan = clips[i];
                 if (!plan.IsValid)
                     throw new InvalidOperationException("Animation pose source clip plan is invalid.");
-                bool catalogMatch = false;
-                for (int catalogIndex = 0; catalogIndex < catalog.Count; catalogIndex++)
-                {
-                    AnimationPoseSourceClipBinding binding = catalog[catalogIndex];
-                    if (binding.ClipBindingIndex != plan.ClipBindingIndex)
-                        continue;
-                    if (!ReferenceEquals(binding.Clip, plan.Clip))
-                        throw new InvalidOperationException($"Animation pose source clip binding #{plan.ClipBindingIndex} changed its clip reference.");
-                    catalogMatch = true;
-                    break;
-                }
-                if (!catalogMatch)
-                    throw new InvalidOperationException($"Animation pose source clip binding #{plan.ClipBindingIndex} is absent from the compiled catalog.");
+                visual.RequireClip(plan.ClipBindingIndex, plan.Clip);
                 for (int previous = 0; previous < i; previous++)
                 {
                     if (clips[previous].ClipBindingIndex == plan.ClipBindingIndex)
@@ -867,6 +859,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 child.Speed = 0f;
                 child.Time = plan.IsLooping ? (float)plan.ContinuousClipTime : plan.ClipTime;
                 child.Weight = normalizedWeights[index];
+                visual.TrackActiveClip(child);
             }
 
             visual.Mixer.Speed = 0f;
@@ -976,12 +969,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                         mutation.OwnerSlotIndex] = 0;
                 }
                 int clipOffset = checked(i * m_ClipCapacity);
-                Array.Clear(m_PendingClipPlans, clipOffset, m_ClipCapacity);
-                Array.Clear(m_PendingClipStates, clipOffset, m_ClipCapacity);
+                Array.Clear(m_PendingClipPlans, clipOffset, mutation.ClipCount);
+                Array.Clear(m_PendingClipStates, clipOffset, mutation.ClipCount);
                 Array.Clear(
                     m_PendingNormalizedClipWeights,
                     clipOffset,
-                    m_ClipCapacity);
+                    mutation.ClipCount);
                 m_FrameMutations[i].Clear();
             }
             m_FrameMutationCount = 0;
@@ -1029,10 +1022,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         sealed class SourceVisual
         {
-            readonly int[] m_ClipBindingIndices;
+            readonly int[] m_ClipStateIndicesByBinding;
             readonly AnimationClip[] m_Clips;
             readonly ClipState[] m_ClipStates;
+            readonly ClipState[] m_ActiveClipStates;
             int m_ClipCount;
+            int m_ActiveClipCount;
             bool m_Destroyed;
 
             public SourceVisual(
@@ -1051,11 +1046,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 {
                     throw new ArgumentException("Animation pose source visual is invalid.");
                 }
-                m_ClipBindingIndices = new int[clipCapacity];
+                m_ClipStateIndicesByBinding = new int[clipCapacity];
                 m_Clips = new AnimationClip[clipCapacity];
                 m_ClipStates = new ClipState[clipCapacity];
-                for (int i = 0; i < m_ClipBindingIndices.Length; i++)
-                    m_ClipBindingIndices[i] = -1;
+                m_ActiveClipStates = new ClipState[clipCapacity];
+                for (int i = 0; i < m_ClipStateIndicesByBinding.Length; i++)
+                    m_ClipStateIndicesByBinding[i] = -1;
             }
 
             public AnimationPlayerSourceKey Key { get; }
@@ -1065,14 +1061,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
             public void ClearClipWeights()
             {
-                for (int i = 0; i < m_ClipCount; i++)
-                    m_ClipStates[i].Weight = 0f;
+                for (int i = 0; i < m_ActiveClipCount; i++)
+                {
+                    m_ActiveClipStates[i].Weight = 0f;
+                    m_ActiveClipStates[i] = null;
+                }
+                m_ActiveClipCount = 0;
+            }
+
+            public void TrackActiveClip(ClipState clip)
+            {
+                if (m_Destroyed || clip == null ||
+                    m_ActiveClipCount >= m_ActiveClipStates.Length)
+                {
+                    throw new InvalidOperationException("Animation pose source active clip capacity was exceeded.");
+                }
+                m_ActiveClipStates[m_ActiveClipCount++] = clip;
             }
 
             public void AddClip(in AnimationPoseSourceClipBinding binding)
             {
                 if (m_Destroyed || !binding.IsValid ||
                     m_ClipCount >= m_ClipStates.Length ||
+                    (uint)binding.ClipBindingIndex >=
+                    (uint)m_ClipStateIndicesByBinding.Length ||
                     FindClip(binding.ClipBindingIndex) >= 0)
                 {
                     throw new InvalidOperationException("Animation pose source clip catalog mutation is invalid.");
@@ -1084,7 +1096,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 child.Speed = 0f;
                 child.Weight = 0f;
                 int index = m_ClipCount++;
-                m_ClipBindingIndices[index] = binding.ClipBindingIndex;
+                m_ClipStateIndicesByBinding[binding.ClipBindingIndex] = index;
                 m_Clips[index] = binding.Clip;
                 m_ClipStates[index] = child;
             }
@@ -1102,23 +1114,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 return m_ClipStates[index];
             }
 
-            public void RequireClipCatalog(
-                AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
-            {
-                if (m_Destroyed || catalog.Count != m_ClipCount)
-                    throw new InvalidOperationException($"Animation source '{Key}' clip catalog changed without a new source identity.");
-                for (int i = 0; i < catalog.Count; i++)
-                    RequireClip(catalog[i].ClipBindingIndex, catalog[i].Clip);
-            }
-
             int FindClip(int clipBindingIndex)
             {
-                for (int i = 0; i < m_ClipCount; i++)
-                {
-                    if (m_ClipBindingIndices[i] == clipBindingIndex)
-                        return i;
-                }
-                return -1;
+                return (uint)clipBindingIndex <
+                       (uint)m_ClipStateIndicesByBinding.Length
+                    ? m_ClipStateIndicesByBinding[clipBindingIndex]
+                    : -1;
             }
 
             public void Destroy(PlayableGraph graph)
@@ -1132,9 +1133,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 ComponentScratch.Dispose();
                 Array.Clear(m_Clips, 0, m_Clips.Length);
                 Array.Clear(m_ClipStates, 0, m_ClipStates.Length);
-                for (int i = 0; i < m_ClipBindingIndices.Length; i++)
-                    m_ClipBindingIndices[i] = -1;
+                Array.Clear(m_ActiveClipStates, 0, m_ActiveClipStates.Length);
+                for (int i = 0; i < m_ClipStateIndicesByBinding.Length; i++)
+                    m_ClipStateIndicesByBinding[i] = -1;
                 m_ClipCount = 0;
+                m_ActiveClipCount = 0;
             }
         }
 

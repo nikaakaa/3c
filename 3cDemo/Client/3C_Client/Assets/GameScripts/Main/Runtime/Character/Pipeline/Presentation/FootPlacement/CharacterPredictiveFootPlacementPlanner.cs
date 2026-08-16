@@ -2531,7 +2531,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (created)
                     runtime.BeginEventSuccessor();
             }
-            if (activeEventReplaced && runtime.CanBeginTransition)
+            if (activeEventReplaced &&
+                (runtime.CanBeginTransition || runtime.IsFadingOut))
             {
                 ulong sourceSequence = step.LandingEventIdentity;
                 bool canAttempt = planningCandidate &&

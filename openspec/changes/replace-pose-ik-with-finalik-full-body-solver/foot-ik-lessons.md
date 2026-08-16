@@ -237,3 +237,26 @@ Artifact重建原动画
 物理Anchor释放后，Predictive恢复必须先保持上一实际Sole位置；该C0交接已经消除了`PolicyReleased`同帧的大跳。但C1不能从相邻表现帧差分，也不能在当前分段Ground Envelope外再套Hermite。实验run `a864d239f8c84f0f82759a5d43a8c93c`把修正P95恶化到左/右`18.1/17.2cm`；改用旧Plan解析切线的`b50830992f1242cf8cc00abba03503c7`仍为`15.2/15.4cm`，都差于有效基线`11.9/10.8cm`。原因是v26的Animation Clearance与Surface Envelope在段交界只有位置连续，强加速度边界会把折点放大成过冲。
 
 因此C1的前提是同一个Biomechanical Step Artifact原子发布路线、净空、约束和支撑事实，并由Ground Path合成出一条有明确分段语义的执行轨迹。后继Revision必须从该轨迹的当前值和切线重基；不能从Final Goal历史、Visible骨骼或额外平滑器猜切线。上述两个失败实验已撤销，不保留配置或兼容分支。
+
+## 17. Foot Route起点与净空起点不能共用一个位置
+
+正式A/D短测已经稳定输出151帧、1217列，Header与Value等宽，覆盖输入、Action Event、Plan/Revision、完整Route/Envelope、Landing、Anchor、Pelvis、Goal与FBBIK。因此该问题不缺诊断字段，也不需要扩大采样时长。
+
+对账发现，旧实现创建或替换Plan时混用了两个起点：
+
+- `Animation Foot Route`按当前动画或执行Sole重基；
+- `Ground Probe`从旧Anchor或旧Plan的Envelope采样点开始。
+
+压力转向下两者XZ最大相差约80cm。随后Query用整段路线把这个差值逐渐拉回Landing，所以即使每条曲线内部连续，脚下Path、Debug线和Revision交接仍会形成长斜线与可见跳变。FinalIK只是在准确执行这个错误Goal。
+
+正式语义必须拆开：
+
+```text
+PathStartPhase的Foot Route XZ = 已提交接触点或当前已执行Sole的XZ
+Ground Probe Start = 当前已执行Sole沿Component Up投影到同一支撑面
+Clearance Continuity = 当前已执行Sole相对该Ground Probe Start的高度
+```
+
+事件生成相位早于LiftOff时，不能在生成相位对齐路线、却从LiftOff开始采样；意图Revision也不能用旧Envelope上不同XZ的点作为新查询起点。对侧落点只提供Virtual Ground拓扑，不替代本脚由动画与Future Body共同形成的曲线。
+
+另有两个实验已经由数据否决：冻结旧脚计划的世界Body Support会使支撑目标最大跳到约155cm；只修改Revision混合相位或提前结束旧事件，仍会留下约126cm的目标跳变。它们证明问题不是Blend速度，而是新旧计划的几何起点和路线语义不一致。

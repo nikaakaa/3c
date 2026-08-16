@@ -13,7 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 startPosition,
             Quaternion startRotation,
             Vector3 presentedBodyStartPosition,
-            Vector3 animationSoleAtGeneration,
+            Vector3 routeStart,
+            Vector3 executionSoleAtGeneration,
             Vector3 committedBodyVelocity,
             float trajectoryCurvatureDegreesPerSecond,
             in CommittedLocomotionPlanarMotionTimeline motionTimeline,
@@ -26,7 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentException("Predictive Foot Root Trajectory requires an authoritative event.", nameof(step));
             if (!IsFinite(startPosition) || !IsFinite(startRotation) ||
                 !IsFinite(presentedBodyStartPosition) ||
-                !IsFinite(animationSoleAtGeneration) ||
+                !IsFinite(routeStart) ||
+                !IsFinite(executionSoleAtGeneration) ||
                 !IsFinite(committedBodyVelocity) ||
                 !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !motionTimeline.IsValid || !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
@@ -38,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             StartPosition = startPosition;
             StartRotation = startRotation.normalized;
             PresentedBodyStartPosition = presentedBodyStartPosition;
-            ExecutionSoleAtGeneration = animationSoleAtGeneration;
+            ExecutionSoleAtGeneration = executionSoleAtGeneration;
             Up = up.normalized;
             Vector3 currentVelocity = Vector3.ProjectOnPlane(
                 committedBodyVelocity,
@@ -75,7 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FutureBodyTrajectory = futureBodyTrajectory;
             FootRoutePlanarAlignment = Vector3.zero;
             FootRoutePlanarAlignment = Vector3.ProjectOnPlane(
-                animationSoleAtGeneration - EvaluateUnalignedFootRoute(EventPhaseAtGeneration),
+                routeStart - EvaluateUnalignedFootRoute(PathStartPhase),
                 Up);
             if (futureBodyTrajectory.DurationSeconds + 0.0001f <
                 PredictionLeadSeconds + LandingDelayAtGeneration)

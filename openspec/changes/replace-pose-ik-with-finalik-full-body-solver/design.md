@@ -210,7 +210,16 @@ AngularVelocity_new(phase0) = CurrentExecutedBodyAngularVelocity
 FutureFootRoute = FutureBodyTransform * RootLocalAnimationFootRoute
 ```
 
-局部X、Z和旋转都必须保留。Plan创建帧允许一次刚性重基，使同相位Artifact Sole与Native Sole重合；该变换整步冻结，不随当前脚逐帧更新。
+局部X、Z和旋转都必须保留。Plan的查询路线从`PathStartPhase`开始，一次刚性重基必须使该相位的Artifact Foot Route与当前已提交的接触点或已执行Sole正下方重合；该变换整步冻结，不随当前脚逐帧更新。事件生成相位早于LiftOff时，不得拿更早的Native Sole去对齐更晚的路线起点。
+
+地面路线起点和净空连续性是两个事实：
+
+```text
+RouteStart = ProjectCommittedSoleToCommittedSupport(CurrentExecutedSole)
+ClearanceStart = CurrentExecutedSole - RouteStart
+```
+
+初始PreSwing使用Locked Contact；意图Revision使用当前已执行Sole投影到旧计划当前支撑面。禁止让新动画路线从当前Sole开始、Ground Probe却从旧Envelope的另一个XZ点开始。
 
 当前最终Swing XZ继续来自同相位Native Animated Sole。Artifact重建和Projection时钟正确时，它应与计划当前样本重合；偏差只能触发明确invalid或离散Revision，不能让冻结路线水平拉脚。
 
@@ -225,6 +234,8 @@ Current/Previous Own Contact
 ```
 
 对侧点是空间拓扑，不是强迫本脚在对侧事件时刻经过该点。
+
+Ground Probe必须沿完整`FutureFootRoute`采样。Current Contact、Opposing Contact和Predicted Landing只对同一路线施加端点或拓扑约束；不得用三点折线替换动画/身体曲线。
 
 ### 7.3 GDC Ground Path顺序
 

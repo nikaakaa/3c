@@ -40,9 +40,9 @@
 - [ ] 4.1 由Simulation/KCC发布覆盖剩余Action Step的Position、Facing、Linear Velocity、Angular Velocity和trajectory identity；Foot Placement不得自行解释输入或Visible导数。
 - [ ] 4.2 删除Predictive planner中固定`trajectoryCurvatureDegreesPerSecond = 0`与Body Yaw猜曲率语义，使位移与有限Facing来自同一committed trajectory。
 - [ ] 4.3 用Future Body Transform与Artifact root-local Sole/Ankle/Hip路线建立唯一未来世界路线，保留动画局部X、Z和旋转。
-- [ ] 4.4 Plan创建帧只允许一次刚性重基，使同相位Artifact Sole与Native Sole重合；重基整步冻结。
+- [ ] 4.4 Plan创建帧只允许一次刚性重基，使`PathStartPhase`的Artifact Foot Route与已提交接触点或已执行Sole正下方重合；执行Sole另行保存净空连续性，重基整步冻结。
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
-- [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
+- [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 
 ## 5. GDC Foot Path与Ground Envelope

@@ -57,11 +57,12 @@
 - [ ] 4.6A Intent Revision创建时冻结上一完成帧实际输出相对同帧Original Animated Ankle/Hip的修正，以及Ground Path与Support作为唯一过渡原点；Blend期间以当前同相位Original动画加冻结修正组成旧侧，不得锁死Swing世界Ankle或继续求值已经越过运动边界的旧Active。尚未产生本Plan完成输出的过期Plan必须先退出，再从当前真实Sole、Support与committed trajectory原子重建，禁止先输出一帧旧Path。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 - [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。
-- [ ] 4.9 当前Plan进入`ApproachingContact`、Intent Revision结束且现有Revision槽空闲时，`IncomingPredictedStep`必须预建唯一Event Successor，并从Stance上一完成帧真实提交的Anchor Sole与Surface连续重基；Intent Revision与Event Successor只允许顺序复用同一槽。
+- [ ] 4.9 当前Plan进入`ApproachingContact`、Intent Revision结束且现有Revision槽空闲时，`IncomingPredictedStep`必须预建唯一Event Successor。Stance尚未在上一完成帧提交Anchor时，只允许用当前Active已经验证并冻结的Projected Landing Sole与Surface预建不可执行geometry；事件换代提升前必须用真实Committed Anchor Sole与Surface验证，失配则丢弃候选并从Committed事实重建。Intent Revision与Event Successor只允许顺序复用同一槽。
 - [ ] 4.9A Event Successor成为Current前不得参与Goal或Blend；事件identity换代时必须原子提升为Active，并只由新Plan自身`Release -> LiftOff`权重与旧Landing Stance/Anchor完成交接，禁止在新Swing中按Render Delta混合旧Landing目标。
 - [ ] 4.9B Plan必须在`ReleasePhase`进入Executing并执行`Release -> LiftOff`连续输出权重；Ground Path进度独立保持到`PathStartPhase`才开始，禁止用几何起点截断所有权淡入。
 - [ ] 4.9C Event Successor成为Current前必须按当前身体位置和朝向重新验证冻结轨迹；过期Successor不得提升、提交Landing/Anchor或产生下一Successor，必须以`MotionDeviationExceeded`退出并从当前真实Sole与Support创建Current Event计划。
 - [ ] 4.9D Intent Revision只有在现有Blend可于`ApproachingContact`前完成时才允许创建；进入接触交接边界后Incoming Event Successor优先占用唯一过渡槽，过晚的旧事件Intent Revision必须退出，禁止其占槽直到新事件进入Swing并制造无Path空窗。
+- [ ] 4.9E Event Successor候选Rejected不得触发不可重入FadeOut：旧Active可连续退回Original Pose，但Planner必须按新的trajectory authority tick继续尝试当前PreSwing事件；候选成功且已验证Committed起点时，当前事件必须同帧原子提升，不能再输出一帧旧Landing目标。
 
 ## 5. GDC Foot Path与Ground Envelope
 

@@ -3615,8 +3615,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : float.PositiveInfinity;
             float trajectoryDurationSeconds = Mathf.Max(
                 0.0001f,
-                step.PredictionLeadSeconds + Mathf.Max(
+                Mathf.Max(
                     step.ActionStepClock.TimeToLandingSeconds,
+                    step.PredictionLeadSeconds +
                     (1f - step.ActionStepClock.Phase) *
                     step.ActionStepClock.DurationSeconds));
             var trajectoryRequest = new CharacterFutureBodyTrajectoryRequest(

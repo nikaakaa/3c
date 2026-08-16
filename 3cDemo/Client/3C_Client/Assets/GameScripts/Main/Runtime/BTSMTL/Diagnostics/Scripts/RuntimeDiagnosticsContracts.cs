@@ -723,6 +723,13 @@ namespace BTSMTL.Diagnostics
         public bool FrozenTrajectoryCurvatureAvailable;
         public float FrozenYawVelocityDegreesPerSecond;
         public float FrozenMaximumYawVelocityDegreesPerSecond;
+        public float PredictionLeadSeconds;
+        public float PlannedLandingElapsedSeconds;
+        public bool WorldProjectionFrozen;
+        public Vector3 WorldProjectionExpectedRoot;
+        public Vector3 WorldProjectionCurrentRoot;
+        public Vector3 ExpectedPresentedBodyPosition;
+        public Vector3 ProjectedExpectedPresentedBodyPosition;
         public float MotionLinearLandingError;
         public float MotionAngularLandingError;
         public float MotionLandingError;

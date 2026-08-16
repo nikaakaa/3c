@@ -668,6 +668,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 FrozenMaximumYawVelocityDegreesPerSecond = hasModifier
                     ? modifier.FrozenMaximumYawVelocityDegreesPerSecond
                     : 0f,
+                PredictionLeadSeconds = hasModifier ? modifier.PredictionLeadSeconds : 0f,
+                PlannedLandingElapsedSeconds = hasModifier
+                    ? modifier.PlannedLandingElapsedSeconds
+                    : 0f,
+                WorldProjectionFrozen = hasModifier && modifier.WorldProjectionFrozen,
+                WorldProjectionExpectedRoot = hasModifier
+                    ? modifier.WorldProjectionExpectedRoot
+                    : default,
+                WorldProjectionCurrentRoot = hasModifier
+                    ? modifier.WorldProjectionCurrentRoot
+                    : default,
+                ExpectedPresentedBodyPosition = hasModifier
+                    ? modifier.ExpectedPresentedBodyPosition
+                    : default,
+                ProjectedExpectedPresentedBodyPosition = hasModifier
+                    ? modifier.ProjectedExpectedPresentedBodyPosition
+                    : default,
                 MotionLinearLandingError = hasModifier ? modifier.MotionLinearLandingError : 0f,
                 MotionAngularLandingError = hasModifier ? modifier.MotionAngularLandingError : 0f,
                 MotionLandingError = hasModifier ? modifier.MotionLandingError : 0f,

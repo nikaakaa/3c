@@ -613,6 +613,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FrozenYawVelocityDegreesPerSecond = plan.RootTrajectory.FrozenYawVelocityDegreesPerSecond;
             FrozenMaximumYawVelocityDegreesPerSecond =
                 plan.RootTrajectory.FrozenMaximumYawVelocityDegreesPerSecond;
+            PredictionLeadSeconds = plan.RootTrajectory.PredictionLeadSeconds;
+            PlannedLandingElapsedSeconds = plan.RootTrajectory.PlannedLandingElapsedSeconds;
+            WorldProjectionFrozen = plan.WorldProjectionFrozen;
+            WorldProjectionExpectedRoot = plan.WorldProjectionExpectedRoot;
+            WorldProjectionCurrentRoot = plan.WorldProjectionCurrentRoot;
+            ExpectedPresentedBodyPosition = plan.OwnsEvent
+                ? plan.ExpectedPresentedBodyPosition
+                : default;
+            ProjectedExpectedPresentedBodyPosition = plan.OwnsEvent
+                ? plan.ProjectedExpectedPresentedBodyPosition
+                : default;
             MotionLinearLandingError = plan.MotionLinearLandingError;
             MotionAngularLandingError = plan.MotionAngularLandingError;
             MotionLandingError = plan.MotionLandingError;
@@ -641,6 +652,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool FrozenTrajectoryCurvatureAvailable { get; }
         public float FrozenYawVelocityDegreesPerSecond { get; }
         public float FrozenMaximumYawVelocityDegreesPerSecond { get; }
+        public float PredictionLeadSeconds { get; }
+        public float PlannedLandingElapsedSeconds { get; }
+        public bool WorldProjectionFrozen { get; }
+        public Vector3 WorldProjectionExpectedRoot { get; }
+        public Vector3 WorldProjectionCurrentRoot { get; }
+        public Vector3 ExpectedPresentedBodyPosition { get; }
+        public Vector3 ProjectedExpectedPresentedBodyPosition { get; }
         public float MotionLinearLandingError { get; }
         public float MotionAngularLandingError { get; }
         public float MotionLandingError { get; }
@@ -846,6 +864,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float FrozenYawVelocityDegreesPerSecond => Plan.FrozenYawVelocityDegreesPerSecond;
         public float FrozenMaximumYawVelocityDegreesPerSecond =>
             Plan.FrozenMaximumYawVelocityDegreesPerSecond;
+        public float PredictionLeadSeconds => Plan.PredictionLeadSeconds;
+        public float PlannedLandingElapsedSeconds => Plan.PlannedLandingElapsedSeconds;
+        public bool WorldProjectionFrozen => Plan.WorldProjectionFrozen;
+        public Vector3 WorldProjectionExpectedRoot => Plan.WorldProjectionExpectedRoot;
+        public Vector3 WorldProjectionCurrentRoot => Plan.WorldProjectionCurrentRoot;
+        public Vector3 ExpectedPresentedBodyPosition => Plan.ExpectedPresentedBodyPosition;
+        public Vector3 ProjectedExpectedPresentedBodyPosition =>
+            Plan.ProjectedExpectedPresentedBodyPosition;
         public float MotionLinearLandingError => Plan.MotionLinearLandingError;
         public float MotionAngularLandingError => Plan.MotionAngularLandingError;
         public float MotionLandingError => Plan.MotionLandingError;

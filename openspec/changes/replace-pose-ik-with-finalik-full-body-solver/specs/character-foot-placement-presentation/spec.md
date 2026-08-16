@@ -134,6 +134,13 @@ Ground Envelope MUST只作为feet-only地形下界。它 MUST不携带Animation 
 - **AND** MUST不以End Surface冒充整个Segment并使Successor起点在台阶边缘被误判为Surface不兼容
 - **AND** Scene、Game与CSV MUST从同一Plan快照显示完整路线和实际消费点
 
+#### Scenario: Native Sole远离局部斜面采样点
+
+- **WHEN** 当前Foot Rate取得有限Ground Envelope高度，但Native Sole XZ因旧Plan偏差或动作变化暂时远离该样本，且Segment Surface具有非水平法线
+- **THEN** 预测Heel/Toe净空 MUST只沿Component Up满足该Foot Rate的Ground Envelope高度下界
+- **AND** Segment Surface法线 MUST只用于支撑身份与Foot Orientation，不得作为无限平面外推到Native Sole位置并产生额外米级抬升
+- **AND** 该偏差 MUST由执行投影或离散Intent Revision处理，不能由Sole Clearance补偿
+
 ### Requirement: 每只脚必须使用有限约束生命周期
 
 每只脚 MUST沿唯一顺序执行：

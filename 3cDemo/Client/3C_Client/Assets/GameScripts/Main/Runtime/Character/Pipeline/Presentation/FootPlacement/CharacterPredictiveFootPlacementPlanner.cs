@@ -1297,11 +1297,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 compositeAnimationClearance = revisionTargetAvailable
                     ? Mathf.Lerp(targetData.CompositeAnimationClearance, revisionTargetData.CompositeAnimationClearance, revisionBlend)
                     : targetData.CompositeAnimationClearance;
-                Vector3 supportNormal = currentPathSupport.IsValid
-                    ? currentPathSupport.Normal.normalized
-                    : up;
-                preHeelDistance = Vector3.Dot(baselineContacts.HeelPosition - currentPathPosition, supportNormal);
-                preToeDistance = Vector3.Dot(baselineContacts.ToePosition - currentPathPosition, supportNormal);
+                Vector3 envelopeNormal = up;
+                preHeelDistance = Vector3.Dot(baselineContacts.HeelPosition - currentPathPosition, envelopeNormal);
+                preToeDistance = Vector3.Dot(baselineContacts.ToePosition - currentPathPosition, envelopeNormal);
                 requiredLift = Vector3.Dot(predictiveAnklePosition - pose.AnklePosition, up);
                 Vector3 activeResolvedAnklePosition = hasTransitionOrigin
                     ? runtime.IsFadingOut
@@ -1371,17 +1369,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     resolvedAnkleRotation);
                 postHeelDistance = Vector3.Dot(
                     resolvedContacts.HeelPosition - currentPathPosition,
-                    supportNormal);
+                    envelopeNormal);
                 postToeDistance = Vector3.Dot(
                     resolvedContacts.ToePosition - currentPathPosition,
-                    supportNormal);
+                    envelopeNormal);
                 predictiveOwnsSoleClearance = !stanceOwnsFoot &&
                                               !runtime.IsFadingOut &&
                                               authoritativePredictionBlend >= 0.999999f;
                 if (!stanceOwnsFoot && !runtime.IsFadingOut)
                 {
                     CharacterFootGroundingHitDiagnostics pathClearanceSupport =
-                        BuildPathSupportDiagnostics(currentPathSupport);
+                        BuildPathSupportDiagnostics(currentPathSupport, currentPathPosition, up);
                     CharacterFootGroundingHitDiagnostics currentClearanceSupport =
                         grounding.SoleSupport;
                     float clearanceTranslation = Mathf.Max(
@@ -1403,10 +1401,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             resolvedAnkleRotation);
                         postHeelDistance = Vector3.Dot(
                             resolvedContacts.HeelPosition - currentPathPosition,
-                            supportNormal);
+                            envelopeNormal);
                         postToeDistance = Vector3.Dot(
                             resolvedContacts.ToePosition - currentPathPosition,
-                            supportNormal);
+                            envelopeNormal);
                     }
                 }
                 if (!stanceOwnsFoot)
@@ -1434,10 +1432,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             resolvedAnkleRotation);
                         postHeelDistance = Vector3.Dot(
                             resolvedContacts.HeelPosition - currentPathPosition,
-                            supportNormal);
+                            envelopeNormal);
                         postToeDistance = Vector3.Dot(
                             resolvedContacts.ToePosition - currentPathPosition,
-                            supportNormal);
+                            envelopeNormal);
                     }
                 }
                 predictionReachRatio = Vector3.Distance(appliedHip, resolvedAnklePosition) / legLength;
@@ -1663,9 +1661,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static CharacterFootGroundingHitDiagnostics BuildPathSupportDiagnostics(
-            FootPlacementSurface support) =>
+            FootPlacementSurface support,
+            Vector3 pathPosition,
+            Vector3 up) =>
             support.IsValid
-                ? new CharacterFootGroundingHitDiagnostics(support)
+                ? new CharacterFootGroundingHitDiagnostics(
+                    new FootPlacementSurface(support.Collider, pathPosition, up.normalized))
                 : default;
 
         static float ResolveSoleClearanceTranslation(
@@ -1740,6 +1741,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? new FootPlacementSurface(pathSupport.Collider, pathPosition, pathSupport.Normal.normalized)
                 : default;
             Vector3 supportNormal = support.IsValid ? support.Normal : up;
+            Vector3 envelopeNormal = up;
             Quaternion ankleRotation = orientationPolicy == AnimationFootOrientationPolicy.LandingSurface
                 ? (Quaternion.FromToRotation(up, supportNormal) * pose.AnkleRotation).normalized
                 : pose.AnkleRotation;
@@ -1774,16 +1776,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementSoleContactPose contacts = pose.ResolveSoleContacts(
                 anklePosition,
                 ankleRotation);
-            float heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, supportNormal);
-            float toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, supportNormal);
+            float heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, envelopeNormal);
+            float toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, envelopeNormal);
             float penetration = Mathf.Max(0f, -Mathf.Min(heelDistance, toeDistance));
-            float upNormalDot = Vector3.Dot(up, supportNormal);
+            float upNormalDot = 1f;
             if (penetration > 0f && upNormalDot > 0.0001f)
             {
                 anklePosition += up * (penetration / upNormalDot);
                 contacts = pose.ResolveSoleContacts(anklePosition, ankleRotation);
-                heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, supportNormal);
-                toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, supportNormal);
+                heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, envelopeNormal);
+                toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, envelopeNormal);
             }
             CharacterFootPlacementSoleContactPose authoredContacts = pose.ResolveSoleContacts(
                 authoredAnklePosition,
@@ -1791,8 +1793,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float authoredPenetration = Mathf.Max(
                 0f,
                 -Mathf.Min(
-                    Vector3.Dot(authoredContacts.HeelPosition - pathPosition, supportNormal),
-                    Vector3.Dot(authoredContacts.ToePosition - pathPosition, supportNormal)));
+                    Vector3.Dot(authoredContacts.HeelPosition - pathPosition, envelopeNormal),
+                    Vector3.Dot(authoredContacts.ToePosition - pathPosition, envelopeNormal)));
             if (authoredPenetration > 0f && upNormalDot > 0.0001f)
                 authoredAnklePosition += up * (authoredPenetration / upNormalDot);
             if (!TryClampTransitionClearanceToReach(
@@ -1816,8 +1818,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     authoredAnimationClearance,
                     compositeAnimationClearance - transitionClearanceReduction);
                 contacts = pose.ResolveSoleContacts(anklePosition, ankleRotation);
-                heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, supportNormal);
-                toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, supportNormal);
+                heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, envelopeNormal);
+                toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, envelopeNormal);
             }
             if (!TryResolveAppliedReachClearance(
                     pose,
@@ -1834,8 +1836,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 anklePosition += up * reachClearance;
                 contacts = pose.ResolveSoleContacts(anklePosition, ankleRotation);
-                heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, supportNormal);
-                toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, supportNormal);
+                heelDistance = Vector3.Dot(contacts.HeelPosition - pathPosition, envelopeNormal);
+                toeDistance = Vector3.Dot(contacts.ToePosition - pathPosition, envelopeNormal);
             }
             if (!IsFinite(anklePosition) || !IsFinite(ankleRotation) ||
                 !float.IsFinite(heelDistance) || !float.IsFinite(toeDistance))

@@ -78,6 +78,7 @@
 - [ ] 5.5A 每条Ground Envelope Segment必须原子保存Start/End Surface；全局起点使用Committed Landing Surface，终点使用该段实际支撑，禁止用End Surface冒充整段并导致Successor原点身份误判。
 - [ ] 5.6 最终Swing保持Native Sole XZ，唯一Y为`GroundEnvelopeHeight + AnimationClearance`；禁止冻结Path XYZ拉脚和Native/Predicted Y双owner。
 - [ ] 5.7 使用Calibration Heel/Toe验证唯一支撑平面物理净空，不增加Heel/Toe Current Query、固定高度或默认地面。
+- [ ] 5.7A Ground Envelope采样只提供当前Foot Rate的Component Up高度下界；Segment Surface法线只用于支撑身份与Foot Orientation，不得把局部斜面无限外推到远离采样点的Native Sole XZ后生成额外抬升。Current Grounding仍只对其当前真实查询平面执行唯一物理净空。
 - [ ] 5.8 台阶边缘Sphere多命中必须以前一支撑做有向可达选择；同Foot Rate合并保留正式支撑身份，Landing、Body Support终点与Ground Envelope终点从验证后的同一链末端原子提交。
 
 ## 6. Constraint、Landing与GDC身体层

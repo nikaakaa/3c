@@ -59,13 +59,15 @@
 45. Camera-relative的`A 1秒 -> D 2秒 -> A 1秒`只在输入时间上对称；角色朝向和相机Basis持续变化时，世界位移不会闭合。无限重复会把角色漂出Deterministic Collision World。每轮必须用正式MoveAxis回到压力区起点后再递增lap，不能靠自动停测或Transform传送规避边界。
 46. Event Successor是否能预建首先取决于Artifact是否提供真实下降窗口。run `d863a1...`中代表性右脚事件从phase `0.0336`推进到`0.1653`仍保持Unsupported，换代后出现22帧Swing无Path；根因是Analyzer把ApproachContact固定成Landing前一个采样点。正式边界必须来自同一参考Foot Path上的动画Clearance峰值，Runtime Planner不能用fallback猜一个窗口。
 47. GameplayLab场景碰撞体变化不会自动更新Fixed KCC的Deterministic Collision Artifact。run `e6f5b4...`中Actor本体从`Y=1.04m`跌至`-21.33m`并触发`body left collision world bounds`，证明不是IK视觉下沉；World Bounds足够大也不能代替场景碰撞重新烘焙。Free与Automatic必须共用当前场景生成的同一正式Artifact。
+48. Event Successor已经预建不等于换代已经闭环。run `dc44e9d...`中Successor在旧事件下降期存在，但事件成为Current时因没有Committed Anchor被取消；同一分支又把Committed Anchor当作Current PreSwing重建前提，最终左右脚分别出现547/549帧Swing无Executable Path。换代时若没有Landing事务，只能拒绝旧Successor，并在同帧用当前真实Sole、唯一Current Support和committed trajectory创建Current Event Plan；不能等待到Swing后再由响应式Grounding托脚。
+49. Reach Clearance出现接近腿长的数值不是参数不足，而是Ground/Body Path身份过期的证据。run `dc44e9d...`中左右最大Reach Clearance为`0.792m/0.910m`，对应Path仍在`Y=0`而身体已到`Y=0.99m/1.14m`；Reach只能验证同一Plan的小范围可达性，不能把低一层的旧Path抬到当前角色附近。
+50. Executing Plan单帧求值失败后直接保留Baseline，就是隐式响应式fallback。run `dc44e9d...`右脚frame `1441 -> 1442 -> 1443`在同一Plan内出现`预测有效 -> NonFinite且Path归零 -> 预测恢复`，frame1442物理穿透`12.14cm`。失败帧必须保留上一完成输出相对当前Original动画的修正并连续淡出，同时发布`ReachExceeded`或`NonFinite`等typed reason；不得形成`预测 -> Baseline -> 预测`。
 
 ## 当前证据与下一owner
 
-- `32d8bff...`已消除旧run的1m级NonFinite目标和13cm物理穿透，证明过期Plan禁止提交Landing/Successor有效。
-- 仍有真实预测修正跳变：右脚frame159在Plan首个Executing帧已`MotionError=14.8cm > 8cm`，Path Y跳`89.85cm`、Required Lift为`40.57cm`；过期Plan仍输出了一帧。
-- 右脚frame224在Revision Blend从`0.456`升到`0.760`时Path Y跳`21.96cm`、预测修正跳`19.36cm`；两个绝对目标虽用连续权重混合，但空间与切线未连续。
-- frame172出现`AnchorCaptured`，frame173立即`AnchorDistanceExceeded`；Landing后的Locked所有权尚未与事件边界形成同一事务。
-- Pelvis 244行内换支撑44次，是次级抖动owner；先闭合脚部Plan与Anchor事务，再处理Pelvis。
-- Idle锁脚入口已由run `d6ee145...`闭环，不再把后续运动跳变归因于Idle权重曲线。
-- run `db699e86...`的231行全部满足1221列合同；压力段左/右Swing无Executable Path分别为21/10帧，Revision占用51/65帧，骨盆Y单帧最大跳21.4cm。FinalIK位置残差仅`3.3e-7m/3.4e-5m`且最终物理穿透约`1e-7m`，首因已确认在Plan误差域与事件槽交接。
+- run `dc44e9d...`共1850行、1221列且Header唯一；左右脚Swing无Executable Path分别为547/549帧，首因是Successor换代失败后错过Current PreSwing重建窗口。
+- 同一run的Successor在旧事件阶段已经存在，问题不是“没有预建”，而是Promotion、Landing Anchor和Current Event重建使用了互相矛盾的前提。
+- 右脚frame `1441 -> 1442 -> 1443`证明Executing求值失败仍会单帧归还Baseline；这是当前可见闪烁的直接owner，不是FBBIK放大。
+- 旧Plan Ground Path停在低层时，Reach Clearance最高达到`0.910m`并把脚抬向空中；必须先结束旧Plan并从当前Sole/Support重建，不能平滑或放宽Reach。
+- FinalIK历史残差仍远小于Goal跳变；在Goal连续性闭环前不修改FBBIK。
+- 下一次数据回归只先验证三项：Swing无Path是否下降、Executing是否仍出现单帧`rewritten=false`、Reach Clearance是否仍出现米级补高；通过后再进入Landing/Anchor原子提交和Pelvis支撑切换。

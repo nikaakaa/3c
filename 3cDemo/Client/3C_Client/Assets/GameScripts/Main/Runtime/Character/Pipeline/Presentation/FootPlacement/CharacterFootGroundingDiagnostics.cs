@@ -423,7 +423,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ActionCompleted = 3,
         ActionClockInvalid = 4,
         LandingTransactionUnavailable = 5,
-        MotionDeviationExceeded = 6
+        MotionDeviationExceeded = 6,
+        TargetReachExceeded = 7,
+        TargetEvaluationInvalid = 8
     }
 
     public readonly struct CharacterPredictiveFootPathSampleDiagnostics

@@ -55,6 +55,7 @@
 41. 执行投影之后，偏差判断也必须进入同一投影坐标域。run `db699e86...`仍用当前身体位置对比未投影冻结Landing，正常位移被累计成左脚7.67m误差，136帧内左右脚分别生成23/27个Plan；这不是意图真的改变，而是比较域错误。
 42. 唯一Revision槽必须有交接截止时间。run `db699e86...`中左脚旧事件在phase 0.944仍创建Intent Revision，直到新事件成为Current仍占槽，随后产生frame148-157共10帧Swing无Path；Intent Revision若不能在`ApproachingContact`前完成就不应启动，交接边界必须让Incoming Successor优先。
 43. Planner准备早于同帧Stance提交，若Event Successor硬等Committed Anchor，唯一预建窗口会天然晚一帧。允许用旧Active已验证的Projected Landing预建不参与Goal的geometry，但提升前必须用上一完成帧Committed Anchor验证；候选Rejected后的FadeOut不能封死后续authority tick重试。
+44. 自动压力测试的A/D事务不能把“一轮结束”当作“运行结束”：旧实现进入Complete后先提交零输入、再等正式Input Action收敛，既截断CSV又会在锁存输入尚未更新时抛异常。Endurance必须持续循环并按lap分段，只有手动停止Play才负责释放输入和封口数据。
 
 ## 当前证据与下一owner
 

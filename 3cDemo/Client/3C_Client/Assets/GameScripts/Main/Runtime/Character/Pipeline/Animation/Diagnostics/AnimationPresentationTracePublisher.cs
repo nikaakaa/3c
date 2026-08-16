@@ -791,14 +791,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 StanceGoalWorldPosition = hasModifier
                     ? modifier.StanceGoalWorldPosition
                     : baselineGoalWorldPosition,
+                ActivePlanGeometryGoalAvailable = hasModifier &&
+                                                  modifier.ActivePlanGeometryGoalAvailable,
+                ActivePlanGeometryGoalWorldPosition = hasModifier
+                    ? modifier.ActivePlanGeometryGoalWorldPosition
+                    : default,
                 ActivePlanGoalAvailable = hasModifier && modifier.ActivePlanGoalAvailable,
                 ActivePlanGoalWorldPosition = hasModifier
                     ? modifier.ActivePlanGoalWorldPosition
+                    : default,
+                ActivePlanGoalRejectReason = hasModifier
+                    ? modifier.ActivePlanGoalRejectReason.ToString()
+                    : FootPredictionRejectReason.None.ToString(),
+                RevisionPlanGeometryGoalAvailable = hasModifier &&
+                                                    modifier.RevisionPlanGeometryGoalAvailable,
+                RevisionPlanGeometryGoalWorldPosition = hasModifier
+                    ? modifier.RevisionPlanGeometryGoalWorldPosition
                     : default,
                 RevisionPlanGoalAvailable = hasModifier && modifier.RevisionPlanGoalAvailable,
                 RevisionPlanGoalWorldPosition = hasModifier
                     ? modifier.RevisionPlanGoalWorldPosition
                     : default,
+                RevisionPlanGoalRejectReason = hasModifier
+                    ? modifier.RevisionPlanGoalRejectReason.ToString()
+                    : FootPredictionRejectReason.None.ToString(),
                 TransitionOriginGoalAvailable = hasModifier && modifier.TransitionOriginGoalAvailable,
                 TransitionOriginGoalWorldPosition = hasModifier
                     ? modifier.TransitionOriginGoalWorldPosition

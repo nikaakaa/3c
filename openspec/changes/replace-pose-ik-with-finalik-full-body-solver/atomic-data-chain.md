@@ -1,0 +1,71 @@
+# Foot Placement原子数据链
+
+## 目标
+
+每个Presentation帧只允许一笔Foot Placement事务：同一帧Original Animated Pose、Step/Body/World事实进入，左右脚与Pelvis完成候选求值和唯一所有权选择后，一次提交Final Goal Set，再由唯一FinalIK FBBIK执行。
+
+```text
+Original Animated Pose + Step/Body/World Facts
+-> Stance Candidate
+-> Active/Revision Geometry Candidate（各一次）
+-> Pelvis Result
+-> Active/Revision Reach Candidate（复用同一Plan Sequence）
+-> Transition Origin
+-> Pre-Continuity Goal
+-> Final Goal + Goal Owner
+-> FinalIK FBBIK Result
+```
+
+Stance Candidate不是Unlocked Swing的基线。Swing从同一份Original Animated Pose合成；Stance只在Locked、Sliding、真实Contact/Anchor或Idle所有权成立时成为Final Goal。
+
+## 已完成的数据合同
+
+- `CharacterPredictiveFootFrameEvaluation`封存本帧唯一Original Pose，Goal阶段不得再次读取Rig。
+- `CharacterFootPlacementFootGoalInput`原子携带Side、Original Pose、Feature、当前事件权重、Stance Candidate和Stance diagnostics。
+- `CharacterPredictiveFootFrameEvaluation`同时封存左右Active/Revision Geometry Candidate；Stance观察、Landing候选、Pelvis输入和Goal阶段复用这些值，不再在Pelvis前后重复求值Plan。
+- Geometry Candidate只负责当前Plan、Ground Path、鞋底净空和动画轨迹合成；Pelvis完成后，Reach阶段只对该不可变候选施加腿长约束，并保持同一个Plan Sequence和typed reject reason。
+- `CharacterFootCompletedOutput`原子保存上一完成帧Original、Final、Sole、Ground Path、Support、Plan identity和Body Path；不得再用分散字段拼接跨帧历史。
+- Transition Origin只在所有权换代帧，用上一完成Final相对当前帧Original捕获；禁止混用旧事件Original与新事件Original。
+- schema v102为每脚发布Original、Stance、Active/Revision Geometry、Active/Revision Reach、typed reject reason、Transition Origin、Pre-Continuity、Final和唯一Goal Owner，共1483列，Header唯一且逐行等宽。
+
+## Event Successor唯一交接
+
+候选Successor只保存不可变geometry与时钟，不参与Goal。事件晋升后，唯一Transition从上一完成输出以权重0开始；Stance观察、Ground Path、Ankle与Final Goal消费同一个权重。Blend只能在新Active首次进入`Executing`后的下一帧推进，不能在候选预建或`Planned`阶段提前累计。
+
+## 数据证据
+
+run `3ad732e4437f4df8a5eff8acf23f7059`共1393行、1463列。FBBIK位置残差通常接近零；最大Y跳变最早出现在`Planned -> Executing`的新Active/Path及`EventSuccessor/PredictiveExit`的Transition合成，证明Solver只是执行错误输入。
+
+首次接入Successor Transition后的run `ee532097a6ad4330ac25dcdf3a52ebb9`共1302行、1463列。左脚大于5cm的Goal Y变化从474次降到31次，95分位从20.9cm降到2.2cm，最大物理下陷从53.8cm降到1.7cm，证明唯一交接方向有效。
+
+同一run右脚frame `369 -> 371`显示：新Plan仍为`Planned`时Blend已从0推进，首个Active Candidate出现时Transition权重已到0.58，产生44.6cm跳变。该证据要求Blend起跑绑定新侧首次可执行，而不是候选创建或事件晋升时刻。
+
+该run还显示部分旧Active在身体已上升时Ground Path仍停留低层踏面，造成晚期Swing下陷；这是Ground Path/Plan身份或支撑链问题，必须在Transition闭环后独立定位，禁止用Blend或Current Grounding掩盖。
+
+run `628412c3a53e421b9a45ef3210231875`的左脚frame 385在Pelvis前仍有Executable Active Geometry，Pelvis后却得到`ReachExceeded`并立即进入`PredictiveExit`；frame 386至387仅由Render Delta推进退出权重，Final Goal Y连续下降约70.9cm和48.3cm。右脚同一事件换代也在候选`FutureLandingNoCandidate`后以相同方式下降约47.0cm。旧链同帧重复求值Plan，使“几何是否有效”和“Pelvis后是否可达”混成一个布尔值；v102先拆开该因果链，后续4A.20再修正错误的退出所有权。
+
+v102回归run `6712da2be2d740d18158ad34f44d08dd`共1190行、1483列、Header唯一且所有分块逐行等宽。左右脚分别有22/23帧`Geometry Candidate有效、Reach Candidate无效`，与22/23帧`PredictiveExit`完全一一对应；最大Final Goal Y单帧下降为`77.6cm/96.6cm`。这把当前最大跳变确定在Pelvis后的Reach裁决到Transition所有权之间，而不是Geometry Path或FBBIK。
+
+修正“FadeOut状态短路Reach诊断”后，run `89996fbc87fb4dd5bc02116537ecea11`共814行、7个流式压缩分块、1483列，Header唯一且每行等宽，Unity Console为0 Error/0 Warning。右脚frame 250至254中Geometry Candidate持续有效且Y约为`2.42m`，Reach Candidate连续以`ReachExceeded`拒绝；Transition仍以`PredictiveExit`拥有Final Goal，并在frame 254单帧下降`1.078m`。左脚frame 725至726的Geometry与Reach Candidate均有效，但`PredictiveExit`仍把Final Goal单帧下降`44.2cm`。因此v102已经能区分两种独立错误：Reach拒绝触发错误退出，以及候选仍有效但Transition主动退出；二者都位于Transition所有权，不得再归责Ground Path或FBBIK。
+
+## 固定诊断顺序
+
+1. Frame、Build Family、Completion identity。
+2. Original Pose与Step/Body/World事实是否同帧。
+3. Stance、Active、Revision各候选首次出现异常的位置。
+4. Geometry Candidate在Pelvis前是否有效，Reach Candidate在Pelvis后为何拒绝。
+5. Transition Origin和Transition Blend是否在唯一边界推进。
+6. Pre-Continuity与Final是否新增跳变。
+7. FinalIK Result/Residual是否只是执行已跳变Goal。
+
+上游候选或所有权尚未一致时，不调阈值、不增加第二查询、不让响应式Grounding接管Swing、不修改FBBIK。
+
+## 精炼经验
+
+- 几何Path连续不等于Goal连续；所有权换代本身必须有可观测候选和唯一权重。
+- 候选存在不等于候选可执行；没有新侧目标时推进Blend，会把首帧权重偷跑成硬切。
+- 同一个Plan一帧内只能产生一次Geometry Candidate；Pelvis后只允许追加Reach裁决，不能重跑Path和鞋底合成制造互相矛盾的候选。
+- Landing Handoff不得把同一Plan额外采样到phase=1生成第二份Ankle/Support；Approaching Contact必须复用本帧Geometry Candidate，Successor无Committed Landing时只能使用该Plan已验证的Projected Landing。
+- 跨事件连续性必须使用“上一完成Final - 换代当前帧Original”，不能使用上一事件Original。
+- Completed Output必须原子保存；分散的Last字段会允许不同帧、不同Plan和不同Support被拼成不存在的历史。
+- FinalIK残差接近零而Goal先跳时，首因不在Solver。

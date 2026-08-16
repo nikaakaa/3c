@@ -30,32 +30,33 @@ GDC原始分享给出的关键语义固定为：
 正式对外链：
 
 ```text
-FootGrounding -> optional PredictiveFootPlacementModifier -> FinalIK FBBIK
+Original Component Pose + Step Facts + Body Trajectory + World Context
+  -> CharacterFootPlacementRuntime.EvaluateFrame
+  -> FootPlacement Final Goal Set
+  -> FinalIK FBBIK
 ```
 
 内部数据流：
 
 ```text
-Original Component Pose
-  + Action Biomechanical Step Fact
-  + Committed Future Body Transform Trajectory
-  + FootGrounding Current Support
-        |
-        v
-Predictive Plan: Foot Route -> Ground Query -> Ground Envelope
-        |
-        v
-Stance: Constraint -> Landing -> Anchor -> Support Leg -> Pelvis -> Body Pivot
-        |
-        v
-One Final Goal Set -> One FBBIK Solve
+Frame Input Snapshot
+  -> Current Support Query Facts
+  -> Predictive Plan Create/Evaluate Facts
+  -> Left/Right Constraint Proposals
+  -> Pelvis Reach Arbitration
+  -> Landing/Anchor Atomic Commit
+  -> Left/Right Final Foot Results
+  -> Write Pelvis/LeftFoot/RightFoot Goals Once
+  -> Frame Result + Completed Diagnostics
 ```
 
-`FootGrounding`只拥有Current Support、surface identity、接触平面和鞋底安全事实。它不得先创建响应式Swing Goal。Predictive关闭、Unavailable或Rejected时，Swing保持上游原动画；Stance仍可约束真实接触脚，但不得把该结果标记为预测成功。
+Pose Plan只认识`CharacterFootPlacementRuntime`这一个world-aware Goal producer。`Current Support`、`Predictive Plan`、`Stance`和`Pelvis`都是该深模块内部的单向步骤，不暴露需要调用方维持顺序的领域协议。调用方不得执行`Prepare -> GetStanceInput -> ObserveStance -> Resolve`，也不得先取得一套Grounding Goals再请求Predictive覆盖。
 
-Current Grounding spring只连续追踪唯一Current Query与Current Sole Clearance target。Landing接触许可可以读取动画鞋底到冻结Landing Surface的距离，但该距离不得作为增量反复写回Current spring。Current/Stance所有权内的唯一鞋底安全投影发生在Lyra Current与Anchor混合完成之后；Executable Swing则由Plan内部一次性组合Ground Envelope、动画净空与Heel/Toe安全目标，连续交接完成后不得再被Current Support改写。
+`CharacterFootPlacementRuntime.EvaluateFrame`接收不可变`CharacterFootPlacementFrameInput`并返回不可变`CharacterFootPlacementFrameResult`。它读取上一完成帧Committed Foot状态，构造本帧Pending Foot状态；只有完整Goal Set、后续FullBodyIK和表现帧完成后，Pending才随外层Presentation事务Seal。失败、Discard、Reset或Fault不得提交部分左右脚状态。
 
-Predictive可以作为统一FootPlacement节点内部模块存在，不要求恢复独立作者节点。模块边界和数据所有权必须保留，不能把它重新写成Current Goal后的高度补丁。
+Current Support只发布surface identity、接触平面、距离、法线、鞋底安全和有限filter结果，不拥有Swing、Plan、Anchor或Goal。Current Grounding spring的数值记忆属于对应脚的唯一执行状态。Landing接触许可可以读取动画鞋底到冻结Landing Surface的距离，但该距离不得作为增量反复写回spring。
+
+Predictive只负责创建不可变Plan和按当前Clock/Root求值Plan。Predictive关闭、Unavailable或Rejected时，Swing保持上游原动画；Stance仍可约束真实接触脚，但不得把该结果标记为预测成功。Executable Swing一次性组合Ground Envelope、动画净空、Foot Orientation与Heel/Toe安全目标，最终结果不得再被Current Support末端改写。
 
 ## 3. 所有权
 
@@ -64,11 +65,122 @@ Predictive可以作为统一FootPlacement节点内部模块存在，不要求恢
 | 动画脚、踝、膝、髋局部运动 | Biomechanical Step Artifact | 输入幅值、Ground Query、当前Transform反推 |
 | Action Step身份与相位 | Projection的权威source | Plan私有elapsed、Render Delta、Stored Pose |
 | 世界身体平移与朝向 | Simulation/KCC Future Body Trajectory | 动画步幅、Visible导数、Body Yaw猜曲率 |
-| 当前支撑 | FootGrounding唯一查询 | 默认地面、KCC Ramp、第二Heel/Toe查询 |
-| 未来地形包络 | Predictive Plan创建事务 | 每帧重查、Current Grounding fallback |
-| Locked/Sliding/Unlocked与Anchor | Stance owner | Predictor私有Anchor、FBBIK |
-| 支撑腿、Pelvis、Body Pivot | 同一个Stance/Pelvis owner | 左右脚各自Pelvis、Ground Envelope直接驱动 |
+| Current Support事实 | Current Support Query/Resolver | 默认地面、KCC Ramp、第二Heel/Toe查询 |
+| 未来地形包络 | Predictive Plan Builder创建事务 | 每帧重查、Current Grounding fallback |
+| 单脚Constraint Phase、spring、Anchor、Plan与Transition | `CharacterFootExecutionState` | Grounding `FootState`、Predictive `FootPlanRuntime`、Plan内部状态 |
+| Landing事实 | `CharacterFootLandingCommit`原子值 | 分散的Plan、Current Surface、Anchor和Successor字段 |
+| 支撑腿、Pelvis、Body Pivot | 单次Pelvis Reach Arbitration | 左右脚各自Pelvis、Ground Envelope直接驱动 |
+| Foot Placement最终Goals | Frame Result唯一Goal assembler | Grounding baseline、Predictive覆盖、FBBIK后处理 |
 | 骨骼求解 | FinalIK FBBIK | LegIK、TwoBoneIK、GrounderFBBIK、后处理 |
+
+### 3.1 Frame Input与Frame Result
+
+`CharacterFootPlacementFrameInput`是本帧唯一输入快照，至少包含：
+
+```text
+Actor / Frame / Completion / Reset identity
+Original Component Pose
+Left/Right authoritative Step Facts and Clock
+Committed Body and Future Body Trajectory
+Foot Placement Weight
+Rig / Calibration / Profile identity
+PhysicsScene world context
+Presentation transaction identity
+```
+
+`CharacterFootPlacementFrameResult`只在全部内部阶段成功后可用，至少包含：
+
+```text
+Availability or typed failure
+Pelvis Goal
+Left Foot Goal
+Right Foot Goal
+Left/Right resolved foot outcome
+Pending state mutation identity
+Completed diagnostics snapshot
+```
+
+Frame Result不暴露中间Grounding Goal、Predictive覆盖结果或可由调用方再次组合的mutable对象。
+
+### 3.2 每脚唯一执行状态
+
+每只脚只有一个`CharacterFootExecutionState`：
+
+```text
+Constraint Phase
+Current Support filter state
+Anchor
+Active immutable Plan handle
+Optional Plan Transition
+Last completed Original/Final Sole and Ankle
+Landing Commit
+Query Attempt identity
+```
+
+`Plan Transition`是执行状态内部的值，保存`IntentRevision`或`EventSuccessor`、旧/新Plan引用、唯一Blend和相对Original动画的连续性修正。它不是第二个owner。Intent Revision与Event Successor继续顺序复用一个槽。
+
+退出预测也复用同一Transition槽并标记为`PredictiveExit`，不得再维护独立Fade owner。运行诊断和CSV逐脚发布`PlanTransitionKind`，使后续异常帧可以直接区分Intent换路、Event后继和预测退出。
+
+左右脚从同一个Committed Frame读取，分别生成约束提案；在Pelvis仲裁与Landing验证完成前不得直接改写Committed状态。Pelvis拒绝某个约束时，拒绝结果回到本帧Pending状态的单次Finalize步骤，而不是回调Grounding重新跑一遍。
+
+### 3.3 Predictive Plan只保存不可变事实
+
+`CharacterPredictiveFootPlan`由Builder在预分配候选槽内完整构造并Seal。Seal后只包含：
+
+```text
+Plan / Event / Source / Trajectory identity
+冻结的phase到trajectory time映射
+Foot/Ankle/Hip/Body路线
+Virtual Ground与Query快照
+Ground Envelope与Surface链
+Landing候选与Body Support Path
+创建结果或精确Rejected原因
+```
+
+Plan不得再保存或推进`Active`、`Revision`、Fade、Anchor观察、Action Step当前相位、Ground Path当前进度、输出连续性和本帧world projection。`CharacterPredictiveFootPlanEvaluator`以`Plan + Current Clock + Current Root + Original Pose`为输入，返回当帧只读样本，不修改Plan。
+
+Rejected是一次候选结果，不是可以提升为Active的Plan状态。上一有效Active、Transition与Anchor如何保留或退出，只由`CharacterFootExecutionState`决定。
+
+### 3.4 Query是事实函数
+
+`CharacterFootPlacementWorldQueryBackend`继续作为唯一PhysicsScene adapter。Current Support Query与Predictive Ground Path Query都使用显式request/result：
+
+```text
+QueryRequest + WorldContext -> QueryResult
+```
+
+Query可以使用预分配workspace，但不得读取或修改Foot Execution State、Plan Transition、Anchor、Pelvis或Goals。Plan Builder只消费Query Result并把必要快照Seal进Plan。
+
+### 3.5 单向Foot与Pelvis仲裁
+
+每脚状态机先生成`CharacterFootConstraintProposal`，包含Original、Current Support、Predictive样本、候选Landing和reach输入，但尚不提交Anchor。唯一Pelvis resolver同时消费左右提案和Body Support Path，返回：
+
+```text
+Pelvis Pre-Solve result
+Left constraint disposition
+Right constraint disposition
+Support Leg and Body Pivot result
+```
+
+随后Frame Finalizer只执行一次：接受或释放左右约束、原子安装Landing Commit与Anchor、保存上一完成输出，并从最终状态构造脚目标。Pelvis resolver不得直接改写Foot状态，Foot状态机也不得在Pelvis完成后被Predictive再次改写。
+
+### 3.6 Landing与Goal发布
+
+`CharacterFootLandingCommit`是不可拆分值：
+
+```text
+Plan Sequence
+Landing Event identity
+Landing Sole Pose
+Support Surface identity and local plane
+Anchor local pose
+Committed Sole Pose
+Successor Step origin
+```
+
+任一字段无效则整笔Landing不提交。Landing只在Pelvis仲裁接受相应约束后进入Pending Foot状态。
+
+Foot Placement最终只写三个Goal槽：Pelvis、Left Foot、Right Foot。Goal assembler必须在左右脚和Pelvis全部完成后一次写入Goal workspace；不存在`CharacterFootGroundingPlan` baseline，也不存在Predictive `Resolve`对已写Goal的覆盖。
 
 ## 4. Animation Biomechanical Step Artifact
 
@@ -231,6 +343,24 @@ AngularVelocity_new(phase0) = CurrentExecutedBodyAngularVelocity
 
 Event Successor成为Current事件前只冻结geometry和时钟，绝不参与Goal或Revision Blend。事件identity换代时必须先按当前权威phase对账其冻结身体轨迹，并验证预建起点与上一完成帧Committed Anchor属于同一Surface且仍在鞋底/查询几何边界内；有效时原子提升为Active，已过期或起点失配则拒绝，并从当前真实Sole、Support与committed trajectory重新创建Current Event计划。候选查询失败可以让旧输出连续退回Original Component Pose，但不得把FadeOut变成禁止后续正式tick重试的锁；新候选成功且已验证Committed起点时必须同帧接管，不能再输出一帧旧Landing目标。新Active只按自身权威phase和`Release -> LiftOff`输出权重接管Swing，旧Landing则由同一Stance/Anchor事务接管。禁止在新事件已经进入Swing后，再按Render Delta把旧Landing世界目标与新Swing世界目标交叉混合；低帧率会把该时间权重变成单帧大位移。若Successor不可执行，不能让Current Grounding伪造预测Swing。
 
+### 决策：Plan Goal采用单次Geometry候选和分阶段裁决
+
+每个Presentation Completion中，Active与Revision各自至多执行一次Plan Geometry求值。该阶段只读取已冻结Plan、同帧Original Animated Foot Pose和Component Up，输出不可变`CharacterPredictiveFootGoalCandidate`：
+
+```text
+Plan Sequence
++ Ground Path / Support
++ Authored Ankle / Sole Clearance
++ Geometry Ankle / Rotation
++ Geometry typed reject reason
+```
+
+Stance观察、Approaching Contact候选、Pelvis输入和Goal合成都必须引用该同一候选。唯一Pelvis resolver完成后，只允许在该候选上追加腿长Reach裁决，产生保持相同Plan Sequence的Reach Candidate；不得重新采样Plan、Ground Path、动画Sole或鞋底净空。之后唯一Transition生成Pre-Continuity Goal，Finalizer生成最终Goal，FBBIK只消费最终Goal。
+
+该设计不改变动作效果算法，而是先消除旧链的自相矛盾：旧实现会在Pelvis前用无限Reach得到有效目标，又在Pelvis后重新执行整条Plan求值并得到`ReachExceeded`。诊断只能看到第二次结果，无法判断错误来自Path、Pelvis还是所有权。分阶段候选使每一级输入、输出和拒绝原因都可按同一Completion对账。
+
+业务取舍是多保存两份每脚小型不可变值，换取确定的数据血缘和可诊断性；不增加Physics Query、不增加Grounding、不改变FBBIK调用次数，也不保留旧兼容路径。
+
 Committed Anchor只用于证明预建Successor与上一Landing事务一致，不能成为Current Event重新规划的资格。事件换代时若没有Committed Anchor，预建Successor必须拒绝；只要新事件仍处于PreSwing，Planner就在同一帧使用当前动画真实Sole、FootGrounding发布的唯一Current Support与同一committed trajectory重新执行正式Query。若该Query失败，上一完成预测修正只允许相对当前Original动画连续淡出；不得先输出一帧Grounding Baseline，也不得等待事件进入Swing后再补Plan。
 
 Plan输出所有权起点与Ground Path几何起点是两个不同边界。Plan必须在`ReleasePhase`进入Executing，使`Release -> LiftOff`的权威约束权重真实参与旧Anchor到预测Swing的交接；Ground Path的空间进度仍在`PathStartPhase/LiftOffPhase`前保持为零。不得用`PathStartPhase`门控Plan状态，否则整段Release淡入会成为死代码，并在LiftOff首帧把预测权重直接从零切到一。
@@ -294,6 +424,8 @@ Clearance = SampleAnimationClearance(ActionPhase)
 FinalSoleXZ = NativeAnimatedSoleXZ
 FinalSoleY = GroundHeight + Clearance
 ```
+
+`FootRate`不是动画脚到整条Virtual Ground的全局最近点。转向或路线折返时，全局最近点会让相邻Action Phase重新关联到远处Segment，即使Ground Envelope几何连续，采样进度也会跨过半条包络。正式映射必须先用权威Action Phase定位`GroundProbeRoute`的同相位局部Segment，再只在该Segment内投影Animation Foot Route，并按有序Route Fraction生成单调Foot Rate；对侧接触只增加明确的相位分段，不能参与全局最近点竞选。
 
 Heel/Toe只使用Calibration在该Sole Pose上重建。Ground Envelope样本是当前Foot Rate处的有限高度下界；Native Sole仍位于现有SoleSupportRadius局部覆盖内时，Segment Surface法线可参与坡面净空与Foot Orientation，超出该范围后预测净空只沿Component Up比较Heel/Toe与样本高度，不得把局部斜面作为无限平面外推。Current Grounding只在Current/Stance所有权内对真实查询平面执行一次最小物理净空；Executable Swing的Plan目标不得在Revision/输出连续性之后再与Current Support取最大值。禁止第二Heel/Toe Current Query。
 

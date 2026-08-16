@@ -74,6 +74,9 @@
 59. Foot Placement状态必须与Final Pose共用提交边界。若Evaluate阶段直接推进Plan、Anchor、Landing或Current spring，随后FBBIK或Final Pose失败，下一帧会从不存在的半完成历史继续。正式做法是保存完整Committed状态、只在Pending上求值，并在Presentation Seal后保留；Discard与Fault恢复全部左右脚和Pelvis filter状态。
 60. Plan事实与Plan执行状态必须物理分离。冻结路线、查询几何和Landing候选属于不可变Plan；当前相位、world projection、运动误差、结束原因和Blend属于每脚执行状态。Intent Revision、Event Successor与Predictive Exit共用一个`CharacterFootPlanTransition`，CSV直接记录kind，禁止再从Plan消失或响应式输出猜换代原因。
 61. Event Successor提升不能清空Transition再等Sequence Continuity补洞。run `e31ff918...`中左脚frame `2041 -> 2042 -> 2043`发生`旧预测Goal 0.994m -> 新Plan低权重Grounding 1.849m -> 新预测1.226m`，而Path首帧基本未变、FBBIK残差接近0；另有新Plan先处于`Planned`而Goal单帧下降`46~72cm`。正式交接必须由同一Transition保留上一完成输出相对Original动画的修正，跨过`Planned`空档，再由新Plan自身`Release -> LiftOff`权重接管。
+62. Event Successor连续性不能在候选预建时冻结。run `cbf1f30...`右脚frame `19 -> 20 -> 21`中候选提前保存了旧脚仍在空中的修正；事件晋升时动画Ankle只轻微变化，Final Goal却从`0.081m`跳到`0.430m`，单帧回弹`34.86cm`，随后新Plan执行又回到`0.170m`。候选阶段只能保存geometry与时钟；连续性必须在Promotion边界从紧邻上一完成帧捕获。修复后run `b91013d...`的晋升最大跳变降为左`12.71cm`、右`15.23cm`，证明捕获时点是根因之一，但同Plan跳变和穿透仍需继续定位。
+63. 同一Plan不能在Pelvis前后执行两次完整Goal求值。run `628412c...`左脚frame 385在Stance/Pelvis输入阶段仍有合法Geometry，随后同帧Goal阶段因应用Pelvis后`ReachExceeded`；旧诊断只留下末次布尔结果，把Geometry、Pelvis和Reach三个owner混在一起。正式链必须封存一次Geometry Candidate，Pelvis后只追加同Plan Sequence的Reach裁决。
+64. `PredictiveExit`不是Unsupported Swing中候选失败的合法替代owner。run `628412c...`左右脚在`FutureLandingNoCandidate`或`ReachExceeded`后由Render Delta推进退出，长帧中Final Goal分别出现约`70.9cm`和`47.0cm`下降；这不是Path曲线自身抖动，也不是FBBIK放大，而是尚未完成重建时把脚暴露给Original的所有权错误。修复应保留上一完成输出为待替换事务并继续正式重建，不能调淡出速度或让Current Grounding接管Swing。
 
 ## 当前证据与下一owner
 

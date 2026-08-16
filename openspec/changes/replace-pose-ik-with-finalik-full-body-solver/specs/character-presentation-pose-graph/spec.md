@@ -106,7 +106,7 @@ Rig v4 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式
 
 ### Requirement: Goal Sources与FullBodyIK必须使用统一typed目标合同
 
-`PoseBoneIKGoals` MUST接收只读Component Pose，显式引用Pose catalog中的target reference、Effector Slot、local offset及position/rotation weight，并只输出`component.full-body-ik-goals`。`FootPlacement` MUST接收同一只读Component Pose、节点总weight、Body Grounded只读诊断、Foot Analysis动作事实与唯一world context，在一个owner内完成Current Support、预测Query Route、Swing合成、contact/anchor稳定和pelvis reach，输出包含唯一pelvis pre-solve transform与Foot effectors的Final Goals。左右脚 MUST独立求值，不得通过全局脚选择器互斥。`FullBodyIK` MUST接收原始Component Pose与最终Goal Sets，从Rig v4建立唯一FinalIK FBBIK binding并只修改其Physical biped范围。Virtual Bone对Goal producers只读，并在Physical写入后按依赖重算。系统 MUST不保留Predictive Modifier ABI、TwoBoneIK joint target ABI、LegIK bend plane ABI、`component.biped-leg-targets`、FinalIK Grounding或第二current-grounding result ABI。
+`PoseBoneIKGoals` MUST接收只读Component Pose，显式引用Pose catalog中的target reference、Effector Slot、local offset及position/rotation weight，并只输出`component.full-body-ik-goals`。`FootPlacement` MUST接收同一只读Component Pose、节点总weight、Body Grounded只读诊断、Foot Analysis动作事实与唯一world context，通过单次Frame Input/Result事务完成Current Support、预测Query Route、Swing合成、contact/anchor稳定和pelvis reach，输出包含唯一pelvis pre-solve transform与Foot effectors的Final Goals。每只脚 MUST只有一个执行状态拥有Constraint、Current Support filter、Anchor、Active Plan、唯一Transition、上一完成输出与Landing Commit；已提交Predictive Plan与Query结果 MUST保持不可变。左右脚 MUST独立求值，不得通过全局脚选择器互斥。`FullBodyIK` MUST接收原始Component Pose与最终Goal Sets，从Rig v4建立唯一FinalIK FBBIK binding并只修改其Physical biped范围。Virtual Bone对Goal producers只读，并在Physical写入后按依赖重算。系统 MUST不保留Predictive Modifier ABI、Grounding baseline Goal覆盖协议、TwoBoneIK joint target ABI、LegIK bend plane ABI、`component.biped-leg-targets`、FinalIK Grounding或第二current-grounding result ABI。
 
 #### Scenario: 手臂IK使用Virtual effector
 
@@ -125,6 +125,12 @@ Rig v4 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式
 - **WHEN** FootPlacement收到同Frame、同Rig的Component Pose与动作事实
 - **THEN** FootPlacement MUST发布同Frame、同Rig、唯一Foot slot lineage的最终Goals
 - **AND** Compiler MUST拒绝第二Foot producer同时送给FullBodyIK
+
+#### Scenario: FootPlacement同帧同时处理Plan换代与Landing
+
+- **WHEN** 左右脚在同一Frame分别发生Plan Transition与Landing Commit
+- **THEN** FootPlacement MUST从同一个Committed输入生成一笔Pending Frame Result并只发布一个最终Goal Set
+- **AND** MUST不通过Grounding与Predictive往返调用或中间Goal回写暴露半完成状态
 
 #### Scenario: Preview缺少world context
 

@@ -215,7 +215,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong completionIdentity,
             in CharacterFootPlacementAnimatedPose originalPose,
             in CharacterPredictiveFootStanceInput left,
-            in CharacterPredictiveFootStanceInput right)
+            in CharacterPredictiveFootStanceInput right,
+            in CharacterPredictiveFootGoalCandidates leftGoalCandidates,
+            in CharacterPredictiveFootGoalCandidates rightGoalCandidates)
         {
             if (renderFrame == 0 || completionIdentity == 0)
                 throw new ArgumentException("Predictive Foot frame identity is invalid.");
@@ -224,6 +226,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OriginalPose = originalPose;
             Left = left;
             Right = right;
+            LeftGoalCandidates = leftGoalCandidates;
+            RightGoalCandidates = rightGoalCandidates;
         }
 
         internal ulong RenderFrame { get; }
@@ -231,6 +235,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPlacementAnimatedPose OriginalPose { get; }
         internal CharacterPredictiveFootStanceInput Left { get; }
         internal CharacterPredictiveFootStanceInput Right { get; }
+        internal CharacterPredictiveFootGoalCandidates LeftGoalCandidates { get; }
+        internal CharacterPredictiveFootGoalCandidates RightGoalCandidates { get; }
 
         internal bool Matches(in CharacterFootPlacementFrameInput frame) =>
             RenderFrame == frame.RenderFrame && CompletionIdentity == frame.CompletionIdentity;

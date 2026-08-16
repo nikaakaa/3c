@@ -742,10 +742,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementGoalOwner goalOwner,
             Vector3 originalGoalWorldPosition,
             Vector3 stanceGoalWorldPosition,
+            bool activePlanGeometryGoalAvailable,
+            Vector3 activePlanGeometryGoalWorldPosition,
             bool activePlanGoalAvailable,
             Vector3 activePlanGoalWorldPosition,
+            FootPredictionRejectReason activePlanGoalRejectReason,
+            bool revisionPlanGeometryGoalAvailable,
+            Vector3 revisionPlanGeometryGoalWorldPosition,
             bool revisionPlanGoalAvailable,
             Vector3 revisionPlanGoalWorldPosition,
+            FootPredictionRejectReason revisionPlanGoalRejectReason,
             bool transitionOriginGoalAvailable,
             Vector3 transitionOriginGoalWorldPosition,
             Vector3 preContinuityGoalWorldPosition,
@@ -819,10 +825,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GoalOwner = goalOwner;
             OriginalGoalWorldPosition = originalGoalWorldPosition;
             StanceGoalWorldPosition = stanceGoalWorldPosition;
+            ActivePlanGeometryGoalAvailable = activePlanGeometryGoalAvailable;
+            ActivePlanGeometryGoalWorldPosition = activePlanGeometryGoalWorldPosition;
             ActivePlanGoalAvailable = activePlanGoalAvailable;
             ActivePlanGoalWorldPosition = activePlanGoalWorldPosition;
+            ActivePlanGoalRejectReason = activePlanGoalRejectReason;
+            RevisionPlanGeometryGoalAvailable = revisionPlanGeometryGoalAvailable;
+            RevisionPlanGeometryGoalWorldPosition = revisionPlanGeometryGoalWorldPosition;
             RevisionPlanGoalAvailable = revisionPlanGoalAvailable;
             RevisionPlanGoalWorldPosition = revisionPlanGoalWorldPosition;
+            RevisionPlanGoalRejectReason = revisionPlanGoalRejectReason;
             TransitionOriginGoalAvailable = transitionOriginGoalAvailable;
             TransitionOriginGoalWorldPosition = transitionOriginGoalWorldPosition;
             PreContinuityGoalWorldPosition = preContinuityGoalWorldPosition;
@@ -949,10 +961,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementGoalOwner GoalOwner { get; }
         public Vector3 OriginalGoalWorldPosition { get; }
         public Vector3 StanceGoalWorldPosition { get; }
+        public bool ActivePlanGeometryGoalAvailable { get; }
+        public Vector3 ActivePlanGeometryGoalWorldPosition { get; }
         public bool ActivePlanGoalAvailable { get; }
         public Vector3 ActivePlanGoalWorldPosition { get; }
+        public FootPredictionRejectReason ActivePlanGoalRejectReason { get; }
+        public bool RevisionPlanGeometryGoalAvailable { get; }
+        public Vector3 RevisionPlanGeometryGoalWorldPosition { get; }
         public bool RevisionPlanGoalAvailable { get; }
         public Vector3 RevisionPlanGoalWorldPosition { get; }
+        public FootPredictionRejectReason RevisionPlanGoalRejectReason { get; }
         public bool TransitionOriginGoalAvailable { get; }
         public Vector3 TransitionOriginGoalWorldPosition { get; }
         public Vector3 PreContinuityGoalWorldPosition { get; }

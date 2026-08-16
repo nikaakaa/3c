@@ -68,6 +68,12 @@
 - [x] 4A.12 删除`CharacterFootGroundingGoalSource`、`CharacterFootGroundingPlan`、Grounding/Predictive旧owner字段、旧多阶段接口和失效诊断字段；保留一个正式`CharacterFootPlacementRuntime`入口，不留兼容adapter。
 - [x] 4A.13 Event Successor提升后继续由同一个`CharacterFootPlanTransition`保存相对Original动画的上一完成输出；新Active只按自身`Release -> LiftOff`权重接管，交接完成前不得开放第二次Revision或Sequence Output Continuity。
 - [x] 4A.14 Plan创建时若权威相位已经到达`ReleasePhase`，执行状态必须当帧进入`Executing`并初始化Action/Ground Path进度，禁止先发布一帧`Planned`空档再暴露Grounding或Original。
+- [x] 4A.15 Event Successor预建阶段只保存不可变geometry与时钟；相对Original动画的连续性原点必须在事件identity原子提升时，从上一完成帧属于旧Active的Final输出捕获，禁止复用候选预建帧的过期脚高。
+- [x] 4A.16 `CharacterPredictiveFootFrameEvaluation`必须封存同一Completion的Original Pose与左右脚候选集合，Goal阶段不得再次读取Rig或重建另一份Original事实。
+- [x] 4A.17 Active与Revision每帧各只允许一次无Pelvis Reach约束的Geometry求值；Stance观察、Landing候选、Pelvis输入和Goal合成必须消费同一个不可变候选，禁止在Pelvis前后重复求值Plan、Ground Path或鞋底净空。
+- [x] 4A.18 Pelvis完成后只对已封存Geometry Candidate执行Reach阶段，并保留同一个Plan Sequence；随后按唯一Transition合成Pre-Continuity Goal并一次生成Final Goal，任何阶段不得回读上游状态拼装第二条数据链。
+- [x] 4A.19 Runtime Trace与CSV schema v102必须逐脚同时发布Active/Revision的Geometry Candidate、Reach-resolved Candidate及typed reject reason，使`Geometry -> Pelvis -> Reach -> Transition -> Final -> FBBIK`可以按同一Completion逐级对账。
+- [ ] 4A.20 当前事件仍处于Unsupported Swing时，Executable Plan求值失败、Revision拒绝或Successor换代不得启动向Original的Render Delta Predictive Exit；旧完成输出必须保留为待替换事务，直到同事件重建成功、合法Stance原子接管或Step明确结束。
 
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
 - [x] 4.5A 历史实验已证明“每个权威Landing Event至多一笔Intent Revision”能阻止同一源Plan反复换路；自动A/D run `35d23e6892f24566808e0276a3ec28be`中，每个事件最多只出现原Plan加一个Revision。后续run证明该事件级限制会让再次偏离的后继Plan继续过期执行，本规则由4.5B替代，不反勾历史完成项。

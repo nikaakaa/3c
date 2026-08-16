@@ -794,10 +794,16 @@ namespace BTSMTL.Diagnostics
         public string GoalOwner;
         public Vector3 OriginalGoalWorldPosition;
         public Vector3 StanceGoalWorldPosition;
+        public bool ActivePlanGeometryGoalAvailable;
+        public Vector3 ActivePlanGeometryGoalWorldPosition;
         public bool ActivePlanGoalAvailable;
         public Vector3 ActivePlanGoalWorldPosition;
+        public string ActivePlanGoalRejectReason;
+        public bool RevisionPlanGeometryGoalAvailable;
+        public Vector3 RevisionPlanGeometryGoalWorldPosition;
         public bool RevisionPlanGoalAvailable;
         public Vector3 RevisionPlanGoalWorldPosition;
+        public string RevisionPlanGoalRejectReason;
         public bool TransitionOriginGoalAvailable;
         public Vector3 TransitionOriginGoalWorldPosition;
         public Vector3 PreContinuityGoalWorldPosition;

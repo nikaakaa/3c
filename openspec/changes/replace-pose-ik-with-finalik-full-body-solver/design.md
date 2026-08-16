@@ -350,6 +350,8 @@ FinalIK只消费原始Component Pose和一个最终Goal Set：
 
 课程启动门禁必须验证：唯一Course、唯一Start/End、48个踏面、A/D横向安全边界、两条Traversal Ramp和唯一Deterministic Collision World。路线阶段、正式MoveAxis、实际速度和事务分段进入现有流式CSV/manifest，使输入变化与Plan Revision可以对账。短事务仍保留Step、Future Body、Ground、Path、Landing、Anchor、Pelvis与FBBIK完整因果列；缩短的是重复时间，不是诊断字段。
 
+自动writer只登记`LiveState`诊断兴趣，从完成帧流直接构造行并交给后台压缩线程；不得自动附加`RuntimeDebugSession`或启动`Continuous`内存捕获。Inspector手动Capture与自动CSV是两个观察入口，但只能消费同一完成快照，不能同时保存第二份无界帧历史。
+
 ### Artifact阶段
 
 - 原Clip与Artifact重建路线；

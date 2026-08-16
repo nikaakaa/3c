@@ -7,7 +7,6 @@ using System.IO.Compression;
 using System.Text;
 using System.Threading;
 using BTSMTL.Diagnostics;
-using BTSMTL.Diagnostics.Editor;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
@@ -138,17 +137,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Debug.Log($"GameplayLab Foot IK diagnostics attached: {target.DisplayName}/{host.name}");
             }
 
-            RuntimeDebugSession session = RuntimeDebugSession.Shared;
-            if (!session.ViewModel.Attached || session.ViewModel.Target.HostInstanceId != target.HostInstanceId)
-                session.AttachToHost(target.HostInstanceId);
-            if (session.CanStartCapture &&
-                !session.IsCaptureRecording &&
-                session.BeginCapture(
-                    RuntimeTraceChannel.FootPlacement,
-                    RuntimeDiagnosticsCaptureDetail.Continuous))
-            {
-                Debug.Log($"GameplayLab Foot IK debug session attached and capture started: {target.DisplayName}");
-            }
         }
 
         static void RemoveDiagnosticsInterest(AnimationPresentationRuntimeTarget target)

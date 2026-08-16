@@ -36,8 +36,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             StartFraction = segment.StartFraction;
             EndFraction = segment.EndFraction;
-            SurfaceIdentity = segment.Surface.Identity;
-            SurfaceNormal = segment.Surface.IsValid ? segment.Surface.Normal : Vector3.zero;
+            SurfaceIdentity = segment.EndSurface.Identity;
+            SurfaceNormal = segment.EndSurface.IsValid ? segment.EndSurface.Normal : Vector3.zero;
             EdgeStart = segment.EdgeStart;
             EdgeEnd = segment.EdgeEnd;
             StartSoleHeight = segment.StartSoleHeight;

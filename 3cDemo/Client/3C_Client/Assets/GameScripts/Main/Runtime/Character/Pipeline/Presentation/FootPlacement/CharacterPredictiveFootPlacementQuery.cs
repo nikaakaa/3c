@@ -838,6 +838,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Segments[segmentCount++] = new FootPlacementGroundEnvelopeSegment(
                     start.Fraction,
                     end.Fraction,
+                    start.Surface,
                     end.Surface,
                     start.Point,
                     end.Point,

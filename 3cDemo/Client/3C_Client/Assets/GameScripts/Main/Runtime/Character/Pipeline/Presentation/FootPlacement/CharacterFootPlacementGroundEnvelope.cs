@@ -22,7 +22,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public FootPlacementGroundEnvelopeSegment(
             float startFraction,
             float endFraction,
-            FootPlacementSurface surface,
+            FootPlacementSurface startSurface,
+            FootPlacementSurface endSurface,
             Vector3 edgeStart,
             Vector3 edgeEnd,
             float startSoleHeight,
@@ -31,7 +32,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             StartFraction = Mathf.Clamp01(startFraction);
             EndFraction = Mathf.Clamp01(endFraction);
-            Surface = surface;
+            StartSurface = startSurface;
+            EndSurface = endSurface;
             EdgeStart = edgeStart;
             EdgeEnd = edgeEnd;
             StartSoleHeight = startSoleHeight;
@@ -41,7 +43,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public float StartFraction { get; }
         public float EndFraction { get; }
-        public FootPlacementSurface Surface { get; }
+        public FootPlacementSurface StartSurface { get; }
+        public FootPlacementSurface EndSurface { get; }
         public Vector3 EdgeStart { get; }
         public Vector3 EdgeEnd { get; }
         public float StartSoleHeight { get; }

@@ -35,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RevisionBlendWeight * RevisionBlendWeight * (3f - 2f * RevisionBlendWeight);
             internal bool IsFadingOut { get; private set; }
             internal float FadeOutWeight { get; private set; }
+            internal ulong FadeOutStartedFrame { get; private set; }
             internal float PredictiveRetentionWeight
             {
                 get
@@ -98,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+                FadeOutStartedFrame = 0;
             }
 
             internal void BeginEventSuccessor()
@@ -110,6 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+                FadeOutStartedFrame = 0;
             }
 
             internal void PromoteRevision()
@@ -127,8 +130,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearTransitionOrigin();
             }
 
-            internal void BeginFadeOut(CharacterPredictiveFootPlanEndReason reason)
+            internal void BeginFadeOut(
+                CharacterPredictiveFootPlanEndReason reason,
+                ulong renderFrame)
             {
+                if (renderFrame == 0)
+                    throw new ArgumentOutOfRangeException(nameof(renderFrame));
                 if (IsFadingOut)
                 {
                     if (Revision.OwnsEvent)
@@ -144,12 +151,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Active.Reset(reason);
                     IsFadingOut = false;
                     FadeOutWeight = 0f;
+                    FadeOutStartedFrame = 0;
                     ClearTransitionOrigin();
                     return;
                 }
                 CaptureTransitionOrigin();
                 IsFadingOut = true;
                 FadeOutWeight = 0f;
+                FadeOutStartedFrame = renderFrame;
             }
 
             internal void AdvanceTransition(
@@ -178,6 +187,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 if (!IsFadingOut)
                     return;
+                if (renderFrame <= FadeOutStartedFrame)
+                    return;
                 FadeOutWeight = Mathf.MoveTowards(
                     FadeOutWeight,
                     1f,
@@ -187,6 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+                FadeOutStartedFrame = 0;
                 ClearTransitionOrigin();
             }
 
@@ -346,6 +358,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+                FadeOutStartedFrame = 0;
                 ClearTransitionOrigin();
                 ClearIntentObservation();
             }
@@ -403,6 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RevisionBlendWeight = 0f;
                 IsFadingOut = false;
                 FadeOutWeight = 0f;
+                FadeOutStartedFrame = 0;
                 ClearIntentObservation();
                 HasLastOutputSole = false;
                 LastOutputSole = Vector3.zero;
@@ -1135,7 +1149,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 runtime.BeginFadeOut(
                     activeEvaluationRejectReason == FootPredictionRejectReason.ReachExceeded
                         ? CharacterPredictiveFootPlanEndReason.TargetReachExceeded
-                        : CharacterPredictiveFootPlanEndReason.TargetEvaluationInvalid);
+                        : CharacterPredictiveFootPlanEndReason.TargetEvaluationInvalid,
+                    renderFrame);
                 hasIntentRevision = false;
                 hasTransitionOrigin = runtime.HasTransitionOrigin && runtime.IsFadingOut;
                 revisionTransitionBlend = 0f;
@@ -1271,9 +1286,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 activeResolvedAnklePosition = hasTransitionOrigin
                     ? runtime.IsFadingOut
                         ? Vector3.Lerp(
-                            pose.AnklePosition,
+                            grounding.ContactState != CharacterFootContactState.Swing ||
+                            grounding.AnchorBlendWeight > 0.0001f
+                                ? baselineWorldPosition
+                                : pose.AnklePosition,
                             outgoingAnklePosition,
-                            runtime.PredictiveRetentionWeight)
+                            activePlanPredictionBlend)
                         : outgoingAnklePosition
                     : Vector3.Lerp(
                         baselineWorldPosition,
@@ -1282,9 +1300,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Quaternion activeResolvedAnkleRotation = hasTransitionOrigin
                     ? runtime.IsFadingOut
                         ? Quaternion.Slerp(
-                            pose.AnkleRotation,
+                            grounding.ContactState != CharacterFootContactState.Swing ||
+                            grounding.AnchorBlendWeight > 0.0001f
+                                ? baselineWorldRotation
+                                : pose.AnkleRotation,
                             outgoingAnkleRotation,
-                            runtime.PredictiveRetentionWeight).normalized
+                            activePlanPredictionBlend).normalized
                         : outgoingAnkleRotation
                     : Quaternion.Slerp(
                         baselineWorldRotation,
@@ -2310,11 +2331,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         runtime.CancelRevision(
                             CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
-                        runtime.BeginFadeOut(replacementReason);
+                        runtime.BeginFadeOut(replacementReason, renderFrame);
                     }
                 }
                 else if (!runtime.IsFadingOut)
-                    runtime.BeginFadeOut(replacementReason);
+                    runtime.BeginFadeOut(replacementReason, renderFrame);
             }
             runtime.AdvanceTransition(
                 renderFrame,
@@ -2827,8 +2848,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             result.Add(new CharacterPredictiveFootPathSampleDiagnostics(
                 first.StartFraction,
                 first.EdgeStart,
-                first.Surface.IsValid ? first.Surface.Normal : Vector3.up,
-                first.Surface.Identity,
+                first.StartSurface.IsValid ? first.StartSurface.Normal : Vector3.up,
+                first.StartSurface.Identity,
                 firstRoot,
                 firstHip));
             int outputCount = Mathf.Min(plan.GroundEnvelopeSegmentCount, Mathf.Min(7, result.Capacity - 1));
@@ -2847,8 +2868,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 result.Add(new CharacterPredictiveFootPathSampleDiagnostics(
                     segment.EndFraction,
                     segment.EdgeEnd,
-                    segment.Surface.IsValid ? segment.Surface.Normal : Vector3.up,
-                    segment.Surface.Identity,
+                    segment.EndSurface.IsValid ? segment.EndSurface.Normal : Vector3.up,
+                    segment.EndSurface.Identity,
                     root,
                     hip));
             }

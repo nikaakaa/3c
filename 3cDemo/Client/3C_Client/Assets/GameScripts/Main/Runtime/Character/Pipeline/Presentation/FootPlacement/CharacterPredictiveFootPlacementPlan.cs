@@ -862,7 +862,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 1f;
             pathPosition = ProjectWorldPoint(
                 Vector3.Lerp(segment.EdgeStart, segment.EdgeEnd, t));
-            support = ProjectSurface(segment.Surface);
+            support = ProjectSurface(
+                t <= 0.000001f
+                    ? segment.StartSurface
+                    : segment.EndSurface);
         }
 
         internal void EvaluateFootMotion(
@@ -1017,7 +1020,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return new FootPlacementGroundEnvelopeSegment(
                 segment.StartFraction,
                 segment.EndFraction,
-                ProjectSurface(segment.Surface),
+                ProjectSurface(segment.StartSurface),
+                ProjectSurface(segment.EndSurface),
                 ProjectWorldPoint(segment.EdgeStart),
                 ProjectWorldPoint(segment.EdgeEnd),
                 segment.StartSoleHeight,

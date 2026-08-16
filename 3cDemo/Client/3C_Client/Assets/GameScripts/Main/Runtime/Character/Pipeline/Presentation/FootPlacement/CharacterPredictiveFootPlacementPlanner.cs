@@ -38,7 +38,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.GroundEnvelopeRejectReason,
                 plan.QueryCount,
                 plan.RawHitCount,
-                plan.RejectedQueryCount)
+                plan.RejectedQueryCount,
+                plan.GeometrySnapshot)
         {
         }
 
@@ -52,7 +53,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementGroundEnvelopeRejectReason groundEnvelopeRejectReason,
             int queryCount,
             int rawHitCount,
-            int rejectedQueryCount)
+            int rejectedQueryCount,
+            CharacterPredictiveFootPlanGeometrySnapshot geometrySnapshot)
         {
             Kind = kind;
             Sequence = sequence;
@@ -64,6 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryCount = queryCount;
             RawHitCount = rawHitCount;
             RejectedQueryCount = rejectedQueryCount;
+            GeometrySnapshot = geometrySnapshot;
         }
 
         public CharacterFootPlanAttemptKind Kind { get; }
@@ -76,6 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int QueryCount { get; }
         public int RawHitCount { get; }
         public int RejectedQueryCount { get; }
+        public CharacterPredictiveFootPlanGeometrySnapshot GeometrySnapshot { get; }
         public bool IsAvailable => Kind != CharacterFootPlanAttemptKind.None && Sequence != 0;
     }
 
@@ -1876,10 +1880,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.WorldProjectionMatrix,
                 runtime.HasRevision
                     ? runtime.Revision.State
-                    : CharacterPredictiveFootPlanState.Inactive,
+                    : planAttempt.IsAvailable &&
+                      planAttempt.GeometrySnapshot != null &&
+                      !ReferenceEquals(planAttempt.GeometrySnapshot, plan.GeometrySnapshot)
+                        ? planAttempt.State
+                        : CharacterPredictiveFootPlanState.Inactive,
                 runtime.HasRevision
                     ? runtime.Revision.GeometrySnapshot
-                    : null,
+                    : planAttempt.IsAvailable &&
+                      !ReferenceEquals(planAttempt.GeometrySnapshot, plan.GeometrySnapshot)
+                        ? planAttempt.GeometrySnapshot
+                        : null,
                 runtime.HasRevision
                     ? runtime.Revision.WorldProjectionMatrix
                     : Matrix4x4.identity,
@@ -3038,7 +3049,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     FootPlacementGroundEnvelopeRejectReason.None,
                     0,
                     0,
-                    0);
+                    0,
+                    null);
                 return false;
             }
             var rootTrajectory = new CharacterPredictiveFootRootTrajectory(

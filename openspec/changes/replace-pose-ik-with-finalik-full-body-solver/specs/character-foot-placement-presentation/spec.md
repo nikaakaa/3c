@@ -37,6 +37,8 @@ Pose Plan MUST每帧只调用一次`CharacterFootPlacementRuntime.EvaluateFrame`
 
 Current Support和Predictive Query MUST只消费显式request并返回事实result。唯一Pelvis resolver MUST同时消费左右脚提案，返回Pelvis结果与左右constraint disposition；随后Finalizer MUST原子接受或释放约束与Landing。系统 MUST在左右脚与Pelvis完成后一次写入三个Goal槽，不得先发布Grounding baseline再由Predictive覆盖。
 
+每个Active与Revision Plan在一个Presentation Completion内 MUST各自至多执行一次无Pelvis Reach约束的Geometry求值，并产出不可变Geometry Candidate。Stance观察、Approaching Contact、Pelvis输入和Goal合成 MUST消费该同一候选。Pelvis完成后 MUST只对该候选追加Reach裁决并保留原Plan Sequence，MUST不重新采样Plan、Ground Path、Original Pose或鞋底净空。Runtime Trace和CSV MUST在同一Completion发布Geometry Candidate、Reach Candidate、Transition、Final Goal和FBBIK结果。
+
 Pending Foot状态 MUST只在Goal Set、FullBodyIK、Final Pose与外层Presentation事务全部完成后Seal。TypedInvalid、异常、Discard、Reset或Fault MUST恢复上一完成状态，不得留下单脚Plan换代、部分Anchor、Landing、Current Support filter或spring推进。Scene、Game和CSV MUST只读取Seal后的完成诊断。
 
 #### Scenario: FBBIK拒绝本帧Goal Set
@@ -50,6 +52,12 @@ Pending Foot状态 MUST只在Goal Set、FullBodyIK、Final Pose与外层Presenta
 - **WHEN** 左右脚提案、Pelvis仲裁、三个Goal、FullBodyIK和Final Pose全部成功
 - **THEN** Pending左右脚状态与完成诊断 MUST随同一个Presentation事务Seal
 - **AND** Goal workspace MUST只出现一次Pelvis、Left Foot、Right Foot最终写入
+
+#### Scenario: Geometry有效但Pelvis后不可达
+
+- **WHEN** 同一Plan的Geometry Candidate合法，但应用唯一Pelvis结果后Reach裁决为`ReachExceeded`
+- **THEN** 诊断 MUST同时保留该Geometry Candidate、同Plan Sequence和Reach typed reason
+- **AND** 系统 MUST不重新执行Plan Geometry求值来覆盖第一阶段事实
 
 #### Scenario: 诊断区分唯一Plan交接类型
 

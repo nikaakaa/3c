@@ -111,6 +111,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 pathRoot,
             Vector3 pathHip,
             FootPlacementSurface support,
+            Vector3 clearanceNormal,
+            Vector3 authoredAnklePosition,
             Vector3 anklePosition,
             Quaternion ankleRotation,
             CharacterFootPlacementSoleContactPose contacts,
@@ -126,6 +128,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathRoot = pathRoot;
             PathHip = pathHip;
             Support = support;
+            ClearanceNormal = clearanceNormal;
+            AuthoredAnklePosition = authoredAnklePosition;
             AnklePosition = anklePosition;
             AnkleRotation = ankleRotation;
             Contacts = contacts;
@@ -142,6 +146,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PathRoot { get; }
         internal Vector3 PathHip { get; }
         internal FootPlacementSurface Support { get; }
+        internal Vector3 ClearanceNormal { get; }
+        internal Vector3 AuthoredAnklePosition { get; }
         internal Vector3 AnklePosition { get; }
         internal Quaternion AnkleRotation { get; }
         internal CharacterFootPlacementSoleContactPose Contacts { get; }
@@ -152,5 +158,44 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float AnimationClearanceContinuityContribution { get; }
         internal float ReachClearance { get; }
         internal float CompositeAnimationClearance { get; }
+    }
+
+    internal readonly struct CharacterPredictiveFootGoalCandidate
+    {
+        internal CharacterPredictiveFootGoalCandidate(
+            ulong planSequence,
+            bool evaluated,
+            bool available,
+            FootPredictionRejectReason rejectReason,
+            in CharacterPredictiveFootTarget target)
+        {
+            if (available && (!evaluated || planSequence == 0 || rejectReason != FootPredictionRejectReason.None))
+                throw new System.ArgumentException("Predictive Foot Goal candidate is invalid.");
+            PlanSequence = planSequence;
+            Evaluated = evaluated;
+            Available = available;
+            RejectReason = rejectReason;
+            Target = target;
+        }
+
+        internal ulong PlanSequence { get; }
+        internal bool Evaluated { get; }
+        internal bool Available { get; }
+        internal FootPredictionRejectReason RejectReason { get; }
+        internal CharacterPredictiveFootTarget Target { get; }
+    }
+
+    internal readonly struct CharacterPredictiveFootGoalCandidates
+    {
+        internal CharacterPredictiveFootGoalCandidates(
+            in CharacterPredictiveFootGoalCandidate active,
+            in CharacterPredictiveFootGoalCandidate revision)
+        {
+            Active = active;
+            Revision = revision;
+        }
+
+        internal CharacterPredictiveFootGoalCandidate Active { get; }
+        internal CharacterPredictiveFootGoalCandidate Revision { get; }
     }
 }

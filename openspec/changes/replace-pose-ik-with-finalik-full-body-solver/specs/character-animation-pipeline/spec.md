@@ -2,7 +2,7 @@
 
 ### Requirement: CharacterSimulationPresentationRuntime必须执行唯一编译Pose Plan
 
-SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application boundary。Runtime MUST消费committed Body/Intent、Program parameter和有限Action command，构造Presentation Fact，并按Projection编译的ordered staged Pose/Value DAG执行PoseStateMachine、state-local provider demand/readiness、ActionPlaybackInput、AnimationSlot、Local Pose composition、显式`LocalToComponentPose`、Component Pose控制、从同一Component Pose分支执行统一FootPlacement与PoseBoneIKGoals、汇聚全部最终Goal value到唯一pure pose FullBodyIK、显式`ComponentToLocalPose`、后续Pose stage及FinalPublication。FootPlacement MUST在一个world-aware value stage中完成响应式Current Support、预测Swing、Stance、Anchor与Pelvis，Runtime MUST不编译独立Predictive Modifier stage。所有Player、Routing、Inertialization、source capture、空间转换、Goal value和output completion MUST位于同一帧固定计划和同一次PlayableGraph Evaluate。任一stage失败 MUST阻断后续stage与FinalPublication；若已跨过Animancer Evaluate Barrier，同一Actor Animation Runtime MUST进入Faulted且不得逆序恢复状态或Physical Bone快照。Runtime MUST不创建图外基础动画、Stack、Foot Placement、LegIK、TwoBoneIK、FinalIK Grounding、FinalIK组件、隐式Pose空间转换、world-aware postprocess、第二Pose Graph或第二final writer。
+SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application boundary。Runtime MUST消费committed Body/Intent、Program parameter和有限Action command，构造Presentation Fact，并按Projection编译的ordered staged Pose/Value DAG执行PoseStateMachine、state-local provider demand/readiness、ActionPlaybackInput、AnimationSlot、Local Pose composition、显式`LocalToComponentPose`、Component Pose控制、从同一Component Pose分支执行统一FootPlacement与PoseBoneIKGoals、汇聚全部最终Goal value到唯一pure pose FullBodyIK、显式`ComponentToLocalPose`、后续Pose stage及FinalPublication。FootPlacement MUST在一个world-aware value stage中通过一次`CharacterFootPlacementRuntime.EvaluateFrame`完成Current Support、Predictive Plan、左右脚状态、Landing/Anchor、Pelvis仲裁和最终Goals，Runtime MUST不编译独立Predictive Modifier stage，也 MUST不跨stage调用FootPlacement内部的Prepare、Stance观察或Goal覆盖协议。所有Player、Routing、Inertialization、source capture、空间转换、Goal value和output completion MUST位于同一帧固定计划和同一次PlayableGraph Evaluate。任一stage失败 MUST阻断后续stage与FinalPublication；若已跨过Animancer Evaluate Barrier，同一Actor Animation Runtime MUST进入Faulted且不得逆序恢复状态或Physical Bone快照。Runtime MUST不创建图外基础动画、Stack、Foot Placement、LegIK、TwoBoneIK、FinalIK Grounding、FinalIK组件、隐式Pose空间转换、world-aware postprocess、第二Pose Graph或第二final writer。
 
 #### Scenario: FootPlacement Goals完成后FullBodyIK失败
 
@@ -15,6 +15,12 @@ SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同�
 - **WHEN** Foot与Hand Goal Source从同一Component Pose完成并且唯一FullBodyIK completion匹配
 - **THEN** Runtime MUST只发布FullBodyIK及后续stage形成的唯一OutputPose
 - **AND** MUST不在图外再次执行Foot Placement、TwoBoneIK、LegIK或FinalIK
+
+#### Scenario: FootPlacement形成Pending状态后后续Pose失败
+
+- **WHEN** 单次FootPlacement world-aware stage已形成左右脚Pending状态和最终Goals，但FullBodyIK或后续Pose stage失败
+- **THEN** Presentation事务 MUST不Seal该Pending Foot状态
+- **AND** 下一帧 MUST不观察到只提升一只脚Plan、半笔Landing或已提交Anchor但未发布对应最终Pose的状态
 
 #### Scenario: Commit Attack producer
 

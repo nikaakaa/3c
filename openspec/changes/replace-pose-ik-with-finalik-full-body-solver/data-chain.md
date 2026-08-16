@@ -114,6 +114,8 @@ LandingElapsed = TrajectoryElapsed(1) = TimeToLandingSeconds
 
 schema v100新增每脚`PredictionLead`、Planned Landing Elapsed、world projection冻结状态、Expected/Current Root以及Expected/Projected Expected Body共15列，使路线生成、运动偏差和执行投影可以逐帧对账。任何一层都不得省略或重复累计Lead。
 
+schema v100回归run `f4330e30a363468a8e2cafc425eae770`共1513行、1419列，Header唯一且逐行等宽。带Prediction Lead的帧中，路线与Expected Body的运动时间误差中位数已接近0，证明时间域修复有效；剩余跳变已经转移到Goal所有权和换代边界。
+
 该run在自动输入层仍出现独立的`formal Move Input Action did not consume...`错误；错误发生前的所有完成帧已正常封口。它不改变Foot Placement数据链结论，但在继续做运动效果回归前必须单独修复测试输入锁存，不能把输入测试失败记成Plan或IK失败。
 
 ## 下一步诊断顺序

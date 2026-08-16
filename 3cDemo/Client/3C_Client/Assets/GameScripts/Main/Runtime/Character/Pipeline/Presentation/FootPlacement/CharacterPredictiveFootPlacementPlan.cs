@@ -457,7 +457,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 RootLanding { get; private set; }
         internal Quaternion RootLandingRotation { get; private set; }
         internal Vector3 PredictedHip { get; private set; }
-        internal CharacterPredictiveFootRootTrajectory RootTrajectory { get; private set; }
+        CharacterPredictiveFootRootTrajectory m_RootTrajectory;
+        internal ref readonly CharacterPredictiveFootRootTrajectory RootTrajectory =>
+            ref m_RootTrajectory;
         internal CharacterPredictiveBodySupportPath BodySupportPath { get; private set; }
         internal FixedList512Bytes<Vector3> AuthoredFootPlanarRoute { get; private set; }
         internal FixedList512Bytes<Vector3> RootLocalHipRoute { get; private set; }
@@ -533,7 +535,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RootLanding = source.RootLanding;
             RootLandingRotation = source.RootLandingRotation;
             PredictedHip = source.PredictedHip;
-            RootTrajectory = source.RootTrajectory;
+            m_RootTrajectory = source.RootTrajectory;
             BodySupportPath = source.BodySupportPath;
             AuthoredFootPlanarRoute = source.AuthoredFootPlanarRoute;
             RootLocalHipRoute = source.RootLocalHipRoute;
@@ -946,7 +948,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RootLanding = Vector3.zero;
             RootLandingRotation = Quaternion.identity;
             PredictedHip = Vector3.zero;
-            RootTrajectory = default;
+            m_RootTrajectory = default;
             AuthoredFootPlanarRoute = default;
             RootLocalHipRoute = default;
             AnimationClearanceHeights = default;
@@ -1165,7 +1167,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 throw new ArgumentException("Predictive Foot Plan action route is invalid.");
             }
-            RootTrajectory = rootTrajectory;
+            m_RootTrajectory = rootTrajectory;
             AuthoredFootPlanarRoute = step.AuthoredFootPlanarRoute;
             RootLocalHipRoute = step.RootLocalHipRoute;
             AnimationClearanceHeights = step.AnimationClearanceHeights;
@@ -1658,7 +1660,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 RootLanding => m_Plan.RootLanding;
         internal Quaternion RootLandingRotation => m_Plan.RootLandingRotation;
         internal Vector3 PredictedHip => m_Plan.PredictedHip;
-        internal CharacterPredictiveFootRootTrajectory RootTrajectory => m_Plan.RootTrajectory;
+        internal ref readonly CharacterPredictiveFootRootTrajectory RootTrajectory =>
+            ref m_Plan.RootTrajectory;
         internal CharacterPredictiveBodySupportPath BodySupportPath => m_Plan.BodySupportPath;
         internal FixedList512Bytes<Vector3> AuthoredFootPlanarRoute => m_Plan.AuthoredFootPlanarRoute;
         internal FixedList512Bytes<Vector3> RootLocalHipRoute => m_Plan.RootLocalHipRoute;

@@ -57,6 +57,8 @@
 43. Planner准备早于同帧Stance提交，若Event Successor硬等Committed Anchor，唯一预建窗口会天然晚一帧。允许用旧Active已验证的Projected Landing预建不参与Goal的geometry，但提升前必须用上一完成帧Committed Anchor验证；候选Rejected后的FadeOut不能封死后续authority tick重试。
 44. 自动压力测试的A/D事务不能把“一轮结束”当作“运行结束”：旧实现进入Complete后先提交零输入、再等正式Input Action收敛，既截断CSV又会在锁存输入尚未更新时抛异常。Endurance必须持续循环并按lap分段，只有手动停止Play才负责释放输入和封口数据。
 45. Camera-relative的`A 1秒 -> D 2秒 -> A 1秒`只在输入时间上对称；角色朝向和相机Basis持续变化时，世界位移不会闭合。无限重复会把角色漂出Deterministic Collision World。每轮必须用正式MoveAxis回到压力区起点后再递增lap，不能靠自动停测或Transform传送规避边界。
+46. Event Successor是否能预建首先取决于Artifact是否提供真实下降窗口。run `d863a1...`中代表性右脚事件从phase `0.0336`推进到`0.1653`仍保持Unsupported，换代后出现22帧Swing无Path；根因是Analyzer把ApproachContact固定成Landing前一个采样点。正式边界必须来自同一参考Foot Path上的动画Clearance峰值，Runtime Planner不能用fallback猜一个窗口。
+47. GameplayLab场景碰撞体变化不会自动更新Fixed KCC的Deterministic Collision Artifact。run `e6f5b4...`中Actor本体从`Y=1.04m`跌至`-21.33m`并触发`body left collision world bounds`，证明不是IK视觉下沉；World Bounds足够大也不能代替场景碰撞重新烘焙。Free与Automatic必须共用当前场景生成的同一正式Artifact。
 
 ## 当前证据与下一owner
 

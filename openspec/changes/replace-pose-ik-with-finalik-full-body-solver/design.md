@@ -123,6 +123,8 @@ IncomingStepEvent / Clock / Route / BiomechanicalFacts
 
 连续路线使用由schema固定的等Action Phase采样域。采样数不是作者参数；若当前采样数无法通过重建容差，提升schema与format version并整体重建，不允许Runtime插值补点掩盖。
 
+`ApproachContactPhase`不是固定的“Landing前一个采样点”。Analyzer先用本脚前一支撑、权威对侧支撑和本脚Landing构造同一条参考Foot Path，再计算每个Swing采样的`Sole Y - Foot Path Y`；从LiftOff到Landing之间首次达到最大非负Clearance的采样点定义为进入最终下降段。该边界与Animation Clearance来自同一数据和同一Action Phase域，使Incoming Event Successor在脚实际下降期间获得稳定预建窗口，Runtime不得用帧数或时间阈值补出该窗口。
+
 ### 4.3 In-place边界
 
 Artifact只表达骨骼相对角色的动画事实：
@@ -382,6 +384,8 @@ Foot Feature与Biomechanical Step曲线同样属于已编译Source的不可变�
 共享测试环境提供一条正式宽课程：30米宽、24级上楼、6米平台、24级下楼。Gameplay碰撞继续使用两条连续Traversal Ramp，Foot Placement只消费48个逐级踏面。自动源不再循环双向长路线，而是对齐起点后进入第一段楼梯，直接通过正式Input System持续循环提交`MoveAxis.x=-1/+1`的`A 1秒 -> D 2秒 -> A 1秒`压力事务。由于角色朝向和相机Basis变化后该输入的世界位移不会天然闭合，每轮压力事务结束后必须通过同一正式MoveAxis驱动角色回到压力区起点，禁止直接改Transform；回归完成才递增lap。采样路由在同一run内持续发布，CSV继续流式分块写盘；只有手动停止Play才释放虚拟输入、注销路由并封口manifest，不得在一轮事务结束时自动归零或退出。它保留实时相机Basis和LookAxis，不用世界空间横向路点抵消相机缓动。课程整体位置由场景中的唯一Course与Start/End决定，不写死世界X坐标。
 
 课程启动门禁必须验证：唯一Course、唯一Start/End、48个踏面、A/D横向安全边界、两条Traversal Ramp和唯一Deterministic Collision World。路线阶段、正式MoveAxis、实际速度、事务分段与lap进入现有流式CSV/manifest，使输入变化与Plan Revision可以对账。每个lap都保留Step、Future Body、Ground、Path、Landing、Anchor、Pelvis与FBBIK完整因果列；持续运行通过分块写盘约束内存，不得靠删减诊断字段或自动停测控制数据量。
+
+普通Free Play与Foot IK Automatic必须消费同一个由当前GameplayLab场景烘焙出的Deterministic Collision World。Course、Traversal Ramp、平台或场景位置发生变化后，旧Collision Artifact视为失效，必须在任何回归前从当前唯一Authoring重新烘焙；不得让Unity Physics场景已更新而Fixed KCC继续读取旧几何。World Bounds只定义允许坐标范围，不证明范围内存在可行走碰撞面。
 
 自动writer只登记`LiveState`诊断兴趣，从完成帧流直接构造行并交给后台压缩线程；不得自动附加`RuntimeDebugSession`或启动`Continuous`内存捕获。Inspector手动Capture与自动CSV是两个观察入口，但只能消费同一完成快照，不能同时保存第二份无界帧历史。
 

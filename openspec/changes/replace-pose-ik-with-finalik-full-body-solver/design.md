@@ -201,7 +201,7 @@ Trajectory Curvature必须由相邻Simulation committed Intent的Desired Planar 
 
 ### 6.1 离散Revision
 
-新的committed trajectory只有在剩余Landing位置或朝向误差超过鞋底/查询几何边界时创建后继Revision。每个Revision仍是不可变计划。
+新的committed trajectory只有在剩余Landing位置或朝向误差超过鞋底/查询几何边界时创建后继Revision。每个Revision仍是不可变计划。一个权威Landing Event至多消费一笔Intent Revision事务；成功与Rejected都会结束该事件的Revision资格，后续连续camera basis、速度或曲率变化只能由下一Landing Event重新冻结。这样自由输入的最坏响应延迟不超过当前剩余Step，同时禁止同一Swing在多个世界路径之间振荡。
 
 Plan创建时必须原子冻结Action Step时长、Future Body轨迹时间范围和`phase -> trajectory time`映射。运行时Action Step Clock只推进同一事件的权威phase；若正式动作时长变化会改变剩余Landing，则它属于新的committed trajectory输入，必须经Revision替换，不能直接改写旧Plan的时间尺度。否则新时长会超出旧Future Body范围，或在不报错时悄悄改变冻结路线的采样位置。
 
@@ -213,7 +213,7 @@ LinearVelocity_new(phase0) = CurrentExecutedSoleVelocity
 AngularVelocity_new(phase0) = CurrentExecutedBodyAngularVelocity
 ```
 
-旧、新计划交叉期间同时保留各自geometry和identity。新计划未进入Executing前不能删除旧输出；Rejected后继只允许旧输出连续退到原动画，不允许Current Grounding伪造一条新预测Path。
+旧、新计划交叉期间同时保留各自geometry和identity。新计划未进入Executing前不能删除旧输出；Intent Revision被Rejected时保留本事件已经提交的Executable Plan直到正常Landing边界，不得淡出唯一输出或让Current Grounding伪造一条新预测Path。
 
 意图Revision的创建起点只能读取上一完成帧已经送入唯一FBBIK的Final Sole，以及该输出所属Active Plan的当前支撑面。Ground Probe由Final Sole沿Component Up投影到该支撑面；不得重新求值旧Plan的理论Target冒充已执行结果。Revision创建帧保持Blend为0，至少先提交一次完整旧输出；下一完成帧才允许推进Revision Blend，避免低表现帧率下在创建帧直接跳到大权重。
 

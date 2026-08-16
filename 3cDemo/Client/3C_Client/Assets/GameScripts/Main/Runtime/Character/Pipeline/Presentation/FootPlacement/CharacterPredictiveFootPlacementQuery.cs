@@ -851,6 +851,63 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return previousSupportIndex >= 0;
         }
 
+        void RemoveUnreachableNonSupportSamples(
+            ref int pathSampleCount,
+            Vector3 up,
+            ref int rejectedCount,
+            ref CharacterPredictiveFootQueryRejectCounts rejectCounts)
+        {
+            int write = 0;
+            for (int i = 0; i < pathSampleCount; i++)
+            {
+                FootPathSample candidate = m_PathSamples[i];
+                if (candidate.IsSupport)
+                {
+                    m_PathSamples[write++] = candidate;
+                    continue;
+                }
+                int beforeIndex = -1;
+                int afterIndex = -1;
+                for (int supportIndex = 0; supportIndex < pathSampleCount; supportIndex++)
+                {
+                    FootPathSample support = m_PathSamples[supportIndex];
+                    if (!support.IsSupport)
+                        continue;
+                    if (support.Fraction < candidate.Fraction &&
+                        (beforeIndex < 0 || support.Fraction > m_PathSamples[beforeIndex].Fraction))
+                    {
+                        beforeIndex = supportIndex;
+                    }
+                    if (support.Fraction > candidate.Fraction &&
+                        (afterIndex < 0 || support.Fraction < m_PathSamples[afterIndex].Fraction))
+                    {
+                        afterIndex = supportIndex;
+                    }
+                }
+                FootPlacementGroundEnvelopeRejectReason rejectReason =
+                    FootPlacementGroundEnvelopeRejectReason.EdgeGap;
+                bool reachable = beforeIndex >= 0 && afterIndex >= 0 &&
+                                 AcceptSupportTransition(
+                                     m_PathSamples[beforeIndex].Point,
+                                     candidate.Point,
+                                     up,
+                                     out rejectReason) &&
+                                 AcceptSupportTransition(
+                                     candidate.Point,
+                                     m_PathSamples[afterIndex].Point,
+                                     up,
+                                     out rejectReason);
+                if (reachable)
+                {
+                    m_PathSamples[write++] = candidate;
+                    continue;
+                }
+                rejectedCount++;
+                rejectCounts.Add(rejectReason);
+            }
+            pathSampleCount = write;
+        }
+
         static float Cross(FootPathSample first, FootPathSample second, FootPathSample third) =>
             (second.Fraction - first.Fraction) * (third.SoleHeight - first.SoleHeight) -
             (second.SoleHeight - first.SoleHeight) * (third.Fraction - first.Fraction);

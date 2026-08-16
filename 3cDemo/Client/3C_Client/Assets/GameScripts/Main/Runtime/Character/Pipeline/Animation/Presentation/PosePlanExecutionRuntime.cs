@@ -2067,7 +2067,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal AnimationPoseSourceId PublishActionFrame(
-            in ActionAnimationPlaybackFrame frame,
+            ActionAnimationPlaybackFrame frame,
             in ResolvedActionAnimationBinding binding,
             AnimationPoseSelectionGeneration selectionGeneration,
             ulong presentationRequestSequence,
@@ -2075,7 +2075,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AnimationResolvedPoseSourceSample> sourceSamples)
         {
             return PublishActionSourceFrame(
-                in frame,
+                frame,
                 in binding,
                 selectionGeneration,
                 presentationRequestSequence,
@@ -2084,7 +2084,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal AnimationPoseSourceId PublishRetainedActionFrame(
-            in ActionAnimationPlaybackFrame frame,
+            ActionAnimationPlaybackFrame frame,
             in ResolvedActionAnimationBinding binding,
             AnimationPoseSelectionGeneration selectionGeneration,
             ulong presentationRequestSequence,
@@ -2092,7 +2092,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AnimationResolvedPoseSourceSample> sourceSamples)
         {
             return PublishActionSourceFrame(
-                in frame,
+                frame,
                 in binding,
                 selectionGeneration,
                 presentationRequestSequence,
@@ -2101,7 +2101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         AnimationPoseSourceId PublishActionSourceFrame(
-            in ActionAnimationPlaybackFrame frame,
+            ActionAnimationPlaybackFrame frame,
             in ResolvedActionAnimationBinding binding,
             AnimationPoseSelectionGeneration selectionGeneration,
             ulong presentationRequestSequence,
@@ -2111,7 +2111,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireOpenMutation();
-            if (!frame.IsValid ||
+            if (frame == null ||
+                !frame.IsValid ||
                 !binding.IsValid ||
                 !frame.PlaybackId.ProducerId.Equals(binding.ProducerId) ||
                 frame.AnimationChannelId != binding.AnimationChannelId ||

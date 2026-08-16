@@ -346,3 +346,9 @@ Projection与输出权重收口后，剩余大跳集中在Revision首帧：新�
 旧Fact Projector先在Simulation Intent之间插值Desired Velocity，再用相邻Render Frame的插值结果除以`presentationDeltaSeconds`生成Trajectory Curvature。同一Simulation事实会因显示帧率、帧间隔和Camera-relative输入插值方式得到不同曲率；Foot Placement随后把它当成Future Body的冻结输入，导致同一步反复Revision。
 
 正式曲率改为只使用相邻Simulation committed Intent：`SignedAngle(previous desired velocity, current desired velocity) / committed tick duration`，并由同一Motion Timeline的最大转速验证。该值在整个Simulation tick区间保持不变，Presentation不再拥有导数。瞬时反向或Timeline换代没有有限曲率时明确标为Unavailable，不用Body Yaw冒充脚下移动轨迹曲率。
+
+## 30. 原子Step payload不能等同于巨型值类型复制
+
+Current与Incoming同时进入左右脚Feature后，`ActionAnimationPlaybackFrame`达到10072字节。它仍作为值类型进入托管`Dictionary`时，Unity Mono在ActionSampling首次执行泛型传参便抛出`InvalidProgramException: Passing an argument of size '10072'`；C#编译和静态校验都无法发现这个运行时边界。
+
+正式分层是：单脚`AnimationFootFeatureSample`继续保持固定布局值类型，供NativeArray、Pose Graph和作业链使用；包含左右脚完整事实、字符串身份和托管Buffer的Action Frame改为不可变引用快照。引用只改变托管传输成本，不改变原子事实、双缓冲提交或唯一执行链。以后扩展Artifact时必须分别审计Native数据布局和托管快照传输，不能用“原子”作为整块结构按值复制的理由。

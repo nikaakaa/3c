@@ -1136,7 +1136,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (sourcePlan.Current)
                 {
                     m_PoseRuntime.PublishActionFrame(
-                        in frame,
+                        frame,
                         in binding,
                         sourcePlan.SelectionGeneration,
                         NextPresentationRequestSequence(),
@@ -1145,7 +1145,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 else
                 {
                     m_PoseRuntime.PublishRetainedActionFrame(
-                        in frame,
+                        frame,
                         in binding,
                         sourcePlan.SelectionGeneration,
                         NextPresentationRequestSequence(),

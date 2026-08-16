@@ -23,6 +23,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CurrentEventReplacement = 4
     }
 
+    public enum CharacterFootPlanBuildDecisionReason : byte
+    {
+        None = 0,
+        Attempted = 1,
+        ActivePlanExecuting = 2,
+        NoAuthoritativeEvent = 3,
+        OutsidePlanningWindow = 4,
+        MotionTimelineUnavailable = 5,
+        ConfidenceBelowMinimum = 6,
+        StepComplete = 7,
+        IncomingEventUnavailable = 8,
+        AwaitingApproachContact = 9,
+        IncomingEventAlreadyOwned = 10,
+        MotionOutsideCommitTolerance = 11,
+        TransitionOccupied = 12,
+        OriginUnavailable = 13,
+        FutureBodyUnavailable = 14,
+        BuildRevisionAlreadyAttempted = 15,
+        PredictiveExitActive = 16,
+        EligibleButNotAttempted = 17
+    }
+
     public enum CharacterFootPlanOriginKind : byte
     {
         None = 0,
@@ -306,6 +328,78 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool IsAvailable => Kind != CharacterFootPlanAttemptKind.None && Sequence != 0;
     }
 
+    public readonly struct CharacterFootPlanBuildDecisionDiagnostics
+    {
+        internal CharacterFootPlanBuildDecisionDiagnostics(
+            CharacterFootPlanAttemptKind candidateKind,
+            CharacterFootPlanBuildDecisionReason reason,
+            ulong landingEventIdentity,
+            in CharacterFootPlanBuildOrigin origin,
+            ulong motionGeneration,
+            ulong motionAuthorityTick,
+            bool attempted,
+            bool currentPlanningCandidate,
+            bool incomingPlanningCandidate,
+            bool currentPlanMatches,
+            bool activeEventReplaced,
+            bool needsInitialPlan,
+            bool intentRevisionRequested,
+            bool canPrepareEventSuccessor,
+            bool motionWithinCommitTolerance,
+            bool canBeginTransition,
+            bool futureBodyAvailable,
+            bool currentPlanHasExecutablePath,
+            bool planFadingOut)
+        {
+            CandidateKind = candidateKind;
+            Reason = reason;
+            LandingEventIdentity = landingEventIdentity;
+            OriginKind = origin.Kind;
+            OriginPlanSequence = origin.SourcePlanSequence;
+            OriginLandingEventIdentity = origin.SourceLandingEventIdentity;
+            OriginSupportSurfaceIdentity = origin.Support.Identity;
+            MotionGeneration = motionGeneration;
+            MotionAuthorityTick = motionAuthorityTick;
+            Attempted = attempted;
+            CurrentPlanningCandidate = currentPlanningCandidate;
+            IncomingPlanningCandidate = incomingPlanningCandidate;
+            CurrentPlanMatches = currentPlanMatches;
+            ActiveEventReplaced = activeEventReplaced;
+            NeedsInitialPlan = needsInitialPlan;
+            IntentRevisionRequested = intentRevisionRequested;
+            CanPrepareEventSuccessor = canPrepareEventSuccessor;
+            MotionWithinCommitTolerance = motionWithinCommitTolerance;
+            CanBeginTransition = canBeginTransition;
+            FutureBodyAvailable = futureBodyAvailable;
+            CurrentPlanHasExecutablePath = currentPlanHasExecutablePath;
+            PlanFadingOut = planFadingOut;
+        }
+
+        public CharacterFootPlanAttemptKind CandidateKind { get; }
+        public CharacterFootPlanBuildDecisionReason Reason { get; }
+        public ulong LandingEventIdentity { get; }
+        public CharacterFootPlanOriginKind OriginKind { get; }
+        public ulong OriginPlanSequence { get; }
+        public ulong OriginLandingEventIdentity { get; }
+        public int OriginSupportSurfaceIdentity { get; }
+        public ulong MotionGeneration { get; }
+        public ulong MotionAuthorityTick { get; }
+        public bool Attempted { get; }
+        public bool CurrentPlanningCandidate { get; }
+        public bool IncomingPlanningCandidate { get; }
+        public bool CurrentPlanMatches { get; }
+        public bool ActiveEventReplaced { get; }
+        public bool NeedsInitialPlan { get; }
+        public bool IntentRevisionRequested { get; }
+        public bool CanPrepareEventSuccessor { get; }
+        public bool MotionWithinCommitTolerance { get; }
+        public bool CanBeginTransition { get; }
+        public bool FutureBodyAvailable { get; }
+        public bool CurrentPlanHasExecutablePath { get; }
+        public bool PlanFadingOut { get; }
+        public bool IsAvailable => Reason != CharacterFootPlanBuildDecisionReason.None;
+    }
+
     internal readonly struct CharacterFootPlanTransition
     {
         CharacterFootPlanTransition(
@@ -504,6 +598,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlanTransition m_Transition;
             internal CharacterFootPlanTransition Transition => m_Transition;
             internal CharacterFootPlanAttemptDiagnostics PlanAttempt { get; private set; }
+            internal CharacterFootPlanBuildDecisionDiagnostics PlanBuildDecision { get; private set; }
             internal bool HasRevision => m_Transition.IsRevision;
             internal bool HasEventSuccessor =>
                 m_Transition.Kind == CharacterFootPlanTransitionKind.EventSuccessor &&
@@ -534,9 +629,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             internal float IntentLandingDisplacementError { get; private set; }
             internal float IntentLandingDisplacementThreshold { get; private set; }
-            internal ulong IntentRevisionAttemptPlanSequence { get; private set; }
-            internal ulong IntentRevisionAttemptTrajectoryGeneration { get; private set; }
-            internal ulong IntentRevisionAttemptAuthorityTick { get; private set; }
+            internal CharacterFootPlanAttemptKind LastPlanBuildAttemptKind { get; private set; }
+            internal ulong LastPlanBuildAttemptSourceIdentity { get; private set; }
+            internal ulong LastPlanBuildAttemptMotionGeneration { get; private set; }
+            internal ulong LastPlanBuildAttemptAuthorityTick { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
             internal Vector3 LastOutputSole { get; private set; }
             internal Vector3 LastOutputAnimatedAnklePosition { get; private set; }
@@ -575,9 +671,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         source.HasRevision ? Revision.ImmutablePlan : null);
                 IntentLandingDisplacementError = source.IntentLandingDisplacementError;
                 IntentLandingDisplacementThreshold = source.IntentLandingDisplacementThreshold;
-                IntentRevisionAttemptPlanSequence = source.IntentRevisionAttemptPlanSequence;
-                IntentRevisionAttemptTrajectoryGeneration = source.IntentRevisionAttemptTrajectoryGeneration;
-                IntentRevisionAttemptAuthorityTick = source.IntentRevisionAttemptAuthorityTick;
+                LastPlanBuildAttemptKind = source.LastPlanBuildAttemptKind;
+                LastPlanBuildAttemptSourceIdentity = source.LastPlanBuildAttemptSourceIdentity;
+                LastPlanBuildAttemptMotionGeneration = source.LastPlanBuildAttemptMotionGeneration;
+                LastPlanBuildAttemptAuthorityTick = source.LastPlanBuildAttemptAuthorityTick;
                 HasLastOutputSole = source.HasLastOutputSole;
                 LastOutputSole = source.LastOutputSole;
                 LastOutputAnimatedAnklePosition = source.LastOutputAnimatedAnklePosition;
@@ -599,6 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_OutputContinuityRotationOffset = source.m_OutputContinuityRotationOffset;
                 m_SuppressNextOutputContinuityCapture = source.m_SuppressNextOutputContinuityCapture;
                 PlanAttempt = source.PlanAttempt;
+                PlanBuildDecision = source.PlanBuildDecision;
             }
 
             internal void BeginFrame()
@@ -606,6 +704,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Active.BeginFrame();
                 Revision.BeginFrame();
                 PlanAttempt = default;
+                PlanBuildDecision = default;
             }
 
             internal void RecordPlanAttempt(in CharacterFootPlanAttemptDiagnostics attempt)
@@ -613,6 +712,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (!attempt.IsAvailable)
                     throw new InvalidOperationException("Predictive Foot plan attempt is invalid.");
                 PlanAttempt = attempt;
+            }
+
+            internal void RecordPlanBuildDecision(
+                in CharacterFootPlanBuildDecisionDiagnostics decision)
+            {
+                if (!decision.IsAvailable)
+                    throw new InvalidOperationException("Predictive Foot plan build decision is invalid.");
+                PlanBuildDecision = decision;
             }
 
             internal void BeginIntentRevision()
@@ -749,26 +856,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentLandingDisplacementThreshold = float.IsFinite(threshold) ? threshold : 0f;
             }
 
-            internal bool HasAttemptedIntentRevision(
-                ulong planSequence,
-                ulong trajectoryGeneration,
+            internal bool HasAttemptedPlanBuildRevision(
+                CharacterFootPlanAttemptKind kind,
+                ulong sourceIdentity,
+                ulong motionGeneration,
                 ulong authorityTick) =>
-                planSequence != 0 &&
-                trajectoryGeneration != 0 &&
+                kind != CharacterFootPlanAttemptKind.None &&
+                sourceIdentity != 0 &&
+                motionGeneration != 0 &&
                 authorityTick != 0 &&
-                IntentRevisionAttemptPlanSequence == planSequence &&
-                IntentRevisionAttemptTrajectoryGeneration == trajectoryGeneration &&
-                IntentRevisionAttemptAuthorityTick == authorityTick;
+                LastPlanBuildAttemptKind == kind &&
+                LastPlanBuildAttemptSourceIdentity == sourceIdentity &&
+                LastPlanBuildAttemptMotionGeneration == motionGeneration &&
+                LastPlanBuildAttemptAuthorityTick == authorityTick;
 
-            internal void MarkIntentRevisionAttempt(
-                ulong planSequence,
+            internal void MarkPlanBuildRevisionAttempt(
+                CharacterFootPlanAttemptKind kind,
+                ulong sourceIdentity,
                 in CommittedLocomotionPlanarMotionTimeline motionTimeline)
             {
-                if (planSequence == 0 || !motionTimeline.IsValid)
-                    throw new ArgumentOutOfRangeException(nameof(planSequence));
-                IntentRevisionAttemptPlanSequence = planSequence;
-                IntentRevisionAttemptTrajectoryGeneration = motionTimeline.Generation;
-                IntentRevisionAttemptAuthorityTick = motionTimeline.AuthorityTick.Value;
+                if (kind == CharacterFootPlanAttemptKind.None ||
+                    sourceIdentity == 0 || !motionTimeline.IsValid)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(sourceIdentity));
+                }
+                LastPlanBuildAttemptKind = kind;
+                LastPlanBuildAttemptSourceIdentity = sourceIdentity;
+                LastPlanBuildAttemptMotionGeneration = motionTimeline.Generation;
+                LastPlanBuildAttemptAuthorityTick = motionTimeline.AuthorityTick.Value;
             }
 
             internal void RememberOutput(
@@ -940,11 +1055,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LastOutputPathRoot = Vector3.zero;
                 LastOutputPathRootStart = Vector3.zero;
                 LastOutputPathHip = Vector3.zero;
-                IntentRevisionAttemptPlanSequence = 0;
-                IntentRevisionAttemptTrajectoryGeneration = 0;
-                IntentRevisionAttemptAuthorityTick = 0;
+                LastPlanBuildAttemptKind = CharacterFootPlanAttemptKind.None;
+                LastPlanBuildAttemptSourceIdentity = 0;
+                LastPlanBuildAttemptMotionGeneration = 0;
+                LastPlanBuildAttemptAuthorityTick = 0;
                 ClearOutputContinuity();
                 m_SuppressNextOutputContinuityCapture = false;
+                PlanAttempt = default;
+                PlanBuildDecision = default;
             }
 
             static bool IsFinite(Vector3 value) =>
@@ -2017,6 +2135,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 runtime.SmoothedRevisionBlendWeight,
                 runtime.Transition.Kind,
                 in planAttempt,
+                runtime.PlanBuildDecision,
                 runtime.IsFadingOut,
                 runtime.PredictiveRetentionWeight,
                 runtime.IntentLandingDisplacementError,
@@ -2824,7 +2943,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 incomingPlanningCandidate &&
                 !plan.MatchesAuthoritativeEvent(in incomingStep) &&
                 runtime.CanBeginTransition &&
-                m_FutureBodyTrajectorySource != null)
+                m_FutureBodyTrajectorySource != null &&
+                !runtime.HasAttemptedPlanBuildRevision(
+                    CharacterFootPlanAttemptKind.EventSuccessor,
+                    plan.Sequence,
+                    motionTimeline.Generation,
+                    motionTimeline.AuthorityTick.Value))
             {
                 var request = new CharacterFootPlanBuildRequest(
                     CharacterFootPlanAttemptKind.EventSuccessor,
@@ -2848,6 +2972,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in request,
                     out CharacterFootPlanAttemptDiagnostics planAttempt);
                 runtime.RecordPlanAttempt(in planAttempt);
+                runtime.MarkPlanBuildRevisionAttempt(
+                    CharacterFootPlanAttemptKind.EventSuccessor,
+                    plan.Sequence,
+                    in motionTimeline);
                 if (created)
                     runtime.BeginEventSuccessor();
             }
@@ -2858,10 +2986,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool canAttempt = planningCandidate &&
                                   replacementOrigin.IsAvailable &&
                                   m_FutureBodyTrajectorySource != null &&
-                                  !runtime.HasAttemptedIntentRevision(
-                                      sourceSequence,
-                                      motionTimeline.Generation,
-                                      motionTimeline.AuthorityTick.Value);
+                                   !runtime.HasAttemptedPlanBuildRevision(
+                                       CharacterFootPlanAttemptKind.CurrentEventReplacement,
+                                       sourceSequence,
+                                       motionTimeline.Generation,
+                                       motionTimeline.AuthorityTick.Value);
                 bool created = false;
                 if (canAttempt)
                 {
@@ -2887,7 +3016,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in request,
                         out CharacterFootPlanAttemptDiagnostics planAttempt);
                     runtime.RecordPlanAttempt(in planAttempt);
-                    runtime.MarkIntentRevisionAttempt(sourceSequence, in motionTimeline);
+                    runtime.MarkPlanBuildRevisionAttempt(
+                        CharacterFootPlanAttemptKind.CurrentEventReplacement,
+                        sourceSequence,
+                        in motionTimeline);
                 }
                 if (created)
                 {
@@ -2925,7 +3057,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : step.LandingEventIdentity;
             if (planningCandidate && needsInitialPlan && runtime.CanBeginTransition &&
                 m_FutureBodyTrajectorySource != null &&
-                !runtime.HasAttemptedIntentRevision(
+                !runtime.HasAttemptedPlanBuildRevision(
+                    CharacterFootPlanAttemptKind.Initial,
                     initialAttemptIdentity,
                     motionTimeline.Generation,
                     motionTimeline.AuthorityTick.Value))
@@ -2952,20 +3085,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in request,
                     out CharacterFootPlanAttemptDiagnostics planAttempt);
                 runtime.RecordPlanAttempt(in planAttempt);
-                runtime.MarkIntentRevisionAttempt(
+                runtime.MarkPlanBuildRevisionAttempt(
+                    CharacterFootPlanAttemptKind.Initial,
                     plan.Sequence != 0 ? plan.Sequence : initialAttemptIdentity,
                     in motionTimeline);
                 if (plan.HasExecutablePath)
                     plan.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
             }
+            CharacterFootPlanBuildOrigin revisionOrigin = activeOutputOrigin.IsAvailable
+                ? activeOutputOrigin
+                : currentFrameOrigin;
             if (runtime.CanBeginTransition && plan.HasExecutablePath &&
                 plan.MatchesAuthoritativeEvent(in step) &&
                 intentRevisionRequested)
             {
-                CharacterFootPlanBuildOrigin revisionOrigin = activeOutputOrigin.IsAvailable
-                    ? activeOutputOrigin
-                    : currentFrameOrigin;
-                runtime.MarkIntentRevisionAttempt(plan.Sequence, in motionTimeline);
+                runtime.MarkPlanBuildRevisionAttempt(
+                    CharacterFootPlanAttemptKind.IntentRevision,
+                    plan.Sequence,
+                    in motionTimeline);
                 var request = new CharacterFootPlanBuildRequest(
                     CharacterFootPlanAttemptKind.IntentRevision,
                     side,
@@ -2998,6 +3135,218 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
                 }
             }
+            bool currentPlanHasExecutablePath = plan.HasExecutablePath;
+            bool canPrepareEventSuccessor = currentPlanHasExecutablePath &&
+                                            CanPrepareEventSuccessor(plan);
+            bool motionWithinCommitTolerance = currentPlanHasExecutablePath &&
+                                               IsMotionWithinCommitTolerance(plan);
+            CharacterFootPlanBuildDecisionDiagnostics buildDecision = ResolvePlanBuildDecision(
+                side,
+                runtime,
+                plan,
+                in step,
+                in incomingStep,
+                in motionTimeline,
+                planningCandidate,
+                incomingPlanningCandidate,
+                currentPlanMatches,
+                activeEventReplaced,
+                needsInitialPlan,
+                intentRevisionRequested,
+                canPrepareEventSuccessor,
+                motionWithinCommitTolerance,
+                in eventSuccessorOrigin,
+                in replacementOrigin,
+                in initialOrigin,
+                in revisionOrigin);
+            runtime.RecordPlanBuildDecision(in buildDecision);
+        }
+
+        CharacterFootPlanBuildDecisionDiagnostics ResolvePlanBuildDecision(
+            CharacterFootSide side,
+            CharacterFootPlanExecutionState runtime,
+            CharacterPredictiveFootPlanExecution plan,
+            in AnimationPredictedFootStepSample step,
+            in AnimationPredictedFootStepSample incomingStep,
+            in CommittedLocomotionPlanarMotionTimeline motionTimeline,
+            bool planningCandidate,
+            bool incomingPlanningCandidate,
+            bool currentPlanMatches,
+            bool activeEventReplaced,
+            bool needsInitialPlan,
+            bool intentRevisionRequested,
+            bool canPrepareEventSuccessor,
+            bool motionWithinCommitTolerance,
+            in CharacterFootPlanBuildOrigin eventSuccessorOrigin,
+            in CharacterFootPlanBuildOrigin replacementOrigin,
+            in CharacterFootPlanBuildOrigin initialOrigin,
+            in CharacterFootPlanBuildOrigin revisionOrigin)
+        {
+            CharacterFootPlanAttemptDiagnostics attempt = runtime.PlanAttempt;
+            CharacterFootPlanAttemptKind candidateKind = CharacterFootPlanAttemptKind.None;
+            CharacterFootPlanBuildOrigin origin = default;
+            ulong landingEventIdentity = 0;
+            if (attempt.IsAvailable)
+            {
+                candidateKind = attempt.Kind;
+                landingEventIdentity = attempt.LandingEventIdentity;
+                origin = candidateKind switch
+                {
+                    CharacterFootPlanAttemptKind.EventSuccessor => eventSuccessorOrigin,
+                    CharacterFootPlanAttemptKind.CurrentEventReplacement => replacementOrigin,
+                    CharacterFootPlanAttemptKind.Initial => initialOrigin,
+                    CharacterFootPlanAttemptKind.IntentRevision => revisionOrigin,
+                    _ => default
+                };
+            }
+            else if (activeEventReplaced)
+            {
+                candidateKind = CharacterFootPlanAttemptKind.CurrentEventReplacement;
+                landingEventIdentity = step.LandingEventIdentity;
+                origin = replacementOrigin;
+            }
+            else if (needsInitialPlan)
+            {
+                candidateKind = CharacterFootPlanAttemptKind.Initial;
+                landingEventIdentity = step.LandingEventIdentity;
+                origin = initialOrigin;
+            }
+            else if (intentRevisionRequested)
+            {
+                candidateKind = CharacterFootPlanAttemptKind.IntentRevision;
+                landingEventIdentity = step.LandingEventIdentity;
+                origin = revisionOrigin;
+            }
+            else if (currentPlanMatches && plan.HasExecutablePath && canPrepareEventSuccessor)
+            {
+                candidateKind = CharacterFootPlanAttemptKind.EventSuccessor;
+                landingEventIdentity = incomingStep.LandingEventIdentity;
+                origin = eventSuccessorOrigin;
+            }
+
+            CharacterFootPlanBuildDecisionReason reason = attempt.IsAvailable
+                ? CharacterFootPlanBuildDecisionReason.Attempted
+                : ResolvePlanBuildDecisionReason(
+                    runtime,
+                    plan,
+                    candidateKind,
+                    side,
+                    in step,
+                    in incomingStep,
+                    in motionTimeline,
+                    planningCandidate,
+                    incomingPlanningCandidate,
+                    currentPlanMatches,
+                    canPrepareEventSuccessor,
+                    motionWithinCommitTolerance,
+                    in origin);
+            return new CharacterFootPlanBuildDecisionDiagnostics(
+                candidateKind,
+                reason,
+                landingEventIdentity,
+                in origin,
+                motionTimeline.Generation,
+                motionTimeline.AuthorityTick.Value,
+                attempt.IsAvailable,
+                planningCandidate,
+                incomingPlanningCandidate,
+                currentPlanMatches,
+                activeEventReplaced,
+                needsInitialPlan,
+                intentRevisionRequested,
+                canPrepareEventSuccessor,
+                motionWithinCommitTolerance,
+                runtime.CanBeginTransition,
+                m_FutureBodyTrajectorySource != null,
+                plan.HasExecutablePath,
+                runtime.IsFadingOut);
+        }
+
+        CharacterFootPlanBuildDecisionReason ResolvePlanBuildDecisionReason(
+            CharacterFootPlanExecutionState runtime,
+            CharacterPredictiveFootPlanExecution plan,
+            CharacterFootPlanAttemptKind candidateKind,
+            CharacterFootSide side,
+            in AnimationPredictedFootStepSample step,
+            in AnimationPredictedFootStepSample incomingStep,
+            in CommittedLocomotionPlanarMotionTimeline motionTimeline,
+            bool planningCandidate,
+            bool incomingPlanningCandidate,
+            bool currentPlanMatches,
+            bool canPrepareEventSuccessor,
+            bool motionWithinCommitTolerance,
+            in CharacterFootPlanBuildOrigin origin)
+        {
+            if (runtime.IsFadingOut)
+                return CharacterFootPlanBuildDecisionReason.PredictiveExitActive;
+            if (candidateKind == CharacterFootPlanAttemptKind.None)
+            {
+                return currentPlanMatches && plan.HasExecutablePath
+                    ? CharacterFootPlanBuildDecisionReason.ActivePlanExecuting
+                    : ResolveStepPlanningReason(side, in step, in motionTimeline, false);
+            }
+            bool usesIncoming = candidateKind == CharacterFootPlanAttemptKind.EventSuccessor;
+            if (usesIncoming && !canPrepareEventSuccessor)
+                return CharacterFootPlanBuildDecisionReason.AwaitingApproachContact;
+            if (usesIncoming && !incomingPlanningCandidate)
+                return ResolveStepPlanningReason(side, in incomingStep, in motionTimeline, true);
+            if (!usesIncoming && !planningCandidate &&
+                candidateKind != CharacterFootPlanAttemptKind.IntentRevision)
+            {
+                return ResolveStepPlanningReason(side, in step, in motionTimeline, false);
+            }
+            if (usesIncoming && plan.MatchesAuthoritativeEvent(in incomingStep))
+                return CharacterFootPlanBuildDecisionReason.IncomingEventAlreadyOwned;
+            if (usesIncoming && !motionWithinCommitTolerance)
+                return CharacterFootPlanBuildDecisionReason.MotionOutsideCommitTolerance;
+            if (!runtime.CanBeginTransition)
+                return CharacterFootPlanBuildDecisionReason.TransitionOccupied;
+            if (!origin.IsAvailable || usesIncoming && !origin.HasSupport)
+                return CharacterFootPlanBuildDecisionReason.OriginUnavailable;
+            if (m_FutureBodyTrajectorySource == null)
+                return CharacterFootPlanBuildDecisionReason.FutureBodyUnavailable;
+            ulong sourceIdentity = candidateKind switch
+            {
+                CharacterFootPlanAttemptKind.EventSuccessor => plan.Sequence,
+                CharacterFootPlanAttemptKind.IntentRevision => plan.Sequence,
+                CharacterFootPlanAttemptKind.CurrentEventReplacement => step.LandingEventIdentity,
+                CharacterFootPlanAttemptKind.Initial => plan.Sequence != 0
+                    ? plan.Sequence
+                    : step.LandingEventIdentity,
+                _ => 0
+            };
+            if (runtime.HasAttemptedPlanBuildRevision(
+                    candidateKind,
+                    sourceIdentity,
+                    motionTimeline.Generation,
+                    motionTimeline.AuthorityTick.Value))
+            {
+                return CharacterFootPlanBuildDecisionReason.BuildRevisionAlreadyAttempted;
+            }
+            return CharacterFootPlanBuildDecisionReason.EligibleButNotAttempted;
+        }
+
+        CharacterFootPlanBuildDecisionReason ResolveStepPlanningReason(
+            CharacterFootSide side,
+            in AnimationPredictedFootStepSample step,
+            in CommittedLocomotionPlanarMotionTimeline motionTimeline,
+            bool incoming)
+        {
+            if (!step.HasConsistentLandingEventIdentity(side))
+            {
+                return incoming
+                    ? CharacterFootPlanBuildDecisionReason.IncomingEventUnavailable
+                    : CharacterFootPlanBuildDecisionReason.NoAuthoritativeEvent;
+            }
+            if (!motionTimeline.IsValid)
+                return CharacterFootPlanBuildDecisionReason.MotionTimelineUnavailable;
+            if (step.Confidence < m_Settings.MinimumLandingConfidence)
+                return CharacterFootPlanBuildDecisionReason.ConfidenceBelowMinimum;
+            if (step.ActionStepClock.Phase >= 0.9999f)
+                return CharacterFootPlanBuildDecisionReason.StepComplete;
+            if (incoming ? !step.IsPreSwing : !(step.IsPreSwing || step.ActionStepClock.IsSwing))
+                return CharacterFootPlanBuildDecisionReason.OutsidePlanningWindow;
+            return CharacterFootPlanBuildDecisionReason.EligibleButNotAttempted;
         }
 
         static bool CanPrepareEventSuccessor(CharacterPredictiveFootPlanExecution plan)
@@ -3176,7 +3525,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             }
             runtime.ObserveIntentLandingDisplacement(preflightError, enterThreshold);
-            if (runtime.HasAttemptedIntentRevision(
+            if (runtime.HasAttemptedPlanBuildRevision(
+                    CharacterFootPlanAttemptKind.IntentRevision,
                     plan.Sequence,
                     motionTimeline.Generation,
                     motionTimeline.AuthorityTick.Value))

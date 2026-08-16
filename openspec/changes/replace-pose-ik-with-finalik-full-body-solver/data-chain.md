@@ -28,6 +28,15 @@ Sole radius
 CharacterFootPlanBuildOrigin
 ```
 
+一次请求同时具有两层身份：
+
+```text
+Build Family = Attempt kind + Foot + Step/Event + Origin lineage + Motion generation
+Build Revision = Build Family + authoritative motion tick + 本次Root/Body/Motion快照
+```
+
+Family用于识别“同一Landing事务正在重试”，Revision用于判断这次查询是否真的消费了新的权威运动事实。同一Revision不得重复进入Physics；新的authority tick可以形成新Revision，但诊断必须保留Root、速度、角速度、剩余落地时间和Origin变化，不能只看到一个新的Plan Sequence。
+
 禁止调用方分别传入Sole、Ground Path和Support。它们必须先组成一个不可拆分的Origin：
 
 ```text
@@ -69,6 +78,8 @@ Query requests / accepted supports / rejected geometry
 Landing candidate and plan identity
 ```
 
+每个完成帧还必须发布Planner资格结果：本帧选择了哪一种Attempt、为什么具备资格，或被哪个明确条件阻断。没有创建Plan不能只表现为`PlanAttempt=None`或Debug Path消失。
+
 进入Physics前失败时，几何序列为空但Origin和typed reason必须存在；进入Query后Rejected必须保留完整查询快照。成功Attempt帧输出该Attempt自己的几何，不能混入当时仍在执行的Active Plan。非Attempt帧才输出Active Plan几何。执行期Current Path、Action Progress和Ground Path Progress只在所选几何确属Active Plan时发布。
 
 ## 当前证据
@@ -87,11 +98,14 @@ schema v97回归run `f9335d62431949a59cab0943c898eaaa`共749行、1279列，Head
 
 该run仍有3组连续帧重复的Rejected Event Successor：frame `1212~1214`从同一Projected Landing和源Plan 288重复得到`FutureLandingStepExceeded`，frame `1215~1216`又从同一Landing Handoff重复拒绝。下一步必须让Attempt公开完整Build Request identity，并按权威事实变化决定重试资格；不能通过放宽Step阈值或让Current Grounding接管Swing隐藏重复失败。
 
+schema v98回归run `945b9dda31174d54abb62cf3fd043b70`共1460行、1345列，Header唯一且每行等宽。左右脚共347次PlanAttempt均带完整Build Request快照；精确重复请求为0，同一authority tick重复请求为0。右脚frame `971 -> 972`虽然属于同一Event Successor Family并连续`StepExceeded`，但authority tick由`1602 -> 1606`、Root移动约`38.5cm`、剩余落地时间减少约`64.6ms`，属于新的Build Revision；frame `977`又从Projected Landing切换为Landing Handoff，Origin事实也发生变化。由此排除“Builder重复执行同一份输入”，下一处可观察缺口是Planner未发布每帧的资格与阻断原因，而不是继续压制合法的新tick重试。
+
 ## 下一步诊断顺序
 
-1. 先验证Attempt Sequence、Origin、Ground Probe和Landing属于同一Plan。
-2. 再验证查询后的有向支撑链和Step/Gap拒绝是否基于真实相邻踏面。
-3. 再验证Active、Revision、Successor和Landing Commit的原子换代。
-4. 最后检查Goal、Pelvis和FBBIK结果。
+1. 先验证Frame资格、Build Family、Build Revision和typed阻断原因。
+2. 再验证Attempt Sequence、Origin、Ground Probe和Landing属于同一Plan。
+3. 再验证查询后的有向支撑链和Step/Gap拒绝是否基于真实相邻踏面。
+4. 再验证Active、Revision、Successor和Landing Commit的原子换代。
+5. 最后检查Goal、Pelvis和FBBIK结果。
 
 如果上游身份尚未一致，不得通过放宽台阶阈值、增加平滑或让响应式Grounding接管Swing来掩盖。

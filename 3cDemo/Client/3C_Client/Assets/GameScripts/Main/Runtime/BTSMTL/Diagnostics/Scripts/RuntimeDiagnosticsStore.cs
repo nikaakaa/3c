@@ -535,6 +535,28 @@ namespace BTSMTL.Diagnostics
                    left.PlanAttemptRequestUp.Equals(right.PlanAttemptRequestUp) &&
                    left.PlanAttemptRequestSoleSupportRadius.Equals(right.PlanAttemptRequestSoleSupportRadius) &&
                    left.PlanAttemptRequestLegLength.Equals(right.PlanAttemptRequestLegLength) &&
+                   string.Equals(left.PlanBuildCandidateKind, right.PlanBuildCandidateKind, StringComparison.Ordinal) &&
+                   string.Equals(left.PlanBuildDecisionReason, right.PlanBuildDecisionReason, StringComparison.Ordinal) &&
+                   left.PlanBuildLandingEventIdentity == right.PlanBuildLandingEventIdentity &&
+                   string.Equals(left.PlanBuildOriginKind, right.PlanBuildOriginKind, StringComparison.Ordinal) &&
+                   left.PlanBuildOriginPlanSequence == right.PlanBuildOriginPlanSequence &&
+                   left.PlanBuildOriginLandingEventIdentity == right.PlanBuildOriginLandingEventIdentity &&
+                   left.PlanBuildOriginSupportSurfaceIdentity == right.PlanBuildOriginSupportSurfaceIdentity &&
+                   left.PlanBuildMotionGeneration == right.PlanBuildMotionGeneration &&
+                   left.PlanBuildMotionAuthorityTick == right.PlanBuildMotionAuthorityTick &&
+                   left.PlanBuildAttempted == right.PlanBuildAttempted &&
+                   left.PlanBuildCurrentPlanningCandidate == right.PlanBuildCurrentPlanningCandidate &&
+                   left.PlanBuildIncomingPlanningCandidate == right.PlanBuildIncomingPlanningCandidate &&
+                   left.PlanBuildCurrentPlanMatches == right.PlanBuildCurrentPlanMatches &&
+                   left.PlanBuildActiveEventReplaced == right.PlanBuildActiveEventReplaced &&
+                   left.PlanBuildNeedsInitialPlan == right.PlanBuildNeedsInitialPlan &&
+                   left.PlanBuildIntentRevisionRequested == right.PlanBuildIntentRevisionRequested &&
+                   left.PlanBuildCanPrepareEventSuccessor == right.PlanBuildCanPrepareEventSuccessor &&
+                   left.PlanBuildMotionWithinCommitTolerance == right.PlanBuildMotionWithinCommitTolerance &&
+                   left.PlanBuildCanBeginTransition == right.PlanBuildCanBeginTransition &&
+                   left.PlanBuildFutureBodyAvailable == right.PlanBuildFutureBodyAvailable &&
+                   left.PlanBuildCurrentPlanHasExecutablePath == right.PlanBuildCurrentPlanHasExecutablePath &&
+                   left.PlanBuildPlanFadingOut == right.PlanBuildPlanFadingOut &&
                    left.PlanFadingOut == right.PlanFadingOut &&
                    left.PlanRetentionWeight.Equals(right.PlanRetentionWeight) &&
                    left.IntentLandingDisplacementError.Equals(right.IntentLandingDisplacementError) &&

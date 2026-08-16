@@ -529,6 +529,58 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PlanAttemptRequestLegLength = hasModifier
                     ? modifier.PlanAttempt.BuildRequest.LegLength
                     : 0f,
+                PlanBuildCandidateKind = hasModifier
+                    ? modifier.PlanBuildDecision.CandidateKind.ToString()
+                    : CharacterFootPlanAttemptKind.None.ToString(),
+                PlanBuildDecisionReason = hasModifier
+                    ? modifier.PlanBuildDecision.Reason.ToString()
+                    : CharacterFootPlanBuildDecisionReason.None.ToString(),
+                PlanBuildLandingEventIdentity = hasModifier
+                    ? modifier.PlanBuildDecision.LandingEventIdentity
+                    : 0,
+                PlanBuildOriginKind = hasModifier
+                    ? modifier.PlanBuildDecision.OriginKind.ToString()
+                    : CharacterFootPlanOriginKind.None.ToString(),
+                PlanBuildOriginPlanSequence = hasModifier
+                    ? modifier.PlanBuildDecision.OriginPlanSequence
+                    : 0,
+                PlanBuildOriginLandingEventIdentity = hasModifier
+                    ? modifier.PlanBuildDecision.OriginLandingEventIdentity
+                    : 0,
+                PlanBuildOriginSupportSurfaceIdentity = hasModifier
+                    ? modifier.PlanBuildDecision.OriginSupportSurfaceIdentity
+                    : 0,
+                PlanBuildMotionGeneration = hasModifier
+                    ? modifier.PlanBuildDecision.MotionGeneration
+                    : 0,
+                PlanBuildMotionAuthorityTick = hasModifier
+                    ? modifier.PlanBuildDecision.MotionAuthorityTick
+                    : 0,
+                PlanBuildAttempted = hasModifier && modifier.PlanBuildDecision.Attempted,
+                PlanBuildCurrentPlanningCandidate = hasModifier &&
+                                                    modifier.PlanBuildDecision.CurrentPlanningCandidate,
+                PlanBuildIncomingPlanningCandidate = hasModifier &&
+                                                     modifier.PlanBuildDecision.IncomingPlanningCandidate,
+                PlanBuildCurrentPlanMatches = hasModifier &&
+                                              modifier.PlanBuildDecision.CurrentPlanMatches,
+                PlanBuildActiveEventReplaced = hasModifier &&
+                                               modifier.PlanBuildDecision.ActiveEventReplaced,
+                PlanBuildNeedsInitialPlan = hasModifier &&
+                                            modifier.PlanBuildDecision.NeedsInitialPlan,
+                PlanBuildIntentRevisionRequested = hasModifier &&
+                                                   modifier.PlanBuildDecision.IntentRevisionRequested,
+                PlanBuildCanPrepareEventSuccessor = hasModifier &&
+                                                    modifier.PlanBuildDecision.CanPrepareEventSuccessor,
+                PlanBuildMotionWithinCommitTolerance = hasModifier &&
+                                                       modifier.PlanBuildDecision.MotionWithinCommitTolerance,
+                PlanBuildCanBeginTransition = hasModifier &&
+                                              modifier.PlanBuildDecision.CanBeginTransition,
+                PlanBuildFutureBodyAvailable = hasModifier &&
+                                               modifier.PlanBuildDecision.FutureBodyAvailable,
+                PlanBuildCurrentPlanHasExecutablePath = hasModifier &&
+                                                        modifier.PlanBuildDecision.CurrentPlanHasExecutablePath,
+                PlanBuildPlanFadingOut = hasModifier &&
+                                         modifier.PlanBuildDecision.PlanFadingOut,
                 PlanFadingOut = hasModifier && modifier.PlanFadingOut,
                 PlanRetentionWeight = hasModifier ? modifier.PlanRetentionWeight : 0f,
                 IntentLandingDisplacementError = hasModifier

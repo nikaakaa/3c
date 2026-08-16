@@ -66,6 +66,8 @@
 - [x] 4A.10 删除Grounding baseline再由Predictive覆盖的路径；左右脚与Pelvis全部完成后一次写入Pelvis、Left Foot、Right Foot三个最终Goal槽。
 - [x] 4A.11 把左右脚Pending状态和诊断接入现有Presentation帧事务；只有Goal Set、FullBodyIK及后续Pose Plan完成时才Seal，Discard、Reset或Fault不得留下部分Plan、Anchor、Landing或单脚换代。
 - [x] 4A.12 删除`CharacterFootGroundingGoalSource`、`CharacterFootGroundingPlan`、Grounding/Predictive旧owner字段、旧多阶段接口和失效诊断字段；保留一个正式`CharacterFootPlacementRuntime`入口，不留兼容adapter。
+- [x] 4A.13 Event Successor提升后继续由同一个`CharacterFootPlanTransition`保存相对Original动画的上一完成输出；新Active只按自身`Release -> LiftOff`权重接管，交接完成前不得开放第二次Revision或Sequence Output Continuity。
+- [x] 4A.14 Plan创建时若权威相位已经到达`ReleasePhase`，执行状态必须当帧进入`Executing`并初始化Action/Ground Path进度，禁止先发布一帧`Planned`空档再暴露Grounding或Original。
 
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
 - [x] 4.5A 历史实验已证明“每个权威Landing Event至多一笔Intent Revision”能阻止同一源Plan反复换路；自动A/D run `35d23e6892f24566808e0276a3ec28be`中，每个事件最多只出现原Plan加一个Revision。后续run证明该事件级限制会让再次偏离的后继Plan继续过期执行，本规则由4.5B替代，不反勾历史完成项。

@@ -22,6 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPredictiveFootPlacementPlan nextPlan,
             float blend,
             ulong startedFrame,
+            bool isSuccessorHandoff,
             bool hasContinuity,
             Vector3 ankleOffset,
             Quaternion ankleRotationOffset,
@@ -36,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextPlan = nextPlan;
             Blend = Mathf.Clamp01(blend);
             StartedFrame = startedFrame;
+            IsSuccessorHandoff = isSuccessorHandoff;
             HasContinuity = hasContinuity;
             AnkleOffset = ankleOffset;
             AnkleRotationOffset = ankleRotationOffset;
@@ -51,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterPredictiveFootPlacementPlan NextPlan { get; }
         internal float Blend { get; }
         internal ulong StartedFrame { get; }
+        internal bool IsSuccessorHandoff { get; }
         internal bool HasContinuity { get; }
         internal Vector3 AnkleOffset { get; }
         internal Quaternion AnkleRotationOffset { get; }
@@ -61,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PathHipOffset { get; }
         internal bool IsRevision =>
             Kind == CharacterFootPlanTransitionKind.IntentRevision ||
-            Kind == CharacterFootPlanTransitionKind.EventSuccessor;
+            Kind == CharacterFootPlanTransitionKind.EventSuccessor && !IsSuccessorHandoff;
 
         internal static CharacterFootPlanTransition Begin(
             CharacterFootPlanTransitionKind kind,
@@ -74,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 nextPlan,
                 0f,
                 startedFrame,
+                false,
                 false,
                 Vector3.zero,
                 Quaternion.identity,
@@ -90,6 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextPlan,
                 blend,
                 StartedFrame,
+                IsSuccessorHandoff,
                 HasContinuity,
                 AnkleOffset,
                 AnkleRotationOffset,
@@ -111,6 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 nextPlan,
                 Blend,
                 StartedFrame,
+                IsSuccessorHandoff,
                 HasContinuity,
                 AnkleOffset,
                 AnkleRotationOffset,
@@ -135,6 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextPlan,
                 Blend,
                 StartedFrame,
+                IsSuccessorHandoff,
                 true,
                 ankleOffset,
                 ankleRotationOffset.normalized,
@@ -143,6 +150,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathRootOffset,
                 pathRootStartOffset,
                 pathHipOffset);
+
+        internal CharacterFootPlanTransition PromoteEventSuccessor(
+            CharacterPredictiveFootPlacementPlan activePlan)
+        {
+            if (Kind != CharacterFootPlanTransitionKind.EventSuccessor ||
+                IsSuccessorHandoff || !HasContinuity || activePlan == null)
+            {
+                throw new InvalidOperationException("Predictive Foot Event Successor handoff is invalid.");
+            }
+            return new CharacterFootPlanTransition(
+                Kind,
+                null,
+                activePlan,
+                0f,
+                StartedFrame,
+                true,
+                true,
+                AnkleOffset,
+                AnkleRotationOffset,
+                GroundPath,
+                GroundSupport,
+                PathRootOffset,
+                PathRootStartOffset,
+                PathHipOffset);
+        }
     }
 
     internal sealed class CharacterPredictiveFootPlacementPlanner
@@ -181,7 +213,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal CharacterFootPlanTransition Transition => m_Transition;
             internal bool HasRevision => m_Transition.IsRevision;
             internal bool HasEventSuccessor =>
-                m_Transition.Kind == CharacterFootPlanTransitionKind.EventSuccessor;
+                m_Transition.Kind == CharacterFootPlanTransitionKind.EventSuccessor &&
+                !m_Transition.IsSuccessorHandoff;
+            internal bool HasEventSuccessorHandoff =>
+                m_Transition.Kind == CharacterFootPlanTransitionKind.EventSuccessor &&
+                m_Transition.IsSuccessorHandoff;
+            internal bool CanBeginTransition =>
+                m_Transition.Kind == CharacterFootPlanTransitionKind.None;
             internal bool HasIntentRevision =>
                 m_Transition.Kind == CharacterFootPlanTransitionKind.IntentRevision;
             internal float RevisionBlendWeight => m_Transition.Blend;
@@ -237,9 +275,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     throw new ArgumentNullException(nameof(source));
                 Active.CopyFrom(source.Active);
                 Revision.CopyFrom(source.Revision);
-                m_Transition = source.m_Transition.Rebind(
-                    Active.ImmutablePlan,
-                    source.HasRevision ? Revision.ImmutablePlan : null);
+                m_Transition = source.HasEventSuccessorHandoff
+                    ? source.m_Transition.Rebind(null, Active.ImmutablePlan)
+                    : source.m_Transition.Rebind(
+                        Active.ImmutablePlan,
+                        source.HasRevision ? Revision.ImmutablePlan : null);
                 IntentLandingDisplacementError = source.IntentLandingDisplacementError;
                 IntentLandingDisplacementThreshold = source.IntentLandingDisplacementThreshold;
                 IntentRevisionAttemptPlanSequence = source.IntentRevisionAttemptPlanSequence;
@@ -289,23 +329,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot successor is not executable.");
-                m_Transition = CharacterFootPlanTransition.Begin(
+                CharacterFootPlanTransition transition = CharacterFootPlanTransition.Begin(
                     CharacterFootPlanTransitionKind.EventSuccessor,
                     Active.ImmutablePlan,
                     Revision.ImmutablePlan);
+                m_Transition = HasCompleteOutputForPlan(Active.Sequence)
+                    ? CaptureTransitionOrigin(transition)
+                    : transition;
             }
 
             internal void PromoteRevision()
             {
                 if (!HasRevision || !Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
+                CharacterFootPlanTransition transition = m_Transition;
+                bool preserveSuccessorHandoff = HasEventSuccessor && transition.HasContinuity;
                 ClearOutputContinuity();
-                m_SuppressNextOutputContinuityCapture = true;
+                m_SuppressNextOutputContinuityCapture = !preserveSuccessorHandoff;
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 CharacterPredictiveFootPlanExecution retired = Active;
                 Active = Revision;
                 Revision = retired;
-                m_Transition = default;
+                m_Transition = preserveSuccessorHandoff
+                    ? transition.PromoteEventSuccessor(Active.ImmutablePlan)
+                    : default;
+            }
+
+            internal void CompleteEventSuccessorHandoff()
+            {
+                if (HasEventSuccessorHandoff)
+                    m_Transition = default;
             }
 
             internal void BeginFadeOut(
@@ -862,8 +915,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out pathRootStart,
                     out _);
             }
+            bool hasEventSuccessorHandoff = runtime.HasEventSuccessorHandoff &&
+                                            runtime.HasTransitionOrigin;
             bool hasTransitionOrigin = runtime.HasTransitionOrigin &&
-                                       (runtime.HasIntentRevision || runtime.IsFadingOut);
+                                       (runtime.HasIntentRevision ||
+                                        hasEventSuccessorHandoff ||
+                                        runtime.IsFadingOut);
             Vector3 transitionOriginAnklePosition = default;
             if (hasTransitionOrigin)
             {
@@ -909,10 +966,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                              pose.HipPosition,
                                              0f,
                                              out activeTarget);
+            if (hasEventSuccessorHandoff && activeTargetAvailable)
+            {
+                float blend = plan.EvaluatePredictiveOutputWeight();
+                pathPosition = Vector3.Lerp(
+                    runtime.TransitionOriginGroundPath,
+                    activeTarget.PathPosition,
+                    blend);
+                pathRoot = Vector3.Lerp(pathRoot, activeTarget.PathRoot, blend);
+                pathHip = Vector3.Lerp(pathHip, activeTarget.PathHip, blend);
+            }
             if (activeTargetAvailable)
                 targetAnklePosition = activeTarget.AnklePosition;
             if (hasTransitionOrigin)
-                targetAnklePosition = transitionOriginAnklePosition;
+            {
+                targetAnklePosition = hasEventSuccessorHandoff && activeTargetAvailable
+                    ? Vector3.Lerp(
+                        transitionOriginAnklePosition,
+                        activeTarget.AnklePosition,
+                        plan.EvaluatePredictiveOutputWeight())
+                    : transitionOriginAnklePosition;
+            }
             if (revisionContributes &&
                 TryEvaluateFootTarget(
                     revision,
@@ -1206,8 +1280,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool allowsStanceHandoff = AllowsStanceHandoff(plan);
             CharacterPredictiveFootPlanExecution revisionPlan = runtime.Revision;
             bool hasIntentRevision = runtime.HasIntentRevision;
+            bool hasEventSuccessorHandoff = runtime.HasEventSuccessorHandoff &&
+                                            runtime.HasTransitionOrigin;
             bool hasTransitionOrigin = runtime.HasTransitionOrigin &&
-                                       (hasIntentRevision || runtime.IsFadingOut);
+                                       (hasIntentRevision ||
+                                        hasEventSuccessorHandoff ||
+                                        runtime.IsFadingOut);
             float predictiveOutputWeight = plan.State == CharacterPredictiveFootPlanState.Executing
                 ? plan.EvaluatePredictiveOutputWeight()
                 : 0f;
@@ -1244,7 +1322,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 grounding.ContactState != CharacterFootContactState.Swing &&
                 allowsStanceHandoff &&
                 grounding.AnchorBlendWeight >= 0.999999f;
-            bool stanceOwnsFoot = actionConstraintOwnsFoot || physicalStanceOwnsFoot;
+            bool stanceOwnsFoot = physicalStanceOwnsFoot ||
+                                  actionConstraintOwnsFoot && !hasEventSuccessorHandoff;
             bool currentSupportOwnsIdle = !step.IsAuthoritative &&
                                           plan.State == CharacterPredictiveFootPlanState.Inactive;
             bool baselineOwnsFoot = physicalStanceOwnsFoot || currentSupportOwnsIdle;
@@ -1291,6 +1370,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 authoritativePredictionBlend = activePlanPredictionBlend;
             }
             bool targetAvailable = activeTargetAvailable || hasTransitionOrigin;
+            if (hasEventSuccessorHandoff && !activeTargetAvailable)
+                activeEvaluationRejectReason = FootPredictionRejectReason.None;
             CharacterPredictiveFootTarget revisionTargetData = default;
             FootPredictionRejectReason revisionEvaluationRejectReason = FootPredictionRejectReason.None;
             bool revisionTargetAvailable = hasIntentRevision &&
@@ -1367,19 +1448,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         plan.RootTrajectory.PathStartPhase,
                         out currentPathRootStart,
                         out _);
+                float successorBlend = hasEventSuccessorHandoff && activeTargetAvailable
+                    ? activePlanPredictionBlend
+                    : 0f;
                 Vector3 predictiveAnklePosition = revisionTargetAvailable
                     ? Vector3.Lerp(outgoingAnklePosition, revisionTargetData.AnklePosition, revisionBlend)
-                    : outgoingAnklePosition;
+                    : hasEventSuccessorHandoff && activeTargetAvailable
+                        ? Vector3.Lerp(
+                            outgoingAnklePosition,
+                            targetData.AnklePosition,
+                            successorBlend)
+                        : outgoingAnklePosition;
                 clearanceEvaluated = true;
                 currentPathPosition = revisionTargetAvailable
                     ? Vector3.Lerp(outgoingPathPosition, revisionTargetData.PathPosition, revisionBlend)
-                    : outgoingPathPosition;
+                    : hasEventSuccessorHandoff && activeTargetAvailable
+                        ? Vector3.Lerp(
+                            outgoingPathPosition,
+                            targetData.PathPosition,
+                            successorBlend)
+                        : outgoingPathPosition;
                 currentPathRoot = revisionTargetAvailable
                     ? Vector3.Lerp(outgoingPathRoot, revisionTargetData.PathRoot, revisionBlend)
-                    : outgoingPathRoot;
+                    : hasEventSuccessorHandoff && activeTargetAvailable
+                        ? Vector3.Lerp(
+                            outgoingPathRoot,
+                            targetData.PathRoot,
+                            successorBlend)
+                        : outgoingPathRoot;
                 currentPathHip = revisionTargetAvailable
                     ? Vector3.Lerp(outgoingPathHip, revisionTargetData.PathHip, revisionBlend)
-                    : outgoingPathHip;
+                    : hasEventSuccessorHandoff && activeTargetAvailable
+                        ? Vector3.Lerp(
+                            outgoingPathHip,
+                            targetData.PathHip,
+                            successorBlend)
+                        : outgoingPathHip;
                 if (revisionTargetAvailable)
                 {
                     revisionPlan.EvaluateBodyPath(
@@ -1392,6 +1496,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         revisionBlend);
                 }
                 currentPathSupport = outgoingPathSupport;
+                if (hasEventSuccessorHandoff && activeTargetAvailable &&
+                    successorBlend >= 0.5f)
+                {
+                    currentPathSupport = targetData.Support;
+                }
                 authoredAnimationClearance = revisionTargetAvailable
                     ? Mathf.Lerp(targetData.AuthoredAnimationClearance, revisionTargetData.AuthoredAnimationClearance, revisionBlend)
                     : targetData.AuthoredAnimationClearance;
@@ -1414,7 +1523,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     baselineContacts.ToePosition - currentPathPosition,
                     up);
                 requiredLift = Vector3.Dot(predictiveAnklePosition - pose.AnklePosition, up);
-                Vector3 activeResolvedAnklePosition = hasTransitionOrigin
+                Vector3 activeResolvedAnklePosition = hasEventSuccessorHandoff
+                    ? activeTargetAvailable
+                        ? Vector3.Lerp(
+                            outgoingAnklePosition,
+                            targetData.AnklePosition,
+                            successorBlend)
+                        : outgoingAnklePosition
+                    : hasTransitionOrigin
                     ? runtime.IsFadingOut
                         ? Vector3.Lerp(
                             grounding.ContactState != CharacterFootContactState.Swing ||
@@ -1428,7 +1544,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         baselineWorldPosition,
                         targetData.AnklePosition,
                         activePlanPredictionBlend);
-                Quaternion activeResolvedAnkleRotation = hasTransitionOrigin
+                Quaternion activeResolvedAnkleRotation = hasEventSuccessorHandoff
+                    ? activeTargetAvailable
+                        ? Quaternion.Slerp(
+                            outgoingAnkleRotation,
+                            targetData.AnkleRotation,
+                            successorBlend).normalized
+                        : outgoingAnkleRotation
+                    : hasTransitionOrigin
                     ? runtime.IsFadingOut
                         ? Quaternion.Slerp(
                             grounding.ContactState != CharacterFootContactState.Swing ||
@@ -1469,7 +1592,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationDeltaSeconds,
                     m_TransitionBlendSpeed,
                     baselineOwnsFoot,
-                    !revisionTargetAvailable,
+                    !revisionTargetAvailable && !hasEventSuccessorHandoff,
                     true,
                     outputPlanSequence,
                     resolvedAnklePosition,
@@ -1668,6 +1791,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentPathRoot,
                 currentPathRootStart,
                 currentPathHip);
+            if (hasEventSuccessorHandoff && activeTargetAvailable &&
+                activePlanPredictionBlend >= 0.999999f)
+            {
+                runtime.CompleteEventSuccessorHandoff();
+            }
             debugSnapshot = new CharacterPredictiveFootLegFrameSnapshot(
                 side,
                 plan.State,
@@ -2384,7 +2512,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasSuccessorOrigin &&
                 incomingPlanningCandidate &&
                 !plan.MatchesAuthoritativeEvent(in incomingStep) &&
-                !runtime.HasRevision && !runtime.IsFadingOut &&
+                runtime.CanBeginTransition &&
                 m_FutureBodyTrajectorySource != null)
             {
                 bool created = CreatePlan(
@@ -2409,7 +2537,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (created)
                     runtime.BeginEventSuccessor();
             }
-            if (activeEventReplaced && !runtime.HasRevision)
+            if (activeEventReplaced && runtime.CanBeginTransition)
             {
                 ulong sourceSequence = step.LandingEventIdentity;
                 bool canAttempt = planningCandidate &&
@@ -2477,8 +2605,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong initialAttemptIdentity = plan.Sequence != 0
                 ? plan.Sequence
                 : step.LandingEventIdentity;
-            if (planningCandidate && needsInitialPlan && !runtime.HasRevision &&
-                !runtime.IsFadingOut && m_FutureBodyTrajectorySource != null &&
+            if (planningCandidate && needsInitialPlan && runtime.CanBeginTransition &&
+                m_FutureBodyTrajectorySource != null &&
                 !runtime.HasAttemptedIntentRevision(
                     initialAttemptIdentity,
                     motionTimeline.Generation,
@@ -2509,7 +2637,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (plan.HasExecutablePath)
                     plan.UpdateWorldProjection(rootWorldPosition, rootWorldRotation);
             }
-            if (!runtime.HasRevision && !runtime.IsFadingOut && plan.HasExecutablePath &&
+            if (runtime.CanBeginTransition && plan.HasExecutablePath &&
                 plan.MatchesAuthoritativeEvent(in step) &&
                 intentRevisionRequested)
             {

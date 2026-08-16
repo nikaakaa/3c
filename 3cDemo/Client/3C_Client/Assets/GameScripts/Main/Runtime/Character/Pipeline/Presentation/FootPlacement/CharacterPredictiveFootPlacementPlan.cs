@@ -1381,8 +1381,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EndReason = CharacterPredictiveFootPlanEndReason.None;
             ContributionContinuityIdentity = plan.InitialContributionContinuityIdentity;
             ActionStepPhase = plan.EventPhaseAtGeneration;
-            ActionProgress = 0f;
-            GroundPathProgress = 0f;
+            bool startsExecuting = State == CharacterPredictiveFootPlanState.Planned &&
+                                   ActionStepPhase + 0.000001f >= plan.ReleasePhase;
+            if (startsExecuting)
+                State = CharacterPredictiveFootPlanState.Executing;
+            ActionProgress = startsExecuting &&
+                             ActionStepPhase + 0.000001f >= plan.RootTrajectory.PathStartPhase
+                ? plan.ResolveActionProgress(ActionStepPhase)
+                : 0f;
+            GroundPathProgress = startsExecuting &&
+                                 ActionStepPhase + 0.000001f >= plan.RootTrajectory.PathStartPhase
+                ? plan.EvaluateGroundPathProgress(ActionStepPhase)
+                : 0f;
             MotionLinearLandingError = 0f;
             MotionAngularLandingError = 0f;
             MotionLandingError = 0f;

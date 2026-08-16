@@ -78,10 +78,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal Vector3 CommittedAnchorSole { get; private set; }
             internal FootPlacementSurface CommittedAnchorSupport { get; private set; }
             FootPlanTransitionKind TransitionKind { get; set; }
-            bool m_BaselineOwnedLastFrame;
-            bool m_HasOwnershipContinuity;
-            Vector3 m_OwnershipContinuityOffset;
-            float m_OwnershipContinuityStartPhase;
+            ulong m_OutputContinuityPlanSequence;
+            ulong m_OutputContinuityStartedFrame;
+            float m_OutputContinuityWeight;
+            Vector3 m_OutputContinuityPositionOffset;
+            Quaternion m_OutputContinuityRotationOffset = Quaternion.identity;
 
             internal void BeginFrame()
             {
@@ -119,7 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!HasRevision || !Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
-                CompleteOwnershipContinuity();
+                ClearOutputContinuity();
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 CharacterPredictiveFootPlacementPlan retired = Active;
                 Active = Revision;
@@ -363,48 +364,68 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearIntentObservation();
             }
 
-            internal Vector3 ResolveOwnershipContinuity(
+            internal void ResolveOutputContinuity(
+                ulong renderFrame,
+                float deltaSeconds,
+                float blendSpeed,
                 bool baselineOwnsFoot,
                 bool targetAvailable,
-                Vector3 targetSole,
-                float actionPhase)
+                ulong targetPlanSequence,
+                Vector3 targetPosition,
+                Quaternion targetRotation,
+                out Vector3 resolvedPosition,
+                out Quaternion resolvedRotation)
             {
-                if (baselineOwnsFoot)
+                resolvedPosition = targetPosition;
+                resolvedRotation = targetRotation;
+                if (baselineOwnsFoot || !targetAvailable || targetPlanSequence == 0 ||
+                    !IsFinite(targetPosition) || !IsFinite(targetRotation))
                 {
-                    m_BaselineOwnedLastFrame = true;
-                    m_HasOwnershipContinuity = false;
-                    m_OwnershipContinuityOffset = Vector3.zero;
-                    return Vector3.zero;
+                    ClearOutputContinuity();
+                    return;
                 }
-                if (m_BaselineOwnedLastFrame && targetAvailable && HasLastOutputSole)
+                bool outputOwnerChanged = LastOutputGroundPlanSequence != targetPlanSequence;
+                if (outputOwnerChanged &&
+                    m_OutputContinuityPlanSequence != targetPlanSequence &&
+                    HasLastOutputSole && IsFinite(LastOutputAnklePosition) &&
+                    IsFinite(LastOutputAnkleRotation))
                 {
-                    m_OwnershipContinuityOffset = LastOutputSole - targetSole;
-                    m_OwnershipContinuityStartPhase = Mathf.Clamp01(actionPhase);
-                    m_HasOwnershipContinuity = IsFinite(m_OwnershipContinuityOffset);
+                    m_OutputContinuityPlanSequence = targetPlanSequence;
+                    m_OutputContinuityStartedFrame = renderFrame;
+                    m_OutputContinuityWeight = 1f;
+                    m_OutputContinuityPositionOffset = LastOutputAnklePosition - targetPosition;
+                    m_OutputContinuityRotationOffset = (
+                        LastOutputAnkleRotation * Quaternion.Inverse(targetRotation)).normalized;
                 }
-                m_BaselineOwnedLastFrame = false;
-                if (!m_HasOwnershipContinuity)
-                    return Vector3.zero;
-                float progress = Mathf.InverseLerp(
-                    m_OwnershipContinuityStartPhase,
-                    1f,
-                    Mathf.Clamp01(actionPhase));
-                float retention = 1f - progress * progress * (3f - 2f * progress);
-                if (retention <= 0.0001f)
+                else if (m_OutputContinuityWeight > 0f &&
+                         renderFrame > m_OutputContinuityStartedFrame)
                 {
-                    m_HasOwnershipContinuity = false;
-                    m_OwnershipContinuityOffset = Vector3.zero;
-                    return Vector3.zero;
+                    m_OutputContinuityWeight = Mathf.MoveTowards(
+                        m_OutputContinuityWeight,
+                        0f,
+                        blendSpeed * deltaSeconds);
                 }
-                return m_OwnershipContinuityOffset * retention;
+                if (m_OutputContinuityWeight <= 0.0001f)
+                {
+                    ClearOutputContinuity();
+                    return;
+                }
+                float weight = m_OutputContinuityWeight * m_OutputContinuityWeight *
+                               (3f - 2f * m_OutputContinuityWeight);
+                resolvedPosition += m_OutputContinuityPositionOffset * weight;
+                resolvedRotation = Quaternion.Slerp(
+                    targetRotation,
+                    (m_OutputContinuityRotationOffset * targetRotation).normalized,
+                    weight).normalized;
             }
 
-            void CompleteOwnershipContinuity()
+            void ClearOutputContinuity()
             {
-                m_BaselineOwnedLastFrame = false;
-                m_HasOwnershipContinuity = false;
-                m_OwnershipContinuityOffset = Vector3.zero;
-                m_OwnershipContinuityStartPhase = 0f;
+                m_OutputContinuityPlanSequence = 0;
+                m_OutputContinuityStartedFrame = 0;
+                m_OutputContinuityWeight = 0f;
+                m_OutputContinuityPositionOffset = Vector3.zero;
+                m_OutputContinuityRotationOffset = Quaternion.identity;
             }
 
             internal void Reset(CharacterPredictiveFootPlanEndReason reason)
@@ -440,10 +461,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentRevisionAttemptPlanSequence = 0;
                 IntentRevisionAttemptTrajectoryGeneration = 0;
                 IntentRevisionAttemptAuthorityTick = 0;
-                m_BaselineOwnedLastFrame = false;
-                m_HasOwnershipContinuity = false;
-                m_OwnershipContinuityOffset = Vector3.zero;
-                m_OwnershipContinuityStartPhase = 0f;
+                ClearOutputContinuity();
             }
 
             static bool IsFinite(Vector3 value) =>
@@ -958,6 +976,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.LeftFoot,
                 baselineDiagnostics.Left,
                 frame.RenderFrame,
+                frame.PresentationDeltaSeconds,
                 m_Rig.LeftLegLength,
                 ResolveAppliedHip(pose.Left.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics leftDiagnostics,
@@ -971,6 +990,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 baseline.RightFoot,
                 baselineDiagnostics.Right,
                 frame.RenderFrame,
+                frame.PresentationDeltaSeconds,
                 m_Rig.RightLegLength,
                 ResolveAppliedHip(pose.Right.HipPosition, baseline.Pelvis),
                 out CharacterPredictiveFootPlacementFootDiagnostics rightDiagnostics,
@@ -1030,6 +1050,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFullBodyIkGoal baseline,
             CharacterFootGroundingFootDiagnostics grounding,
             ulong renderFrame,
+            float presentationDeltaSeconds,
             float legLength,
             Vector3 appliedHip,
             out CharacterPredictiveFootPlacementFootDiagnostics diagnostics,
@@ -1085,7 +1106,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float revisionTransitionBlend = hasIntentRevision
                 ? runtime.SmoothedRevisionBlendWeight
                 : 0f;
-            float ownershipContinuityProgress = plan.ActionStepPhase;
             float stanceTransitionBlend = plan.State == CharacterPredictiveFootPlanState.Executing
                 ? Mathf.Clamp01(grounding.AnchorBlendWeight)
                 : 0f;
@@ -1332,16 +1352,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         revisionResolvedAnkleRotation,
                         revisionBlend).normalized;
                 }
-                CharacterFootPlacementSoleContactPose preContinuityContacts = pose.ResolveSoleContacts(
-                    resolvedAnklePosition,
-                    resolvedAnkleRotation);
-                Vector3 preContinuitySole =
-                    (preContinuityContacts.HeelPosition + preContinuityContacts.ToePosition) * 0.5f;
-                resolvedAnklePosition += runtime.ResolveOwnershipContinuity(
+                ulong outputPlanSequence = revisionTargetAvailable && revisionTransitionBlend >= 0.5f
+                    ? revisionPlan.Sequence
+                    : plan.Sequence;
+                runtime.ResolveOutputContinuity(
+                    renderFrame,
+                    presentationDeltaSeconds,
+                    m_TransitionBlendSpeed,
                     baselineOwnsFoot,
                     true,
-                    preContinuitySole,
-                    ownershipContinuityProgress);
+                    outputPlanSequence,
+                    resolvedAnklePosition,
+                    resolvedAnkleRotation,
+                    out resolvedAnklePosition,
+                    out resolvedAnkleRotation);
                 CharacterFootPlacementSoleContactPose resolvedContacts = pose.ResolveSoleContacts(
                     resolvedAnklePosition,
                     resolvedAnkleRotation);
@@ -1436,11 +1460,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             else
             {
-                runtime.ResolveOwnershipContinuity(
+                runtime.ResolveOutputContinuity(
+                    renderFrame,
+                    presentationDeltaSeconds,
+                    m_TransitionBlendSpeed,
                     baselineOwnsFoot,
                     false,
+                    0,
                     Vector3.zero,
-                    ownershipContinuityProgress);
+                    Quaternion.identity,
+                    out _,
+                    out _);
             }
             FootPredictionRejectReason rejectReason = ResolveRejectReason(
                 plan,
@@ -2026,7 +2056,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3.ProjectOnPlane(contacts.HeelPosition - currentSole, up).magnitude,
                 Vector3.ProjectOnPlane(contacts.ToePosition - currentSole, up).magnitude);
             bool planningCandidate = landingEventIdentityValid &&
-                                     step.IsPreSwing &&
+                                     (step.IsPreSwing || step.ActionStepClock.IsSwing) &&
                                      motionTimeline.IsValid &&
                                      step.Confidence >= m_Settings.MinimumLandingConfidence &&
                                      step.ActionStepClock.Phase < 0.9999f;
@@ -2048,6 +2078,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentedBodyPosition,
                     rootWorldRotation,
                     Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
+            }
+            bool intentRevisionRequested = currentPlanMatches &&
+                                           plan.HasExecutablePath &&
+                                           !runtime.IsFadingOut &&
+                                           ShouldRequestIntentRevision(
+                                               runtime,
+                                               plan,
+                                               in step,
+                                               in motionTimeline,
+                                               movementPlaybackTime,
+                                               step.PredictionLeadSeconds,
+                                               trajectoryCurvatureDegreesPerSecond,
+                                               presentedBodyPosition,
+                                               rootWorldRotation);
+            if (runtime.HasEventSuccessor && intentRevisionRequested)
+            {
+                runtime.CancelRevision(
+                    CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
             }
             if ((currentPlanMatches || activeEventReplaced && step.IsPreSwing) &&
                 plan.HasExecutablePath &&
@@ -2117,6 +2165,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             bool incomingSuccessorNeedsSlot = currentPlanMatches &&
                                               plan.HasExecutablePath &&
+                                              !intentRevisionRequested &&
                                               CanPrepareEventSuccessor(plan) &&
                                               incomingPlanningCandidate &&
                                               !plan.MatchesAuthoritativeEvent(in incomingStep);
@@ -2231,7 +2280,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasCommittedLanding = successorProbeSupport.IsValid;
                 hasSuccessorOrigin = hasCommittedLanding;
             }
-            else if (activeEventReplaced)
+            else if (activeEventReplaced && !hasSuccessorOrigin)
             {
                 FootPlacementSurface currentOriginSupport = ResolveSupportAtRoutePoint(
                     groundProbeSupport,
@@ -2250,6 +2299,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
             }
             if (currentPlanMatches && plan.HasExecutablePath &&
+                !intentRevisionRequested &&
                 CanPrepareEventSuccessor(plan) &&
                 IsMotionWithinCommitTolerance(plan) &&
                 hasSuccessorOrigin &&
@@ -2382,16 +2432,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (!runtime.HasRevision && !runtime.IsFadingOut && plan.HasExecutablePath &&
                 plan.MatchesAuthoritativeEvent(in step) &&
-                ShouldRequestIntentRevision(
-                    runtime,
-                    plan,
-                    in step,
-                    in motionTimeline,
-                    movementPlaybackTime,
-                    step.PredictionLeadSeconds,
-                    trajectoryCurvatureDegreesPerSecond,
-                    presentedBodyPosition,
-                    rootWorldRotation))
+                intentRevisionRequested)
             {
                 if (!TryResolveIntentRevisionOrigin(
                         runtime,
@@ -2922,7 +2963,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return FootPredictionRejectReason.LandingEventUnavailable;
             if (step.Confidence <= 0f)
                 return FootPredictionRejectReason.LandingConfidenceInsufficient;
-            if (!step.IsPreSwing)
+            if (!step.IsPreSwing && !step.ActionStepClock.IsSwing)
                 return FootPredictionRejectReason.LandingEventNotPreSwing;
             return FootPredictionRejectReason.NoCommittedPlan;
         }

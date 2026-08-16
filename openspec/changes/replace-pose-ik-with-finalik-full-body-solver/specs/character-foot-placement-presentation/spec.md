@@ -168,9 +168,17 @@ Current Grounding spring MUST只消费Current Query与Current Sole Clearance tar
 
 - **WHEN** 当前Swing因committed意图改变需要Intent Revision，且同脚Incoming事件也已可见
 - **THEN** Intent Revision只有在现有Blend可于`ApproachingContact`前完成时才可创建
+- **AND** 当前Step仍为`Unsupported`且Landing误差已跨越几何边界时，当前Intent Revision MUST优先；尚未参与Goal的Event Successor MUST释放过渡槽，待当前Revision完成后再由同一槽重建
 - **AND** 当前Plan进入`ApproachingContact`后，Incoming Event Successor MUST优先占用唯一过渡槽并在事件换代前预建
 - **AND** 过晚且尚未完成的旧事件Intent Revision MUST退出，不得占槽直到新事件进入Swing
 - **AND** 两者 MUST只顺序复用同一槽，不得并存
+
+#### Scenario: 当前Swing失去Executable Plan
+
+- **WHEN** 权威事件已经进入Swing，但旧Plan连续退出或候选曾Rejected，当前没有Executable Plan
+- **THEN** Planner MUST使用同一权威事件、当前实际Sole、唯一Current Support与最新committed trajectory继续重建，不得把PreSwing作为唯一创建窗口
+- **AND** 新Plan首次参与Goal时 MUST从上一完成帧实际Ankle位置与旋转连续接管，再按正式过渡曲线收敛到新Plan输出
+- **AND** MUST不先暴露一帧Current Grounding或Original后再跳入新Plan
 
 #### Scenario: Plan输出所有权先于Ground Path空间推进
 

@@ -358,3 +358,9 @@ Current与Incoming同时进入左右脚Feature后，`ActionAnimationPlaybackFram
 正式分层是：单脚`AnimationFootFeatureSample`继续保持固定布局值类型，供NativeArray、Pose Graph和作业链使用；左右脚完整事实写入既有Action Sample Workspace的预分配Foot Feature页，Action Frame恢复为只携带leased Buffer的轻量值快照。把10KB帧直接改成class虽能绕开JIT限制，却会产生逐Action、逐表现帧的大对象分配，因此不作为正式实现保留。以后扩展Artifact时必须分别审计Native数据布局、Workspace生命周期和托管快照尺寸，不能用“原子”作为整块结构按值复制或逐帧分配的理由。
 
 正式Workspace版本用同一自动入口完整产生run `dbbfcf471ddf4e168e4d0769e504f93f`：257行、5个压缩分块、Header/Value均为1217列，Unity Console为0 Error，未再出现第3帧ActionSampling失败或buffer lease错误。该结果只证明运行与传输合同修复，不代表IK效果完成。
+
+## 31. Incoming事件边界不能由连续Clock代替
+
+run `4fe6c339ed5946658dd582ec103ecaff`证明曲率不是本轮首因：运动中Current曲率仅5帧Unavailable，全部Active Plan均保存有效冻结曲率。真正的左脚断点发生在frame 236：Current仍是cycle N，Incoming却提前从N+1跨到N+2，已预建Successor因此被取消；frame 239预测输出归零，Final Goal单帧变化约`1.60m`。生成资产给出直接原因：Current的`TimeToLanding`在事件边界为阶跃，Incoming却从`0.6s`线性斜插到`1.183s`，而二者的Event Phase与Event Ordinal不足以区分同脚Loop occurrence。
+
+此前“Marker occurrence已由Artifact拥有”的记录不完整：Marker查找虽已删除，`BindSource`仍用插值后的`sample time + TimeToLanding`反推Landing cycle。正式修复必须把`SourceLandingCycleOffset`作为Current/Incoming Artifact字段，以`cycle offset + event ordinal`切分全部事件曲线，Runtime只绑定该离散身份。右脚同run另有独立问题：Intent Revision创建失败会立即淡出唯一Active Plan；必须在事件身份修复并重新采样后单独处理，不能把两种错误混成一个平滑参数。

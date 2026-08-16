@@ -36,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public float[] ApproachContactPhase;
             public float[] ActionStepDurationSeconds;
             public float[] EventOrdinal;
+            public float[] SourceLandingCycleOffset;
             public float[] OpposingLandingDelaySeconds;
             public float[] OpposingEventOrdinal;
             public float[] OpposingLandingCycleOffset;
@@ -551,6 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 RequireReconstruction(step.ApproachContactPhase, source.ApproachContactPhase[sourceIndex], weightTolerance, side, sourceIndex, -1, "ApproachContactPhase");
                 RequireReconstruction(step.ActionStepClock.DurationSeconds, source.ActionStepDurationSeconds[sourceIndex], delayTolerance, side, sourceIndex, -1, "StepDuration");
                 RequireReconstruction(step.EventOrdinal, source.EventOrdinal[sourceIndex], 0.00001f, side, sourceIndex, -1, "EventOrdinal");
+                RequireReconstruction(step.SourceLandingCycleOffset, source.SourceLandingCycleOffset[sourceIndex], 0.00001f, side, sourceIndex, -1, "SourceLandingCycleOffset");
                 RequireReconstruction(step.OpposingLandingDelaySeconds, source.OpposingLandingDelaySeconds[sourceIndex], delayTolerance, side, sourceIndex, -1, "OpposingLandingDelay");
                 RequireReconstruction(step.OpposingEventOrdinal, source.OpposingEventOrdinal[sourceIndex], 0.00001f, side, sourceIndex, -1, "OpposingEventOrdinal");
                 RequireReconstruction(step.OpposingLandingCycleOffset, source.OpposingLandingCycleOffset[sourceIndex], 0.00001f, side, sourceIndex, -1, "OpposingCycleOffset");
@@ -712,6 +714,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ApproachContactPhase = new float[positions.Length],
                 ActionStepDurationSeconds = new float[positions.Length],
                 EventOrdinal = new float[positions.Length],
+                SourceLandingCycleOffset = new float[positions.Length],
                 OpposingLandingDelaySeconds = new float[positions.Length],
                 OpposingEventOrdinal = new float[positions.Length],
                 OpposingLandingCycleOffset = new float[positions.Length],
@@ -1206,6 +1209,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     : 1f;
                 foot.LandingDelay[i] = delay;
                 foot.EventOrdinal[i] = eventIndex + 1;
+                foot.SourceLandingCycleOffset[i] = loop ? next / intervals : 0;
 
                 int previous = ResolvePreviousLanding(ownLandings, eventIndex, next, loop, intervals);
                 int opposing = ResolveOpposingLanding(
@@ -1771,7 +1775,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         candidateIndex,
                         result,
                         sample,
-                        (candidate - sample) * sampleStep);
+                        (candidate - sample) * sampleStep,
+                        loop ? candidateLanding / intervals : 0);
                     break;
                 }
             }
@@ -1788,6 +1793,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ApproachContactPhase = new float[sampleCount],
             ActionStepDurationSeconds = new float[sampleCount],
             EventOrdinal = new float[sampleCount],
+            SourceLandingCycleOffset = new float[sampleCount],
             OpposingLandingDelaySeconds = new float[sampleCount],
             OpposingEventOrdinal = new float[sampleCount],
             OpposingLandingCycleOffset = new float[sampleCount],
@@ -1817,7 +1823,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             int sourceIndex,
             SampledFoot destination,
             int destinationIndex,
-            float scheduleDelay)
+            float scheduleDelay,
+            int sourceLandingCycleOffset)
         {
             destination.LandingConfidence[destinationIndex] = source.LandingConfidence[sourceIndex];
             destination.LandingDelay[destinationIndex] = source.LandingDelay[sourceIndex] + scheduleDelay;
@@ -1827,6 +1834,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             destination.ApproachContactPhase[destinationIndex] = source.ApproachContactPhase[sourceIndex];
             destination.ActionStepDurationSeconds[destinationIndex] = source.ActionStepDurationSeconds[sourceIndex];
             destination.EventOrdinal[destinationIndex] = source.EventOrdinal[sourceIndex];
+            destination.SourceLandingCycleOffset[destinationIndex] = sourceLandingCycleOffset;
             destination.OpposingLandingDelaySeconds[destinationIndex] =
                 source.OpposingEventOrdinal[sourceIndex] > 0f
                     ? source.OpposingLandingDelaySeconds[sourceIndex] + scheduleDelay
@@ -1881,7 +1889,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 opposingLandingRotationW[i] = foot.OpposingRootLocalLandingRotation[i].w;
                 landingPhase[i] = foot.EventOrdinal[i] > 0f ? 1f : 0f;
             }
-            bool[] eventBoundaries = ResolveEventBoundaries(foot.EventPhase, foot.EventOrdinal);
+            bool[] eventBoundaries = ResolveEventBoundaries(
+                foot.EventPhase,
+                foot.EventOrdinal,
+                foot.SourceLandingCycleOffset);
             AnimationCurve[] routeX = BuildRouteCurves(foot.RootLocalFootRoute, 0, reduction.LandingOffsetTolerance, eventBoundaries);
             AnimationCurve[] routeY = BuildRouteCurves(foot.RootLocalFootRoute, 1, reduction.LandingOffsetTolerance, eventBoundaries);
             AnimationCurve[] routeZ = BuildRouteCurves(foot.RootLocalFootRoute, 2, reduction.LandingOffsetTolerance, eventBoundaries);
@@ -1946,6 +1957,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ReduceEventScoped(foot.ApproachContactPhase, reduction.ConfidenceTolerance, eventBoundaries),
                 ReduceEventScoped(foot.ActionStepDurationSeconds, reduction.LandingDelayTolerance, eventBoundaries),
                 ReduceEventScoped(foot.EventOrdinal, 0f, eventBoundaries),
+                ReduceDiscrete(foot.SourceLandingCycleOffset),
                 ReduceEventScoped(foot.OpposingLandingDelaySeconds, reduction.LandingDelayTolerance, eventBoundaries),
                 ReduceDiscrete(foot.OpposingEventOrdinal),
                 ReduceDiscrete(foot.OpposingLandingCycleOffset),
@@ -2033,15 +2045,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return result;
         }
 
-        static bool[] ResolveEventBoundaries(float[] eventPhase, float[] eventOrdinal)
+        static bool[] ResolveEventBoundaries(
+            float[] eventPhase,
+            float[] eventOrdinal,
+            float[] sourceLandingCycleOffset)
         {
-            if (eventPhase == null || eventOrdinal == null || eventPhase.Length != eventOrdinal.Length)
+            if (eventPhase == null || eventOrdinal == null || sourceLandingCycleOffset == null ||
+                eventPhase.Length != eventOrdinal.Length ||
+                eventPhase.Length != sourceLandingCycleOffset.Length)
                 throw new InvalidOperationException("Foot Analysis event boundary input is invalid.");
             var result = new bool[eventPhase.Length];
             for (int i = 1; i < result.Length; i++)
             {
                 result[i] = eventPhase[i] + 0.0001f < eventPhase[i - 1] ||
-                            Mathf.RoundToInt(eventOrdinal[i]) != Mathf.RoundToInt(eventOrdinal[i - 1]);
+                            Mathf.RoundToInt(eventOrdinal[i]) != Mathf.RoundToInt(eventOrdinal[i - 1]) ||
+                            Mathf.RoundToInt(sourceLandingCycleOffset[i]) !=
+                            Mathf.RoundToInt(sourceLandingCycleOffset[i - 1]);
             }
             return result;
         }

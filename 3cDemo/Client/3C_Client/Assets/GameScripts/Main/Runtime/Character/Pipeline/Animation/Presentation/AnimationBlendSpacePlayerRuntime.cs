@@ -370,19 +370,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     left.Add(
                         sample.LeftFootFeatures.Sample(time.NormalizedTime).BindPredictionSource(
                             AnimationPredictedFootStepSample.SourceIdentity(m_SourceId, sample.SampleId.Value),
-                            time.Cycle,
-                            time.ClipTime,
-                            sample.Clip.length,
-                            looping),
+                            time.Cycle),
                         weight,
                         1f);
                     right.Add(
                         sample.RightFootFeatures.Sample(time.NormalizedTime).BindPredictionSource(
                             AnimationPredictedFootStepSample.SourceIdentity(m_SourceId, sample.SampleId.Value),
-                            time.Cycle,
-                            time.ClipTime,
-                            sample.Clip.length,
-                            looping),
+                            time.Cycle),
                         weight,
                         1f);
                 }

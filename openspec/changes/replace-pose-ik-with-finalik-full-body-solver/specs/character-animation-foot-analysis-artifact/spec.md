@@ -62,7 +62,7 @@ Definition Build MUST删除旧Projection payload和旧generated产品，不得�
 
 每只脚的每个Landing Event MUST作为一个不可拆分值发布以下事实：
 
-- 稳定Source、Cycle、Event Ordinal、Landing Event identity与Foot Side；
+- 稳定Source、离散Source Landing Cycle Offset、Event Ordinal、Landing Event identity与Foot Side；
 - 精确Release、LiftOff、ApproachContact、Landing phase和Action Step duration；
 - root-local Heel、Toe、Sole、Ankle、Knee、Hip位置路线；
 - root-local Sole与Ankle旋转路线；
@@ -77,6 +77,14 @@ Definition Build MUST删除旧Projection payload和旧generated产品，不得�
 Projection source selection MUST完整选择一个事件。系统 MUST不分别混合Landing、路线、Clearance、Constraint、Support Leg、Orientation或Pivot。Pose MAY连续Blend，但离散Biomechanical Step事实 MUST保持同源。
 
 Analyzer MUST在Artifact Build时同时生成Current与Incoming Step。Runtime MUST只按同一effective sample time读取二者并绑定同一source occurrence，不得扫描未来曲线、缓存后继候选或从Current Step补建Incoming。
+
+Current与Incoming的Source Landing Cycle Offset MUST由Analyzer从确切Landing occurrence生成，并与Event Ordinal共同切分全部事件字段。`TimeToLanding` MUST只表达连续时钟；Runtime MUST不通过`source sample time + TimeToLanding`反推Landing cycle。两个occurrence边界之间 MUST不线性插值Clock、路线、Clearance、Constraint或Biomechanical事实。
+
+#### Scenario: Loop边界的Incoming换代
+
+- **WHEN** 当前Landing仍属于cycle N而Immediate Incoming将在后一个采样点换为cycle N+2
+- **THEN** Current与Incoming MUST分别在各自确切事件边界原子换代
+- **AND** Incoming MUST不因TimeToLanding线性插值而提前跨到N+2并取消cycle N+1的后继Plan
 
 #### Scenario: Blend的两个source具有不同右脚事件
 

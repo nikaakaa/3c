@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public static class MotionMatchingProjectionPayloadCodec
     {
-        const int SchemaVersion = 20;
+        const int SchemaVersion = 21;
 
         public static byte[] Encode(MotionMatchingProjectionPayload payload, out AnimationClip[] clips)
         {
@@ -617,6 +617,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (!predicted.IsValid)
                 return;
             writer.Write(predicted.EventOrdinal);
+            writer.Write(predicted.SourceLandingCycleOffset);
             writer.Write(predicted.Confidence);
             writer.Write(predicted.TimeToLandingSeconds);
             writer.Write(predicted.EventPhase);
@@ -650,6 +651,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             float plantConfidence = reader.ReadSingle();
             AnimationPredictedFootStepSample predicted = reader.ReadBoolean()
                 ? new AnimationPredictedFootStepSample(
+                reader.ReadInt32(),
                 reader.ReadInt32(),
                 reader.ReadSingle(),
                 reader.ReadSingle(),

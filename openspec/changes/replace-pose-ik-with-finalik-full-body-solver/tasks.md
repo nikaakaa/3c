@@ -29,6 +29,7 @@
 - [x] 2.7 原子保存对侧Landing identity、time、cycle和root-local Sole pose。
 - [ ] 2.8 更新artifact codec、hash、store、inspector与analysis source identity；未知字段、非有限值和旧版本必须明确失败。
 - [x] 2.8A 在同一Artifact采样点原子保存Current与Incoming Step；Incoming必须携带完整事件、时钟、路线、Biomechanical事实和相对当前采样的Landing时间，不允许Runtime搜索、补建或缓存猜测。
+- [ ] 2.8B 为Current与Incoming显式烘焙离散Source Landing Cycle Offset，以该identity切分全部事件字段并删除Runtime从TimeToLanding反推cycle；重建Corin Projection后验证每次Current换代的前一完成帧Incoming恰为该事件。
 - [ ] 2.9 建立Artifact Flat Reconstruction Gate，逐相位输出Foot/Sole/Ankle/Knee/Hip位置与Sole/Ankle旋转误差，并阻止超过固定容差的artifact进入Projection。
 - [x] 2.10 重新生成Corin Start、Loop、Stop、MovingTurn全部可达Foot Analysis artifact，不保留旧资产或运行时补建。
 

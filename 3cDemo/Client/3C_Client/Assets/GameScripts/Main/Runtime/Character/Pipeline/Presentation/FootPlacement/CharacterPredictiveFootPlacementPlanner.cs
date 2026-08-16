@@ -103,6 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!HasRevision || !Revision.HasExecutablePath)
                     throw new InvalidOperationException("Predictive Foot revision cannot be promoted.");
+                CompleteOwnershipContinuity();
                 Active.Reset(CharacterPredictiveFootPlanEndReason.EventReplaced);
                 CharacterPredictiveFootPlacementPlan retired = Active;
                 Active = Revision;
@@ -264,6 +265,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return Vector3.zero;
                 }
                 return m_OwnershipContinuityOffset * retention;
+            }
+
+            void CompleteOwnershipContinuity()
+            {
+                m_BaselineOwnedLastFrame = false;
+                m_HasOwnershipContinuity = false;
+                m_OwnershipContinuityOffset = Vector3.zero;
+                m_OwnershipContinuityStartPhase = 0f;
             }
 
             internal void Reset(CharacterPredictiveFootPlanEndReason reason)
@@ -864,6 +873,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float revisionTransitionBlend = runtime.HasRevision
                 ? runtime.SmoothedRevisionBlendWeight
                 : 0f;
+            float ownershipContinuityProgress = runtime.HasEventSuccessor
+                ? revisionTransitionBlend
+                : plan.ActionStepPhase;
             float stanceTransitionBlend = plan.State == CharacterPredictiveFootPlanState.Executing
                 ? Mathf.Clamp01(grounding.AnchorBlendWeight)
                 : 0f;
@@ -1009,7 +1021,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     baselineOwnsFoot,
                     true,
                     preContinuitySole,
-                    plan.ActionStepPhase);
+                    ownershipContinuityProgress);
                 CharacterFootPlacementSoleContactPose resolvedContacts = pose.ResolveSoleContacts(
                     resolvedAnklePosition,
                     resolvedAnkleRotation);
@@ -1107,7 +1119,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     baselineOwnsFoot,
                     false,
                     Vector3.zero,
-                    plan.ActionStepPhase);
+                    ownershipContinuityProgress);
             }
             FootPredictionRejectReason rejectReason = ResolveRejectReason(
                 plan,

@@ -816,16 +816,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 features.Value);
             if (m_SwingPrediction != null)
             {
+                bool leftCommitted = m_Left.PlantContact && m_Left.HasAnchor;
+                bool rightCommitted = m_Right.PlantContact && m_Right.HasAnchor;
                 m_SwingPrediction.ObserveStance(
                     CharacterFootSide.Left,
-                    m_Left.PlantContact && m_Left.HasAnchor,
+                    leftCommitted,
                     m_Left.AnchorPlanSequence,
-                    m_Left.AnchorLandingEventIdentity);
+                    m_Left.AnchorLandingEventIdentity,
+                    leftCommitted
+                        ? ResolveSoleCenter(pose.Left, left.AnchorWorldPosition, left.AnchorWorldRotation)
+                        : default,
+                    leftCommitted ? m_Left.AnchorSurface.Rebuild() : default);
                 m_SwingPrediction.ObserveStance(
                     CharacterFootSide.Right,
-                    m_Right.PlantContact && m_Right.HasAnchor,
+                    rightCommitted,
                     m_Right.AnchorPlanSequence,
-                    m_Right.AnchorLandingEventIdentity);
+                    m_Right.AnchorLandingEventIdentity,
+                    rightCommitted
+                        ? ResolveSoleCenter(pose.Right, right.AnchorWorldPosition, right.AnchorWorldRotation)
+                        : default,
+                    rightCommitted ? m_Right.AnchorSurface.Rebuild() : default);
             }
             CharacterFootPlacementPelvisPlan pelvisPlan = m_Pelvis.Plan(
                 pelvisTargetOffset,
@@ -1159,6 +1169,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Mathf.Max(
                     clearance.HeelPlaneDistance,
                     clearance.ToePlaneDistance));
+
+        static Vector3 ResolveSoleCenter(
+            CharacterFootPlacementAnimatedFootPose animated,
+            Vector3 anklePosition,
+            Quaternion ankleRotation)
+        {
+            CharacterFootPlacementSoleContactPose contacts = animated.ResolveSoleContacts(
+                anklePosition,
+                ankleRotation);
+            return (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
+        }
 
         ResolvedFoot StabilizeFoot(
             FootState state,

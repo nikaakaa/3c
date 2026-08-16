@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             internal float IntentLandingDisplacementError { get; private set; }
             internal float IntentLandingDisplacementThreshold { get; private set; }
-            internal ulong IntentRevisionAttemptEventIdentity { get; private set; }
+            internal ulong IntentRevisionAttemptPlanSequence { get; private set; }
             internal bool HasLastOutputSole { get; private set; }
             internal Vector3 LastOutputSole { get; private set; }
             internal bool HasLastOutputGroundPath { get; private set; }
@@ -56,6 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal ulong LastOutputGroundPlanSequence { get; private set; }
             internal ulong CommittedAnchorPlanSequence { get; private set; }
             internal ulong CommittedAnchorLandingEventIdentity { get; private set; }
+            internal Vector3 CommittedAnchorSole { get; private set; }
+            internal FootPlacementSurface CommittedAnchorSupport { get; private set; }
             FootPlanTransitionKind TransitionKind { get; set; }
             bool m_BaselineOwnedLastFrame;
             bool m_HasOwnershipContinuity;
@@ -166,19 +168,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RevisionBlendWeight = 0f;
             }
 
-            internal bool HasCommittedLanding(ulong landingEventIdentity) =>
-                landingEventIdentity != 0 &&
-                CommittedAnchorLandingEventIdentity == landingEventIdentity;
+            internal bool TryGetCommittedLanding(
+                ulong landingEventIdentity,
+                out Vector3 sole,
+                out FootPlacementSurface support)
+            {
+                bool available = landingEventIdentity != 0 &&
+                                 CommittedAnchorLandingEventIdentity == landingEventIdentity &&
+                                 IsFinite(CommittedAnchorSole) &&
+                                 CommittedAnchorSupport.IsValid;
+                sole = available ? CommittedAnchorSole : default;
+                support = available ? CommittedAnchorSupport.Rebuild() : default;
+                return available && support.IsValid;
+            }
 
             internal void ObserveStance(
                 bool hasCommittedAnchor,
                 ulong anchorPlanSequence,
-                ulong anchorLandingEventIdentity)
+                ulong anchorLandingEventIdentity,
+                Vector3 anchorSole,
+                FootPlacementSurface anchorSupport)
             {
-                CommittedAnchorPlanSequence = hasCommittedAnchor ? anchorPlanSequence : 0;
-                CommittedAnchorLandingEventIdentity = hasCommittedAnchor
+                bool valid = hasCommittedAnchor &&
+                             anchorPlanSequence != 0 &&
+                             anchorLandingEventIdentity != 0 &&
+                             IsFinite(anchorSole) &&
+                             anchorSupport.IsValid;
+                CommittedAnchorPlanSequence = valid ? anchorPlanSequence : 0;
+                CommittedAnchorLandingEventIdentity = valid
                     ? anchorLandingEventIdentity
                     : 0;
+                CommittedAnchorSole = valid ? anchorSole : default;
+                CommittedAnchorSupport = valid ? anchorSupport : default;
             }
 
             internal void ClearIntentObservation()
@@ -193,15 +214,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IntentLandingDisplacementThreshold = float.IsFinite(threshold) ? threshold : 0f;
             }
 
-            internal bool HasAttemptedIntentRevision(ulong landingEventIdentity) =>
-                landingEventIdentity != 0 &&
-                IntentRevisionAttemptEventIdentity == landingEventIdentity;
+            internal bool HasAttemptedIntentRevision(ulong planSequence) =>
+                planSequence != 0 &&
+                IntentRevisionAttemptPlanSequence == planSequence;
 
-            internal void MarkIntentRevisionAttempt(ulong landingEventIdentity)
+            internal void MarkIntentRevisionAttempt(ulong planSequence)
             {
-                if (landingEventIdentity == 0)
-                    throw new ArgumentOutOfRangeException(nameof(landingEventIdentity));
-                IntentRevisionAttemptEventIdentity = landingEventIdentity;
+                if (planSequence == 0)
+                    throw new ArgumentOutOfRangeException(nameof(planSequence));
+                IntentRevisionAttemptPlanSequence = planSequence;
             }
 
             internal void RememberOutput(
@@ -295,7 +316,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LastOutputGroundPlanSequence = 0;
                 CommittedAnchorPlanSequence = 0;
                 CommittedAnchorLandingEventIdentity = 0;
-                IntentRevisionAttemptEventIdentity = 0;
+                CommittedAnchorSole = default;
+                CommittedAnchorSupport = default;
+                IntentRevisionAttemptPlanSequence = 0;
                 m_BaselineOwnedLastFrame = false;
                 m_HasOwnershipContinuity = false;
                 m_OwnershipContinuityOffset = Vector3.zero;
@@ -360,7 +383,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             bool hasCommittedAnchor,
             ulong anchorPlanSequence,
-            ulong anchorLandingEventIdentity)
+            ulong anchorLandingEventIdentity,
+            Vector3 anchorSole,
+            FootPlacementSurface anchorSupport)
         {
             FootPlanRuntime runtime = side == CharacterFootSide.Left
                 ? m_LeftPlan
@@ -370,7 +395,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             runtime.ObserveStance(
                 hasCommittedAnchor,
                 anchorPlanSequence,
-                anchorLandingEventIdentity);
+                anchorLandingEventIdentity,
+                anchorSole,
+                anchorSupport);
         }
 
         internal void Prepare(
@@ -605,6 +632,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             else if (contactPlan != null &&
                 contactPlan.State == CharacterPredictiveFootPlanState.Executing &&
+                IsMotionWithinCommitTolerance(contactPlan) &&
                 supportPhase == AnimationFootSupportPhase.ApproachingContact &&
                 TryEvaluateFootTarget(
                     contactPlan,
@@ -1647,8 +1675,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootWorldRotation,
                     Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
             }
+            if (currentPlanMatches && plan.HasExecutablePath &&
+                !IsMotionWithinCommitTolerance(plan) &&
+                IsApproachingContact(plan) &&
+                !runtime.HasRevision && !runtime.IsFadingOut)
+            {
+                runtime.BeginFadeOut(CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
+            }
             if ((currentPlanMatches || activeEventReplaced && step.IsPreSwing) &&
-                plan.HasExecutablePath)
+                plan.HasExecutablePath &&
+                IsMotionWithinCommitTolerance(plan) &&
+                !runtime.IsFadingOut)
             {
                 TryBuildLandingHandoff(
                     plan,
@@ -1671,15 +1708,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : groundProbeSupport;
             if (plan.HasExecutablePath && plan.FutureSupport.IsValid)
             {
-                FootPlacementSurface committedLandingSupport = ResolveSupportAtRoutePoint(
+                FootPlacementSurface plannedLandingSupport = ResolveSupportAtRoutePoint(
                     plan.FutureSupport,
                     plan.Landing,
                     up);
-                if (committedLandingSupport.IsValid)
+                if (plannedLandingSupport.IsValid)
                 {
                     successorSole = plan.Landing;
-                    successorProbeSupport = committedLandingSupport;
-                    successorProbeStart = committedLandingSupport.Point;
+                    successorProbeSupport = plannedLandingSupport;
+                    successorProbeStart = plannedLandingSupport.Point;
                 }
             }
             if (outgoingOutputAvailable && runtime.HasLastOutputSole)
@@ -1709,6 +1746,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? successorProbeSupport.Point
                     : handoffSole;
             }
+            if (plan.HasExecutablePath && !IsMotionWithinCommitTolerance(plan))
+            {
+                successorSole = currentSole;
+                successorProbeStart = groundProbeStart;
+                successorProbeSupport = groundProbeSupport;
+            }
             if (runtime.HasRevision)
             {
                 CharacterPredictiveFootPlacementPlan revision = runtime.Revision;
@@ -1722,11 +1765,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         revision.SynchronizePoseContribution(in step);
                         revision.SynchronizeActionClock(renderFrame, in step);
-                        runtime.PromoteRevision();
-                        plan = runtime.Active;
-                        currentPlanMatches = true;
-                        activeEventReplaced = false;
-                        replacementReason = CharacterPredictiveFootPlanEndReason.None;
+                        revision.ObserveWorldMotionDeviation(
+                            presentedBodyPosition,
+                            rootWorldRotation,
+                            Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
+                        if (IsMotionWithinCommitTolerance(revision))
+                        {
+                            runtime.PromoteRevision();
+                            plan = runtime.Active;
+                            currentPlanMatches = true;
+                            activeEventReplaced = false;
+                            replacementReason = CharacterPredictiveFootPlanEndReason.None;
+                        }
+                        else
+                        {
+                            runtime.CancelRevision(
+                                CharacterPredictiveFootPlanEndReason.MotionDeviationExceeded);
+                        }
                     }
                     else if (currentPlanMatches && revisionMatchesIncoming)
                     {
@@ -1755,8 +1810,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                 }
             }
+            bool hasCommittedLanding = runtime.TryGetCommittedLanding(
+                plan.LandingEventIdentity,
+                out Vector3 committedLandingSole,
+                out FootPlacementSurface committedLandingSupport);
+            if (hasCommittedLanding)
+            {
+                successorSole = committedLandingSole;
+                successorProbeSupport = ResolveSupportAtRoutePoint(
+                    committedLandingSupport,
+                    committedLandingSole,
+                    up);
+                successorProbeStart = successorProbeSupport.IsValid
+                    ? successorProbeSupport.Point
+                    : default;
+                hasCommittedLanding = successorProbeSupport.IsValid;
+            }
             if (currentPlanMatches && plan.HasExecutablePath &&
                 CanPrepareEventSuccessor(plan) &&
+                IsMotionWithinCommitTolerance(plan) &&
+                hasCommittedLanding &&
                 incomingPlanningCandidate &&
                 !plan.MatchesAuthoritativeEvent(in incomingStep) &&
                 !runtime.HasRevision && !runtime.IsFadingOut &&
@@ -1863,7 +1936,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     return;
                 }
-                runtime.MarkIntentRevisionAttempt(step.LandingEventIdentity);
+                runtime.MarkIntentRevisionAttempt(plan.Sequence);
                 bool created = CreatePlan(
                     side,
                     runtime.Revision,
@@ -1892,6 +1965,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (plan.State != CharacterPredictiveFootPlanState.Executing)
                 return false;
+            return IsApproachingContact(plan);
+        }
+
+        static bool IsApproachingContact(CharacterPredictiveFootPlacementPlan plan)
+        {
             plan.EvaluateActionState(
                 plan.ActionStepPhase,
                 out _,
@@ -1900,6 +1978,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out _);
             return supportPhase == AnimationFootSupportPhase.ApproachingContact;
         }
+
+        bool IsMotionWithinCommitTolerance(CharacterPredictiveFootPlacementPlan plan)
+        {
+            float error = plan.MotionLandingError;
+            return float.IsFinite(error) && error <= ResolveMotionDeviationThreshold(plan);
+        }
+
+        float ResolveMotionDeviationThreshold(CharacterPredictiveFootPlacementPlan plan) =>
+            2f * Mathf.Max(
+                plan.SoleSupportRadius,
+                Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
 
         static bool TryResolveIntentRevisionOrigin(
             FootPlanRuntime runtime,
@@ -1986,16 +2075,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Mathf.Sqrt(
                     velocityError * velocityError +
                     curvatureError * curvatureError));
-            float enterThreshold = 2f * Mathf.Max(
-                plan.SoleSupportRadius,
-                Mathf.Max(m_Settings.PathSphereRadius, m_Settings.SwingCapsuleRadius));
+            float enterThreshold = ResolveMotionDeviationThreshold(plan);
             if (!float.IsFinite(preflightError) || preflightError <= enterThreshold)
             {
                 runtime.ObserveIntentLandingDisplacement(preflightError, enterThreshold);
                 return false;
             }
             runtime.ObserveIntentLandingDisplacement(preflightError, enterThreshold);
-            if (runtime.HasAttemptedIntentRevision(step.LandingEventIdentity))
+            if (runtime.HasAttemptedIntentRevision(plan.Sequence))
                 return false;
             float currentSegmentRemainingSeconds = motionTimeline.CurrentSegmentDurationTicks > 0
                 ? Mathf.Max(

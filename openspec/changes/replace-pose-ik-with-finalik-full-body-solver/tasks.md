@@ -48,12 +48,15 @@
 - [ ] 4.3 用Future Body Transform与Artifact root-local Sole/Ankle/Hip路线建立唯一未来世界路线，保留动画局部X、Z和旋转。
 - [ ] 4.4 Plan创建帧只允许一次刚性重基，使`PathStartPhase`的Artifact Foot Route与已提交接触点或已执行Sole正下方重合；执行Sole另行保存净空连续性，重基整步冻结。
 - [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
-- [x] 4.5A 每个权威Landing Event至多消费一笔Intent Revision事务；Rejected修订保留原Executable Plan到Landing边界。自动A/D run `35d23e6892f24566808e0276a3ec28be`中，按Plan自身Landing identity统计，每个事件最多只出现原Plan加一个Revision。
+- [x] 4.5A 历史实验已证明“每个权威Landing Event至多一笔Intent Revision”能阻止同一源Plan反复换路；自动A/D run `35d23e6892f24566808e0276a3ec28be`中，每个事件最多只出现原Plan加一个Revision。后续run证明该事件级限制会让再次偏离的后继Plan继续过期执行，本规则由4.5B替代，不反勾历史完成项。
+- [ ] 4.5B Revision资格改为每个不可变源Plan至多一次；Revision提升后新的Active Plan可在committed轨迹再次越过几何边界时继续离散修订，但每只脚同一时刻仍只有一个Active与一个过渡槽。
 - [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ；新计划未Executing前保留旧输出，Rejected后继连续退回原动画。
 - [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径，并为真实失败分别发布typed reason。
 - [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。
-- [ ] 4.9 当前Plan进入`ApproachingContact`、Intent Revision结束且现有Revision槽空闲时，`IncomingPredictedStep`必须预建唯一Event Successor，并从旧Plan已提交Landing支撑连续重基；Intent Revision与Event Successor只允许顺序复用同一槽。
+- [ ] 4.9 当前Plan进入`ApproachingContact`、Intent Revision结束且现有Revision槽空闲时，`IncomingPredictedStep`必须预建唯一Event Successor，并从Stance上一完成帧真实提交的Anchor Sole与Surface连续重基；Intent Revision与Event Successor只允许顺序复用同一槽。
 - [ ] 4.9A Event Successor成为Current前不得参与Goal或Blend；事件identity换代时必须原子提升为Active，并只由新Plan自身`Release -> LiftOff`权重与旧Landing Stance/Anchor完成交接，禁止在新Swing中按Render Delta混合旧Landing目标。
+- [ ] 4.9B Plan必须在`ReleasePhase`进入Executing并执行`Release -> LiftOff`连续输出权重；Ground Path进度独立保持到`PathStartPhase`才开始，禁止用几何起点截断所有权淡入。
+- [ ] 4.9C Event Successor成为Current前必须按当前身体位置和朝向重新验证冻结轨迹；过期Successor不得提升、提交Landing/Anchor或产生下一Successor，必须以`MotionDeviationExceeded`退出并从当前真实Sole与Support创建Current Event计划。
 
 ## 5. GDC Foot Path与Ground Envelope
 

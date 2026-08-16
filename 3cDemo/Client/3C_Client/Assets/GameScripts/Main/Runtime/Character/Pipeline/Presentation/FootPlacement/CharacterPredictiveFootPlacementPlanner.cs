@@ -2589,16 +2589,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 else if (!runtime.IsFadingOut)
                     runtime.BeginFadeOut(replacementReason, renderFrame);
             }
-            bool retainsReplacementContinuity = activeEventReplaced &&
-                                                planningCandidate &&
-                                                runtime.IsFadingOut;
-            if (!retainsReplacementContinuity)
-            {
-                runtime.AdvanceTransition(
-                    renderFrame,
-                    presentationDeltaSeconds,
-                    m_TransitionBlendSpeed);
-            }
+            runtime.AdvanceTransition(
+                renderFrame,
+                presentationDeltaSeconds,
+                m_TransitionBlendSpeed);
             plan = runtime.Active;
             bool needsInitialPlan = !plan.OwnsEvent ||
                                     plan.State == CharacterPredictiveFootPlanState.Rejected &&

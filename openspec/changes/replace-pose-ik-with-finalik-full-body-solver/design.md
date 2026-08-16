@@ -300,6 +300,8 @@ Locked -> Sliding/Releasing -> Unlocked Swing -> Approaching -> LandingBlend -> 
 - Unlocked：不消费旧Anchor，完整保留动画Swing轮廓；
 - LandingBlend：使用同一冻结Landing Surface、同一Sole Pose和同一identity交给Anchor。
 
+从运动进入`GroundedStationary`本身就是Idle锁脚的进入事件。该事件必须显式武装一次Idle Anchor捕获，不能等待Foot Placement权重先低于1；普通运行中该权重可以始终为1。若仍有运动Anchor，则先通过现有Stance淡出退出，再从Current Support约束后的安全Baseline捕获Idle Anchor，并只使用同一Anchor Blend连续淡入。
+
 约束模式和连续权重来自动画数据；FootGrounding只验证真实surface、距离、坡度和reach。ApproachContact不是接触许可，预测Goal也不能自证接触。
 
 Landing必须是一笔原子事务：

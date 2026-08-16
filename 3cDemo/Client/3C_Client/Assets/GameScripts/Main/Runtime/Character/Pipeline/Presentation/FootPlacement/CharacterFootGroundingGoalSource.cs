@@ -224,7 +224,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     !predictive.HasActionConstraint;
                 bool wasIdleCurrentSupport = IdleCurrentSupport;
                 IdleCurrentSupport = stationaryGroundContact;
-                if (!IdleCurrentSupport)
+                if (IdleCurrentSupport && !wasIdleCurrentSupport)
+                    IdleAnchorCaptureArmed = true;
+                else if (!IdleCurrentSupport)
                     IdleAnchorCaptureArmed = false;
                 HasAnimationConstraint = predictive.HasActionConstraint;
                 AnimationConstraintEventIdentity = predictive.HasActionConstraint

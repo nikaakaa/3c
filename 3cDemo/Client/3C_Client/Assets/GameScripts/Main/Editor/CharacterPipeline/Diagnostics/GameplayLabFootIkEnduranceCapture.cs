@@ -347,7 +347,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SequenceValueCache cache)
         {
             CharacterPredictiveFootPlanGeometrySnapshot plan = leg.Plan;
-            if (cache.TryGet(plan, out string[] cached))
+            bool hasRejectedAttempt = leg.RevisionPlanState ==
+                                      CharacterPredictiveFootPlanState.Rejected &&
+                                      leg.RevisionPlan != null;
+            if (!hasRejectedAttempt && cache.TryGet(plan, out string[] cached))
             {
                 var result = new List<string>(cached);
                 UpdateDynamicSequenceValues(result, leg, route);
@@ -358,9 +361,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IReadOnlyList<CharacterPredictiveFootRatePointSnapshot> footRate = plan?.FootRate ?? Array.Empty<CharacterPredictiveFootRatePointSnapshot>();
             IReadOnlyList<CharacterPredictiveFootClearanceSegmentSnapshot> clearancePath = plan?.ClearancePath ?? Array.Empty<CharacterPredictiveFootClearanceSegmentSnapshot>();
             IReadOnlyList<CharacterPredictiveFootEnvelopeSegmentSnapshot> envelope = plan?.GroundEnvelope ?? Array.Empty<CharacterPredictiveFootEnvelopeSegmentSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootQueryRequestSnapshot> requests = plan?.QueryRequests ?? Array.Empty<CharacterPredictiveFootQueryRequestSnapshot>();
-            IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> accepted = plan?.AcceptedSupports ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
-            IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> rejected = plan?.RejectedGeometry ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
+            CharacterPredictiveFootPlanGeometrySnapshot queryPlan = hasRejectedAttempt
+                ? leg.RevisionPlan
+                : plan;
+            IReadOnlyList<CharacterPredictiveFootQueryRequestSnapshot> requests = queryPlan?.QueryRequests ?? Array.Empty<CharacterPredictiveFootQueryRequestSnapshot>();
+            IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> accepted = queryPlan?.AcceptedSupports ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
+            IReadOnlyList<CharacterPredictiveFootQueryGeometrySnapshot> rejected = queryPlan?.RejectedGeometry ?? Array.Empty<CharacterPredictiveFootQueryGeometrySnapshot>();
             var values = new List<string>(SequenceColumnCount);
 
             string routeFractions = Join(footRoute, value => Number(value.Fraction));
@@ -537,7 +543,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(animationRouteEnd.Position.z),
                 animationRouteHash
             });
-            cache.Store(plan, values);
+            if (!hasRejectedAttempt)
+                cache.Store(plan, values);
             return values;
         }
 

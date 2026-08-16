@@ -97,8 +97,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (leg.Plan == null && leg.RevisionPlan == null)
                 return;
             float markerSize = 0.11f;
+            bool rejectedAttempt = leg.RevisionPlan != null &&
+                                   leg.RevisionPlanState == CharacterPredictiveFootPlanState.Rejected;
             float revisionBlend = leg.RevisionPlan != null
-                ? Mathf.Clamp01(leg.RevisionBlendWeight)
+                ? rejectedAttempt
+                    ? 0f
+                    : Mathf.Clamp01(leg.RevisionBlendWeight)
                 : 0f;
             DrawPlan(
                 leg.Plan,
@@ -112,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 leg.RevisionPlanWorldProjection,
                 leg.RevisionPlanState,
                 sideColor,
-                revisionBlend,
+                rejectedAttempt ? 1f : revisionBlend,
                 markerSize);
             if (leg.ClearanceEvaluated)
                 DrawMarker(leg.CurrentPath, markerSize * 0.55f, s_LiftColor);

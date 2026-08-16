@@ -489,27 +489,28 @@ namespace ThirdPersonGameplay.Editor.Lab
                     cameraRig,
                     true,
                     footIkEndurance);
-                FixedCharacterHost target = InstantiateFixedActor(
-                    FixedTargetPrefabPath,
-                    root.transform,
-                    "Gameplay Lab Fixed Target",
-                    new ActorId(TargetActorId),
-                    footIkEndurance
-                        ? GameplayLabFootIkRegressionCourse.TargetSpawnPosition
-                        : s_TargetPosition,
-                    Quaternion.Euler(0f, 180f, 0f),
-                    sessionHost,
-                    fixedProgram,
-                    definition,
-                    CharacterPresentationRole.SimulatedActor,
-                    null,
-                    false,
-                    false);
-                SessionActorActionTargetInputProvider provider =
-                    player.GetComponent<SessionActorActionTargetInputProvider>();
-                if (!provider)
-                    throw new InvalidOperationException("Gameplay Lab Fixed player requires the formal Session Actor target provider.");
-                provider.SetAuthoring(target);
+                if (!footIkEndurance)
+                {
+                    FixedCharacterHost target = InstantiateFixedActor(
+                        FixedTargetPrefabPath,
+                        root.transform,
+                        "Gameplay Lab Fixed Target",
+                        new ActorId(TargetActorId),
+                        s_TargetPosition,
+                        Quaternion.Euler(0f, 180f, 0f),
+                        sessionHost,
+                        fixedProgram,
+                        definition,
+                        CharacterPresentationRole.SimulatedActor,
+                        null,
+                        false,
+                        false);
+                    SessionActorActionTargetInputProvider provider =
+                        player.GetComponent<SessionActorActionTargetInputProvider>();
+                    if (!provider)
+                        throw new InvalidOperationException("Gameplay Lab Fixed player requires the formal Session Actor target provider.");
+                    provider.SetAuthoring(target);
+                }
                 GameObject saved = SavePrefab(
                     root,
                     footIkEndurance ? FootIkEnduranceRootPath : FixedRootPath);
@@ -735,16 +736,14 @@ namespace ThirdPersonGameplay.Editor.Lab
             FixedCharacterControlSource controlSource;
             if (playerControlled)
             {
-                SessionActorActionTargetInputProvider provider =
-                    instance.GetComponent<SessionActorActionTargetInputProvider>() ??
-                    instance.AddComponent<SessionActorActionTargetInputProvider>();
                 if (footIkEndurance)
                 {
+                    RemoveComponents<CharacterActionTargetInputProvider>(instance);
                     var enduranceSource = instance.AddComponent<GameplayLabFootIkFixedControlSource>();
                     enduranceSource.SetAuthoring(
                         definition.InputProfile,
-                        ActionTargetInputId,
-                        provider,
+                        string.Empty,
+                        null,
                         "MoveAxis",
                         0.18f,
                         0.75f);
@@ -752,6 +751,9 @@ namespace ThirdPersonGameplay.Editor.Lab
                 }
                 else
                 {
+                    SessionActorActionTargetInputProvider provider =
+                        instance.GetComponent<SessionActorActionTargetInputProvider>() ??
+                        instance.AddComponent<SessionActorActionTargetInputProvider>();
                     var playerSource = instance.AddComponent<FixedPlayerCharacterControlSource>();
                     playerSource.SetAuthoring(definition.InputProfile, ActionTargetInputId, provider);
                     controlSource = playerSource;

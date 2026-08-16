@@ -11,12 +11,13 @@
 
 - [x] 1.7 在共享Character Movement Test Environment中生成正式宽楼梯课程：30米宽、24级上楼、6米平台、24级下楼，Gameplay使用斜坡碰撞，FootPlacement使用逐级踏面。
 - [x] 1.8 保持Local Fixed普通Play为自由输入；唯一Foot IK Automatic Variant只接管MoveAxis，保留LookAxis相机控制并自动启动Diagnostics与流式采样。
-- [x] 1.9 自动源只执行一次短单向Camera-relative A/D事务：对齐起点、进入第一段楼梯、正式提交`A 1秒 -> D 2秒 -> A 1秒`，随后输入归零并结束采样；不得用世界空间横向路点冒充键盘转向，不改Transform、速度倍率或Time Scale。
+- [x] 1.9 建立短单向Camera-relative A/D事务基线：对齐起点、进入第一段楼梯、正式提交`A 1秒 -> D 2秒 -> A 1秒`；不得用世界空间横向路点冒充键盘转向，不改Transform、速度倍率或Time Scale。该一次性结束语义由1.15正式取代。
 - [x] 1.10 启动前以场景中唯一Course和Start/End为权威验证全部踏面、A/D安全范围、两条Traversal Ramp和Collision World闭包；允许整体移动Course，但路线不覆盖故障地形时拒绝运行。
 - [x] 1.11 自动writer只消费`LiveState`完成帧流并后台压缩CSV；删除自动附加`RuntimeDebugSession Continuous`造成的第二份无界内存捕获。
 - [x] 1.12 Foot IK Automatic Variant只运行唯一玩家表现，ActionTarget正式提交`None`；普通Local Fixed继续保留中立Target。
 - [x] 1.13 将动画Source不可变Clip Catalog的全量校验和索引建立收敛到Source创建/换代，逐帧Prepare只处理动态采样计划与实际激活Clip。
 - [x] 1.14 将Foot Feature曲线合法性校验收敛到Sequence Player创建；删除Runtime后继事件搜索与缓存，由Artifact在同一采样域原子烘焙Current与Incoming Step，运行帧只采样并绑定权威source。
+- [x] 1.15 Foot IK Endurance进入压力区后持续循环`A 1秒 -> D 2秒 -> A 1秒`，每轮递增lap并持续发布采样路由；不得自动归零、注销路由或退出Play，只有手动停止测试才释放虚拟输入并封口流式CSV。
 
 ## 2. Animation Biomechanical Step Artifact
 

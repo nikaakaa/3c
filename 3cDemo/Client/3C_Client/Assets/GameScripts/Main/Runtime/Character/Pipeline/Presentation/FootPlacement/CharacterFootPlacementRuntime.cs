@@ -477,7 +477,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootLandingCacheSlot cache)
         {
             if (cache.Matches(step))
-                return cache.Diagnostics;
+            {
+                return cache.Diagnostics.WithLiveStep(
+                    stepSource,
+                    step,
+                    currentSole,
+                    goal);
+            }
             CharacterFootLandingPredictionFootDiagnostics diagnostics = PredictStep(
                 side,
                 step,

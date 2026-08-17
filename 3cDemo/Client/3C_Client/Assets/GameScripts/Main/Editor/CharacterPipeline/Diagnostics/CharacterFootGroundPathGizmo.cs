@@ -18,30 +18,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return;
             }
-            CharacterFootLandingPredictionFootDiagnostics active =
-                SelectActiveSwing(diagnostics.Left, diagnostics.Right);
-            DrawGroundPath(active);
+            DrawGroundPath(diagnostics.Left);
+            DrawGroundPath(diagnostics.Right);
         }
 
-
-        static CharacterFootLandingPredictionFootDiagnostics SelectActiveSwing(
-            CharacterFootLandingPredictionFootDiagnostics left,
-            CharacterFootLandingPredictionFootDiagnostics right)
-        {
-            bool leftValid = left.State == CharacterFootLandingPredictionState.Accepted &&
-                             left.TimeToLandingSeconds > 0.000001f;
-            bool rightValid = right.State == CharacterFootLandingPredictionState.Accepted &&
-                              right.TimeToLandingSeconds > 0.000001f;
-            if (leftValid && !rightValid)
-                return left;
-            if (rightValid && !leftValid)
-                return right;
-            if (leftValid && rightValid)
-                return left.TimeToLandingSeconds <= right.TimeToLandingSeconds
-                    ? left
-                    : right;
-            return left.State == CharacterFootLandingPredictionState.Accepted ? left : right;
-        }
 
         static void DrawGroundPath(CharacterFootLandingPredictionFootDiagnostics foot)
         {
@@ -64,9 +44,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
 
-            Color landingColor = groundPath.Accepted ? Color.green : Color.red;
-            DrawLandingMarker(groundPath.CurrentLanding, groundPath.ComponentUp, landingColor);
-            DrawLandingMarker(groundPath.NextLanding, groundPath.ComponentUp, landingColor);
+            Color currentColor = groundPath.Accepted ? Color.green : Color.red;
+            Color nextColor = groundPath.Accepted ? Color.yellow : Color.red;
+            DrawLandingMarker(groundPath.CurrentLanding, groundPath.ComponentUp, currentColor);
+            DrawLandingMarker(groundPath.NextLanding, groundPath.ComponentUp, nextColor);
         }
 
         static void DrawLandingMarker(Vector3 position, Vector3 componentUp, Color color)

@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const int BaseColumnCount = 1429;
         const int GlobalColumnCount = 71;
         const int LegColumnCount = 728;
-        const int BeforeSequenceColumnCount = 438;
+        const int BeforeSequenceColumnCount = 450;
         const int ReplacedSequenceColumnCount = 118;
         const int SequenceColumnCount = 146;
         const int CausalityColumnCount = 21;
@@ -172,8 +172,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "right");
             if (values.Count != ColumnCount)
                 throw new InvalidOperationException($"Foot IK CSV header has {values.Count} columns instead of {ColumnCount}.");
-            if (new HashSet<string>(values, StringComparer.Ordinal).Count != ColumnCount)
-                throw new InvalidOperationException("Foot IK CSV header names must be unique.");
+            var uniqueNames = new HashSet<string>(StringComparer.Ordinal);
+            var duplicateNames = new List<string>();
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (!uniqueNames.Add(values[i]) && !duplicateNames.Contains(values[i]))
+                    duplicateNames.Add(values[i]);
+            }
+            if (duplicateNames.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Foot IK CSV header names must be unique: {string.Join(", ", duplicateNames)}.");
+            }
             return values.ToArray();
         }
 

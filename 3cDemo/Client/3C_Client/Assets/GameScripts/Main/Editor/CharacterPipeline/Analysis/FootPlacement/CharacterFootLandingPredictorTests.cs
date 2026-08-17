@@ -8,14 +8,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public sealed class CharacterFootLandingPredictorTests
     {
         [Test]
-        public void ProjectionConsumesFutureTranslationAndYawOnce()
+        public void ProjectionConsumesFutureTranslationAndCurrentBodyRotationOnce()
         {
-            var body = new CharacterFutureBodyTrajectorySample(
+            var body = new CharacterFutureBodyTranslationSample(
                 0.25f,
                 2f,
                 0f,
-                0f,
-                90f,
                 0f,
                 0f,
                 0f,
@@ -23,8 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             Vector3 result = CharacterFootLandingPredictor.ProjectRawLanding(
                 Vector3.zero,
-                Quaternion.identity,
-                Vector3.up,
+                Quaternion.Euler(0f, 90f, 0f),
                 in body,
                 Vector3.forward);
 
@@ -56,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Assert.That(query.FootIndex, Is.EqualTo(1));
             Assert.That(query.Origin, Is.EqualTo(raw + Vector3.up * 0.35f));
             Assert.That(query.Direction, Is.EqualTo(Vector3.down));
+            Assert.That(query.Radius, Is.EqualTo(0.08f).Within(0.0001f));
             Assert.That(query.MaximumDistance, Is.EqualTo(1.1f).Within(0.0001f));
         }
 

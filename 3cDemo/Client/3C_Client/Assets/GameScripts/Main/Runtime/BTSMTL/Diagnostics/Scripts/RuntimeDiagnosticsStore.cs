@@ -272,411 +272,51 @@ namespace BTSMTL.Diagnostics
                    left.Flag == right.Flag &&
                    DebugValueEquivalent(in left.Value, in right.Value) &&
                    TimelineProvenanceEquivalent(in left.TimelinePlayback, in right.TimelinePlayback) &&
-                   FootIkEquivalent(in left.FootIk, in right.FootIk);
+                   FootPlacementEquivalent(in left.FootPlacement, in right.FootPlacement);
         }
 
-        static bool FootIkEquivalent(in RuntimeFootIkTraceSnapshot left, in RuntimeFootIkTraceSnapshot right)
+        static bool FootPlacementEquivalent(
+            in RuntimeFootPlacementTraceSnapshot left,
+            in RuntimeFootPlacementTraceSnapshot right)
         {
             return left.IsAvailable == right.IsAvailable &&
                    left.FrameSequence == right.FrameSequence &&
-                   left.ResetSequence == right.ResetSequence &&
-                   left.GroundingCompletionIdentity == right.GroundingCompletionIdentity &&
-                   left.ModifierCompletionIdentity == right.ModifierCompletionIdentity &&
-                   left.SolverCompletionIdentity == right.SolverCompletionIdentity &&
-                   left.HasPredictiveModifier == right.HasPredictiveModifier &&
-                   string.Equals(left.SolverBackendIdentity, right.SolverBackendIdentity, StringComparison.Ordinal) &&
-                   string.Equals(left.SolverFailure, right.SolverFailure, StringComparison.Ordinal) &&
-                   left.NodeExecuted == right.NodeExecuted &&
-                   left.BodyGrounded == right.BodyGrounded &&
-                   left.PlacementAlpha.Equals(right.PlacementAlpha) &&
-                   left.PresentationDeltaSeconds.Equals(right.PresentationDeltaSeconds) &&
-                   left.PoseRootVerticalDelta.Equals(right.PoseRootVerticalDelta) &&
-                   left.PoseRootWorldPosition.Equals(right.PoseRootWorldPosition) &&
-                   left.PoseRootWorldRotation.Equals(right.PoseRootWorldRotation) &&
-                   left.PelvisLyraTargetOffset.Equals(right.PelvisLyraTargetOffset) &&
-                   left.PelvisResolvedTargetOffset.Equals(right.PelvisResolvedTargetOffset) &&
-                   left.CurrentPelvisOffset.Equals(right.CurrentPelvisOffset) &&
-                   left.PelvisSpringVelocity.Equals(right.PelvisSpringVelocity) &&
-                   left.PreviousPelvisTarget.Equals(right.PreviousPelvisTarget) &&
-                   left.PelvisSpringInitialized == right.PelvisSpringInitialized &&
-                   left.PelvisPreSolveTranslation.Equals(right.PelvisPreSolveTranslation) &&
-                   left.PelvisGoalPositionWeight.Equals(right.PelvisGoalPositionWeight) &&
-                   string.Equals(left.PelvisGoalApplication, right.PelvisGoalApplication, StringComparison.Ordinal) &&
-                   string.Equals(left.PelvisGoalSourceKind, right.PelvisGoalSourceKind, StringComparison.Ordinal) &&
-                   left.PelvisSupportAvailable == right.PelvisSupportAvailable &&
-                   string.Equals(left.PelvisSupportSide, right.PelvisSupportSide, StringComparison.Ordinal) &&
-                   left.PelvisSupportSwitched == right.PelvisSupportSwitched &&
-                   left.PelvisSupportPlanSequence == right.PelvisSupportPlanSequence &&
-                   left.PelvisCurrentSupportTarget.Equals(right.PelvisCurrentSupportTarget) &&
-                   left.PelvisSelectedSupportTarget.Equals(right.PelvisSelectedSupportTarget) &&
-                   left.LeftPelvisHasActionConstraint == right.LeftPelvisHasActionConstraint &&
-                   string.Equals(left.LeftPelvisConstraintMode, right.LeftPelvisConstraintMode, StringComparison.Ordinal) &&
-                   string.Equals(left.LeftPelvisSupportPhase, right.LeftPelvisSupportPhase, StringComparison.Ordinal) &&
-                   string.Equals(left.LeftPelvisBodyPivotMode, right.LeftPelvisBodyPivotMode, StringComparison.Ordinal) &&
-                   left.LeftPelvisCandidate == right.LeftPelvisCandidate &&
-                   left.LeftPelvisPlanSequence == right.LeftPelvisPlanSequence &&
-                   left.LeftPelvisDisplacement.Equals(right.LeftPelvisDisplacement) &&
-                   left.RightPelvisHasActionConstraint == right.RightPelvisHasActionConstraint &&
-                   string.Equals(left.RightPelvisConstraintMode, right.RightPelvisConstraintMode, StringComparison.Ordinal) &&
-                   string.Equals(left.RightPelvisSupportPhase, right.RightPelvisSupportPhase, StringComparison.Ordinal) &&
-                   string.Equals(left.RightPelvisBodyPivotMode, right.RightPelvisBodyPivotMode, StringComparison.Ordinal) &&
-                   left.RightPelvisCandidate == right.RightPelvisCandidate &&
-                   left.RightPelvisPlanSequence == right.RightPelvisPlanSequence &&
-                   left.RightPelvisDisplacement.Equals(right.RightPelvisDisplacement) &&
-                   string.Equals(left.LyraSourceIdentity, right.LyraSourceIdentity, StringComparison.Ordinal) &&
-                   string.Equals(left.SpringIdentity, right.SpringIdentity, StringComparison.Ordinal) &&
-                   string.Equals(left.RigId, right.RigId, StringComparison.Ordinal) &&
-                   string.Equals(left.RigRevision, right.RigRevision, StringComparison.Ordinal) &&
-                   string.Equals(left.ProfileId, right.ProfileId, StringComparison.Ordinal) &&
-                   string.Equals(left.ProfileRevision, right.ProfileRevision, StringComparison.Ordinal) &&
-                   string.Equals(left.PosePlanHash, right.PosePlanHash, StringComparison.Ordinal) &&
-                   string.Equals(left.CalibrationId, right.CalibrationId, StringComparison.Ordinal) &&
-                   string.Equals(left.CalibrationRevision, right.CalibrationRevision, StringComparison.Ordinal) &&
-                   left.PhysicsSceneIdentity == right.PhysicsSceneIdentity &&
-                   left.SelfFilterIdentity == right.SelfFilterIdentity &&
-                   left.BaselineProducerOperationIndex == right.BaselineProducerOperationIndex &&
-                   left.BaselineProducerCallSiteIndex == right.BaselineProducerCallSiteIndex &&
-                   left.BaselineGoalOffset == right.BaselineGoalOffset &&
-                   left.BaselineGoalCount == right.BaselineGoalCount &&
-                   string.Equals(left.BaselineRigId, right.BaselineRigId, StringComparison.Ordinal) &&
-                   string.Equals(left.BaselineRigRevision, right.BaselineRigRevision, StringComparison.Ordinal) &&
-                   FootIkLegEquivalent(in left.Left, in right.Left) &&
-                   FootIkLegEquivalent(in left.Right, in right.Right);
+                   left.CompletionIdentity == right.CompletionIdentity &&
+                   FootPlacementFootEquivalent(in left.Left, in right.Left) &&
+                   FootPlacementFootEquivalent(in left.Right, in right.Right);
         }
 
-        static bool FootIkLegEquivalent(in RuntimeFootIkLegTraceSnapshot left, in RuntimeFootIkLegTraceSnapshot right)
+        static bool FootPlacementFootEquivalent(
+            in RuntimeFootPlacementFootTraceSnapshot left,
+            in RuntimeFootPlacementFootTraceSnapshot right)
         {
             return left.IsAvailable == right.IsAvailable &&
-                   left.DidCurrentTraceHit == right.DidCurrentTraceHit &&
-                   left.CurrentSurfaceIdentity == right.CurrentSurfaceIdentity &&
-                   string.Equals(left.CurrentQueryShape, right.CurrentQueryShape, StringComparison.Ordinal) &&
-                   string.Equals(left.CurrentQueryPurpose, right.CurrentQueryPurpose, StringComparison.Ordinal) &&
-                   left.CurrentQueryFootIndex == right.CurrentQueryFootIndex &&
-                   left.CurrentQueryOrigin.Equals(right.CurrentQueryOrigin) &&
-                   left.CurrentQueryCapsuleEnd.Equals(right.CurrentQueryCapsuleEnd) &&
-                   left.CurrentQueryDirection.Equals(right.CurrentQueryDirection) &&
-                   left.CurrentQueryRadius.Equals(right.CurrentQueryRadius) &&
-                   left.CurrentQueryMaximumDistance.Equals(right.CurrentQueryMaximumDistance) &&
-                   left.CurrentQueryLayerMask == right.CurrentQueryLayerMask &&
-                   left.CurrentQueryMinimumGroundNormalDot.Equals(right.CurrentQueryMinimumGroundNormalDot) &&
-                   left.CurrentHitLocation.Equals(right.CurrentHitLocation) &&
-                   left.CurrentImpactPoint.Equals(right.CurrentImpactPoint) &&
-                   left.CurrentHitNormal.Equals(right.CurrentHitNormal) &&
-                   left.CurrentHitDistance.Equals(right.CurrentHitDistance) &&
-                   string.Equals(left.ContactState, right.ContactState, StringComparison.Ordinal) &&
-                   string.Equals(left.TransitionReason, right.TransitionReason, StringComparison.Ordinal) &&
-                   string.Equals(left.ContactDecision, right.ContactDecision, StringComparison.Ordinal) &&
-                   left.ContactSurfaceValid == right.ContactSurfaceValid &&
-                   left.ContactSurfaceDistanceAccepted == right.ContactSurfaceDistanceAccepted &&
-                   left.ContactCaptureSpeedAccepted == right.ContactCaptureSpeedAccepted &&
-                   left.ContactRetentionSpeedAccepted == right.ContactRetentionSpeedAccepted &&
-                   left.ContactConfidenceAccepted == right.ContactConfidenceAccepted &&
-                   left.MaximumContactSurfaceDistance.Equals(right.MaximumContactSurfaceDistance) &&
-                   left.PlantSpeedThreshold.Equals(right.PlantSpeedThreshold) &&
-                   left.UnalignmentSpeedThreshold.Equals(right.UnalignmentSpeedThreshold) &&
-                   left.PlantConfidenceEnter.Equals(right.PlantConfidenceEnter) &&
-                   left.PlantConfidenceExit.Equals(right.PlantConfidenceExit) &&
-                   left.AnchorDistance.Equals(right.AnchorDistance) &&
-                   left.AnchorDistanceAccepted == right.AnchorDistanceAccepted &&
-                   left.MaximumAnchorDistance.Equals(right.MaximumAnchorDistance) &&
-                   left.AnchorBlendSpeed.Equals(right.AnchorBlendSpeed) &&
-                   left.HasSurfaceAnchor == right.HasSurfaceAnchor &&
-                   left.SurfaceLocalAnchor.Equals(right.SurfaceLocalAnchor) &&
-                   left.SurfaceLocalRotation.Equals(right.SurfaceLocalRotation) &&
-                   left.AnchorWorldPosition.Equals(right.AnchorWorldPosition) &&
-                   left.AnchorWorldRotation.Equals(right.AnchorWorldRotation) &&
-                   left.PredictiveRewritten == right.PredictiveRewritten &&
-                   string.Equals(left.PredictionRejectReason, right.PredictionRejectReason, StringComparison.Ordinal) &&
-                   left.FutureSurfaceIdentity == right.FutureSurfaceIdentity &&
-                   left.FutureSupportPoint.Equals(right.FutureSupportPoint) &&
-                   left.FutureSupportNormal.Equals(right.FutureSupportNormal) &&
-                   left.GroundEnvelopeSegmentCount == right.GroundEnvelopeSegmentCount &&
-                   string.Equals(left.GroundEnvelopeRejectReason, right.GroundEnvelopeRejectReason, StringComparison.Ordinal) &&
-                   left.PredictiveQueryCount == right.PredictiveQueryCount &&
-                   left.PredictiveRejectedQueryCount == right.PredictiveRejectedQueryCount &&
-                   left.PredictiveRawHitCount == right.PredictiveRawHitCount &&
-                   left.PredictiveRejectNoCandidateCount == right.PredictiveRejectNoCandidateCount &&
-                   left.PredictiveRejectHeightDiscontinuityCount == right.PredictiveRejectHeightDiscontinuityCount &&
-                   left.PredictiveRejectEdgeGapCount == right.PredictiveRejectEdgeGapCount &&
-                   left.PredictiveRejectSurfaceDiscontinuityCount == right.PredictiveRejectSurfaceDiscontinuityCount &&
-                   left.PredictiveRejectReachExceededCount == right.PredictiveRejectReachExceededCount &&
-                   left.PredictiveRejectSlopeExceededCount == right.PredictiveRejectSlopeExceededCount &&
-                   left.PredictiveRejectStepExceededCount == right.PredictiveRejectStepExceededCount &&
-                   left.PredictiveRejectInvalidCandidateCount == right.PredictiveRejectInvalidCandidateCount &&
-                   left.PredictiveRejectUnsupportedCenterCount == right.PredictiveRejectUnsupportedCenterCount &&
-                   left.FutureLandingQueryAvailable == right.FutureLandingQueryAvailable &&
-                   string.Equals(left.FutureLandingQueryShape, right.FutureLandingQueryShape, StringComparison.Ordinal) &&
-                   string.Equals(left.FutureLandingQueryPurpose, right.FutureLandingQueryPurpose, StringComparison.Ordinal) &&
-                   left.FutureLandingQueryOrigin.Equals(right.FutureLandingQueryOrigin) &&
-                   left.FutureLandingQueryDirection.Equals(right.FutureLandingQueryDirection) &&
-                   left.FutureLandingQueryRadius.Equals(right.FutureLandingQueryRadius) &&
-                   left.FutureLandingQueryMaximumDistance.Equals(right.FutureLandingQueryMaximumDistance) &&
-                   left.FutureLandingQueryMinimumGroundNormalDot.Equals(right.FutureLandingQueryMinimumGroundNormalDot) &&
-                   left.FootFeatureValid == right.FootFeatureValid &&
-                   left.PredictedStepValid == right.PredictedStepValid &&
-                   left.PredictedStepHasLandingEvent == right.PredictedStepHasLandingEvent &&
-                   left.PredictedStepSourceBound == right.PredictedStepSourceBound &&
-                   left.HasAuthoritativeLandingEvent == right.HasAuthoritativeLandingEvent &&
-                   left.ExpectedLandingEventIdentity == right.ExpectedLandingEventIdentity &&
-                   left.LandingEventIdentityValid == right.LandingEventIdentityValid &&
-                   left.CurrentEventIsPreSwing == right.CurrentEventIsPreSwing &&
-                   left.CurrentEventIsSwing == right.CurrentEventIsSwing &&
+                   string.Equals(left.Side, right.Side, StringComparison.Ordinal) &&
+                   string.Equals(left.State, right.State, StringComparison.Ordinal) &&
+                   string.Equals(left.RejectReason, right.RejectReason, StringComparison.Ordinal) &&
+                   string.Equals(left.StepSource, right.StepSource, StringComparison.Ordinal) &&
                    left.LandingEventIdentity == right.LandingEventIdentity &&
-                   left.SourceSampleIdentity == right.SourceSampleIdentity &&
-                   left.SourceSampleCycle == right.SourceSampleCycle &&
-                   left.EventOrdinal == right.EventOrdinal &&
-                   left.ContributionContinuityIdentity == right.ContributionContinuityIdentity &&
+                   left.TrajectoryGeneration == right.TrajectoryGeneration &&
                    left.LandingConfidence.Equals(right.LandingConfidence) &&
-                   left.AuthoredLandingDelaySeconds.Equals(right.AuthoredLandingDelaySeconds) &&
-                   left.LandingEventPhase.Equals(right.LandingEventPhase) &&
-                   left.LandingLiftOffPhase.Equals(right.LandingLiftOffPhase) &&
+                   left.TimeToLandingSeconds.Equals(right.TimeToLandingSeconds) &&
                    left.RootLocalLanding.Equals(right.RootLocalLanding) &&
-                   left.RootLocalRouteSample0.Equals(right.RootLocalRouteSample0) &&
-                   left.RootLocalRouteSample1.Equals(right.RootLocalRouteSample1) &&
-                   left.RootLocalRouteSample2.Equals(right.RootLocalRouteSample2) &&
-                   left.RootLocalRouteSample3.Equals(right.RootLocalRouteSample3) &&
-                   left.RootLocalRouteSample4.Equals(right.RootLocalRouteSample4) &&
-                   left.RootLocalRouteSample5.Equals(right.RootLocalRouteSample5) &&
-                   left.RootLocalRouteSample6.Equals(right.RootLocalRouteSample6) &&
-                   left.RootLocalRouteSample7.Equals(right.RootLocalRouteSample7) &&
-                   left.RootLocalRouteSample8.Equals(right.RootLocalRouteSample8) &&
-                   left.RootLocalRouteSample9.Equals(right.RootLocalRouteSample9) &&
-                   left.RootLocalRouteSample10.Equals(right.RootLocalRouteSample10) &&
-                   left.RootLocalRouteSample11.Equals(right.RootLocalRouteSample11) &&
-                   left.RootLocalRouteSample12.Equals(right.RootLocalRouteSample12) &&
-                   left.RootLocalRouteSample13.Equals(right.RootLocalRouteSample13) &&
-                   left.RootLocalRouteSample14.Equals(right.RootLocalRouteSample14) &&
-                   left.RootLocalRouteSample15.Equals(right.RootLocalRouteSample15) &&
-                   left.RootLocalRouteSample16.Equals(right.RootLocalRouteSample16) &&
-                   left.RootLocalRouteSample17.Equals(right.RootLocalRouteSample17) &&
-                   left.RootLocalRouteSample18.Equals(right.RootLocalRouteSample18) &&
-                   left.RootLocalRouteSample19.Equals(right.RootLocalRouteSample19) &&
-                   left.RootLocalRouteSample20.Equals(right.RootLocalRouteSample20) &&
-                   left.RootLocalRouteSample21.Equals(right.RootLocalRouteSample21) &&
-                   left.RootLocalRouteSample22.Equals(right.RootLocalRouteSample22) &&
-                   left.RootLocalRouteSample23.Equals(right.RootLocalRouteSample23) &&
-                   left.RootLocalRouteSample24.Equals(right.RootLocalRouteSample24) &&
-                   left.AuthoredFootRouteStart.Equals(right.AuthoredFootRouteStart) &&
-                   left.AuthoredFootRouteLanding.Equals(right.AuthoredFootRouteLanding) &&
-                   left.PredictivePlanSequence == right.PredictivePlanSequence &&
-                   left.PredictivePlanGeneratedFrame == right.PredictivePlanGeneratedFrame &&
-                   left.PredictivePlanGenerationPhase.Equals(right.PredictivePlanGenerationPhase) &&
-                   left.IncomingPredictedStepValid == right.IncomingPredictedStepValid &&
-                   left.IncomingLandingEventIdentityValid == right.IncomingLandingEventIdentityValid &&
-                   left.IncomingLandingEventIdentity == right.IncomingLandingEventIdentity &&
-                   left.IncomingEventPhase.Equals(right.IncomingEventPhase) &&
-                   left.IncomingLiftOffPhase.Equals(right.IncomingLiftOffPhase) &&
-                   string.Equals(left.PredictivePlanState, right.PredictivePlanState, StringComparison.Ordinal) &&
-                   string.Equals(left.PredictivePlanTransitionReason, right.PredictivePlanTransitionReason, StringComparison.Ordinal) &&
-                   string.Equals(left.PredictivePlanEndReason, right.PredictivePlanEndReason, StringComparison.Ordinal) &&
-                   left.PredictiveExecutionProgress.Equals(right.PredictiveExecutionProgress) &&
-                   left.PlanLandingEventIdentity == right.PlanLandingEventIdentity &&
-                   left.PlanSourceSampleIdentity == right.PlanSourceSampleIdentity &&
-                   left.PlanSourceSampleCycle == right.PlanSourceSampleCycle &&
-                   left.PlanEventOrdinal == right.PlanEventOrdinal &&
-                   left.PlanContributionContinuityIdentity == right.PlanContributionContinuityIdentity &&
-                   left.PlanElapsedSeconds.Equals(right.PlanElapsedSeconds) &&
-                   left.PlanSecondsToLiftOff.Equals(right.PlanSecondsToLiftOff) &&
-                   left.PlanSwingDuration.Equals(right.PlanSwingDuration) &&
-                   left.PlanHasPathGeometry == right.PlanHasPathGeometry &&
-                   left.PlanHasExecutablePath == right.PlanHasExecutablePath &&
-                   left.FrozenPlanarVelocity.Equals(right.FrozenPlanarVelocity) &&
-                   left.TrajectoryCurvatureDegreesPerSecond.Equals(right.TrajectoryCurvatureDegreesPerSecond) &&
-                   left.TrajectoryCurvatureAvailable == right.TrajectoryCurvatureAvailable &&
-                   left.FrozenTrajectoryCurvatureDegreesPerSecond.Equals(right.FrozenTrajectoryCurvatureDegreesPerSecond) &&
-                   left.FrozenTrajectoryCurvatureAvailable == right.FrozenTrajectoryCurvatureAvailable &&
-                   left.FrozenYawVelocityDegreesPerSecond.Equals(right.FrozenYawVelocityDegreesPerSecond) &&
-                   left.FrozenMaximumYawVelocityDegreesPerSecond.Equals(right.FrozenMaximumYawVelocityDegreesPerSecond) &&
-                   left.PredictionLeadSeconds.Equals(right.PredictionLeadSeconds) &&
-                   left.PlannedLandingElapsedSeconds.Equals(right.PlannedLandingElapsedSeconds) &&
-                   left.WorldProjectionFrozen == right.WorldProjectionFrozen &&
-                   left.WorldProjectionExpectedRoot.Equals(right.WorldProjectionExpectedRoot) &&
-                   left.WorldProjectionCurrentRoot.Equals(right.WorldProjectionCurrentRoot) &&
-                   left.ExpectedPresentedBodyPosition.Equals(right.ExpectedPresentedBodyPosition) &&
-                   left.ProjectedExpectedPresentedBodyPosition.Equals(right.ProjectedExpectedPresentedBodyPosition) &&
-                   left.MotionLinearLandingError.Equals(right.MotionLinearLandingError) &&
-                   left.MotionAngularLandingError.Equals(right.MotionAngularLandingError) &&
-                   left.MotionLandingError.Equals(right.MotionLandingError) &&
-                   left.MotionLandingTolerance.Equals(right.MotionLandingTolerance) &&
-                   left.HasPlanRevision == right.HasPlanRevision &&
-                   left.RevisionPlanSequence == right.RevisionPlanSequence &&
-                   left.PlanRevisionBlendWeight.Equals(right.PlanRevisionBlendWeight) &&
-                   string.Equals(left.PlanTransitionKind, right.PlanTransitionKind, StringComparison.Ordinal) &&
-                   left.PlanAttemptAvailable == right.PlanAttemptAvailable &&
-                   string.Equals(left.PlanAttemptKind, right.PlanAttemptKind, StringComparison.Ordinal) &&
-                   left.PlanAttemptSequence == right.PlanAttemptSequence &&
-                   left.PlanAttemptGeneratedFrame == right.PlanAttemptGeneratedFrame &&
-                   left.PlanAttemptLandingEventIdentity == right.PlanAttemptLandingEventIdentity &&
-                   string.Equals(left.PlanAttemptState, right.PlanAttemptState, StringComparison.Ordinal) &&
-                   string.Equals(left.PlanAttemptRejectReason, right.PlanAttemptRejectReason, StringComparison.Ordinal) &&
-                   string.Equals(left.PlanAttemptGroundEnvelopeRejectReason, right.PlanAttemptGroundEnvelopeRejectReason, StringComparison.Ordinal) &&
-                   left.PlanAttemptQueryCount == right.PlanAttemptQueryCount &&
-                   left.PlanAttemptRawHitCount == right.PlanAttemptRawHitCount &&
-                   left.PlanAttemptRejectedQueryCount == right.PlanAttemptRejectedQueryCount &&
-                   string.Equals(left.PlanAttemptOriginKind, right.PlanAttemptOriginKind, StringComparison.Ordinal) &&
-                   left.PlanAttemptOriginPlanSequence == right.PlanAttemptOriginPlanSequence &&
-                   left.PlanAttemptOriginLandingEventIdentity == right.PlanAttemptOriginLandingEventIdentity &&
-                   left.PlanAttemptOriginSole.Equals(right.PlanAttemptOriginSole) &&
-                   left.PlanAttemptOriginGroundPath.Equals(right.PlanAttemptOriginGroundPath) &&
-                   left.PlanAttemptOriginSupportSurfaceIdentity == right.PlanAttemptOriginSupportSurfaceIdentity &&
-                   left.PlanAttemptOriginSupportPoint.Equals(right.PlanAttemptOriginSupportPoint) &&
-                   left.PlanAttemptOriginSupportNormal.Equals(right.PlanAttemptOriginSupportNormal) &&
-                   left.PlanAttemptOriginSoleHeightAboveSupport.Equals(right.PlanAttemptOriginSoleHeightAboveSupport) &&
-                   left.PlanAttemptRequestSourceSampleIdentity == right.PlanAttemptRequestSourceSampleIdentity &&
-                   left.PlanAttemptRequestSourceSampleCycle == right.PlanAttemptRequestSourceSampleCycle &&
-                   left.PlanAttemptRequestEventOrdinal == right.PlanAttemptRequestEventOrdinal &&
-                   left.PlanAttemptRequestEventPhase.Equals(right.PlanAttemptRequestEventPhase) &&
-                   left.PlanAttemptRequestTimeToLandingSeconds.Equals(right.PlanAttemptRequestTimeToLandingSeconds) &&
-                   left.PlanAttemptRequestMotionGeneration == right.PlanAttemptRequestMotionGeneration &&
-                   left.PlanAttemptRequestMotionAuthorityTick == right.PlanAttemptRequestMotionAuthorityTick &&
-                   left.PlanAttemptRequestMotionCurrentVelocity.Equals(right.PlanAttemptRequestMotionCurrentVelocity) &&
-                   left.PlanAttemptRequestMotionContinuationVelocity.Equals(right.PlanAttemptRequestMotionContinuationVelocity) &&
-                   left.PlanAttemptRequestMotionYawVelocityDegreesPerSecond.Equals(right.PlanAttemptRequestMotionYawVelocityDegreesPerSecond) &&
-                   left.PlanAttemptRequestRootStart.Equals(right.PlanAttemptRequestRootStart) &&
-                   left.PlanAttemptRequestRootStartRotation.Equals(right.PlanAttemptRequestRootStartRotation) &&
-                   left.PlanAttemptRequestPresentedBodyStartPosition.Equals(right.PlanAttemptRequestPresentedBodyStartPosition) &&
-                   left.PlanAttemptRequestCommittedBodyVelocity.Equals(right.PlanAttemptRequestCommittedBodyVelocity) &&
-                   left.PlanAttemptRequestTrajectoryCurvatureDegreesPerSecond.Equals(right.PlanAttemptRequestTrajectoryCurvatureDegreesPerSecond) &&
-                   left.PlanAttemptRequestTrajectoryCurvatureAvailable == right.PlanAttemptRequestTrajectoryCurvatureAvailable &&
-                   left.PlanAttemptRequestMovementPlaybackTime.Equals(right.PlanAttemptRequestMovementPlaybackTime) &&
-                   left.PlanAttemptRequestUp.Equals(right.PlanAttemptRequestUp) &&
-                   left.PlanAttemptRequestSoleSupportRadius.Equals(right.PlanAttemptRequestSoleSupportRadius) &&
-                   left.PlanAttemptRequestLegLength.Equals(right.PlanAttemptRequestLegLength) &&
-                   string.Equals(left.PlanBuildCandidateKind, right.PlanBuildCandidateKind, StringComparison.Ordinal) &&
-                   string.Equals(left.PlanBuildDecisionReason, right.PlanBuildDecisionReason, StringComparison.Ordinal) &&
-                   left.PlanBuildLandingEventIdentity == right.PlanBuildLandingEventIdentity &&
-                   string.Equals(left.PlanBuildOriginKind, right.PlanBuildOriginKind, StringComparison.Ordinal) &&
-                   left.PlanBuildOriginPlanSequence == right.PlanBuildOriginPlanSequence &&
-                   left.PlanBuildOriginLandingEventIdentity == right.PlanBuildOriginLandingEventIdentity &&
-                   left.PlanBuildOriginSupportSurfaceIdentity == right.PlanBuildOriginSupportSurfaceIdentity &&
-                   left.PlanBuildMotionGeneration == right.PlanBuildMotionGeneration &&
-                   left.PlanBuildMotionAuthorityTick == right.PlanBuildMotionAuthorityTick &&
-                   left.PlanBuildAttempted == right.PlanBuildAttempted &&
-                   left.PlanBuildCurrentPlanningCandidate == right.PlanBuildCurrentPlanningCandidate &&
-                   left.PlanBuildIncomingPlanningCandidate == right.PlanBuildIncomingPlanningCandidate &&
-                   left.PlanBuildCurrentPlanMatches == right.PlanBuildCurrentPlanMatches &&
-                   left.PlanBuildActiveEventReplaced == right.PlanBuildActiveEventReplaced &&
-                   left.PlanBuildNeedsInitialPlan == right.PlanBuildNeedsInitialPlan &&
-                   left.PlanBuildIntentRevisionRequested == right.PlanBuildIntentRevisionRequested &&
-                   left.PlanBuildCanPrepareEventSuccessor == right.PlanBuildCanPrepareEventSuccessor &&
-                   left.PlanBuildMotionWithinCommitTolerance == right.PlanBuildMotionWithinCommitTolerance &&
-                   left.PlanBuildCanBeginTransition == right.PlanBuildCanBeginTransition &&
-                   left.PlanBuildFutureBodyAvailable == right.PlanBuildFutureBodyAvailable &&
-                   left.PlanBuildCurrentPlanHasExecutablePath == right.PlanBuildCurrentPlanHasExecutablePath &&
-                   left.PlanBuildPlanFadingOut == right.PlanBuildPlanFadingOut &&
-                   left.PlanFadingOut == right.PlanFadingOut &&
-                   left.PlanRetentionWeight.Equals(right.PlanRetentionWeight) &&
-                   left.IntentLandingDisplacementError.Equals(right.IntentLandingDisplacementError) &&
-                   left.IntentLandingDisplacementThreshold.Equals(right.IntentLandingDisplacementThreshold) &&
-                   left.FixedPathStartWorldPosition.Equals(right.FixedPathStartWorldPosition) &&
-                   left.FixedLandingWorldPosition.Equals(right.FixedLandingWorldPosition) &&
-                   left.CurrentPathWorldPosition.Equals(right.CurrentPathWorldPosition) &&
-                   left.CurrentPathRootWorldPosition.Equals(right.CurrentPathRootWorldPosition) &&
-                   left.CurrentPathHipWorldPosition.Equals(right.CurrentPathHipWorldPosition) &&
-                   left.FrozenRootStartWorldPosition.Equals(right.FrozenRootStartWorldPosition) &&
-                   left.FrozenRootStartWorldRotation.Equals(right.FrozenRootStartWorldRotation) &&
-                   left.FrozenRootLandingWorldPosition.Equals(right.FrozenRootLandingWorldPosition) &&
-                   left.FrozenRootLandingWorldRotation.Equals(right.FrozenRootLandingWorldRotation) &&
-                   left.PredictiveRouteSampleCount == right.PredictiveRouteSampleCount &&
-                   left.PredictiveAcceptedHitCount == right.PredictiveAcceptedHitCount &&
-                   left.PredictiveEdgePlaneCandidateCount == right.PredictiveEdgePlaneCandidateCount &&
-                   left.PredictiveAcceptedEdgePlaneCount == right.PredictiveAcceptedEdgePlaneCount &&
-                   left.SoleSupportRadius.Equals(right.SoleSupportRadius) &&
-                   left.CurrentPathSurfaceIdentity == right.CurrentPathSurfaceIdentity &&
-                   left.CurrentPathSupportPoint.Equals(right.CurrentPathSupportPoint) &&
-                   left.CurrentPathSupportNormal.Equals(right.CurrentPathSupportNormal) &&
-                   left.PreClearanceHeelPathDistance.Equals(right.PreClearanceHeelPathDistance) &&
-                   left.PreClearanceToePathDistance.Equals(right.PreClearanceToePathDistance) &&
-                   left.PostClearanceHeelPathDistance.Equals(right.PostClearanceHeelPathDistance) &&
-                   left.PostClearanceToePathDistance.Equals(right.PostClearanceToePathDistance) &&
-                   left.PredictiveClearanceEvaluated == right.PredictiveClearanceEvaluated &&
-                   left.PredictiveResidualPenetration.Equals(right.PredictiveResidualPenetration) &&
-                   left.PlannedFootRouteWorldSampleCount == right.PlannedFootRouteWorldSampleCount &&
-                   left.PlannedFootRouteWorldSample0.Equals(right.PlannedFootRouteWorldSample0) &&
-                   left.PlannedFootRouteWorldSample1.Equals(right.PlannedFootRouteWorldSample1) &&
-                   left.PlannedFootRouteWorldSample2.Equals(right.PlannedFootRouteWorldSample2) &&
-                   left.PlannedFootRouteWorldSample3.Equals(right.PlannedFootRouteWorldSample3) &&
-                   left.PlannedFootRouteWorldSample4.Equals(right.PlannedFootRouteWorldSample4) &&
-                   left.PlannedFootRouteWorldSample5.Equals(right.PlannedFootRouteWorldSample5) &&
-                   left.PlannedFootRouteWorldSample6.Equals(right.PlannedFootRouteWorldSample6) &&
-                   left.PredictivePathDiagnosticSampleCount == right.PredictivePathDiagnosticSampleCount &&
-                   PathSampleEquivalent(in left.PredictivePathSample0, in right.PredictivePathSample0) &&
-                   PathSampleEquivalent(in left.PredictivePathSample1, in right.PredictivePathSample1) &&
-                   PathSampleEquivalent(in left.PredictivePathSample2, in right.PredictivePathSample2) &&
-                   PathSampleEquivalent(in left.PredictivePathSample3, in right.PredictivePathSample3) &&
-                   PathSampleEquivalent(in left.PredictivePathSample4, in right.PredictivePathSample4) &&
-                   PathSampleEquivalent(in left.PredictivePathSample5, in right.PredictivePathSample5) &&
-                   PathSampleEquivalent(in left.PredictivePathSample6, in right.PredictivePathSample6) &&
-                   PathSampleEquivalent(in left.PredictivePathSample7, in right.PredictivePathSample7) &&
-                   left.RequiredLift.Equals(right.RequiredLift) &&
-                   string.Equals(left.BaselineGoalApplication, right.BaselineGoalApplication, StringComparison.Ordinal) &&
-                   string.Equals(left.FinalGoalSourceKind, right.FinalGoalSourceKind, StringComparison.Ordinal) &&
-                   left.SolverResultAvailable == right.SolverResultAvailable &&
-                   left.PlantConfidence.Equals(right.PlantConfidence) &&
-                   left.PlantContact == right.PlantContact &&
-                   left.SoleHeight.Equals(right.SoleHeight) &&
-                   left.PlacementWeight.Equals(right.PlacementWeight) &&
-                   left.AnimationFootSpeed.Equals(right.AnimationFootSpeed) &&
-                   left.SurfaceDistance.Equals(right.SurfaceDistance) &&
-                   left.SoleSupportSurfaceIdentity == right.SoleSupportSurfaceIdentity &&
-                   left.SoleSupportPoint.Equals(right.SoleSupportPoint) &&
-                   left.SoleSupportNormal.Equals(right.SoleSupportNormal) &&
-                   left.SoleClearanceTarget.Equals(right.SoleClearanceTarget) &&
-                   left.SoleClearanceTargetTranslation.Equals(right.SoleClearanceTargetTranslation) &&
-                   left.SoleAnklePosition.Equals(right.SoleAnklePosition) &&
-                   left.SoleHeelPosition.Equals(right.SoleHeelPosition) &&
-                   left.SoleToePosition.Equals(right.SoleToePosition) &&
-                   left.SoleHeelPlaneDistance.Equals(right.SoleHeelPlaneDistance) &&
-                   left.SoleToePlaneDistance.Equals(right.SoleToePlaneDistance) &&
-                   left.ResidualSolePenetration.Equals(right.ResidualSolePenetration) &&
-                   left.FinalGoalSoleHeelPosition.Equals(right.FinalGoalSoleHeelPosition) &&
-                   left.FinalGoalSoleToePosition.Equals(right.FinalGoalSoleToePosition) &&
-                   left.SolvedSoleAnklePosition.Equals(right.SolvedSoleAnklePosition) &&
-                   left.SolvedSoleHeelPosition.Equals(right.SolvedSoleHeelPosition) &&
-                   left.SolvedSoleToePosition.Equals(right.SolvedSoleToePosition) &&
-                   left.FinalPhysicalEvaluationAvailable == right.FinalPhysicalEvaluationAvailable &&
-                   string.Equals(left.FinalPhysicalSupportKind, right.FinalPhysicalSupportKind, StringComparison.Ordinal) &&
-                   left.FinalPhysicalSupportSurfaceIdentity == right.FinalPhysicalSupportSurfaceIdentity &&
-                   left.FinalPhysicalSupportPoint.Equals(right.FinalPhysicalSupportPoint) &&
-                   left.FinalPhysicalSupportNormal.Equals(right.FinalPhysicalSupportNormal) &&
-                   left.FinalPhysicalHeelPlaneDistance.Equals(right.FinalPhysicalHeelPlaneDistance) &&
-                   left.FinalPhysicalToePlaneDistance.Equals(right.FinalPhysicalToePlaneDistance) &&
-                   left.FinalPhysicalResidualPenetration.Equals(right.FinalPhysicalResidualPenetration) &&
-                   left.AnimatedAnkleComponentY.Equals(right.AnimatedAnkleComponentY) &&
-                   left.AnchorBlendWeight.Equals(right.AnchorBlendWeight) &&
-                   left.BaselineGoalPositionWeight.Equals(right.BaselineGoalPositionWeight) &&
-                   left.BaselineGoalRotationWeight.Equals(right.BaselineGoalRotationWeight) &&
-                   left.FinalGoalPositionWeight.Equals(right.FinalGoalPositionWeight) &&
-                   left.FinalGoalRotationWeight.Equals(right.FinalGoalRotationWeight) &&
-                   left.TargetOffset.Equals(right.TargetOffset) &&
-                   left.OffsetTarget.Equals(right.OffsetTarget) &&
-                   left.CurrentOffset.Equals(right.CurrentOffset) &&
-                   left.OffsetSpringVelocity.Equals(right.OffsetSpringVelocity) &&
-                   left.PreviousOffsetTarget.Equals(right.PreviousOffsetTarget) &&
-                   left.OffsetSpringInitialized == right.OffsetSpringInitialized &&
-                   left.TargetNormal.Equals(right.TargetNormal) &&
-                   left.CurrentNormal.Equals(right.CurrentNormal) &&
-                   left.NormalSpringVelocity.Equals(right.NormalSpringVelocity) &&
-                   left.PreviousNormalTarget.Equals(right.PreviousNormalTarget) &&
-                   left.NormalSpringInitialized == right.NormalSpringInitialized &&
-                   left.PredictionHorizon.Equals(right.PredictionHorizon) &&
-                   left.CurrentGroundingComponentPosition.Equals(right.CurrentGroundingComponentPosition) &&
-                   left.BaselineGoalComponentPosition.Equals(right.BaselineGoalComponentPosition) &&
-                   left.FinalGoalComponentPosition.Equals(right.FinalGoalComponentPosition) &&
-                   left.SolvedComponentPosition.Equals(right.SolvedComponentPosition) &&
-                   left.PositionResidual.Equals(right.PositionResidual) &&
-                   left.RotationResidualDegrees.Equals(right.RotationResidualDegrees);
+                   left.CurrentAnimatedSole.Equals(right.CurrentAnimatedSole) &&
+                   left.RawLanding.Equals(right.RawLanding) &&
+                   left.QueryAvailable == right.QueryAvailable &&
+                   string.Equals(left.QueryShape, right.QueryShape, StringComparison.Ordinal) &&
+                   string.Equals(left.QueryPurpose, right.QueryPurpose, StringComparison.Ordinal) &&
+                   left.QueryOrigin.Equals(right.QueryOrigin) &&
+                   left.QueryDirection.Equals(right.QueryDirection) &&
+                   left.QueryRadius.Equals(right.QueryRadius) &&
+                   left.QueryMaximumDistance.Equals(right.QueryMaximumDistance) &&
+                   left.QueryLayerMask == right.QueryLayerMask &&
+                   left.QueryMinimumGroundNormalDot.Equals(right.QueryMinimumGroundNormalDot) &&
+                   left.Accepted == right.Accepted &&
+                   left.SurfaceIdentity == right.SurfaceIdentity &&
+                   left.LandingPoint.Equals(right.LandingPoint) &&
+                   left.LandingNormal.Equals(right.LandingNormal) &&
+                   left.QueryDistance.Equals(right.QueryDistance);
         }
-
-        static bool PathSampleEquivalent(
-            in RuntimeFootIkPathSampleSnapshot left,
-            in RuntimeFootIkPathSampleSnapshot right) =>
-            left.Fraction.Equals(right.Fraction) &&
-            left.Position.Equals(right.Position) &&
-            left.Normal.Equals(right.Normal) &&
-            left.SurfaceIdentity == right.SurfaceIdentity &&
-            left.AnimationRootPosition.Equals(right.AnimationRootPosition) &&
-            left.HipPosition.Equals(right.HipPosition);
 
         static bool DebugValueEquivalent(in DebugValueSnapshot left, in DebugValueSnapshot right)
         {

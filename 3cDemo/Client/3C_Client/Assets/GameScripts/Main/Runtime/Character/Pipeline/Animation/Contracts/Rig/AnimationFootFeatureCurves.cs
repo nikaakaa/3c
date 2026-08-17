@@ -633,9 +633,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             OpposingRootLocalSoleRotation = RequireFinite(
                 opposingRootLocalSoleRotation,
                 nameof(opposingRootLocalSoleRotation));
-            if (!biomechanicalSample.IsValid)
-                throw new ArgumentException("Predicted biomechanical Foot sample is invalid.");
-            BiomechanicalSample = biomechanicalSample;
             if (!hasOpposingLanding && OpposingRootLocalLanding.sqrMagnitude > 0.000000000001f)
                 throw new ArgumentException("Predicted opposing landing position is unpaired.");
             if (!hasOpposingLanding && Quaternion.Angle(
@@ -644,27 +641,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Predicted opposing landing rotation is unpaired.");
             }
-            if (rootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                rootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                rootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                authoredFootPlanarRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                animationClearanceHeights.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
-            {
-                throw new ArgumentException("Predicted foot route sample counts are invalid.");
-            }
-            for (int i = 0; i < rootLocalFootRoute.Length; i++)
-            {
-                RequireFinite(rootLocalFootRoute[i], nameof(rootLocalFootRoute));
-                RequireFinite(rootLocalAnkleRoute[i], nameof(rootLocalAnkleRoute));
-                RequireFinite(rootLocalHipRoute[i], nameof(rootLocalHipRoute));
-                RequirePlanar(authoredFootPlanarRoute[i], nameof(authoredFootPlanarRoute));
-                RequireNonNegative(animationClearanceHeights[i], nameof(animationClearanceHeights));
-            }
-            RootLocalFootRoute = rootLocalFootRoute;
-            RootLocalAnkleRoute = rootLocalAnkleRoute;
-            RootLocalHipRoute = rootLocalHipRoute;
-            AuthoredFootPlanarRoute = authoredFootPlanarRoute;
-            AnimationClearanceHeights = animationClearanceHeights;
+            Route = new AnimationBiomechanicalRoutePage(
+                rootLocalFootRoute,
+                rootLocalAnkleRoute,
+                rootLocalHipRoute,
+                authoredFootPlanarRoute,
+                animationClearanceHeights,
+                biomechanicalSample);
             SourceSampleIdentity = sourceSampleIdentity;
             SourceSampleCycle = sourceSampleCycle;
             ContributionContinuityIdentity = contributionContinuityIdentity;
@@ -691,15 +674,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int OpposingLandingCycleOffset { get; }
         public Vector3 OpposingRootLocalLanding { get; }
         public Quaternion OpposingRootLocalSoleRotation { get; }
-        public AnimationFootBiomechanicalRouteSample BiomechanicalSample { get; }
-        public FixedList512Bytes<Vector3> RootLocalFootRoute { get; }
-        public FixedList512Bytes<Vector3> RootLocalAnkleRoute { get; }
-        public FixedList512Bytes<Vector3> RootLocalHipRoute { get; }
-        public FixedList512Bytes<Vector3> AuthoredFootPlanarRoute { get; }
-        public FixedList128Bytes<float> AnimationClearanceHeights { get; }
-        public Vector3 RootLocalLanding => RootLocalFootRoute.Length > 0
-            ? RootLocalFootRoute[RootLocalFootRoute.Length - 1]
-            : Vector3.zero;
+        public readonly AnimationBiomechanicalRoutePage Route;
+        public Vector3 RootLocalLanding => Route.RootLocalLanding;
         public ulong SourceSampleIdentity { get; }
         public int SourceSampleCycle { get; }
         public ulong ContributionContinuityIdentity { get; }
@@ -709,7 +685,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool HasLandingEvent => IsValid && EventOrdinal > 0 && Confidence > 0f;
         public bool IsSourceBound => HasLandingEvent && SourceSampleIdentity != 0;
         public bool IsAuthoritative => IsSourceBound && ContributionContinuityIdentity != 0 &&
-                                       LandingEventIdentity != 0 && BiomechanicalSample.IsValid;
+                                       LandingEventIdentity != 0 && Route.IsValid;
         public bool HasOpposingLandingEvent => IsAuthoritative && OpposingEventOrdinal > 0 &&
                                                OpposingLandingDelaySeconds > 0.000001f &&
                                                OpposingLandingEventIdentity != 0;
@@ -740,49 +716,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public Vector3 EvaluateRootLocalFootRoute(float eventPhase)
         {
-            if (RootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+            if (Route.RootLocalFoot.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
                 throw new InvalidOperationException("Predicted foot route is unavailable.");
-            float scaled = Mathf.Clamp01(eventPhase) * (RootLocalFootRoute.Length - 1);
-            int first = Mathf.Min(RootLocalFootRoute.Length - 1, Mathf.FloorToInt(scaled));
-            int second = Mathf.Min(RootLocalFootRoute.Length - 1, first + 1);
-            return Vector3.Lerp(RootLocalFootRoute[first], RootLocalFootRoute[second], scaled - first);
+            float scaled = Mathf.Clamp01(eventPhase) * (Route.RootLocalFoot.Length - 1);
+            int first = Mathf.Min(Route.RootLocalFoot.Length - 1, Mathf.FloorToInt(scaled));
+            int second = Mathf.Min(Route.RootLocalFoot.Length - 1, first + 1);
+            return Vector3.Lerp(Route.RootLocalFoot[first], Route.RootLocalFoot[second], scaled - first);
         }
 
         public Vector3 EvaluateRootLocalAnkleRoute(float eventPhase)
         {
-            if (RootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+            if (Route.RootLocalAnkle.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
                 throw new InvalidOperationException("Predicted ankle route is unavailable.");
-            float scaled = Mathf.Clamp01(eventPhase) * (RootLocalAnkleRoute.Length - 1);
-            int first = Mathf.Min(RootLocalAnkleRoute.Length - 1, Mathf.FloorToInt(scaled));
-            int second = Mathf.Min(RootLocalAnkleRoute.Length - 1, first + 1);
-            return Vector3.Lerp(RootLocalAnkleRoute[first], RootLocalAnkleRoute[second], scaled - first);
+            float scaled = Mathf.Clamp01(eventPhase) * (Route.RootLocalAnkle.Length - 1);
+            int first = Mathf.Min(Route.RootLocalAnkle.Length - 1, Mathf.FloorToInt(scaled));
+            int second = Mathf.Min(Route.RootLocalAnkle.Length - 1, first + 1);
+            return Vector3.Lerp(Route.RootLocalAnkle[first], Route.RootLocalAnkle[second], scaled - first);
         }
 
         public Vector3 EvaluateRootLocalHipRoute(float eventPhase)
         {
-            if (RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+            if (Route.RootLocalHip.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
                 throw new InvalidOperationException("Predicted hip route is unavailable.");
-            float scaled = Mathf.Clamp01(eventPhase) * (RootLocalHipRoute.Length - 1);
-            int first = Mathf.Min(RootLocalHipRoute.Length - 1, Mathf.FloorToInt(scaled));
-            int second = Mathf.Min(RootLocalHipRoute.Length - 1, first + 1);
-            return Vector3.Lerp(RootLocalHipRoute[first], RootLocalHipRoute[second], scaled - first);
+            float scaled = Mathf.Clamp01(eventPhase) * (Route.RootLocalHip.Length - 1);
+            int first = Mathf.Min(Route.RootLocalHip.Length - 1, Mathf.FloorToInt(scaled));
+            int second = Mathf.Min(Route.RootLocalHip.Length - 1, first + 1);
+            return Vector3.Lerp(Route.RootLocalHip[first], Route.RootLocalHip[second], scaled - first);
         }
 
         public Vector3 EvaluateAuthoredFootPlanarRoute(float eventPhase) =>
-            EvaluateVectorRoute(AuthoredFootPlanarRoute, eventPhase, "authored Foot planar route");
+            EvaluateVectorRoute(Route.AuthoredFootPlanar, eventPhase, "authored Foot planar route");
 
         public float EvaluateAnimationClearanceHeight(float eventPhase)
         {
-            EvaluateIndices(AnimationClearanceHeights.Length, eventPhase, out int first, out int second, out float t);
-            return Mathf.Lerp(AnimationClearanceHeights[first], AnimationClearanceHeights[second], t);
+            EvaluateIndices(Route.AnimationClearance.Length, eventPhase, out int first, out int second, out float t);
+            return Mathf.Lerp(Route.AnimationClearance[first], Route.AnimationClearance[second], t);
         }
 
-        public float CurrentConstraintWeight => BiomechanicalSample.IsValid
-            ? BiomechanicalSample.ConstraintWeight
+        public float CurrentConstraintWeight => Route.CurrentSample.IsValid
+            ? Route.CurrentSample.ConstraintWeight
             : throw new InvalidOperationException("Predicted biomechanical Foot sample is unavailable.");
 
-        public float CurrentSupportWeight => BiomechanicalSample.IsValid
-            ? BiomechanicalSample.SupportWeight
+        public float CurrentSupportWeight => Route.CurrentSample.IsValid
+            ? Route.CurrentSample.SupportWeight
             : throw new InvalidOperationException("Predicted biomechanical Foot sample is unavailable.");
 
         public float EvaluateConstraintWeight(float eventPhase)
@@ -862,14 +838,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 OpposingLandingDelaySeconds,
                 OpposingLandingCycleOffset,
                 OpposingRootLocalLanding,
-                RootLocalFootRoute,
-                RootLocalAnkleRoute,
-                RootLocalHipRoute,
-                AuthoredFootPlanarRoute,
-                AnimationClearanceHeights,
+                Route.RootLocalFoot,
+                Route.RootLocalAnkle,
+                Route.RootLocalHip,
+                Route.AuthoredFootPlanar,
+                Route.AnimationClearance,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                BiomechanicalSample,
+                Route.CurrentSample,
                 sourceSampleIdentity,
                 sourceLandingCycle,
                 0,
@@ -911,14 +887,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 OpposingLandingDelaySeconds,
                 opposingOffset,
                 OpposingRootLocalLanding,
-                RootLocalFootRoute,
-                RootLocalAnkleRoute,
-                RootLocalHipRoute,
-                AuthoredFootPlanarRoute,
-                AnimationClearanceHeights,
+                Route.RootLocalFoot,
+                Route.RootLocalAnkle,
+                Route.RootLocalHip,
+                Route.AuthoredFootPlanar,
+                Route.AnimationClearance,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                BiomechanicalSample,
+                Route.CurrentSample,
                 markerEpochIdentity,
                 landingMarkerOrdinal,
                 0,
@@ -970,14 +946,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 OpposingLandingDelaySeconds,
                 OpposingLandingCycleOffset,
                 OpposingRootLocalLanding,
-                RootLocalFootRoute,
-                RootLocalAnkleRoute,
-                RootLocalHipRoute,
-                AuthoredFootPlanarRoute,
-                AnimationClearanceHeights,
+                Route.RootLocalFoot,
+                Route.RootLocalAnkle,
+                Route.RootLocalHip,
+                Route.AuthoredFootPlanar,
+                Route.AnimationClearance,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                BiomechanicalSample,
+                Route.CurrentSample,
                 SourceSampleIdentity,
                 SourceSampleCycle,
                 contributionContinuityIdentity,
@@ -1006,14 +982,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 OpposingLandingDelaySeconds / visualTimeScale,
                 OpposingLandingCycleOffset,
                 OpposingRootLocalLanding,
-                RootLocalFootRoute,
-                RootLocalAnkleRoute,
-                RootLocalHipRoute,
-                AuthoredFootPlanarRoute,
-                AnimationClearanceHeights,
+                Route.RootLocalFoot,
+                Route.RootLocalAnkle,
+                Route.RootLocalHip,
+                Route.AuthoredFootPlanar,
+                Route.AnimationClearance,
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
-                BiomechanicalSample,
+                Route.CurrentSample,
                 SourceSampleIdentity,
                 SourceSampleCycle,
                 ContributionContinuityIdentity,
@@ -1182,8 +1158,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector3 SoleLocalVelocity { get; }
         public float SoleHeight { get; }
         public float PlantConfidence { get; }
-        public AnimationPredictedFootStepSample PredictedStep { get; }
-        public AnimationPredictedFootStepSample IncomingPredictedStep { get; }
+        public readonly AnimationPredictedFootStepSample PredictedStep;
+        public readonly AnimationPredictedFootStepSample IncomingPredictedStep;
         public bool IsValid => m_IsSpecified != 0;
 
         public AnimationFootFeatureSample WithPredictionPair(

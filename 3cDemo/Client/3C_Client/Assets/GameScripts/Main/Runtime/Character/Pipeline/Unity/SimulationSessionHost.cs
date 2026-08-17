@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline
     [DefaultExecutionOrder(-9000)]
     [DisallowMultipleComponent]
     public sealed class SimulationSessionHost : MonoBehaviour, IGameplayRenderFrameInputTarget, IGameplayLogicTickTarget,
-        ICharacterFutureBodyTrajectorySource
+        ICharacterFutureBodyTranslationSource
     {
         static readonly ProfilerMarker InputMarker = new ProfilerMarker("ThirdPerson.Session.Input");
         static readonly ProfilerMarker LogicMarker = new ProfilerMarker("ThirdPerson.Session.LogicTick");
@@ -44,16 +44,16 @@ namespace ThirdPersonCharacter.Pipeline
         public bool IsQuiesced => m_Quiesced;
 
         public bool TryPredict(
-            in CharacterFutureBodyTrajectoryRequest request,
-            out CharacterFutureBodyTrajectory trajectory)
+            in CharacterFutureBodyTranslationRequest request,
+            out CharacterFutureBodyTranslation translation)
         {
             if (m_Disposed || m_Quiesced || m_State != SimulationSessionLifecycleState.Active ||
-                m_Runtime is not ICharacterFutureBodyTrajectorySource source)
+                m_Runtime is not ICharacterFutureBodyTranslationSource source)
             {
-                trajectory = null;
+                translation = null;
                 return false;
             }
-            return source.TryPredict(in request, out trajectory);
+            return source.TryPredict(in request, out translation);
         }
 
         public void BindComposition(SimulationSessionCompositionDefinition composition)

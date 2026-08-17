@@ -191,7 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CopyRootOrientationWarps(page, rootOrientationWarps);
                 CopyInertializations(page, inertializations);
                 CopySlotContributions(page, in frame, physicalSources);
-                CopyFootIk(page, in footLandingPrediction);
+                CopyFootPlacement(page, in footLandingPrediction);
             }
             if (RequiresOperationDetail(interest))
                 CopyOperations(page, in frame, physicalSources);
@@ -1073,7 +1073,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             page.PoseWatchCount = m_MergedPoseWatchInterestCount;
         }
 
-        void CopyFootIk(
+        void CopyFootPlacement(
             Page page,
             in CharacterFootLandingPredictionDiagnostics footLandingPrediction)
         {
@@ -1113,10 +1113,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 solverDiagnostics = candidate;
                 break;
             }
-            page.FootIk.LandingPrediction = footLandingPrediction;
-            page.FootIk.Solver = solverDiagnostics;
-            page.FootIk.LeftFoot = leftFoot;
-            page.FootIk.RightFoot = rightFoot;
+            page.FootPlacement.LandingPrediction = footLandingPrediction;
+            page.FootPlacement.Solver = solverDiagnostics;
+            page.FootPlacement.LeftFoot = leftFoot;
+            page.FootPlacement.RightFoot = rightFoot;
         }
 
         bool TryResolvePoseWatchOperation(
@@ -1231,9 +1231,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             page.PoseGraphCompletedAt = finalRead.PoseGraphCompletedAt[0];
             page.FinalAppliedAt = finalRead.AppliedAt[0];
             page.ContinuityIdentity = finalRead.ContinuityIdentity[0];
-            page.LeftFootFeatures = finalRead.LeftFootFeatures[0];
-            page.RightFootFeatures = finalRead.RightFootFeatures[0];
             page.HasFootFeatures = finalRead.HasFootFeatures[0] == 1;
+            AnimationFootFeatureSample left = finalRead.LeftFootFeatures[0];
+            AnimationFootFeatureSample right = finalRead.RightFootFeatures[0];
+            page.LeftFootSteps = page.HasFootFeatures
+                ? new AnimationBiomechanicalStepReadPage(
+                    in left,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left)
+                : default;
+            page.RightFootSteps = page.HasFootFeatures
+                ? new AnimationBiomechanicalStepReadPage(
+                    in right,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right)
+                : default;
         }
 
         void CopyFinalDetail(
@@ -1379,7 +1389,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 OperationContributionBoneWeights = new float[
                     checked(program.Operations.Count * layout.PoseValueContributionStride * layout.BoneCount)];
                 FinalContributionBoneWeights = new float[checked(layout.PoseValueContributionStride * layout.BoneCount)];
-                FootIk = new AnimationFootIkRuntimeSnapshotPage();
+                FootPlacement = new AnimationFootPlacementRuntimeSnapshotPage();
                 PhysicalBoneCount = rig.PhysicalBoneCount;
                 VirtualBoneCount = rig.VirtualBoneCount;
                 PoseBoneCount = rig.PoseBoneCount;
@@ -1471,10 +1481,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal ulong PoseGraphCompletedAt;
             internal ulong FinalAppliedAt;
             internal ulong ContinuityIdentity;
-            internal AnimationFootFeatureSample LeftFootFeatures;
-            internal AnimationFootFeatureSample RightFootFeatures;
+            internal AnimationBiomechanicalStepReadPage LeftFootSteps;
+            internal AnimationBiomechanicalStepReadPage RightFootSteps;
             internal bool HasFootFeatures;
-            internal readonly AnimationFootIkRuntimeSnapshotPage FootIk;
+            internal readonly AnimationFootPlacementRuntimeSnapshotPage FootPlacement;
 
             internal void ClearCounts()
             {
@@ -1495,7 +1505,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 LinkedPoseGroupCount = 0;
                 LinkedPoseEntryCount = 0;
                 PoseWatchCount = 0;
-                FootIk.Clear();
+                FootPlacement.Clear();
             }
 
             internal AnimationPresentationRuntimeSnapshot CreateSnapshot(
@@ -1517,10 +1527,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     PoseGraphCompletedAt,
                     FinalAppliedAt,
                     ContinuityIdentity,
-                    LeftFootFeatures,
-                    RightFootFeatures,
+                    LeftFootSteps,
+                    RightFootSteps,
                     HasFootFeatures,
-                    new AnimationFootIkRuntimeSnapshot(FootIk, Lease, leaseIdentity),
+                    new AnimationFootPlacementRuntimeSnapshot(
+                        FootPlacement,
+                        Lease,
+                        leaseIdentity),
                     PhysicalBoneCount,
                     VirtualBoneCount,
                     PoseBoneCount,

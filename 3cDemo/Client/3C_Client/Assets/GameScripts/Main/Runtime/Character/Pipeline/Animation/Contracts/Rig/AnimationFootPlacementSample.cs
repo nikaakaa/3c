@@ -10,8 +10,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public AnimationFootPlacementSample(
             float weight,
-            AnimationFootFeatureSample left,
-            AnimationFootFeatureSample right)
+            in AnimationFootFeatureSample left,
+            in AnimationFootFeatureSample right)
         {
             Weight = RequireWeight(weight, nameof(weight));
             if (!left.IsValid || !right.IsValid)
@@ -22,8 +22,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public float Weight { get; }
-        public AnimationFootFeatureSample Left { get; }
-        public AnimationFootFeatureSample Right { get; }
+        public readonly AnimationFootFeatureSample Left;
+        public readonly AnimationFootFeatureSample Right;
         public bool IsValid => m_IsSpecified && Left.IsValid && Right.IsValid;
 
         static float RequireWeight(float value, string field)

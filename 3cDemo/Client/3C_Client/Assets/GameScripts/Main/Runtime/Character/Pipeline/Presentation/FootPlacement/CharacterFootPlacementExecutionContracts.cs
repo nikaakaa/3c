@@ -58,8 +58,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationPoseNativeInvalidReason.None ||
                 binding.ContinuityIdentity[0] == 0 ||
                 binding.HasFootFeatures[0] != 1 ||
-                !binding.LeftFootFeatures[0].IsValid ||
-                !binding.RightFootFeatures[0].IsValid ||
                 contributions == null || contributionCount <= 0 ||
                 contributionCount != nativeContributionCount ||
                 contributionCount > contributions.Length)
@@ -73,8 +71,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseParameters = binding.PoseParameters;
             PoseParameterAvailability =
                 binding.PoseParameterAvailability;
-            LeftFootFeatures = binding.LeftFootFeatures[0];
-            RightFootFeatures = binding.RightFootFeatures[0];
+            AnimationFootFeatureSample left = binding.LeftFootFeatures[0];
+            AnimationFootFeatureSample right = binding.RightFootFeatures[0];
+            if (!left.IsValid || !right.IsValid)
+                throw new ArgumentException("Foot Placement feature input is invalid.");
+            LeftFootSteps = new AnimationBiomechanicalStepReadPage(
+                in left,
+                CharacterFootSide.Left);
+            RightFootSteps = new AnimationBiomechanicalStepReadPage(
+                in right,
+                CharacterFootSide.Right);
             ContinuityIdentity = binding.ContinuityIdentity[0];
             Contributions = contributions;
             ContributionCount = contributionCount;
@@ -85,8 +91,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal NativeSlice<AnimationLocalBonePose> DenseComponentPoses { get; }
         internal NativeSlice<float> PoseParameters { get; }
         internal NativeSlice<byte> PoseParameterAvailability { get; }
-        internal AnimationFootFeatureSample LeftFootFeatures { get; }
-        internal AnimationFootFeatureSample RightFootFeatures { get; }
+        internal AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
+        internal AnimationBiomechanicalStepReadPage RightFootSteps { get; }
         internal ulong ContinuityIdentity { get; }
         internal AnimationPoseSourceContribution[] Contributions { get; }
         internal int ContributionCount { get; }

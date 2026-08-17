@@ -5,7 +5,7 @@ using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicKcc
 {
-    public sealed partial class DeterministicKccWorldSolver : ICharacterWorldSolver, ICharacterFutureBodyTrajectorySource
+    public sealed partial class DeterministicKccWorldSolver : ICharacterWorldSolver, ICharacterFutureBodyTranslationSource
     {
         public const string SolverId = "thirdperson.simulation.solver.deterministic-kcc";
         public const string SolverVersion = "11";

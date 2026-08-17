@@ -84,68 +84,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 
-    internal readonly struct CharacterLyraCurrentGroundingSettings
-    {
-        internal CharacterLyraCurrentGroundingSettings(
-            int groundLayerMask,
-            int hitCapacity,
-            float traceAbove,
-            float traceBelow,
-            float traceRadius,
-            float hitNormalSpringStrength,
-            float hitNormalCriticalDamping,
-            float footOffsetSpringStrength,
-            float footOffsetCriticalDamping,
-            float footOffsetTargetVelocityAmount,
-            float pelvisOffsetSpringStrength,
-            float pelvisOffsetCriticalDamping)
-        {
-            GroundLayerMask = groundLayerMask;
-            HitCapacity = hitCapacity;
-            TraceAbove = traceAbove;
-            TraceBelow = traceBelow;
-            TraceRadius = traceRadius;
-            HitNormalSpringStrength = hitNormalSpringStrength;
-            HitNormalCriticalDamping = hitNormalCriticalDamping;
-            FootOffsetSpringStrength = footOffsetSpringStrength;
-            FootOffsetCriticalDamping = footOffsetCriticalDamping;
-            FootOffsetTargetVelocityAmount = footOffsetTargetVelocityAmount;
-            PelvisOffsetSpringStrength = pelvisOffsetSpringStrength;
-            PelvisOffsetCriticalDamping = pelvisOffsetCriticalDamping;
-        }
-
-        internal int GroundLayerMask { get; }
-        internal int HitCapacity { get; }
-        internal float TraceAbove { get; }
-        internal float TraceBelow { get; }
-        internal float TraceRadius { get; }
-        internal float HitNormalSpringStrength { get; }
-        internal float HitNormalCriticalDamping { get; }
-        internal float FootOffsetSpringStrength { get; }
-        internal float FootOffsetCriticalDamping { get; }
-        internal float FootOffsetTargetVelocityAmount { get; }
-        internal float PelvisOffsetSpringStrength { get; }
-        internal float PelvisOffsetCriticalDamping { get; }
-
-        internal void RequireValid()
-        {
-            if (GroundLayerMask == 0 || HitCapacity < 4 || HitCapacity > 32 ||
-                !Positive(TraceAbove) || !Positive(TraceBelow) || !Positive(TraceRadius) ||
-                !Positive(HitNormalSpringStrength) || !Positive(HitNormalCriticalDamping) ||
-                !Positive(FootOffsetSpringStrength) || !Positive(FootOffsetCriticalDamping) ||
-                !float.IsFinite(FootOffsetTargetVelocityAmount) ||
-                FootOffsetTargetVelocityAmount < 0f ||
-                !Positive(PelvisOffsetSpringStrength) ||
-                !Positive(PelvisOffsetCriticalDamping))
-            {
-                throw new InvalidOperationException(
-                    "Lyra Current Grounding settings are invalid.");
-            }
-        }
-
-        static bool Positive(float value) => float.IsFinite(value) && value > 0f;
-    }
-
     [CreateAssetMenu(
         fileName = "CharacterFootPlacementProfile",
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]

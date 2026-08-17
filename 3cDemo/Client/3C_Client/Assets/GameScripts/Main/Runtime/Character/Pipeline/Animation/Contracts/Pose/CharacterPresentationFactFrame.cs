@@ -263,8 +263,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Vector2 locomotionPlanarBasis,
             Vector2 desiredPlanarVelocity,
             Vector2 desiredDirection,
-            float trajectoryCurvatureDegreesPerSecond,
-            bool trajectoryCurvatureAvailable,
             float facingError,
             CharacterPresentationMotionPhase motionPhase,
             string movementModeId,
@@ -282,7 +280,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !IsFinite(locomotionPlanarBasis) || locomotionPlanarBasis.sqrMagnitude > 1.0001f ||
                 !IsFinite(desiredPlanarVelocity) ||
                 !IsFinite(desiredDirection) || desiredDirection.sqrMagnitude > 1.0001f ||
-                !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !float.IsFinite(facingError) ||
                 (byte)motionPhase < (byte)CharacterPresentationMotionPhase.GroundedStationary ||
                 (byte)motionPhase > (byte)CharacterPresentationMotionPhase.AirborneFalling ||
@@ -306,8 +303,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             LocomotionPlanarBasis = locomotionPlanarBasis;
             DesiredPlanarVelocity = desiredPlanarVelocity;
             DesiredDirection = desiredDirection;
-            TrajectoryCurvatureDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
-            TrajectoryCurvatureAvailable = trajectoryCurvatureAvailable;
             FacingError = facingError;
             MotionPhase = motionPhase;
             MovementModeId = movementModeId.Trim();
@@ -328,8 +323,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector2 LocomotionPlanarBasis { get; }
         public Vector2 DesiredPlanarVelocity { get; }
         public Vector2 DesiredDirection { get; }
-        public float TrajectoryCurvatureDegreesPerSecond { get; }
-        public bool TrajectoryCurvatureAvailable { get; }
         public float FacingError { get; }
         public CharacterPresentationMotionPhase MotionPhase { get; }
         public string MovementModeId { get; }
@@ -501,8 +494,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 intent.LocomotionPlanarBasis,
                 intent.DesiredPlanarVelocity,
                 desiredDirection,
-                intent.TrajectoryCurvatureDegreesPerSecond,
-                intent.TrajectoryCurvatureAvailable,
                 facingError,
                 ResolveMotionPhase(bodyFrame.TargetGrounded, intent.HasMotion, speed, velocity.y),
                 intent.MovementModeId,
@@ -533,19 +524,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Intents.Count == 0)
                 throw new InvalidOperationException("Presentation Fact projection has no committed Intent.");
             bool hasPrevious = false;
-            bool hasBeforePrevious = false;
-            CharacterPresentationTrajectoryIntent beforePrevious = default;
             CharacterPresentationTrajectoryIntent previous = default;
             ulong previousTick = 0;
             foreach (KeyValuePair<ulong, CharacterPresentationTrajectoryIntent> pair in m_Intents)
             {
                 if (pair.Key <= sampleTick)
                 {
-                    if (hasPrevious)
-                    {
-                        beforePrevious = previous;
-                        hasBeforePrevious = true;
-                    }
                     previous = pair.Value;
                     previousTick = pair.Key;
                     hasPrevious = true;
@@ -565,9 +549,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             if (!hasPrevious)
                 throw new InvalidOperationException("Presentation Fact projection cannot sample committed Intent.");
-            return hasBeforePrevious
-                ? IntentSample.From(beforePrevious, previous)
-                : IntentSample.From(previous);
+            return IntentSample.From(previous);
         }
 
         void ResetBodyBranch(ulong branchSequence)
@@ -650,12 +632,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string movementModeId,
                 CommittedMovementPlaybackClock movementPlaybackClock,
                 CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline,
-                double movementPlaybackTime,
-                float trajectoryCurvatureDegreesPerSecond,
-                bool trajectoryCurvatureAvailable)
+                double movementPlaybackTime)
             {
-                if (string.IsNullOrWhiteSpace(movementModeId) ||
-                    !float.IsFinite(trajectoryCurvatureDegreesPerSecond))
+                if (string.IsNullOrWhiteSpace(movementModeId))
                     throw new ArgumentException("Presentation Intent sample is incomplete.", nameof(movementModeId));
                 LocomotionPlanarBasis = locomotionPlanarBasis;
                 DesiredPlanarVelocity = desiredPlanarVelocity;
@@ -665,8 +644,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 MovementPlaybackClock = movementPlaybackClock;
                 LocomotionMotionTimeline = locomotionMotionTimeline;
                 MovementPlaybackTime = movementPlaybackTime;
-                TrajectoryCurvatureDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
-                TrajectoryCurvatureAvailable = trajectoryCurvatureAvailable;
             }
 
             internal Vector2 LocomotionPlanarBasis { get; }
@@ -677,8 +654,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal CommittedMovementPlaybackClock MovementPlaybackClock { get; }
             internal CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
             internal double MovementPlaybackTime { get; }
-            internal float TrajectoryCurvatureDegreesPerSecond { get; }
-            internal bool TrajectoryCurvatureAvailable { get; }
 
             internal static IntentSample From(CharacterPresentationTrajectoryIntent intent) =>
                 new IntentSample(
@@ -689,31 +664,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     intent.MovementModeId,
                     intent.MovementPlaybackClock,
                     intent.LocomotionMotionTimeline,
-                    intent.MovementPlaybackClock.ElapsedSeconds,
-                    0f,
-                    false);
-
-            internal static IntentSample From(
-                CharacterPresentationTrajectoryIntent previous,
-                CharacterPresentationTrajectoryIntent current)
-            {
-                ResolveCommittedTrajectoryCurvature(
-                    previous,
-                    current,
-                    out float curvature,
-                    out bool curvatureAvailable);
-                return new IntentSample(
-                    current.LocomotionPlanarBasis,
-                    current.DesiredPlanarVelocity,
-                    current.DesiredFacing,
-                    current.HasMotion,
-                    current.MovementModeId,
-                    current.MovementPlaybackClock,
-                    current.LocomotionMotionTimeline,
-                    current.MovementPlaybackClock.ElapsedSeconds,
-                    curvature,
-                    curvatureAvailable);
-            }
+                    intent.MovementPlaybackClock.ElapsedSeconds);
 
             internal static IntentSample Lerp(
                 CharacterPresentationTrajectoryIntent previous,
@@ -748,11 +699,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 double movementPlaybackTime = sameMovementClock
                     ? previousMotionTime + (currentMotionTime - previousMotionTime) * alpha
                     : useCurrentDiscrete ? currentMotionTime : previousMotionTime;
-                ResolveCommittedTrajectoryCurvature(
-                    previous,
-                    current,
-                    out float curvature,
-                    out bool curvatureAvailable);
                 return new IntentSample(
                     Vector2.Lerp(previous.LocomotionPlanarBasis, current.LocomotionPlanarBasis, alpha),
                     Vector2.Lerp(previous.DesiredPlanarVelocity, current.DesiredPlanarVelocity, alpha),
@@ -763,53 +709,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     useCurrentDiscrete
                         ? current.LocomotionMotionTimeline
                         : previous.LocomotionMotionTimeline,
-                    movementPlaybackTime,
-                    curvature,
-                    curvatureAvailable);
-            }
-
-            static void ResolveCommittedTrajectoryCurvature(
-                CharacterPresentationTrajectoryIntent previous,
-                CharacterPresentationTrajectoryIntent current,
-                out float curvatureDegreesPerSecond,
-                out bool available)
-            {
-                curvatureDegreesPerSecond = 0f;
-                available = false;
-                CommittedLocomotionPlanarMotionTimeline previousTimeline =
-                    previous.LocomotionMotionTimeline;
-                CommittedLocomotionPlanarMotionTimeline currentTimeline =
-                    current.LocomotionMotionTimeline;
-                if (!previousTimeline.IsValid || !currentTimeline.IsValid ||
-                    previousTimeline.Generation != currentTimeline.Generation ||
-                    previousTimeline.TickRate != currentTimeline.TickRate ||
-                    !string.Equals(
-                        previousTimeline.OwnerIdentity,
-                        currentTimeline.OwnerIdentity,
-                        StringComparison.Ordinal) ||
-                    previous.DesiredPlanarVelocity.sqrMagnitude <= 0.00000001f ||
-                    current.DesiredPlanarVelocity.sqrMagnitude <= 0.00000001f ||
-                    current.CurrentTick.Value <= previous.CurrentTick.Value)
-                {
-                    return;
-                }
-                float durationSeconds =
-                    (current.CurrentTick.Value - previous.CurrentTick.Value) /
-                    (float)currentTimeline.TickRate;
-                if (!float.IsFinite(durationSeconds) || durationSeconds <= 0f)
-                    return;
-                float directionDeltaDegrees = -Vector2.SignedAngle(
-                    previous.DesiredPlanarVelocity,
-                    current.DesiredPlanarVelocity);
-                float maximumDirectionDeltaDegrees = Mathf.Min(
-                    previousTimeline.MaximumYawVelocityDegreesPerSecond,
-                    currentTimeline.MaximumYawVelocityDegreesPerSecond) * durationSeconds;
-                if (Mathf.Abs(directionDeltaDegrees) > maximumDirectionDeltaDegrees + 0.001f)
-                    return;
-                curvatureDegreesPerSecond = directionDeltaDegrees / durationSeconds;
-                available = float.IsFinite(curvatureDegreesPerSecond);
-                if (!available)
-                    curvatureDegreesPerSecond = 0f;
+                    movementPlaybackTime);
             }
         }
     }

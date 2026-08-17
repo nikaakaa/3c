@@ -28,6 +28,18 @@ Original Component Pose
 
 Body trajectory只来自Simulation committed位置、朝向、线速度和角速度。in-place动画不提供世界Root位移。一次Plan冻结一个trajectory generation与动作时钟。
 
+首个可运行阶段只发布`Landing Prediction`，不生成Path、Hull、Foot Motion、Lock或Pelvis：
+
+```text
+Current/Incoming Biomechanical Step
++ committed Body trajectory
+-> RootLocalLanding世界投影
+-> 向下SphereCast
+-> Accepted Landing或typed Rejection
+```
+
+该阶段仍从唯一FootPlacement事务输出三个零权重Goal，保证FinalIK不改变原动画姿势。零权重Goal只表示该阶段尚未拥有Foot Motion，不得被描述为预测IK效果或响应式兜底。
+
 ### 3.3 转向Revision
 
 有效输入/轨迹方向改变必须新建Revision：
@@ -70,3 +82,5 @@ Artifact reconstruction
 -> Final Goal
 -> FBBIK result/residual
 ```
+
+Landing Prediction阶段的Gizmo固定为：白色Native Sole、青色Raw Landing、黄色实际SphereCast、绿色Accepted Landing、红色Rejected位置，不显示文字、不绘制伪Path。

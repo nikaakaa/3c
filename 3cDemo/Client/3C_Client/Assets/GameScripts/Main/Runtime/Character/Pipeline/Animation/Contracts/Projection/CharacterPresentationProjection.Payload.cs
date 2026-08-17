@@ -167,8 +167,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 CharacterPresentationFootGroundingDescriptor descriptor =
                     PosePlan.FootGroundings[profileIndex];
-                CharacterLyraCurrentGroundingSettings current =
-                    descriptor.Profile.LyraCurrentGrounding.Build();
+                CharacterFootLandingPredictionSettings landing =
+                    descriptor.Profile.LandingPrediction.Build();
                 string ownerId = $"foot-placement-profile:{descriptor.Profile.ProfileId}";
                 for (int entryIndex = 0; entryIndex < TuningLayout.Entries.Count; entryIndex++)
                 {
@@ -177,8 +177,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         entry.Interaction != CharacterPoseTuningInteractionPolicy.Structural)
                         continue;
                     CharacterPoseTuningValue value = TuningDefaultBlock.GetValue(entry);
-                    if (entry.FieldId.EndsWith("/lyra-current-grounding/hit-capacity", StringComparison.Ordinal) &&
-                        value.IntegerValue != current.HitCapacity)
+                    if (entry.FieldId.EndsWith("/landing-prediction/hit-capacity", StringComparison.Ordinal) &&
+                        value.IntegerValue != landing.HitCapacity)
                         throw new InvalidOperationException("Character Presentation Projection Foot Placement hit capacity is stale.");
                 }
             }

@@ -325,10 +325,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         int m_MotionMatchingHistoryCompletionCount;
         CharacterPoseGraphNativeBinding m_LastCompletedFrame;
         CharacterPoseGraphNativeBinding m_PendingCompletedFrame;
-        CharacterFootGroundingDiagnostics m_LastFootGroundingDiagnostics;
-        CharacterFootGroundingDiagnostics m_PendingFootGroundingDiagnostics;
-        CharacterPredictiveFootPlacementDiagnostics m_LastFootPlacementPredictionDiagnostics;
-        CharacterPredictiveFootPlacementDiagnostics m_PendingFootPlacementPredictionDiagnostics;
+        CharacterFootLandingPredictionDiagnostics m_LastFootLandingPredictionDiagnostics;
+        CharacterFootLandingPredictionDiagnostics m_PendingFootLandingPredictionDiagnostics;
         PosePlanFrameLease m_ActiveFrameLease;
         bool m_CommitValidated;
         bool m_HasCompletedFrame;
@@ -961,8 +959,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceBackend.BeginFrame(frameIdentity);
                 m_PendingCompletedFrame = default;
                 m_HasPendingCompletedFrame = false;
-                m_PendingFootGroundingDiagnostics = default;
-                m_PendingFootPlacementPredictionDiagnostics = default;
+                m_PendingFootLandingPredictionDiagnostics = default;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
                 m_PosePlan.BeginFrame();
                 PrepareLinkedPoseSelection(linkedPose);
@@ -1040,12 +1037,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_DirectPlayers[i].CommitFrame();
             m_PoseStateSources.CommitFrame();
             m_LastCompletedFrame = m_PendingCompletedFrame;
-            m_LastFootGroundingDiagnostics = m_PendingFootGroundingDiagnostics;
-            m_LastFootPlacementPredictionDiagnostics = m_PendingFootPlacementPredictionDiagnostics;
+            m_LastFootLandingPredictionDiagnostics = m_PendingFootLandingPredictionDiagnostics;
             m_HasCompletedFrame = true;
             m_PendingCompletedFrame = default;
-            m_PendingFootGroundingDiagnostics = default;
-            m_PendingFootPlacementPredictionDiagnostics = default;
+            m_PendingFootLandingPredictionDiagnostics = default;
             m_HasPendingCompletedFrame = false;
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
@@ -1309,8 +1304,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CommitValidated = false;
             m_PendingCompletedFrame = default;
             m_HasPendingCompletedFrame = false;
-            m_PendingFootGroundingDiagnostics = default;
-            m_PendingFootPlacementPredictionDiagnostics = default;
+            m_PendingFootLandingPredictionDiagnostics = default;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_RecordReleaseDiagnostics = false;
             ClearLinkedPoseFrameSelection();
@@ -1653,8 +1647,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PhysicalSources,
                     m_RootOrientationWarps,
                     linkedPose,
-                    in m_LastFootGroundingDiagnostics,
-                    in m_LastFootPlacementPredictionDiagnostics,
+                    in m_LastFootLandingPredictionDiagnostics,
                     interest);
             }
         }
@@ -2742,8 +2735,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     operation.Index,
                     operation.FrameCacheIndex,
                     operation.ParameterIndex);
-                m_PendingFootGroundingDiagnostics = footPlacement.GroundingDiagnostics;
-                m_PendingFootPlacementPredictionDiagnostics = footPlacement.PredictionDiagnostics;
+                m_PendingFootLandingPredictionDiagnostics =
+                    footPlacement.LandingPredictionDiagnostics;
             }
             NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets =
                 m_PosePlan.FullBodyIkGoalSets;
@@ -2802,10 +2795,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ActionBackendReleaseCompletions.Clear();
             m_LastCompletedFrame = default;
             m_PendingCompletedFrame = default;
-            m_LastFootGroundingDiagnostics = default;
-            m_PendingFootGroundingDiagnostics = default;
-            m_LastFootPlacementPredictionDiagnostics = default;
-            m_PendingFootPlacementPredictionDiagnostics = default;
+            m_LastFootLandingPredictionDiagnostics = default;
+            m_PendingFootLandingPredictionDiagnostics = default;
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
@@ -2855,10 +2846,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FramePublisher.Invalidate();
             m_LastCompletedFrame = default;
             m_PendingCompletedFrame = default;
-            m_LastFootGroundingDiagnostics = default;
-            m_PendingFootGroundingDiagnostics = default;
-            m_LastFootPlacementPredictionDiagnostics = default;
-            m_PendingFootPlacementPredictionDiagnostics = default;
+            m_LastFootLandingPredictionDiagnostics = default;
+            m_PendingFootLandingPredictionDiagnostics = default;
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;

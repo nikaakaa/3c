@@ -325,63 +325,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!profile)
                 throw new InvalidOperationException("Foot Placement Profile tuning owner is missing.");
-            if (fieldPath.StartsWith("lyra-current-grounding/", StringComparison.Ordinal))
+            if (string.Equals(
+                    fieldPath,
+                    "landing-prediction/hit-capacity",
+                    StringComparison.Ordinal))
             {
-                CharacterLyraCurrentGroundingSettings value = profile.LyraCurrentGrounding.Build();
-                string field = fieldPath.Substring("lyra-current-grounding/".Length);
-                return field switch
-                {
-                    "trace-above" => CharacterPoseTuningValue.Float(value.TraceAbove),
-                    "trace-below" => CharacterPoseTuningValue.Float(value.TraceBelow),
-                    "trace-radius" => CharacterPoseTuningValue.Float(value.TraceRadius),
-                    "hit-normal-spring-strength" => CharacterPoseTuningValue.Float(value.HitNormalSpringStrength),
-                    "hit-normal-critical-damping" => CharacterPoseTuningValue.Float(value.HitNormalCriticalDamping),
-                    "foot-offset-spring-strength" => CharacterPoseTuningValue.Float(value.FootOffsetSpringStrength),
-                    "foot-offset-critical-damping" => CharacterPoseTuningValue.Float(value.FootOffsetCriticalDamping),
-                    "foot-offset-target-velocity-amount" => CharacterPoseTuningValue.Float(value.FootOffsetTargetVelocityAmount),
-                    "pelvis-offset-spring-strength" => CharacterPoseTuningValue.Float(value.PelvisOffsetSpringStrength),
-                    "pelvis-offset-critical-damping" => CharacterPoseTuningValue.Float(value.PelvisOffsetCriticalDamping),
-                    _ => throw new InvalidOperationException($"Lyra Current Grounding tuning field '{field}' is not declared.")
-                };
-            }
-            if (fieldPath.StartsWith("stance-stabilization/", StringComparison.Ordinal))
-            {
-                CharacterStanceStabilizationSettings value = profile.StanceStabilization.Build();
-                string field = fieldPath.Substring("stance-stabilization/".Length);
-                return field switch
-                {
-                    "maximum-surface-slope-degrees" => CharacterPoseTuningValue.Float(value.MaximumSurfaceSlopeDegrees),
-                    "maximum-contact-surface-distance" => CharacterPoseTuningValue.Float(value.MaximumContactSurfaceDistance),
-                    "plant-speed-threshold" => CharacterPoseTuningValue.Float(value.PlantSpeedThreshold),
-                    "unalignment-speed-threshold" => CharacterPoseTuningValue.Float(value.UnalignmentSpeedThreshold),
-                    "plant-confidence-enter" => CharacterPoseTuningValue.Float(value.PlantConfidenceEnter),
-                    "plant-confidence-exit" => CharacterPoseTuningValue.Float(value.PlantConfidenceExit),
-                    "anchor-blend-speed" => CharacterPoseTuningValue.Float(value.AnchorBlendSpeed),
-                    "maximum-anchor-distance" => CharacterPoseTuningValue.Float(value.MaximumAnchorDistance),
-                    "maximum-pelvis-lowering" => CharacterPoseTuningValue.Float(value.MaximumPelvisLowering),
-                    "maximum-pelvis-raising" => CharacterPoseTuningValue.Float(value.MaximumPelvisRaising),
-                    _ => throw new InvalidOperationException($"Stance Stabilization tuning field '{field}' is not declared.")
-                };
-            }
-            if (fieldPath.StartsWith("predictive/", StringComparison.Ordinal))
-            {
-                CharacterPredictiveFootPlacementRuntimeSettings value = profile.PredictiveExtension.Build();
-                string field = fieldPath.Substring("predictive/".Length);
-                return field switch
-                {
-                    "path-sphere-radius" => CharacterPoseTuningValue.Float(value.PathSphereRadius),
-                    "swing-capsule-radius" => CharacterPoseTuningValue.Float(value.SwingCapsuleRadius),
-                    "cast-above" => CharacterPoseTuningValue.Float(value.CastAbove),
-                    "cast-below" => CharacterPoseTuningValue.Float(value.CastBelow),
-                    "maximum-slope-degrees" => CharacterPoseTuningValue.Float(value.MaximumSlopeDegrees),
-                    "maximum-step-up" => CharacterPoseTuningValue.Float(value.MaximumStepUp),
-                    "maximum-step-down" => CharacterPoseTuningValue.Float(value.MaximumStepDown),
-                    "maximum-height-discontinuity" => CharacterPoseTuningValue.Float(value.MaximumHeightDiscontinuity),
-                    "maximum-edge-gap" => CharacterPoseTuningValue.Float(value.MaximumEdgeGap),
-                    "minimum-landing-confidence" => CharacterPoseTuningValue.Float(value.MinimumLandingConfidence),
-                    "maximum-prediction-reach-ratio" => CharacterPoseTuningValue.Float(value.MaximumPredictionReachRatio),
-                    _ => throw new InvalidOperationException($"Predictive Extension tuning field '{field}' is not declared.")
-                };
+                return CharacterPoseTuningValue.Integer(
+                    profile.LandingPrediction.Build().HitCapacity);
             }
             throw new InvalidOperationException($"Foot Placement tuning field '{fieldPath}' is not declared.");
         }

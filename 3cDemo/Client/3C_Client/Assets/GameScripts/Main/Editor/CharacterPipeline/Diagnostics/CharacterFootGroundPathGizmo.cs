@@ -28,20 +28,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (groundPath.RevisionIdentity == 0)
                 return;
 
-            Handles.color = FootColor(foot.Side);
-            if (groundPath.EnvelopeVertexCount >= 2)
+            if (groundPath.Accepted)
             {
-                Vector3 previous = groundPath.EnvelopeVertexAt(0).Position;
-                for (int i = 1; i < groundPath.EnvelopeVertexCount; i++)
+                Handles.color = FootColor(foot.Side);
+                if (groundPath.EnvelopeVertexCount >= 2)
                 {
-                    Vector3 current = groundPath.EnvelopeVertexAt(i).Position;
-                    Handles.DrawLine(previous, current, 5f);
-                    previous = current;
+                    Vector3 previous = groundPath.EnvelopeVertexAt(0).Position;
+                    for (int i = 1; i < groundPath.EnvelopeVertexCount; i++)
+                    {
+                        Vector3 current = groundPath.EnvelopeVertexAt(i).Position;
+                        Handles.DrawLine(previous, current, 5f);
+                        previous = current;
+                    }
                 }
             }
 
-            DrawLandingMarker(groundPath.CurrentLanding, groundPath.ComponentUp, Color.green);
-            DrawLandingMarker(groundPath.NextLanding, groundPath.ComponentUp, Color.yellow);
+            Color landingColor = groundPath.Accepted ? Color.green : Color.red;
+            DrawLandingMarker(groundPath.CurrentLanding, groundPath.ComponentUp, landingColor);
+            DrawLandingMarker(groundPath.NextLanding, groundPath.ComponentUp, landingColor);
         }
 
         static void DrawLandingMarker(Vector3 position, Vector3 componentUp, Color color)

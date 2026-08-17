@@ -272,7 +272,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     0,
                     default);
-                return state.CreateDiagnostics(rejectedPage, false);
+                return new CharacterFootGroundPathDiagnostics(rejectedPage, false);
             }
             if (!nextLanding.Accepted)
             {
@@ -282,7 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     0,
                     default);
-                return state.CreateDiagnostics(rejectedPage, false);
+                return new CharacterFootGroundPathDiagnostics(rejectedPage, false);
             }
 
             CharacterFootGroundPathRevisionKey key =
@@ -298,7 +298,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                  state.CommittedAuthorityTick == key.AuthorityTick))
             {
                 CharacterFootGroundPathPage committedPage = state.ReuseCommitted();
-                return state.CreateDiagnostics(committedPage, false);
+                return new CharacterFootGroundPathDiagnostics(committedPage, false);
             }
 
             CharacterFootGroundPathPage pendingPage = state.BeginPending();
@@ -320,7 +320,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     0,
                     default);
-                return state.CreateDiagnostics(pendingPage, false);
+                return new CharacterFootGroundPathDiagnostics(pendingPage, false);
             }
 
             CharacterFootGroundPathQueryRequest query = revision.Query;
@@ -354,7 +354,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     true,
                     result.SegmentCount,
                     in revision);
-            return state.CreateDiagnostics(pendingPage, true);
+            return new CharacterFootGroundPathDiagnostics(pendingPage, true);
         }
 
         CharacterFootLandingPredictionPair PredictFootPair(
@@ -437,7 +437,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     goal);
             }
             CharacterFootLandingPredictionSettings settings = m_Settings.LandingPrediction;
-            if (step.TimeToLandingSeconds <= 0.000001f ||
+            if (step.TimeToLandingSeconds < 0f ||
                 step.TimeToLandingSeconds > settings.MaximumPredictionTimeSeconds)
             {
                 return Rejected(
@@ -464,7 +464,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     goal);
             }
-            if (bodyTrajectory == null)
+            bool requiresFutureBodyTranslation = step.TimeToLandingSeconds > 0.000001f;
+            if (requiresFutureBodyTranslation && bodyTrajectory == null)
             {
                 return Rejected(
                     side,
@@ -478,7 +479,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     goal);
             }
 
-            if (bodyTrajectory.DurationSeconds + 0.0001f < step.TimeToLandingSeconds)
+            if (requiresFutureBodyTranslation &&
+                bodyTrajectory.DurationSeconds + 0.0001f < step.TimeToLandingSeconds)
             {
                 return Rejected(
                     side,
@@ -493,7 +495,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
 
             CharacterFutureBodyTranslationSample bodyTranslation =
-                bodyTrajectory.Evaluate(step.TimeToLandingSeconds);
+                bodyTrajectory != null
+                    ? bodyTrajectory.Evaluate(step.TimeToLandingSeconds)
+                    : new CharacterFutureBodyTranslationSample(
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        0f);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
             Vector3 rawLanding = CharacterFootLandingPredictor.ProjectRawLanding(
                 frame.Body.VisiblePosition,
@@ -522,8 +533,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 step.Confidence,
                 step.TimeToLandingSeconds,
                 step.RootLocalLanding,
-                true,
-                bodyTrajectory.SourceIdentity,
+                bodyTrajectory != null,
+                bodyTrajectory != null ? bodyTrajectory.SourceIdentity : string.Empty,
                 in bodyTranslation,
                 currentSole,
                 rawLanding,

@@ -1,0 +1,100 @@
+using NUnit.Framework;
+using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonSimulation;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Pipeline.Editor
+{
+    public sealed class CharacterFootLandingPredictorTests
+    {
+        [Test]
+        public void ProjectionConsumesFutureTranslationAndYawOnce()
+        {
+            var body = new CharacterFutureBodyTrajectorySample(
+                0.25f,
+                2f,
+                0f,
+                0f,
+                90f,
+                0f,
+                0f,
+                0f,
+                0f);
+
+            Vector3 result = CharacterFootLandingPredictor.ProjectRawLanding(
+                Vector3.zero,
+                Quaternion.identity,
+                Vector3.up,
+                in body,
+                Vector3.forward);
+
+            Assert.That(result.x, Is.EqualTo(3f).Within(0.0001f));
+            Assert.That(result.y, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(result.z, Is.EqualTo(0f).Within(0.0001f));
+        }
+
+        [Test]
+        public void QueryIsAnchoredAboveRawLandingAndPointsDown()
+        {
+            var settings = new CharacterFootLandingPredictionSettings(
+                1 << 12,
+                16,
+                0.08f,
+                0.35f,
+                0.75f,
+                55f,
+                2f);
+            Vector3 raw = new Vector3(1f, 2f, 3f);
+
+            CharacterFootPlacementQueryRequest query =
+                CharacterFootLandingPredictor.BuildQuery(
+                    CharacterFootSide.Right,
+                    raw,
+                    Vector3.up,
+                    in settings);
+
+            Assert.That(query.FootIndex, Is.EqualTo(1));
+            Assert.That(query.Origin, Is.EqualTo(raw + Vector3.up * 0.35f));
+            Assert.That(query.Direction, Is.EqualTo(Vector3.down));
+            Assert.That(query.MaximumDistance, Is.EqualTo(1.1f).Within(0.0001f));
+        }
+
+        [Test]
+        public void QueryMissDoesNotCreateSupport()
+        {
+            var settings = new CharacterFootLandingPredictionSettings(
+                1 << 12,
+                16,
+                0.08f,
+                0.35f,
+                0.75f,
+                55f,
+                2f);
+            var world = new MissingWorldQuery();
+
+            bool accepted = CharacterFootLandingPredictor.TryResolve(
+                CharacterFootSide.Left,
+                Vector3.zero,
+                Vector3.up,
+                in settings,
+                world,
+                out CharacterFootPlacementQueryRequest query,
+                out CharacterFootLandingSupport support);
+
+            Assert.That(accepted, Is.False);
+            Assert.That(query.Purpose, Is.EqualTo(CharacterFootPlacementQueryPurpose.FutureLanding));
+            Assert.That(support.SurfaceIdentity, Is.EqualTo(0));
+        }
+
+        sealed class MissingWorldQuery : ICharacterFootLandingWorldQuery
+        {
+            public bool TryQuery(
+                in CharacterFootPlacementQueryRequest request,
+                out CharacterFootLandingSupport support)
+            {
+                support = default;
+                return false;
+            }
+        }
+    }
+}

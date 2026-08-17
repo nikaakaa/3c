@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c3b014348f0c4733bd0a1b0c9d90a21e, type: 3}
-  m_Name: TrainingEnemyMonsterFootPlacementProfile
+  m_Name: CorinFootPlacementProfile
   m_EditorClassIdentifier: 
-  m_ProfileId: training-enemy.monster.foot-placement
+  m_ProfileId: corin.foot-placement
   m_LandingPrediction:
     m_GroundLayerMask:
       serializedVersion: 2

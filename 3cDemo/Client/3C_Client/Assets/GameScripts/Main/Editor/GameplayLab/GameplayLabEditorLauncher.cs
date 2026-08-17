@@ -98,7 +98,6 @@ namespace ThirdPersonGameplay.Editor.Lab
                     .ToArray();
                 if (sessionHosts.Length != 0)
                     throw new InvalidOperationException("Gameplay Lab scene cannot contain a pre-instantiated SimulationSessionHost.");
-                GameplayLabFootIkRegressionCourseBuilder.ValidateScene(scene);
                 ValidatePlayerPresentation();
                 ValidateVariants(bootstrap);
             }
@@ -236,15 +235,13 @@ namespace ThirdPersonGameplay.Editor.Lab
                 FixedCharacterHost[] characters = root.GetComponentsInChildren<FixedCharacterHost>(true);
                 if (characters.Any(character => !character.ControlSource) ||
                     characters.Count(character => character.ControlSource is FixedPlayerCharacterControlSource) !=
-                    (footIkEnduranceVariant ? 0 : 1) ||
-                    characters.Count(character => character.ControlSource is GameplayLabFootIkFixedControlSource) !=
-                    (footIkEnduranceVariant ? 1 : 0) ||
+                    1 ||
                     characters.Count(character => character.ControlSource is FixedNeutralCharacterControlSource) !=
                     (footIkEnduranceVariant ? 0 : 1))
                 {
                     throw new InvalidOperationException(
                         footIkEnduranceVariant
-                            ? $"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Foot IK Endurance Control Source."
+                            ? $"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Fixed Player Control Source."
                             : $"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Fixed Player Control Source and one persisted Fixed Neutral Control Source.");
                 }
             }

@@ -4,7 +4,7 @@
 - [x] 1.2 删除旧Revision、Successor、Continuity、LandingHandoff与Stance/Anchor/Pelvis实现。
 - [x] 1.3 删除旧Predictive Profile/Tuning、Gizmo、CSV Capture、自动控制入口和专用Variant。
 - [x] 1.4 保留Rig/Calibration、Sole几何、Surface、WorldQuery、Lyra Current Grounding基础、Pose/Feature输入和唯一FBBIK。
-- [ ] 1.5 清理共享Animation/Editor中的旧类型引用，使源码只留下新的FootPlacement装配入口。
+- [x] 1.5 清理共享Animation/Editor中的旧类型引用，使源码只留下新的FootPlacement装配入口。
 
 ## 2. 平地动画路线
 
@@ -16,9 +16,12 @@
 
 ## 3. Body Trajectory与初始Plan
 
-- [ ] 3.1 从Simulation committed事实构造一次冻结的Body position/facing/linear/angular trajectory。
-- [ ] 3.2 用Animation Foot Route与Body trajectory生成唯一世界Foot Route和Landing候选。
-- [ ] 3.3 Landing必须通过正式Physics查询取得可踩Surface，不得使用旋转旧命中或默认地面。
+- [x] 3.1 从Simulation committed事实构造Body position/facing/linear/angular trajectory输入。
+- [x] 3.2 用Biomechanical Step的`RootLocalLanding`与Body trajectory生成唯一Raw Landing候选。
+- [x] 3.3 Landing必须通过正式Physics SphereCast取得可踩Surface，不得使用旋转旧命中或默认地面。
+- [x] 3.4 为Landing投影、查询请求和无命中拒绝建立纯计算单元测试。
+- [x] 3.5 以零权重Goal接回唯一FootPlacement事务，使角色可运行但不修改原动画骨骼。
+- [x] 3.6 绘制Native Sole、Raw Landing、实际查询和Accepted/Rejected Landing，不显示文字或伪Path。
 
 ## 4. 转向重规划
 

@@ -78,7 +78,6 @@ namespace ThirdPersonGameplay.Editor.Lab
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be rebuilt in Play Mode.");
-            GameplayLabFootIkRegressionCourseBuilder.SyncEnvironmentPrefab();
             EnsureFolders();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram =
@@ -144,7 +143,6 @@ namespace ThirdPersonGameplay.Editor.Lab
                 collision,
                 string.Empty);
             BuildScene(fixedVariant, floatVariant, footIkEnduranceVariant, rollbackVariant);
-            GameplayLabFootIkRegressionCourseBuilder.SyncGameplayLabScene();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
@@ -194,7 +192,6 @@ namespace ThirdPersonGameplay.Editor.Lab
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be synchronized in Play Mode.");
-            GameplayLabFootIkRegressionCourseBuilder.SyncEnvironmentPrefab();
             EnsureFolders();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram =
@@ -227,7 +224,6 @@ namespace ThirdPersonGameplay.Editor.Lab
             GameplayLabSessionVariantDefinition rollbackVariant =
                 LoadRequired<GameplayLabSessionVariantDefinition>(RollbackVariantPath);
             SyncSceneVariants(fixedVariant, floatVariant, enduranceVariant, rollbackVariant);
-            GameplayLabFootIkRegressionCourseBuilder.SyncGameplayLabScene();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
@@ -478,9 +474,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     root.transform,
                     "Gameplay Lab Fixed Player",
                     new ActorId(PlayerActorId),
-                    footIkEndurance
-                        ? GameplayLabFootIkRegressionCourse.PlayerSpawnPosition
-                        : s_PlayerPosition,
+                    s_PlayerPosition,
                     Quaternion.identity,
                     sessionHost,
                     fixedProgram,
@@ -736,28 +730,12 @@ namespace ThirdPersonGameplay.Editor.Lab
             FixedCharacterControlSource controlSource;
             if (playerControlled)
             {
-                if (footIkEndurance)
-                {
-                    RemoveComponents<CharacterActionTargetInputProvider>(instance);
-                    var enduranceSource = instance.AddComponent<GameplayLabFootIkFixedControlSource>();
-                    enduranceSource.SetAuthoring(
-                        definition.InputProfile,
-                        string.Empty,
-                        null,
-                        "MoveAxis",
-                        0.18f,
-                        0.75f);
-                    controlSource = enduranceSource;
-                }
-                else
-                {
-                    SessionActorActionTargetInputProvider provider =
-                        instance.GetComponent<SessionActorActionTargetInputProvider>() ??
-                        instance.AddComponent<SessionActorActionTargetInputProvider>();
-                    var playerSource = instance.AddComponent<FixedPlayerCharacterControlSource>();
-                    playerSource.SetAuthoring(definition.InputProfile, ActionTargetInputId, provider);
-                    controlSource = playerSource;
-                }
+                SessionActorActionTargetInputProvider provider =
+                    instance.GetComponent<SessionActorActionTargetInputProvider>() ??
+                    instance.AddComponent<SessionActorActionTargetInputProvider>();
+                var playerSource = instance.AddComponent<FixedPlayerCharacterControlSource>();
+                playerSource.SetAuthoring(definition.InputProfile, ActionTargetInputId, provider);
+                controlSource = playerSource;
             }
             else
             {

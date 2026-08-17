@@ -377,43 +377,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string ownerId,
             List<FieldValue> fields)
         {
-            CharacterLyraCurrentGroundingSettings grounding = profile.LyraCurrentGrounding.Build();
-            CharacterStanceStabilizationSettings stance = profile.StanceStabilization.Build();
-            CharacterPredictiveFootPlacementRuntimeSettings predictive = profile.PredictiveExtension.Build();
-            int nextFloat = NextIndex(fields, CharacterPoseTuningValueKind.Float);
+            CharacterFootLandingPredictionSettings landing =
+                profile.LandingPrediction.Build();
             int nextInteger = NextIndex(fields, CharacterPoseTuningValueKind.Integer);
-            AddInteger(fields, ownerId, $"{ownerId}/lyra-current-grounding/hit-capacity", "Current Grounding Hit Capacity", grounding.HitCapacity, 4, 32, "count", ref nextInteger, CharacterPoseTuningInteractionPolicy.Structural);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/trace-above", "Trace Above", grounding.TraceAbove, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/trace-below", "Trace Below", grounding.TraceBelow, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/trace-radius", "Trace Radius", grounding.TraceRadius, 0f, 2f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/hit-normal-spring-strength", "Hit Normal Spring Strength", grounding.HitNormalSpringStrength, 0f, 100f, "hertz", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/hit-normal-critical-damping", "Hit Normal Critical Damping", grounding.HitNormalCriticalDamping, 0f, 10f, "ratio", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/foot-offset-spring-strength", "Foot Offset Spring Strength", grounding.FootOffsetSpringStrength, 0f, 100f, "hertz", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/foot-offset-critical-damping", "Foot Offset Critical Damping", grounding.FootOffsetCriticalDamping, 0f, 10f, "ratio", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/foot-offset-target-velocity-amount", "Foot Offset Target Velocity", grounding.FootOffsetTargetVelocityAmount, 0f, 1f, "normalized", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/pelvis-offset-spring-strength", "Pelvis Offset Spring Strength", grounding.PelvisOffsetSpringStrength, 0f, 100f, "hertz", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/lyra-current-grounding/pelvis-offset-critical-damping", "Pelvis Offset Critical Damping", grounding.PelvisOffsetCriticalDamping, 0f, 10f, "ratio", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/maximum-surface-slope-degrees", "Maximum Surface Slope", stance.MaximumSurfaceSlopeDegrees, 0f, 89f, "degrees", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/maximum-contact-surface-distance", "Maximum Contact Surface Distance", stance.MaximumContactSurfaceDistance, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/plant-speed-threshold", "Plant Speed Threshold", stance.PlantSpeedThreshold, 0f, 10f, "meters/second", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/unalignment-speed-threshold", "Unalignment Speed Threshold", stance.UnalignmentSpeedThreshold, 0f, 10f, "meters/second", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/plant-confidence-enter", "Plant Confidence Enter", stance.PlantConfidenceEnter, 0f, 1f, "normalized", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/plant-confidence-exit", "Plant Confidence Exit", stance.PlantConfidenceExit, 0f, 1f, "normalized", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/anchor-blend-speed", "Anchor Blend Speed", stance.AnchorBlendSpeed, 0f, 100f, "response", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/maximum-anchor-distance", "Maximum Anchor Distance", stance.MaximumAnchorDistance, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/maximum-pelvis-lowering", "Maximum Pelvis Lowering", stance.MaximumPelvisLowering, 0f, 1f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/stance-stabilization/maximum-pelvis-raising", "Maximum Pelvis Raising", stance.MaximumPelvisRaising, 0f, 1f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/path-sphere-radius", "Path Sphere Radius", predictive.PathSphereRadius, 0f, 2f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/swing-capsule-radius", "Swing Capsule Radius", predictive.SwingCapsuleRadius, 0f, 2f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/cast-above", "Cast Above", predictive.CastAbove, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/cast-below", "Cast Below", predictive.CastBelow, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/maximum-slope-degrees", "Maximum Slope", predictive.MaximumSlopeDegrees, 0f, 89f, "degrees", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/maximum-step-up", "Maximum Step Up", predictive.MaximumStepUp, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/maximum-step-down", "Maximum Step Down", predictive.MaximumStepDown, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/maximum-height-discontinuity", "Maximum Height Discontinuity", predictive.MaximumHeightDiscontinuity, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/maximum-edge-gap", "Maximum Edge Gap", predictive.MaximumEdgeGap, 0f, 10f, "meters", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/minimum-landing-confidence", "Minimum Landing Confidence", predictive.MinimumLandingConfidence, 0f, 1f, "normalized", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
-            AddFloat(fields, ownerId, $"{ownerId}/predictive/maximum-prediction-reach-ratio", "Maximum Prediction Reach", predictive.MaximumPredictionReachRatio, 0.5f, 1.25f, "ratio", ownerId, CharacterPoseTuningApplyTiming.NextFrame, CharacterPoseTuningStatePolicy.PreserveState, ref nextFloat);
+            AddInteger(
+                fields,
+                ownerId,
+                $"{ownerId}/landing-prediction/hit-capacity",
+                "Landing Query Hit Capacity",
+                landing.HitCapacity,
+                4,
+                32,
+                "count",
+                ref nextInteger,
+                CharacterPoseTuningInteractionPolicy.Structural);
         }
 
         static CharacterPoseTuningConsumerRange[] BuildConsumerRanges(

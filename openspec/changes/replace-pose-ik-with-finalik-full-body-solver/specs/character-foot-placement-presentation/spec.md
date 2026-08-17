@@ -18,6 +18,28 @@
 
 ## ADDED Requirements
 
+### Requirement: Landing Prediction必须先形成可独立验证的世界事实
+
+系统 MUST先以权威Current或Incoming Biomechanical Step的`RootLocalLanding`、落地时间和Landing Event identity，结合Simulation committed Body position、facing、linear/angular trajectory生成Raw Landing。系统 MUST对Raw Landing执行实际向下SphereCast，并只把合法坡度命中发布为Accepted Landing；无Step、identity不匹配、Body trajectory不可用或查询无命中 MUST发布精确拒绝原因。该阶段 MUST不生成Path、Hull、Foot Motion、Lock或Pelvis，也 MUST不修改脚和骨盆。
+
+#### Scenario: 直线行走产生合法落点
+
+- **WHEN** 当前脚拥有权威下一落脚事实、committed Body trajectory和合法可踩命中
+- **THEN** 系统 MUST同时发布Raw Landing、实际SphereCast请求和Accepted Landing
+- **AND** Gizmo MUST分别绘制Native Sole、Raw Landing、查询与Accepted Landing
+
+#### Scenario: 前方没有合法踏面
+
+- **WHEN** Raw Landing下方SphereCast没有合法命中
+- **THEN** 系统 MUST发布`GroundQueryMissed`
+- **AND** MUST不创建绿色落点、默认地面或伪Path
+
+#### Scenario: Landing阶段尚未拥有Foot Motion
+
+- **WHEN** Landing Prediction阶段运行
+- **THEN** FootPlacement MUST向唯一FBBIK ABI提交三个零权重Goal并保持原动画姿势
+- **AND** MUST不让Current Grounding或其它owner修改脚或骨盆
+
 ### Requirement: 平地Animation Foot Route必须先与Native Sole对齐
 
 系统 MUST在进入Ground Query前，按同一权威Action Phase证明Animation Foot Route可重建Native Sole的XZ、旋转和Landing端点。Gizmo MUST绘制完整Route与当前Phase采样点。实际Foot Motion与该采样不一致时，Plan MUST无效。

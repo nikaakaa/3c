@@ -458,13 +458,16 @@ Successor Step Start
 
 这五项不能分别查询、分别换代或用Current Surface代替。
 
-Landing交接只允许一层互补所有权。Anchor开始淡入后，本帧已经完成Transition与Reach裁决的预测输出是旧侧，已提交Anchor的世界Ankle Pose是新侧：
+Landing交接只允许一层互补所有权。Anchor第一次提交时，必须从紧邻上一完成帧冻结一次Final Ankle Pose作为旧侧；本帧Transition、Reach、事件换代或Plan后继都不得重新生成这个起点。已提交Anchor的世界Ankle Pose是新侧：
 
 ```text
-LandingGoal = Lerp(ResolvedPredictiveOrTransitionGoal, CommittedAnchorGoal, AnchorBlend)
+LandingHandoffOrigin = PreviousCompletedFinalGoal at first committed Anchor frame
+LandingGoal(t) = Lerp(FrozenLandingHandoffOrigin, CommittedAnchorGoal(t), AnchorBlend(t))
 ```
 
-`AnchorBlend`同时约束Foot Goal与Pelvis支撑权重。实现不得先把Predictive权重乘以`1 - AnchorBlend`，再从Original动画重新补足剩余权重；这种组合会在部分Anchor期间形成`Predictive -> Original -> Anchor`三个owner，并把动画空中脚重新暴露到已经提交的支撑事务中。只有没有合法Plan/Transition且没有合法Stance/Anchor时，Original动画才能独占该脚。
+冻结身份必须至少包含Landing Event identity与Plan Sequence。`AnchorBlend=0`时输出必须精确等于冻结Origin；同一事务内Origin必须保持不变；事件已经换代也不能让本帧重新求值的Transition替换Origin。`AnchorBlend`同时约束Foot Goal与Pelvis支撑权重。实现不得先把Predictive权重乘以`1 - AnchorBlend`，再从Original动画重新补足剩余权重；这种组合会在部分Anchor期间形成`Predictive -> Original -> Anchor`三个owner，并把动画空中脚重新暴露到已经提交的支撑事务中。
+
+跨帧连续性身份必须是`Plan Sequence + Goal Owner`，不能只比较Plan Sequence。否则同一Plan下`LandingHandoff -> PlanTransition`或`Stance -> ActivePlan`会被误判为同一输出；但Landing仍在接管时不得提前启动这笔释放连续性，必须等最终Owner真实离开Landing/Stance后再从上一完成Final捕获。只有没有合法Plan/Transition且没有合法Stance/Anchor时，Original动画才能独占该脚。
 
 ## 9. Predictive Body、Support Leg与Pelvis
 

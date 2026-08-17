@@ -80,6 +80,7 @@
 65. 自动Input Action的锁存边界属于Input System update sequence，不属于Render Frame。只有`InputSystem.onAfterUpdate`确认正式Action消费了上一提交状态后才能校验；要求每个表现帧都出现新Input update会制造与Foot Placement无关的假失败。
 66. Foot与Pelvis必须在同一个Transition边界保留旧完成输出。run `fec7a6b...`证明仅保留Foot而暂时移除Pelvis候选，或在Transition之后再次执行Reach，都会让同一Completion出现两个owner；移除第二Reach后run `79dfec...`的`Pre-Continuity -> Final`最大额外变化降至左`2.192cm`、右`0.982cm`。
 67. Anchor部分权重不是Original动画的空档。run `79dfec...`中Anchor Blend约`0.303~0.706`时出现`63.59~82.48cm`Goal下降和最高约`1.330m`物理下陷；根因是先以`1 - AnchorBlend`衰减Predictive，再让Original补足。正式Landing必须只做`Resolved Predictive/Transition -> Committed Anchor`的互补混合，并让Foot与Pelvis消费同一权重。
+68. 互补公式不能使用本帧重算目标作为左端点。run `fe5f1816...`右脚frame 231首次提交Anchor时Blend为0、Committed Anchor Y为`2.423m`，但Final已降到`1.981m`；frame 232事件换代后Pre-Continuity降至`1.505m`，约9.3% Anchor混合仍产生`84.48cm`物理下陷。Landing左端点必须在首次Anchor提交时冻结为紧邻上一完成Final，并用`Plan Sequence + Landing Event identity`锁定整笔事务；跨帧连续性还必须比较Goal Owner，且不能在Landing覆盖底层Plan时提前消费释放交接。
 
 ## 当前证据与下一owner
 

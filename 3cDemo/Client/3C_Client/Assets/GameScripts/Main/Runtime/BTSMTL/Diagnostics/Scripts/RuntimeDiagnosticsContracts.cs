@@ -794,6 +794,12 @@ namespace BTSMTL.Diagnostics
         public string GoalOwner;
         public Vector3 OriginalGoalWorldPosition;
         public Vector3 StanceGoalWorldPosition;
+        public bool LandingHandoffAvailable;
+        public ulong LandingHandoffPlanSequence;
+        public ulong LandingHandoffEventIdentity;
+        public float LandingHandoffBlend;
+        public Vector3 LandingHandoffOriginWorldPosition;
+        public Vector3 LandingHandoffTargetWorldPosition;
         public bool ActivePlanGeometryGoalAvailable;
         public Vector3 ActivePlanGeometryGoalWorldPosition;
         public bool ActivePlanGoalAvailable;

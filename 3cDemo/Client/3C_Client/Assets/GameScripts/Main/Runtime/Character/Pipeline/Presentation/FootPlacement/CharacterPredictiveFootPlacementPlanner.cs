@@ -648,6 +648,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 groundPathPosition,
                 in FootPlacementSurface groundSupport,
                 ulong planSequence,
+                CharacterFootPlacementGoalOwner goalOwner,
                 Vector3 pathRootPosition,
                 Vector3 pathRootStartPosition,
                 Vector3 pathHipPosition)
@@ -663,6 +664,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 GroundPathPosition = hasGroundPath ? groundPathPosition : Vector3.zero;
                 GroundSupport = hasGroundPath ? groundSupport : default;
                 PlanSequence = hasGroundPath ? planSequence : 0;
+                GoalOwner = goalOwner;
                 PathRootPosition = hasGroundPath ? pathRootPosition : Vector3.zero;
                 PathRootStartPosition = hasGroundPath ? pathRootStartPosition : Vector3.zero;
                 PathHipPosition = hasGroundPath ? pathHipPosition : Vector3.zero;
@@ -679,6 +681,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal Vector3 GroundPathPosition { get; }
             internal FootPlacementSurface GroundSupport { get; }
             internal ulong PlanSequence { get; }
+            internal CharacterFootPlacementGoalOwner GoalOwner { get; }
             internal Vector3 PathRootPosition { get; }
             internal Vector3 PathRootStartPosition { get; }
             internal Vector3 PathHipPosition { get; }
@@ -745,11 +748,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal FootPlacementSurface TransitionOriginGroundSupport =>
                 m_Transition.GroundSupport;
             ulong m_OutputContinuityPlanSequence;
+            CharacterFootPlacementGoalOwner m_OutputContinuityGoalOwner;
             ulong m_OutputContinuityStartedFrame;
             float m_OutputContinuityWeight;
             Vector3 m_OutputContinuityPositionOffset;
             Quaternion m_OutputContinuityRotationOffset = Quaternion.identity;
             bool m_SuppressNextOutputContinuityCapture;
+            ulong m_LandingHandoffPlanSequence;
+            ulong m_LandingHandoffEventIdentity;
+            Vector3 m_LandingHandoffOriginPosition;
+            Quaternion m_LandingHandoffOriginRotation = Quaternion.identity;
 
             internal void CopyFrom(CharacterFootPlanExecutionState source)
             {
@@ -770,11 +778,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LastPlanBuildAttemptAuthorityTick = source.LastPlanBuildAttemptAuthorityTick;
                 LastOutput = source.LastOutput;
                 m_OutputContinuityPlanSequence = source.m_OutputContinuityPlanSequence;
+                m_OutputContinuityGoalOwner = source.m_OutputContinuityGoalOwner;
                 m_OutputContinuityStartedFrame = source.m_OutputContinuityStartedFrame;
                 m_OutputContinuityWeight = source.m_OutputContinuityWeight;
                 m_OutputContinuityPositionOffset = source.m_OutputContinuityPositionOffset;
                 m_OutputContinuityRotationOffset = source.m_OutputContinuityRotationOffset;
                 m_SuppressNextOutputContinuityCapture = source.m_SuppressNextOutputContinuityCapture;
+                m_LandingHandoffPlanSequence = source.m_LandingHandoffPlanSequence;
+                m_LandingHandoffEventIdentity = source.m_LandingHandoffEventIdentity;
+                m_LandingHandoffOriginPosition = source.m_LandingHandoffOriginPosition;
+                m_LandingHandoffOriginRotation = source.m_LandingHandoffOriginRotation;
                 PlanAttempt = source.PlanAttempt;
                 PlanBuildDecision = source.PlanBuildDecision;
             }
@@ -1038,6 +1051,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 groundPath,
                 FootPlacementSurface groundSupport,
                 ulong groundPlanSequence,
+                CharacterFootPlacementGoalOwner goalOwner,
                 Vector3 pathRoot,
                 Vector3 pathRootStart,
                 Vector3 pathHip)
@@ -1067,6 +1081,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     groundPath,
                     in outputSupport,
                     groundPlanSequence,
+                    goalOwner,
                     pathRoot,
                     pathRootStart,
                     pathHip);
@@ -1085,6 +1100,51 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IsFinite(LastOutput.PathRootPosition) &&
                 IsFinite(LastOutput.PathRootStartPosition) &&
                 IsFinite(LastOutput.PathHipPosition);
+
+            internal void BeginOrContinueLandingHandoff(
+                ulong planSequence,
+                ulong landingEventIdentity)
+            {
+                if (planSequence == 0 || landingEventIdentity == 0 ||
+                    !HasCompleteOutputForPlan(planSequence))
+                {
+                    throw new InvalidOperationException("Foot Landing handoff origin is unavailable.");
+                }
+                if (m_LandingHandoffPlanSequence == planSequence &&
+                    m_LandingHandoffEventIdentity == landingEventIdentity)
+                {
+                    return;
+                }
+                m_LandingHandoffPlanSequence = planSequence;
+                m_LandingHandoffEventIdentity = landingEventIdentity;
+                m_LandingHandoffOriginPosition = LastOutput.FinalAnklePosition;
+                m_LandingHandoffOriginRotation = LastOutput.FinalAnkleRotation;
+            }
+
+            internal void ResolveLandingHandoffOrigin(
+                ulong planSequence,
+                ulong landingEventIdentity,
+                out Vector3 position,
+                out Quaternion rotation)
+            {
+                if (m_LandingHandoffPlanSequence != planSequence ||
+                    m_LandingHandoffEventIdentity != landingEventIdentity ||
+                    !IsFinite(m_LandingHandoffOriginPosition) ||
+                    !IsFinite(m_LandingHandoffOriginRotation))
+                {
+                    throw new InvalidOperationException("Foot Landing handoff identity is inconsistent.");
+                }
+                position = m_LandingHandoffOriginPosition;
+                rotation = m_LandingHandoffOriginRotation;
+            }
+
+            internal void ClearLandingHandoff()
+            {
+                m_LandingHandoffPlanSequence = 0;
+                m_LandingHandoffEventIdentity = 0;
+                m_LandingHandoffOriginPosition = Vector3.zero;
+                m_LandingHandoffOriginRotation = Quaternion.identity;
+            }
 
             internal void PromoteUncommittedRevision(CharacterPredictiveFootPlanEndReason reason)
             {
@@ -1106,6 +1166,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool allowOwnerChangeCapture,
                 bool targetAvailable,
                 ulong targetPlanSequence,
+                CharacterFootPlacementGoalOwner targetGoalOwner,
                 Vector3 targetPosition,
                 Quaternion targetRotation,
                 out Vector3 resolvedPosition,
@@ -1126,13 +1187,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ClearOutputContinuity();
                     return;
                 }
-                bool outputOwnerChanged = LastOutput.PlanSequence != targetPlanSequence;
+                bool outputOwnerChanged = LastOutput.PlanSequence != targetPlanSequence ||
+                                          LastOutput.GoalOwner != targetGoalOwner;
                 if (outputOwnerChanged &&
-                    m_OutputContinuityPlanSequence != targetPlanSequence &&
+                    (m_OutputContinuityPlanSequence != targetPlanSequence ||
+                     m_OutputContinuityGoalOwner != targetGoalOwner) &&
                     LastOutput.IsAvailable && IsFinite(LastOutput.FinalAnklePosition) &&
                     IsFinite(LastOutput.FinalAnkleRotation))
                 {
                     m_OutputContinuityPlanSequence = targetPlanSequence;
+                    m_OutputContinuityGoalOwner = targetGoalOwner;
                     m_OutputContinuityStartedFrame = renderFrame;
                     m_OutputContinuityWeight = 1f;
                     m_OutputContinuityPositionOffset = LastOutput.FinalAnklePosition - targetPosition;
@@ -1164,6 +1228,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             void ClearOutputContinuity()
             {
                 m_OutputContinuityPlanSequence = 0;
+                m_OutputContinuityGoalOwner = CharacterFootPlacementGoalOwner.OriginalAnimation;
                 m_OutputContinuityStartedFrame = 0;
                 m_OutputContinuityWeight = 0f;
                 m_OutputContinuityPositionOffset = Vector3.zero;
@@ -1183,6 +1248,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LastPlanBuildAttemptAuthorityTick = 0;
                 ClearOutputContinuity();
                 m_SuppressNextOutputContinuityCapture = false;
+                ClearLandingHandoff();
                 PlanAttempt = default;
                 PlanBuildDecision = default;
             }
@@ -1901,9 +1967,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float revisionTransitionBlend = hasIntentRevision
                 ? runtime.SmoothedTransitionBlendWeight
                 : 0f;
-            bool hasCommittedAnchorHandoff = stance.HasCommittedAnchorGoal &&
-                                             allowsStanceHandoff;
-            float anchorHandoffBlend = hasCommittedAnchorHandoff
+            bool hasCommittedAnchorGoal = stance.HasCommittedAnchorGoal &&
+                                          allowsStanceHandoff;
+            bool hasPredictiveLandingHandoff = hasCommittedAnchorGoal &&
+                                                runtime.HasCompleteOutputForPlan(
+                                                    stance.AnchorPlanSequence);
+            if (hasPredictiveLandingHandoff)
+            {
+                runtime.BeginOrContinueLandingHandoff(
+                    stance.AnchorPlanSequence,
+                    stance.AnchorLandingEventIdentity);
+            }
+            else
+            {
+                runtime.ClearLandingHandoff();
+            }
+            float anchorHandoffBlend = hasCommittedAnchorGoal
                 ? stance.AnchorBlendWeight
                 : 0f;
             float activePlanPredictionBlend = predictiveOutputWeight *
@@ -1929,11 +2008,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                    currentSupportPhase == AnimationFootSupportPhase.Unsupported;
             bool actionConstraintOwnsFoot = step.IsAuthoritative &&
                                             currentConstraintMode != AnimationFootConstraintMode.Unlocked &&
-                                            !hasCommittedAnchorHandoff &&
+                                            !hasPredictiveLandingHandoff &&
                                             (authoritativePredictionBlend <= 0.000001f ||
                                              runtime.IsAwaitingReplacement);
             bool physicalStanceOwnsFoot =
-                hasCommittedAnchorHandoff && anchorHandoffBlend >= 0.999999f ||
+                hasCommittedAnchorGoal && anchorHandoffBlend >= 0.999999f ||
                 (!stance.HasCommittedAnchorGoal &&
                  grounding.ContactState != CharacterFootContactState.Swing &&
                  allowsStanceHandoff &&
@@ -1959,6 +2038,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? CharacterFootPlacementGoalOwner.Stance
                 : CharacterFootPlacementGoalOwner.OriginalAnimation;
             Vector3 preContinuityGoalWorldPosition = component.TransformPoint(result.ComponentPosition);
+            bool landingHandoffAvailable = false;
+            Vector3 landingHandoffOriginWorldPosition = default;
+            Vector3 landingHandoffTargetWorldPosition = default;
             Vector3 transitionOriginAnklePosition = default;
             Quaternion transitionOriginAnkleRotation = default;
             Vector3 transitionOriginPathRoot = default;
@@ -2293,15 +2375,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         revisionBlend).normalized;
                 }
                 ulong outputPlanSequence = plan.Sequence;
+                CharacterFootPlacementGoalOwner predictiveTargetOwner = hasTransitionOrigin
+                    ? CharacterFootPlacementGoalOwner.PlanTransition
+                    : revisionTargetAvailable
+                        ? CharacterFootPlacementGoalOwner.RevisionPlan
+                        : CharacterFootPlacementGoalOwner.ActivePlan;
                 preContinuityGoalWorldPosition = resolvedAnklePosition;
                 runtime.ResolveOutputContinuity(
                     renderFrame,
                     presentationDeltaSeconds,
                     m_TransitionBlendSpeed,
                     baselineOwnsFoot,
-                    !revisionTargetAvailable && !hasEventSuccessorHandoff && !hasAwaitingReplacement,
+                    !revisionTargetAvailable && !hasEventSuccessorHandoff &&
+                    !hasAwaitingReplacement && !hasPredictiveLandingHandoff,
                     true,
                     outputPlanSequence,
+                    predictiveTargetOwner,
                     resolvedAnklePosition,
                     resolvedAnkleRotation,
                     out resolvedAnklePosition,
@@ -2316,7 +2405,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     resolvedContacts.ToePosition - currentPathPosition,
                     up);
                 predictiveOwnsSoleClearance = !stanceOwnsFoot &&
-                                              !hasCommittedAnchorHandoff &&
+                                              !hasPredictiveLandingHandoff &&
                                               !runtime.IsFadingOut &&
                                               !runtime.IsAwaitingReplacement &&
                                               authoritativePredictionBlend >= 0.999999f;
@@ -2337,11 +2426,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         stanceGoal.SourceKind | CharacterFullBodyIkGoalSourceKind.PredictiveExtension,
                         stanceGoal.DiagnosticMetadataIndex);
                     rewritten = true;
-                    goalOwner = hasTransitionOrigin
-                        ? CharacterFootPlacementGoalOwner.PlanTransition
-                        : revisionTargetAvailable
-                            ? CharacterFootPlacementGoalOwner.RevisionPlan
-                            : CharacterFootPlacementGoalOwner.ActivePlan;
+                    goalOwner = predictiveTargetOwner;
                 }
             }
             else
@@ -2354,18 +2439,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     true,
                     false,
                     0,
+                    CharacterFootPlacementGoalOwner.OriginalAnimation,
                     Vector3.zero,
                     Quaternion.identity,
                     out _,
                     out _);
             }
-            if (hasCommittedAnchorHandoff &&
-                anchorHandoffBlend > 0.000001f &&
-                !stanceOwnsFoot)
+            if (hasPredictiveLandingHandoff && !stanceOwnsFoot)
             {
-                Vector3 handoffStartPosition = component.TransformPoint(result.ComponentPosition);
-                Quaternion handoffStartRotation =
-                    (component.rotation * result.ComponentRotation).normalized;
+                runtime.ResolveLandingHandoffOrigin(
+                    stance.AnchorPlanSequence,
+                    stance.AnchorLandingEventIdentity,
+                    out Vector3 handoffStartPosition,
+                    out Quaternion handoffStartRotation);
+                landingHandoffAvailable = true;
+                landingHandoffOriginWorldPosition = handoffStartPosition;
+                landingHandoffTargetWorldPosition = committedAnchorWorldPosition;
                 Vector3 handoffPosition = Vector3.Lerp(
                     handoffStartPosition,
                     committedAnchorWorldPosition,
@@ -2449,6 +2538,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 appliedLift,
                 goalOwner,
                 stanceWorldPosition,
+                landingHandoffAvailable,
+                landingHandoffAvailable ? stance.AnchorPlanSequence : 0,
+                landingHandoffAvailable ? stance.AnchorLandingEventIdentity : 0,
+                landingHandoffAvailable ? anchorHandoffBlend : 0f,
+                landingHandoffOriginWorldPosition,
+                landingHandoffTargetWorldPosition,
                 in goalCandidates,
                 activeGeometryGoalAvailable,
                 activeReachGoalAvailable,
@@ -2478,9 +2573,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentPathSupport,
                 targetAvailable
                     ? plan.Sequence
-                    : hasCommittedAnchorHandoff
+                    : hasPredictiveLandingHandoff
                         ? stance.AnchorPlanSequence
                         : 0,
+                goalOwner,
                 currentPathRoot,
                 currentPathRootStart,
                 currentPathHip);
@@ -2549,6 +2645,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float appliedLift,
             CharacterFootPlacementGoalOwner goalOwner,
             Vector3 stanceWorldPosition,
+            bool landingHandoffAvailable,
+            ulong landingHandoffPlanSequence,
+            ulong landingHandoffEventIdentity,
+            float landingHandoffBlend,
+            Vector3 landingHandoffOriginWorldPosition,
+            Vector3 landingHandoffTargetWorldPosition,
             in CharacterPredictiveFootGoalCandidates goalCandidates,
             bool activeGeometryGoalAvailable,
             bool activeReachGoalAvailable,
@@ -2656,6 +2758,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 goalOwner,
                 pose.AnklePosition,
                 stanceWorldPosition,
+                landingHandoffAvailable,
+                landingHandoffPlanSequence,
+                landingHandoffEventIdentity,
+                landingHandoffBlend,
+                landingHandoffOriginWorldPosition,
+                landingHandoffTargetWorldPosition,
                 activeGeometryGoalAvailable,
                 activeGeometryGoalAvailable
                     ? goalCandidates.Active.Target.AnklePosition

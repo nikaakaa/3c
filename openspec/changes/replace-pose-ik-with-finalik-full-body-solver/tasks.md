@@ -49,4 +49,4 @@
 
 - [ ] 7.1 重建最小因果CSV，逐阶段发布输入、结果和typed failure。
 - [ ] 7.2 重建GameplayLab平地、直线楼梯和转向压力入口。
-- [ ] 7.3 完成Runtime/Editor编译、Float32/Fixed Character Build和OpenSpec strict validate。
+- [x] 7.3 完成Runtime/Editor编译、Float32/Fixed Character Build和OpenSpec strict validate。

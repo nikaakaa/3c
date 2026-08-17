@@ -1,73 +1,91 @@
 ## ADDED Requirements
 
-### Requirement: Ground Path Revision必须冻结真实步伐端点
+### Requirement: Ground Path必须从两次Accepted Landing重新查询
 
-每只脚的Ground Path Revision MUST在创建时只从上一成功Seal的实际Completed Sole捕获起点，并以同Frame Accepted Landing、Landing Event identity、Motion Timeline generation与authority tick、Future Body Translation source identity、Component Up和Profile revision建立其余事实。Revision MUST冻结起点、终点、Landing Surface identity、查询请求和结果，不得在后续Frame按动画Sole、Body或Visual Root变化旋转、平移或重投影旧命中。Runtime没有上一成功Frame时 MUST发布`OriginUnavailable`，不得从当前Transform、默认地面或固定高度补起点。
+每只脚 MUST在同一Foot Placement事务内得到Current Accepted Landing和Incoming Accepted Landing。Ground Path MUST只使用这两次落点、同一帧的Future Body Translation、Component Up和Ground Detection配置作为查询输入。输入变化时 MUST重新执行对应的Landing和Ground Detection；不得旋转、平移、补全或沿用旧地形命中。
 
-同一Landing Event、运动权威、Accepted Landing几何和Profile revision未变化时 MUST复用Committed Revision，不得因后续动画Sole移动而逐Render Frame重复执行Physics查询。Landing Event、运动权威、Accepted Landing几何或Profile revision变化时 MUST从当时的上一完成Frame捕获新起点，创建新Revision并重新执行Landing与Ground Path查询；Rejected Revision只可在新的authority tick重新尝试，不得用旧Revision冒充当前事实。
+#### Scenario: 两次落点有效
 
-#### Scenario: 同一Revision跨多个表现帧
+- **WHEN** Current与Incoming Landing都通过真实SphereCast
+- **THEN** Runtime MUST使用两次Accepted Landing构造唯一Capsule Ground Detection请求
+- **AND** MUST把查询结果交给Ground Envelope Builder
 
-- **WHEN** Landing Event、运动权威、Accepted Landing与Profile revision均未变化
-- **THEN** Runtime MUST复用同一Committed Ground Path Revision
-- **AND** 后续动画Sole移动 MUST不触发新的Capsule Ground Detection
+#### Scenario: 任一落点无效
 
-#### Scenario: 转向产生新运动权威
-
-- **WHEN** committed运动权威改变并产生新的Accepted Landing
-- **THEN** Runtime MUST从上一完成Sole创建新的Ground Path Revision
-- **AND** MUST重新执行Capsule查询而不是旋转旧查询结果
+- **WHEN** 任一Landing被拒绝或Future Body不可用
+- **THEN** Runtime MUST发布对应typed rejection
+- **AND** MUST不构造替代地面或使用旧查询结果补端点
 
 ### Requirement: Ground Detection必须发布原始Capsule接触集合
 
-Ground Detection MUST沿上一Completed Sole到Accepted Landing的脚步路径构造唯一Capsule请求。完整Capsule包络的两个端点 MUST分别为`PathStart + ComponentUp * CastAbove`与`PathEnd + ComponentUp * CastAbove`，查询方向 MUST为`-ComponentUp`，查询距离 MUST为`CastAbove + CastBelow`，且`CastAbove` MUST大于半径。请求 MUST显式携带两个端点、半径、最大轴段长度、方向、距离、Ground Layer和固定命中容量；Capsule表示路径采集包络，不表示鞋底矩形或脚掌凸包。
+Ground Detection MUST沿Current Accepted Landing到Incoming Accepted Landing构造唯一Capsule请求。两个轴端点 MUST分别为`CurrentLanding + ComponentUp * CastAbove`与`IncomingLanding + ComponentUp * CastAbove`，查询方向 MUST为`-ComponentUp`，距离 MUST为`CastAbove + CastBelow`。请求 MUST显式携带半径、最大轴段长度、Ground Layer和固定命中容量；Capsule只表示路径采集包络，不表示鞋底或最终Ground Envelope。
 
-Unity World Query Backend MUST按最大轴段长度把完整轴确定性切成首尾连续的短段，并对每段执行实际Capsule Cast。分段 MUST只由请求几何与正式配置决定；不得根据命中情况切换到Raycast、Sphere Cast或其它查询。同一MeshCollider在不同短段产生的合法接触 MUST能够作为不同候选保留。
+Unity World Query Backend MUST按最大轴段长度确定性切分Capsule轴并对每段执行真实Capsule Cast。它 MUST过滤自身Collider、初始重叠、非法几何和同分段重复命中，并发布分段索引、Surface、位置、法线、查询距离和稳定candidate identity。Backend不得改用Raycast、Sphere Cast或第二种查询算法。
 
-查询 MUST过滤自身Collider、初始重叠、非法点、非法法线与同分段重复命中，并把每个保留候选的分段索引、位置、法线、Surface identity、查询距离和稳定候选identity写入预分配结果页。原始候选不得在本阶段按坡度、台阶高度、Reach或Hull删除；固定容量溢出、没有合法候选和非法请求 MUST产生不同typed rejection，不得生成默认地面。
+#### Scenario: Capsule命中多个表面
 
-#### Scenario: Capsule经过多个表面
-
-- **WHEN** 实际Capsule查询命中多个合法地面或障碍表面
-- **THEN** Ground Detection MUST在固定容量内发布对应原始位置与法线
-- **AND** MUST不提前把候选压成单个落点、Edge或Envelope
+- **WHEN** 分段Capsule Cast命中多个合法表面
+- **THEN** Backend MUST在固定容量页中保留各接触的位置和法线
+- **AND** MUST不先压成单个落点或中心线
 
 #### Scenario: Capsule没有合法命中
 
-- **WHEN** 查询没有返回合法原始接触
-- **THEN** Ground Path Revision MUST发布明确NoContact rejection
-- **AND** MUST不复用旧候选或执行第二种查询
+- **WHEN** 查询没有合法接触或固定容量溢出
+- **THEN** Runtime MUST发布对应typed rejection
+- **AND** MUST不生成默认地面或替代查询
 
-### Requirement: Ground Path查询抽象必须与Unity适配器分离
+### Requirement: Ground Envelope必须来自排序边缘与上侧凸包
 
-Foot Placement Runtime MUST只依赖Ground Path查询合同和预分配结果页。纯Revision构造 MUST不引用`PhysicsScene`、`Collider`、`RaycastHit`、Gizmo或Editor类型；唯一Unity World Query Backend MUST负责把正式Capsule请求适配到当前`PhysicsScene`、过滤自身Collider并写入规范结果。
+Ground Envelope Builder MUST把Raw Contacts投影到脚步纵向与Component Up组成的二维平面，按Near/Far、Bottom/Top和candidate identity稳定排序。Builder MUST验证投影法线，并用相邻接触的位置与法线定义地面平面；只有位于两接触距离和高度范围内的平面交点 MAY成为Edge候选。
 
-#### Scenario: 使用纯查询实现检查Revision
+同一路径距离 MUST保留最高候选，Current与Incoming Landing MUST作为首尾端点保留。Builder MUST使用Ground Detection的`CastAbove`和`CastBelow`检查相邻边缘高度变化及候选相对两端线性高度的偏差；超出范围 MUST发布`UnreachableEnvelope`，不得删除障碍后继续或沿用旧包络。
 
-- **WHEN** 非Unity查询实现接收同一合法Capsule请求和规范接触集合
-- **THEN** Revision构造 MUST产生与Unity类型无关的同结构结果
-- **AND** Foot Placement Runtime MUST不需要查询实现的具体类型
+可达候选 MUST形成二维上侧Convex Hull，输出从Current Landing到Incoming Landing的连续折线。该折线 MUST位于全部保留候选的Component Up上侧或与其重合，并且只属于feet-only地面下界；它 MUST不携带Animation Clearance、不改变Foot XZ、不驱动Pelvis。
+
+#### Scenario: 路径经过台阶
+
+- **WHEN** 合法接触与法线定义出台阶边缘
+- **THEN** Ground Envelope MUST保留上侧Hull关键转折点
+- **AND** MUST不退化为Current到Incoming中心直线
+
+#### Scenario: 地形高度不可达
+
+- **WHEN** 任一边缘或路径偏差超过CastAbove或CastBelow
+- **THEN** Runtime MUST发布`UnreachableEnvelope`
+- **AND** MUST不输出替代Envelope
+
+### Requirement: Ground Path模块必须保持抽象与实现分离
+
+Foot Placement Runtime MUST只依赖World Query合同、Ground Envelope Builder和预分配结果页。纯Builder MUST不引用`PhysicsScene`、`Collider`、`RaycastHit`、Gizmo或Editor类型；Unity Backend MUST不选择Step、构造Hull或写Goal；Gizmo MUST不重新查询或重算算法。
+
+Raw Contacts、Builder workspace和Envelope顶点 MUST预分配。左右脚 MUST各自只有一个Committed Page和一个Pending Page，并随外层Foot Placement事务执行`Seal`或`Discard`。
+
+#### Scenario: 提交Foot Placement Frame
+
+- **WHEN** 外层Frame成功Seal
+- **THEN** Raw Contacts与Ground Envelope MUST作为同一Foot Placement结果原子提交
+- **AND** Debug读取 MUST不改变下一帧状态
 
 ## MODIFIED Requirements
 
 ### Requirement: 当前Landing阶段必须保持Pose恒等
 
-当前阶段只验证未来落点与Ground Path原始接触，不实现Foot Motion、FootLock、Constraint、Anchor、Pelvis、Ground Envelope、Edge、Hull或Reachability。Ground Path Revision和Capsule Ground Detection只能生成世界查询事实；Pelvis与双脚Goal的位置和旋转权重 MUST全部为零，唯一FullBodyIK MUST在验证Goal lineage后跳过FBBIK求解并保持输入Pose不变。
+当前阶段增加Capsule Ground Detection、Edge、Reachability与feet-only Ground Envelope，但不实现Foot Motion、FootLock、Constraint、Anchor或Pelvis。Pelvis与双脚Goal的位置和旋转权重 MUST全部为零；唯一FullBodyIK MUST在验证Goal lineage后跳过FBBIK求解并保持输入Pose不变。
 
-#### Scenario: Ground Path查询完成
+#### Scenario: Ground Envelope构建完成
 
-- **WHEN** 任一脚得到Accepted Landing与原始Ground Contact集合
-- **THEN** Landing与Ground Path事实 MUST只进入同一成功Seal后的diagnostics
+- **WHEN** 任一脚提交Accepted Ground Envelope
+- **THEN** 该结果 MUST只进入同一成功Seal后的diagnostics
 - **AND** 脚、骨盆和其它Physical Bone MUST继续使用原动画Pose
 
 ### Requirement: Foot Placement诊断必须只显示当前事实
 
-Scene诊断 MUST只显示Current Animated Sole、Raw Landing、实际Landing SphereCast、Accepted或Rejected Landing、实际Ground Path Capsule请求及其原始接触位置和法线。诊断 MUST从成功提交的只读摘要发布，不得重新采样动画、重新查询世界、保存完整Foot Feature或伪装Grounding、Predictive Modifier、Anchor、Pelvis、Edge、Hull和Ground Envelope语义。
+Scene诊断 MUST保留绿色Current Accepted Landing与黄色Incoming Accepted Landing，并以左右脚不同颜色绘制最近一次成功Seal的最终Ground Envelope粗折线。诊断 MUST不绘制Current到Incoming中心直线、Current Animated Sole、Capsule外框、扫掠边线、文字、矩形鞋底或伪Path。
 
-Capsule Gizmo MUST直接使用Runtime请求中的两个端点、半径、方向与距离显示简单完整包络。短胶囊首尾连续且并集等于该包络，Gizmo MUST不重复绘制内部接缝；不得用矩形鞋底、脚掌凸包、伪Path或文字替代真实请求。
+完整请求、Raw Contacts与Envelope顶点 MUST来自成功Seal的只读摘要。Gizmo MUST不重新采样动画、查询世界或计算Hull。
 
-#### Scenario: 查看Ground Path诊断
+#### Scenario: 查看Ground Envelope诊断
 
 - **WHEN** 用户打开Foot Placement Scene诊断
-- **THEN** 显示内容 MUST与最近一次成功Seal的Landing与Ground Path事务一致
-- **AND** 读取诊断 MUST不改变下一帧结果或再次执行Physics查询
+- **THEN** 显示折线 MUST逐点等于最近一次成功Seal的Ground Envelope
+- **AND** 读取诊断 MUST不改变下一帧结果

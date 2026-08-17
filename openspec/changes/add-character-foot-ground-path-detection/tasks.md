@@ -1,45 +1,50 @@
-## 1. Ground Path合同
+## 1. Ground Path查询合同
 
-- [ ] 1.1 定义Ground Path Revision identity、输入、状态和typed rejection。
-- [ ] 1.2 定义上一完成Sole与Accepted Landing组成的不可变Revision端点。
-- [ ] 1.3 定义固定容量Raw Ground Contact与只读结果页。
-- [ ] 1.4 为左右脚建立预分配Committed/Pending Ground Path页。
+- [x] 1.1 定义Current/Next Accepted Landing到Ground Path的输入和输出。
+- [x] 1.2 记录Landing Event、运动权威、Surface、位置、法线、Component Up和Profile事实。
+- [x] 1.3 定义不依赖Unity类型的Capsule请求、Raw Contact和typed rejection。
+- [x] 1.4 为左右脚建立预分配Committed/Pending Ground Path页。
+- [x] 1.5 在同一Foot Placement事务内复用已准备结果，输入变化时重新查询。
 
-## 2. World Query模块
+## 2. Unity World Query Adapter
 
-- [ ] 2.1 扩展Foot Placement查询请求以精确表达Capsule两个端点、半径、最大轴段长度、方向和距离。
-- [ ] 2.2 定义不依赖Unity Physics类型的`ICharacterFootGroundPathWorldQuery`。
-- [ ] 2.3 在唯一World Query Backend按最大轴段长度确定性切分完整Capsule轴。
-- [ ] 2.4 对每个连续轴段执行实际Capsule Cast并写入同一固定容量结果页。
-- [ ] 2.5 集中处理自身Collider、初始重叠、非法几何、重复命中与容量溢出。
-- [ ] 2.6 对原始命中执行稳定canonical排序并保留分段索引、位置、法线、Surface与查询距离。
+- [x] 2.1 按最大轴段长度确定性切分完整Capsule轴。
+- [x] 2.2 每个连续轴段执行真实Capsule Cast。
+- [x] 2.3 过滤自身Collider、初始重叠和非法几何。
+- [x] 2.4 保留分段索引、Surface、位置、法线、查询距离和稳定identity。
+- [x] 2.5 固定容量溢出与无接触发布不同rejection。
 
-## 3. Foot Placement事务
+## 3. Ground Envelope模块
 
-- [ ] 3.1 从上一成功Seal的实际Sole建立左右脚Revision起点。
-- [ ] 3.2 首次启动没有上一完成Frame时发布`OriginUnavailable`并在下一成功Frame后建立起点。
-- [ ] 3.3 从同帧Accepted Landing与正式运动权威建立Revision终点和identity。
-- [ ] 3.4 只在Revision变化或Rejected后的新authority tick执行Ground Detection。
-- [ ] 3.5 将Ground Detection结果写入同一Foot Placement Pending Frame。
-- [ ] 3.6 统一实现Seal、Discard、Reset、Retarget与Dispose的Ground Path状态处理。
-- [ ] 3.7 保持Pelvis与双脚Goal权重为零并保持唯一FinalIK输入Pose不变。
+- [x] 3.1 新增不引用Unity Physics或Editor类型的独立Builder。
+- [x] 3.2 把接触投影到脚步纵向与Component Up二维平面。
+- [x] 3.3 按Near/Far、Bottom/Top和candidate identity稳定排序。
+- [x] 3.4 验证二维法线并用相邻位置与法线定义Edge Plane。
+- [x] 3.5 只保留位于相邻接触范围内的合法平面交点。
+- [x] 3.6 同路径距离保留最高候选并强制保留两次Landing端点。
+- [x] 3.7 使用CastAbove/CastBelow检查边缘和整条路径的竖直可达性。
+- [x] 3.8 为不可达、退化、无合法接触和容量溢出发布typed rejection。
+- [x] 3.9 计算二维上侧Convex Hull并输出连续Ground Envelope。
+- [x] 3.10 预分配Builder workspace和Envelope顶点页。
 
-## 4. 配置与发布
+## 4. Foot Placement事务
 
-- [ ] 4.1 在Foot Placement Profile增加唯一Ground Detection配置并升级schema。
-- [ ] 4.2 更新Profile revision、Projection依赖和发布校验。
-- [ ] 4.3 更新Corin正式Profile并重新发布唯一Projection与Float32/Fixed角色产物。
-- [ ] 4.4 删除Landing-only旧schema、旧字段名和任何默认补全路径。
+- [x] 4.1 在唯一Runtime中依次执行两次Landing、Ground Detection和Envelope Build。
+- [x] 4.2 Raw Contacts与Envelope写入同一Pending Frame。
+- [x] 4.3 Seal、Discard、Reset、Retarget和Dispose统一处理Ground Path状态。
+- [x] 4.4 保持Pelvis与双脚Goal权重为零并保持FinalIK输入Pose不变。
 
-## 5. 诊断
+## 5. Diagnostics与Gizmo
 
-- [ ] 5.1 扩展Seal后只读摘要以发布Revision identity、Capsule请求、原始候选和typed rejection。
-- [ ] 5.2 Scene Gizmo直接绘制完整Capsule起点、终点、半径、查询方向与距离，不重复绘制内部接缝。
-- [ ] 5.3 Scene Gizmo绘制原始候选位置和法线，不显示文字、矩形鞋底、伪Path或Hull。
-- [ ] 5.4 扩展现有Landing采样器以记录Ground Path Revision与原始候选事实。
+- [x] 5.1 Seal后只读摘要发布Raw Contacts与最终Envelope顶点。
+- [x] 5.2 保留绿色Current Landing和黄色Next Landing标记。
+- [x] 5.3 使用左右脚不同颜色绘制最终Envelope粗折线。
+- [x] 5.4 删除Current到Next中心直线和其它遮挡图形。
+- [x] 5.5 采样器增加最终Envelope顶点列。
 
-## 6. 清理与统一
+## 6. 文档与校验
 
-- [ ] 6.1 确认Runtime只通过Ground Path查询接口访问Unity适配器。
-- [ ] 6.2 确认不存在第二Grounding、第二Pelvis、旧Plan、Anchor、Hull、fallback或FBBIK后处理引用。
-- [ ] 6.3 确认Ground Path状态只随外层Presentation事务Seal或Discard。
+- [x] 6.1 更新proposal、design与spec，删除未由原始参考确定的Plan/Revision层表述。
+- [x] 6.2 执行Runtime与Editor项目编译。
+- [x] 6.3 执行定向`git diff --check`。
+- [x] 6.4 执行OpenSpec strict validate。

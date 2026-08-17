@@ -743,6 +743,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementGoalOwner goalOwner,
             Vector3 originalGoalWorldPosition,
             Vector3 stanceGoalWorldPosition,
+            bool landingHandoffAvailable,
+            ulong landingHandoffPlanSequence,
+            ulong landingHandoffEventIdentity,
+            float landingHandoffBlend,
+            Vector3 landingHandoffOriginWorldPosition,
+            Vector3 landingHandoffTargetWorldPosition,
             bool activePlanGeometryGoalAvailable,
             Vector3 activePlanGeometryGoalWorldPosition,
             bool activePlanGoalAvailable,
@@ -826,6 +832,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GoalOwner = goalOwner;
             OriginalGoalWorldPosition = originalGoalWorldPosition;
             StanceGoalWorldPosition = stanceGoalWorldPosition;
+            LandingHandoffAvailable = landingHandoffAvailable;
+            LandingHandoffPlanSequence = landingHandoffPlanSequence;
+            LandingHandoffEventIdentity = landingHandoffEventIdentity;
+            LandingHandoffBlend = landingHandoffBlend;
+            LandingHandoffOriginWorldPosition = landingHandoffOriginWorldPosition;
+            LandingHandoffTargetWorldPosition = landingHandoffTargetWorldPosition;
             ActivePlanGeometryGoalAvailable = activePlanGeometryGoalAvailable;
             ActivePlanGeometryGoalWorldPosition = activePlanGeometryGoalWorldPosition;
             ActivePlanGoalAvailable = activePlanGoalAvailable;
@@ -962,6 +974,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementGoalOwner GoalOwner { get; }
         public Vector3 OriginalGoalWorldPosition { get; }
         public Vector3 StanceGoalWorldPosition { get; }
+        public bool LandingHandoffAvailable { get; }
+        public ulong LandingHandoffPlanSequence { get; }
+        public ulong LandingHandoffEventIdentity { get; }
+        public float LandingHandoffBlend { get; }
+        public Vector3 LandingHandoffOriginWorldPosition { get; }
+        public Vector3 LandingHandoffTargetWorldPosition { get; }
         public bool ActivePlanGeometryGoalAvailable { get; }
         public Vector3 ActivePlanGeometryGoalWorldPosition { get; }
         public bool ActivePlanGoalAvailable { get; }

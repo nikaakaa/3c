@@ -791,6 +791,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 StanceGoalWorldPosition = hasModifier
                     ? modifier.StanceGoalWorldPosition
                     : baselineGoalWorldPosition,
+                LandingHandoffAvailable = hasModifier && modifier.LandingHandoffAvailable,
+                LandingHandoffPlanSequence = hasModifier
+                    ? modifier.LandingHandoffPlanSequence
+                    : 0,
+                LandingHandoffEventIdentity = hasModifier
+                    ? modifier.LandingHandoffEventIdentity
+                    : 0,
+                LandingHandoffBlend = hasModifier ? modifier.LandingHandoffBlend : 0f,
+                LandingHandoffOriginWorldPosition = hasModifier
+                    ? modifier.LandingHandoffOriginWorldPosition
+                    : default,
+                LandingHandoffTargetWorldPosition = hasModifier
+                    ? modifier.LandingHandoffTargetWorldPosition
+                    : default,
                 ActivePlanGeometryGoalAvailable = hasModifier &&
                                                   modifier.ActivePlanGeometryGoalAvailable,
                 ActivePlanGeometryGoalWorldPosition = hasModifier

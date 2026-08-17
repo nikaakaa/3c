@@ -431,25 +431,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    internal readonly struct AnimationResolvedPoseSourceSample
+    internal sealed class AnimationResolvedPoseSourceSample
     {
         internal AnimationResolvedPoseSourceSample(
             AnimationPoseSampleRequest request,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures,
+            in AnimationFootFeatureSample leftFootFeatures,
+            in AnimationFootFeatureSample rightFootFeatures,
             bool hasFootFeatures)
         {
             Request = request;
-            LeftFootFeatures = leftFootFeatures;
-            RightFootFeatures = rightFootFeatures;
+            m_LeftFootFeatures = leftFootFeatures;
+            m_RightFootFeatures = rightFootFeatures;
             HasFootFeatures = hasFootFeatures;
             if (!IsValid)
                 throw new ArgumentException("Animation source pose sample is invalid.");
         }
 
+        readonly AnimationFootFeatureSample m_LeftFootFeatures;
+        readonly AnimationFootFeatureSample m_RightFootFeatures;
         internal AnimationPoseSampleRequest Request { get; }
-        internal AnimationFootFeatureSample LeftFootFeatures { get; }
-        internal AnimationFootFeatureSample RightFootFeatures { get; }
+        internal ref readonly AnimationFootFeatureSample LeftFootFeatures =>
+            ref m_LeftFootFeatures;
+        internal ref readonly AnimationFootFeatureSample RightFootFeatures =>
+            ref m_RightFootFeatures;
         internal bool HasFootFeatures { get; }
         internal bool IsValid => Request.IsValid && (HasFootFeatures
             ? LeftFootFeatures.IsValid && RightFootFeatures.IsValid

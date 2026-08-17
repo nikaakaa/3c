@@ -762,11 +762,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         }
 
         internal AnimationPoseSourceCaptureBinding PrepareCapture(
-            in AnimationResolvedPoseSourceSample sourceSample,
+            AnimationResolvedPoseSourceSample sourceSample,
             float presentationDeltaSeconds)
         {
             RequireAlive();
             RequireNoPreparedPlan();
+            if (sourceSample == null)
+                throw new ArgumentNullException(nameof(sourceSample));
             AnimationPoseSampleRequest request = sourceSample.Request;
             if (!request.IsValid ||
                 m_SourceFrameCompletionIdentity == 0 ||
@@ -788,7 +790,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             if (!referenced)
                 throw new InvalidOperationException("Animation source capture is not referenced by this Blend Stack.");
 
-            AnimationPoseSourceCaptureBinding binding = m_Sources.PrepareCapture(in sourceSample, presentationDeltaSeconds);
+            AnimationPoseSourceCaptureBinding binding = m_Sources.PrepareCapture(
+                sourceSample,
+                presentationDeltaSeconds);
             for (int i = 0; i < m_EntryCount; i++)
             {
                 AnimationBlendEntryState entry = ReadEntry(i);

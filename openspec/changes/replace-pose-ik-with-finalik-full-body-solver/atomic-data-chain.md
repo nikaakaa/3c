@@ -10,4 +10,8 @@
 
 ## 当前状态
 
-Predictive、Stance/Anchor/Pelvis、Gizmo、CSV与自动入口已删除；共享Animation/Editor引用尚待清理。当前工作区是明确的重做准备态，不是可运行Foot IK版本。
+旧Predictive、Stance/Anchor/Pelvis、CSV与自动入口已删除；共享Animation/Editor旧引用已经清理。当前只接回可运行的Landing Prediction与无文字Gizmo，三个FBBIK Goal权重为零，因此它是落点验证版本，不是完整Foot IK效果版本。
+
+## Managed发布边界
+
+`AnimationFootFeatureSample`内嵌Current与Incoming完整Step固定页，单值约10KB。它可以留在预分配Native/数组页中，但不得继续内嵌进按值传递的managed Source Sample或作为`Dictionary`值类型；Mono会在调用点以`InvalidProgramException: Passing an argument of size '10000'`拒绝该IL。正式managed边界使用引用对象保存不可变Sample，并通过`ref readonly`读取左右Foot Feature，容器和调用链只传对象引用。

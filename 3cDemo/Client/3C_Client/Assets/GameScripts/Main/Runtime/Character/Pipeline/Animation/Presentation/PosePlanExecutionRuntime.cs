@@ -2163,8 +2163,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 key,
                 new AnimationResolvedPoseSourceSample(
                     request,
-                    frame.LeftFootFeatures,
-                    frame.RightFootFeatures,
+                    in frame.LeftFootFeatures,
+                    in frame.RightFootFeatures,
                     true));
             return sourceId;
         }
@@ -2988,7 +2988,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 stack.PoseNodeId,
                 request.SourceOwnerIndex);
             AnimationPoseSourceCaptureBinding capture = stack.PrepareCapture(
-                in sourceSample,
+                sourceSample,
                 presentationDeltaSeconds);
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
             if (!m_SourceBackend.ContainsCommitted(sourceId, stack.PoseNodeId))
@@ -3043,7 +3043,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in PresentationPoseSourceSample sample,
                 int sourceOwnerIndex)
         {
-            if (!sample.IsValid ||
+            if (sample == null || !sample.IsValid ||
                 sample.Availability !=
                     PresentationPoseSourceAvailability.Ready ||
                 sourceOwnerIndex < 0)
@@ -3075,8 +3075,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sample.PoseParameterAvailability);
             return new AnimationResolvedPoseSourceSample(
                 request,
-                sample.LeftFootFeatures,
-                sample.RightFootFeatures,
+                in sample.LeftFootFeatures,
+                in sample.RightFootFeatures,
                 sample.HasFootFeatures);
         }
 

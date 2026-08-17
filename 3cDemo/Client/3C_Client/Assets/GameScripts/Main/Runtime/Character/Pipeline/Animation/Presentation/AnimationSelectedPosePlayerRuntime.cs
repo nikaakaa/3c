@@ -158,7 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in PresentationPoseSourceSample sample)
         {
             RequireAlive();
-            if (!sample.IsValid ||
+            if (sample == null || !sample.IsValid ||
                 sample.Availability !=
                     PresentationPoseSourceAvailability.Ready ||
                 sample.ProviderId != ProviderId ||
@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             float presentationDeltaSeconds)
         {
             RequireAlive();
-            if (!m_HasSelection || !sample.IsValid ||
+            if (!m_HasSelection || sample == null || !sample.IsValid ||
                 sample.ProviderId != ProviderId ||
                 sample.PlayerNodeId != NodeId ||
                 sample.Availability !=
@@ -251,12 +251,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sample.PoseParameterAvailability);
             var resolved = new AnimationResolvedPoseSourceSample(
                 request,
-                sample.LeftFootFeatures,
-                sample.RightFootFeatures,
+                in sample.LeftFootFeatures,
+                in sample.RightFootFeatures,
                 sample.HasFootFeatures);
             AnimationPoseSourceCaptureBinding binding =
                 m_Sources.PrepareCapture(
-                    in resolved,
+                    resolved,
                     presentationDeltaSeconds);
             m_SourceRetained = true;
             return binding;

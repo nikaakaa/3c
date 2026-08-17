@@ -622,15 +622,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!m_HasPending)
                 throw new InvalidOperationException("Ground Path has no pending page.");
-            if (m_Pending.State == CharacterFootGroundPathState.Accepted)
-            {
-                m_Committed = m_Pending;
-                m_HasCommitted = true;
-            }
-            else if (!ReferenceEquals(m_Pending, m_Committed))
-            {
-                m_Pending.Clear();
-            }
+            m_Committed = m_Pending;
+            m_HasCommitted = true;
             m_Pending = null;
             m_HasPending = false;
         }
@@ -656,24 +649,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EnvelopeWorkspace.Clear();
         }
 
-        internal CharacterFootGroundPathDiagnostics CreateDiagnostics(
-            CharacterFootGroundPathPage statusPage,
-            bool queryExecutedThisFrame)
-        {
-            if (statusPage == null)
-                throw new ArgumentNullException(nameof(statusPage));
-            CharacterFootGroundPathPage snapshotPage = statusPage;
-            if (statusPage.State != CharacterFootGroundPathState.Accepted &&
-                m_HasCommitted &&
-                m_Committed.State == CharacterFootGroundPathState.Accepted)
-            {
-                snapshotPage = m_Committed;
-            }
-            return new CharacterFootGroundPathDiagnostics(
-                statusPage,
-                snapshotPage,
-                queryExecutedThisFrame);
-        }
     }
 
     readonly struct CharacterFootGroundPathDiagnosticContacts
@@ -836,66 +811,56 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathDiagnostics(
             CharacterFootGroundPathPage page,
             bool queryExecutedThisFrame)
-            : this(page, page, queryExecutedThisFrame)
         {
-        }
-
-        internal CharacterFootGroundPathDiagnostics(
-            CharacterFootGroundPathPage statusPage,
-            CharacterFootGroundPathPage snapshotPage,
-            bool queryExecutedThisFrame)
-        {
-            if (statusPage == null || snapshotPage == null)
-                throw new ArgumentNullException();
-            State = statusPage.State;
-            RejectReason = statusPage.RejectReason;
+            State = page.State;
+            RejectReason = page.RejectReason;
             QueryExecutedThisFrame = queryExecutedThisFrame;
-            SegmentCount = statusPage.SegmentCount;
-            RevisionIdentity = snapshotPage.Revision.Identity;
-            CurrentLandingEventIdentity = snapshotPage.HasRevision
-                ? snapshotPage.Revision.Key.CurrentLandingEventIdentity
+            SegmentCount = page.SegmentCount;
+            RevisionIdentity = page.Revision.Identity;
+            CurrentLandingEventIdentity = page.HasRevision
+                ? page.Revision.Key.CurrentLandingEventIdentity
                 : 0;
-            NextLandingEventIdentity = snapshotPage.HasRevision
-                ? snapshotPage.Revision.Key.NextLandingEventIdentity
+            NextLandingEventIdentity = page.HasRevision
+                ? page.Revision.Key.NextLandingEventIdentity
                 : 0;
-            TrajectoryGeneration = snapshotPage.HasRevision
-                ? snapshotPage.Revision.Key.TrajectoryGeneration
+            TrajectoryGeneration = page.HasRevision
+                ? page.Revision.Key.TrajectoryGeneration
                 : 0;
-            AuthorityTick = snapshotPage.HasRevision
-                ? snapshotPage.Revision.Key.AuthorityTick
+            AuthorityTick = page.HasRevision
+                ? page.Revision.Key.AuthorityTick
                 : 0;
-            CurrentFutureBodyTranslationSourceIdentity = snapshotPage.HasRevision
-                ? snapshotPage.Revision.Key.CurrentFutureBodyTranslationSourceIdentity
+            CurrentFutureBodyTranslationSourceIdentity = page.HasRevision
+                ? page.Revision.Key.CurrentFutureBodyTranslationSourceIdentity
                 : string.Empty;
-            NextFutureBodyTranslationSourceIdentity = snapshotPage.HasRevision
-                ? snapshotPage.Revision.Key.NextFutureBodyTranslationSourceIdentity
+            NextFutureBodyTranslationSourceIdentity = page.HasRevision
+                ? page.Revision.Key.NextFutureBodyTranslationSourceIdentity
                 : string.Empty;
-            CurrentLanding = snapshotPage.HasRevision
-                ? snapshotPage.Revision.CurrentLanding
+            CurrentLanding = page.HasRevision
+                ? page.Revision.CurrentLanding
                 : default;
-            NextLanding = snapshotPage.HasRevision
-                ? snapshotPage.Revision.NextLanding
+            NextLanding = page.HasRevision
+                ? page.Revision.NextLanding
                 : default;
-            CurrentLandingNormal = snapshotPage.HasRevision
-                ? snapshotPage.Revision.CurrentLandingNormal
+            CurrentLandingNormal = page.HasRevision
+                ? page.Revision.CurrentLandingNormal
                 : default;
-            NextLandingNormal = snapshotPage.HasRevision
-                ? snapshotPage.Revision.NextLandingNormal
+            NextLandingNormal = page.HasRevision
+                ? page.Revision.NextLandingNormal
                 : default;
-            CurrentLandingSurfaceIdentity = snapshotPage.HasRevision
-                ? snapshotPage.Revision.CurrentLandingSurfaceIdentity
+            CurrentLandingSurfaceIdentity = page.HasRevision
+                ? page.Revision.CurrentLandingSurfaceIdentity
                 : 0;
-            NextLandingSurfaceIdentity = snapshotPage.HasRevision
-                ? snapshotPage.Revision.NextLandingSurfaceIdentity
+            NextLandingSurfaceIdentity = page.HasRevision
+                ? page.Revision.NextLandingSurfaceIdentity
                 : 0;
-            ComponentUp = snapshotPage.HasRevision
-                ? snapshotPage.Revision.ComponentUp
+            ComponentUp = page.HasRevision
+                ? page.Revision.ComponentUp
                 : default;
-            Query = snapshotPage.HasRevision
-                ? snapshotPage.Revision.Query
+            Query = page.HasRevision
+                ? page.Revision.Query
                 : default;
-            m_Contacts = new CharacterFootGroundPathDiagnosticContacts(snapshotPage.Contacts);
-            m_Envelope = new CharacterFootGroundEnvelopeDiagnosticVertices(snapshotPage.Envelope);
+            m_Contacts = new CharacterFootGroundPathDiagnosticContacts(page.Contacts);
+            m_Envelope = new CharacterFootGroundEnvelopeDiagnosticVertices(page.Envelope);
         }
 
         public CharacterFootGroundPathState State { get; }

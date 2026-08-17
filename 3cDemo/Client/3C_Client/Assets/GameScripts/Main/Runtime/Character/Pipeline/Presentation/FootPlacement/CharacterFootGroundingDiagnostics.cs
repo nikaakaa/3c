@@ -671,7 +671,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Stance = 1,
         ActivePlan = 2,
         RevisionPlan = 3,
-        PlanTransition = 4
+        PlanTransition = 4,
+        LandingHandoff = 5
     }
 
     public readonly struct CharacterPredictiveFootPlacementFootDiagnostics

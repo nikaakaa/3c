@@ -1687,16 +1687,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlanExecutionState rightPlanState,
             in CharacterFullBodyIkGoalSetHeader ownerHeader,
             CharacterFullBodyIkGoal currentPelvis,
-            CharacterFullBodyIkGoal stanceLeft,
-            CharacterFullBodyIkGoal stanceRight,
+            in CharacterFootPlacementStanceGoalCandidate stanceLeft,
+            in CharacterFootPlacementStanceGoalCandidate stanceRight,
             in CharacterFootGroundingDiagnostics stanceDiagnostics)
         {
             RequireValidInput(
                 in frame,
                 in ownerHeader,
                 currentPelvis,
-                stanceLeft,
-                stanceRight,
+                in stanceLeft,
+                in stanceRight,
                 in stanceDiagnostics);
             if (!evaluation.Matches(in frame))
                 throw new InvalidOperationException("Predictive Foot frame evaluation identity is invalid.");
@@ -1718,7 +1718,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in upstreamPose,
                     CharacterFootSide.Left,
                 in leftStep),
-                stanceLeft,
+                in stanceLeft,
                 in leftStanceDiagnostics);
             var rightInput = new CharacterFootPlacementFootGoalInput(
                 CharacterFootSide.Right,
@@ -1728,7 +1728,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in upstreamPose,
                     CharacterFootSide.Right,
                 in rightStep),
-                stanceRight,
+                in stanceRight,
                 in rightStanceDiagnostics);
             CharacterPredictiveFootGoalCandidates leftGoalCandidates =
                 evaluation.LeftGoalCandidates;
@@ -1830,7 +1830,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose pose = input.OriginalPose;
             AnimationFootFeatureSample feature = input.Feature;
             float currentEventFootPoseWeight = input.CurrentEventFootPoseWeight;
-            CharacterFullBodyIkGoal stanceGoal = input.StanceGoal;
+            CharacterFootPlacementStanceGoalCandidate stance = input.Stance;
+            CharacterFullBodyIkGoal stanceGoal = stance.CurrentGoal;
             CharacterFootGroundingFootDiagnostics grounding = input.StanceDiagnostics;
             var transitionCapture = new CharacterFootPlanTransitionCapture(
                 pose.AnklePosition,
@@ -1843,6 +1844,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up = component.up.normalized;
             Vector3 stanceWorldPosition = component.TransformPoint(stanceGoal.ComponentPosition);
             Quaternion stanceWorldRotation = (component.rotation * stanceGoal.ComponentRotation).normalized;
+            Vector3 committedAnchorWorldPosition = stance.HasCommittedAnchorGoal
+                ? component.TransformPoint(stance.CommittedAnchorGoal.ComponentPosition)
+                : default;
+            Quaternion committedAnchorWorldRotation = stance.HasCommittedAnchorGoal
+                ? (component.rotation * stance.CommittedAnchorGoal.ComponentRotation).normalized
+                : default;
             CharacterFootPlacementSoleContactPose baselineContacts = pose.ResolveSoleContacts(
                 stanceWorldPosition,
                 stanceWorldRotation);
@@ -1894,14 +1901,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float revisionTransitionBlend = hasIntentRevision
                 ? runtime.SmoothedTransitionBlendWeight
                 : 0f;
-            float stanceTransitionBlend = plan.State == CharacterPredictiveFootPlanState.Executing
-                ? Mathf.Clamp01(grounding.AnchorBlendWeight)
+            bool hasCommittedAnchorHandoff = stance.HasCommittedAnchorGoal &&
+                                             allowsStanceHandoff;
+            float anchorHandoffBlend = hasCommittedAnchorHandoff
+                ? stance.AnchorBlendWeight
                 : 0f;
             float activePlanPredictionBlend = predictiveOutputWeight *
-                                              (1f - stanceTransitionBlend) *
                                               runtime.PredictiveRetentionWeight;
-            float revisionPlanPredictionBlend = revisionPredictiveOutputWeight *
-                                                (1f - stanceTransitionBlend);
+            float revisionPlanPredictionBlend = revisionPredictiveOutputWeight;
             float planPredictionBlend = Mathf.Lerp(
                 activePlanPredictionBlend,
                 revisionPlanPredictionBlend,
@@ -1922,12 +1929,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                    currentSupportPhase == AnimationFootSupportPhase.Unsupported;
             bool actionConstraintOwnsFoot = step.IsAuthoritative &&
                                             currentConstraintMode != AnimationFootConstraintMode.Unlocked &&
+                                            !hasCommittedAnchorHandoff &&
                                             (authoritativePredictionBlend <= 0.000001f ||
                                              runtime.IsAwaitingReplacement);
             bool physicalStanceOwnsFoot =
-                grounding.ContactState != CharacterFootContactState.Swing &&
-                allowsStanceHandoff &&
-                grounding.AnchorBlendWeight >= 0.999999f;
+                hasCommittedAnchorHandoff && anchorHandoffBlend >= 0.999999f ||
+                (!stance.HasCommittedAnchorGoal &&
+                 grounding.ContactState != CharacterFootContactState.Swing &&
+                 allowsStanceHandoff &&
+                 grounding.AnchorBlendWeight >= 0.999999f);
             bool stanceOwnsFoot = physicalStanceOwnsFoot ||
                                   actionConstraintOwnsFoot && !hasEventSuccessorHandoff;
             bool currentSupportOwnsIdle = !step.IsAuthoritative &&
@@ -2306,6 +2316,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     resolvedContacts.ToePosition - currentPathPosition,
                     up);
                 predictiveOwnsSoleClearance = !stanceOwnsFoot &&
+                                              !hasCommittedAnchorHandoff &&
                                               !runtime.IsFadingOut &&
                                               !runtime.IsAwaitingReplacement &&
                                               authoritativePredictionBlend >= 0.999999f;
@@ -2347,6 +2358,50 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Quaternion.identity,
                     out _,
                     out _);
+            }
+            if (hasCommittedAnchorHandoff &&
+                anchorHandoffBlend > 0.000001f &&
+                !stanceOwnsFoot)
+            {
+                Vector3 handoffStartPosition = component.TransformPoint(result.ComponentPosition);
+                Quaternion handoffStartRotation =
+                    (component.rotation * result.ComponentRotation).normalized;
+                Vector3 handoffPosition = Vector3.Lerp(
+                    handoffStartPosition,
+                    committedAnchorWorldPosition,
+                    anchorHandoffBlend);
+                Quaternion handoffRotation = Quaternion.Slerp(
+                    handoffStartRotation,
+                    committedAnchorWorldRotation,
+                    anchorHandoffBlend).normalized;
+                if (!IsFinite(handoffPosition) || !IsFinite(handoffRotation))
+                    throw new InvalidOperationException("Foot Landing handoff Goal is invalid.");
+                result = new CharacterFullBodyIkGoal(
+                    stanceGoal.Slot,
+                    component.InverseTransformPoint(handoffPosition),
+                    (Quaternion.Inverse(component.rotation) * handoffRotation).normalized,
+                    stanceGoal.PositionWeight,
+                    stanceGoal.RotationWeight,
+                    CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget,
+                    result.SourceKind | CharacterFullBodyIkGoalSourceKind.FootGrounding,
+                    stanceGoal.DiagnosticMetadataIndex);
+                CharacterFootPlacementSoleContactPose handoffContacts = pose.ResolveSoleContacts(
+                    handoffPosition,
+                    handoffRotation);
+                if (clearanceEvaluated)
+                {
+                    postHeelDistance = Vector3.Dot(
+                        handoffContacts.HeelPosition - currentPathPosition,
+                        up);
+                    postToeDistance = Vector3.Dot(
+                        handoffContacts.ToePosition - currentPathPosition,
+                        up);
+                }
+                appliedLift = Vector3.Dot(handoffPosition - pose.AnklePosition, up);
+                predictionReachRatio = Vector3.Distance(appliedHip, handoffPosition) / legLength;
+                predictiveOwnsSoleClearance = false;
+                rewritten = true;
+                goalOwner = CharacterFootPlacementGoalOwner.LandingHandoff;
             }
             FootPredictionRejectReason rejectReason = ResolveRejectReason(
                 plan,
@@ -2421,7 +2476,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f,
                 currentPathPosition,
                 currentPathSupport,
-                targetAvailable ? plan.Sequence : 0,
+                targetAvailable
+                    ? plan.Sequence
+                    : hasCommittedAnchorHandoff
+                        ? stance.AnchorPlanSequence
+                        : 0,
                 currentPathRoot,
                 currentPathRootStart,
                 currentPathHip);
@@ -4401,8 +4460,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPlacementFrameInput frame,
             in CharacterFullBodyIkGoalSetHeader ownerHeader,
             CharacterFullBodyIkGoal currentPelvis,
-            CharacterFullBodyIkGoal currentLeft,
-            CharacterFullBodyIkGoal currentRight,
+            in CharacterFootPlacementStanceGoalCandidate currentLeft,
+            in CharacterFootPlacementStanceGoalCandidate currentRight,
             in CharacterFootGroundingDiagnostics currentDiagnostics)
         {
             if (frame.ActorId != m_ActorId ||
@@ -4418,10 +4477,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                  currentDiagnostics.FrameSequence != frame.RenderFrame ||
                  currentDiagnostics.CompletionIdentity != frame.CompletionIdentity ||
                  !IsCurrentGoal(currentPelvis, CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation, CharacterFullBodyIkGoalApplication.PelvisPreSolveTranslation, 0) ||
-                 !IsCurrentGoal(currentLeft, CharacterFullBodyIkEffectorSlot.LeftFoot, CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget, 1) ||
-                 !IsCurrentGoal(currentRight, CharacterFullBodyIkEffectorSlot.RightFoot, CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget, 2) ||
-                 !SameGoal(currentLeft, currentDiagnostics.Left.Goal) ||
-                 !SameGoal(currentRight, currentDiagnostics.Right.Goal))
+                 !IsCurrentGoal(currentLeft.CurrentGoal, CharacterFullBodyIkEffectorSlot.LeftFoot, CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget, 1) ||
+                 !IsCurrentGoal(currentRight.CurrentGoal, CharacterFullBodyIkEffectorSlot.RightFoot, CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget, 2) ||
+                 !SameGoal(currentLeft.CurrentGoal, currentDiagnostics.Left.Goal) ||
+                 !SameGoal(currentRight.CurrentGoal, currentDiagnostics.Right.Goal))
             {
                 throw new ArgumentException("Predictive Foot Placement input is invalid.");
             }

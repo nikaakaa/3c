@@ -112,6 +112,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFullBodyIkGoal Right { get; }
     }
 
+    internal readonly struct CharacterFootPlacementStanceGoalCandidate
+    {
+        internal CharacterFootPlacementStanceGoalCandidate(
+            CharacterFullBodyIkGoal currentGoal,
+            bool hasCommittedAnchorGoal,
+            CharacterFullBodyIkGoal committedAnchorGoal,
+            float anchorBlendWeight,
+            ulong anchorPlanSequence,
+            ulong anchorLandingEventIdentity)
+        {
+            if (!currentGoal.IsValid ||
+                !float.IsFinite(anchorBlendWeight) ||
+                anchorBlendWeight < 0f || anchorBlendWeight > 1f ||
+                hasCommittedAnchorGoal &&
+                (!committedAnchorGoal.IsValid ||
+                 committedAnchorGoal.Slot != currentGoal.Slot ||
+                 anchorPlanSequence == 0 || anchorLandingEventIdentity == 0) ||
+                !hasCommittedAnchorGoal &&
+                (anchorBlendWeight != 0f || anchorPlanSequence != 0 ||
+                 anchorLandingEventIdentity != 0))
+            {
+                throw new ArgumentException("Foot Placement stance Goal candidate is invalid.");
+            }
+            CurrentGoal = currentGoal;
+            HasCommittedAnchorGoal = hasCommittedAnchorGoal;
+            CommittedAnchorGoal = committedAnchorGoal;
+            AnchorBlendWeight = anchorBlendWeight;
+            AnchorPlanSequence = anchorPlanSequence;
+            AnchorLandingEventIdentity = anchorLandingEventIdentity;
+        }
+
+        internal CharacterFullBodyIkGoal CurrentGoal { get; }
+        internal bool HasCommittedAnchorGoal { get; }
+        internal CharacterFullBodyIkGoal CommittedAnchorGoal { get; }
+        internal float AnchorBlendWeight { get; }
+        internal ulong AnchorPlanSequence { get; }
+        internal ulong AnchorLandingEventIdentity { get; }
+    }
+
     internal readonly struct CharacterFootPlacementFootGoalInput
     {
         internal CharacterFootPlacementFootGoalInput(
@@ -119,10 +158,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPlacementAnimatedFootPose originalPose,
             AnimationFootFeatureSample feature,
             float currentEventFootPoseWeight,
-            CharacterFullBodyIkGoal stanceGoal,
+            in CharacterFootPlacementStanceGoalCandidate stance,
             in CharacterFootGroundingFootDiagnostics stanceDiagnostics)
         {
-            if (!stanceGoal.IsValid || stanceDiagnostics.Side != side ||
+            if (stance.CurrentGoal.Slot !=
+                    (side == CharacterFootSide.Left
+                        ? CharacterFullBodyIkEffectorSlot.LeftFoot
+                        : CharacterFullBodyIkEffectorSlot.RightFoot) ||
+                stanceDiagnostics.Side != side ||
                 !float.IsFinite(currentEventFootPoseWeight) ||
                 currentEventFootPoseWeight < 0f || currentEventFootPoseWeight > 1f)
             {
@@ -132,7 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OriginalPose = originalPose;
             Feature = feature;
             CurrentEventFootPoseWeight = currentEventFootPoseWeight;
-            StanceGoal = stanceGoal;
+            Stance = stance;
             StanceDiagnostics = stanceDiagnostics;
         }
 
@@ -140,7 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPlacementAnimatedFootPose OriginalPose { get; }
         internal AnimationFootFeatureSample Feature { get; }
         internal float CurrentEventFootPoseWeight { get; }
-        internal CharacterFullBodyIkGoal StanceGoal { get; }
+        internal CharacterFootPlacementStanceGoalCandidate Stance { get; }
         internal CharacterFootGroundingFootDiagnostics StanceDiagnostics { get; }
     }
 

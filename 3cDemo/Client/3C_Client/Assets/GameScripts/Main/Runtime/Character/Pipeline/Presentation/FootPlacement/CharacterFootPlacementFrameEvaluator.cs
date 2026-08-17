@@ -916,8 +916,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Right.PlanState,
                 in ownerHeader,
                 pelvis,
-                left.Goal,
-                right.Goal,
+                left.StanceCandidate,
+                right.StanceCandidate,
                 in m_Diagnostics);
             CharacterPredictiveFootPlacementDiagnostics predictionDiagnostics =
                 m_SwingPrediction.Diagnostics;
@@ -1404,10 +1404,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             finalWorldPosition = soleClearance.SafeAnklePosition;
             Vector3 componentPosition = Quaternion.Inverse(root.rotation) * (finalWorldPosition - root.position);
             Quaternion componentRotation = (Quaternion.Inverse(root.rotation) * finalWorldRotation).normalized;
+            CharacterFullBodyIkEffectorSlot slot = state.Side == CharacterFootSide.Left
+                ? CharacterFullBodyIkEffectorSlot.LeftFoot
+                : CharacterFullBodyIkEffectorSlot.RightFoot;
             var goal = new CharacterFullBodyIkGoal(
-                state.Side == CharacterFootSide.Left
-                    ? CharacterFullBodyIkEffectorSlot.LeftFoot
-                    : CharacterFullBodyIkEffectorSlot.RightFoot,
+                slot,
                 componentPosition,
                 componentRotation,
                 placementWeight,
@@ -1415,8 +1416,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget,
                 CharacterFullBodyIkGoalSourceKind.FootGrounding,
                 state.Side == CharacterFootSide.Left ? 1 : 2);
+            bool hasCommittedAnchorGoal = state.PlantContact && state.AllowsAnchor &&
+                                          hasResolvedAnchor &&
+                                          state.AnchorPlanSequence != 0 &&
+                                          state.AnchorLandingEventIdentity != 0;
+            CharacterFullBodyIkGoal committedAnchorGoal = default;
+            if (hasCommittedAnchorGoal)
+            {
+                SoleClearancePlan committedAnchorClearance = MeasureSoleClearance(
+                    animated,
+                    anchorWorldPosition,
+                    anchorWorldRotation,
+                    anchorSurface,
+                    root.up);
+                committedAnchorGoal = new CharacterFullBodyIkGoal(
+                    slot,
+                    root.InverseTransformPoint(committedAnchorClearance.SafeAnklePosition),
+                    (Quaternion.Inverse(root.rotation) * anchorWorldRotation).normalized,
+                    placementWeight,
+                    placementWeight,
+                    CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget,
+                    CharacterFullBodyIkGoalSourceKind.FootGrounding,
+                    state.Side == CharacterFootSide.Left ? 1 : 2);
+            }
+            var stanceCandidate = new CharacterFootPlacementStanceGoalCandidate(
+                goal,
+                hasCommittedAnchorGoal,
+                committedAnchorGoal,
+                hasCommittedAnchorGoal ? anchorBlendWeight : 0f,
+                hasCommittedAnchorGoal ? state.AnchorPlanSequence : 0,
+                hasCommittedAnchorGoal ? state.AnchorLandingEventIdentity : 0);
             return new ResolvedFoot(
                 goal,
+                in stanceCandidate,
                 prepared.Surface,
                 state.HasAnchor ? state.AnchorLocalPosition : Vector3.zero,
                 state.HasAnchor ? state.AnchorLocalRotation : Quaternion.identity,
@@ -1956,6 +1988,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             internal ResolvedFoot(
                 CharacterFullBodyIkGoal goal,
+                in CharacterFootPlacementStanceGoalCandidate stanceCandidate,
                 FootPlacementSurface surface,
                 Vector3 surfaceLocalAnchor,
                 Quaternion surfaceLocalRotation,
@@ -1969,6 +2002,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 SoleClearancePlan soleClearance)
             {
                 Goal = goal;
+                StanceCandidate = stanceCandidate;
                 Surface = surface;
                 SurfaceLocalAnchor = surfaceLocalAnchor;
                 SurfaceLocalRotation = surfaceLocalRotation;
@@ -1983,6 +2017,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
 
             internal CharacterFullBodyIkGoal Goal { get; }
+            internal CharacterFootPlacementStanceGoalCandidate StanceCandidate { get; }
             internal FootPlacementSurface Surface { get; }
             internal Vector3 SurfaceLocalAnchor { get; }
             internal Quaternion SurfaceLocalRotation { get; }

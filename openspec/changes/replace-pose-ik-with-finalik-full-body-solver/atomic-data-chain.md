@@ -67,6 +67,10 @@ v103回归run `0bf203fb9dad45fb97eb4619b063ebb6`共16个压缩分块、2189行�
 
 代码对账确认直接原因：捕获后的Anchor在`ApproachingContact`仍把逐帧Predictive Contact Target当作Contact Surface前提；目标短暂缺失时`PlantContact`被清除，而捕获首帧raw Blend为0，因此同帧`ClearAnchor`，后续目标恢复又重新Capture。修复口径是Committed Anchor在`Landing/Locked`状态下用自身Surface与local anchor维持Contact；Predictive Target只参与首次捕获。schema v104扩展为1527列，增加逐脚Stance/Anchor事务状态、Anchor Plan/Event、动画Constraint identity与权重、raw/target Anchor Blend、raw/target Pelvis Support及Committed Goal可用性；数据通过前4A.23保持未完成。
 
+首个v104 run `20a2e819963f4fa1a7a8df90307cf4c2`共21个压缩分块、2972行、1527列且Header唯一、逐行等宽。右脚同identity一帧Handoff闪断从92次降到1次，证明Committed Anchor不再依赖逐帧Predictive Target有效；左脚仍有30次。frame `2310 -> 2314`中Anchor Plan 455持续存在且Committed Goal持续有效，但Handoff只在2310至2311可用，2312起又退回ActivePlan。原因是Modifier每帧重新用`LastOutput.PlanSequence == AnchorPlanSequence`判定Handoff资格，Handoff首帧后Completed Output却优先记录底层Active Plan，导致已开始事务自我失效。正式修复必须让`Plan/Event`已冻结的Handoff持续到Anchor事务结束，并在Handoff期间把Completed Output identity记为Anchor Plan。
+
+同一run还证明下一层是动画权重边界：同一Anchor的Animation Constraint target可单帧完整翻转`0↔1`，raw Blend最大步进约`0.62`，SmoothStep后最大约`0.82`；左脚frame `2314 -> 2316`发生`Capturing -> Holding -> Releasing`，Current Event换代后Constraint从1变0，最大Y跳变与穿透仍超过1m。必须先消除Handoff事务自我失效，再用下一run区分剩余异常属于Constraint事实边界、Anchor目标距离还是低帧步进。
+
 本run停止后Unity Console另有一笔自动Input Action锁存失败；它属于Foot Placement之前的测试入口，不能把该run描述为Console干净或完整效果回归，但不影响上述已封存帧对Landing代数关系的只读对账。
 
 Landing事务闭环后，下一owner才是新Plan自身Ground Path/Clock：左脚frame `1338 -> 1341`的`Pre-Continuity`已经随Path连续两帧下降约`50.78cm/49.03cm`。该问题必须按Ground Path与权威Phase对账，不能再由Landing Blend、Current Grounding或FBBIK掩盖。

@@ -1121,6 +1121,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_LandingHandoffOriginRotation = LastOutput.FinalAnkleRotation;
             }
 
+            internal bool HasLandingHandoff(
+                ulong planSequence,
+                ulong landingEventIdentity) =>
+                planSequence != 0 && landingEventIdentity != 0 &&
+                m_LandingHandoffPlanSequence == planSequence &&
+                m_LandingHandoffEventIdentity == landingEventIdentity &&
+                IsFinite(m_LandingHandoffOriginPosition) &&
+                IsFinite(m_LandingHandoffOriginRotation);
+
             internal void ResolveLandingHandoffOrigin(
                 ulong planSequence,
                 ulong landingEventIdentity,
@@ -1970,8 +1979,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasCommittedAnchorGoal = stance.HasCommittedAnchorGoal &&
                                           allowsStanceHandoff;
             bool hasPredictiveLandingHandoff = hasCommittedAnchorGoal &&
-                                                runtime.HasCompleteOutputForPlan(
-                                                    stance.AnchorPlanSequence);
+                                                (runtime.HasLandingHandoff(
+                                                     stance.AnchorPlanSequence,
+                                                     stance.AnchorLandingEventIdentity) ||
+                                                 runtime.HasCompleteOutputForPlan(
+                                                     stance.AnchorPlanSequence));
             if (hasPredictiveLandingHandoff)
             {
                 runtime.BeginOrContinueLandingHandoff(
@@ -2571,10 +2583,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (finalContacts.HeelPosition + finalContacts.ToePosition) * 0.5f,
                 currentPathPosition,
                 currentPathSupport,
-                targetAvailable
-                    ? plan.Sequence
-                    : hasPredictiveLandingHandoff
-                        ? stance.AnchorPlanSequence
+                goalOwner == CharacterFootPlacementGoalOwner.LandingHandoff
+                    ? stance.AnchorPlanSequence
+                    : targetAvailable
+                        ? plan.Sequence
                         : 0,
                 goalOwner,
                 currentPathRoot,

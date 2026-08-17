@@ -82,6 +82,7 @@
 67. Anchor部分权重不是Original动画的空档。run `79dfec...`中Anchor Blend约`0.303~0.706`时出现`63.59~82.48cm`Goal下降和最高约`1.330m`物理下陷；根因是先以`1 - AnchorBlend`衰减Predictive，再让Original补足。正式Landing必须只做`Resolved Predictive/Transition -> Committed Anchor`的互补混合，并让Foot与Pelvis消费同一权重。
 68. 互补公式不能使用本帧重算目标作为左端点。run `fe5f1816...`右脚frame 231首次提交Anchor时Blend为0、Committed Anchor Y为`2.423m`，但Final已降到`1.981m`；frame 232事件换代后Pre-Continuity降至`1.505m`，约9.3% Anchor混合仍产生`84.48cm`物理下陷。Landing左端点必须在首次Anchor提交时冻结为紧邻上一完成Final，并用`Plan Sequence + Landing Event identity`锁定整笔事务；跨帧连续性还必须比较Goal Owner，且不能在Landing覆盖底层Plan时提前消费释放交接。
 69. Landing公式正确后仍可能由Stance事务跳变。run `0bf203fb...`证明Origin、Target、Blend到Final的代数误差低于`0.01mm`，但同identity Handoff会一帧消失再捕获，左右分别30/92次；frame `794 -> 795`旧Anchor遇到Current Event换代时Blend从`0.354`增至`0.919`，产生约`1.205m`三维Goal跳变。Committed Anchor必须持续到Release归零；事件换代不能让旧Anchor重新增权，逐帧`HasAnchor`布尔值不能代替显式事务状态。
+70. Landing Handoff开始后不能每帧用Completed Output重新验资格。run `20a2e819...`中Anchor与Committed Goal持续有效，但首帧Handoff输出把Completed Output记成底层Active Plan，下一帧便因Plan不匹配自行退出。Handoff必须由冻结的Plan/Event identity持续拥有，期间Completed Output也记录Anchor Plan；底层Plan只能提供候选，不能取消已提交事务。
 
 ## 当前证据与下一owner
 

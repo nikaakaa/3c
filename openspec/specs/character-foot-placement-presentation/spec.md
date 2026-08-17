@@ -39,7 +39,7 @@ SphereCast MUST从Raw Landing上方沿Component Down使用Profile声明的半径
 
 ### Requirement: 当前Landing阶段必须保持Pose恒等
 
-当前阶段只验证未来落点，不实现Foot Motion、FootLock、Constraint、Anchor、Pelvis、Ground Envelope、Capsule Path、Edge、Hull或Reachability，也不引入额外Plan或Revision层。Pelvis与双脚Goal的位置和旋转权重 MUST全部为零；唯一FullBodyIK MUST在验证Goal lineage后跳过FBBIK求解并保持输入Pose不变。
+当前阶段只验证未来落点，不实现Foot Motion、FootLock、Constraint、Anchor、Pelvis、Ground Envelope、Capsule Path、Edge、Hull或Reachability，也不引入参考未定义的额外规划层、版本层或兼容路径。Pelvis与双脚Goal的位置和旋转权重 MUST全部为零；唯一FullBodyIK MUST在验证Goal lineage后跳过FBBIK求解并保持输入Pose不变。
 
 #### Scenario: Landing被接受
 

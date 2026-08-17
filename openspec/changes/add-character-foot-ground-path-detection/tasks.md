@@ -44,7 +44,7 @@
 
 ## 6. 文档与校验
 
-- [x] 6.1 更新proposal、design与spec，删除未由原始参考确定的Plan/Revision层表述。
+- [x] 6.1 更新proposal、design与spec，删除未由原始参考确定的额外规划层和版本层表述。
 - [x] 6.2 执行Runtime与Editor项目编译。
 - [x] 6.3 执行定向`git diff --check`。
 - [x] 6.4 执行OpenSpec strict validate。

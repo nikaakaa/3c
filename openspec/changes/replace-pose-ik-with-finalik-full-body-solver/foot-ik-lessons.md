@@ -18,7 +18,7 @@
 3. 四条路线必须分开：Animation Foot Route、Future Body Transform、Virtual Ground Query Route、feet-only Ground Envelope不能互相冒充。
 4. In-place动画不提供世界位移；输入幅值、Action Motion、Visible速度、Body Yaw和Render差分都不能重建KCC世界运动。
 5. 楼梯前先证明Artifact可按同一相位还原Heel/Toe/Sole/Ankle/Knee/Hip位置、旋转、弧长、侧向范围和事件边界。
-6. 冻结Plan与输入变化不冲突：Artifact、Clock和Ground Query结果不可变；每帧用正式Root做廉价平面刚体投影，只有committed trajectory误差跨界才创建昂贵Revision。
+6. 历史方案曾让冻结Plan每帧按Root做廉价平面刚体投影；该方案会旋转旧命中、Surface和Hull，已由71否决。
 7. 曲线内部连续不等于跨owner连续；Active/Revision、Event、Predictive/Grounding、Swing/Anchor、Reach和Pelvis换边都可跳。
 8. GDC Ground Path顺序固定为采集位置/法线 -> 排序 -> Edge Plane -> Reachability -> 删除不可达 -> 上侧Hull；顺序颠倒会先承诺错误路线。
 9. Foot Lock是数据意图加世界验证；Landing必须原子提交Pose、Surface、Anchor local、Committed Sole和Successor Start。
@@ -51,9 +51,9 @@
 36. Idle Capture不能依赖权重先低于1：run `32d8bff...`静止段两脚`Contact=true`但`HasAnchor=false`；改为进入`GroundedStationary`显式武装后，run `d6ee145...`两脚frame76捕获、frame82权重到1并持续Anchored到frame97，Final XZ不再跟随Idle动画漂移。
 37. Revision权重连续不等于旧侧目标连续：run `d6ee145...`中旧Active已偏离0.51m至4.82m仍在Blend期间继续求值。Revision旧侧必须冻结上一完成输出；本Plan从未输出时则没有预测历史可保留，必须先退出再从当前事实重建。
 38. Swing交接不能冻结绝对世界Ankle：run `2633c9...`中动画与Pelvis继续运动，绝对冻结导致Reach单帧补高53.9cm、Final Goal跳72.4cm。必须冻结相对Original Animated Ankle/Hip的修正，保留原动画运动；只有Ground Path与Support保持世界事实。
-39. 参考文章4明确区分廉价预测更新与昂贵路径重建：每帧让已提交路线跟随正式Root位移/转向，误差跨界才重新Capsule Sweep。世界Path完全冻结会与角色分离；每帧查询又会抖动且浪费性能。
+39. 历史方案曾把参考文章4解释成“每帧刚体变换旧Path、跨界才重建”；运行证明它让可视化线旋转但不代表新地形采样，已由71否决。
 40. Traditional与Predictive必须在Release前按整步选择并保持粘滞。Traditional可处理急加减速、低速急转、无历史和空中状态，但不能成为Query Rejected后的中途fallback。
-41. 执行投影之后，偏差判断也必须进入同一投影坐标域。run `db699e86...`仍用当前身体位置对比未投影冻结Landing，正常位移被累计成左脚7.67m误差，136帧内左右脚分别生成23/27个Plan；这不是意图真的改变，而是比较域错误。
+41. 旧WorldProjection要求偏差比较也进入投影域，否则正常位移会累计成米级误差；整个WorldProjection已删除，不再作为正式设计。
 42. 唯一Revision槽必须有交接截止时间。run `db699e86...`中左脚旧事件在phase 0.944仍创建Intent Revision，直到新事件成为Current仍占槽，随后产生frame148-157共10帧Swing无Path；Intent Revision若不能在`ApproachingContact`前完成就不应启动，交接边界必须让Incoming Successor优先。
 43. Planner准备早于同帧Stance提交，若Event Successor硬等Committed Anchor，唯一预建窗口会天然晚一帧。允许用旧Active已验证的Projected Landing预建不参与Goal的geometry，但提升前必须用上一完成帧Committed Anchor验证；候选Rejected后的FadeOut不能封死后续authority tick重试。
 44. 自动压力测试的A/D事务不能把“一轮结束”当作“运行结束”：旧实现进入Complete后先提交零输入、再等正式Input Action收敛，既截断CSV又会在锁存输入尚未更新时抛异常。Endurance必须持续循环并按lap分段，只有手动停止Play才负责释放输入和封口数据。
@@ -83,6 +83,7 @@
 68. 互补公式不能使用本帧重算目标作为左端点。run `fe5f1816...`右脚frame 231首次提交Anchor时Blend为0、Committed Anchor Y为`2.423m`，但Final已降到`1.981m`；frame 232事件换代后Pre-Continuity降至`1.505m`，约9.3% Anchor混合仍产生`84.48cm`物理下陷。Landing左端点必须在首次Anchor提交时冻结为紧邻上一完成Final，并用`Plan Sequence + Landing Event identity`锁定整笔事务；跨帧连续性还必须比较Goal Owner，且不能在Landing覆盖底层Plan时提前消费释放交接。
 69. Landing公式正确后仍可能由Stance事务跳变。run `0bf203fb...`证明Origin、Target、Blend到Final的代数误差低于`0.01mm`，但同identity Handoff会一帧消失再捕获，左右分别30/92次；frame `794 -> 795`旧Anchor遇到Current Event换代时Blend从`0.354`增至`0.919`，产生约`1.205m`三维Goal跳变。Committed Anchor必须持续到Release归零；事件换代不能让旧Anchor重新增权，逐帧`HasAnchor`布尔值不能代替显式事务状态。
 70. Landing Handoff开始后不能每帧用Completed Output重新验资格。run `20a2e819...`中Anchor与Committed Goal持续有效，但首帧Handoff输出把Completed Output记成底层Active Plan，下一帧便因Plan不匹配自行退出。Handoff必须由冻结的Plan/Event identity持续拥有，期间Completed Output也记录Anchor Plan；底层Plan只能提供候选，不能取消已提交事务。
+71. 运行时有效转向不能刚体旋转旧Foot Route、命中、Surface和Ground Envelope。方向改变必须产生新committed trajectory Revision，重新Landing查询、Capsule采样、Edge、Reachability与Hull；旧Plan只保持不可变交接旧侧。实际脚未沿平地Animation Foot Route时禁止进入地形算法。
 
 ## 当前证据与下一owner
 

@@ -33,7 +33,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 direction,
             float maximumDistance,
             int layerMask,
-            int hitCapacity)
+            int segmentHitCapacity,
+            int contactCapacity)
         {
             Side = side;
             AxisStart = axisStart;
@@ -43,7 +44,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Direction = direction;
             MaximumDistance = maximumDistance;
             LayerMask = layerMask;
-            HitCapacity = hitCapacity;
+            SegmentHitCapacity = segmentHitCapacity;
+            ContactCapacity = contactCapacity;
         }
 
         public CharacterFootSide Side { get; }
@@ -54,7 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 Direction { get; }
         public float MaximumDistance { get; }
         public int LayerMask { get; }
-        public int HitCapacity { get; }
+        public int SegmentHitCapacity { get; }
+        public int ContactCapacity { get; }
 
         internal bool IsValid =>
             (Side == CharacterFootSide.Left || Side == CharacterFootSide.Right) &&
@@ -63,7 +66,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float.IsFinite(MaximumAxisSegmentLength) && MaximumAxisSegmentLength > 0f &&
             Finite(Direction) && Direction.sqrMagnitude > 0.000001f &&
             float.IsFinite(MaximumDistance) && MaximumDistance > 0f &&
-            LayerMask != 0 && HitCapacity >= 4 && HitCapacity <= 16;
+            LayerMask != 0 &&
+            SegmentHitCapacity >= 4 && SegmentHitCapacity <= 32 &&
+            ContactCapacity >= 4 && ContactCapacity <= 64;
 
         static bool Finite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
@@ -116,7 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootGroundContactPage(int capacity)
         {
-            if (capacity < 4 || capacity > 16)
+            if (capacity < 4 || capacity > 64)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             m_Contacts = new CharacterFootGroundContact[capacity];
         }
@@ -205,9 +210,43 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
     }
 
-    internal readonly struct CharacterFootGroundPathRevisionKey : IEquatable<CharacterFootGroundPathRevisionKey>
+    internal readonly struct CharacterFootGroundPathLanding
     {
-        internal CharacterFootGroundPathRevisionKey(
+        internal CharacterFootGroundPathLanding(
+            ulong landingEventIdentity,
+            ulong trajectoryGeneration,
+            string futureBodyTranslationSourceIdentity,
+            int surfaceIdentity,
+            Vector3 point,
+            Vector3 normal)
+        {
+            if (landingEventIdentity == 0 || surfaceIdentity == 0 ||
+                !Finite(point) || !Finite(normal) || normal.sqrMagnitude <= 0.000001f)
+            {
+                throw new ArgumentException("Ground Path landing is invalid.");
+            }
+            LandingEventIdentity = landingEventIdentity;
+            TrajectoryGeneration = trajectoryGeneration;
+            FutureBodyTranslationSourceIdentity = futureBodyTranslationSourceIdentity ?? string.Empty;
+            SurfaceIdentity = surfaceIdentity;
+            Point = point;
+            Normal = normal.normalized;
+        }
+
+        internal ulong LandingEventIdentity { get; }
+        internal ulong TrajectoryGeneration { get; }
+        internal string FutureBodyTranslationSourceIdentity { get; }
+        internal int SurfaceIdentity { get; }
+        internal Vector3 Point { get; }
+        internal Vector3 Normal { get; }
+
+        static bool Finite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+    }
+
+    internal readonly struct CharacterFootGroundPathInputKey : IEquatable<CharacterFootGroundPathInputKey>
+    {
+        internal CharacterFootGroundPathInputKey(
             CharacterFootSide side,
             ulong currentLandingEventIdentity,
             ulong nextLandingEventIdentity,
@@ -277,7 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal int ComponentUpZ { get; }
         internal string ProfileRevision { get; }
 
-        public bool Equals(CharacterFootGroundPathRevisionKey other) =>
+        public bool Equals(CharacterFootGroundPathInputKey other) =>
             Side == other.Side &&
             CurrentLandingEventIdentity == other.CurrentLandingEventIdentity &&
             NextLandingEventIdentity == other.NextLandingEventIdentity &&
@@ -310,7 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string.Equals(ProfileRevision, other.ProfileRevision, StringComparison.Ordinal);
 
         public override bool Equals(object obj) =>
-            obj is CharacterFootGroundPathRevisionKey other && Equals(other);
+            obj is CharacterFootGroundPathInputKey other && Equals(other);
 
         public override int GetHashCode()
         {
@@ -337,11 +376,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Mathf.RoundToInt(value * scale);
     }
 
-    internal readonly struct CharacterFootGroundPathRevision
+    internal readonly struct CharacterFootGroundPathInput
     {
-        internal CharacterFootGroundPathRevision(
+        internal CharacterFootGroundPathInput(
             ulong identity,
-            in CharacterFootGroundPathRevisionKey key,
+            in CharacterFootGroundPathInputKey key,
             Vector3 currentLanding,
             Vector3 nextLanding,
             Vector3 currentLandingNormal,
@@ -364,7 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal ulong Identity { get; }
-        internal CharacterFootGroundPathRevisionKey Key { get; }
+        internal CharacterFootGroundPathInputKey Key { get; }
         internal Vector3 CurrentLanding { get; }
         internal Vector3 NextLanding { get; }
         internal Vector3 CurrentLandingNormal { get; }
@@ -376,34 +415,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool IsValid => Identity != 0 && Query.IsValid;
     }
 
-    internal static class CharacterFootGroundPathRevisionBuilder
+    internal static class CharacterFootGroundPathInputBuilder
     {
-        internal static CharacterFootGroundPathRevisionKey BuildKey(
+        internal static CharacterFootGroundPathInputKey BuildKey(
             CharacterFootSide side,
-            CharacterFootLandingPredictionFootDiagnostics currentLanding,
-            CharacterFootLandingPredictionFootDiagnostics nextLanding,
+            in CharacterFootGroundPathLanding currentLanding,
+            CharacterFootLandingPredictionFootDiagnostics targetLanding,
             ulong authorityTick,
             Vector3 componentUp,
             string profileRevision) =>
-            new CharacterFootGroundPathRevisionKey(
+            new CharacterFootGroundPathInputKey(
                 side,
                 currentLanding.LandingEventIdentity,
-                nextLanding.LandingEventIdentity,
+                targetLanding.LandingEventIdentity,
                 currentLanding.TrajectoryGeneration,
                 authorityTick,
                 currentLanding.FutureBodyTranslationSourceIdentity,
-                nextLanding.FutureBodyTranslationSourceIdentity,
+                targetLanding.FutureBodyTranslationSourceIdentity,
                 currentLanding.SurfaceIdentity,
-                nextLanding.SurfaceIdentity,
-                currentLanding.LandingPoint,
-                nextLanding.LandingPoint,
-                currentLanding.LandingNormal,
-                nextLanding.LandingNormal,
-                componentUp.normalized,
+                targetLanding.SurfaceIdentity,
+                currentLanding.Point,
+                targetLanding.LandingPoint,
+                currentLanding.Normal,
+                targetLanding.LandingNormal,
+                componentUp,
                 profileRevision);
 
         internal static bool TryBuild(
-            in CharacterFootGroundPathRevisionKey key,
+            in CharacterFootGroundPathInputKey key,
             Vector3 currentLanding,
             Vector3 nextLanding,
             Vector3 currentLandingNormal,
@@ -412,16 +451,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int nextLandingSurfaceIdentity,
             Vector3 componentUp,
             in CharacterFootGroundDetectionSettings settings,
-            out CharacterFootGroundPathRevision revision)
+            out CharacterFootGroundPathInput input)
         {
             if (!Finite(currentLanding) || !Finite(nextLanding) ||
                 !Finite(currentLandingNormal) || currentLandingNormal.sqrMagnitude <= 0.000001f ||
                 !Finite(nextLandingNormal) || nextLandingNormal.sqrMagnitude <= 0.000001f ||
-                currentLandingSurfaceIdentity == 0 || nextLandingSurfaceIdentity == 0 ||
+                nextLandingSurfaceIdentity == 0 ||
                 !Finite(componentUp) ||
                 componentUp.sqrMagnitude <= 0.000001f)
             {
-                revision = default;
+                input = default;
                 return false;
             }
             Vector3 up = componentUp.normalized;
@@ -434,14 +473,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 -up,
                 settings.CastAbove + settings.CastBelow,
                 settings.GroundLayerMask,
-                settings.HitCapacity);
+                settings.SegmentHitCapacity,
+                settings.ContactCapacity);
             if (!query.IsValid)
             {
-                revision = default;
+                input = default;
                 return false;
             }
             ulong identity = ComputeIdentity(in key, in query);
-            revision = new CharacterFootGroundPathRevision(
+            input = new CharacterFootGroundPathInput(
                 identity,
                 in key,
                 currentLanding,
@@ -456,7 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static ulong ComputeIdentity(
-            in CharacterFootGroundPathRevisionKey key,
+            in CharacterFootGroundPathInputKey key,
             in CharacterFootGroundPathQueryRequest query)
         {
             ulong hash = 14695981039346656037UL;
@@ -522,16 +562,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathRejectReason RejectReason { get; private set; }
         internal bool QueryExecuted { get; private set; }
         internal int SegmentCount { get; private set; }
-        internal CharacterFootGroundPathRevision Revision { get; private set; }
+        internal CharacterFootGroundPathInput Input { get; private set; }
         internal CharacterFootGroundContactPage Contacts { get; }
         internal CharacterFootGroundEnvelopePage Envelope { get; }
-        internal bool HasRevision => Revision.IsValid;
+        internal bool HasInput => Input.IsValid;
 
         internal void SetRejected(
             CharacterFootGroundPathRejectReason reason,
             bool queryExecuted,
             int segmentCount,
-            in CharacterFootGroundPathRevision revision)
+            in CharacterFootGroundPathInput input)
         {
             if (reason == CharacterFootGroundPathRejectReason.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
@@ -539,23 +579,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason = reason;
             QueryExecuted = queryExecuted;
             SegmentCount = segmentCount;
-            Revision = revision;
+            Input = input;
             if (!queryExecuted)
                 Contacts.Clear();
         }
 
         internal void SetAccepted(
             int segmentCount,
-            in CharacterFootGroundPathRevision revision)
+            in CharacterFootGroundPathInput input)
         {
-            if (!revision.IsValid || Contacts.Count <= 0 || Envelope.Count < 2 ||
+            if (!input.IsValid || Contacts.Count <= 0 || Envelope.Count < 2 ||
                 segmentCount <= 0)
                 throw new ArgumentException("Ground Path accepted page is invalid.");
             State = CharacterFootGroundPathState.Accepted;
             RejectReason = CharacterFootGroundPathRejectReason.None;
             QueryExecuted = true;
             SegmentCount = segmentCount;
-            Revision = revision;
+            Input = input;
         }
 
         internal void Clear()
@@ -564,7 +604,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason = default;
             QueryExecuted = false;
             SegmentCount = 0;
-            Revision = default;
+            Input = default;
             Contacts.Clear();
             Envelope.Clear();
         }
@@ -577,8 +617,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterFootGroundPathPage m_Committed;
         CharacterFootGroundPathPage m_Pending;
+        CharacterFootGroundPathLanding m_CommittedLanding;
+        CharacterFootGroundPathLanding m_PendingLanding;
         bool m_HasCommitted;
         bool m_HasPending;
+        bool m_HasCommittedLanding;
+        bool m_HasPendingLanding;
 
         internal CharacterFootGroundPathFootState(int contactCapacity)
         {
@@ -589,12 +633,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootGroundEnvelopeWorkspace EnvelopeWorkspace { get; }
 
-        internal bool HasCommittedRevision => m_HasCommitted && m_Committed.HasRevision;
-        internal CharacterFootGroundPathRevisionKey CommittedKey => m_Committed.Revision.Key;
+        internal bool HasCurrentLanding => m_HasPendingLanding || m_HasCommittedLanding;
+        internal CharacterFootGroundPathLanding CurrentLanding =>
+            m_HasPendingLanding ? m_PendingLanding : m_CommittedLanding;
+        internal bool HasCommittedInput => m_HasCommitted && m_Committed.HasInput;
+        internal CharacterFootGroundPathInputKey CommittedKey => m_Committed.Input.Key;
         internal bool CommittedAccepted =>
             m_HasCommitted && m_Committed.State == CharacterFootGroundPathState.Accepted;
         internal ulong CommittedAuthorityTick =>
-            HasCommittedRevision ? m_Committed.Revision.Key.AuthorityTick : 0;
+            HasCommittedInput ? m_Committed.Input.Key.AuthorityTick : 0;
+
+        internal void SetPendingLanding(in CharacterFootGroundPathLanding landing)
+        {
+            m_PendingLanding = landing;
+            m_HasPendingLanding = true;
+        }
 
         internal CharacterFootGroundPathPage BeginPending()
         {
@@ -625,16 +678,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_HasCommitted = true;
             m_Pending = null;
             m_HasPending = false;
+            if (m_HasPendingLanding)
+            {
+                m_CommittedLanding = m_PendingLanding;
+                m_HasCommittedLanding = true;
+                m_PendingLanding = default;
+                m_HasPendingLanding = false;
+            }
         }
 
         internal void Discard()
         {
-            if (!m_HasPending)
-                return;
-            if (!ReferenceEquals(m_Pending, m_Committed))
-                m_Pending.Clear();
-            m_Pending = null;
-            m_HasPending = false;
+            if (m_HasPending)
+            {
+                if (!ReferenceEquals(m_Pending, m_Committed))
+                    m_Pending.Clear();
+                m_Pending = null;
+                m_HasPending = false;
+            }
+            m_PendingLanding = default;
+            m_HasPendingLanding = false;
         }
 
         internal void Reset()
@@ -643,13 +706,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Second.Clear();
             m_Committed = null;
             m_Pending = null;
+            m_CommittedLanding = default;
+            m_PendingLanding = default;
             m_HasCommitted = false;
             m_HasPending = false;
+            m_HasCommittedLanding = false;
+            m_HasPendingLanding = false;
             EnvelopeWorkspace.Clear();
         }
-
     }
-
     readonly struct CharacterFootGroundPathDiagnosticContacts
     {
         readonly CharacterFootGroundContact m_0;
@@ -668,6 +733,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootGroundContact m_13;
         readonly CharacterFootGroundContact m_14;
         readonly CharacterFootGroundContact m_15;
+        readonly CharacterFootGroundContact m_16;
+        readonly CharacterFootGroundContact m_17;
+        readonly CharacterFootGroundContact m_18;
+        readonly CharacterFootGroundContact m_19;
+        readonly CharacterFootGroundContact m_20;
+        readonly CharacterFootGroundContact m_21;
+        readonly CharacterFootGroundContact m_22;
+        readonly CharacterFootGroundContact m_23;
+        readonly CharacterFootGroundContact m_24;
+        readonly CharacterFootGroundContact m_25;
+        readonly CharacterFootGroundContact m_26;
+        readonly CharacterFootGroundContact m_27;
+        readonly CharacterFootGroundContact m_28;
+        readonly CharacterFootGroundContact m_29;
+        readonly CharacterFootGroundContact m_30;
+        readonly CharacterFootGroundContact m_31;
+        readonly CharacterFootGroundContact m_32;
+        readonly CharacterFootGroundContact m_33;
+        readonly CharacterFootGroundContact m_34;
+        readonly CharacterFootGroundContact m_35;
+        readonly CharacterFootGroundContact m_36;
+        readonly CharacterFootGroundContact m_37;
+        readonly CharacterFootGroundContact m_38;
+        readonly CharacterFootGroundContact m_39;
+        readonly CharacterFootGroundContact m_40;
+        readonly CharacterFootGroundContact m_41;
+        readonly CharacterFootGroundContact m_42;
+        readonly CharacterFootGroundContact m_43;
+        readonly CharacterFootGroundContact m_44;
+        readonly CharacterFootGroundContact m_45;
+        readonly CharacterFootGroundContact m_46;
+        readonly CharacterFootGroundContact m_47;
+        readonly CharacterFootGroundContact m_48;
+        readonly CharacterFootGroundContact m_49;
+        readonly CharacterFootGroundContact m_50;
+        readonly CharacterFootGroundContact m_51;
+        readonly CharacterFootGroundContact m_52;
+        readonly CharacterFootGroundContact m_53;
+        readonly CharacterFootGroundContact m_54;
+        readonly CharacterFootGroundContact m_55;
+        readonly CharacterFootGroundContact m_56;
+        readonly CharacterFootGroundContact m_57;
+        readonly CharacterFootGroundContact m_58;
+        readonly CharacterFootGroundContact m_59;
+        readonly CharacterFootGroundContact m_60;
+        readonly CharacterFootGroundContact m_61;
+        readonly CharacterFootGroundContact m_62;
+        readonly CharacterFootGroundContact m_63;
 
         internal CharacterFootGroundPathDiagnosticContacts(
             CharacterFootGroundContactPage page)
@@ -689,6 +802,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_13 = Read(page, 13);
             m_14 = Read(page, 14);
             m_15 = Read(page, 15);
+            m_16 = Read(page, 16);
+            m_17 = Read(page, 17);
+            m_18 = Read(page, 18);
+            m_19 = Read(page, 19);
+            m_20 = Read(page, 20);
+            m_21 = Read(page, 21);
+            m_22 = Read(page, 22);
+            m_23 = Read(page, 23);
+            m_24 = Read(page, 24);
+            m_25 = Read(page, 25);
+            m_26 = Read(page, 26);
+            m_27 = Read(page, 27);
+            m_28 = Read(page, 28);
+            m_29 = Read(page, 29);
+            m_30 = Read(page, 30);
+            m_31 = Read(page, 31);
+            m_32 = Read(page, 32);
+            m_33 = Read(page, 33);
+            m_34 = Read(page, 34);
+            m_35 = Read(page, 35);
+            m_36 = Read(page, 36);
+            m_37 = Read(page, 37);
+            m_38 = Read(page, 38);
+            m_39 = Read(page, 39);
+            m_40 = Read(page, 40);
+            m_41 = Read(page, 41);
+            m_42 = Read(page, 42);
+            m_43 = Read(page, 43);
+            m_44 = Read(page, 44);
+            m_45 = Read(page, 45);
+            m_46 = Read(page, 46);
+            m_47 = Read(page, 47);
+            m_48 = Read(page, 48);
+            m_49 = Read(page, 49);
+            m_50 = Read(page, 50);
+            m_51 = Read(page, 51);
+            m_52 = Read(page, 52);
+            m_53 = Read(page, 53);
+            m_54 = Read(page, 54);
+            m_55 = Read(page, 55);
+            m_56 = Read(page, 56);
+            m_57 = Read(page, 57);
+            m_58 = Read(page, 58);
+            m_59 = Read(page, 59);
+            m_60 = Read(page, 60);
+            m_61 = Read(page, 61);
+            m_62 = Read(page, 62);
+            m_63 = Read(page, 63);
         }
 
         internal int Count { get; }
@@ -711,6 +872,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             13 => m_13,
             14 => m_14,
             15 => m_15,
+            16 => m_16,
+            17 => m_17,
+            18 => m_18,
+            19 => m_19,
+            20 => m_20,
+            21 => m_21,
+            22 => m_22,
+            23 => m_23,
+            24 => m_24,
+            25 => m_25,
+            26 => m_26,
+            27 => m_27,
+            28 => m_28,
+            29 => m_29,
+            30 => m_30,
+            31 => m_31,
+            32 => m_32,
+            33 => m_33,
+            34 => m_34,
+            35 => m_35,
+            36 => m_36,
+            37 => m_37,
+            38 => m_38,
+            39 => m_39,
+            40 => m_40,
+            41 => m_41,
+            42 => m_42,
+            43 => m_43,
+            44 => m_44,
+            45 => m_45,
+            46 => m_46,
+            47 => m_47,
+            48 => m_48,
+            49 => m_49,
+            50 => m_50,
+            51 => m_51,
+            52 => m_52,
+            53 => m_53,
+            54 => m_54,
+            55 => m_55,
+            56 => m_56,
+            57 => m_57,
+            58 => m_58,
+            59 => m_59,
+            60 => m_60,
+            61 => m_61,
+            62 => m_62,
+            63 => m_63,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -742,6 +951,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootGroundEnvelopeVertex m_17;
         readonly CharacterFootGroundEnvelopeVertex m_18;
         readonly CharacterFootGroundEnvelopeVertex m_19;
+        readonly CharacterFootGroundEnvelopeVertex m_20;
+        readonly CharacterFootGroundEnvelopeVertex m_21;
+        readonly CharacterFootGroundEnvelopeVertex m_22;
+        readonly CharacterFootGroundEnvelopeVertex m_23;
+        readonly CharacterFootGroundEnvelopeVertex m_24;
+        readonly CharacterFootGroundEnvelopeVertex m_25;
+        readonly CharacterFootGroundEnvelopeVertex m_26;
+        readonly CharacterFootGroundEnvelopeVertex m_27;
+        readonly CharacterFootGroundEnvelopeVertex m_28;
+        readonly CharacterFootGroundEnvelopeVertex m_29;
+        readonly CharacterFootGroundEnvelopeVertex m_30;
+        readonly CharacterFootGroundEnvelopeVertex m_31;
+        readonly CharacterFootGroundEnvelopeVertex m_32;
+        readonly CharacterFootGroundEnvelopeVertex m_33;
+        readonly CharacterFootGroundEnvelopeVertex m_34;
+        readonly CharacterFootGroundEnvelopeVertex m_35;
+        readonly CharacterFootGroundEnvelopeVertex m_36;
+        readonly CharacterFootGroundEnvelopeVertex m_37;
+        readonly CharacterFootGroundEnvelopeVertex m_38;
+        readonly CharacterFootGroundEnvelopeVertex m_39;
+        readonly CharacterFootGroundEnvelopeVertex m_40;
+        readonly CharacterFootGroundEnvelopeVertex m_41;
+        readonly CharacterFootGroundEnvelopeVertex m_42;
+        readonly CharacterFootGroundEnvelopeVertex m_43;
+        readonly CharacterFootGroundEnvelopeVertex m_44;
+        readonly CharacterFootGroundEnvelopeVertex m_45;
+        readonly CharacterFootGroundEnvelopeVertex m_46;
+        readonly CharacterFootGroundEnvelopeVertex m_47;
+        readonly CharacterFootGroundEnvelopeVertex m_48;
+        readonly CharacterFootGroundEnvelopeVertex m_49;
+        readonly CharacterFootGroundEnvelopeVertex m_50;
+        readonly CharacterFootGroundEnvelopeVertex m_51;
+        readonly CharacterFootGroundEnvelopeVertex m_52;
+        readonly CharacterFootGroundEnvelopeVertex m_53;
+        readonly CharacterFootGroundEnvelopeVertex m_54;
+        readonly CharacterFootGroundEnvelopeVertex m_55;
+        readonly CharacterFootGroundEnvelopeVertex m_56;
+        readonly CharacterFootGroundEnvelopeVertex m_57;
+        readonly CharacterFootGroundEnvelopeVertex m_58;
+        readonly CharacterFootGroundEnvelopeVertex m_59;
+        readonly CharacterFootGroundEnvelopeVertex m_60;
+        readonly CharacterFootGroundEnvelopeVertex m_61;
+        readonly CharacterFootGroundEnvelopeVertex m_62;
+        readonly CharacterFootGroundEnvelopeVertex m_63;
+        readonly CharacterFootGroundEnvelopeVertex m_64;
+        readonly CharacterFootGroundEnvelopeVertex m_65;
+        readonly CharacterFootGroundEnvelopeVertex m_66;
+        readonly CharacterFootGroundEnvelopeVertex m_67;
 
         internal CharacterFootGroundEnvelopeDiagnosticVertices(
             CharacterFootGroundEnvelopePage page)
@@ -767,6 +1024,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_17 = Read(page, 17);
             m_18 = Read(page, 18);
             m_19 = Read(page, 19);
+            m_20 = Read(page, 20);
+            m_21 = Read(page, 21);
+            m_22 = Read(page, 22);
+            m_23 = Read(page, 23);
+            m_24 = Read(page, 24);
+            m_25 = Read(page, 25);
+            m_26 = Read(page, 26);
+            m_27 = Read(page, 27);
+            m_28 = Read(page, 28);
+            m_29 = Read(page, 29);
+            m_30 = Read(page, 30);
+            m_31 = Read(page, 31);
+            m_32 = Read(page, 32);
+            m_33 = Read(page, 33);
+            m_34 = Read(page, 34);
+            m_35 = Read(page, 35);
+            m_36 = Read(page, 36);
+            m_37 = Read(page, 37);
+            m_38 = Read(page, 38);
+            m_39 = Read(page, 39);
+            m_40 = Read(page, 40);
+            m_41 = Read(page, 41);
+            m_42 = Read(page, 42);
+            m_43 = Read(page, 43);
+            m_44 = Read(page, 44);
+            m_45 = Read(page, 45);
+            m_46 = Read(page, 46);
+            m_47 = Read(page, 47);
+            m_48 = Read(page, 48);
+            m_49 = Read(page, 49);
+            m_50 = Read(page, 50);
+            m_51 = Read(page, 51);
+            m_52 = Read(page, 52);
+            m_53 = Read(page, 53);
+            m_54 = Read(page, 54);
+            m_55 = Read(page, 55);
+            m_56 = Read(page, 56);
+            m_57 = Read(page, 57);
+            m_58 = Read(page, 58);
+            m_59 = Read(page, 59);
+            m_60 = Read(page, 60);
+            m_61 = Read(page, 61);
+            m_62 = Read(page, 62);
+            m_63 = Read(page, 63);
+            m_64 = Read(page, 64);
+            m_65 = Read(page, 65);
+            m_66 = Read(page, 66);
+            m_67 = Read(page, 67);
         }
 
         internal int Count { get; }
@@ -793,6 +1098,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             17 => m_17,
             18 => m_18,
             19 => m_19,
+            20 => m_20,
+            21 => m_21,
+            22 => m_22,
+            23 => m_23,
+            24 => m_24,
+            25 => m_25,
+            26 => m_26,
+            27 => m_27,
+            28 => m_28,
+            29 => m_29,
+            30 => m_30,
+            31 => m_31,
+            32 => m_32,
+            33 => m_33,
+            34 => m_34,
+            35 => m_35,
+            36 => m_36,
+            37 => m_37,
+            38 => m_38,
+            39 => m_39,
+            40 => m_40,
+            41 => m_41,
+            42 => m_42,
+            43 => m_43,
+            44 => m_44,
+            45 => m_45,
+            46 => m_46,
+            47 => m_47,
+            48 => m_48,
+            49 => m_49,
+            50 => m_50,
+            51 => m_51,
+            52 => m_52,
+            53 => m_53,
+            54 => m_54,
+            55 => m_55,
+            56 => m_56,
+            57 => m_57,
+            58 => m_58,
+            59 => m_59,
+            60 => m_60,
+            61 => m_61,
+            62 => m_62,
+            63 => m_63,
+            64 => m_64,
+            65 => m_65,
+            66 => m_66,
+            67 => m_67,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -815,48 +1168,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason = page.RejectReason;
             QueryExecutedThisFrame = queryExecutedThisFrame;
             SegmentCount = page.SegmentCount;
-            RevisionIdentity = page.Revision.Identity;
-            CurrentLandingEventIdentity = page.HasRevision
-                ? page.Revision.Key.CurrentLandingEventIdentity
+            InputIdentity = page.Input.Identity;
+            CurrentLandingEventIdentity = page.HasInput
+                ? page.Input.Key.CurrentLandingEventIdentity
                 : 0;
-            NextLandingEventIdentity = page.HasRevision
-                ? page.Revision.Key.NextLandingEventIdentity
+            NextLandingEventIdentity = page.HasInput
+                ? page.Input.Key.NextLandingEventIdentity
                 : 0;
-            TrajectoryGeneration = page.HasRevision
-                ? page.Revision.Key.TrajectoryGeneration
+            TrajectoryGeneration = page.HasInput
+                ? page.Input.Key.TrajectoryGeneration
                 : 0;
-            AuthorityTick = page.HasRevision
-                ? page.Revision.Key.AuthorityTick
+            AuthorityTick = page.HasInput
+                ? page.Input.Key.AuthorityTick
                 : 0;
-            CurrentFutureBodyTranslationSourceIdentity = page.HasRevision
-                ? page.Revision.Key.CurrentFutureBodyTranslationSourceIdentity
+            CurrentFutureBodyTranslationSourceIdentity = page.HasInput
+                ? page.Input.Key.CurrentFutureBodyTranslationSourceIdentity
                 : string.Empty;
-            NextFutureBodyTranslationSourceIdentity = page.HasRevision
-                ? page.Revision.Key.NextFutureBodyTranslationSourceIdentity
+            NextFutureBodyTranslationSourceIdentity = page.HasInput
+                ? page.Input.Key.NextFutureBodyTranslationSourceIdentity
                 : string.Empty;
-            CurrentLanding = page.HasRevision
-                ? page.Revision.CurrentLanding
+            CurrentLanding = page.HasInput
+                ? page.Input.CurrentLanding
                 : default;
-            NextLanding = page.HasRevision
-                ? page.Revision.NextLanding
+            NextLanding = page.HasInput
+                ? page.Input.NextLanding
                 : default;
-            CurrentLandingNormal = page.HasRevision
-                ? page.Revision.CurrentLandingNormal
+            CurrentLandingNormal = page.HasInput
+                ? page.Input.CurrentLandingNormal
                 : default;
-            NextLandingNormal = page.HasRevision
-                ? page.Revision.NextLandingNormal
+            NextLandingNormal = page.HasInput
+                ? page.Input.NextLandingNormal
                 : default;
-            CurrentLandingSurfaceIdentity = page.HasRevision
-                ? page.Revision.CurrentLandingSurfaceIdentity
+            CurrentLandingSurfaceIdentity = page.HasInput
+                ? page.Input.CurrentLandingSurfaceIdentity
                 : 0;
-            NextLandingSurfaceIdentity = page.HasRevision
-                ? page.Revision.NextLandingSurfaceIdentity
+            NextLandingSurfaceIdentity = page.HasInput
+                ? page.Input.NextLandingSurfaceIdentity
                 : 0;
-            ComponentUp = page.HasRevision
-                ? page.Revision.ComponentUp
+            ComponentUp = page.HasInput
+                ? page.Input.ComponentUp
                 : default;
-            Query = page.HasRevision
-                ? page.Revision.Query
+            Query = page.HasInput
+                ? page.Input.Query
                 : default;
             m_Contacts = new CharacterFootGroundPathDiagnosticContacts(page.Contacts);
             m_Envelope = new CharacterFootGroundEnvelopeDiagnosticVertices(page.Envelope);
@@ -867,7 +1220,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool QueryExecutedThisFrame { get; }
         public bool QueryExecuted => QueryExecutedThisFrame;
         public int SegmentCount { get; }
-        public ulong RevisionIdentity { get; }
+        public ulong InputIdentity { get; }
         public ulong CurrentLandingEventIdentity { get; }
         public ulong NextLandingEventIdentity { get; }
         public ulong TrajectoryGeneration { get; }

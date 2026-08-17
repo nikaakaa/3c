@@ -41,9 +41,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "QueryShape,QueryPurpose,QueryFootIndex,QueryOriginX,QueryOriginY,QueryOriginZ," +
             "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot," +
             "Accepted,SurfaceIdentity,LandingPointX,LandingPointY,LandingPointZ," +
-            "LandingNormalX,LandingNormalY,LandingNormalZ,QueryDistance";
+            "LandingNormalX,LandingNormalY,LandingNormalZ,QueryDistance," +
+            "GroundPathState,GroundPathRejectReason,GroundPathInputIdentity,GroundPathQueryExecuted," +
+            "GroundPathCurrentLandingEventIdentity,GroundPathNextLandingEventIdentity,GroundPathTrajectoryGeneration,GroundPathAuthorityTick," +
+            "GroundPathCurrentFutureBodyTranslationSourceIdentity,GroundPathNextFutureBodyTranslationSourceIdentity," +
+            "GroundPathCurrentLandingX,GroundPathCurrentLandingY,GroundPathCurrentLandingZ," +
+            "GroundPathNextLandingX,GroundPathNextLandingY,GroundPathNextLandingZ," +
+            "GroundPathCurrentLandingNormalX,GroundPathCurrentLandingNormalY,GroundPathCurrentLandingNormalZ," +
+            "GroundPathNextLandingNormalX,GroundPathNextLandingNormalY,GroundPathNextLandingNormalZ," +
+            "GroundPathCurrentLandingSurfaceIdentity,GroundPathNextLandingSurfaceIdentity," +
+            "GroundPathComponentUpX,GroundPathComponentUpY,GroundPathComponentUpZ," +
+            "GroundPathAxisStartX,GroundPathAxisStartY,GroundPathAxisStartZ," +
+            "GroundPathAxisEndX,GroundPathAxisEndY,GroundPathAxisEndZ," +
+            "GroundPathRadius,GroundPathMaximumAxisSegmentLength,GroundPathDirectionX,GroundPathDirectionY,GroundPathDirectionZ," +
+            "GroundPathMaximumDistance,GroundPathLayerMask,GroundPathSegmentHitCapacity,GroundPathContactCapacity,GroundPathSegmentCount,GroundPathContactCount,GroundEnvelopeVertexCount," +
+            "GroundContactIndex,GroundContactSegmentIndex,GroundContactSurfaceIdentity,GroundContactCandidateIdentity," +
+            "GroundContactPositionX,GroundContactPositionY,GroundContactPositionZ," +
+            "GroundContactNormalX,GroundContactNormalY,GroundContactNormalZ,GroundContactQueryDistance," +
+            "GroundEnvelopeVertexIndex,GroundEnvelopeVertexX,GroundEnvelopeVertexY,GroundEnvelopeVertexZ";
 
-        static readonly List<CharacterFootLandingPredictionDiagnostics> s_Frames =
+            static readonly List<CharacterFootLandingPredictionDiagnostics> s_Frames =
             new List<CharacterFootLandingPredictionDiagnostics>(4096);
 
         static bool s_Capturing;
@@ -102,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 string path = Save();
                 Debug.Log(
-                    $"Foot Landing sampling saved {s_Frames.Count * 2} rows to {path}");
+                    $"Foot Landing sampling saved {s_Frames.Count} frames to {path}");
             }
             catch (Exception exception)
             {
@@ -136,17 +153,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < s_Frames.Count; i++)
             {
                 CharacterFootLandingPredictionDiagnostics frame = s_Frames[i];
-                WriteRow(writer, row, in frame, frame.Left);
-                WriteRow(writer, row, in frame, frame.Right);
+                WriteRows(writer, row, in frame, frame.Left);
+                WriteRows(writer, row, in frame, frame.Right);
             }
             return path;
+        }
+
+        static void WriteRows(
+            StreamWriter writer,
+            StringBuilder row,
+            in CharacterFootLandingPredictionDiagnostics frame,
+            CharacterFootLandingPredictionFootDiagnostics foot)
+        {
+            int rowCount = Math.Max(
+                1,
+                Math.Max(
+                    foot.GroundPath.ContactCount,
+                    foot.GroundPath.EnvelopeVertexCount));
+            for (int contactIndex = 0; contactIndex < rowCount; contactIndex++)
+                WriteRow(writer, row, in frame, foot, contactIndex);
         }
 
         static void WriteRow(
             StreamWriter writer,
             StringBuilder row,
             in CharacterFootLandingPredictionDiagnostics frame,
-            CharacterFootLandingPredictionFootDiagnostics foot)
+            CharacterFootLandingPredictionFootDiagnostics foot,
+            int groundContactIndex)
         {
             row.Clear();
             CharacterFootLandingPredictionInputDiagnostics input = frame.Input;
@@ -216,6 +249,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.LandingPoint);
             Add(row, foot.LandingNormal);
             Add(row, foot.QueryDistance);
+            CharacterFootGroundPathDiagnostics ground = foot.GroundPath;
+            CharacterFootGroundPathQueryRequest groundQuery = ground.Query;
+            Add(row, ground.State.ToString());
+            Add(row, ground.RejectReason.ToString());
+            Add(row, ground.InputIdentity);
+            Add(row, ground.QueryExecuted);
+            Add(row, ground.CurrentLandingEventIdentity);
+            Add(row, ground.NextLandingEventIdentity);
+            Add(row, ground.TrajectoryGeneration);
+            Add(row, ground.AuthorityTick);
+            Add(row, ground.CurrentFutureBodyTranslationSourceIdentity);
+            Add(row, ground.NextFutureBodyTranslationSourceIdentity);
+            Add(row, ground.CurrentLanding);
+            Add(row, ground.NextLanding);
+            Add(row, ground.CurrentLandingNormal);
+            Add(row, ground.NextLandingNormal);
+            Add(row, ground.CurrentLandingSurfaceIdentity);
+            Add(row, ground.NextLandingSurfaceIdentity);
+            Add(row, ground.ComponentUp);
+            Add(row, groundQuery.AxisStart);
+            Add(row, groundQuery.AxisEnd);
+            Add(row, groundQuery.Radius);
+            Add(row, groundQuery.MaximumAxisSegmentLength);
+            Add(row, groundQuery.Direction);
+            Add(row, groundQuery.MaximumDistance);
+            Add(row, groundQuery.LayerMask);
+            Add(row, groundQuery.SegmentHitCapacity);
+            Add(row, groundQuery.ContactCapacity);
+            Add(row, ground.SegmentCount);
+            Add(row, ground.ContactCount);
+            Add(row, ground.EnvelopeVertexCount);
+            bool hasContact = groundContactIndex < ground.ContactCount;
+            CharacterFootGroundContact contact = hasContact
+                ? ground.ContactAt(groundContactIndex)
+                : default;
+            Add(row, hasContact ? groundContactIndex : -1);
+            Add(row, hasContact ? contact.SegmentIndex : -1);
+            Add(row, contact.SurfaceIdentity);
+            Add(row, contact.CandidateIdentity);
+            Add(row, contact.Position);
+            Add(row, contact.Normal);
+            Add(row, contact.QueryDistance);
+            bool hasEnvelopeVertex = groundContactIndex < ground.EnvelopeVertexCount;
+            CharacterFootGroundEnvelopeVertex envelopeVertex = hasEnvelopeVertex
+                ? ground.EnvelopeVertexAt(groundContactIndex)
+                : default;
+            Add(row, hasEnvelopeVertex ? groundContactIndex : -1);
+            Add(row, envelopeVertex.Position);
             writer.WriteLine(row);
         }
 

@@ -1,10 +1,10 @@
 ## 1. Ground Path查询合同
 
-- [x] 1.1 定义Current/Next Accepted Landing到Ground Path的输入和输出。
+- [x] 1.1 定义上一已提交Accepted Landing到下一Landing Event Accepted Landing的Ground Path输入和输出。
 - [x] 1.2 记录Landing Event、运动权威、Surface、位置、法线、Component Up和Profile事实。
 - [x] 1.3 定义不依赖Unity类型的Capsule请求、Raw Contact和typed rejection。
 - [x] 1.4 为左右脚建立预分配Committed/Pending Ground Path页。
-- [x] 1.5 在同一Foot Placement事务内复用已准备结果，输入变化时重新查询。
+- [x] 1.5 同一Landing Event缓存Accepted Landing，事件完成时晋级Current并只查询新的Incoming Landing。
 
 ## 2. Unity World Query Adapter
 
@@ -21,7 +21,7 @@
 - [x] 3.3 按Near/Far、Bottom/Top和candidate identity稳定排序。
 - [x] 3.4 验证二维法线并用相邻位置与法线定义Edge Plane。
 - [x] 3.5 只保留位于相邻接触范围内的合法平面交点。
-- [x] 3.6 同路径距离保留最高候选并强制保留两次Landing端点。
+- [x] 3.6 同路径距离保留最高候选并强制保留Path Start与Target Landing端点。
 - [x] 3.7 保持CastAbove/CastBelow只属于Capsule查询范围，不用查询高度删除合法碰撞点。
 - [x] 3.8 只为退化、无合法接触和容量溢出发布typed rejection。
 - [x] 3.9 计算二维上侧Convex Hull并输出连续Ground Envelope。
@@ -29,7 +29,7 @@
 
 ## 4. Foot Placement事务
 
-- [x] 4.1 在唯一Runtime中依次执行两次Landing、Ground Detection和Envelope Build。
+- [x] 4.1 在唯一Runtime中依次执行事件级Landing缓存、Current/Next晋级、Ground Detection和Envelope Build。
 - [x] 4.2 Raw Contacts与Envelope写入同一Pending Frame。
 - [x] 4.3 Seal、Discard、Reset、Retarget和Dispose统一处理Ground Path状态。
 - [x] 4.4 保持Pelvis与双脚Goal权重为零并保持FinalIK输入Pose不变。
@@ -37,7 +37,7 @@
 ## 5. Diagnostics与Gizmo
 
 - [x] 5.1 Seal后只读摘要发布Raw Contacts与最终Envelope顶点。
-- [x] 5.2 保留绿色Current Landing和黄色Next Landing标记。
+- [x] 5.2 保留Committed Current Landing与Cached Next Landing标记。
 - [x] 5.3 使用左右脚不同颜色绘制最终Envelope粗折线。
 - [x] 5.4 删除Current到Next中心直线和其它遮挡图形。
 - [x] 5.5 采样器增加最终Envelope顶点列。

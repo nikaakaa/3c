@@ -61,6 +61,12 @@ v102回归run `6712da2be2d740d18158ad34f44d08dd`共1190行、1483列、Header唯
 
 正式Landing事务必须满足：首次Committed Anchor出现时冻结`PreviousCompletedFinal`；后续同一`Plan Sequence + Landing Event identity`只更新Committed Target与Blend，不改Origin；`AnchorBlend=0`时Final等于Origin。schema v103将以1503列新增逐脚Handoff可用性、Plan/Event identity、Blend、Origin和Target，验证`Previous Final -> Frozen Origin -> Target -> Final`。该实现尚需新Unity run证明，4A.21与4A.22在证据通过前保持未完成。
 
+v103回归run `0bf203fb9dad45fb97eb4619b063ebb6`共16个压缩分块、2189行、1503列，Header无重复且逐行等宽。左右脚每笔连续Handoff的Origin都与紧邻上一完成Final精确一致，连续事务内Origin漂移为0；Final对`Lerp(Origin, Target, Blend)`的最大误差分别约`0.0099mm/0.0099mm`。因此冻结左端点、唯一互补公式、Owner identity与v103诊断链已经生效，4A.22闭环。
+
+同一run同时证明4A.21尚未闭环：同identity的Handoff可用性出现一帧消失再重现，左脚30次、右脚92次；连续事务内Committed Target基本不动，但单帧Blend最大增加左`0.663`、右`0.658`。左脚frame `794 -> 795`中旧Handoff仍是Plan 152/Event `9381358328273184905`，Current已换成Plan 156/Event `10629688855033292255`，Support从`Unlocked/ApproachingContact`切到`Locked/Supporting`，Blend却从`0.3542521`增至`0.91882`，Final Goal三维跳变约`1.205m`、Y跳变约`13.87cm`；下一帧同一新事件又回到`Unlocked/Unsupported`并开始释放。现在错误已定位到Stance Anchor事务与Step换代边界，不在Landing Lerp、Ground Path或FBBIK。
+
+本run停止后Unity Console另有一笔自动Input Action锁存失败；它属于Foot Placement之前的测试入口，不能把该run描述为Console干净或完整效果回归，但不影响上述已封存帧对Landing代数关系的只读对账。
+
 Landing事务闭环后，下一owner才是新Plan自身Ground Path/Clock：左脚frame `1338 -> 1341`的`Pre-Continuity`已经随Path连续两帧下降约`50.78cm/49.03cm`。该问题必须按Ground Path与权威Phase对账，不能再由Landing Blend、Current Grounding或FBBIK掩盖。
 
 ## 固定诊断顺序

@@ -542,6 +542,18 @@ namespace BTSMTL.Diagnostics
         public bool AnchorDistanceAccepted;
         public float MaximumAnchorDistance;
         public float AnchorBlendSpeed;
+        public string StanceOwnershipState;
+        public string AnchorTransactionState;
+        public ulong AnchorPlanSequence;
+        public ulong AnchorLandingEventIdentity;
+        public ulong AnimationConstraintEventIdentity;
+        public float AnimationConstraintWeight;
+        public float AnimationSupportWeight;
+        public float RawAnchorBlendWeight;
+        public float AnchorBlendTarget;
+        public float RawPelvisSupportWeight;
+        public float PelvisSupportTarget;
+        public bool CommittedAnchorGoalAvailable;
         public bool HasSurfaceAnchor;
         public Vector3 SurfaceLocalAnchor;
         public Quaternion SurfaceLocalRotation;

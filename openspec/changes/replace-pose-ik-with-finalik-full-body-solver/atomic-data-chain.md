@@ -65,6 +65,8 @@ v103回归run `0bf203fb9dad45fb97eb4619b063ebb6`共16个压缩分块、2189行�
 
 同一run同时证明4A.21尚未闭环：同identity的Handoff可用性出现一帧消失再重现，左脚30次、右脚92次；连续事务内Committed Target基本不动，但单帧Blend最大增加左`0.663`、右`0.658`。左脚frame `794 -> 795`中旧Handoff仍是Plan 152/Event `9381358328273184905`，Current已换成Plan 156/Event `10629688855033292255`，Support从`Unlocked/ApproachingContact`切到`Locked/Supporting`，Blend却从`0.3542521`增至`0.91882`，Final Goal三维跳变约`1.205m`、Y跳变约`13.87cm`；下一帧同一新事件又回到`Unlocked/Unsupported`并开始释放。现在错误已定位到Stance Anchor事务与Step换代边界，不在Landing Lerp、Ground Path或FBBIK。
 
+代码对账确认直接原因：捕获后的Anchor在`ApproachingContact`仍把逐帧Predictive Contact Target当作Contact Surface前提；目标短暂缺失时`PlantContact`被清除，而捕获首帧raw Blend为0，因此同帧`ClearAnchor`，后续目标恢复又重新Capture。修复口径是Committed Anchor在`Landing/Locked`状态下用自身Surface与local anchor维持Contact；Predictive Target只参与首次捕获。schema v104扩展为1527列，增加逐脚Stance/Anchor事务状态、Anchor Plan/Event、动画Constraint identity与权重、raw/target Anchor Blend、raw/target Pelvis Support及Committed Goal可用性；数据通过前4A.23保持未完成。
+
 本run停止后Unity Console另有一笔自动Input Action锁存失败；它属于Foot Placement之前的测试入口，不能把该run描述为Console干净或完整效果回归，但不影响上述已封存帧对Landing代数关系的只读对账。
 
 Landing事务闭环后，下一owner才是新Plan自身Ground Path/Clock：左脚frame `1338 -> 1341`的`Pre-Continuity`已经随Path连续两帧下降约`50.78cm/49.03cm`。该问题必须按Ground Path与权威Phase对账，不能再由Landing Blend、Current Grounding或FBBIK掩盖。

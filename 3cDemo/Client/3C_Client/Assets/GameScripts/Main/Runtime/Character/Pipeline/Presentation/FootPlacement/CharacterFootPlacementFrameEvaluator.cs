@@ -8,14 +8,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal sealed class CharacterFootPlacementFrameEvaluator : IDisposable
     {
-        enum FootOwnershipState : byte
-        {
-            Locked = 1,
-            Releasing = 2,
-            Swing = 3,
-            Landing = 4
-        }
-
         sealed class FootState
         {
             internal FootState(CharacterFootSide side) => Side = side;
@@ -32,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal ulong AnchorPlanSequence;
             internal ulong AnchorLandingEventIdentity;
             internal float AnchorBlendWeight;
+            internal float AnchorBlendTarget;
             internal bool HasAnchor;
             internal CharacterFootContactDecision ContactDecision;
             internal bool ContactSurfaceValid;
@@ -48,14 +41,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal float AnimationConstraintWeight = 1f;
             internal float AnimationSupportWeight = 1f;
             internal float PelvisSupportWeight;
+            internal float PelvisSupportTarget;
             internal bool IdleCurrentSupport;
             internal bool IdleAnchor;
             internal bool IdleAnchorCaptureArmed = true;
-            internal FootOwnershipState OwnershipState = FootOwnershipState.Locked;
+            internal CharacterFootStanceOwnershipState OwnershipState =
+                CharacterFootStanceOwnershipState.Locked;
 
             internal bool AllowsAnchor =>
-                OwnershipState == FootOwnershipState.Locked ||
-                OwnershipState == FootOwnershipState.Landing;
+                OwnershipState == CharacterFootStanceOwnershipState.Locked ||
+                OwnershipState == CharacterFootStanceOwnershipState.Landing;
+
+            internal CharacterFootAnchorTransactionState AnchorTransactionState =>
+                !HasAnchor
+                    ? CharacterFootAnchorTransactionState.Inactive
+                    : PlantContact && AllowsAnchor
+                        ? AnchorBlendWeight >= 0.999999f
+                            ? CharacterFootAnchorTransactionState.Holding
+                            : CharacterFootAnchorTransactionState.Capturing
+                        : CharacterFootAnchorTransactionState.Releasing;
 
             internal CharacterFootContactState ContactState =>
                 PlantContact && AllowsAnchor && HasAnchor && AnchorBlendWeight >= 0.999999f
@@ -79,6 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnchorPlanSequence = source.AnchorPlanSequence;
                 AnchorLandingEventIdentity = source.AnchorLandingEventIdentity;
                 AnchorBlendWeight = source.AnchorBlendWeight;
+                AnchorBlendTarget = source.AnchorBlendTarget;
                 HasAnchor = source.HasAnchor;
                 ContactDecision = source.ContactDecision;
                 ContactSurfaceValid = source.ContactSurfaceValid;
@@ -95,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationConstraintWeight = source.AnimationConstraintWeight;
                 AnimationSupportWeight = source.AnimationSupportWeight;
                 PelvisSupportWeight = source.PelvisSupportWeight;
+                PelvisSupportTarget = source.PelvisSupportTarget;
                 IdleCurrentSupport = source.IdleCurrentSupport;
                 IdleAnchor = source.IdleAnchor;
                 IdleAnchorCaptureArmed = source.IdleAnchorCaptureArmed;
@@ -342,6 +348,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasAnchor = true;
                 IdleAnchor = IdleCurrentSupport;
                 AnchorBlendWeight = 0f;
+                AnchorBlendTarget = AnimationConstraintWeight;
+                PelvisSupportTarget = AnimationSupportWeight;
                 TransitionReason = FootConstraintTransitionReason.AnchorCaptured;
             }
 
@@ -435,6 +443,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasAnchor = false;
                 IdleAnchor = false;
                 AnchorBlendWeight = 0f;
+                AnchorBlendTarget = 0f;
+                PelvisSupportTarget = 0f;
             }
 
             internal void Reset(FootConstraintTransitionReason reason)
@@ -456,13 +466,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationConstraintWeight = 1f;
                 AnimationSupportWeight = 1f;
                 PelvisSupportWeight = 0f;
+                PelvisSupportTarget = 0f;
                 IdleCurrentSupport = false;
                 IdleAnchorCaptureArmed = true;
-                OwnershipState = FootOwnershipState.Locked;
+                OwnershipState = CharacterFootStanceOwnershipState.Locked;
                 ClearAnchor();
             }
 
-            static FootOwnershipState ResolveOwnershipState(
+            static CharacterFootStanceOwnershipState ResolveOwnershipState(
                 bool stationaryGroundContact,
                 bool hasAnimationConstraint,
                 AnimationFootConstraintMode constraintMode,
@@ -474,26 +485,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (stationaryGroundContact)
                     return hasAnchor && !idleAnchor
-                        ? FootOwnershipState.Releasing
-                        : FootOwnershipState.Locked;
+                        ? CharacterFootStanceOwnershipState.Releasing
+                        : CharacterFootStanceOwnershipState.Locked;
                 if (!hasAnimationConstraint)
-                    return FootOwnershipState.Locked;
+                    return CharacterFootStanceOwnershipState.Locked;
                 if (hasLandingTarget)
-                    return FootOwnershipState.Landing;
+                    return CharacterFootStanceOwnershipState.Landing;
                 if (supportPhase == AnimationFootSupportPhase.ApproachingContact)
-                    return FootOwnershipState.Landing;
+                    return CharacterFootStanceOwnershipState.Landing;
                 if (supportPhase == AnimationFootSupportPhase.Unsupported)
                 {
                     return hasAnchor || anchorBlendWeight > 0.0001f
-                        ? FootOwnershipState.Releasing
-                        : FootOwnershipState.Swing;
+                        ? CharacterFootStanceOwnershipState.Releasing
+                        : CharacterFootStanceOwnershipState.Swing;
                 }
                 if (supportPhase == AnimationFootSupportPhase.Releasing ||
                     constraintMode == AnimationFootConstraintMode.Sliding)
                 {
-                    return FootOwnershipState.Releasing;
+                    return CharacterFootStanceOwnershipState.Releasing;
                 }
-                return FootOwnershipState.Locked;
+                return CharacterFootStanceOwnershipState.Locked;
             }
 
             static bool IsFinite(Vector3 value) =>
@@ -1151,11 +1162,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool usePredictiveContactTarget = hasPredictiveContactTarget && contactSurfaceValid;
             bool idleCurrentSupport = motionPhase == CharacterPresentationMotionPhase.GroundedStationary &&
                                       !predictive.HasActionConstraint;
-            bool lockedAnchorOwnsContact = hasResolvedAnchor && state.PlantContact &&
-                                           (!idleCurrentSupport || state.IdleAnchor) &&
-                                           (!predictive.HasActionConstraint ||
-                                            predictive.ConstraintMode == AnimationFootConstraintMode.Locked);
-            if (!usePredictiveContactTarget && lockedAnchorOwnsContact)
+            bool committedAnchorOwnsContact = hasResolvedAnchor && state.PlantContact &&
+                                              (!idleCurrentSupport || state.IdleAnchor) &&
+                                              state.AllowsAnchor;
+            if (!usePredictiveContactTarget && committedAnchorOwnsContact)
             {
                 contactSurface = anchorSurface;
                 contactSurfaceValid = true;
@@ -1169,7 +1179,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool requiresFrozenLandingTarget = predictive.HasContactTarget ||
                                                predictive.HasActionConstraint &&
                                                predictive.SupportPhase == AnimationFootSupportPhase.ApproachingContact;
-            if (requiresFrozenLandingTarget && !usePredictiveContactTarget && !lockedAnchorOwnsContact)
+            if (requiresFrozenLandingTarget && !usePredictiveContactTarget &&
+                !committedAnchorOwnsContact)
                 contactSurfaceValid = false;
             float surfaceDistance = contactSurfaceValid
                 ? usePredictiveContactTarget
@@ -1187,7 +1198,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 predictive,
                 motionPhase,
                 settings);
-            Vector3 targetWorldPosition = lockedAnchorOwnsContact
+            Vector3 targetWorldPosition = committedAnchorOwnsContact
                 ? anchorWorldPosition
                 : usePredictiveContactTarget
                     ? predictive.ContactAnklePosition
@@ -1205,30 +1216,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : float.PositiveInfinity;
             state.AnchorDistanceAccepted = !hadAnchor ||
                                            state.IdleCurrentSupport ||
-                                           lockedAnchorOwnsContact ||
+                                           committedAnchorOwnsContact ||
                                            hasResolvedAnchor &&
                                            state.AnchorDistance <= settings.MaximumAnchorDistance;
             if (state.PlantContact && hasResolvedAnchor &&
                 !state.IdleCurrentSupport &&
-                !lockedAnchorOwnsContact && !state.AnchorDistanceAccepted)
+             !committedAnchorOwnsContact && !state.AnchorDistanceAccepted)
             {
                 state.Release(
                     FootConstraintTransitionReason.AnchorDistanceExceeded,
                     CharacterFootContactDecision.ContactReleasedAnchorDistance);
             }
-            float targetBlend = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor
+            state.AnchorBlendTarget = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor
                 ? state.AnimationConstraintWeight
                 : 0f;
             state.AnchorBlendWeight = Mathf.MoveTowards(
                 state.AnchorBlendWeight,
-                targetBlend,
+                state.AnchorBlendTarget,
                 settings.AnchorBlendSpeed * deltaSeconds);
-            float pelvisSupportTarget = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor
+            state.PelvisSupportTarget = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor
                 ? state.AnimationSupportWeight
                 : 0f;
             state.PelvisSupportWeight = Mathf.MoveTowards(
                 state.PelvisSupportWeight,
-                pelvisSupportTarget,
+                state.PelvisSupportTarget,
                 settings.AnchorBlendSpeed * deltaSeconds);
             if (state.AnchorBlendWeight <= 0.0001f &&
                 (!state.PlantContact || !state.AllowsAnchor))
@@ -1489,6 +1500,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.AnchorDistanceAccepted,
                 m_Settings.StanceStabilization.MaximumAnchorDistance,
                 m_Settings.StanceStabilization.AnchorBlendSpeed,
+                state.OwnershipState,
+                state.AnchorTransactionState,
+                state.AnchorPlanSequence,
+                state.AnchorLandingEventIdentity,
+                state.AnimationConstraintEventIdentity,
+                state.AnimationConstraintWeight,
+                state.AnimationSupportWeight,
+                state.AnchorBlendWeight,
+                state.AnchorBlendTarget,
+                state.PelvisSupportWeight,
+                state.PelvisSupportTarget,
+                resolved.StanceCandidate.HasCommittedAnchorGoal,
                 resolved.Surface,
                 resolved.SurfaceLocalAnchor,
                 resolved.SurfaceLocalRotation,

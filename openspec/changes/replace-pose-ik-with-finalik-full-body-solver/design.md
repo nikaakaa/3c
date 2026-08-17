@@ -469,6 +469,10 @@ LandingGoal(t) = Lerp(FrozenLandingHandoffOrigin, CommittedAnchorGoal(t), Anchor
 
 跨帧连续性身份必须是`Plan Sequence + Goal Owner`，不能只比较Plan Sequence。否则同一Plan下`LandingHandoff -> PlanTransition`或`Stance -> ActivePlan`会被误判为同一输出；但Landing仍在接管时不得提前启动这笔释放连续性，必须等最终Owner真实离开Landing/Stance后再从上一完成Final捕获。只有没有合法Plan/Transition且没有合法Stance/Anchor时，Original动画才能独占该脚。
 
+Predictive Contact Target只负责在Landing提交前提供候选支撑。Anchor一旦捕获，`Surface identity + local anchor pose + Plan/Event identity`就是持续的Committed Anchor事务；后续Contact验证必须优先消费该Anchor自身重建的支撑，不能因某一帧Predictive Contact Target缺失而把已提交Anchor判为无Surface。事务状态固定为`Inactive / Capturing / Holding / Releasing`：进入Releasing后保留原identity和local anchor直到Blend归零，期间不得重新Capture同一事务；只有Anchor Surface自身失效、明确Reset或Release完成才可清除。
+
+Anchor Blend必须同时发布动画Constraint目标、内部raw值和最终曲线值。Foot与Pelvis可以消费各自的动画权重，但必须共享同一个Anchor事务和同一释放边界；不得只输出最终SmoothStep结果而让低帧大步进、事件权重跳变和重复Capture无法区分。
+
 ## 9. Predictive Body、Support Leg与Pelvis
 
 Foot Ground Envelope不能驱动身体。身体使用独立但同源的Body Support Path：

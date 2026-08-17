@@ -4,6 +4,22 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    public enum CharacterFootStanceOwnershipState : byte
+    {
+        Locked = 1,
+        Releasing = 2,
+        Swing = 3,
+        Landing = 4
+    }
+
+    public enum CharacterFootAnchorTransactionState : byte
+    {
+        Inactive = 0,
+        Capturing = 1,
+        Holding = 2,
+        Releasing = 3
+    }
+
     public readonly struct CharacterFootGroundingQueryDiagnostics
     {
         internal CharacterFootGroundingQueryDiagnostics(
@@ -90,6 +106,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool anchorDistanceAccepted,
             float maximumAnchorDistance,
             float anchorBlendSpeed,
+            CharacterFootStanceOwnershipState stanceOwnershipState,
+            CharacterFootAnchorTransactionState anchorTransactionState,
+            ulong anchorPlanSequence,
+            ulong anchorLandingEventIdentity,
+            ulong animationConstraintEventIdentity,
+            float animationConstraintWeight,
+            float animationSupportWeight,
+            float rawAnchorBlendWeight,
+            float anchorBlendTarget,
+            float rawPelvisSupportWeight,
+            float pelvisSupportTarget,
+            bool committedAnchorGoalAvailable,
             FootPlacementSurface currentSurface,
             Vector3 surfaceLocalAnchor,
             Quaternion surfaceLocalRotation,
@@ -153,6 +181,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnchorDistanceAccepted = anchorDistanceAccepted;
             MaximumAnchorDistance = maximumAnchorDistance;
             AnchorBlendSpeed = anchorBlendSpeed;
+            StanceOwnershipState = stanceOwnershipState;
+            AnchorTransactionState = anchorTransactionState;
+            AnchorPlanSequence = anchorPlanSequence;
+            AnchorLandingEventIdentity = anchorLandingEventIdentity;
+            AnimationConstraintEventIdentity = animationConstraintEventIdentity;
+            AnimationConstraintWeight = animationConstraintWeight;
+            AnimationSupportWeight = animationSupportWeight;
+            RawAnchorBlendWeight = rawAnchorBlendWeight;
+            AnchorBlendTarget = anchorBlendTarget;
+            RawPelvisSupportWeight = rawPelvisSupportWeight;
+            PelvisSupportTarget = pelvisSupportTarget;
+            CommittedAnchorGoalAvailable = committedAnchorGoalAvailable;
             CurrentSurface = new CharacterFootGroundingHitDiagnostics(currentSurface);
             SurfaceLocalAnchor = surfaceLocalAnchor;
             SurfaceLocalRotation = surfaceLocalRotation;
@@ -214,6 +254,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool AnchorDistanceAccepted { get; }
         public float MaximumAnchorDistance { get; }
         public float AnchorBlendSpeed { get; }
+        public CharacterFootStanceOwnershipState StanceOwnershipState { get; }
+        public CharacterFootAnchorTransactionState AnchorTransactionState { get; }
+        public ulong AnchorPlanSequence { get; }
+        public ulong AnchorLandingEventIdentity { get; }
+        public ulong AnimationConstraintEventIdentity { get; }
+        public float AnimationConstraintWeight { get; }
+        public float AnimationSupportWeight { get; }
+        public float RawAnchorBlendWeight { get; }
+        public float AnchorBlendTarget { get; }
+        public float RawPelvisSupportWeight { get; }
+        public float PelvisSupportTarget { get; }
+        public bool CommittedAnchorGoalAvailable { get; }
         public CharacterFootGroundingHitDiagnostics CurrentSurface { get; }
         public Vector3 SurfaceLocalAnchor { get; }
         public Quaternion SurfaceLocalRotation { get; }

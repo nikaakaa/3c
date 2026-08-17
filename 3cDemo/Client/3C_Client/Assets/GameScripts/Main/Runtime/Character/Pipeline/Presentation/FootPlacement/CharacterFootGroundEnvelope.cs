@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootGroundEnvelopeWorkspace(int contactCapacity)
         {
-            if (contactCapacity < 4 || contactCapacity > 16)
+            if (contactCapacity < 4 || contactCapacity > 64)
                 throw new ArgumentOutOfRangeException(nameof(contactCapacity));
             m_Contacts = new CharacterFootGroundEnvelopeCandidate[contactCapacity];
             m_Profile = new CharacterFootGroundEnvelopeCandidate[contactCapacity + 4];
@@ -136,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootGroundEnvelopePage(int contactCapacity)
         {
-            if (contactCapacity < 4 || contactCapacity > 16)
+            if (contactCapacity < 4 || contactCapacity > 64)
                 throw new ArgumentOutOfRangeException(nameof(contactCapacity));
             m_Vertices = new CharacterFootGroundEnvelopeVertex[contactCapacity + 4];
         }
@@ -177,24 +177,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         const float GeometryEpsilon = 0.0001f;
 
         internal static bool TryBuild(
-            in CharacterFootGroundPathRevision revision,
+            in CharacterFootGroundPathInput input,
             CharacterFootGroundContactPage contacts,
             CharacterFootGroundEnvelopeWorkspace workspace,
             CharacterFootGroundEnvelopePage output,
             out CharacterFootGroundPathRejectReason rejectReason)
         {
-            if (!revision.IsValid || contacts == null || workspace == null || output == null)
+            if (!input.IsValid || contacts == null || workspace == null || output == null)
                 throw new ArgumentException("Ground Envelope input is invalid.");
 
             workspace.Clear();
             output.Clear();
-            Vector3 up = revision.ComponentUp.normalized;
+            Vector3 up = input.ComponentUp.normalized;
             Vector3 horizontal = Vector3.ProjectOnPlane(
-                revision.NextLanding - revision.CurrentLanding,
+                input.NextLanding - input.CurrentLanding,
                 up);
             float pathLength = horizontal.magnitude;
             float endHeight = Vector3.Dot(
-                revision.NextLanding - revision.CurrentLanding,
+                input.NextLanding - input.CurrentLanding,
                 up);
             if (!float.IsFinite(pathLength) || pathLength <= GeometryEpsilon)
             {
@@ -208,7 +208,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootGroundContact contact = contacts.ContactAt(i);
                 if (!TryProjectContact(
                         in contact,
-                        revision.CurrentLanding,
+                        input.CurrentLanding,
                         forward,
                         up,
                         pathLength,
@@ -242,8 +242,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (!TryBuildUpperHull(
                     workspace,
-                    revision.CurrentLanding,
-                    revision.NextLanding,
+                    input.CurrentLanding,
+                    input.NextLanding,
                     forward,
                     up,
                     output))
@@ -257,10 +257,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rejectReason = CharacterFootGroundPathRejectReason.DegenerateEnvelope;
                 return false;
             }
-            if (Vector3.Distance(output.VertexAt(0).Position, revision.CurrentLanding) > GeometryEpsilon ||
+            if (Vector3.Distance(output.VertexAt(0).Position, input.CurrentLanding) > GeometryEpsilon ||
                 Vector3.Distance(
                     output.VertexAt(output.Count - 1).Position,
-                    revision.NextLanding) > GeometryEpsilon)
+                    input.NextLanding) > GeometryEpsilon)
             {
                 output.Clear();
                 rejectReason = CharacterFootGroundPathRejectReason.DegenerateEnvelope;

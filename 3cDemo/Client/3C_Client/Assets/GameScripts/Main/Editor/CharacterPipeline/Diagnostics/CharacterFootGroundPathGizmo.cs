@@ -18,14 +18,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return;
             }
-            DrawGroundPath(diagnostics.Left);
-            DrawGroundPath(diagnostics.Right);
+            CharacterFootLandingPredictionFootDiagnostics active =
+                SelectActiveSwing(diagnostics.Left, diagnostics.Right);
+            DrawGroundPath(active);
+        }
+
+
+        static CharacterFootLandingPredictionFootDiagnostics SelectActiveSwing(
+            CharacterFootLandingPredictionFootDiagnostics left,
+            CharacterFootLandingPredictionFootDiagnostics right)
+        {
+            bool leftValid = left.State == CharacterFootLandingPredictionState.Accepted &&
+                             left.TimeToLandingSeconds > 0.000001f;
+            bool rightValid = right.State == CharacterFootLandingPredictionState.Accepted &&
+                              right.TimeToLandingSeconds > 0.000001f;
+            if (leftValid && !rightValid)
+                return left;
+            if (rightValid && !leftValid)
+                return right;
+            if (leftValid && rightValid)
+                return left.TimeToLandingSeconds <= right.TimeToLandingSeconds
+                    ? left
+                    : right;
+            return left.State == CharacterFootLandingPredictionState.Accepted ? left : right;
         }
 
         static void DrawGroundPath(CharacterFootLandingPredictionFootDiagnostics foot)
         {
             CharacterFootGroundPathDiagnostics groundPath = foot.GroundPath;
-            if (groundPath.RevisionIdentity == 0)
+            if (groundPath.InputIdentity == 0)
                 return;
 
             if (groundPath.Accepted)

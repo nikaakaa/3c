@@ -1,133 +1,49 @@
-## 1. 已有基础与文档收口
+## 1. 删除失败实现
 
-- [x] 1.1 保持作者拓扑只有`FootPlacement Final Goals -> FinalIK FBBIK`一条正式链，不增加独立Predictive节点、第二Grounding、Heel/Toe Current Query、第二Pelvis、LegIK、TwoBoneIK或FBBIK后处理。
-- [x] 1.2 已接入Rig v4、Calibration v4、Heel/Toe/Sole几何、唯一World Query backend、Stance/Anchor/Pelvis算法基础和FinalIK Pose Buffer FBBIK。
-- [x] 1.3 已建立Action Step Fact、基础Foot/Ankle/Hip/Clearance路线、Ground Probe、Ground Envelope、Revision、Gizmo、Runtime Trace与CSV诊断框架。
-- [x] 1.4 用最新压力采样和源码证明当前首个错误owner位于Artifact/Plan/所有权交接而非FBBIK；Executing失去Predictive输出、计划陈旧、Revision硬边与不可达Goal均有数据证据。
-- [x] 1.5 对照本地GDC 2016原始幻灯片，重写proposal、design、delta spec和经验文档；旧逐轮补丁不再定义目标架构。
-- [x] 1.6 对重写后的change执行strict validate并清除全部delta冲突。
+- [x] 1.1 删除旧Predictive Planner、Plan、Query、Targets、Ground Envelope与WorldProjection实现。
+- [x] 1.2 删除旧Revision、Successor、Continuity、LandingHandoff与Stance/Anchor/Pelvis实现。
+- [x] 1.3 删除旧Predictive Profile/Tuning、Gizmo、CSV Capture、自动控制入口和专用Variant。
+- [x] 1.4 保留Rig/Calibration、Sole几何、Surface、WorldQuery、Lyra Current Grounding基础、Pose/Feature输入和唯一FBBIK。
+- [ ] 1.5 清理共享Animation/Editor中的旧类型引用，使源码只留下新的FootPlacement装配入口。
 
-## 1A. GameplayLab自动反馈环
+## 2. 平地动画路线
 
-- [x] 1.7 在共享Character Movement Test Environment中生成正式宽楼梯课程：30米宽、24级上楼、6米平台、24级下楼，Gameplay使用斜坡碰撞，FootPlacement使用逐级踏面。
-- [x] 1.8 保持Local Fixed普通Play为自由输入；唯一Foot IK Automatic Variant只接管MoveAxis，保留LookAxis相机控制并自动启动Diagnostics与流式采样。
-- [x] 1.9 建立短单向Camera-relative A/D事务基线：对齐起点、进入第一段楼梯、正式提交`A 1秒 -> D 2秒 -> A 1秒`；不得用世界空间横向路点冒充键盘转向，不改Transform、速度倍率或Time Scale。该一次性结束语义由1.15正式取代。
-- [x] 1.10 启动前以场景中唯一Course和Start/End为权威验证全部踏面、A/D安全范围、两条Traversal Ramp和Collision World闭包；允许整体移动Course，但路线不覆盖故障地形时拒绝运行。
-- [x] 1.11 自动writer只消费`LiveState`完成帧流并后台压缩CSV；删除自动附加`RuntimeDebugSession Continuous`造成的第二份无界内存捕获。
-- [x] 1.12 Foot IK Automatic Variant只运行唯一玩家表现，ActionTarget正式提交`None`；普通Local Fixed继续保留中立Target。
-- [x] 1.13 将动画Source不可变Clip Catalog的全量校验和索引建立收敛到Source创建/换代，逐帧Prepare只处理动态采样计划与实际激活Clip。
-- [x] 1.14 将Foot Feature曲线合法性校验收敛到Sequence Player创建；删除Runtime后继事件搜索与缓存，由Artifact在同一采样域原子烘焙Current与Incoming Step，运行帧只采样并绑定权威source。
-- [x] 1.15 Foot IK Endurance进入压力区后持续循环`A 1秒 -> D 2秒 -> A 1秒`，每轮结束后通过同一正式MoveAxis回到压力区起点再递增lap；持续发布采样路由，不得传送、自动归零、注销路由或退出Play，只有手动停止测试才释放虚拟输入并封口流式CSV。
-- [x] 1.15A 自动输入改为一帧Input System流水线：本帧只消费上一帧已提交并由正式Move Action锁存的值，再向虚拟Gamepad提交下一帧状态；A/D换向不得要求同一FrameUpdate内Action立即收敛，也不得绕过正式Input Action。
-- [ ] 1.16 以用户调整后的GameplayLab大楼梯和Traversal Ramp重新烘焙唯一Deterministic Collision World；普通Free Play出生点对齐场景`teststart`但继续使用自由键鼠和相机，Foot IK Automatic保持独立自动输入；证明两者共用该碰撞资产且KCC不会再从楼梯区域掉出世界。
+- [ ] 2.1 定义不可变Biomechanical Step读取页，只发布一个Current与一个Incoming Step。
+- [ ] 2.2 对每个可达Locomotion Clip执行Flat Reconstruction Gate。
+- [ ] 2.3 同相位比较完整Animation Foot Route、Native Sole、Ankle与Landing端点。
+- [ ] 2.4 绘制完整Animation Foot Route与当前权威相位点，不绘制文字或代表点伪路线。
+- [ ] 2.5 平地实际Foot Motion必须沿Animation Foot Route执行且无owner闪断。
 
-## 2. Animation Biomechanical Step Artifact
+## 3. Body Trajectory与初始Plan
 
-- [x] 2.1 提升`AnimationFootAnalysisArtifact` format与algorithm identity，删除v26兼容reader、位置-only payload和旧generated产品读取路径。
-- [x] 2.2 在同一Action Phase采样域烘焙Heel、Toe、Sole、Ankle、Knee、Hip的root-local位置路线。
-- [x] 2.3 烘焙Sole与Ankle的root-local旋转路线，并保存动画脚掌朝向基准。
-- [x] 2.4 从同一动作区间生成Animation Foot Planar Route与相对参考Foot Path的Clearance，不保存世界高度或KCC位移。
-- [ ] 2.5 生成精确Release、LiftOff、ApproachContact、Landing边界，以及Locked/Sliding/Unlocked区间和连续Constraint Weight。
-- [ ] 2.5A 删除Landing前一个采样点的固定ApproachContact；由同一参考Foot Path上的动画Clearance峰值确定最终下降边界，提升analysis algorithm identity并重建全部正式Artifact。
-- [x] 2.6 生成Support Weight、Support Leg Length、Compression Reserve、Knee Bend Plane、Support Foot Pivot位置与权重。
-- [x] 2.7 原子保存对侧Landing identity、time、cycle和root-local Sole pose。
-- [ ] 2.8 更新artifact codec、hash、store、inspector与analysis source identity；未知字段、非有限值和旧版本必须明确失败。
-- [x] 2.8A 在同一Artifact采样点原子保存Current与Incoming Step；Incoming必须携带完整事件、时钟、路线、Biomechanical事实和相对当前采样的Landing时间，不允许Runtime搜索、补建或缓存猜测。
-- [x] 2.8B 为Current与Incoming显式烘焙离散Source Landing Cycle Offset，以该identity切分全部事件字段并删除Runtime从TimeToLanding反推cycle；重建Corin Projection后验证每次Current换代的前一完成帧Incoming恰为该事件。
-- [ ] 2.9 建立Artifact Flat Reconstruction Gate，逐相位输出Foot/Sole/Ankle/Knee/Hip位置与Sole/Ankle旋转误差，并阻止超过固定容差的artifact进入Projection。
-- [x] 2.10 重新生成Corin Start、Loop、Stop、MovingTurn全部可达Foot Analysis artifact，不保留旧资产或运行时补建。
+- [ ] 3.1 从Simulation committed事实构造一次冻结的Body position/facing/linear/angular trajectory。
+- [ ] 3.2 用Animation Foot Route与Body trajectory生成唯一世界Foot Route和Landing候选。
+- [ ] 3.3 Landing必须通过正式Physics查询取得可踩Surface，不得使用旋转旧命中或默认地面。
 
-## 3. Projection与Action Step事实
+## 4. 转向重规划
 
-- [ ] 3.1 扩展`AnimationPredictedFootStepSample`和Projection payload，使完整Biomechanical Step Event以不可拆分值发布。
-- [x] 3.2 Pose字段可按正式Blend混合；Landing identity、Clock、路线、Constraint、Support Leg、Orientation与Pivot必须从一个权威source原子选择。
-- [x] 3.3 删除Stored Pose、退出source、Inertial History和逐脚Pose Weight复活旧事件或拆开混合字段的路径。
-- [ ] 3.4 统一Start、Loop、Stop、MovingTurn的左右脚Marker Epoch、Occurrence、Cycle与Phase，使每个当前事件在LiftOff前成为PreSwing事实。
-- [ ] 3.5 更新Definition Build校验和Projection schema；缺少新字段、Flat Reconstruction失败或event不连续必须阻止Float32/Fixed产品发布。
+- [ ] 4.1 删除所有旧Path/Surface/Hull的运行时刚体旋转或平移。
+- [ ] 4.2 committed trajectory generation或有效方向改变时创建唯一Revision。
+- [ ] 4.3 Revision重新执行Landing Cast、Capsule采样、Edge、Reachability和Hull。
+- [ ] 4.4 Rejected Revision保留不可变旧Plan作为交接旧侧，但不得改写旧Plan或让Current Grounding接管Swing。
+- [ ] 4.5 新Plan成功后从上一完成Final Goal只交接一次。
 
-## 4. Committed Future Body Transform Trajectory
+## 5. Ground Path与Foot Motion
 
-- [ ] 4.1 由Simulation/KCC发布覆盖剩余Action Step的Position、Facing、Linear Velocity、Angular Velocity和trajectory identity；Foot Placement不得自行解释输入或Visible导数。
-- [ ] 4.2 删除Predictive planner中固定`trajectoryCurvatureDegreesPerSecond = 0`与Body Yaw猜曲率语义，使位移与有限Facing来自同一committed trajectory。
-- [ ] 4.3 用Future Body Transform与Artifact root-local Sole/Ankle/Hip路线建立唯一未来世界路线，保留动画局部X、Z和旋转。
-- [ ] 4.4 Plan创建帧只允许一次刚性重基，使`PathStartPhase`的Artifact Foot Route与已提交接触点或已执行Sole正下方重合；执行Sole另行保存净空连续性，重基整步冻结。
+- [ ] 5.1 按GDC顺序生成feet-only Ground Envelope。
+- [ ] 5.2 Foot Rate只按权威Phase映射局部Route segment。
+- [ ] 5.3 最终Swing保留动画XZ与旋转，Y使用Ground Path加动画Clearance。
+- [ ] 5.4 Surface Point必须重心化到当前验证Sole，局部法线不得超出鞋底覆盖无限外推。
 
-## 4A. 统一Foot Placement运行事务与状态所有权
+## 6. Landing、Lock与Pelvis
 
-- [x] 4A.1 定义不可变`CharacterFootPlacementFrameInput`与`CharacterFootPlacementFrameResult`，使Pose Plan每帧只通过`CharacterFootPlacementRuntime.EvaluateFrame`提交一次world-aware Goal计算。
-- [x] 4A.2 建立每脚唯一`CharacterFootExecutionState`，迁入Constraint Phase、Current Support filter state、Anchor、Active Plan引用、唯一Transition槽、上一完成Original/Final输出、Landing Commit和Query Attempt identity。
-- [x] 4A.3 把Current Support Trace/Resolve改为显式request/result与对`CharacterFootExecutionState`中filter state的数值求值；它不得拥有Swing、Plan、Anchor、Pelvis或Goal生命周期。
-- [x] 4A.4 将`CharacterPredictiveFootPlacementPlan`拆成Builder提交的不可变Plan与无状态Evaluator；把Active/Revision/Fade、Action Clock推进、world projection current、Anchor观察和输出连续性全部迁出Plan。
-- [x] 4A.5 将Intent Revision与Event Successor收敛为`CharacterFootExecutionState`内部唯一`CharacterFootPlanTransition`，只保存旧/新不可变Plan、transition kind、唯一Blend及相对Original动画的连续性修正。
-- [x] 4A.6 保持`CharacterFootPlacementWorldQueryBackend`为唯一PhysicsScene adapter，使Current Support Query与Predictive Ground Path Query只消费显式request并返回事实result；Query不得读取或修改Foot状态、Plan Transition、Anchor、Pelvis或Goals。
-- [x] 4A.7 用单次Frame事务替换`Prepare -> GetStanceInput -> ObserveStance -> Resolve`协议：从同一Committed左右脚状态生成Pending约束提案，禁止Predictive与Grounding跨阶段回调。
-- [x] 4A.8 建立`CharacterFootLandingCommit`原子值，完整包含Plan/Event、Landing Sole、Support Surface/local plane、Anchor local pose、Committed Sole和Successor origin；任一字段无效时整笔不提交。
-- [x] 4A.9 让唯一Pelvis resolver同时消费左右脚约束提案并返回Pelvis结果与左右constraint disposition；它不得直接改写Foot状态，Finalize只按该结果一次接受或释放约束并提交Landing/Anchor。
-- [x] 4A.10 删除Grounding baseline再由Predictive覆盖的路径；左右脚与Pelvis全部完成后一次写入Pelvis、Left Foot、Right Foot三个最终Goal槽。
-- [x] 4A.11 把左右脚Pending状态和诊断接入现有Presentation帧事务；只有Goal Set、FullBodyIK及后续Pose Plan完成时才Seal，Discard、Reset或Fault不得留下部分Plan、Anchor、Landing或单脚换代。
-- [x] 4A.12 删除`CharacterFootGroundingGoalSource`、`CharacterFootGroundingPlan`、Grounding/Predictive旧owner字段、旧多阶段接口和失效诊断字段；保留一个正式`CharacterFootPlacementRuntime`入口，不留兼容adapter。
-- [x] 4A.13 Event Successor提升后继续由同一个`CharacterFootPlanTransition`保存相对Original动画的上一完成输出；新Active只按自身`Release -> LiftOff`权重接管，交接完成前不得开放第二次Revision或Sequence Output Continuity。
-- [x] 4A.14 Plan创建时若权威相位已经到达`ReleasePhase`，执行状态必须当帧进入`Executing`并初始化Action/Ground Path进度，禁止先发布一帧`Planned`空档再暴露Grounding或Original。
-- [x] 4A.15 Event Successor预建阶段只保存不可变geometry与时钟；相对Original动画的连续性原点必须在事件identity原子提升时，从上一完成帧属于旧Active的Final输出捕获，禁止复用候选预建帧的过期脚高。
-- [x] 4A.16 `CharacterPredictiveFootFrameEvaluation`必须封存同一Completion的Original Pose与左右脚候选集合，Goal阶段不得再次读取Rig或重建另一份Original事实。
-- [x] 4A.17 Active与Revision每帧各只允许一次无Pelvis Reach约束的Geometry求值；Stance观察、Landing候选、Pelvis输入和Goal合成必须消费同一个不可变候选，禁止在Pelvis前后重复求值Plan、Ground Path或鞋底净空。
-- [x] 4A.18 Pelvis完成后只对已封存Geometry Candidate执行Reach阶段，并保留同一个Plan Sequence；随后按唯一Transition合成Pre-Continuity Goal并一次生成Final Goal，任何阶段不得回读上游状态拼装第二条数据链。
-- [x] 4A.19 Runtime Trace与CSV schema v102必须逐脚同时发布Active/Revision的Geometry Candidate、Reach-resolved Candidate及typed reject reason，使`Geometry -> Pelvis -> Reach -> Transition -> Final -> FBBIK`可以按同一Completion逐级对账。
-- [x] 4A.20 当前事件仍处于Unsupported Swing时，Executable Plan求值失败、Revision拒绝或Successor换代不得启动向Original的Render Delta Predictive Exit；旧完成输出必须保留为待替换事务，直到同事件重建成功、合法Stance原子接管或Step明确结束。
-- [ ] 4A.21 Landing Anchor开始接管的首帧，唯一Goal合成必须把紧邻上一完成帧的Final Ankle Pose冻结为该Landing事务唯一旧侧，并以同一Anchor Blend直接交给已提交Stance/Anchor Goal；事件换代、Plan求值和后继创建均不得重算或替换该旧侧，不得先衰减Predictive权重再让Original动画拥有剩余权重，也不得让Foot与Pelvis消费不同的交接权重。Anchor未满权重时仍属于同一Landing事务，只有交接完成后才由Stance独占。
-- [x] 4A.22 `CharacterFootCompletedOutput`必须原子保存Final Goal Owner；Output Continuity identity必须同时包含Plan Sequence与Goal Owner。Runtime Trace与CSV schema v103必须逐脚发布Landing Handoff可用性、Plan/Event identity、冻结Origin、Committed Target和Blend，使`Previous Final -> Frozen Landing Origin -> Committed Anchor -> Final Goal -> FBBIK`可逐帧对账；Landing仍有效时不得提前消费其释放连续性。
-- [ ] 4A.23 Stance必须把Committed Anchor作为持续事务而不是逐帧布尔值：同一Plan/Event的Anchor开始接管后，即使Current Query或PlantContact短暂失败也只能进入携带原identity的Release，Blend归零前不得清除后又重新捕获；Current Step换代时旧Anchor不得因新事件短暂进入Locked/Supporting而重新增权。Trace必须发布事务状态、原始/目标/最终Blend和换代决定，使Anchor消失、重捕获和大权重步进可分别归责。
+- [ ] 6.1 原子提交Landing Sole、Support、Surface local anchor与Plan/Event identity。
+- [ ] 6.2 实现数据定义的Locked、Sliding、Unlocked持续状态，不按逐帧Contact布尔值重捕获。
+- [ ] 6.3 Support Leg与Body Path生成唯一Pelvis目标，上下坡分别处理。
+- [ ] 6.4 Foot与Pelvis在同一事务边界提交三个Final Goals。
 
-- [ ] 4.5 A/D、W/S或camera-relative意图改变时，只在committed Landing位置或朝向误差超过鞋底几何边界后创建离散后继Revision。
-- [x] 4.5A 历史实验已证明“每个权威Landing Event至多一笔Intent Revision”能阻止同一源Plan反复换路；自动A/D run `35d23e6892f24566808e0276a3ec28be`中，每个事件最多只出现原Plan加一个Revision。后续run证明该事件级限制会让再次偏离的后继Plan继续过期执行，本规则由4.5B替代，不反勾历史完成项。
-- [ ] 4.5B 已提交Step Plan每帧必须用当前正式Root相对该相位Expected Root的平面刚体差重投影Foot Route、Ground Envelope、Landing与Body Path；这只是无Physics的廉价执行投影，不得改写Artifact、Clock、Plan identity或重新查询。进入`ApproachingContact`后冻结最终投影，保证Landing不再漂移。
-- [ ] 4.5C 当committed trajectory使剩余Landing位置或朝向误差超过鞋底/查询几何边界时才创建昂贵Revision。查询资格按`源Plan + trajectory generation + authority tick`记账，同一权威tick至多一次，后续正式tick仍可重试；不得用“源Plan一生只试一次”让Rejected占据整步。
-- [ ] 4.5D Revision必须先在过渡槽完整Query并Commit，成功后才原子参与Blend或提升；Rejected候选不得清空仍有效Active、不得删除完整Debug Path、不得让Grounding接管Swing。初始候选Rejected时，当前Step在后续权威tick继续重试，直至计划成功或Step明确结束。
-- [ ] 4.5E 在Release前按加减速、低速急转、无有效前一步历史和空中状态原子选择整步`Predictive`或`Traditional`模式；模式整步粘滞。Traditional是统一Foot Placement内的正式执行策略，不是Predictive Query失败后的fallback。
-- [ ] 4.5F 当前Step仍为`Unsupported Swing`且偏差已跨越几何边界时，Intent Revision必须优先于尚未生效的Event Successor；当前权威Swing没有Executable Plan时必须在同一事件内重建。Plan identity换代首帧必须从上一完成帧实际Ankle输出连续接管，不得先暴露Current Grounding/Original再跳入新Plan。
-- [ ] 4.5G Intent Revision必须只执行一层连续交接：创建时以上一完成帧Final Ankle相对Original动画的冻结修正作为旧侧，新Plan完整求解自身Ground Envelope安全目标作为新侧，再按唯一Revision Blend混合。Blend期间和`PromoteRevision`后不得因Plan Sequence变化启动第二层Output Continuity；支撑面identity只随Plan原子提升，不得在Blend 0.5硬切。
-- [ ] 4.6 后继Revision从当前已执行Sole位置、线速度与Body角速度连续重基；Ground Probe起点必须是该Sole投影到旧计划当前支撑面的点，不得使用旧Envelope的异位XZ。新计划未Commit前保持旧Active经执行投影后的输出，成功后才连续Blend；Rejected候选只记录失败并等待下一正式重试机会。
-- [ ] 4.6A Intent Revision创建时冻结上一完成帧实际输出相对同帧Original Animated Ankle/Hip的修正，以及Ground Path与Support作为唯一过渡原点；Blend期间以当前同相位Original动画加冻结修正组成旧侧，不得锁死Swing世界Ankle或继续求值已经越过运动边界的旧Active。尚未产生本Plan完成输出的过期Plan必须先退出，再从当前真实Sole、Support与committed trajectory原子重建，禁止先输出一帧旧Path。
-- [ ] 4.7 删除事件换代、Plan状态或generic`NonFinite`导致Executing输出当帧归零的路径；Executing求值失败时必须保留上一完成输出相对当前Original动画的修正并连续退出，同时为Reach、非有限值和身份失配分别发布typed reason，禁止当帧归还Grounding Baseline后下一帧再恢复预测。
-- [ ] 4.8 Plan创建时原子冻结Action Step时长、Future Body时间范围与路线时间映射；运行中只同步权威相位，时长变化必须进入离散Revision，禁止用新时长采样旧轨迹。
-- [ ] 4.9 当前Plan进入`ApproachingContact`、Intent Revision结束且现有Revision槽空闲时，`IncomingPredictedStep`必须预建唯一Event Successor。Stance尚未在上一完成帧提交Anchor时，只允许用当前Active已经验证并冻结的Projected Landing Sole与Surface预建不可执行geometry；事件换代提升前必须用真实Committed Anchor Sole与Surface验证，失配则丢弃候选并从Committed事实重建。Intent Revision与Event Successor只允许顺序复用同一槽。
-- [ ] 4.9A Event Successor成为Current前不得参与Goal或Blend；事件identity换代时必须原子提升为Active，并只由新Plan自身`Release -> LiftOff`权重与旧Landing Stance/Anchor完成交接，禁止在新Swing中按Render Delta混合旧Landing目标。
-- [ ] 4.9B Plan必须在`ReleasePhase`进入Executing并执行`Release -> LiftOff`连续输出权重；Ground Path进度独立保持到`PathStartPhase`才开始，禁止用几何起点截断所有权淡入。
-- [ ] 4.9C Event Successor成为Current前必须按当前身体位置和朝向重新验证冻结轨迹；过期Successor不得提升、提交Landing/Anchor或产生下一Successor，必须以`MotionDeviationExceeded`退出。若上一完成帧没有Committed Anchor，Current事件仍处于PreSwing时必须在同帧从当前真实Sole、唯一Current Support与committed trajectory创建Current Event计划，不得把Committed Anchor同时作为Promotion和重建的前提。
-- [ ] 4.9D Intent Revision只有在现有Blend可于`ApproachingContact`前完成时才允许创建；进入接触交接边界后Incoming Event Successor优先占用唯一过渡槽，过晚的旧事件Intent Revision必须退出，禁止其占槽直到新事件进入Swing并制造无Path空窗。
-- [ ] 4.9E Event Successor候选Rejected不得触发不可重入FadeOut：旧Active可连续退回Original Pose，但Planner必须按新的trajectory authority tick继续尝试当前PreSwing事件；候选成功且已验证Committed起点时，当前事件必须同帧原子提升，不能再输出一帧旧Landing目标。
+## 7. 诊断与发布
 
-## 5. GDC Foot Path与Ground Envelope
-
-- [ ] 5.1 由本脚动画Foot Path和权威对侧接触构造Virtual Ground分段路线；对侧接触只提供空间拓扑，不强迫本脚按对侧phase经过。
-- [ ] 5.2 沿`当前本脚支撑 -> 对侧接触 -> 本脚预测落点`的Virtual Ground各分段执行唯一Sphere/Capsule检测，并在可达性判断前保存全部位置、法线与query identity。
-- [ ] 5.3 按前后和高低排序命中，验证法线并建立Edge Plane。
-- [ ] 5.4 在Convex Hull前对排序后的正式支撑链验证Step Up/Down、gap、坡度、鞋底范围和Support Leg Reach；Height Discontinuity只判断真实Edge Plane，不得在中间踏面尚未收集前用稀疏端点提前拒绝整条Plan。
-- [ ] 5.5 对剩余点构造连续二维上侧Convex Hull；Ground Envelope保持feet-only，不驱动Pelvis。
-- [ ] 5.5A 每条Ground Envelope Segment必须原子保存Start/End Surface；全局起点使用Committed Landing Surface，终点使用该段实际支撑，禁止用End Surface冒充整段并导致Successor原点身份误判。
-- [ ] 5.6 最终Swing保持Native Sole XZ，唯一Y为`GroundEnvelopeHeight + AnimationClearance`；禁止冻结Path XYZ拉脚和Native/Predicted Y双owner。
-- [x] 5.6A Foot Rate必须由权威Action Phase先定位同相位Ground Probe Segment，再只在该局部Segment投影Animation Foot Route并生成单调Route Fraction；删除整条Virtual Ground全局最近点重新关联远处Segment的路径。
-- [ ] 5.7 使用Calibration Heel/Toe验证唯一支撑平面物理净空，不增加Heel/Toe Current Query、固定高度或默认地面。
-- [ ] 5.7A Ground Envelope采样提供当前Foot Rate的Component Up高度下界；Segment Surface法线只可在Native Sole仍位于现有SoleSupportRadius局部覆盖内时参与坡面净空与Foot Orientation，不得把局部斜面无限外推到远处后生成额外抬升。Current Grounding只在Current/Stance所有权内对其真实查询平面执行唯一物理净空；Executable Swing的完整Plan目标不得在连续性处理后再次被Current Support抬升。
-- [ ] 5.8 台阶边缘Sphere多命中必须以前一支撑做有向可达选择；同Foot Rate合并保留正式支撑身份，Landing、Body Support终点与Ground Envelope终点从验证后的同一链末端原子提交。
-
-## 6. Constraint、Landing与GDC身体层
-
-- [ ] 6.1 在现有Stance owner中用Artifact事实收口`Locked -> Sliding/Releasing -> Unlocked Swing -> Approaching -> LandingBlend -> Locked`，连续Constraint Weight不得在事件边界硬切。
-- [ ] 6.2 Landing提交同一Plan Landing Pose、Surface identity、Anchor local point/normal、Committed Sole Pose与Successor Step Start，不允许Current Surface替换预测支撑。
-- [ ] 6.3 Locked保持完整世界Goal；Sliding只允许支撑面内有限移动；Unlocked不消费旧Anchor；Idle继续使用现有单一Stance owner归位和锁脚。
-- [x] 6.3A 从运动进入`GroundedStationary`时必须显式武装Idle Anchor捕获；不得依赖Foot Placement权重先降到1以下。旧运动Anchor先沿现有淡出退出，再从Current Support约束后的安全Baseline捕获Idle Anchor。
-- [ ] 6.4 构造独立Body Support Path：`last support -> opposing support -> predicted landing`，不得复制Foot Ground Envelope或离散KCC台阶Y。
-- [ ] 6.5 用Animation Hip relative path、Support Leg Weight、Length、Compression Reserve和Knee Bend Plane生成预测Hip与可达区间。
-- [ ] 6.6 直接应用Body Support Path位移，临界spring只增加support-leg pull并消除bounce；输出一个Pelvis Pre-Solve Transform。
-- [ ] 6.7 实现上坡脚掌趋于水平、下坡脚掌贴坡、跑步保留动画的Foot Orientation策略，并受同一reach约束。
-- [ ] 6.8 临近接触时按Artifact pivot weight围绕Locked Support Foot应用有限body/pelvis rotation，不移动锁定Foot Goal或创建第二body owner。
-
-## 7. 集成、诊断与发布
-
-- [ ] 7.1 将4A形成的统一Frame Input/Result、每脚Pending状态与最终Goal Set接入generated Pose Plan workspace和completion lineage；FinalIK继续只消费结果并执行一次FBBIK。
-- [ ] 7.2 更新Scene/Game Gizmo：完整绘制Artifact Route、Future Body Transform、Virtual Ground、Capsule Query、Ground Envelope、实际消费点、Revision和Body Support Path，不显示文字或伪Path。
-- [ ] 7.3 更新Runtime Trace、Inspector和CSV，覆盖Artifact重建误差、事件所有权、Future Body Position/Facing/速度、当前与Plan冻结Trajectory Curvature及availability、query/reach、Goal、Support Leg、Pelvis、Pivot和FBBIK两层残差。
-- [ ] 7.4 保证CSV Header/Value等宽、列名唯一、左右脚字段对称，更新流式耐久writer与manifest合同。
-- [ ] 7.5 删除旧artifact、旧Projection、旧Plan字段、旧诊断列、旧配置和失效命名，不保留fallback或兼容路径。
-- [ ] 7.6 完成单一路径静态搜索、OpenSpec strict validate、Runtime/Editor编译和精确Float32/Fixed Character Build；构建服务器按项目规则关闭。
+- [ ] 7.1 重建最小因果CSV，逐阶段发布输入、结果和typed failure。
+- [ ] 7.2 重建GameplayLab平地、直线楼梯和转向压力入口。
+- [ ] 7.3 完成Runtime/Editor编译、Float32/Fixed Character Build和OpenSpec strict validate。

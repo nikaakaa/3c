@@ -299,7 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 normalDistance * normalDistance + normalHeight * normalHeight);
             if (!float.IsFinite(distance) || !float.IsFinite(height) ||
                 !float.IsFinite(normalLength) || normalLength <= GeometryEpsilon ||
-                normalHeight < -GeometryEpsilon)
+                normalHeight <= GeometryEpsilon)
             {
                 candidate = default;
                 return false;

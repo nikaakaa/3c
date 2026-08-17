@@ -4,15 +4,15 @@
 
 当前链已经能得到同一只脚的Current/Next Accepted Landing，并在两点之间执行真实Capsule Ground Detection，但Scene里只有两点间中心直线。该线没有消费地面接触、法线、边缘或凸包，不能代表参考文章和GDC 33–36页中的Ground Envelope。
 
-本change继续沿唯一Foot Placement事务完成下一层：把原始Capsule接触变成可达、连续的feet-only地面上侧包络，并让Debug只显示这份正式结果和两次落点。
+本change继续沿唯一Foot Placement事务完成下一层：把原始Capsule接触变成连续的feet-only地面上侧包络，并让Debug只显示这份正式结果和两次落点。
 
 ## What Changes
 
 - 保留`Current/Incoming Step -> 两次Landing -> 分段Capsule Cast -> Raw Ground Contacts`唯一链。
 - 增加独立Ground Envelope Builder：把接触投影到脚步纵向与Component Up组成的二维平面，按近到远、低到高稳定排序。
 - 使用接触位置与法线定义相邻地面平面；合法交点形成台阶和坡面的边缘候选。
-- 使用现有`CastAbove/CastBelow`检查边缘与整条路径的竖直可达性，不可达时发布typed rejection，不输出替代路径。
-- 对可达候选计算二维上侧Convex Hull，输出从Current Landing到Next Landing的连续折线。
+- 保留接触高差作为包络几何事实；`CastAbove/CastBelow`只定义Capsule查询范围，不把碰撞点按可达性删除或拒绝。
+- 对全部合法候选计算二维上侧Convex Hull，输出从Current Landing到Next Landing的连续折线。
 - 左右脚各自把Raw Contacts与Ground Envelope写入现有Committed/Pending双页，并随外层Foot Placement事务Seal或Discard。
 - Scene Gizmo保留绿色Current Landing与黄色Next Landing，以左右脚不同颜色绘制最终Ground Envelope粗折线；删除中心直线和其它遮挡图形。
 - Foot/Pelvis Goal继续保持零权重，Ground Envelope本轮不修改Pose。

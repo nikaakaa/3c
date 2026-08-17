@@ -22,8 +22,8 @@
 - [x] 3.4 验证二维法线并用相邻位置与法线定义Edge Plane。
 - [x] 3.5 只保留位于相邻接触范围内的合法平面交点。
 - [x] 3.6 同路径距离保留最高候选并强制保留两次Landing端点。
-- [x] 3.7 使用CastAbove/CastBelow检查边缘和整条路径的竖直可达性。
-- [x] 3.8 为不可达、退化、无合法接触和容量溢出发布typed rejection。
+- [x] 3.7 保持CastAbove/CastBelow只属于Capsule查询范围，不用查询高度删除合法碰撞点。
+- [x] 3.8 只为退化、无合法接触和容量溢出发布typed rejection。
 - [x] 3.9 计算二维上侧Convex Hull并输出连续Ground Envelope。
 - [x] 3.10 预分配Builder workspace和Envelope顶点页。
 

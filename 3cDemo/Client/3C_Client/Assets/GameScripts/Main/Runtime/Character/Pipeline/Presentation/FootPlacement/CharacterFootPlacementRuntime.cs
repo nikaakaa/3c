@@ -332,7 +332,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (CharacterFootGroundEnvelopeBuilder.TryBuild(
                         in revision,
                         pendingPage.Contacts,
-                        in settings,
                         state.EnvelopeWorkspace,
                         pendingPage.Envelope,
                         out CharacterFootGroundPathRejectReason envelopeRejectReason))

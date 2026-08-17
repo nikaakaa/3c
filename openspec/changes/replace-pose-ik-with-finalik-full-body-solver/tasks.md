@@ -5,6 +5,7 @@
 - [x] 1.3 删除旧Predictive Profile/Tuning、Gizmo、CSV Capture、自动控制入口和专用Variant。
 - [x] 1.4 保留Rig/Calibration、Sole几何、Surface、WorldQuery、Lyra Current Grounding基础、Pose/Feature输入和唯一FBBIK。
 - [x] 1.5 清理共享Animation/Editor中的旧类型引用，使源码只留下新的FootPlacement装配入口。
+- [x] 1.6 删除GameplayLab专用Foot IK Variant、Prefab、菜单和场景空槽，只保留三个正式Variant。
 
 ## 2. 平地动画路线
 

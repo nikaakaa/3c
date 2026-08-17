@@ -708,7 +708,6 @@ MonoBehaviour:
   m_Variants:
   - {fileID: 11400000, guid: c00d13ea42ba75d4ea0cca6f5f0d3371, type: 2}
   - {fileID: 11400000, guid: 0fd8bd434b4bed0408f8276c8c7fde08, type: 2}
-  - {fileID: 11400000, guid: d18d550b73f315d4d9269442a5c388e3, type: 2}
   - {fileID: 11400000, guid: 0bdf6435f09d2654987f51931b4371fa, type: 2}
   m_StartupVariantIndex: 0
 --- !u!4 &1564475072

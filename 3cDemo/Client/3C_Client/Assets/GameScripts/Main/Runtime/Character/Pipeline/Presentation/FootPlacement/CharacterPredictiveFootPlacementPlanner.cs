@@ -1105,15 +1105,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ulong planSequence,
                 ulong landingEventIdentity)
             {
+                if (HasLandingHandoff(planSequence, landingEventIdentity))
+                    return;
                 if (planSequence == 0 || landingEventIdentity == 0 ||
                     !HasCompleteOutputForPlan(planSequence))
                 {
                     throw new InvalidOperationException("Foot Landing handoff origin is unavailable.");
-                }
-                if (m_LandingHandoffPlanSequence == planSequence &&
-                    m_LandingHandoffEventIdentity == landingEventIdentity)
-                {
-                    return;
                 }
                 m_LandingHandoffPlanSequence = planSequence;
                 m_LandingHandoffEventIdentity = landingEventIdentity;

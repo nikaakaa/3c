@@ -69,6 +69,8 @@ v103回归run `0bf203fb9dad45fb97eb4619b063ebb6`共16个压缩分块、2189行�
 
 首个v104 run `20a2e819963f4fa1a7a8df90307cf4c2`共21个压缩分块、2972行、1527列且Header唯一、逐行等宽。右脚同identity一帧Handoff闪断从92次降到1次，证明Committed Anchor不再依赖逐帧Predictive Target有效；左脚仍有30次。frame `2310 -> 2314`中Anchor Plan 455持续存在且Committed Goal持续有效，但Handoff只在2310至2311可用，2312起又退回ActivePlan。原因是Modifier每帧重新用`LastOutput.PlanSequence == AnchorPlanSequence`判定Handoff资格，Handoff首帧后Completed Output却优先记录底层Active Plan，导致已开始事务自我失效。正式修复必须让`Plan/Event`已冻结的Handoff持续到Anchor事务结束，并在Handoff期间把Completed Output identity记为Anchor Plan。
 
+首次持续身份实现的Unity run在frame 20以`Foot Landing handoff origin is unavailable`失败：调用方已确认同一Handoff存在，但`BeginOrContinueLandingHandoff`仍先执行“新事务必须有完整上一输出”的门禁，之后才检查同identity。正确顺序是同一事务直接继续；只有创建新Handoff时才要求上一完成Final。
+
 同一run还证明下一层是动画权重边界：同一Anchor的Animation Constraint target可单帧完整翻转`0↔1`，raw Blend最大步进约`0.62`，SmoothStep后最大约`0.82`；左脚frame `2314 -> 2316`发生`Capturing -> Holding -> Releasing`，Current Event换代后Constraint从1变0，最大Y跳变与穿透仍超过1m。必须先消除Handoff事务自我失效，再用下一run区分剩余异常属于Constraint事实边界、Anchor目标距离还是低帧步进。
 
 本run停止后Unity Console另有一笔自动Input Action锁存失败；它属于Foot Placement之前的测试入口，不能把该run描述为Console干净或完整效果回归，但不影响上述已封存帧对Landing代数关系的只读对账。

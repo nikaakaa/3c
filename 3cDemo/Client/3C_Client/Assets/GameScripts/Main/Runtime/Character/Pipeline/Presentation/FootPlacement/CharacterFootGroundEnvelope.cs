@@ -179,7 +179,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal static bool TryBuild(
             in CharacterFootGroundPathRevision revision,
             CharacterFootGroundContactPage contacts,
-            in CharacterFootGroundDetectionSettings settings,
             CharacterFootGroundEnvelopeWorkspace workspace,
             CharacterFootGroundEnvelopePage output,
             out CharacterFootGroundPathRejectReason rejectReason)
@@ -241,16 +240,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rejectReason = CharacterFootGroundPathRejectReason.EnvelopeCapacityExceeded;
                 return false;
             }
-            if (!IsReachable(
-                    workspace,
-                    pathLength,
-                    endHeight,
-                    settings.CastAbove,
-                    settings.CastBelow))
-            {
-                rejectReason = CharacterFootGroundPathRejectReason.UnreachableEnvelope;
-                return false;
-            }
             if (!TryBuildUpperHull(
                     workspace,
                     revision.CurrentLanding,
@@ -297,18 +286,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float normalHeight = Vector3.Dot(contact.Normal, up);
             float normalLength = Mathf.Sqrt(
                 normalDistance * normalDistance + normalHeight * normalHeight);
-            if (!float.IsFinite(distance) || !float.IsFinite(height) ||
-                !float.IsFinite(normalLength) || normalLength <= GeometryEpsilon ||
-                normalHeight <= GeometryEpsilon)
+            if (!float.IsFinite(distance) || !float.IsFinite(height))
             {
                 candidate = default;
                 return false;
             }
+            if (!float.IsFinite(normalLength) || normalLength <= GeometryEpsilon)
+            {
+                normalDistance = 0f;
+                normalHeight = 0f;
+            }
+            else
+            {
+                normalDistance /= normalLength;
+                normalHeight /= normalLength;
+            }
             candidate = new CharacterFootGroundEnvelopeCandidate(
                 distance,
                 height,
-                normalDistance / normalLength,
-                normalHeight / normalLength,
+                normalDistance,
+                normalHeight,
                 contact.CandidateIdentity,
                 0);
             return true;
@@ -479,31 +476,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return first.Endpoint == 1 && last.Endpoint == 2 &&
                    Mathf.Abs(first.Distance) <= GeometryEpsilon &&
                    Mathf.Abs(last.Distance - pathLength) <= GeometryEpsilon;
-        }
-
-        static bool IsReachable(
-            CharacterFootGroundEnvelopeWorkspace workspace,
-            float pathLength,
-            float endHeight,
-            float maximumUpDistance,
-            float maximumDownDistance)
-        {
-            for (int i = 0; i < workspace.ProfileCount; i++)
-            {
-                CharacterFootGroundEnvelopeCandidate value = workspace.ProfileAt(i);
-                float baseline = endHeight * Mathf.Clamp01(value.Distance / pathLength);
-                float baselineDelta = value.Height - baseline;
-                if (baselineDelta > maximumUpDistance ||
-                    baselineDelta < -maximumDownDistance)
-                    return false;
-                if (i <= 0)
-                    continue;
-                CharacterFootGroundEnvelopeCandidate previous = workspace.ProfileAt(i - 1);
-                float edgeDelta = value.Height - previous.Height;
-                if (edgeDelta > maximumUpDistance || edgeDelta < -maximumDownDistance)
-                    return false;
-            }
-            return pathLength > GeometryEpsilon;
         }
 
         static bool TryBuildUpperHull(

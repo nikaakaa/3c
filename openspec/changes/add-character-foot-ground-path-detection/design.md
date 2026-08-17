@@ -8,7 +8,6 @@
 Ground Detection
 -> Near/Far、Bottom/Top排序
 -> Normal验证与Edge Plane
--> 竖直Reachability
 -> Convex Hull
 -> Continuous Ground Envelope
 ```
@@ -36,7 +35,7 @@ Ground Path只消费当前两次Accepted Landing和本次查询输入。输入�
 
 ### 3.1 二维路径平面
 
-Builder以`Component Up`和两次落点之间的水平纵向组成二维平面。所有接触位置投影为`路径距离 + 高度`，法线投影为对应二维法线。与该平面几乎垂直、朝向地面下方或非有限的法线不进入候选。
+Builder以`Component Up`和两次落点之间的水平纵向组成二维平面。所有有效接触位置投影为`路径距离 + 高度`，法线只在可用时投影为对应二维法线；法线不能使有效碰撞位置从候选集合消失。
 
 路径水平长度退化、没有合法接触、固定容量溢出时发布不同typed rejection；不得输出Current到Next直线作为替代。
 
@@ -46,18 +45,13 @@ Builder以`Component Up`和两次落点之间的水平纵向组成二维平面�
 
 同一路径距离只保留最高地面候选，但Current Landing和Next Landing必须作为首尾端点保留。这样台阶竖边不会被误画成多个无意义并列点，同时包络不会脱离两次真实落点。
 
-### 3.3 Reachability
+### 3.3 高差处理
 
-现有Ground Detection配置已经明确声明向上`CastAbove`和向下`CastBelow`。Builder用同一范围检查：
-
-- 任一相邻边缘的向上或向下高度变化。
-- 任一候选相对Current到Next线性高度基准的向上或向下偏差。
-
-超出范围时发布`UnreachableEnvelope`，不放宽参数、不删除高点后继续、不沿用旧包络。
+`CastAbove/CastBelow`只定义Capsule从路径上方向下的真实查询范围。碰撞点已经是该查询返回的世界事实，不能再用同一组查询高度把点判成不可达并删除；GDC 36页的上侧凸包仍然经过障碍顶部。高差由上侧凸包保留为连续包络几何，不生成第二个拒绝分支。
 
 ### 3.4 上侧Convex Hull
 
-对可达候选按距离递增构造二维上侧单调链。新点加入时，所有会形成平直或向上凹陷的中间点被移除，只保留不会穿过任何候选地面的上侧转折点。结果是从Current Landing到Next Landing的连续折线；它是feet-only地面下界，不是动画脚轨迹。
+对全部候选按距离递增构造二维上侧单调链。新点加入时，所有会形成平直或向上凹陷的中间点被移除，只保留不会穿过任何候选地面的上侧转折点。结果是从Current Landing到Next Landing的连续折线；它是feet-only地面下界，不是动画脚轨迹。
 
 ## 4. 事务与内存
 
@@ -73,7 +67,7 @@ ICharacterFootGroundPathWorldQuery
     输出: Raw Ground Contacts
 
 CharacterFootGroundEnvelopeBuilder
-    输入: Accepted Landings + Raw Contacts + Ground Detection配置
+    输入: Accepted Landings + Raw Contacts
     输出: typed rejection或预分配Ground Envelope页
 
 CharacterFootPlacementRuntime

@@ -36,23 +36,17 @@ Unity World Query Backend MUST按最大轴段长度确定性切分Capsule轴并�
 
 ### Requirement: Ground Envelope必须来自排序边缘与上侧凸包
 
-Ground Envelope Builder MUST把Raw Contacts投影到脚步纵向与Component Up组成的二维平面，按Near/Far、Bottom/Top和candidate identity稳定排序。Builder MUST验证投影法线，并用相邻接触的位置与法线定义地面平面；只有位于两接触距离和高度范围内的平面交点 MAY成为Edge候选。
+Ground Envelope Builder MUST把Raw Contacts投影到脚步纵向与Component Up组成的二维平面，按Near/Far、Bottom/Top和candidate identity稳定排序。Builder MUST在法线有效时用相邻接触的位置与法线定义地面平面；法线无效不得丢弃有效碰撞位置，只有位于两接触距离和高度范围内的平面交点 MAY成为Edge候选。
 
-同一路径距离 MUST保留最高候选，Current与Incoming Landing MUST作为首尾端点保留。Builder MUST使用Ground Detection的`CastAbove`和`CastBelow`检查相邻边缘高度变化及候选相对两端线性高度的偏差；超出范围 MUST发布`UnreachableEnvelope`，不得删除障碍后继续或沿用旧包络。
+同一路径距离 MUST保留最高候选，Current与Incoming Landing MUST作为首尾端点保留。`CastAbove`和`CastBelow` MUST只用于Capsule查询范围；Builder MUST保留查询得到的合法碰撞高差，不得因高差删除障碍点、拒绝整条包络或沿用旧包络。
 
-可达候选 MUST形成二维上侧Convex Hull，输出从Current Landing到Incoming Landing的连续折线。该折线 MUST位于全部保留候选的Component Up上侧或与其重合，并且只属于feet-only地面下界；它 MUST不携带Animation Clearance、不改变Foot XZ、不驱动Pelvis。
+全部合法候选 MUST形成二维上侧Convex Hull，输出从Current Landing到Incoming Landing的连续折线。该折线 MUST位于全部保留候选的Component Up上侧或与其重合，并且只属于feet-only地面下界；它 MUST不携带Animation Clearance、不改变Foot XZ、不驱动Pelvis。
 
 #### Scenario: 路径经过台阶
 
 - **WHEN** 合法接触与法线定义出台阶边缘
 - **THEN** Ground Envelope MUST保留上侧Hull关键转折点
 - **AND** MUST不退化为Current到Incoming中心直线
-
-#### Scenario: 地形高度不可达
-
-- **WHEN** 任一边缘或路径偏差超过CastAbove或CastBelow
-- **THEN** Runtime MUST发布`UnreachableEnvelope`
-- **AND** MUST不输出替代Envelope
 
 ### Requirement: Ground Path模块必须保持抽象与实现分离
 
@@ -70,7 +64,7 @@ Raw Contacts、Builder workspace和Envelope顶点 MUST预分配。左右脚 MUST
 
 ### Requirement: 当前Landing阶段必须保持Pose恒等
 
-当前阶段增加Capsule Ground Detection、Edge、Reachability与feet-only Ground Envelope，但不实现Foot Motion、FootLock、Constraint、Anchor或Pelvis。Pelvis与双脚Goal的位置和旋转权重 MUST全部为零；唯一FullBodyIK MUST在验证Goal lineage后跳过FBBIK求解并保持输入Pose不变。
+当前阶段增加Capsule Ground Detection、Edge与feet-only Ground Envelope，但不实现Foot Motion、FootLock、Constraint、Anchor或Pelvis。Pelvis与双脚Goal的位置和旋转权重 MUST全部为零；唯一FullBodyIK MUST在验证Goal lineage后跳过FBBIK求解并保持输入Pose不变。
 
 #### Scenario: Ground Envelope构建完成
 

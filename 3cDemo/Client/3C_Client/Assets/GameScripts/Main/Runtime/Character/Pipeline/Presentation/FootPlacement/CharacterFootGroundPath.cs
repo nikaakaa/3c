@@ -19,8 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CapacityExceeded = 5,
         DegenerateEnvelope = 6,
         NoEnvelopeContact = 7,
-        UnreachableEnvelope = 8,
-        EnvelopeCapacityExceeded = 9
+        EnvelopeCapacityExceeded = 8
     }
 
     public readonly struct CharacterFootGroundPathQueryRequest

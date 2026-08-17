@@ -6,15 +6,40 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    readonly struct CharacterFootLandingPredictionPair
+    {
+        internal CharacterFootLandingPredictionPair(
+            CharacterFootLandingPredictionFootDiagnostics current,
+            CharacterFootLandingPredictionFootDiagnostics incoming,
+            CharacterFootLandingPredictionFootDiagnostics selected)
+        {
+            Current = current;
+            Incoming = incoming;
+            Selected = selected;
+        }
+
+        internal CharacterFootLandingPredictionFootDiagnostics Current { get; }
+        internal CharacterFootLandingPredictionFootDiagnostics Incoming { get; }
+        internal CharacterFootLandingPredictionFootDiagnostics Selected { get; }
+    }
+
     internal sealed class CharacterFootPlacementRuntime : IDisposable
     {
         readonly ActorId m_ActorId;
         readonly CharacterFootPlacementRuntimeSettings m_Settings;
         readonly CharacterFootPlacementPoseRig m_Rig;
         readonly ICharacterFutureBodyTranslationSource m_FutureBodyTranslationSource;
-        readonly CharacterFootPlacementWorldQueryBackend m_WorldBackend;
-        readonly ICharacterFootLandingWorldQuery m_LandingWorld;
+        readonly ICharacterFootPlacementWorldQuery m_WorldQuery;
+        readonly CharacterFootGroundPathFootState m_LeftGroundPath;
+        readonly CharacterFootGroundPathFootState m_RightGroundPath;
 
+        CharacterFutureBodyTranslation m_BodyTrajectory;
+        ulong m_BodyTrajectoryTick;
+        ulong m_BodyTrajectoryResetSequence;
+        ulong m_BodyTrajectoryGeneration;
+        ulong m_BodyTrajectoryAuthorityTick;
+        float m_BodyTrajectoryRequestedDuration;
+        bool m_HasBodyTrajectoryAttempt;
         CharacterFootLandingPredictionDiagnostics m_LastDiagnostics;
         CharacterFootLandingPredictionDiagnostics m_PendingDiagnostics;
         bool m_HasPendingFrame;
@@ -24,11 +49,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             CharacterFootPlacementRuntimeSettings settings,
             CharacterFootPlacementPoseRig rig,
-            PhysicsScene physicsScene,
-            ICharacterFutureBodyTranslationSource futureBodyTranslationSource)
+            ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
+            ICharacterFootPlacementWorldQuery worldQuery)
         {
-            if (!actorId.IsValid || settings == null || rig == null ||
-                !physicsScene.IsValid())
+            if (!actorId.IsValid || settings == null || rig == null || worldQuery == null)
             {
                 throw new ArgumentException("Foot Placement Runtime input is invalid.");
             }
@@ -36,11 +60,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Settings = settings;
             m_Rig = rig;
             m_FutureBodyTranslationSource = futureBodyTranslationSource;
-            m_WorldBackend = new CharacterFootPlacementWorldQueryBackend(
-                physicsScene,
-                rig,
-                settings.LandingPrediction.HitCapacity);
-            m_LandingWorld = new CharacterFootLandingWorldQuery(m_WorldBackend);
+            m_WorldQuery = worldQuery;
+            m_LeftGroundPath = new CharacterFootGroundPathFootState(
+                settings.GroundDetection.HitCapacity);
+            m_RightGroundPath = new CharacterFootGroundPathFootState(
+                settings.GroundDetection.HitCapacity);
         }
 
         internal bool HasPendingFrame => m_HasPendingFrame;
@@ -95,23 +119,50 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Body,
                 in timeline,
                 currentSegmentRemainingSeconds);
+            CharacterFutureBodyTranslation bodyTrajectory = ResolveBodyTrajectory(
+                frame.Pose.LeftFootSteps,
+                frame.Pose.RightFootSteps,
+                in timeline,
+                currentSegmentRemainingSeconds,
+                frame.Body);
 
-            CharacterFootLandingPredictionFootDiagnostics left = PredictFoot(
+            CharacterFootLandingPredictionPair leftPair = PredictFootPair(
                 CharacterFootSide.Left,
                 frame.Pose.LeftFootSteps,
                 pose.Left,
                 leftGoal,
                 in timeline,
                 currentSegmentRemainingSeconds,
+                bodyTrajectory,
                 in frame);
-            CharacterFootLandingPredictionFootDiagnostics right = PredictFoot(
+            CharacterFootLandingPredictionPair rightPair = PredictFootPair(
                 CharacterFootSide.Right,
                 frame.Pose.RightFootSteps,
                 pose.Right,
                 rightGoal,
                 in timeline,
                 currentSegmentRemainingSeconds,
+                bodyTrajectory,
                 in frame);
+            CharacterFootLandingPredictionFootDiagnostics left = leftPair.Selected;
+            CharacterFootLandingPredictionFootDiagnostics right = rightPair.Selected;
+            Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
+            CharacterFootGroundPathDiagnostics leftGroundPath = PrepareGroundPath(
+                CharacterFootSide.Left,
+                leftPair.Current,
+                leftPair.Incoming,
+                componentUp,
+                inputDiagnostics.TimelineAuthorityTick,
+                m_LeftGroundPath);
+            CharacterFootGroundPathDiagnostics rightGroundPath = PrepareGroundPath(
+                CharacterFootSide.Right,
+                rightPair.Current,
+                rightPair.Incoming,
+                componentUp,
+                inputDiagnostics.TimelineAuthorityTick,
+                m_RightGroundPath);
+            left = left.WithGroundPath(in leftGroundPath);
+            right = right.WithGroundPath(in rightGroundPath);
 
             goalOutput[0] = pelvisGoal;
             goalOutput[1] = leftGoal;
@@ -149,6 +200,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     "Foot Placement pending completion identity is inconsistent.");
             }
             m_LastDiagnostics = m_PendingDiagnostics;
+            m_LeftGroundPath.Seal();
+            m_RightGroundPath.Seal();
             m_PendingDiagnostics = default;
             m_HasPendingFrame = false;
             CharacterFootLandingPredictionDebugRegistry.Publish(in m_LastDiagnostics);
@@ -157,6 +210,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void DiscardPendingFrame()
         {
             RequireAlive();
+            m_LeftGroundPath.Discard();
+            m_RightGroundPath.Discard();
             m_PendingDiagnostics = default;
             m_HasPendingFrame = false;
         }
@@ -169,6 +224,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingDiagnostics = default;
             m_LastDiagnostics = default;
             m_HasPendingFrame = false;
+            ClearBodyTrajectory();
+            m_LeftGroundPath.Reset();
+            m_RightGroundPath.Reset();
             CharacterFootLandingPredictionDebugRegistry.Remove(
                 m_Rig.VisualRoot.GetInstanceID());
         }
@@ -181,6 +239,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingDiagnostics = default;
             m_LastDiagnostics = default;
             m_HasPendingFrame = false;
+            ClearBodyTrajectory();
+            m_LeftGroundPath.Reset();
+            m_RightGroundPath.Reset();
             CharacterFootLandingPredictionDebugRegistry.Remove(
                 m_Rig.VisualRoot.GetInstanceID());
         }
@@ -195,26 +256,181 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return string.Empty;
         }
 
-        CharacterFootLandingPredictionFootDiagnostics PredictFoot(
+        CharacterFootGroundPathDiagnostics PrepareGroundPath(
+            CharacterFootSide side,
+            CharacterFootLandingPredictionFootDiagnostics currentLanding,
+            CharacterFootLandingPredictionFootDiagnostics nextLanding,
+            Vector3 componentUp,
+            ulong authorityTick,
+            CharacterFootGroundPathFootState state)
+        {
+            if (!currentLanding.Accepted)
+            {
+                CharacterFootGroundPathPage rejectedPage = state.BeginPending();
+                rejectedPage.SetRejected(
+                    CharacterFootGroundPathRejectReason.CurrentLandingUnavailable,
+                    false,
+                    0,
+                    default);
+                return state.CreateDiagnostics(rejectedPage, false);
+            }
+            if (!nextLanding.Accepted)
+            {
+                CharacterFootGroundPathPage rejectedPage = state.BeginPending();
+                rejectedPage.SetRejected(
+                    CharacterFootGroundPathRejectReason.NextLandingUnavailable,
+                    false,
+                    0,
+                    default);
+                return state.CreateDiagnostics(rejectedPage, false);
+            }
+
+            CharacterFootGroundPathRevisionKey key =
+                CharacterFootGroundPathRevisionBuilder.BuildKey(
+                    side,
+                    currentLanding,
+                    nextLanding,
+                    authorityTick,
+                    componentUp,
+                    m_Settings.ProfileRevision);
+            if (state.HasCommittedRevision && state.CommittedKey.Equals(key) &&
+                (state.CommittedAccepted ||
+                 state.CommittedAuthorityTick == key.AuthorityTick))
+            {
+                CharacterFootGroundPathPage committedPage = state.ReuseCommitted();
+                return state.CreateDiagnostics(committedPage, false);
+            }
+
+            CharacterFootGroundPathPage pendingPage = state.BeginPending();
+            CharacterFootGroundDetectionSettings settings = m_Settings.GroundDetection;
+            if (!CharacterFootGroundPathRevisionBuilder.TryBuild(
+                    in key,
+                    currentLanding.LandingPoint,
+                    nextLanding.LandingPoint,
+                    currentLanding.LandingNormal,
+                    nextLanding.LandingNormal,
+                    currentLanding.SurfaceIdentity,
+                    nextLanding.SurfaceIdentity,
+                    componentUp,
+                    in settings,
+                    out CharacterFootGroundPathRevision revision))
+            {
+                pendingPage.SetRejected(
+                    CharacterFootGroundPathRejectReason.InvalidRequest,
+                    false,
+                    0,
+                    default);
+                return state.CreateDiagnostics(pendingPage, false);
+            }
+
+            CharacterFootGroundPathQueryRequest query = revision.Query;
+            CharacterFootGroundPathQueryResult result = m_WorldQuery.Query(
+                in query,
+                pendingPage.Contacts);
+            if (result.Accepted)
+            {
+                if (CharacterFootGroundEnvelopeBuilder.TryBuild(
+                        in revision,
+                        pendingPage.Contacts,
+                        in settings,
+                        state.EnvelopeWorkspace,
+                        pendingPage.Envelope,
+                        out CharacterFootGroundPathRejectReason envelopeRejectReason))
+                {
+                    pendingPage.SetAccepted(result.SegmentCount, in revision);
+                }
+                else
+                {
+                    pendingPage.SetRejected(
+                        envelopeRejectReason,
+                        true,
+                        result.SegmentCount,
+                        in revision);
+                }
+            }
+            else
+                pendingPage.SetRejected(
+                    result.RejectReason,
+                    true,
+                    result.SegmentCount,
+                    in revision);
+            return state.CreateDiagnostics(pendingPage, true);
+        }
+
+        CharacterFootLandingPredictionPair PredictFootPair(
             CharacterFootSide side,
             AnimationBiomechanicalStepReadPage steps,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             CharacterFullBodyIkGoal goal,
             in CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
+            CharacterFutureBodyTranslation bodyTrajectory,
             in CharacterFootPlacementFrameInput frame)
         {
             Vector3 currentSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
-            if (!TrySelectStep(steps, out AnimationBiomechanicalStepHeader step,
-                    out CharacterFootLandingStepSource stepSource,
-                    out CharacterFootLandingPredictionRejectReason stepFailure))
+            CharacterFootLandingPredictionFootDiagnostics current = PredictStep(
+                side,
+                steps.CurrentStep,
+                CharacterFootLandingStepSource.Current,
+                currentSole,
+                goal,
+                in timeline,
+                currentSegmentRemainingSeconds,
+                bodyTrajectory,
+                in frame);
+            CharacterFootLandingPredictionFootDiagnostics incoming = PredictStep(
+                side,
+                steps.IncomingStep,
+                CharacterFootLandingStepSource.Incoming,
+                currentSole,
+                goal,
+                in timeline,
+                currentSegmentRemainingSeconds,
+                bodyTrajectory,
+                in frame);
+            CharacterFootLandingPredictionFootDiagnostics selected =
+                steps.CurrentStep.IsAuthoritative &&
+                steps.CurrentStep.TimeToLandingSeconds > 0.000001f
+                    ? current
+                    : steps.IncomingStep.IsAuthoritative &&
+                      steps.IncomingStep.TimeToLandingSeconds > 0.000001f
+                        ? incoming
+                        : current;
+            return new CharacterFootLandingPredictionPair(current, incoming, selected);
+        }
+
+        CharacterFootLandingPredictionFootDiagnostics PredictStep(
+            CharacterFootSide side,
+            AnimationBiomechanicalStepHeader step,
+            CharacterFootLandingStepSource stepSource,
+            Vector3 currentSole,
+            CharacterFullBodyIkGoal goal,
+            in CommittedLocomotionPlanarMotionTimeline timeline,
+            float currentSegmentRemainingSeconds,
+            CharacterFutureBodyTranslation bodyTrajectory,
+            in CharacterFootPlacementFrameInput frame)
+        {
+            if (!step.IsAuthoritative)
             {
                 return Rejected(
                     side,
-                    stepFailure,
+                    CharacterFootLandingPredictionRejectReason.StepUnavailable,
                     stepSource,
-                    default,
+                    step,
                     0,
+                    currentSole,
+                    default,
+                    default,
+                    goal);
+            }
+            if (!step.HasConsistentLandingEventIdentity)
+            {
+                return Rejected(
+                    side,
+                    CharacterFootLandingPredictionRejectReason.StepIdentityMismatch,
+                    stepSource,
+                    step,
+                    timeline.Generation,
                     currentSole,
                     default,
                     default,
@@ -248,7 +464,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     goal);
             }
-            if (m_FutureBodyTranslationSource == null)
+            if (bodyTrajectory == null)
             {
                 return Rejected(
                     side,
@@ -262,32 +478,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     goal);
             }
 
-            var translationRequest = new CharacterFutureBodyTranslationRequest(
-                m_ActorId,
-                step.TimeToLandingSeconds,
-                frame.Body.TargetVelocity.x,
-                frame.Body.TargetVelocity.z,
-                timeline.ContinuationVelocityX,
-                timeline.ContinuationVelocityZ,
-                currentSegmentRemainingSeconds,
-                timeline.HasContinuation);
-            if (!m_FutureBodyTranslationSource.TryPredict(
-                    in translationRequest,
-                    out CharacterFutureBodyTranslation translation) ||
-                translation == null)
-            {
-                return Rejected(
-                    side,
-                    CharacterFootLandingPredictionRejectReason.FutureBodyTranslationUnavailable,
-                    stepSource,
-                    step,
-                    timeline.Generation,
-                    currentSole,
-                    default,
-                    default,
-                    goal);
-            }
-            if (translation.DurationSeconds + 0.0001f < step.TimeToLandingSeconds)
+            if (bodyTrajectory.DurationSeconds + 0.0001f < step.TimeToLandingSeconds)
             {
                 return Rejected(
                     side,
@@ -302,7 +493,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
 
             CharacterFutureBodyTranslationSample bodyTranslation =
-                translation.Evaluate(step.TimeToLandingSeconds);
+                bodyTrajectory.Evaluate(step.TimeToLandingSeconds);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
             Vector3 rawLanding = CharacterFootLandingPredictor.ProjectRawLanding(
                 frame.Body.VisiblePosition,
@@ -314,7 +505,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rawLanding,
                 componentUp,
                 in settings,
-                m_LandingWorld,
+                m_WorldQuery,
                 out CharacterFootPlacementQueryRequest query,
                 out CharacterFootLandingSupport support);
             return new CharacterFootLandingPredictionFootDiagnostics(
@@ -332,6 +523,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 step.TimeToLandingSeconds,
                 step.RootLocalLanding,
                 true,
+                bodyTrajectory.SourceIdentity,
                 in bodyTranslation,
                 currentSole,
                 rawLanding,
@@ -340,43 +532,94 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 goal);
         }
 
-        static bool TrySelectStep(
-            AnimationBiomechanicalStepReadPage steps,
-            out AnimationBiomechanicalStepHeader selected,
-            out CharacterFootLandingStepSource source,
-            out CharacterFootLandingPredictionRejectReason failure)
+        CharacterFutureBodyTranslation ResolveBodyTrajectory(
+            AnimationBiomechanicalStepReadPage leftSteps,
+            AnimationBiomechanicalStepReadPage rightSteps,
+            in CommittedLocomotionPlanarMotionTimeline timeline,
+            float currentSegmentRemainingSeconds,
+            CharacterBodyPresentationFrame body)
         {
-            AnimationBiomechanicalStepHeader current = steps.CurrentStep;
-            AnimationBiomechanicalStepHeader incoming = steps.IncomingStep;
-            if (current.IsAuthoritative && current.TimeToLandingSeconds > 0.000001f)
+            float maximum = m_Settings.LandingPrediction.MaximumPredictionTimeSeconds;
+            float leftCurrentTime = ResolvePredictionTime(
+                leftSteps.CurrentStep,
+                maximum);
+            float leftIncomingTime = ResolvePredictionTime(
+                leftSteps.IncomingStep,
+                maximum);
+            float rightCurrentTime = ResolvePredictionTime(
+                rightSteps.CurrentStep,
+                maximum);
+            float rightIncomingTime = ResolvePredictionTime(
+                rightSteps.IncomingStep,
+                maximum);
+            float duration = Mathf.Max(
+                Mathf.Max(leftCurrentTime, leftIncomingTime),
+                Mathf.Max(rightCurrentTime, rightIncomingTime));
+            if (duration <= 0f || !timeline.IsValid ||
+                m_FutureBodyTranslationSource == null)
             {
-                selected = current;
-                source = CharacterFootLandingStepSource.Current;
+                return null;
             }
-            else if (incoming.IsAuthoritative && incoming.TimeToLandingSeconds > 0.000001f)
+
+            bool sameCommittedBody = m_HasBodyTrajectoryAttempt &&
+                                     m_BodyTrajectoryTick == body.CurrentTick &&
+                                     m_BodyTrajectoryResetSequence == body.ResetSequence &&
+                                     m_BodyTrajectoryGeneration == timeline.Generation &&
+                                     m_BodyTrajectoryAuthorityTick == timeline.AuthorityTick.Value;
+            if (sameCommittedBody &&
+                duration <= m_BodyTrajectoryRequestedDuration + 0.0001f)
             {
-                selected = incoming;
-                source = CharacterFootLandingStepSource.Incoming;
+                return m_BodyTrajectory;
             }
-            else
+
+            m_HasBodyTrajectoryAttempt = true;
+            m_BodyTrajectoryTick = body.CurrentTick;
+            m_BodyTrajectoryResetSequence = body.ResetSequence;
+            m_BodyTrajectoryGeneration = timeline.Generation;
+            m_BodyTrajectoryAuthorityTick = timeline.AuthorityTick.Value;
+            m_BodyTrajectoryRequestedDuration = duration;
+            m_BodyTrajectory = null;
+
+            var request = new CharacterFutureBodyTranslationRequest(
+                m_ActorId,
+                duration,
+                body.TargetVelocity.x,
+                body.TargetVelocity.z,
+                timeline.ContinuationVelocityX,
+                timeline.ContinuationVelocityZ,
+                currentSegmentRemainingSeconds,
+                timeline.HasContinuation,
+                leftCurrentTime,
+                leftIncomingTime,
+                rightCurrentTime,
+                rightIncomingTime);
+            if (m_FutureBodyTranslationSource.TryPredict(
+                    in request,
+                    out CharacterFutureBodyTranslation trajectory))
             {
-                selected = default;
-                source = CharacterFootLandingStepSource.None;
-                bool identityMismatch =
-                    current.HasLandingEvent && !current.HasConsistentLandingEventIdentity ||
-                    incoming.HasLandingEvent && !incoming.HasConsistentLandingEventIdentity;
-                failure = identityMismatch
-                    ? CharacterFootLandingPredictionRejectReason.StepIdentityMismatch
-                    : CharacterFootLandingPredictionRejectReason.StepUnavailable;
-                return false;
+                m_BodyTrajectory = trajectory;
             }
-            if (!selected.HasConsistentLandingEventIdentity)
-            {
-                failure = CharacterFootLandingPredictionRejectReason.StepIdentityMismatch;
-                return false;
-            }
-            failure = CharacterFootLandingPredictionRejectReason.None;
-            return true;
+            return m_BodyTrajectory;
+        }
+
+        static float ResolvePredictionTime(
+            AnimationBiomechanicalStepHeader step,
+            float maximum) =>
+            step.IsAuthoritative && step.HasConsistentLandingEventIdentity &&
+            step.TimeToLandingSeconds > 0.000001f &&
+            step.TimeToLandingSeconds <= maximum
+                ? step.TimeToLandingSeconds
+                : 0f;
+
+        void ClearBodyTrajectory()
+        {
+            m_BodyTrajectory = null;
+            m_BodyTrajectoryTick = 0;
+            m_BodyTrajectoryResetSequence = 0;
+            m_BodyTrajectoryGeneration = 0;
+            m_BodyTrajectoryAuthorityTick = 0;
+            m_BodyTrajectoryRequestedDuration = 0f;
+            m_HasBodyTrajectoryAttempt = false;
         }
 
         static float ResolveCurrentSegmentRemainingSeconds(
@@ -416,6 +659,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 step.IsValid ? step.TimeToLandingSeconds : 0f,
                 step.IsValid ? step.RootLocalLanding : default,
                 false,
+                string.Empty,
                 default,
                 currentSole,
                 rawLanding,
@@ -468,6 +712,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_LastDiagnostics = default;
             m_PendingDiagnostics = default;
             m_HasPendingFrame = false;
+            ClearBodyTrajectory();
+            m_LeftGroundPath.Reset();
+            m_RightGroundPath.Reset();
         }
     }
 }

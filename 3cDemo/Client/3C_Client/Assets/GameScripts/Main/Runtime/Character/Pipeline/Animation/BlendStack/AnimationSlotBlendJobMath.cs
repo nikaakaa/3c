@@ -165,23 +165,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         static bool IsValidRootLocalFootRoute(AnimationPredictedFootStepSample value)
         {
-            if (value.RootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.RootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.AuthoredFootPlanarRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.AnimationClearanceHeights.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+            if (value.Route.RootLocalFoot.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.Route.RootLocalAnkle.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.Route.RootLocalHip.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.Route.AuthoredFootPlanar.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.Route.AnimationClearance.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
                 !IsNormalized(value.LandingPhase) ||
                 !IsFinite(value.OpposingRootLocalSoleRotation) ||
                 Quaternion.Dot(value.OpposingRootLocalSoleRotation, value.OpposingRootLocalSoleRotation) <= 0.000001f)
                 return false;
-            for (int i = 0; i < value.RootLocalFootRoute.Length; i++)
+            for (int i = 0; i < value.Route.RootLocalFoot.Length; i++)
             {
-                if (!AnimationPoseMath.IsFinite(value.RootLocalFootRoute[i]) ||
-                    !AnimationPoseMath.IsFinite(value.RootLocalAnkleRoute[i]) ||
-                    !AnimationPoseMath.IsFinite(value.RootLocalHipRoute[i]) ||
-                    !AnimationPoseMath.IsFinite(value.AuthoredFootPlanarRoute[i]) ||
-                    !float.IsFinite(value.AnimationClearanceHeights[i]) ||
-                    value.AnimationClearanceHeights[i] < 0f)
+                if (!AnimationPoseMath.IsFinite(value.Route.RootLocalFoot[i]) ||
+                    !AnimationPoseMath.IsFinite(value.Route.RootLocalAnkle[i]) ||
+                    !AnimationPoseMath.IsFinite(value.Route.RootLocalHip[i]) ||
+                    !AnimationPoseMath.IsFinite(value.Route.AuthoredFootPlanar[i]) ||
+                    !float.IsFinite(value.Route.AnimationClearance[i]) ||
+                    value.Route.AnimationClearance[i] < 0f)
                     return false;
             }
             return true;

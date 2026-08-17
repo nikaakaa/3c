@@ -5,16 +5,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     public enum CharacterFootPlacementQueryShape : byte
     {
-        Sphere = 1,
-        Capsule = 2
+        Sphere = 1
     }
 
     public enum CharacterFootPlacementQueryPurpose : byte
     {
-        CurrentGrounding = 1,
-        FutureLanding = 2,
-        GroundEnvelope = 3,
-        SwingClearance = 4
+        FutureLanding = 1
     }
 
     public readonly struct CharacterFootPlacementQueryRequest
@@ -24,7 +20,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementQueryPurpose purpose,
             int footIndex,
             Vector3 origin,
-            Vector3 capsuleEnd,
             Vector3 direction,
             float maximumDistance,
             float radius,
@@ -35,7 +30,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Purpose = purpose;
             FootIndex = footIndex;
             Origin = origin;
-            CapsuleEnd = capsuleEnd;
             Direction = direction;
             MaximumDistance = maximumDistance;
             Radius = radius;
@@ -47,7 +41,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementQueryPurpose Purpose { get; }
         public int FootIndex { get; }
         public Vector3 Origin { get; }
-        public Vector3 CapsuleEnd { get; }
         public Vector3 Direction { get; }
         public float MaximumDistance { get; }
         public float Radius { get; }
@@ -79,9 +72,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly PhysicsScene m_PhysicsScene;
         readonly CharacterFootPlacementPoseRig m_Rig;
         readonly RaycastHit[] m_Hits;
-        readonly CharacterFootPlacementQueryRequest[] m_LastCurrentRequests =
-            new CharacterFootPlacementQueryRequest[2];
-        readonly bool[] m_HasLastCurrentRequest = new bool[2];
 
         internal CharacterFootPlacementWorldQueryBackend(
             PhysicsScene physicsScene,
@@ -98,25 +88,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;
-
-        internal void BeginFrame()
-        {
-            m_HasLastCurrentRequest[0] = false;
-            m_HasLastCurrentRequest[1] = false;
-        }
-
-        internal bool TryGetLastCurrentRequest(
-            int footIndex,
-            out CharacterFootPlacementQueryRequest request)
-        {
-            if ((uint)footIndex >= 2u || !m_HasLastCurrentRequest[footIndex])
-            {
-                request = default;
-                return false;
-            }
-            request = m_LastCurrentRequests[footIndex];
-            return true;
-        }
 
         internal bool Query(
             in CharacterFootPlacementQueryRequest request,
@@ -136,30 +107,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!IsRequestValid(in request))
                 return 0;
-            if (request.Purpose == CharacterFootPlacementQueryPurpose.CurrentGrounding &&
-                request.FootIndex >= 0)
-            {
-                m_LastCurrentRequests[request.FootIndex] = request;
-                m_HasLastCurrentRequest[request.FootIndex] = true;
-            }
-            int count = request.Shape == CharacterFootPlacementQueryShape.Sphere
-                ? m_PhysicsScene.SphereCast(
-                    request.Origin,
-                    request.Radius,
-                    request.Direction.normalized,
-                    m_Hits,
-                    request.MaximumDistance,
-                    request.LayerMask,
-                    QueryTriggerInteraction.Ignore)
-                : m_PhysicsScene.CapsuleCast(
-                    request.Origin,
-                    request.CapsuleEnd,
-                    request.Radius,
-                    request.Direction.normalized,
-                    m_Hits,
-                    request.MaximumDistance,
-                    request.LayerMask,
-                    QueryTriggerInteraction.Ignore);
+            int count = m_PhysicsScene.SphereCast(
+                request.Origin,
+                request.Radius,
+                request.Direction.normalized,
+                m_Hits,
+                request.MaximumDistance,
+                request.LayerMask,
+                QueryTriggerInteraction.Ignore);
             Vector3 supportUp = -request.Direction.normalized;
             int hitCount = Mathf.Min(count, m_Hits.Length);
             int validCount = 0;
@@ -168,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RaycastHit candidate = m_Hits[i];
                 if (!candidate.collider ||
                     m_Rig.IsSelfCollider(candidate.collider) ||
-                    IsInitialOverlap(in candidate, request.Direction) ||
+                    IsInitialOverlap(in candidate) ||
                     !IsFinite(candidate.point) ||
                     !IsFinite(candidate.normal) ||
                     candidate.normal.sqrMagnitude <= 0.000001f ||
@@ -194,13 +149,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return validCount;
         }
 
-        internal CharacterFootPlacementQueryHit GetHit(int index)
-        {
-            if (index < 0 || index >= m_Hits.Length)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return new CharacterFootPlacementQueryHit(m_Hits[index]);
-        }
-
         static int Compare(RaycastHit left, RaycastHit right)
         {
             int distance = left.distance.CompareTo(right.distance);
@@ -216,16 +164,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return y != 0 ? y : left.point.z.CompareTo(right.point.z);
         }
 
-        static bool IsInitialOverlap(in RaycastHit hit, Vector3 direction) =>
-            hit.distance <= 0.000001f &&
-            hit.point.sqrMagnitude <= 0.00000001f &&
-            Vector3.Dot(hit.normal.normalized, -direction.normalized) >= 0.9999f;
+        static bool IsInitialOverlap(in RaycastHit hit) =>
+            hit.distance <= 0.000001f;
 
-        bool IsRequestValid(in CharacterFootPlacementQueryRequest request) =>
+        static bool IsRequestValid(in CharacterFootPlacementQueryRequest request) =>
+            request.Shape == CharacterFootPlacementQueryShape.Sphere &&
+            request.Purpose == CharacterFootPlacementQueryPurpose.FutureLanding &&
             request.FootIndex >= 0 && request.FootIndex < 2 &&
             request.LayerMask != 0 &&
             IsFinite(request.Origin) &&
-            IsFinite(request.CapsuleEnd) &&
             IsFinite(request.Direction) &&
             request.Direction.sqrMagnitude > 0f &&
             float.IsFinite(request.MaximumDistance) && request.MaximumDistance > 0f &&

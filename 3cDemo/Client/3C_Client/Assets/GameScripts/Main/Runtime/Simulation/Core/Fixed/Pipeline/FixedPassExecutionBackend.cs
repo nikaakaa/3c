@@ -211,7 +211,7 @@ namespace ThirdPersonSimulation.Fixed
                     transaction,
                     runtimes.AsReadOnly(),
                     resources,
-                    request.Solver as ICharacterFutureBodyTrajectorySource);
+                    request.Solver as ICharacterFutureBodyTranslationSource);
                 return new FixedPassBackendCompositionResult(
                     launchPlan,
                     initialPipelineState,

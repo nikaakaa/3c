@@ -8,8 +8,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
     internal static class AnimationPresentationTracePublisher
     {
-        static bool s_LoggedCompletedFootIkAvailable;
-        static bool s_LoggedCompletedFootIkUnavailable;
+        static bool s_LoggedCompletedFootPlacementAvailable;
+        static bool s_LoggedCompletedFootPlacementUnavailable;
 
         internal static AnimationPresentationDiagnosticsInterest ResolveInterest(
             RuntimeDiagnosticsContext diagnostics)
@@ -49,12 +49,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 diagnostics,
                 debugView.PoseStateSourceSyncRelations);
             PublishRetirements(diagnostics, retiredPlaybacks);
-            PublishFootIk(diagnostics, debugView.PosePlan.FootIk);
+            PublishFootPlacement(diagnostics, debugView.PosePlan.FootPlacement);
         }
 
-        static void PublishFootIk(
+        static void PublishFootPlacement(
             RuntimeDiagnosticsContext diagnostics,
-            AnimationFootIkRuntimeSnapshot snapshot)
+            AnimationFootPlacementRuntimeSnapshot snapshot)
         {
             if (!snapshot.IsAvailable ||
                 !diagnostics.ShouldPublish(
@@ -63,10 +63,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             {
                 return;
             }
-            RuntimeFootIkTraceSnapshot footIk = BuildFootIkSnapshot(snapshot);
+            RuntimeFootPlacementTraceSnapshot footPlacement =
+                BuildFootPlacementSnapshot(snapshot);
             ref readonly CharacterFootLandingPredictionDiagnostics landing =
                 ref snapshot.LandingPrediction;
-            ref readonly CharacterFullBodyIkSolverDiagnostics solver = ref snapshot.Solver;
             diagnostics.Publish(
                 RuntimeTraceChannel.FootPlacement,
                 RuntimeTraceDomain.Presentation,
@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 RuntimeInstanceKey.Character(diagnostics.CharacterRuntimeId),
                 new RuntimeTracePayload
                 {
-                    Name = "LandingPrediction -> zero-weight FBBIK",
+                    Name = "Landing Prediction",
                     Status =
                         $"L:{landing.Left.State}/{landing.Left.RejectReason} " +
                         $"R:{landing.Right.State}/{landing.Right.RejectReason}",
@@ -85,121 +85,83 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     SecondaryTime = landing.Right.TimeToLandingSeconds,
                     Weight = 0f,
                     FinalWeight = 0f,
-                    Flag = solver.IsCompleted && solver.Succeeded,
-                    FootIk = footIk
+                    Flag = landing.Left.Accepted || landing.Right.Accepted,
+                    FootPlacement = footPlacement
                 });
         }
 
-        internal static void PublishCompletedFootIk(
+        internal static void PublishCompletedFootPlacement(
             ActorId actorId,
-            AnimationFootIkRuntimeSnapshot snapshot)
+            AnimationFootPlacementRuntimeSnapshot snapshot)
         {
             if (!snapshot.IsAvailable)
             {
-                if (!s_LoggedCompletedFootIkUnavailable)
+                if (!s_LoggedCompletedFootPlacementUnavailable)
                 {
-                    s_LoggedCompletedFootIkUnavailable = true;
+                    s_LoggedCompletedFootPlacementUnavailable = true;
                     Debug.Log("GameplayLab Foot Landing Prediction completed snapshot unavailable.");
                 }
                 return;
             }
-            if (!s_LoggedCompletedFootIkAvailable)
+            if (!s_LoggedCompletedFootPlacementAvailable)
             {
-                s_LoggedCompletedFootIkAvailable = true;
+                s_LoggedCompletedFootPlacementAvailable = true;
                 Debug.Log(
                     $"GameplayLab Foot Landing Prediction completed snapshot available for {actorId}.");
             }
-            _ = BuildFootIkSnapshot(snapshot);
+            _ = BuildFootPlacementSnapshot(snapshot);
         }
 
-        static RuntimeFootIkTraceSnapshot BuildFootIkSnapshot(
-            AnimationFootIkRuntimeSnapshot snapshot)
+        static RuntimeFootPlacementTraceSnapshot BuildFootPlacementSnapshot(
+            AnimationFootPlacementRuntimeSnapshot snapshot)
         {
             ref readonly CharacterFootLandingPredictionDiagnostics landing =
                 ref snapshot.LandingPrediction;
-            ref readonly CharacterFullBodyIkSolverDiagnostics solver = ref snapshot.Solver;
-            return new RuntimeFootIkTraceSnapshot
+            return new RuntimeFootPlacementTraceSnapshot
             {
                 IsAvailable = true,
                 FrameSequence = landing.FrameSequence,
-                GroundingCompletionIdentity = landing.CompletionIdentity,
-                ModifierCompletionIdentity = landing.CompletionIdentity,
-                SolverCompletionIdentity = solver.OutputCompletionIdentity,
-                HasPredictiveModifier = true,
-                SolverBackendIdentity = solver.BackendIdentity,
-                SolverFailure = solver.IsCompleted
-                    ? solver.Failure.ToString()
-                    : "NotCompleted",
-                NodeExecuted = true,
-                PlacementAlpha = 0f,
-                PelvisGoalPositionWeight = landing.PelvisGoal.PositionWeight,
-                PelvisGoalApplication = landing.PelvisGoal.Application.ToString(),
-                PelvisGoalSourceKind = landing.PelvisGoal.SourceKind.ToString(),
-                Left = BuildFootTrace(landing.Left, snapshot.LeftFoot),
-                Right = BuildFootTrace(landing.Right, snapshot.RightFoot)
+                CompletionIdentity = landing.CompletionIdentity,
+                Left = BuildFootTrace(landing.Left),
+                Right = BuildFootTrace(landing.Right)
             };
         }
 
-        static RuntimeFootIkLegTraceSnapshot BuildFootTrace(
-            CharacterFootLandingPredictionFootDiagnostics landing,
-            CharacterFullBodyIkEffectorDiagnostics solved) =>
-            new RuntimeFootIkLegTraceSnapshot
+        static RuntimeFootPlacementFootTraceSnapshot BuildFootTrace(
+            CharacterFootLandingPredictionFootDiagnostics landing) =>
+            new RuntimeFootPlacementFootTraceSnapshot
             {
                 IsAvailable = true,
-                PredictiveRewritten = false,
-                PredictionRejectReason = landing.RejectReason.ToString(),
-                FutureSurfaceIdentity = landing.SurfaceIdentity,
-                FutureSupportPoint = landing.LandingPoint,
-                FutureSupportNormal = landing.LandingNormal,
-                FutureLandingQueryAvailable = landing.Query.MaximumDistance > 0f,
-                FutureLandingQueryShape = landing.Query.MaximumDistance > 0f
+                Side = landing.Side.ToString(),
+                State = landing.State.ToString(),
+                RejectReason = landing.RejectReason.ToString(),
+                StepSource = landing.StepSource.ToString(),
+                LandingEventIdentity = landing.LandingEventIdentity,
+                TrajectoryGeneration = landing.TrajectoryGeneration,
+                LandingConfidence = landing.LandingConfidence,
+                TimeToLandingSeconds = landing.TimeToLandingSeconds,
+                RootLocalLanding = landing.RootLocalLanding,
+                CurrentAnimatedSole = landing.CurrentAnimatedSole,
+                RawLanding = landing.RawLandingCandidate,
+                QueryAvailable = landing.Query.MaximumDistance > 0f,
+                QueryShape = landing.Query.MaximumDistance > 0f
                     ? landing.Query.Shape.ToString()
                     : string.Empty,
-                FutureLandingQueryPurpose = landing.Query.MaximumDistance > 0f
+                QueryPurpose = landing.Query.MaximumDistance > 0f
                     ? landing.Query.Purpose.ToString()
                     : string.Empty,
-                FutureLandingQueryOrigin = landing.Query.Origin,
-                FutureLandingQueryDirection = landing.Query.Direction,
-                FutureLandingQueryRadius = landing.Query.Radius,
-                FutureLandingQueryMaximumDistance = landing.Query.MaximumDistance,
-                FutureLandingQueryMinimumGroundNormalDot =
+                QueryOrigin = landing.Query.Origin,
+                QueryDirection = landing.Query.Direction,
+                QueryRadius = landing.Query.Radius,
+                QueryMaximumDistance = landing.Query.MaximumDistance,
+                QueryLayerMask = landing.Query.LayerMask,
+                QueryMinimumGroundNormalDot =
                     landing.Query.MinimumGroundNormalDot,
-                FootFeatureValid = true,
-                PredictedStepValid = landing.LandingEventIdentity != 0,
-                PredictedStepHasLandingEvent = landing.LandingEventIdentity != 0,
-                PredictedStepSourceBound = landing.LandingEventIdentity != 0,
-                HasAuthoritativeLandingEvent = landing.LandingEventIdentity != 0,
-                ExpectedLandingEventIdentity = landing.LandingEventIdentity,
-                LandingEventIdentityValid = landing.LandingEventIdentity != 0,
-                LandingEventIdentity = landing.LandingEventIdentity,
-                LandingConfidence = landing.LandingConfidence,
-                AuthoredLandingDelaySeconds = landing.TimeToLandingSeconds,
-                RootLocalLanding = landing.RootLocalLanding,
-                PredictivePlanState = landing.State.ToString(),
-                PredictivePlanEndReason = landing.RejectReason.ToString(),
-                CurrentSoleWorldPosition = landing.CurrentAnimatedSole,
-                FixedLandingWorldPosition = landing.Accepted
-                    ? landing.LandingPoint
-                    : landing.RawLandingCandidate,
-                CurrentPathSurfaceIdentity = landing.SurfaceIdentity,
-                CurrentPathSupportPoint = landing.LandingPoint,
-                CurrentPathSupportNormal = landing.LandingNormal,
-                PredictiveAcceptedHitCount = landing.Accepted ? 1 : 0,
-                PredictiveQueryCount = landing.Query.MaximumDistance > 0f ? 1 : 0,
-                PredictiveRejectedQueryCount =
-                    landing.Query.MaximumDistance > 0f && !landing.Accepted ? 1 : 0,
-                GoalOwner = "LandingDebugOnly",
-                BaselineGoalComponentPosition = landing.Goal.ComponentPosition,
-                FinalGoalComponentPosition = landing.Goal.ComponentPosition,
-                BaselineGoalPositionWeight = landing.Goal.PositionWeight,
-                BaselineGoalRotationWeight = landing.Goal.RotationWeight,
-                FinalGoalPositionWeight = landing.Goal.PositionWeight,
-                FinalGoalRotationWeight = landing.Goal.RotationWeight,
-                FinalGoalSourceKind = landing.Goal.SourceKind.ToString(),
-                SolverResultAvailable = solved.IsAvailable,
-                SolvedComponentPosition = solved.SolvedComponentPosition,
-                PositionResidual = solved.PositionResidual,
-                RotationResidualDegrees = solved.RotationResidualDegrees
+                Accepted = landing.Accepted,
+                SurfaceIdentity = landing.SurfaceIdentity,
+                LandingPoint = landing.LandingPoint,
+                LandingNormal = landing.LandingNormal,
+                QueryDistance = landing.QueryDistance
             };
 
         static void PublishActionPlaybacks(

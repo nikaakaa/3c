@@ -115,8 +115,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong storedCapturedAt,
             ulong storedSourceHistoryCompletedAt,
             bool storedHasFootFeatures,
-            AnimationFootFeatureSample storedLeftFootFeatures,
-            AnimationFootFeatureSample storedRightFootFeatures)
+            in AnimationFootFeatureSample storedLeftFootFeatures,
+            in AnimationFootFeatureSample storedRightFootFeatures)
         {
             AnimationChannelId = animationChannelId;
             PresentationPoseSourceProviderId = presentationPoseSourceProviderId;
@@ -137,8 +137,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             StoredCapturedAt = storedCapturedAt;
             StoredSourceHistoryCompletedAt = storedSourceHistoryCompletedAt;
             StoredHasFootFeatures = storedHasFootFeatures;
-            StoredLeftFootFeatures = storedLeftFootFeatures;
-            StoredRightFootFeatures = storedRightFootFeatures;
+            StoredLeftFootSteps = default;
+            StoredRightFootSteps = default;
+            if (storedHasFootFeatures)
+            {
+                StoredLeftFootSteps = new AnimationBiomechanicalStepReadPage(
+                    in storedLeftFootFeatures,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left);
+                StoredRightFootSteps = new AnimationBiomechanicalStepReadPage(
+                    in storedRightFootFeatures,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right);
+            }
         }
 
         public AnimationChannelId AnimationChannelId { get; }
@@ -160,8 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong StoredCapturedAt { get; }
         public ulong StoredSourceHistoryCompletedAt { get; }
         public bool StoredHasFootFeatures { get; }
-        public AnimationFootFeatureSample StoredLeftFootFeatures { get; }
-        public AnimationFootFeatureSample StoredRightFootFeatures { get; }
+        public AnimationBiomechanicalStepReadPage StoredLeftFootSteps { get; }
+        public AnimationBiomechanicalStepReadPage StoredRightFootSteps { get; }
     }
 
     public readonly struct PoseInertializationSnapshot
@@ -345,8 +354,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             string footAnalysisSourceId,
             int footAnalysisVersion,
             string footArtifactContentHash,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures)
+            in AnimationFootFeatureSample leftFootFeatures,
+            in AnimationFootFeatureSample rightFootFeatures)
         {
             SampleId = sampleId;
             Weight = weight;
@@ -356,8 +365,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             FootAnalysisSourceId = footAnalysisSourceId ?? string.Empty;
             FootAnalysisVersion = footAnalysisVersion;
             FootArtifactContentHash = footArtifactContentHash ?? string.Empty;
-            LeftFootFeatures = leftFootFeatures;
-            RightFootFeatures = rightFootFeatures;
+            LeftFootSteps = default;
+            RightFootSteps = default;
+            if (hasFootFeatures)
+            {
+                LeftFootSteps = new AnimationBiomechanicalStepReadPage(
+                    in leftFootFeatures,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left);
+                RightFootSteps = new AnimationBiomechanicalStepReadPage(
+                    in rightFootFeatures,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right);
+            }
         }
 
         public CharacterAnimationBlendSpaceSampleId SampleId { get; }
@@ -368,8 +386,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public string FootAnalysisSourceId { get; }
         public int FootAnalysisVersion { get; }
         public string FootArtifactContentHash { get; }
-        public AnimationFootFeatureSample LeftFootFeatures { get; }
-        public AnimationFootFeatureSample RightFootFeatures { get; }
+        public AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
+        public AnimationBiomechanicalStepReadPage RightFootSteps { get; }
     }
 
     public readonly struct AnimationBlendSpacePlayerRuntimeSnapshot
@@ -674,7 +692,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong GoalCompletionIdentity { get; }
     }
 
-    internal sealed class AnimationFootIkRuntimeSnapshotPage
+    internal sealed class AnimationFootPlacementRuntimeSnapshotPage
     {
         internal CharacterFootLandingPredictionDiagnostics LandingPrediction;
         internal CharacterFullBodyIkSolverDiagnostics Solver;
@@ -690,18 +708,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
     }
 
-    public readonly struct AnimationFootIkRuntimeSnapshot
+    public readonly struct AnimationFootPlacementRuntimeSnapshot
     {
         static readonly CharacterFootLandingPredictionDiagnostics s_DefaultLandingPrediction;
         static readonly CharacterFullBodyIkSolverDiagnostics s_DefaultSolver;
         static readonly CharacterFullBodyIkEffectorDiagnostics s_DefaultEffector;
 
-        readonly AnimationFootIkRuntimeSnapshotPage m_Page;
+        readonly AnimationFootPlacementRuntimeSnapshotPage m_Page;
         readonly FinalAnimationPoseFramePageLease m_Lease;
         readonly ulong m_LeaseIdentity;
 
-        internal AnimationFootIkRuntimeSnapshot(
-            AnimationFootIkRuntimeSnapshotPage page,
+        internal AnimationFootPlacementRuntimeSnapshot(
+            AnimationFootPlacementRuntimeSnapshotPage page,
             FinalAnimationPoseFramePageLease lease,
             ulong leaseIdentity)
         {
@@ -831,7 +849,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly float[] m_SlotContributionBoneWeights;
         readonly float[] m_OperationContributionBoneWeights;
         readonly float[] m_FinalContributionBoneWeights;
-        readonly AnimationFootIkRuntimeSnapshot m_FootIk;
+        readonly AnimationFootPlacementRuntimeSnapshot m_FootPlacement;
         readonly int m_StackCount;
         readonly int m_InertializationCount;
         readonly int m_EntryCount;
@@ -864,10 +882,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong poseGraphCompletedAt,
             ulong finalAppliedAt,
             ulong continuityIdentity,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures,
+            AnimationBiomechanicalStepReadPage leftFootSteps,
+            AnimationBiomechanicalStepReadPage rightFootSteps,
             bool hasFootFeatures,
-            AnimationFootIkRuntimeSnapshot footIk,
+            AnimationFootPlacementRuntimeSnapshot footPlacement,
             int physicalBoneCount,
             int virtualBoneCount,
             int poseBoneCount,
@@ -941,10 +959,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PoseGraphCompletedAt = poseGraphCompletedAt;
             FinalAppliedAt = finalAppliedAt;
             ContinuityIdentity = continuityIdentity;
-            LeftFootFeatures = leftFootFeatures;
-            RightFootFeatures = rightFootFeatures;
+            LeftFootSteps = leftFootSteps;
+            RightFootSteps = rightFootSteps;
             HasFootFeatures = hasFootFeatures;
-            m_FootIk = footIk;
+            m_FootPlacement = footPlacement;
             PhysicalBoneCount = physicalBoneCount;
             VirtualBoneCount = virtualBoneCount;
             PoseBoneCount = poseBoneCount;
@@ -1020,10 +1038,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong PoseGraphCompletedAt { get; }
         public ulong FinalAppliedAt { get; }
         public ulong ContinuityIdentity { get; }
-        public AnimationFootFeatureSample LeftFootFeatures { get; }
-        public AnimationFootFeatureSample RightFootFeatures { get; }
+        public AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
+        public AnimationBiomechanicalStepReadPage RightFootSteps { get; }
         public bool HasFootFeatures { get; }
-        public AnimationFootIkRuntimeSnapshot FootIk => m_FootIk;
+        public AnimationFootPlacementRuntimeSnapshot FootPlacement => m_FootPlacement;
         public int PhysicalBoneCount { get; }
         public int VirtualBoneCount { get; }
         public int PoseBoneCount { get; }

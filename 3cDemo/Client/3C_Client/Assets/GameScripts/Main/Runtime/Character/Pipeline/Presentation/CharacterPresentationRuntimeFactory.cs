@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             IReadOnlyList<CameraTargetBinding> cameraTargetBindings,
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
-            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
+            ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return CreateLocalOwner(
@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 inputAdapter,
                 lookInputId,
                 null,
-                futureBodyTrajectorySource,
+                futureBodyTranslationSource,
                 diagnostics);
         }
 
@@ -86,7 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
-            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
+            ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return Create(
@@ -109,7 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 inputAdapter,
                 lookInputId,
                 equipmentRigCatalog,
-                futureBodyTrajectorySource,
+                futureBodyTranslationSource,
                 diagnostics);
         }
 
@@ -125,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
-            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
+            ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return CreateSimulatedActor(
@@ -141,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 worldAwareBinding,
                 physicsScene,
                 null,
-                futureBodyTrajectorySource,
+                futureBodyTranslationSource,
                 diagnostics);
         }
 
@@ -158,7 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
-            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
+            ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return Create(
@@ -181,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 null,
                 string.Empty,
                 equipmentRigCatalog,
-                futureBodyTrajectorySource,
+                futureBodyTranslationSource,
                 diagnostics);
         }
 
@@ -197,7 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
-            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
+            ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
             RuntimeDiagnosticsContext diagnostics)
         {
             return Create(
@@ -220,7 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 null,
                 string.Empty,
                 null,
-                futureBodyTrajectorySource,
+                futureBodyTranslationSource,
                 diagnostics);
         }
 
@@ -244,7 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
-            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource,
+            ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
             RuntimeDiagnosticsContext diagnostics)
         {
             if (contract == null)
@@ -323,14 +323,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     projection,
                     equipmentRigCatalog,
                     diagnostics);
-                if (projection.PosePlan.FootGroundings.Count == 1)
+                if (projection.PosePlan.FootPlacements.Count == 1)
                 {
                     if (!worldAwareBinding)
                         throw new ArgumentNullException(nameof(worldAwareBinding));
                     if (!physicsScene.IsValid())
                         throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
-                    CharacterPresentationFootGroundingDescriptor descriptor =
-                        projection.PosePlan.FootGroundings[0];
+                    CharacterPresentationFootPlacementDescriptor descriptor =
+                        projection.PosePlan.FootPlacements[0];
                     CharacterFootPlacementPublicationValidation.Require(projection, descriptor.Calibration);
                     CharacterFootPlacementPoseRig rig = new CharacterFootPlacementPoseRig(
                         descriptor.Calibration,
@@ -347,7 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         footPlacementSettings,
                         rig,
                         physicsScene,
-                        futureBodyTrajectorySource);
+                        futureBodyTranslationSource);
                 }
                 if (cameraRig)
                 {

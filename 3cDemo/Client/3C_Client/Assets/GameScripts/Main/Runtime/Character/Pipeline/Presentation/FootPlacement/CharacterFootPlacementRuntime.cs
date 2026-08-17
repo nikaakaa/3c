@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly ActorId m_ActorId;
         readonly CharacterFootPlacementRuntimeSettings m_Settings;
         readonly CharacterFootPlacementPoseRig m_Rig;
-        readonly ICharacterFutureBodyTrajectorySource m_FutureBodyTrajectorySource;
+        readonly ICharacterFutureBodyTranslationSource m_FutureBodyTranslationSource;
         readonly CharacterFootPlacementWorldQueryBackend m_WorldBackend;
         readonly ICharacterFootLandingWorldQuery m_LandingWorld;
 
@@ -25,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementRuntimeSettings settings,
             CharacterFootPlacementPoseRig rig,
             PhysicsScene physicsScene,
-            ICharacterFutureBodyTrajectorySource futureBodyTrajectorySource)
+            ICharacterFutureBodyTranslationSource futureBodyTranslationSource)
         {
             if (!actorId.IsValid || settings == null || rig == null ||
                 !physicsScene.IsValid())
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_ActorId = actorId;
             m_Settings = settings;
             m_Rig = rig;
-            m_FutureBodyTrajectorySource = futureBodyTrajectorySource;
+            m_FutureBodyTranslationSource = futureBodyTranslationSource;
             m_WorldBackend = new CharacterFootPlacementWorldQueryBackend(
                 physicsScene,
                 rig,
@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.Pose.PosePlanHash,
                     m_Settings.PosePlanHash,
                     StringComparison.Ordinal) ||
-                goalOutput.Length != CharacterPresentationFootGroundingDescriptor.GoalCount ||
+                goalOutput.Length != CharacterPresentationFootPlacementDescriptor.GoalCount ||
                 goalOffset < 0 || producerOperationIndex < 0 ||
                 producerCallSiteIndex < 0 || parameterIndex < 0 ||
                 parameterIndex >= frame.Pose.PoseParameters.Length ||
@@ -84,18 +84,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSide.Right,
                 pose.Right);
 
-            m_WorldBackend.BeginFrame();
+            CharacterPresentationFactFrame facts = frame.Facts;
+            CommittedLocomotionPlanarMotionTimeline timeline =
+                facts.LocomotionMotionTimeline;
+            float currentSegmentRemainingSeconds = timeline.IsValid
+                ? ResolveCurrentSegmentRemainingSeconds(timeline, frame.Body)
+                : 0f;
+            var inputDiagnostics = new CharacterFootLandingPredictionInputDiagnostics(
+                frame.PresentationDeltaSeconds,
+                frame.Body,
+                in timeline,
+                currentSegmentRemainingSeconds);
+
             CharacterFootLandingPredictionFootDiagnostics left = PredictFoot(
                 CharacterFootSide.Left,
-                frame.Pose.LeftFootFeatures,
+                frame.Pose.LeftFootSteps,
                 pose.Left,
                 leftGoal,
+                in timeline,
+                currentSegmentRemainingSeconds,
                 in frame);
             CharacterFootLandingPredictionFootDiagnostics right = PredictFoot(
                 CharacterFootSide.Right,
-                frame.Pose.RightFootFeatures,
+                frame.Pose.RightFootSteps,
                 pose.Right,
                 rightGoal,
+                in timeline,
+                currentSegmentRemainingSeconds,
                 in frame);
 
             goalOutput[0] = pelvisGoal;
@@ -105,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.RenderFrame,
                 frame.Pose.CompletionIdentity,
                 m_Rig.VisualRoot.GetInstanceID(),
+                inputDiagnostics,
                 pelvisGoal,
                 left,
                 right);
@@ -118,7 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 producerOperationIndex,
                 producerCallSiteIndex,
                 goalOffset,
-                CharacterPresentationFootGroundingDescriptor.GoalCount,
+                CharacterPresentationFootPlacementDescriptor.GoalCount,
                 CharacterFullBodyIkGoalSetAvailability.Ready);
         }
 
@@ -181,18 +197,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterFootLandingPredictionFootDiagnostics PredictFoot(
             CharacterFootSide side,
-            AnimationFootFeatureSample feature,
+            AnimationBiomechanicalStepReadPage steps,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             CharacterFullBodyIkGoal goal,
+            in CommittedLocomotionPlanarMotionTimeline timeline,
+            float currentSegmentRemainingSeconds,
             in CharacterFootPlacementFrameInput frame)
         {
             Vector3 currentSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
-            if (!TrySelectStep(feature, side, out AnimationPredictedFootStepSample step,
+            if (!TrySelectStep(steps, out AnimationBiomechanicalStepHeader step,
+                    out CharacterFootLandingStepSource stepSource,
                     out CharacterFootLandingPredictionRejectReason stepFailure))
             {
                 return Rejected(
                     side,
                     stepFailure,
+                    stepSource,
                     default,
                     0,
                     currentSole,
@@ -207,6 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return Rejected(
                     side,
                     CharacterFootLandingPredictionRejectReason.LandingTimeInvalid,
+                    stepSource,
                     step,
                     0,
                     currentSole,
@@ -214,13 +235,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     goal);
             }
-            CommittedLocomotionPlanarMotionTimeline timeline =
-                frame.Facts.LocomotionMotionTimeline;
             if (!timeline.IsValid)
             {
                 return Rejected(
                     side,
                     CharacterFootLandingPredictionRejectReason.MotionTimelineUnavailable,
+                    stepSource,
                     step,
                     0,
                     currentSole,
@@ -228,11 +248,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     goal);
             }
-            if (m_FutureBodyTrajectorySource == null)
+            if (m_FutureBodyTranslationSource == null)
             {
                 return Rejected(
                     side,
-                    CharacterFootLandingPredictionRejectReason.FutureBodyUnavailable,
+                    CharacterFootLandingPredictionRejectReason.FutureBodyTranslationUnavailable,
+                    stepSource,
                     step,
                     timeline.Generation,
                     currentSole,
@@ -241,32 +262,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     goal);
             }
 
-            float remainingSeconds = ResolveCurrentSegmentRemainingSeconds(
-                timeline,
-                frame.Body);
-            float curvature = frame.Facts.TrajectoryCurvatureAvailable
-                ? frame.Facts.TrajectoryCurvatureDegreesPerSecond
-                : timeline.YawVelocityDegreesPerSecond;
-            var trajectoryRequest = new CharacterFutureBodyTrajectoryRequest(
+            var translationRequest = new CharacterFutureBodyTranslationRequest(
                 m_ActorId,
                 step.TimeToLandingSeconds,
-                timeline.CurrentVelocityX,
-                timeline.CurrentVelocityZ,
+                frame.Body.TargetVelocity.x,
+                frame.Body.TargetVelocity.z,
                 timeline.ContinuationVelocityX,
                 timeline.ContinuationVelocityZ,
-                remainingSeconds,
-                timeline.HasContinuation,
-                curvature,
-                timeline.YawVelocityDegreesPerSecond,
-                timeline.MaximumYawVelocityDegreesPerSecond);
-            if (!m_FutureBodyTrajectorySource.TryPredict(
-                    in trajectoryRequest,
-                    out CharacterFutureBodyTrajectory trajectory) ||
-                trajectory == null)
+                currentSegmentRemainingSeconds,
+                timeline.HasContinuation);
+            if (!m_FutureBodyTranslationSource.TryPredict(
+                    in translationRequest,
+                    out CharacterFutureBodyTranslation translation) ||
+                translation == null)
             {
                 return Rejected(
                     side,
-                    CharacterFootLandingPredictionRejectReason.FutureBodyUnavailable,
+                    CharacterFootLandingPredictionRejectReason.FutureBodyTranslationUnavailable,
+                    stepSource,
                     step,
                     timeline.Generation,
                     currentSole,
@@ -274,11 +287,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     goal);
             }
-            if (trajectory.DurationSeconds + 0.0001f < step.TimeToLandingSeconds)
+            if (translation.DurationSeconds + 0.0001f < step.TimeToLandingSeconds)
             {
                 return Rejected(
                     side,
-                    CharacterFootLandingPredictionRejectReason.FutureBodyRangeInvalid,
+                    CharacterFootLandingPredictionRejectReason.FutureBodyTranslationRangeInvalid,
+                    stepSource,
                     step,
                     timeline.Generation,
                     currentSole,
@@ -287,14 +301,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     goal);
             }
 
-            CharacterFutureBodyTrajectorySample bodySample =
-                trajectory.Evaluate(step.TimeToLandingSeconds);
+            CharacterFutureBodyTranslationSample bodyTranslation =
+                translation.Evaluate(step.TimeToLandingSeconds);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
             Vector3 rawLanding = CharacterFootLandingPredictor.ProjectRawLanding(
                 frame.Body.VisiblePosition,
                 frame.Body.VisibleRotation,
-                componentUp,
-                in bodySample,
+                in bodyTranslation,
                 step.RootLocalLanding);
             bool accepted = CharacterFootLandingPredictor.TryResolve(
                 side,
@@ -312,11 +325,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 accepted
                     ? CharacterFootLandingPredictionRejectReason.None
                     : CharacterFootLandingPredictionRejectReason.GroundQueryMissed,
+                stepSource,
                 step.LandingEventIdentity,
                 timeline.Generation,
                 step.Confidence,
                 step.TimeToLandingSeconds,
                 step.RootLocalLanding,
+                true,
+                in bodyTranslation,
                 currentSole,
                 rawLanding,
                 query,
@@ -325,29 +341,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static bool TrySelectStep(
-            AnimationFootFeatureSample feature,
-            CharacterFootSide side,
-            out AnimationPredictedFootStepSample selected,
+            AnimationBiomechanicalStepReadPage steps,
+            out AnimationBiomechanicalStepHeader selected,
+            out CharacterFootLandingStepSource source,
             out CharacterFootLandingPredictionRejectReason failure)
         {
-            AnimationPredictedFootStepSample current = feature.PredictedStep;
-            AnimationPredictedFootStepSample incoming = feature.IncomingPredictedStep;
+            AnimationBiomechanicalStepHeader current = steps.CurrentStep;
+            AnimationBiomechanicalStepHeader incoming = steps.IncomingStep;
             if (current.IsAuthoritative && current.TimeToLandingSeconds > 0.000001f)
+            {
                 selected = current;
+                source = CharacterFootLandingStepSource.Current;
+            }
             else if (incoming.IsAuthoritative && incoming.TimeToLandingSeconds > 0.000001f)
+            {
                 selected = incoming;
+                source = CharacterFootLandingStepSource.Incoming;
+            }
             else
             {
                 selected = default;
+                source = CharacterFootLandingStepSource.None;
                 bool identityMismatch =
-                    current.HasLandingEvent && !current.HasConsistentLandingEventIdentity(side) ||
-                    incoming.HasLandingEvent && !incoming.HasConsistentLandingEventIdentity(side);
+                    current.HasLandingEvent && !current.HasConsistentLandingEventIdentity ||
+                    incoming.HasLandingEvent && !incoming.HasConsistentLandingEventIdentity;
                 failure = identityMismatch
                     ? CharacterFootLandingPredictionRejectReason.StepIdentityMismatch
                     : CharacterFootLandingPredictionRejectReason.StepUnavailable;
                 return false;
             }
-            if (!selected.HasConsistentLandingEventIdentity(side))
+            if (!selected.HasConsistentLandingEventIdentity)
             {
                 failure = CharacterFootLandingPredictionRejectReason.StepIdentityMismatch;
                 return false;
@@ -375,7 +398,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static CharacterFootLandingPredictionFootDiagnostics Rejected(
             CharacterFootSide side,
             CharacterFootLandingPredictionRejectReason reason,
-            AnimationPredictedFootStepSample step,
+            CharacterFootLandingStepSource stepSource,
+            AnimationBiomechanicalStepHeader step,
             ulong trajectoryGeneration,
             Vector3 currentSole,
             Vector3 rawLanding,
@@ -385,11 +409,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 side,
                 CharacterFootLandingPredictionState.Rejected,
                 reason,
+                stepSource,
                 step.IsValid ? step.LandingEventIdentity : 0,
                 trajectoryGeneration,
                 step.IsValid ? step.Confidence : 0f,
                 step.IsValid ? step.TimeToLandingSeconds : 0f,
                 step.IsValid ? step.RootLocalLanding : default,
+                false,
+                default,
                 currentSole,
                 rawLanding,
                 query,
@@ -404,8 +431,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 0f,
                 CharacterFullBodyIkGoalApplication.PelvisPreSolveTranslation,
-                CharacterFullBodyIkGoalSourceKind.FootGrounding |
-                CharacterFullBodyIkGoalSourceKind.PredictiveExtension,
+                CharacterFullBodyIkGoalSourceKind.FootPlacement,
                 -1);
 
         CharacterFullBodyIkGoal CreateFootGoal(
@@ -422,8 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 0f,
                 CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget,
-                CharacterFullBodyIkGoalSourceKind.FootGrounding |
-                CharacterFullBodyIkGoalSourceKind.PredictiveExtension,
+                CharacterFullBodyIkGoalSourceKind.FootPlacement,
                 -1);
         }
 

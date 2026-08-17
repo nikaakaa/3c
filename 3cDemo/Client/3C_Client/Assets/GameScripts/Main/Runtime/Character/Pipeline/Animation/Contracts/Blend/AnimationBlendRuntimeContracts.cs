@@ -586,6 +586,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        public ref readonly T ElementAt(int index)
+        {
+            RequireLease();
+            if ((uint)index >= (uint)m_Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return ref m_Buffer[m_Offset + index];
+        }
+
         void RequireLease()
         {
             m_Lease?.RequireValid(m_LeaseIdentity);

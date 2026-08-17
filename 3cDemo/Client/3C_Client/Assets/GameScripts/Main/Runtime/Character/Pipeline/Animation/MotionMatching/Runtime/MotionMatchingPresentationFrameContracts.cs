@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (string.IsNullOrWhiteSpace(providerId) || stateMachineIndex < 0 || stateIndex < 0 ||
                 playerIndex < 0 || !playerNodeId.IsValid ||
                 !demandGeneration.IsValid ||
-                !sourceSample.IsValid ||
+                sourceSample == null || !sourceSample.IsValid ||
                 sourceSample.ProviderId !=
                     new PresentationPoseSourceProviderId(providerId) ||
                 sourceSample.PlayerNodeId != playerNodeId ||

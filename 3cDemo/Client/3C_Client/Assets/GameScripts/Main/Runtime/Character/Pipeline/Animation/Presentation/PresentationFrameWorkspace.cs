@@ -194,7 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             PresentationPoseSourceSample sample)
         {
             RequireLease(lease);
-            if (!sample.IsValid ||
+            if (sample == null || !sample.IsValid ||
                 sample.FrameSequence != lease.PresentationFrame ||
                 !HasDemand(sample))
             {

@@ -300,8 +300,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationReadOnlyBuffer<float> PoseParameters { get; }
         public AnimationReadOnlyBuffer<byte> PoseParameterAvailability { get; }
         public AnimationReadOnlyBuffer<AnimationFootFeatureSample> FootFeatures { get; }
-        public AnimationFootFeatureSample LeftFootFeatures => FootFeatures[0];
-        public AnimationFootFeatureSample RightFootFeatures => FootFeatures[1];
+        public ref readonly AnimationFootFeatureSample LeftFootFeatures =>
+            ref FootFeatures.ElementAt(0);
+        public ref readonly AnimationFootFeatureSample RightFootFeatures =>
+            ref FootFeatures.ElementAt(1);
 
         public bool IsValid
         {

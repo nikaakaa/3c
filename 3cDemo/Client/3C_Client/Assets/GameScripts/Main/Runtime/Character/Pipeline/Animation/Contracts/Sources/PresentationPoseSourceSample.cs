@@ -111,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             TimeScale >= 0f;
     }
 
-    public readonly struct PresentationPoseSourceSample
+    public sealed class PresentationPoseSourceSample
     {
         PresentationPoseSourceSample(
             PresentationPoseSourceProviderId providerId,
@@ -129,8 +129,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationParameterPageId parameterPageId,
             AnimationReadOnlyBuffer<float> poseParameters,
             AnimationReadOnlyBuffer<byte> poseParameterAvailability,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures,
+            in AnimationFootFeatureSample leftFootFeatures,
+            in AnimationFootFeatureSample rightFootFeatures,
             bool hasFootFeatures,
             PresentationPoseSourceFailureReason failureReason)
         {
@@ -149,14 +149,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ParameterPageId = parameterPageId;
             PoseParameters = poseParameters;
             PoseParameterAvailability = poseParameterAvailability;
-            LeftFootFeatures = leftFootFeatures;
-            RightFootFeatures = rightFootFeatures;
+            m_LeftFootFeatures = leftFootFeatures;
+            m_RightFootFeatures = rightFootFeatures;
             HasFootFeatures = hasFootFeatures;
             FailureReason = failureReason;
             if (!IsValid)
                 throw new ArgumentException("Presentation Pose source sample is invalid.");
         }
 
+        readonly AnimationFootFeatureSample m_LeftFootFeatures;
+        readonly AnimationFootFeatureSample m_RightFootFeatures;
         public PresentationPoseSourceProviderId ProviderId { get; }
         public PoseNodeId PlayerNodeId { get; }
         public PresentationPoseSourceIndex SourceIndex { get; }
@@ -172,8 +174,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public PresentationParameterPageId ParameterPageId { get; }
         public AnimationReadOnlyBuffer<float> PoseParameters { get; }
         public AnimationReadOnlyBuffer<byte> PoseParameterAvailability { get; }
-        public AnimationFootFeatureSample LeftFootFeatures { get; }
-        public AnimationFootFeatureSample RightFootFeatures { get; }
+        public ref readonly AnimationFootFeatureSample LeftFootFeatures =>
+            ref m_LeftFootFeatures;
+        public ref readonly AnimationFootFeatureSample RightFootFeatures =>
+            ref m_RightFootFeatures;
         public bool HasFootFeatures { get; }
         public PresentationPoseSourceFailureReason FailureReason { get; }
 
@@ -290,8 +294,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationParameterPageId parameterPageId,
             AnimationReadOnlyBuffer<float> poseParameters,
             AnimationReadOnlyBuffer<byte> poseParameterAvailability,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures,
+            in AnimationFootFeatureSample leftFootFeatures,
+            in AnimationFootFeatureSample rightFootFeatures,
             bool hasFootFeatures)
         {
             return new PresentationPoseSourceSample(
@@ -310,8 +314,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 parameterPageId,
                 poseParameters,
                 poseParameterAvailability,
-                leftFootFeatures,
-                rightFootFeatures,
+                in leftFootFeatures,
+                in rightFootFeatures,
                 hasFootFeatures,
                 PresentationPoseSourceFailureReason.None);
         }
@@ -351,6 +355,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationPoseSourceAvailability availability,
             PresentationPoseSourceFailureReason failureReason)
         {
+            AnimationFootFeatureSample emptyLeft = default;
+            AnimationFootFeatureSample emptyRight = default;
             return new PresentationPoseSourceSample(
                 providerId,
                 playerNodeId,
@@ -367,8 +373,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 default,
                 default,
                 default,
-                default,
-                default,
+                in emptyLeft,
+                in emptyRight,
                 false,
                 failureReason);
         }

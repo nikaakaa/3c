@@ -36,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case "status":
                         return Success("Foot landing stair AD automation status.");
                     case "stop":
+                        GameplayLabFootIkKeyboardRouteDriver.ClearPending();
                         GameplayLabFootIkKeyboardRouteDriver.Stop();
                         return Success("Foot landing stair AD automation stopped.");
                     default:

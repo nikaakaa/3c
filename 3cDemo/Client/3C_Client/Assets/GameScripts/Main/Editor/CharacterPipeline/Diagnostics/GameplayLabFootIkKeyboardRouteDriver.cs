@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
@@ -18,6 +19,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const double SampleSeconds = 45d;
         const string PendingKey = "ThirdPerson.GameplayLab.StairAd.Pending.v2";
         const string PendingDeadlineKey = "ThirdPerson.GameplayLab.StairAd.PendingDeadline.v2";
+        const string RestartPendingKey = "ThirdPerson.GameplayLab.StairAd.RestartPending.v1";
+        const string CompletedKey = "ThirdPerson.GameplayLab.StairAd.Completed.v1";
         const float PendingTimeoutSeconds = 60f;
 
         static bool s_Active;
@@ -26,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static GameplayLabFootIkStairAdState s_State;
         static double s_StopTime;
         static string s_LastReport = string.Empty;
+        static bool s_HasCompletedRun;
 
         static GameplayLabFootIkKeyboardRouteDriver()
         {
@@ -55,6 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             EditorPrefs.SetBool(PendingKey, false);
             EditorPrefs.DeleteKey(PendingDeadlineKey);
+            EditorPrefs.SetBool(RestartPendingKey, false);
         }
 
         [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair AD/Start")]
@@ -72,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 try
                 {
                     GameplayLabLauncherState launcherState = operations.ReadState();
+                    EditorPrefs.SetBool(CompletedKey, false);
                     ArmPending();
                     EditorApplication.update -= StartAfterPlayMode;
                     EditorApplication.update += StartAfterPlayMode;
@@ -82,6 +88,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ClearPending();
                     throw;
                 }
+                return;
+            }
+            if (s_HasCompletedRun || EditorPrefs.GetBool(CompletedKey, false))
+            {
+                RestartAfterCompletedRun();
+                return;
+            }
+            if (!IsPending &&
+                !CharacterFootLandingPredictionSampler.IsCapturing &&
+                AnimationPresentationRuntimeTargetRegistry.Targets.Count > 0)
+            {
+                RestartAfterCompletedRun();
                 return;
             }
             if (CharacterFootLandingPredictionSampler.IsCapturing)
@@ -125,7 +143,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootLandingStep1Evaluator.Evaluate(
                         CharacterFootLandingPredictionSampler.LastSavedPath);
                 s_LastReport = report.Summary;
+                s_HasCompletedRun = true;
+                EditorPrefs.SetBool(CompletedKey, true);
                 Debug.Log("Foot Landing Stair AD " + report.Summary);
+            }
+        }
+
+        static void RestartAfterCompletedRun()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                EditorPrefs.SetBool(RestartPendingKey, true);
+                ArmPending();
+                s_HasCompletedRun = false;
+                EditorApplication.ExitPlaymode();
             }
         }
 
@@ -139,6 +170,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (state == PlayModeStateChange.EnteredEditMode && IsPending)
             {
+                if (EditorPrefs.GetBool(RestartPendingKey, false))
+                {
+                    EditorApplication.update -= RestartAfterEditMode;
+                    EditorApplication.update += RestartAfterEditMode;
+                    return;
+                }
                 EditorApplication.update -= StartAfterPlayMode;
                 EditorApplication.update += StartAfterPlayMode;
                 return;
@@ -147,8 +184,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 state == PlayModeStateChange.EnteredEditMode)
             {
                 EditorApplication.update -= StartAfterPlayMode;
-                ClearPending();
+                if (!EditorPrefs.GetBool(RestartPendingKey, false))
+                    ClearPending();
                 Stop();
+            }
+        }
+
+        static void RestartAfterEditMode()
+        {
+            if (!EditorPrefs.GetBool(RestartPendingKey, false))
+            {
+                EditorApplication.update -= RestartAfterEditMode;
+                return;
+            }
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+            try
+            {
+                IGameplayLabLauncherOperations operations = GameplayLabLauncherRegistry.Operations;
+                if (operations == null)
+                    throw new InvalidOperationException("GameplayLab launcher operations are not registered.");
+                GameplayLabLauncherState launcherState = operations.ReadState();
+                EditorPrefs.SetBool(CompletedKey, false);
+                EditorPrefs.SetBool(RestartPendingKey, false);
+                operations.Play(launcherState.SelectedVariantIndex);
+                EditorApplication.update -= RestartAfterEditMode;
+            }
+            catch (Exception exception)
+            {
+                if (EditorApplication.timeSinceStartup <
+                    EditorPrefs.GetFloat(PendingDeadlineKey, 0f))
+                    return;
+                EditorApplication.update -= RestartAfterEditMode;
+                ClearPending();
+                s_LastReport = exception.Message;
+                Debug.LogException(exception);
             }
         }
 

@@ -16,7 +16,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public static class GameplayLabFootIkKeyboardRouteDriver
     {
         const double SampleSeconds = 45d;
-        const string PendingKey = "ThirdPerson.GameplayLab.StairAd.Pending";
+        const string PendingKey = "ThirdPerson.GameplayLab.StairAd.Pending.v2";
+        const string PendingDeadlineKey = "ThirdPerson.GameplayLab.StairAd.PendingDeadline.v2";
+        const float PendingTimeoutSeconds = 60f;
 
         static bool s_Active;
         static bool s_OwnsSampling;
@@ -28,10 +30,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static GameplayLabFootIkKeyboardRouteDriver()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            EditorApplication.update -= StartAfterPlayMode;
+            if (IsPending)
+                EditorApplication.update += StartAfterPlayMode;
         }
 
         public static bool IsActive => s_Active;
-        public static bool IsPending => SessionState.GetBool(PendingKey, false);
+        public static bool IsPending => EditorPrefs.GetBool(PendingKey, false);
         public static GameplayLabFootIkStairAdPhase Phase => s_State.Phase;
         public static int Lap => s_State.Lap;
         public static double SampleSecondsValue => SampleSeconds;
@@ -39,13 +44,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static void ArmPending()
         {
-            SessionState.SetBool(PendingKey, true);
+            EditorPrefs.SetBool(PendingKey, true);
+            EditorPrefs.SetFloat(
+                PendingDeadlineKey,
+                (float)EditorApplication.timeSinceStartup + PendingTimeoutSeconds);
             s_LastReport = "Starting Gameplay Lab...";
         }
 
         public static void ClearPending()
         {
-            SessionState.SetBool(PendingKey, false);
+            EditorPrefs.SetBool(PendingKey, false);
+            EditorPrefs.DeleteKey(PendingDeadlineKey);
         }
 
         [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair AD/Start")]
@@ -64,6 +73,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     GameplayLabLauncherState launcherState = operations.ReadState();
                     ArmPending();
+                    EditorApplication.update -= StartAfterPlayMode;
+                    EditorApplication.update += StartAfterPlayMode;
                     operations.Play(launcherState.SelectedVariantIndex);
                 }
                 catch
@@ -90,13 +101,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair AD/Stop")]
+        public static void StopFromMenu()
+        {
+            ClearPending();
+            Stop();
+        }
+
         public static void Stop()
         {
             if (!s_Active)
-            {
-                ClearPending();
                 return;
-            }
             EditorApplication.update -= Tick;
             ReleaseKeys();
             s_Active = false;
@@ -122,6 +136,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorApplication.update += StartAfterPlayMode;
                 return;
             }
+            if (state == PlayModeStateChange.EnteredEditMode && IsPending)
+            {
+                EditorApplication.update -= StartAfterPlayMode;
+                EditorApplication.update += StartAfterPlayMode;
+                return;
+            }
             if (state == PlayModeStateChange.ExitingPlayMode ||
                 state == PlayModeStateChange.EnteredEditMode)
             {
@@ -133,9 +153,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void StartAfterPlayMode()
         {
-            if (!EditorApplication.isPlaying || s_Active)
+            if (!IsPending || s_Active)
             {
                 EditorApplication.update -= StartAfterPlayMode;
+                return;
+            }
+            if (!EditorApplication.isPlaying)
+            {
+                if (EditorApplication.timeSinceStartup >=
+                    EditorPrefs.GetFloat(PendingDeadlineKey, 0f) &&
+                    !EditorApplication.isPlayingOrWillChangePlaymode)
+                {
+                    EditorApplication.update -= StartAfterPlayMode;
+                    ClearPending();
+                    s_LastReport = "Gameplay Lab PlayMode start timed out.";
+                }
                 return;
             }
             try
@@ -149,7 +181,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             catch (Exception exception)
             {
-                if (EditorApplication.timeSinceStartup < 8d)
+                if (EditorApplication.timeSinceStartup <
+                    EditorPrefs.GetFloat(PendingDeadlineKey, 0f))
                     return;
                 EditorApplication.update -= StartAfterPlayMode;
                 ClearPending();

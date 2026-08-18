@@ -49,10 +49,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static SuccessResponse Success(string message)
+        static object Success(string message)
         {
-            return new SuccessResponse(message, new
+            return new
             {
+                success = true,
+                message,
+                data = new
+                {
                 active = GameplayLabFootIkKeyboardRouteDriver.IsActive,
                 pending = GameplayLabFootIkKeyboardRouteDriver.IsPending,
                 phase = GameplayLabFootIkKeyboardRouteDriver.Phase.ToString(),
@@ -60,7 +64,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 sampling = CharacterFootLandingPredictionSampler.IsCapturing,
                 saved_path = CharacterFootLandingPredictionSampler.LastSavedPath,
                 report = GameplayLabFootIkKeyboardRouteDriver.LastReport
-            });
+                }
+            };
         }
     }
 }

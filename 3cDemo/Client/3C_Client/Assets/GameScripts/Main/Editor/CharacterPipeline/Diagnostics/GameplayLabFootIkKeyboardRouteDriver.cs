@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [InitializeOnLoad]
     public static class GameplayLabFootIkKeyboardRouteDriver
     {
-        const float SampleSeconds = 45d;
+        const double SampleSeconds = 45d;
 
         static bool s_Active;
         static GameplayLabFootIkStairAdPlan s_Plan;

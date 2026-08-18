@@ -3,6 +3,7 @@ using System.IO;
 using ThirdPerson.ProductStartup;
 using ThirdPersonCharacter.Editor.ProductBuild;
 using ThirdPersonCharacter.Editor.ProductStartup;
+using ThirdPersonCharacter.Pipeline.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -56,6 +57,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         string[] m_LabVariantLabels = Array.Empty<string>();
         int m_LabVariantIndex;
         Vector2 m_Scroll;
+        string m_Step1Report = string.Empty;
+        double m_AutoSampleStopTime;
 
         [MenuItem("Tools/3C/Launcher", false, -1000)]
         public static void Open()
@@ -69,6 +72,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             m_BuildTarget = EditorUserBuildSettings.activeBuildTarget;
             RefreshGameplayLab();
+        }
+
+        void OnDisable()
+        {
+            EditorApplication.update -= TickAutoSample;
+            m_AutoSampleStopTime = 0d;
         }
 
         void OnGUI()
@@ -202,6 +211,67 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             RefreshGameplayLab();
                         });
                 }
+                EditorGUILayout.Space(6f);
+                DrawFootLandingSampling();
+            }
+        }
+
+        void DrawFootLandingSampling()
+        {
+            bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
+            string savedPath = CharacterFootLandingPredictionSampler.LastSavedPath;
+            EditorGUILayout.LabelField(
+                "Foot Landing Sampling",
+                capturing ? "Recording" : "Idle");
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(
+                           EditorApplication.isCompiling ||
+                           !EditorApplication.isPlaying ||
+                           capturing))
+                {
+                    if (GUILayout.Button("Start Sampling"))
+                        ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
+                }
+                using (new EditorGUI.DisabledScope(EditorApplication.isCompiling || !capturing))
+                {
+                    if (GUILayout.Button("Stop and Save CSV"))
+                        ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
+                }
+                using (new EditorGUI.DisabledScope(
+                           string.IsNullOrEmpty(savedPath) || !File.Exists(savedPath)))
+                {
+                    if (GUILayout.Button("Reveal CSV"))
+                        EditorUtility.RevealInFinder(savedPath);
+                }
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(
+                           EditorApplication.isCompiling ||
+                           !EditorApplication.isPlaying ||
+                           capturing ||
+                           m_AutoSampleStopTime > 0d))
+                {
+                    if (GUILayout.Button("Auto Sample 8s then Score"))
+                        StartAutoSample();
+                }
+                using (new EditorGUI.DisabledScope(
+                           string.IsNullOrEmpty(savedPath) || !File.Exists(savedPath)))
+                {
+                    if (GUILayout.Button("Score Last CSV"))
+                        ScoreLastCsv();
+                }
+            }
+            if (!string.IsNullOrEmpty(m_Step1Report))
+                EditorGUILayout.HelpBox(m_Step1Report, MessageType.Info);
+            if (!string.IsNullOrEmpty(savedPath))
+            {
+                EditorGUILayout.LabelField("Last CSV");
+                EditorGUILayout.SelectableLabel(
+                    savedPath,
+                    EditorStyles.textField,
+                    GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
         }
 
@@ -379,6 +449,54 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Debug.LogException(exception);
                 EditorUtility.DisplayDialog("3C Launcher", exception.Message, "OK");
             }
+        }
+
+        static void ExecuteSampling(Action action)
+        {
+            if (action == null || EditorApplication.isCompiling)
+                return;
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorUtility.DisplayDialog("3C Launcher", exception.Message, "OK");
+            }
+        }
+
+        void StartAutoSample()
+        {
+            ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
+            m_AutoSampleStopTime = EditorApplication.timeSinceStartup + 8d;
+            m_Step1Report = "Auto sampling 8s... walk the stairs now.";
+            EditorApplication.update -= TickAutoSample;
+            EditorApplication.update += TickAutoSample;
+        }
+
+        void TickAutoSample()
+        {
+            if (m_AutoSampleStopTime <= 0d ||
+                EditorApplication.timeSinceStartup < m_AutoSampleStopTime)
+            {
+                return;
+            }
+            EditorApplication.update -= TickAutoSample;
+            m_AutoSampleStopTime = 0d;
+            ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
+            ScoreLastCsv();
+            Repaint();
+        }
+
+        void ScoreLastCsv()
+        {
+            CharacterFootLandingStep1Report report =
+                CharacterFootLandingStep1Evaluator.Evaluate(
+                    CharacterFootLandingPredictionSampler.LastSavedPath);
+            m_Step1Report = report.Summary;
+            Debug.Log("Foot Landing Step1 " + report.Summary);
+            Repaint();
         }
     }
 }

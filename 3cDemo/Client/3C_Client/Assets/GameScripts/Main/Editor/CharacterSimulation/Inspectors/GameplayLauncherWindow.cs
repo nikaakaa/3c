@@ -256,6 +256,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 {
                     if (GUILayout.Button("Auto Sample 8s then Score"))
                         StartAutoSample();
+                }
+                using (new EditorGUI.DisabledScope(
+                           EditorApplication.isCompiling ||
+                           EditorApplication.isPlayingOrWillChangePlaymode &&
+                           !EditorApplication.isPlaying ||
+                           capturing ||
+                           GameplayLabFootIkKeyboardRouteDriver.IsActive ||
+                           GameplayLabFootIkKeyboardRouteDriver.IsPending ||
+                           m_AutoSampleStopTime > 0d))
+                {
                     if (GUILayout.Button("Auto Walk Stairs AD Sample"))
                         StartStairAdSample();
                 }
@@ -272,6 +282,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     $"Stair AD drive {GameplayLabFootIkKeyboardRouteDriver.Phase} lap {GameplayLabFootIkKeyboardRouteDriver.Lap}",
                     MessageType.Info);
             }
+            else if (GameplayLabFootIkKeyboardRouteDriver.IsPending)
+            {
+                EditorGUILayout.HelpBox("Starting Gameplay Lab for stair AD sample...", MessageType.Info);
+            }
+            if (!string.IsNullOrEmpty(GameplayLabFootIkKeyboardRouteDriver.LastReport))
+                EditorGUILayout.HelpBox(GameplayLabFootIkKeyboardRouteDriver.LastReport, MessageType.Info);
             if (!string.IsNullOrEmpty(m_Step1Report))
                 EditorGUILayout.HelpBox(m_Step1Report, MessageType.Info);
             if (!string.IsNullOrEmpty(savedPath))
@@ -486,23 +502,30 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void StartStairAdSample()
         {
+            IGameplayLabLauncherOperations operations = GameplayLabLauncherRegistry.Operations;
+            if (operations == null)
+            {
+                EditorUtility.DisplayDialog("3C Launcher", "Gameplay Lab launcher module is not registered.", "OK");
+                return;
+            }
             try
             {
-                GameplayLabFootIkKeyboardRouteDriver.Start();
+                if (EditorApplication.isPlaying)
+                {
+                    GameplayLabFootIkKeyboardRouteDriver.Start();
+                    return;
+                }
+                GameplayLabFootIkKeyboardRouteDriver.ArmPending();
+                operations.Play(m_LabVariantIndex);
+                if (!EditorApplication.isPlayingOrWillChangePlaymode)
+                    GameplayLabFootIkKeyboardRouteDriver.ClearPending();
             }
             catch (Exception exception)
             {
+                GameplayLabFootIkKeyboardRouteDriver.ClearPending();
                 Debug.LogException(exception);
                 EditorUtility.DisplayDialog("3C Launcher", exception.Message, "OK");
-                return;
             }
-            ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
-            m_AutoSampleStopTime =
-                EditorApplication.timeSinceStartup +
-                GameplayLabFootIkKeyboardRouteDriver.SampleSecondsValue;
-            m_Step1Report = "Auto walking stairs with A/D...";
-            EditorApplication.update -= TickAutoSample;
-            EditorApplication.update += TickAutoSample;
         }
 
         void TickAutoSample()

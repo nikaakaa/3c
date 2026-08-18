@@ -178,6 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_MaximumSameEventVerticalJump = 0.12f;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
+        [SerializeField] float m_UnlockBlendSeconds = 0.12f;
         [SerializeField] float m_PelvisSpringFrequency = 6f;
 
         internal CharacterFootMotionSettings Build() =>
@@ -186,6 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_MaximumSameEventVerticalJump,
                 m_LockDistance,
                 m_SlideDistance,
+                m_UnlockBlendSeconds,
                 m_PelvisSpringFrequency);
     }
 
@@ -196,12 +198,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumSameEventVerticalJump,
             float lockDistance,
             float slideDistance,
+            float unlockBlendSeconds,
             float pelvisSpringFrequency)
         {
             LandingUpdateDistance = landingUpdateDistance;
             MaximumSameEventVerticalJump = maximumSameEventVerticalJump;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
+            UnlockBlendSeconds = unlockBlendSeconds;
             PelvisSpringFrequency = pelvisSpringFrequency;
             RequireValid();
         }
@@ -210,6 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float MaximumSameEventVerticalJump { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
+        internal float UnlockBlendSeconds { get; }
         internal float PelvisSpringFrequency { get; }
 
         internal void RequireValid()
@@ -220,6 +225,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LockDistance <= LandingUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
+                !float.IsFinite(UnlockBlendSeconds) ||
+                UnlockBlendSeconds <= 0f ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f)
             {
                 throw new InvalidOperationException(
@@ -233,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v22-critical-pelvis-spring";
+        public const string SchemaVersion = "character-foot-placement-profile/v23-support-lock";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

@@ -37,6 +37,7 @@ MonoBehaviour:
   m_FootMotion:
   m_LandingUpdateDistance: 0.005
   m_MaximumSameEventVerticalJump: 0.12
-  m_LockDistance: 0.08
+    m_LockDistance: 0.08
     m_SlideDistance: 0.2
+    m_UnlockBlendSeconds: 0.12
     m_PelvisSpringFrequency: 6

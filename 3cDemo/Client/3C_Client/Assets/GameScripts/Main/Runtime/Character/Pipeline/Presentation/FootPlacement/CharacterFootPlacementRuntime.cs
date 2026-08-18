@@ -267,6 +267,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterFootLandingPredictionDiagnostics m_PendingDiagnostics;
         CharacterFootPelvisSpringState m_CommittedPelvisSpring;
         CharacterFootPelvisSpringState m_PendingPelvisSpring;
+        CharacterFootSupportLockFacts m_CommittedLeftSupportLock;
+        CharacterFootSupportLockFacts m_CommittedRightSupportLock;
+        CharacterFootSupportLockFacts m_PendingLeftSupportLock;
+        CharacterFootSupportLockFacts m_PendingRightSupportLock;
         bool m_HasPendingFrame;
         bool m_Disposed;
 
@@ -365,6 +369,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_LeftLandingFacts.BeginPending();
             m_RightLandingFacts.BeginPending();
             m_PendingPelvisSpring = m_CommittedPelvisSpring;
+            m_PendingLeftSupportLock = m_CommittedLeftSupportLock;
+            m_PendingRightSupportLock = m_CommittedRightSupportLock;
 
             m_LeftLandingFacts.PromoteLanded(frame.Pose.LeftFootSteps.CurrentStep);
             m_RightLandingFacts.PromoteLanded(frame.Pose.RightFootSteps.CurrentStep);
@@ -476,7 +482,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentUp,
                     hasLeftLastLanding,
                     hasLeftLastLanding ? leftLastLanding.Point : default,
-                    m_Settings.FootMotion);
+                    m_Settings.FootMotion,
+                    frame.PresentationDeltaSeconds,
+                    ref m_PendingLeftSupportLock);
+            }
+            else
+            {
+                m_PendingLeftSupportLock.Clear();
             }
             if (facts.Grounded && !rightAction.IsOccupied && !rightCurrentStep.IsSwing)
             {
@@ -487,7 +499,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentUp,
                     hasRightLastLanding,
                     hasRightLastLanding ? rightLastLanding.Point : default,
-                    m_Settings.FootMotion);
+                    m_Settings.FootMotion,
+                    frame.PresentationDeltaSeconds,
+                    ref m_PendingRightSupportLock);
+            }
+            else
+            {
+                m_PendingRightSupportLock.Clear();
             }
             if (leftFootMotion.Accepted &&
                 leftFootMotion.PositionWeight > 0f &&
@@ -496,9 +514,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (Mathf.Abs(leftFootMotion.VerticalCorrection) >=
                     Mathf.Abs(rightFootMotion.VerticalCorrection))
+                {
                     rightFootMotion = default;
+                    m_PendingRightSupportLock.Clear();
+                }
                 else
+                {
                     leftFootMotion = default;
+                    m_PendingLeftSupportLock.Clear();
+                }
             }
             leftGoal = CreateFootGoal(
                 CharacterFootSide.Left,
@@ -575,11 +599,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             m_LastDiagnostics = m_PendingDiagnostics;
             m_CommittedPelvisSpring = m_PendingPelvisSpring;
+            m_CommittedLeftSupportLock = m_PendingLeftSupportLock;
+            m_CommittedRightSupportLock = m_PendingRightSupportLock;
             m_LeftGroundPath.Seal();
             m_RightGroundPath.Seal();
             m_LeftLandingFacts.Seal();
             m_RightLandingFacts.Seal();
             m_PendingPelvisSpring.Clear();
+            m_PendingLeftSupportLock.Clear();
+            m_PendingRightSupportLock.Clear();
             m_PendingDiagnostics = default;
             m_HasPendingFrame = false;
             CharacterFootLandingPredictionDebugRegistry.Publish(in m_LastDiagnostics);
@@ -593,6 +621,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_LeftLandingFacts.Discard();
             m_RightLandingFacts.Discard();
             m_PendingPelvisSpring.Clear();
+            m_PendingLeftSupportLock.Clear();
+            m_PendingRightSupportLock.Clear();
             m_PendingDiagnostics = default;
             m_HasPendingFrame = false;
         }
@@ -1053,6 +1083,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RightLandingFacts.Reset();
             m_CommittedPelvisSpring.Clear();
             m_PendingPelvisSpring.Clear();
+            m_CommittedLeftSupportLock.Clear();
+            m_CommittedRightSupportLock.Clear();
+            m_PendingLeftSupportLock.Clear();
+            m_PendingRightSupportLock.Clear();
         }
 
         void ClearBodyTrajectory()

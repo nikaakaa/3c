@@ -27,7 +27,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         DegeneratePath = 11,
         EnvelopeSampleUnavailable = 12,
         NegativeVerticalCorrection = 13,
-        InvalidSwingPhase = 14
+        InvalidSwingPhase = 14,
+        StanceLandingUnavailable = 15,
+        SupportOutsideSlideDistance = 16
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics
@@ -49,7 +51,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 correctedSole,
             Vector3 correctedAnkle,
             float positionWeight,
-            float rotationWeight)
+            float rotationWeight,
+            CharacterFootSupportLockState supportLockState = CharacterFootSupportLockState.None,
+            float supportHorizontalError = 0f,
+            float supportUnlockRemainingSeconds = 0f,
+            Vector3 supportUnlockCorrection = default)
         {
             State = state;
             RejectReason = rejectReason;
@@ -68,6 +74,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CorrectedAnkle = correctedAnkle;
             PositionWeight = positionWeight;
             RotationWeight = rotationWeight;
+            SupportLockState = supportLockState;
+            SupportHorizontalError = supportHorizontalError;
+            SupportUnlockRemainingSeconds = supportUnlockRemainingSeconds;
+            SupportUnlockCorrection = supportUnlockCorrection;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -87,6 +97,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 CorrectedAnkle { get; }
         public float PositionWeight { get; }
         public float RotationWeight { get; }
+        public CharacterFootSupportLockState SupportLockState { get; }
+        public float SupportHorizontalError { get; }
+        public float SupportUnlockRemainingSeconds { get; }
+        public Vector3 SupportUnlockCorrection { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 
@@ -292,9 +306,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 0f;
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
-            // Target already has the full envelope delta; IK weight must not rescale it by swing phase.
             float positionWeight = verticalCorrection > EndpointTolerance
-                ? footPlacementWeight * landingConstraintWeight
+                ? footPlacementWeight
                 : 0f;
             return new CharacterFootSwingMotionDiagnostics(
                 CharacterFootSwingMotionState.Accepted,

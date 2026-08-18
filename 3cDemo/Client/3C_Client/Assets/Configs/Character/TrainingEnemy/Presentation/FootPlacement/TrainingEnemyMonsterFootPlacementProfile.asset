@@ -23,3 +23,20 @@ MonoBehaviour:
     m_CastBelow: 0.75
     m_MaximumSurfaceSlopeDegrees: 55
     m_MaximumPredictionTimeSeconds: 2
+  m_GroundDetection:
+    m_GroundLayerMask:
+      serializedVersion: 2
+      m_Bits: 4608
+    m_SegmentHitCapacity: 16
+    m_ContactCapacity: 32
+    m_CapsuleRadius: 0.1
+    m_MaximumAxisSegmentLength: 0.18
+    m_CastAbove: 0.45
+    m_CastBelow: 0.85
+    m_MaximumReachableVerticalEdge: 0.3
+  m_FootMotion:
+  m_LandingUpdateDistance: 0.005
+  m_MaximumSameEventVerticalJump: 0.12
+  m_LockDistance: 0.08
+    m_SlideDistance: 0.2
+    m_PelvisSpringFrequency: 6

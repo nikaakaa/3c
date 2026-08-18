@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using UnityEditor;
@@ -47,12 +48,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SessionState.SetBool(PendingKey, false);
         }
 
+        [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair AD/Start")]
         public static void Start()
         {
             if (s_Active)
                 return;
             if (!EditorApplication.isPlaying)
-                throw new InvalidOperationException("GameplayLab stair AD drive requires Play Mode.");
+            {
+                if (EditorApplication.isPlayingOrWillChangePlaymode)
+                    return;
+                IGameplayLabLauncherOperations operations = GameplayLabLauncherRegistry.Operations;
+                if (operations == null)
+                    throw new InvalidOperationException("GameplayLab launcher operations are not registered.");
+                try
+                {
+                    GameplayLabLauncherState launcherState = operations.ReadState();
+                    ArmPending();
+                    operations.Play(launcherState.SelectedVariantIndex);
+                }
+                catch
+                {
+                    ClearPending();
+                    throw;
+                }
+                return;
+            }
+            if (CharacterFootLandingPredictionSampler.IsCapturing)
+                throw new InvalidOperationException("Foot Landing sampling is already active.");
             ClearPending();
             Scene scene = SceneManager.GetActiveScene();
             GameplayLabFootIkRegressionCourse.Resolve(scene, out Vector3 start, out Vector3 end);
@@ -60,20 +82,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_State = GameplayLabFootIkStairAdRoute.CreateState();
             s_StopTime = EditorApplication.timeSinceStartup + SampleSeconds;
             s_Active = true;
-            if (!CharacterFootLandingPredictionSampler.IsCapturing)
-            {
-                CharacterFootLandingPredictionSampler.StartSampling();
-                s_OwnsSampling = true;
-            }
+            CharacterFootLandingPredictionSampler.StartSampling();
+            s_OwnsSampling = true;
             s_LastReport = "Auto walking stairs with A/D...";
             EditorApplication.update -= Tick;
             EditorApplication.update += Tick;
         }
 
+        [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair AD/Stop")]
         public static void Stop()
         {
             if (!s_Active)
+            {
+                ClearPending();
                 return;
+            }
             EditorApplication.update -= Tick;
             ReleaseKeys();
             s_Active = false;
@@ -220,10 +243,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null)
                 throw new InvalidOperationException("GameplayLab stair AD drive requires Keyboard.current.");
-            SetKey(keyboard.aKey, keys.A);
-            SetKey(keyboard.dKey, keys.D);
-            SetKey(keyboard.wKey, keys.W);
-            SetKey(keyboard.sKey, keys.S);
+            QueueKeys(keyboard, keys.A, keys.D, keys.W, keys.S);
         }
 
         static void ReleaseKeys()
@@ -231,15 +251,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null || !keyboard.added)
                 return;
-            SetKey(keyboard.aKey, false);
-            SetKey(keyboard.dKey, false);
-            SetKey(keyboard.wKey, false);
-            SetKey(keyboard.sKey, false);
+            QueueKeys(keyboard, false, false, false, false);
         }
 
-        static void SetKey(KeyControl key, bool pressed)
+        static void QueueKeys(Keyboard keyboard, bool a, bool d, bool w, bool s)
         {
-            InputState.Change(key, pressed ? 1f : 0f, InputState.currentUpdateType);
+            KeyboardState state = default;
+            for (int i = 0; i < keyboard.allKeys.Count; i++)
+            {
+                KeyControl key = keyboard.allKeys[i];
+                if (key != null && key.isPressed)
+                    state.Press(key.keyCode);
+            }
+            state.Set(Key.A, a);
+            state.Set(Key.D, d);
+            state.Set(Key.W, w);
+            state.Set(Key.S, s);
+            InputSystem.QueueStateEvent(keyboard, state);
         }
     }
 }

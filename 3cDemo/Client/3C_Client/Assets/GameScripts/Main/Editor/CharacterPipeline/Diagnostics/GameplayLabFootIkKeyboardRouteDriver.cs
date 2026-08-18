@@ -15,11 +15,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public static class GameplayLabFootIkKeyboardRouteDriver
     {
         const double SampleSeconds = 45d;
+        const string PendingKey = "ThirdPerson.GameplayLab.StairAd.Pending";
 
         static bool s_Active;
+        static bool s_OwnsSampling;
         static GameplayLabFootIkStairAdPlan s_Plan;
         static GameplayLabFootIkStairAdState s_State;
         static double s_StopTime;
+        static string s_LastReport = string.Empty;
 
         static GameplayLabFootIkKeyboardRouteDriver()
         {
@@ -27,9 +30,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public static bool IsActive => s_Active;
+        public static bool IsPending => SessionState.GetBool(PendingKey, false);
         public static GameplayLabFootIkStairAdPhase Phase => s_State.Phase;
         public static int Lap => s_State.Lap;
         public static double SampleSecondsValue => SampleSeconds;
+        public static string LastReport => s_LastReport;
+
+        public static void ArmPending()
+        {
+            SessionState.SetBool(PendingKey, true);
+            s_LastReport = "Starting Gameplay Lab...";
+        }
+
+        public static void ClearPending()
+        {
+            SessionState.SetBool(PendingKey, false);
+        }
 
         public static void Start()
         {
@@ -37,12 +53,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             if (!EditorApplication.isPlaying)
                 throw new InvalidOperationException("GameplayLab stair AD drive requires Play Mode.");
+            ClearPending();
             Scene scene = SceneManager.GetActiveScene();
             GameplayLabFootIkRegressionCourse.Resolve(scene, out Vector3 start, out Vector3 end);
             s_Plan = GameplayLabFootIkStairAdRoute.Create(start, end);
             s_State = GameplayLabFootIkStairAdRoute.CreateState();
             s_StopTime = EditorApplication.timeSinceStartup + SampleSeconds;
             s_Active = true;
+            if (!CharacterFootLandingPredictionSampler.IsCapturing)
+            {
+                CharacterFootLandingPredictionSampler.StartSampling();
+                s_OwnsSampling = true;
+            }
+            s_LastReport = "Auto walking stairs with A/D...";
             EditorApplication.update -= Tick;
             EditorApplication.update += Tick;
         }
@@ -55,13 +78,61 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ReleaseKeys();
             s_Active = false;
             s_StopTime = 0d;
+            if (s_OwnsSampling)
+            {
+                s_OwnsSampling = false;
+                if (CharacterFootLandingPredictionSampler.IsCapturing)
+                    CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+                CharacterFootLandingStep1Report report =
+                    CharacterFootLandingStep1Evaluator.Evaluate(
+                        CharacterFootLandingPredictionSampler.LastSavedPath);
+                s_LastReport = report.Summary;
+                Debug.Log("Foot Landing Stair AD " + report.Summary);
+            }
         }
 
         static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
+            if (state == PlayModeStateChange.EnteredPlayMode && IsPending)
+            {
+                EditorApplication.update -= StartAfterPlayMode;
+                EditorApplication.update += StartAfterPlayMode;
+                return;
+            }
             if (state == PlayModeStateChange.ExitingPlayMode ||
                 state == PlayModeStateChange.EnteredEditMode)
+            {
+                EditorApplication.update -= StartAfterPlayMode;
+                ClearPending();
                 Stop();
+            }
+        }
+
+        static void StartAfterPlayMode()
+        {
+            if (!EditorApplication.isPlaying || s_Active)
+            {
+                EditorApplication.update -= StartAfterPlayMode;
+                return;
+            }
+            try
+            {
+                GameplayLabFootIkRegressionCourse.Resolve(
+                    SceneManager.GetActiveScene(),
+                    out _,
+                    out _);
+                Start();
+                EditorApplication.update -= StartAfterPlayMode;
+            }
+            catch (Exception exception)
+            {
+                if (EditorApplication.timeSinceStartup < 8d)
+                    return;
+                EditorApplication.update -= StartAfterPlayMode;
+                ClearPending();
+                s_LastReport = exception.Message;
+                Debug.LogException(exception);
+            }
         }
 
         static void Tick()

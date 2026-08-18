@@ -9,6 +9,7 @@
 3. 在 Launcher 面板启动 Foot Landing Sampling，记录本次 CSV 路径、角色 Rig identity、Profile identity、采样开始和结束时间。
 4. 先确认 Console 没有 `AnimationPresentationDiagnosticsInterest`、目标缺失、Goal ABI 或 PhysicsScene 错误；有错误时本轮全部作废。
 5. 每一个通过条件都要同时满足：Scene 中的人眼结果、Foot Placement Goal、唯一 FullBodyIK、Final Writer 和 Physical Bone 属于相同 Frame、Completion、Rig lineage。
+6. CSV 必须能看到同帧 `CharacterPresentationFactFrame.Grounded/HorizontalSpeed`，以及从 Pose Contribution 解析的左右 `ActionInstanceId/FootWeight`；缺失时动作占用和跑步朝向结论无效。
 
 当前已有的采样只能证明摆动脚链：`FinalGoalPositionWeight > 0`、`FinalIkSucceeded = 1`、`FinalIkFailure = None`、最终物理踝骨 residual 接近零、`GroundPathHasInvalidSegment = 0`。它不能证明本 change 后续四类目标已经接入。
 
@@ -32,8 +33,11 @@
 - `LandingEventIdentity` 连续帧不变时，`GroundPathNextSwingLandingSurfaceIdentity` 不得在 Accepted 记录中换值。
 - 高度差 `abs(dot(NewAccepted - CachedAccepted, ComponentUp))` 不得超过 `MaximumSameEventVerticalJump`。
 - 换级帧必须有 typed rejection/Warning，且不得把被拒命中写入 `GroundPathNextSwingLandingX/Y/Z`。
-- Event 完成后，`GroundPathLastLandingEventIdentity` 才能变成刚完成的事件 identity。
-- `GroundPathQueryExecuted` 每个有效表现帧最多为一次；路径重建不能带来第二次 SphereCast。
+- `SelectedQueryStepSource` 与 `SelectedQueryLandingEventIdentity` 每脚每帧最多只有一组；Current/Incoming同时合法时必须选择较小TimeToLanding，相等时选择Current。
+- `LandingQueryCount` 每脚每帧只能为0或1；路径重建和Current/Incoming竞争都不能带来第二次SphereCast。
+- Event完成后，`GroundPathLastLandingEventIdentity`才变成刚完成的identity；`PromotedFromAcceptedRevisionIdentity`、点、法线和Surface必须逐值等于完成前最后Accepted NextSwingLanding。
+- 完成帧查询结果不得出现在晋级字段；晋级后若Incoming合法，可作为该帧唯一新查询事件。
+- 更新死区内`AttemptedTrajectoryRevisionIdentity`可变化，但Accepted Landing与Ground Path的revision identity必须保持旧值。
 
 ### 通过 / 不通过
 
@@ -64,7 +68,9 @@
 
 - `StrideState = Accepted` 时，`StrideSupportSide`、`StrideSwingSide`、`StrideStart*`、`StrideEnd*` 和 `StrideProgress` 同一 Completion 内一致。
 - `StrideSlope` 与起止点沿 `GroundPathComponentUp` 的符号一致。
-- `StrideRawPelvisDelta*`、`StrideSpringTarget`、`StrideSpringOutput`、`StridePelvisDelta*` 有明确的总目标、重基后的必要位移、弹簧输出和最终 Goal 分解；支撑切换前后必须记录旧/新 stride start，且不得把 `springDelta` 再次加到 `FinalPelvisGoal*`。
+- `CommittedSpring*` 与`PendingSpringInput*`证明Pending从Committed复制；支撑切换前后必须记录旧/新stride start、重基量、重基后的raw target/output、necessary、closed-form spring output/velocity。
+- `StrideRawPelvisDelta*`、`StrideSpringTarget`、`StrideSpringOutput`、`StridePelvisDelta*` 有唯一总目标与最终 Goal 分解；`springDelta` 不得再次加到 `FinalPelvisGoal*`。
+- 以CSV中的frequency、deltaSeconds、spring input/velocity重算design闭式公式，必须在浮点容差内等于Pending spring output/velocity；不得出现显式Euler积分或可调damping ratio字段。
 - `PelvisPositionWeight > 0` 时，`FinalPelvisGoal*`、`FinalPhysicalPelvisComponentPosition*` 和 `FinalPhysicalPelvisGoalResidual` 必须来自同一 Completion。
 - 没有完整步伐或 Path rejected 的帧，`PelvisPositionWeight = 0`，不得沿用上一帧骨盆 Goal。
 
@@ -153,17 +159,20 @@
 
 - `Locked`：站脚保持在 LastLanding 附近，水平不跟空中脚的 Envelope 跑，旋转仍有自由度；平地 plantHeight 为零时站脚仍保持锁定，不回到原生动画所有权。
 - `Sliding`：误差不大时脚向原生动画方向平滑收回，不在旧点和动画之间来回跳。
-- `Unlocked`：误差超过 SlideDistance 时脚回到原生动画，腿不会被过远旧落点钉成直线。
-- Idle 两脚都有 LastLanding 时，两脚都能通过同一支撑合同站稳。
+- `Unlocked`：误差超过 SlideDistance 的首帧目标与权重连续等于上一提交 Goal，之后只让冻结的相对修正和权重按正式时长衰减；释放完成才回到当帧原生动画，腿不会被过远旧落点钉成直线。
+- Idle 两脚都有 LastLanding 时两脚都能站稳；连续小幅转向时主支撑不左右来回切，另一脚可以滑动或释放。
 - 跳跃、空中和有限 Action 占用时脚不继续钉在地面。
 
 ### CSV 对账
 
-- 每只脚必须记录 `SupportLockState`、`SupportHorizontalError`、`LockLandingEventIdentity`、`UnlockBlendRemainingSeconds` 和位置权重。
+- 每只脚必须记录 `SupportLockState`、`SupportHorizontalError`、`LockLandingEventIdentity`、`LockPreparationStartTimeToLandingSeconds`、`LockPreparationWeight`、`UnlockStartCorrection*`、`UnlockStartPositionWeight`、`UnlockBlendRemainingSeconds` 和位置权重。
 - 水平误差不超过 `LockDistance` 只能对应 Locked；大于 `LockDistance` 且不超过 `SlideDistance` 只能对应 Sliding；超过 `SlideDistance` 只能对应 Unlocked。Locked/Sliding 即使 plantHeight 和水平误差为零，位置权重也必须等于同帧动画位置权重。
 - Locked/Sliding 帧不得产生新的 Envelope 采样或 NextSwingLanding 追踪。
-- Unlocked 的位置权重在 `UnlockBlendSeconds` 内递减到零；Discard 帧不消耗剩余时间。
-- 进入 Locked 的锁入权重只能由该事件 `TimeToLandingSeconds` 推导，不得出现第二条 lock curve。
+- 同一Landing Event的LockPreparationWeight必须等于`max(previousCommitted, 1 - TimeToLanding/StartTimeToLanding)`，只增不减；事件完成时为1，不得出现第二条lock curve或delta累计时钟。
+- 进入Unlocked首帧的Target与Position Weight必须逐值等于上一Committed Locked/Sliding Goal；后续权重按`UnlockStartPositionWeight * Remaining / UnlockBlendSeconds`递减到零。
+- Unlocked释放期间目标只携带冻结的`UnlockStartCorrection`，不得重新追LastLanding；Discard帧不消耗Remaining。
+- `PivotSupportSide/Event`在旧主脚仍Locked时保持不变；旧主脚失效后才按较小水平误差与稳定Side顺序重选。
+- Fact未Grounded或Action Foot Weight大于容差时，该脚必须当帧原生目标和零权重，不能继续Unlocked释放旧世界锚。
 
 ### 通过 / 不通过
 
@@ -181,21 +190,23 @@
 
 ### 操作
 
-在同一坡面上先慢走，再逐渐提高速度到正式 `OrientationRunSpeed` 以上；分别测试上坡和下坡。
+在同一坡面上先慢走，再站住，最后逐渐提高速度到正式 `OrientationRunSpeed` 以上；分别测试上坡和下坡。
 
 ### Scene 观察
 
 - 慢走上坡时支撑脚有有限贴面，但脚掌不会完全躺平到法线。
 - 慢走下坡时脚掌比上坡更接近落点法线，但受 Pitch/Roll 角限约束。
+- 坡面站住且没有步伐时，脚掌仍可使用Committed revision forward保持有限贴坡，不因Stride为空突然回正。
 - 跑步达到阈值后脚掌朝向回到原生动画，不再追坡面。
 - 摆动脚不因为包络增量获得旋转 Goal。
 
 ### CSV 对账
 
-- `SupportRotationWeight` 只有 Locked/Sliding 且前进方向、法线有效时非零。
+- `SupportRotationWeight` 只有Locked/Sliding且正式前进方向、法线有效时非零；移动时`OrientationForwardSource=Stride`，GroundedStationary时只能为同一Pending `TrajectoryRevision`，不得从旧Stride或Transform差分补前向。
 - `SupportPitchDegrees`、`SupportRollDegrees` 的绝对值不得超过 Profile 角限。
 - 上坡目标的 Up 向量更接近 Component Up，下坡目标更接近 Landing Normal；不能两种坡向使用同一固定法线。
-- `OrientationRunSpeed` 达到后左右脚 Rotation Weight 均为零，且最终物理踝骨旋转不再向法线收敛。
+- 关闭判定的速度必须逐值等于同帧`CharacterPresentationFactFrame.HorizontalSpeed`；不得来自Step、输入幅值或Transform差分。
+- `HorizontalSpeed >= OrientationRunSpeed`后左右脚Rotation Weight均为零，且最终物理踝骨旋转不再向法线收敛。
 
 ### 通过 / 不通过
 
@@ -219,14 +230,19 @@
 
 - 支撑脚位置继续留在 LastLanding 合同内。
 - 摆动脚 NextSwingLanding 和 Envelope 必须来自以支撑 LastLanding 为 Pivot 输入的新 trajectory revision；不能把旧 Path、Surface 或 Envelope 事后旋转后当成新目标。
+- GroundedStationary两脚都可支撑时，主脚持续锁在同一LastLanding，另一脚根据水平误差滑动或释放；不能每帧换Pivot脚。
 - 实体 Origin 和 KCC 仍绕自身旋转；Foot Placement 不把胶囊或 VisualRoot 绕支撑脚转。
 - 可见 yaw 单帧过大时受 `MaximumPivotYawDeltaDegrees` 限制，后续帧继续消化，不出现一次跨越多圈。
 
 ### CSV 对账
 
-- `VisibleYawDelta`、`PivotYawDelta`、`PivotSupportLanding*`、`TrajectoryRevision` 和 `PivotApplied` 来自同一 Frame/Completion。
-- `PivotYawDelta` 的绝对值不得超过 Profile 上限；超出的部分必须保留为下一帧可见误差，而不是改写 Body。
-- Pivot 后的摆动目标必须对应新 revision 的 Ground Path/Envelope identity；支撑脚 Goal 不得被 Pivot 改成摆动目标，旧 revision 只能作为上一完成输出交接。
+- `CurrentVisiblePosition/Rotation*`、`VisiblePosition/RotationAtCommit*`、`CommittedRevisionPosition/Rotation*`、`VisiblePositionForRevision*`、`VirtualBodyPosition/Rotation*`、`RevisionPosition/Rotation/Forward*`、`VisibleYawDelta`、`RequestedYaw`、`PivotYawDelta`、`ResidualYaw`、`PivotSupportSide/Event/Landing*`、`AttemptedTrajectoryRevisionIdentity`和`PivotApplied`必须来自同一Frame/Completion。
+- 先重算`CommittedRevisionPosition + (CurrentVisiblePosition - VisiblePositionAtCommit)`，必须等于`VisiblePositionForRevision`；再重算`LastLanding + RotateAroundUp(VisiblePositionForRevision - LastLanding, PivotYawDelta)`，必须等于Virtual Body与Revision Position。Revision Rotation必须逐值等于`PivotRotation * CommittedRevisionRotation`。
+- Raw Landing必须逐值等于`VirtualBodyPosition + FutureBodyTranslationWorld + VirtualBodyRotation * RootLocalLanding`；Future Body Translation不得随Pivot旋转，旧Route、Surface、Hull和Envelope不得被旋转后冒充本帧新查询事实。
+- `PivotYawDelta`绝对值不得超过Profile上限；`ResidualYaw = RequestedYaw - PivotYawDelta`并在后续成功Seal帧继续消化，Discard不得推进。
+- trajectory revision identity必须独立于Future Body TrajectoryGeneration、Tick、Event与Render Frame；左右脚本帧查询共享同一attempt identity。
+- Pivot后的摆动目标必须对应新revision的Ground Path/Envelope identity；支撑脚Goal不得被Pivot改成摆动目标，旧revision只能保留未被本帧替换的Committed事实。
+- GroundedStationary旧主支撑仍Locked时`PivotSupportSide/Event`不得变化；辅脚状态变化不得反向切换主支撑。
 - `VisualRoot`、KCC 和 Gameplay Body 的写入计数保持为零；唯一变化应出现在同一 Foot Placement Goal Set 和最终物理骨骼链。
 
 ### 通过 / 不通过

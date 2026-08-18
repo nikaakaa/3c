@@ -78,6 +78,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             EditorApplication.update -= TickAutoSample;
             m_AutoSampleStopTime = 0d;
+            GameplayLabFootIkKeyboardRouteDriver.Stop();
         }
 
         void OnGUI()
@@ -255,6 +256,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 {
                     if (GUILayout.Button("Auto Sample 8s then Score"))
                         StartAutoSample();
+                    if (GUILayout.Button("Auto Walk Stairs AD Sample"))
+                        StartStairAdSample();
                 }
                 using (new EditorGUI.DisabledScope(
                            string.IsNullOrEmpty(savedPath) || !File.Exists(savedPath)))
@@ -262,6 +265,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     if (GUILayout.Button("Score Last CSV"))
                         ScoreLastCsv();
                 }
+            }
+            if (GameplayLabFootIkKeyboardRouteDriver.IsActive)
+            {
+                EditorGUILayout.HelpBox(
+                    $"Stair AD drive {GameplayLabFootIkKeyboardRouteDriver.Phase} lap {GameplayLabFootIkKeyboardRouteDriver.Lap}",
+                    MessageType.Info);
             }
             if (!string.IsNullOrEmpty(m_Step1Report))
                 EditorGUILayout.HelpBox(m_Step1Report, MessageType.Info);
@@ -475,6 +484,27 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             EditorApplication.update += TickAutoSample;
         }
 
+        void StartStairAdSample()
+        {
+            try
+            {
+                GameplayLabFootIkKeyboardRouteDriver.Start();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorUtility.DisplayDialog("3C Launcher", exception.Message, "OK");
+                return;
+            }
+            ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
+            m_AutoSampleStopTime =
+                EditorApplication.timeSinceStartup +
+                GameplayLabFootIkKeyboardRouteDriver.SampleSecondsValue;
+            m_Step1Report = "Auto walking stairs with A/D...";
+            EditorApplication.update -= TickAutoSample;
+            EditorApplication.update += TickAutoSample;
+        }
+
         void TickAutoSample()
         {
             if (m_AutoSampleStopTime <= 0d ||
@@ -484,6 +514,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             EditorApplication.update -= TickAutoSample;
             m_AutoSampleStopTime = 0d;
+            GameplayLabFootIkKeyboardRouteDriver.Stop();
             ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
             ScoreLastCsv();
             Repaint();

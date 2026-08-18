@@ -2,6 +2,8 @@ using System;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
@@ -57,13 +59,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 message,
                 data = new
                 {
-                active = GameplayLabFootIkKeyboardRouteDriver.IsActive,
-                pending = GameplayLabFootIkKeyboardRouteDriver.IsPending,
-                phase = GameplayLabFootIkKeyboardRouteDriver.Phase.ToString(),
-                lap = GameplayLabFootIkKeyboardRouteDriver.Lap,
-                sampling = CharacterFootLandingPredictionSampler.IsCapturing,
-                saved_path = CharacterFootLandingPredictionSampler.LastSavedPath,
-                report = GameplayLabFootIkKeyboardRouteDriver.LastReport
+                    playing = EditorApplication.isPlaying,
+                    paused = EditorApplication.isPaused,
+                    active = GameplayLabFootIkKeyboardRouteDriver.IsActive,
+                    pending = GameplayLabFootIkKeyboardRouteDriver.IsPending,
+                    phase = GameplayLabFootIkKeyboardRouteDriver.Phase.ToString(),
+                    lap = GameplayLabFootIkKeyboardRouteDriver.Lap,
+                    sampling = CharacterFootLandingPredictionSampler.IsCapturing,
+                    runtime_target_count = AnimationPresentationRuntimeTargetRegistry.Targets.Count,
+                    captured_frame_count = CharacterFootLandingPredictionSampler.CapturedFrameCount,
+                    pending_frame_count = CharacterFootLandingPredictionSampler.PendingFrameCount,
+                    dropped_pending_frame_count = CharacterFootLandingPredictionSampler.DroppedPendingFrameCount,
+                    last_saved_frame_count = CharacterFootLandingPredictionSampler.LastSavedFrameCount,
+                    saved_path = CharacterFootLandingPredictionSampler.LastSavedPath,
+                    report = GameplayLabFootIkKeyboardRouteDriver.LastReport
                 }
             };
         }

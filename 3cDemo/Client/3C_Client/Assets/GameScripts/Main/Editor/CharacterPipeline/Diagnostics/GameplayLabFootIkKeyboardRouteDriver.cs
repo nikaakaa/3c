@@ -86,6 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (CharacterFootLandingPredictionSampler.IsCapturing)
                 throw new InvalidOperationException("Foot Landing sampling is already active.");
+            EditorApplication.isPaused = false;
             ClearPending();
             Scene scene = SceneManager.GetActiveScene();
             GameplayLabFootIkRegressionCourse.Resolve(scene, out Vector3 start, out Vector3 end);

@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [InitializeOnLoad]
     public static class CharacterFootLandingPredictionSampler
     {
+        const int MaximumPendingFrameCount = 256;
         const string StartMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Start";
         const string StopMenu =
@@ -173,9 +174,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static bool s_Capturing;
         static string s_LastSavedPath = string.Empty;
+        static int s_DroppedPendingFrameCount;
+        static int s_LastSavedFrameCount;
 
         public static bool IsCapturing => s_Capturing;
         public static string LastSavedPath => s_LastSavedPath;
+        public static int CapturedFrameCount => s_Frames.Count;
+        public static int PendingFrameCount => s_PendingFrames.Count;
+        public static int DroppedPendingFrameCount => s_DroppedPendingFrameCount;
+        public static int LastSavedFrameCount => s_LastSavedFrameCount;
 
         static CharacterFootLandingPredictionSampler()
         {
@@ -194,6 +201,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Frames.Clear();
             s_PendingFrames.Clear();
             s_LastSavedPath = string.Empty;
+            s_DroppedPendingFrameCount = 0;
+            s_LastSavedFrameCount = 0;
             CharacterFootLandingPredictionDebugRegistry.Published += Capture;
             AnimationPresentationRuntimeTargetRegistry.TargetRegistered += ConfigureTarget;
             AnimationPresentationRuntimeTargetRegistry.TargetUnregistered += RemoveTarget;
@@ -227,8 +236,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void Capture(in CharacterFootLandingPredictionDiagnostics diagnostics)
         {
-            if (s_Capturing)
-                s_PendingFrames.Add(new PendingFrame(in diagnostics));
+            if (!s_Capturing)
+                return;
+            if (s_PendingFrames.Count >= MaximumPendingFrameCount)
+            {
+                s_PendingFrames.RemoveAt(0);
+                s_DroppedPendingFrameCount++;
+            }
+            s_PendingFrames.Add(new PendingFrame(in diagnostics));
         }
 
         static void ProcessPendingFrames()
@@ -240,17 +255,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 PendingFrame pending = s_PendingFrames[pendingIndex];
                 CharacterFootLandingPredictionDiagnostics pendingDiagnostics = pending.Diagnostics;
-                if (!TryCaptureCommittedIk(in pendingDiagnostics, out CapturedFrame captured))
+                PendingFrameResolution resolution = TryCaptureCommittedIk(
+                    in pendingDiagnostics,
+                    out CapturedFrame captured);
+                if (resolution == PendingFrameResolution.Waiting)
                 {
                     pendingIndex++;
                     continue;
                 }
-                s_Frames.Add(captured);
+                if (resolution == PendingFrameResolution.Captured)
+                    s_Frames.Add(captured);
+                else
+                    s_DroppedPendingFrameCount++;
                 s_PendingFrames.RemoveAt(pendingIndex);
             }
         }
 
-        static bool TryCaptureCommittedIk(
+        enum PendingFrameResolution : byte
+        {
+            Waiting,
+            Captured,
+            Stale
+        }
+
+        static PendingFrameResolution TryCaptureCommittedIk(
             in CharacterFootLandingPredictionDiagnostics pending,
             out CapturedFrame captured)
         {
@@ -263,8 +291,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 AnimationFootPlacementRuntimeSnapshot placement = debugView.PosePlan.FootPlacement;
                 if (!placement.IsAvailable ||
-                    placement.LandingPrediction.RootInstanceId != pending.RootInstanceId ||
-                    placement.LandingPrediction.FrameSequence != pending.FrameSequence ||
+                    placement.LandingPrediction.RootInstanceId != pending.RootInstanceId)
+                {
+                    continue;
+                }
+                if (placement.LandingPrediction.FrameSequence > pending.FrameSequence)
+                {
+                    captured = default;
+                    return PendingFrameResolution.Stale;
+                }
+                if (placement.LandingPrediction.FrameSequence != pending.FrameSequence ||
                     placement.LandingPrediction.CompletionIdentity != pending.CompletionIdentity)
                 {
                     continue;
@@ -288,10 +324,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.RightPhysicalAnkleComponentPosition,
                         placement.PhysicalPelvisComponentPosition),
                     placement.PhysicalPelvisComponentPosition);
-                return true;
+                return PendingFrameResolution.Captured;
             }
             captured = default;
-            return false;
+            return PendingFrameResolution.Waiting;
         }
 
         static void ConfigureTargets()
@@ -408,9 +444,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Capturing = false;
             try
             {
+                s_LastSavedFrameCount = s_Frames.Count;
                 s_LastSavedPath = Save();
                 Debug.Log(
-                    $"Foot Landing sampling saved {s_Frames.Count} frames to {s_LastSavedPath}");
+                    $"Foot Landing sampling saved {s_LastSavedFrameCount} frames " +
+                    $"with {s_DroppedPendingFrameCount} dropped pending frames to {s_LastSavedPath}");
             }
             catch (Exception exception)
             {

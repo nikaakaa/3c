@@ -22,31 +22,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawGroundPath(diagnostics.Right);
         }
 
-
-        static void DrawGroundPath(CharacterFootLandingPredictionFootDiagnostics foot)
+        static void DrawGroundPath(
+            CharacterFootLandingPredictionFootDiagnostics foot)
         {
             CharacterFootGroundPathDiagnostics groundPath = foot.GroundPath;
             if (groundPath.InputIdentity == 0)
                 return;
 
-            if (groundPath.Accepted)
+            if (groundPath.Accepted && groundPath.EnvelopeVertexCount >= 2)
             {
                 Handles.color = FootColor(foot.Side);
-                if (groundPath.EnvelopeVertexCount >= 2)
+                Vector3 previous = groundPath.EnvelopeVertexAt(0).Position;
+                for (int i = 1; i < groundPath.EnvelopeVertexCount; i++)
                 {
-                    Vector3 previous = groundPath.EnvelopeVertexAt(0).Position;
-                    for (int i = 1; i < groundPath.EnvelopeVertexCount; i++)
-                    {
-                        Vector3 current = groundPath.EnvelopeVertexAt(i).Position;
-                        Handles.DrawLine(previous, current, 5f);
-                        previous = current;
-                    }
+                    Vector3 current = groundPath.EnvelopeVertexAt(i).Position;
+                    Handles.DrawLine(previous, current, 2f);
+                    previous = current;
                 }
             }
 
-            Color currentColor = groundPath.Accepted ? Color.green : Color.red;
+            Color lastColor = groundPath.Accepted ? Color.green : Color.red;
             Color nextColor = groundPath.Accepted ? Color.yellow : Color.red;
-            DrawLandingMarker(groundPath.CurrentLanding, groundPath.ComponentUp, currentColor);
+            DrawLandingMarker(groundPath.CurrentLanding, groundPath.ComponentUp, lastColor);
             DrawLandingMarker(groundPath.NextLanding, groundPath.ComponentUp, nextColor);
         }
 
@@ -56,9 +53,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? componentUp.normalized
                 : Vector3.up;
             Gizmos.color = color;
-            Gizmos.DrawSphere(position, 0.025f);
+            Gizmos.DrawSphere(position, 0.05f);
             Handles.color = color;
-            Handles.DrawWireDisc(position, normal, 0.07f);
+            Handles.DrawWireDisc(position, normal, 0.12f);
         }
 
         static Color FootColor(CharacterFootSide side) =>

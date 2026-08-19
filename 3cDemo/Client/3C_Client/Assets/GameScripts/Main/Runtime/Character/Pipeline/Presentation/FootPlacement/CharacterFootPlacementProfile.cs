@@ -175,7 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterFootMotionAuthoringSettings
     {
         [SerializeField] float m_LandingUpdateDistance = 0.005f;
-        [SerializeField] float m_MaximumSameEventVerticalJump = 0.12f;
+        [SerializeField] float m_GoalTransitionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_UnlockBlendSeconds = 0.12f;
@@ -184,7 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(
                 m_LandingUpdateDistance,
-                m_MaximumSameEventVerticalJump,
+                m_GoalTransitionHalfLifeSeconds,
                 m_LockDistance,
                 m_SlideDistance,
                 m_UnlockBlendSeconds,
@@ -195,14 +195,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootMotionSettings(
             float landingUpdateDistance,
-            float maximumSameEventVerticalJump,
+            float goalTransitionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
             float unlockBlendSeconds,
             float pelvisSpringFrequency)
         {
             LandingUpdateDistance = landingUpdateDistance;
-            MaximumSameEventVerticalJump = maximumSameEventVerticalJump;
+            GoalTransitionHalfLifeSeconds = goalTransitionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
             UnlockBlendSeconds = unlockBlendSeconds;
@@ -211,7 +211,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal float LandingUpdateDistance { get; }
-        internal float MaximumSameEventVerticalJump { get; }
+        internal float GoalTransitionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
         internal float UnlockBlendSeconds { get; }
@@ -220,7 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void RequireValid()
         {
             if (!float.IsFinite(LandingUpdateDistance) || LandingUpdateDistance <= 0f ||
-                !float.IsFinite(MaximumSameEventVerticalJump) || MaximumSameEventVerticalJump <= 0f ||
+                !float.IsFinite(GoalTransitionHalfLifeSeconds) || GoalTransitionHalfLifeSeconds <= 0f ||
                 !float.IsFinite(LockDistance) ||
                 LockDistance <= LandingUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||
@@ -240,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v23-support-lock";
+        public const string SchemaVersion = "character-foot-placement-profile/v24-live-landing-goal-transition";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

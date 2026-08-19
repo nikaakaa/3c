@@ -6,6 +6,7 @@ using System.Text;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public static class CharacterFootLandingPredictionSampler
     {
         const int MaximumPendingFrameCount = 256;
+        const double SamplingStartTimeoutSeconds = 30d;
         const string GameplayLabPlayerActorId = "gameplay-lab-player";
         const string StartMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Start";
@@ -180,6 +182,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static readonly Guid s_DiagnosticsOwnerId = Guid.NewGuid();
 
         static bool s_Capturing;
+        static bool s_StartPending;
+        static double s_StartDeadline;
+        static string s_LastStartFailure = string.Empty;
+        static string s_StartWaitReason = string.Empty;
         static string s_LastSavedPath = string.Empty;
         static int s_DroppedPendingFrameCount;
         static int s_LastSavedFrameCount;
@@ -187,6 +193,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static int s_TargetRootInstanceId;
 
         public static bool IsCapturing => s_Capturing;
+        public static bool IsStartPending => s_StartPending;
+        public static string LastStartFailure => s_LastStartFailure;
         public static string LastSavedPath => s_LastSavedPath;
         public static int CapturedFrameCount => s_Frames.Count;
         public static int PendingFrameCount => s_PendingFrames.Count;
@@ -207,12 +215,62 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (s_Capturing)
                 throw new InvalidOperationException(
                     "Foot Landing sampling is already active.");
+            if (s_StartPending)
+                throw new InvalidOperationException(
+                    "Foot Landing sampling is already waiting for the Gameplay Lab player.");
             s_Frames.Clear();
             s_PendingFrames.Clear();
             s_LastSavedPath = string.Empty;
             s_DroppedPendingFrameCount = 0;
             s_LastSavedFrameCount = 0;
-            BindGameplayLabPlayerTarget();
+            s_LastStartFailure = string.Empty;
+            s_StartWaitReason = string.Empty;
+            s_StartPending = true;
+            s_StartDeadline = EditorApplication.timeSinceStartup + SamplingStartTimeoutSeconds;
+            EditorApplication.update -= PollSamplingStart;
+            EditorApplication.update += PollSamplingStart;
+            PollSamplingStart();
+        }
+
+        static void PollSamplingStart()
+        {
+            if (!s_StartPending)
+            {
+                EditorApplication.update -= PollSamplingStart;
+                return;
+            }
+            if (!EditorApplication.isPlaying)
+            {
+                FailSamplingStart("Gameplay Lab left Play Mode before the player host became available.");
+                return;
+            }
+            try
+            {
+                if (TryCompleteSamplingStart())
+                    return;
+            }
+            catch (Exception exception)
+            {
+                FailSamplingStart(exception.Message);
+                Debug.LogException(exception);
+                return;
+            }
+            if (EditorApplication.timeSinceStartup >= s_StartDeadline)
+                FailSamplingStart(s_StartWaitReason);
+        }
+
+        static bool TryCompleteSamplingStart()
+        {
+            if (!TryBindGameplayLabPlayerTarget())
+            {
+                s_StartWaitReason = "Gameplay Lab player host did not become available before sampling timed out.";
+                return false;
+            }
+            if (!HasGameplayLabPlayerRuntimeTarget())
+            {
+                s_StartWaitReason = "Gameplay Lab player Animation Presentation target did not become available before sampling timed out.";
+                return false;
+            }
             CharacterFootLandingPredictionDebugRegistry.Published += Capture;
             AnimationPresentationRuntimeTargetRegistry.TargetRegistered += ConfigureTarget;
             AnimationPresentationRuntimeTargetRegistry.TargetUnregistered += RemoveTarget;
@@ -227,20 +285,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CancelSamplingStart();
                 throw;
             }
+            s_StartPending = false;
+            s_StartDeadline = 0d;
+            s_StartWaitReason = string.Empty;
+            EditorApplication.update -= PollSamplingStart;
             Debug.Log("Foot Landing sampling started.");
+            return true;
         }
 
         [MenuItem(StartMenu)]
         static void StartFromMenu() => StartSampling();
 
         [MenuItem(StartMenu, true)]
-        static bool CanStart() => EditorApplication.isPlaying && !s_Capturing;
+        static bool CanStart() =>
+            EditorApplication.isPlaying && !s_Capturing && !s_StartPending;
 
         [MenuItem(StopMenu)]
         static void Stop() => StopAndSave();
 
         [MenuItem(StopMenu, true)]
-        static bool CanStop() => s_Capturing;
+        static bool CanStop() => s_Capturing || s_StartPending;
 
         public static void StopAndSaveSampling() => StopAndSave();
 
@@ -260,9 +324,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ProcessPendingFrames()
         {
-            if (!s_Capturing || s_PendingFrames.Count == 0)
+            if (!s_Capturing)
                 return;
             ConfigureTargets();
+            if (s_PendingFrames.Count == 0)
+                return;
             for (int pendingIndex = 0; pendingIndex < s_PendingFrames.Count;)
             {
                 PendingFrame pending = s_PendingFrames[pendingIndex];
@@ -378,6 +444,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (!target.TryGetDebugView(out AnimationPresentationDebugView debugView))
                 return;
+            AnimationFootPlacementRuntimeSnapshot footPlacement = debugView.PosePlan.FootPlacement;
+            if (footPlacement.IsAvailable &&
+                footPlacement.LandingPrediction.RootInstanceId != 0)
+            {
+                int rootInstanceId = footPlacement.LandingPrediction.RootInstanceId;
+                if (s_TargetRootInstanceId != 0 && s_TargetRootInstanceId != rootInstanceId)
+                {
+                    throw new InvalidOperationException(
+                        "Gameplay Lab player Animation Presentation root changed after sampling target binding.");
+                }
+                s_TargetRootInstanceId = rootInstanceId;
+            }
             IReadOnlyList<AnimationPoseWatchIdentity> watches = BuildPoseWatches(debugView.PosePlan);
             string signature = BuildPoseWatchSignature(watches);
             if (string.Equals(
@@ -401,28 +479,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_PoseWatchSignatures.Remove(target.RuntimeInstanceId);
         }
 
-        static void BindGameplayLabPlayerTarget()
+        static bool TryBindGameplayLabPlayerTarget()
         {
+            int selectedHostInstanceId = 0;
+            int selectedRootInstanceId = 0;
             CharacterPipelineHost[] hosts = UnityEngine.Object.FindObjectsByType<CharacterPipelineHost>(
                 FindObjectsInactive.Exclude,
                 FindObjectsSortMode.None);
-            CharacterPipelineHost selected = null;
             for (int i = 0; i < hosts.Length; i++)
             {
                 CharacterPipelineHost host = hosts[i];
                 if (host == null || !host.VisualRoot ||
                     !string.Equals(host.ActorId, GameplayLabPlayerActorId, StringComparison.Ordinal))
                     continue;
-                if (selected != null)
+                if (selectedHostInstanceId != 0)
                     throw new InvalidOperationException(
                         "Gameplay Lab contains multiple gameplay-lab-player hosts.");
-                selected = host;
+                selectedHostInstanceId = host.GetInstanceID();
+                selectedRootInstanceId = host.VisualRoot.GetInstanceID();
             }
-            if (selected == null)
-                throw new InvalidOperationException(
-                    "Gameplay Lab player host is unavailable.");
-            s_TargetHostInstanceId = selected.GetInstanceID();
-            s_TargetRootInstanceId = selected.VisualRoot.GetInstanceID();
+            FixedCharacterHost[] fixedHosts = UnityEngine.Object.FindObjectsByType<FixedCharacterHost>(
+                FindObjectsInactive.Exclude,
+                FindObjectsSortMode.None);
+            for (int i = 0; i < fixedHosts.Length; i++)
+            {
+                FixedCharacterHost host = fixedHosts[i];
+                if (host == null ||
+                    !string.Equals(host.ActorId.Value, GameplayLabPlayerActorId, StringComparison.Ordinal))
+                    continue;
+                if (selectedHostInstanceId != 0)
+                    throw new InvalidOperationException(
+                        "Gameplay Lab contains multiple gameplay-lab-player hosts.");
+                selectedHostInstanceId = host.GetInstanceID();
+            }
+            if (selectedHostInstanceId == 0)
+            {
+                ResetTargetBinding();
+                return false;
+            }
+            s_TargetHostInstanceId = selectedHostInstanceId;
+            s_TargetRootInstanceId = selectedRootInstanceId;
+            return true;
+        }
+
+        static bool HasGameplayLabPlayerRuntimeTarget()
+        {
+            IReadOnlyList<AnimationPresentationRuntimeTarget> targets =
+                AnimationPresentationRuntimeTargetRegistry.Targets;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (targets[i].HostInstanceId == s_TargetHostInstanceId)
+                    return true;
+            }
+            return false;
         }
 
         static void ResetTargetBinding()
@@ -477,12 +586,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void CancelSamplingStart()
         {
+            EditorApplication.update -= PollSamplingStart;
             CharacterFootLandingPredictionDebugRegistry.Published -= Capture;
             AnimationPresentationRuntimeTargetRegistry.TargetRegistered -= ConfigureTarget;
             AnimationPresentationRuntimeTargetRegistry.TargetUnregistered -= RemoveTarget;
             EditorApplication.update -= ProcessPendingFrames;
             RemoveTargetDiagnostics();
             s_Capturing = false;
+            s_StartPending = false;
+            s_StartDeadline = 0d;
+            s_StartWaitReason = string.Empty;
             s_Frames.Clear();
             s_PendingFrames.Clear();
             ResetTargetBinding();
@@ -490,6 +603,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static string StopAndSave()
         {
+            if (s_StartPending)
+            {
+                CancelSamplingStart();
+                return s_LastSavedPath;
+            }
             if (!s_Capturing)
                 return s_LastSavedPath;
             ProcessPendingFrames();
@@ -518,6 +636,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ResetTargetBinding();
             }
             return s_LastSavedPath;
+        }
+
+        static void FailSamplingStart(string message)
+        {
+            s_LastStartFailure = string.IsNullOrWhiteSpace(message)
+                ? "Foot Landing sampling could not bind the Gameplay Lab player."
+                : message;
+            CancelSamplingStart();
+            Debug.LogError(s_LastStartFailure);
         }
 
         static void RemoveTargetDiagnostics()

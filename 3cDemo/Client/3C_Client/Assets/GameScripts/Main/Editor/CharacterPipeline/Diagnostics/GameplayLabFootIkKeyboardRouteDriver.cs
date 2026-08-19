@@ -44,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string s_LastReport = string.Empty;
         static bool s_HasCompletedRun;
         static Keyboard s_RouteKeyboard;
+        static bool s_RouteKeyboardReleasePending;
 
         static GameplayLabFootIkKeyboardRouteDriver()
         {
@@ -483,6 +484,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void AcquireRouteKeyboard()
         {
+            CancelRouteKeyboardRelease();
             if (s_RouteKeyboard != null && s_RouteKeyboard.added)
                 return;
             s_RouteKeyboard = InputSystem.AddDevice<Keyboard>("FootIkStairAdKeyboard");
@@ -490,9 +492,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ReleaseRouteKeyboard()
         {
-            if (s_RouteKeyboard != null && s_RouteKeyboard.added)
-                InputSystem.RemoveDevice(s_RouteKeyboard);
+            if (s_RouteKeyboard == null || !s_RouteKeyboard.added)
+            {
+                CancelRouteKeyboardRelease();
+                s_RouteKeyboard = null;
+                return;
+            }
+            if (s_RouteKeyboardReleasePending)
+                return;
+            s_RouteKeyboardReleasePending = true;
+            InputSystem.onAfterUpdate += CompleteRouteKeyboardRelease;
+        }
+
+        static void CompleteRouteKeyboardRelease()
+        {
+            if (s_RouteKeyboard == null || !s_RouteKeyboard.added)
+            {
+                CancelRouteKeyboardRelease();
+                s_RouteKeyboard = null;
+                return;
+            }
+            if (s_RouteKeyboard.aKey.isPressed || s_RouteKeyboard.dKey.isPressed ||
+                s_RouteKeyboard.wKey.isPressed || s_RouteKeyboard.sKey.isPressed)
+            {
+                return;
+            }
+            InputSystem.RemoveDevice(s_RouteKeyboard);
             s_RouteKeyboard = null;
+            CancelRouteKeyboardRelease();
+        }
+
+        static void CancelRouteKeyboardRelease()
+        {
+            if (!s_RouteKeyboardReleasePending)
+                return;
+            InputSystem.onAfterUpdate -= CompleteRouteKeyboardRelease;
+            s_RouteKeyboardReleasePending = false;
         }
 
         static void QueueKeys(Keyboard keyboard, bool a, bool d, bool w, bool s)

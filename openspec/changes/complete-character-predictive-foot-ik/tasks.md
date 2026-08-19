@@ -127,7 +127,7 @@
 - [ ] 8.11 增加每脚ActionInstance、Action脚权重、Fact Grounded与HorizontalSpeed诊断。
 - [ ] 8.12 增加Lock Event、准备起始时间/权重、锁脚状态、水平误差、释放起点修正/权重/剩余时间诊断。
 - [ ] 8.13 增加PreviousStrideStart、重基前后raw target、necessary、spring input/output/velocity与最终Pelvis Goal诊断。
-- [ ] 8.14 增加原始Goal修正、Committed/Pending换代输出、原始/最终权重、半衰期与Source Path identity诊断。
+- [x] 8.14 增加原始Goal修正、Committed/Pending换代输出、原始/最终权重、半衰期与Source Path identity诊断。
 - [ ] 8.15 Gizmo只显示Committed事实，不重新查询、重算Path/Envelope、推进状态或执行FBBIK；状态只用颜色和线框。
 - [ ] 8.16 CSV增加上述字段以及最终物理Pelvis/Ankle、Goal residual、写入Completion与typed rejection。
 

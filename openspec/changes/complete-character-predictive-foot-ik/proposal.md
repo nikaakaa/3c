@@ -2,7 +2,7 @@
 
 ## 当前实施状态
 
-本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。当前代码已经收口 Landing Event 实时更新合同，并接入每脚唯一最终 Goal 换代：Landing、Ground Path 与 Envelope 不再冻结旧踏面，Foot Goal 只保存相对同帧原生踝骨的 Committed/Pending 修正并向最新目标连续收敛。该换代尚未完成 Scene 与 CSV 采样验收；当前用户已经确认的运行事实仍只有 Accepted Landing、落点身份和 Ground Path 线。Ground Envelope、Swing Foot Motion、Goal 换代后的物理踝骨、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入仍待后续逐步验证。
+本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。当前代码已经收口 Landing Event 实时更新合同，并接入每脚唯一最终 Goal 换代：Landing、Ground Path 与 Envelope 不再冻结旧踏面，Foot Goal 只保存相对同帧原生踝骨的 Committed/Pending 修正并向最新目标连续收敛。Goal 换代诊断已接入采样 CSV，并完成一次直线楼梯自动采样；该样本报告 117 个闭环失败帧、最大踝骨残差 0.06，故不能作为方案二通过证据。Ground Envelope、Swing Foot Motion、Goal 换代后的物理踝骨、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入仍待后续逐步验证。
 
 ## Why
 

@@ -4,6 +4,51 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    public readonly struct CharacterFootGoalTransitionDiagnostics
+    {
+        internal CharacterFootGoalTransitionDiagnostics(
+            in CharacterFootGoalTransitionSnapshot committed,
+            in CharacterFootGoalTransitionSnapshot pending,
+            float halfLifeSeconds)
+        {
+            HasCommittedOutput = committed.HasOutput;
+            HasPendingOutput = pending.HasOutput;
+            CommittedSourceGroundPathIdentity = committed.SourceGroundPathIdentity;
+            PendingSourceGroundPathIdentity = pending.SourceGroundPathIdentity;
+            RawPositionCorrection = pending.TargetPositionCorrection;
+            RawRotationCorrection = pending.TargetRotationCorrection;
+            RawPositionWeight = pending.TargetPositionWeight;
+            RawRotationWeight = pending.TargetRotationWeight;
+            CommittedPositionCorrection = committed.OutputPositionCorrection;
+            CommittedRotationCorrection = committed.OutputRotationCorrection;
+            CommittedPositionWeight = committed.OutputPositionWeight;
+            CommittedRotationWeight = committed.OutputRotationWeight;
+            PendingPositionCorrection = pending.OutputPositionCorrection;
+            PendingRotationCorrection = pending.OutputRotationCorrection;
+            PendingPositionWeight = pending.OutputPositionWeight;
+            PendingRotationWeight = pending.OutputRotationWeight;
+            HalfLifeSeconds = halfLifeSeconds;
+        }
+
+        public bool HasCommittedOutput { get; }
+        public bool HasPendingOutput { get; }
+        public ulong CommittedSourceGroundPathIdentity { get; }
+        public ulong PendingSourceGroundPathIdentity { get; }
+        public Vector3 RawPositionCorrection { get; }
+        public Quaternion RawRotationCorrection { get; }
+        public float RawPositionWeight { get; }
+        public float RawRotationWeight { get; }
+        public Vector3 CommittedPositionCorrection { get; }
+        public Quaternion CommittedRotationCorrection { get; }
+        public float CommittedPositionWeight { get; }
+        public float CommittedRotationWeight { get; }
+        public Vector3 PendingPositionCorrection { get; }
+        public Quaternion PendingRotationCorrection { get; }
+        public float PendingPositionWeight { get; }
+        public float PendingRotationWeight { get; }
+        public float HalfLifeSeconds { get; }
+    }
+
     readonly struct CharacterFootGoalTransitionSnapshot
     {
         internal CharacterFootGoalTransitionSnapshot(
@@ -82,6 +127,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RequirePending();
                 return m_Pending.Snapshot;
             }
+        }
+
+        internal CharacterFootGoalTransitionDiagnostics CaptureDiagnostics(
+            float halfLifeSeconds)
+        {
+            RequirePending();
+            return new CharacterFootGoalTransitionDiagnostics(
+                m_Committed.Snapshot,
+                m_Pending.Snapshot,
+                halfLifeSeconds);
         }
 
         internal void BeginPending()

@@ -20,7 +20,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         MotionTimelineUnavailable = 4,
         FutureBodyTranslationUnavailable = 5,
         FutureBodyTranslationRangeInvalid = 6,
-        GroundQueryMissed = 7
+        GroundQueryMissed = 7,
+        GroundQueryCapacityExceeded = 8
     }
 
     public enum CharacterFootLandingStepSource : byte
@@ -59,11 +60,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 
+    internal enum CharacterFootLandingQueryRejectReason : byte
+    {
+        None = 0,
+        InvalidRequest = 1,
+        NoHit = 2,
+        CapacityExceeded = 3
+    }
+
+    internal readonly struct CharacterFootLandingQueryResult
+    {
+        internal CharacterFootLandingQueryResult(
+            CharacterFootLandingQueryRejectReason rejectReason,
+            CharacterFootLandingSupport support)
+        {
+            RejectReason = rejectReason;
+            Support = support;
+        }
+
+        internal CharacterFootLandingQueryRejectReason RejectReason { get; }
+        internal CharacterFootLandingSupport Support { get; }
+        internal bool Accepted => RejectReason == CharacterFootLandingQueryRejectReason.None;
+    }
+
     internal interface ICharacterFootLandingWorldQuery
     {
-        bool TryQuery(
-            in CharacterFootPlacementQueryRequest request,
-            out CharacterFootLandingSupport support);
+        CharacterFootLandingQueryResult Query(
+            in CharacterFootPlacementQueryRequest request);
     }
 
     public readonly struct CharacterFootLandingPredictionFootDiagnostics
@@ -119,6 +142,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryDistance = support.Distance;
             Goal = goal;
             GroundPath = default;
+            FootMotion = default;
+            GoalTransition = default;
         }
 
         CharacterFootLandingPredictionFootDiagnostics(
@@ -147,6 +172,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryDistance = source.QueryDistance;
             Goal = source.Goal;
             GroundPath = groundPath;
+            FootMotion = source.FootMotion;
+            GoalTransition = source.GoalTransition;
         }
 
         CharacterFootLandingPredictionFootDiagnostics(
@@ -178,6 +205,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryDistance = source.QueryDistance;
             Goal = goal;
             GroundPath = source.GroundPath;
+            FootMotion = source.FootMotion;
+            GoalTransition = source.GoalTransition;
+        }
+
+        CharacterFootLandingPredictionFootDiagnostics(
+            in CharacterFootLandingPredictionFootDiagnostics source,
+            in CharacterFootSwingMotionDiagnostics footMotion,
+            in CharacterFootGoalTransitionDiagnostics goalTransition,
+            CharacterFullBodyIkGoal goal)
+        {
+            Side = source.Side;
+            State = source.State;
+            RejectReason = source.RejectReason;
+            StepSource = source.StepSource;
+            LandingEventIdentity = source.LandingEventIdentity;
+            TrajectoryGeneration = source.TrajectoryGeneration;
+            LandingConfidence = source.LandingConfidence;
+            TimeToLandingSeconds = source.TimeToLandingSeconds;
+            RootLocalLanding = source.RootLocalLanding;
+            FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
+            FutureBodyTranslationSourceIdentity = source.FutureBodyTranslationSourceIdentity;
+            FutureBodyRelativeTranslation = source.FutureBodyRelativeTranslation;
+            FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
+            CurrentAnimatedSole = source.CurrentAnimatedSole;
+            RawLandingCandidate = source.RawLandingCandidate;
+            Query = source.Query;
+            SurfaceIdentity = source.SurfaceIdentity;
+            LandingPoint = source.LandingPoint;
+            LandingNormal = source.LandingNormal;
+            QueryDistance = source.QueryDistance;
+            Goal = goal;
+            GroundPath = source.GroundPath;
+            FootMotion = footMotion;
+            GoalTransition = goalTransition;
         }
         public CharacterFootSide Side { get; }
         public CharacterFootLandingPredictionState State { get; }
@@ -201,6 +262,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float QueryDistance { get; }
         public CharacterFullBodyIkGoal Goal { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
+        public CharacterFootSwingMotionDiagnostics FootMotion { get; }
+        public CharacterFootGoalTransitionDiagnostics GoalTransition { get; }
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
 
         internal CharacterFootLandingPredictionFootDiagnostics WithLiveStep(
@@ -217,6 +280,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingPredictionFootDiagnostics WithGroundPath(
             in CharacterFootGroundPathDiagnostics groundPath) =>
             new CharacterFootLandingPredictionFootDiagnostics(in this, in groundPath);
+
+        internal CharacterFootLandingPredictionFootDiagnostics WithFootMotion(
+            in CharacterFootSwingMotionDiagnostics footMotion,
+            in CharacterFootGoalTransitionDiagnostics goalTransition,
+            CharacterFullBodyIkGoal goal) =>
+            new CharacterFootLandingPredictionFootDiagnostics(
+                in this,
+                in footMotion,
+                in goalTransition,
+                goal);
     }
 
     public readonly struct CharacterFootLandingPredictionInputDiagnostics
@@ -224,10 +297,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingPredictionInputDiagnostics(
             float presentationDeltaSeconds,
             CharacterBodyPresentationFrame body,
+            bool grounded,
+            float horizontalSpeed,
+            in CharacterFootActionOccupancy leftAction,
+            in CharacterFootActionOccupancy rightAction,
             in ThirdPersonSimulation.CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds)
         {
             PresentationDeltaSeconds = presentationDeltaSeconds;
+            Grounded = grounded;
+            HorizontalSpeed = horizontalSpeed;
+            LeftActionInstanceIdentity = leftAction.ActionInstanceIdentity;
+            LeftActionFootWeight = leftAction.Weight;
+            RightActionInstanceIdentity = rightAction.ActionInstanceIdentity;
+            RightActionFootWeight = rightAction.Weight;
             PreviousBodyTick = body.PreviousTick;
             CurrentBodyTick = body.CurrentTick;
             BodySampleAlpha = body.SampleAlpha;
@@ -269,6 +352,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public float PresentationDeltaSeconds { get; }
+        public bool Grounded { get; }
+        public float HorizontalSpeed { get; }
+        public ulong LeftActionInstanceIdentity { get; }
+        public float LeftActionFootWeight { get; }
+        public ulong RightActionInstanceIdentity { get; }
+        public float RightActionFootWeight { get; }
         public ulong PreviousBodyTick { get; }
         public ulong CurrentBodyTick { get; }
         public float BodySampleAlpha { get; }
@@ -312,6 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int rootInstanceId,
             CharacterFootLandingPredictionInputDiagnostics input,
             CharacterFullBodyIkGoal pelvisGoal,
+            in CharacterFootStrideHipsDiagnostics strideHips,
             CharacterFootLandingPredictionFootDiagnostics left,
             CharacterFootLandingPredictionFootDiagnostics right)
         {
@@ -320,6 +410,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RootInstanceId = rootInstanceId;
             Input = input;
             PelvisGoal = pelvisGoal;
+            StrideHips = strideHips;
             Left = left;
             Right = right;
         }
@@ -329,6 +420,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int RootInstanceId { get; }
         public CharacterFootLandingPredictionInputDiagnostics Input { get; }
         public CharacterFullBodyIkGoal PelvisGoal { get; }
+        public CharacterFootStrideHipsDiagnostics StrideHips { get; }
         public CharacterFootLandingPredictionFootDiagnostics Left { get; }
         public CharacterFootLandingPredictionFootDiagnostics Right { get; }
         public bool IsCompleted =>
@@ -415,14 +507,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLandingPredictionSettings settings,
             ICharacterFootLandingWorldQuery world,
             out CharacterFootPlacementQueryRequest query,
-            out CharacterFootLandingSupport support)
+            out CharacterFootLandingSupport support,
+            out CharacterFootLandingQueryRejectReason queryRejectReason)
         {
             query = BuildQuery(
                 side,
                 rawLandingCandidate,
                 componentUp,
                 in settings);
-            return world.TryQuery(in query, out support);
+            CharacterFootLandingQueryResult result = world.Query(in query);
+            support = result.Support;
+            queryRejectReason = result.RejectReason;
+            return result.Accepted;
         }
 
         static bool Finite(Vector3 value) =>

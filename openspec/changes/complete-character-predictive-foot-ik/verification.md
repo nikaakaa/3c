@@ -11,7 +11,7 @@
 5. 每一个通过条件都要同时满足：Scene 中的人眼结果、Foot Placement Goal、唯一 FullBodyIK、Final Writer 和 Physical Bone 属于相同 Frame、Completion、Rig lineage。
 6. CSV 必须能看到同帧 `CharacterPresentationFactFrame.Grounded/HorizontalSpeed`，以及从 Pose Contribution 解析的左右 `ActionInstanceId/FootWeight`；缺失时动作占用和跑步朝向结论无效。
 
-当前验收入口已注册为 Unity MCP 工具 `character.foot_landing_stair_ad`，只通过正式 Launcher/Gameplay Lab 路线驱动，不使用 compute-use。运行时代码已经接入实时 Landing/Path 合同与每脚唯一最终 Goal 换代，但尚未生成对应的新采样证据；当前唯一确认的仍是旧采样中的 Accepted Landing、落点身份和 Ground Path 线。Ground Envelope、Swing Foot Motion、Goal 换代后的物理踝骨、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入均未确认，不能从旧报告中的 Goal、残差或画面叠加推断完成。
+当前验收入口已注册为 Unity MCP 工具 `character.foot_landing_stair_ad`，只通过正式 Launcher/Gameplay Lab 路线驱动，不使用 compute-use。运行时代码已经接入实时 Landing/Path 合同、每脚唯一最终 Goal 换代和对应 CSV 诊断。直线楼梯自动采样已经完成一次，但报告仍失败；Ground Envelope、Swing Foot Motion、Goal 换代后的物理踝骨、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入均未通过，不能从 Goal 字段或画面叠加推断完成。
 
 生命周期重构后的第一项用户验收改为：使用 Launcher 采样同一条路线，对照 CSV 与 Scene，确认同一事件的落点、Ground Path 与 Envelope始终来自本帧当前有效预测；跨Surface或高度变化时立即换到新踏面，查询失败时当前Path消失而不是冻结旧线。最后有效落点只在事件完成时晋级为LastLanding。
 
@@ -121,6 +121,14 @@
 
 - CSV：
 - 结论：
+
+## 方案二直线楼梯自动采样记录
+
+- CSV：`Temp/FootLandingSamples/foot-landing-20260819-151949-560-fb14a17fc6f3471aa302b7d283b78b4f.csv`
+- 路线：Unity MCP `character.foot_landing_stair_ad(action=start_straight)`，24 秒直线上下楼梯。
+- 采样：764 个表现帧，左右脚展开 43234 行，`GroundPathState=Accepted` 43191 行；CSV 已包含 Goal 换代 Committed/Pending 修正、权重、Source Path identity 与 `GoalTransitionHalfLifeSeconds=0.03`。
+- 自动验收：`expandedMismatch=0`、`dualGoal=0`、`dualStride=0`、`pelvisCuts=0/0`，但 `missedPromotion=1`、`closureFailures=117`、`maxAnkleResidual=0.06`，报告为 `FAIL`。
+- 结论：本次证明采样器和 Goal 换代诊断链可用，且没有新增米级骨盆跳变；最终 Foot Goal 到物理踝骨的闭环仍未通过，方案二不能标记完成。该 CSV 只作为当前失败基线，不是通过证据。
 
 ## 第 4 步：摆动脚贴路径，支撑脚只向上接地
 

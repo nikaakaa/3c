@@ -72,10 +72,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 groundPath.LastLanding,
                 groundPath.ComponentUp,
                 Color.green);
-            if (foot.Accepted)
+            if (groundPath.NextSwingLandingEventIdentity != 0 &&
+                groundPath.NextSwingLandingEventIdentity == foot.LandingEventIdentity)
             {
                 DrawLandingMarker(
-                    foot.LandingPoint,
+                    groundPath.NextSwingLanding,
                     groundPath.ComponentUp,
                     Color.yellow);
             }

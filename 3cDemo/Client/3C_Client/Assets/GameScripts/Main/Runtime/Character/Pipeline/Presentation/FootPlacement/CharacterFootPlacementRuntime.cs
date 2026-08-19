@@ -49,10 +49,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         float m_PendingNextSwingPredictionError;
         float m_NextSwingConstraintWeight;
         float m_PendingNextSwingConstraintWeight;
+        ulong m_ObservedCurrentEventIdentity;
+        ulong m_PendingObservedCurrentEventIdentity;
         bool m_HasLastLanding;
         bool m_HasNextSwingLanding;
         bool m_HasPendingLastLanding;
         bool m_HasPendingNextSwingLanding;
+        bool m_HasObservedCurrentEvent;
+        bool m_HasPendingObservedCurrentEvent;
 
         internal bool HasPendingLastLanding => m_HasPendingLastLanding;
         internal bool HasPendingNextSwingLanding => m_HasPendingNextSwingLanding;
@@ -74,8 +78,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingNextSwingReferencePoint = m_NextSwingReferencePoint;
             m_PendingNextSwingPredictionError = m_NextSwingPredictionError;
             m_PendingNextSwingConstraintWeight = m_NextSwingConstraintWeight;
+            m_PendingObservedCurrentEventIdentity = m_ObservedCurrentEventIdentity;
             m_HasPendingLastLanding = m_HasLastLanding;
             m_HasPendingNextSwingLanding = m_HasNextSwingLanding;
+            m_HasPendingObservedCurrentEvent = m_HasObservedCurrentEvent;
         }
 
         internal void CaptureNextSwing(
@@ -84,17 +90,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp,
             in CharacterFootMotionSettings settings)
         {
-            if (!diagnostics.Accepted || !step.IsAuthoritative ||
-                !step.HasConsistentLandingEventIdentity ||
-                !(step.IsPreSwing || step.IsSwing) ||
-                step.TimeToLandingSeconds <= 0.000001f ||
-                step.LandingEventIdentity == PendingLastLandingEventIdentity)
+            bool validCandidate = step.IsAuthoritative &&
+                                  step.HasConsistentLandingEventIdentity &&
+                                  (step.IsPreSwing || step.IsSwing) &&
+                                  step.TimeToLandingSeconds > 0.000001f &&
+                                  step.LandingEventIdentity != 0 &&
+                                  step.LandingEventIdentity != PendingLastLandingEventIdentity;
+            if (!validCandidate || !diagnostics.Accepted ||
+                diagnostics.LandingEventIdentity != step.LandingEventIdentity)
             {
                 ClearPendingNextSwing();
                 return;
             }
             if (m_HasPendingNextSwingLanding &&
-                m_PendingNextSwingLanding.LandingEventIdentity == step.LandingEventIdentity)
+                m_PendingNextSwingLanding.LandingEventIdentity != step.LandingEventIdentity)
+            {
+                ClearPendingNextSwing();
+            }
+            if (m_HasPendingNextSwingLanding)
             {
                 Vector3 landingPoint = diagnostics.LandingPoint;
                 Vector3 up = componentUp.sqrMagnitude > 0.000001f
@@ -106,18 +119,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landingPoint - m_PendingNextSwingLanding.WorldPoint,
                     up)) <= settings.MaximumSameEventVerticalJump;
                 if (!sameSurface || !sameHeight)
+                {
+                    ClearPendingNextSwing();
                     return;
+                }
                 m_PendingNextSwingPredictionError = Vector3.Distance(
                     m_PendingNextSwingReferencePoint,
                     landingPoint);
                 m_PendingNextSwingConstraintWeight = 1f;
-                if (Vector3.Distance(
-                        m_PendingNextSwingLanding.WorldPoint,
-                        landingPoint) >= settings.LandingUpdateDistance ||
-                    m_PendingNextSwingLanding.SurfaceIdentity != diagnostics.SurfaceIdentity)
-                {
-                    m_PendingNextSwingLanding = CreateFact(step, diagnostics);
-                }
+                m_PendingNextSwingLanding = CreateFact(step, diagnostics);
                 return;
             }
             m_PendingNextSwingLanding = CreateFact(step, diagnostics);
@@ -129,14 +139,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void PromoteLanded(in AnimationBiomechanicalStepHeader step)
         {
-            if (!step.IsAuthoritative ||
-                step.TimeToLandingSeconds > 0.000001f ||
-                !m_HasPendingNextSwingLanding ||
-                m_PendingNextSwingLanding.LandingEventIdentity != step.LandingEventIdentity)
-                return;
-            m_PendingLastLanding = m_PendingNextSwingLanding;
-            m_HasPendingLastLanding = true;
-            ClearPendingNextSwing();
+            bool hasCurrentEvent = step.IsAuthoritative &&
+                                   step.HasConsistentLandingEventIdentity &&
+                                   step.LandingEventIdentity != 0;
+            ulong currentEventIdentity = hasCurrentEvent
+                ? step.LandingEventIdentity
+                : 0;
+            if (m_HasPendingNextSwingLanding)
+            {
+                ulong acceptedEventIdentity =
+                    m_PendingNextSwingLanding.LandingEventIdentity;
+                bool completedInPlace = hasCurrentEvent &&
+                                        currentEventIdentity == acceptedEventIdentity &&
+                                        step.TimeToLandingSeconds <= 0.000001f;
+                bool advancedToNextEvent = hasCurrentEvent &&
+                                           m_HasPendingObservedCurrentEvent &&
+                                           m_PendingObservedCurrentEventIdentity == acceptedEventIdentity &&
+                                           currentEventIdentity != acceptedEventIdentity;
+                if (completedInPlace || advancedToNextEvent)
+                {
+                    m_PendingLastLanding = m_PendingNextSwingLanding;
+                    m_HasPendingLastLanding = true;
+                    ClearPendingNextSwing();
+                }
+            }
+            if (hasCurrentEvent)
+            {
+                m_PendingObservedCurrentEventIdentity = currentEventIdentity;
+                m_HasPendingObservedCurrentEvent = true;
+            }
         }
 
         void ClearPendingNextSwing()
@@ -169,15 +200,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_NextSwingReferencePoint = m_PendingNextSwingReferencePoint;
             m_NextSwingPredictionError = m_PendingNextSwingPredictionError;
             m_NextSwingConstraintWeight = m_PendingNextSwingConstraintWeight;
+            m_ObservedCurrentEventIdentity = m_PendingObservedCurrentEventIdentity;
             m_HasLastLanding = m_HasPendingLastLanding;
             m_HasNextSwingLanding = m_HasPendingNextSwingLanding;
+            m_HasObservedCurrentEvent = m_HasPendingObservedCurrentEvent;
             m_PendingLastLanding.Clear();
             m_PendingNextSwingLanding.Clear();
             m_PendingNextSwingReferencePoint = default;
             m_PendingNextSwingPredictionError = 0f;
             m_PendingNextSwingConstraintWeight = 0f;
+            m_PendingObservedCurrentEventIdentity = 0;
             m_HasPendingLastLanding = false;
             m_HasPendingNextSwingLanding = false;
+            m_HasPendingObservedCurrentEvent = false;
         }
 
         internal void Discard()
@@ -187,8 +222,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingNextSwingReferencePoint = default;
             m_PendingNextSwingPredictionError = 0f;
             m_PendingNextSwingConstraintWeight = 0f;
+            m_PendingObservedCurrentEventIdentity = 0;
             m_HasPendingLastLanding = false;
             m_HasPendingNextSwingLanding = false;
+            m_HasPendingObservedCurrentEvent = false;
         }
 
         internal void Reset()
@@ -203,10 +240,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingNextSwingPredictionError = 0f;
             m_NextSwingConstraintWeight = 0f;
             m_PendingNextSwingConstraintWeight = 0f;
+            m_ObservedCurrentEventIdentity = 0;
+            m_PendingObservedCurrentEventIdentity = 0;
             m_HasLastLanding = false;
             m_HasNextSwingLanding = false;
             m_HasPendingLastLanding = false;
             m_HasPendingNextSwingLanding = false;
+            m_HasObservedCurrentEvent = false;
+            m_HasPendingObservedCurrentEvent = false;
         }
     }
 
@@ -473,7 +514,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_RightLandingFacts.PendingNextSwingConstraintWeight);
             CharacterFootSwingMotionDiagnostics leftFootMotion = leftSwingMotion;
             CharacterFootSwingMotionDiagnostics rightFootMotion = rightSwingMotion;
-            if (facts.Grounded && !leftAction.IsOccupied && !leftCurrentStep.IsSwing)
+            bool hasSelectedSwing = CharacterFootStrideHipsBuilder.TrySelectSwing(
+                in leftCurrentStep,
+                in rightCurrentStep,
+                in leftSwingMotion,
+                in rightSwingMotion,
+                out CharacterFootSide selectedSwingSide);
+            bool leftIsSelectedSwing = hasSelectedSwing &&
+                                       selectedSwingSide == CharacterFootSide.Left;
+            bool rightIsSelectedSwing = hasSelectedSwing &&
+                                        selectedSwingSide == CharacterFootSide.Right;
+            bool leftIsSupport = facts.Grounded &&
+                                 !leftAction.IsOccupied &&
+                                 !leftIsSelectedSwing &&
+                                 (!leftCurrentStep.IsSwing || rightIsSelectedSwing);
+            bool rightIsSupport = facts.Grounded &&
+                                  !rightAction.IsOccupied &&
+                                  !rightIsSelectedSwing &&
+                                  (!rightCurrentStep.IsSwing || leftIsSelectedSwing);
+            if (leftIsSupport)
             {
                 leftFootMotion = CharacterFootStrideHipsBuilder.BuildStancePlant(
                     pose.Left,
@@ -482,15 +541,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentUp,
                     hasLeftLastLanding,
                     hasLeftLastLanding ? leftLastLanding.Point : default,
+                    hasLeftLastLanding ? leftLastLanding.LandingEventIdentity : 0,
                     m_Settings.FootMotion,
                     frame.PresentationDeltaSeconds,
                     ref m_PendingLeftSupportLock);
             }
             else
             {
+                if (!leftIsSelectedSwing && leftSwingMotion.Accepted)
+                    leftFootMotion = default;
                 m_PendingLeftSupportLock.Clear();
             }
-            if (facts.Grounded && !rightAction.IsOccupied && !rightCurrentStep.IsSwing)
+            if (rightIsSupport)
             {
                 rightFootMotion = CharacterFootStrideHipsBuilder.BuildStancePlant(
                     pose.Right,
@@ -499,30 +561,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentUp,
                     hasRightLastLanding,
                     hasRightLastLanding ? rightLastLanding.Point : default,
+                    hasRightLastLanding ? rightLastLanding.LandingEventIdentity : 0,
                     m_Settings.FootMotion,
                     frame.PresentationDeltaSeconds,
                     ref m_PendingRightSupportLock);
             }
             else
             {
-                m_PendingRightSupportLock.Clear();
-            }
-            if (leftFootMotion.Accepted &&
-                leftFootMotion.PositionWeight > 0f &&
-                rightFootMotion.Accepted &&
-                rightFootMotion.PositionWeight > 0f)
-            {
-                if (Mathf.Abs(leftFootMotion.VerticalCorrection) >=
-                    Mathf.Abs(rightFootMotion.VerticalCorrection))
-                {
+                if (!rightIsSelectedSwing && rightSwingMotion.Accepted)
                     rightFootMotion = default;
-                    m_PendingRightSupportLock.Clear();
-                }
-                else
-                {
-                    leftFootMotion = default;
-                    m_PendingLeftSupportLock.Clear();
-                }
+                m_PendingRightSupportLock.Clear();
             }
             leftGoal = CreateFootGoal(
                 CharacterFootSide.Left,
@@ -535,6 +583,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootStrideHipsDiagnostics strideHips = ResolveStrideHips(
                 in leftCurrentStep,
                 in rightCurrentStep,
+                hasSelectedSwing,
+                selectedSwingSide,
                 hasLeftLastLanding,
                 leftLastLanding,
                 hasRightLastLanding,
@@ -707,9 +757,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     authorityTick,
                     componentUp,
                     m_Settings.ProfileRevision);
-            if (state.HasCommittedInput && state.CommittedKey.Equals(key) &&
-                (state.CommittedAccepted ||
-                 state.CommittedAuthorityTick == key.AuthorityTick))
+            if (state.HasCommittedInput && state.CommittedAccepted &&
+                state.CommittedKey.Equals(key))
             {
                 CharacterFootGroundPathPage committedPage = state.ReuseCommitted();
                 return new CharacterFootGroundPathDiagnostics(committedPage, false);
@@ -1182,6 +1231,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterFootStrideHipsDiagnostics ResolveStrideHips(
             in AnimationBiomechanicalStepHeader leftStep,
             in AnimationBiomechanicalStepHeader rightStep,
+            bool hasSelectedSwing,
+            CharacterFootSide selectedSwingSide,
             bool hasLeftLastLanding,
             CharacterFootGroundPathLanding leftLastLanding,
             bool hasRightLastLanding,
@@ -1212,6 +1263,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!CharacterFootStrideHipsBuilder.TryResolveStride(
                     in leftStep,
                     in rightStep,
+                    hasSelectedSwing,
+                    selectedSwingSide,
                     hasLeftLastLanding,
                     hasLeftLastLanding ? leftLastLanding.Point : default,
                     hasRightLastLanding,

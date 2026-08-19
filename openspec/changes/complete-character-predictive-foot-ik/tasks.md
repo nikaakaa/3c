@@ -7,7 +7,8 @@
 - [x] 0.1 把每脚 `LastLanding`、`NextSwingLanding`、事件观察、Seal、Discard 与 Reset 收入独立 `CharacterFootLandingLifecycle` Module。
 - [x] 0.2 把每脚状态收敛为一个完整 Committed Frame 与一个完整 Pending Frame，删除同字段平行散落的生命周期变量。
 - [x] 0.3 增加显式 `Empty`、`Tracking`、`Accepted` 状态，并让 Runtime 只通过不可变 `CharacterFootLandingSnapshot` 读取 Pending Landing facts。
-- [x] 0.4 预测失败、同事件换级或没有合法候选时保留该事件最后 Accepted `NextSwingLanding`，只由事件完成晋级或外层 Reset 清除它。
+- [x] 0.4 把“最后有效落点历史”与“本帧当前Accepted落点”分开：查询失败或没有候选时历史只供完成晋级，Snapshot不得继续发布旧`NextSwingLanding`。
+- [x] 0.5 让Ground Path只消费本帧当前Accepted Snapshot；Snapshot无落点时提交Rejected页和空Envelope，不复用旧Accepted Path。
 
 ## 1. 统一输入、状态与配置合同
 
@@ -16,12 +17,12 @@
 - [ ] 1.3 新增每脚锁脚 Pending/Committed 页，保存 Lock Event、锁入准备起始时间/权重、Committed Goal、释放起点修正/权重与剩余时间。
 - [ ] 1.4 从 `CharacterFootPlacementPoseInput.Contributions` 解析 Live ActionInstance 与左右脚权重，形成唯一每脚 Action 占用事实。
 - [ ] 1.5 把 `CharacterPresentationFactFrame.Grounded` 与 `HorizontalSpeed` 显式送入支撑和朝向纯计算输入，不新增第二状态源。
-- [ ] 1.6 为 `MaximumSameEventVerticalJump` 增加正式 Profile、Projection payload 与序列化值。
+- [x] 1.6 为 `GoalTransitionHalfLifeSeconds` 增加正式Profile、序列化值与Build校验，删除`MaximumSameEventVerticalJump`配置和资产字段。
 - [ ] 1.7 为 `LockDistance`、`SlideDistance`、`UnlockBlendSeconds` 增加正式 Profile、Projection payload 与序列化值。
 - [ ] 1.8 为 `StrideSwitchCooldownSeconds` 与 `MaximumPivotYawDeltaDegrees` 增加正式 Profile、Projection payload 与序列化值。
 - [ ] 1.9 为朝向增加 `MaximumPitchDegrees`、`MaximumRollDegrees`、`UphillLevelBlend`、`DownhillSlopeBlend` 与 `OrientationRunSpeed` 正式配置。
 - [ ] 1.10 只保留有限正数 `PelvisSpringFrequency`，删除旧 `PelvisSpringDampingRatio` 配置、Projection 字段与Runtime读取。
-- [ ] 1.11 在 Profile Build 校验中拒绝非有限值、非正值以及 `LandingUpdateDistance >= LockDistance`、`LockDistance >= SlideDistance`。
+- [x] 1.11 在 Profile Build 校验中拒绝非有限值、非正值以及 `LandingUpdateDistance >= LockDistance`、`LockDistance >= SlideDistance`，并要求Goal换代半衰期为有限正数。
 - [ ] 1.12 删除预测误差淡出距离、约束权重及其 Profile、Projection、Runtime、诊断字段，不保留兼容读取。
 
 ## 2. 单次 Landing 查询与事件晋级
@@ -33,10 +34,10 @@
 - [ ] 2.5 Current与Incoming都合法时按较小`TimeToLandingSeconds`选择，相等时稳定选择Current。
 - [ ] 2.6 每脚每表现帧只为选中事件执行零次或一次正式Landing SphereCast，删除Current与Incoming双查询结构。
 - [ ] 2.7 选中事件查询失败时发布typed rejection，不查询另一事件作为fallback。
-- [ ] 2.8 同事件更新前先比较SurfaceIdentity，再比较沿Component Up高度差，统一实现换级判定。
-- [ ] 2.9 同踏面且超过`LandingUpdateDistance`时提交新的Accepted Landing，并复用同一次SphereCast结果重建Ground Path。
-- [ ] 2.10 同踏面但未超过死区时保留Accepted Landing、Accepted revision与Committed Ground Path，同时允许下一帧继续查询。
-- [ ] 2.11 换级命中时发布typed rejection和Warning，保留本事件最后Accepted Landing，不把新命中写入Path。
+- [x] 2.8 删除SurfaceIdentity与高度换级拒绝；同事件任一合法命中都能成为当前Accepted候选。
+- [x] 2.9 新命中超过`LandingUpdateDistance`时提交新的Accepted Landing，并复用同一次SphereCast结果重建Ground Path。
+- [x] 2.10 新命中未超过死区时保留Accepted Landing、Accepted revision与Committed Ground Path，同时允许下一帧继续查询。
+- [x] 2.11 查询失败、Selected Event无效或没有候选时把当前Snapshot退回Tracking，Ground Path发布Rejected且Envelope为空；最后有效落点只保留作晋级历史。
 - [ ] 2.12 Ground Path输入只消费LastLanding、NextSwingLanding及其Surface/revision身份，不读取Animated Sole或固定高度。
 - [ ] 2.13 保持Capsule、Reachability、Hull与Envelope唯一查询链，不新增脚下Trace。
 
@@ -116,18 +117,24 @@
 - [ ] 8.1 按design第10节顺序组装Prepare，保证晋级、Step选择、revision、查询、Path、步伐与Goal使用同一Pending事实。
 - [ ] 8.2 保证Pelvis、LeftFoot、RightFoot三个slot在唯一FullBodyIK前各只有一个最终值。
 - [ ] 8.3 保证唯一FullBodyIK与唯一final writer使用同一Frame、Completion与Rig lineage。
-- [ ] 8.4 增加Selected Query Step、每脚查询次数、尝试/Accepted revision与晋级来源revision诊断。
-- [ ] 8.5 增加Current Visible Position/Rotation、Virtual Body/Revision Position/Rotation/Forward、visible/requested/applied/residual yaw与Pivot主支撑身份诊断。
-- [ ] 8.6 增加每脚ActionInstance、Action脚权重、Fact Grounded与HorizontalSpeed诊断。
-- [ ] 8.7 增加Lock Event、准备起始时间/权重、锁脚状态、水平误差、释放起点修正/权重/剩余时间诊断。
-- [ ] 8.8 增加PreviousStrideStart、重基前后raw target、necessary、spring input/output/velocity与最终Pelvis Goal诊断。
-- [ ] 8.9 Gizmo只显示Committed事实，不重新查询、重算Path/Envelope、推进状态或执行FBBIK；状态只用颜色和线框。
-- [ ] 8.10 CSV增加上述字段以及最终物理Pelvis/Ankle、Goal residual、写入Completion与typed rejection。
+- [x] 8.4 新增每脚唯一Goal换代Module，保存Committed/Pending相对原生动画踝骨的Component空间位置/旋转修正与权重。
+- [x] 8.5 用`GoalTransitionHalfLifeSeconds`计算帧率无关alpha，让本帧输出从上一成功输出收敛到最新原始Goal或零修正。
+- [x] 8.6 换代途中原始Goal再次变化时直接以上一成功输出为新起点，不缓存旧Path、旧Envelope或第二目标队列。
+- [x] 8.7 离地或有限Action占脚时当帧清空对应换代状态并发布原生Goal零权重，不携带旧世界修正。
+- [x] 8.8 把Goal换代接入Foot Placement的BeginPending、Seal、Discard、Reset、Retarget与Dispose事务生命周期。
+- [ ] 8.9 增加Selected Query Step、每脚查询次数、尝试/Accepted revision与晋级来源revision诊断。
+- [ ] 8.10 增加Current Visible Position/Rotation、Virtual Body/Revision Position/Rotation/Forward、visible/requested/applied/residual yaw与Pivot主支撑身份诊断。
+- [ ] 8.11 增加每脚ActionInstance、Action脚权重、Fact Grounded与HorizontalSpeed诊断。
+- [ ] 8.12 增加Lock Event、准备起始时间/权重、锁脚状态、水平误差、释放起点修正/权重/剩余时间诊断。
+- [ ] 8.13 增加PreviousStrideStart、重基前后raw target、necessary、spring input/output/velocity与最终Pelvis Goal诊断。
+- [ ] 8.14 增加原始Goal修正、Committed/Pending换代输出、原始/最终权重、半衰期与Source Path identity诊断。
+- [ ] 8.15 Gizmo只显示Committed事实，不重新查询、重算Path/Envelope、推进状态或执行FBBIK；状态只用颜色和线框。
+- [ ] 8.16 CSV增加上述字段以及最终物理Pelvis/Ankle、Goal residual、写入Completion与typed rejection。
 
 ## 9. 正式内容与旧路径清理
 
-- [ ] 9.1 为Corin与TrainingEnemy写入同一正式Foot Placement Profile配置，不增加角色旁路配置。
+- [x] 9.1 为Corin与TrainingEnemy写入同一正式Foot Placement Profile配置，不增加角色旁路配置。
 - [ ] 9.2 把已有步伐骨盆Builder迁移到本change的正式命名与输入输出合同，删除旧四步阶段命名和未接线调用。
-- [ ] 9.3 删除旧预测误差约束、可调阻尼比、双Step查询与完成帧重查实现，不保留兼容路径。
+- [ ] 9.3 删除旧预测误差约束、同事件Surface/高度冻结、可调阻尼比、双Step查询与完成帧重查实现，不保留兼容路径。
 - [ ] 9.4 对账current spec、`openspec/project.md`与其它active change，保证只有本change拥有完整预测IK增量。
-- [ ] 9.5 运行`openspec validate complete-character-predictive-foot-ik --strict --no-interactive`。
+- [x] 9.5 运行`openspec validate complete-character-predictive-foot-ik --strict --no-interactive`。

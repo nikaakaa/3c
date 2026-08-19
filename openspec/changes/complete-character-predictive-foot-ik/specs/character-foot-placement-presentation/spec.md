@@ -26,7 +26,7 @@ RawLanding = VirtualBodyPosition
 
 `CurrentVisiblePosition/Rotation` MUST来自尚未被Foot Placement改写的当前Component Pose；`VisiblePositionForRevision = CommittedRevisionPosition + (CurrentVisiblePosition - CommittedVisiblePositionAtCommit)`，只表示上一提交虚体沿当前可见世界位移推进后的临时Pose。没有有效Pivot时Revision Position/Rotation MUST对齐本帧Visible Position/Rotation。`RevisionPosition`与`RevisionRotation`只属于Foot Placement Pending/Committed状态，不是Gameplay或KCC未来朝向Plan。Future Body Translation MUST保持KCC在原世界空间积分和裁剪的向量，不得随Pivot yaw、输入方向、速度方向或Body方向再次旋转。RootLocalLanding MUST只乘本帧受角限后的Virtual Body Rotation；系统 MUST不把瞬时Yaw Velocity外推到Landing时刻，不得旋转旧Route、Surface、Hull或Envelope冒充新查询结果。
 
-SphereCast MUST从Raw Landing上方沿Component Down使用Profile声明的半径和有限距离查询。查询 MUST过滤自身Collider、初始重叠、非法点、非法法线与超坡度命中，并在固定容量返回集合中按距离和稳定identity选择最近合法命中。没有合法命中时 MUST发布`GroundQueryMissed`，不得创建默认Surface或沿用旧revision Path。
+SphereCast MUST从Raw Landing上方沿Component Down使用Profile声明的半径和有限距离查询。查询 MUST过滤自身Collider、初始重叠、非法点、非法法线与超坡度命中，并在固定容量返回集合中按距离和稳定identity选择最近合法命中。命中数量达到固定缓冲容量时 MUST发布`GroundQueryCapacityExceeded`并拒绝整次查询，不得从截断集合选择落点；没有合法命中时 MUST发布`GroundQueryMissed`，不得创建默认Surface或沿用旧revision Path。
 
 #### Scenario: Current与Incoming同时可预测
 
@@ -50,25 +50,26 @@ SphereCast MUST从Raw Landing上方沿Component Down使用Profile声明的半径
 - **WHEN** Selected Step、Motion Timeline、Body Target、Future Body Translation、revision Pose或合法Surface不可用
 - **THEN** 该脚 MUST发布明确Rejected原因
 - **AND** MUST不查询另一Step或生成替代落点
-- **AND** 若该事件已经有Accepted `NextSwingLanding`，Pending生命周期 MUST保留该事实和其Ground Path输入，直到事件完成晋级或外层因Body discontinuity、Runtime Reset / Dispose重置生命周期
+- **AND** 若该事件此前已有有效落点，生命周期 MAY保留它作为事件完成晋级历史，但当前Snapshot MUST不发布`NextSwingLanding`，Ground Path MUST为Rejected且Envelope MUST为空
 
 ### Requirement: Landing Event生命周期必须独立拥有Pending与Committed事实
 
 每只脚 MUST由唯一 `CharacterFootLandingLifecycle` Module拥有 `LastLanding`、`NextSwingLanding`、当前事件身份和显式生命周期状态。状态至少包含 `Empty`、`Tracking` 与 `Accepted`；Ground Path、Ground Envelope、Goal producer、FullBodyIK 与最终物理骨骼 writer 不得复制这些状态。
 
-每次表现帧 MUST先把唯一 Committed Frame整体复制为唯一 Pending Frame；同一生命周期字段不得以平行变量分别维护Committed与Pending值。`Tracking` 表示已经锁定一个合法 Landing Event，但本帧尚未得到新的Accepted地面事实；`Accepted` 表示 Pending 拥有该事件最后一个合法落点。只有外层表现事务 `Seal` 才能把 Pending 变成 Committed；`Discard`、查询失败、没有候选或同事件换级 MUST保留上一份 Committed Accepted事实，不得把 `NextSwingLanding` 清零或改成默认点。事件完成时 MUST先把最后 Accepted `NextSwingLanding` 原值晋级为 `LastLanding`，再允许新事件建立下一落点。
+每次表现帧 MUST先把唯一 Committed Frame整体复制为唯一 Pending Frame；同一生命周期字段不得以平行变量分别维护Committed与Pending值。`Tracking` 表示已经锁定一个合法 Landing Event，但本帧没有当前Accepted地面事实；`Accepted` 表示 Pending拥有本帧有效或死区内复用的唯一当前落点。只有外层表现事务`Seal`才能把Pending变成Committed。查询失败、没有候选或Selected Event无效时，Pending MUST回到Tracking并使当前Snapshot不发布`NextSwingLanding`；Module MAY保留最后有效落点作为晋级历史，但Ground Path、Ground Envelope、Goal producer不得读取该历史。事件完成时 MUST把该历史中的最后有效落点原值晋级为`LastLanding`，再允许新事件建立下一落点。`Discard` MUST完整恢复上一Committed Frame。
 
 #### Scenario: Accepted事件本帧查询失败
 
 - **WHEN** 已有Accepted `NextSwingLanding`，但同一Landing Event本帧没有合法命中
-- **THEN** 生命周期状态 MUST保留该Accepted落点
-- **AND** Ground Path MUST继续消费该落点，不得因一次Rejected把线冻结为无输入或清空
+- **THEN** 生命周期状态 MUST回到Tracking且当前Snapshot MUST不发布`NextSwingLanding`
+- **AND** Ground Path MUST发布Rejected并清空Envelope，不得继续显示上一Accepted Path
+- **AND** 最后有效落点 MAY仅作为事件完成晋级历史保留
 
-#### Scenario: 同事件换级被拒绝
+#### Scenario: 同事件命中新踏面
 
-- **WHEN** 新命中与缓存Accepted落点的SurfaceIdentity不同，或沿Component Up高度差超过正式阈值
-- **THEN** 新命中 MUST只作为本帧Rejected事实
-- **AND** 缓存Accepted `NextSwingLanding`、Landing Event identity与Ground Path输入 MUST保持不变
+- **WHEN** 新合法命中与当前Accepted落点的SurfaceIdentity不同或沿Component Up高度发生变化，且点位移动超过更新死区
+- **THEN** 新命中 MUST成为该事件唯一当前Accepted `NextSwingLanding`
+- **AND** Ground Path与Envelope MUST在同一事务中重建到新踏面
 
 #### Scenario: 表现事务Discard
 
@@ -86,7 +87,7 @@ Foot Placement MUST在同一Pending Frame内按固定顺序发布最多三个有
 
 支撑脚在Grounded、拥有LastLanding、不是当前摆动脚且未被有限Action占用时，MUST先按`plantHeight = max(0, dot(LastLanding - originalSole, ComponentUp))`把Sole和Ankle沿`Component Up`落到不低于LastLanding的高度，再按水平误差进入Locked、Sliding或Unlocked。Locked/Sliding的Sole水平位置 MUST使用LastLanding方向的水平偏移叠加到`plantedSole`，不得把`LastLanding + up * plantHeight`作为目标。Locked/Sliding的Ankle目标 MUST保留同一帧原生`originalAnkle - originalSole`偏移。Pelvis MUST使用现有`PelvisPreSolveTranslation`：步伐起点是支撑脚LastLanding，终点是revision后的摆动脚NextSwingLanding；主目标按Pose Root在步伐水平轴上的进度采样；上坡在支撑落地后抬升，下坡在支撑仍接触时下降；支撑切换时旧步伐相对高度 MUST先按旧起点到新起点重基，Pending弹簧 MUST从Committed输出、速度和旧起点初始化，再用Profile频率执行闭式临界阻尼积分。必要地面升高 MUST一次加上，诊断分解不得重复加到最终Goal。双脚垂直目标确定后，若盆骨相对更低修正脚的净空低于同帧原生动画净空，MUST把差值补进盆骨平移。
 
-摆动脚有效Position Weight只有包络垂直增量超过几何容差时才可使用同帧`animation.foot-placement-weight`；Pelvis只有最终平移超过几何容差时才可非零。有效Locked/Sliding支撑脚即使plantHeight和水平误差为零，Position Weight仍 MUST 等于同帧`animation.foot-placement-weight`，以持续维护锁脚；Unlocked才按正式解锁时间降到零。摆动脚Rotation Weight MUST为零。支撑脚Rotation Weight MUST只在朝向合同成立时非零。缺少步伐两端时，Pelvis和摆动路径权重 MUST为零，但有效GroundedStationary支撑脚仍可复用支撑锁脚合同；缺少LastLanding、Ground Path Rejected或无效支撑合同时，对应Goal MUST发布原生事实和零权重。系统 MUST不叠加预测误差权重、摆动相位、Set Mesh、VisualRoot写入、Gameplay Body写入或第二Grounding查询。
+摆动脚有效Position Weight只有包络垂直增量超过几何容差时才可使用同帧`animation.foot-placement-weight`；Pelvis只有最终平移超过几何容差时才可非零。有效Locked/Sliding支撑脚即使plantHeight和水平误差为零，Position Weight仍 MUST 等于同帧`animation.foot-placement-weight`，以持续维护锁脚；Unlocked才按正式解锁时间降到零。摆动脚Rotation Weight MUST为零。支撑脚Rotation Weight MUST只在朝向合同成立时非零。缺少步伐两端时，Pelvis和摆动路径权重 MUST为零，但有效GroundedStationary支撑脚仍可复用支撑锁脚合同；缺少LastLanding、Ground Path Rejected或无效支撑合同时，原始Foot Goal MUST发布原生事实和零权重，再由唯一最终Goal换代连续收敛到零修正。离地或有限Action占脚时 MUST当帧清空换代状态并发布原生Goal零权重。系统 MUST不叠加预测误差权重、摆动相位、Set Mesh、VisualRoot写入、Gameplay Body写入或第二Grounding查询。
 
 #### Scenario: 上楼时一只脚摆动一只脚支撑
 
@@ -123,15 +124,15 @@ Foot Placement MUST在同一Pending Frame内按固定顺序发布最多三个有
 
 ### Requirement: Ground Path必须使用上一已提交落点与下一事件落点
 
-每只脚 MUST按Landing Event identity缓存Accepted Landing。PreSwing或Swing阶段的每个有效表现帧 MUST执行一次且仅一次正式Landing SphereCast。同一事件的后续权威Accepted结果 MUST只有在`SurfaceIdentity`相同且沿Component Up的高度差不超过Profile显式`MaximumSameEventVerticalJump`时更新NextSwingLanding。任一条件不满足都算换级。更新距离小于正式Profile死区时 MUST保留原落点并复用Ground Path，但 MUST不停止下一表现帧的正式Landing预测。换级时 MUST丢弃该命中、保留本事件已接受落点并发布Warning，MUST不把新踏面写进Ground Path。该事件实际落地后最新NextSwingLanding MUST晋级为LastLanding，之后才为新的Swing事件建立下一落点。
+每只脚 MUST按Landing Event identity跟踪当前Accepted Landing。PreSwing或Swing阶段的每个有效表现帧 MUST执行一次且仅一次正式Landing SphereCast。同一事件的任一合法命中都 MUST成为当前Accepted候选；SurfaceIdentity与沿Component Up的高度变化不得阻止它替换旧踏面。更新距离小于正式Profile死区时 MUST保留原落点并复用Ground Path，但 MUST不停止下一表现帧的正式Landing预测；超过死区时 MUST提交新落点并重建同一事务中的唯一Ground Path。当前查询失败、Selected Event无效或没有候选时 MUST不发布当前NextSwingLanding，Ground Path MUST为Rejected且Envelope MUST为空。生命周期内部最后有效落点只可供事件完成晋级，不得继续驱动当前Path或Goal。该事件实际落地后最后有效落点 MUST晋级为LastLanding，之后才为新的Swing事件建立下一落点。
 
 上述“一次” MUST指查询前已经选中的唯一Current或Incoming事件；没有候选时为零次，不能理解成Current与Incoming各一次。NextSwingLanding MUST记录产生它的独立Accepted trajectory revision identity。事件完成时 MUST把缓存Accepted事实原值晋级，完成帧查询结果不得覆盖点、法线、Surface或revision identity。
 
 Ground Path MUST只使用LastLanding与revision后的NextSwingLanding构造查询输入。没有LastLanding时 MUST发布`CurrentLandingUnavailable`；不得用Animated Sole、Transform、固定高度或默认地面补起点。
 
-#### Scenario: 同一Landing Event持续多个表现帧且同踏面未变
+#### Scenario: 同一Landing Event持续多个表现帧
 
-- **WHEN** NextSwingLanding Event identity没有变化、SurfaceIdentity相同、高度差未超过`MaximumSameEventVerticalJump`且新的Accepted Landing移动超过更新死区
+- **WHEN** NextSwingLanding Event identity没有变化且新的合法Landing移动超过更新死区
 - **THEN** Runtime MUST提交新的NextSwingLanding并重建同一Foot Placement事务中的Ground Path
 - **AND** Ground Path重建 MUST消费该表现帧已经产生的唯一SphereCast结果，不得为重建再执行第二次Landing查询
 
@@ -141,12 +142,17 @@ Ground Path MUST只使用LastLanding与revision后的NextSwingLanding构造查�
 - **THEN** Runtime MUST复用缓存落点与Committed Ground Path
 - **AND** MUST继续执行下一表现帧的唯一Landing预测，但不得因毫米级误差触发新的Capsule Ground Detection
 
-#### Scenario: 同一Landing Event换级
+#### Scenario: 同一Landing Event跨踏面
 
-- **WHEN** 新的Accepted Landing属于不同SurfaceIdentity，或沿Component Up的高度差大于`MaximumSameEventVerticalJump`
-- **THEN** Runtime MUST保留本事件已接受的NextSwingLanding
-- **AND** MUST发布Warning
-- **AND** MUST不重建指向新踏面的Ground Path
+- **WHEN** 新的Accepted Landing属于不同SurfaceIdentity或不同高度，且点位移动超过更新死区
+- **THEN** Runtime MUST接受本帧新Landing并更新唯一NextSwingLanding
+- **AND** Ground Path与Envelope MUST重建到新踏面，不得继续显示旧踏面
+
+#### Scenario: 当前Landing查询失败
+
+- **WHEN** 当前Selected Event没有合法Landing命中
+- **THEN** Runtime MUST发布Rejected Ground Path和空Envelope
+- **AND** Scene与CSV MUST不继续发布上一Accepted Path
 
 #### Scenario: 下一Swing Event完成
 
@@ -157,9 +163,9 @@ Ground Path MUST只使用LastLanding与revision后的NextSwingLanding构造查�
 
 ### Requirement: Foot Placement诊断必须只显示当前事实
 
-Scene诊断 MUST保留上一已提交Accepted Landing、下一Landing Event的Cached Accepted Landing、左右脚Ground Envelope和上游Invalid Segment，并显示当前摆动脚Original/Corrected Sole、支撑脚Original/Planted Sole、步伐起点到终点的细线、盆骨目标标记、锁脚状态对应的脚标记以及支撑脚朝向短法线。标记不得使用文字。Active Swing或换级被拒绝 MUST继续在对应Sole显示红色线框。
+Scene诊断 MUST显示上一已提交LastLanding、本帧当前Accepted NextSwingLanding、左右脚当前Ground Envelope和上游Invalid Segment，并显示当前摆动脚Original/Corrected Sole、支撑脚Original/Planted Sole、步伐起点到终点的细线、盆骨目标标记、锁脚状态对应的脚标记以及支撑脚朝向短法线。标记不得使用文字。当前查询Rejected时 MUST在对应Sole显示红色线框且不得继续画旧Accepted Path。
 
-只读摘要与CSV MUST记录Selected Query Step、每脚查询次数、尝试与Accepted trajectory revision identity、Current Visible Position/Rotation、Virtual Body Position/Rotation、revision Position/Rotation/Forward、visible/applied/residual yaw、Pivot主支撑Side/Event、ActionInstance与左右脚占用权重、Fact HorizontalSpeed、事件SurfaceIdentity、晋级来源Accepted revision、步伐支撑侧、起止点、progress、上下坡判定、盆骨重基前后target、spring input/output/velocity、支撑脚plantDelta、锁脚状态、水平误差、锁入准备、释放起点修正/权重/剩余时间和朝向权重，以及既有Swing Foot Motion字段。CSV MUST另外记录final writer之后的物理盆骨、物理脚踝、写入Completion identity及相对Goal残差。Diagnostics与Gizmo MUST不重新采样动画、查询世界、计算Reachability、采样Envelope或执行FBBIK。
+只读摘要与CSV MUST记录Selected Query Step、每脚查询次数、尝试与Accepted trajectory revision identity、Current Visible Position/Rotation、Virtual Body Position/Rotation、revision Position/Rotation/Forward、visible/applied/residual yaw、Pivot主支撑Side/Event、ActionInstance与左右脚占用权重、Fact HorizontalSpeed、事件SurfaceIdentity、晋级来源Accepted revision、步伐支撑侧、起止点、progress、上下坡判定、盆骨重基前后target、spring input/output/velocity、支撑脚plantDelta、锁脚状态、水平误差、锁入准备、释放起点修正/权重/剩余时间和朝向权重，以及既有Swing Foot Motion字段。CSV MUST另外记录每脚原始Goal修正、Committed/Pending换代输出修正、原始/最终权重、Goal换代半衰期、Source Ground Path identity、final writer之后的物理盆骨、物理脚踝、写入Completion identity及相对Goal残差。Diagnostics与Gizmo MUST不重新采样动画、查询世界、计算Reachability、采样Envelope或执行FBBIK。
 
 最终骨骼消费仍 MUST通过同帧FootPlacement Goal Target Watch与FullBodyIK Pose Watch验证；两者 MUST具有相同Frame、Completion和Rig lineage。用户 MUST不从Scene Gizmo或身体弹跳单独推断盆骨或脚已经写入Physical Bones。
 
@@ -169,13 +175,39 @@ Scene诊断 MUST保留上一已提交Accepted Landing、下一Landing Event的Ca
 - **THEN** 步伐细线端点 MUST等于该帧支撑脚LastLanding与revision后的摆动脚NextSwingLanding
 - **AND** CSV中的最终Pelvis Goal、权重和物理盆骨残差 MUST来自同一Completion
 
-#### Scenario: 查看换级被拒绝的下一落点
+#### Scenario: 查看实时换踏面的下一落点
 
-- **WHEN** 同一Landing Event的新查询命中了不同SurfaceIdentity或高度超过阈值
-- **THEN** Scene诊断 MUST继续显示本事件已接受的下一落点
-- **AND** CSV MUST记录Warning对应的typed原因且不得把新踏面写成Accepted NextSwingLanding
+- **WHEN** 同一Landing Event的新查询命中了不同SurfaceIdentity或不同高度的合法点
+- **THEN** Scene诊断 MUST显示本帧新Accepted落点和对应Ground Path
+- **AND** CSV中的Landing、Path端点和Envelope identity MUST属于同一Completion
 
 ## ADDED Requirements
+
+### Requirement: 最终Foot Goal必须以原生动画踝骨修正连续换代
+
+每只脚 MUST在唯一GoalSet写入前拥有一份Goal换代Pending/Committed状态。输入 MUST是本帧原始Foot Goal相对同帧原生动画踝骨的Component空间位置修正、旋转修正和权重；状态 MUST只保存上一成功输出修正与权重以及Source Ground Path identity，不得保存第二条Landing、Ground Path、Envelope或世界绝对Goal。
+
+每帧 MUST按`alpha = 1 - pow(0.5, deltaSeconds / GoalTransitionHalfLifeSeconds)`从上一Committed输出收敛到本帧最新原始修正和权重。位置修正与权重使用Lerp，旋转修正使用最短路径Slerp，最终Foot Goal MUST等于本帧原生动画踝骨加Pending输出修正。当前Path变更或失效时，Landing、Path和Envelope MUST立即表达新事实或Rejected；只有最终Foot Goal连续换代。换代途中目标再次变化时 MUST以上一成功输出为新起点，不得建立旧目标队列。`GoalTransitionHalfLifeSeconds` MUST是正式Profile中的有限正数。
+
+Pending MUST从Committed完整初始化，只有外层Seal提交；Discard不得推进响应。Body离地、有限Action占脚、Body discontinuity、Reset、Retarget或Dispose属于所有权硬失效，MUST立即清空该脚换代状态并发布原生Goal零权重，不能在空中或动作期间继续携带旧地面修正。Pelvis MUST继续只使用自己的步伐临界弹簧，不得再经过Foot Goal换代。
+
+#### Scenario: 当前落点从一级踏面切到下一级
+
+- **WHEN** 同一Landing Event的新合法预测使Ground Path与原始Foot Goal发生离散变化
+- **THEN** Scene中的Landing、Path与Envelope MUST同帧切到新事实
+- **AND** 最终Foot Goal修正 MUST从上一Committed输出按正式半衰期向最新修正收敛，不得一帧硬切
+
+#### Scenario: Ground Path失效
+
+- **WHEN** Body仍Grounded且该脚未被Action占用，但当前Ground Path从Accepted变为Rejected
+- **THEN** 原始Foot Goal MUST为零修正和零权重
+- **AND** 最终Foot Goal MUST从上一Committed修正连续收敛回同帧原生动画踝骨
+
+#### Scenario: 所有权硬失效
+
+- **WHEN** Body离地或有限Action占用该脚
+- **THEN** 该脚Goal换代状态 MUST当帧清空
+- **AND** 最终Foot Goal MUST立即等于原生动画踝骨且位置与旋转权重为零
 
 ### Requirement: 支撑脚必须按水平误差进入Locked Sliding或Unlocked
 

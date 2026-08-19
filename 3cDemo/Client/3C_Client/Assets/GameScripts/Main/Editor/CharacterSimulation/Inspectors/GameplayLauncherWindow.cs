@@ -77,6 +77,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void OnDisable()
         {
             EditorApplication.update -= TickAutoSample;
+            if (m_AutoSampleStopTime != 0d &&
+                (CharacterFootLandingPredictionSampler.IsStartPending ||
+                 CharacterFootLandingPredictionSampler.IsCapturing))
+            {
+                CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+            }
             m_AutoSampleStopTime = 0d;
             GameplayLabFootIkKeyboardRouteDriver.Stop();
         }
@@ -220,24 +226,28 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void DrawFootLandingSampling()
         {
             bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
+            bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
             string savedPath = CharacterFootLandingPredictionSampler.LastSavedPath;
             EditorGUILayout.LabelField(
                 "Foot Landing Sampling",
-                capturing ? "Recording" : "Idle");
+                capturing ? "Recording" : starting ? "Starting" : "Idle");
             using (new EditorGUILayout.HorizontalScope())
             {
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling ||
                            !EditorApplication.isPlaying ||
-                           capturing))
+                           capturing ||
+                           starting))
                 {
                     if (GUILayout.Button("Start Sampling"))
-                        ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
+                        StartManualSample();
                 }
-                using (new EditorGUI.DisabledScope(EditorApplication.isCompiling || !capturing))
+                using (new EditorGUI.DisabledScope(
+                           EditorApplication.isCompiling ||
+                           !capturing && !starting))
                 {
                     if (GUILayout.Button("Stop and Save CSV"))
-                        ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
+                        StopManualSample();
                 }
                 using (new EditorGUI.DisabledScope(
                            string.IsNullOrEmpty(savedPath) || !File.Exists(savedPath)))
@@ -252,6 +262,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            EditorApplication.isCompiling ||
                            !EditorApplication.isPlaying ||
                            capturing ||
+                           starting ||
                            m_AutoSampleStopTime > 0d))
                 {
                     if (GUILayout.Button("Auto Sample 8s then Score"))
@@ -262,6 +273,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            EditorApplication.isPlayingOrWillChangePlaymode &&
                            !EditorApplication.isPlaying ||
                            capturing ||
+                           starting ||
                            GameplayLabFootIkKeyboardRouteDriver.IsActive ||
                            GameplayLabFootIkKeyboardRouteDriver.IsPending ||
                            m_AutoSampleStopTime > 0d))
@@ -288,6 +300,27 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             if (!string.IsNullOrEmpty(GameplayLabFootIkKeyboardRouteDriver.LastReport))
                 EditorGUILayout.HelpBox(GameplayLabFootIkKeyboardRouteDriver.LastReport, MessageType.Info);
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField(
+                "Foot IK Visual Validation",
+                CharacterFootPlacementVisualValidation.IsEnabled ? "Enabled" : "Disabled");
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(CharacterFootPlacementVisualValidation.IsEnabled))
+                {
+                    if (GUILayout.Button("Enable Visual Validation"))
+                        ExecuteSampling(CharacterFootPlacementVisualValidation.Enable);
+                }
+                using (new EditorGUI.DisabledScope(!CharacterFootPlacementVisualValidation.IsEnabled))
+                {
+                    if (GUILayout.Button("Disable Visual Validation"))
+                        ExecuteSampling(CharacterFootPlacementVisualValidation.Disable);
+                }
+            }
+            if (CharacterFootPlacementVisualValidation.IsEnabled)
+                EditorGUILayout.HelpBox(
+                    "Game/Scene View shows accepted landings, Ground Path, original/corrected soles, pelvis/foot goals, FBBIK and final physical bones.",
+                    MessageType.Info);
             if (!string.IsNullOrEmpty(m_Step1Report))
                 EditorGUILayout.HelpBox(m_Step1Report, MessageType.Info);
             if (!string.IsNullOrEmpty(savedPath))
@@ -493,11 +526,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void StartAutoSample()
         {
-            ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
-            m_AutoSampleStopTime = EditorApplication.timeSinceStartup + 8d;
-            m_Step1Report = "Auto sampling 8s... walk the stairs now.";
-            EditorApplication.update -= TickAutoSample;
-            EditorApplication.update += TickAutoSample;
+            try
+            {
+                CharacterFootLandingPredictionSampler.StartSampling();
+                m_AutoSampleStopTime = -1d;
+                m_Step1Report = "Waiting for Gameplay Lab player...";
+                EditorApplication.update -= TickAutoSample;
+                EditorApplication.update += TickAutoSample;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorUtility.DisplayDialog("3C Launcher", exception.Message, "OK");
+            }
         }
 
         void StartStairAdSample()
@@ -530,8 +571,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void TickAutoSample()
         {
-            if (m_AutoSampleStopTime <= 0d ||
-                EditorApplication.timeSinceStartup < m_AutoSampleStopTime)
+            if (m_AutoSampleStopTime == 0d)
+                return;
+            if (m_AutoSampleStopTime < 0d)
+            {
+                if (CharacterFootLandingPredictionSampler.IsStartPending)
+                    return;
+                if (!CharacterFootLandingPredictionSampler.IsCapturing)
+                {
+                    EditorApplication.update -= TickAutoSample;
+                    m_AutoSampleStopTime = 0d;
+                    m_Step1Report = CharacterFootLandingPredictionSampler.LastStartFailure;
+                    Repaint();
+                    return;
+                }
+                m_AutoSampleStopTime = EditorApplication.timeSinceStartup + 8d;
+                m_Step1Report = "Auto sampling 8s... walk the stairs now.";
+                Repaint();
+                return;
+            }
+            if (EditorApplication.timeSinceStartup < m_AutoSampleStopTime)
             {
                 return;
             }
@@ -551,6 +610,20 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             m_Step1Report = report.Summary;
             Debug.Log("Foot Landing Step1 " + report.Summary);
             Repaint();
+        }
+
+        void StartManualSample()
+        {
+            m_Step1Report = string.Empty;
+            ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
+            Repaint();
+        }
+
+        void StopManualSample()
+        {
+            ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
+            if (!string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastSavedPath))
+                ScoreLastCsv();
         }
     }
 }

@@ -154,32 +154,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
 
+            if (roots.Count != 1)
+                return Fail(csvPath, $"采样 Root 数量错误：{roots.Count}。");
             string selectedRoot = string.Empty;
-            int activeRootCount = 0;
             foreach (string root in roots)
-            {
-                bool active = false;
-                foreach (KeyValuePair<(int frame, ulong completion, string root), FramePair> entry in frames)
-                {
-                    if (!string.Equals(entry.Key.root, root, StringComparison.Ordinal) ||
-                        !entry.Value.Left.HasValue || !entry.Value.Right.HasValue)
-                        continue;
-                    FootRow left = entry.Value.Left.Value;
-                    FootRow right = entry.Value.Right.Value;
-                    if (left.Weight > 0.01f || right.Weight > 0.01f ||
-                        left.PelvisWeight > 0.01f || right.PelvisWeight > 0.01f)
-                    {
-                        active = true;
-                        break;
-                    }
-                }
-                if (!active)
-                    continue;
                 selectedRoot = root;
-                activeRootCount++;
-            }
-            if (activeRootCount != 1)
-                return Fail(csvPath, $"有效采样目标数量错误：{activeRootCount}。");
 
             var ordered = new List<FrameSample>();
             foreach (KeyValuePair<(int frame, ulong completion, string root), FramePair> entry in frames)

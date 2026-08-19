@@ -7,7 +7,6 @@ using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 
@@ -21,20 +20,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string PendingDeadlineKey = "ThirdPerson.GameplayLab.StairAd.PendingDeadline.v2";
         const string RestartPendingKey = "ThirdPerson.GameplayLab.StairAd.RestartPending.v1";
         const string CompletedKey = "ThirdPerson.GameplayLab.StairAd.Completed.v1";
+        const string GameplayLabPlayerActorId = "gameplay-lab-player";
         const float PendingTimeoutSeconds = 60f;
 
         static bool s_Active;
+        static bool s_WaitingForSampling;
         static bool s_OwnsSampling;
         static GameplayLabFootIkStairAdPlan s_Plan;
         static GameplayLabFootIkStairAdState s_State;
         static double s_StopTime;
         static string s_LastReport = string.Empty;
         static bool s_HasCompletedRun;
+        static Keyboard s_RouteKeyboard;
 
         static GameplayLabFootIkKeyboardRouteDriver()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            AssemblyReloadEvents.beforeAssemblyReload += ReleaseRouteKeyboard;
             EditorApplication.update -= StartAfterPlayMode;
+            EditorApplication.update -= StartAfterSampling;
             if (IsPending)
                 EditorApplication.update += StartAfterPlayMode;
         }
@@ -65,7 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair AD/Start")]
         public static void Start()
         {
-            if (s_Active)
+            if (s_Active || s_WaitingForSampling)
                 return;
             if (!EditorApplication.isPlaying)
             {
@@ -105,18 +109,57 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (CharacterFootLandingPredictionSampler.IsCapturing)
                 throw new InvalidOperationException("Foot Landing sampling is already active.");
             EditorApplication.isPaused = false;
-            ClearPending();
             Scene scene = SceneManager.GetActiveScene();
             GameplayLabFootIkRegressionCourse.Resolve(scene, out Vector3 start, out Vector3 end);
             s_Plan = GameplayLabFootIkStairAdRoute.Create(start, end);
             s_State = GameplayLabFootIkStairAdRoute.CreateState();
-            s_StopTime = EditorApplication.timeSinceStartup + SampleSeconds;
-            s_Active = true;
             CharacterFootLandingPredictionSampler.StartSampling();
             s_OwnsSampling = true;
+            if (CharacterFootLandingPredictionSampler.IsStartPending)
+            {
+                s_WaitingForSampling = true;
+                s_LastReport = "Waiting for Gameplay Lab player...";
+                EditorApplication.update -= StartAfterSampling;
+                EditorApplication.update += StartAfterSampling;
+                return;
+            }
+            BeginDriving();
+        }
+
+        static void BeginDriving()
+        {
+            AcquireRouteKeyboard();
+            s_StopTime = EditorApplication.timeSinceStartup + SampleSeconds;
+            s_Active = true;
+            s_WaitingForSampling = false;
+            ClearPending();
             s_LastReport = "Auto walking stairs with A/D...";
+            EditorApplication.update -= StartAfterSampling;
             EditorApplication.update -= Tick;
             EditorApplication.update += Tick;
+        }
+
+        static void StartAfterSampling()
+        {
+            if (!s_WaitingForSampling)
+            {
+                EditorApplication.update -= StartAfterSampling;
+                return;
+            }
+            if (CharacterFootLandingPredictionSampler.IsStartPending)
+                return;
+            if (CharacterFootLandingPredictionSampler.IsCapturing)
+            {
+                BeginDriving();
+                return;
+            }
+            EditorApplication.update -= StartAfterSampling;
+            s_WaitingForSampling = false;
+            s_OwnsSampling = false;
+            ClearPending();
+            s_LastReport = string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastStartFailure)
+                ? "Foot Landing sampling start was canceled."
+                : CharacterFootLandingPredictionSampler.LastStartFailure;
         }
 
         [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair AD/Stop")]
@@ -128,17 +171,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static void Stop()
         {
-            if (!s_Active)
+            if (!s_Active && !s_WaitingForSampling)
                 return;
+            bool completedCapture = s_Active;
             EditorApplication.update -= Tick;
+            EditorApplication.update -= StartAfterSampling;
             ReleaseKeys();
+            ReleaseRouteKeyboard();
             s_Active = false;
+            s_WaitingForSampling = false;
             s_StopTime = 0d;
             if (s_OwnsSampling)
             {
                 s_OwnsSampling = false;
-                if (CharacterFootLandingPredictionSampler.IsCapturing)
+                if (CharacterFootLandingPredictionSampler.IsCapturing ||
+                    CharacterFootLandingPredictionSampler.IsStartPending)
+                {
                     CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+                }
+                if (!completedCapture ||
+                    string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastSavedPath))
+                {
+                    s_LastReport = "Foot Landing sampling stopped before recording started.";
+                    return;
+                }
                 CharacterFootLandingStep1Report report =
                     CharacterFootLandingStep1Evaluator.Evaluate(
                         CharacterFootLandingPredictionSampler.LastSavedPath);
@@ -294,15 +350,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < hosts.Length; i++)
             {
                 CharacterPipelineHost host = hosts[i];
-                if (host == null || !host.VisualRoot)
+                if (host == null || !host.VisualRoot ||
+                    !string.Equals(host.ActorId, GameplayLabPlayerActorId, StringComparison.Ordinal))
                     continue;
-                if (string.Equals(host.ActorId, "gameplay-lab-player", StringComparison.Ordinal))
-                {
-                    chosen = host;
-                    break;
-                }
-                if (chosen == null)
-                    chosen = host;
+                chosen = host;
+                break;
             }
             if (chosen != null && chosen.CameraRig)
             {
@@ -316,7 +368,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < fixedHosts.Length; i++)
             {
                 FixedCharacterHost host = fixedHosts[i];
-                if (host == null || !host.CameraRig)
+                if (host == null || !host.CameraRig ||
+                    !string.Equals(host.ActorId.Value, GameplayLabPlayerActorId, StringComparison.Ordinal))
                     continue;
                 position = host.VisualPosition;
                 basis = host.CameraRig.BasisSnapshot;
@@ -344,29 +397,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ApplyKeys(GameplayLabFootIkKeyboardMove keys)
         {
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard == null)
-                throw new InvalidOperationException("GameplayLab stair AD drive requires Keyboard.current.");
-            QueueKeys(keyboard, keys.A, keys.D, keys.W, keys.S);
+            AcquireRouteKeyboard();
+            QueueKeys(s_RouteKeyboard, keys.A, keys.D, keys.W, keys.S);
         }
 
         static void ReleaseKeys()
         {
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard == null || !keyboard.added)
+            if (s_RouteKeyboard == null || !s_RouteKeyboard.added)
                 return;
-            QueueKeys(keyboard, false, false, false, false);
+            QueueKeys(s_RouteKeyboard, false, false, false, false);
+        }
+
+        static void AcquireRouteKeyboard()
+        {
+            if (s_RouteKeyboard != null && s_RouteKeyboard.added)
+                return;
+            s_RouteKeyboard = InputSystem.AddDevice<Keyboard>("FootIkStairAdKeyboard");
+        }
+
+        static void ReleaseRouteKeyboard()
+        {
+            if (s_RouteKeyboard != null && s_RouteKeyboard.added)
+                InputSystem.RemoveDevice(s_RouteKeyboard);
+            s_RouteKeyboard = null;
         }
 
         static void QueueKeys(Keyboard keyboard, bool a, bool d, bool w, bool s)
         {
             KeyboardState state = default;
-            for (int i = 0; i < keyboard.allKeys.Count; i++)
-            {
-                KeyControl key = keyboard.allKeys[i];
-                if (key != null && key.isPressed)
-                    state.Press(key.keyCode);
-            }
             state.Set(Key.A, a);
             state.Set(Key.D, d);
             state.Set(Key.W, w);

@@ -11,6 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         "character.foot_landing_stair_ad",
         Description = "Start, inspect, or stop the formal Gameplay Lab stair AD foot landing sampler. Uses the existing Launcher route driver and writes the normal FootLandingSamples CSV.",
         StructuredOutput = true,
+        AutoRegister = true,
         RequiresPolling = false,
         HasBehaviorAnnotations = true,
         ReadOnlyHint = false,

@@ -19,7 +19,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CapacityExceeded = 5,
         DegenerateEnvelope = 6,
         NoEnvelopeContact = 7,
-        EnvelopeCapacityExceeded = 8
+        EnvelopeCapacityExceeded = 8,
+        UnreachableEdge = 9,
+        EdgeCapacityExceeded = 10
     }
 
     public readonly struct CharacterFootGroundPathQueryRequest
@@ -248,42 +250,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootGroundPathInputKey(
             CharacterFootSide side,
-            ulong currentLandingEventIdentity,
-            ulong nextLandingEventIdentity,
+            ulong lastLandingEventIdentity,
+            ulong nextSwingLandingEventIdentity,
             ulong trajectoryGeneration,
             ulong authorityTick,
-            string currentFutureBodyTranslationSourceIdentity,
-            string nextFutureBodyTranslationSourceIdentity,
-            int currentLandingSurfaceIdentity,
-            int nextLandingSurfaceIdentity,
-            Vector3 currentLandingPoint,
-            Vector3 nextLandingPoint,
-            Vector3 currentLandingNormal,
-            Vector3 nextLandingNormal,
+            string lastFutureBodyTranslationSourceIdentity,
+            string nextSwingFutureBodyTranslationSourceIdentity,
+            int lastLandingSurfaceIdentity,
+            int nextSwingLandingSurfaceIdentity,
+            Vector3 lastLandingPoint,
+            Vector3 nextSwingLandingPoint,
+            Vector3 lastLandingNormal,
+            Vector3 nextSwingLandingNormal,
             Vector3 componentUp,
             string profileRevision)
         {
             Side = side;
-            CurrentLandingEventIdentity = currentLandingEventIdentity;
-            NextLandingEventIdentity = nextLandingEventIdentity;
+            LastLandingEventIdentity = lastLandingEventIdentity;
+            NextSwingLandingEventIdentity = nextSwingLandingEventIdentity;
             TrajectoryGeneration = trajectoryGeneration;
             AuthorityTick = authorityTick;
-            CurrentFutureBodyTranslationSourceIdentity = currentFutureBodyTranslationSourceIdentity ?? string.Empty;
-            NextFutureBodyTranslationSourceIdentity = nextFutureBodyTranslationSourceIdentity ?? string.Empty;
-            CurrentLandingSurfaceIdentity = currentLandingSurfaceIdentity;
-            NextLandingSurfaceIdentity = nextLandingSurfaceIdentity;
-            CurrentLandingPointX = Quantize(currentLandingPoint.x, 1000f);
-            CurrentLandingPointY = Quantize(currentLandingPoint.y, 1000f);
-            CurrentLandingPointZ = Quantize(currentLandingPoint.z, 1000f);
-            NextLandingPointX = Quantize(nextLandingPoint.x, 1000f);
-            NextLandingPointY = Quantize(nextLandingPoint.y, 1000f);
-            NextLandingPointZ = Quantize(nextLandingPoint.z, 1000f);
-            CurrentLandingNormalX = Quantize(currentLandingNormal.x, 10000f);
-            CurrentLandingNormalY = Quantize(currentLandingNormal.y, 10000f);
-            CurrentLandingNormalZ = Quantize(currentLandingNormal.z, 10000f);
-            NextLandingNormalX = Quantize(nextLandingNormal.x, 10000f);
-            NextLandingNormalY = Quantize(nextLandingNormal.y, 10000f);
-            NextLandingNormalZ = Quantize(nextLandingNormal.z, 10000f);
+            LastFutureBodyTranslationSourceIdentity = lastFutureBodyTranslationSourceIdentity ?? string.Empty;
+            NextSwingFutureBodyTranslationSourceIdentity = nextSwingFutureBodyTranslationSourceIdentity ?? string.Empty;
+            LastLandingSurfaceIdentity = lastLandingSurfaceIdentity;
+            NextSwingLandingSurfaceIdentity = nextSwingLandingSurfaceIdentity;
+            LastLandingPointX = Quantize(lastLandingPoint.x, 1000f);
+            LastLandingPointY = Quantize(lastLandingPoint.y, 1000f);
+            LastLandingPointZ = Quantize(lastLandingPoint.z, 1000f);
+            NextSwingLandingPointX = Quantize(nextSwingLandingPoint.x, 1000f);
+            NextSwingLandingPointY = Quantize(nextSwingLandingPoint.y, 1000f);
+            NextSwingLandingPointZ = Quantize(nextSwingLandingPoint.z, 1000f);
+            LastLandingNormalX = Quantize(lastLandingNormal.x, 10000f);
+            LastLandingNormalY = Quantize(lastLandingNormal.y, 10000f);
+            LastLandingNormalZ = Quantize(lastLandingNormal.z, 10000f);
+            NextSwingLandingNormalX = Quantize(nextSwingLandingNormal.x, 10000f);
+            NextSwingLandingNormalY = Quantize(nextSwingLandingNormal.y, 10000f);
+            NextSwingLandingNormalZ = Quantize(nextSwingLandingNormal.z, 10000f);
             ComponentUpX = Quantize(componentUp.x, 10000f);
             ComponentUpY = Quantize(componentUp.y, 10000f);
             ComponentUpZ = Quantize(componentUp.z, 10000f);
@@ -291,26 +293,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal CharacterFootSide Side { get; }
-        internal ulong CurrentLandingEventIdentity { get; }
-        internal ulong NextLandingEventIdentity { get; }
+        internal ulong LastLandingEventIdentity { get; }
+        internal ulong NextSwingLandingEventIdentity { get; }
         internal ulong TrajectoryGeneration { get; }
         internal ulong AuthorityTick { get; }
-        internal string CurrentFutureBodyTranslationSourceIdentity { get; }
-        internal string NextFutureBodyTranslationSourceIdentity { get; }
-        internal int CurrentLandingSurfaceIdentity { get; }
-        internal int NextLandingSurfaceIdentity { get; }
-        internal int CurrentLandingPointX { get; }
-        internal int CurrentLandingPointY { get; }
-        internal int CurrentLandingPointZ { get; }
-        internal int NextLandingPointX { get; }
-        internal int NextLandingPointY { get; }
-        internal int NextLandingPointZ { get; }
-        internal int CurrentLandingNormalX { get; }
-        internal int CurrentLandingNormalY { get; }
-        internal int CurrentLandingNormalZ { get; }
-        internal int NextLandingNormalX { get; }
-        internal int NextLandingNormalY { get; }
-        internal int NextLandingNormalZ { get; }
+        internal string LastFutureBodyTranslationSourceIdentity { get; }
+        internal string NextSwingFutureBodyTranslationSourceIdentity { get; }
+        internal int LastLandingSurfaceIdentity { get; }
+        internal int NextSwingLandingSurfaceIdentity { get; }
+        internal int LastLandingPointX { get; }
+        internal int LastLandingPointY { get; }
+        internal int LastLandingPointZ { get; }
+        internal int NextSwingLandingPointX { get; }
+        internal int NextSwingLandingPointY { get; }
+        internal int NextSwingLandingPointZ { get; }
+        internal int LastLandingNormalX { get; }
+        internal int LastLandingNormalY { get; }
+        internal int LastLandingNormalZ { get; }
+        internal int NextSwingLandingNormalX { get; }
+        internal int NextSwingLandingNormalY { get; }
+        internal int NextSwingLandingNormalZ { get; }
         internal int ComponentUpX { get; }
         internal int ComponentUpY { get; }
         internal int ComponentUpZ { get; }
@@ -318,31 +320,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public bool Equals(CharacterFootGroundPathInputKey other) =>
             Side == other.Side &&
-            CurrentLandingEventIdentity == other.CurrentLandingEventIdentity &&
-            NextLandingEventIdentity == other.NextLandingEventIdentity &&
+            LastLandingEventIdentity == other.LastLandingEventIdentity &&
+            NextSwingLandingEventIdentity == other.NextSwingLandingEventIdentity &&
             TrajectoryGeneration == other.TrajectoryGeneration &&
+            AuthorityTick == other.AuthorityTick &&
             string.Equals(
-                CurrentFutureBodyTranslationSourceIdentity,
-                other.CurrentFutureBodyTranslationSourceIdentity,
+                LastFutureBodyTranslationSourceIdentity,
+                other.LastFutureBodyTranslationSourceIdentity,
                 StringComparison.Ordinal) &&
             string.Equals(
-                NextFutureBodyTranslationSourceIdentity,
-                other.NextFutureBodyTranslationSourceIdentity,
+                NextSwingFutureBodyTranslationSourceIdentity,
+                other.NextSwingFutureBodyTranslationSourceIdentity,
                 StringComparison.Ordinal) &&
-            CurrentLandingSurfaceIdentity == other.CurrentLandingSurfaceIdentity &&
-            NextLandingSurfaceIdentity == other.NextLandingSurfaceIdentity &&
-            CurrentLandingPointX == other.CurrentLandingPointX &&
-            CurrentLandingPointY == other.CurrentLandingPointY &&
-            CurrentLandingPointZ == other.CurrentLandingPointZ &&
-            NextLandingPointX == other.NextLandingPointX &&
-            NextLandingPointY == other.NextLandingPointY &&
-            NextLandingPointZ == other.NextLandingPointZ &&
-            CurrentLandingNormalX == other.CurrentLandingNormalX &&
-            CurrentLandingNormalY == other.CurrentLandingNormalY &&
-            CurrentLandingNormalZ == other.CurrentLandingNormalZ &&
-            NextLandingNormalX == other.NextLandingNormalX &&
-            NextLandingNormalY == other.NextLandingNormalY &&
-            NextLandingNormalZ == other.NextLandingNormalZ &&
+            LastLandingSurfaceIdentity == other.LastLandingSurfaceIdentity &&
+            NextSwingLandingSurfaceIdentity == other.NextSwingLandingSurfaceIdentity &&
+            LastLandingPointX == other.LastLandingPointX &&
+            LastLandingPointY == other.LastLandingPointY &&
+            LastLandingPointZ == other.LastLandingPointZ &&
+            NextSwingLandingPointX == other.NextSwingLandingPointX &&
+            NextSwingLandingPointY == other.NextSwingLandingPointY &&
+            NextSwingLandingPointZ == other.NextSwingLandingPointZ &&
+            LastLandingNormalX == other.LastLandingNormalX &&
+            LastLandingNormalY == other.LastLandingNormalY &&
+            LastLandingNormalZ == other.LastLandingNormalZ &&
+            NextSwingLandingNormalX == other.NextSwingLandingNormalX &&
+            NextSwingLandingNormalY == other.NextSwingLandingNormalY &&
+            NextSwingLandingNormalZ == other.NextSwingLandingNormalZ &&
             ComponentUpX == other.ComponentUpX &&
             ComponentUpY == other.ComponentUpY &&
             ComponentUpZ == other.ComponentUpZ &&
@@ -355,21 +358,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             int first = HashCode.Combine(
                 (int)Side,
-                CurrentLandingEventIdentity,
-                NextLandingEventIdentity,
+                LastLandingEventIdentity,
+                NextSwingLandingEventIdentity,
                 TrajectoryGeneration,
-                CurrentFutureBodyTranslationSourceIdentity,
-                NextFutureBodyTranslationSourceIdentity,
-                CurrentLandingSurfaceIdentity,
-                NextLandingSurfaceIdentity);
+                AuthorityTick);
+            first = HashCode.Combine(
+                first,
+                LastFutureBodyTranslationSourceIdentity,
+                NextSwingFutureBodyTranslationSourceIdentity,
+                LastLandingSurfaceIdentity,
+                NextSwingLandingSurfaceIdentity);
             return HashCode.Combine(
                 first,
-                CurrentLandingPointX,
-                CurrentLandingPointY,
-                CurrentLandingPointZ,
-                NextLandingPointX,
-                NextLandingPointY,
-                NextLandingPointZ);
+                LastLandingPointX,
+                LastLandingPointY,
+                LastLandingPointZ,
+                NextSwingLandingPointX,
+                NextSwingLandingPointY,
+                NextSwingLandingPointZ);
         }
 
         static int Quantize(float value, float scale) =>
@@ -381,82 +387,88 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathInput(
             ulong identity,
             in CharacterFootGroundPathInputKey key,
-            Vector3 currentLanding,
-            Vector3 nextLanding,
-            Vector3 currentLandingNormal,
-            Vector3 nextLandingNormal,
-            int currentLandingSurfaceIdentity,
-            int nextLandingSurfaceIdentity,
+            Vector3 lastLanding,
+            Vector3 nextSwingLanding,
+            Vector3 lastLandingNormal,
+            Vector3 nextSwingLandingNormal,
+            int lastLandingSurfaceIdentity,
+            int nextSwingLandingSurfaceIdentity,
             Vector3 componentUp,
+            float maximumReachableVerticalEdge,
             in CharacterFootGroundPathQueryRequest query)
         {
             Identity = identity;
             Key = key;
-            CurrentLanding = currentLanding;
-            NextLanding = nextLanding;
-            CurrentLandingNormal = currentLandingNormal;
-            NextLandingNormal = nextLandingNormal;
-            CurrentLandingSurfaceIdentity = currentLandingSurfaceIdentity;
-            NextLandingSurfaceIdentity = nextLandingSurfaceIdentity;
+            LastLanding = lastLanding;
+            NextSwingLanding = nextSwingLanding;
+            LastLandingNormal = lastLandingNormal;
+            NextSwingLandingNormal = nextSwingLandingNormal;
+            LastLandingSurfaceIdentity = lastLandingSurfaceIdentity;
+            NextSwingLandingSurfaceIdentity = nextSwingLandingSurfaceIdentity;
             ComponentUp = componentUp;
+            MaximumReachableVerticalEdge = maximumReachableVerticalEdge;
             Query = query;
         }
 
         internal ulong Identity { get; }
         internal CharacterFootGroundPathInputKey Key { get; }
-        internal Vector3 CurrentLanding { get; }
-        internal Vector3 NextLanding { get; }
-        internal Vector3 CurrentLandingNormal { get; }
-        internal Vector3 NextLandingNormal { get; }
-        internal int CurrentLandingSurfaceIdentity { get; }
-        internal int NextLandingSurfaceIdentity { get; }
+        internal Vector3 LastLanding { get; }
+        internal Vector3 NextSwingLanding { get; }
+        internal Vector3 LastLandingNormal { get; }
+        internal Vector3 NextSwingLandingNormal { get; }
+        internal int LastLandingSurfaceIdentity { get; }
+        internal int NextSwingLandingSurfaceIdentity { get; }
         internal Vector3 ComponentUp { get; }
+        internal float MaximumReachableVerticalEdge { get; }
         internal CharacterFootGroundPathQueryRequest Query { get; }
-        internal bool IsValid => Identity != 0 && Query.IsValid;
+        internal bool IsValid =>
+            Identity != 0 && Query.IsValid &&
+            float.IsFinite(MaximumReachableVerticalEdge) &&
+            MaximumReachableVerticalEdge > 0f;
     }
 
     internal static class CharacterFootGroundPathInputBuilder
     {
         internal static CharacterFootGroundPathInputKey BuildKey(
             CharacterFootSide side,
-            in CharacterFootGroundPathLanding currentLanding,
-            CharacterFootLandingPredictionFootDiagnostics targetLanding,
+            in CharacterFootGroundPathLanding lastLanding,
+            in CharacterFootGroundPathLanding nextSwingLanding,
             ulong authorityTick,
             Vector3 componentUp,
             string profileRevision) =>
             new CharacterFootGroundPathInputKey(
                 side,
-                currentLanding.LandingEventIdentity,
-                targetLanding.LandingEventIdentity,
-                currentLanding.TrajectoryGeneration,
+                lastLanding.LandingEventIdentity,
+                nextSwingLanding.LandingEventIdentity,
+                lastLanding.TrajectoryGeneration,
                 authorityTick,
-                currentLanding.FutureBodyTranslationSourceIdentity,
-                targetLanding.FutureBodyTranslationSourceIdentity,
-                currentLanding.SurfaceIdentity,
-                targetLanding.SurfaceIdentity,
-                currentLanding.Point,
-                targetLanding.LandingPoint,
-                currentLanding.Normal,
-                targetLanding.LandingNormal,
+                lastLanding.FutureBodyTranslationSourceIdentity,
+                nextSwingLanding.FutureBodyTranslationSourceIdentity,
+                lastLanding.SurfaceIdentity,
+                nextSwingLanding.SurfaceIdentity,
+                lastLanding.Point,
+                nextSwingLanding.Point,
+                lastLanding.Normal,
+                nextSwingLanding.Normal,
                 componentUp,
                 profileRevision);
 
         internal static bool TryBuild(
             in CharacterFootGroundPathInputKey key,
-            Vector3 currentLanding,
-            Vector3 nextLanding,
-            Vector3 currentLandingNormal,
-            Vector3 nextLandingNormal,
-            int currentLandingSurfaceIdentity,
-            int nextLandingSurfaceIdentity,
+            Vector3 lastLanding,
+            Vector3 nextSwingLanding,
+            Vector3 lastLandingNormal,
+            Vector3 nextSwingLandingNormal,
+            int lastLandingSurfaceIdentity,
+            int nextSwingLandingSurfaceIdentity,
             Vector3 componentUp,
             in CharacterFootGroundDetectionSettings settings,
             out CharacterFootGroundPathInput input)
         {
-            if (!Finite(currentLanding) || !Finite(nextLanding) ||
-                !Finite(currentLandingNormal) || currentLandingNormal.sqrMagnitude <= 0.000001f ||
-                !Finite(nextLandingNormal) || nextLandingNormal.sqrMagnitude <= 0.000001f ||
-                nextLandingSurfaceIdentity == 0 ||
+            if (!Finite(lastLanding) || !Finite(nextSwingLanding) ||
+                !Finite(lastLandingNormal) || lastLandingNormal.sqrMagnitude <= 0.000001f ||
+                !Finite(nextSwingLandingNormal) || nextSwingLandingNormal.sqrMagnitude <= 0.000001f ||
+                lastLandingSurfaceIdentity == 0 || nextSwingLandingSurfaceIdentity == 0 ||
                 !Finite(componentUp) ||
                 componentUp.sqrMagnitude <= 0.000001f)
             {
@@ -466,8 +478,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up = componentUp.normalized;
             var query = new CharacterFootGroundPathQueryRequest(
                 key.Side,
-                currentLanding + up * settings.CastAbove,
-                nextLanding + up * settings.CastAbove,
+                lastLanding + up * settings.CastAbove,
+                nextSwingLanding + up * settings.CastAbove,
                 settings.CapsuleRadius,
                 settings.MaximumAxisSegmentLength,
                 -up,
@@ -480,50 +492,55 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 input = default;
                 return false;
             }
-            ulong identity = ComputeIdentity(in key, in query);
+            ulong identity = ComputeIdentity(
+                in key,
+                in query,
+                settings.MaximumReachableVerticalEdge);
             input = new CharacterFootGroundPathInput(
                 identity,
                 in key,
-                currentLanding,
-                nextLanding,
-                currentLandingNormal.normalized,
-                nextLandingNormal.normalized,
-                currentLandingSurfaceIdentity,
-                nextLandingSurfaceIdentity,
+                lastLanding,
+                nextSwingLanding,
+                lastLandingNormal.normalized,
+                nextSwingLandingNormal.normalized,
+                lastLandingSurfaceIdentity,
+                nextSwingLandingSurfaceIdentity,
                 up,
+                settings.MaximumReachableVerticalEdge,
                 in query);
             return true;
         }
 
         static ulong ComputeIdentity(
             in CharacterFootGroundPathInputKey key,
-            in CharacterFootGroundPathQueryRequest query)
+            in CharacterFootGroundPathQueryRequest query,
+            float maximumReachableVerticalEdge)
         {
             ulong hash = 14695981039346656037UL;
             Add(ref hash, (ulong)key.Side);
-            Add(ref hash, key.CurrentLandingEventIdentity);
-            Add(ref hash, key.NextLandingEventIdentity);
+            Add(ref hash, key.LastLandingEventIdentity);
+            Add(ref hash, key.NextSwingLandingEventIdentity);
             Add(ref hash, key.TrajectoryGeneration);
-            Add(ref hash, key.AuthorityTick);
-            Add(ref hash, key.CurrentFutureBodyTranslationSourceIdentity);
-            Add(ref hash, key.NextFutureBodyTranslationSourceIdentity);
-            Add(ref hash, unchecked((ulong)(uint)key.CurrentLandingSurfaceIdentity));
-            Add(ref hash, unchecked((ulong)(uint)key.NextLandingSurfaceIdentity));
-            Add(ref hash, unchecked((ulong)(uint)key.CurrentLandingPointX));
-            Add(ref hash, unchecked((ulong)(uint)key.CurrentLandingPointY));
-            Add(ref hash, unchecked((ulong)(uint)key.CurrentLandingPointZ));
-            Add(ref hash, unchecked((ulong)(uint)key.NextLandingPointX));
-            Add(ref hash, unchecked((ulong)(uint)key.NextLandingPointY));
-            Add(ref hash, unchecked((ulong)(uint)key.NextLandingPointZ));
-            Add(ref hash, unchecked((ulong)(uint)key.CurrentLandingNormalX));
-            Add(ref hash, unchecked((ulong)(uint)key.CurrentLandingNormalY));
-            Add(ref hash, unchecked((ulong)(uint)key.CurrentLandingNormalZ));
-            Add(ref hash, unchecked((ulong)(uint)key.NextLandingNormalX));
-            Add(ref hash, unchecked((ulong)(uint)key.NextLandingNormalY));
-            Add(ref hash, unchecked((ulong)(uint)key.NextLandingNormalZ));
+            Add(ref hash, key.LastFutureBodyTranslationSourceIdentity);
+            Add(ref hash, key.NextSwingFutureBodyTranslationSourceIdentity);
+            Add(ref hash, unchecked((ulong)(uint)key.LastLandingSurfaceIdentity));
+            Add(ref hash, unchecked((ulong)(uint)key.NextSwingLandingSurfaceIdentity));
+            Add(ref hash, unchecked((ulong)(uint)key.LastLandingPointX));
+            Add(ref hash, unchecked((ulong)(uint)key.LastLandingPointY));
+            Add(ref hash, unchecked((ulong)(uint)key.LastLandingPointZ));
+            Add(ref hash, unchecked((ulong)(uint)key.NextSwingLandingPointX));
+            Add(ref hash, unchecked((ulong)(uint)key.NextSwingLandingPointY));
+            Add(ref hash, unchecked((ulong)(uint)key.NextSwingLandingPointZ));
+            Add(ref hash, unchecked((ulong)(uint)key.LastLandingNormalX));
+            Add(ref hash, unchecked((ulong)(uint)key.LastLandingNormalY));
+            Add(ref hash, unchecked((ulong)(uint)key.LastLandingNormalZ));
+            Add(ref hash, unchecked((ulong)(uint)key.NextSwingLandingNormalX));
+            Add(ref hash, unchecked((ulong)(uint)key.NextSwingLandingNormalY));
+            Add(ref hash, unchecked((ulong)(uint)key.NextSwingLandingNormalZ));
             Add(ref hash, key.ProfileRevision);
             Add(ref hash, unchecked((ulong)(uint)Mathf.RoundToInt(query.Radius * 10000f)));
             Add(ref hash, unchecked((ulong)(uint)Mathf.RoundToInt(query.MaximumAxisSegmentLength * 10000f)));
+            Add(ref hash, unchecked((ulong)(uint)Mathf.RoundToInt(maximumReachableVerticalEdge * 10000f)));
             return hash != 0 ? hash : 1UL;
         }
 
@@ -555,6 +572,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathPage(int contactCapacity)
         {
             Contacts = new CharacterFootGroundContactPage(contactCapacity);
+            Edges = new CharacterFootGroundEdgePage(contactCapacity);
             Envelope = new CharacterFootGroundEnvelopePage(contactCapacity);
         }
 
@@ -563,7 +581,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool QueryExecuted { get; private set; }
         internal int SegmentCount { get; private set; }
         internal CharacterFootGroundPathInput Input { get; private set; }
+        internal CharacterFootGroundInvalidSegment InvalidSegment { get; private set; }
         internal CharacterFootGroundContactPage Contacts { get; }
+        internal CharacterFootGroundEdgePage Edges { get; }
         internal CharacterFootGroundEnvelopePage Envelope { get; }
         internal bool HasInput => Input.IsValid;
 
@@ -571,24 +591,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathRejectReason reason,
             bool queryExecuted,
             int segmentCount,
-            in CharacterFootGroundPathInput input)
+            in CharacterFootGroundPathInput input,
+            in CharacterFootGroundInvalidSegment invalidSegment)
         {
             if (reason == CharacterFootGroundPathRejectReason.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
+            if ((reason == CharacterFootGroundPathRejectReason.UnreachableEdge) !=
+                invalidSegment.HasValue)
+                throw new ArgumentException("Ground Path invalid segment is inconsistent.");
             State = CharacterFootGroundPathState.Rejected;
             RejectReason = reason;
             QueryExecuted = queryExecuted;
             SegmentCount = segmentCount;
             Input = input;
+            InvalidSegment = invalidSegment;
             if (!queryExecuted)
+            {
                 Contacts.Clear();
+                Edges.Clear();
+            }
+            Envelope.Clear();
         }
 
         internal void SetAccepted(
             int segmentCount,
             in CharacterFootGroundPathInput input)
         {
-            if (!input.IsValid || Contacts.Count <= 0 || Envelope.Count < 2 ||
+            if (!input.IsValid || Contacts.Count <= 0 || Edges.Count <= 0 ||
+                Envelope.Count < 2 || InvalidSegment.HasValue ||
                 segmentCount <= 0)
                 throw new ArgumentException("Ground Path accepted page is invalid.");
             State = CharacterFootGroundPathState.Accepted;
@@ -596,6 +626,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryExecuted = true;
             SegmentCount = segmentCount;
             Input = input;
+            InvalidSegment = default;
         }
 
         internal void Clear()
@@ -605,7 +636,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryExecuted = false;
             SegmentCount = 0;
             Input = default;
+            InvalidSegment = default;
             Contacts.Clear();
+            Edges.Clear();
             Envelope.Clear();
         }
     }
@@ -617,12 +650,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterFootGroundPathPage m_Committed;
         CharacterFootGroundPathPage m_Pending;
-        CharacterFootGroundPathLanding m_CommittedLanding;
-        CharacterFootGroundPathLanding m_PendingLanding;
         bool m_HasCommitted;
         bool m_HasPending;
-        bool m_HasCommittedLanding;
-        bool m_HasPendingLanding;
 
         internal CharacterFootGroundPathFootState(int contactCapacity)
         {
@@ -633,21 +662,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootGroundEnvelopeWorkspace EnvelopeWorkspace { get; }
 
-        internal bool HasCurrentLanding => m_HasPendingLanding || m_HasCommittedLanding;
-        internal CharacterFootGroundPathLanding CurrentLanding =>
-            m_HasPendingLanding ? m_PendingLanding : m_CommittedLanding;
         internal bool HasCommittedInput => m_HasCommitted && m_Committed.HasInput;
         internal CharacterFootGroundPathInputKey CommittedKey => m_Committed.Input.Key;
         internal bool CommittedAccepted =>
             m_HasCommitted && m_Committed.State == CharacterFootGroundPathState.Accepted;
-        internal ulong CommittedAuthorityTick =>
-            HasCommittedInput ? m_Committed.Input.Key.AuthorityTick : 0;
-
-        internal void SetPendingLanding(in CharacterFootGroundPathLanding landing)
-        {
-            m_PendingLanding = landing;
-            m_HasPendingLanding = true;
-        }
 
         internal CharacterFootGroundPathPage BeginPending()
         {
@@ -678,13 +696,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_HasCommitted = true;
             m_Pending = null;
             m_HasPending = false;
-            if (m_HasPendingLanding)
-            {
-                m_CommittedLanding = m_PendingLanding;
-                m_HasCommittedLanding = true;
-                m_PendingLanding = default;
-                m_HasPendingLanding = false;
-            }
         }
 
         internal void Discard()
@@ -696,8 +707,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Pending = null;
                 m_HasPending = false;
             }
-            m_PendingLanding = default;
-            m_HasPendingLanding = false;
         }
 
         internal void Reset()
@@ -706,12 +715,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Second.Clear();
             m_Committed = null;
             m_Pending = null;
-            m_CommittedLanding = default;
-            m_PendingLanding = default;
             m_HasCommitted = false;
             m_HasPending = false;
-            m_HasCommittedLanding = false;
-            m_HasPendingLanding = false;
             EnvelopeWorkspace.Clear();
         }
     }
@@ -1169,11 +1174,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryExecutedThisFrame = queryExecutedThisFrame;
             SegmentCount = page.SegmentCount;
             InputIdentity = page.Input.Identity;
-            CurrentLandingEventIdentity = page.HasInput
-                ? page.Input.Key.CurrentLandingEventIdentity
+            LastLandingEventIdentity = page.HasInput
+                ? page.Input.Key.LastLandingEventIdentity
                 : 0;
-            NextLandingEventIdentity = page.HasInput
-                ? page.Input.Key.NextLandingEventIdentity
+            NextSwingLandingEventIdentity = page.HasInput
+                ? page.Input.Key.NextSwingLandingEventIdentity
                 : 0;
             TrajectoryGeneration = page.HasInput
                 ? page.Input.Key.TrajectoryGeneration
@@ -1181,29 +1186,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AuthorityTick = page.HasInput
                 ? page.Input.Key.AuthorityTick
                 : 0;
-            CurrentFutureBodyTranslationSourceIdentity = page.HasInput
-                ? page.Input.Key.CurrentFutureBodyTranslationSourceIdentity
+            LastFutureBodyTranslationSourceIdentity = page.HasInput
+                ? page.Input.Key.LastFutureBodyTranslationSourceIdentity
                 : string.Empty;
-            NextFutureBodyTranslationSourceIdentity = page.HasInput
-                ? page.Input.Key.NextFutureBodyTranslationSourceIdentity
+            NextSwingFutureBodyTranslationSourceIdentity = page.HasInput
+                ? page.Input.Key.NextSwingFutureBodyTranslationSourceIdentity
                 : string.Empty;
-            CurrentLanding = page.HasInput
-                ? page.Input.CurrentLanding
+            LastLanding = page.HasInput
+                ? page.Input.LastLanding
                 : default;
-            NextLanding = page.HasInput
-                ? page.Input.NextLanding
+            NextSwingLanding = page.HasInput
+                ? page.Input.NextSwingLanding
                 : default;
-            CurrentLandingNormal = page.HasInput
-                ? page.Input.CurrentLandingNormal
+            LastLandingNormal = page.HasInput
+                ? page.Input.LastLandingNormal
                 : default;
-            NextLandingNormal = page.HasInput
-                ? page.Input.NextLandingNormal
+            NextSwingLandingNormal = page.HasInput
+                ? page.Input.NextSwingLandingNormal
                 : default;
-            CurrentLandingSurfaceIdentity = page.HasInput
-                ? page.Input.CurrentLandingSurfaceIdentity
+            LastLandingSurfaceIdentity = page.HasInput
+                ? page.Input.LastLandingSurfaceIdentity
                 : 0;
-            NextLandingSurfaceIdentity = page.HasInput
-                ? page.Input.NextLandingSurfaceIdentity
+            NextSwingLandingSurfaceIdentity = page.HasInput
+                ? page.Input.NextSwingLandingSurfaceIdentity
                 : 0;
             ComponentUp = page.HasInput
                 ? page.Input.ComponentUp
@@ -1211,6 +1216,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Query = page.HasInput
                 ? page.Input.Query
                 : default;
+            MaximumReachableVerticalEdge = page.HasInput
+                ? page.Input.MaximumReachableVerticalEdge
+                : 0f;
+            EdgeCount = page.Edges.Count;
+            HasInvalidSegment = page.InvalidSegment.HasValue;
+            FirstInvalidSegmentIndex = page.InvalidSegment.HasValue
+                ? page.InvalidSegment.EdgeIndex
+                : -1;
+            FirstInvalidSegmentIdentity = page.InvalidSegment.HasValue
+                ? page.InvalidSegment.EdgeIdentity
+                : 0;
+            FirstInvalidSegmentBottom = page.InvalidSegment.HasValue
+                ? page.InvalidSegment.Bottom
+                : default;
+            FirstInvalidSegmentTop = page.InvalidSegment.HasValue
+                ? page.InvalidSegment.Top
+                : default;
+            FirstInvalidSegmentVerticalDistance = page.InvalidSegment.HasValue
+                ? page.InvalidSegment.VerticalDistance
+                : 0f;
             m_Contacts = new CharacterFootGroundPathDiagnosticContacts(page.Contacts);
             m_Envelope = new CharacterFootGroundEnvelopeDiagnosticVertices(page.Envelope);
         }
@@ -1221,20 +1246,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool QueryExecuted => QueryExecutedThisFrame;
         public int SegmentCount { get; }
         public ulong InputIdentity { get; }
-        public ulong CurrentLandingEventIdentity { get; }
-        public ulong NextLandingEventIdentity { get; }
+        public ulong LastLandingEventIdentity { get; }
+        public ulong NextSwingLandingEventIdentity { get; }
         public ulong TrajectoryGeneration { get; }
         public ulong AuthorityTick { get; }
-        public string CurrentFutureBodyTranslationSourceIdentity { get; }
-        public string NextFutureBodyTranslationSourceIdentity { get; }
-        public Vector3 CurrentLanding { get; }
-        public Vector3 NextLanding { get; }
-        public Vector3 CurrentLandingNormal { get; }
-        public Vector3 NextLandingNormal { get; }
-        public int CurrentLandingSurfaceIdentity { get; }
-        public int NextLandingSurfaceIdentity { get; }
+        public string LastFutureBodyTranslationSourceIdentity { get; }
+        public string NextSwingFutureBodyTranslationSourceIdentity { get; }
+        public Vector3 LastLanding { get; }
+        public Vector3 NextSwingLanding { get; }
+        public Vector3 LastLandingNormal { get; }
+        public Vector3 NextSwingLandingNormal { get; }
+        public int LastLandingSurfaceIdentity { get; }
+        public int NextSwingLandingSurfaceIdentity { get; }
         public Vector3 ComponentUp { get; }
         public CharacterFootGroundPathQueryRequest Query { get; }
+        public float MaximumReachableVerticalEdge { get; }
+        public int EdgeCount { get; }
+        public bool HasInvalidSegment { get; }
+        public int FirstInvalidSegmentIndex { get; }
+        public ulong FirstInvalidSegmentIdentity { get; }
+        public Vector3 FirstInvalidSegmentBottom { get; }
+        public Vector3 FirstInvalidSegmentTop { get; }
+        public float FirstInvalidSegmentVerticalDistance { get; }
         public int ContactCount => m_Contacts.Count;
         public int EnvelopeVertexCount => m_Envelope.Count;
         public bool Accepted => State == CharacterFootGroundPathState.Accepted;

@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,6 +23,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             DrawGroundPath(diagnostics.Left);
             DrawGroundPath(diagnostics.Right);
+            DrawFootMotion(diagnostics.Left);
+            DrawFootMotion(diagnostics.Right);
+            DrawStrideHips(diagnostics.StrideHips);
+            DrawFinalPose(binding);
+        }
+
+        static void DrawStrideHips(in CharacterFootStrideHipsDiagnostics stride)
+        {
+            if (!stride.Accepted)
+                return;
+            Handles.color = new Color(1f, 0.85f, 0.2f);
+            Handles.DrawLine(stride.StrideStart, stride.StrideEnd, 1.5f);
+            Gizmos.color = new Color(1f, 0.7f, 0.1f);
+            Gizmos.DrawSphere(stride.AnimatedPelvis + stride.PelvisDelta, 0.04f);
         }
 
         static void DrawGroundPath(
@@ -40,11 +57,143 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous = current;
                 }
             }
+            else if (groundPath.RejectReason ==
+                     CharacterFootGroundPathRejectReason.UnreachableEdge &&
+                     groundPath.HasInvalidSegment)
+            {
+                Handles.color = Color.red;
+                Handles.DrawLine(
+                    groundPath.FirstInvalidSegmentBottom,
+                    groundPath.FirstInvalidSegmentTop,
+                    1f);
+            }
 
-            Color lastColor = groundPath.Accepted ? Color.green : Color.red;
-            Color nextColor = groundPath.Accepted ? Color.yellow : Color.red;
-            DrawLandingMarker(groundPath.CurrentLanding, groundPath.ComponentUp, lastColor);
-            DrawLandingMarker(groundPath.NextLanding, groundPath.ComponentUp, nextColor);
+            DrawLandingMarker(
+                groundPath.LastLanding,
+                groundPath.ComponentUp,
+                Color.green);
+            if (foot.Accepted)
+            {
+                DrawLandingMarker(
+                    foot.LandingPoint,
+                    groundPath.ComponentUp,
+                    Color.yellow);
+            }
+        }
+
+        static void DrawFootMotion(
+            CharacterFootLandingPredictionFootDiagnostics foot)
+        {
+            CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
+            if (motion.State == CharacterFootSwingMotionState.None)
+                return;
+
+            Gizmos.color = Color.white;
+            Gizmos.DrawSphere(motion.OriginalSole, 0.025f);
+            if (motion.Accepted)
+            {
+                Color color = SupportColor(motion.SupportLockState, foot.Side);
+                Gizmos.color = color;
+                Gizmos.DrawSphere(motion.CorrectedSole, 0.035f);
+                Handles.color = color;
+                Handles.DrawLine(
+                    motion.OriginalSole,
+                    motion.CorrectedSole,
+                    1f);
+                return;
+            }
+            if (motion.RejectReason == CharacterFootSwingMotionRejectReason.StepUnavailable ||
+                motion.RejectReason == CharacterFootSwingMotionRejectReason.StepNotSwing)
+            {
+                return;
+            }
+            Handles.color = Color.red;
+            Handles.DrawWireDisc(
+                motion.OriginalSole,
+                Vector3.up,
+                0.06f);
+        }
+
+        static void DrawFinalPose(CharacterWorldAwarePresentationBinding binding)
+        {
+            CharacterPipelineHost host = binding.GetComponentInParent<CharacterPipelineHost>();
+            if (!host || !TryGetTarget(host.GetInstanceID(), out AnimationPresentationRuntimeTarget target) ||
+                !target.TryGetDebugView(out AnimationPresentationDebugView debugView))
+                return;
+            Animator animator = binding.GetComponentInChildren<Animator>();
+            if (!animator)
+                return;
+            AnimationFootPlacementRuntimeSnapshot foot = debugView.PosePlan.FootPlacement;
+            if (!foot.IsAvailable || !foot.PhysicalWriteAvailable)
+                return;
+            DrawFinalEffector(animator.transform, foot.LeftGoal, foot.LeftFoot, foot.LeftPhysicalAnkleComponentPosition, Color.cyan);
+            DrawFinalEffector(animator.transform, foot.RightGoal, foot.RightFoot, foot.RightPhysicalAnkleComponentPosition, Color.magenta);
+            DrawFinalPelvis(animator.transform, foot.Pelvis, foot.PhysicalPelvisComponentPosition);
+            CharacterAnimationRigBinding rigBinding = binding.GetComponent<CharacterAnimationRigBinding>();
+            if (!rigBinding)
+                return;
+            IReadOnlyList<Transform> bones = rigBinding.PhysicalBones;
+            for (int i = 0; i < bones.Count; i++)
+            {
+                Transform bone = bones[i];
+                if (!bone || !bone.parent || !bone.parent.IsChildOf(animator.transform))
+                    continue;
+                Handles.color = Color.red;
+                Handles.DrawLine(bone.parent.position, bone.position, 2f);
+            }
+        }
+
+        static bool TryGetTarget(int hostInstanceId, out AnimationPresentationRuntimeTarget target)
+        {
+            IReadOnlyList<AnimationPresentationRuntimeTarget> targets =
+                AnimationPresentationRuntimeTargetRegistry.Targets;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (targets[i].HostInstanceId == hostInstanceId)
+                {
+                    target = targets[i];
+                    return true;
+                }
+            }
+            target = null;
+            return false;
+        }
+
+        static void DrawFinalEffector(
+            Transform componentRoot,
+            CharacterFullBodyIkGoal goal,
+            CharacterFullBodyIkEffectorDiagnostics solved,
+            Vector3 physicalComponentPosition,
+            Color color)
+        {
+            Vector3 goalPosition = componentRoot.TransformPoint(goal.ComponentPosition);
+            Vector3 solvedPosition = componentRoot.TransformPoint(solved.SolvedComponentPosition);
+            Vector3 physicalPosition = componentRoot.TransformPoint(physicalComponentPosition);
+            Handles.color = Color.white;
+            Handles.DrawWireDisc(goalPosition, componentRoot.up, 0.08f);
+            Gizmos.color = color;
+            Gizmos.DrawSphere(solvedPosition, 0.045f);
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(physicalPosition, 0.055f);
+            Handles.color = color;
+            Handles.DrawLine(goalPosition, solvedPosition, 2f);
+            Handles.color = Color.red;
+            Handles.DrawLine(solvedPosition, physicalPosition, 2f);
+        }
+
+        static void DrawFinalPelvis(
+            Transform componentRoot,
+            CharacterFullBodyIkEffectorDiagnostics pelvis,
+            Vector3 physicalComponentPosition)
+        {
+            Vector3 solvedPosition = componentRoot.TransformPoint(pelvis.SolvedComponentPosition);
+            Vector3 physicalPosition = componentRoot.TransformPoint(physicalComponentPosition);
+            Gizmos.color = new Color(1f, 0.8f, 0.1f);
+            Gizmos.DrawSphere(solvedPosition, 0.05f);
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(physicalPosition, 0.06f);
+            Handles.color = Color.red;
+            Handles.DrawLine(solvedPosition, physicalPosition, 2f);
         }
 
         static void DrawLandingMarker(Vector3 position, Vector3 componentUp, Color color)
@@ -62,5 +211,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             side == CharacterFootSide.Left
                 ? new Color(0.1f, 0.8f, 1f)
                 : new Color(1f, 0.35f, 0.75f);
+
+        static Color SupportColor(CharacterFootSupportLockState state, CharacterFootSide side) =>
+            state switch
+            {
+                CharacterFootSupportLockState.Locked => new Color(0.2f, 1f, 0.25f),
+                CharacterFootSupportLockState.Sliding => new Color(1f, 0.8f, 0.1f),
+                CharacterFootSupportLockState.Unlocked => new Color(1f, 0.25f, 0.15f),
+                _ => FootColor(side)
+            };
     }
 }

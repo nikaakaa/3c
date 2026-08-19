@@ -120,7 +120,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly List<CharacterWorldAwarePresentationBinding> m_Bindings =
             new List<CharacterWorldAwarePresentationBinding>();
         Material m_Material;
-        Camera m_GameCamera;
         double m_NextBindingRefresh;
 
         void OnEnable()
@@ -135,7 +134,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_Material)
                 DestroyImmediate(m_Material);
             m_Material = null;
-            m_GameCamera = null;
             m_Bindings.Clear();
         }
 
@@ -155,8 +153,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!Application.isPlaying || !m_Material || Camera.current == null)
                 return;
-            if (Camera.current.cameraType == CameraType.Game)
-                m_GameCamera = Camera.current;
             m_Material.SetPass(0);
             GL.PushMatrix();
             GL.MultMatrix(Matrix4x4.identity);
@@ -165,72 +161,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 DrawBinding(m_Bindings[i]);
             GL.End();
             GL.PopMatrix();
-        }
-
-        void OnGUI()
-        {
-            if (!Application.isPlaying || Event.current.type != EventType.Repaint)
-                return;
-            GUI.Label(
-                new Rect(12f, 12f, 780f, 24f),
-                "FOOT IK VISUAL VALIDATION  |  white original  cyan/magenta path  green planted  yellow pelvis  red physical");
-            DrawStatusPanel();
-            Camera camera = m_GameCamera ? m_GameCamera : Camera.main;
-            if (!camera)
-                return;
-            for (int i = 0; i < m_Bindings.Count; i++)
-                DrawLabels(m_Bindings[i], camera);
-        }
-
-        void DrawStatusPanel()
-        {
-            IReadOnlyList<AnimationPresentationRuntimeTarget> targets =
-                AnimationPresentationRuntimeTargetRegistry.Targets;
-            for (int i = 0; i < targets.Count; i++)
-            {
-                AnimationPresentationRuntimeTarget target = targets[i];
-                if (target == null || !target.TryGetDebugView(
-                        out AnimationPresentationDebugView debugView))
-                    continue;
-                AnimationFootPlacementRuntimeSnapshot foot =
-                    debugView.PosePlan.FootPlacement;
-                if (!foot.IsAvailable)
-                    continue;
-                ref readonly CharacterFootLandingPredictionDiagnostics prediction =
-                    ref foot.LandingPrediction;
-                float goalWeight = prediction.PelvisGoal.PositionWeight;
-                Vector3 goalTranslation = prediction.PelvisGoal.ComponentPosition;
-                float residual = foot.PhysicalWriteAvailable
-                    ? Vector3.Distance(
-                        prediction.StrideHips.AnimatedPelvisComponentPosition +
-                        goalTranslation * goalWeight,
-                        foot.PhysicalPelvisComponentPosition)
-                    : 0f;
-                Rect panel = new Rect(12f, 38f, 540f, 110f);
-                GUI.Box(panel, GUIContent.none);
-                GUI.Label(
-                    new Rect(20f, 42f, 490f, 18f),
-                    $"Frame {prediction.FrameSequence}  Completion {prediction.CompletionIdentity}  " +
-                    $"Grounded {(prediction.Input.Grounded ? 1 : 0)}");
-                GUI.Label(
-                    new Rect(20f, 61f, 490f, 18f),
-                    $"Pelvis Goal W {goalWeight:0.###}  " +
-                    $"Delta {goalTranslation.y:0.###}m  " +
-                    $"Stride {prediction.StrideHips.State}");
-                GUI.Label(
-                    new Rect(20f, 80f, 490f, 18f),
-                    $"FBBIK in {foot.Solver.InputCompletionIdentity}  " +
-                    $"out {foot.Solver.OutputCompletionIdentity}  " +
-                    $"Physical {foot.PhysicalWriteCompletionIdentity}");
-                GUI.Label(
-                    new Rect(20f, 99f, 490f, 18f),
-                    $"Pelvis residual {residual:0.######}  " +
-                    $"L {prediction.Left.FootMotion.SupportLockState} / " +
-                    $"{(prediction.Left.GroundPath.Accepted ? "Path" : "NoPath")}    " +
-                    $"R {prediction.Right.FootMotion.SupportLockState} / " +
-                    $"{(prediction.Right.GroundPath.Accepted ? "Path" : "NoPath")}");
-                return;
-            }
         }
 
         void RefreshBindings()
@@ -391,42 +321,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Marker(solved, root.up, new Color(1f, 0.8f, 0.1f, 1f), 0.075f);
             Marker(physicalPosition, root.up, Color.red, 0.08f);
             Line(solved, physicalPosition, Color.red);
-        }
-
-        static void DrawLabels(CharacterWorldAwarePresentationBinding binding, Camera camera)
-        {
-            if (!CharacterFootLandingPredictionDebugRegistry.TryGet(
-                    binding.PresentationRoot.GetInstanceID(),
-                    out CharacterFootLandingPredictionDiagnostics diagnostics))
-                return;
-            Label(camera, diagnostics.Left.LandingPoint, "L accepted");
-            Label(camera, diagnostics.Right.LandingPoint, "R accepted");
-            if (diagnostics.StrideHips.Accepted)
-                Label(camera, diagnostics.StrideHips.AnimatedPelvis + diagnostics.StrideHips.PelvisDelta, "pelvis goal");
-            CharacterPipelineHost host = binding.GetComponentInParent<CharacterPipelineHost>();
-            if (!host || !host.AnimationRigBinding || !host.AnimationRigBinding.Animator ||
-                !TryGetDebugViewForRoot(
-                    binding.PresentationRoot.GetInstanceID(),
-                    out AnimationPresentationRuntimeTarget target,
-                    out AnimationPresentationDebugView debugView))
-                return;
-            AnimationFootPlacementRuntimeSnapshot foot = debugView.PosePlan.FootPlacement;
-            if (!foot.IsAvailable)
-                return;
-            Transform root = host.AnimationRigBinding.Animator.transform;
-            Label(camera, root.TransformPoint(foot.LeftGoal.ComponentPosition), "L goal");
-            Label(camera, root.TransformPoint(foot.RightGoal.ComponentPosition), "R goal");
-            Label(camera, root.TransformPoint(foot.Pelvis.SolvedComponentPosition), "FBBIK pelvis");
-            Label(camera, root.TransformPoint(foot.PhysicalPelvisComponentPosition), "physical pelvis");
-        }
-
-        static void Label(Camera camera, Vector3 world, string text)
-        {
-            Vector3 screen = camera.WorldToScreenPoint(world);
-            if (screen.z <= 0f || screen.x < 0f || screen.x > Screen.width ||
-                screen.y < 0f || screen.y > Screen.height)
-                return;
-            GUI.Label(new Rect(screen.x + 6f, Screen.height - screen.y - 10f, 150f, 18f), text);
         }
 
         static void Marker(Vector3 position, Vector3 normal, Color color, float size)

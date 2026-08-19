@@ -110,10 +110,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 TrackedEventIdentity,
                 LastLanding.HasValue,
                 LastLanding.HasValue ? LastLanding.Resolve() : default,
+                State == CharacterFootLandingLifecycleState.Accepted &&
                 NextSwingLanding.HasValue,
+                State == CharacterFootLandingLifecycleState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
+                State == CharacterFootLandingLifecycleState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
+                State == CharacterFootLandingLifecycleState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f);
+
+        internal void InvalidateCurrentLanding()
+        {
+            NextSwingPredictionError = 0f;
+            NextSwingConstraintWeight = 0f;
+            State = TrackedEventIdentity != 0
+                ? CharacterFootLandingLifecycleState.Tracking
+                : CharacterFootLandingLifecycleState.Empty;
+        }
 
         internal void ClearNextSwingLanding()
         {
@@ -151,7 +164,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void CaptureNextSwing(
             in AnimationBiomechanicalStepHeader step,
             in CharacterFootLandingPredictionFootDiagnostics diagnostics,
-            Vector3 componentUp,
             in CharacterFootMotionSettings settings)
         {
             RequirePending();
@@ -162,12 +174,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                   step.LandingEventIdentity != 0 &&
                                   step.LandingEventIdentity != Pending.LastLandingEventIdentity;
             if (!validCandidate)
+            {
+                m_Pending.InvalidateCurrentLanding();
                 return;
+            }
 
             if (m_Pending.NextSwingLanding.HasValue &&
                 m_Pending.NextSwingLanding.LandingEventIdentity != step.LandingEventIdentity)
             {
-                return;
+                m_Pending.TrackedEventIdentity = 0;
+                m_Pending.ClearNextSwingLanding();
             }
 
             m_Pending.TrackedEventIdentity = step.LandingEventIdentity;
@@ -176,26 +192,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!diagnostics.Accepted ||
                 diagnostics.LandingEventIdentity != step.LandingEventIdentity)
             {
+                m_Pending.InvalidateCurrentLanding();
                 return;
             }
 
             if (m_Pending.NextSwingLanding.HasValue)
             {
                 Vector3 landingPoint = diagnostics.LandingPoint;
-                Vector3 up = componentUp.sqrMagnitude > 0.000001f
-                    ? componentUp.normalized
-                    : Vector3.up;
-                bool sameSurface =
-                    m_Pending.NextSwingLanding.SurfaceIdentity == diagnostics.SurfaceIdentity;
-                bool sameHeight = Mathf.Abs(Vector3.Dot(
-                    landingPoint - m_Pending.NextSwingLanding.WorldPoint,
-                    up)) <= settings.MaximumSameEventVerticalJump;
-                if (!sameSurface || !sameHeight)
-                    return;
                 m_Pending.NextSwingPredictionError = Vector3.Distance(
                     m_Pending.NextSwingReferencePoint,
                     landingPoint);
                 m_Pending.NextSwingConstraintWeight = 1f;
+                if (Vector3.Distance(
+                        landingPoint,
+                        m_Pending.NextSwingLanding.WorldPoint) <
+                    settings.LandingUpdateDistance)
+                {
+                    m_Pending.State = CharacterFootLandingLifecycleState.Accepted;
+                    return;
+                }
                 m_Pending.NextSwingLanding = CharacterFootLandingFact.Create(
                     in step,
                     in diagnostics);

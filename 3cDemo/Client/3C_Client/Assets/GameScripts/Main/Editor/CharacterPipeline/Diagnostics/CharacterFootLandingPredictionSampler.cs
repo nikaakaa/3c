@@ -15,12 +15,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public static class CharacterFootLandingPredictionSampler
     {
         const int MaximumPendingFrameCount = 256;
+        const string GameplayLabPlayerActorId = "gameplay-lab-player";
         const string StartMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Start";
         const string StopMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Stop and Save";
         const string Header =
-            "FrameSequence,CompletionIdentity,RootInstanceId,Side,State,RejectReason,StepSource," +
+            "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
@@ -149,18 +150,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 in CharacterFootLandingPredictionDiagnostics foot,
                 FootIkCapture left,
                 FootIkCapture right,
-                Vector3 physicalPelvisComponentPosition)
+                Vector3 physicalPelvisComponentPosition,
+                Guid targetRuntimeInstanceId,
+                int targetHostInstanceId)
             {
                 Foot = foot;
                 Left = left;
                 Right = right;
                 PhysicalPelvisComponentPosition = physicalPelvisComponentPosition;
+                TargetRuntimeInstanceId = targetRuntimeInstanceId;
+                TargetHostInstanceId = targetHostInstanceId;
             }
 
             internal CharacterFootLandingPredictionDiagnostics Foot { get; }
             internal FootIkCapture Left { get; }
             internal FootIkCapture Right { get; }
             internal Vector3 PhysicalPelvisComponentPosition { get; }
+            internal Guid TargetRuntimeInstanceId { get; }
+            internal int TargetHostInstanceId { get; }
         }
 
         static readonly List<CapturedFrame> s_Frames =
@@ -176,6 +183,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string s_LastSavedPath = string.Empty;
         static int s_DroppedPendingFrameCount;
         static int s_LastSavedFrameCount;
+        static int s_TargetHostInstanceId;
+        static int s_TargetRootInstanceId;
 
         public static bool IsCapturing => s_Capturing;
         public static string LastSavedPath => s_LastSavedPath;
@@ -203,6 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastSavedPath = string.Empty;
             s_DroppedPendingFrameCount = 0;
             s_LastSavedFrameCount = 0;
+            BindGameplayLabPlayerTarget();
             CharacterFootLandingPredictionDebugRegistry.Published += Capture;
             AnimationPresentationRuntimeTargetRegistry.TargetRegistered += ConfigureTarget;
             AnimationPresentationRuntimeTargetRegistry.TargetUnregistered += RemoveTarget;
@@ -237,6 +247,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void Capture(in CharacterFootLandingPredictionDiagnostics diagnostics)
         {
             if (!s_Capturing)
+                return;
+            if (diagnostics.RootInstanceId != s_TargetRootInstanceId)
                 return;
             if (s_PendingFrames.Count >= MaximumPendingFrameCount)
             {
@@ -287,6 +299,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int targetIndex = 0; targetIndex < targets.Count; targetIndex++)
             {
                 AnimationPresentationRuntimeTarget target = targets[targetIndex];
+                if (target.HostInstanceId != s_TargetHostInstanceId)
+                    continue;
                 if (!target.TryGetDebugView(out AnimationPresentationDebugView debugView))
                     continue;
                 AnimationFootPlacementRuntimeSnapshot placement = debugView.PosePlan.FootPlacement;
@@ -323,7 +337,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.PhysicalWriteCompletionIdentity,
                         placement.RightPhysicalAnkleComponentPosition,
                         placement.PhysicalPelvisComponentPosition),
-                    placement.PhysicalPelvisComponentPosition);
+                    placement.PhysicalPelvisComponentPosition,
+                    target.RuntimeInstanceId,
+                    target.HostInstanceId);
                 return PendingFrameResolution.Captured;
             }
             captured = default;
@@ -334,13 +350,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             IReadOnlyList<AnimationPresentationRuntimeTarget> targets =
                 AnimationPresentationRuntimeTargetRegistry.Targets;
+            bool configured = false;
             for (int i = 0; i < targets.Count; i++)
+            {
+                if (targets[i].HostInstanceId != s_TargetHostInstanceId)
+                    continue;
                 ConfigureTarget(targets[i]);
+                configured = true;
+            }
+            if (!configured)
+                throw new InvalidOperationException(
+                    "Gameplay Lab player Animation Presentation target is unavailable.");
         }
 
         static void ConfigureTarget(AnimationPresentationRuntimeTarget target)
         {
-            if (!s_Capturing || target == null)
+            if (!s_Capturing || target == null ||
+                target.HostInstanceId != s_TargetHostInstanceId)
                 return;
             if (!s_ConfiguredTargets.Contains(target.RuntimeInstanceId))
             {
@@ -373,6 +399,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             s_ConfiguredTargets.Remove(target.RuntimeInstanceId);
             s_PoseWatchSignatures.Remove(target.RuntimeInstanceId);
+        }
+
+        static void BindGameplayLabPlayerTarget()
+        {
+            CharacterPipelineHost[] hosts = UnityEngine.Object.FindObjectsByType<CharacterPipelineHost>(
+                FindObjectsInactive.Exclude,
+                FindObjectsSortMode.None);
+            CharacterPipelineHost selected = null;
+            for (int i = 0; i < hosts.Length; i++)
+            {
+                CharacterPipelineHost host = hosts[i];
+                if (host == null || !host.VisualRoot ||
+                    !string.Equals(host.ActorId, GameplayLabPlayerActorId, StringComparison.Ordinal))
+                    continue;
+                if (selected != null)
+                    throw new InvalidOperationException(
+                        "Gameplay Lab contains multiple gameplay-lab-player hosts.");
+                selected = host;
+            }
+            if (selected == null)
+                throw new InvalidOperationException(
+                    "Gameplay Lab player host is unavailable.");
+            s_TargetHostInstanceId = selected.GetInstanceID();
+            s_TargetRootInstanceId = selected.VisualRoot.GetInstanceID();
+        }
+
+        static void ResetTargetBinding()
+        {
+            s_TargetHostInstanceId = 0;
+            s_TargetRootInstanceId = 0;
         }
 
         static IReadOnlyList<AnimationPoseWatchIdentity> BuildPoseWatches(
@@ -429,6 +485,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Capturing = false;
             s_Frames.Clear();
             s_PendingFrames.Clear();
+            ResetTargetBinding();
         }
 
         static string StopAndSave()
@@ -458,6 +515,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 s_Frames.Clear();
                 s_PendingFrames.Clear();
+                ResetTargetBinding();
             }
             return s_LastSavedPath;
         }
@@ -505,8 +563,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootIkCapture right = captured.Right;
                 CharacterFootLandingPredictionFootDiagnostics leftFoot = frame.Left;
                 CharacterFootLandingPredictionFootDiagnostics rightFoot = frame.Right;
-                WriteRows(writer, row, in frame, in leftFoot, in left);
-                WriteRows(writer, row, in frame, in rightFoot, in right);
+                WriteRows(
+                    writer, row, in frame, in leftFoot, in left,
+                    captured.TargetRuntimeInstanceId, captured.TargetHostInstanceId);
+                WriteRows(
+                    writer, row, in frame, in rightFoot, in right,
+                    captured.TargetRuntimeInstanceId, captured.TargetHostInstanceId);
             }
             return path;
         }
@@ -516,7 +578,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             StringBuilder row,
             in CharacterFootLandingPredictionDiagnostics frame,
             in CharacterFootLandingPredictionFootDiagnostics foot,
-            in FootIkCapture ik)
+            in FootIkCapture ik,
+            Guid targetRuntimeInstanceId,
+            int targetHostInstanceId)
         {
             int rowCount = Math.Max(
                 1,
@@ -524,7 +588,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     foot.GroundPath.ContactCount,
                     foot.GroundPath.EnvelopeVertexCount));
             for (int contactIndex = 0; contactIndex < rowCount; contactIndex++)
-                WriteRow(writer, row, in frame, in foot, in ik, contactIndex);
+                WriteRow(
+                    writer, row, in frame, in foot, in ik,
+                    targetRuntimeInstanceId, targetHostInstanceId, contactIndex);
         }
 
         static void WriteRow(
@@ -533,6 +599,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in CharacterFootLandingPredictionDiagnostics frame,
             in CharacterFootLandingPredictionFootDiagnostics foot,
             in FootIkCapture ik,
+            Guid targetRuntimeInstanceId,
+            int targetHostInstanceId,
             int groundContactIndex)
         {
             row.Clear();
@@ -540,6 +608,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootPlacementQueryRequest query = foot.Query;
             Add(row, frame.FrameSequence);
             Add(row, frame.CompletionIdentity);
+            Add(row, targetRuntimeInstanceId.ToString("N"));
+            Add(row, targetHostInstanceId);
             Add(row, frame.RootInstanceId);
             Add(row, foot.Side.ToString());
             Add(row, foot.State.ToString());

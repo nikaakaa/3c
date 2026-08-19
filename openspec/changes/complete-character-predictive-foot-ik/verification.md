@@ -11,11 +11,13 @@
 5. 每一个通过条件都要同时满足：Scene 中的人眼结果、Foot Placement Goal、唯一 FullBodyIK、Final Writer 和 Physical Bone 属于相同 Frame、Completion、Rig lineage。
 6. CSV 必须能看到同帧 `CharacterPresentationFactFrame.Grounded/HorizontalSpeed`，以及从 Pose Contribution 解析的左右 `ActionInstanceId/FootWeight`；缺失时动作占用和跑步朝向结论无效。
 
-当前已有的采样只能证明摆动脚链：`FinalGoalPositionWeight > 0`、`FinalIkSucceeded = 1`、`FinalIkFailure = None`、最终物理踝骨 residual 接近零、`GroundPathHasInvalidSegment = 0`。它不能证明本 change 后续四类目标已经接入。
+当前验收入口已注册为 Unity MCP 工具 `character.foot_landing_stair_ad`，只通过正式 Launcher/Gameplay Lab 路线驱动，不使用 compute-use。本轮唯一确认的是采样中的 Accepted Landing、落点身份和 Ground Path 线。Ground Envelope、Swing Foot Motion、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入均未确认，不能从旧报告中的 Goal、残差或画面叠加推断完成。
+
+生命周期重构后的第一项用户验收仍是：使用 Launcher 采样同一条路线，对照 CSV 与 Scene，确认同一事件的 Accepted 落点在查询失败或换级拒绝后不被清空，Ground Path 线继续使用最后 Accepted 输入；事件完成后才晋级 LastLanding。
 
 ## 第 1 步：同一次迈步，下一落点保持在同一级
 
-状态：未开始
+状态：部分确认：仅落点与 Ground Path 线（2026-08-19 实机记录）
 
 ### 操作
 
@@ -46,12 +48,13 @@
 
 结果：
 
-- CSV：
-- 结论：
+- CSV：`Temp/FootLandingSamples/foot-landing-20260819-062514-942-0383dd1d990f402f87146fa0c9f14494.csv`
+- Scene：`Assets/Screenshots/foot-ik-visual-validation-regression-game.png`、`Assets/Screenshots/foot-ik-visual-validation-regression-scene.png`
+- 结论：本次只确认 Accepted Landing、落点身份与 Ground Path 线的可视化入口；Ground Envelope、换级保持、脚部实际消费和最终骨骼不计入通过。
 
 ## 第 2 步：人跟着当前步伐站起来
 
-状态：未开始
+状态：未确认
 
 ### 操作
 
@@ -81,8 +84,10 @@
 
 结果：
 
-- CSV：
-- 结论：
+- CSV：`Temp/FootLandingSamples/foot-landing-20260819-062514-942-0383dd1d990f402f87146fa0c9f14494.csv`
+- 对账：同一 `CompletionIdentity` 上 `PelvisPositionWeight > 0` 的 105 个帧均有 `FinalIkPelvisAvailable`；`FinalIkInputCompletionIdentity`、`FinalIkOutputCompletionIdentity` 与 `FinalPhysicalWriteCompletionIdentity` 一致，`FinalIkPelvisPositionResidual` 最大为 `0`，`FinalPhysicalPelvisGoalResidual` 最大约 `3.6e-7`。
+- Scene：`Assets/Screenshots/foot-ik-runtime-game-mid.png`、`Assets/Screenshots/foot-ik-runtime-scene-mid.png`。
+- 结论：旧记录不能作为本轮证据；盆骨、FullBodyIK 和 Physical Writer 尚未验收。
 
 ## 第 3 步：Ground Envelope 越过踢面
 

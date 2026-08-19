@@ -49,7 +49,32 @@ SphereCast MUST从Raw Landing上方沿Component Down使用Profile声明的半径
 
 - **WHEN** Selected Step、Motion Timeline、Body Target、Future Body Translation、revision Pose或合法Surface不可用
 - **THEN** 该脚 MUST发布明确Rejected原因
-- **AND** MUST不查询另一Step、沿用旧Landing或生成替代落点
+- **AND** MUST不查询另一Step或生成替代落点
+- **AND** 若该事件已经有Accepted `NextSwingLanding`，Pending生命周期 MUST保留该事实和其Ground Path输入，直到事件完成晋级或外层因Body discontinuity、Runtime Reset / Dispose重置生命周期
+
+### Requirement: Landing Event生命周期必须独立拥有Pending与Committed事实
+
+每只脚 MUST由唯一 `CharacterFootLandingLifecycle` Module拥有 `LastLanding`、`NextSwingLanding`、当前事件身份和显式生命周期状态。状态至少包含 `Empty`、`Tracking` 与 `Accepted`；Ground Path、Ground Envelope、Goal producer、FullBodyIK 与最终物理骨骼 writer 不得复制这些状态。
+
+每次表现帧 MUST先把唯一 Committed Frame整体复制为唯一 Pending Frame；同一生命周期字段不得以平行变量分别维护Committed与Pending值。`Tracking` 表示已经锁定一个合法 Landing Event，但本帧尚未得到新的Accepted地面事实；`Accepted` 表示 Pending 拥有该事件最后一个合法落点。只有外层表现事务 `Seal` 才能把 Pending 变成 Committed；`Discard`、查询失败、没有候选或同事件换级 MUST保留上一份 Committed Accepted事实，不得把 `NextSwingLanding` 清零或改成默认点。事件完成时 MUST先把最后 Accepted `NextSwingLanding` 原值晋级为 `LastLanding`，再允许新事件建立下一落点。
+
+#### Scenario: Accepted事件本帧查询失败
+
+- **WHEN** 已有Accepted `NextSwingLanding`，但同一Landing Event本帧没有合法命中
+- **THEN** 生命周期状态 MUST保留该Accepted落点
+- **AND** Ground Path MUST继续消费该落点，不得因一次Rejected把线冻结为无输入或清空
+
+#### Scenario: 同事件换级被拒绝
+
+- **WHEN** 新命中与缓存Accepted落点的SurfaceIdentity不同，或沿Component Up高度差超过正式阈值
+- **THEN** 新命中 MUST只作为本帧Rejected事实
+- **AND** 缓存Accepted `NextSwingLanding`、Landing Event identity与Ground Path输入 MUST保持不变
+
+#### Scenario: 表现事务Discard
+
+- **WHEN** Foot Placement Pending帧在Seal前被Discard
+- **THEN** Landing Committed facts、生命周期状态与Accepted落点 MUST逐值保持Discard前状态
+- **AND** 下一帧 MUST从该Committed状态开始，不得读到被丢弃的事件或落点
 
 ### Requirement: Foot Placement必须发布完整预测IK的步伐盆骨与双脚Goal
 

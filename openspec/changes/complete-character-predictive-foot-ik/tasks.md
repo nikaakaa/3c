@@ -2,6 +2,13 @@
 
 所有任务按依赖顺序执行。每项只关闭一个可审查的代码或文档闭环，完成对应实现后勾选。人工观察与采样结论只记录在 `verification.md`，不作为任务项或任务勾选条件。
 
+## 0. Landing 生命周期重构
+
+- [x] 0.1 把每脚 `LastLanding`、`NextSwingLanding`、事件观察、Seal、Discard 与 Reset 收入独立 `CharacterFootLandingLifecycle` Module。
+- [x] 0.2 把每脚状态收敛为一个完整 Committed Frame 与一个完整 Pending Frame，删除同字段平行散落的生命周期变量。
+- [x] 0.3 增加显式 `Empty`、`Tracking`、`Accepted` 状态，并让 Runtime 只通过不可变 `CharacterFootLandingSnapshot` 读取 Pending Landing facts。
+- [x] 0.4 预测失败、同事件换级或没有合法候选时保留该事件最后 Accepted `NextSwingLanding`，只由事件完成晋级或外层 Reset 清除它。
+
 ## 1. 统一输入、状态与配置合同
 
 - [ ] 1.1 扩展每脚 Landing Pending/Committed 页，保存 Landing Event、Surface、点、法线、Accepted 状态与独立 Accepted trajectory revision identity。

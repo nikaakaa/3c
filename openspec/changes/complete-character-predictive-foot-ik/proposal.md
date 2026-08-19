@@ -1,5 +1,9 @@
 # Change: 补齐并接通完整预测式 Foot IK
 
+## 当前实施状态
+
+本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。本轮只收口 Landing Event 生命周期：当前已确认的运行事实只有 Accepted Landing、落点身份和 Ground Path 线；Ground Envelope、Swing Foot Motion、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入仍待后续逐步验证。
+
 ## Why
 
 当前 Foot Placement 已经有预测落点、可达 Ground Path、摆动脚包络增量和唯一 FBBIK，但楼梯上仍看不出完整预测 IK。原因不是“有没有画线”，而是同一次迈步的落点、步伐骨盆、支撑锁脚、脚掌朝向和转向没有接到同一个 Goal 链。

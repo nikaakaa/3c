@@ -1,8 +1,8 @@
 # Design
 
-## 0. 当前实施阶段：先收口 Landing 生命周期
+## 0. 当前实施阶段：实时 Landing 与最终 Goal 换代
 
-本轮只实施每只脚的 Landing Event 生命周期重构。已确认的运行事实只有 Accepted Landing 与 Ground Path 线；Ground Envelope、Swing Foot Motion、支撑锁脚、Pelvis、脚掌朝向、Pivot、FullBodyIK 消费和最终物理骨骼写入都不在本轮验收结论内。
+当前代码已经实施每只脚的 Landing Event 生命周期重构和最终 Goal 换代。Landing、Ground Path 与 Envelope 只表达本帧当前有效预测；连续性只由写入唯一 GoalSet 前的相对踝骨修正换代负责。已确认的运行事实仍只有 Accepted Landing 与 Ground Path 线；实时跨踏面更新、Goal 换代后的物理踝骨、Ground Envelope、Swing Foot Motion、支撑锁脚、Pelvis、脚掌朝向、Pivot、FullBodyIK 消费和最终物理骨骼写入都不在当前验收结论内。
 
 Landing 生命周期是 Foot Placement 的状态 Module，不是查询算法。每只脚只保存一个完整 Committed Frame 和一个完整 Pending Frame，不再把相同字段拆成两组平行变量。状态只在外层表现事务 Seal 后推进，Discard 不得改变上一份已提交事实：
 
@@ -10,12 +10,12 @@ Landing 生命周期是 Foot Placement 的状态 Module，不是查询算法。�
 Empty
 -> Tracking
 -> Accepted
--> Accepted（本帧预测失败或换级，保留上一次 Accepted）
--> Accepted（同一事件同一踏面的新命中）
+-> Tracking（本帧预测失败，旧事实只保留为晋级历史，不再发布当前 Path）
+-> Accepted（同一事件的最新合法命中；死区内可复用上一命中）
 -> Empty（事件完成后晋级 LastLanding；同帧新事件可再进入 Tracking / Accepted）
 ```
 
-预测失败、同事件换级或没有合法候选时，只记录本帧没有新的 Accepted Landing；不得清除该事件最后一个 Accepted `NextSwingLanding`，也不得让 Ground Path 因一次查询拒绝突然丢失输入。只有事件完成晋级或外层因 Body discontinuity、Runtime Reset / Dispose 明确 Reset 生命周期时才会清除下一落点。该 Module 只输出不可变 Landing Snapshot 给现有 Ground Path；不拥有 Ground Path、Envelope、Goal 或骨骼写入。
+预测失败或没有合法候选时，生命周期保留该事件最后一个有效落点只供完成时晋级，但本帧 Snapshot 必须回到 `Tracking` 且不发布 `NextSwingLanding`。Ground Path 因而在同一事务中发布 Rejected 并清空当前 Envelope，不能继续显示旧踏面。只有本帧合法命中，Snapshot 才发布唯一当前 Accepted 落点。该 Module 不拥有 Ground Path、Envelope、Goal 或骨骼写入。
 
 ## 1. 唯一计算链
 
@@ -63,17 +63,9 @@ IK Solver 只执行最终目标，不查询地面、不决定支撑脚、不锁�
 
 `Confidence` 只进诊断，不改变 Goal 权重。空中、无权威 Step、有限 Action 占用或 Ground Path rejected 时，不另做传统 IK；无效 Goal 发布原生事实和零权重。跑步朝向关闭只读 `CharacterPresentationFactFrame.HorizontalSpeed`，不得从 Step、输入幅值、动画位移或可见 Transform 差分重建速度。
 
-## 3. 同事件同踏面落点
+## 3. 同事件实时落点与唯一当前 Path
 
-同一 `LandingEventIdentity` 只有同时满足下面两个条件才属于同一踏面：
-
-```text
-SurfaceIdentity 相同
-且 abs(dot(newPoint - cachedPoint, ComponentUp))
-    <= MaximumSameEventVerticalJump
-```
-
-任一条件不成立都算换级。`MaximumSameEventVerticalJump` 是有限正数的正式 Profile 值，Build 时校验，Runtime 不猜楼梯高度。`SurfaceIdentity` 必须来自稳定查询命中，不得由 AuthorityTick、每帧坐标哈希或表现时间伪造。
+`LandingEventIdentity` 只表示同一次迈步，不表示该事件必须绑定首次命中的踏面。楼梯上身体继续移动时，同一事件的合法预测可以从当前踏面切到下一踏面；`SurfaceIdentity`、高度和法线都属于本帧命中事实，不能成为冻结旧落点的门槛。
 
 每只脚在世界查询前先处理事件换代：
 
@@ -82,15 +74,15 @@ SurfaceIdentity 相同
 3. 候选 header 自身非法、时间越界或身份不一致时直接发布 typed rejection，不查询另一候选作为 fallback。
 4. 只有选中的事件执行本帧该脚唯一 SphereCast。没有候选时该脚查询次数为零。
 
-同一事件、同一踏面且仍处于 PreSwing / Swing 时：
+同一事件仍处于 PreSwing / Swing 时：
 
 - 每个有效表现帧继续执行唯一正式 SphereCast。
-- 新命中与缓存点距离小于 `LandingUpdateDistance` 时，复用 Accepted Landing 和已提交 Ground Path，但下一帧仍继续预测。
-- 新命中仍属同一踏面且超过死区时，接受新点，并用这一次 SphereCast 结果重建同一 Foot Placement 事务中的 Ground Path。
-- 新命中换级时，丢弃新命中，保留本事件最后 Accepted Landing，并发布 typed rejection 和 Warning；不得把新踏面写入 Path。
+- 新命中与当前 Accepted 点距离小于 `LandingUpdateDistance` 时，复用 Accepted Landing 和已提交 Ground Path，但下一帧仍继续预测。
+- 新命中超过死区时，无论 SurfaceIdentity 或沿 Component Up 的高度是否变化，都接受新点，并用这一次 SphereCast 结果重建同一 Foot Placement 事务中的唯一 Ground Path。
+- 查询失败、Selected Event 无效或没有合法候选时，当前 Snapshot 不发布 `NextSwingLanding`，Ground Path 发布 typed rejection，Envelope 为空。生命周期内部最后有效命中只允许用于事件完成晋级，不能继续驱动线或 Goal。
 - Swing Event 完成时，最后一个 Accepted `NextSwingLanding` 才原值晋级为 `LastLanding`；完成帧的新命中、Current Sole 或默认点都不得替换它。晋级后才允许 Incoming 成为本帧唯一查询事件。
 
-这不是冻结实时落点：同一踏面内预测仍可实时滑动，只有换级被拒绝。
+因此 Scene 中的落点、Path 与 Envelope 始终表达同一个当前有效查询 revision；它们可以跳到新的真实踏面，但不能冻结旧踏面。
 
 ## 4. 转向与唯一 trajectory revision
 
@@ -313,16 +305,42 @@ targetRot = LookRotation(slopeForward, targetUp)
 3. 先把已完成 Current Event 的最后 Accepted `NextSwingLanding` 原值晋级为 `LastLanding`，不为晋级查询。
 4. 每脚在 Current / Incoming header 中选择零个或一个查询事件。
 5. 用 LastLanding 与锁脚状态延续或重选稳定 Pivot 主支撑，按当前 Visible Pose 绕支撑脚建立虚拟 Body Position/Rotation，计算本帧唯一 revision Pose、identity 和 residual yaw。
-6. 每脚只为选中的事件执行至多一次 revision Raw Landing SphereCast，按同事件同踏面合同更新 Accepted `NextSwingLanding`。
+6. 每脚只为选中的事件执行至多一次 revision Raw Landing SphereCast，按距离死区更新唯一当前 Accepted `NextSwingLanding`；查询失败时使当前 Path 失效。
 7. 用 Accepted revision 落点建立或复用 Ground Path、Reachability、Hull 和 Envelope。
 8. 正式判定摆动、支撑、GroundedStationary 与当前步伐；计算 Swing 增量、plant、锁入/释放、朝向和主辅支撑结果。
 9. 用同一 revision 后步伐端点和同帧双脚结果计算骨盆重基、闭式弹簧和净空下限。
-10. 写 Pelvis、LeftFoot、RightFoot 到同一 GoalSet，执行一次 FullBodyIK 和一次 final writer。
-11. 外层 Seal 或 Discard；只有 Seal 才提交全部 Pending 状态和查询结果。
+10. 每脚把原始 Foot Goal 转成相对同帧原生动画踝骨的修正和权重，通过唯一 Goal 换代状态得到最终 Foot Goal；Pelvis 继续使用自己的临界弹簧输出。
+11. 写 Pelvis、LeftFoot、RightFoot 到同一 GoalSet，执行一次 FullBodyIK 和一次 final writer。
+12. 外层 Seal 或 Discard；只有 Seal 才提交全部 Pending 状态和查询结果。
 
 Position Weight 规则必须分开：Swing 只有垂直增量超过容差时非零；Pelvis 只有最终平移超过容差时非零；有效 Locked/Sliding 支撑脚始终使用同帧动画位置权重；Unlocked 按解锁时间递减。Rotation Weight 只在朝向合同成立时非零。
 
-## 11. 诊断
+## 11. 最终 Foot Goal 换代
+
+Landing、Ground Path 与 Envelope 不承担防抖职责。每只脚在唯一 GoalSet 写入前拥有一份独立 Pending/Committed 换代状态：
+
+```text
+OutputPositionCorrection
+OutputRotationCorrection
+OutputPositionWeight
+OutputRotationWeight
+SourceGroundPathIdentity
+```
+
+输入目标先转成相对同帧原生动画踝骨的 Component 空间修正。当前 Path 或目标变化时，不保存旧 Path，也不固定旧世界 Goal；本帧只从上一成功输出向最新修正和权重收敛：
+
+```text
+alpha = 1 - pow(0.5, deltaSeconds / GoalTransitionHalfLifeSeconds)
+outputCorrection = lerp(committedOutputCorrection, currentCorrection, alpha)
+outputWeight = lerp(committedOutputWeight, currentWeight, alpha)
+finalGoal = currentOriginalAnkle + outputCorrection
+```
+
+旋转修正使用同一 `alpha` 做最短路径 Slerp。换代途中 Landing、Path 或 Envelope 再次变化时，紧邻上一成功输出自然成为新起点，不需要额外队列、旧目标页或第二 Path。当前 Path Rejected 时目标是零修正和零权重，最终 Goal 连续回到原生动画。`GoalTransitionHalfLifeSeconds` 是有限正数正式 Profile 值。
+
+离地、有限 Action 占脚、Body discontinuity、Runtime Reset / Retarget / Dispose 属于所有权硬失效：状态当帧清零并发布原生 Goal 和零权重，不能借换代继续携带旧世界地面修正。只有外层 Seal 才提交输出；Discard 不推进半衰期响应。
+
+## 12. 诊断
 
 Scene Gizmo 只显示当前事实：Accepted LastLanding、Cached NextSwingLanding、Ground Envelope、Invalid Segment、Original/Corrected Sole、Planted Sole、步伐线、Pelvis 标记、锁脚颜色和朝向短法线。Gizmo 不重新采样动画、查询世界、计算 Reachability、采样 Envelope 或执行 FBBIK。
 
@@ -330,9 +348,11 @@ CSV 记录 Selected Query Step、每脚查询次数、尝试与 Accepted revisio
 
 晋级诊断必须同时记录 `PromotedFromAcceptedRevisionIdentity` 与晋级前最后 Accepted 点、法线、Surface；完成帧查询结果不得出现在这些字段。Pending 与 Committed revision、spring、lock/release state 必须可在同一 Completion 对账，证明 Prepare 从 Committed 开始且 Discard 没有推进。CSV 不能单独算过，必须和 Scene 结果及同一 Completion 对账。
 
-## 12. 取舍与非目标
+CSV 还必须记录每脚当前原始修正、Committed/Pending输出修正、原始/最终权重、`GoalTransitionHalfLifeSeconds`与Source Ground Path identity，证明线可以立即换踏面而最终骨骼Goal连续。
 
-- 同事件同踏面内继续更新，避免冻结 Path；身份或高度换级留到新事件，避免一步中跳层。
+## 13. 取舍与非目标
+
+- 同事件始终消费当前合法落点，允许真实踏面切换；骨骼连续性由最终 Goal 换代解决，不用旧 Path 冒充稳定世界。
 - 骨盆只写 `PelvisPreSolveTranslation`，不使用 Set Mesh、VisualRoot、Gameplay Body 或 KCC 高度。
 - 转向重新查询唯一 revision，成本高于旋转旧 Path，但不会伪造 Surface、Hull 与 Envelope。
 - Ground Envelope 是唯一 feet-only 下界；不增加第二脚下 Trace、第二 Grounding、第二 IK 或第二 writer。

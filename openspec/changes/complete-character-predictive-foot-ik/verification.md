@@ -11,30 +11,31 @@
 5. 每一个通过条件都要同时满足：Scene 中的人眼结果、Foot Placement Goal、唯一 FullBodyIK、Final Writer 和 Physical Bone 属于相同 Frame、Completion、Rig lineage。
 6. CSV 必须能看到同帧 `CharacterPresentationFactFrame.Grounded/HorizontalSpeed`，以及从 Pose Contribution 解析的左右 `ActionInstanceId/FootWeight`；缺失时动作占用和跑步朝向结论无效。
 
-当前验收入口已注册为 Unity MCP 工具 `character.foot_landing_stair_ad`，只通过正式 Launcher/Gameplay Lab 路线驱动，不使用 compute-use。本轮唯一确认的是采样中的 Accepted Landing、落点身份和 Ground Path 线。Ground Envelope、Swing Foot Motion、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入均未确认，不能从旧报告中的 Goal、残差或画面叠加推断完成。
+当前验收入口已注册为 Unity MCP 工具 `character.foot_landing_stair_ad`，只通过正式 Launcher/Gameplay Lab 路线驱动，不使用 compute-use。运行时代码已经接入实时 Landing/Path 合同与每脚唯一最终 Goal 换代，但尚未生成对应的新采样证据；当前唯一确认的仍是旧采样中的 Accepted Landing、落点身份和 Ground Path 线。Ground Envelope、Swing Foot Motion、Goal 换代后的物理踝骨、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入均未确认，不能从旧报告中的 Goal、残差或画面叠加推断完成。
 
-生命周期重构后的第一项用户验收仍是：使用 Launcher 采样同一条路线，对照 CSV 与 Scene，确认同一事件的 Accepted 落点在查询失败或换级拒绝后不被清空，Ground Path 线继续使用最后 Accepted 输入；事件完成后才晋级 LastLanding。
+生命周期重构后的第一项用户验收改为：使用 Launcher 采样同一条路线，对照 CSV 与 Scene，确认同一事件的落点、Ground Path 与 Envelope始终来自本帧当前有效预测；跨Surface或高度变化时立即换到新踏面，查询失败时当前Path消失而不是冻结旧线。最后有效落点只在事件完成时晋级为LastLanding。
 
-## 第 1 步：同一次迈步，下一落点保持在同一级
+## 第 1 步：同一次迈步，落点与Path实时跟随当前有效预测
 
-状态：部分确认：仅落点与 Ground Path 线（2026-08-19 实机记录）
+状态：待按实时Path与Goal换代新合同重新确认
 
 ### 操作
 
-沿普通楼梯连续走过至少三次上行和三次下行迈步，分别观察左右脚的上一落点球、下一落点球、落点法线和包络线。对同一个 `LandingEventIdentity` 找出连续多帧记录。这里“同一级”必须同时满足 `SurfaceIdentity` 相同和高度差不超过 `MaximumSameEventVerticalJump`。
+沿普通楼梯连续走过至少三次上行和三次下行迈步，分别观察左右脚的上一落点球、下一落点球、落点法线和包络线。对同一个 `LandingEventIdentity` 找出连续多帧记录，重点覆盖预测点从一级踏面切到下一级踏面的时刻。
 
 ### Scene 观察
 
-- 下一落点球在 PreSwing 到落地前可以在同一踏面内跟随身体移动。
+- 下一落点球在 PreSwing 到落地前持续跟随本帧有效预测，同一事件可以从当前踏面切到下一踏面。
 - 该脚落地后，最后一个 Accepted 下一落点晋级为 LastLanding，另一脚建立新的事件。
-- 命中另一级踏面时，旧踏面球保留，不能出现球瞬间跳层或整条包络线抽到另一层。
-- 同一踏面内超过 `LandingUpdateDistance` 时包络可以重建；小于死区时路径保持但下一帧仍继续预测。
+- 命中另一级踏面且移动超过 `LandingUpdateDistance` 时，落点、Path端点和Envelope同帧切到新事实，不能继续留在旧踏面。
+- 查询失败或没有合法候选时当前落点、Accepted Path和Envelope不显示；下一帧查询恢复后再发布新事实。
+- 小于`LandingUpdateDistance`时路径可以复用，但下一帧仍继续预测。
 
 ### CSV 对账
 
-- `LandingEventIdentity` 连续帧不变时，`GroundPathNextSwingLandingSurfaceIdentity` 不得在 Accepted 记录中换值。
-- 高度差 `abs(dot(NewAccepted - CachedAccepted, ComponentUp))` 不得超过 `MaximumSameEventVerticalJump`。
-- 换级帧必须有 typed rejection/Warning，且不得把被拒命中写入 `GroundPathNextSwingLandingX/Y/Z`。
+- `LandingEventIdentity` 连续帧不变时，`GroundPathNextSwingLandingSurfaceIdentity`与高度允许随本帧合法命中变化。
+- 新Accepted点超过死区时，Landing点、`GroundPathNextSwingLanding*`、Path identity和Envelope端点必须来自同一Completion。
+- 当前查询Rejected或没有Selected Event时，Accepted Ground Path数量必须为0，Envelope顶点必须为空，不能继续发布上一次Accepted Path。
 - `SelectedQueryStepSource` 与 `SelectedQueryLandingEventIdentity` 每脚每帧最多只有一组；Current/Incoming同时合法时必须选择较小TimeToLanding，相等时选择Current。
 - `LandingQueryCount` 每脚每帧只能为0或1；路径重建和Current/Incoming竞争都不能带来第二次SphereCast。
 - Event完成后，`GroundPathLastLandingEventIdentity`才变成刚完成的identity；`PromotedFromAcceptedRevisionIdentity`、点、法线和Surface必须逐值等于完成前最后Accepted NextSwingLanding。
@@ -43,14 +44,14 @@
 
 ### 通过 / 不通过
 
-- 通过：一次迈步从开始到落地始终只属于一个踏面，换级只发生在新事件。
-- 不通过：事件中换级、路径被冻结、落点停止实时更新、或同一帧出现第二次落点查询。
+- 通过：落点、Path、Envelope实时反映当前合法预测，线可以在同一事件内换踏面；骨骼连续性留到第4步验收。
+- 不通过：Surface/高度变化后仍冻结旧踏面、无当前有效查询仍显示旧Accepted Path、落点停止实时更新、或同一帧出现第二次落点查询。
 
 结果：
 
 - CSV：`Temp/FootLandingSamples/foot-landing-20260819-062514-942-0383dd1d990f402f87146fa0c9f14494.csv`
 - Scene：`Assets/Screenshots/foot-ik-visual-validation-regression-game.png`、`Assets/Screenshots/foot-ik-visual-validation-regression-scene.png`
-- 结论：本次只确认 Accepted Landing、落点身份与 Ground Path 线的可视化入口；Ground Envelope、换级保持、脚部实际消费和最终骨骼不计入通过。
+- 结论：该旧记录采用“换级保留旧落点”口径，不能作为新实时Path合同的通过证据，文件保留用于回归对比。
 
 ## 第 2 步：人跟着当前步伐站起来
 
@@ -88,6 +89,7 @@
 - 对账：同一 `CompletionIdentity` 上 `PelvisPositionWeight > 0` 的 105 个帧均有 `FinalIkPelvisAvailable`；`FinalIkInputCompletionIdentity`、`FinalIkOutputCompletionIdentity` 与 `FinalPhysicalWriteCompletionIdentity` 一致，`FinalIkPelvisPositionResidual` 最大为 `0`，`FinalPhysicalPelvisGoalResidual` 最大约 `3.6e-7`。
 - Scene：`Assets/Screenshots/foot-ik-runtime-game-mid.png`、`Assets/Screenshots/foot-ik-runtime-scene-mid.png`。
 - 结论：旧记录不能作为本轮证据；盆骨、FullBodyIK 和 Physical Writer 尚未验收。
+- 最新失败样本：`Temp/FootLandingSamples/foot-landing-20260819-140819-595-bafd5e2d66ad49be9b46c1190172ac65.csv` 共205帧，`maxPelvisStep=1.696/1.717`、`pelvisCuts=37/28`，证明未验收Pelvis输出已经进入FBBIK并造成米级跳变。本轮已把当前阶段恢复为Swing-only输出；修正结果必须重新采样，旧CSV不能作为通过证据。
 
 ## 第 3 步：Ground Envelope 越过踢面
 
@@ -101,7 +103,7 @@
 
 - 包络线从支撑点到下一落点形成连续上侧折线，越过台阶踢面。
 - 摆动脚的水平进度仍来自原生动画，不会因为 IK 把脚水平吸到落点。
-- 被拒绝的换级命中不会把包络线拖到另一层。
+- 当前预测换踏面时包络线同帧重建到新端点；当前查询失败时Envelope为空，不沿用旧线。
 
 ### CSV 对账
 
@@ -112,7 +114,7 @@
 
 ### 通过 / 不通过
 
-- 通过：线和实际脚路径都从踢面上方通过，且包络没有因为换级被抽走。
+- 通过：线和实际脚路径都从踢面上方通过，且包络随当前有效落点实时重建。
 - 不通过：线穿台阶、脚的水平轨迹被落点直接替换、或 Ground Path 失败后仍沿用旧包络。
 
 结果：
@@ -131,6 +133,7 @@
 ### Scene 观察
 
 - 摆动脚只在 Envelope 高于动画基线时抬高，垂直增量为零时回到原生事实。
+- 落点或Path跨踏面换代时，线可以当帧变化，但最终踝骨Goal从上一提交修正连续收敛到新修正，不出现一帧硬切。
 - 支撑脚 Sole 只在低于 LastLanding 时向 Component Up 抬高，不会被 IK 向下拽。
 - 支撑脚的 Ankle 与 Sole 保持同一帧原生 Sole-to-Ankle 偏移，不出现踝骨被单独拉走。
 - 骨盆净空不低于同帧原生动画净空，脚贴面后不会把人重新压回去。
@@ -141,6 +144,8 @@
 - 支撑脚需要接地时 `plantHeight = max(0, dot(LastLanding - OriginalSole, ComponentUp))`；已在落点上方时为零。
 - 摆动脚 `FootMotionPositionWeight` 只能由正式动画脚位置权重提供，不再乘 Swing phase 或预测误差。
 - `FinalPhysicalAnkleGoalResidual` 和 `FinalPhysicalPelvisGoalResidual` 必须在同一 Completion 归零到 Profile 几何容差内。
+- `RawFootGoalCorrection*`可以随当前Path立即变化；`PendingGoalTransitionCorrection*`必须从上一`CommittedGoalTransitionCorrection*`按`alpha = 1 - pow(0.5, deltaSeconds / GoalTransitionHalfLifeSeconds)`重算，最终Goal等于当前Original Ankle加Pending修正。
+- Path Rejected但Body仍Grounded且未被Action占用时，原始目标为零修正/零权重，最终Goal连续收敛回原生；离地或Action占用时必须当帧清零，不执行旧修正淡出。
 
 ### 通过 / 不通过
 

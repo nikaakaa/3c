@@ -2,7 +2,7 @@
 
 ## 当前实施状态
 
-本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。本轮只收口 Landing Event 生命周期：当前已确认的运行事实只有 Accepted Landing、落点身份和 Ground Path 线；Ground Envelope、Swing Foot Motion、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入仍待后续逐步验证。
+本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。当前代码已经收口 Landing Event 实时更新合同，并接入每脚唯一最终 Goal 换代：Landing、Ground Path 与 Envelope 不再冻结旧踏面，Foot Goal 只保存相对同帧原生踝骨的 Committed/Pending 修正并向最新目标连续收敛。该换代尚未完成 Scene 与 CSV 采样验收；当前用户已经确认的运行事实仍只有 Accepted Landing、落点身份和 Ground Path 线。Ground Envelope、Swing Foot Motion、Goal 换代后的物理踝骨、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入仍待后续逐步验证。
 
 ## Why
 
@@ -16,11 +16,12 @@ GDC《Fitting the World》的完整顺序是：自动脚步数据 -> 预测接�
 
 ## What Changes
 
-- 同一 `LandingEventIdentity` 内，下一落点只有在 `SurfaceIdentity` 相同且沿 Component Up 的高度差不超过 Profile 显式 `MaximumSameEventVerticalJump` 时才允许跟随权威预测滑动。任一条件不满足都算换级；整段楼梯共用一个碰撞表面时，不能只比 SurfaceIdentity。迈步结束才换踏面，不再只用毫米死区决定「整条 Path 重建还是冻死」。
+- 同一 `LandingEventIdentity` 内，每帧合法 SphereCast 都代表当前世界事实。新命中相对当前 Accepted 落点小于 `LandingUpdateDistance` 时复用当前落点与 Path；超过死区时无论 Surface 或高度是否变化，都替换唯一 `NextSwingLanding` 并重建唯一 Ground Path。查询失败或没有合法候选时当前 Path 必须 Rejected，不能继续显示旧踏面；生命周期只保留最后有效落点供事件完成晋级，不再把它发布成当前 Path 输入。
 - 每只脚先从 Current / Incoming Step 选出唯一查询事件，再执行至多一次正式 Landing SphereCast。完成事件只把该事件最后一个 Accepted `NextSwingLanding` 原值晋级为 `LastLanding`，不得为晋级再查询一次地面。
 - 当前步伐由支撑脚 `LastLanding` 到摆动脚 `NextSwingLanding` 构成。骨盆使用已有 `PelvisPreSolveTranslation`，按 Pose Root 在步伐水平轴上的进度采样；必要位移和弹簧输出先在步伐起点坐标系中重基，再合成唯一骨盆 Goal，避免支撑切换带着旧步伐的相对高度回弹。
 - 摆动脚继续只消费 Ground Envelope 相对落点基线的非负垂直增量，水平进度和原生动作仍由动画提供。
 - 支撑脚拥有 `LastLanding` 且不是当前 Swing 时，先用非负 plantHeight 接地，再进入 Locked / Sliding / Unlocked。锁入准备只消费同一事件的 `TimeToLandingSeconds`；Locked / Sliding 即使垂直和水平误差为零也保持动画位置权重；Unlocked 冻结上一提交修正和权重作为释放起点，在正式 `UnlockBlendSeconds` 内连续回到原生动画。
+- 每只脚的最终 Goal 在写入唯一 GoalSet 前经过一份 Pending/Committed 换代状态。状态只保存上一成功帧输出相对同帧原生动画踝骨的 Component 空间修正与权重；当前 Landing、Path 或 Envelope 可以立即换代，最终修正按正式 `GoalTransitionHalfLifeSeconds` 向本帧最新目标或零修正收敛。换代途中目标再次变化时直接以上一成功输出为新起点，不缓存第二条 Path，不平滑世界落点。离地或有限 Action 占脚属于所有权硬失效，必须当帧清零，不能让换代继续携带旧地面修正。
 - 支撑脚只在 Locked / Sliding 时发布有限 Pitch / Roll：移动时使用revision后步伐前向，GroundedStationary没有步伐时使用同一Pending RevisionForward；上坡更趋水平，下坡更趋坡面，跑步达到阈值时关闭。摆动脚旋转权重保持为零。
 - 有效可见 yaw 先启动 Foot Placement 唯一 trajectory revision。该 revision 拥有独立 identity、Pending/Committed 虚拟 Body Position、Rotation、Forward 和剩余 yaw；先用当前未改写的 Visible Position相对上一提交Visible Position的世界位移推进Committed虚体，再以稳定主支撑 `LastLanding` 为 Pivot，按`VirtualBodyPosition = LastLanding + RotateAroundUp(VisiblePositionForRevision - LastLanding, pivotDelta)`与`VirtualBodyRotation = pivotRotation * CommittedRevisionRotation`建立本帧虚体，最后按`RawLanding = VirtualBodyPosition + FutureBodyTranslationWorld + VirtualBodyRotation * RootLocalLanding`执行当前唯一落点 SphereCast、Capsule、Reachability、Hull 和 Envelope。之后才判定步伐、骨盆和脚 Goal。不刚体旋转旧 Foot Route、Surface 或 Ground Envelope，不改 KCC、Gameplay Body 或 VisualRoot。
 - `GroundedStationary` 两脚都有合法 `LastLanding` 时延续上一提交主支撑；旧主支撑失效时才按较小水平误差、再按稳定 Side 顺序重选。Pivot 主脚保持 Locked，另一脚重新进入 Locked / Sliding / Unlocked，Sole 前后关系不得决定主支撑。
@@ -45,12 +46,13 @@ GDC《Fitting the World》的完整顺序是：自动脚步数据 -> 预测接�
 
 - current `character-foot-placement-presentation` 仍要求只生成 Swing 脚垂直 Goal、Pelvis 与支撑脚权重为零，并禁止 Foot Lock、Pelvis、脚底旋转。本 change 删除这条阶段边界，安装完整步伐骨盆、支撑锁脚、朝向和 Pivot revision。
 - current `Landing Prediction必须形成独立世界事实` 把 Raw Landing 固定为 `VisiblePosition + FutureBodyTranslation + VisibleRotation * RootLocalLanding`，并禁止任何未来朝向 Plan。本 change 明确修改该 Requirement：先用当前Visible世界位移推进上一提交虚体，再把该临时Pose绕稳定 `LastLanding` 重投影成唯一 revision Pose，由它计算Raw Landing；这不是 Gameplay 或 KCC 的未来朝向。Future Body Translation 仍保持原世界向量且不随 yaw 旋转，旧 Route、Surface 与 Envelope 也不参与该几何计算。
-- current 同一 Landing Event 只按距离死区复用或重建 Path。本 change 保留死区，但把“同一踏面”定义为 SurfaceIdentity 相同且高度差未超阈值；不可走仍只由 Ground Path typed rejection 表达。
+- current 同一 Landing Event 只按距离死区复用或重建 Path。本 change 保留这一实时合同，并明确 SurfaceIdentity 或高度变化不是冻结条件；不可走和当前查询失败只由 Ground Path typed rejection 表达。
+- current Swing 阶段明确禁止跨帧 Goal 平滑。本 change 用唯一最终 Goal 换代替换该阶段边界：世界事实仍实时更新，只有写给骨骼的相对修正与权重连续收敛。
 - current 诊断不显示 Pelvis。本 change 增加步伐线、骨盆标记和同一 Completion 的 Physical Pelvis 对账。
 - current `character-presentation-pose-graph` 已要求 Foot Placement 输出 Pelvis 与双脚 Goal、唯一 FBBIK；本 change 只让已有 slot 成为有效目标，不改端口类型。
 - current `character-vertical-body-motion` 拥有 Gameplay 垂直积分和 KCC Grounded。本 change 不读取或改写 VerticalVelocity，不用骨盆补 KCC 没上台阶。
 - current `character-animation-foot-analysis-artifact` 继续只发布 root-local 脚部事实。本 change 不把分析改成锁脚状态机，只消费 TimeToLanding、IsSwing 和 Landing Event。
-- `openspec/project.md` 本轮已删除“误差软阈值降权、硬阈值释放”的旧表述，并明确当前只安装Swing Foot Motion；归档本 change 时还必须把同事件同踏面、SurfaceIdentity/高度换级和唯一trajectory revision的实现证据收口到current truth。
+- `openspec/project.md` 本轮已删除“误差软阈值降权、硬阈值释放”的旧表述，并明确当前只安装Swing Foot Motion；归档本 change 时还必须把实时唯一 Path、最终 Goal 换代和唯一trajectory revision的实现证据收口到current truth。
 - `add-character-foot-placement-stride-hips` 的 delta 尚未进入 current spec，且其代码仍未接入 Runtime Goal 组装。本 change 吸收其有效内容并删除独立 active 文档，归档时只合并本 change。
 
 ## Reference Alignment
@@ -62,7 +64,7 @@ GDC《Fitting the World》的完整顺序是：自动脚步数据 -> 预测接�
 - GDC 第 21–28 页：转向枢轴靠近接触脚。项目让唯一虚拟 Body Pose先跟随当前Visible世界位移，再绕稳定接触脚重投影；双脚站住时延续上一提交主支撑，失效后才稳定重选，不转胶囊、不旋转旧 Route。
 - GDC 第 29–36 页：两点正确不等于中间安全；Capsule、排序、Edge、Reachability 和上侧 Hull 已存在，本 change 只消费其 Accepted Envelope。
 - Shadow：先算盆骨再应用脚；步伐是支撑落点到摆动预测点；Foot Path 是相对地面基线的增量；落地脚暂时收到落点。`Set Mesh` 是 UE 方案，项目使用 `PelvisPreSolveTranslation`。
-- 依卞：落点用 Sphere 避免台阶边缘滑级；预测落点可在落地前继续更新，但本项目限制为同一事件同一踏面，踏面同时由 SurfaceIdentity 和高度阈值决定。
+- 依卞：落点用 Sphere 减少台阶边缘误命中；预测落点在落地前继续更新。SurfaceIdentity 与高度只进入诊断和 Path 几何，不再阻止当前合法预测替换旧落点。
 
 ## 实施边界
 
@@ -77,11 +79,12 @@ GDC《Fitting the World》的完整顺序是：自动脚步数据 -> 预测接�
 -> Physical Pelvis / Ankle
 ```
 
-每只脚仍只有一个 `LastLanding`、一个 `NextSwingLanding`、一个 Ground Path 和一个 Envelope。所有新增的锁脚、骨盆、弹簧和 trajectory revision 状态都进入 Foot Placement Pending/Committed 页，外层 `Seal` 才推进，`Discard` 或 Fault 不得留下半帧结果。
+每只脚仍只有一个 `LastLanding`、一个当前可用的 `NextSwingLanding`、一个 Ground Path、一个 Envelope 和一个最终 Goal 换代状态。所有新增的换代、锁脚、骨盆、弹簧和 trajectory revision 状态都进入 Foot Placement Pending/Committed 页，外层 `Seal` 才推进，`Discard` 或 Fault 不得留下半帧结果。
 
 ### 明确采用
 
-- 同一事件同一踏面内实时滑动，SurfaceIdentity 不同或高度超阈值才换级。
+- 同一事件内始终接受本帧最新合法预测；只在 `LandingUpdateDistance` 死区内复用，SurfaceIdentity 与高度变化不得冻结旧 Path。
+- 最终脚 Goal 只平滑相对原生踝骨的修正与权重，不平滑 Landing、Surface、Ground Path 或 Envelope。
 - 转向建立唯一 trajectory revision，重新查询和重建地形事实，不刚体旋转旧 Path。
 - revision 先旋转虚拟 Body Position 与 Rotation，再计算 Raw Landing；KCC Future Body Translation 保持原世界向量。
 - 双脚站立延续稳定主支撑，Pivot 主脚锁住，另一脚允许滑动或释放。

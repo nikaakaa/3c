@@ -1,5 +1,22 @@
 # Design
 
+## 0. 当前实施阶段：先收口 Landing 生命周期
+
+本轮只实施每只脚的 Landing Event 生命周期重构。已确认的运行事实只有 Accepted Landing 与 Ground Path 线；Ground Envelope、Swing Foot Motion、支撑锁脚、Pelvis、脚掌朝向、Pivot、FullBodyIK 消费和最终物理骨骼写入都不在本轮验收结论内。
+
+Landing 生命周期是 Foot Placement 的状态 Module，不是查询算法。每只脚只保存一个完整 Committed Frame 和一个完整 Pending Frame，不再把相同字段拆成两组平行变量。状态只在外层表现事务 Seal 后推进，Discard 不得改变上一份已提交事实：
+
+```text
+Empty
+-> Tracking
+-> Accepted
+-> Accepted（本帧预测失败或换级，保留上一次 Accepted）
+-> Accepted（同一事件同一踏面的新命中）
+-> Empty（事件完成后晋级 LastLanding；同帧新事件可再进入 Tracking / Accepted）
+```
+
+预测失败、同事件换级或没有合法候选时，只记录本帧没有新的 Accepted Landing；不得清除该事件最后一个 Accepted `NextSwingLanding`，也不得让 Ground Path 因一次查询拒绝突然丢失输入。只有事件完成晋级或外层因 Body discontinuity、Runtime Reset / Dispose 明确 Reset 生命周期时才会清除下一落点。该 Module 只输出不可变 Landing Snapshot 给现有 Ground Path；不拥有 Ground Path、Envelope、Goal 或骨骼写入。
+
 ## 1. 唯一计算链
 
 完整预测 IK 仍然只有一条 Foot Placement 链，不增加第二个 Solver：

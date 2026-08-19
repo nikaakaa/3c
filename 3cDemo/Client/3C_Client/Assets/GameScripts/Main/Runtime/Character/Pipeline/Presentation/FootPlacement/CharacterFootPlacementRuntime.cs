@@ -6,251 +6,6 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    struct CharacterFootLandingFact
-    {
-        internal bool HasValue;
-        internal ulong LandingEventIdentity;
-        internal ulong TrajectoryGeneration;
-        internal string FutureBodyTranslationSourceIdentity;
-        internal int SurfaceIdentity;
-        internal Vector3 WorldPoint;
-        internal Vector3 WorldNormal;
-
-        internal CharacterFootGroundPathLanding Resolve() =>
-            new CharacterFootGroundPathLanding(
-                LandingEventIdentity,
-                TrajectoryGeneration,
-                FutureBodyTranslationSourceIdentity,
-                SurfaceIdentity,
-                WorldPoint,
-                WorldNormal);
-
-        internal void Clear()
-        {
-            HasValue = false;
-            LandingEventIdentity = 0;
-            TrajectoryGeneration = 0;
-            FutureBodyTranslationSourceIdentity = string.Empty;
-            SurfaceIdentity = 0;
-            WorldPoint = default;
-            WorldNormal = default;
-        }
-    }
-
-    struct CharacterFootLandingFacts
-    {
-        CharacterFootLandingFact m_LastLanding;
-        CharacterFootLandingFact m_NextSwingLanding;
-        CharacterFootLandingFact m_PendingLastLanding;
-        CharacterFootLandingFact m_PendingNextSwingLanding;
-        Vector3 m_NextSwingReferencePoint;
-        Vector3 m_PendingNextSwingReferencePoint;
-        float m_NextSwingPredictionError;
-        float m_PendingNextSwingPredictionError;
-        float m_NextSwingConstraintWeight;
-        float m_PendingNextSwingConstraintWeight;
-        ulong m_ObservedCurrentEventIdentity;
-        ulong m_PendingObservedCurrentEventIdentity;
-        bool m_HasLastLanding;
-        bool m_HasNextSwingLanding;
-        bool m_HasPendingLastLanding;
-        bool m_HasPendingNextSwingLanding;
-        bool m_HasObservedCurrentEvent;
-        bool m_HasPendingObservedCurrentEvent;
-
-        internal bool HasPendingLastLanding => m_HasPendingLastLanding;
-        internal bool HasPendingNextSwingLanding => m_HasPendingNextSwingLanding;
-        internal ulong PendingLastLandingEventIdentity =>
-            m_HasPendingLastLanding ? m_PendingLastLanding.LandingEventIdentity : 0;
-        internal float PendingNextSwingPredictionError =>
-            m_HasPendingNextSwingLanding ? m_PendingNextSwingPredictionError : 0f;
-        internal float PendingNextSwingConstraintWeight =>
-            m_HasPendingNextSwingLanding ? m_PendingNextSwingConstraintWeight : 0f;
-        internal CharacterFootGroundPathLanding ResolvePendingLastLanding() =>
-            m_PendingLastLanding.Resolve();
-        internal CharacterFootGroundPathLanding ResolvePendingNextSwingLanding() =>
-            m_PendingNextSwingLanding.Resolve();
-
-        internal void BeginPending()
-        {
-            m_PendingLastLanding = m_LastLanding;
-            m_PendingNextSwingLanding = m_NextSwingLanding;
-            m_PendingNextSwingReferencePoint = m_NextSwingReferencePoint;
-            m_PendingNextSwingPredictionError = m_NextSwingPredictionError;
-            m_PendingNextSwingConstraintWeight = m_NextSwingConstraintWeight;
-            m_PendingObservedCurrentEventIdentity = m_ObservedCurrentEventIdentity;
-            m_HasPendingLastLanding = m_HasLastLanding;
-            m_HasPendingNextSwingLanding = m_HasNextSwingLanding;
-            m_HasPendingObservedCurrentEvent = m_HasObservedCurrentEvent;
-        }
-
-        internal void CaptureNextSwing(
-            in AnimationBiomechanicalStepHeader step,
-            in CharacterFootLandingPredictionFootDiagnostics diagnostics,
-            Vector3 componentUp,
-            in CharacterFootMotionSettings settings)
-        {
-            bool validCandidate = step.IsAuthoritative &&
-                                  step.HasConsistentLandingEventIdentity &&
-                                  (step.IsPreSwing || step.IsSwing) &&
-                                  step.TimeToLandingSeconds > 0.000001f &&
-                                  step.LandingEventIdentity != 0 &&
-                                  step.LandingEventIdentity != PendingLastLandingEventIdentity;
-            if (!validCandidate || !diagnostics.Accepted ||
-                diagnostics.LandingEventIdentity != step.LandingEventIdentity)
-            {
-                ClearPendingNextSwing();
-                return;
-            }
-            if (m_HasPendingNextSwingLanding &&
-                m_PendingNextSwingLanding.LandingEventIdentity != step.LandingEventIdentity)
-            {
-                ClearPendingNextSwing();
-            }
-            if (m_HasPendingNextSwingLanding)
-            {
-                Vector3 landingPoint = diagnostics.LandingPoint;
-                Vector3 up = componentUp.sqrMagnitude > 0.000001f
-                    ? componentUp.normalized
-                    : Vector3.up;
-                bool sameSurface =
-                    m_PendingNextSwingLanding.SurfaceIdentity == diagnostics.SurfaceIdentity;
-                bool sameHeight = Mathf.Abs(Vector3.Dot(
-                    landingPoint - m_PendingNextSwingLanding.WorldPoint,
-                    up)) <= settings.MaximumSameEventVerticalJump;
-                if (!sameSurface || !sameHeight)
-                {
-                    ClearPendingNextSwing();
-                    return;
-                }
-                m_PendingNextSwingPredictionError = Vector3.Distance(
-                    m_PendingNextSwingReferencePoint,
-                    landingPoint);
-                m_PendingNextSwingConstraintWeight = 1f;
-                m_PendingNextSwingLanding = CreateFact(step, diagnostics);
-                return;
-            }
-            m_PendingNextSwingLanding = CreateFact(step, diagnostics);
-            m_PendingNextSwingReferencePoint = diagnostics.LandingPoint;
-            m_PendingNextSwingPredictionError = 0f;
-            m_PendingNextSwingConstraintWeight = 1f;
-            m_HasPendingNextSwingLanding = true;
-        }
-
-        internal void PromoteLanded(in AnimationBiomechanicalStepHeader step)
-        {
-            bool hasCurrentEvent = step.IsAuthoritative &&
-                                   step.HasConsistentLandingEventIdentity &&
-                                   step.LandingEventIdentity != 0;
-            ulong currentEventIdentity = hasCurrentEvent
-                ? step.LandingEventIdentity
-                : 0;
-            if (m_HasPendingNextSwingLanding)
-            {
-                ulong acceptedEventIdentity =
-                    m_PendingNextSwingLanding.LandingEventIdentity;
-                bool completedInPlace = hasCurrentEvent &&
-                                        currentEventIdentity == acceptedEventIdentity &&
-                                        step.TimeToLandingSeconds <= 0.000001f;
-                bool advancedToNextEvent = hasCurrentEvent &&
-                                           m_HasPendingObservedCurrentEvent &&
-                                           m_PendingObservedCurrentEventIdentity == acceptedEventIdentity &&
-                                           currentEventIdentity != acceptedEventIdentity;
-                if (completedInPlace || advancedToNextEvent)
-                {
-                    m_PendingLastLanding = m_PendingNextSwingLanding;
-                    m_HasPendingLastLanding = true;
-                    ClearPendingNextSwing();
-                }
-            }
-            if (hasCurrentEvent)
-            {
-                m_PendingObservedCurrentEventIdentity = currentEventIdentity;
-                m_HasPendingObservedCurrentEvent = true;
-            }
-        }
-
-        void ClearPendingNextSwing()
-        {
-            m_PendingNextSwingLanding.Clear();
-            m_PendingNextSwingReferencePoint = default;
-            m_PendingNextSwingPredictionError = 0f;
-            m_PendingNextSwingConstraintWeight = 0f;
-            m_HasPendingNextSwingLanding = false;
-        }
-
-        static CharacterFootLandingFact CreateFact(
-            in AnimationBiomechanicalStepHeader step,
-            in CharacterFootLandingPredictionFootDiagnostics diagnostics) =>
-            new CharacterFootLandingFact
-            {
-                HasValue = true,
-                LandingEventIdentity = step.LandingEventIdentity,
-                TrajectoryGeneration = diagnostics.TrajectoryGeneration,
-                FutureBodyTranslationSourceIdentity = diagnostics.FutureBodyTranslationSourceIdentity,
-                SurfaceIdentity = diagnostics.SurfaceIdentity,
-                WorldPoint = diagnostics.LandingPoint,
-                WorldNormal = diagnostics.LandingNormal
-            };
-
-        internal void Seal()
-        {
-            m_LastLanding = m_PendingLastLanding;
-            m_NextSwingLanding = m_PendingNextSwingLanding;
-            m_NextSwingReferencePoint = m_PendingNextSwingReferencePoint;
-            m_NextSwingPredictionError = m_PendingNextSwingPredictionError;
-            m_NextSwingConstraintWeight = m_PendingNextSwingConstraintWeight;
-            m_ObservedCurrentEventIdentity = m_PendingObservedCurrentEventIdentity;
-            m_HasLastLanding = m_HasPendingLastLanding;
-            m_HasNextSwingLanding = m_HasPendingNextSwingLanding;
-            m_HasObservedCurrentEvent = m_HasPendingObservedCurrentEvent;
-            m_PendingLastLanding.Clear();
-            m_PendingNextSwingLanding.Clear();
-            m_PendingNextSwingReferencePoint = default;
-            m_PendingNextSwingPredictionError = 0f;
-            m_PendingNextSwingConstraintWeight = 0f;
-            m_PendingObservedCurrentEventIdentity = 0;
-            m_HasPendingLastLanding = false;
-            m_HasPendingNextSwingLanding = false;
-            m_HasPendingObservedCurrentEvent = false;
-        }
-
-        internal void Discard()
-        {
-            m_PendingLastLanding.Clear();
-            m_PendingNextSwingLanding.Clear();
-            m_PendingNextSwingReferencePoint = default;
-            m_PendingNextSwingPredictionError = 0f;
-            m_PendingNextSwingConstraintWeight = 0f;
-            m_PendingObservedCurrentEventIdentity = 0;
-            m_HasPendingLastLanding = false;
-            m_HasPendingNextSwingLanding = false;
-            m_HasPendingObservedCurrentEvent = false;
-        }
-
-        internal void Reset()
-        {
-            m_LastLanding.Clear();
-            m_NextSwingLanding.Clear();
-            m_PendingLastLanding.Clear();
-            m_PendingNextSwingLanding.Clear();
-            m_NextSwingReferencePoint = default;
-            m_PendingNextSwingReferencePoint = default;
-            m_NextSwingPredictionError = 0f;
-            m_PendingNextSwingPredictionError = 0f;
-            m_NextSwingConstraintWeight = 0f;
-            m_PendingNextSwingConstraintWeight = 0f;
-            m_ObservedCurrentEventIdentity = 0;
-            m_PendingObservedCurrentEventIdentity = 0;
-            m_HasLastLanding = false;
-            m_HasNextSwingLanding = false;
-            m_HasPendingLastLanding = false;
-            m_HasPendingNextSwingLanding = false;
-            m_HasObservedCurrentEvent = false;
-            m_HasPendingObservedCurrentEvent = false;
-        }
-    }
-
     readonly struct CharacterFootLandingPredictionPair
     {
         internal CharacterFootLandingPredictionPair(
@@ -294,8 +49,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootGroundPathFootState m_LeftGroundPath;
         readonly CharacterFootGroundPathFootState m_RightGroundPath;
 
-        CharacterFootLandingFacts m_LeftLandingFacts;
-        CharacterFootLandingFacts m_RightLandingFacts;
+        readonly CharacterFootLandingLifecycle m_LeftLandingLifecycle;
+        readonly CharacterFootLandingLifecycle m_RightLandingLifecycle;
 
         CharacterFutureBodyTranslation m_BodyTrajectory;
         ulong m_BodyTrajectoryTick;
@@ -335,6 +90,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.GroundDetection.ContactCapacity);
             m_RightGroundPath = new CharacterFootGroundPathFootState(
                 settings.GroundDetection.ContactCapacity);
+            m_LeftLandingLifecycle = new CharacterFootLandingLifecycle();
+            m_RightLandingLifecycle = new CharacterFootLandingLifecycle();
         }
 
         internal bool HasPendingFrame => m_HasPendingFrame;
@@ -407,14 +164,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Body);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
 
-            m_LeftLandingFacts.BeginPending();
-            m_RightLandingFacts.BeginPending();
+            m_LeftLandingLifecycle.BeginPending();
+            m_RightLandingLifecycle.BeginPending();
             m_PendingPelvisSpring = m_CommittedPelvisSpring;
             m_PendingLeftSupportLock = m_CommittedLeftSupportLock;
             m_PendingRightSupportLock = m_CommittedRightSupportLock;
 
-            m_LeftLandingFacts.PromoteLanded(frame.Pose.LeftFootSteps.CurrentStep);
-            m_RightLandingFacts.PromoteLanded(frame.Pose.RightFootSteps.CurrentStep);
+            m_LeftLandingLifecycle.PromoteLanded(frame.Pose.LeftFootSteps.CurrentStep);
+            m_RightLandingLifecycle.PromoteLanded(frame.Pose.RightFootSteps.CurrentStep);
+
+            CharacterFootLandingSnapshot leftLanding = m_LeftLandingLifecycle.Pending;
+            CharacterFootLandingSnapshot rightLanding = m_RightLandingLifecycle.Pending;
 
             CharacterFootLandingPredictionPair leftPair = PredictFootPair(
                 CharacterFootSide.Left,
@@ -425,7 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentSegmentRemainingSeconds,
                 bodyTrajectory,
                 in frame,
-                m_LeftLandingFacts.PendingLastLandingEventIdentity);
+                leftLanding.LastLandingEventIdentity);
             CharacterFootLandingPredictionPair rightPair = PredictFootPair(
                 CharacterFootSide.Right,
                 frame.Pose.RightFootSteps,
@@ -435,7 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentSegmentRemainingSeconds,
                 bodyTrajectory,
                 in frame,
-                m_RightLandingFacts.PendingLastLandingEventIdentity);
+                rightLanding.LastLandingEventIdentity);
             CharacterFootLandingPredictionFootDiagnostics leftCurrent = leftPair.Current;
             CharacterFootLandingPredictionFootDiagnostics leftIncoming = leftPair.Incoming;
             CharacterFootLandingPredictionFootDiagnostics rightCurrent = rightPair.Current;
@@ -446,32 +206,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationBiomechanicalStepHeader leftSelectedStep = leftPair.SelectedStep;
             CharacterFootLandingPredictionFootDiagnostics right = rightPair.Selected;
             AnimationBiomechanicalStepHeader rightSelectedStep = rightPair.SelectedStep;
-            m_LeftLandingFacts.CaptureNextSwing(
+            m_LeftLandingLifecycle.CaptureNextSwing(
                 in leftSelectedStep,
                 in left,
                 componentUp,
                 m_Settings.FootMotion);
-            m_RightLandingFacts.CaptureNextSwing(
+            m_RightLandingLifecycle.CaptureNextSwing(
                 in rightSelectedStep,
                 in right,
                 componentUp,
                 m_Settings.FootMotion);
-            bool hasLeftLastLanding = m_LeftLandingFacts.HasPendingLastLanding;
-            bool hasLeftNextSwingLanding = m_LeftLandingFacts.HasPendingNextSwingLanding;
-            bool hasRightLastLanding = m_RightLandingFacts.HasPendingLastLanding;
-            bool hasRightNextSwingLanding = m_RightLandingFacts.HasPendingNextSwingLanding;
-            CharacterFootGroundPathLanding leftLastLanding = hasLeftLastLanding
-                ? m_LeftLandingFacts.ResolvePendingLastLanding()
-                : default;
-            CharacterFootGroundPathLanding leftNextSwingLanding = hasLeftNextSwingLanding
-                ? m_LeftLandingFacts.ResolvePendingNextSwingLanding()
-                : default;
-            CharacterFootGroundPathLanding rightLastLanding = hasRightLastLanding
-                ? m_RightLandingFacts.ResolvePendingLastLanding()
-                : default;
-            CharacterFootGroundPathLanding rightNextSwingLanding = hasRightNextSwingLanding
-                ? m_RightLandingFacts.ResolvePendingNextSwingLanding()
-                : default;
+            leftLanding = m_LeftLandingLifecycle.Pending;
+            rightLanding = m_RightLandingLifecycle.Pending;
+            bool hasLeftLastLanding = leftLanding.HasLastLanding;
+            bool hasLeftNextSwingLanding = leftLanding.HasNextSwingLanding;
+            bool hasRightLastLanding = rightLanding.HasLastLanding;
+            bool hasRightNextSwingLanding = rightLanding.HasNextSwingLanding;
+            CharacterFootGroundPathLanding leftLastLanding = leftLanding.LastLanding;
+            CharacterFootGroundPathLanding leftNextSwingLanding = leftLanding.NextSwingLanding;
+            CharacterFootGroundPathLanding rightLastLanding = rightLanding.LastLanding;
+            CharacterFootGroundPathLanding rightNextSwingLanding = rightLanding.NextSwingLanding;
             CharacterFootGroundPathDiagnostics leftGroundPath = PrepareGroundPath(
                 CharacterFootSide.Left,
                 hasLeftLastLanding,
@@ -501,8 +255,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     footPlacementWeight,
                     componentUp,
                     in leftGroundPath,
-                    m_LeftLandingFacts.PendingNextSwingPredictionError,
-                    m_LeftLandingFacts.PendingNextSwingConstraintWeight);
+                    leftLanding.NextSwingPredictionError,
+                    leftLanding.NextSwingConstraintWeight);
             CharacterFootSwingMotionDiagnostics rightSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
                     pose.Right,
@@ -510,8 +264,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     footPlacementWeight,
                     componentUp,
                     in rightGroundPath,
-                    m_RightLandingFacts.PendingNextSwingPredictionError,
-                    m_RightLandingFacts.PendingNextSwingConstraintWeight);
+                    rightLanding.NextSwingPredictionError,
+                    rightLanding.NextSwingConstraintWeight);
             CharacterFootSwingMotionDiagnostics leftFootMotion = leftSwingMotion;
             CharacterFootSwingMotionDiagnostics rightFootMotion = rightSwingMotion;
             bool hasSelectedSwing = CharacterFootStrideHipsBuilder.TrySelectSwing(
@@ -653,8 +407,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CommittedRightSupportLock = m_PendingRightSupportLock;
             m_LeftGroundPath.Seal();
             m_RightGroundPath.Seal();
-            m_LeftLandingFacts.Seal();
-            m_RightLandingFacts.Seal();
+            m_LeftLandingLifecycle.Seal();
+            m_RightLandingLifecycle.Seal();
             m_PendingPelvisSpring.Clear();
             m_PendingLeftSupportLock.Clear();
             m_PendingRightSupportLock.Clear();
@@ -668,8 +422,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireAlive();
             m_LeftGroundPath.Discard();
             m_RightGroundPath.Discard();
-            m_LeftLandingFacts.Discard();
-            m_RightLandingFacts.Discard();
+            m_LeftLandingLifecycle.Discard();
+            m_RightLandingLifecycle.Discard();
             m_PendingPelvisSpring.Clear();
             m_PendingLeftSupportLock.Clear();
             m_PendingRightSupportLock.Clear();
@@ -1128,8 +882,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void ResetLandingState()
         {
-            m_LeftLandingFacts.Reset();
-            m_RightLandingFacts.Reset();
+            m_LeftLandingLifecycle.Reset();
+            m_RightLandingLifecycle.Reset();
             m_CommittedPelvisSpring.Clear();
             m_PendingPelvisSpring.Clear();
             m_CommittedLeftSupportLock.Clear();

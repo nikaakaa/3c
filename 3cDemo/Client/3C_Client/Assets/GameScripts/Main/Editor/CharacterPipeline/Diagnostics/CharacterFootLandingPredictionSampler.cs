@@ -77,6 +77,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionSupportLockState,FootMotionSupportHorizontalError,FootMotionSupportUnlockRemainingSeconds," +
             "FootMotionSupportUnlockCorrectionX,FootMotionSupportUnlockCorrectionY,FootMotionSupportUnlockCorrectionZ," +
+            "GoalTransitionHasCommittedOutput,GoalTransitionHasPendingOutput," +
+            "GoalTransitionCommittedSourceGroundPathIdentity,GoalTransitionPendingSourceGroundPathIdentity," +
+            "RawGoalPositionCorrectionX,RawGoalPositionCorrectionY,RawGoalPositionCorrectionZ," +
+            "RawGoalRotationCorrectionX,RawGoalRotationCorrectionY,RawGoalRotationCorrectionZ,RawGoalRotationCorrectionW," +
+            "RawGoalPositionWeight,RawGoalRotationWeight," +
+            "CommittedGoalTransitionPositionCorrectionX,CommittedGoalTransitionPositionCorrectionY,CommittedGoalTransitionPositionCorrectionZ," +
+            "CommittedGoalTransitionRotationCorrectionX,CommittedGoalTransitionRotationCorrectionY,CommittedGoalTransitionRotationCorrectionZ,CommittedGoalTransitionRotationCorrectionW," +
+            "CommittedGoalTransitionPositionWeight,CommittedGoalTransitionRotationWeight," +
+            "PendingGoalTransitionPositionCorrectionX,PendingGoalTransitionPositionCorrectionY,PendingGoalTransitionPositionCorrectionZ," +
+            "PendingGoalTransitionRotationCorrectionX,PendingGoalTransitionRotationCorrectionY,PendingGoalTransitionRotationCorrectionZ,PendingGoalTransitionRotationCorrectionW," +
+            "PendingGoalTransitionPositionWeight,PendingGoalTransitionRotationWeight,GoalTransitionHalfLifeSeconds," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
             "StrideStartX,StrideStartY,StrideStartZ,StrideEndX,StrideEndY,StrideEndZ," +
@@ -867,6 +878,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SupportHorizontalError);
             Add(row, motion.SupportUnlockRemainingSeconds);
             Add(row, motion.SupportUnlockCorrection);
+            CharacterFootGoalTransitionDiagnostics goalTransition = foot.GoalTransition;
+            Add(row, goalTransition.HasCommittedOutput);
+            Add(row, goalTransition.HasPendingOutput);
+            Add(row, goalTransition.CommittedSourceGroundPathIdentity);
+            Add(row, goalTransition.PendingSourceGroundPathIdentity);
+            Add(row, goalTransition.RawPositionCorrection);
+            Add(row, goalTransition.RawRotationCorrection);
+            Add(row, goalTransition.RawPositionWeight);
+            Add(row, goalTransition.RawRotationWeight);
+            Add(row, goalTransition.CommittedPositionCorrection);
+            Add(row, goalTransition.CommittedRotationCorrection);
+            Add(row, goalTransition.CommittedPositionWeight);
+            Add(row, goalTransition.CommittedRotationWeight);
+            Add(row, goalTransition.PendingPositionCorrection);
+            Add(row, goalTransition.PendingRotationCorrection);
+            Add(row, goalTransition.PendingPositionWeight);
+            Add(row, goalTransition.PendingRotationWeight);
+            Add(row, goalTransition.HalfLifeSeconds);
             Add(row, foot.Goal.ComponentPosition);
             Add(row, foot.Goal.ComponentRotation);
             Add(row, foot.Goal.PositionWeight);

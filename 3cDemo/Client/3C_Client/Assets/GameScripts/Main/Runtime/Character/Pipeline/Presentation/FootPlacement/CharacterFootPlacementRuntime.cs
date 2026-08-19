@@ -323,8 +323,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !facts.Grounded || rightAction.IsOccupied);
             CharacterFootStrideHipsDiagnostics strideHips = RejectStride(
                 CharacterFootStrideRejectReason.SwingOnlyStage);
-            left = left.WithFootMotion(in leftFootMotion, leftGoal);
-            right = right.WithFootMotion(in rightFootMotion, rightGoal);
+            CharacterFootGoalTransitionDiagnostics leftGoalTransition =
+                m_LeftGoalTransition.CaptureDiagnostics(
+                    m_Settings.FootMotion.GoalTransitionHalfLifeSeconds);
+            CharacterFootGoalTransitionDiagnostics rightGoalTransition =
+                m_RightGoalTransition.CaptureDiagnostics(
+                    m_Settings.FootMotion.GoalTransitionHalfLifeSeconds);
+            left = left.WithFootMotion(
+                in leftFootMotion,
+                in leftGoalTransition,
+                leftGoal);
+            right = right.WithFootMotion(
+                in rightFootMotion,
+                in rightGoalTransition,
+                rightGoal);
 
             goalOutput[0] = pelvisGoal;
             goalOutput[1] = leftGoal;

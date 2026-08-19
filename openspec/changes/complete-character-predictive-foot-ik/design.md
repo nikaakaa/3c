@@ -2,7 +2,7 @@
 
 ## 0. 当前实施阶段：实时 Landing 与最终 Goal 换代
 
-当前代码已经实施每只脚的 Landing Event 生命周期重构和最终 Goal 换代。Landing、Ground Path 与 Envelope 只表达本帧当前有效预测；连续性只由写入唯一 GoalSet 前的相对踝骨修正换代负责。已确认的运行事实仍只有 Accepted Landing 与 Ground Path 线；实时跨踏面更新、Goal 换代后的物理踝骨、Ground Envelope、Swing Foot Motion、支撑锁脚、Pelvis、脚掌朝向、Pivot、FullBodyIK 消费和最终物理骨骼写入都不在当前验收结论内。
+当前代码已经实施每只脚的 Landing Event 生命周期重构和最终 Goal 换代。Landing、Ground Path 与 Envelope 只表达本帧当前有效预测；连续性只由写入唯一 GoalSet 前的相对踝骨修正换代负责。Goal 换代诊断已经接入脚摘要与采样 CSV，并完成一次直线楼梯自动采样；该样本的最终骨骼闭环仍失败，不能把 Goal 换代或整条预测 IK 写成已验收。Ground Envelope、Swing Foot Motion、支撑锁脚、Pelvis、脚掌朝向、Pivot、FullBodyIK 消费和最终物理骨骼写入仍不在当前验收结论内。
 
 Landing 生命周期是 Foot Placement 的状态 Module，不是查询算法。每只脚只保存一个完整 Committed Frame 和一个完整 Pending Frame，不再把相同字段拆成两组平行变量。状态只在外层表现事务 Seal 后推进，Discard 不得改变上一份已提交事实：
 

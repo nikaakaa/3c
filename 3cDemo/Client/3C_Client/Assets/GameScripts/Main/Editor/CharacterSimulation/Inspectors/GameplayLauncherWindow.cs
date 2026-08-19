@@ -279,7 +279,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            m_AutoSampleStopTime > 0d))
                 {
                     if (GUILayout.Button("Auto Walk Stairs AD Sample"))
-                        StartStairAdSample();
+                        StartStairSample(GameplayLabFootIkAutomaticRouteMode.StairAdStress);
                 }
                 using (new EditorGUI.DisabledScope(
                            string.IsNullOrEmpty(savedPath) || !File.Exists(savedPath)))
@@ -288,15 +288,30 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         ScoreLastCsv();
                 }
             }
+            using (new EditorGUI.DisabledScope(
+                       EditorApplication.isCompiling ||
+                       EditorApplication.isPlayingOrWillChangePlaymode &&
+                       !EditorApplication.isPlaying ||
+                       capturing ||
+                       starting ||
+                       GameplayLabFootIkKeyboardRouteDriver.IsActive ||
+                       GameplayLabFootIkKeyboardRouteDriver.IsPending ||
+                       m_AutoSampleStopTime > 0d))
+            {
+                if (GUILayout.Button("Auto Walk Stairs Straight Sample"))
+                    StartStairSample(GameplayLabFootIkAutomaticRouteMode.StairStraight);
+            }
             if (GameplayLabFootIkKeyboardRouteDriver.IsActive)
             {
                 EditorGUILayout.HelpBox(
-                    $"Stair AD drive {GameplayLabFootIkKeyboardRouteDriver.Phase} lap {GameplayLabFootIkKeyboardRouteDriver.Lap}",
+                    $"{GameplayLabFootIkKeyboardRouteDriver.Mode} {GameplayLabFootIkKeyboardRouteDriver.PhaseName} lap {GameplayLabFootIkKeyboardRouteDriver.Lap}",
                     MessageType.Info);
             }
             else if (GameplayLabFootIkKeyboardRouteDriver.IsPending)
             {
-                EditorGUILayout.HelpBox("Starting Gameplay Lab for stair AD sample...", MessageType.Info);
+                EditorGUILayout.HelpBox(
+                    $"Starting Gameplay Lab for {GameplayLabFootIkKeyboardRouteDriver.Mode} sample...",
+                    MessageType.Info);
             }
             if (!string.IsNullOrEmpty(GameplayLabFootIkKeyboardRouteDriver.LastReport))
                 EditorGUILayout.HelpBox(GameplayLabFootIkKeyboardRouteDriver.LastReport, MessageType.Info);
@@ -541,7 +556,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        void StartStairAdSample()
+        void StartStairSample(GameplayLabFootIkAutomaticRouteMode mode)
         {
             IGameplayLabLauncherOperations operations = GameplayLabLauncherRegistry.Operations;
             if (operations == null)
@@ -553,10 +568,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 if (EditorApplication.isPlaying)
                 {
-                    GameplayLabFootIkKeyboardRouteDriver.Start();
+                    GameplayLabFootIkKeyboardRouteDriver.Start(mode);
                     return;
                 }
-                GameplayLabFootIkKeyboardRouteDriver.ArmPending();
+                GameplayLabFootIkKeyboardRouteDriver.ArmPending(mode);
                 operations.Play(m_LabVariantIndex);
                 if (!EditorApplication.isPlayingOrWillChangePlaymode)
                     GameplayLabFootIkKeyboardRouteDriver.ClearPending();

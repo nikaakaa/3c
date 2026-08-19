@@ -4,12 +4,13 @@ using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using UnityEditor;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
     [McpForUnityTool(
         "character.foot_landing_stair_ad",
-        Description = "Start, inspect, or stop the formal Gameplay Lab stair AD foot landing sampler. Uses the existing Launcher route driver and writes the normal FootLandingSamples CSV.",
+        Description = "Start, inspect, or stop the formal Gameplay Lab stair foot landing sampler. Supports A/D stress and straight up/down routes through the existing Launcher route driver and writes the normal FootLandingSamples CSV.",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -22,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: start, status, or stop. Defaults to status.", Required = false)]
+            [ToolParameter("Action: start, start_straight, status, or stop. Defaults to status.", Required = false)]
             public string action { get; set; }
         }
 
@@ -36,8 +37,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case "start":
                         GameplayLabFootIkKeyboardRouteDriver.Start();
                         return Success("Foot landing stair AD automation started.");
+                    case "start_straight":
+                        GameplayLabFootIkKeyboardRouteDriver.StartStraight();
+                        return Success("Foot landing stair straight automation started.");
                     case "status":
-                        return Success("Foot landing stair AD automation status.");
+                        return Success("Foot landing stair automation status.");
                     case "stop":
                         GameplayLabFootIkKeyboardRouteDriver.ClearPending();
                         GameplayLabFootIkKeyboardRouteDriver.Stop();
@@ -54,6 +58,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static object Success(string message)
         {
+            bool hasPlayerPosition =
+                GameplayLabFootIkKeyboardRouteDriver.TryGetPlayerPosition(out Vector3 playerPosition);
             return new
             {
                 success = true,
@@ -64,8 +70,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     paused = EditorApplication.isPaused,
                     active = GameplayLabFootIkKeyboardRouteDriver.IsActive,
                     pending = GameplayLabFootIkKeyboardRouteDriver.IsPending,
-                    phase = GameplayLabFootIkKeyboardRouteDriver.Phase.ToString(),
+                    mode = GameplayLabFootIkKeyboardRouteDriver.Mode.ToString(),
+                    phase = GameplayLabFootIkKeyboardRouteDriver.PhaseName,
                     lap = GameplayLabFootIkKeyboardRouteDriver.Lap,
+                    sample_seconds = GameplayLabFootIkKeyboardRouteDriver.SampleSecondsValue,
+                    player_position_available = hasPlayerPosition,
+                    player_position = hasPlayerPosition
+                        ? new { x = playerPosition.x, y = playerPosition.y, z = playerPosition.z }
+                        : null,
                     sampling = CharacterFootLandingPredictionSampler.IsCapturing,
                     runtime_target_count = AnimationPresentationRuntimeTargetRegistry.Targets.Count,
                     captured_frame_count = CharacterFootLandingPredictionSampler.CapturedFrameCount,

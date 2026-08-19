@@ -12,12 +12,20 @@ using UnityEngine.SceneManagement;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
+    public enum GameplayLabFootIkAutomaticRouteMode : byte
+    {
+        StairAdStress = 1,
+        StairStraight = 2
+    }
+
     [InitializeOnLoad]
     public static class GameplayLabFootIkKeyboardRouteDriver
     {
-        const double SampleSeconds = 45d;
+        const double StressSampleSeconds = 45d;
+        const double StraightSampleSeconds = 24d;
         const string PendingKey = "ThirdPerson.GameplayLab.StairAd.Pending.v2";
         const string PendingDeadlineKey = "ThirdPerson.GameplayLab.StairAd.PendingDeadline.v2";
+        const string PendingModeKey = "ThirdPerson.GameplayLab.FootIkRoute.PendingMode.v1";
         const string RestartPendingKey = "ThirdPerson.GameplayLab.StairAd.RestartPending.v1";
         const string CompletedKey = "ThirdPerson.GameplayLab.StairAd.Completed.v1";
         const string GameplayLabPlayerActorId = "gameplay-lab-player";
@@ -26,8 +34,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool s_Active;
         static bool s_WaitingForSampling;
         static bool s_OwnsSampling;
+        static GameplayLabFootIkAutomaticRouteMode s_Mode =
+            GameplayLabFootIkAutomaticRouteMode.StairAdStress;
         static GameplayLabFootIkStairAdPlan s_Plan;
         static GameplayLabFootIkStairAdState s_State;
+        static GameplayLabFootIkStairStraightPlan s_StraightPlan;
+        static GameplayLabFootIkStairStraightState s_StraightState;
         static double s_StopTime;
         static string s_LastReport = string.Empty;
         static bool s_HasCompletedRun;
@@ -40,35 +52,68 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.update -= StartAfterPlayMode;
             EditorApplication.update -= StartAfterSampling;
             if (IsPending)
+            {
+                s_Mode = ReadPendingMode();
                 EditorApplication.update += StartAfterPlayMode;
+            }
         }
 
         public static bool IsActive => s_Active;
         public static bool IsPending => EditorPrefs.GetBool(PendingKey, false);
-        public static GameplayLabFootIkStairAdPhase Phase => s_State.Phase;
-        public static int Lap => s_State.Lap;
-        public static double SampleSecondsValue => SampleSeconds;
+        public static GameplayLabFootIkAutomaticRouteMode Mode => s_Mode;
+        public static string PhaseName
+        {
+            get
+            {
+                if (!s_Active && !s_WaitingForSampling && !IsPending)
+                    return "Idle";
+                return s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
+                    ? s_StraightState.Phase.ToString()
+                    : s_State.Phase.ToString();
+            }
+        }
+        public static int Lap => s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
+            ? s_StraightState.Lap
+            : s_State.Lap;
+        public static double SampleSecondsValue => s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
+            ? StraightSampleSeconds
+            : StressSampleSeconds;
         public static string LastReport => s_LastReport;
 
-        public static void ArmPending()
+        public static void ArmPending() =>
+            ArmPending(GameplayLabFootIkAutomaticRouteMode.StairAdStress);
+
+        public static void ArmPending(GameplayLabFootIkAutomaticRouteMode mode)
         {
+            RequireMode(mode);
             EditorPrefs.SetBool(PendingKey, true);
             EditorPrefs.SetFloat(
                 PendingDeadlineKey,
                 (float)EditorApplication.timeSinceStartup + PendingTimeoutSeconds);
-            s_LastReport = "Starting Gameplay Lab...";
+            EditorPrefs.SetInt(PendingModeKey, (int)mode);
+            s_Mode = mode;
+            s_LastReport = $"Starting Gameplay Lab for {ModeLabel(mode)}...";
         }
 
         public static void ClearPending()
         {
             EditorPrefs.SetBool(PendingKey, false);
             EditorPrefs.DeleteKey(PendingDeadlineKey);
+            EditorPrefs.DeleteKey(PendingModeKey);
             EditorPrefs.SetBool(RestartPendingKey, false);
         }
 
         [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair AD/Start")]
-        public static void Start()
+        public static void Start() =>
+            Start(GameplayLabFootIkAutomaticRouteMode.StairAdStress);
+
+        [MenuItem("Tools/3C/Diagnostics/Foot Landing Stair Straight/Start")]
+        public static void StartStraight() =>
+            Start(GameplayLabFootIkAutomaticRouteMode.StairStraight);
+
+        public static void Start(GameplayLabFootIkAutomaticRouteMode mode)
         {
+            RequireMode(mode);
             if (s_Active || s_WaitingForSampling)
                 return;
             if (!EditorApplication.isPlaying)
@@ -82,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     GameplayLabLauncherState launcherState = operations.ReadState();
                     EditorPrefs.SetBool(CompletedKey, false);
-                    ArmPending();
+                    ArmPending(mode);
                     EditorApplication.update -= StartAfterPlayMode;
                     EditorApplication.update += StartAfterPlayMode;
                     operations.Play(launcherState.SelectedVariantIndex);
@@ -96,14 +141,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (s_HasCompletedRun || EditorPrefs.GetBool(CompletedKey, false))
             {
-                RestartAfterCompletedRun();
+                RestartAfterCompletedRun(mode);
                 return;
             }
             if (!IsPending &&
                 !CharacterFootLandingPredictionSampler.IsCapturing &&
                 AnimationPresentationRuntimeTargetRegistry.Targets.Count > 0)
             {
-                RestartAfterCompletedRun();
+                RestartAfterCompletedRun(mode);
                 return;
             }
             if (CharacterFootLandingPredictionSampler.IsCapturing)
@@ -111,8 +156,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.isPaused = false;
             Scene scene = SceneManager.GetActiveScene();
             GameplayLabFootIkRegressionCourse.Resolve(scene, out Vector3 start, out Vector3 end);
-            s_Plan = GameplayLabFootIkStairAdRoute.Create(start, end);
-            s_State = GameplayLabFootIkStairAdRoute.CreateState();
+            s_Mode = mode;
+            if (mode == GameplayLabFootIkAutomaticRouteMode.StairStraight)
+            {
+                s_StraightPlan = GameplayLabFootIkStairStraightRoute.Create(start, end);
+                s_StraightState = GameplayLabFootIkStairStraightRoute.CreateState();
+            }
+            else
+            {
+                s_Plan = GameplayLabFootIkStairAdRoute.Create(start, end);
+                s_State = GameplayLabFootIkStairAdRoute.CreateState();
+            }
             CharacterFootLandingPredictionSampler.StartSampling();
             s_OwnsSampling = true;
             if (CharacterFootLandingPredictionSampler.IsStartPending)
@@ -129,11 +183,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void BeginDriving()
         {
             AcquireRouteKeyboard();
-            s_StopTime = EditorApplication.timeSinceStartup + SampleSeconds;
+            s_StopTime = EditorApplication.timeSinceStartup + SampleSecondsValue;
             s_Active = true;
             s_WaitingForSampling = false;
             ClearPending();
-            s_LastReport = "Auto walking stairs with A/D...";
+            s_LastReport = s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
+                ? "Auto walking straight up and down stairs..."
+                : "Auto walking stairs with A/D stress input...";
             EditorApplication.update -= StartAfterSampling;
             EditorApplication.update -= Tick;
             EditorApplication.update += Tick;
@@ -201,16 +257,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastReport = report.Summary;
                 s_HasCompletedRun = true;
                 EditorPrefs.SetBool(CompletedKey, true);
-                Debug.Log("Foot Landing Stair AD " + report.Summary);
+                Debug.Log($"Foot Landing {ModeLabel(s_Mode)} {report.Summary}");
             }
         }
 
-        static void RestartAfterCompletedRun()
+        static void RestartAfterCompletedRun(GameplayLabFootIkAutomaticRouteMode mode)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 EditorPrefs.SetBool(RestartPendingKey, true);
-                ArmPending();
+                ArmPending(mode);
                 s_HasCompletedRun = false;
                 EditorApplication.ExitPlaymode();
             }
@@ -303,7 +359,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     SceneManager.GetActiveScene(),
                     out _,
                     out _);
-                Start();
+                Start(ReadPendingMode());
                 EditorApplication.update -= StartAfterPlayMode;
             }
             catch (Exception exception)
@@ -333,10 +389,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ReleaseKeys();
                 return;
             }
-            Vector3 target = GameplayLabFootIkStairAdRoute.Tick(ref s_State, in s_Plan, position);
-            Vector2 world = GameplayLabFootIkStairAdRoute.WorldDirection(position, target);
+            Vector2 world;
+            if (s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight)
+            {
+                world = GameplayLabFootIkStairStraightRoute.Tick(
+                    ref s_StraightState,
+                    in s_StraightPlan,
+                    position);
+            }
+            else
+            {
+                Vector3 target = GameplayLabFootIkStairAdRoute.Tick(ref s_State, in s_Plan, position);
+                world = GameplayLabFootIkStairAdRoute.WorldDirection(position, target);
+            }
             Vector2 camera = ToCameraRelative(world, basis);
             ApplyKeys(GameplayLabFootIkKeyboardMove.FromCameraRelative(camera.x, camera.y));
+        }
+
+        public static bool TryGetPlayerPosition(out Vector3 position)
+        {
+            bool available = TryResolveActor(out position, out _);
+            return available;
         }
 
         static bool TryResolveActor(out Vector3 position, out CameraBasisSnapshot basis)
@@ -431,5 +504,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             state.Set(Key.S, s);
             InputSystem.QueueStateEvent(keyboard, state);
         }
+
+        static GameplayLabFootIkAutomaticRouteMode ReadPendingMode()
+        {
+            var mode = (GameplayLabFootIkAutomaticRouteMode)EditorPrefs.GetInt(
+                PendingModeKey,
+                (int)GameplayLabFootIkAutomaticRouteMode.StairAdStress);
+            RequireMode(mode);
+            return mode;
+        }
+
+        static void RequireMode(GameplayLabFootIkAutomaticRouteMode mode)
+        {
+            if (mode != GameplayLabFootIkAutomaticRouteMode.StairAdStress &&
+                mode != GameplayLabFootIkAutomaticRouteMode.StairStraight)
+            {
+                throw new ArgumentOutOfRangeException(nameof(mode), mode, "Foot IK automatic route mode is invalid.");
+            }
+        }
+
+        static string ModeLabel(GameplayLabFootIkAutomaticRouteMode mode) =>
+            mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
+                ? "Stair Straight"
+                : "Stair AD Stress";
     }
 }

@@ -30,7 +30,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         InvalidSwingPhase = 14,
         StanceLandingUnavailable = 15,
         SupportOutsideSlideDistance = 16,
-        UnselectedSwing = 17
+        UnselectedSwing = 17,
+        SupportOwnershipReleased = 18
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics
@@ -332,9 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 preparedLandingCorrection);
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
-            float positionWeight = verticalCorrection > EndpointTolerance
-                ? footPlacementWeight
-                : 0f;
+            float positionWeight = footPlacementWeight * landingPreparationWeight;
             return new CharacterFootSwingMotionDiagnostics(
                 CharacterFootSwingMotionState.Accepted,
                 CharacterFootSwingMotionRejectReason.None,

@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
-            Transform visualRoot,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 actorId,
                 animancer,
                 animationRigBinding,
-                visualRoot,
+                rootHierarchy,
                 initialBody,
                 bodyProfile,
                 worldAwareBinding,
@@ -74,7 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
-            Transform visualRoot,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
@@ -96,7 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 actorId,
                 animancer,
                 animationRigBinding,
-                visualRoot,
+                rootHierarchy,
                 initialBody,
                 CharacterBodyPresentationSourceMode.CommittedStream,
                 RequireBodySettings(bodyProfile),
@@ -120,7 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
-            Transform visualRoot,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
@@ -135,7 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 actorId,
                 animancer,
                 animationRigBinding,
-                visualRoot,
+                rootHierarchy,
                 initialBody,
                 bodyProfile,
                 worldAwareBinding,
@@ -152,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
-            Transform visualRoot,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 actorId,
                 animancer,
                 animationRigBinding,
-                visualRoot,
+                rootHierarchy,
                 initialBody,
                 CharacterBodyPresentationSourceMode.CommittedStream,
                 RequireBodySettings(bodyProfile),
@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
-            Transform visualRoot,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
@@ -207,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 actorId,
                 animancer,
                 animationRigBinding,
-                visualRoot,
+                rootHierarchy,
                 initialBody,
                 CharacterBodyPresentationSourceMode.SelectedStream,
                 RequireBodySettings(bodyProfile),
@@ -231,7 +231,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
-            Transform visualRoot,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationSourceMode bodySourceMode,
             CharacterBodyPresentationSettings bodySettings,
@@ -253,21 +253,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(projection));
             if (!animationRigBinding)
                 throw new ArgumentNullException(nameof(animationRigBinding));
-            if (!visualRoot)
-                throw new ArgumentNullException(nameof(visualRoot));
+            if (!rootHierarchy)
+                throw new ArgumentNullException(nameof(rootHierarchy));
             if (!animancer || !animancer.Animator)
                 throw new ArgumentNullException(nameof(animancer));
+            rootHierarchy.RequireValid();
             projection.RequireContract(contract);
             projection.RequirePosePayload();
             projection.RequireTuningPayload();
             animationRigBinding.RequireValid(projection.Rig);
-            Transform animatorRoot = animancer.Animator.transform;
-            if (animatorRoot == visualRoot || !animatorRoot.IsChildOf(visualRoot))
-                throw new InvalidOperationException("Animator Root must be a strict child of the Presentation VisualRoot.");
-            if (animationRigBinding.Animator != animancer.Animator ||
-                animationRigBinding.PhysicalBones[projection.Rig.RootPhysicalBoneIndex] != animatorRoot)
+            Transform poseRoot = animancer.Animator.transform;
+            if (poseRoot != rootHierarchy.PoseRoot)
+                throw new InvalidOperationException("Animancer Animator must be attached to the formal PoseRoot.");
+            if (animationRigBinding.transform != poseRoot ||
+                animationRigBinding.Animator != animancer.Animator ||
+                animationRigBinding.PhysicalBones[projection.Rig.RootPhysicalBoneIndex] != poseRoot)
             {
-                throw new InvalidOperationException("Animation Rig root must match the Animancer Animator Root exactly.");
+                throw new InvalidOperationException("Animation Rig root must match the formal PoseRoot exactly.");
+            }
+            if (!worldAwareBinding ||
+                worldAwareBinding.PresentationRoot != rootHierarchy.VisualRoot ||
+                worldAwareBinding.SelfColliderRoot != rootHierarchy.LogicRoot)
+            {
+                throw new InvalidOperationException("World-Aware Presentation binding must match the formal LogicRoot and VisualRoot.");
             }
 
             CharacterBodyPresentationRuntime body = null;
@@ -283,7 +291,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     simulationTickRate,
                     bodySourceMode,
                     bodySettings,
-                    visualRoot,
+                    rootHierarchy,
                     initialBody,
                     diagnostics);
                 CharacterAnimationPresentationBindings animationBindings =
@@ -338,7 +346,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         animationRigBinding,
                         worldAwareBinding);
                     rig.RequireValid();
-                    if (rig.VisualRoot != visualRoot)
+                    if (rig.VisualRoot != rootHierarchy.VisualRoot)
                         throw new InvalidOperationException("World-Aware Presentation Root must match Presentation VisualRoot exactly.");
                     CharacterFootPlacementRuntimeSettings footPlacementSettings =
                         descriptor.Profile.BuildSettings(projection, rig);
@@ -380,7 +388,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     equipment,
                     footPlacement,
                     camera,
-                    animatorRoot,
+                    poseRoot,
                     diagnostics);
                 body = null;
                 animation = null;

@@ -128,65 +128,73 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 throw new InvalidOperationException($"Unity World Solver is missing required capabilities '{request.RequiredCapabilities & ~Descriptor.Capabilities}'.");
             RequireSceneMatches(m_Current);
 
-            Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_TickRate);
-            var bodies = new WorldBodyState[request.Requests.Count];
-            var results = new CharacterWorldSolveResult[request.Requests.Count];
-            for (int i = 0; i < request.Requests.Count; i++)
+            try
             {
-                CharacterWorldSolveRequest actorRequest = request.Requests[i];
-                UnityCharacterControllerWorldBodyBinding binding = m_Bindings[i];
-                if (binding.ActorId != actorRequest.ActorId || !BodyEquals(actorRequest.BeforeBody, m_Current.Bodies[i]))
-                    throw new InvalidOperationException("Unity World Solver Actor request does not match its locked body binding.");
-                WorldBodyState before = actorRequest.BeforeBody;
-                Float32Vector3 requestedDisplacement = actorRequest.Motion.Space == WorldMotionSpace.ActorLocal
-                    ? Float32Angle.RotatePlanar(actorRequest.Motion.Displacement, before.Yaw)
-                    : actorRequest.Motion.Displacement;
-                Vector3 beforePosition = binding.LogicRoot.position;
-                CollisionFlags flags = CollisionFlags.None;
-                if (actorRequest.Motion.HasMotion)
+                Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_TickRate);
+                var bodies = new WorldBodyState[request.Requests.Count];
+                var results = new CharacterWorldSolveResult[request.Requests.Count];
+                for (int i = 0; i < request.Requests.Count; i++)
                 {
-                    flags = binding.CharacterController.Move(ToUnity(requestedDisplacement));
-                    if (actorRequest.Motion.YawDegrees != Float32Scalar.Zero)
+                    CharacterWorldSolveRequest actorRequest = request.Requests[i];
+                    UnityCharacterControllerWorldBodyBinding binding = m_Bindings[i];
+                    if (binding.ActorId != actorRequest.ActorId || !BodyEquals(actorRequest.BeforeBody, m_Current.Bodies[i]))
+                        throw new InvalidOperationException("Unity World Solver Actor request does not match its locked body binding.");
+                    WorldBodyState before = actorRequest.BeforeBody;
+                    Float32Vector3 requestedDisplacement = actorRequest.Motion.Space == WorldMotionSpace.ActorLocal
+                        ? Float32Angle.RotatePlanar(actorRequest.Motion.Displacement, before.Yaw)
+                        : actorRequest.Motion.Displacement;
+                    Vector3 beforePosition = binding.LogicRoot.position;
+                    CollisionFlags flags = CollisionFlags.None;
+                    if (actorRequest.Motion.HasMotion)
                     {
-                        binding.LogicRoot.rotation = Quaternion.AngleAxis(
-                            actorRequest.Motion.YawDegrees.ToSingle(),
-                            Vector3.up) * binding.LogicRoot.rotation;
+                        flags = binding.CharacterController.Move(ToUnity(requestedDisplacement));
+                        if (actorRequest.Motion.YawDegrees != Float32Scalar.Zero)
+                        {
+                            binding.LogicRoot.rotation = Quaternion.AngleAxis(
+                                actorRequest.Motion.YawDegrees.ToSingle(),
+                                Vector3.up) * binding.LogicRoot.rotation;
+                        }
                     }
+                    Vector3 appliedUnity = binding.LogicRoot.position - beforePosition;
+                    Float32Vector3 applied = ToSimulation(appliedUnity, $"{binding.BindingId}/applied-displacement");
+                    Float32Yaw finalYaw = new Float32Yaw(Float32ScalarBoundary.ConvertExternal(
+                        NormalizeSignedYaw(binding.LogicRoot.eulerAngles.y),
+                        $"{binding.BindingId}/yaw"));
+                    Float32Scalar appliedYaw = Float32Angle.Delta(before.Yaw, finalYaw);
+                    bodies[i] = CharacterBodyMotionRuntime.Finalize(
+                        before,
+                        actorRequest.BodyMotionPlan,
+                        ToSimulation(binding.LogicRoot.position, $"{binding.BindingId}/position"),
+                        finalYaw,
+                        applied,
+                        binding.CharacterController.isGrounded,
+                        Convert(flags),
+                        delta);
+                    results[i] = new CharacterWorldSolveResult(
+                        Descriptor.NumericProfile,
+                        actorRequest.ActorId,
+                        actorRequest.RequestId,
+                        request.Tick,
+                        Descriptor.ImplementationId,
+                        bodies[i],
+                        applied,
+                        appliedYaw);
                 }
-                Vector3 appliedUnity = binding.LogicRoot.position - beforePosition;
-                Float32Vector3 applied = ToSimulation(appliedUnity, $"{binding.BindingId}/applied-displacement");
-                Float32Yaw finalYaw = new Float32Yaw(Float32ScalarBoundary.ConvertExternal(
-                    NormalizeSignedYaw(binding.LogicRoot.eulerAngles.y),
-                    $"{binding.BindingId}/yaw"));
-                Float32Scalar appliedYaw = Float32Angle.Delta(before.Yaw, finalYaw);
-                bodies[i] = CharacterBodyMotionRuntime.Finalize(
-                    before,
-                    actorRequest.BodyMotionPlan,
-                    ToSimulation(binding.LogicRoot.position, $"{binding.BindingId}/position"),
-                    finalYaw,
-                    applied,
-                    binding.CharacterController.isGrounded,
-                    Convert(flags),
-                    delta);
-                results[i] = new CharacterWorldSolveResult(
+                m_Current = new WorldSimulationState(
                     Descriptor.NumericProfile,
-                    actorRequest.ActorId,
-                    actorRequest.RequestId,
-                    request.Tick,
                     Descriptor.ImplementationId,
-                    bodies[i],
-                    applied,
-                    appliedYaw);
+                    Descriptor.Version,
+                    request.BeforeWorldState.WorldRevision,
+                    WorldStatePersistenceMode.Reconstruct,
+                    bodies,
+                    Array.Empty<byte>());
+                return new WorldSolveBatchResult(request, Descriptor.ImplementationId, Descriptor.Version, CloneState(m_Current), results);
             }
-            m_Current = new WorldSimulationState(
-                Descriptor.NumericProfile,
-                Descriptor.ImplementationId,
-                Descriptor.Version,
-                request.BeforeWorldState.WorldRevision,
-                WorldStatePersistenceMode.Reconstruct,
-                bodies,
-                Array.Empty<byte>());
-            return new WorldSolveBatchResult(request, Descriptor.ImplementationId, Descriptor.Version, CloneState(m_Current), results);
+            catch
+            {
+                Reconstruct(request.BeforeWorldState);
+                throw;
+            }
         }
 
         WorldSimulationState CreateState(WorldRevision worldRevision, IReadOnlyList<WorldBodyState> bodies)

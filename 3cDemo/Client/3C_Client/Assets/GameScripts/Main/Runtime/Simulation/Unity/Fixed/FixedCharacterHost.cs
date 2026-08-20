@@ -29,8 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField] CharacterPresentationRole m_PresentationRole = CharacterPresentationRole.SimulatedActor;
         [SerializeField] string m_ActorId = string.Empty;
         [SerializeField] string m_WorldBodyBindingId = string.Empty;
-        [SerializeField] Transform m_LogicalSpawn;
-        [SerializeField] Transform m_VisualRoot;
+        [SerializeField] CharacterRootHierarchyBinding m_RootHierarchy;
         [SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
         [SerializeField] CharacterWorldAwarePresentationBinding m_WorldAwarePresentation;
         [SerializeField] CharacterEquipmentRigBindingCatalog m_EquipmentRigBindings;
@@ -53,32 +52,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public FixedCharacterControlSource ControlSource => m_ControlSource;
         public ThirdPersonCameraController CameraRig => m_CameraRig;
         public CharacterPresentationRole PresentationRole => m_PresentationRole;
-        public Vector3 VisualPosition => m_VisualRoot ? m_VisualRoot.position : transform.position;
+        public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
+        public Vector3 VisualPosition => m_RootHierarchy
+            ? m_RootHierarchy.VisualRoot.position
+            : throw new InvalidOperationException("Fixed Character Host requires a Root Hierarchy Binding.");
 
 #if UNITY_EDITOR
-        public void SetAuthoring(
-            SimulationSessionHost sessionHost,
+        public void SetProfileAuthoring(
             FixedCharacterSimulationProgramAsset program,
             CharacterPresentationProjectionAsset presentationProjection,
             FixedCharacterControlSource controlSource,
             CharacterPresentationRole presentationRole,
             ActorId actorId,
             string worldBodyBindingId,
-            Transform logicalSpawn,
-            Transform visualRoot,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterBodyPresentationProfile bodyPresentationProfile,
             CharacterWorldAwarePresentationBinding worldAwarePresentation,
             CharacterEquipmentRigBindingCatalog equipmentRigBindings,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
-            ThirdPersonCameraController cameraRig,
             Transform cameraFollowAnchor,
             Transform cameraAimAnchor,
             IEnumerable<CameraTargetBinding> cameraTargetBindings,
             string cameraLookInputValueId,
             int maximumActivePresentationRecords)
         {
-            m_SessionHost = sessionHost ? sessionHost : throw new ArgumentNullException(nameof(sessionHost));
+            m_SessionHost = null;
             m_Program = program ? program : throw new ArgumentNullException(nameof(program));
             m_PresentationProjection = presentationProjection ? presentationProjection :
                 throw new ArgumentNullException(nameof(presentationProjection));
@@ -86,8 +85,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_PresentationRole = presentationRole;
             m_ActorId = actorId.IsValid ? actorId.Value : throw new ArgumentException("ActorId is invalid.", nameof(actorId));
             m_WorldBodyBindingId = Require(worldBodyBindingId, nameof(worldBodyBindingId));
-            m_LogicalSpawn = logicalSpawn ? logicalSpawn : throw new ArgumentNullException(nameof(logicalSpawn));
-            m_VisualRoot = visualRoot ? visualRoot : throw new ArgumentNullException(nameof(visualRoot));
+            m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
+            m_RootHierarchy.RequireValid();
             m_BodyPresentationProfile = bodyPresentationProfile ? bodyPresentationProfile :
                 throw new ArgumentNullException(nameof(bodyPresentationProfile));
             m_WorldAwarePresentation = worldAwarePresentation ? worldAwarePresentation : throw new ArgumentNullException(nameof(worldAwarePresentation));
@@ -96,7 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_AnimationRigBinding = animationRigBinding
                 ? animationRigBinding
                 : throw new ArgumentNullException(nameof(animationRigBinding));
-            m_CameraRig = cameraRig;
+            m_CameraRig = null;
             m_CameraFollowAnchor = cameraFollowAnchor;
             m_CameraAimAnchor = cameraAimAnchor;
             m_CameraTargetBindings = cameraTargetBindings == null
@@ -109,21 +108,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 maximumActivePresentationRecords,
                 nameof(maximumActivePresentationRecords));
         }
-#endif
 
-        void Reset()
+        public void SetSceneAuthoring(
+            SimulationSessionHost sessionHost,
+            ThirdPersonCameraController cameraRig)
         {
-            if (!m_SessionHost)
-                m_SessionHost = GetComponentInParent<SimulationSessionHost>();
-            if (!m_ControlSource)
-                m_ControlSource = GetComponent<FixedCharacterControlSource>();
-            if (!m_LogicalSpawn)
-                m_LogicalSpawn = transform;
-            if (!m_VisualRoot)
-                m_VisualRoot = transform;
-            if (!m_Animancer)
-                m_Animancer = GetComponentInChildren<AnimancerComponent>(true);
+            m_SessionHost = sessionHost ? sessionHost : throw new ArgumentNullException(nameof(sessionHost));
+            if (m_PresentationRole == CharacterPresentationRole.LocalOwner)
+                m_CameraRig = cameraRig ? cameraRig : throw new ArgumentNullException(nameof(cameraRig));
+            else if (cameraRig)
+                throw new ArgumentException("Simulated Fixed Character cannot receive a Camera Rig.", nameof(cameraRig));
+            else
+                m_CameraRig = null;
         }
+#endif
 
         void OnEnable()
         {
@@ -152,10 +150,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Presentation Projection asset.");
             FixedCharacterControlSource controlSourceDefinition = m_ControlSource ? m_ControlSource :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a formal Fixed Control Source.");
-            Transform logicalSpawn = m_LogicalSpawn ? m_LogicalSpawn :
-                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a logical spawn Transform.");
-            Transform visualRoot = m_VisualRoot ? m_VisualRoot :
-                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a visual root Transform.");
+            CharacterRootHierarchyBinding rootHierarchy = m_RootHierarchy ? m_RootHierarchy :
+                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Root Hierarchy Binding.");
+            rootHierarchy.RequireValid();
             CharacterBodyPresentationProfile bodyPresentationProfile = m_BodyPresentationProfile ? m_BodyPresentationProfile :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Body Presentation Profile.");
             CharacterWorldAwarePresentationBinding worldAwarePresentation = m_WorldAwarePresentation ? m_WorldAwarePresentation :
@@ -174,7 +171,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             FixedCharacterRegistration registration = null;
             try
             {
-                FixedWorldBodyState initialBody = BuildInitialBody(actorId, logicalSpawn);
+                if (animancer.Animator.transform != rootHierarchy.PoseRoot)
+                    throw new InvalidOperationException($"Fixed Character Host '{name}' Animancer Animator must use PoseRoot.");
+                if (worldAwarePresentation.PresentationRoot != rootHierarchy.VisualRoot ||
+                    worldAwarePresentation.SelfColliderRoot != rootHierarchy.LogicRoot)
+                {
+                    throw new InvalidOperationException($"Fixed Character Host '{name}' World-Aware binding must match its Root Hierarchy.");
+                }
+                FixedWorldBodyState initialBody = BuildInitialBody(actorId, rootHierarchy.LogicRoot);
                 CharacterPresentationBodyState presentationBody = FixedUnityPresentationBoundary.Convert(initialBody);
                 CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(
                     program.Manifest.ProgramId.Value,
@@ -211,6 +215,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires a Camera Rig.");
                         if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
                             throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires camera follow and aim anchors.");
+                        if (m_CameraFollowAnchor != rootHierarchy.VisualRoot &&
+                            !m_CameraFollowAnchor.IsChildOf(rootHierarchy.VisualRoot) ||
+                            m_CameraAimAnchor != rootHierarchy.VisualRoot &&
+                            !m_CameraAimAnchor.IsChildOf(rootHierarchy.VisualRoot))
+                        {
+                            throw new InvalidOperationException($"Local Fixed Character Host '{name}' camera anchors must belong to VisualRoot.");
+                        }
                         if (controlSource is not ICharacterPresentationLookInput lookInput)
                             throw new InvalidOperationException($"Local Fixed Character Host '{name}' Control Source has no look input contract.");
                         presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
@@ -220,7 +231,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             actorId,
                             animancer,
                             animationRigBinding,
-                            visualRoot,
+                            rootHierarchy,
                             presentationBody,
                             bodyPresentationProfile,
                             worldAwarePresentation,
@@ -244,7 +255,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             actorId,
                             animancer,
                             animationRigBinding,
-                            visualRoot,
+                            rootHierarchy,
                             presentationBody,
                             bodyPresentationProfile,
                             worldAwarePresentation,
@@ -274,6 +285,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     controlSource,
                     presentationOutput,
                     presentation,
+                    rootHierarchy,
                     diagnosticsContext,
                     diagnosticsTarget,
                     m_MaximumActivePresentationRecords);

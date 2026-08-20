@@ -33,6 +33,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Descending = 2
     }
 
+    [Flags]
+    public enum CharacterFootPelvisSpringHandoffReason : byte
+    {
+        None = 0,
+        SupportChanged = 1,
+        SlopeChanged = 2,
+        TargetCrossedOutput = 4
+    }
+
     public enum CharacterFootSupportLockState : byte
     {
         None = 0,
@@ -85,10 +94,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float soleClearanceLiftAlongUp,
             bool hadPreviousState,
             bool supportChanged,
+            CharacterFootStrideSlope previousSlope,
+            CharacterFootPelvisSpringHandoffReason springHandoffReason,
+            bool springVelocityReset,
             float previousSpringTarget,
             float previousSpringOutput,
             float previousSpringVelocity,
             float springInput,
+            float springInputVelocity,
+            float springFrequency,
             float springTarget,
             float springOutput,
             float springVelocity,
@@ -112,10 +126,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SoleClearanceLiftAlongUp = soleClearanceLiftAlongUp;
             HadPreviousState = hadPreviousState;
             SupportChanged = supportChanged;
+            PreviousSlope = previousSlope;
+            SpringHandoffReason = springHandoffReason;
+            SpringVelocityReset = springVelocityReset;
             PreviousSpringTarget = previousSpringTarget;
             PreviousSpringOutput = previousSpringOutput;
             PreviousSpringVelocity = previousSpringVelocity;
             SpringInput = springInput;
+            SpringInputVelocity = springInputVelocity;
+            SpringFrequency = springFrequency;
             SpringTarget = springTarget;
             SpringOutput = springOutput;
             SpringVelocity = springVelocity;
@@ -140,10 +159,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SoleClearanceLiftAlongUp { get; }
         public bool HadPreviousState { get; }
         public bool SupportChanged { get; }
+        public CharacterFootStrideSlope PreviousSlope { get; }
+        public CharacterFootPelvisSpringHandoffReason SpringHandoffReason { get; }
+        public bool SpringVelocityReset { get; }
         public float PreviousSpringTarget { get; }
         public float PreviousSpringOutput { get; }
         public float PreviousSpringVelocity { get; }
         public float SpringInput { get; }
+        public float SpringInputVelocity { get; }
+        public float SpringFrequency { get; }
         public float SpringTarget { get; }
         public float SpringOutput { get; }
         public float SpringVelocity { get; }
@@ -157,6 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasValue;
         internal CharacterFootSide SupportSide;
         internal ulong SupportLandingEventIdentity;
+        internal CharacterFootStrideSlope Slope;
         internal float TargetAlongUp;
         internal float OutputAlongUp;
         internal float VelocityAlongUp;
@@ -166,6 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasValue = false;
             SupportSide = default;
             SupportLandingEventIdentity = 0;
+            Slope = CharacterFootStrideSlope.Flat;
             TargetAlongUp = 0f;
             OutputAlongUp = 0f;
             VelocityAlongUp = 0f;
@@ -503,6 +529,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 false,
                 false,
+                CharacterFootStrideSlope.Flat,
+                CharacterFootPelvisSpringHandoffReason.None,
+                false,
+                0f,
+                0f,
                 0f,
                 0f,
                 0f,
@@ -590,24 +621,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool supportChanged = hadPreviousState &&
                 (spring.SupportSide != supportSide ||
                  spring.SupportLandingEventIdentity != supportLandingEventIdentity);
+            CharacterFootStrideSlope previousSlope = hadPreviousState
+                ? spring.Slope
+                : CharacterFootStrideSlope.Flat;
+            bool slopeChanged = hadPreviousState && previousSlope != slope;
             float previousTarget = hadPreviousState ? spring.TargetAlongUp : 0f;
             float previousOutput = hadPreviousState ? spring.OutputAlongUp : 0f;
             float previousVelocity = hadPreviousState ? spring.VelocityAlongUp : 0f;
             float springInput = previousOutput;
+            float previousTargetDirection = previousTarget - previousOutput;
+            float nextTargetDirection = target - previousOutput;
+            bool targetCrossedOutput = hadPreviousState &&
+                Mathf.Abs(previousTargetDirection) > EndpointTolerance &&
+                Mathf.Abs(nextTargetDirection) > EndpointTolerance &&
+                previousTargetDirection * nextTargetDirection < 0f;
+            CharacterFootPelvisSpringHandoffReason handoffReason =
+                CharacterFootPelvisSpringHandoffReason.None;
+            if (supportChanged)
+                handoffReason |= CharacterFootPelvisSpringHandoffReason.SupportChanged;
+            if (slopeChanged)
+                handoffReason |= CharacterFootPelvisSpringHandoffReason.SlopeChanged;
+            if (targetCrossedOutput)
+                handoffReason |= CharacterFootPelvisSpringHandoffReason.TargetCrossedOutput;
+            bool velocityReset =
+                handoffReason != CharacterFootPelvisSpringHandoffReason.None &&
+                Mathf.Abs(nextTargetDirection) > GeometryEpsilon &&
+                previousVelocity * nextTargetDirection < 0f;
+            float springInputVelocity = velocityReset ? 0f : previousVelocity;
             float springOutput = springInput;
-            float springVelocity = previousVelocity;
+            float springVelocity = springInputVelocity;
             if (deltaSeconds > 0f)
             {
                 float omega = settings.PelvisSpringFrequency * 2f * Mathf.PI;
                 float x0 = springInput - target;
-                float j0 = previousVelocity + omega * x0;
+                float j0 = springInputVelocity + omega * x0;
                 float decay = Mathf.Exp(-omega * deltaSeconds);
                 springOutput = target + (x0 + j0 * deltaSeconds) * decay;
-                springVelocity = (previousVelocity - omega * j0 * deltaSeconds) * decay;
+                springVelocity =
+                    (springInputVelocity - omega * j0 * deltaSeconds) * decay;
             }
             spring.HasValue = true;
             spring.SupportSide = supportSide;
             spring.SupportLandingEventIdentity = supportLandingEventIdentity;
+            spring.Slope = slope;
             spring.TargetAlongUp = target;
             spring.OutputAlongUp = springOutput;
             spring.VelocityAlongUp = springVelocity;
@@ -633,10 +689,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 soleClearanceLift,
                 hadPreviousState,
                 supportChanged,
+                previousSlope,
+                handoffReason,
+                velocityReset,
                 previousTarget,
                 previousOutput,
                 previousVelocity,
                 springInput,
+                springInputVelocity,
+                settings.PelvisSpringFrequency,
                 target,
                 springOutput,
                 springVelocity,

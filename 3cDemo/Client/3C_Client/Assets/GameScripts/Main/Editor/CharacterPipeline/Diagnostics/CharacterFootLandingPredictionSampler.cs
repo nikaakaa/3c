@@ -31,6 +31,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "TimelineCurrentVelocityX,TimelineCurrentVelocityZ,TimelineContinuationVelocityX,TimelineContinuationVelocityZ," +
             "TimelineHasContinuation,TimelineBodyYawVelocityDegreesPerSecond,TimelineMaximumBodyYawVelocityDegreesPerSecond,CurrentSegmentRemainingSeconds," +
             "Grounded,HorizontalSpeed,LeftActionInstanceIdentity,LeftActionFootWeight,RightActionInstanceIdentity,RightActionFootWeight," +
+            "LogicRootPositionX,LogicRootPositionY,LogicRootPositionZ,LogicRootRotationX,LogicRootRotationY,LogicRootRotationZ,LogicRootRotationW," +
+            "VisualRootLocalPositionX,VisualRootLocalPositionY,VisualRootLocalPositionZ,VisualRootLocalRotationX,VisualRootLocalRotationY,VisualRootLocalRotationZ,VisualRootLocalRotationW," +
+            "VisualRootWorldPositionX,VisualRootWorldPositionY,VisualRootWorldPositionZ,VisualRootWorldRotationX,VisualRootWorldRotationY,VisualRootWorldRotationZ,VisualRootWorldRotationW," +
+            "PoseRootLocalPositionX,PoseRootLocalPositionY,PoseRootLocalPositionZ,PoseRootLocalRotationX,PoseRootLocalRotationY,PoseRootLocalRotationZ,PoseRootLocalRotationW," +
+            "PoseRootWorldPositionX,PoseRootWorldPositionY,PoseRootWorldPositionZ,PoseRootWorldRotationX,PoseRootWorldRotationY,PoseRootWorldRotationZ,PoseRootWorldRotationW," +
             "VisibleBodyPositionX,VisibleBodyPositionY,VisibleBodyPositionZ," +
             "VisibleBodyRotationX,VisibleBodyRotationY,VisibleBodyRotationZ,VisibleBodyRotationW," +
             "VisibleBodyVelocityX,VisibleBodyVelocityY,VisibleBodyVelocityZ,VisibleBodyYawVelocityDegreesPerSecond," +
@@ -97,7 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "StrideAnimatedPelvisComponentPositionX,StrideAnimatedPelvisComponentPositionY,StrideAnimatedPelvisComponentPositionZ," +
             "StrideRawPelvisDeltaX,StrideRawPelvisDeltaY,StrideRawPelvisDeltaZ," +
             "StrideRootRelativeGroundTargetAlongUp,StrideSoleClearanceLiftAlongUp,StrideHadPreviousState,StrideSupportChanged," +
-            "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput," +
+            "StridePreviousSlope,StrideSpringHandoffReason,StrideSpringVelocityReset," +
+            "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput,StrideSpringInputVelocity,StrideSpringFrequency," +
             "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
             "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
             "FinalPelvisGoalX,FinalPelvisGoalY,FinalPelvisGoalZ," +
@@ -157,6 +163,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal CharacterFootLandingPredictionDiagnostics Diagnostics { get; }
         }
 
+        readonly struct RootHierarchyCapture
+        {
+            internal RootHierarchyCapture(CharacterRootHierarchyBinding binding)
+            {
+                if (!binding)
+                    throw new ArgumentNullException(nameof(binding));
+                LogicRootPosition = binding.LogicRoot.position;
+                LogicRootRotation = binding.LogicRoot.rotation;
+                VisualRootLocalPosition = binding.VisualRoot.localPosition;
+                VisualRootLocalRotation = binding.VisualRoot.localRotation;
+                VisualRootWorldPosition = binding.VisualRoot.position;
+                VisualRootWorldRotation = binding.VisualRoot.rotation;
+                PoseRootLocalPosition = binding.PoseRoot.localPosition;
+                PoseRootLocalRotation = binding.PoseRoot.localRotation;
+                PoseRootWorldPosition = binding.PoseRoot.position;
+                PoseRootWorldRotation = binding.PoseRoot.rotation;
+            }
+
+            internal Vector3 LogicRootPosition { get; }
+            internal Quaternion LogicRootRotation { get; }
+            internal Vector3 VisualRootLocalPosition { get; }
+            internal Quaternion VisualRootLocalRotation { get; }
+            internal Vector3 VisualRootWorldPosition { get; }
+            internal Quaternion VisualRootWorldRotation { get; }
+            internal Vector3 PoseRootLocalPosition { get; }
+            internal Quaternion PoseRootLocalRotation { get; }
+            internal Vector3 PoseRootWorldPosition { get; }
+            internal Quaternion PoseRootWorldRotation { get; }
+        }
+
         sealed class CapturedFrame
         {
             internal CapturedFrame(
@@ -164,6 +200,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootIkCapture left,
                 FootIkCapture right,
                 Vector3 physicalPelvisComponentPosition,
+                RootHierarchyCapture roots,
                 Guid targetRuntimeInstanceId,
                 int targetHostInstanceId)
             {
@@ -171,6 +208,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Left = left;
                 Right = right;
                 PhysicalPelvisComponentPosition = physicalPelvisComponentPosition;
+                Roots = roots;
                 TargetRuntimeInstanceId = targetRuntimeInstanceId;
                 TargetHostInstanceId = targetHostInstanceId;
             }
@@ -179,6 +217,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal FootIkCapture Left { get; }
             internal FootIkCapture Right { get; }
             internal Vector3 PhysicalPelvisComponentPosition { get; }
+            internal RootHierarchyCapture Roots { get; }
             internal Guid TargetRuntimeInstanceId { get; }
             internal int TargetHostInstanceId { get; }
         }
@@ -202,6 +241,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static int s_LastSavedFrameCount;
         static int s_TargetHostInstanceId;
         static int s_TargetRootInstanceId;
+        static CharacterRootHierarchyBinding s_TargetRootHierarchy;
 
         public static bool IsCapturing => s_Capturing;
         public static bool IsStartPending => s_StartPending;
@@ -216,6 +256,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+            s_LastSavedPath = FindLatestSavedPath();
         }
 
         public static void StartSampling()
@@ -231,7 +272,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Foot Landing sampling is already waiting for the Gameplay Lab player.");
             s_Frames.Clear();
             s_PendingFrames.Clear();
-            s_LastSavedPath = string.Empty;
             s_DroppedPendingFrameCount = 0;
             s_LastSavedFrameCount = 0;
             s_LastStartFailure = string.Empty;
@@ -415,6 +455,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.RightPhysicalAnkleComponentPosition,
                         placement.PhysicalPelvisComponentPosition),
                     placement.PhysicalPelvisComponentPosition,
+                    new RootHierarchyCapture(s_TargetRootHierarchy),
                     target.RuntimeInstanceId,
                     target.HostInstanceId);
                 return PendingFrameResolution.Captured;
@@ -494,6 +535,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             int selectedHostInstanceId = 0;
             int selectedRootInstanceId = 0;
+            CharacterRootHierarchyBinding selectedRootHierarchy = null;
             CharacterPipelineHost[] hosts = UnityEngine.Object.FindObjectsByType<CharacterPipelineHost>(
                 FindObjectsInactive.Exclude,
                 FindObjectsSortMode.None);
@@ -508,6 +550,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "Gameplay Lab contains multiple gameplay-lab-player hosts.");
                 selectedHostInstanceId = host.GetInstanceID();
                 selectedRootInstanceId = host.VisualRoot.GetInstanceID();
+                selectedRootHierarchy = host.RootHierarchy;
             }
             FixedCharacterHost[] fixedHosts = UnityEngine.Object.FindObjectsByType<FixedCharacterHost>(
                 FindObjectsInactive.Exclude,
@@ -515,13 +558,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < fixedHosts.Length; i++)
             {
                 FixedCharacterHost host = fixedHosts[i];
-                if (host == null ||
+                if (host == null || !host.RootHierarchy ||
                     !string.Equals(host.ActorId.Value, GameplayLabPlayerActorId, StringComparison.Ordinal))
                     continue;
                 if (selectedHostInstanceId != 0)
                     throw new InvalidOperationException(
                         "Gameplay Lab contains multiple gameplay-lab-player hosts.");
                 selectedHostInstanceId = host.GetInstanceID();
+                selectedRootInstanceId = host.RootHierarchy.VisualRoot.GetInstanceID();
+                selectedRootHierarchy = host.RootHierarchy;
             }
             if (selectedHostInstanceId == 0)
             {
@@ -530,6 +575,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             s_TargetHostInstanceId = selectedHostInstanceId;
             s_TargetRootInstanceId = selectedRootInstanceId;
+            s_TargetRootHierarchy = selectedRootHierarchy;
             return true;
         }
 
@@ -549,6 +595,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             s_TargetHostInstanceId = 0;
             s_TargetRootInstanceId = 0;
+            s_TargetRootHierarchy = null;
         }
 
         static IReadOnlyList<AnimationPoseWatchIdentity> BuildPoseWatches(
@@ -676,11 +723,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static string Save()
         {
-            string directory = Path.GetFullPath(Path.Combine(
-                Application.dataPath,
-                "..",
-                "Temp",
-                "FootLandingSamples"));
+            string directory = ResolveSaveDirectory();
             Directory.CreateDirectory(directory);
             string path = Path.Combine(
                 directory,
@@ -699,17 +742,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootLandingPredictionDiagnostics frame = captured.Foot;
                 FootIkCapture left = captured.Left;
                 FootIkCapture right = captured.Right;
+                RootHierarchyCapture roots = captured.Roots;
                 CharacterFootLandingPredictionFootDiagnostics leftFoot = frame.Left;
                 CharacterFootLandingPredictionFootDiagnostics rightFoot = frame.Right;
                 WriteRows(
-                    writer, row, in frame, in leftFoot, in left,
+                    writer, row, in frame, in leftFoot, in left, in roots,
                     captured.TargetRuntimeInstanceId, captured.TargetHostInstanceId);
                 WriteRows(
-                    writer, row, in frame, in rightFoot, in right,
+                    writer, row, in frame, in rightFoot, in right, in roots,
                     captured.TargetRuntimeInstanceId, captured.TargetHostInstanceId);
             }
             return path;
         }
+
+        static string FindLatestSavedPath()
+        {
+            string directory = ResolveSaveDirectory();
+            if (!Directory.Exists(directory))
+                return string.Empty;
+            string latestPath = string.Empty;
+            DateTime latestWriteTime = DateTime.MinValue;
+            foreach (string path in Directory.EnumerateFiles(directory, "foot-landing-*.csv"))
+            {
+                DateTime writeTime = File.GetLastWriteTimeUtc(path);
+                if (writeTime <= latestWriteTime)
+                    continue;
+                latestWriteTime = writeTime;
+                latestPath = path;
+            }
+            return latestPath;
+        }
+
+        static string ResolveSaveDirectory() => Path.GetFullPath(Path.Combine(
+            Application.dataPath,
+            "..",
+            "Temp",
+            "FootLandingSamples"));
 
         static void WriteRows(
             StreamWriter writer,
@@ -717,6 +785,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in CharacterFootLandingPredictionDiagnostics frame,
             in CharacterFootLandingPredictionFootDiagnostics foot,
             in FootIkCapture ik,
+            in RootHierarchyCapture roots,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId)
         {
@@ -728,6 +797,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int contactIndex = 0; contactIndex < rowCount; contactIndex++)
                 WriteRow(
                     writer, row, in frame, in foot, in ik,
+                    in roots,
                     targetRuntimeInstanceId, targetHostInstanceId, contactIndex);
         }
 
@@ -737,6 +807,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in CharacterFootLandingPredictionDiagnostics frame,
             in CharacterFootLandingPredictionFootDiagnostics foot,
             in FootIkCapture ik,
+            in RootHierarchyCapture roots,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId,
             int groundContactIndex)
@@ -781,6 +852,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, input.LeftActionFootWeight);
             Add(row, input.RightActionInstanceIdentity);
             Add(row, input.RightActionFootWeight);
+            Add(row, roots.LogicRootPosition);
+            Add(row, roots.LogicRootRotation);
+            Add(row, roots.VisualRootLocalPosition);
+            Add(row, roots.VisualRootLocalRotation);
+            Add(row, roots.VisualRootWorldPosition);
+            Add(row, roots.VisualRootWorldRotation);
+            Add(row, roots.PoseRootLocalPosition);
+            Add(row, roots.PoseRootLocalRotation);
+            Add(row, roots.PoseRootWorldPosition);
+            Add(row, roots.PoseRootWorldRotation);
             Add(row, input.VisibleBodyPosition);
             Add(row, input.VisibleBodyRotation);
             Add(row, input.VisibleBodyVelocity);
@@ -921,10 +1002,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.SoleClearanceLiftAlongUp);
             Add(row, stride.HadPreviousState);
             Add(row, stride.SupportChanged);
+            Add(row, stride.PreviousSlope.ToString());
+            Add(row, stride.SpringHandoffReason.ToString().Replace(", ", "|"));
+            Add(row, stride.SpringVelocityReset);
             Add(row, stride.PreviousSpringTarget);
             Add(row, stride.PreviousSpringOutput);
             Add(row, stride.PreviousSpringVelocity);
             Add(row, stride.SpringInput);
+            Add(row, stride.SpringInputVelocity);
+            Add(row, stride.SpringFrequency);
             Add(row, stride.SpringTarget);
             Add(row, stride.SpringOutput);
             Add(row, stride.SpringVelocity);

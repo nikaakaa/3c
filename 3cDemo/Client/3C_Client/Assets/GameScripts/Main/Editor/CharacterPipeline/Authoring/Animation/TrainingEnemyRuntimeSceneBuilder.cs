@@ -81,19 +81,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 AICharacterControlSource control = instance.AddComponent<AICharacterControlSource>();
                 CharacterPipelineHost host = instance.AddComponent<CharacterPipelineHost>();
 
-                var visualRootObject = new GameObject("EnemyVisualRoot");
+                var visualRootObject = new GameObject("VisualRoot");
                 visualRootObject.layer = instance.layer;
                 Transform visualRoot = visualRootObject.transform;
                 visualRoot.SetParent(instance.transform, false);
+                visualRoot.localScale = Vector3.one * 0.5f;
                 GameObject presentationInstance = PrefabUtility.InstantiatePrefab(presentation, visualRoot) as GameObject ??
                     throw new InvalidOperationException("Training Enemy Presentation Prefab could not be instantiated.");
-                presentationInstance.name = "MonsterPresentation";
+                presentationInstance.name = "PoseRoot";
                 presentationInstance.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-                presentationInstance.transform.localScale = Vector3.one * 0.5f;
+                presentationInstance.transform.localScale = Vector3.one;
                 SetLayerRecursively(presentationInstance, instance.layer);
 
-                Animator animator = presentationInstance.GetComponentInChildren<Animator>(true) ??
-                    throw new InvalidOperationException("Training Enemy Presentation has no Animator.");
+                Animator animator = presentationInstance.GetComponent<Animator>() ??
+                    throw new InvalidOperationException("Training Enemy PoseRoot has no Animator.");
                 animator.runtimeAnimatorController = null;
                 animator.applyRootMotion = false;
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -111,7 +112,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
                 ConfigureCharacterController(instance.transform, characterController, presentationInstance);
                 worldBody.ConfigurePreview("TrainingEnemy.MonsterBody", new ActorId(ActorId), characterController, instance.transform);
-                CharacterWorldAwarePresentationBinding worldAware = instance.AddComponent<CharacterWorldAwarePresentationBinding>();
+                CharacterRootHierarchyBinding rootHierarchy = instance.AddComponent<CharacterRootHierarchyBinding>();
+                rootHierarchy.Configure(instance.transform, visualRoot, presentationInstance.transform);
+                CharacterWorldAwarePresentationBinding worldAware = visualRootObject.AddComponent<CharacterWorldAwarePresentationBinding>();
                 worldAware.Configure(visualRoot, instance.transform);
 
                 var hostSerialized = new SerializedObject(host);
@@ -122,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 hostSerialized.FindProperty("m_Animancer").objectReferenceValue = animancer;
                 hostSerialized.FindProperty("m_AnimationRigBinding").objectReferenceValue = rigBinding;
                 hostSerialized.FindProperty("m_WorldBodyBinding").objectReferenceValue = worldBody;
-                hostSerialized.FindProperty("m_VisualRoot").objectReferenceValue = visualRoot;
+                hostSerialized.FindProperty("m_RootHierarchy").objectReferenceValue = rootHierarchy;
                 hostSerialized.FindProperty("m_EquipmentRigBindings").objectReferenceValue = null;
                 hostSerialized.FindProperty("m_EquipmentPreviewFixture").objectReferenceValue = null;
                 hostSerialized.FindProperty("m_BodyPresentationProfile").objectReferenceValue = bodyPresentation;
@@ -136,6 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorUtility.SetDirty(host);
                 EditorUtility.SetDirty(worldBody);
                 EditorUtility.SetDirty(worldAware);
+                EditorUtility.SetDirty(rootHierarchy);
 
                 GameObject prefab = PrefabUtility.SaveAsPrefabAsset(instance, RuntimePrefabPath) ??
                     throw new InvalidOperationException("Training Enemy runtime Prefab could not be saved.");

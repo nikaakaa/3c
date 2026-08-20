@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline
 		[SerializeField] AnimancerComponent m_Animancer;
 		[SerializeField] CharacterAnimationRigBinding m_AnimationRigBinding;
 		[SerializeField] Float32WorldBodyBinding m_WorldBodyBinding;
-		[SerializeField] Transform m_VisualRoot;
+		[SerializeField] CharacterRootHierarchyBinding m_RootHierarchy;
 		[SerializeField] CharacterEquipmentRigBindingCatalog m_EquipmentRigBindings;
 		[SerializeField] CharacterEquipmentPreviewFixture m_EquipmentPreviewFixture;
 		[SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
@@ -56,7 +56,10 @@ namespace ThirdPersonCharacter.Pipeline
 		public AnimancerComponent Animancer => m_Animancer;
 		public CharacterAnimationRigBinding AnimationRigBinding => m_AnimationRigBinding;
 		public Float32WorldBodyBinding WorldBodyBinding => m_WorldBodyBinding;
-		public Transform VisualRoot => m_VisualRoot;
+		public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
+		public Transform LogicRoot => m_RootHierarchy ? m_RootHierarchy.LogicRoot : null;
+		public Transform VisualRoot => m_RootHierarchy ? m_RootHierarchy.VisualRoot : null;
+		public Transform PoseRoot => m_RootHierarchy ? m_RootHierarchy.PoseRoot : null;
 		public CharacterEquipmentRigBindingCatalog EquipmentRigBindings => m_EquipmentRigBindings;
 		public CharacterEquipmentPreviewFixture EquipmentPreviewFixture => m_EquipmentPreviewFixture;
 		public CharacterBodyPresentationProfile BodyPresentationProfile => m_BodyPresentationProfile;
@@ -169,7 +172,7 @@ namespace ThirdPersonCharacter.Pipeline
 			m_Animancer.Animator &&
 			m_AnimationRigBinding &&
 			m_WorldBodyBinding &&
-			m_VisualRoot;
+			m_RootHierarchy;
 		public bool CanPreviewPoseGraph => CanPreviewTimeline;
 		public override string PreviewStatus =>
 			"Pose Graph preview uses the selected Host's formal Body fixture and Scene PhysicsScene. A missing World-Aware Binding is reported at the first world-aware stage.";
@@ -278,9 +281,18 @@ namespace ThirdPersonCharacter.Pipeline
 				Debug.LogException(exception, this);
 				return false;
 			}
-			if (!m_VisualRoot)
+			if (!m_RootHierarchy)
 			{
-				Debug.LogError("CharacterPipelineHost requires an explicit visual root.", this);
+				Debug.LogError("CharacterPipelineHost requires an explicit Root Hierarchy Binding.", this);
+				return false;
+			}
+			try
+			{
+				m_RootHierarchy.RequireValid();
+			}
+			catch (Exception exception)
+			{
+				Debug.LogException(exception, this);
 				return false;
 			}
 			if (!m_BodyPresentationProfile)
@@ -315,22 +327,28 @@ namespace ThirdPersonCharacter.Pipeline
 				Debug.LogError("CharacterPipelineHost requires Animancer to reference a valid Animator.", this);
 				return false;
 			}
-			if (m_Animancer.Animator.transform == m_VisualRoot ||
-				!m_Animancer.Animator.transform.IsChildOf(m_VisualRoot))
+			if (m_Animancer.Animator.transform != m_RootHierarchy.PoseRoot)
 			{
-				Debug.LogError("CharacterPipelineHost requires the Animancer Animator Root to be a strict child of VisualRoot.", this);
+				Debug.LogError("CharacterPipelineHost requires Animancer Animator to use the formal PoseRoot.", this);
 				return false;
 			}
 			if (m_WorldBodyBinding is UnityCharacterControllerWorldBodyBinding ccBinding &&
-				m_VisualRoot == ccBinding.LogicRoot)
+				m_RootHierarchy.LogicRoot != ccBinding.LogicRoot)
 			{
-				Debug.LogError("CharacterPipelineHost visual root must be separate from the logic pose root.", this);
+				Debug.LogError("CharacterPipelineHost Root Hierarchy LogicRoot must match the World body binding LogicRoot.", this);
 				return false;
 			}
 			if (m_PresentationRole == CharacterPresentationRole.LocalOwner &&
 				(!m_CameraRig || !m_CameraFollowAnchor || !m_CameraAimAnchor || string.IsNullOrEmpty(m_CameraLookInputValueId)))
 			{
 				Debug.LogError("LocalOwner CharacterPipelineHost requires explicit camera rig, follow anchor, aim anchor, and look input id.", this);
+				return false;
+			}
+			if (m_PresentationRole == CharacterPresentationRole.LocalOwner &&
+				(!m_CameraFollowAnchor.IsChildOf(m_RootHierarchy.VisualRoot) && m_CameraFollowAnchor != m_RootHierarchy.VisualRoot ||
+				 !m_CameraAimAnchor.IsChildOf(m_RootHierarchy.VisualRoot) && m_CameraAimAnchor != m_RootHierarchy.VisualRoot))
+			{
+				Debug.LogError("LocalOwner camera anchors must belong to the VisualRoot presentation subtree.", this);
 				return false;
 			}
 			if (!m_Definition.SimulationProgram || !m_Definition.PresentationProjection)
@@ -386,7 +404,7 @@ namespace ThirdPersonCharacter.Pipeline
 						actorId,
 						m_Animancer,
 						m_AnimationRigBinding,
-						m_VisualRoot,
+						m_RootHierarchy,
 						CharacterPresentationBodyState.FromFloat32(initialBody),
 						m_BodyPresentationProfile,
 						m_WorldAwarePresentation,
@@ -410,7 +428,7 @@ namespace ThirdPersonCharacter.Pipeline
 						actorId,
 						m_Animancer,
 						m_AnimationRigBinding,
-						m_VisualRoot,
+						m_RootHierarchy,
 						CharacterPresentationBodyState.FromFloat32(initialBody),
 						m_BodyPresentationProfile,
 						m_WorldAwarePresentation,
@@ -437,7 +455,7 @@ namespace ThirdPersonCharacter.Pipeline
 					presentationRuntime,
 					diagnosticsAdapter,
 					diagnosticsTarget,
-					m_VisualRoot);
+					m_RootHierarchy.VisualRoot);
 				inputAdapter = null;
 				presentationRuntime = null;
 				diagnosticsTarget = null;

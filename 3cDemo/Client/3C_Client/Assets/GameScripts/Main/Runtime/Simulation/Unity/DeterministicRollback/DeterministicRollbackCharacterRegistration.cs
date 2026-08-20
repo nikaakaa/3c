@@ -25,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly UnityFixedCharacterInputAdapter m_LocalInput;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
         readonly ICharacterPresentationRuntime m_PresentationRuntime;
+        readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
@@ -60,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             UnityFixedCharacterInputAdapter localInput,
             FixedUnityPresentationOutputAdapter presentationOutput,
             ICharacterPresentationRuntime presentationRuntime,
+            CharacterRootHierarchyBinding rootHierarchy,
             RuntimeDiagnosticsContext diagnosticsContext,
             RuntimeDiagnosticsTarget diagnosticsTarget,
             int maximumActivePresentationRecords)
@@ -86,6 +88,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_LocalInput = localInput;
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
+            m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
+            m_RootHierarchy.RequireValid();
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
             m_DiagnosticsAdapter = new FixedCharacterSimulationDiagnosticsAdapter(DiagnosticsContext, Program);
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
@@ -262,8 +266,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 if (m_PendingBodySamples.Count == 0)
                     return;
                 var intervals = new List<CharacterPresentationBodyInterval>(m_PendingBodySamples.Count);
+                FixedCharacterBodySample finalSample = default;
                 foreach (FixedCharacterBodySample sample in m_PendingBodySamples.Values)
                 {
+                    finalSample = sample;
                     float yawVelocityDegreesPerSecond =
                         sample.AppliedYawDegrees.ToSingle() * Program.Manifest.TickRate;
                     intervals.Add(new CharacterPresentationBodyInterval(
@@ -282,6 +288,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                             checked(++m_TrajectoryIntentSequence),
                             m_PresentationRuntime.BodyResetSequence));
                 }
+                CharacterPresentationBodyState finalBody = FixedUnityPresentationBoundary.Convert(finalSample.FinalBody);
+                m_RootHierarchy.ApplyLogicPose(finalBody.Position, finalBody.Rotation);
             }
             finally
             {

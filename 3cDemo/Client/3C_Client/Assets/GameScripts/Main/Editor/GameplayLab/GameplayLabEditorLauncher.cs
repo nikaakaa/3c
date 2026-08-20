@@ -281,6 +281,12 @@ namespace ThirdPersonGameplay.Editor.Lab
             GameplayLabAssetBuilder.SyncFloat32EnemyVariant();
         }
 
+        [MenuItem("Tools/3C/Internal/Rebuild Gameplay Lab Fixed Character Prefabs")]
+        static void RebuildFixedCharacterPrefabs()
+        {
+            GameplayLabAssetBuilder.RebuildFixedCharacterPrefabs();
+        }
+
         sealed class Operations : IGameplayLabLauncherOperations
         {
             public GameplayLabLauncherState ReadState() => GameplayLabEditorLauncher.ReadLauncherState();

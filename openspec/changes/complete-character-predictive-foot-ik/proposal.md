@@ -2,7 +2,7 @@
 
 ## 当前实施状态
 
-本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。当前代码已经收口 Landing Event 实时更新合同，并接入每脚唯一最终 Goal 换代。2026-08-20有效楼梯样本确认旧Pelvis空间合同造成约0.815米单帧Goal跳变；工作区已改为采样地面相对当前Pose Root的唯一修正，并让最终加权双脚Sole抬升与该修正共同进入同一临界弹簧。该修正尚未重新实机采样，后续各阶段仍待逐步验证。
+本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。当前代码已经收口 Landing Event 实时更新合同，并接入每脚唯一最终 Goal 换代。2026-08-20有效楼梯样本确认旧Pelvis空间合同造成约0.815米单帧Goal跳变；工作区已改为采样地面相对当前Pose Root的唯一修正，并让最终加权双脚Sole抬升与该修正共同进入同一临界弹簧。后续压力样本又捕获到支撑与坡向换代后旧Spring Velocity短暂继续推向旧方向；工作区现以typed handoff保留上一Output，只在旧Velocity远离新Target时清零输入速度。该修正尚未重新实机采样，后续各阶段仍待逐步验证。
 
 ## Why
 
@@ -18,7 +18,7 @@ GDC《Fitting the World》的完整顺序是：自动脚步数据 -> 预测接�
 
 - 同一 `LandingEventIdentity` 内，每帧合法 SphereCast 都代表当前世界事实。新命中相对当前 Accepted 落点小于 `LandingUpdateDistance` 时复用当前落点与 Path；超过死区时无论 Surface 或高度是否变化，都替换唯一 `NextSwingLanding` 并重建唯一 Ground Path。查询失败或没有合法候选时当前 Path 必须 Rejected，不能继续显示旧踏面；生命周期只保留最后有效落点供事件完成晋级，不再把它发布成当前 Path 输入。
 - 每只脚先从 Current / Incoming Step 选出唯一查询事件，再执行至多一次正式 Landing SphereCast。完成事件只把该事件最后一个 Accepted `NextSwingLanding` 原值晋级为 `LastLanding`，不得为晋级再查询一次地面。
-- 当前步伐由支撑脚 `LastLanding` 到摆动脚 `NextSwingLanding` 构成。骨盆使用已有 `PelvisPreSolveTranslation`，按 Pose Root 在步伐水平轴上的进度采样地面，再减去同帧 Pose Root 世界位置得到唯一 Component Up 修正；Gameplay Body 已经走过的楼梯高度不得重复叠加。支撑切换和实时落点变化都只更新同一临界弹簧目标，不搬运旧 `StrideStart` 坐标原点，也不把目标差直通到最终 Goal。
+- 当前步伐由支撑脚 `LastLanding` 到摆动脚 `NextSwingLanding` 构成。骨盆使用已有 `PelvisPreSolveTranslation`，按 Pose Root 在步伐水平轴上的进度采样地面，再减去同帧 Pose Root 世界位置得到唯一 Component Up 修正；Gameplay Body 已经走过的楼梯高度不得重复叠加。支撑切换和实时落点变化都只更新同一临界弹簧目标，不搬运旧 `StrideStart` 坐标原点，也不把目标差直通到最终 Goal。支撑Event、坡向或Target跨越形成handoff时保留上一Output；仅当旧Velocity正在远离新Target时清零输入速度，不建立第二Pelvis Goal或额外淡入淡出。
 - 摆动脚继续只消费 Ground Envelope 相对落点基线的非负垂直增量，水平进度和原生动作仍由动画提供。
 - 支撑脚拥有 `LastLanding` 且不是当前 Swing 时，先用非负 plantHeight 接地，再进入 Locked / Sliding / Unlocked。锁入准备只消费同一事件的 `TimeToLandingSeconds`；Locked / Sliding 即使垂直和水平误差为零也保持动画位置权重；Unlocked 冻结上一提交修正和权重作为释放起点，在正式 `UnlockBlendSeconds` 内连续回到原生动画。
 - 每只脚的最终 Goal 在写入唯一 GoalSet 前经过一份 Pending/Committed 换代状态。状态只保存上一成功帧输出相对同帧原生动画踝骨的 Component 空间修正与权重；当前 Landing、Path 或 Envelope 可以立即换代，最终修正按正式 `GoalTransitionHalfLifeSeconds` 向本帧最新目标或零修正收敛。换代途中目标再次变化时直接以上一成功输出为新起点，不缓存第二条 Path，不平滑世界落点。离地或有限 Action 占脚属于所有权硬失效，必须当帧清零，不能让换代继续携带旧地面修正。

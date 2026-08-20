@@ -31,8 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         [SerializeField] CharacterInputProfile m_InputProfile;
         [SerializeField] string m_ActorId = string.Empty;
         [SerializeField] string m_WorldBodyBindingId = string.Empty;
-        [SerializeField] Transform m_LogicalSpawn;
-        [SerializeField] Transform m_VisualRoot;
+        [SerializeField] CharacterRootHierarchyBinding m_RootHierarchy;
         [SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
         [SerializeField] CharacterWorldAwarePresentationBinding m_WorldAwarePresentation;
         [SerializeField] AnimancerComponent m_Animancer;
@@ -50,11 +49,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public ActorId SimulationActorId => ActorId;
         public bool IsLocalActor => m_Endpoint && m_Endpoint.ResolvePeerProfile().ActorId == ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
-        public Vector3 VisualPosition => m_VisualRoot ? m_VisualRoot.position : transform.position;
-        public Transform VisualRoot => m_VisualRoot;
+        public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
+        public Vector3 VisualPosition => m_RootHierarchy
+            ? m_RootHierarchy.VisualRoot.position
+            : throw new InvalidOperationException("Rollback Character Host requires a Root Hierarchy Binding.");
+        public Transform VisualRoot => m_RootHierarchy ? m_RootHierarchy.VisualRoot : null;
         public CharacterWorldAwarePresentationBinding WorldAwarePresentation => m_WorldAwarePresentation;
         public AnimancerComponent Animancer => m_Animancer;
         public CharacterAnimationRigBinding AnimationRigBinding => m_AnimationRigBinding;
+        public Transform CameraFollowAnchor => m_CameraFollowAnchor;
+        public Transform CameraAimAnchor => m_CameraAimAnchor;
 
         public void ConfigureAnimationRigBinding(CharacterAnimationRigBinding binding)
         {
@@ -70,6 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             CharacterInputProfile inputProfile,
             string actorId,
             string worldBodyBindingId,
+            CharacterRootHierarchyBinding rootHierarchy,
             ThirdPersonCameraController cameraRig,
             string cameraLookInputValueId)
         {
@@ -80,7 +85,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_InputProfile = inputProfile ? inputProfile : throw new ArgumentNullException(nameof(inputProfile));
             m_ActorId = Require(actorId, nameof(actorId));
             m_WorldBodyBindingId = Require(worldBodyBindingId, nameof(worldBodyBindingId));
-            m_LogicalSpawn = transform;
+            m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
+            m_RootHierarchy.RequireValid();
             m_CameraRig = cameraRig ? cameraRig : throw new ArgumentNullException(nameof(cameraRig));
             m_CameraLookInputValueId = Require(cameraLookInputValueId, nameof(cameraLookInputValueId));
         }
@@ -92,20 +98,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 return m_Registration.TryGetRuntimeDiagnostics(out snapshot);
             snapshot = default;
             return false;
-        }
-
-        void Reset()
-        {
-            if (!m_SessionHost)
-                m_SessionHost = GetComponentInParent<SimulationSessionHost>();
-            if (!m_LogicalSpawn)
-                m_LogicalSpawn = transform;
-            if (!m_VisualRoot)
-                m_VisualRoot = transform;
-            if (!m_Animancer)
-                m_Animancer = GetComponentInChildren<AnimancerComponent>(true);
-            if (!m_CameraRig)
-                m_CameraRig = FindObjectOfType<ThirdPersonCameraController>(true);
         }
 
         void OnEnable()
@@ -135,10 +127,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Fixed Program asset.");
             CharacterPresentationProjectionAsset projectionAsset = m_PresentationProjection ? m_PresentationProjection :
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Presentation Projection asset.");
-            Transform logicalSpawn = m_LogicalSpawn ? m_LogicalSpawn :
-                throw new InvalidOperationException($"Rollback Character Host '{name}' requires a logical spawn Transform.");
-            Transform visualRoot = m_VisualRoot ? m_VisualRoot :
-                throw new InvalidOperationException($"Rollback Character Host '{name}' requires a visual root Transform.");
+            CharacterRootHierarchyBinding rootHierarchy = m_RootHierarchy ? m_RootHierarchy :
+                throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Root Hierarchy Binding.");
+            rootHierarchy.RequireValid();
             CharacterBodyPresentationProfile bodyPresentationProfile = m_BodyPresentationProfile ? m_BodyPresentationProfile :
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Body Presentation Profile.");
             CharacterWorldAwarePresentationBinding worldAwarePresentation = m_WorldAwarePresentation ? m_WorldAwarePresentation :
@@ -158,7 +149,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             DeterministicRollbackCharacterRegistration registration = null;
             try
             {
-                FixedWorldBodyState initialBody = BuildInitialBody(actorId, logicalSpawn);
+                if (animancer.Animator.transform != rootHierarchy.PoseRoot)
+                    throw new InvalidOperationException($"Rollback Character Host '{name}' Animancer Animator must use PoseRoot.");
+                if (worldAwarePresentation.PresentationRoot != rootHierarchy.VisualRoot ||
+                    worldAwarePresentation.SelfColliderRoot != rootHierarchy.LogicRoot)
+                {
+                    throw new InvalidOperationException($"Rollback Character Host '{name}' World-Aware binding must match its Root Hierarchy.");
+                }
+                FixedWorldBodyState initialBody = BuildInitialBody(actorId, rootHierarchy.LogicRoot);
                 CharacterPresentationBodyState presentationBody = FixedUnityPresentationBoundary.Convert(initialBody);
                 CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(
                     program.Manifest.ProgramId.Value,
@@ -185,6 +183,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires a Camera Rig.");
                     if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires camera follow and aim anchors.");
+                    if (m_CameraFollowAnchor != rootHierarchy.VisualRoot &&
+                        !m_CameraFollowAnchor.IsChildOf(rootHierarchy.VisualRoot) ||
+                        m_CameraAimAnchor != rootHierarchy.VisualRoot &&
+                        !m_CameraAimAnchor.IsChildOf(rootHierarchy.VisualRoot))
+                    {
+                        throw new InvalidOperationException($"Local Rollback Character Host '{name}' camera anchors must belong to VisualRoot.");
+                    }
                     input = new UnityFixedCharacterInputAdapter(inputProfile, program, cameraRig);
                     presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
                         projectionAsset,
@@ -193,7 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         actorId,
                         animancer,
                         animationRigBinding,
-                        visualRoot,
+                        rootHierarchy,
                         presentationBody,
                         bodyPresentationProfile,
                         worldAwarePresentation,
@@ -216,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         actorId,
                         animancer,
                         animationRigBinding,
-                        visualRoot,
+                        rootHierarchy,
                         presentationBody,
                         bodyPresentationProfile,
                         worldAwarePresentation,
@@ -244,6 +249,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     input,
                     presentationOutput,
                     presentation,
+                    rootHierarchy,
                     diagnosticsContext,
                     diagnosticsTarget,
                     m_MaximumActivePresentationRecords);

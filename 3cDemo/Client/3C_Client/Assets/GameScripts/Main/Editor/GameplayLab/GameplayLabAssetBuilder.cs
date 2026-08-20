@@ -8,6 +8,7 @@ using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -47,7 +48,8 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string CharacterDefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
         const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
         const string TrainingEnemyPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/AI/TrainingEnemyMonster.prefab";
-        const string FixedTargetPrefabPath = PlayerPrefabPath;
+        const string FixedPlayerProfilePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinGameplayLabFixedPlayer.prefab";
+        const string FixedTargetProfilePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinGameplayLabFixedTarget.prefab";
         const string AnimationRigTemplatePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
         const string EnvironmentPrefabPath = "Assets/Scenes/Shared/CharacterMovementTestEnvironment.prefab";
         const string FixedPipelinePath = PipelineDirectory + "/StandardFixedLocalSimulationPipeline.asset";
@@ -69,7 +71,12 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string SharedWorldId = "corin-gameplay-lab-world";
         const string SharedWorldRevision = "corin-gameplay-lab-world-v1";
 
-        static readonly Vector3 s_PlayerPosition = new Vector3(2.96f, 0f, -5.27f);
+        static readonly Vector3 s_FloatPlayerPosition = new Vector3(2.96f, 0f, -5.27f);
+        static readonly Vector3 s_FixedFootIkPlayerPosition = new Vector3(
+            GameplayLabFootIkRegressionCourse.CourseX,
+            0f,
+            GameplayLabFootIkRegressionCourse.CourseStartZ -
+            GameplayLabFootIkRegressionCourse.EndpointMargin);
         static readonly Vector3 s_TargetPosition = new Vector3(2.96f, 0f, -1.7f);
 
         public static void Rebuild()
@@ -77,6 +84,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be rebuilt in Play Mode.");
             EnsureFolders();
+            CharacterRuntimeProfileRootHierarchyBuilder.Synchronize();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram =
                 FixedCharacterSimulationProgramBuildService.Build(definition, FixedProgramPath);
@@ -88,6 +96,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             DeterministicCollisionWorldAsset collision =
                 LoadRequired<DeterministicCollisionWorldAsset>(CollisionPath);
             ValidatePublishedProducts(definition, fixedProgram, projection, solver, collision);
+            BuildFixedRuntimeProfiles(definition, fixedProgram);
             SimulationSessionCompositionDefinition fixedComposition = BuildFixedComposition();
             SimulationSessionCompositionDefinition rollbackComposition = BuildRollbackComposition();
             GameObject floatRoot = BuildFloatRuntimeRoot();
@@ -409,31 +418,21 @@ namespace ThirdPersonGameplay.Editor.Lab
                 sessionHost.BindComposition(composition);
                 ThirdPersonCameraController cameraRig = CreateCameraRig(root.transform);
                 FixedCharacterHost player = InstantiateFixedActor(
-                    PlayerPrefabPath,
+                    FixedPlayerProfilePrefabPath,
                     root.transform,
                     "Gameplay Lab Fixed Player",
-                    new ActorId(PlayerActorId),
-                    s_PlayerPosition,
+                    s_FixedFootIkPlayerPosition,
                     Quaternion.identity,
                     sessionHost,
-                    fixedProgram,
-                    definition,
-                    CharacterPresentationRole.LocalOwner,
-                    cameraRig,
-                    true);
+                    cameraRig);
                 FixedCharacterHost target = InstantiateFixedActor(
-                    FixedTargetPrefabPath,
+                    FixedTargetProfilePrefabPath,
                     root.transform,
                     "Gameplay Lab Fixed Target",
-                    new ActorId(TargetActorId),
                     s_TargetPosition,
                     Quaternion.Euler(0f, 180f, 0f),
                     sessionHost,
-                    fixedProgram,
-                    definition,
-                    CharacterPresentationRole.SimulatedActor,
-                    null,
-                    false);
+                    null);
                 SessionActorActionTargetInputProvider provider =
                     player.GetComponent<SessionActorActionTargetInputProvider>();
                 if (!provider)
@@ -469,7 +468,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     root.transform,
                     "Gameplay Lab Float Player",
                     PlayerActorId,
-                    s_PlayerPosition,
+                    s_FloatPlayerPosition,
                     Quaternion.identity,
                     sessionHost,
                     CharacterPresentationRole.LocalOwner,
@@ -577,6 +576,11 @@ namespace ThirdPersonGameplay.Editor.Lab
                 instance.GetComponent<DeterministicRollbackCharacterHost>() ??
                 throw new InvalidOperationException(
                     $"Rollback Character Prefab '{AnimationRigTemplatePrefabPath}' has no DeterministicRollbackCharacterHost.");
+            CharacterRootHierarchyBinding rootHierarchy = host.RootHierarchy
+                ? host.RootHierarchy
+                : throw new InvalidOperationException(
+                    $"Rollback Character Prefab '{AnimationRigTemplatePrefabPath}' has no Root Hierarchy Binding.");
+            rootHierarchy.RequireValid();
             host.SetAuthoring(
                 sessionHost,
                 endpoint,
@@ -585,6 +589,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 definition.InputProfile,
                 actorId,
                 bodyBindingId,
+                rootHierarchy,
                 cameraRig,
                 CameraLookInputId);
             return host;
@@ -617,41 +622,107 @@ namespace ThirdPersonGameplay.Editor.Lab
             string prefabPath,
             Transform parent,
             string objectName,
-            ActorId actorId,
             Vector3 position,
             Quaternion rotation,
             SimulationSessionHost sessionHost,
-            FixedCharacterSimulationProgramAsset fixedProgram,
-            CharacterPipelineDefinition definition,
-            CharacterPresentationRole role,
-            ThirdPersonCameraController cameraRig,
-            bool playerControlled)
+            ThirdPersonCameraController cameraRig)
         {
             GameObject instance = InstantiatePrefab(prefabPath, parent.gameObject.scene);
+            instance.name = objectName;
+            instance.transform.SetParent(parent, false);
+            instance.transform.localPosition = position;
+            instance.transform.localRotation = rotation;
+            FixedCharacterHost fixedHost = instance.GetComponent<FixedCharacterHost>() ??
+                throw new InvalidOperationException($"Fixed Character Prefab '{prefabPath}' has no FixedCharacterHost.");
+            fixedHost.SetSceneAuthoring(sessionHost, cameraRig);
+            return fixedHost;
+        }
+
+        public static void RebuildFixedCharacterPrefabs()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Gameplay Lab Fixed Character Prefabs cannot be rebuilt in Play Mode.");
+            EnsureFolders();
+            CharacterRuntimeProfileRootHierarchyBuilder.Synchronize();
+            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
+            FixedCharacterSimulationProgramAsset fixedProgram =
+                LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+            SimulationSessionCompositionDefinition fixedComposition =
+                LoadRequired<SimulationSessionCompositionDefinition>(FixedCompositionPath);
+            BuildFixedRuntimeProfiles(definition, fixedProgram);
+            BuildFixedRuntimeRoot(fixedComposition);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        static void BuildFixedRuntimeProfiles(
+            CharacterPipelineDefinition definition,
+            FixedCharacterSimulationProgramAsset fixedProgram)
+        {
+            Scene previous = SceneManager.GetActiveScene();
+            Scene workspace = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            try
+            {
+                SceneManager.SetActiveScene(workspace);
+                BuildFixedRuntimeProfile(
+                    definition,
+                    fixedProgram,
+                    FixedPlayerProfilePrefabPath,
+                    "CorinGameplayLabFixedPlayer",
+                    new ActorId(PlayerActorId),
+                    CharacterPresentationRole.LocalOwner,
+                    true);
+                BuildFixedRuntimeProfile(
+                    definition,
+                    fixedProgram,
+                    FixedTargetProfilePrefabPath,
+                    "CorinGameplayLabFixedTarget",
+                    new ActorId(TargetActorId),
+                    CharacterPresentationRole.SimulatedActor,
+                    false);
+            }
+            finally
+            {
+                if (previous.IsValid() && previous.isLoaded)
+                    SceneManager.SetActiveScene(previous);
+                EditorSceneManager.CloseScene(workspace, true);
+            }
+        }
+
+        static void BuildFixedRuntimeProfile(
+            CharacterPipelineDefinition definition,
+            FixedCharacterSimulationProgramAsset fixedProgram,
+            string outputPath,
+            string objectName,
+            ActorId actorId,
+            CharacterPresentationRole role,
+            bool playerControlled)
+        {
+            GameObject instance = InstantiatePrefab(PlayerPrefabPath, SceneManager.GetActiveScene());
             PrefabUtility.UnpackPrefabInstance(
                 instance,
                 PrefabUnpackMode.Completely,
                 InteractionMode.AutomatedAction);
             instance.name = objectName;
-            instance.transform.SetParent(parent, false);
-            instance.transform.localPosition = position;
-            instance.transform.localRotation = rotation;
+            instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             CharacterPipelineHost floatHost = instance.GetComponent<CharacterPipelineHost>() ??
-                throw new InvalidOperationException($"Character Prefab '{prefabPath}' has no CharacterPipelineHost.");
-            EnsureStrictAnimatorRoot(floatHost, definition);
-            EnsureAnimationRigBinding(floatHost, definition);
+                throw new InvalidOperationException($"Character Prefab '{PlayerPrefabPath}' has no CharacterPipelineHost.");
+            RequireRootHierarchy(floatHost, definition);
             Float32WorldBodyBinding floatBody = floatHost.WorldBodyBinding;
             string bindingId = floatBody ? floatBody.BindingId :
-                throw new InvalidOperationException($"Character Prefab '{prefabPath}' has no World Body Binding.");
-            Transform visualRoot = floatHost.VisualRoot;
+                throw new InvalidOperationException($"Character Prefab '{PlayerPrefabPath}' has no World Body Binding.");
+            CharacterRootHierarchyBinding rootHierarchy = floatHost.RootHierarchy;
             CharacterBodyPresentationProfile bodyPresentation = floatHost.BodyPresentationProfile;
             CharacterWorldAwarePresentationBinding worldAwarePresentation = floatHost.WorldAwarePresentation;
             CharacterEquipmentRigBindingCatalog equipment = floatHost.EquipmentRigBindings;
             AnimancerComponent animancer = floatHost.Animancer;
             CharacterAnimationRigBinding animationRigBinding = floatHost.AnimationRigBinding;
-            Transform cameraFollowAnchor = floatHost.CameraFollowAnchor;
-            Transform cameraAimAnchor = floatHost.CameraAimAnchor;
-            IReadOnlyList<CameraTargetBinding> cameraBindings = floatHost.CameraTargetBindings;
+            Transform inheritedCameraAimAnchor = floatHost.CameraAimAnchor;
+            Transform cameraFollowAnchor = playerControlled ? floatHost.CameraFollowAnchor : null;
+            Transform cameraAimAnchor = playerControlled ? floatHost.CameraAimAnchor : null;
+            IReadOnlyList<CameraTargetBinding> cameraBindings = playerControlled
+                ? floatHost.CameraTargetBindings
+                : Array.Empty<CameraTargetBinding>();
             RemoveComponents<CharacterControlSource>(instance);
             Object.DestroyImmediate(floatBody, true);
             Object.DestroyImmediate(floatHost, true);
@@ -671,51 +742,42 @@ namespace ThirdPersonGameplay.Editor.Lab
             else
             {
                 RemoveComponents<CharacterActionTargetInputProvider>(instance);
+                if (inheritedCameraAimAnchor)
+                    Object.DestroyImmediate(inheritedCameraAimAnchor.gameObject, true);
                 controlSource = instance.AddComponent<FixedNeutralCharacterControlSource>();
             }
             FixedCharacterHost fixedHost = instance.AddComponent<FixedCharacterHost>();
-            fixedHost.SetAuthoring(
-                sessionHost,
+            fixedHost.SetProfileAuthoring(
                 fixedProgram,
                 definition.PresentationProjection,
                 controlSource,
                 role,
                 actorId,
                 bindingId,
-                instance.transform,
-                visualRoot,
+                rootHierarchy,
                 bodyPresentation,
                 worldAwarePresentation,
                 equipment,
                 animancer,
                 animationRigBinding,
-                cameraRig,
                 cameraFollowAnchor,
                 cameraAimAnchor,
                 cameraBindings,
-                role == CharacterPresentationRole.LocalOwner ? CameraLookInputId : string.Empty,
+                playerControlled ? CameraLookInputId : string.Empty,
                 128);
-            return fixedHost;
+            SavePrefab(instance, outputPath);
+            Object.DestroyImmediate(instance);
         }
 
-        static void EnsureStrictAnimatorRoot(
+        static void RequireRootHierarchy(
             CharacterPipelineHost host,
             CharacterPipelineDefinition definition)
         {
-            Transform visualRoot = host.VisualRoot;
-            AnimancerComponent sourceAnimancer = host.Animancer;
-            Animator sourceAnimator = sourceAnimancer ? sourceAnimancer.Animator : null;
-            if (!visualRoot || !sourceAnimator)
+            CharacterRootHierarchyBinding rootHierarchy = host.RootHierarchy;
+            if (!rootHierarchy)
                 throw new InvalidOperationException(
-                    $"Gameplay Lab Character '{host.name}' has no formal Presentation hierarchy.");
-            sourceAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            if (sourceAnimator.transform != visualRoot)
-            {
-                if (!sourceAnimator.transform.IsChildOf(visualRoot))
-                    throw new InvalidOperationException(
-                        $"Gameplay Lab Character '{host.name}' Animator Root is outside its Presentation VisualRoot.");
-                return;
-            }
+                    $"Gameplay Lab Character '{host.name}' has no formal Root Hierarchy Binding.");
+            rootHierarchy.RequireValid();
 
             CharacterAnimationRigDefinition rigDefinition = definition.AnimationPresentationProfile
                 ? definition.AnimationPresentationProfile.RigDefinition
@@ -723,81 +785,13 @@ namespace ThirdPersonGameplay.Editor.Lab
                     "Gameplay Lab Character Definition has no Animation Presentation Rig.");
             var payload = new CharacterAnimationRigPayload(rigDefinition);
             CharacterAnimationRigBinding rigBinding = host.AnimationRigBinding;
-            Transform[] physicalBones = rigBinding
-                ? rigBinding.PhysicalBones.ToArray()
-                : null;
-
-            Transform[] children = Enumerable.Range(0, visualRoot.childCount)
-                .Select(visualRoot.GetChild)
-                .ToArray();
-            var animatorRootObject = new GameObject("AnimatorRoot");
-            Transform animatorRoot = animatorRootObject.transform;
-            animatorRoot.SetParent(visualRoot, false);
-            for (int i = 0; i < children.Length; i++)
-                children[i].SetParent(animatorRoot, false);
-
-            Animator animator = animatorRootObject.AddComponent<Animator>();
-            EditorUtility.CopySerialized(sourceAnimator, animator);
-            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            AnimancerComponent animancer = animatorRootObject.AddComponent<AnimancerComponent>();
-            EditorUtility.CopySerialized(sourceAnimancer, animancer);
-            var animancerSerialized = new SerializedObject(animancer);
-            animancerSerialized.FindProperty("_Animator").objectReferenceValue = animator;
-            animancerSerialized.ApplyModifiedPropertiesWithoutUndo();
-
-            if (rigBinding)
-            {
-                physicalBones[payload.RootPhysicalBoneIndex] = animatorRoot;
-                rigBinding.Configure(animator, payload, physicalBones);
-            }
-            var hostSerialized = new SerializedObject(host);
-            hostSerialized.FindProperty("m_Animancer").objectReferenceValue = animancer;
-            hostSerialized.ApplyModifiedPropertiesWithoutUndo();
-
-            Object.DestroyImmediate(sourceAnimancer, true);
-            Object.DestroyImmediate(sourceAnimator, true);
-        }
-
-        static void EnsureAnimationRigBinding(
-            CharacterPipelineHost host,
-            CharacterPipelineDefinition definition)
-        {
-            CharacterAnimationRigDefinition rigDefinition = definition.AnimationPresentationProfile
-                ? definition.AnimationPresentationProfile.RigDefinition
-                : throw new InvalidOperationException("Gameplay Lab Character Definition has no Animation Presentation Rig.");
-            var payload = new CharacterAnimationRigPayload(rigDefinition);
-            if (host.AnimationRigBinding)
-            {
-                host.AnimationRigBinding.RequireValid(payload);
-                return;
-            }
-
-            GameObject template = LoadRequired<GameObject>(AnimationRigTemplatePrefabPath);
-            CharacterAnimationRigBinding templateBinding =
-                template.GetComponentInChildren<CharacterAnimationRigBinding>(true);
-            if (!templateBinding)
-                throw new InvalidOperationException("Gameplay Lab Animation Rig template has no formal Rig Binding.");
-            templateBinding.RequireValid(payload);
-
-            Transform sourceRoot = templateBinding.Animator.transform;
-            Transform targetRoot = host.Animancer.Animator.transform;
-            var physicalBones = new Transform[templateBinding.PhysicalBones.Count];
-            for (int i = 0; i < physicalBones.Length; i++)
-            {
-                Transform sourceBone = templateBinding.PhysicalBones[i];
-                string path = AnimationUtility.CalculateTransformPath(sourceBone, sourceRoot);
-                Transform targetBone = string.IsNullOrEmpty(path) ? targetRoot : targetRoot.Find(path);
-                if (!targetBone)
-                    throw new InvalidOperationException(
-                        $"Gameplay Lab Character '{host.name}' is missing Animation Rig Bone path '{path}'.");
-                physicalBones[i] = targetBone;
-            }
-
-            CharacterAnimationRigBinding binding =
-                host.VisualRoot.GetComponent<CharacterAnimationRigBinding>() ??
-                host.VisualRoot.gameObject.AddComponent<CharacterAnimationRigBinding>();
-            binding.Configure(host.Animancer.Animator, payload, physicalBones);
-            host.ConfigureAnimationRigBinding(binding);
+            AnimancerComponent animancer = host.Animancer;
+            if (!animancer || !animancer.Animator || animancer.transform != rootHierarchy.PoseRoot)
+                throw new InvalidOperationException($"Gameplay Lab Character '{host.name}' PoseRoot has no formal Animancer Animator.");
+            if (!rigBinding || rigBinding.transform != rootHierarchy.PoseRoot)
+                throw new InvalidOperationException($"Gameplay Lab Character '{host.name}' PoseRoot has no formal Animation Rig Binding.");
+            animancer.Animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            rigBinding.RequireValid(payload);
         }
 
         static ThirdPersonCameraController CreateCameraRig(Transform parent)

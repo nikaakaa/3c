@@ -28,7 +28,7 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 
 ### Requirement: Corin旧Locomotion Timeline数据必须原子迁移
 
-旧Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd与MovingTurn Timeline中的数据 MUST按用途迁移：AnimationClip引用迁入Profile Clip Binding，Foot Placement Weight与Locomotion Phase迁入原生AnimationClip注册Curve，Rig与Foot Analysis进入Profile统一装配；真实影响Body的Motion数据迁入唯一Gameplay Motion owner；无正式消费方的数据删除。迁移完成后 MUST删除旧TimelineNode、BaseLocomotion AnimationChannel producer、Sequence、Marker、source binding副本、lifecycle配置、ActionOverride与旧ownership Blackboard declaration，MUST不保留旧新双写。
+旧Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd与MovingTurn Timeline中的数据 MUST按用途迁移：AnimationClip引用迁入Profile Clip Binding，归一化Foot Placement Weight按`SourceDurationSeconds`换算为秒域并与Locomotion Phase写入原生AnimationClip注册Curve，Rig与Foot Analysis进入Profile统一装配；真实影响Body的Motion数据迁入唯一Gameplay Motion owner；无正式消费方的数据删除。ClipPlayer MUST删除Loop副本并只消费AnimationClip正式Loop设置。迁移完成后 MUST删除旧TimelineNode、BaseLocomotion AnimationChannel producer、Sequence、Marker、source binding副本、lifecycle配置、ActionOverride与旧ownership Blackboard declaration，MUST不保留旧新双写。
 
 #### Scenario: 迁移RunLoop
 
@@ -55,11 +55,11 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 
 ### Requirement: Corin生成产物必须显式重建
 
-Corin作者数据迁移后，Foot Analysis Artifact、Presentation Projection、Float32 Program wrapper与Fixed Program wrapper MUST通过精确Definition的正式显式Build入口按依赖顺序重建。Program MUST不包含BaseLocomotion animation producer；Projection MUST包含PoseStateMachine、Clip/BlendSpace state-local source、Locomotion Phase endpoint、AnimationSlot、完整Rig v3与唯一ordered Pose Plan。产物 MUST共享匹配的source revision闭包，不得自动Build、部分发布或使用旧wrapper、Sequence plan或Marker relation。
+Corin迁移 MUST先用`AnimationClipAnalysisInputHash`与新Phase Validation Descriptor显式重建Foot Analysis Artifact，再通过Document v4写入注册Curve、Profile、Pose Graph与Timeline；Curve写回 MUST不使该Artifact stale。Document apply成功后，Presentation Projection、Float32 Program wrapper与Fixed Program wrapper MUST通过精确Definition的正式显式Build入口按依赖顺序重建。Program MUST不包含BaseLocomotion animation producer；Projection MUST包含PoseStateMachine、Clip/BlendSpace state-local source、Locomotion Phase endpoint、AnimationSlot、完整Rig v4与唯一ordered Pose Plan。产物 MUST共享匹配的source revision闭包，不得自动Build、部分发布或使用旧wrapper、Sequence plan或Marker relation。
 
 #### Scenario: 迁移后显式Build
 
-- **WHEN** Corin Document apply成功且作者已经显式重建所需Foot Analysis
+- **WHEN** Corin新schema Foot Analysis已Ready且Document apply成功
 - **THEN** 作者 MUST显式触发Projection、Float32 Build与Fixed Build
 - **AND** 任一阶段失败 MUST保留明确typed diagnostic且不得发布混合revision
 

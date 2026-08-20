@@ -90,8 +90,8 @@ MonoBehaviour:
         FilterRuleName: CollectAll
         AssetTags: Gameplay
         UserData: 
-      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/AI/CorinStandaloneTrainingEnemy.prefab
-        CollectorGUID: 92b30edb28014fe8a1c58b893df987d4
+      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/AI/TrainingEnemyMonster.prefab
+        CollectorGUID: 2666876f0d0fecf41a9506503707fbb8
         CollectorType: 0
         AddressRuleName: AddressByFileName
         PackRuleName: PackGroup

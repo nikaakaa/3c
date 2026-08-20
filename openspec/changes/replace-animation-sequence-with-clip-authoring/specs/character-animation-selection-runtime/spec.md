@@ -18,13 +18,19 @@
 
 ### Requirement: Locomotion Phase映射必须属于source-local采样计划
 
-Direct Clip与Blend Space Locomotion source MUST各自编译为`AnimationSourcePhasePlan`。Direct Clip endpoint MUST使用该Clip的forward/inverse Phase plan；Blend Space endpoint MUST使用显式Phase Reference Sample作为raw clock carrier，并让全部正权重Dynamic Sample通过各自per-clip inverse plan采样同一unwrapped phase。PoseState source同步 MUST由Compiler根据Transition两侧唯一source usage和共同Profile Locomotion Sync Group生成relation；Transition MUST不保存同步开关。Runtime MUST在source采样前生成effective phase/time，MUST不读取AnimationCurve、Profile或Foot Analysis，也 MUST不按State名、Clip名、weight或最高权重样本动态选择leader。
+Direct Clip与Blend Space Locomotion source MUST各自编译为`AnimationSourcePhasePlan`。Direct Clip endpoint MUST使用该Clip的forward/inverse Phase plan；Blend Space endpoint MUST使用显式Phase Reference Sample作为raw clock carrier，并让全部正权重Dynamic Sample通过各自per-clip inverse plan采样同一unwrapped phase。PoseState source同步 MUST由Compiler根据Transition两侧唯一source usage和共同Profile Locomotion Sync Group生成relation；Transition authoring MUST不保存同步开关或leader override。Compiler MUST按clock authority与完整Blend窗口coverage写入固定leader，Runtime MUST用TransitionGeneration建立relation lifecycle并在source采样前生成effective phase/time。Runtime MUST不读取AnimationCurve、Profile或Foot Analysis，也 MUST不按State名、Clip名、weight或最高权重样本动态选择leader。
 
 #### Scenario: Walk State切换Run State
 
 - **WHEN** Transition两侧source endpoint属于同一Locomotion Sync Group
 - **THEN** relation MUST把leader source phase映射到target source endpoint
 - **AND** MUST不创建BaseLocomotion Gameplay Selection
+
+#### Scenario: Relation正常完成
+
+- **WHEN** TransitionGeneration完成并释放Phase relation
+- **THEN** follower MUST从最后effective time建立自身continuation anchor后关闭该generation
+- **AND** 下一次独立Transition MUST不复用旧leader、cycle或generation state
 
 #### Scenario: Transition两侧没有共同同步组
 

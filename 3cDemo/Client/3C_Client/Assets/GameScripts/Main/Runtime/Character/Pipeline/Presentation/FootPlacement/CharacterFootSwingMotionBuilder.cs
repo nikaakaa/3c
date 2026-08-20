@@ -30,7 +30,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         InvalidSwingPhase = 14,
         StanceLandingUnavailable = 15,
         SupportOutsideSlideDistance = 16,
-        UnselectedSwing = 17
+        UnselectedSwing = 17,
+        SupportOutsideVerticalReach = 18
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics

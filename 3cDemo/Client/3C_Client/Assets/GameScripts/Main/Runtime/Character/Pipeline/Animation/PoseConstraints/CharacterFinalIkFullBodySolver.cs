@@ -131,6 +131,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterFinalIkFullBodySolver
     {
         const float FootEffectorSolverResidualTolerance = 0.001f;
+        const float ReliableBendHeightRatio = 0.01f;
+        const float BendStabilizationStartExtensionRatio = 0.94f;
+        const float BendStabilizationFullExtensionRatio = 0.99f;
 
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterFullBodyIkProfile m_Profile;
@@ -148,8 +151,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ulong m_LastCompletionIdentity;
         ActiveTuning m_ActiveTuning;
         Vector3 m_DiagnosticPelvisTranslation;
+        LegSolveFrame m_LeftLegSolveFrame;
+        LegSolveFrame m_RightLegSolveFrame;
+        Vector3 m_LeftStableBendDirection;
+        Vector3 m_RightStableBendDirection;
+        Vector3 m_LeftAppliedBendDirection;
+        Vector3 m_RightAppliedBendDirection;
         ulong m_DiagnosticFrameSequence;
         int m_DiagnosticEffectorCount;
+        bool m_HasLeftStableBendDirection;
+        bool m_HasRightStableBendDirection;
+        bool m_HasLeftAppliedBendDirection;
+        bool m_HasRightAppliedBendDirection;
         bool m_Prepared;
 
         public CharacterFinalIkFullBodySolver(
@@ -218,7 +231,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ActiveTuning = next;
                 ApplyProfile();
                 if (resetOwnerState)
+                {
                     ResetEffectorsToPose();
+                    ResetLegBendState();
+                }
                 return string.Empty;
             }
             catch (Exception exception)
@@ -238,6 +254,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Solver.SetToIndexedReferences(m_Backend, m_References);
                 ApplyProfile();
                 ResetEffectorsToPose();
+                ResetLegBendState();
                 m_Prepared = true;
                 return CharacterFullBodyIkResult.Success(0);
             }
@@ -357,6 +374,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LastResult = default;
             m_LastCompletionIdentity = 0;
             m_DiagnosticPelvisTranslation = Vector3.zero;
+            ResetLegBendState();
             m_DiagnosticFrameSequence = 0;
             m_DiagnosticEffectorCount = 0;
             Array.Clear(m_DiagnosticEffectors, 0, m_DiagnosticEffectors.Length);
@@ -481,6 +499,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ApplyEffectorGoal(goal);
                 }
             }
+            ApplyLegBendStabilization(
+                goalSetValueIndices,
+                goalSets,
+                goalWorkspace);
             return CharacterFullBodyIkResult.Success(appliedGoalCount);
         }
 
@@ -633,6 +655,313 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        void ApplyLegBendStabilization(
+            NativeSlice<int> goalSetValueIndices,
+            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
+        {
+            bool hasLeftGoal = TryFindFootPlacementGoal(
+                CharacterFullBodyIkEffectorSlot.LeftFoot,
+                goalSetValueIndices,
+                goalSets,
+                goalWorkspace,
+                out CharacterFullBodyIkGoal leftGoal);
+            bool hasRightGoal = TryFindFootPlacementGoal(
+                CharacterFullBodyIkEffectorSlot.RightFoot,
+                goalSetValueIndices,
+                goalSets,
+                goalWorkspace,
+                out CharacterFullBodyIkGoal rightGoal);
+            m_LeftLegSolveFrame = ApplyLegBendStabilization(
+                m_Rig.LeftLeg,
+                FullBodyBipedChain.LeftLeg,
+                m_ActiveTuning.LeftLeg,
+                hasLeftGoal,
+                in leftGoal,
+                ref m_LeftStableBendDirection,
+                ref m_HasLeftStableBendDirection,
+                ref m_LeftAppliedBendDirection,
+                ref m_HasLeftAppliedBendDirection);
+            m_RightLegSolveFrame = ApplyLegBendStabilization(
+                m_Rig.RightLeg,
+                FullBodyBipedChain.RightLeg,
+                m_ActiveTuning.RightLeg,
+                hasRightGoal,
+                in rightGoal,
+                ref m_RightStableBendDirection,
+                ref m_HasRightStableBendDirection,
+                ref m_RightAppliedBendDirection,
+                ref m_HasRightAppliedBendDirection);
+        }
+
+        LegSolveFrame ApplyLegBendStabilization(
+            CharacterAnimationLegChainPayload leg,
+            FullBodyBipedChain chainId,
+            ActiveLimb settings,
+            bool hasFootPlacementGoal,
+            in CharacterFullBodyIkGoal goal,
+            ref Vector3 stableBendDirection,
+            ref bool hasStableBendDirection,
+            ref Vector3 appliedBendDirection,
+            ref bool hasAppliedBendDirection)
+        {
+            var hip = new IndexedBoneHandle(leg.HipPhysicalBoneIndex);
+            var knee = new IndexedBoneHandle(leg.KneePhysicalBoneIndex);
+            var ankle = new IndexedBoneHandle(leg.AnklePhysicalBoneIndex);
+            Vector3 originalHip = m_Backend.GetComponentPosition(hip);
+            Vector3 originalKnee = m_Backend.GetComponentPosition(knee);
+            Vector3 originalAnkle = m_Backend.GetComponentPosition(ankle);
+            float upperLength = Vector3.Distance(originalHip, originalKnee);
+            float lowerLength = Vector3.Distance(originalKnee, originalAnkle);
+            float legLength = upperLength + lowerLength;
+            Vector3 targetAnkle = hasFootPlacementGoal
+                ? Vector3.Lerp(originalAnkle, goal.ComponentPosition, goal.PositionWeight)
+                : originalAnkle;
+            bool hasAnimatedDirection = TryResolveBendDirection(
+                originalHip,
+                originalKnee,
+                originalAnkle,
+                legLength * ReliableBendHeightRatio,
+                out Vector3 animatedDirection);
+            float animatedPreviousDot = 1f;
+            bool retainedPreviousDirection = false;
+            if (hasAnimatedDirection)
+            {
+                if (hasStableBendDirection)
+                {
+                    animatedPreviousDot = Vector3.Dot(
+                        animatedDirection,
+                        stableBendDirection);
+                    if (animatedPreviousDot < 0f)
+                        animatedDirection = -animatedDirection;
+                }
+                stableBendDirection = animatedDirection;
+                hasStableBendDirection = true;
+            }
+            else if (hasStableBendDirection)
+            {
+                retainedPreviousDirection = true;
+            }
+
+            IKConstraintBend bend = m_Solver.GetBendConstraint(chainId);
+            Vector3 effectiveDirection = hasStableBendDirection
+                ? stableBendDirection
+                : bend.direction;
+            Vector3 targetAxis = targetAnkle - originalHip;
+            Vector3 projectedDirection = Vector3.ProjectOnPlane(
+                effectiveDirection,
+                targetAxis);
+            if (projectedDirection.sqrMagnitude > CharacterPoseConstraintMath.Epsilon)
+                effectiveDirection = projectedDirection.normalized;
+            else if (hasAnimatedDirection)
+                effectiveDirection = animatedDirection;
+            float effectivePreviousDot = hasAppliedBendDirection
+                ? Vector3.Dot(effectiveDirection, appliedBendDirection)
+                : 1f;
+            if (effectivePreviousDot < 0f)
+            {
+                effectiveDirection = -effectiveDirection;
+                effectivePreviousDot = -effectivePreviousDot;
+            }
+            appliedBendDirection = effectiveDirection;
+            hasAppliedBendDirection = true;
+            float originalDistance = Vector3.Distance(originalHip, originalAnkle);
+            float targetDistance = Vector3.Distance(originalHip, targetAnkle);
+            float originalReserve = Mathf.Max(0f, legLength - originalDistance);
+            float targetReserve = Mathf.Max(0f, legLength - targetDistance);
+            float targetExtensionRatio = legLength > CharacterPoseConstraintMath.Epsilon
+                ? targetDistance / legLength
+                : 0f;
+            float stabilizationWeight = hasFootPlacementGoal
+                ? ResolveBendStabilizationWeight(
+                    goal.PositionWeight,
+                    targetExtensionRatio,
+                    originalReserve,
+                    targetReserve)
+                : 0f;
+            float effectiveBendWeight = Mathf.Max(
+                settings.BendConstraintWeight,
+                stabilizationWeight);
+            bend.direction = effectiveDirection;
+            bend.weight = effectiveBendWeight;
+            return new LegSolveFrame(
+                originalHip,
+                originalKnee,
+                originalAnkle,
+                targetAnkle,
+                effectiveDirection,
+                legLength,
+                animatedPreviousDot,
+                effectivePreviousDot,
+                stabilizationWeight,
+                effectiveBendWeight,
+                retainedPreviousDirection);
+        }
+
+        static bool TryFindFootPlacementGoal(
+            CharacterFullBodyIkEffectorSlot slot,
+            NativeSlice<int> goalSetValueIndices,
+            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
+            out CharacterFullBodyIkGoal result)
+        {
+            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            {
+                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
+                for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
+                {
+                    CharacterFullBodyIkGoal candidate = goalWorkspace[header.GoalOffset + goalIndex];
+                    if (candidate.Slot != slot ||
+                        candidate.Application != CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget)
+                    {
+                        continue;
+                    }
+                    result = candidate;
+                    return true;
+                }
+            }
+            result = default;
+            return false;
+        }
+
+        static float ResolveBendStabilizationWeight(
+            float positionWeight,
+            float targetExtensionRatio,
+            float originalReserve,
+            float targetReserve)
+        {
+            float extensionRisk = Mathf.SmoothStep(
+                0f,
+                1f,
+                Mathf.InverseLerp(
+                    BendStabilizationStartExtensionRatio,
+                    BendStabilizationFullExtensionRatio,
+                    targetExtensionRatio));
+            float reserveConsumptionRisk = originalReserve > CharacterPoseConstraintMath.Epsilon
+                ? Mathf.Clamp01((originalReserve - targetReserve) / originalReserve)
+                : extensionRisk;
+            return Mathf.Clamp01(positionWeight) * Mathf.Max(
+                extensionRisk,
+                reserveConsumptionRisk);
+        }
+
+        static bool TryResolveBendDirection(
+            Vector3 hip,
+            Vector3 knee,
+            Vector3 ankle,
+            float minimumHeight,
+            out Vector3 direction)
+        {
+            Vector3 axis = ankle - hip;
+            float axisSquare = axis.sqrMagnitude;
+            if (axisSquare <= CharacterPoseConstraintMath.Epsilon)
+            {
+                direction = default;
+                return false;
+            }
+            Vector3 projected = hip + axis * Mathf.Clamp01(
+                Vector3.Dot(knee - hip, axis) / axisSquare);
+            Vector3 bend = knee - projected;
+            if (bend.sqrMagnitude <= minimumHeight * minimumHeight)
+            {
+                direction = default;
+                return false;
+            }
+            direction = bend.normalized;
+            return true;
+        }
+
+        CharacterFullBodyIkLegPoseDiagnostics BuildLegPoseDiagnostics(
+            in LegSolveFrame frame,
+            CharacterAnimationLegChainPayload leg)
+        {
+            if (!frame.IsAvailable)
+                return default;
+            Vector3 solvedHip = m_Backend.GetComponentPosition(
+                new IndexedBoneHandle(leg.HipPhysicalBoneIndex));
+            Vector3 solvedKnee = m_Backend.GetComponentPosition(
+                new IndexedBoneHandle(leg.KneePhysicalBoneIndex));
+            Vector3 solvedAnkle = m_Backend.GetComponentPosition(
+                new IndexedBoneHandle(leg.AnklePhysicalBoneIndex));
+            float solvedDistance = Vector3.Distance(solvedHip, solvedAnkle);
+            return new CharacterFullBodyIkLegPoseDiagnostics(
+                frame.OriginalHip,
+                frame.OriginalKnee,
+                frame.OriginalAnkle,
+                frame.TargetAnkle,
+                solvedHip,
+                solvedKnee,
+                solvedAnkle,
+                frame.EffectiveBendDirection,
+                ResolveKneeBendDegrees(
+                    frame.OriginalHip,
+                    frame.OriginalKnee,
+                    frame.OriginalAnkle),
+                ResolveKneeBendDegrees(solvedHip, solvedKnee, solvedAnkle),
+                ResolveExtensionRatio(
+                    frame.OriginalHip,
+                    frame.OriginalAnkle,
+                    frame.LegLength),
+                ResolveExtensionRatio(
+                    frame.OriginalHip,
+                    frame.TargetAnkle,
+                    frame.LegLength),
+                frame.LegLength > CharacterPoseConstraintMath.Epsilon
+                    ? solvedDistance / frame.LegLength
+                    : 0f,
+                ResolveCompressionReserve(
+                    frame.OriginalHip,
+                    frame.OriginalAnkle,
+                    frame.LegLength),
+                ResolveCompressionReserve(
+                    frame.OriginalHip,
+                    frame.TargetAnkle,
+                    frame.LegLength),
+                Mathf.Max(0f, frame.LegLength - solvedDistance),
+                frame.AnimatedBendDirectionPreviousDot,
+                frame.EffectiveBendDirectionPreviousDot,
+                frame.StabilizationWeight,
+                frame.RetainedPreviousBendDirection);
+        }
+
+        static float ResolveKneeBendDegrees(
+            Vector3 hip,
+            Vector3 knee,
+            Vector3 ankle) =>
+            180f - Vector3.Angle(hip - knee, ankle - knee);
+
+        static float ResolveExtensionRatio(
+            Vector3 hip,
+            Vector3 ankle,
+            float legLength) =>
+            legLength > CharacterPoseConstraintMath.Epsilon
+                ? Vector3.Distance(hip, ankle) / legLength
+                : 0f;
+
+        static float ResolveCompressionReserve(
+            Vector3 hip,
+            Vector3 ankle,
+            float legLength) =>
+            Mathf.Max(0f, legLength - Vector3.Distance(hip, ankle));
+
+        void ResetLegBendState()
+        {
+            m_LeftLegSolveFrame = default;
+            m_RightLegSolveFrame = default;
+            m_LeftStableBendDirection = default;
+            m_RightStableBendDirection = default;
+            m_LeftAppliedBendDirection = default;
+            m_RightAppliedBendDirection = default;
+            m_HasLeftStableBendDirection = false;
+            m_HasRightStableBendDirection = false;
+            m_HasLeftAppliedBendDirection = false;
+            m_HasRightAppliedBendDirection = false;
+            m_Solver.GetBendConstraint(FullBodyBipedChain.LeftLeg).weight =
+                m_ActiveTuning.LeftLeg.BendConstraintWeight;
+            m_Solver.GetBendConstraint(FullBodyBipedChain.RightLeg).weight =
+                m_ActiveTuning.RightLeg.BendConstraintWeight;
+        }
+
         CharacterFullBodyIkResult ValidateSolvedFootGoals(
             CharacterFullBodyIkResult solvedResult,
             NativeSlice<int> goalSetValueIndices,
@@ -704,6 +1033,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_DiagnosticPelvisTranslation = Vector3.zero;
             m_DiagnosticFrameSequence = frameSequence;
             m_DiagnosticEffectorCount = 0;
+            m_LeftLegSolveFrame = default;
+            m_RightLegSolveFrame = default;
             Array.Clear(m_DiagnosticEffectors, 0, m_DiagnosticEffectors.Length);
             Array.Clear(m_DiagnosticLimbs, 0, m_DiagnosticLimbs.Length);
             if (frameSequence == 0)
@@ -782,21 +1113,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void CopyLimbDiagnostics()
         {
-            m_DiagnosticLimbs[0] = LimbDiagnostics(CharacterFullBodyIkLimbSlot.LeftArm, m_ActiveTuning.LeftArm);
-            m_DiagnosticLimbs[1] = LimbDiagnostics(CharacterFullBodyIkLimbSlot.RightArm, m_ActiveTuning.RightArm);
-            m_DiagnosticLimbs[2] = LimbDiagnostics(CharacterFullBodyIkLimbSlot.LeftLeg, m_ActiveTuning.LeftLeg);
-            m_DiagnosticLimbs[3] = LimbDiagnostics(CharacterFullBodyIkLimbSlot.RightLeg, m_ActiveTuning.RightLeg);
+            m_DiagnosticLimbs[0] = LimbDiagnostics(
+                CharacterFullBodyIkLimbSlot.LeftArm,
+                m_ActiveTuning.LeftArm,
+                default,
+                m_ActiveTuning.LeftArm.BendConstraintWeight);
+            m_DiagnosticLimbs[1] = LimbDiagnostics(
+                CharacterFullBodyIkLimbSlot.RightArm,
+                m_ActiveTuning.RightArm,
+                default,
+                m_ActiveTuning.RightArm.BendConstraintWeight);
+            m_DiagnosticLimbs[2] = LimbDiagnostics(
+                CharacterFullBodyIkLimbSlot.LeftLeg,
+                m_ActiveTuning.LeftLeg,
+                BuildLegPoseDiagnostics(in m_LeftLegSolveFrame, m_Rig.LeftLeg),
+                m_LeftLegSolveFrame.IsAvailable
+                    ? m_LeftLegSolveFrame.EffectiveBendWeight
+                    : m_ActiveTuning.LeftLeg.BendConstraintWeight);
+            m_DiagnosticLimbs[3] = LimbDiagnostics(
+                CharacterFullBodyIkLimbSlot.RightLeg,
+                m_ActiveTuning.RightLeg,
+                BuildLegPoseDiagnostics(in m_RightLegSolveFrame, m_Rig.RightLeg),
+                m_RightLegSolveFrame.IsAvailable
+                    ? m_RightLegSolveFrame.EffectiveBendWeight
+                    : m_ActiveTuning.RightLeg.BendConstraintWeight);
         }
 
         static CharacterFullBodyIkLimbDiagnostics LimbDiagnostics(
             CharacterFullBodyIkLimbSlot limb,
-            ActiveLimb settings) =>
+            ActiveLimb settings,
+            CharacterFullBodyIkLegPoseDiagnostics legPose,
+            float bendWeight) =>
             new CharacterFullBodyIkLimbDiagnostics(
                 limb,
                 settings.Pull,
                 settings.Reach,
-                settings.BendConstraintWeight,
-                settings.BendClamp);
+                bendWeight,
+                settings.BendClamp,
+                legPose);
 
         void ApplyLimbProfile(
             FullBodyBipedChain chainId,
@@ -860,6 +1214,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static bool Contains(string value, string part) =>
             value.IndexOf(part, StringComparison.Ordinal) >= 0;
+
+        readonly struct LegSolveFrame
+        {
+            internal LegSolveFrame(
+                Vector3 originalHip,
+                Vector3 originalKnee,
+                Vector3 originalAnkle,
+                Vector3 targetAnkle,
+                Vector3 effectiveBendDirection,
+                float legLength,
+                float animatedBendDirectionPreviousDot,
+                float effectiveBendDirectionPreviousDot,
+                float stabilizationWeight,
+                float effectiveBendWeight,
+                bool retainedPreviousBendDirection)
+            {
+                OriginalHip = originalHip;
+                OriginalKnee = originalKnee;
+                OriginalAnkle = originalAnkle;
+                TargetAnkle = targetAnkle;
+                EffectiveBendDirection = effectiveBendDirection;
+                LegLength = legLength;
+                AnimatedBendDirectionPreviousDot = animatedBendDirectionPreviousDot;
+                EffectiveBendDirectionPreviousDot = effectiveBendDirectionPreviousDot;
+                StabilizationWeight = stabilizationWeight;
+                EffectiveBendWeight = effectiveBendWeight;
+                RetainedPreviousBendDirection = retainedPreviousBendDirection;
+                IsAvailable = true;
+            }
+
+            internal Vector3 OriginalHip { get; }
+            internal Vector3 OriginalKnee { get; }
+            internal Vector3 OriginalAnkle { get; }
+            internal Vector3 TargetAnkle { get; }
+            internal Vector3 EffectiveBendDirection { get; }
+            internal float LegLength { get; }
+            internal float AnimatedBendDirectionPreviousDot { get; }
+            internal float EffectiveBendDirectionPreviousDot { get; }
+            internal float StabilizationWeight { get; }
+            internal float EffectiveBendWeight { get; }
+            internal bool RetainedPreviousBendDirection { get; }
+            internal bool IsAvailable { get; }
+        }
 
         struct ActiveTuning
         {

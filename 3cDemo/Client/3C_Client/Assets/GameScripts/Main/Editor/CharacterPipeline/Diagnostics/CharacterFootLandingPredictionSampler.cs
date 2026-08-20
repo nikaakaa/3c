@@ -106,7 +106,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "StrideRootRelativeGroundTargetAlongUp,StrideSoleClearanceLiftAlongUp,StrideHadPreviousState,StrideSupportChanged," +
             "StridePreviousSlope,StrideSpringHandoffReason,StrideSpringVelocityReset," +
             "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput,StrideSpringInputVelocity,StrideSpringFrequency," +
-            "StrideUnclampedSpringTarget,StrideSupportReachAvailable,StrideSupportReachMinimumAlongUp,StrideSupportReachMaximumAlongUp," +
+            "StrideUnclampedSpringTarget,StrideSupportReachAvailable,StrideSupportLegCompressionReserve,StrideSupportReachUsableLegLength,StrideSupportReachMinimumAlongUp,StrideSupportReachMaximumAlongUp," +
             "StrideSupportReachTargetClamped,StrideSupportReachOutputClamped," +
             "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
             "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
@@ -116,6 +116,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FinalIkBackendIdentity,FinalIkRigId,FinalIkRigRevision,FinalIkProfileId,FinalIkProfileRevision,FinalIkFailure,FinalIkAppliedGoalCount," +
             "FinalIkEffectorAvailable,FinalIkEffectorSlot,FinalIkTargetPositionX,FinalIkTargetPositionY,FinalIkTargetPositionZ," +
             "FinalIkSolvedPositionX,FinalIkSolvedPositionY,FinalIkSolvedPositionZ,FinalIkPositionResidual,FinalIkRotationResidualDegrees," +
+            "FinalIkLegAvailable,FinalIkLegSlot,FinalIkLegBendWeight,FinalIkLegStabilizationWeight,FinalIkLegRetainedPreviousBendDirection," +
+            "FinalIkLegOriginalHipX,FinalIkLegOriginalHipY,FinalIkLegOriginalHipZ," +
+            "FinalIkLegOriginalKneeX,FinalIkLegOriginalKneeY,FinalIkLegOriginalKneeZ," +
+            "FinalIkLegOriginalAnkleX,FinalIkLegOriginalAnkleY,FinalIkLegOriginalAnkleZ," +
+            "FinalIkLegTargetAnkleX,FinalIkLegTargetAnkleY,FinalIkLegTargetAnkleZ," +
+            "FinalIkLegSolvedHipX,FinalIkLegSolvedHipY,FinalIkLegSolvedHipZ," +
+            "FinalIkLegSolvedKneeX,FinalIkLegSolvedKneeY,FinalIkLegSolvedKneeZ," +
+            "FinalIkLegSolvedAnkleX,FinalIkLegSolvedAnkleY,FinalIkLegSolvedAnkleZ," +
+            "FinalIkLegOriginalBendDegrees,FinalIkLegSolvedBendDegrees," +
+            "FinalIkLegOriginalExtensionRatio,FinalIkLegTargetExtensionRatio,FinalIkLegSolvedExtensionRatio," +
+            "FinalIkLegOriginalCompressionReserve,FinalIkLegTargetCompressionReserve,FinalIkLegSolvedCompressionReserve," +
+            "FinalIkLegEffectiveBendDirectionX,FinalIkLegEffectiveBendDirectionY,FinalIkLegEffectiveBendDirectionZ," +
+            "FinalIkLegAnimatedBendDirectionPreviousDot,FinalIkLegEffectiveBendDirectionPreviousDot," +
             "FinalIkPelvisAvailable,FinalIkPelvisTargetPositionX,FinalIkPelvisTargetPositionY,FinalIkPelvisTargetPositionZ," +
             "FinalIkPelvisSolvedPositionX,FinalIkPelvisSolvedPositionY,FinalIkPelvisSolvedPositionZ,FinalIkPelvisPositionResidual,FinalIkPelvisRotationResidualDegrees," +
             "FinalPhysicalWriteAvailable,FinalPhysicalWriteCompletionIdentity," +
@@ -131,6 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFullBodyIkSolverDiagnostics solver,
                 CharacterFullBodyIkEffectorDiagnostics pelvis,
                 CharacterFullBodyIkEffectorDiagnostics effector,
+                CharacterFullBodyIkLimbDiagnostics limb,
                 bool physicalWriteAvailable,
                 ulong physicalWriteCompletionIdentity,
                 Vector3 physicalAnkleComponentPosition,
@@ -139,6 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Solver = solver;
                 Pelvis = pelvis;
                 Effector = effector;
+                Limb = limb;
                 PhysicalWriteAvailable = physicalWriteAvailable;
                 PhysicalWriteCompletionIdentity = physicalWriteCompletionIdentity;
                 PhysicalAnkleComponentPosition = physicalAnkleComponentPosition;
@@ -148,6 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal CharacterFullBodyIkSolverDiagnostics Solver { get; }
             internal CharacterFullBodyIkEffectorDiagnostics Pelvis { get; }
             internal CharacterFullBodyIkEffectorDiagnostics Effector { get; }
+            internal CharacterFullBodyIkLimbDiagnostics Limb { get; }
             internal bool SolverAvailable => Solver.IsCompleted;
             internal bool PelvisAvailable => Pelvis.IsAvailable;
             internal bool EffectorAvailable => Effector.IsAvailable;
@@ -446,6 +462,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.Solver,
                         placement.Pelvis,
                         placement.LeftFoot,
+                        placement.LeftLeg,
                         placement.PhysicalWriteAvailable,
                         placement.PhysicalWriteCompletionIdentity,
                         placement.LeftPhysicalAnkleComponentPosition,
@@ -454,6 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.Solver,
                         placement.Pelvis,
                         placement.RightFoot,
+                        placement.RightLeg,
                         placement.PhysicalWriteAvailable,
                         placement.PhysicalWriteCompletionIdentity,
                         placement.RightPhysicalAnkleComponentPosition,
@@ -1025,6 +1043,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.SpringFrequency);
             Add(row, stride.UnclampedSpringTarget);
             Add(row, stride.SupportReachAvailable);
+            Add(row, stride.SupportLegCompressionReserve);
+            Add(row, stride.SupportReachUsableLegLength);
             Add(row, stride.SupportReachMinimumAlongUp);
             Add(row, stride.SupportReachMaximumAlongUp);
             Add(row, stride.SupportReachTargetClamped);
@@ -1065,6 +1085,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, effector.SolvedComponentPosition);
             Add(row, effector.PositionResidual);
             Add(row, effector.RotationResidualDegrees);
+            CharacterFullBodyIkLimbDiagnostics limb = ik.Limb;
+            CharacterFullBodyIkLegPoseDiagnostics legPose = limb.LegPose;
+            Add(row, legPose.IsAvailable);
+            Add(row, limb.Limb.ToString());
+            Add(row, limb.BendWeight);
+            Add(row, legPose.StabilizationWeight);
+            Add(row, legPose.RetainedPreviousBendDirection);
+            Add(row, legPose.OriginalHip);
+            Add(row, legPose.OriginalKnee);
+            Add(row, legPose.OriginalAnkle);
+            Add(row, legPose.TargetAnkle);
+            Add(row, legPose.SolvedHip);
+            Add(row, legPose.SolvedKnee);
+            Add(row, legPose.SolvedAnkle);
+            Add(row, legPose.OriginalBendDegrees);
+            Add(row, legPose.SolvedBendDegrees);
+            Add(row, legPose.OriginalExtensionRatio);
+            Add(row, legPose.TargetExtensionRatio);
+            Add(row, legPose.SolvedExtensionRatio);
+            Add(row, legPose.OriginalCompressionReserve);
+            Add(row, legPose.TargetCompressionReserve);
+            Add(row, legPose.SolvedCompressionReserve);
+            Add(row, legPose.EffectiveBendDirection);
+            Add(row, legPose.AnimatedBendDirectionPreviousDot);
+            Add(row, legPose.EffectiveBendDirectionPreviousDot);
             CharacterFullBodyIkEffectorDiagnostics pelvis = ik.Pelvis;
             Add(row, ik.PelvisAvailable);
             Add(row, pelvis.TargetComponentPosition);

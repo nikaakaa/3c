@@ -179,6 +179,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float springFrequency,
             float unclampedSpringTarget,
             bool supportReachAvailable,
+            float supportLegCompressionReserve,
+            float supportReachUsableLegLength,
             float supportReachMinimumAlongUp,
             float supportReachMaximumAlongUp,
             bool supportReachTargetClamped,
@@ -217,6 +219,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SpringFrequency = springFrequency;
             UnclampedSpringTarget = unclampedSpringTarget;
             SupportReachAvailable = supportReachAvailable;
+            SupportLegCompressionReserve = supportLegCompressionReserve;
+            SupportReachUsableLegLength = supportReachUsableLegLength;
             SupportReachMinimumAlongUp = supportReachMinimumAlongUp;
             SupportReachMaximumAlongUp = supportReachMaximumAlongUp;
             SupportReachTargetClamped = supportReachTargetClamped;
@@ -256,6 +260,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SpringFrequency { get; }
         public float UnclampedSpringTarget { get; }
         public bool SupportReachAvailable { get; }
+        public float SupportLegCompressionReserve { get; }
+        public float SupportReachUsableLegLength { get; }
         public float SupportReachMinimumAlongUp { get; }
         public float SupportReachMaximumAlongUp { get; }
         public bool SupportReachTargetClamped { get; }
@@ -979,6 +985,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 false,
                 0f,
                 0f,
+                0f,
+                0f,
                 false,
                 false,
                 0f,
@@ -1000,6 +1008,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 supportHip,
             Vector3 supportTargetAnkle,
             float supportLegLength,
+            float supportLegCompressionReserve,
             Vector3 leftOriginalSole,
             Vector3 rightOriginalSole,
             Vector3 leftCorrectedSole,
@@ -1015,6 +1024,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !Finite(animatedPelvis) || !Finite(animatedPelvisComponentPosition) ||
                 !Finite(supportHip) || !Finite(supportTargetAnkle) ||
                 !float.IsFinite(supportLegLength) || supportLegLength <= EndpointTolerance ||
+                !float.IsFinite(supportLegCompressionReserve) || supportLegCompressionReserve < 0f ||
                 !Finite(leftOriginalSole) || !Finite(rightOriginalSole) ||
                 !Finite(leftCorrectedSole) || !Finite(rightCorrectedSole) ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
@@ -1070,6 +1080,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     supportTargetAnkle,
                     up,
                     supportLegLength,
+                    supportLegCompressionReserve,
+                    out float supportReachUsableLegLength,
                     out float supportReachMinimum,
                     out float supportReachMaximum))
             {
@@ -1183,6 +1195,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.PelvisSpringFrequency,
                 unclampedTarget,
                 true,
+                supportLegCompressionReserve,
+                supportReachUsableLegLength,
                 supportReachMinimum,
                 supportReachMaximum,
                 supportReachTargetClamped,
@@ -1288,6 +1302,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 false,
                 0f,
                 0f,
+                0f,
+                0f,
                 false,
                 false,
                 target,
@@ -1302,16 +1318,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 supportTargetAnkle,
             Vector3 up,
             float supportLegLength,
+            float supportLegCompressionReserve,
+            out float usableLegLength,
             out float minimumAlongUp,
             out float maximumAlongUp)
         {
             Vector3 hipFromTarget = supportHip - supportTargetAnkle;
             Vector3 horizontal = Vector3.ProjectOnPlane(hipFromTarget, up);
-            float usableLegLength = supportLegLength - EndpointTolerance;
             float horizontalSquare = horizontal.sqrMagnitude;
-            float legSquare = usableLegLength * usableLegLength;
-            if (!float.IsFinite(horizontalSquare) || horizontalSquare >= legSquare)
+            float maximumUsableLegLength = supportLegLength - EndpointTolerance;
+            float maximumLegSquare = maximumUsableLegLength * maximumUsableLegLength;
+            if (!float.IsFinite(horizontalSquare) ||
+                maximumUsableLegLength <= EndpointTolerance ||
+                horizontalSquare >= maximumLegSquare)
             {
+                usableLegLength = 0f;
+                minimumAlongUp = 0f;
+                maximumAlongUp = 0f;
+                return false;
+            }
+            float minimumUsableLegLength = Mathf.Min(
+                maximumUsableLegLength,
+                Mathf.Sqrt(horizontalSquare + EndpointTolerance * EndpointTolerance));
+            usableLegLength = Mathf.Clamp(
+                supportLegLength - Mathf.Max(EndpointTolerance, supportLegCompressionReserve),
+                minimumUsableLegLength,
+                maximumUsableLegLength);
+            float legSquare = usableLegLength * usableLegLength;
+            if (!float.IsFinite(usableLegLength) ||
+                usableLegLength <= EndpointTolerance ||
+                horizontalSquare >= legSquare)
+            {
+                usableLegLength = 0f;
                 minimumAlongUp = 0f;
                 maximumAlongUp = 0f;
                 return false;

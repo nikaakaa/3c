@@ -729,6 +729,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal CharacterFullBodyIkEffectorDiagnostics Pelvis;
         internal CharacterFullBodyIkEffectorDiagnostics LeftFoot;
         internal CharacterFullBodyIkEffectorDiagnostics RightFoot;
+        internal CharacterFullBodyIkLimbDiagnostics LeftLeg;
+        internal CharacterFullBodyIkLimbDiagnostics RightLeg;
         internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
 
         internal void Clear()
@@ -738,6 +740,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Pelvis = default;
             LeftFoot = default;
             RightFoot = default;
+            LeftLeg = default;
+            RightLeg = default;
             PhysicalWrite = default;
         }
     }
@@ -747,6 +751,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         static readonly CharacterFootLandingPredictionDiagnostics s_DefaultLandingPrediction;
         static readonly CharacterFullBodyIkSolverDiagnostics s_DefaultSolver;
         static readonly CharacterFullBodyIkEffectorDiagnostics s_DefaultEffector;
+        static readonly CharacterFullBodyIkLimbDiagnostics s_DefaultLimb;
 
         readonly AnimationFootPlacementRuntimeSnapshotPage m_Page;
         readonly FinalAnimationPoseFramePageLease m_Lease;
@@ -816,6 +821,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     return ref s_DefaultEffector;
                 RequireValid();
                 return ref m_Page.Pelvis;
+            }
+        }
+
+        public ref readonly CharacterFullBodyIkLimbDiagnostics LeftLeg
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultLimb;
+                RequireValid();
+                return ref m_Page.LeftLeg;
+            }
+        }
+
+        public ref readonly CharacterFullBodyIkLimbDiagnostics RightLeg
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultLimb;
+                RequireValid();
+                return ref m_Page.RightLeg;
             }
         }
 

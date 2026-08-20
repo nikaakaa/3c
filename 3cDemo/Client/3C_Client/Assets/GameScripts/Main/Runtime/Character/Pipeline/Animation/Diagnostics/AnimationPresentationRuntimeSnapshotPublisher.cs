@@ -1089,6 +1089,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CharacterFullBodyIkEffectorDiagnostics pelvis = default;
             CharacterFullBodyIkEffectorDiagnostics leftFoot = default;
             CharacterFullBodyIkEffectorDiagnostics rightFoot = default;
+            CharacterFullBodyIkLimbDiagnostics leftLeg = default;
+            CharacterFullBodyIkLimbDiagnostics rightLeg = default;
             for (int solverIndex = 0; solverIndex < m_FullBodyIkSolvers.Length; solverIndex++)
             {
                 CharacterFinalIkFullBodySolver solver = m_FullBodyIkSolvers[solverIndex];
@@ -1121,6 +1123,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 }
                 if (!containsFoot)
                     continue;
+                for (int limbIndex = 0; limbIndex < solver.DiagnosticLimbCount; limbIndex++)
+                {
+                    CharacterFullBodyIkLimbDiagnostics limb = solver.GetDiagnosticLimb(limbIndex);
+                    if (limb.Limb == CharacterFullBodyIkLimbSlot.LeftLeg)
+                        leftLeg = limb;
+                    else if (limb.Limb == CharacterFullBodyIkLimbSlot.RightLeg)
+                        rightLeg = limb;
+                }
                 solverDiagnostics = candidate;
                 break;
             }
@@ -1129,6 +1139,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             page.FootPlacement.Pelvis = pelvis;
             page.FootPlacement.LeftFoot = leftFoot;
             page.FootPlacement.RightFoot = rightFoot;
+            page.FootPlacement.LeftLeg = leftLeg;
+            page.FootPlacement.RightLeg = rightLeg;
             page.FootPlacement.PhysicalWrite =
                 physicalWrite.IsAvailable &&
                 physicalWrite.CompletionIdentity == page.CompletionIdentity

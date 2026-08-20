@@ -20,7 +20,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     {
         [SerializeField] string m_BindingId = string.Empty;
         [SerializeField] CharacterPipelineDefinition m_CharacterDefinition;
-        [SerializeField] GameObject m_VisualTemplate;
+        [SerializeField] GameObject m_CharacterTemplate;
         [SerializeField] Vector3 m_SpawnPosition;
         [SerializeField] Vector3 m_SpawnEulerAngles;
         [SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
@@ -46,8 +46,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             {
                 throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' requires compiled Character assets.");
             }
-            if (!m_VisualTemplate)
-                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' requires an explicit VisualRoot template.");
+            if (!m_CharacterTemplate)
+                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' requires an explicit Character Root template.");
             if (tickRate <= 0 || !m_BodyPresentationProfile)
             {
                 throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' requires a formal Presentation Profile.");
@@ -58,32 +58,47 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' Program does not match the owner Session Program.");
             CharacterPresentationProjection projection = m_CharacterDefinition.PresentationProjection.Load(
                 Float32CharacterPresentationContractAdapter.Create(program));
-            GameObject visualObject = Instantiate(m_VisualTemplate, m_SpawnPosition, Quaternion.Euler(m_SpawnEulerAngles));
-            visualObject.name = $"{m_VisualTemplate.name} [Remote {actorId.Value}]";
-            AnimancerComponent animancer = visualObject.GetComponent<AnimancerComponent>();
+            GameObject characterObject = Instantiate(m_CharacterTemplate, m_SpawnPosition, Quaternion.Euler(m_SpawnEulerAngles));
+            characterObject.name = $"{m_CharacterTemplate.name} [Remote {actorId.Value}]";
+            CharacterRootHierarchyBinding rootHierarchy = characterObject.GetComponent<CharacterRootHierarchyBinding>();
+            if (!rootHierarchy)
+            {
+                Destroy(characterObject);
+                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template requires a Root Hierarchy Binding on LogicRoot.");
+            }
+            try
+            {
+                rootHierarchy.RequireValid();
+            }
+            catch
+            {
+                Destroy(characterObject);
+                throw;
+            }
+            AnimancerComponent animancer = rootHierarchy.PoseRoot.GetComponent<AnimancerComponent>();
             CharacterAnimationRigBinding animationRigBinding =
-                visualObject.GetComponent<CharacterAnimationRigBinding>();
+                rootHierarchy.PoseRoot.GetComponent<CharacterAnimationRigBinding>();
             if (!animancer || !animancer.Animator || !animationRigBinding)
             {
-                Destroy(visualObject);
-                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template root requires Animancer, Animator, and Animation Rig Binding.");
+                Destroy(characterObject);
+                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' PoseRoot requires Animancer, Animator, and Animation Rig Binding.");
             }
             animationRigBinding.RequireValid(projection.Rig);
-            Transform visualRoot = animancer.Animator.transform;
-            if (visualRoot.gameObject != visualObject)
+            if (animancer.Animator.transform != rootHierarchy.PoseRoot)
             {
-                Destroy(visualObject);
-                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template root must be the Animancer Animator transform.");
+                Destroy(characterObject);
+                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' Animator must use PoseRoot.");
             }
             CharacterWorldAwarePresentationBinding worldAwarePresentation =
-                visualObject.GetComponent<CharacterWorldAwarePresentationBinding>();
+                rootHierarchy.VisualRoot.GetComponent<CharacterWorldAwarePresentationBinding>();
             if (!worldAwarePresentation)
             {
-                Destroy(visualObject);
-                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template root requires a World-Aware Presentation Binding.");
+                Destroy(characterObject);
+                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' VisualRoot requires a World-Aware Presentation Binding.");
             }
-            PhysicsScene physicsScene = visualObject.scene.GetPhysicsScene();
-            WorldBodyState initialBody = BuildInitialBody(actorId, visualRoot);
+            worldAwarePresentation.RequireValid();
+            PhysicsScene physicsScene = characterObject.scene.GetPhysicsScene();
+            WorldBodyState initialBody = BuildInitialBody(actorId, rootHierarchy.LogicRoot);
             CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(program);
             var diagnosticsContext = new RuntimeDiagnosticsContext(
                 Guid.NewGuid(),
@@ -104,7 +119,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     actorId,
                     animancer,
                     animationRigBinding,
-                    visualRoot,
+                    rootHierarchy,
                     CharacterPresentationBodyState.FromFloat32(initialBody),
                     m_BodyPresentationProfile,
                     worldAwarePresentation,
@@ -119,7 +134,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     diagnostics,
                     runtime,
                     diagnosticsTarget,
-                    visualObject,
+                    characterObject,
+                    rootHierarchy,
                     Release);
                 runtime = null;
                 diagnosticsTarget = null;
@@ -133,8 +149,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 runtime?.Dispose();
                 diagnosticsTarget?.Terminate();
                 diagnosticsTarget?.Dispose();
-                if (registration == null && visualObject)
-                    Destroy(visualObject);
+                if (registration == null && characterObject)
+                    Destroy(characterObject);
                 throw;
             }
         }
@@ -162,16 +178,16 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 m_Registration = null;
         }
 
-        static WorldBodyState BuildInitialBody(ActorId actorId, Transform visualRoot)
+        static WorldBodyState BuildInitialBody(ActorId actorId, Transform logicRoot)
         {
-            Vector3 position = visualRoot.position;
+            Vector3 position = logicRoot.position;
             return new WorldBodyState(
                 actorId,
                 new Float32Vector3(
                     Float32Scalar.FromSingle(position.x),
                     Float32Scalar.FromSingle(position.y),
                     Float32Scalar.FromSingle(position.z)),
-                new Float32Yaw(Float32Scalar.FromSingle(visualRoot.eulerAngles.y)),
+                new Float32Yaw(Float32Scalar.FromSingle(logicRoot.eulerAngles.y)),
                 Float32Vector3.Zero,
                 Float32Scalar.Zero,
                 false,
@@ -226,7 +242,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly CharacterSimulationGameplayOutputBuffer m_Gameplay = new CharacterSimulationGameplayOutputBuffer();
         readonly ISimulationDiagnosticsSink m_Diagnostics;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
-        readonly GameObject m_VisualObject;
+        readonly GameObject m_CharacterObject;
+        readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly ServerAuthoritativeRemotePresentationFrameTarget m_PresentationTarget;
         readonly Action<ServerAuthoritativeRemotePresentationRegistration> m_Release;
         readonly SortedDictionary<ulong, List<PresentationCommand>> m_Commands =
@@ -248,7 +265,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ISimulationDiagnosticsSink diagnostics,
             ICharacterPresentationRuntime runtime,
             RuntimeDiagnosticsTarget diagnosticsTarget,
-            GameObject visualObject,
+            GameObject characterObject,
+            CharacterRootHierarchyBinding rootHierarchy,
             Action<ServerAuthoritativeRemotePresentationRegistration> release)
         {
             BindingId = string.IsNullOrWhiteSpace(bindingId)
@@ -263,7 +281,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
             m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
-            m_VisualObject = visualObject ? visualObject : throw new ArgumentNullException(nameof(visualObject));
+            m_CharacterObject = characterObject ? characterObject : throw new ArgumentNullException(nameof(characterObject));
+            m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
+            m_RootHierarchy.RequireValid();
             m_Release = release ?? throw new ArgumentNullException(nameof(release));
             m_PresentationTarget = new ServerAuthoritativeRemotePresentationFrameTarget(this);
         }
@@ -300,6 +320,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             if (batch.ResetBodyStream && batch.BodySamples.Count == 0)
                 throw new InvalidOperationException("Remote selected Body stream reset requires an explicit anchor interval.");
             m_Gameplay.BeginTick();
+            CharacterPresentationBodyState finalBody = default;
+            bool hasFinalBody = false;
             for (int i = 0; i < batch.BodySamples.Count; i++)
             {
                 CharacterBodySample sample = batch.BodySamples[i];
@@ -310,12 +332,16 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                         batch.ResetBodyStream && i == 0
                             ? CharacterPresentationBodyStreamUpdateKind.Reset
                             : CharacterPresentationBodyStreamUpdateKind.Append));
+                finalBody = CharacterPresentationBodyState.FromFloat32(sample.FinalBody);
+                hasFinalBody = true;
                 m_SelectedTick = sample.Tick.Value;
             }
             for (int i = 0; i < batch.SampleCommands.Count; i++)
                 Enqueue(m_Commands, batch.SampleCommands[i].Header.Tick.Value, batch.SampleCommands[i]);
             for (int i = 0; i < batch.ReliableEvents.Count; i++)
                 Enqueue(m_Reliable, batch.ReliableEvents[i].Header.Tick.Value, batch.ReliableEvents[i]);
+            if (hasFinalBody)
+                m_RootHierarchy.ApplyLogicPose(finalBody.Position, finalBody.Rotation);
         }
 
         public void Present(GameplayPresentationFrameContext context)
@@ -344,8 +370,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_Runtime.Dispose();
             m_Commands.Clear();
             m_Reliable.Clear();
-            if (m_VisualObject)
-                UnityEngine.Object.Destroy(m_VisualObject);
+            if (m_CharacterObject)
+                UnityEngine.Object.Destroy(m_CharacterObject);
             m_Release(this);
         }
 

@@ -2,13 +2,13 @@
 
 ### Requirement: Agent必须保持Generated Foot Analysis只读
 
-Agent Character Document package MUST只把正式Graph、StateMachine、Timeline-local Curve、Presentation装配和原生AnimationClip注册Curve放入对应editable分片。`presentation.foot-placement-weight`与`presentation.locomotion-phase` MUST只以完整Curve进入精确`editable/animation-clips/**/curves.json`；Projection生成的sole speed、height、plant confidence、next landing confidence、delay、offset与关系质量结果 MUST不进入editable分片或Mutation Plan。Agent MUST不复制generated payload、不创建Foot Analysis mutation，也不得把Analysis候选当作正式Curve。
+Agent Character Document package MUST只把正式Graph、StateMachine、Timeline-local Curve、Presentation装配和原生AnimationClip注册Curve放入对应editable分片。`presentation.foot-placement-weight`与`presentation.locomotion-phase` MUST只以秒域完整Curve进入精确`editable/animation-clips/**/curves.json`，并携带完整Clip dependency baseline与只读`AnimationClipAnalysisInputHash`；Projection生成的sole speed、height、plant confidence、next landing confidence、delay、offset、Phase Validation samples与关系质量结果 MUST不进入editable分片或Mutation Plan。Agent MUST不复制generated payload、不创建Foot Analysis mutation，也不得把Analysis候选当作正式Curve。
 
 #### Scenario: Agent修改Foot Placement Weight
 
 - **WHEN** AI替换现有原生AnimationClip的完整Foot Placement Weight Curve
 - **THEN** Reconciler MUST生成Clip registered Curve typed Mutation
-- **AND** MUST不修改Foot Analysis Artifact或Timeline Segment
+- **AND** MUST只使Projection stale，不修改AnimationClipAnalysisInputHash、Foot Analysis Artifact或Timeline Segment
 
 ### Requirement: Agent Snapshot 必须是只读投影
 
@@ -82,7 +82,7 @@ Document package v4与其canonical Snapshot MUST按显式domain输出Graph、Nod
 
 ### Requirement: Agent Document必须完整读写Clip注册Curve与Timeline本地Curve
 
-Character Document v4 MUST在`editable/animation-clips/<stable-segment>/curves.json`按结构化AnimationClip对象引用表达允许的注册Curve，并在`editable/timelines/**/curves.json`按Timeline owner表达Timeline-local registered Curve。两类Curve MUST使用同一canonical Keyframe语义，但不同Capability、owner和Mutation handler。Reconciler MUST为完整Curve替换生成typed Mutation；Clip handler MUST只调用Clip registered Curve Mutation，Timeline handler MUST只调用Timeline Curve MutationAdapter。系统 MUST不接受key级MCP操作、Marker字段、Sequence分片、旧Patch operation或字段名目标。
+Character Document v4 MUST在`editable/animation-clips/<stable-segment>/curves.json`按结构化AnimationClip对象引用表达允许的秒域注册Curve，并在`editable/timelines/**/curves.json`按Timeline owner表达Timeline-local registered Curve。两类Curve MUST使用同一canonical Keyframe语义，但不同Capability、owner和Mutation handler。Clip channel MUST按完整`EditorCurveBinding(path + type + property)`识别；Reconciler MUST为完整Curve替换生成typed Mutation；Clip handler MUST只调用Clip registered Curve Mutation，Timeline handler MUST只调用Timeline Curve MutationAdapter。系统 MUST不接受key级MCP操作、Marker字段、Sequence分片、旧Patch operation、仅propertyName匹配或字段名目标。
 
 #### Scenario: 修改weighted Clip Curve
 

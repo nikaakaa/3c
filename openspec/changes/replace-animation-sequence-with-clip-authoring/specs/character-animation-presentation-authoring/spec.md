@@ -2,7 +2,7 @@
 
 ### Requirement: Presentation Profile必须唯一绑定Pose source
 
-Pose Graph MUST唯一拥有typed Source Slot，`CharacterAnimationPresentationProfile` MUST为每个Slot拥有唯一类型匹配Binding。Clip Binding MUST直接引用精确AnimationClip；Blend Space与Motion Matching Binding MUST继续引用各自正式资源。Profile MUST唯一引用Rig Definition、Foot Analysis Source、有限Action producer binding和Locomotion Sync Group。Binding MUST不保存Sequence、Rig副本、Analysis副本、素材Curve、Marker、Group、Role、Topology或Time Mapping。
+Pose Graph MUST唯一拥有typed Source Slot，`CharacterAnimationPresentationProfile` MUST为每个Slot拥有唯一类型匹配Binding。Clip Binding MUST直接引用精确AnimationClip；Blend Space与Motion Matching Binding MUST继续引用各自正式资源。Profile MUST唯一引用角色Rig Definition、Foot Analysis Source、有限Action producer binding和Locomotion Sync Group。Clip Binding与Action producer binding MUST不保存Sequence、Rig副本、Analysis identity副本、素材Curve、Marker、Group、Role、Topology或Time Mapping。Blend Space与Motion Matching资源内部为各自Artifact保存的Rig/Analysis compatibility identity MAY保留，但只能作为Profile选择的准入约束，不得成为第二角色配置owner。
 
 #### Scenario: ClipPlayer解析RunLoop
 
@@ -17,7 +17,8 @@ Pose Graph MUST唯一拥有typed Source Slot，`CharacterAnimationPresentationPr
 #### Scenario: 修改Foot Placement Weight
 
 - **WHEN** 作者在Animation Window修改Clip的`presentation.foot-placement-weight`
-- **THEN** Clip dependency与curve hash MUST变化并使Projection stale
+- **THEN** 完整Clip dependency与Registered Curve Hash MUST变化并使Projection stale
+- **AND** AnimationClipAnalysisInputHash与匹配Foot Analysis Artifact MUST保持不变
 - **AND** Runtime MUST只在显式Build后消费新的Projection curve
 
 ### Requirement: 跨资产表现配置必须保持唯一写入口
@@ -44,7 +45,7 @@ Pose Graph Workspace、Navigator与Details MAY只读显示Action Timeline Segmen
 
 ### Requirement: Presentation Projection必须保存per-clip Phase与可达relation计划
 
-Projection Compiler MUST为每个Locomotion Group成员编译固定容量forward/inverse Phase plan，把Direct Clip或Blend Space降低为`AnimationSourcePhasePlan`，并只为PoseState实际可达edge保存source-to-source relation。Direct Clip endpoint MUST引用自身Clip plan；Blend Space endpoint MUST引用显式Phase Reference Sample作为clock carrier和全部Dynamic Sample的per-clip inverse plan。Relation MUST包含两侧source plan identity、正式clock authority和实际有限coverage。Foot Analysis质量门槛不通过 MUST阻止Projection发布。Projection MUST不保存Editor AnimationCurve、Marker occurrence、pairwise warp knot或Sequence identity。
+Projection Compiler MUST为每个Locomotion Group成员编译固定容量forward/inverse Phase plan，把Direct Clip或Blend Space降低为`AnimationSourcePhasePlan`，并只为PoseState实际可达edge保存source-to-source relation。Direct Clip endpoint MUST引用自身Clip plan；Blend Space endpoint MUST引用显式Phase Reference Sample作为clock carrier和全部Dynamic Sample的per-clip inverse plan。Relation MUST包含RelationIdentity、TransitionId、两侧source plan identity、编译期固定leader、正式clock authority、实际有限秒域coverage与Artifact validation identity。Foot Analysis质量门槛不通过 MUST阻止Projection发布。Projection MUST不保存Editor AnimationCurve、Phase Validation samples、Marker occurrence、pairwise warp knot或Sequence identity。
 
 #### Scenario: MovingTurn实际只播放28帧
 

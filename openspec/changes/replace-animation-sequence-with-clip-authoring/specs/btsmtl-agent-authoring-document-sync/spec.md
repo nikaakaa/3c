@@ -127,7 +127,7 @@ Document v4 Reconciler MUST按owner依赖生成类型化Presentation Mutation计
 
 ### Requirement: Document v4失败恢复必须同时覆盖Unity owner与正式package
 
-Application Service MUST在首次Mutation前解析并锁定全部Gameplay、Timeline、AnimationClip与Presentation serialized owner，并注册一个完整Undo事务。只有Mutation、全域Validator、Unity authoring保存、最终树反向导出、staging重读与hash校验、正式package原子替换全部成功后，apply才可返回`applied=true`、`saved=true`与`Clean`。任一步失败 MUST恢复全部Unity owner并保留上一份正式package；Character apply MUST不发布Foot Analysis、Program、Projection或Native Pose Program。
+Application Service MUST在首次Mutation前解析并锁定全部Gameplay、Timeline、AnimationClip与Presentation serialized owner，并注册一个完整Undo事务。只有Mutation、全域Validator、Unity authoring保存、最终树反向导出、staging重读与hash校验、正式package原子替换全部成功后，apply才可返回`applied=true`、`saved=true`与`Clean`。任一步失败 MUST恢复全部Unity owner并保留上一份正式package；Character apply MUST不发布Foot Analysis、Program、Projection或Native Pose Program。Clip registered Curve Mutation MUST只改变完整dependency baseline与Registered Curve Hash并使相关Projection stale，不得修改`AnimationClipAnalysisInputHash`或把匹配Artifact标记为stale。
 
 #### Scenario: Clip Curve Validator失败
 
@@ -139,13 +139,19 @@ Application Service MUST在首次Mutation前解析并锁定全部Gameplay、Time
 
 ### Requirement: AnimationClip注册Curve必须使用独立严格分片
 
-Document v4 MUST只为当前Definition闭包中实际可达且位于可写原生`.anim`的AnimationClip输出`editable/animation-clips/<stable-segment>/curves.json`。分片 MUST包含结构化Clip对象引用、dependency baseline和Clip Curve catalog允许的完整canonical Curve；MUST不包含骨骼Curve、AnimationEvent、import设置、Rig、Foot Analysis Artifact、Group或generated plan。Exporter、strict parser、Reconciler、handler、Validator与reverse exporter MUST复用同一Clip Curve capability。
+Document v4 MUST只为当前Definition闭包中实际可达且位于可写原生`.anim`的AnimationClip输出`editable/animation-clips/<stable-segment>/curves.json`。分片 MUST包含结构化Clip对象引用、完整dependency baseline、只读`AnimationClipAnalysisInputHash`和Clip Curve catalog允许的秒域完整canonical Curve；MUST不包含骨骼Curve、AnimationEvent、import设置、Rig、Foot Analysis Artifact、Phase Validation samples、Group或generated plan。Exporter、strict parser、Reconciler、handler、Validator与reverse exporter MUST复用同一Clip Curve capability，并按完整`EditorCurveBinding(path + type + property)`识别channel，不得只比较propertyName。
 
 #### Scenario: checkout导出RunLoop Curve
 
 - **WHEN** RunLoop原生Clip被当前Profile或Blend Space可达引用
 - **THEN** exporter MUST输出其允许的注册Curve与dependency baseline
 - **AND** MUST不导出骨骼曲线或Analysis payload
+
+#### Scenario: Document修改Foot Weight Curve
+
+- **WHEN** AI在dependency baseline与Analysis Input Hash仍匹配时替换Foot Placement Weight完整秒域Curve
+- **THEN** preflight MUST通过唯一Clip Curve Mutation校验完整binding、秒域、值域与Registered Curve Hash
+- **AND** apply成功后 MUST只使Projection stale，匹配Analysis Input Hash的Foot Analysis Artifact MUST继续Ready
 
 #### Scenario: Document修改只读导入子Clip
 

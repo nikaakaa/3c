@@ -59,6 +59,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         Vector2 m_Scroll;
         string m_Step1Report = string.Empty;
         double m_AutoSampleStopTime;
+        bool m_LastSamplingCapturing;
+        bool m_LastSamplingStarting;
+        string m_LastSamplingSavedPath = string.Empty;
 
         [MenuItem("Tools/3C/Launcher", false, -1000)]
         public static void Open()
@@ -72,6 +75,24 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             m_BuildTarget = EditorUserBuildSettings.activeBuildTarget;
             RefreshGameplayLab();
+            CaptureSamplingUiState();
+        }
+
+        void OnInspectorUpdate()
+        {
+            bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
+            bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
+            string savedPath = CharacterFootLandingPredictionSampler.LastSavedPath;
+            if (capturing == m_LastSamplingCapturing &&
+                starting == m_LastSamplingStarting &&
+                string.Equals(savedPath, m_LastSamplingSavedPath, StringComparison.Ordinal))
+            {
+                return;
+            }
+            m_LastSamplingCapturing = capturing;
+            m_LastSamplingStarting = starting;
+            m_LastSamplingSavedPath = savedPath;
+            Repaint();
         }
 
         void OnDisable()
@@ -639,6 +660,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
             if (!string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastSavedPath))
                 ScoreLastCsv();
+        }
+
+        void CaptureSamplingUiState()
+        {
+            m_LastSamplingCapturing = CharacterFootLandingPredictionSampler.IsCapturing;
+            m_LastSamplingStarting = CharacterFootLandingPredictionSampler.IsStartPending;
+            m_LastSamplingSavedPath = CharacterFootLandingPredictionSampler.LastSavedPath;
         }
     }
 }

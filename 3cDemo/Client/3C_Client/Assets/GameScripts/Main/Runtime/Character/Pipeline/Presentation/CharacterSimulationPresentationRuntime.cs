@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootPlacementRuntime m_FootPlacement;
         readonly CharacterCameraPresentationRuntime m_Camera;
         readonly Transform m_VisualRoot;
-        readonly Transform m_AnimationRoot;
+        readonly Transform m_PoseRoot;
         readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly List<CharacterPresentationCommand> m_CurrentFrameSignals =
             new List<CharacterPresentationCommand>();
@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterEquipmentVisualRuntime equipment,
             CharacterFootPlacementRuntime footPlacement,
             CharacterCameraPresentationRuntime camera,
-            Transform animationRoot,
+            Transform poseRoot,
             RuntimeDiagnosticsContext diagnostics)
         {
             if (!actorId.IsValid)
@@ -73,11 +73,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_FootPlacement = footPlacement;
             m_Camera = camera;
             m_VisualRoot = m_Body.VisualRoot;
-            m_AnimationRoot = animationRoot
-                ? animationRoot
-                : throw new ArgumentNullException(nameof(animationRoot));
-            if (m_AnimationRoot == m_VisualRoot || !m_AnimationRoot.IsChildOf(m_VisualRoot))
-                throw new InvalidOperationException("Animation Root must be a strict child of the Presentation VisualRoot.");
+            m_PoseRoot = poseRoot
+                ? poseRoot
+                : throw new ArgumentNullException(nameof(poseRoot));
+            if (m_PoseRoot.parent != m_VisualRoot)
+                throw new InvalidOperationException("PoseRoot must be a direct child of the Presentation VisualRoot.");
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         }
 
@@ -366,7 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             $"Presentation failure Actor={m_ActorId}, Frame={context.RenderFrame}, " +
                             $"BodyTick={bodyFrame.PreviousTick}->{bodyFrame.CurrentTick}@{bodyFrame.SampleAlpha:R}, " +
                             $"Visible={bodyFrame.VisiblePosition:R}, VisualRoot={m_VisualRoot.position:R}, " +
-                            $"AnimationRoot={m_AnimationRoot.position:R}, AnimationRootLocal={m_AnimationRoot.localPosition:R}, " +
+                            $"PoseRoot={m_PoseRoot.position:R}, PoseRootLocal={m_PoseRoot.localPosition:R}, " +
                             $"CameraSkipped={m_Camera != null}, Error={exception.Message}");
                     }
                     throw;

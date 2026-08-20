@@ -1466,12 +1466,6 @@ MonoBehaviour:
   m_Damping: 0.15
   m_DampingWhenOccluded: 0.05
   m_OptimalTargetDistance: 0
---- !u!1 &4778672069546708255 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7488367917416384809, guid: a0ce369f3f8c83d448bf45d0ad69ada7,
-    type: 3}
-  m_PrefabInstance: {fileID: 8504781732915987925}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &7789750232084570716 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5895519894295355212, guid: a0ce369f3f8c83d448bf45d0ad69ada7,
@@ -1564,7 +1558,8 @@ MonoBehaviour:
   m_BindingId: corin.remote-presentation
   m_CharacterDefinition: {fileID: 11400000, guid: c7a7c1e3f7e64d81b5a04a90cbeb8d4e,
     type: 2}
-  m_VisualTemplate: {fileID: 4778672069546708255}
+  m_CharacterTemplate: {fileID: 8392856502737243488, guid: a0ce369f3f8c83d448bf45d0ad69ada7,
+    type: 3}
   m_SpawnPosition: {x: -1.5, y: 0, z: -5.27}
   m_SpawnEulerAngles: {x: 0, y: 0, z: 0}
   m_BodyPresentationProfile: {fileID: 11400000, guid: af66407d1a1449718e36c61f7c6bb234,

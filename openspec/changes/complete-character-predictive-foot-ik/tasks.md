@@ -21,7 +21,7 @@
 - [ ] 1.7 为 `LockDistance`、`SlideDistance`、`UnlockBlendSeconds` 增加正式 Profile、Projection payload 与序列化值。
 - [ ] 1.8 为 `StrideSwitchCooldownSeconds` 与 `MaximumPivotYawDeltaDegrees` 增加正式 Profile、Projection payload 与序列化值。
 - [ ] 1.9 为朝向增加 `MaximumPitchDegrees`、`MaximumRollDegrees`、`UphillLevelBlend`、`DownhillSlopeBlend` 与 `OrientationRunSpeed` 正式配置。
-- [ ] 1.10 只保留有限正数 `PelvisSpringFrequency`，删除旧 `PelvisSpringDampingRatio` 配置、Projection 字段与Runtime读取。
+- [x] 1.10 只保留有限正数 `PelvisSpringFrequency`，删除旧 `PelvisSpringDampingRatio` 配置、Projection 字段与Runtime读取，并把Corin与TrainingEnemy正式值统一为3Hz。
 - [x] 1.11 在 Profile Build 校验中拒绝非有限值、非正值以及 `LandingUpdateDistance >= LockDistance`、`LockDistance >= SlideDistance`，并要求Goal换代半衰期为有限正数。
 - [ ] 1.12 删除预测误差淡出距离、约束权重及其 Profile、Projection、Runtime、诊断字段，不保留兼容读取。
 
@@ -75,10 +75,10 @@
 - [x] 5.1 实现步伐水平轴、Pose Root投影与`strideProgress`纯计算Builder。
 - [x] 5.2 按起点到终点的Component Up高差确定Flat、Ascending、Descending。
 - [x] 5.3 实现上坡落地后抬升和下坡支撑仍接触时下降的有符号`rootRelativeGroundTargetAlongUp = dot(sampledGround - poseRootPosition, ComponentUp)`，不重复叠加Gameplay Body已经走过的楼梯高度。
-- [x] 5.4 每帧计算前把Committed spring的target、output、velocity、SupportSide与SupportLandingEventIdentity逐字段复制到Pending。
+- [x] 5.4 每帧计算前把Committed spring的target、output、velocity、SupportSide、SupportLandingEventIdentity与Slope逐字段复制到Pending。
 - [x] 5.5 删除Stride Start坐标重基；弹簧状态始终表达相对同帧Pose Root的Component Up修正。
 - [x] 5.6 支撑切换、实时换踏面和目标变化都只更新唯一spring target，不把target差作为necessary delta直通最终Goal。
-- [x] 5.7 按design闭式公式实现固定临界阻尼积分，`deltaSeconds = 0`时保持输入和速度。
+- [x] 5.7 按design闭式公式实现固定临界阻尼积分；支撑、坡向或Target跨越handoff只在旧Velocity远离新Target时清零输入速度，保留上一Output且不建立第二Goal。
 - [x] 5.8 保证`springOutput`是唯一最终骨盆输出，地面修正与净空抬升不得在弹簧后再次叠加。
 - [x] 5.9 使用经过最终Goal换代与Position Weight后的双脚Sole计算相对原生双脚的额外抬升，并把该值合入唯一spring target。
 - [x] 5.10 没有完整步伐、Path rejected、空中或Action占用时清零骨盆Goal，不沿用上一帧目标。
@@ -126,7 +126,7 @@
 - [ ] 8.10 增加Current Visible Position/Rotation、Virtual Body/Revision Position/Rotation/Forward、visible/requested/applied/residual yaw与Pivot主支撑身份诊断。
 - [ ] 8.11 增加每脚ActionInstance、Action脚权重、Fact Grounded与HorizontalSpeed诊断。
 - [ ] 8.12 增加Lock Event、准备起始时间/权重、锁脚状态、水平误差、释放起点修正/权重/剩余时间诊断。
-- [x] 8.13 增加sampled ground、Pose Root、root-relative ground target、weighted Sole clearance lift、previous spring target/output/velocity、spring input/target/output/velocity与最终Pelvis Goal诊断，并删除旧重基与necessary字段。
+- [x] 8.13 增加sampled ground、Pose Root、root-relative ground target、weighted Sole clearance lift、previous slope、typed spring handoff reason、velocity reset、previous spring target/output/velocity、spring input/input velocity/target/output/velocity与最终Pelvis Goal诊断，并删除旧重基与necessary字段。
 - [x] 8.14 增加原始Goal修正、Committed/Pending换代输出、原始/最终权重、半衰期与Source Path identity诊断。
 - [ ] 8.15 Gizmo只显示Committed事实，不重新查询、重算Path/Envelope、推进状态或执行FBBIK；状态只用颜色和线框。
 - [ ] 8.16 CSV增加上述字段以及最终物理Pelvis/Ankle、Goal residual、写入Completion与typed rejection。

@@ -191,22 +191,31 @@ soleClearanceLiftAlongUp = max(0, correctedLowerSole - originalLowerSole)
 springTarget = rootRelativeGroundTargetAlongUp + soleClearanceLiftAlongUp
 ```
 
-弹簧 Pending 必须在本帧计算前逐字段复制 Committed，不能从 `Clear()` 后的零状态开始。弹簧状态始终是相对同帧Pose Root的Component Up修正，不属于Stride Start坐标系。支撑切换、同事件实时换踏面和净空变化都只更新同一个`springTarget`，不得搬运旧Stride Start，也不得把target差作为直通位移绕过弹簧：
+弹簧 Pending 必须在本帧计算前逐字段复制 Committed，不能从 `Clear()` 后的零状态开始。弹簧状态始终是相对同帧Pose Root的Component Up修正，不属于Stride Start坐标系。支撑切换、同事件实时换踏面和净空变化都只更新同一个`springTarget`，不得搬运旧Stride Start，也不得把target差作为直通位移绕过弹簧。
+
+支撑Landing Event变化、Ascending/Descending/Flat坡向变化，或新Target从上一Target所在方向跨过当前Output时，形成typed Pelvis Spring Handoff。Handoff只处理上一速度是否仍指向旧目标：若`previousVelocity * (springTarget - springInput) < 0`，旧速度正在远离新Target，必须把本帧`springInputVelocity`清零；`springInput`仍逐值等于上一Committed Output。未远离新Target时保留速度。不得按Target差绝对值增加阈值分支，也不得建立第二Pelvis Goal或交叉淡入淡出：
 
 ```text
 springInput = hadPreviousState ? previousSpringOutput : 0
-v0 = hadPreviousState ? previousSpringVelocity : 0
+previousDirection = previousSpringTarget - springInput
+nextDirection = springTarget - springInput
+handoff = supportChanged
+       or previousSlope != currentSlope
+       or previousDirection * nextDirection < 0
+springInputVelocity = handoff and previousSpringVelocity * nextDirection < 0
+                    ? 0
+                    : previousSpringVelocity
 
 omega = 2 * PI * PelvisSpringFrequency
 x0 = springInput - springTarget
-j0 = v0 + omega * x0
+j0 = springInputVelocity + omega * x0
 decay = exp(-omega * deltaSeconds)
 springOutput = springTarget + (x0 + j0 * deltaSeconds) * decay
-springVelocity = (v0 - omega * j0 * deltaSeconds) * decay
+springVelocity = (springInputVelocity - omega * j0 * deltaSeconds) * decay
 pelvisDelta = up * springOutput
 ```
 
-`springTarget`、`springOutput`、SupportSide、SupportLandingEventIdentity和弹簧速度属于Foot Placement Pending/Committed状态。没有有效旧状态时从零修正和零速度开始，不能在首个有效步伐帧直接跳到当前目标。`deltaSeconds = 0`时原样保留输入和速度。Profile只保留有限正数`PelvisSpringFrequency`；临界阻尼固定为`1`，删除可把行为改成欠阻尼或过阻尼的旧`PelvisSpringDampingRatio`配置。`springOutput`是唯一最终骨盆输出，地面修正与净空抬升不得在弹簧后再次叠加。
+`springTarget`、`springOutput`、SupportSide、SupportLandingEventIdentity、Slope和弹簧速度属于Foot Placement Pending/Committed状态。没有有效旧状态时从零修正和零速度开始，不能在首个有效步伐帧直接跳到当前目标。`deltaSeconds = 0`时原样保留输入和经过handoff裁决后的速度。Profile只保留有限正数`PelvisSpringFrequency`；临界阻尼固定为`1`，删除可把行为改成欠阻尼或过阻尼的旧`PelvisSpringDampingRatio`配置。Corin与TrainingEnemy正式Profile统一使用3Hz：相比6Hz压力样本，离线重放把Output单帧变化P95从约2.23cm降到1.27cm、超过5cm的帧从23降到6，同时中位Target跟随误差只增加约1.9cm。`springOutput`是唯一最终骨盆输出，地面修正与净空抬升不得在弹簧后再次叠加。
 
 没有完整步伐、Path rejected、空中或有限 Action 占用时，Pelvis Position Weight 为零，不沿用上一帧目标。Pelvis 只能进入 `PelvisPreSolveTranslation`，不能写 VisualRoot、Gameplay Body 或 KCC。
 
@@ -344,7 +353,7 @@ finalGoal = currentOriginalAnkle + outputCorrection
 
 Scene Gizmo 只显示当前事实：Accepted LastLanding、Cached NextSwingLanding、Ground Envelope、Invalid Segment、Original/Corrected Sole、Planted Sole、步伐线、Pelvis 标记、锁脚颜色和朝向短法线。Gizmo 不重新采样动画、查询世界、计算 Reachability、采样 Envelope 或执行 FBBIK。
 
-CSV 记录 Selected Query Step、每脚查询次数、尝试与 Accepted revision identity、Visible Position/Rotation、virtual Body Position/Rotation、revision Position/Rotation/Forward、visible/applied/residual yaw、主支撑 Side/Event、ActionInstance/脚权重、HorizontalSpeed、SurfaceIdentity、事件身份、锁脚状态、水平误差、锁入准备、释放起点修正/权重/剩余时间、朝向输入、步伐端点、sampled ground、Pose Root、progress、root-relative ground target、weighted Sole clearance lift、previous spring target/output/velocity、spring input/target/output/velocity、Pelvis Goal，以及 final writer 后 Physical Pelvis/Ankle、Completion 和 Goal residual。
+CSV 记录 Selected Query Step、每脚查询次数、尝试与 Accepted revision identity、Visible Position/Rotation、virtual Body Position/Rotation、revision Position/Rotation/Forward、visible/applied/residual yaw、主支撑 Side/Event、ActionInstance/脚权重、HorizontalSpeed、SurfaceIdentity、事件身份、锁脚状态、水平误差、锁入准备、释放起点修正/权重/剩余时间、朝向输入、步伐端点、sampled ground、Pose Root、progress、root-relative ground target、weighted Sole clearance lift、previous slope、typed spring handoff reason、velocity reset、previous spring target/output/velocity、spring input/input velocity/target/output/velocity、Pelvis Goal，以及 final writer 后 Physical Pelvis/Ankle、Completion 和 Goal residual。
 
 晋级诊断必须同时记录 `PromotedFromAcceptedRevisionIdentity` 与晋级前最后 Accepted 点、法线、Surface；完成帧查询结果不得出现在这些字段。Pending 与 Committed revision、spring、lock/release state 必须可在同一 Completion 对账，证明 Prepare 从 Committed 开始且 Discard 没有推进。CSV 不能单独算过，必须和 Scene 结果及同一 Completion 对账。
 

@@ -57,7 +57,7 @@
 
 状态：已取得有效失败样本，待修正后复验
 
-代码已接入 `ResolveStrideHips -> BuildPelvis -> CreatePelvisGoal`，骨盆目标与左右脚目标写入同一 GoalSet，并由唯一 `PelvisPreSolveTranslation` 消费。2026-08-20样本已经恢复正式Gameplay Timeline和647个Accepted Stride，但暴露出骨盆空间错误：旧实现把`rise * progress`整段步伐高度叠加到已经沿Traversal Ramp升降的Pose Root，又在支撑切换时把Component修正按Stride Start高度重基，连续有效步伐的Pelvis Goal单帧最大跳变约0.815米。修正后必须使用`sampledGround - poseRootPosition`作为地面修正，支撑切换只更新同一临界弹簧目标；双脚净空只消费经过最终Goal换代和Position Weight后的实际Sole抬升。
+代码已接入 `ResolveStrideHips -> BuildPelvis -> CreatePelvisGoal`，骨盆目标与左右脚目标写入同一 GoalSet，并由唯一 `PelvisPreSolveTranslation` 消费。2026-08-20首个有效样本暴露出骨盆空间重复叠加与Stride Start重基造成约0.815米单帧Goal跳变；修正后的压力样本已把连续Goal最大步长降到约0.047米，但又捕获支撑/坡向换代后旧Spring Velocity短暂继续推向旧方向的稀有上冲。当前代码通过typed handoff保留上一Output，只在旧Velocity远离新Target时清零输入速度；正常同坡向弹簧不改变。
 
 ### 操作
 
@@ -76,6 +76,7 @@
 - `StrideSlope` 与起止点沿 `GroundPathComponentUp` 的符号一致。
 - `StrideSampledGround*`、`StridePoseRootPosition*`与`StrideRootRelativeGroundTargetAlongUp`必须能重算唯一地面修正；`StrideSoleClearanceLiftAlongUp`只记录最终加权双脚Goal Sole相对原生双脚的额外抬升。
 - `StridePreviousSpringTarget/Output/Velocity`与`StrideSpringInput/Target/Output/Velocity`必须证明支撑切换只更新target，input连续等于上一Committed output，不存在Stride Start重基或necessary delta直通。
+- `StridePreviousSlope`、`StrideSpringHandoffReason`与`StrideSpringVelocityReset`必须说明换向原因；若旧Velocity与`SpringTarget - SpringInput`反向，`StrideSpringInputVelocity`必须为0，否则必须逐值等于Previous Spring Velocity。Handoff不得改变Spring Input位置。
 - `StrideRawPelvisDelta*`、`StrideSpringTarget`、`StrideSpringOutput`、`StridePelvisDelta*`有唯一总目标与最终Goal分解；地面修正或净空抬升不得在`SpringOutput`后再次叠加到`FinalPelvisGoal*`。
 - 以CSV中的frequency、deltaSeconds、spring input/velocity重算design闭式公式，必须在浮点容差内等于Pending spring output/velocity；不得出现显式Euler积分或可调damping ratio字段。
 - `PelvisPositionWeight > 0` 时，`FinalPelvisGoal*`、`FinalPhysicalPelvisComponentPosition*` 和 `FinalPhysicalPelvisGoalResidual` 必须来自同一 Completion。
@@ -93,6 +94,7 @@
 - Scene：`Assets/Screenshots/foot-ik-runtime-game-mid.png`、`Assets/Screenshots/foot-ik-runtime-scene-mid.png`。
 - 结论：旧记录不能作为本轮证据；盆骨、FullBodyIK 和 Physical Writer 尚未验收。
 - 历史失败样本：`Temp/FootLandingSamples/foot-landing-20260819-140819-595-bafd5e2d66ad49be9b46c1190172ac65.csv`共205帧，`maxPelvisStep=1.696/1.717`、`pelvisCuts=37/28`。当前Pelvis接线已替代当时的Swing-only状态，该CSV只保留作回归基线。
+- 当前换向失败基线：`Temp/FootLandingSamples/foot-landing-20260820-145208-138-0e9f1d9f45584b52b6f5fb8e7589e88e.csv`中帧39692的Target从约`+0.499m`翻到`-0.062m`，上一Velocity仍约`+3.561m/s`，旧Output因此继续从约`0.385m`升到`0.393m`。修正后该帧必须记录typed handoff、Velocity Reset和不再沿旧方向上升的Output；新CSV未生成前不得判定通过。
 
 ## 第 3 步：Ground Envelope 越过踢面
 

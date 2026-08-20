@@ -115,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly float m_TickDurationSeconds;
         readonly CharacterBodyPresentationSourceMode m_SourceMode;
         readonly CharacterVisualTrajectoryFollower m_Follower;
-        readonly Transform m_VisualRoot;
+        readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly Vector3 m_VisualBindPosition;
         readonly Quaternion m_VisualBindRotation;
         readonly CharacterPresentationBodyState m_InitialBody;
@@ -149,7 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int simulationTickRate,
             CharacterBodyPresentationSourceMode sourceMode,
             CharacterBodyPresentationSettings settings,
-            Transform visualRoot,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState initialBody,
             RuntimeDiagnosticsContext diagnostics)
         {
@@ -168,17 +168,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_TickDurationSeconds = 1f / simulationTickRate;
             m_SourceMode = sourceMode;
             m_Follower = new CharacterVisualTrajectoryFollower(settings);
-            m_VisualRoot = visualRoot ? visualRoot : throw new ArgumentNullException(nameof(visualRoot));
+            m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
+            m_RootHierarchy.RequireValid();
             m_InitialBody = initialBody;
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
             Quaternion inverse = Quaternion.Inverse(initialBody.Rotation);
-            m_VisualBindPosition = inverse * (visualRoot.position - initialBody.Position);
-            m_VisualBindRotation = inverse * visualRoot.rotation;
+            m_VisualBindPosition = inverse * (m_RootHierarchy.VisualRoot.position - initialBody.Position);
+            m_VisualBindRotation = inverse * m_RootHierarchy.VisualRoot.rotation;
             InitializeState();
         }
 
         public CharacterBodyPresentationSourceMode SourceMode => m_SourceMode;
-        internal Transform VisualRoot => m_VisualRoot;
+        internal Transform VisualRoot => m_RootHierarchy.VisualRoot;
         internal float TickDurationSeconds => m_TickDurationSeconds;
         public ulong LatestTick => m_LatestTick;
         public ulong ResetSequence => m_ResetSequence;
@@ -596,7 +597,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!frame.IsValid)
                 return;
-            m_VisualRoot.SetPositionAndRotation(
+            m_RootHierarchy.ApplyVisualWorldPose(
                 frame.VisiblePosition + frame.VisibleRotation * m_VisualBindPosition,
                 frame.VisibleRotation * m_VisualBindRotation);
         }
@@ -619,7 +620,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Status = frame.CorrectionActive ? "Correcting" : "Settled",
                     Time = frame.SampleAlpha,
                     SecondaryTime = presentationDeltaSeconds,
-                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};trajectory={frame.TrajectoryMode};sampleAge={frame.SampleAgeSeconds:0.####};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};groundedInterval={frame.GroundedBefore}->{frame.GroundedAfter};sourceDelta={frame.SourceTranslationDelta};visibleDelta={frame.VisibleTranslationDelta};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
+                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};trajectory={frame.TrajectoryMode};sampleAge={frame.SampleAgeSeconds:0.####};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};groundedInterval={frame.GroundedBefore}->{frame.GroundedAfter};sourceDelta={frame.SourceTranslationDelta};visibleDelta={frame.VisibleTranslationDelta};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};logicRoot={m_RootHierarchy.LogicRoot.position};visualRootLocal={m_RootHierarchy.VisualRoot.localPosition};visualRootWorld={m_RootHierarchy.VisualRoot.position};poseRootLocal={m_RootHierarchy.PoseRoot.localPosition};poseRootWorld={m_RootHierarchy.PoseRoot.position};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
                     Value = DebugValueSnapshot.Capture(frame.VisiblePosition)
                 });
         }

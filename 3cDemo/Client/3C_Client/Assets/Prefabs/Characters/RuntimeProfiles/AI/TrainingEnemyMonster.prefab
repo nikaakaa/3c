@@ -9,8 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4747243045056547913}
+  - component: {fileID: 4682194903437069685}
   m_Layer: 7
-  m_Name: EnemyVisualRoot
+  m_Name: VisualRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -26,12 +27,26 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6445966515355308978}
   m_Father: {fileID: 2803746775746296065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4682194903437069685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3772832476166313113}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c9d817d92d64df9b4170cb4b7ab02d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_PresentationRoot: {fileID: 4747243045056547913}
+  m_SelfColliderRoot: {fileID: 2803746775746296065}
 --- !u!1 &5923385775902307038
 GameObject:
   m_ObjectHideFlags: 0
@@ -45,7 +60,7 @@ GameObject:
   - component: {fileID: 2459673054063820776}
   - component: {fileID: 1905672166840258073}
   - component: {fileID: 348067713567278960}
-  - component: {fileID: 4682194903437069685}
+  - component: {fileID: 910231010000000103}
   m_Layer: 7
   m_Name: TrainingEnemyMonster
   m_TagString: Untagged
@@ -144,7 +159,7 @@ MonoBehaviour:
   m_Animancer: {fileID: 1484193444849101864}
   m_AnimationRigBinding: {fileID: 4277833373727526423}
   m_WorldBodyBinding: {fileID: 2459673054063820776}
-  m_VisualRoot: {fileID: 4747243045056547913}
+  m_RootHierarchy: {fileID: 910231010000000103}
   m_EquipmentRigBindings: {fileID: 0}
   m_EquipmentPreviewFixture: {fileID: 0}
   m_BodyPresentationProfile: {fileID: 11400000, guid: 4b4c626d2ec8f88468283470f1e1c194,
@@ -155,7 +170,7 @@ MonoBehaviour:
   m_CameraAimAnchor: {fileID: 0}
   m_CameraTargetBindings: []
   m_CameraLookInputValueId: 
---- !u!114 &4682194903437069685
+--- !u!114 &910231010000000103
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -164,11 +179,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 5923385775902307038}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c9d817d92d64df9b4170cb4b7ab02d3, type: 3}
+  m_Script: {fileID: 11500000, guid: 0b1b10d5b3ea49f9a8d55c1165d2f2e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_PresentationRoot: {fileID: 4747243045056547913}
-  m_SelfColliderRoot: {fileID: 2803746775746296065}
+  m_LogicRoot: {fileID: 2803746775746296065}
+  m_VisualRoot: {fileID: 4747243045056547913}
+  m_PoseRoot: {fileID: 6445966515355308978}
 --- !u!1001 &1605735058697435884
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -365,7 +381,7 @@ PrefabInstance:
     - target: {fileID: 4933635458688988132, guid: 56ef39d4bb9768b46a058f4b829fa7cd,
         type: 3}
       propertyPath: m_Name
-      value: MonsterPresentation
+      value: PoseRoot
       objectReference: {fileID: 0}
     - target: {fileID: 4933635458688988132, guid: 56ef39d4bb9768b46a058f4b829fa7cd,
         type: 3}
@@ -405,17 +421,17 @@ PrefabInstance:
     - target: {fileID: 5709469093612874078, guid: 56ef39d4bb9768b46a058f4b829fa7cd,
         type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5709469093612874078, guid: 56ef39d4bb9768b46a058f4b829fa7cd,
         type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5709469093612874078, guid: 56ef39d4bb9768b46a058f4b829fa7cd,
         type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5709469093612874078, guid: 56ef39d4bb9768b46a058f4b829fa7cd,
         type: 3}

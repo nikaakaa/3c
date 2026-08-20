@@ -179,7 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_UnlockBlendSeconds = 0.12f;
-        [SerializeField] float m_PelvisSpringFrequency = 6f;
+        [SerializeField] float m_PelvisSpringFrequency = 3f;
 
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(

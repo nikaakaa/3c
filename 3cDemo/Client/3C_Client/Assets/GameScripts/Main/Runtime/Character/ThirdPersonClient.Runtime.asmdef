@@ -8,6 +8,7 @@
         "ThirdPersonGameplay",
         "ThirdPersonCharacter.Animation.TransitionRouting",
         "ThirdPersonCharacter.Pipeline.RootMotion",
+        "HoaxGames.iStep.Contact",
         "RootMotion",
         "BTSMTL",
         "BTSMTL.Diagnostics",

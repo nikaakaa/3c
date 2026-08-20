@@ -31,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "TimelineCurrentVelocityX,TimelineCurrentVelocityZ,TimelineContinuationVelocityX,TimelineContinuationVelocityZ," +
             "TimelineHasContinuation,TimelineBodyYawVelocityDegreesPerSecond,TimelineMaximumBodyYawVelocityDegreesPerSecond,CurrentSegmentRemainingSeconds," +
             "Grounded,HorizontalSpeed,LeftActionInstanceIdentity,LeftActionFootWeight,RightActionInstanceIdentity,RightActionFootWeight," +
+            "PrimarySupportHasValue,PrimarySupportSide,PrimarySupportLandingEventIdentity,PrimarySupportRetained," +
             "LogicRootPositionX,LogicRootPositionY,LogicRootPositionZ,LogicRootRotationX,LogicRootRotationY,LogicRootRotationZ,LogicRootRotationW," +
             "VisualRootLocalPositionX,VisualRootLocalPositionY,VisualRootLocalPositionZ,VisualRootLocalRotationX,VisualRootLocalRotationY,VisualRootLocalRotationZ,VisualRootLocalRotationW," +
             "VisualRootWorldPositionX,VisualRootWorldPositionY,VisualRootWorldPositionZ,VisualRootWorldRotationX,VisualRootWorldRotationY,VisualRootWorldRotationZ,VisualRootWorldRotationW," +
@@ -51,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "CurrentAnimatedSoleX,CurrentAnimatedSoleY,CurrentAnimatedSoleZ," +
             "RawLandingCandidateX,RawLandingCandidateY,RawLandingCandidateZ," +
             "QueryShape,QueryPurpose,QueryFootIndex,QueryOriginX,QueryOriginY,QueryOriginZ," +
-            "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot," +
+            "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot,QueryPreferredSurfaceIdentity," +
             "Accepted,SurfaceIdentity,LandingPointX,LandingPointY,LandingPointZ," +
             "LandingNormalX,LandingNormalY,LandingNormalZ,QueryDistance," +
             "GroundPathState,GroundPathRejectReason,GroundPathInputIdentity,GroundPathQueryExecuted," +
@@ -855,6 +856,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, input.LeftActionFootWeight);
             Add(row, input.RightActionInstanceIdentity);
             Add(row, input.RightActionFootWeight);
+            Add(row, frame.PrimarySupport.HasValue);
+            Add(row, frame.PrimarySupport.Side.ToString());
+            Add(row, frame.PrimarySupport.LandingEventIdentity);
+            Add(row, frame.PrimarySupport.Retained);
             Add(row, roots.LogicRootPosition);
             Add(row, roots.LogicRootRotation);
             Add(row, roots.VisualRootLocalPosition);
@@ -896,6 +901,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, query.Radius);
             Add(row, query.LayerMask);
             Add(row, query.MinimumGroundNormalDot);
+            Add(row, query.PreferredSurfaceIdentity);
             Add(row, foot.Accepted);
             Add(row, foot.SurfaceIdentity);
             Add(row, foot.LandingPoint);

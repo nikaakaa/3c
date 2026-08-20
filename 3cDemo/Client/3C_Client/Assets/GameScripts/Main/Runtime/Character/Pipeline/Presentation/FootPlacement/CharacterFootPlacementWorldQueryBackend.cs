@@ -24,7 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumDistance,
             float radius,
             int layerMask,
-            float minimumGroundNormalDot)
+            float minimumGroundNormalDot,
+            int preferredSurfaceIdentity)
         {
             Shape = shape;
             Purpose = purpose;
@@ -35,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Radius = radius;
             LayerMask = layerMask;
             MinimumGroundNormalDot = minimumGroundNormalDot;
+            PreferredSurfaceIdentity = preferredSurfaceIdentity;
         }
 
         public CharacterFootPlacementQueryShape Shape { get; }
@@ -46,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float Radius { get; }
         public int LayerMask { get; }
         public float MinimumGroundNormalDot { get; }
+        public int PreferredSurfaceIdentity { get; }
     }
 
     internal sealed class CharacterFootPlacementWorldQueryBackend :
@@ -95,6 +98,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default);
             }
             RaycastHit hit = m_LandingHits[0];
+            if (request.PreferredSurfaceIdentity != 0)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    RaycastHit candidate = m_LandingHits[i];
+                    if (candidate.collider &&
+                        candidate.collider.GetInstanceID() == request.PreferredSurfaceIdentity)
+                    {
+                        hit = candidate;
+                        break;
+                    }
+                }
+            }
             return new CharacterFootLandingQueryResult(
                 CharacterFootLandingQueryRejectReason.None,
                 new CharacterFootLandingSupport(

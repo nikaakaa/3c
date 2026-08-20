@@ -400,6 +400,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong completionIdentity,
             int rootInstanceId,
             CharacterFootLandingPredictionInputDiagnostics input,
+            in CharacterFootPrimarySupportDiagnostics primarySupport,
             CharacterFullBodyIkGoal pelvisGoal,
             in CharacterFootStrideHipsDiagnostics strideHips,
             CharacterFootLandingPredictionFootDiagnostics left,
@@ -409,6 +410,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = completionIdentity;
             RootInstanceId = rootInstanceId;
             Input = input;
+            PrimarySupport = primarySupport;
             PelvisGoal = pelvisGoal;
             StrideHips = strideHips;
             Left = left;
@@ -419,6 +421,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong CompletionIdentity { get; }
         public int RootInstanceId { get; }
         public CharacterFootLandingPredictionInputDiagnostics Input { get; }
+        public CharacterFootPrimarySupportDiagnostics PrimarySupport { get; }
         public CharacterFullBodyIkGoal PelvisGoal { get; }
         public CharacterFootStrideHipsDiagnostics StrideHips { get; }
         public CharacterFootLandingPredictionFootDiagnostics Left { get; }
@@ -485,6 +488,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             Vector3 rawLandingCandidate,
             Vector3 componentUp,
+            int preferredSurfaceIdentity,
             in CharacterFootLandingPredictionSettings settings)
         {
             Vector3 up = componentUp.normalized;
@@ -497,13 +501,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.CastAbove + settings.CastBelow,
                 settings.SphereRadius,
                 settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot);
+                settings.MinimumGroundNormalDot,
+                preferredSurfaceIdentity);
         }
 
         internal static bool TryResolve(
             CharacterFootSide side,
             Vector3 rawLandingCandidate,
             Vector3 componentUp,
+            int preferredSurfaceIdentity,
             in CharacterFootLandingPredictionSettings settings,
             ICharacterFootLandingWorldQuery world,
             out CharacterFootPlacementQueryRequest query,
@@ -514,6 +520,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 side,
                 rawLandingCandidate,
                 componentUp,
+                preferredSurfaceIdentity,
                 in settings);
             CharacterFootLandingQueryResult result = world.Query(in query);
             support = result.Support;

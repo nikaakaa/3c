@@ -219,6 +219,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootSupportLockState.Locked => new Color(0.2f, 1f, 0.25f),
                 CharacterFootSupportLockState.Sliding => new Color(1f, 0.8f, 0.1f),
                 CharacterFootSupportLockState.Unlocked => new Color(1f, 0.25f, 0.15f),
+                CharacterFootSupportLockState.SwingHandoff => new Color(0.85f, 0.35f, 1f),
                 _ => FootColor(side)
             };
     }

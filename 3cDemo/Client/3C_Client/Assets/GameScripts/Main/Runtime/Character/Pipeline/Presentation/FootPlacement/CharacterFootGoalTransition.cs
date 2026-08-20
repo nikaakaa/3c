@@ -8,7 +8,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         Smooth = 0,
         LandingPreparation = 1,
-        DirectSupport = 2
+        DirectSupport = 2,
+        Released = 3
     }
 
     public readonly struct CharacterFootGoalTransitionDiagnostics
@@ -175,6 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float deltaSeconds,
             float halfLifeSeconds,
             CharacterFootGoalTransitionMode mode,
+            float landingConvergenceWeight,
             bool hardOwnershipLoss)
         {
             RequirePending();
@@ -185,9 +187,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !Unit(originalComponentRotation) ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f ||
                 !float.IsFinite(halfLifeSeconds) || halfLifeSeconds <= 0f ||
+                !float.IsFinite(landingConvergenceWeight) ||
+                landingConvergenceWeight < 0f || landingConvergenceWeight > 1f ||
                 mode != CharacterFootGoalTransitionMode.Smooth &&
                 mode != CharacterFootGoalTransitionMode.LandingPreparation &&
-                mode != CharacterFootGoalTransitionMode.DirectSupport)
+                mode != CharacterFootGoalTransitionMode.DirectSupport &&
+                mode != CharacterFootGoalTransitionMode.Released)
             {
                 throw new ArgumentException("Foot Goal transition input is invalid.");
             }
@@ -247,7 +252,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Pending.TargetRotationCorrection = targetRotationCorrection;
             m_Pending.TargetPositionWeight = target.PositionWeight;
             m_Pending.TargetRotationWeight = target.RotationWeight;
-            if (mode == CharacterFootGoalTransitionMode.DirectSupport)
+            if (mode == CharacterFootGoalTransitionMode.Released)
+            {
+                m_Pending.OutputPositionCorrection = default;
+                m_Pending.OutputRotationCorrection = Quaternion.identity;
+                m_Pending.OutputPositionWeight = 0f;
+                m_Pending.OutputRotationWeight = 0f;
+            }
+            else if (mode == CharacterFootGoalTransitionMode.DirectSupport)
             {
                 m_Pending.OutputPositionCorrection = targetPositionCorrection;
                 m_Pending.OutputRotationCorrection = targetRotationCorrection;
@@ -257,13 +269,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             else if (mode == CharacterFootGoalTransitionMode.LandingPreparation)
             {
                 Vector3 up = componentUp.normalized;
+                Vector3 convergedPositionCorrection = Vector3.LerpUnclamped(
+                    smoothedPositionCorrection,
+                    targetPositionCorrection,
+                    landingConvergenceWeight);
                 float missingUpwardCorrection = Vector3.Dot(
-                    targetPositionCorrection - smoothedPositionCorrection,
+                    targetPositionCorrection - convergedPositionCorrection,
                     up);
                 m_Pending.OutputPositionCorrection = missingUpwardCorrection > 0f
-                    ? smoothedPositionCorrection + up * missingUpwardCorrection
-                    : smoothedPositionCorrection;
-                m_Pending.OutputRotationCorrection = smoothedRotationCorrection;
+                    ? convergedPositionCorrection + up * missingUpwardCorrection
+                    : convergedPositionCorrection;
+                m_Pending.OutputRotationCorrection = Quaternion.SlerpUnclamped(
+                    smoothedRotationCorrection,
+                    targetRotationCorrection,
+                    landingConvergenceWeight).normalized;
                 m_Pending.OutputPositionWeight = target.PositionWeight;
                 m_Pending.OutputRotationWeight = target.RotationWeight;
             }

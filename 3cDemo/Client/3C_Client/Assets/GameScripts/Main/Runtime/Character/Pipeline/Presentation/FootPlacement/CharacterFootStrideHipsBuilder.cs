@@ -50,7 +50,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         Locked = 1,
         Sliding = 2,
-        Unlocked = 3
+        Unlocked = 3,
+        SwingHandoff = 4
     }
 
     internal struct CharacterFootSupportLockFacts
@@ -63,6 +64,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 UnlockStartCorrection;
         internal float UnlockStartPositionWeight;
         internal float UnlockRemainingSeconds;
+        internal Vector3 OutputAnkle;
+        internal Vector3 OutputVelocity;
+        internal ulong SwingHandoffLandingEventIdentity;
+        internal Vector3 SwingHandoffTargetAnkle;
 
         internal void ClearSupport()
         {
@@ -74,6 +79,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             UnlockStartCorrection = default;
             UnlockStartPositionWeight = 0f;
             UnlockRemainingSeconds = 0f;
+            OutputAnkle = default;
+            OutputVelocity = default;
+            SwingHandoffLandingEventIdentity = 0;
+            SwingHandoffTargetAnkle = default;
         }
 
         internal void Clear()
@@ -94,6 +103,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             StartTimeToLandingSeconds = 0f;
             Weight = 0f;
         }
+    }
+
+    internal struct CharacterFootPrimarySupportFacts
+    {
+        internal bool HasValue;
+        internal CharacterFootSide Side;
+        internal ulong LandingEventIdentity;
+        internal bool Retained;
+
+        internal void Clear()
+        {
+            HasValue = false;
+            Side = default;
+            LandingEventIdentity = 0;
+            Retained = false;
+        }
+
+        internal CharacterFootPrimarySupportDiagnostics Diagnostics =>
+            new CharacterFootPrimarySupportDiagnostics(
+                HasValue,
+                Side,
+                LandingEventIdentity,
+                Retained);
+    }
+
+    public readonly struct CharacterFootPrimarySupportDiagnostics
+    {
+        internal CharacterFootPrimarySupportDiagnostics(
+            bool hasValue,
+            CharacterFootSide side,
+            ulong landingEventIdentity,
+            bool retained)
+        {
+            HasValue = hasValue;
+            Side = side;
+            LandingEventIdentity = landingEventIdentity;
+            Retained = retained;
+        }
+
+        public bool HasValue { get; }
+        public CharacterFootSide Side { get; }
+        public ulong LandingEventIdentity { get; }
+        public bool Retained { get; }
     }
 
     public readonly struct CharacterFootStrideHipsDiagnostics
@@ -290,21 +342,61 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        internal static void ResolvePrimarySupport(
+            in CharacterFootSwingMotionDiagnostics leftMotion,
+            in CharacterFootSwingMotionDiagnostics rightMotion,
+            ref CharacterFootPrimarySupportFacts primarySupport)
+        {
+            bool leftRetainable = IsRetainablePrimarySupport(in leftMotion);
+            bool rightRetainable = IsRetainablePrimarySupport(in rightMotion);
+            if (primarySupport.HasValue)
+            {
+                bool retained = primarySupport.Side == CharacterFootSide.Left
+                    ? leftRetainable &&
+                      leftMotion.LandingEventIdentity == primarySupport.LandingEventIdentity
+                    : rightRetainable &&
+                      rightMotion.LandingEventIdentity == primarySupport.LandingEventIdentity;
+                if (retained)
+                {
+                    primarySupport.Retained = true;
+                    return;
+                }
+            }
+
+            bool leftCandidate = IsAcquirablePrimarySupport(in leftMotion);
+            bool rightCandidate = IsAcquirablePrimarySupport(in rightMotion);
+            if (!leftCandidate && !rightCandidate)
+            {
+                primarySupport.Clear();
+                return;
+            }
+
+            bool selectLeft = leftCandidate &&
+                (!rightCandidate ||
+                 leftMotion.SupportHorizontalError <= rightMotion.SupportHorizontalError);
+            primarySupport.HasValue = true;
+            primarySupport.Side = selectLeft
+                ? CharacterFootSide.Left
+                : CharacterFootSide.Right;
+            primarySupport.LandingEventIdentity = selectLeft
+                ? leftMotion.LandingEventIdentity
+                : rightMotion.LandingEventIdentity;
+            primarySupport.Retained = false;
+        }
+
         internal static bool TrySelectSwing(
             in AnimationBiomechanicalStepHeader leftStep,
             in AnimationBiomechanicalStepHeader rightStep,
             in CharacterFootSwingMotionDiagnostics leftMotion,
             in CharacterFootSwingMotionDiagnostics rightMotion,
-            out CharacterFootSide swingSide,
-            out bool leftSwingCandidate,
-            out bool rightSwingCandidate)
+            out CharacterFootSide swingSide)
         {
             bool leftAuthoritativeSwing = IsAuthoritativeSwing(in leftStep);
             bool rightAuthoritativeSwing = IsAuthoritativeSwing(in rightStep);
-            leftSwingCandidate = leftAuthoritativeSwing &&
+            bool leftSwingCandidate = leftAuthoritativeSwing &&
                                  leftMotion.Accepted &&
                                  leftMotion.LandingEventIdentity == leftStep.LandingEventIdentity;
-            rightSwingCandidate = rightAuthoritativeSwing &&
+            bool rightSwingCandidate = rightAuthoritativeSwing &&
                                   rightMotion.Accepted &&
                                   rightMotion.LandingEventIdentity == rightStep.LandingEventIdentity;
             if (leftAuthoritativeSwing != rightAuthoritativeSwing)
@@ -329,14 +421,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static bool TryResolveStride(
-            in AnimationBiomechanicalStepHeader leftSupportStep,
-            in AnimationBiomechanicalStepHeader rightSupportStep,
             in AnimationBiomechanicalStepHeader leftSwingStep,
             in AnimationBiomechanicalStepHeader rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
-            bool leftSwingCandidate,
-            bool rightSwingCandidate,
+            bool hasPrimarySupport,
+            CharacterFootSide primarySupportSide,
+            ulong primarySupportLandingEventIdentity,
             bool hasLeftLastLanding,
             Vector3 leftLastLanding,
             ulong leftLastLandingEventIdentity,
@@ -365,6 +456,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rejectReason = CharacterFootStrideRejectReason.MissingSwingLanding;
                 return false;
             }
+            if (!hasPrimarySupport ||
+                primarySupportLandingEventIdentity == 0 ||
+                primarySupportSide == selectedSwingSide)
+            {
+                rejectReason = CharacterFootStrideRejectReason.SupportUnavailable;
+                return false;
+            }
             if (selectedSwingSide == CharacterFootSide.Left)
             {
                 if (!IsAuthoritativeSwing(in leftSwingStep))
@@ -372,12 +470,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason = CharacterFootStrideRejectReason.MissingSwingLanding;
                     return false;
                 }
-                if (!IsAuthoritativeSupport(in rightSupportStep) && !rightSwingCandidate)
+                if (primarySupportSide != CharacterFootSide.Right)
                 {
-                    rejectReason = CharacterFootStrideRejectReason.DualSwing;
+                    rejectReason = CharacterFootStrideRejectReason.SupportUnavailable;
                     return false;
                 }
                 if (!hasRightLastLanding || rightLastLandingEventIdentity == 0 ||
+                    rightLastLandingEventIdentity != primarySupportLandingEventIdentity ||
                     !Finite(rightLastLanding))
                 {
                     rejectReason = CharacterFootStrideRejectReason.MissingSupportLanding;
@@ -405,12 +504,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason = CharacterFootStrideRejectReason.MissingSwingLanding;
                     return false;
                 }
-                if (!IsAuthoritativeSupport(in leftSupportStep) && !leftSwingCandidate)
+                if (primarySupportSide != CharacterFootSide.Left)
                 {
-                    rejectReason = CharacterFootStrideRejectReason.DualSwing;
+                    rejectReason = CharacterFootStrideRejectReason.SupportUnavailable;
                     return false;
                 }
                 if (!hasLeftLastLanding || leftLastLandingEventIdentity == 0 ||
+                    leftLastLandingEventIdentity != primarySupportLandingEventIdentity ||
                     !Finite(leftLastLanding))
                 {
                     rejectReason = CharacterFootStrideRejectReason.MissingSupportLanding;
@@ -448,7 +548,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasLastLanding,
             Vector3 lastLanding,
             ulong lastLandingEventIdentity,
-            bool releaseRequested,
             float preparationStartTimeToLandingSeconds,
             float preparationWeight,
             in CharacterFootMotionSettings settings,
@@ -517,15 +616,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     ref lockFacts);
             }
-            if (releaseRequested || horizontalError > settings.SlideDistance)
+            if (horizontalError > settings.SlideDistance)
             {
                 if (!sameLockEvent)
                 {
                     lockFacts.ClearSupport();
                     return RejectedPlant(
-                        releaseRequested
-                            ? CharacterFootSwingMotionRejectReason.SupportOwnershipReleased
-                            : CharacterFootSwingMotionRejectReason.SupportOutsideSlideDistance,
+                        CharacterFootSwingMotionRejectReason.SupportOutsideSlideDistance,
                         landingEventIdentity,
                         originalSole,
                         originalAnkle);
@@ -584,6 +681,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 targetSole = originalSole + ankleDelta;
             float verticalCorrection = Vector3.Dot(ankleDelta, up);
             float positionWeight = footPlacementWeight;
+            Vector3 outputVelocity = sameLockEvent &&
+                                     deltaSeconds > GeometryEpsilon
+                ? (targetAnkle - lockFacts.OutputAnkle) / deltaSeconds
+                : default;
             lockFacts.HasValue = true;
             lockFacts.LandingEventIdentity = landingEventIdentity;
             lockFacts.State = lockState;
@@ -592,6 +693,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             lockFacts.UnlockStartCorrection = default;
             lockFacts.UnlockStartPositionWeight = 0f;
             lockFacts.UnlockRemainingSeconds = 0f;
+            lockFacts.OutputAnkle = targetAnkle;
+            lockFacts.OutputVelocity = outputVelocity;
+            lockFacts.SwingHandoffLandingEventIdentity = 0;
+            lockFacts.SwingHandoffTargetAnkle = default;
             return new CharacterFootSwingMotionDiagnostics(
                 CharacterFootSwingMotionState.Accepted,
                 CharacterFootSwingMotionRejectReason.None,
@@ -618,6 +723,153 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 preparationWeight);
         }
 
+        internal static CharacterFootSwingMotionDiagnostics BuildSwingHandoff(
+            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in CharacterFootSwingMotionDiagnostics swingMotion,
+            ulong handoffLandingEventIdentity,
+            Vector3 componentUp,
+            in CharacterFootMotionSettings settings,
+            float deltaSeconds,
+            ref CharacterFootSupportLockFacts lockFacts)
+        {
+            Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
+            Vector3 originalAnkle = animatedFoot.AnklePosition;
+            if (!lockFacts.HasValue || handoffLandingEventIdentity == 0 ||
+                !Finite(componentUp) || componentUp.sqrMagnitude <= GeometryEpsilon ||
+                !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
+            {
+                throw new InvalidOperationException("Foot swing handoff input is invalid.");
+            }
+
+            bool beginning = lockFacts.State != CharacterFootSupportLockState.SwingHandoff;
+            bool hasPredictedTarget = swingMotion.Accepted &&
+                                      swingMotion.LandingEventIdentity ==
+                                      handoffLandingEventIdentity;
+            Vector3 handoffTargetAnkle = hasPredictedTarget
+                ? swingMotion.CorrectedAnkle
+                : originalAnkle;
+            if (beginning)
+            {
+                lockFacts.State = CharacterFootSupportLockState.SwingHandoff;
+                lockFacts.OutputAnkle = Finite(lockFacts.OutputAnkle)
+                    ? lockFacts.OutputAnkle
+                    : lockFacts.TargetAnkle;
+                lockFacts.OutputVelocity = Finite(lockFacts.OutputVelocity)
+                    ? lockFacts.OutputVelocity
+                    : default;
+                lockFacts.SwingHandoffLandingEventIdentity = handoffLandingEventIdentity;
+                lockFacts.SwingHandoffTargetAnkle = handoffTargetAnkle;
+                lockFacts.UnlockStartPositionWeight = lockFacts.PositionWeight;
+                lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
+            }
+            else
+            {
+                if (lockFacts.SwingHandoffLandingEventIdentity != handoffLandingEventIdentity)
+                {
+                    lockFacts.SwingHandoffLandingEventIdentity = handoffLandingEventIdentity;
+                    lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
+                }
+                lockFacts.SwingHandoffTargetAnkle = handoffTargetAnkle;
+            }
+
+            if (!Finite(lockFacts.OutputAnkle) ||
+                !Finite(lockFacts.OutputVelocity) ||
+                !Finite(lockFacts.SwingHandoffTargetAnkle))
+            {
+                throw new InvalidOperationException("Foot swing handoff state is invalid.");
+            }
+
+            bool hasCurrentTarget = handoffLandingEventIdentity ==
+                                    lockFacts.SwingHandoffLandingEventIdentity;
+            if (!beginning && deltaSeconds > 0f &&
+                lockFacts.UnlockRemainingSeconds > GeometryEpsilon)
+            {
+                float duration = lockFacts.UnlockRemainingSeconds;
+                float step = Mathf.Min(deltaSeconds, duration);
+                AdvanceHermite(
+                    lockFacts.OutputAnkle,
+                    lockFacts.OutputVelocity,
+                    lockFacts.SwingHandoffTargetAnkle,
+                    duration,
+                    step,
+                    out lockFacts.OutputAnkle,
+                    out lockFacts.OutputVelocity);
+                float targetWeight = hasPredictedTarget
+                    ? swingMotion.PositionWeight
+                    : lockFacts.PositionWeight;
+                lockFacts.PositionWeight = Mathf.Lerp(
+                    lockFacts.PositionWeight,
+                    targetWeight,
+                    step / duration);
+                lockFacts.UnlockRemainingSeconds = Mathf.Max(0f, duration - step);
+            }
+
+            if (lockFacts.UnlockRemainingSeconds <= GeometryEpsilon && hasCurrentTarget)
+            {
+                lockFacts.ClearSupport();
+                return hasPredictedTarget
+                    ? swingMotion
+                    : CharacterFootSwingMotionBuilder.SuppressUnselected(in swingMotion);
+            }
+
+            Vector3 up = componentUp.normalized;
+            Vector3 correction = lockFacts.OutputAnkle - originalAnkle;
+            Vector3 correctedSole = originalSole + correction;
+            float horizontalError = Vector3.ProjectOnPlane(
+                lockFacts.SwingHandoffTargetAnkle - lockFacts.OutputAnkle,
+                up).magnitude;
+            return new CharacterFootSwingMotionDiagnostics(
+                CharacterFootSwingMotionState.Accepted,
+                CharacterFootSwingMotionRejectReason.None,
+                lockFacts.SwingHandoffLandingEventIdentity,
+                hasPredictedTarget ? swingMotion.GroundPathInputIdentity : 0,
+                originalSole,
+                originalAnkle,
+                hasPredictedTarget ? swingMotion.Distance : 0f,
+                hasPredictedTarget ? swingMotion.Progress : 0f,
+                hasPredictedTarget ? swingMotion.BaselineSample : default,
+                hasPredictedTarget ? swingMotion.EnvelopeSample : default,
+                Vector3.Dot(correction, up),
+                hasPredictedTarget ? swingMotion.LandingPredictionError : 0f,
+                hasPredictedTarget ? swingMotion.LandingConstraintWeight : 0f,
+                correctedSole,
+                lockFacts.OutputAnkle,
+                lockFacts.PositionWeight,
+                0f,
+                CharacterFootSupportLockState.SwingHandoff,
+                horizontalError,
+                lockFacts.UnlockRemainingSeconds,
+                correction,
+                hasPredictedTarget
+                    ? swingMotion.SupportLockPreparationStartTimeToLandingSeconds
+                    : 0f,
+                hasPredictedTarget ? swingMotion.SupportLockPreparationWeight : 0f);
+        }
+
+        static void AdvanceHermite(
+            Vector3 start,
+            Vector3 startVelocity,
+            Vector3 end,
+            float duration,
+            float step,
+            out Vector3 position,
+            out Vector3 velocity)
+        {
+            float t = Mathf.Clamp01(step / duration);
+            float t2 = t * t;
+            float t3 = t2 * t;
+            float h00 = 2f * t3 - 3f * t2 + 1f;
+            float h10 = t3 - 2f * t2 + t;
+            float h01 = -2f * t3 + 3f * t2;
+            position = h00 * start + h10 * duration * startVelocity + h01 * end;
+            float dh00 = 6f * t2 - 6f * t;
+            float dh10 = 3f * t2 - 4f * t + 1f;
+            float dh01 = -6f * t2 + 6f * t;
+            velocity = (dh00 * start +
+                        dh10 * duration * startVelocity +
+                        dh01 * end) / duration;
+        }
+
         static void BeginSupportUnlock(
             Vector3 originalAnkle,
             in CharacterFootMotionSettings settings,
@@ -627,6 +879,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             lockFacts.UnlockStartCorrection = lockFacts.TargetAnkle - originalAnkle;
             lockFacts.UnlockStartPositionWeight = lockFacts.PositionWeight;
             lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
+            lockFacts.SwingHandoffLandingEventIdentity = 0;
+            lockFacts.SwingHandoffTargetAnkle = default;
         }
 
         static CharacterFootSwingMotionDiagnostics ContinueSupportUnlock(
@@ -661,6 +915,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float releaseWeight = lockFacts.UnlockStartPositionWeight * releaseAlpha;
             Vector3 releasedAnkle = originalAnkle + lockFacts.UnlockStartCorrection;
             Vector3 releasedSole = originalSole + lockFacts.UnlockStartCorrection;
+            lockFacts.OutputVelocity = !beganUnlock && deltaSeconds > GeometryEpsilon
+                ? (releasedAnkle - lockFacts.OutputAnkle) / deltaSeconds
+                : default;
+            lockFacts.OutputAnkle = releasedAnkle;
+            lockFacts.PositionWeight = releaseWeight;
             return new CharacterFootSwingMotionDiagnostics(
                 CharacterFootSwingMotionState.Accepted,
                 CharacterFootSwingMotionRejectReason.None,
@@ -1073,10 +1332,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             step.IsSwing &&
             step.HasConsistentLandingEventIdentity;
 
-        static bool IsAuthoritativeSupport(in AnimationBiomechanicalStepHeader step) =>
-            step.IsValid &&
-            step.IsAuthoritative &&
-            !step.IsSwing;
+        static bool IsRetainablePrimarySupport(
+            in CharacterFootSwingMotionDiagnostics motion) =>
+            motion.Accepted &&
+            motion.LandingEventIdentity != 0 &&
+            (motion.SupportLockState == CharacterFootSupportLockState.Locked ||
+             motion.SupportLockState == CharacterFootSupportLockState.Sliding);
+
+        static bool IsAcquirablePrimarySupport(
+            in CharacterFootSwingMotionDiagnostics motion) =>
+            motion.Accepted &&
+            motion.LandingEventIdentity != 0 &&
+            motion.SupportLockState == CharacterFootSupportLockState.Locked;
 
         static CharacterFootSwingMotionDiagnostics RejectedPlant(
             CharacterFootSwingMotionRejectReason reason,

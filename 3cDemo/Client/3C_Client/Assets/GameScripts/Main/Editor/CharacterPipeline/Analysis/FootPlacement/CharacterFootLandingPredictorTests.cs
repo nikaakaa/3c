@@ -48,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootSide.Right,
                     raw,
                     Vector3.up,
+                    0,
                     in settings);
 
             Assert.That(query.FootIndex, Is.EqualTo(1));
@@ -74,6 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootSide.Left,
                 Vector3.zero,
                 Vector3.up,
+                0,
                 in settings,
                 world,
                 out CharacterFootPlacementQueryRequest query,

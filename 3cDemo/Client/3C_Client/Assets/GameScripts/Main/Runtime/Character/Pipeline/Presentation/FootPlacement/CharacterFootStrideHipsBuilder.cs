@@ -23,7 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         BodyNotGrounded = 7,
         ActionOccupied = 8,
         GroundPathRejected = 9,
-        InvalidInput = 10
+        InvalidInput = 10,
+        SupportNotLocked = 11
     }
 
     public enum CharacterFootStrideSlope : byte
@@ -361,6 +362,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasLastLanding,
             Vector3 lastLanding,
             ulong lastLandingEventIdentity,
+            float legLength,
+            float maximumReachableVerticalEdge,
             in CharacterFootMotionSettings settings,
             float deltaSeconds,
             ref CharacterFootSupportLockFacts lockFacts)
@@ -392,6 +395,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landingEventIdentity,
                     originalSole,
                     originalAnkle);
+            if (!IsSupportLandingReachable(
+                    animatedFoot,
+                    lastLanding,
+                    componentUp,
+                    legLength,
+                    maximumReachableVerticalEdge))
+            {
+                lockFacts.Clear();
+                return RejectedPlant(
+                    CharacterFootSwingMotionRejectReason.SupportOutsideVerticalReach,
+                    landingEventIdentity,
+                    originalSole,
+                    originalAnkle);
+            }
             Vector3 up = componentUp.normalized;
             float plant = Vector3.Dot(lastLanding - originalSole, up);
             if (!float.IsFinite(plant))
@@ -411,6 +428,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     originalAnkle);
             if (horizontalError > settings.SlideDistance)
             {
+                bool beganUnlock = false;
                 if (lockFacts.HasValue &&
                     (lockFacts.State == CharacterFootSupportLockState.Locked ||
                      lockFacts.State == CharacterFootSupportLockState.Sliding))
@@ -419,11 +437,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     lockFacts.UnlockStartCorrection = lockFacts.TargetAnkle - originalAnkle;
                     lockFacts.UnlockStartPositionWeight = lockFacts.PositionWeight;
                     lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
+                    beganUnlock = true;
                 }
                 if (lockFacts.HasValue &&
                     lockFacts.State == CharacterFootSupportLockState.Unlocked)
                 {
-                    if (float.IsFinite(deltaSeconds) && deltaSeconds > 0f)
+                    if (!beganUnlock && float.IsFinite(deltaSeconds) && deltaSeconds > 0f)
                         lockFacts.UnlockRemainingSeconds = Mathf.Max(
                             0f,
                             lockFacts.UnlockRemainingSeconds - deltaSeconds);
@@ -507,6 +526,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 horizontalError,
                 0f,
                 default);
+        }
+
+        internal static bool IsSupportLandingReachable(
+            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            Vector3 landing,
+            Vector3 componentUp,
+            float legLength,
+            float maximumReachableVerticalEdge)
+        {
+            if (!Finite(animatedFoot.HipPosition) ||
+                !Finite(animatedFoot.AnklePosition) ||
+                !Finite(animatedFoot.HeelPosition) ||
+                !Finite(animatedFoot.ToePosition) ||
+                !Finite(landing) ||
+                !Finite(componentUp) ||
+                componentUp.sqrMagnitude <= GeometryEpsilon ||
+                !float.IsFinite(legLength) || legLength <= GeometryEpsilon ||
+                !float.IsFinite(maximumReachableVerticalEdge) ||
+                maximumReachableVerticalEdge <= GeometryEpsilon)
+            {
+                return false;
+            }
+
+            Vector3 up = componentUp.normalized;
+            Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
+            Vector3 soleToAnkle = animatedFoot.AnklePosition - originalSole;
+            float verticalDistance = Mathf.Abs(Vector3.Dot(landing - originalSole, up));
+            if (verticalDistance > maximumReachableVerticalEdge)
+                return false;
+
+            Vector3 targetAnkle = landing + soleToAnkle;
+            float reachableLegLength = legLength + maximumReachableVerticalEdge;
+            return Vector3.Distance(animatedFoot.HipPosition, targetAnkle) <= reachableLegLength;
         }
 
         internal static CharacterFootStrideHipsDiagnostics BuildRejected(

@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         OutputPose = 13,
         BlendSpacePlayer = 15,
         PoseBoneIKGoals = 16,
-        SequencePlayer = 17,
+        ClipPlayer = 17,
         PoseStateMachine = 18,
         StatePoseOutput = 19,
         AnimationSlot = 20,
@@ -196,7 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] int m_Index;
         [SerializeField] string m_NodeId = string.Empty;
-        [SerializeField] int m_SequencePlayerIndex = -1;
+        [SerializeField] int m_ClipPlayerIndex = -1;
         [SerializeField] int m_RootPhysicalBoneIndex = -1;
         [SerializeField] float m_Duration;
         [SerializeField] float m_TotalYaw;
@@ -205,13 +205,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterPresentationRootOrientationWarpDescriptor(
             int index,
             PoseNodeId nodeId,
-            int sequencePlayerIndex,
+            int clipPlayerIndex,
             int rootPhysicalBoneIndex,
             float duration,
             float totalYaw,
             AnimationCurve yawCurve)
         {
-            if (index < 0 || !nodeId.IsValid || sequencePlayerIndex < 0 ||
+            if (index < 0 || !nodeId.IsValid || clipPlayerIndex < 0 ||
                 rootPhysicalBoneIndex < 0 || !float.IsFinite(duration) || duration <= 0f ||
                 !float.IsFinite(totalYaw) || Math.Abs(totalYaw) <= 0.001f ||
                 yawCurve == null || yawCurve.length < 2)
@@ -220,7 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             m_Index = index;
             m_NodeId = nodeId.Value;
-            m_SequencePlayerIndex = sequencePlayerIndex;
+            m_ClipPlayerIndex = clipPlayerIndex;
             m_RootPhysicalBoneIndex = rootPhysicalBoneIndex;
             m_Duration = duration;
             m_TotalYaw = totalYaw;
@@ -233,16 +233,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public int Index => m_Index;
         public PoseNodeId NodeId => new PoseNodeId(m_NodeId);
-        public int SequencePlayerIndex => m_SequencePlayerIndex;
+        public int ClipPlayerIndex => m_ClipPlayerIndex;
         public int RootPhysicalBoneIndex => m_RootPhysicalBoneIndex;
         public float Duration => m_Duration;
         public float TotalYaw => m_TotalYaw;
         public AnimationCurve YawCurve => m_YawCurve;
 
-        public void RequireValid(int sequencePlayerCount, int physicalBoneCount)
+        public void RequireValid(int clipPlayerCount, int physicalBoneCount)
         {
-            if (Index < 0 || !NodeId.IsValid || SequencePlayerIndex < 0 ||
-                SequencePlayerIndex >= sequencePlayerCount || RootPhysicalBoneIndex < 0 ||
+            if (Index < 0 || !NodeId.IsValid || ClipPlayerIndex < 0 ||
+                ClipPlayerIndex >= clipPlayerCount || RootPhysicalBoneIndex < 0 ||
                 RootPhysicalBoneIndex >= physicalBoneCount || !float.IsFinite(Duration) || Duration <= 0f ||
                 !float.IsFinite(TotalYaw) || Math.Abs(TotalYaw) <= 0.001f ||
                 YawCurve == null || YawCurve.length < 2 ||
@@ -386,7 +386,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] int m_OutputFullBodyIkGoalSetValueIndex = -1;
         [SerializeField] int m_FullBodyIkGoalInputStart = -1;
         [SerializeField] int m_FullBodyIkGoalInputCount;
-        [SerializeField] int m_SequencePlayerIndex = -1;
+        [SerializeField] int m_ClipPlayerIndex = -1;
         [SerializeField] int m_StateMachineIndex = -1;
         [SerializeField] int m_AnimationSlotIndex = -1;
         [SerializeField] int m_LinkedPoseCallIndex = -1;
@@ -425,7 +425,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int outputFullBodyIkGoalSetValueIndex,
             int fullBodyIkGoalInputStart,
             int fullBodyIkGoalInputCount,
-            int sequencePlayerIndex,
+            int clipPlayerIndex,
             int stateMachineIndex,
             int animationSlotIndex,
             int linkedPoseCallIndex,
@@ -477,7 +477,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
             m_FullBodyIkGoalInputStart = fullBodyIkGoalInputStart;
             m_FullBodyIkGoalInputCount = fullBodyIkGoalInputCount;
-            m_SequencePlayerIndex = sequencePlayerIndex;
+            m_ClipPlayerIndex = clipPlayerIndex;
             m_StateMachineIndex = stateMachineIndex;
             m_AnimationSlotIndex = animationSlotIndex;
             m_LinkedPoseCallIndex = linkedPoseCallIndex;
@@ -528,7 +528,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int OutputFullBodyIkGoalSetValueIndex => m_OutputFullBodyIkGoalSetValueIndex;
         public int FullBodyIkGoalInputStart => m_FullBodyIkGoalInputStart;
         public int FullBodyIkGoalInputCount => m_FullBodyIkGoalInputCount;
-        public int SequencePlayerIndex => m_SequencePlayerIndex;
+        public int ClipPlayerIndex => m_ClipPlayerIndex;
         public int StateMachineIndex => m_StateMachineIndex;
         public int AnimationSlotIndex => m_AnimationSlotIndex;
         public int LinkedPoseCallIndex => m_LinkedPoseCallIndex;
@@ -654,7 +654,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPresentationFootPlacementDescriptor[] m_FootPlacements = Array.Empty<CharacterPresentationFootPlacementDescriptor>();
         [SerializeField] CharacterPresentationFullBodyIkDescriptor[] m_FullBodyIks = Array.Empty<CharacterPresentationFullBodyIkDescriptor>();
         [SerializeField] int[] m_FullBodyIkGoalInputValueIndices = Array.Empty<int>();
-        [SerializeField] CharacterPresentationSequencePlayerDescriptor[] m_SequencePlayers = Array.Empty<CharacterPresentationSequencePlayerDescriptor>();
+        [SerializeField] CharacterPresentationClipPlayerDescriptor[] m_ClipPlayers = Array.Empty<CharacterPresentationClipPlayerDescriptor>();
         [SerializeField] CharacterPoseStateMachineDescriptor[] m_StateMachines =
             Array.Empty<CharacterPoseStateMachineDescriptor>();
         [SerializeField] CharacterAnimationSlotDescriptor[] m_AnimationSlots =
@@ -688,7 +688,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPresentationFootPlacementDescriptor[] footPlacements,
             CharacterPresentationFullBodyIkDescriptor[] fullBodyIks,
             int[] fullBodyIkGoalInputValueIndices,
-            CharacterPresentationSequencePlayerDescriptor[] sequencePlayers,
+            CharacterPresentationClipPlayerDescriptor[] clipPlayers,
             CharacterPoseStateMachineDescriptor[] stateMachines,
             CharacterAnimationSlotDescriptor[] animationSlots,
             ActionPlaybackInputPlan[] actionPlaybackInputs,
@@ -727,7 +727,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FootPlacements = footPlacements ?? throw new ArgumentNullException(nameof(footPlacements));
             m_FullBodyIks = fullBodyIks ?? throw new ArgumentNullException(nameof(fullBodyIks));
             m_FullBodyIkGoalInputValueIndices = fullBodyIkGoalInputValueIndices ?? throw new ArgumentNullException(nameof(fullBodyIkGoalInputValueIndices));
-            m_SequencePlayers = sequencePlayers ?? throw new ArgumentNullException(nameof(sequencePlayers));
+            m_ClipPlayers = clipPlayers ?? throw new ArgumentNullException(nameof(clipPlayers));
             m_StateMachines = stateMachines ?? throw new ArgumentNullException(nameof(stateMachines));
             m_AnimationSlots = animationSlots ?? throw new ArgumentNullException(nameof(animationSlots));
             m_ActionPlaybackInputs = actionPlaybackInputs ??
@@ -767,7 +767,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     CharacterPoseOperationCode code = Operations[i].Code;
                     if (code == CharacterPoseOperationCode.SelectedPosePlayer || code == CharacterPoseOperationCode.BlendStack ||
-                        code == CharacterPoseOperationCode.BlendSpacePlayer || code == CharacterPoseOperationCode.SequencePlayer ||
+                        code == CharacterPoseOperationCode.BlendSpacePlayer || code == CharacterPoseOperationCode.ClipPlayer ||
                         code == CharacterPoseOperationCode.AnimationSlot)
                         count++;
                 }
@@ -782,7 +782,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPresentationFootPlacementDescriptor> FootPlacements => m_FootPlacements ?? Array.Empty<CharacterPresentationFootPlacementDescriptor>();
         public IReadOnlyList<CharacterPresentationFullBodyIkDescriptor> FullBodyIks => m_FullBodyIks ?? Array.Empty<CharacterPresentationFullBodyIkDescriptor>();
         public IReadOnlyList<int> FullBodyIkGoalInputValueIndices => m_FullBodyIkGoalInputValueIndices ?? Array.Empty<int>();
-        public IReadOnlyList<CharacterPresentationSequencePlayerDescriptor> SequencePlayers => m_SequencePlayers ?? Array.Empty<CharacterPresentationSequencePlayerDescriptor>();
+        public IReadOnlyList<CharacterPresentationClipPlayerDescriptor> ClipPlayers => m_ClipPlayers ?? Array.Empty<CharacterPresentationClipPlayerDescriptor>();
         public IReadOnlyList<CharacterPoseStateMachineDescriptor> StateMachines =>
             m_StateMachines ?? Array.Empty<CharacterPoseStateMachineDescriptor>();
         public IReadOnlyList<CharacterAnimationSlotDescriptor> AnimationSlots =>
@@ -941,22 +941,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException("Pose Plan Output operation boundary is inconsistent.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer || operation.Code == CharacterPoseOperationCode.BlendStack ||
-                    operation.Code == CharacterPoseOperationCode.BlendSpacePlayer || operation.Code == CharacterPoseOperationCode.SequencePlayer ||
+                    operation.Code == CharacterPoseOperationCode.BlendSpacePlayer || operation.Code == CharacterPoseOperationCode.ClipPlayer ||
                     operation.Code == CharacterPoseOperationCode.AnimationSlot)
                 {
                     if (operation.PlayerIndex < 0 || !playerIndices.Add(operation.PlayerIndex))
                         throw new InvalidOperationException($"Pose Plan Player operation #{i} has an invalid runtime index.");
                 }
-                if (operation.Code == CharacterPoseOperationCode.SequencePlayer)
+                if (operation.Code == CharacterPoseOperationCode.ClipPlayer)
                 {
-                    if ((uint)operation.SequencePlayerIndex >= (uint)SequencePlayers.Count)
-                        throw new InvalidOperationException($"Pose Plan Sequence Player operation #{i} has no descriptor.");
-                    CharacterPresentationSequencePlayerDescriptor descriptor = SequencePlayers[operation.SequencePlayerIndex];
+                    if ((uint)operation.ClipPlayerIndex >= (uint)ClipPlayers.Count)
+                        throw new InvalidOperationException($"Pose Plan Clip Player operation #{i} has no descriptor.");
+                    CharacterPresentationClipPlayerDescriptor descriptor = ClipPlayers[operation.ClipPlayerIndex];
                     descriptor?.RequireValid();
-                    if (descriptor == null || descriptor.Index != operation.SequencePlayerIndex ||
+                    if (descriptor == null || descriptor.Index != operation.ClipPlayerIndex ||
                         descriptor.NodeId != operation.NodeId || descriptor.PlayerIndex != operation.PlayerIndex)
                     {
-                        throw new InvalidOperationException($"Pose Plan Sequence Player operation #{i} descriptor ownership is invalid.");
+                        throw new InvalidOperationException($"Pose Plan Clip Player operation #{i} descriptor ownership is invalid.");
                     }
                 }
                 if (operation.Code == CharacterPoseOperationCode.RootOrientationWarp)
@@ -970,7 +970,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPresentationRootOrientationWarpDescriptor descriptor =
                         RootOrientationWarps[operation.RootOrientationWarpIndex];
                     descriptor?.RequireValid(
-                        SequencePlayers.Count,
+                        ClipPlayers.Count,
                         PoseBoneCount);
                     if (descriptor == null ||
                         descriptor.Index != operation.RootOrientationWarpIndex ||
@@ -978,8 +978,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         !poseValueProducers.TryGetValue(
                             operation.InputValueIndexA,
                             out CharacterPresentationPoseOperation rootSource) ||
-                        rootSource.Code != CharacterPoseOperationCode.SequencePlayer ||
-                        rootSource.SequencePlayerIndex != descriptor.SequencePlayerIndex)
+                        rootSource.Code != CharacterPoseOperationCode.ClipPlayer ||
+                        rootSource.ClipPlayerIndex != descriptor.ClipPlayerIndex)
                     {
                         throw new InvalidOperationException(
                             $"Pose Plan Root Orientation Warp operation #{i} descriptor ownership is invalid.");
@@ -1099,7 +1099,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                 }
             }
-            if (SequencePlayers.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.SequencePlayer) ||
+            if (ClipPlayers.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.ClipPlayer) ||
                 RootOrientationWarps.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.RootOrientationWarp) ||
                 StateMachines.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.PoseStateMachine) ||
                 AnimationSlots.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.AnimationSlot) ||
@@ -1229,7 +1229,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static bool IsDirectInertializationPlayer(CharacterPoseOperationCode code) =>
             code == CharacterPoseOperationCode.SelectedPosePlayer ||
             code == CharacterPoseOperationCode.BlendSpacePlayer ||
-            code == CharacterPoseOperationCode.SequencePlayer;
+            code == CharacterPoseOperationCode.ClipPlayer;
 
         void RequireStagesValid()
         {

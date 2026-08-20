@@ -167,7 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         GraphInput = 15,
         GraphOutput = 16,
         BlendSpacePlayer = 18,
-        SequencePlayer = 20,
+        ClipPlayer = 20,
         PoseStateMachine = 21,
         AnimationSlot = 22,
         ActionPlaybackInput = 23,

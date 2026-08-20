@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
@@ -527,7 +527,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return kind == CharacterPoseNodeKind.SelectedPosePlayer ||
                    kind == CharacterPoseNodeKind.BlendStack ||
                    kind == CharacterPoseNodeKind.BlendSpacePlayer ||
-                   kind == CharacterPoseNodeKind.SequencePlayer;
+                   kind == CharacterPoseNodeKind.ClipPlayer;
         }
 
         static string ResolveStateLocalPoseSourceKind(
@@ -1081,8 +1081,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         easeOutFrame = clip.EaseOutFrame,
                         clipInFrame = clip.ClipInFrame,
                         extraPolationMode = animationClip?.ExtraPolationMode.ToString() ?? string.Empty,
-                        animationSequence = animationClip != null && animationClip.Sequence
-                            ? AssetReference(animationClip.Sequence)
+                        animationClip = animationClip != null && animationClip.Clip
+                            ? AssetReference(animationClip.Clip)
                             : null
                     };
                     if (clip is MotionCurveClip motionCurve)
@@ -1831,7 +1831,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
         }
 
-        static AgentPackageAssetReferenceV3 AssetReference(UnityEngine.Object asset)
+        static AgentPackageAssetReferenceV4 AssetReference(UnityEngine.Object asset)
         {
             if (!asset ||
                 !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(
@@ -1839,7 +1839,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     out string guid,
                     out long localFileId))
                 return null;
-            return new AgentPackageAssetReferenceV3
+            return new AgentPackageAssetReferenceV4
             {
                 assetPath = AssetDatabase.GetAssetPath(asset),
                 assetGuid = guid,

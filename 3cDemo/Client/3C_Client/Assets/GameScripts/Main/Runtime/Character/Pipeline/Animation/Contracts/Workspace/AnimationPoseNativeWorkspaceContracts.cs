@@ -85,7 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                   TrackAuthoringId.Length > 0 &&
                   PlaybackGeneration != 0 &&
                   PresentationPoseSourceIndex < 0
-                : (SourceKind == AnimationPoseSourceKind.Sequence ||
+                : (SourceKind == AnimationPoseSourceKind.Clip ||
                    SourceKind == AnimationPoseSourceKind.BlendSpace ||
                    SourceKind == AnimationPoseSourceKind.MotionMatching) &&
                   TimelineAuthoringId.Length == 0 &&

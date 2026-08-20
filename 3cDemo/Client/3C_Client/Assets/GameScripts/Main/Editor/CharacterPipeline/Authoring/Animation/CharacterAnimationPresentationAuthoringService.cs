@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Animancer;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Equipment;
@@ -61,19 +62,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     public static class CharacterAnimationPresentationAuthoringService
     {
-        public static CharacterSequencePoseSourceSlot CreateSequencePoseSource(
+        public static CharacterClipPoseSourceSlot CreateClipPoseSource(
             CharacterAnimationPresentationProfile profile,
             string displayName,
-            CharacterAnimationSequenceAsset sequence)
+            UnityEngine.AnimationClip clip)
         {
             RequirePoseSourceContext(profile, displayName);
-            if (!sequence)
-                throw new ArgumentNullException(nameof(sequence));
-            var slot = UnityEngine.ScriptableObject.CreateInstance<CharacterSequencePoseSourceSlot>();
+            _ = CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clip);
+            var slot = UnityEngine.ScriptableObject.CreateInstance<CharacterClipPoseSourceSlot>();
             slot.name = displayName.Trim();
-            var binding = UnityEngine.ScriptableObject.CreateInstance<CharacterSequencePoseSourceBinding>();
+            var binding = UnityEngine.ScriptableObject.CreateInstance<CharacterClipPoseSourceBinding>();
             binding.name = slot.name + " Binding";
-            binding.Configure(slot, sequence);
+            binding.Configure(slot, clip);
             CreatePoseSource(profile, slot, binding);
             return slot;
         }
@@ -120,26 +120,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return slot;
         }
 
-        public static void ConfigureSequencePoseSourceBinding(
+        public static void ConfigureClipPoseSourceBinding(
             CharacterAnimationPresentationProfile profile,
-            CharacterSequencePoseSourceSlot slot,
-            CharacterAnimationSequenceAsset sequence)
+            CharacterClipPoseSourceSlot slot,
+            UnityEngine.AnimationClip clip)
         {
-            if (!profile)
-                throw new ArgumentNullException(nameof(profile));
-            if (!slot)
-                throw new ArgumentNullException(nameof(slot));
-            if (!sequence)
-                throw new ArgumentNullException(nameof(sequence));
-            if (!profile.RigDefinition)
-                throw new InvalidOperationException($"Animation Presentation Profile '{profile.name}' requires one formal Rig Definition.");
-
-            CharacterPresentationPoseSourceBinding existing = profile.FindPoseSourceBinding(slot);
-            var configured = UnityEngine.ScriptableObject.CreateInstance<CharacterSequencePoseSourceBinding>();
-            configured.name = existing ? existing.name : slot.name + " Binding";
-            configured.Configure(slot, sequence);
-
-            SetPoseSourceBinding(profile, configured);
+            if (!profile || !slot)
+                throw new ArgumentException("Clip Pose source context is incomplete.");
+            _ = CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clip);
+            CharacterPresentationPoseSourceBinding current = profile.FindPoseSourceBinding(slot);
+            Undo.RecordObject(profile, "Configure Clip Pose Source Binding");
+            if (current)
+                Undo.DestroyObjectImmediate(current);
+            var binding = UnityEngine.ScriptableObject.CreateInstance<CharacterClipPoseSourceBinding>();
+            binding.name = slot.name + " Binding";
+            binding.Configure(slot, clip);
+            AssetDatabase.AddObjectToAsset(binding, profile);
+            CharacterPresentationPoseSourceBinding[] bindings = profile.PoseSourceBindings
+                .Where(value => value && value.Slot != slot)
+                .Concat(new CharacterPresentationPoseSourceBinding[] { binding })
+                .ToArray();
+            profile.SetPoseSourceBindings(bindings);
+            EditorUtility.SetDirty(profile);
         }
 
         public static void ConfigureBlendSpacePoseSourceBinding(
@@ -512,7 +514,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     producerId.TimelineAuthoringId,
                     producerId.TrackAuthoringId,
                     clip.AuthoringId,
-                    clip.Sequence.Clip));
+                    clip.Clip));
             }
             return clips.ToArray();
         }

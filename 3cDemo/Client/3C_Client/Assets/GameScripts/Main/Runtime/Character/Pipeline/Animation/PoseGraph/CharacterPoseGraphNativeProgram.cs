@@ -1025,7 +1025,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
                     operation.Code == CharacterPoseOperationCode.BlendStack ||
                     operation.Code == CharacterPoseOperationCode.BlendSpacePlayer ||
-                    operation.Code == CharacterPoseOperationCode.SequencePlayer ||
+                    operation.Code == CharacterPoseOperationCode.ClipPlayer ||
                     operation.Code == CharacterPoseOperationCode.AnimationSlot)
                 {
                     if (operation.Code !=
@@ -1222,7 +1222,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             CharacterPoseOperationCode.SelectedPosePlayer => true,
             CharacterPoseOperationCode.BlendSpacePlayer => true,
-            CharacterPoseOperationCode.SequencePlayer => true,
+            CharacterPoseOperationCode.ClipPlayer => true,
             CharacterPoseOperationCode.BlendStack => true,
             CharacterPoseOperationCode.AnimationSlot => true,
             CharacterPoseOperationCode.Inertialization => true,

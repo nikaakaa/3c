@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentMutationKind.ConfigureTimelineClipEase,
                 AgentMutationKind.ConfigureTimelineCurveChannel,
                 AgentMutationKind.ConfigureAnimationTrackChannel,
-                AgentMutationKind.EnsureAnimationSequenceSegment,
+                AgentMutationKind.EnsureAnimationClipSegment,
                 AgentMutationKind.DeleteTimelineClip,
                 AgentMutationKind.EnsureTreeClipBlackboardWrite,
                 AgentMutationKind.DeleteTransition,

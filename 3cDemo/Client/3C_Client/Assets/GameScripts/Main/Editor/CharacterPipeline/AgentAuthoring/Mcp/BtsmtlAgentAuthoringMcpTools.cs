@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
 {
-    [McpForUnityTool("btsmtl.checkout_document", Description = "Create or refresh the canonical Document v3 package, including Blackboard declarations with optional inputBinding.inputValueId and factProjection payloads, readonly Linked Pose Interface context, and editable Presentation Profile, Linked Implementation, Entry Graph, Group and selector fragments for CharacterController. Returns the exact package path, sync state, source revision and document hashes without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.checkout_document", Description = "Create or refresh the canonical Document v4 package, including Blackboard declarations with optional inputBinding.inputValueId and factProjection payloads, readonly Linked Pose Interface context, and editable Presentation Profile, Linked Implementation, Entry Graph, Group and selector fragments for CharacterController. Returns the exact package path, sync state, source revision and document hashes without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
     public static class CheckoutBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.rebase_document", Description = "Accept current Unity authoring and readonly context as the new Document v3 baseline while preserving editable target files, including complete canonical local Pose Graph, Timeline and Linked Implementation Entry Graph closures admitted by the service-owned manifest lifecycle. Returns the rebased hashes and sync state without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.rebase_document", Description = "Accept current Unity authoring and readonly context as the new Document v4 baseline while preserving editable target files, including complete canonical local Pose Graph, Timeline and Linked Implementation Entry Graph closures admitted by the service-owned manifest lifecycle. Returns the rebased hashes and sync state without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = true, OpenWorldHint = false)]
     public static class RebaseBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.dry_run_document", Description = "Strictly reconcile the complete Document v3 editable target, including Blackboard declaration, inputBinding.inputValueId and factProjection paths, into the shared typed Mutation plan. Reject readonly Interface edits, runtime handles, legacy authority/syncPolicy fields and old flat Blackboard payloads. Returns the exact effective document hash, plan hash, planned diff and identity-preserving diagnostics without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.dry_run_document", Description = "Strictly reconcile the complete Document v4 editable target, including Blackboard declaration, inputBinding.inputValueId and factProjection paths, into the shared typed Mutation plan. Reject readonly Interface edits, runtime handles, legacy authority/syncPolicy fields and old flat Blackboard payloads. Returns the exact effective document hash, plan hash, planned diff and identity-preserving diagnostics without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
     public static class DryRunBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -94,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.apply_document", Description = "Apply the complete Document v3 target only when expected_document_hash exactly matches the latest dry-run effective hash. Service-admitted local Pose Graph, Timeline, Linked Implementation, Entry Graph and selector creation join the same asset-level transaction; any failure rolls back. Success saves authoring, reverse-exports formal GUID/local file identities and the canonical manifest without building Character products or switching an active runtime Implementation.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.apply_document", Description = "Apply the complete Document v4 target only when expected_document_hash exactly matches the latest dry-run effective hash. Service-admitted local Pose Graph, Timeline, Linked Implementation, Entry Graph and selector creation join the same asset-level transaction; any failure rolls back. Success saves authoring, reverse-exports formal GUID/local file identities and the canonical manifest without building Character products or switching an active runtime Implementation.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
     public static class ApplyBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -111,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
             [ToolParameter("Exact Assets/... root Definition path required for start.", Required = false)]
             public string root_asset_path { get; set; }
 
-            [ToolParameter("Exact document hash returned by the latest successful dry-run for this same Document v3 package.", Required = false)]
+            [ToolParameter("Exact document hash returned by the latest successful dry-run for this same Document v4 package.", Required = false)]
             public string expected_document_hash { get; set; }
         }
 

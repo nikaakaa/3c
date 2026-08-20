@@ -416,7 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     case CharacterPoseOperationCode.SelectedPosePlayer:
                     case CharacterPoseOperationCode.BlendSpacePlayer:
-                    case CharacterPoseOperationCode.SequencePlayer:
+                    case CharacterPoseOperationCode.ClipPlayer:
                     case CharacterPoseOperationCode.BlendStack:
                         using (PlayerInputMarker.Auto())
                             EvaluatePlayerInput(operation);
@@ -561,9 +561,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 found = true;
                 break;
             }
-            if (!found || sourceOperation.Code != CharacterPoseOperationCode.SequencePlayer)
+            if (!found || sourceOperation.Code != CharacterPoseOperationCode.ClipPlayer)
                 throw new InvalidOperationException(
-                    $"Sequence Preview source operation #{sourceOperationIndex} is not a compiled Sequence Player.");
+                    $"Clip Preview source operation #{sourceOperationIndex} is not a compiled Clip Player.");
 
             ResetValue(sourceOperation.OutputValueIndex);
             EvaluatePlayerInput(sourceOperation);
@@ -4042,7 +4042,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bool valid = operation.Code switch
                 {
                     CharacterPoseOperationCode.SelectedPosePlayer or CharacterPoseOperationCode.BlendSpacePlayer or
-                        CharacterPoseOperationCode.SequencePlayer or CharacterPoseOperationCode.BlendStack =>
+                        CharacterPoseOperationCode.ClipPlayer or CharacterPoseOperationCode.BlendStack =>
                         operation.InputValueIndexA == -1 && operation.InputValueIndexB == -1 &&
                         operation.PhysicalPlayerIndex >= 0 && operation.PhysicalPlayerIndex < layout.PlayerCount &&
                         IsOutputPolicy(operation.AnimationSelectionAvailabilityPolicy) &&

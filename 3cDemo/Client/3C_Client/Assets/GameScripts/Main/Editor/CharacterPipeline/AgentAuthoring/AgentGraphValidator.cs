@@ -337,7 +337,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     node.Kind == CharacterPoseNodeKind.SelectedPosePlayer ||
                     node.Kind == CharacterPoseNodeKind.BlendStack ||
                     node.Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
-                    node.Kind == CharacterPoseNodeKind.SequencePlayer;
+                    node.Kind == CharacterPoseNodeKind.ClipPlayer;
                 if (stateLocal)
                     ValidateStateLocalPoseSource(presentation, node, nodePath);
                 if (!stateLocal &&
@@ -429,8 +429,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     typeof(CharacterMotionMatchingPoseSourceSlot),
                 CharacterPoseNodeKind.BlendSpacePlayer =>
                     typeof(CharacterBlendSpacePoseSourceSlot),
-                CharacterPoseNodeKind.SequencePlayer =>
-                    typeof(CharacterSequencePoseSourceSlot),
+                CharacterPoseNodeKind.ClipPlayer =>
+                    typeof(CharacterClipPoseSourceSlot),
                 _ => typeof(CharacterPresentationPoseSourceSlot)
             };
             if (!expectedSlotType.IsInstanceOfType(sourceSlot))
@@ -452,13 +452,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "Source Slot不能从Presentation Profile解析到唯一typed binding子资产。");
                 return;
             }
-            if (node.Kind == CharacterPoseNodeKind.SequencePlayer &&
+            if (node.Kind == CharacterPoseNodeKind.ClipPlayer &&
                 source?.SourceKind != PresentationPoseSourceKind.Clip)
             {
                 m_Report.Error(
                     path,
                     "sequence_pose_source_kind_invalid",
-                    "SequencePlayer必须引用Sequence Presentation Pose source。");
+                    "ClipPlayer必须引用Sequence Presentation Pose source。");
             }
             if (node.Kind == CharacterPoseNodeKind.BlendSpacePlayer &&
                 source?.SourceKind != PresentationPoseSourceKind.BlendSpace)

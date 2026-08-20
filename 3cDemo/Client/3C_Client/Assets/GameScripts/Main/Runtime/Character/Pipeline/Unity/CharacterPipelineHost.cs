@@ -176,27 +176,6 @@ namespace ThirdPersonCharacter.Pipeline
 		public bool CanPreviewPoseGraph => CanPreviewTimeline;
 		public override string PreviewStatus =>
 			"Pose Graph preview uses the selected Host's formal Body fixture and Scene PhysicsScene. A missing World-Aware Binding is reported at the first world-aware stage.";
-		public override bool TryGetAnimationSequencePreviewStatus(
-			AnimationSequenceAsset sequence,
-			out string status)
-		{
-			if (!CanPreviewTimeline)
-			{
-				status = "Sequence Preview is unavailable: the selected Host is missing its compiled Definition, Animancer, Rig Binding, Body fixture or Visual Root.";
-				return false;
-			}
-			try
-			{
-				return EnsurePreviewController()
-					.TryGetSequencePreviewStatus(sequence, out status);
-			}
-			catch (InvalidOperationException exception)
-			{
-				status = exception.Message;
-				return false;
-			}
-		}
-
 		public void BindSessionActor(SimulationSessionHost sessionHost, ActorId actorId)
 		{
 			if (m_Registration != null)
@@ -504,29 +483,6 @@ namespace ThirdPersonCharacter.Pipeline
 				resetLifecycle);
 		}
 
-		public override void EvaluateAnimationSequencePreview(
-			Guid sessionId,
-			AnimationSequenceAsset sequence,
-			float previousTime,
-			float currentTime,
-			ulong evaluationTick,
-			float presentationDeltaSeconds,
-			bool resetLifecycle)
-		{
-			if (sessionId == Guid.Empty || sequence == null || !CanPreviewTimeline)
-			{
-				ClearAnimationSequencePreview(sessionId);
-				return;
-			}
-			EnsurePreviewController().EvaluateSequence(
-				sessionId,
-				sequence,
-				currentTime,
-				evaluationTick,
-				presentationDeltaSeconds,
-				resetLifecycle || currentTime + 0.000001f < previousTime);
-		}
-
 		public void EvaluatePoseGraphPreview(
 			Guid sessionId,
 			double presentationTime,
@@ -602,45 +558,6 @@ namespace ThirdPersonCharacter.Pipeline
 		public override void ClearTimelinePreview(Guid sessionId)
 		{
 			m_PreviewController?.Clear(sessionId);
-		}
-
-		public override void ClearAnimationSequencePreview(Guid sessionId)
-		{
-			m_PreviewController?.Clear(sessionId);
-		}
-
-		public override void CollectAnimationMarkerSyncPreviewSources(
-			TimelineData timeline,
-			string targetTrackAuthoringId,
-			List<TimelineAnimationMarkerSyncPreviewCandidate> destination)
-		{
-			EnsurePreviewController().CollectMarkerSyncSources(timeline, targetTrackAuthoringId, destination);
-		}
-
-		public override void ConfigureAnimationMarkerSyncPreviewSource(
-			Guid sessionId,
-			string targetTimelineAuthoringId,
-			string targetTrackAuthoringId,
-			string sourceTimelineAuthoringId,
-			string sourceTrackAuthoringId)
-		{
-			EnsurePreviewController().ConfigureMarkerSyncSource(
-				sessionId,
-				targetTimelineAuthoringId,
-				targetTrackAuthoringId,
-				sourceTimelineAuthoringId,
-				sourceTrackAuthoringId);
-		}
-
-		public override bool TryGetAnimationMarkerSyncPreviewState(
-			Guid sessionId,
-			string targetTrackAuthoringId,
-			out TimelineAnimationMarkerSyncPreviewState state)
-		{
-			if (m_PreviewController != null)
-				return m_PreviewController.TryGetMarkerSyncPreviewState(sessionId, targetTrackAuthoringId, out state);
-			state = default;
-			return false;
 		}
 
 		void Awake()

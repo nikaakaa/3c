@@ -118,7 +118,7 @@ namespace BTSMTL.Timeline
             for (int clipIndex = 0; clipIndex < Clips.Count; clipIndex++)
             {
                 Clip clip = Clips[clipIndex];
-                if (clip is not AnimationClip animationClip || !animationClip.ResolvedClip)
+                if (clip is not AnimationClip animationClip || !animationClip.Clip)
                     continue;
 
                 if (!TrySampleClip(animationClip, timelineTime, out float clipTime, out float normalizedTime, out float weight))
@@ -133,7 +133,7 @@ namespace BTSMTL.Timeline
                     sourceId,
                     sourceName,
                     Name,
-                    animationClip.ResolvedClip,
+                    animationClip.Clip,
                     AnimationChannelId,
                     clipTime,
                     normalizedTime,
@@ -204,8 +204,6 @@ namespace BTSMTL.Timeline
     public partial class AnimationClip : Clip
     {
         [ShowInInspector, OnValueChanged("OnClipChanged", "RebindTimeline")]
-        public AnimationSequenceAsset Sequence;
-        [ShowInInspector, OnValueChanged("OnClipChanged", "RebindTimeline")]
         public UnityEngine.AnimationClip Clip;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public ExtraPolationMode ExtraPolationMode;
@@ -217,10 +215,9 @@ namespace BTSMTL.Timeline
         public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 #if UNITY_EDITOR
 
-        public UnityEngine.AnimationClip ResolvedClip => Clip ? Clip : Sequence ? Sequence.Clip : null;
-        public override string Name => ResolvedClip ? ResolvedClip.name : base.Name;
-        public override int Length => ResolvedClip
-            ? Mathf.RoundToInt(ResolvedClip.length * TimelineUtility.FrameRate)
+        public override string Name => Clip ? Clip.name : base.Name;
+        public override int Length => Clip
+            ? Mathf.RoundToInt(Clip.length * TimelineUtility.FrameRate)
             : base.Length;
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable | ClipCapabilities.ClipInable;
         public AnimationClip(Track track, int frame) : base(track, frame) { }

@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public static void Open(CharacterPipelineDefinition definition)
         {
-            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v3");
+            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v4");
             window.m_Domain = ControllerDomain.CharacterController;
             window.m_Root = definition;
             window.Show();
@@ -34,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public static void Open(AIControllerDefinition definition)
         {
-            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v3");
+            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v4");
             window.m_Domain = ControllerDomain.AIController;
             window.m_Root = definition;
             window.Show();

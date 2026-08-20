@@ -78,7 +78,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: ece1421ead360ce4cbbcecc60f8daeaa, type: 2}
+        Clip: {fileID: 7400000, guid: 1085463043eec484c9173b05b7037f92, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -163,7 +163,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: 6558b174fa4a85d428a67102c44d1ab6, type: 2}
+        Clip: {fileID: 7400000, guid: 4bd2aa40793a8a5449b6ef7f4de23426, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2

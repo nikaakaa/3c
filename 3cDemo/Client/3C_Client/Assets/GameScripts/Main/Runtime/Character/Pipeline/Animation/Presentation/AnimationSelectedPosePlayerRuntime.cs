@@ -239,7 +239,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sample.SourcePoseContinuityIdentity,
                 sample.FrameSequence,
                 SourceOwnerIndex,
-                default,
                 time.SampleTime,
                 time.ContinuousTime,
                 time.Cycle,

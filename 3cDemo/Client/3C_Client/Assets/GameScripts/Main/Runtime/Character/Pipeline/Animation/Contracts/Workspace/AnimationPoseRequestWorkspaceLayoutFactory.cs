@@ -34,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             sourceCapacity = checked(sourceCapacity + blendNode.StackPolicy.MaxActiveSourceEntries + 1);
                             playerCount++;
                             break;
-                        case CharacterPoseOperationCode.SequencePlayer:
+                        case CharacterPoseOperationCode.ClipPlayer:
                             playerCount++;
                             break;
                     }

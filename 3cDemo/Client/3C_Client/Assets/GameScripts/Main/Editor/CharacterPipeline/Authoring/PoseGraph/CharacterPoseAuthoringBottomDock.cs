@@ -193,6 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public DropdownField TargetField => m_TargetField;
+        public GameObject PreviewTarget => m_Target ? m_Target.gameObject : null;
 
         public override void Bind(
             IGraphAuthoringDocumentProjection document)

@@ -712,7 +712,7 @@ namespace BTSMTL.Diagnostics
                 RuntimeTraceEventKind.AnimationPlaybackSelected or
                 RuntimeTraceEventKind.AnimationPlaybackRetained or
                 RuntimeTraceEventKind.AnimationPlaybackRetired or
-                RuntimeTraceEventKind.AnimationMarkerSync or
+                RuntimeTraceEventKind.AnimationPhaseSync or
                 RuntimeTraceEventKind.MotionMatchingQuery or
                 RuntimeTraceEventKind.MotionMatchingTrajectory or
                 RuntimeTraceEventKind.MotionMatchingPoseHistory or

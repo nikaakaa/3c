@@ -53,7 +53,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly float[] m_Parameters;
         readonly byte[] m_ParameterAvailability;
         readonly ClipSamplePlan[] m_ClipSamples;
+        readonly double[] m_SampleRawTimes;
         readonly AnimationPlayerReleaseJournal m_Releases;
+        readonly int m_FootPlacementWeightParameterIndex;
         State m_CommittedState;
         State m_PendingState;
         bool m_FrameOpen;
@@ -102,7 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterAnimationBlendSpacePlan plan,
             CharacterPresentationPosePlan posePlan,
             CharacterAnimationRigPayload rig,
-            AnimationFootAnalysisProjectionIdentity footAnalysis)
+            AnimationFootAnalysisProjectionIdentity footAnalysis,
+            System.Collections.Generic.IReadOnlyList<AnimationClipPhasePlan> clipPhasePlans)
         {
             m_Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             m_Plan = plan ?? throw new ArgumentNullException(nameof(plan));
@@ -113,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FootAnalysis = footAnalysis;
             m_Plan.RequireValid(footAnalysis != null && footAnalysis.IsEnabled);
             m_Solver = m_Plan.CreateSolverPlan();
-            m_Phase = m_Plan.CreatePhasePlan();
+            m_Phase = m_Plan.CreatePhasePlan(clipPhasePlans);
             m_Weights = new CharacterAnimationBlendSpaceWeightPage(m_Plan.Samples.Count);
             m_Times = new CharacterAnimationBlendSpaceTimePage(m_Plan.Samples.Count);
             m_ParameterIds = new PoseParameterId[posePlan.Parameters.Count];
@@ -121,7 +124,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ParameterAvailability = new byte[posePlan.Parameters.Count];
             for (int i = 0; i < posePlan.Parameters.Count; i++)
                 m_ParameterIds[i] = posePlan.Parameters[i].ParameterId;
+            m_FootPlacementWeightParameterIndex = posePlan.RequireParameterIndex(AnimationPoseParameterIds.FootPlacementWeight);
             m_ClipSamples = new ClipSamplePlan[m_Plan.Samples.Count];
+            m_SampleRawTimes = new double[m_Plan.Samples.Count];
             m_SourceWorkspace =
                 new AnimationBlendSourcePoseWorkspace(
                     rig,
@@ -148,7 +153,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool IsRelevant => m_Relevant;
         internal bool HasCompletedFrame => m_HasCompletedFrame;
         internal float RemainingTime => float.MaxValue;
-        internal AnimationMarkerSyncBinding MarkerSync => m_Plan.MarkerSync;
         internal double ContinuousTime => m_ContinuousTime;
         internal double RawContinuousTime => m_RawContinuousTime;
         internal AnimationReadOnlyBuffer<ClipSamplePlan> ClipSamples =>
@@ -330,6 +334,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_Phase,
                     m_ContinuousTime,
                     m_Cycle,
+                    m_SampleRawTimes,
                     m_Times,
                     out CharacterAnimationBlendSpaceCanonicalPhase canonicalPhase,
                     out CharacterAnimationBlendSpacePhaseFailure phaseFailure))
@@ -340,6 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             WriteParameters(x, y);
             var left = new AnimationFootFeatureBlendAccumulator();
             var right = new AnimationFootFeatureBlendAccumulator();
+            float footPlacementWeight = 0f;
             m_ClipSampleCount = 0;
             for (int weightIndex = 0; weightIndex < m_Weights.Count; weightIndex++)
             {
@@ -351,11 +357,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterAnimationBlendSpaceSampleTime time =
                     FindTime(m_Times, sampleId);
                 int sampleIndex = FindSampleIndex(m_Plan, sampleId);
-                bool looping =
-                    sample.Role == CharacterAnimationBlendSpaceSampleRole.DynamicCycle;
-                double continuousClipTime = looping
-                    ? m_Cycle * (double)sample.Clip.length + time.ClipTime
-                    : time.ClipTime;
+                bool looping = sample.Clip.isLooping;
+                double continuousClipTime = time.RawContinuousTime;
                 m_ClipSamples[m_ClipSampleCount++] = new ClipSamplePlan(
                     sampleIndex,
                     sample.SampleId,
@@ -365,6 +368,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     time.NormalizedTime,
                     weight,
                     looping);
+                footPlacementWeight += sample.SampleFootPlacementWeight(time.NormalizedTime) * weight;
                 if (sample.HasFootFeatures)
                 {
                     left.Add(
@@ -384,6 +388,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_ClipSampleCount == 0)
                 throw new InvalidOperationException(
                     $"Blend Space Player '{NodeId}' produced no active samples.");
+            m_Parameters[m_FootPlacementWeightParameterIndex] = Mathf.Clamp01(footPlacementWeight);
+            m_ParameterAvailability[m_FootPlacementWeightParameterIndex] = 1;
             bool hasFootFeatures =
                 m_Plan.Samples[0].HasFootFeatures;
             m_RawX = rawX;
@@ -618,6 +624,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 else
                 {
+                    if (m_ParameterIds[parameterIndex].Equals(AnimationPoseParameterIds.FootPlacementWeight))
+                    {
+                        value = 0f;
+                        available = true;
+                        m_Parameters[parameterIndex] = value;
+                        m_ParameterAvailability[parameterIndex] = 1;
+                        continue;
+                    }
                     available = TryResolveSourceParameter(
                         m_Plan,
                         m_Weights,

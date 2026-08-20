@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using BTSMTL.Timeline;
 using UnityEngine;
-using UnityAnimationClip = UnityEngine.AnimationClip;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -40,8 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum CharacterAnimationBlendSpacePhasePolicy : byte
     {
         SharedNormalizedPhase = 1,
-        MarkerSegmentPhase = 2,
-        GeneratedFootPhase = 3
+        LocomotionPhase = 2
     }
 
     public enum CharacterAnimationBlendSpaceSampleRole : byte
@@ -74,9 +71,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void Configure(PoseParameterId parameterId, string unit, float minimum, float maximum)
         {
-            m_ParameterId = parameterId.IsValid ? parameterId.Value : throw new ArgumentException("Blend Space axis Parameter identity is invalid.", nameof(parameterId));
-            if (string.IsNullOrWhiteSpace(unit) || !float.IsFinite(minimum) || !float.IsFinite(maximum) || minimum >= maximum)
+            if (!parameterId.IsValid || string.IsNullOrWhiteSpace(unit) ||
+                !float.IsFinite(minimum) || !float.IsFinite(maximum) || minimum >= maximum)
                 throw new ArgumentException("Blend Space axis contract is invalid.");
+            m_ParameterId = parameterId.Value;
             m_ValueType = PoseParameterValueType.Float;
             m_Unit = unit.Trim();
             m_Minimum = minimum;
@@ -91,7 +89,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] float m_Value;
 
         public CharacterAnimationBlendSpaceSampleParameter() { }
-
         public CharacterAnimationBlendSpaceSampleParameter(PoseParameterId parameterId, float value)
         {
             if (!parameterId.IsValid || !float.IsFinite(value))
@@ -108,35 +105,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterAnimationBlendSpaceSample
     {
         [SerializeField] string m_SampleId = string.Empty;
-        [SerializeField] CharacterAnimationSequenceAsset m_Sequence;
-        [SerializeField] UnityAnimationClip m_Clip;
+        [SerializeField] AnimationClip m_Clip;
         [SerializeField] Vector2 m_Position;
         [SerializeField] CharacterAnimationBlendSpaceSampleRole m_Role = CharacterAnimationBlendSpaceSampleRole.DynamicCycle;
         [SerializeField, Range(0f, 1f)] float m_StationaryNormalizedTime;
         [SerializeField] CharacterAnimationBlendSpaceSampleParameter[] m_Parameters = Array.Empty<CharacterAnimationBlendSpaceSampleParameter>();
 
         public CharacterAnimationBlendSpaceSampleId SampleId => string.IsNullOrWhiteSpace(m_SampleId) ? default : new CharacterAnimationBlendSpaceSampleId(m_SampleId);
-        public CharacterAnimationSequenceAsset Sequence => m_Sequence;
-        public UnityAnimationClip Clip => m_Clip ? m_Clip : m_Sequence ? m_Sequence.Clip : null;
-        public string ClipContentIdentity => m_Clip ? m_Clip.GetInstanceID().ToString() : m_Sequence ? m_Sequence.ContentRevision : string.Empty;
+        public AnimationClip Clip => m_Clip;
         public Vector2 Position => m_Position;
         public CharacterAnimationBlendSpaceSampleRole Role => m_Role;
         public float StationaryNormalizedTime => m_StationaryNormalizedTime;
         public IReadOnlyList<CharacterAnimationBlendSpaceSampleParameter> Parameters => m_Parameters ?? Array.Empty<CharacterAnimationBlendSpaceSampleParameter>();
 
-        internal CharacterAnimationBlendSpaceSample Clone(CharacterAnimationBlendSpaceSampleId sampleId)
-        {
-            return new CharacterAnimationBlendSpaceSample
+        internal CharacterAnimationBlendSpaceSample Clone(CharacterAnimationBlendSpaceSampleId sampleId) =>
+            new CharacterAnimationBlendSpaceSample
             {
                 m_SampleId = sampleId.IsValid ? sampleId.Value : throw new ArgumentException("Blend Space Sample identity is invalid.", nameof(sampleId)),
-                m_Sequence = m_Sequence,
                 m_Clip = m_Clip,
                 m_Position = m_Position,
                 m_Role = m_Role,
                 m_StationaryNormalizedTime = m_StationaryNormalizedTime,
                 m_Parameters = m_Parameters == null ? Array.Empty<CharacterAnimationBlendSpaceSampleParameter>() : (CharacterAnimationBlendSpaceSampleParameter[])m_Parameters.Clone()
             };
-        }
 
         internal void Initialize(CharacterAnimationBlendSpaceSampleId sampleId, Vector2 position)
         {
@@ -149,21 +140,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void SetPosition(Vector2 position) => m_Position = RequireFinite(position);
 
-        internal void SetSequence(CharacterAnimationSequenceAsset sequence)
+        internal void SetClip(AnimationClip clip)
         {
-            if (!sequence)
-                throw new ArgumentException("Blend Space Sample Sequence binding is invalid.");
-            sequence.RequireValid();
-            m_Sequence = sequence;
-            m_Clip = sequence.Clip;
-        }
-
-        internal void SetClip(UnityAnimationClip clip)
-        {
-            if (!clip)
-                throw new ArgumentException("Blend Space Sample Clip binding is invalid.");
-            m_Clip = clip;
-            m_Sequence = null;
+            m_Clip = clip ? clip : throw new ArgumentException("Blend Space Sample Clip binding is invalid.");
         }
 
         internal void SetRole(CharacterAnimationBlendSpaceSampleRole role, float stationaryNormalizedTime)
@@ -177,9 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void SetParameters(CharacterAnimationBlendSpaceSampleParameter[] parameters)
         {
-            m_Parameters = parameters == null
-                ? Array.Empty<CharacterAnimationBlendSpaceSampleParameter>()
-                : (CharacterAnimationBlendSpaceSampleParameter[])parameters.Clone();
+            m_Parameters = parameters == null ? Array.Empty<CharacterAnimationBlendSpaceSampleParameter>() : (CharacterAnimationBlendSpaceSampleParameter[])parameters.Clone();
         }
 
         static Vector2 RequireFinite(Vector2 value)
@@ -200,7 +177,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterAnimationBlendSpaceParameterPolicy Policy => m_Policy;
 
         public CharacterAnimationBlendSpacePoseParameterPolicy() { }
-
         public CharacterAnimationBlendSpacePoseParameterPolicy(PoseParameterId parameterId, CharacterAnimationBlendSpaceParameterPolicy policy)
         {
             if (!parameterId.IsValid || !Enum.IsDefined(typeof(CharacterAnimationBlendSpaceParameterPolicy), policy))
@@ -215,10 +191,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] Vector2 m_Parameter;
         [SerializeField, Range(0f, 1f)] float m_NormalizedTime;
-
         public Vector2 Parameter => m_Parameter;
         public float NormalizedTime => m_NormalizedTime;
-
         internal void Configure(Vector2 parameter, float normalizedTime)
         {
             if (!float.IsFinite(parameter.x) || !float.IsFinite(parameter.y) ||
@@ -263,97 +237,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             TouchContentRevision();
         }
 
-        internal void SetRig(CharacterAnimationRigDefinition rig)
-        {
-            m_Rig = rig ? rig : throw new ArgumentNullException(nameof(rig));
-            TouchContentRevision();
-        }
-
+        internal void SetRig(CharacterAnimationRigDefinition rig) { m_Rig = rig ? rig : throw new ArgumentNullException(nameof(rig)); TouchContentRevision(); }
         internal void SetMode(CharacterAnimationBlendSpaceMode mode)
         {
-            if (!Enum.IsDefined(typeof(CharacterAnimationBlendSpaceMode), mode))
-                throw new ArgumentOutOfRangeException(nameof(mode));
+            if (!Enum.IsDefined(typeof(CharacterAnimationBlendSpaceMode), mode)) throw new ArgumentOutOfRangeException(nameof(mode));
             m_Mode = mode;
-            if (mode == CharacterAnimationBlendSpaceMode.Linear1D)
-                m_YAxis = null;
-            else if (m_YAxis == null)
-                m_YAxis = new CharacterAnimationBlendSpaceAxis();
+            if (mode == CharacterAnimationBlendSpaceMode.Linear1D) m_YAxis = null;
+            else m_YAxis ??= new CharacterAnimationBlendSpaceAxis();
             TouchContentRevision();
         }
-
         internal void SetAxis(int axisIndex, PoseParameterId parameterId, string unit, float minimum, float maximum)
         {
-            if (axisIndex == 0)
-            {
-                m_XAxis ??= new CharacterAnimationBlendSpaceAxis();
-                m_XAxis.Configure(parameterId, unit, minimum, maximum);
-            }
-            else if (axisIndex == 1 && AxisCount == 2)
-            {
-                m_YAxis ??= new CharacterAnimationBlendSpaceAxis();
-                m_YAxis.Configure(parameterId, unit, minimum, maximum);
-            }
-            else
-            {
-                throw new ArgumentOutOfRangeException(nameof(axisIndex));
-            }
+            if (axisIndex == 0) { m_XAxis ??= new CharacterAnimationBlendSpaceAxis(); m_XAxis.Configure(parameterId, unit, minimum, maximum); }
+            else if (axisIndex == 1 && AxisCount == 2) { m_YAxis ??= new CharacterAnimationBlendSpaceAxis(); m_YAxis.Configure(parameterId, unit, minimum, maximum); }
+            else throw new ArgumentOutOfRangeException(nameof(axisIndex));
             TouchContentRevision();
         }
-
         internal void SetPhase(CharacterAnimationBlendSpacePhasePolicy policy, CharacterAnimationBlendSpaceSampleId referenceSampleId)
         {
-            if (!Enum.IsDefined(typeof(CharacterAnimationBlendSpacePhasePolicy), policy))
-                throw new ArgumentOutOfRangeException(nameof(policy));
-            if ((policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
-                 policy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase) && !referenceSampleId.IsValid)
-                throw new ArgumentException("Marker synchronized Blend Space requires a Phase Reference Sample.", nameof(referenceSampleId));
-            if (policy == CharacterAnimationBlendSpacePhasePolicy.SharedNormalizedPhase && referenceSampleId.IsValid)
-                throw new ArgumentException("Shared normalized Blend Space cannot retain a Phase Reference Sample.", nameof(referenceSampleId));
+            if (!Enum.IsDefined(typeof(CharacterAnimationBlendSpacePhasePolicy), policy)) throw new ArgumentOutOfRangeException(nameof(policy));
+            if (policy == CharacterAnimationBlendSpacePhasePolicy.LocomotionPhase && !referenceSampleId.IsValid) throw new ArgumentException("Locomotion Phase requires a Reference Sample.", nameof(referenceSampleId));
+            if (policy == CharacterAnimationBlendSpacePhasePolicy.SharedNormalizedPhase && referenceSampleId.IsValid) throw new ArgumentException("Shared normalized phase cannot retain a Reference Sample.", nameof(referenceSampleId));
             m_PhasePolicy = policy;
             m_PhaseReferenceSampleId = referenceSampleId.Value ?? string.Empty;
             TouchContentRevision();
         }
-
         internal void SetSamples(CharacterAnimationBlendSpaceSample[] samples)
         {
-            CharacterAnimationBlendSpaceSample[] next =
-                samples == null
-                    ? Array.Empty<CharacterAnimationBlendSpaceSample>()
-                    : (CharacterAnimationBlendSpaceSample[])samples.Clone();
-            if ((m_PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
-                 m_PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase) &&
-                PhaseReferenceSampleId.IsValid &&
+            CharacterAnimationBlendSpaceSample[] next = samples == null ? Array.Empty<CharacterAnimationBlendSpaceSample>() : (CharacterAnimationBlendSpaceSample[])samples.Clone();
+            if (m_PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.LocomotionPhase && PhaseReferenceSampleId.IsValid &&
                 !Array.Exists(next, sample => sample != null && sample.SampleId.Equals(PhaseReferenceSampleId)))
-            {
-                throw new InvalidOperationException(
-                    $"Marker synchronized Blend Space cannot remove its Phase Reference Sample '{PhaseReferenceSampleId}'.");
-            }
+                throw new InvalidOperationException($"Locomotion Phase cannot remove Reference Sample '{PhaseReferenceSampleId}'.");
             m_Samples = next;
             TouchContentRevision();
         }
-
-        internal void SetPoseParameterPolicies(CharacterAnimationBlendSpacePoseParameterPolicy[] policies)
-        {
-            m_PoseParameterPolicies = policies == null ? Array.Empty<CharacterAnimationBlendSpacePoseParameterPolicy>() : (CharacterAnimationBlendSpacePoseParameterPolicy[])policies.Clone();
-            TouchContentRevision();
-        }
-
-        internal void SetPreview(Vector2 parameter, float normalizedTime)
-        {
-            m_Preview ??= new CharacterAnimationBlendSpacePreviewSettings();
-            m_Preview.Configure(parameter, normalizedTime);
-        }
-
+        internal void SetPoseParameterPolicies(CharacterAnimationBlendSpacePoseParameterPolicy[] policies) { m_PoseParameterPolicies = policies == null ? Array.Empty<CharacterAnimationBlendSpacePoseParameterPolicy>() : (CharacterAnimationBlendSpacePoseParameterPolicy[])policies.Clone(); TouchContentRevision(); }
+        internal void SetPreview(Vector2 parameter, float normalizedTime) { m_Preview ??= new CharacterAnimationBlendSpacePreviewSettings(); m_Preview.Configure(parameter, normalizedTime); }
         internal void TouchContentRevision() => m_ContentRevision = Guid.NewGuid().ToString("N");
-
         public CharacterAnimationBlendSpaceSample FindSample(CharacterAnimationBlendSpaceSampleId sampleId)
         {
-            for (int i = 0; i < Samples.Count; i++)
-            {
-                CharacterAnimationBlendSpaceSample sample = Samples[i];
-                if (sample != null && sample.SampleId.Equals(sampleId))
-                    return sample;
-            }
+            for (int i = 0; i < Samples.Count; i++) if (Samples[i] != null && Samples[i].SampleId.Equals(sampleId)) return Samples[i];
             return null;
         }
     }

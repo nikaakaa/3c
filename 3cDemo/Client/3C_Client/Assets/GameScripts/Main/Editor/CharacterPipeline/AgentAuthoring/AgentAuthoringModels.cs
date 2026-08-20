@@ -7,7 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public static class AgentAuthoringSchema
     {
-        public const string Version = "btsmtl-agent-authoring-document.v3";
+        public const string Version = "btsmtl-agent-authoring-document.v4";
         public const string CharacterControllerDomain = "CharacterController";
         public const string AIControllerDomain = "AIController";
 
@@ -398,7 +398,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int easeOutFrame;
         public int clipInFrame;
         public string extraPolationMode;
-        public AgentPackageAssetReferenceV3 animationSequence;
+        public AgentPackageAssetReferenceV4 animationClip;
         public string curveId;
         public int curveEndFrame;
         public string motionSpace;
@@ -862,7 +862,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int clipInFrame;
         public string extraPolationMode;
         public string animationChannelId;
-        public AgentPackageAssetReferenceV3 animationSequence;
+        public AgentPackageAssetReferenceV4 animationClip;
         public int frameOffset;
         public int selfEaseInFrame;
         public int selfEaseOutFrame;

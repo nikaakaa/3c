@@ -149,6 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             CharacterLinkedPoseRuntimeSession linkedPose,
             in CharacterFootLandingPredictionDiagnostics footLandingPrediction,
+            in AnimationPhysicalBoneWriteDiagnostics physicalWrite,
             AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
@@ -191,7 +192,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CopyRootOrientationWarps(page, rootOrientationWarps);
                 CopyInertializations(page, inertializations);
                 CopySlotContributions(page, in frame, physicalSources);
-                CopyFootPlacement(page, in footLandingPrediction);
+                CopyFootPlacement(
+                    page,
+                    in footLandingPrediction,
+                    in physicalWrite);
             }
             if (RequiresOperationDetail(interest))
                 CopyOperations(page, in frame, physicalSources);
@@ -1075,12 +1079,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         void CopyFootPlacement(
             Page page,
-            in CharacterFootLandingPredictionDiagnostics footLandingPrediction)
+            in CharacterFootLandingPredictionDiagnostics footLandingPrediction,
+            in AnimationPhysicalBoneWriteDiagnostics physicalWrite)
         {
             if (!footLandingPrediction.IsCompleted ||
                 footLandingPrediction.CompletionIdentity != page.CompletionIdentity)
                 return;
             CharacterFullBodyIkSolverDiagnostics solverDiagnostics = default;
+            CharacterFullBodyIkEffectorDiagnostics pelvis = default;
             CharacterFullBodyIkEffectorDiagnostics leftFoot = default;
             CharacterFullBodyIkEffectorDiagnostics rightFoot = default;
             for (int solverIndex = 0; solverIndex < m_FullBodyIkSolvers.Length; solverIndex++)
@@ -1097,7 +1103,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 for (int effectorIndex = 0; effectorIndex < solver.DiagnosticEffectorCount; effectorIndex++)
                 {
                     CharacterFullBodyIkEffectorDiagnostics effector = solver.GetDiagnosticEffector(effectorIndex);
-                    if (effector.Slot == CharacterFullBodyIkEffectorSlot.LeftFoot)
+                    if (effector.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
+                    {
+                        pelvis = effector;
+                        containsFoot = true;
+                    }
+                    else if (effector.Slot == CharacterFullBodyIkEffectorSlot.LeftFoot)
                     {
                         leftFoot = effector;
                         containsFoot = true;
@@ -1115,8 +1126,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
             page.FootPlacement.LandingPrediction = footLandingPrediction;
             page.FootPlacement.Solver = solverDiagnostics;
+            page.FootPlacement.Pelvis = pelvis;
             page.FootPlacement.LeftFoot = leftFoot;
             page.FootPlacement.RightFoot = rightFoot;
+            page.FootPlacement.PhysicalWrite =
+                physicalWrite.IsAvailable &&
+                physicalWrite.CompletionIdentity == page.CompletionIdentity
+                    ? physicalWrite
+                    : default;
         }
 
         bool TryResolvePoseWatchOperation(

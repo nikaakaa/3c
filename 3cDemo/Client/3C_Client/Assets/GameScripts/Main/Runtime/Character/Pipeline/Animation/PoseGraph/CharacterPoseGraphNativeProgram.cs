@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int modifyBoneIndex,
             int rootOrientationWarpIndex,
             int poseBoneIkGoalsIndex,
-            int footGroundingIndex,
+            int footPlacementIndex,
             int fullBodyIkIndex,
             int stateMachineIndex,
             int animationSlotIndex,
@@ -93,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex = modifyBoneIndex;
             RootOrientationWarpIndex = rootOrientationWarpIndex;
             PoseBoneIkGoalsIndex = poseBoneIkGoalsIndex;
-            FootGroundingIndex = footGroundingIndex;
+            FootPlacementIndex = footPlacementIndex;
             FullBodyIkIndex = fullBodyIkIndex;
             StateMachineIndex = stateMachineIndex;
             AnimationSlotIndex = animationSlotIndex;
@@ -123,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int ModifyBoneIndex { get; }
         internal int RootOrientationWarpIndex { get; }
         internal int PoseBoneIkGoalsIndex { get; }
-        internal int FootGroundingIndex { get; }
+        internal int FootPlacementIndex { get; }
         internal int FullBodyIkIndex { get; }
         internal int StateMachineIndex { get; }
         internal int AnimationSlotIndex { get; }
@@ -153,7 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex,
             RootOrientationWarpIndex,
             PoseBoneIkGoalsIndex,
-            FootGroundingIndex,
+            FootPlacementIndex,
             FullBodyIkIndex,
             StateMachineIndex,
             AnimationSlotIndex,
@@ -186,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex,
             RootOrientationWarpIndex,
             PoseBoneIkGoalsIndex,
-            FootGroundingIndex,
+            FootPlacementIndex,
             FullBodyIkIndex,
             StateMachineIndex,
             AnimationSlotIndex,
@@ -467,7 +467,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_BoneCount;
         int m_ParameterCount;
         int m_PoseValueCount;
-        int m_FootGroundingCount;
+        int m_FootPlacementCount;
         int m_FullBodyIkCount;
         int m_ContributionStride;
         int m_FrameCacheCount;
@@ -514,7 +514,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BoneCounts = rig.BoneCounts;
                 m_ParameterCount = program.Parameters.Count;
                 m_PoseValueCount = program.PoseValueWorkspaceCount;
-                m_FootGroundingCount = program.FootGroundings.Count;
+                m_FootPlacementCount = program.FootPlacements.Count;
                 m_FullBodyIkCount = program.FullBodyIks.Count;
                 m_ContributionStride = program.ContributionWorkspaceCount / program.PoseValueWorkspaceCount;
                 m_FrameCacheCount = program.FrameCacheCount;
@@ -595,7 +595,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int PoseBoneCount => m_BoneCount;
         internal int ParameterCount => m_ParameterCount;
         internal int PoseValueCount => m_PoseValueCount;
-        internal int FootGroundingCount => m_FootGroundingCount;
+        internal int FootPlacementCount => m_FootPlacementCount;
         internal int FullBodyIkCount => m_FullBodyIkCount;
         internal int ContributionStride => m_ContributionStride;
         internal int FrameCacheCount => m_FrameCacheCount;
@@ -1084,7 +1084,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.ModifyBoneIndex,
                     operation.RootOrientationWarpIndex,
                     operation.PoseBoneIkGoalsIndex,
-                    operation.FootGroundingIndex,
+                    operation.FootPlacementIndex,
                     operation.FullBodyIkIndex,
                     operation.StateMachineIndex,
                     operation.AnimationSlotIndex,
@@ -1127,7 +1127,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             if (m_BoneCount <= 0 || m_ParameterCount <= 0 || m_PoseValueCount <= 0 ||
-                m_FootGroundingCount < 0 ||
+                m_FootPlacementCount < 0 ||
                 m_FullBodyIkCount < 0 || m_ContributionStride <= 0 ||
                 m_FrameCacheCount <= 0 || m_LeftFootBoneIndex < 0 || m_LeftFootBoneIndex >= m_BoneCount ||
                 m_RightFootBoneIndex < 0 || m_RightFootBoneIndex >= m_BoneCount ||

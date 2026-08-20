@@ -256,7 +256,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSwingMotionDiagnostics leftSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
                     pose.Left,
-                    in leftCurrentStep,
+                    in leftSelectedStep,
                     footPlacementWeight,
                     componentUp,
                     in leftGroundPath,
@@ -265,29 +265,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSwingMotionDiagnostics rightSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
                     pose.Right,
-                    in rightCurrentStep,
+                    in rightSelectedStep,
                     footPlacementWeight,
                     componentUp,
                     in rightGroundPath,
                     rightLanding.NextSwingPredictionError,
                     rightLanding.NextSwingConstraintWeight);
             bool hasSelectedSwing = CharacterFootStrideHipsBuilder.TrySelectSwing(
-                in leftCurrentStep,
-                in rightCurrentStep,
+                in leftSelectedStep,
+                in rightSelectedStep,
                 in leftSwingMotion,
                 in rightSwingMotion,
-                out CharacterFootSide selectedSwingSide);
+                out CharacterFootSide selectedSwingSide,
+                out bool leftSwingCandidate,
+                out bool rightSwingCandidate);
             CharacterFootSwingMotionDiagnostics leftFootMotion =
                 hasSelectedSwing && selectedSwingSide == CharacterFootSide.Left
                     ? leftSwingMotion
-                    : default;
+                    : CharacterFootSwingMotionBuilder.SuppressUnselected(in leftSwingMotion);
             CharacterFootSwingMotionDiagnostics rightFootMotion =
                 hasSelectedSwing && selectedSwingSide == CharacterFootSide.Right
                     ? rightSwingMotion
-                    : default;
+                    : CharacterFootSwingMotionBuilder.SuppressUnselected(in rightSwingMotion);
             m_PendingLeftSupportLock.Clear();
             m_PendingRightSupportLock.Clear();
-            m_PendingPelvisSpring.Clear();
             leftGoal = CreateFootGoal(
                 CharacterFootSide.Left,
                 pose.Left,
@@ -321,8 +322,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion.GoalTransitionHalfLifeSeconds,
                 !facts.Grounded || rightAction.IsOccupied);
-            CharacterFootStrideHipsDiagnostics strideHips = RejectStride(
-                CharacterFootStrideRejectReason.SwingOnlyStage);
+            Vector3 leftCorrectedSole = ResolveWeightedGoalSole(
+                pose.Left,
+                in leftGoal,
+                goalRoot);
+            Vector3 rightCorrectedSole = ResolveWeightedGoalSole(
+                pose.Right,
+                in rightGoal,
+                goalRoot);
+            CharacterFootStrideHipsDiagnostics strideHips = ResolveStrideHips(
+                in leftCurrentStep,
+                in rightCurrentStep,
+                in leftSelectedStep,
+                in rightSelectedStep,
+                hasSelectedSwing,
+                selectedSwingSide,
+                leftSwingCandidate,
+                rightSwingCandidate,
+                hasLeftLastLanding,
+                leftLastLanding,
+                hasRightLastLanding,
+                rightLastLanding,
+                hasLeftNextSwingLanding,
+                leftNextSwingLanding,
+                hasRightNextSwingLanding,
+                rightNextSwingLanding,
+                leftGroundPath.Accepted,
+                rightGroundPath.Accepted,
+                facts.Grounded,
+                in leftAction,
+                in rightAction,
+                componentUp,
+                m_Rig.PoseRoot.position,
+                m_Rig.PoseRoot.TransformPoint(pose.PelvisLocalPosition),
+                pose.PelvisLocalPosition,
+                in pose,
+                leftCorrectedSole,
+                rightCorrectedSole,
+                footPlacementWeight,
+                frame.PresentationDeltaSeconds);
+            pelvisGoal = CreatePelvisGoal(in strideHips, m_Rig.PoseRoot);
+            if (!strideHips.Accepted)
+                m_PendingPelvisSpring.Clear();
             CharacterFootGoalTransitionDiagnostics leftGoalTransition =
                 m_LeftGoalTransition.CaptureDiagnostics(
                     m_Settings.FootMotion.GoalTransitionHalfLifeSeconds);
@@ -963,10 +1004,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         CharacterFootStrideHipsDiagnostics ResolveStrideHips(
-            in AnimationBiomechanicalStepHeader leftStep,
-            in AnimationBiomechanicalStepHeader rightStep,
+            in AnimationBiomechanicalStepHeader leftSupportStep,
+            in AnimationBiomechanicalStepHeader rightSupportStep,
+            in AnimationBiomechanicalStepHeader leftSwingStep,
+            in AnimationBiomechanicalStepHeader rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
+            bool leftSwingCandidate,
+            bool rightSwingCandidate,
             bool hasLeftLastLanding,
             CharacterFootGroundPathLanding leftLastLanding,
             bool hasRightLastLanding,
@@ -985,8 +1030,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 animatedPelvis,
             Vector3 animatedPelvisComponentPosition,
             in CharacterFootPlacementAnimatedPose pose,
-            in CharacterFootSwingMotionDiagnostics leftFootMotion,
-            in CharacterFootSwingMotionDiagnostics rightFootMotion,
+            Vector3 leftCorrectedSole,
+            Vector3 rightCorrectedSole,
             float footPlacementWeight,
             float deltaSeconds)
         {
@@ -995,14 +1040,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (leftAction.IsOccupied || rightAction.IsOccupied)
                 return RejectStride(CharacterFootStrideRejectReason.ActionOccupied);
             if (!CharacterFootStrideHipsBuilder.TryResolveStride(
-                    in leftStep,
-                    in rightStep,
+                    in leftSupportStep,
+                    in rightSupportStep,
+                    in leftSwingStep,
+                    in rightSwingStep,
                     hasSelectedSwing,
                     selectedSwingSide,
+                    leftSwingCandidate,
+                    rightSwingCandidate,
                     hasLeftLastLanding,
                     hasLeftLastLanding ? leftLastLanding.Point : default,
+                    hasLeftLastLanding ? leftLastLanding.LandingEventIdentity : 0,
                     hasRightLastLanding,
                     hasRightLastLanding ? rightLastLanding.Point : default,
+                    hasRightLastLanding ? rightLastLanding.LandingEventIdentity : 0,
                     hasLeftNextSwingLanding,
                     hasLeftNextSwingLanding ? leftNextSwingLanding.Point : default,
                     hasLeftNextSwingLanding ? leftNextSwingLanding.LandingEventIdentity : 0,
@@ -1024,16 +1075,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!groundPathAccepted)
                 return RejectStride(CharacterFootStrideRejectReason.GroundPathRejected);
             float swingTimeToLanding = swingSide == CharacterFootSide.Left
-                ? leftStep.TimeToLandingSeconds
-                : rightStep.TimeToLandingSeconds;
-            Vector3 leftCorrectedSole = leftFootMotion.Accepted
-                ? leftFootMotion.CorrectedSole
-                : pose.Left.HeelPosition * 0.5f + pose.Left.ToePosition * 0.5f;
-            Vector3 rightCorrectedSole = rightFootMotion.Accepted
-                ? rightFootMotion.CorrectedSole
-                : pose.Right.HeelPosition * 0.5f + pose.Right.ToePosition * 0.5f;
+                ? leftSwingStep.TimeToLandingSeconds
+                : rightSwingStep.TimeToLandingSeconds;
+            ulong supportLandingEventIdentity = supportSide == CharacterFootSide.Left
+                ? leftLastLanding.LandingEventIdentity
+                : rightLastLanding.LandingEventIdentity;
             return CharacterFootStrideHipsBuilder.BuildPelvis(
                 supportSide,
+                supportLandingEventIdentity,
                 swingSide,
                 strideStart,
                 strideEnd,
@@ -1050,6 +1099,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 deltaSeconds,
                 m_Settings.FootMotion,
                 ref m_PendingPelvisSpring);
+        }
+
+        static Vector3 ResolveWeightedGoalSole(
+            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFullBodyIkGoal goal,
+            Transform poseRoot)
+        {
+            Vector3 originalSole = foot.HeelPosition * 0.5f + foot.ToePosition * 0.5f;
+            if (poseRoot == null || goal.PositionWeight <= 0f)
+                return originalSole;
+            Vector3 targetAnkle = poseRoot.TransformPoint(goal.ComponentPosition);
+            return originalSole +
+                   (targetAnkle - foot.AnklePosition) * goal.PositionWeight;
         }
 
         CharacterFootStrideHipsDiagnostics RejectStride(

@@ -694,9 +694,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             ClearCommittedStateSnapshots();
                         PublishCommittedDebugView(
                             publishStateDiagnostics);
-                        AnimationPresentationTracePublisher.PublishCompletedFootIk(
+                        AnimationPresentationTracePublisher.PublishCompletedFootPlacement(
                             m_ActorId,
-                            m_DebugView.PosePlan.FootIk);
+                            m_DebugView.PosePlan.FootPlacement);
                         if (traceInterest !=
                             AnimationPresentationDiagnosticsInterest.None)
                         {

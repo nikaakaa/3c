@@ -144,9 +144,11 @@ rawLanding = virtualBodyPosition
 
 ## 5. 当前步伐仲裁
 
-支撑脚是权威 Step 非 Swing、拥有有效 `LastLanding`、`CharacterPresentationFactFrame.Grounded` 为真且未被有限 Action 占用的脚。摆动脚是权威 Step 为 Swing、`NextSwingLanding` 存在、Event identity 与 Selected Query Step 一致且未被有限 Action 占用的脚。正式步伐起点是支撑 `LastLanding`，终点是 revision 后的摆动 `NextSwingLanding`。
+普通支撑脚是权威 Step 非 Swing、拥有有效 `LastLanding`、`CharacterPresentationFactFrame.Grounded` 为真且未被有限 Action 占用的脚。双 Swing 时，完整满足摆动合同但未被选中的一脚是唯一例外：它只有拥有有效 `LastLanding` 且未被有限 Action 占用时才可作为本帧支撑；未形成可用摆动候选的 Swing 脚不得被降级成支撑。摆动脚是权威 Step 为 Swing、`NextSwingLanding` 存在、Event identity 与 Selected Query Step 一致且未被有限 Action 占用的脚。正式步伐起点是支撑 `LastLanding`，终点是 revision 后的摆动 `NextSwingLanding`。
 
 两脚同时满足摆动合同且都有可用垂直包络增量时，只选择增量较大的一脚作为唯一摆动脚。另一脚只有拥有 `LastLanding` 且未被有限 Action 占用时才进入支撑合同，否则保持原生事实和零权重。
+
+只有一脚是权威 Swing 时，步伐资格不得依赖该帧包络垂直增量是否大于容差；事件、`NextSwingLanding` 与 Ground Path仍完整时，步伐和骨盆必须持续有效。包络垂直增量只决定该脚是否发布非零 Swing Foot Goal，不能让同一次步伐和骨盆弹簧在零增量帧反复清空、重建。
 
 两脚都没有 LastLanding、身份不一致、没有唯一摆动脚或端点退化时，本帧没有步伐，Pelvis 权重为零；没有 LastLanding、未 Grounded 或被有限 Action 占用的脚支撑锁脚权重为零。若两脚都非 Swing、各自拥有有效 LastLanding、Grounded 且未被有限 Action 占用，则进入 `GroundedStationary`：不发布步伐骨盆和摆动 Envelope，但两脚都先按同一支撑接地与锁脚合同计算。
 
@@ -172,41 +174,39 @@ sampledGround = lerp(strideStart, strideEnd, strideProgress)
 rise = dot(strideEnd - strideStart, up)
 ```
 
-上坡且支撑已落地时，`rawPelvisDelta = up * rise * strideProgress`；下坡且支撑仍接触、摆动未落地时同样按 progress 下降；平地为零。它是相对当前步伐起点的有符号目标，不是世界绝对 Y，也不是 Set Mesh。
-
-弹簧 Pending 必须在本帧计算前逐字段复制 Committed，不能从 `Clear()` 后的零状态开始。弹簧先解决相对坐标系，再使用闭式临界阻尼积分：
+Gameplay Body与Pose Root已经沿正式Traversal Ramp升降，Foot Placement不得再把`sampledGround - strideStart`整段高差叠加一次。上坡且支撑已落地、或下坡且支撑仍接触并且摆动未落地时，唯一地面修正为：
 
 ```text
-rawPelvisTargetAlongUp = dot(rawPelvisDelta, up)
-rebaseAlongUp = dot(previousStrideStart - strideStart, up)
-rebasedPreviousRawTarget = previousRawPelvisTargetAlongUp + rebaseAlongUp
-rebasedPreviousSpringOutput = previousSpringOutput + rebaseAlongUp
-necessaryDelta = 支撑脚未切换时的
-                 rawPelvisTargetAlongUp - rebasedPreviousRawTarget
-                 支撑脚切换时为 0
-springTarget = rawPelvisTargetAlongUp
-springInput = rebasedPreviousSpringOutput + necessaryDelta
+rootRelativeGroundTargetAlongUp = dot(sampledGround - poseRootPosition, up)
+```
+
+平地为零。双脚参与同帧FBBIK的有效位置目标先经过各自最终Goal换代与Position Weight，再把踝骨平移同步投影到Sole。净空只表达两只有效Sole相对原生双脚多抬高的部分，不把骨盆主动下沉误判成净空损失：
+
+```text
+originalLowerSole = min(dot(leftOriginalSole, up),
+                        dot(rightOriginalSole, up))
+correctedLowerSole = min(dot(leftWeightedGoalSole, up),
+                         dot(rightWeightedGoalSole, up))
+soleClearanceLiftAlongUp = max(0, correctedLowerSole - originalLowerSole)
+springTarget = rootRelativeGroundTargetAlongUp + soleClearanceLiftAlongUp
+```
+
+弹簧 Pending 必须在本帧计算前逐字段复制 Committed，不能从 `Clear()` 后的零状态开始。弹簧状态始终是相对同帧Pose Root的Component Up修正，不属于Stride Start坐标系。支撑切换、同事件实时换踏面和净空变化都只更新同一个`springTarget`，不得搬运旧Stride Start，也不得把target差作为直通位移绕过弹簧：
+
+```text
+springInput = hadPreviousState ? previousSpringOutput : 0
+v0 = hadPreviousState ? previousSpringVelocity : 0
 
 omega = 2 * PI * PelvisSpringFrequency
 x0 = springInput - springTarget
-v0 = previousSpringVelocity
 j0 = v0 + omega * x0
 decay = exp(-omega * deltaSeconds)
 springOutput = springTarget + (x0 + j0 * deltaSeconds) * decay
 springVelocity = (v0 - omega * j0 * deltaSeconds) * decay
-springDelta = springOutput - necessaryDelta
 pelvisDelta = up * springOutput
 ```
 
-`previousStrideStart`、`previousRawPelvisTargetAlongUp`、`previousSpringOutput`、SupportSide 和弹簧速度属于 Foot Placement Pending/Committed 状态。支撑切换时旧相对高度必须按旧起点到新起点重基；不能把旧起点的厘米数直接与新起点的目标相减。如果没有有效旧起点，以当前目标和零速度初始化。`deltaSeconds = 0` 时原样保留输入和速度。Profile 只保留有限正数 `PelvisSpringFrequency`；临界阻尼固定为 `1`，删除可把行为改成欠阻尼或过阻尼的旧 `PelvisSpringDampingRatio` 配置。`springOutput` 是唯一最终输出，`springDelta` 只是诊断分解，不能再加回 Goal。
-
-双脚垂直目标完成后，使用同帧原生动画净空：
-
-```text
-animatedClearance = 原生动画盆骨到更低原生脚
-correctedClearance = (animatedPelvis + pelvisDelta) 到更低修正脚
-若 correctedClearance < animatedClearance：把差值补进 pelvisDelta
-```
+`springTarget`、`springOutput`、SupportSide、SupportLandingEventIdentity和弹簧速度属于Foot Placement Pending/Committed状态。没有有效旧状态时从零修正和零速度开始，不能在首个有效步伐帧直接跳到当前目标。`deltaSeconds = 0`时原样保留输入和速度。Profile只保留有限正数`PelvisSpringFrequency`；临界阻尼固定为`1`，删除可把行为改成欠阻尼或过阻尼的旧`PelvisSpringDampingRatio`配置。`springOutput`是唯一最终骨盆输出，地面修正与净空抬升不得在弹簧后再次叠加。
 
 没有完整步伐、Path rejected、空中或有限 Action 占用时，Pelvis Position Weight 为零，不沿用上一帧目标。Pelvis 只能进入 `PelvisPreSolveTranslation`，不能写 VisualRoot、Gameplay Body 或 KCC。
 
@@ -308,7 +308,7 @@ targetRot = LookRotation(slopeForward, targetUp)
 6. 每脚只为选中的事件执行至多一次 revision Raw Landing SphereCast，按距离死区更新唯一当前 Accepted `NextSwingLanding`；查询失败时使当前 Path 失效。
 7. 用 Accepted revision 落点建立或复用 Ground Path、Reachability、Hull 和 Envelope。
 8. 正式判定摆动、支撑、GroundedStationary 与当前步伐；计算 Swing 增量、plant、锁入/释放、朝向和主辅支撑结果。
-9. 用同一 revision 后步伐端点和同帧双脚结果计算骨盆重基、闭式弹簧和净空下限。
+9. 用同一revision后步伐端点采样地面，以当前Pose Root扣除Gameplay Body已经完成的升降，并把最终加权双脚Goal产生的Sole抬升合入唯一闭式弹簧目标。
 10. 每脚把原始 Foot Goal 转成相对同帧原生动画踝骨的修正和权重，通过唯一 Goal 换代状态得到最终 Foot Goal；Pelvis 继续使用自己的临界弹簧输出。
 11. 写 Pelvis、LeftFoot、RightFoot 到同一 GoalSet，执行一次 FullBodyIK 和一次 final writer。
 12. 外层 Seal 或 Discard；只有 Seal 才提交全部 Pending 状态和查询结果。
@@ -344,7 +344,7 @@ finalGoal = currentOriginalAnkle + outputCorrection
 
 Scene Gizmo 只显示当前事实：Accepted LastLanding、Cached NextSwingLanding、Ground Envelope、Invalid Segment、Original/Corrected Sole、Planted Sole、步伐线、Pelvis 标记、锁脚颜色和朝向短法线。Gizmo 不重新采样动画、查询世界、计算 Reachability、采样 Envelope 或执行 FBBIK。
 
-CSV 记录 Selected Query Step、每脚查询次数、尝试与 Accepted revision identity、Visible Position/Rotation、virtual Body Position/Rotation、revision Position/Rotation/Forward、visible/applied/residual yaw、主支撑 Side/Event、ActionInstance/脚权重、HorizontalSpeed、SurfaceIdentity、事件身份、锁脚状态、水平误差、锁入准备、释放起点修正/权重/剩余时间、朝向输入、步伐端点与 progress、重基前后 target、necessary、spring input/output/velocity、Pelvis Goal，以及 final writer 后 Physical Pelvis/Ankle、Completion 和 Goal residual。
+CSV 记录 Selected Query Step、每脚查询次数、尝试与 Accepted revision identity、Visible Position/Rotation、virtual Body Position/Rotation、revision Position/Rotation/Forward、visible/applied/residual yaw、主支撑 Side/Event、ActionInstance/脚权重、HorizontalSpeed、SurfaceIdentity、事件身份、锁脚状态、水平误差、锁入准备、释放起点修正/权重/剩余时间、朝向输入、步伐端点、sampled ground、Pose Root、progress、root-relative ground target、weighted Sole clearance lift、previous spring target/output/velocity、spring input/target/output/velocity、Pelvis Goal，以及 final writer 后 Physical Pelvis/Ankle、Completion 和 Goal residual。
 
 晋级诊断必须同时记录 `PromotedFromAcceptedRevisionIdentity` 与晋级前最后 Accepted 点、法线、Surface；完成帧查询结果不得出现在这些字段。Pending 与 Committed revision、spring、lock/release state 必须可在同一 Completion 对账，证明 Prepare 从 Committed 开始且 Discard 没有推进。CSV 不能单独算过，必须和 Scene 结果及同一 Completion 对账。
 

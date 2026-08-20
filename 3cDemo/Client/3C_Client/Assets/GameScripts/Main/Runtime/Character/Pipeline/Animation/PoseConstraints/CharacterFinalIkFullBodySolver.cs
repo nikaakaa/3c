@@ -293,6 +293,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         goalWorkspace,
                         completionIdentity,
                         recordDiagnostics);
+                if (!HasEffectiveGoal(
+                        goalSetValueIndices,
+                        goalSets,
+                        goalWorkspace))
+                {
+                    return CompleteResult(
+                        goalResult,
+                        goalSetValueIndices,
+                        goalSets,
+                        goalWorkspace,
+                        completionIdentity,
+                        recordDiagnostics);
+                }
                 m_Solver.Update();
                 m_Backend.RebuildVirtualBones();
                 if (!IsValidPosePage(pendingOutputComponentPose))
@@ -564,7 +577,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int localGoalIndex = 0; localGoalIndex < header.GoalCount; localGoalIndex++)
                 {
                     CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + localGoalIndex];
-                    if ((goal.SourceKind & CharacterFullBodyIkGoalSourceKind.PoseBone) == 0 ||
+                    if (goal.SourceKind != CharacterFullBodyIkGoalSourceKind.PoseBone ||
                         goal.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
                     {
                         continue;
@@ -583,6 +596,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             return slots;
+        }
+
+        static bool HasEffectiveGoal(
+            NativeSlice<int> goalSetValueIndices,
+            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
+        {
+            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            {
+                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
+                for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
+                {
+                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + goalIndex];
+                    if (goal.PositionWeight > CharacterPoseConstraintMath.Epsilon ||
+                        goal.RotationWeight > CharacterPoseConstraintMath.Epsilon)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         void ResetEffectorsToPose()

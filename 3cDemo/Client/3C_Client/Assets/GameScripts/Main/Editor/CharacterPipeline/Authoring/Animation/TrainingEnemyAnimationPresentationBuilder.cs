@@ -457,11 +457,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Training Enemy Monster Foot Placement Profile");
             var serialized = new SerializedObject(profile);
             serialized.FindProperty("m_ProfileId").stringValue = "training-enemy.monster.foot-placement";
-            serialized.FindProperty("m_LyraCurrentGrounding.m_GroundLayerMask").intValue =
+            serialized.FindProperty("m_LandingPrediction.m_GroundLayerMask").intValue =
                 1 << groundLayer | 1 << footPlacementLayer;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-            serialized.Update();
-            serialized.FindProperty("m_Revision").stringValue = profile.ComputeRevision();
+            serialized.FindProperty("m_GroundDetection.m_GroundLayerMask").intValue =
+                1 << groundLayer | 1 << footPlacementLayer;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             profile.RequireValid();
             EditorUtility.SetDirty(profile);

@@ -15,6 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasPendingOutput = pending.HasOutput;
             CommittedSourceGroundPathIdentity = committed.SourceGroundPathIdentity;
             PendingSourceGroundPathIdentity = pending.SourceGroundPathIdentity;
+            OriginalComponentPosition = pending.OriginalComponentPosition;
             RawPositionCorrection = pending.TargetPositionCorrection;
             RawRotationCorrection = pending.TargetRotationCorrection;
             RawPositionWeight = pending.TargetPositionWeight;
@@ -34,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool HasPendingOutput { get; }
         public ulong CommittedSourceGroundPathIdentity { get; }
         public ulong PendingSourceGroundPathIdentity { get; }
+        public Vector3 OriginalComponentPosition { get; }
         public Vector3 RawPositionCorrection { get; }
         public Quaternion RawRotationCorrection { get; }
         public float RawPositionWeight { get; }
@@ -54,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGoalTransitionSnapshot(
             bool hasOutput,
             ulong sourceGroundPathIdentity,
+            Vector3 originalComponentPosition,
             Vector3 targetPositionCorrection,
             Quaternion targetRotationCorrection,
             float targetPositionWeight,
@@ -65,6 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             HasOutput = hasOutput;
             SourceGroundPathIdentity = sourceGroundPathIdentity;
+            OriginalComponentPosition = originalComponentPosition;
             TargetPositionCorrection = targetPositionCorrection;
             TargetRotationCorrection = targetRotationCorrection;
             TargetPositionWeight = targetPositionWeight;
@@ -77,6 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal bool HasOutput { get; }
         internal ulong SourceGroundPathIdentity { get; }
+        internal Vector3 OriginalComponentPosition { get; }
         internal Vector3 TargetPositionCorrection { get; }
         internal Quaternion TargetRotationCorrection { get; }
         internal float TargetPositionWeight { get; }
@@ -91,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal bool HasOutput;
         internal ulong SourceGroundPathIdentity;
+        internal Vector3 OriginalComponentPosition;
         internal Vector3 TargetPositionCorrection;
         internal Quaternion TargetRotationCorrection;
         internal float TargetPositionWeight;
@@ -104,6 +110,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootGoalTransitionSnapshot(
                 HasOutput,
                 SourceGroundPathIdentity,
+                OriginalComponentPosition,
                 TargetPositionCorrection,
                 HasOutput ? TargetRotationCorrection : Quaternion.identity,
                 TargetPositionWeight,
@@ -198,6 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             m_Pending.HasOutput = true;
             m_Pending.SourceGroundPathIdentity = sourceGroundPathIdentity;
+            m_Pending.OriginalComponentPosition = originalComponentPosition;
             m_Pending.TargetPositionCorrection = targetPositionCorrection;
             m_Pending.TargetRotationCorrection = targetRotationCorrection;
             m_Pending.TargetPositionWeight = target.PositionWeight;

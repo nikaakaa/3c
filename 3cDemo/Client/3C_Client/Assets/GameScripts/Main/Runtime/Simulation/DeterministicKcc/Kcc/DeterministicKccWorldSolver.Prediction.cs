@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicKcc
@@ -7,7 +6,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     public sealed partial class DeterministicKccWorldSolver
     {
         const string FutureBodyTranslationSourceIdentity =
-            "thirdperson.simulation.solver.deterministic-kcc.future-body-translation/v1";
+            "thirdperson.simulation.solver.deterministic-kcc.future-body-translation/v2";
 
         public bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,
@@ -19,21 +18,18 @@ namespace ThirdPersonSimulation.DeterministicKcc
             int actorIndex = FindBinding(request.ActorId);
             if (actorIndex < 0 || m_KccStates == null || actorIndex >= m_KccStates.Length)
                 return false;
-            int stepCount = checked((int)Math.Ceiling(request.DurationSeconds * m_TickRate));
-            if (stepCount <= 0 || stepCount > m_TickRate * 10)
-                return false;
+            Span<float> sampleTimes = stackalloc float[4];
+            int sampleCount = CollectSampleTimes(in request, sampleTimes);
             WorldBodyState body = m_Current.Bodies[actorIndex];
-            var samples = new List<CharacterFutureBodyTranslationSample>(stepCount + 1)
-            {
-                new CharacterFutureBodyTranslationSample(
-                    0f,
-                    0f,
-                    0f,
-                    0f,
-                    request.CurrentVelocityX,
-                    body.Velocity.Y.ToSingle(),
-                    request.CurrentVelocityZ)
-            };
+            var samples = new CharacterFutureBodyTranslationSample[sampleCount + 1];
+            samples[0] = new CharacterFutureBodyTranslationSample(
+                0f,
+                0f,
+                0f,
+                0f,
+                request.CurrentVelocityX,
+                body.Velocity.Y.ToSingle(),
+                request.CurrentVelocityZ);
             FixedVector3 origin = body.Position;
             FixedVector3 position = origin;
             DeterministicKccBodyState state = m_KccStates[actorIndex];
@@ -41,39 +37,31 @@ namespace ThirdPersonSimulation.DeterministicKcc
             float previousTime = 0f;
             try
             {
-                for (int stepIndex = 1; stepIndex <= stepCount; stepIndex++)
+                for (int sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
                 {
-                    float tickElapsed = stepIndex / (float)m_TickRate;
-                    float elapsed = stepIndex == stepCount || tickElapsed >= request.DurationSeconds
-                        ? request.DurationSeconds
-                        : tickElapsed;
-                    if (elapsed <= previousTime)
-                        continue;
+                    float elapsed = sampleTimes[sampleIndex];
                     float deltaSeconds = elapsed - previousTime;
-                    FixedVector3 requestedDisplacement = ToFixed(
-                        IntegrateRequestedPlanarDisplacement(
-                            in request,
-                            previousTime,
-                            elapsed));
                     FixedVector3 previousPosition = position;
-                    DeterministicKccMotorResult result = motor.Move(
-                        position,
-                        state,
-                        requestedDisplacement);
-                    position = result.Position;
-                    state = CreateKccState(request.ActorId, result);
+                    MoveInterval(
+                        in request,
+                        request.ActorId,
+                        previousTime,
+                        elapsed,
+                        motor,
+                        ref position,
+                        ref state);
                     FixedVector3 relative = position - origin;
                     FixedVector3 appliedVelocity = (position - previousPosition) *
                                                    (FixedScalar.One /
                                                     FixedScalar.FromDouble(deltaSeconds));
-                    samples.Add(new CharacterFutureBodyTranslationSample(
+                    samples[sampleIndex + 1] = new CharacterFutureBodyTranslationSample(
                         elapsed,
                         relative.X.ToSingle(),
                         relative.Y.ToSingle(),
                         relative.Z.ToSingle(),
                         appliedVelocity.X.ToSingle(),
                         appliedVelocity.Y.ToSingle(),
-                        appliedVelocity.Z.ToSingle()));
+                        appliedVelocity.Z.ToSingle());
                     previousTime = elapsed;
                 }
             }
@@ -83,8 +71,112 @@ namespace ThirdPersonSimulation.DeterministicKcc
             }
             translation = new CharacterFutureBodyTranslation(
                 FutureBodyTranslationSourceIdentity,
-                samples.ToArray());
+                samples);
             return true;
+        }
+
+        static int CollectSampleTimes(
+            in CharacterFutureBodyTranslationRequest request,
+            Span<float> output)
+        {
+            int count = 0;
+            for (int sourceIndex = 0; sourceIndex < 4; sourceIndex++)
+            {
+                float value = request.SampleTimeAt(sourceIndex);
+                if (value <= 0.000001f)
+                    continue;
+                int insertion = count;
+                while (insertion > 0 && value < output[insertion - 1])
+                {
+                    output[insertion] = output[insertion - 1];
+                    insertion--;
+                }
+                if (insertion > 0 && Math.Abs(output[insertion - 1] - value) <= 0.000001f ||
+                    insertion < count && Math.Abs(output[insertion] - value) <= 0.000001f)
+                {
+                    continue;
+                }
+                output[insertion] = value;
+                count++;
+            }
+            if (count <= 0 || Math.Abs(output[count - 1] - request.DurationSeconds) > 0.0001f)
+                throw new InvalidOperationException("Future Body Translation sample schedule is invalid.");
+            return count;
+        }
+
+        void MoveInterval(
+            in CharacterFutureBodyTranslationRequest request,
+            ActorId actorId,
+            float startSeconds,
+            float endSeconds,
+            DeterministicKccMotor motor,
+            ref FixedVector3 position,
+            ref DeterministicKccBodyState state)
+        {
+            float switchTime = request.CurrentSegmentRemainingSeconds;
+            if (float.IsFinite(switchTime) &&
+                startSeconds < switchTime && switchTime < endSeconds)
+            {
+                MoveDisplacement(
+                    actorId,
+                    IntegrateRequestedPlanarDisplacement(
+                        in request,
+                        startSeconds,
+                        switchTime),
+                    motor,
+                    ref position,
+                    ref state);
+                MoveDisplacement(
+                    actorId,
+                    IntegrateRequestedPlanarDisplacement(
+                        in request,
+                        switchTime,
+                        endSeconds),
+                    motor,
+                    ref position,
+                    ref state);
+                return;
+            }
+            MoveDisplacement(
+                actorId,
+                IntegrateRequestedPlanarDisplacement(
+                    in request,
+                    startSeconds,
+                    endSeconds),
+                motor,
+                ref position,
+                ref state);
+        }
+
+        void MoveDisplacement(
+            ActorId actorId,
+            PlanarDisplacement requested,
+            DeterministicKccMotor motor,
+            ref FixedVector3 position,
+            ref DeterministicKccBodyState state)
+        {
+            FixedVector3 remaining = ToFixed(requested);
+            FixedScalar magnitude = remaining.Magnitude;
+            int segmentCount = magnitude > m_Configuration.MaximumMovementDistance
+                ? checked((int)Math.Ceiling(
+                    magnitude.ToDouble() /
+                    m_Configuration.MaximumMovementDistance.ToDouble()))
+                : 1;
+            FixedVector3 segment = remaining *
+                                   (FixedScalar.One / FixedScalar.FromInt64(segmentCount));
+            for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
+            {
+                FixedVector3 displacement = segmentIndex == segmentCount - 1
+                    ? remaining
+                    : segment;
+                DeterministicKccMotorResult result = motor.Move(
+                    position,
+                    state,
+                    displacement);
+                position = result.Position;
+                state = CreateKccState(actorId, result);
+                remaining -= displacement;
+            }
         }
 
         static PlanarDisplacement IntegrateRequestedPlanarDisplacement(

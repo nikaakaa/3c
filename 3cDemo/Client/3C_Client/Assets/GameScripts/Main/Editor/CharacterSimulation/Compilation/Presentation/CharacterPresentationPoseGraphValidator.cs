@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AdditiveInvalid = 23,
         ParameterPolicyMissing = 24,
         ModifyBoneInvalid = 25,
-        FootGroundingInvalid = 26,
+        FootPlacementInvalid = 26,
         SubgraphOwnershipInvalid = 27,
         SharedSubgraphCycle = 28,
         InterfaceBoundaryInvalid = 29,
@@ -1241,7 +1241,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         Report(
                             report,
                             node.Kind == CharacterPoseNodeKind.FootPlacement
-                                ? CharacterPoseGraphValidationCode.FootGroundingInvalid
+                                ? CharacterPoseGraphValidationCode.FootPlacementInvalid
                                 : CharacterPoseGraphValidationCode.PoseBoneIkGoalsInvalid,
                             $"Goal Source '{node.NodeId}' must have exactly one downstream Goal consumer.",
                             graph.GraphId,

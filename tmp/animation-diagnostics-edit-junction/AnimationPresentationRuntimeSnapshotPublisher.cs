@@ -148,8 +148,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PhysicalPoseSourceRegistry physicalSources,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            in CharacterFootGroundingDiagnostics footGrounding,
-            in CharacterPredictiveFootPlacementDiagnostics footPlacementPrediction,
+            in CharacterFootLandingPredictionDiagnostics footLandingPrediction,
+            in AnimationPhysicalBoneWriteDiagnostics physicalWrite,
             AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
@@ -192,7 +192,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CopyRootOrientationWarps(page, rootOrientationWarps);
                 CopyInertializations(page, inertializations);
                 CopySlotContributions(page, in frame, physicalSources);
-                CopyFootIk(page, in footGrounding, in footPlacementPrediction);
+                CopyFootPlacement(
+                    page,
+                    in footLandingPrediction,
+                    in physicalWrite);
             }
             if (RequiresOperationDetail(interest))
                 CopyOperations(page, in frame, physicalSources);
@@ -202,8 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     page,
                     in frame,
                     physicalSources,
-                    in footGrounding,
-                    in footPlacementPrediction);
+                    in footLandingPrediction);
             CopyFinalSummary(page, in finalRead);
             if (RequiresFinalPoseDetail(interest))
                 CopyFinalDetail(page, in finalRead, physicalSources);
@@ -864,8 +866,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Page page,
             in CharacterPoseGraphNativeBinding frame,
             PhysicalPoseSourceRegistry physicalSources,
-            in CharacterFootGroundingDiagnostics footGrounding,
-            in CharacterPredictiveFootPlacementDiagnostics footPlacementPrediction)
+            in CharacterFootLandingPredictionDiagnostics footLandingPrediction)
         {
             int boneCount = frame.Layout.BoneCount;
             int stride = frame.Layout.PoseValueContributionStride;
@@ -880,8 +881,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 Array.Clear(page.PoseWatchLocalPoses, poseOffset, boneCount);
                 Array.Clear(page.PoseWatchComponentPoses, poseOffset, boneCount);
                 Array.Clear(page.PoseWatchContributions, contributionOffset, stride);
-                page.PoseWatchFootGroundings[watchIndex] = default;
-                page.PoseWatchFootPlacementPredictions[watchIndex] = default;
+                page.PoseWatchFootLandingPredictions[watchIndex] = default;
                 page.PoseWatchFullBodyIkSolvers[watchIndex] = default;
                 Array.Clear(
                     page.PoseWatchFullBodyIkGoals,
@@ -958,18 +958,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         }
                     }
                     if (operation.Code == CharacterPoseOperationCode.FootPlacement &&
-                        footGrounding.IsCompleted &&
-                        footGrounding.CompletionIdentity == completion &&
-                        footGrounding.FrameSequence == goalSet.FrameSequence)
+                        footLandingPrediction.IsCompleted &&
+                        footLandingPrediction.CompletionIdentity == completion &&
+                        footLandingPrediction.FrameSequence == goalSet.FrameSequence)
                     {
-                        page.PoseWatchFootGroundings[watchIndex] = footGrounding;
-                    }
-                    if (operation.Code == CharacterPoseOperationCode.FootPlacement &&
-                        footPlacementPrediction.IsCompleted &&
-                        footPlacementPrediction.CompletionIdentity == completion &&
-                        footPlacementPrediction.FrameSequence == goalSet.FrameSequence)
-                    {
-                        page.PoseWatchFootPlacementPredictions[watchIndex] = footPlacementPrediction;
+                        page.PoseWatchFootLandingPredictions[watchIndex] =
+                            footLandingPrediction;
                     }
                     page.PoseWatches[watchIndex] = new AnimationPoseWatchSnapshot(
                         identity,
@@ -1083,15 +1077,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             page.PoseWatchCount = m_MergedPoseWatchInterestCount;
         }
 
-        void CopyFootIk(
+        void CopyFootPlacement(
             Page page,
-            in CharacterFootGroundingDiagnostics footGrounding,
-            in CharacterPredictiveFootPlacementDiagnostics footPlacementPrediction)
+            in CharacterFootLandingPredictionDiagnostics footLandingPrediction,
+            in AnimationPhysicalBoneWriteDiagnostics physicalWrite)
         {
-            if (!footGrounding.IsCompleted ||
-                footGrounding.CompletionIdentity != page.CompletionIdentity)
+            if (!footLandingPrediction.IsCompleted ||
+                footLandingPrediction.CompletionIdentity != page.CompletionIdentity)
                 return;
             CharacterFullBodyIkSolverDiagnostics solverDiagnostics = default;
+            CharacterFullBodyIkEffectorDiagnostics pelvis = default;
             CharacterFullBodyIkEffectorDiagnostics leftFoot = default;
             CharacterFullBodyIkEffectorDiagnostics rightFoot = default;
             for (int solverIndex = 0; solverIndex < m_FullBodyIkSolvers.Length; solverIndex++)
@@ -1100,7 +1095,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CharacterFullBodyIkSolverDiagnostics candidate = solver.Diagnostics;
                 if (!candidate.IsCompleted ||
                     candidate.InputCompletionIdentity != page.CompletionIdentity ||
-                    candidate.FrameSequence != footGrounding.FrameSequence)
+                    candidate.FrameSequence != footLandingPrediction.FrameSequence)
                 {
                     continue;
                 }
@@ -1108,7 +1103,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 for (int effectorIndex = 0; effectorIndex < solver.DiagnosticEffectorCount; effectorIndex++)
                 {
                     CharacterFullBodyIkEffectorDiagnostics effector = solver.GetDiagnosticEffector(effectorIndex);
-                    if (effector.Slot == CharacterFullBodyIkEffectorSlot.LeftFoot)
+                    if (effector.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
+                    {
+                        pelvis = effector;
+                        containsFoot = true;
+                    }
+                    else if (effector.Slot == CharacterFullBodyIkEffectorSlot.LeftFoot)
                     {
                         leftFoot = effector;
                         containsFoot = true;
@@ -1124,11 +1124,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 solverDiagnostics = candidate;
                 break;
             }
-            page.FootIk.Grounding = footGrounding;
-            page.FootIk.Prediction = footPlacementPrediction;
-            page.FootIk.Solver = solverDiagnostics;
-            page.FootIk.LeftFoot = leftFoot;
-            page.FootIk.RightFoot = rightFoot;
+            page.FootPlacement.LandingPrediction = footLandingPrediction;
+            page.FootPlacement.Solver = solverDiagnostics;
+            page.FootPlacement.Pelvis = pelvis;
+            page.FootPlacement.LeftFoot = leftFoot;
+            page.FootPlacement.RightFoot = rightFoot;
+            page.FootPlacement.PhysicalWrite =
+                physicalWrite.IsAvailable &&
+                physicalWrite.CompletionIdentity == page.CompletionIdentity
+                    ? physicalWrite
+                    : default;
         }
 
         bool TryResolvePoseWatchOperation(
@@ -1243,9 +1248,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             page.PoseGraphCompletedAt = finalRead.PoseGraphCompletedAt[0];
             page.FinalAppliedAt = finalRead.AppliedAt[0];
             page.ContinuityIdentity = finalRead.ContinuityIdentity[0];
-            page.LeftFootFeatures = finalRead.LeftFootFeatures[0];
-            page.RightFootFeatures = finalRead.RightFootFeatures[0];
             page.HasFootFeatures = finalRead.HasFootFeatures[0] == 1;
+            AnimationFootFeatureSample left = finalRead.LeftFootFeatures[0];
+            AnimationFootFeatureSample right = finalRead.RightFootFeatures[0];
+            page.LeftFootSteps = page.HasFootFeatures
+                ? new AnimationBiomechanicalStepReadPage(
+                    in left,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left)
+                : default;
+            page.RightFootSteps = page.HasFootFeatures
+                ? new AnimationBiomechanicalStepReadPage(
+                    in right,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right)
+                : default;
         }
 
         void CopyFinalDetail(
@@ -1367,10 +1382,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PoseWatches = new AnimationPoseWatchSnapshot[AnimationPoseWatchCapacity.PerTarget];
                 PoseWatchFullBodyIkGoals = new CharacterFullBodyIkGoal[
                     checked(AnimationPoseWatchCapacity.PerTarget * CharacterFullBodyIkGoalSetHeader.MaximumGoalCount)];
-                PoseWatchFootGroundings =
-                    new CharacterFootGroundingDiagnostics[AnimationPoseWatchCapacity.PerTarget];
-                PoseWatchFootPlacementPredictions =
-                    new CharacterPredictiveFootPlacementDiagnostics[AnimationPoseWatchCapacity.PerTarget];
+                PoseWatchFootLandingPredictions =
+                    new CharacterFootLandingPredictionDiagnostics[AnimationPoseWatchCapacity.PerTarget];
                 PoseWatchFullBodyIkSolvers =
                     new CharacterFullBodyIkSolverDiagnostics[AnimationPoseWatchCapacity.PerTarget];
                 PoseWatchFullBodyIkEffectors = new CharacterFullBodyIkEffectorDiagnostics[
@@ -1393,7 +1406,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 OperationContributionBoneWeights = new float[
                     checked(program.Operations.Count * layout.PoseValueContributionStride * layout.BoneCount)];
                 FinalContributionBoneWeights = new float[checked(layout.PoseValueContributionStride * layout.BoneCount)];
-                FootIk = new AnimationFootIkRuntimeSnapshotPage();
+                FootPlacement = new AnimationFootPlacementRuntimeSnapshotPage();
                 PhysicalBoneCount = rig.PhysicalBoneCount;
                 VirtualBoneCount = rig.VirtualBoneCount;
                 PoseBoneCount = rig.PoseBoneCount;
@@ -1439,8 +1452,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal readonly AnimationLinkedPoseEntryRuntimeSnapshot[] LinkedPoseEntries;
             internal readonly AnimationPoseWatchSnapshot[] PoseWatches;
             internal readonly CharacterFullBodyIkGoal[] PoseWatchFullBodyIkGoals;
-            internal readonly CharacterFootGroundingDiagnostics[] PoseWatchFootGroundings;
-            internal readonly CharacterPredictiveFootPlacementDiagnostics[] PoseWatchFootPlacementPredictions;
+            internal readonly CharacterFootLandingPredictionDiagnostics[] PoseWatchFootLandingPredictions;
             internal readonly CharacterFullBodyIkSolverDiagnostics[] PoseWatchFullBodyIkSolvers;
             internal readonly CharacterFullBodyIkEffectorDiagnostics[] PoseWatchFullBodyIkEffectors;
             internal readonly CharacterFullBodyIkLimbDiagnostics[] PoseWatchFullBodyIkLimbs;
@@ -1486,10 +1498,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal ulong PoseGraphCompletedAt;
             internal ulong FinalAppliedAt;
             internal ulong ContinuityIdentity;
-            internal AnimationFootFeatureSample LeftFootFeatures;
-            internal AnimationFootFeatureSample RightFootFeatures;
+            internal AnimationBiomechanicalStepReadPage LeftFootSteps;
+            internal AnimationBiomechanicalStepReadPage RightFootSteps;
             internal bool HasFootFeatures;
-            internal readonly AnimationFootIkRuntimeSnapshotPage FootIk;
+            internal readonly AnimationFootPlacementRuntimeSnapshotPage FootPlacement;
 
             internal void ClearCounts()
             {
@@ -1510,7 +1522,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 LinkedPoseGroupCount = 0;
                 LinkedPoseEntryCount = 0;
                 PoseWatchCount = 0;
-                FootIk.Clear();
+                FootPlacement.Clear();
             }
 
             internal AnimationPresentationRuntimeSnapshot CreateSnapshot(
@@ -1532,10 +1544,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     PoseGraphCompletedAt,
                     FinalAppliedAt,
                     ContinuityIdentity,
-                    LeftFootFeatures,
-                    RightFootFeatures,
+                    LeftFootSteps,
+                    RightFootSteps,
                     HasFootFeatures,
-                    new AnimationFootIkRuntimeSnapshot(FootIk, Lease, leaseIdentity),
+                    new AnimationFootPlacementRuntimeSnapshot(
+                        FootPlacement,
+                        Lease,
+                        leaseIdentity),
                     PhysicalBoneCount,
                     VirtualBoneCount,
                     PoseBoneCount,
@@ -1576,8 +1591,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     PoseWatches,
                     PoseWatchCount,
                     PoseWatchFullBodyIkGoals,
-                    PoseWatchFootGroundings,
-                    PoseWatchFootPlacementPredictions,
+                    PoseWatchFootLandingPredictions,
                     PoseWatchFullBodyIkSolvers,
                     PoseWatchFullBodyIkEffectors,
                     PoseWatchFullBodyIkLimbs,

@@ -119,13 +119,13 @@ namespace ThirdPersonCharacter.Pipeline
                     AnimationPresentationDiagnosticsInterest.OperationDetail |
                     AnimationPresentationDiagnosticsInterest.FinalPoseDetail);
                 motionMatching = null;
-                if (m_Projection.PosePlan.FootGroundings.Count == 1 && worldAwareBinding)
+                if (m_Projection.PosePlan.FootPlacements.Count == 1 && worldAwareBinding)
                 {
                     worldAwareBinding.RequireValid();
                     if (!physicsScene.IsValid())
                         throw new InvalidOperationException("Pose Graph Preview Foot Placement requires the target Scene PhysicsScene.");
-                    CharacterPresentationFootGroundingDescriptor descriptor =
-                        m_Projection.PosePlan.FootGroundings[0];
+                    CharacterPresentationFootPlacementDescriptor descriptor =
+                        m_Projection.PosePlan.FootPlacements[0];
                     CharacterFootPlacementPublicationValidation.Require(m_Projection, descriptor.Calibration);
                     var rig = new CharacterFootPlacementPoseRig(
                         descriptor.Calibration,
@@ -133,12 +133,19 @@ namespace ThirdPersonCharacter.Pipeline
                         animationRigBinding,
                         worldAwareBinding);
                     rig.RequireValid();
+                    CharacterFootPlacementRuntimeSettings footPlacementSettings =
+                        descriptor.Profile.BuildSettings(m_Projection, rig);
+                    var worldQuery = new CharacterFootPlacementWorldQueryBackend(
+                        physicsScene,
+                        rig,
+                        footPlacementSettings.LandingPrediction.HitCapacity,
+                        footPlacementSettings.GroundDetection.SegmentHitCapacity);
                     footPlacement = new CharacterFootPlacementRuntime(
                         m_PreviewActorId,
-                        descriptor.Profile.BuildSettings(m_Projection, rig),
+                        footPlacementSettings,
                         rig,
-                        physicsScene,
-                        null);
+                        null,
+                        worldQuery);
                 }
                 var tuningTarget = new CharacterPoseTuningTargetIdentity(
                     m_PreviewActorId.Value,
@@ -157,7 +164,7 @@ namespace ThirdPersonCharacter.Pipeline
                 m_Playback = playback;
                 m_FootPlacement = footPlacement;
                 m_WorldContextAvailable =
-                    m_Projection.PosePlan.FootGroundings.Count == 0 ||
+                    m_Projection.PosePlan.FootPlacements.Count == 0 ||
                     m_FootPlacement != null;
             }
             catch

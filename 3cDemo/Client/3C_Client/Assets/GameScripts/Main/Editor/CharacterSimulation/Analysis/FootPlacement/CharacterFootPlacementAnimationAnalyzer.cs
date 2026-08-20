@@ -576,11 +576,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 for (int routeIndex = 0; routeIndex < AnimationPredictedFootStepCurveSet.RouteSampleCount; routeIndex++)
                 {
                     AnimationFootBiomechanicalRouteSample actual = biomechanicalRoute[routeIndex];
-                    RequireReconstruction(step.RootLocalFootRoute[routeIndex], source.RootLocalFootRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Sole");
-                    RequireReconstruction(step.RootLocalAnkleRoute[routeIndex], source.RootLocalAnkleRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Ankle");
-                    RequireReconstruction(step.RootLocalHipRoute[routeIndex], source.RootLocalHipRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Hip");
-                    RequireReconstruction(step.AuthoredFootPlanarRoute[routeIndex], source.AuthoredFootPlanarRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "PlanarRoute");
-                    RequireReconstruction(step.AnimationClearanceHeights[routeIndex], source.AnimationClearanceHeight[routeIndex][sourceIndex], heightTolerance, side, sourceIndex, routeIndex, "Clearance");
+                    RequireReconstruction(step.Route.RootLocalFoot[routeIndex], source.RootLocalFootRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Sole");
+                    RequireReconstruction(step.Route.RootLocalAnkle[routeIndex], source.RootLocalAnkleRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Ankle");
+                    RequireReconstruction(step.Route.RootLocalHip[routeIndex], source.RootLocalHipRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Hip");
+                    RequireReconstruction(step.Route.AuthoredFootPlanar[routeIndex], source.AuthoredFootPlanarRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "PlanarRoute");
+                    RequireReconstruction(step.Route.AnimationClearance[routeIndex], source.AnimationClearanceHeight[routeIndex][sourceIndex], heightTolerance, side, sourceIndex, routeIndex, "Clearance");
                     RequireReconstruction(actual.RootLocalHeelPosition, source.RootLocalHeelRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Heel");
                     RequireReconstruction(actual.RootLocalToePosition, source.RootLocalToeRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Toe");
                     RequireReconstruction(actual.RootLocalKneePosition, source.RootLocalKneeRoute[routeIndex][sourceIndex], positionTolerance, side, sourceIndex, routeIndex, "Knee");

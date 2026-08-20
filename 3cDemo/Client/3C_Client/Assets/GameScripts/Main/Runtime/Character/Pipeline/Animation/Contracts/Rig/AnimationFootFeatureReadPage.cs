@@ -111,6 +111,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_IsAuthoritative = source.IsAuthoritative ? (byte)1 : (byte)0;
             m_HasConsistentLandingEventIdentity =
                 source.HasConsistentLandingEventIdentity(side) ? (byte)1 : (byte)0;
+            IsPreSwing = source.IsPreSwing;
+            IsSwing = source.IsSwing;
         }
 
         readonly byte m_IsSpecified;
@@ -137,6 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool IsAuthoritative => m_IsAuthoritative != 0;
         public bool HasConsistentLandingEventIdentity =>
             m_HasConsistentLandingEventIdentity != 0;
+        public bool IsPreSwing { get; }
+        public bool IsSwing { get; }
     }
 
     public readonly struct AnimationBiomechanicalStepReadPage

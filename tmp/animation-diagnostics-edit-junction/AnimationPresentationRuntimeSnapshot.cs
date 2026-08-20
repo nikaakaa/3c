@@ -7,6 +7,36 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
+    internal readonly struct AnimationPhysicalBoneWriteDiagnostics
+    {
+        internal AnimationPhysicalBoneWriteDiagnostics(
+            ulong completionIdentity,
+            Vector3 leftAnkleComponentPosition,
+            Vector3 rightAnkleComponentPosition,
+            Vector3 pelvisComponentPosition)
+        {
+            CompletionIdentity = completionIdentity;
+            LeftAnkleComponentPosition = leftAnkleComponentPosition;
+            RightAnkleComponentPosition = rightAnkleComponentPosition;
+            PelvisComponentPosition = pelvisComponentPosition;
+        }
+
+        internal ulong CompletionIdentity { get; }
+        internal Vector3 LeftAnkleComponentPosition { get; }
+        internal Vector3 RightAnkleComponentPosition { get; }
+        internal Vector3 PelvisComponentPosition { get; }
+        internal bool IsAvailable =>
+            CompletionIdentity != 0 &&
+            IsFinite(LeftAnkleComponentPosition) &&
+            IsFinite(RightAnkleComponentPosition) &&
+            IsFinite(PelvisComponentPosition);
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) &&
+            float.IsFinite(value.y) &&
+            float.IsFinite(value.z);
+    }
+
     public readonly struct AnimationPoseBoneSnapshot
     {
         internal AnimationPoseBoneSnapshot(
@@ -115,8 +145,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong storedCapturedAt,
             ulong storedSourceHistoryCompletedAt,
             bool storedHasFootFeatures,
-            AnimationFootFeatureSample storedLeftFootFeatures,
-            AnimationFootFeatureSample storedRightFootFeatures)
+            in AnimationFootFeatureSample storedLeftFootFeatures,
+            in AnimationFootFeatureSample storedRightFootFeatures)
         {
             AnimationChannelId = animationChannelId;
             PresentationPoseSourceProviderId = presentationPoseSourceProviderId;
@@ -137,8 +167,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             StoredCapturedAt = storedCapturedAt;
             StoredSourceHistoryCompletedAt = storedSourceHistoryCompletedAt;
             StoredHasFootFeatures = storedHasFootFeatures;
-            StoredLeftFootFeatures = storedLeftFootFeatures;
-            StoredRightFootFeatures = storedRightFootFeatures;
+            StoredLeftFootSteps = default;
+            StoredRightFootSteps = default;
+            if (storedHasFootFeatures)
+            {
+                StoredLeftFootSteps = new AnimationBiomechanicalStepReadPage(
+                    in storedLeftFootFeatures,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left);
+                StoredRightFootSteps = new AnimationBiomechanicalStepReadPage(
+                    in storedRightFootFeatures,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right);
+            }
         }
 
         public AnimationChannelId AnimationChannelId { get; }
@@ -160,8 +199,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong StoredCapturedAt { get; }
         public ulong StoredSourceHistoryCompletedAt { get; }
         public bool StoredHasFootFeatures { get; }
-        public AnimationFootFeatureSample StoredLeftFootFeatures { get; }
-        public AnimationFootFeatureSample StoredRightFootFeatures { get; }
+        public AnimationBiomechanicalStepReadPage StoredLeftFootSteps { get; }
+        public AnimationBiomechanicalStepReadPage StoredRightFootSteps { get; }
     }
 
     public readonly struct PoseInertializationSnapshot
@@ -345,8 +384,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             string footAnalysisSourceId,
             int footAnalysisVersion,
             string footArtifactContentHash,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures)
+            in AnimationFootFeatureSample leftFootFeatures,
+            in AnimationFootFeatureSample rightFootFeatures)
         {
             SampleId = sampleId;
             Weight = weight;
@@ -356,8 +395,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             FootAnalysisSourceId = footAnalysisSourceId ?? string.Empty;
             FootAnalysisVersion = footAnalysisVersion;
             FootArtifactContentHash = footArtifactContentHash ?? string.Empty;
-            LeftFootFeatures = leftFootFeatures;
-            RightFootFeatures = rightFootFeatures;
+            LeftFootSteps = default;
+            RightFootSteps = default;
+            if (hasFootFeatures)
+            {
+                LeftFootSteps = new AnimationBiomechanicalStepReadPage(
+                    in leftFootFeatures,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left);
+                RightFootSteps = new AnimationBiomechanicalStepReadPage(
+                    in rightFootFeatures,
+                    global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right);
+            }
         }
 
         public CharacterAnimationBlendSpaceSampleId SampleId { get; }
@@ -368,8 +416,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public string FootAnalysisSourceId { get; }
         public int FootAnalysisVersion { get; }
         public string FootArtifactContentHash { get; }
-        public AnimationFootFeatureSample LeftFootFeatures { get; }
-        public AnimationFootFeatureSample RightFootFeatures { get; }
+        public AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
+        public AnimationBiomechanicalStepReadPage RightFootSteps { get; }
     }
 
     public readonly struct AnimationBlendSpacePlayerRuntimeSnapshot
@@ -674,37 +722,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong GoalCompletionIdentity { get; }
     }
 
-    internal sealed class AnimationFootIkRuntimeSnapshotPage
+    internal sealed class AnimationFootPlacementRuntimeSnapshotPage
     {
-        internal CharacterFootGroundingDiagnostics Grounding;
-        internal CharacterPredictiveFootPlacementDiagnostics Prediction;
+        internal CharacterFootLandingPredictionDiagnostics LandingPrediction;
         internal CharacterFullBodyIkSolverDiagnostics Solver;
+        internal CharacterFullBodyIkEffectorDiagnostics Pelvis;
         internal CharacterFullBodyIkEffectorDiagnostics LeftFoot;
         internal CharacterFullBodyIkEffectorDiagnostics RightFoot;
+        internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
 
         internal void Clear()
         {
-            Grounding = default;
-            Prediction = default;
+            LandingPrediction = default;
             Solver = default;
+            Pelvis = default;
             LeftFoot = default;
             RightFoot = default;
+            PhysicalWrite = default;
         }
     }
 
-    public readonly struct AnimationFootIkRuntimeSnapshot
+    public readonly struct AnimationFootPlacementRuntimeSnapshot
     {
-        static readonly CharacterFootGroundingDiagnostics s_DefaultGrounding;
-        static readonly CharacterPredictiveFootPlacementDiagnostics s_DefaultPrediction;
+        static readonly CharacterFootLandingPredictionDiagnostics s_DefaultLandingPrediction;
         static readonly CharacterFullBodyIkSolverDiagnostics s_DefaultSolver;
         static readonly CharacterFullBodyIkEffectorDiagnostics s_DefaultEffector;
 
-        readonly AnimationFootIkRuntimeSnapshotPage m_Page;
+        readonly AnimationFootPlacementRuntimeSnapshotPage m_Page;
         readonly FinalAnimationPoseFramePageLease m_Lease;
         readonly ulong m_LeaseIdentity;
 
-        internal AnimationFootIkRuntimeSnapshot(
-            AnimationFootIkRuntimeSnapshotPage page,
+        internal AnimationFootPlacementRuntimeSnapshot(
+            AnimationFootPlacementRuntimeSnapshotPage page,
             FinalAnimationPoseFramePageLease lease,
             ulong leaseIdentity)
         {
@@ -715,25 +764,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 : throw new ArgumentOutOfRangeException(nameof(leaseIdentity));
         }
 
-        public ref readonly CharacterFootGroundingDiagnostics Grounding
+        public ref readonly CharacterFootLandingPredictionDiagnostics LandingPrediction
         {
             get
             {
                 if (m_Page == null)
-                    return ref s_DefaultGrounding;
+                    return ref s_DefaultLandingPrediction;
                 RequireValid();
-                return ref m_Page.Grounding;
-            }
-        }
-
-        public ref readonly CharacterPredictiveFootPlacementDiagnostics Prediction
-        {
-            get
-            {
-                if (m_Page == null)
-                    return ref s_DefaultPrediction;
-                RequireValid();
-                return ref m_Page.Prediction;
+                return ref m_Page.LandingPrediction;
             }
         }
 
@@ -770,12 +808,79 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
         }
 
+        public ref readonly CharacterFullBodyIkEffectorDiagnostics Pelvis
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultEffector;
+                RequireValid();
+                return ref m_Page.Pelvis;
+            }
+        }
+
+        public bool PhysicalWriteAvailable
+        {
+            get
+            {
+                if (m_Page == null)
+                    return false;
+                RequireValid();
+                return m_Page.PhysicalWrite.IsAvailable;
+            }
+        }
+
+        public ulong PhysicalWriteCompletionIdentity
+        {
+            get
+            {
+                if (m_Page == null)
+                    return 0;
+                RequireValid();
+                return m_Page.PhysicalWrite.CompletionIdentity;
+            }
+        }
+
+        public Vector3 LeftPhysicalAnkleComponentPosition
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.PhysicalWrite.LeftAnkleComponentPosition;
+            }
+        }
+
+        public Vector3 RightPhysicalAnkleComponentPosition
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.PhysicalWrite.RightAnkleComponentPosition;
+            }
+        }
+
+        public Vector3 PhysicalPelvisComponentPosition
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.PhysicalWrite.PelvisComponentPosition;
+            }
+        }
+
         public CharacterFullBodyIkGoal LeftGoal
         {
             get
             {
-                ref readonly CharacterPredictiveFootPlacementDiagnostics prediction = ref Prediction;
-                return prediction.IsCompleted ? prediction.Left.FinalGoal : Grounding.Left.Goal;
+                ref readonly CharacterFootLandingPredictionDiagnostics prediction =
+                    ref LandingPrediction;
+                return prediction.Left.Goal;
             }
         }
 
@@ -783,8 +888,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         {
             get
             {
-                ref readonly CharacterPredictiveFootPlacementDiagnostics prediction = ref Prediction;
-                return prediction.IsCompleted ? prediction.Right.FinalGoal : Grounding.Right.Goal;
+                ref readonly CharacterFootLandingPredictionDiagnostics prediction =
+                    ref LandingPrediction;
+                return prediction.Right.Goal;
             }
         }
 
@@ -795,7 +901,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 if (m_Page == null)
                     return false;
                 RequireValid();
-                return m_Page.Grounding.IsCompleted;
+                return m_Page.LandingPrediction.IsCompleted;
             }
         }
 
@@ -824,8 +930,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly AnimationLinkedPoseEntryRuntimeSnapshot[] m_LinkedPoseEntries;
         readonly AnimationPoseWatchSnapshot[] m_PoseWatches;
         readonly CharacterFullBodyIkGoal[] m_PoseWatchFullBodyIkGoals;
-        readonly CharacterFootGroundingDiagnostics[] m_PoseWatchFootGroundings;
-        readonly CharacterPredictiveFootPlacementDiagnostics[] m_PoseWatchFootPlacementPredictions;
+        readonly CharacterFootLandingPredictionDiagnostics[] m_PoseWatchFootLandingPredictions;
         readonly CharacterFullBodyIkSolverDiagnostics[] m_PoseWatchFullBodyIkSolvers;
         readonly CharacterFullBodyIkEffectorDiagnostics[] m_PoseWatchFullBodyIkEffectors;
         readonly CharacterFullBodyIkLimbDiagnostics[] m_PoseWatchFullBodyIkLimbs;
@@ -844,7 +949,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly float[] m_SlotContributionBoneWeights;
         readonly float[] m_OperationContributionBoneWeights;
         readonly float[] m_FinalContributionBoneWeights;
-        readonly AnimationFootIkRuntimeSnapshot m_FootIk;
+        readonly AnimationFootPlacementRuntimeSnapshot m_FootPlacement;
         readonly int m_StackCount;
         readonly int m_InertializationCount;
         readonly int m_EntryCount;
@@ -877,10 +982,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong poseGraphCompletedAt,
             ulong finalAppliedAt,
             ulong continuityIdentity,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures,
+            AnimationBiomechanicalStepReadPage leftFootSteps,
+            AnimationBiomechanicalStepReadPage rightFootSteps,
             bool hasFootFeatures,
-            AnimationFootIkRuntimeSnapshot footIk,
+            AnimationFootPlacementRuntimeSnapshot footPlacement,
             int physicalBoneCount,
             int virtualBoneCount,
             int poseBoneCount,
@@ -921,8 +1026,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             AnimationPoseWatchSnapshot[] poseWatches,
             int poseWatchCount,
             CharacterFullBodyIkGoal[] poseWatchFullBodyIkGoals,
-            CharacterFootGroundingDiagnostics[] poseWatchFootGroundings,
-            CharacterPredictiveFootPlacementDiagnostics[] poseWatchFootPlacementPredictions,
+            CharacterFootLandingPredictionDiagnostics[] poseWatchFootLandingPredictions,
             CharacterFullBodyIkSolverDiagnostics[] poseWatchFullBodyIkSolvers,
             CharacterFullBodyIkEffectorDiagnostics[] poseWatchFullBodyIkEffectors,
             CharacterFullBodyIkLimbDiagnostics[] poseWatchFullBodyIkLimbs,
@@ -955,10 +1059,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PoseGraphCompletedAt = poseGraphCompletedAt;
             FinalAppliedAt = finalAppliedAt;
             ContinuityIdentity = continuityIdentity;
-            LeftFootFeatures = leftFootFeatures;
-            RightFootFeatures = rightFootFeatures;
+            LeftFootSteps = leftFootSteps;
+            RightFootSteps = rightFootSteps;
             HasFootFeatures = hasFootFeatures;
-            m_FootIk = footIk;
+            m_FootPlacement = footPlacement;
             PhysicalBoneCount = physicalBoneCount;
             VirtualBoneCount = virtualBoneCount;
             PoseBoneCount = poseBoneCount;
@@ -999,8 +1103,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_PoseWatches = poseWatches;
             m_PoseWatchCount = poseWatchCount;
             m_PoseWatchFullBodyIkGoals = poseWatchFullBodyIkGoals;
-            m_PoseWatchFootGroundings = poseWatchFootGroundings;
-            m_PoseWatchFootPlacementPredictions = poseWatchFootPlacementPredictions;
+            m_PoseWatchFootLandingPredictions = poseWatchFootLandingPredictions;
             m_PoseWatchFullBodyIkSolvers = poseWatchFullBodyIkSolvers;
             m_PoseWatchFullBodyIkEffectors = poseWatchFullBodyIkEffectors;
             m_PoseWatchFullBodyIkLimbs = poseWatchFullBodyIkLimbs;
@@ -1035,10 +1138,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong PoseGraphCompletedAt { get; }
         public ulong FinalAppliedAt { get; }
         public ulong ContinuityIdentity { get; }
-        public AnimationFootFeatureSample LeftFootFeatures { get; }
-        public AnimationFootFeatureSample RightFootFeatures { get; }
+        public AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
+        public AnimationBiomechanicalStepReadPage RightFootSteps { get; }
         public bool HasFootFeatures { get; }
-        public AnimationFootIkRuntimeSnapshot FootIk => m_FootIk;
+        public AnimationFootPlacementRuntimeSnapshot FootPlacement => m_FootPlacement;
         public int PhysicalBoneCount { get; }
         public int VirtualBoneCount { get; }
         public int PoseBoneCount { get; }
@@ -1134,21 +1237,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_LeaseIdentity);
         }
 
-        public bool TryGetPoseWatchFootGrounding(
+        public bool TryGetPoseWatchFootLandingPrediction(
             int watchIndex,
-            out CharacterFootGroundingDiagnostics diagnostics)
+            out CharacterFootLandingPredictionDiagnostics diagnostics)
         {
             RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
-            diagnostics = m_PoseWatchFootGroundings[watchIndex];
-            return diagnostics.IsCompleted;
-        }
-
-        public bool TryGetPoseWatchPredictiveFootPlacement(
-            int watchIndex,
-            out CharacterPredictiveFootPlacementDiagnostics diagnostics)
-        {
-            RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
-            diagnostics = m_PoseWatchFootPlacementPredictions[watchIndex];
+            diagnostics = m_PoseWatchFootLandingPredictions[watchIndex];
             return diagnostics.IsCompleted;
         }
 

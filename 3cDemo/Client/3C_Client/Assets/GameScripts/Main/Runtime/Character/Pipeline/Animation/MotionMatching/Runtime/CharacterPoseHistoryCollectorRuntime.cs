@@ -117,7 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public int Count => RequireOwner().Count;
         public bool HasGap => RequireOwner().HasGap;
         public ulong ResetSequence => RequireOwner().ResetSequence;
-        public AnimationFootPlacementSample LatestFootPlacement => RequireOwner().LatestFootPlacement;
+        public AnimationFootPlacementHistorySample LatestFootPlacement => RequireOwner().LatestFootPlacement;
 
         public bool CoversSecondsBeforeLatest(float secondsBeforeLatest) =>
             RequireOwner().CoversSecondsBeforeLatest(secondsBeforeLatest);
@@ -151,7 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         readonly ulong[] m_FrameIdentities;
         readonly CharacterMotionMatchingSourceLineage[] m_SourceLineages;
         readonly CharacterPoseHistoryRootKinematics[] m_RootKinematics;
-        readonly AnimationFootPlacementSample[] m_FootPlacement;
+        readonly AnimationFootPlacementHistorySample[] m_FootPlacement;
         readonly Vector3[] m_Positions;
         readonly Vector3[] m_Velocities;
         readonly Vector3[] m_PendingPositions;
@@ -166,7 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         ulong m_PendingFrameIdentity;
         CharacterMotionMatchingSourceLineage m_PendingSourceLineage;
         CharacterPoseHistoryRootKinematics m_PendingRootKinematics;
-        AnimationFootPlacementSample m_PendingFootPlacement;
+        AnimationFootPlacementHistorySample m_PendingFootPlacement;
         bool m_HasGap;
         bool m_FrameOpen;
         bool m_CommitPrepared;
@@ -187,7 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_FrameIdentities = new ulong[capacity];
             m_SourceLineages = new CharacterMotionMatchingSourceLineage[capacity];
             m_RootKinematics = new CharacterPoseHistoryRootKinematics[capacity];
-            m_FootPlacement = new AnimationFootPlacementSample[capacity];
+            m_FootPlacement = new AnimationFootPlacementHistorySample[capacity];
             m_Positions = new Vector3[checked(capacity * boneCount)];
             m_Velocities = new Vector3[checked(capacity * boneCount)];
             m_PendingPositions = new Vector3[boneCount];
@@ -206,7 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_Count == 0 ? default : m_SourceLineages[PhysicalIndex(m_Count - 1)];
         internal CharacterPoseHistoryRootKinematics LatestRootKinematics =>
             m_Count == 0 ? default : m_RootKinematics[PhysicalIndex(m_Count - 1)];
-        internal AnimationFootPlacementSample LatestFootPlacement =>
+        internal AnimationFootPlacementHistorySample LatestFootPlacement =>
             m_Count == 0 ? default : m_FootPlacement[PhysicalIndex(m_Count - 1)];
         double LatestPresentationTime =>
             m_Count == 0 ? 0d : m_PresentationTimes[PhysicalIndex(m_Count - 1)];
@@ -282,7 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 rootPose,
                 rootLinearVelocity,
                 rootAngularVelocity);
-            m_PendingFootPlacement = footPlacement;
+            m_PendingFootPlacement = new AnimationFootPlacementHistorySample(in footPlacement);
             m_CommitPrepared = true;
         }
 

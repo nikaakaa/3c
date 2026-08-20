@@ -184,13 +184,13 @@ Gameplay Timeline提交短Root Motion
   -> 0.12秒进入Inertialization
   -> 0.30秒退出Inertialization
   -> LocalToComponentPose
-  -> FootPlacement规划pelvis与typed双腿targets
-  -> LegIK求解Physical腿链
+  -> FootPlacement发布Pelvis与双脚Final Goal
+  -> 唯一FinalIK FBBIK消费Goal
   -> ComponentToLocalPose
   -> FinalPose
 ```
 
-当前FootPlacement不是FootLock，不得把两者混称。若后续仍出现支撑脚绕点滑动，应新增独立FootLock Pose能力；它只约束骨架脚部，不得重新取得Body运动所有权。
+当前FootPlacement只验证Landing，不执行FootLock、Constraint或Pelvis修正。后续能力仍必须进入同一FootPlacement Goal事务，不得新增独立Grounding、第二Pelvis或第二IK。
 
 ## 6. 动画表现业务
 
@@ -231,7 +231,7 @@ PoseStateMachine需要表达这些可见状态：
 
 ### 6.3 IK与后处理
 
-- Virtual Bone、TwoBoneIK、FootPlacement、LegIK、Inertialization、Layer、Additive和Mask只处理Pose。
+- Virtual Bone、FootPlacement、FullBodyIK、Inertialization、Layer、Additive和Mask只属于Presentation Pose。
 - 它们不得生成或修改Rollback Gameplay状态。
 - 它们不得修改MovingTurn Gameplay Timeline提交的Body Root Motion。
 - Pose Graph和Graph运行内存不进入Rollback snapshot或网络协议。
@@ -314,9 +314,8 @@ Input
   -> AnimationSlot
   -> Inertialization/Blend/Layer
   -> LocalToComponentPose
-  -> TwoBoneIK
-  -> FootPlacement pelvis/targets
-  -> LegIK
+  -> FootPlacement / PoseBoneIKGoals
+  -> 唯一FullBodyIK
   -> ComponentToLocalPose
   -> FinalPose
 ```

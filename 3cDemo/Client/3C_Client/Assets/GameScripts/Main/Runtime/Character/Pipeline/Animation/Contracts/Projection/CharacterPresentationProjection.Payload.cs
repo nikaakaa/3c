@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -163,12 +163,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void RequireStructuralTuningPayload()
         {
-            for (int profileIndex = 0; profileIndex < PosePlan.FootGroundings.Count; profileIndex++)
+            for (int profileIndex = 0; profileIndex < PosePlan.FootPlacements.Count; profileIndex++)
             {
-                CharacterPresentationFootGroundingDescriptor descriptor =
-                    PosePlan.FootGroundings[profileIndex];
+                CharacterPresentationFootPlacementDescriptor descriptor =
+                    PosePlan.FootPlacements[profileIndex];
                 CharacterFootLandingPredictionSettings landing =
                     descriptor.Profile.LandingPrediction.Build();
+                CharacterFootGroundDetectionSettings ground =
+                    descriptor.Profile.GroundDetection.Build();
                 string ownerId = $"foot-placement-profile:{descriptor.Profile.ProfileId}";
                 for (int entryIndex = 0; entryIndex < TuningLayout.Entries.Count; entryIndex++)
                 {
@@ -180,6 +182,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (entry.FieldId.EndsWith("/landing-prediction/hit-capacity", StringComparison.Ordinal) &&
                         value.IntegerValue != landing.HitCapacity)
                         throw new InvalidOperationException("Character Presentation Projection Foot Placement hit capacity is stale.");
+                    if (entry.FieldId.EndsWith("/ground-detection/segment-hit-capacity", StringComparison.Ordinal) &&
+                        value.IntegerValue != ground.SegmentHitCapacity)
+                        throw new InvalidOperationException("Character Presentation Projection Ground Detection segment hit capacity is stale.");
+                    if (entry.FieldId.EndsWith("/ground-detection/contact-capacity", StringComparison.Ordinal) &&
+                        value.IntegerValue != ground.ContactCapacity)
+                        throw new InvalidOperationException("Character Presentation Projection Ground Detection contact capacity is stale.");
                 }
             }
         }

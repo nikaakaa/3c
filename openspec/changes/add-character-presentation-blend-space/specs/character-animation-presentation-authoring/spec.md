@@ -2,7 +2,7 @@
 
 ### Requirement: Profile必须唯一绑定Blend Space Pose source
 
-Pose Graph MUST拥有typed Blend Space Source Slot子资产，`CharacterAnimationPresentationProfile` MUST为该Slot拥有唯一typed Blend Space Binding子资产并精确引用`CharacterAnimationBlendSpaceAsset`。同一Slot MUST只有一条类型匹配binding；Sequence、Motion Matching与Blend Space必须使用各自独立的Slot和Binding类型。Pose Graph节点、Timeline、Gameplay State、Agent Patch和generated Projection MUST不保存第二份可写Blend Space资源选择。
+Pose Graph MUST拥有typed Blend Space Source Slot子资产，`CharacterAnimationPresentationProfile` MUST为该Slot拥有唯一typed Blend Space Binding子资产并精确引用`CharacterAnimationBlendSpaceAsset`。同一Slot MUST只有一条类型匹配binding；Clip、Motion Matching与Blend Space必须使用各自独立的Slot和Binding类型。Pose Graph节点、Timeline、Gameplay State、Agent Document和generated Projection MUST不保存第二份可写Blend Space资源选择。
 
 #### Scenario: 作者把Locomotion Pose source绑定到Blend Space
 

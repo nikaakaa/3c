@@ -174,7 +174,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 source.ModifyBones.ToArray(),
                 source.RootOrientationWarps.ToArray(),
                 source.PoseBoneIkGoalSources.ToArray(),
-                source.FootGroundings.ToArray(),
+                source.FootPlacements.ToArray(),
                 source.FullBodyIks.ToArray(),
                 source.FullBodyIkGoalInputValueIndices.ToArray(),
                 source.SequencePlayers.ToArray(),

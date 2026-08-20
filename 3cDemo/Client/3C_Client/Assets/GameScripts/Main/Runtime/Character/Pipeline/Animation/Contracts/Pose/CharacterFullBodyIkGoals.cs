@@ -18,13 +18,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         RightFoot = 10
     }
 
-    [Flags]
     public enum CharacterFullBodyIkGoalSourceKind : byte
     {
         None = 0,
-        FootGrounding = 1,
-        PredictiveExtension = 2,
-        PoseBone = 4
+        FootPlacement = 1,
+        PoseBone = 2
     }
 
     public enum CharacterFullBodyIkGoalSetAvailability : byte
@@ -82,10 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IsWeight(PositionWeight) &&
             IsWeight(RotationWeight) &&
             IsApplicationValid() &&
-            SourceKind != CharacterFullBodyIkGoalSourceKind.None &&
-            (SourceKind & ~(CharacterFullBodyIkGoalSourceKind.FootGrounding |
-                            CharacterFullBodyIkGoalSourceKind.PredictiveExtension |
-                            CharacterFullBodyIkGoalSourceKind.PoseBone)) == 0 &&
+            (SourceKind == CharacterFullBodyIkGoalSourceKind.FootPlacement ||
+             SourceKind == CharacterFullBodyIkGoalSourceKind.PoseBone) &&
             DiagnosticMetadataIndex >= -1;
 
         bool IsApplicationValid()
@@ -96,11 +92,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     return Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation &&
                            ComponentRotation == Quaternion.identity &&
                            RotationWeight == 0f &&
-                           (SourceKind & CharacterFullBodyIkGoalSourceKind.FootGrounding) != 0;
+                           SourceKind == CharacterFullBodyIkGoalSourceKind.FootPlacement;
                 case CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget:
                     return (Slot == CharacterFullBodyIkEffectorSlot.LeftFoot ||
                             Slot == CharacterFullBodyIkEffectorSlot.RightFoot) &&
-                           (SourceKind & CharacterFullBodyIkGoalSourceKind.FootGrounding) != 0;
+                           SourceKind == CharacterFullBodyIkGoalSourceKind.FootPlacement;
                 case CharacterFullBodyIkGoalApplication.AbsoluteEffectorTarget:
                     return Slot != CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation;
                 default:

@@ -629,19 +629,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             writer.Write(predicted.OpposingLandingDelaySeconds);
             writer.Write(predicted.OpposingLandingCycleOffset);
             WriteVector3(writer, predicted.OpposingRootLocalLanding);
-            for (int i = 0; i < predicted.RootLocalFootRoute.Length; i++)
-                WriteVector3(writer, predicted.RootLocalFootRoute[i]);
-            for (int i = 0; i < predicted.RootLocalAnkleRoute.Length; i++)
-                WriteVector3(writer, predicted.RootLocalAnkleRoute[i]);
-            for (int i = 0; i < predicted.RootLocalHipRoute.Length; i++)
-                WriteVector3(writer, predicted.RootLocalHipRoute[i]);
-            for (int i = 0; i < predicted.AuthoredFootPlanarRoute.Length; i++)
-                WriteVector3(writer, predicted.AuthoredFootPlanarRoute[i]);
-            for (int i = 0; i < predicted.AnimationClearanceHeights.Length; i++)
-                writer.Write(predicted.AnimationClearanceHeights[i]);
+            for (int i = 0; i < predicted.Route.RootLocalFoot.Length; i++)
+                WriteVector3(writer, predicted.Route.RootLocalFoot[i]);
+            for (int i = 0; i < predicted.Route.RootLocalAnkle.Length; i++)
+                WriteVector3(writer, predicted.Route.RootLocalAnkle[i]);
+            for (int i = 0; i < predicted.Route.RootLocalHip.Length; i++)
+                WriteVector3(writer, predicted.Route.RootLocalHip[i]);
+            for (int i = 0; i < predicted.Route.AuthoredFootPlanar.Length; i++)
+                WriteVector3(writer, predicted.Route.AuthoredFootPlanar[i]);
+            for (int i = 0; i < predicted.Route.AnimationClearance.Length; i++)
+                writer.Write(predicted.Route.AnimationClearance[i]);
             writer.Write(predicted.LandingPhase);
             WriteQuaternion(writer, predicted.OpposingRootLocalSoleRotation);
-            WriteBiomechanicalSample(writer, predicted.BiomechanicalSample);
+            WriteBiomechanicalSample(writer, predicted.Route.CurrentSample);
         }
 
         static AnimationFootFeatureSample ReadFootSample(BinaryReader reader)

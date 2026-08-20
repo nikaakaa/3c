@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         SourcePhysicalPoseInvalid = 14,
         SourceVirtualBoneInvalid = 15,
         SourcePoseHistoryInvalid = 16,
-        FootGroundingInvalid = 17,
+        FootPlacementInvalid = 17,
         PoseSpaceConversionInvalid = 18,
         WorldContextUnavailable = 19,
         FullBodyIkGoalSetInvalid = 20,

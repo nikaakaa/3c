@@ -2,7 +2,7 @@
 
 ### Requirement: 系统必须提供正式Blend Space资产
 
-系统 MUST使用`CharacterAnimationBlendSpaceAsset`作为连续参数动画样本空间的唯一authoring真相。资产 MUST保存稳定BlendSpaceId、content revision、Rig identity、正式mode、typed axis、稳定SampleId、精确AnimationClip引用、sample position、sample role、phase policy、Foot Analysis source binding与显式Pose Parameter policy。资产 MUST不保存Runtime weight、time、Playable、Animator或Transform状态。
+系统 MUST使用`CharacterAnimationBlendSpaceAsset`作为连续参数动画样本空间的唯一authoring真相。资产 MUST保存稳定BlendSpaceId、content revision、Rig identity、正式mode、typed axis、稳定SampleId、精确AnimationClip引用、sample position、sample role、phase policy、LocomotionPhase模式的稳定Phase Reference Sample、Foot Analysis source binding与显式Pose Parameter policy。资产 MUST不保存Runtime weight、time、Playable、Animator或Transform状态。
 
 #### Scenario: 作者创建一维移动Blend Space
 
@@ -38,7 +38,7 @@
 
 ### Requirement: Blend Space时间策略必须显式且确定
 
-每个资产 MUST显式选择`SharedNormalizedPhase`或`MarkerSynchronizedPhase`。SharedNormalizedPhase MUST把同一canonical normalized phase映射到全部DynamicCycle sample；MarkerSynchronizedPhase MUST使用稳定Phase Reference Sample与所有DynamicCycle共有的MarkerId循环拓扑，将canonical marker segment与fraction映射到每个样本。StationaryPose MUST使用显式固定normalized time且不得成为Phase Reference。Marker数据缺失或不一致时 MUST编译失败，不得回退normalized time。
+每个资产 MUST显式选择`SharedNormalizedPhase`或`LocomotionPhase`。SharedNormalizedPhase MUST把同一canonical normalized phase映射到全部DynamicCycle sample。LocomotionPhase MUST使用稳定DynamicCycle Phase Reference Sample作为source raw clock carrier；Compiler MUST要求全部DynamicCycle Sample的AnimationClip属于同一Profile Locomotion Sync Group并具有合法per-clip forward/inverse Phase plan，把Reference raw time转换为unwrapped phase后再通过每个Sample自己的inverse plan得到effective time。资产 MUST不保存reference-to-sample pairwise warp、Marker topology或动态leader。StationaryPose MUST使用显式固定normalized time且不得成为Phase Reference。Phase Reference、Group成员或Curve无效时 MUST编译失败，不得回退SharedNormalizedPhase。
 
 #### Scenario: 参数跨越多个动态样本
 
@@ -46,9 +46,9 @@
 - **THEN** 全部正权重DynamicCycle sample MUST继续使用同一canonical phase
 - **AND** 系统 MUST不按最大weight动态更换Phase Reference
 
-#### Scenario: Marker拓扑缺失
+#### Scenario: Locomotion Phase输入缺失
 
-- **WHEN** MarkerSynchronizedPhase中的一个DynamicCycle缺少共同MarkerId
+- **WHEN** LocomotionPhase中的一个DynamicCycle不属于共同Profile Group或缺少合法Phase Curve
 - **THEN** Projection Build MUST失败并定位AssetId与SampleId
 - **AND** MUST不静默使用SharedNormalizedPhase
 
@@ -64,13 +64,13 @@ Pose Graph MUST提供`BlendSpacePlayer`正式节点。节点 MUST只位于PoseSt
 
 #### Scenario: 非BlendSpace Pose source进入BlendSpacePlayer
 
-- **WHEN** Player绑定的source kind为Sequence或MotionMatching
+- **WHEN** Player绑定的source kind为Clip或MotionMatching
 - **THEN** Compiler MUST拒绝该节点并定位Source Slot业务名与对象owner
-- **AND** MUST不改用SequencePlayer或MM Player
+- **AND** MUST不改用ClipPlayer或MM Player
 
 ### Requirement: BlendSpacePlayer与连续性节点必须分责
 
-BlendSpacePlayer MUST只拥有同一BlendSpace source内部的参数权重、child phase、multi-clip sample与source-local feature聚合。跨来源raw-to-effective映射 MUST仍由显式MarkerSync拥有；跨来源CrossFade、Stored Pose和exact release MUST仍由BlendStack拥有；单Pose discontinuity的residual与rebase MUST仍由下游Inertialization拥有。Runtime与Preview MUST不自动插入这些节点。
+BlendSpacePlayer MUST只拥有同一BlendSpace source内部的参数权重、source canonical phase到child effective time的映射、multi-clip sample与source-local feature聚合。跨PoseState source的Phase handoff MUST由edge编译的`AnimationPhaseRelationPlan`拥有；跨来源CrossFade、Stored Pose和exact release MUST仍由Transition或BlendStack拥有；单Pose discontinuity的residual与rebase MUST仍由显式Inertialization拥有。Runtime与Preview MUST不自动插入Relation、Stack或Inertialization。
 
 #### Scenario: BlendSpace source identity变化
 
@@ -80,7 +80,7 @@ BlendSpacePlayer MUST只拥有同一BlendSpace source内部的参数权重、chi
 
 ### Requirement: Blend Space必须编译为固定Projection计划
 
-Projection Compiler MUST把资产编译为不可变BlendSpace plan，其中包含Projection-local dense source index、identity/revision/Rig、dense axis、stable sample table、weight solver data、phase table、clip resource binding、Foot Analysis binding、Pose Parameter policy、workspace offset与可读diagnostic source map。Runtime MUST只读取匹配Projection revision的plan，不得读取Source Slot或Binding ScriptableObject、AssetDatabase、Timeline authoring、Profile或AnimationTrack marker。
+Projection Compiler MUST把资产编译为不可变BlendSpace plan，其中包含Projection-local dense source index、identity/revision/Rig、dense axis、stable sample table、weight solver data、phase policy、Phase Reference、per-clip Phase plan index、clip resource binding、Foot Analysis binding、Pose Parameter policy、workspace offset与可读diagnostic source map。LocomotionPhase资产 MUST同时降低为`AnimationSourcePhasePlan`供PoseState relation使用。Runtime MUST只读取匹配Projection revision的plan，不得读取Source Slot或Binding ScriptableObject、AnimationClip Curve、AssetDatabase、Timeline authoring、Profile或Marker。
 
 #### Scenario: Runtime创建BlendSpacePlayer
 
@@ -90,7 +90,7 @@ Projection Compiler MUST把资产编译为不可变BlendSpace plan，其中包�
 
 ### Requirement: Blend Space必须复用现有Animancer采样后端
 
-BlendSpacePlayer MUST把正权重样本降低为现有`ClipSamplePlan`并交给Animancer source backend。Animancer MUST只创建或复用child ClipState、应用effective time、loop、play rate与weight并提供source pose capture；MUST不重新求解Blend Space权重、选择phase leader、执行Marker relation或拥有最终Pose。
+BlendSpacePlayer MUST把正权重样本降低为现有`ClipSamplePlan`并交给Animancer source backend。Animancer MUST只创建或复用child ClipState、应用compiled effective time、loop、play rate与weight并提供source pose capture；MUST不读取Phase Curve、重新求解Blend Space权重、选择phase leader、执行Phase relation或拥有最终Pose。
 
 #### Scenario: 三个样本同时贡献
 

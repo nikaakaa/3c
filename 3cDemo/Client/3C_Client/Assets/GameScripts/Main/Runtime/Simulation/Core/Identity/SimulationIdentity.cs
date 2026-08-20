@@ -296,8 +296,8 @@ namespace ThirdPersonSimulation
             int tickRate,
             float currentVelocityX,
             float currentVelocityZ,
-            float yawVelocityDegreesPerSecond,
-            float maximumYawVelocityDegreesPerSecond,
+            float bodyYawVelocityDegreesPerSecond,
+            float maximumBodyYawVelocityDegreesPerSecond,
             int currentSegmentDurationTicks,
             string continuationOwnerIdentity,
             float continuationVelocityX,
@@ -311,9 +311,9 @@ namespace ThirdPersonSimulation
             if (tickRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(tickRate));
             if (!float.IsFinite(currentVelocityX) || !float.IsFinite(currentVelocityZ) ||
-                !float.IsFinite(yawVelocityDegreesPerSecond) ||
-                !float.IsFinite(maximumYawVelocityDegreesPerSecond) ||
-                maximumYawVelocityDegreesPerSecond < 0f ||
+                !float.IsFinite(bodyYawVelocityDegreesPerSecond) ||
+                !float.IsFinite(maximumBodyYawVelocityDegreesPerSecond) ||
+                maximumBodyYawVelocityDegreesPerSecond < 0f ||
                 currentSegmentDurationTicks < 0 ||
                 !float.IsFinite(continuationVelocityX) || !float.IsFinite(continuationVelocityZ))
             {
@@ -332,8 +332,8 @@ namespace ThirdPersonSimulation
             TickRate = tickRate;
             CurrentVelocityX = currentVelocityX;
             CurrentVelocityZ = currentVelocityZ;
-            YawVelocityDegreesPerSecond = yawVelocityDegreesPerSecond;
-            MaximumYawVelocityDegreesPerSecond = maximumYawVelocityDegreesPerSecond;
+            BodyYawVelocityDegreesPerSecond = bodyYawVelocityDegreesPerSecond;
+            MaximumBodyYawVelocityDegreesPerSecond = maximumBodyYawVelocityDegreesPerSecond;
             CurrentSegmentDurationTicks = currentSegmentDurationTicks;
             ContinuationOwnerIdentity = continuationOwnerIdentity ?? string.Empty;
             ContinuationVelocityX = continuationVelocityX;
@@ -346,8 +346,8 @@ namespace ThirdPersonSimulation
         public int TickRate { get; }
         public float CurrentVelocityX { get; }
         public float CurrentVelocityZ { get; }
-        public float YawVelocityDegreesPerSecond { get; }
-        public float MaximumYawVelocityDegreesPerSecond { get; }
+        public float BodyYawVelocityDegreesPerSecond { get; }
+        public float MaximumBodyYawVelocityDegreesPerSecond { get; }
         public int CurrentSegmentDurationTicks { get; }
         public string ContinuationOwnerIdentity { get; }
         public float ContinuationVelocityX { get; }
@@ -360,9 +360,9 @@ namespace ThirdPersonSimulation
             TickRate > 0 &&
             float.IsFinite(CurrentVelocityX) &&
             float.IsFinite(CurrentVelocityZ) &&
-            float.IsFinite(YawVelocityDegreesPerSecond) &&
-            float.IsFinite(MaximumYawVelocityDegreesPerSecond) &&
-            MaximumYawVelocityDegreesPerSecond >= 0f &&
+            float.IsFinite(BodyYawVelocityDegreesPerSecond) &&
+            float.IsFinite(MaximumBodyYawVelocityDegreesPerSecond) &&
+            MaximumBodyYawVelocityDegreesPerSecond >= 0f &&
             CurrentSegmentDurationTicks >= 0 &&
             float.IsFinite(ContinuationVelocityX) &&
             float.IsFinite(ContinuationVelocityZ) &&
@@ -381,8 +381,8 @@ namespace ThirdPersonSimulation
             TickRate == other.TickRate &&
             CurrentVelocityX.Equals(other.CurrentVelocityX) &&
             CurrentVelocityZ.Equals(other.CurrentVelocityZ) &&
-            YawVelocityDegreesPerSecond.Equals(other.YawVelocityDegreesPerSecond) &&
-            MaximumYawVelocityDegreesPerSecond.Equals(other.MaximumYawVelocityDegreesPerSecond) &&
+            BodyYawVelocityDegreesPerSecond.Equals(other.BodyYawVelocityDegreesPerSecond) &&
+            MaximumBodyYawVelocityDegreesPerSecond.Equals(other.MaximumBodyYawVelocityDegreesPerSecond) &&
             CurrentSegmentDurationTicks == other.CurrentSegmentDurationTicks &&
             ContinuationVelocityX.Equals(other.ContinuationVelocityX) &&
             ContinuationVelocityZ.Equals(other.ContinuationVelocityZ) &&
@@ -398,9 +398,9 @@ namespace ThirdPersonSimulation
                 TickRate,
                 CurrentVelocityX,
                 CurrentVelocityZ,
-                YawVelocityDegreesPerSecond,
+                BodyYawVelocityDegreesPerSecond,
                 CurrentSegmentDurationTicks),
-            MaximumYawVelocityDegreesPerSecond,
+            MaximumBodyYawVelocityDegreesPerSecond,
             ContinuationOwnerIdentity == null ? 0 : StringComparer.Ordinal.GetHashCode(ContinuationOwnerIdentity),
             ContinuationVelocityX,
             ContinuationVelocityZ);

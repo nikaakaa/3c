@@ -108,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterPresentationFootGroundingDescriptor
+    public sealed class CharacterPresentationFootPlacementDescriptor
     {
         public const int GoalCount = 3;
 
@@ -120,7 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_CalibrationRevision = string.Empty;
         [SerializeField] int m_GoalWorkspaceOffset = -1;
 
-        public CharacterPresentationFootGroundingDescriptor(
+        public CharacterPresentationFootPlacementDescriptor(
             int index,
             PoseNodeId nodeId,
             CharacterFootPlacementProfile profile,
@@ -148,7 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void RequireValid(string rigId, string rigRevision)
         {
             if (Index < 0 || !NodeId.IsValid || GoalWorkspaceOffset < 0 || !Profile || !Calibration)
-                throw new InvalidOperationException("Foot Grounding descriptor is invalid.");
+                throw new InvalidOperationException("Foot Placement descriptor is invalid.");
             Profile.RequireValid();
             Calibration.RequireValid();
             string computedProfileRevision = Profile.ComputeRevision();
@@ -159,7 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !string.Equals(CalibrationRevision, Calibration.ContentRevision, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Foot Grounding descriptor is stale. " +
+                    $"Foot Placement descriptor is stale. " +
                     $"Profile={Profile.Revision}/{computedProfileRevision} " +
                     $"CalibrationRig={Calibration.RigId}/{Calibration.RigRevision} ExpectedRig={rigId}/{rigRevision} " +
                     $"Calibration={CalibrationId}/{CalibrationRevision} ExpectedCalibration={Calibration.CalibrationId.Value}/{Calibration.ContentRevision}.");

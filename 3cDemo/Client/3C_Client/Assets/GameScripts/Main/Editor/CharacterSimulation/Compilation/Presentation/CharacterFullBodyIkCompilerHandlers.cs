@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseCompilerHandlerValidation.Require(
                 payload.Profile && payload.Calibration,
                 sourcePath,
-                "Foot Grounding profile or calibration is missing.");
+                "Foot Placement profile or calibration is missing.");
             payload.Profile.RequireValid();
             CharacterPoseCompilerHandlerValidation.Require(
                 string.Equals(
@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     payload.Profile.ComputeRevision(),
                     StringComparison.Ordinal),
                 sourcePath,
-                "Foot Grounding profile revision is stale.");
+                "Foot Placement profile revision is stale.");
         }
 
         protected override void ValidateRig(

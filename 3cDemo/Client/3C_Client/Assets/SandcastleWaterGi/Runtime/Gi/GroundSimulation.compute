@@ -1,0 +1,252 @@
+// ============================================================
+// GroundSimulation.compute
+// Rebuilt from Sandcastle Demo's Ground.asset kernels
+// (Initialization / VelocityIntegration / HeightIntegration /
+// UpdateTangent / UpdateObstacleHeight / Paint).
+//
+// Sand pile physics on a grid:
+//   - per-cell Wang-hash noise perturbs the gradient (sand grains)
+//   - wetness modulates mobility through a log/exp curve
+//     (the original: log(wet) * cb0[156].w, exp back) - wet sand
+//     flows more easily
+//   - slope above an angle-of-repose threshold flows downhill
+//   - velocity cap + border falloff
+//   - heights update by directional flux, tangent = gradient
+//
+// The bed comes from the shared heightmap (R = world height);
+// wetness is driven by the water level (cells under water get wet,
+// dry cells dry out over time).
+// ============================================================
+
+#pragma kernel Initialize
+#pragma kernel VelocityIntegration
+#pragma kernel HeightIntegration
+#pragma kernel UpdateTangent
+#pragma kernel Erosion
+
+RWStructuredBuffer<float4> _GroundA;   // x=height y=vx z=vy w=wetness
+RWStructuredBuffer<float4> _GroundB;   // xy=tangent z=flow z w=free
+Texture2D<float4> _Heightmap;
+StructuredBuffer<float4> _WaterCells;  // water sim cells (WaterSimulation)
+int2 _WaterRes;
+float2 _WaterSize;
+float2 _WaterOrigin;
+float _ErosionFactor;   // water erosion strength
+float _SedimentCapacity;
+
+float2 _WorldSize;
+float2 _OriginOffset;
+int2 _Resolution;
+float _Gravity;          // original Ground.gravityForce
+float _NoiseFactor;      // original Ground.noiseFactor
+float _ReposeAngle;      // slope threshold (angle of repose)
+float _WetMobility;      // log/exp curve strength (cb0[156].w)
+float _DeltaTime;
+float _MaxVelocity;
+float _WaterLevel;       // cells below this level get wet
+float _DryRate;          // drying speed
+
+// ---------- helpers ----------
+
+float BedHeight(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _Resolution - 1);
+    return _Heightmap.Load(int3(cc, 0)).r;
+}
+
+float4 CellA(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _Resolution - 1);
+    return _GroundA[cc.x + cc.y * _Resolution.x];
+}
+
+float4 CellB(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _Resolution - 1);
+    return _GroundB[cc.x + cc.y * _Resolution.x];
+}
+
+uint WangHash(uint s)
+{
+    s = (s ^ 61u) ^ (s >> 16);
+    s *= 9u;
+    s = s ^ (s >> 4);
+    s *= 0x27d4eb2du;
+    s = s ^ (s >> 15);
+    return s;
+}
+
+float Rand11(uint s)
+{
+    return (float)(WangHash(s) & 0x7fffffu) * (2.0 / 8388607.0) - 1.0;
+}
+
+// ---------- Initialize ----------
+
+[numthreads(32, 32, 1)]
+void Initialize(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+    float bed = BedHeight(c);
+    float wet = saturate((_WaterLevel - bed) / 0.3);
+    _GroundA[i] = float4(bed, 0, 0, wet);
+    _GroundB[i] = float4(0, 0, 0, 0);
+}
+
+// ---------- VelocityIntegration ----------
+// original: bilinear-interpolated neighbour heights, hash noise added
+// to the gradient, wetness log/exp mobility, border falloff, cap.
+
+[numthreads(32, 32, 1)]
+void VelocityIntegration(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float4 cell = _GroundA[i];
+    float h = cell.x;
+    float dt = min(_DeltaTime, 0.05);
+
+    float hL = CellA(c + int2(-1, 0)).x;
+    float hR = CellA(c + int2(1, 0)).x;
+    float hD = CellA(c + int2(0, -1)).x;
+    float hU = CellA(c + int2(0, 1)).x;
+
+    // gradient + per-cell hash noise (original cb0[155].y scaling)
+    float2 grad = 0.5 * float2(hL - hR, hD - hU);
+    uint seed = WangHash((uint)(c.x + c.y * _Resolution.x) * 0x9E3779B9u);
+    grad += _NoiseFactor * float2(Rand11(seed), Rand11(seed ^ 0x85EBCA6Bu));
+
+    // wetness mobility: pow-like curve (original log/exp with cb0[156].w)
+    float wet = saturate(cell.w);
+    float mobility = pow(max(wet, 1e-4), _WetMobility);
+
+    // angle of repose: only slopes steeper than the threshold flow
+    float slope = length(grad);
+    float flow = max(slope - _ReposeAngle, 0.0);
+    float2 v = grad * (flow / max(slope, 1e-6)) * mobility * _Gravity * dt;
+
+    // merge with previous velocity (semi-implicit) + border falloff
+    v += cell.yz * 0.9;
+    float2 uv = ((float2)c + 0.5) / (float2)_Resolution;
+    float border = saturate(min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)) * 8.0);
+    v *= border;
+
+    float speed = length(v);
+    if (speed > _MaxVelocity) v *= _MaxVelocity / speed;
+
+    _GroundA[i] = float4(h, v, wet);
+}
+
+// ---------- HeightIntegration ----------
+// directional flux like the water version; sand only flows downhill
+// and never above its neighbour (original: fluxes + relaxation).
+
+[numthreads(32, 32, 1)]
+void HeightIntegration(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float4 cell = _GroundA[i];
+    float h = cell.x;
+    float dt = min(_DeltaTime, 0.05);
+
+    // flux: velocity carries height differences downhill only
+    float fluxX = CellA(c + int2(-1, 0)).y * max(h - CellA(c + int2(-1, 0)).x, 0.0)
+                - CellA(c + int2(1, 0)).y * max(CellA(c + int2(1, 0)).x - h, 0.0);
+    float fluxY = CellA(c + int2(0, -1)).z * max(h - CellA(c + int2(0, -1)).x, 0.0)
+                - CellA(c + int2(0, 1)).z * max(CellA(c + int2(0, 1)).x - h, 0.0);
+    h += 0.5 * dt * (fluxX + fluxY);
+
+    // relaxed toward neighbour average (stability, like the original)
+    float avg = (CellA(c + int2(-1, 0)).x + CellA(c + int2(1, 0)).x
+               + CellA(c + int2(0, -1)).x + CellA(c + int2(0, 1)).x) * 0.25;
+    h += 0.25 * (avg - h);
+
+    // clamp to a small band around the bed (sand never vanishes far
+    // below, never inflates)
+    float bed = BedHeight(c);
+    h = clamp(h, bed - 0.001, 100.0);
+
+    // wetness: wet under water, drying out above (original wetness field)
+    float wet = cell.w;
+    float target = saturate((_WaterLevel - h) / 0.3);
+    wet = wet + (target - wet) * min(dt * _DryRate, 1.0);
+
+    _GroundA[i] = float4(h, cell.yz, wet);
+    _GroundB[i] = float4(CellB(c).xy, h - bed, 0.0);
+}
+
+// ---------- UpdateTangent ----------
+
+[numthreads(32, 32, 1)]
+void UpdateTangent(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float hL = CellA(c + int2(-1, 0)).x;
+    float hR = CellA(c + int2(1, 0)).x;
+    float hD = CellA(c + int2(0, -1)).x;
+    float hU = CellA(c + int2(0, 1)).x;
+
+    float2 grad = float2(hL - hR, hD - hU);
+    float len = length(grad);
+    float2 tangent = len > 1e-6 ? grad / len : float2(0, 0);
+
+    float4 b = CellB(c);
+    _GroundB[i] = float4(tangent, b.z, b.w);
+}
+
+// ---------- Erosion ----------
+// water carries sand away from steep wet cells (the original beach
+// sand parameters: waterErosionFactor, sedimentCapacity). Simplified:
+// erosion = factor * |waterVel| * slope; deposition spreads through
+// the neighbour average (like water_BlurFloor).
+
+[numthreads(32, 32, 1)]
+void Erosion(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float4 cell = _GroundA[i];
+    float h = cell.x;
+    float dt = min(_DeltaTime, 0.05);
+
+    // sample water velocity at this cell
+    float2 uv = ((float2)c + 0.5) / (float2)_Resolution;
+    float2 g = uv * (float2)_WaterRes - 0.5;
+    int2 wc = clamp(int2(floor(g)), int2(0, 0), _WaterRes - 1);
+    float2 waterV = _WaterCells[wc.x + wc.y * _WaterRes.x].yz;
+
+    // slope + wetness gate the erosion
+    float hL = CellA(c + int2(-1, 0)).x;
+    float hR = CellA(c + int2(1, 0)).x;
+    float hD = CellA(c + int2(0, -1)).x;
+    float hU = CellA(c + int2(0, 1)).x;
+    float2 grad = 0.5 * float2(hL - hR, hD - hU);
+    float slope = length(grad);
+
+    float wet = saturate(cell.w);
+    float erosion = _ErosionFactor * length(waterV) * slope * wet * dt;
+    erosion = min(erosion, _SedimentCapacity * dt);
+    h -= erosion;
+
+    // depositing: relax toward the neighbour average (blurred bed)
+    float avg = (hL + hR + hD + hU) * 0.25;
+    h += 0.5 * (avg - h) * wet * dt;
+
+    // clamp to bed, keep wetness
+    float bed = BedHeight(c);
+    h = clamp(h, bed - 0.001, 100.0);
+
+    _GroundA[i] = float4(h, cell.yz, cell.w);
+}

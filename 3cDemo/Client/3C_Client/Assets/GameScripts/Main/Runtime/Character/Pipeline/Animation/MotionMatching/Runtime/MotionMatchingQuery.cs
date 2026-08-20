@@ -230,15 +230,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             RequireRangeCount(range, 8);
             if (initialization)
                 return;
-            AnimationFootPlacementSample sample = history.LatestFootPlacement;
-            m_RawFeatures[range.Offset] = sample.Left.PlantConfidence;
-            m_RawFeatures[range.Offset + 1] = sample.Left.SoleHeight;
-            m_RawFeatures[range.Offset + 2] = sample.Left.SoleLocalVelocity.magnitude;
-            m_RawFeatures[range.Offset + 3] = sample.Left.PredictedStep.Confidence;
-            m_RawFeatures[range.Offset + 4] = sample.Right.PlantConfidence;
-            m_RawFeatures[range.Offset + 5] = sample.Right.SoleHeight;
-            m_RawFeatures[range.Offset + 6] = sample.Right.SoleLocalVelocity.magnitude;
-            m_RawFeatures[range.Offset + 7] = sample.Right.PredictedStep.Confidence;
+            AnimationFootPlacementHistorySample sample = history.LatestFootPlacement;
+            m_RawFeatures[range.Offset] = sample.Left.Kinematics.PlantConfidence;
+            m_RawFeatures[range.Offset + 1] = sample.Left.Kinematics.SoleHeight;
+            m_RawFeatures[range.Offset + 2] = sample.Left.Kinematics.SoleLocalVelocity.magnitude;
+            m_RawFeatures[range.Offset + 3] = sample.Left.CurrentStep.Confidence;
+            m_RawFeatures[range.Offset + 4] = sample.Right.Kinematics.PlantConfidence;
+            m_RawFeatures[range.Offset + 5] = sample.Right.Kinematics.SoleHeight;
+            m_RawFeatures[range.Offset + 6] = sample.Right.Kinematics.SoleLocalVelocity.magnitude;
+            m_RawFeatures[range.Offset + 7] = sample.Right.CurrentStep.Confidence;
         }
 
         static void RequireRangeCount(MotionMatchingFeatureRange range, int expected)

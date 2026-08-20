@@ -1,0 +1,250 @@
+// ============================================================
+// GiLighting.compute
+// Rebuilt from the disassembly of Sandcastle Demo's Gi compute shader
+// (kernels: Initialization / Gi / BlurGi / Raycast).
+//
+// The original runs every frame because the sand heightfield is
+// constantly deformed by water erosion and player tools, so baked
+// lighting is impossible. It is NOT 3D voxel GI: it is a 2D
+// heightfield GI:
+//
+//   Raycast : Amanatides-Woo DDA along the sun direction (2D),
+//             recording the highest occluder per cell.
+//   Gi      : per-cell, N random directions around the normal,
+//             DDA raymarch, horizon-based occlusion angle + sky
+//             colour integration along the horizon (bounce light),
+//             + sun specular lobe, temporally blended.
+//   BlurGi  : 4-neighbour box blur of the lightmap (soft AO).
+//
+// Heightmap layout: RGBA, R = world-space height, GBA = albedo colour.
+// ============================================================
+
+#pragma kernel Raycast
+#pragma kernel Gi
+#pragma kernel BlurGi
+
+RWStructuredBuffer<float4> _RaycastResults;
+RWTexture2D<float4> _GILightMap;
+RWTexture2D<float4> _GILightMapBlurred;
+Texture2D<float4> _Heightmap;
+
+float2 _WorldSize;      // world-space XZ extent covered by the heightmap
+float2 _OriginOffset;   // world-space position of the heightmap corner
+int2 _Resolution;
+int _SampleCount;       // random directions per cell in Gi
+int _MaxSteps;          // DDA step budget
+float _TemporalBlend;   // 0..1 blend toward the new frame (original: cb0[139].z)
+float3 _SunDirection;   // normalized direction pointing TOWARD the sun
+float3 _SunColor;
+float3 _GroundColor;    // ambient bounce tint (original cb0[40])
+
+// ---- shared helpers --------------------------------------------------
+
+float HeightAt(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _Resolution - 1);
+    return _Heightmap.Load(int3(cc, 0)).r;
+}
+
+float4 ColorAt(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _Resolution - 1);
+    return _Heightmap.Load(int3(cc, 0));
+}
+
+uint WangHash(uint s)
+{
+    s = (s ^ 61u) ^ (s >> 16);
+    s *= 9u;
+    s = s ^ (s >> 4);
+    s *= 0x27d4eb2du;
+    s = s ^ (s >> 15);
+    return s;
+}
+
+// returns in [-1, 1]
+float Rand(uint s)
+{
+    return (float)(WangHash(s) & 0x7fffffu) * (2.0 / 8388607.0) - 1.0;
+}
+
+// ---- Raycast: highest occluder along the sun direction ---------------
+// Original: cs_5_0, thread group (1,1,1), 256-step loop with mip
+// acceleration; output float4(hitX, hitHeight, hitZ, steps) into a
+// stride-16 structured buffer.
+
+[numthreads(64, 1, 1)]
+void Raycast(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    uint cellCount = (uint)(_Resolution.x * _Resolution.y);
+    if (i >= cellCount) return;
+
+    int2 cell = int2(i % _Resolution.x, i / _Resolution.x);
+    float2 cellSize = _WorldSize / (float2)_Resolution;
+    float2 p = _OriginOffset + ((float2)cell + 0.5) * cellSize;
+    float h0 = HeightAt(cell);
+
+    float2 dir = _SunDirection.xz;
+    float bestSin = -1.0;
+    float3 best = float3(p.x, h0, p.y);
+    int steps = 0;
+
+    if (dot(dir, dir) > 1e-8)
+    {
+        dir = normalize(dir);
+
+        // Amanatides-Woo in grid space (2D)
+        float2 grid = (p - _OriginOffset) / cellSize;
+        int2 s = int2(dir.x >= 0.0 ? 1 : -1, dir.y >= 0.0 ? 1 : -1);
+        float2 delta = abs(1.0 / dir);
+        float2 tMax = (s > 0 ? floor(grid) + 1.0 - grid : grid - floor(grid)) * delta;
+
+        int2 cur = cell;
+        float t = 0.0;
+        while (steps < _MaxSteps)
+        {
+            steps++;
+            float h = HeightAt(cur);
+            // elevation of the terrain point above the origin cell,
+            // ray height uses the 3D sun slope (original: normalized y)
+            float d = t * cellSize.x;
+            float sinElev = (h - h0) / max(d, 1e-6);
+            if (sinElev > bestSin)
+            {
+                bestSin = sinElev;
+                best = float3(_OriginOffset.x + (cur.x + 0.5) * cellSize.x,
+                              h,
+                              _OriginOffset.y + (cur.y + 0.5) * cellSize.y);
+            }
+            if (tMax.x < tMax.y)
+            {
+                cur.x += s.x; t = tMax.x; tMax.x += delta.x;
+            }
+            else
+            {
+                cur.y += s.y; t = tMax.y; tMax.y += delta.y;
+            }
+            if (any(cur < 0) || any(cur >= _Resolution)) break;
+        }
+    }
+
+    _RaycastResults[i] = float4(best, (float)steps);
+}
+
+// ---- Gi: horizon-based AO + sky/bounce integration + sun lobe --------
+// Original: cs_5_0, thread group (32,32,1), N random directions around
+// the normal, DDA march, accumulating surface colour weighted by the
+// angular span above the horizon; result blended with the previous
+// frame.
+
+[numthreads(32, 32, 1)]
+void Gi(uint3 id : SV_DispatchThreadID)
+{
+    int2 cell = id.xy;
+    if (any(cell >= _Resolution)) return;
+
+    float2 cellSize = _WorldSize / (float2)_Resolution;
+    float2 cellSizeInv = 1.0 / cellSize;
+
+    // normal from central differences (same as the water UpdateTangent)
+    float hL = HeightAt(cell + int2(-1, 0));
+    float hR = HeightAt(cell + int2(1, 0));
+    float hD = HeightAt(cell + int2(0, -1));
+    float hU = HeightAt(cell + int2(0, 1));
+    float3 N = normalize(float3((hL - hR) * 0.5 * cellSizeInv.x,
+                                1.0,
+                                (hD - hU) * 0.5 * cellSizeInv.y));
+
+    float2 p = _OriginOffset + ((float2)cell + 0.5) * cellSize;
+
+    float3 accum = float3(0, 0, 0);
+
+    for (int s = 0; s < _SampleCount; s++)
+    {
+        // hash stream seeded per cell and per sample (original Wang hash)
+        uint seed = WangHash((uint)(cell.x + cell.y * _Resolution.x) * 0x9E3779B9u
+                             + (uint)s * 0x85EBCA6Bu);
+
+        // hemisphere sample around the normal (original: z = 1-2u, az = 2pi v)
+        float u1 = Rand(seed) * 0.5 + 0.5;
+        float u2 = Rand(seed ^ 0x9E3779B9u) * 0.5 + 0.5;
+        float z = 1.0 - 2.0 * u1;
+        float r = sqrt(max(0.0, 1.0 - z * z));
+        float az = 6.283185 * u2;
+        float3 dir = normalize(N + float3(r * cos(az), r * sin(az), z));
+
+        // ---- DDA march along dir.xz ----
+        float2 grid = (p - _OriginOffset) / cellSize;
+        int2 sgn = int2(dir.x >= 0.0 ? 1 : -1, dir.z >= 0.0 ? 1 : -1);
+        float2 d2 = dir.xz;
+        float len2 = length(d2);
+        float maxCos = -1.0;   // highest elevation seen (cos to normal)
+        float3 skyCol = float3(0, 0, 0);
+        int2 cur = cell;
+        float t = 0.0;
+        int steps = 0;
+
+        if (len2 > 1e-8)
+        {
+            float2 delta = abs(1.0 / (d2 / len2));
+            float2 tMax = (sgn > 0 ? floor(grid) + 1.0 - grid : grid - floor(grid)) * delta;
+
+            while (steps < _MaxSteps)
+            {
+                steps++;
+                float4 sample = ColorAt(cur);
+                float h = sample.r;
+                float3 spos = float3(_OriginOffset.x + (cur.x + 0.5) * cellSize.x,
+                                     h,
+                                     _OriginOffset.y + (cur.y + 0.5) * cellSize.y);
+                float3 toS = spos - float3(p.x, HeightAt(cell), p.y);
+                float cosA = dot(normalize(toS), N);
+                if (cosA > maxCos)
+                {
+                    // angular-span weighted colour integration (original)
+                    skyCol += sample.gba * (cosA - maxCos);
+                    maxCos = cosA;
+                }
+                if (tMax.x < tMax.y)
+                {
+                    cur.x += sgn.x; t = tMax.x; tMax.x += delta.x;
+                }
+                else
+                {
+                    cur.y += sgn.y; t = tMax.y; tMax.y += delta.y;
+                }
+                if (any(cur < 0) || any(cur >= _Resolution)) break;
+            }
+        }
+
+        // horizon occlusion: 1 - highest cosine (original add_sat -max + 1)
+        float ao = saturate(1.0 - maxCos);
+        // sun lobe along this sample direction (original pow5)
+        float sun = pow(saturate(dot(-_SunDirection, dir)), 5.0);
+        float3 contrib = (sun * _SunColor + _GroundColor) * ao + skyCol;
+        accum += contrib;
+    }
+
+    accum /= max(_SampleCount, 1);
+
+    // temporal blend with the previous frame (original cb0[139].z lerp)
+    float4 prev = _GILightMap[cell];
+    _GILightMap[cell] = lerp(prev, float4(accum, 1.0), _TemporalBlend);
+}
+
+// ---- BlurGi: 4-neighbour box blur ------------------------------------
+
+[numthreads(32, 32, 1)]
+void BlurGi(uint3 id : SV_DispatchThreadID)
+{
+    int2 cell = id.xy;
+    if (any(cell >= _Resolution)) return;
+
+    float4 acc = float4(0, 0, 0, 0);
+    acc += _GILightMap[clamp(cell + int2(-1, 0), 0, _Resolution - 1)];
+    acc += _GILightMap[clamp(cell + int2(1, 0), 0, _Resolution - 1)];
+    acc += _GILightMap[clamp(cell + int2(0, -1), 0, _Resolution - 1)];
+    acc += _GILightMap[clamp(cell + int2(0, 1), 0, _Resolution - 1)];
+    _GILightMapBlurred[cell] = acc * 0.25;
+}

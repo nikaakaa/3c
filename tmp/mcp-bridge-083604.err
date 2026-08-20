@@ -1,0 +1,85 @@
+
+
++-----------------------------------------------------------------------------+
+|                                                                             |
+|                                                                             |
+|                        ¨{\u2580\u2580 ¨{\u2580¨€ ¨€\u2580\u2580 \u2580¨€\u2580 ¨€\u2580¨{\u2580¨€ ¨€\u2580\u2580 ¨€\u2580¨€                        |
+|                        ¨€\u2580  ¨€\u2580¨€ ¨{¨{¨€  ¨€  ¨€ \u2580 ¨€ ¨€¨{¨{ ¨€\u2580\u2580                        |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                FastMCP 3.4.7                                |
+|                            https://gofastmcp.com                            |
+|                                                                             |
+|                 \U0001f5a5  Server:      mcp-for-unity-server, 3.4.7                 |
+|                 \U0001f680 Deploy free: https://horizon.prefect.io                  |
+|                                                                             |
++-----------------------------------------------------------------------------+
+
+
+[08/19/26 08:36:08] INFO     Starting MCP server               transport.py:361
+                             'mcp-for-unity-server' with                       
+                             transport 'http' on                               
+                             http://127.0.0.1:8080/mcp                         
+INFO:     Started server process [25988]
+INFO:     Waiting for application startup.
+2026-08-19 08:36:08,670 - mcp.server.streamable_http_manager - INFO - StreamableHTTP session manager started
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50441 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:36:31,610 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:37:00,175 - mcp.server.streamable_http_manager - INFO - Created new transport with session ID: 557b65175c5f4759b0f91dbc99e46aac
+[08/19/26 08:37:00] DEBUG    Sending INFO to client: Syncing    context.py:1446
+                             tool visibility from Unity                        
+                             Editor...                                         
+2026-08-19 08:37:11,591 - transport.plugin_hub - INFO - Plugin session 27c7a4d8-6fa1-48b8-afa9-1433d93d679e disconnected (1005)
+INFO:     127.0.0.1:59092 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:37:16,650 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:37:56,625 - transport.plugin_hub - INFO - Plugin session 99ac7b7c-7796-4463-9618-33519a4d3c9d disconnected (1005)
+INFO:     127.0.0.1:59115 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:38:01,708 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:38:41,698 - transport.plugin_hub - INFO - Plugin session f50af951-227f-44e9-b622-2a6827496d2a disconnected (1005)
+INFO:     127.0.0.1:54917 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:39:01,755 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:39:41,755 - transport.plugin_hub - INFO - Plugin session e010510c-f244-4fa2-b095-3ea6807c9b27 disconnected (1005)
+INFO:     127.0.0.1:54952 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:39:46,810 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:40:26,790 - transport.plugin_hub - INFO - Plugin session 4794017a-9196-45d5-a2fa-9ea656100518 disconnected (1005)
+INFO:     127.0.0.1:54983 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:40:31,911 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:41:11,907 - transport.plugin_hub - WARNING - [Ping] Failed to send ping to session e170a7d5-2cef-46b4-a297-c0c4a5c2c41a: . Connection likely dead.
+2026-08-19 08:41:11,908 - transport.plugin_hub - INFO - Plugin session e170a7d5-2cef-46b4-a297-c0c4a5c2c41a disconnected (1005)
+INFO:     127.0.0.1:53616 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:41:16,995 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:41:56,953 - transport.plugin_hub - INFO - Plugin session de43b5d0-11e3-47a2-9179-a20056f4983b disconnected (1005)
+INFO:     127.0.0.1:56052 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:42:02,060 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:42:42,025 - transport.plugin_hub - INFO - Plugin session 7f00ff58-e293-4643-80fe-007479c216ae disconnected (1005)
+2026-08-19 08:42:42,027 - services.tools.refresh_unity - INFO - refresh_unity: Connection lost during compile (expected - domain reload triggered)
+INFO:     127.0.0.1:62323 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:43:02,140 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:43:42,150 - transport.plugin_hub - INFO - Plugin session 9f3ff450-757f-452d-99c9-599e716220de disconnected (1005)
+INFO:     127.0.0.1:62368 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:43:47,218 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+[08/19/26 08:44:23] DEBUG    Sending INFO to client: Activating context.py:1446
+                             tool group: scripting_ext                         
+2026-08-19 08:44:27,212 - transport.plugin_hub - INFO - Plugin session f36b4c45-5d9f-4865-83a5-8014a2edf86f disconnected (1005)
+INFO:     127.0.0.1:49436 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:44:32,275 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:45:12,266 - transport.plugin_hub - WARNING - [Ping] Failed to send ping to session 23f03f54-8243-4c1a-b4af-3a31b353d2d8: . Connection likely dead.
+2026-08-19 08:45:12,267 - transport.plugin_hub - INFO - Plugin session 23f03f54-8243-4c1a-b4af-3a31b353d2d8 disconnected (1005)
+INFO:     127.0.0.1:49485 - "WebSocket /hub/plugin" [accepted]
+INFO:     connection open
+2026-08-19 08:45:17,317 - transport.plugin_hub - INFO - Plugin registered: 3C_Client (e852139597e42532)
+2026-08-19 08:45:37,961 - transport.plugin_hub - INFO - Plugin session 3859e790-63fa-4a4d-a190-8cb9893fe386 disconnected (1000)

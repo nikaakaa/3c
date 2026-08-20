@@ -1,0 +1,16 @@
+{
+  "name": "com.sandcastle.watergi",
+  "version": "1.0.0",
+  "displayName": "Sandcastle Water & GI",
+  "description": "水体渲染 Shader + 高度场动态 GI。从 Sandcastle Demo (Unity 6000.4.10f1) 的打包字节码反汇编还原,仅作学习用途。",
+  "unity": "2022.3",
+  "keywords": ["water", "shader", "gi", "shallow-water", "heightfield"],
+  "author": { "name": "rebuilt from disassembly" },
+  "samples": [
+    {
+      "displayName": "Water + GI Sample",
+      "description": "程序化沙滩场景:动态高度场 + 水面 + 实时 GI",
+      "path": "Samples~/WaterGiSample"
+    }
+  ]
+}

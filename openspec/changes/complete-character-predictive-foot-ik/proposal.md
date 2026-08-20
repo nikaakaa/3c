@@ -2,7 +2,7 @@
 
 ## 当前实施状态
 
-本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。当前代码已经收口 Landing Event 实时更新合同，并接入每脚唯一最终 Goal 换代：Landing、Ground Path 与 Envelope 不再冻结旧踏面，Foot Goal 只保存相对同帧原生踝骨的 Committed/Pending 修正并向最新目标连续收敛。Goal 换代诊断已接入采样 CSV，并完成一次直线楼梯自动采样；该样本报告 117 个闭环失败帧、最大踝骨残差 0.06，故不能作为方案二通过证据。Ground Envelope、Swing Foot Motion、Goal 换代后的物理踝骨、Pelvis、支撑锁脚、脚掌朝向、Pivot、FullBodyIK 消费和最终 Physical Bone 写入仍待后续逐步验证。
+本 change 仍是完整预测式 Foot IK 的目标设计，不代表整条 IK 已经验收。当前代码已经收口 Landing Event 实时更新合同，并接入每脚唯一最终 Goal 换代。2026-08-20有效楼梯样本确认旧Pelvis空间合同造成约0.815米单帧Goal跳变；工作区已改为采样地面相对当前Pose Root的唯一修正，并让最终加权双脚Sole抬升与该修正共同进入同一临界弹簧。该修正尚未重新实机采样，后续各阶段仍待逐步验证。
 
 ## Why
 
@@ -18,7 +18,7 @@ GDC《Fitting the World》的完整顺序是：自动脚步数据 -> 预测接�
 
 - 同一 `LandingEventIdentity` 内，每帧合法 SphereCast 都代表当前世界事实。新命中相对当前 Accepted 落点小于 `LandingUpdateDistance` 时复用当前落点与 Path；超过死区时无论 Surface 或高度是否变化，都替换唯一 `NextSwingLanding` 并重建唯一 Ground Path。查询失败或没有合法候选时当前 Path 必须 Rejected，不能继续显示旧踏面；生命周期只保留最后有效落点供事件完成晋级，不再把它发布成当前 Path 输入。
 - 每只脚先从 Current / Incoming Step 选出唯一查询事件，再执行至多一次正式 Landing SphereCast。完成事件只把该事件最后一个 Accepted `NextSwingLanding` 原值晋级为 `LastLanding`，不得为晋级再查询一次地面。
-- 当前步伐由支撑脚 `LastLanding` 到摆动脚 `NextSwingLanding` 构成。骨盆使用已有 `PelvisPreSolveTranslation`，按 Pose Root 在步伐水平轴上的进度采样；必要位移和弹簧输出先在步伐起点坐标系中重基，再合成唯一骨盆 Goal，避免支撑切换带着旧步伐的相对高度回弹。
+- 当前步伐由支撑脚 `LastLanding` 到摆动脚 `NextSwingLanding` 构成。骨盆使用已有 `PelvisPreSolveTranslation`，按 Pose Root 在步伐水平轴上的进度采样地面，再减去同帧 Pose Root 世界位置得到唯一 Component Up 修正；Gameplay Body 已经走过的楼梯高度不得重复叠加。支撑切换和实时落点变化都只更新同一临界弹簧目标，不搬运旧 `StrideStart` 坐标原点，也不把目标差直通到最终 Goal。
 - 摆动脚继续只消费 Ground Envelope 相对落点基线的非负垂直增量，水平进度和原生动作仍由动画提供。
 - 支撑脚拥有 `LastLanding` 且不是当前 Swing 时，先用非负 plantHeight 接地，再进入 Locked / Sliding / Unlocked。锁入准备只消费同一事件的 `TimeToLandingSeconds`；Locked / Sliding 即使垂直和水平误差为零也保持动画位置权重；Unlocked 冻结上一提交修正和权重作为释放起点，在正式 `UnlockBlendSeconds` 内连续回到原生动画。
 - 每只脚的最终 Goal 在写入唯一 GoalSet 前经过一份 Pending/Committed 换代状态。状态只保存上一成功帧输出相对同帧原生动画踝骨的 Component 空间修正与权重；当前 Landing、Path 或 Envelope 可以立即换代，最终修正按正式 `GoalTransitionHalfLifeSeconds` 向本帧最新目标或零修正收敛。换代途中目标再次变化时直接以上一成功输出为新起点，不缓存第二条 Path，不平滑世界落点。离地或有限 Action 占脚属于所有权硬失效，必须当帧清零，不能让换代继续携带旧地面修正。
@@ -59,7 +59,7 @@ GDC《Fitting the World》的完整顺序是：自动脚步数据 -> 预测接�
 
 - GDC 第 4–11 页：每脚预测接触时间和位置；脚的向前运动来自动画；最终脚不得低于 Foot Path。
 - GDC 第 13–16 页：Locked 锁位置但允许旋转，Sliding 允许小幅滑动，Unlocked 在误差过大时解除。
-- GDC 第 17 页：支撑腿决定髋部，上下坡使用不同处理，必要位移直接应用，临界阻尼弹簧消化支撑切换；原文没有给出具体弹簧公式，项目在 design 中补齐输入和坐标重基。
+- GDC 第 17 页：支撑腿决定髋部，上下坡使用不同处理，临界阻尼弹簧消化目标变化；原文没有给出具体弹簧公式。项目的 Gameplay Body 已经沿 Traversal Ramp 升降，因此表现修正只取采样地面相对当前 Pose Root 的差，不重复应用整段步伐高差。
 - GDC 第 19 页：根据移动方向限制 Pitch / Roll；上坡更水平，下坡更贴坡；跑步关闭。
 - GDC 第 21–28 页：转向枢轴靠近接触脚。项目让唯一虚拟 Body Pose先跟随当前Visible世界位移，再绕稳定接触脚重投影；双脚站住时延续上一提交主支撑，失效后才稳定重选，不转胶囊、不旋转旧 Route。
 - GDC 第 29–36 页：两点正确不等于中间安全；Capsule、排序、Edge、Reachability 和上侧 Hull 已存在，本 change 只消费其 Accepted Envelope。
@@ -90,7 +90,7 @@ GDC《Fitting the World》的完整顺序是：自动脚步数据 -> 预测接�
 - 双脚站立延续稳定主支撑，Pivot 主脚锁住，另一脚允许滑动或释放。
 - 支撑脚非负接地、三态锁脚、平地也保持有效锁脚 Position Weight。
 - 锁入使用 Landing Event 时间，解锁从上一提交 Goal 连续释放，不把目标一帧切回原生动画。
-- 骨盆相对高度在支撑切换时重基，再进入临界阻尼弹簧。
+- 骨盆采样地面相对当前 Pose Root 的差与双脚实际目标抬升量共同进入唯一临界阻尼弹簧；支撑切换不建立第二坐标系。
 - 所有结果进入同一 GoalSet、一次 FullBodyIK 和一次 final writer。
 
 ### 明确不采用

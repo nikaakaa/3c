@@ -76,25 +76,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 strideEnd,
             float progress,
             CharacterFootStrideSlope slope,
+            Vector3 sampledGround,
+            Vector3 poseRootPosition,
             Vector3 animatedPelvis,
             Vector3 animatedPelvisComponentPosition,
             Vector3 rawPelvisDelta,
-            float rawPelvisTargetAlongUp,
-            float clearanceCorrectionAlongUp,
+            float rootRelativeGroundTargetAlongUp,
+            float soleClearanceLiftAlongUp,
             bool hadPreviousState,
             bool supportChanged,
-            Vector3 previousStrideStart,
-            float rebaseAlongUp,
-            float previousRawPelvisTargetAlongUp,
-            float rebasedPreviousRawPelvisTargetAlongUp,
+            float previousSpringTarget,
             float previousSpringOutput,
-            float rebasedPreviousSpringOutput,
-            float necessaryDelta,
+            float previousSpringVelocity,
             float springInput,
             float springTarget,
             float springOutput,
             float springVelocity,
-            float springDelta,
             Vector3 pelvisDelta,
             float positionWeight)
         {
@@ -106,25 +103,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             StrideEnd = strideEnd;
             Progress = progress;
             Slope = slope;
+            SampledGround = sampledGround;
+            PoseRootPosition = poseRootPosition;
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
             RawPelvisDelta = rawPelvisDelta;
-            RawPelvisTargetAlongUp = rawPelvisTargetAlongUp;
-            ClearanceCorrectionAlongUp = clearanceCorrectionAlongUp;
+            RootRelativeGroundTargetAlongUp = rootRelativeGroundTargetAlongUp;
+            SoleClearanceLiftAlongUp = soleClearanceLiftAlongUp;
             HadPreviousState = hadPreviousState;
             SupportChanged = supportChanged;
-            PreviousStrideStart = previousStrideStart;
-            RebaseAlongUp = rebaseAlongUp;
-            PreviousRawPelvisTargetAlongUp = previousRawPelvisTargetAlongUp;
-            RebasedPreviousRawPelvisTargetAlongUp = rebasedPreviousRawPelvisTargetAlongUp;
+            PreviousSpringTarget = previousSpringTarget;
             PreviousSpringOutput = previousSpringOutput;
-            RebasedPreviousSpringOutput = rebasedPreviousSpringOutput;
-            NecessaryDelta = necessaryDelta;
+            PreviousSpringVelocity = previousSpringVelocity;
             SpringInput = springInput;
             SpringTarget = springTarget;
             SpringOutput = springOutput;
             SpringVelocity = springVelocity;
-            SpringDelta = springDelta;
             PelvisDelta = pelvisDelta;
             PositionWeight = positionWeight;
         }
@@ -137,25 +131,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 StrideEnd { get; }
         public float Progress { get; }
         public CharacterFootStrideSlope Slope { get; }
+        public Vector3 SampledGround { get; }
+        public Vector3 PoseRootPosition { get; }
         public Vector3 AnimatedPelvis { get; }
         public Vector3 AnimatedPelvisComponentPosition { get; }
         public Vector3 RawPelvisDelta { get; }
-        public float RawPelvisTargetAlongUp { get; }
-        public float ClearanceCorrectionAlongUp { get; }
+        public float RootRelativeGroundTargetAlongUp { get; }
+        public float SoleClearanceLiftAlongUp { get; }
         public bool HadPreviousState { get; }
         public bool SupportChanged { get; }
-        public Vector3 PreviousStrideStart { get; }
-        public float RebaseAlongUp { get; }
-        public float PreviousRawPelvisTargetAlongUp { get; }
-        public float RebasedPreviousRawPelvisTargetAlongUp { get; }
+        public float PreviousSpringTarget { get; }
         public float PreviousSpringOutput { get; }
-        public float RebasedPreviousSpringOutput { get; }
-        public float NecessaryDelta { get; }
+        public float PreviousSpringVelocity { get; }
         public float SpringInput { get; }
         public float SpringTarget { get; }
         public float SpringOutput { get; }
         public float SpringVelocity { get; }
-        public float SpringDelta { get; }
         public Vector3 PelvisDelta { get; }
         public float PositionWeight { get; }
         public bool Accepted => State == CharacterFootStrideState.Accepted;
@@ -165,8 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal bool HasValue;
         internal CharacterFootSide SupportSide;
-        internal Vector3 StrideStart;
-        internal float RawTargetAlongUp;
+        internal ulong SupportLandingEventIdentity;
         internal float TargetAlongUp;
         internal float OutputAlongUp;
         internal float VelocityAlongUp;
@@ -175,8 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             HasValue = false;
             SupportSide = default;
-            StrideStart = default;
-            RawTargetAlongUp = 0f;
+            SupportLandingEventIdentity = 0;
             TargetAlongUp = 0f;
             OutputAlongUp = 0f;
             VelocityAlongUp = 0f;
@@ -188,13 +177,59 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         const float GeometryEpsilon = 0.0001f;
         const float EndpointTolerance = 0.005f;
 
-        internal static bool TryResolveStride(
+        internal static bool TrySelectSwing(
             in AnimationBiomechanicalStepHeader leftStep,
             in AnimationBiomechanicalStepHeader rightStep,
+            in CharacterFootSwingMotionDiagnostics leftMotion,
+            in CharacterFootSwingMotionDiagnostics rightMotion,
+            out CharacterFootSide swingSide,
+            out bool leftSwingCandidate,
+            out bool rightSwingCandidate)
+        {
+            bool leftAuthoritativeSwing = IsAuthoritativeSwing(in leftStep);
+            bool rightAuthoritativeSwing = IsAuthoritativeSwing(in rightStep);
+            leftSwingCandidate = leftAuthoritativeSwing &&
+                                 leftMotion.Accepted &&
+                                 leftMotion.LandingEventIdentity == leftStep.LandingEventIdentity;
+            rightSwingCandidate = rightAuthoritativeSwing &&
+                                  rightMotion.Accepted &&
+                                  rightMotion.LandingEventIdentity == rightStep.LandingEventIdentity;
+            if (leftAuthoritativeSwing != rightAuthoritativeSwing)
+            {
+                swingSide = leftAuthoritativeSwing
+                    ? CharacterFootSide.Left
+                    : CharacterFootSide.Right;
+                return true;
+            }
+            if (!leftAuthoritativeSwing || !leftSwingCandidate && !rightSwingCandidate)
+            {
+                swingSide = default;
+                return false;
+            }
+            swingSide = leftSwingCandidate &&
+                        (!rightSwingCandidate ||
+                         Mathf.Abs(leftMotion.VerticalCorrection) >=
+                         Mathf.Abs(rightMotion.VerticalCorrection))
+                ? CharacterFootSide.Left
+                : CharacterFootSide.Right;
+            return true;
+        }
+
+        internal static bool TryResolveStride(
+            in AnimationBiomechanicalStepHeader leftSupportStep,
+            in AnimationBiomechanicalStepHeader rightSupportStep,
+            in AnimationBiomechanicalStepHeader leftSwingStep,
+            in AnimationBiomechanicalStepHeader rightSwingStep,
+            bool hasSelectedSwing,
+            CharacterFootSide selectedSwingSide,
+            bool leftSwingCandidate,
+            bool rightSwingCandidate,
             bool hasLeftLastLanding,
             Vector3 leftLastLanding,
+            ulong leftLastLandingEventIdentity,
             bool hasRightLastLanding,
             Vector3 rightLastLanding,
+            ulong rightLastLandingEventIdentity,
             bool hasLeftNextSwingLanding,
             Vector3 leftNextSwingLanding,
             ulong leftNextSwingEventIdentity,
@@ -212,31 +247,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             swingSide = default;
             strideStart = default;
             strideEnd = default;
-            bool leftSwing = IsAuthoritativeSwing(in leftStep);
-            bool rightSwing = IsAuthoritativeSwing(in rightStep);
-            if (leftSwing && rightSwing)
-            {
-                rejectReason = CharacterFootStrideRejectReason.DualSwing;
-                return false;
-            }
-            if (!leftSwing && !rightSwing)
+            if (!hasSelectedSwing)
             {
                 rejectReason = CharacterFootStrideRejectReason.MissingSwingLanding;
                 return false;
             }
-            if (leftSwing)
+            if (selectedSwingSide == CharacterFootSide.Left)
             {
-                if (!hasRightLastLanding || !Finite(rightLastLanding))
+                if (!IsAuthoritativeSwing(in leftSwingStep))
+                {
+                    rejectReason = CharacterFootStrideRejectReason.MissingSwingLanding;
+                    return false;
+                }
+                if (!IsAuthoritativeSupport(in rightSupportStep) && !rightSwingCandidate)
+                {
+                    rejectReason = CharacterFootStrideRejectReason.DualSwing;
+                    return false;
+                }
+                if (!hasRightLastLanding || rightLastLandingEventIdentity == 0 ||
+                    !Finite(rightLastLanding))
                 {
                     rejectReason = CharacterFootStrideRejectReason.MissingSupportLanding;
                     return false;
                 }
                 if (!hasLeftNextSwingLanding ||
-                    leftNextSwingEventIdentity != leftStep.LandingEventIdentity ||
+                    leftNextSwingEventIdentity != leftSwingStep.LandingEventIdentity ||
                     !Finite(leftNextSwingLanding))
                 {
                     rejectReason = leftNextSwingEventIdentity != 0 &&
-                                   leftNextSwingEventIdentity != leftStep.LandingEventIdentity
+                                   leftNextSwingEventIdentity != leftSwingStep.LandingEventIdentity
                         ? CharacterFootStrideRejectReason.SwingIdentityMismatch
                         : CharacterFootStrideRejectReason.MissingSwingLanding;
                     return false;
@@ -248,17 +287,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             else
             {
-                if (!hasLeftLastLanding || !Finite(leftLastLanding))
+                if (!IsAuthoritativeSwing(in rightSwingStep))
+                {
+                    rejectReason = CharacterFootStrideRejectReason.MissingSwingLanding;
+                    return false;
+                }
+                if (!IsAuthoritativeSupport(in leftSupportStep) && !leftSwingCandidate)
+                {
+                    rejectReason = CharacterFootStrideRejectReason.DualSwing;
+                    return false;
+                }
+                if (!hasLeftLastLanding || leftLastLandingEventIdentity == 0 ||
+                    !Finite(leftLastLanding))
                 {
                     rejectReason = CharacterFootStrideRejectReason.MissingSupportLanding;
                     return false;
                 }
                 if (!hasRightNextSwingLanding ||
-                    rightNextSwingEventIdentity != rightStep.LandingEventIdentity ||
+                    rightNextSwingEventIdentity != rightSwingStep.LandingEventIdentity ||
                     !Finite(rightNextSwingLanding))
                 {
                     rejectReason = rightNextSwingEventIdentity != 0 &&
-                                   rightNextSwingEventIdentity != rightStep.LandingEventIdentity
+                                   rightNextSwingEventIdentity != rightSwingStep.LandingEventIdentity
                         ? CharacterFootStrideRejectReason.SwingIdentityMismatch
                         : CharacterFootStrideRejectReason.MissingSwingLanding;
                     return false;
@@ -284,22 +334,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp,
             bool hasLastLanding,
             Vector3 lastLanding,
+            ulong lastLandingEventIdentity,
             in CharacterFootMotionSettings settings,
             float deltaSeconds,
             ref CharacterFootSupportLockFacts lockFacts)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
-            ulong landingEventIdentity = step.IsValid ? step.LandingEventIdentity : 0;
+            ulong landingEventIdentity = hasLastLanding ? lastLandingEventIdentity : 0;
             if (!step.IsValid || !step.IsAuthoritative)
                 return RejectedPlant(
                     CharacterFootSwingMotionRejectReason.StepUnavailable,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            if (step.IsSwing)
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.StepNotSwing,
                     landingEventIdentity,
                     originalSole,
                     originalAnkle);
@@ -315,7 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landingEventIdentity,
                     originalSole,
                     originalAnkle);
-            if (!hasLastLanding || !Finite(lastLanding))
+            if (!hasLastLanding || landingEventIdentity == 0 || !Finite(lastLanding))
                 return RejectedPlant(
                     CharacterFootSwingMotionRejectReason.StanceLandingUnavailable,
                     landingEventIdentity,
@@ -452,15 +497,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 default,
                 default,
-                0f,
-                0f,
-                false,
-                false,
+                default,
                 default,
                 0f,
                 0f,
-                0f,
-                0f,
+                false,
+                false,
                 0f,
                 0f,
                 0f,
@@ -473,6 +515,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootStrideHipsDiagnostics BuildPelvis(
             CharacterFootSide supportSide,
+            ulong supportLandingEventIdentity,
             CharacterFootSide swingSide,
             Vector3 strideStart,
             Vector3 strideEnd,
@@ -497,7 +540,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !Finite(leftCorrectedSole) || !Finite(rightCorrectedSole) ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
                 return BuildRejected(CharacterFootStrideRejectReason.InvalidComponentUp);
-            if (!float.IsFinite(footPlacementWeight) || footPlacementWeight < 0f || footPlacementWeight > 1f)
+            if (supportLandingEventIdentity == 0 ||
+                !float.IsFinite(footPlacementWeight) ||
+                footPlacementWeight < 0f || footPlacementWeight > 1f)
                 return BuildRejected(CharacterFootStrideRejectReason.InvalidInput);
             Vector3 up = componentUp.normalized;
             Vector3 horizontal = Vector3.ProjectOnPlane(strideEnd - strideStart, up);
@@ -508,13 +553,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3.Dot(
                     Vector3.ProjectOnPlane(poseRootPosition - strideStart, up),
                     horizontal / pathLength) / pathLength);
+            Vector3 sampledGround = Vector3.Lerp(strideStart, strideEnd, progress);
             float rise = Vector3.Dot(strideEnd - strideStart, up);
             CharacterFootStrideSlope slope = CharacterFootStrideSlope.Flat;
-            float appliedRise = 0f;
+            float rootRelativeGroundTarget = 0f;
             if (rise > EndpointTolerance)
             {
                 slope = CharacterFootStrideSlope.Ascending;
-                appliedRise = rise * progress;
+                rootRelativeGroundTarget = Vector3.Dot(
+                    sampledGround - poseRootPosition,
+                    up);
             }
             else if (rise < -EndpointTolerance)
             {
@@ -522,39 +570,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (float.IsFinite(swingTimeToLandingSeconds) &&
                     swingTimeToLandingSeconds > GeometryEpsilon)
                 {
-                    appliedRise = rise * progress;
+                    rootRelativeGroundTarget = Vector3.Dot(
+                        sampledGround - poseRootPosition,
+                        up);
                 }
             }
-            Vector3 rawPelvisDelta = up * appliedRise;
-            float originalLower = Mathf.Min(
+            Vector3 rawPelvisDelta = up * rootRelativeGroundTarget;
+            float originalLowerSole = Mathf.Min(
                 Vector3.Dot(leftOriginalSole, up),
                 Vector3.Dot(rightOriginalSole, up));
-            float correctedLower = Mathf.Min(
+            float correctedLowerSole = Mathf.Min(
                 Vector3.Dot(leftCorrectedSole, up),
                 Vector3.Dot(rightCorrectedSole, up));
-            float rawTarget = Vector3.Dot(rawPelvisDelta, up);
-            float clearanceCorrection = Mathf.Max(0f, correctedLower - originalLower);
-            float target = rawTarget + clearanceCorrection;
+            float soleClearanceLift = Mathf.Max(
+                0f,
+                correctedLowerSole - originalLowerSole);
+            float target = rootRelativeGroundTarget + soleClearanceLift;
             bool hadPreviousState = spring.HasValue;
-            bool supportChanged = hadPreviousState && spring.SupportSide != supportSide;
-            Vector3 previousStrideStart = hadPreviousState ? spring.StrideStart : strideStart;
-            float previousRawTarget = hadPreviousState ? spring.RawTargetAlongUp : target;
-            float previousOutput = hadPreviousState ? spring.OutputAlongUp : target;
+            bool supportChanged = hadPreviousState &&
+                (spring.SupportSide != supportSide ||
+                 spring.SupportLandingEventIdentity != supportLandingEventIdentity);
+            float previousTarget = hadPreviousState ? spring.TargetAlongUp : 0f;
+            float previousOutput = hadPreviousState ? spring.OutputAlongUp : 0f;
             float previousVelocity = hadPreviousState ? spring.VelocityAlongUp : 0f;
-            float rebase = hadPreviousState
-                ? Vector3.Dot(previousStrideStart - strideStart, up)
-                : 0f;
-            float rebasedPreviousRawTarget = previousRawTarget + rebase;
-            float rebasedPreviousOutput = previousOutput + rebase;
-            float necessaryDelta = hadPreviousState && !supportChanged
-                ? target - rebasedPreviousRawTarget
-                : 0f;
-            float springInput = hadPreviousState
-                ? rebasedPreviousOutput + necessaryDelta
-                : target;
+            float springInput = previousOutput;
             float springOutput = springInput;
             float springVelocity = previousVelocity;
-            if (hadPreviousState && deltaSeconds > 0f)
+            if (deltaSeconds > 0f)
             {
                 float omega = settings.PelvisSpringFrequency * 2f * Mathf.PI;
                 float x0 = springInput - target;
@@ -565,12 +607,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             spring.HasValue = true;
             spring.SupportSide = supportSide;
-            spring.StrideStart = strideStart;
-            spring.RawTargetAlongUp = target;
+            spring.SupportLandingEventIdentity = supportLandingEventIdentity;
             spring.TargetAlongUp = target;
             spring.OutputAlongUp = springOutput;
             spring.VelocityAlongUp = springVelocity;
-            float springDelta = springOutput - necessaryDelta;
             Vector3 pelvisDelta = up * springOutput;
             float positionWeight = Mathf.Abs(springOutput) > EndpointTolerance
                 ? footPlacementWeight
@@ -584,25 +624,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 strideEnd,
                 progress,
                 slope,
+                sampledGround,
+                poseRootPosition,
                 animatedPelvis,
                 animatedPelvisComponentPosition,
                 rawPelvisDelta,
-                rawTarget,
-                clearanceCorrection,
+                rootRelativeGroundTarget,
+                soleClearanceLift,
                 hadPreviousState,
                 supportChanged,
-                previousStrideStart,
-                rebase,
-                previousRawTarget,
-                rebasedPreviousRawTarget,
+                previousTarget,
                 previousOutput,
-                rebasedPreviousOutput,
-                necessaryDelta,
+                previousVelocity,
                 springInput,
                 target,
                 springOutput,
                 springVelocity,
-                springDelta,
                 pelvisDelta,
                 positionWeight);
         }
@@ -612,6 +649,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             step.IsAuthoritative &&
             step.IsSwing &&
             step.HasConsistentLandingEventIdentity;
+
+        static bool IsAuthoritativeSupport(in AnimationBiomechanicalStepHeader step) =>
+            step.IsValid &&
+            step.IsAuthoritative &&
+            !step.IsSwing;
 
         static CharacterFootSwingMotionDiagnostics RejectedPlant(
             CharacterFootSwingMotionRejectReason reason,

@@ -144,7 +144,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public List<CharacterPresentationModifyBoneDescriptor> ModifyBones { get; } = new List<CharacterPresentationModifyBoneDescriptor>();
             public List<CharacterPresentationRootOrientationWarpDescriptor> RootOrientationWarps { get; } = new List<CharacterPresentationRootOrientationWarpDescriptor>();
             public List<CharacterPresentationPoseBoneIkGoalsDescriptor> PoseBoneIkGoalSources { get; } = new List<CharacterPresentationPoseBoneIkGoalsDescriptor>();
-            public List<CharacterPresentationFootGroundingDescriptor> FootGroundings { get; } = new List<CharacterPresentationFootGroundingDescriptor>();
+            public List<CharacterPresentationFootPlacementDescriptor> FootPlacements { get; } = new List<CharacterPresentationFootPlacementDescriptor>();
             public List<CharacterPresentationFullBodyIkDescriptor> FullBodyIks { get; } = new List<CharacterPresentationFullBodyIkDescriptor>();
             public List<int> FullBodyIkGoalInputValueIndices { get; } = new List<int>();
             public List<CharacterPresentationSequencePlayerDescriptor> SequencePlayers { get; } = new List<CharacterPresentationSequencePlayerDescriptor>();
@@ -320,7 +320,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.ModifyBones.ToArray(),
                 state.RootOrientationWarps.ToArray(),
                 state.PoseBoneIkGoalSources.ToArray(),
-                state.FootGroundings.ToArray(),
+                state.FootPlacements.ToArray(),
                 state.FullBodyIks.ToArray(),
                 state.FullBodyIkGoalInputValueIndices.ToArray(),
                 state.SequencePlayers.ToArray(),
@@ -872,8 +872,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         scopedNodeId,
                         state)
                     : -1;
-                int footGroundingIndex = handler.Kind == CharacterPoseNodeKind.FootPlacement
-                    ? CompileFootGrounding(
+                int footPlacementIndex = handler.Kind == CharacterPoseNodeKind.FootPlacement
+                    ? CompileFootPlacement(
                         RequirePayload<CharacterFootPlacementPosePayload>(irNode),
                         scopedNodeId,
                         state)
@@ -930,7 +930,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     modifyIndex,
                     rootOrientationWarpIndex,
                     poseBoneIkGoalsIndex,
-                    footGroundingIndex,
+                    footPlacementIndex,
                     fullBodyIkIndex,
                     outputFullBodyIkGoalSetValueIndex,
                     fullBodyIkGoalInputStart,
@@ -1418,20 +1418,20 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static int CompileInertialization(CompilationState state) =>
             state.InertializationCount++;
 
-        static int CompileFootGrounding(
+        static int CompileFootPlacement(
             CharacterFootPlacementPosePayload payload,
             PoseNodeId scopedNodeId,
             CompilationState state)
         {
-            if (state.FootGroundings.Count != 0)
-                throw new InvalidOperationException("Pose Plan contains more than one Foot Grounding node.");
-            int index = state.FootGroundings.Count;
+            if (state.FootPlacements.Count != 0)
+                throw new InvalidOperationException("Pose Plan contains more than one Foot Placement node.");
+            int index = state.FootPlacements.Count;
             int goalOffset = state.FullBodyIkGoalWorkspaceCount;
             state.FullBodyIkGoalWorkspaceCount = checked(
                 state.FullBodyIkGoalWorkspaceCount +
-                CharacterPresentationFootGroundingDescriptor.GoalCount);
-            state.FootGroundings.Add(
-                new CharacterPresentationFootGroundingDescriptor(
+                CharacterPresentationFootPlacementDescriptor.GoalCount);
+            state.FootPlacements.Add(
+                new CharacterPresentationFootPlacementDescriptor(
                     index,
                     scopedNodeId,
                     payload.Profile,
@@ -2438,12 +2438,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         $"pose-bone-ik-goal:{i}:{bindingIndex}:{(int)binding.EffectorSlot}:{binding.TargetPoseBoneIndex}:{binding.PositionOffset.x:R}:{binding.PositionOffset.y:R}:{binding.PositionOffset.z:R}:{binding.RotationOffset.x:R}:{binding.RotationOffset.y:R}:{binding.RotationOffset.z:R}:{binding.RotationOffset.w:R}:{binding.PositionWeight:R}:{binding.RotationWeight:R}"));
                 }
             }
-            for (int i = 0; i < state.FootGroundings.Count; i++)
+            for (int i = 0; i < state.FootPlacements.Count; i++)
             {
-                CharacterPresentationFootGroundingDescriptor descriptor =
-                    state.FootGroundings[i];
+                CharacterPresentationFootPlacementDescriptor descriptor =
+                    state.FootPlacements[i];
                 values.Add(
-                    $"foot-grounding:{i}:{descriptor.NodeId}:{descriptor.Profile.ProfileId}:{descriptor.Profile.Revision}:{descriptor.CalibrationId}:{descriptor.CalibrationRevision}:{descriptor.GoalWorkspaceOffset}");
+                    $"foot-placement:{i}:{descriptor.NodeId}:{descriptor.Profile.ProfileId}:{descriptor.Profile.Revision}:{descriptor.CalibrationId}:{descriptor.CalibrationRevision}:{descriptor.GoalWorkspaceOffset}");
             }
             for (int i = 0; i < state.FullBodyIks.Count; i++)
             {
@@ -2535,7 +2535,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPresentationPoseOperation operation = state.Operations[i];
                 values.Add(FormattableString.Invariant(
-                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalInputStart}:{operation.FullBodyIkGoalInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootGroundingIndex}:{operation.FullBodyIkIndex}:{operation.SequencePlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
+                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalInputStart}:{operation.FullBodyIkGoalInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.SequencePlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
             }
             for (int i = 0; i < stages.Count; i++)
             {

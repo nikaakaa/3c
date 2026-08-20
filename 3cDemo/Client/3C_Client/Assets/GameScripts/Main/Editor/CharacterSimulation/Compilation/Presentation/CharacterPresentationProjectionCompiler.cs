@@ -12,6 +12,7 @@ using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonSimulation;
 using UnityEditor;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -492,6 +493,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 profile.RigDefinition,
                 footAnalysis,
                 errors);
+            AnimationClipPhasePlan[] clipPhasePlans = Array.Empty<AnimationClipPhasePlan>();
+            AnimationSourcePhasePlan[] sourcePhasePlans = Array.Empty<AnimationSourcePhasePlan>();
+            try
+            {
+                AnimationPhasePlanCompiler.CompileDirectSources(
+                    profile,
+                    poseSources,
+                    footAnalysisCompilation,
+                    out clipPhasePlans,
+                    out sourcePhasePlans);
+            }
+            catch (Exception exception)
+            {
+                errors?.Add(exception.Message);
+            }
             CharacterLinkedPoseProjectionPayload linkedPose =
                 CharacterLinkedPoseProjectionCompiler.Compile(
                     profile,
@@ -573,6 +589,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 poseSources,
                 blendSpaces.ToArray(),
                 blendSpacePlayers,
+                clipPhasePlans,
+                sourcePhasePlans,
                 actionFootPhaseWarps,
                 entries.ToArray(),
                 footIdentity,
@@ -850,6 +868,35 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     if (!binding || !sourceIndices.Add(entry.SourceIndex))
                         throw new InvalidOperationException("binding or source index is missing or duplicated.");
                     binding.RequireValid(rig);
+                    if (binding is CharacterClipPoseSourceBinding directClip)
+                    {
+                        string bindingIdentity = CharacterPresentationAssetObjectIdentity.Require(directClip);
+                        if (footAnalysis == null ||
+                            !footAnalysis.TryGetPoseSource(bindingIdentity, out AnimationFootFeaturePair directFeatures))
+                        {
+                            throw new InvalidOperationException("Foot Analysis artifact binding is missing.");
+                        }
+                        CharacterAnimationClipContentIdentity clipIdentity =
+                            CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(directClip.Clip);
+                        AnimationCurve secondsCurve = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            directClip.Clip,
+                            CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight);
+                        result.Add(new CharacterPresentationPoseSourcePlan(
+                            entry.SourceIndex,
+                            bindingIdentity,
+                            directClip,
+                            rig,
+                            footAnalysis.Identity.AnalysisSourceId,
+                            $"{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}",
+                            clipIdentity.FullDependencyHash,
+                            clipIdentity.AnalysisInputHash,
+                            clipIdentity.RegisteredCurveHash,
+                            clipIdentity.SourceDurationSeconds,
+                            clipIdentity.Loop,
+                            NormalizeRegisteredCurve(secondsCurve, clipIdentity.SourceDurationSeconds),
+                            directFeatures));
+                        continue;
+                    }
                     if (!(binding is CharacterSequencePoseSourceBinding sequence))
                         continue;
                     if (footAnalysis == null ||
@@ -875,6 +922,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
             }
             return result.ToArray();
+        }
+
+        static AnimationCurve NormalizeRegisteredCurve(AnimationCurve source, float sourceDurationSeconds)
+        {
+            Keyframe[] keys = source.keys;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                Keyframe key = keys[i];
+                key.time /= sourceDurationSeconds;
+                key.inSlope *= sourceDurationSeconds;
+                key.outSlope *= sourceDurationSeconds;
+                keys[i] = key;
+            }
+            return new AnimationCurve(keys)
+            {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
         }
 
         static void ValidateSequencePlayers(
@@ -1100,13 +1165,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 errors?.Add($"Animation producer '{producerId}' has no Presentation source binding.");
                 return null;
             }
-            if (footAnalysis == null ||
-                 !string.Equals(
-                     authoringBinding.FootAnalysisIdentity,
-                     footAnalysis.Identity.AnalysisSourceId,
-                     StringComparison.Ordinal))
+            if (footAnalysis == null)
             {
-                errors?.Add($"Animation producer '{producerId}' Foot Analysis identity does not match the compiled artifact source.");
+                errors?.Add($"Animation producer '{producerId}' has no compiled Profile Foot Analysis source.");
                 return null;
             }
             if (!authoringBinding.Source || !authoringBinding.Source.IsValid)
@@ -1138,11 +1199,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (!ReferenceEquals(sequence.Rig, profile.RigDefinition))
                 {
                     errors?.Add($"Animation producer '{producerId}' Sequence '{sequence.name}' Rig does not match the Presentation Profile.");
-                    continue;
-                }
-                if (!string.Equals(sequence.FootAnalysisIdentity, authoringBinding.FootAnalysisIdentity, StringComparison.Ordinal))
-                {
-                    errors?.Add($"Animation producer '{producerId}' Sequence '{sequence.name}' Foot Analysis identity does not match the Action binding.");
                     continue;
                 }
                 AnimationFootFeaturePair features = default;

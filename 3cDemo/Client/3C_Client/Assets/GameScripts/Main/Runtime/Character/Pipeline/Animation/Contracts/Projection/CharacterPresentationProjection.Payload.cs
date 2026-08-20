@@ -15,6 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPresentationPoseSourcePlan[] m_PoseSources = Array.Empty<CharacterPresentationPoseSourcePlan>();
         [SerializeField] CharacterAnimationBlendSpacePlan[] m_BlendSpaces = Array.Empty<CharacterAnimationBlendSpacePlan>();
         [SerializeField] CharacterAnimationBlendSpacePlayerPlan[] m_BlendSpacePlayers = Array.Empty<CharacterAnimationBlendSpacePlayerPlan>();
+        [SerializeField] AnimationClipPhasePlan[] m_ClipPhasePlans = Array.Empty<AnimationClipPhasePlan>();
+        [SerializeField] AnimationSourcePhasePlan[] m_SourcePhasePlans = Array.Empty<AnimationSourcePhasePlan>();
         [SerializeField] ActionAnimationFootPhaseTimeWarpPlan[] m_ActionFootPhaseWarps =
             Array.Empty<ActionAnimationFootPhaseTimeWarpPlan>();
         [SerializeField] CharacterPoseTuningLayout m_TuningLayout;
@@ -32,6 +34,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>();
         public IReadOnlyList<CharacterAnimationBlendSpacePlan> BlendSpaces => m_BlendSpaces ?? Array.Empty<CharacterAnimationBlendSpacePlan>();
         public IReadOnlyList<CharacterAnimationBlendSpacePlayerPlan> BlendSpacePlayers => m_BlendSpacePlayers ?? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>();
+        public IReadOnlyList<AnimationClipPhasePlan> ClipPhasePlans =>
+            m_ClipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>();
+        public IReadOnlyList<AnimationSourcePhasePlan> SourcePhasePlans =>
+            m_SourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>();
         public IReadOnlyList<ActionAnimationFootPhaseTimeWarpPlan> ActionFootPhaseWarps =>
             m_ActionFootPhaseWarps ?? Array.Empty<ActionAnimationFootPhaseTimeWarpPlan>();
         public MotionMatchingProjectionPayload MotionMatching => m_MotionMatching;
@@ -53,6 +59,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             source = null;
+            return false;
+        }
+
+        public bool TryGetSourcePhasePlan(
+            PresentationPoseSourceIndex sourceIndex,
+            out AnimationSourcePhasePlan plan)
+        {
+            for (int i = 0; i < SourcePhasePlans.Count; i++)
+            {
+                if (SourcePhasePlans[i] != null && SourcePhasePlans[i].SourceIndex == sourceIndex)
+                {
+                    plan = SourcePhasePlans[i];
+                    return true;
+                }
+            }
+            plan = null;
             return false;
         }
 
@@ -102,6 +124,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPresentationPoseSourcePlan[] poseSources,
             CharacterAnimationBlendSpacePlan[] blendSpaces,
             CharacterAnimationBlendSpacePlayerPlan[] blendSpacePlayers,
+            AnimationClipPhasePlan[] clipPhasePlans,
+            AnimationSourcePhasePlan[] sourcePhasePlans,
             ActionAnimationFootPhaseTimeWarpPlan[] actionFootPhaseWarps,
             CharacterPresentationProducerEntry[] producers,
             AnimationFootAnalysisProjectionIdentity footAnalysis,
@@ -129,6 +153,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PoseSources = poseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>(),
                 m_BlendSpaces = blendSpaces ?? Array.Empty<CharacterAnimationBlendSpacePlan>(),
                 m_BlendSpacePlayers = blendSpacePlayers ?? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>(),
+                m_ClipPhasePlans = clipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>(),
+                m_SourcePhasePlans = sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>(),
                 m_ActionFootPhaseWarps = actionFootPhaseWarps ?? Array.Empty<ActionAnimationFootPhaseTimeWarpPlan>(),
                 m_Producers = producers ?? Array.Empty<CharacterPresentationProducerEntry>(),
                 m_FootAnalysis = footAnalysis,

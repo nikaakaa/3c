@@ -407,7 +407,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 timelineId = binding.ProducerId.TimelineAuthoringId,
                 trackId = binding.ProducerId.TrackAuthoringId,
                 source = Asset(binding.Source, true),
-                footAnalysisIdentity = binding.FootAnalysisIdentity
+                footAnalysisIdentity = string.Empty
             };
         }
 

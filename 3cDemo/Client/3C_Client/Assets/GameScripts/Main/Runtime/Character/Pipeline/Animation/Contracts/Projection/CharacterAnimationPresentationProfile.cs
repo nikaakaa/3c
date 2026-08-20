@@ -13,36 +13,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_TimelineAuthoringId;
         [SerializeField] string m_TrackAuthoringId;
         [SerializeField] TransitionAssetBase m_Source;
-        [SerializeField] string m_FootAnalysisIdentity = string.Empty;
 
         public AnimationProducerId ProducerId => new AnimationProducerId(m_TimelineAuthoringId, m_TrackAuthoringId);
         public TransitionAssetBase Source => m_Source;
-        public string FootAnalysisIdentity => m_FootAnalysisIdentity ?? string.Empty;
-
-        public void ConfigureTimeline(
-            AnimationProducerId producerId,
-            TransitionAssetBase source,
-            string footAnalysisIdentity)
-        {
-            if (!producerId.IsValid)
-                throw new ArgumentException("Animation producer id is invalid.", nameof(producerId));
-            if (!source || !source.IsValid)
-                throw new ArgumentException("Animation source is invalid.", nameof(source));
-            if (string.IsNullOrWhiteSpace(footAnalysisIdentity))
-                throw new ArgumentException("Animation producer Foot Analysis identity is missing.", nameof(footAnalysisIdentity));
-
-            m_TimelineAuthoringId = producerId.TimelineAuthoringId;
-            m_TrackAuthoringId = producerId.TrackAuthoringId;
-            m_Source = source;
-            m_FootAnalysisIdentity = footAnalysisIdentity.Trim();
-        }
 
         public void ConfigureTimeline(
             AnimationProducerId producerId,
             TransitionAssetBase source)
         {
-            throw new InvalidOperationException(
-                "Timeline Animation producer binding requires an explicit Foot Analysis identity.");
+            if (!producerId.IsValid)
+                throw new ArgumentException("Animation producer id is invalid.", nameof(producerId));
+            if (!source || !source.IsValid)
+                throw new ArgumentException("Animation source is invalid.", nameof(source));
+
+            m_TimelineAuthoringId = producerId.TimelineAuthoringId;
+            m_TrackAuthoringId = producerId.TrackAuthoringId;
+            m_Source = source;
         }
 
     }
@@ -66,6 +52,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<AnimationProducerPresentationBinding>();
         [SerializeField] CharacterPresentationPoseSourceBinding[] m_PoseSourceBindings =
             Array.Empty<CharacterPresentationPoseSourceBinding>();
+        [SerializeField] CharacterLocomotionSyncGroup[] m_LocomotionSyncGroups =
+            Array.Empty<CharacterLocomotionSyncGroup>();
         [SerializeField] CharacterFootPlacementAnalysisMode m_FootPlacementAnalysisMode;
         [SerializeField] string m_FootPlacementAnalysisSourceAssetGuid = string.Empty;
 
@@ -83,6 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ProducerBindings ?? Array.Empty<AnimationProducerPresentationBinding>();
         public IReadOnlyList<CharacterPresentationPoseSourceBinding> PoseSourceBindings =>
             m_PoseSourceBindings ?? Array.Empty<CharacterPresentationPoseSourceBinding>();
+        public IReadOnlyList<CharacterLocomotionSyncGroup> LocomotionSyncGroups =>
+            m_LocomotionSyncGroups ?? Array.Empty<CharacterLocomotionSyncGroup>();
         public CharacterFootPlacementAnalysisMode FootPlacementAnalysisMode => m_FootPlacementAnalysisMode;
         public string FootPlacementAnalysisSourceAssetGuid => m_FootPlacementAnalysisSourceAssetGuid ?? string.Empty;
 
@@ -117,6 +107,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void SetPoseSourceBindings(CharacterPresentationPoseSourceBinding[] bindings)
         {
             m_PoseSourceBindings = bindings ?? Array.Empty<CharacterPresentationPoseSourceBinding>();
+        }
+
+        public void SetLocomotionSyncGroups(CharacterLocomotionSyncGroup[] groups)
+        {
+            m_LocomotionSyncGroups = groups ?? Array.Empty<CharacterLocomotionSyncGroup>();
+        }
+
+        public CharacterLocomotionSyncGroup FindLocomotionSyncGroup(AnimationClip clip)
+        {
+            CharacterLocomotionSyncGroup result = null;
+            for (int i = 0; i < LocomotionSyncGroups.Count; i++)
+            {
+                CharacterLocomotionSyncGroup group = LocomotionSyncGroups[i];
+                if (group == null || !group.Contains(clip))
+                    continue;
+                if (result != null)
+                    throw new InvalidOperationException($"AnimationClip '{clip?.name}' belongs to more than one Locomotion Sync Group.");
+                result = group;
+            }
+            return result;
         }
 
         public void SetPresentationGraph(
@@ -207,10 +217,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationProducerPresentationBinding binding = bindings[i];
                 if (binding == null || !binding.ProducerId.IsValid ||
                     !producerIds.Add(binding.ProducerId) ||
-                    (!binding.Source || !binding.Source.IsValid ||
-                     string.IsNullOrWhiteSpace(binding.FootAnalysisIdentity)))
+                    !binding.Source || !binding.Source.IsValid)
                 {
                     errors?.Add($"{name}: Animation producer binding #{i} is invalid or duplicated.");
+                    valid = false;
+                }
+            }
+
+            var locomotionGroupIds = new HashSet<string>(StringComparer.Ordinal);
+            var locomotionGroupMembers = new HashSet<AnimationClip>();
+            for (int i = 0; i < LocomotionSyncGroups.Count; i++)
+            {
+                CharacterLocomotionSyncGroup group = LocomotionSyncGroups[i];
+                try
+                {
+                    group?.RequireValid();
+                    if (group == null || !locomotionGroupIds.Add(group.GroupId))
+                        throw new InvalidOperationException("group identity is missing or duplicated.");
+                    for (int memberIndex = 0; memberIndex < group.Members.Count; memberIndex++)
+                    {
+                        if (!locomotionGroupMembers.Add(group.Members[memberIndex]))
+                            throw new InvalidOperationException($"member '{group.Members[memberIndex].name}' belongs to more than one group.");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: Locomotion Sync Group #{i} is invalid: {exception.Message}");
                     valid = false;
                 }
             }

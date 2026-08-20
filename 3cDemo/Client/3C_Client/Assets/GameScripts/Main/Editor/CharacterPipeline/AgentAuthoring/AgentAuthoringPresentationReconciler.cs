@@ -2433,8 +2433,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     new AnimationProducerId(
                         value.timelineId,
                         value.trackId),
-                    source,
-                    value.footAnalysisIdentity);
+                    source);
                 return binding;
             }
             catch (Exception exception)

@@ -25,8 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public CharacterPresentationPoseSourceSlot Slot => m_Slot;
         public string ContentRevision => m_ContentRevision ?? string.Empty;
-        public abstract CharacterAnimationRigDefinition Rig { get; }
-        public abstract string FootAnalysisIdentity { get; }
+        public virtual CharacterAnimationRigDefinition Rig => null;
+        public virtual string FootAnalysisIdentity => string.Empty;
         public abstract PresentationPoseSourceKind SourceKind { get; }
         public abstract UnityEngine.Object SourceAsset { get; }
 
@@ -41,8 +41,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public virtual void RequireValid(CharacterAnimationRigDefinition profileRig)
         {
             if (!m_Slot || !m_Slot.Accepts(this) || m_Slot.SourceKind != SourceKind ||
-                !Rig || Rig != profileRig || string.IsNullOrWhiteSpace(FootAnalysisIdentity) ||
-                string.IsNullOrWhiteSpace(ContentRevision) || !SourceAsset)
+                string.IsNullOrWhiteSpace(ContentRevision) || !SourceAsset ||
+                Rig && Rig != profileRig)
             {
                 throw new InvalidOperationException($"Presentation Pose source binding '{name}' is invalid.");
             }

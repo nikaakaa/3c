@@ -9,7 +9,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum PoseStateSourceSyncMode : byte
     {
         None = 1,
-        MarkerGroup = 2
+        MarkerGroup = 2,
+        LocomotionPhase = 3
     }
 
     [Serializable]
@@ -140,6 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] bool m_SourceIsLeader;
         [SerializeField] BTSMTL.Timeline.AnimationSyncTimeMapping m_TimeMapping;
         [SerializeField] AnimationFootPhaseTimeWarpPlan m_FootPhaseWarp;
+        [SerializeField] AnimationPhaseRelationPlan m_PhaseRelation;
 
         public PoseStateSourceSyncMode Mode => m_Mode;
         public string RelationId => m_RelationId ?? string.Empty;
@@ -155,6 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool SourceIsLeader => m_SourceIsLeader;
         public BTSMTL.Timeline.AnimationSyncTimeMapping TimeMapping => m_TimeMapping;
         public AnimationFootPhaseTimeWarpPlan FootPhaseWarp => m_FootPhaseWarp;
+        public AnimationPhaseRelationPlan PhaseRelation => m_PhaseRelation;
 
         public CharacterPoseStateSourceSyncPlan(PoseStateSourceSyncMode mode)
         {
@@ -197,6 +200,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_TimeMapping = timeMapping;
             m_FootPhaseWarp = footPhaseWarp;
             m_FootPhaseWarp?.RequireValid();
+        }
+
+        public CharacterPoseStateSourceSyncPlan(
+            int sourcePlayerIndex,
+            int targetPlayerIndex,
+            PresentationPoseSourceIndex sourcePoseSourceIndex,
+            PresentationPoseSourceIndex targetPoseSourceIndex,
+            string canonicalGroupId,
+            AnimationPhaseRelationPlan phaseRelation)
+        {
+            if (sourcePlayerIndex < 0 || targetPlayerIndex < 0 ||
+                !sourcePoseSourceIndex.IsValid || !targetPoseSourceIndex.IsValid ||
+                string.IsNullOrWhiteSpace(canonicalGroupId) || phaseRelation == null)
+            {
+                throw new ArgumentException("Pose State Locomotion Phase sync plan is invalid.");
+            }
+            m_Mode = PoseStateSourceSyncMode.LocomotionPhase;
+            m_RelationId = phaseRelation.RelationIdentity;
+            m_SourcePlayerIndex = sourcePlayerIndex;
+            m_TargetPlayerIndex = targetPlayerIndex;
+            m_SourcePoseSourceIndex = sourcePoseSourceIndex.Value;
+            m_TargetPoseSourceIndex = targetPoseSourceIndex.Value;
+            m_CanonicalGroupId = canonicalGroupId.Trim();
+            m_SourceIsLeader = phaseRelation.SourceIsLeader;
+            m_PhaseRelation = phaseRelation;
         }
     }
 

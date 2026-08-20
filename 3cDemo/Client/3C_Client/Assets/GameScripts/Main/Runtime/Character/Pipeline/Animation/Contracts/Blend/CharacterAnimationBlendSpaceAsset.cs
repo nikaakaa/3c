@@ -109,6 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] string m_SampleId = string.Empty;
         [SerializeField] CharacterAnimationSequenceAsset m_Sequence;
+        [SerializeField] UnityAnimationClip m_Clip;
         [SerializeField] Vector2 m_Position;
         [SerializeField] CharacterAnimationBlendSpaceSampleRole m_Role = CharacterAnimationBlendSpaceSampleRole.DynamicCycle;
         [SerializeField, Range(0f, 1f)] float m_StationaryNormalizedTime;
@@ -116,8 +117,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public CharacterAnimationBlendSpaceSampleId SampleId => string.IsNullOrWhiteSpace(m_SampleId) ? default : new CharacterAnimationBlendSpaceSampleId(m_SampleId);
         public CharacterAnimationSequenceAsset Sequence => m_Sequence;
-        public UnityAnimationClip Clip => m_Sequence ? m_Sequence.Clip : null;
-        public string ClipContentIdentity => m_Sequence ? m_Sequence.ContentRevision : string.Empty;
+        public UnityAnimationClip Clip => m_Clip ? m_Clip : m_Sequence ? m_Sequence.Clip : null;
+        public string ClipContentIdentity => m_Clip ? m_Clip.GetInstanceID().ToString() : m_Sequence ? m_Sequence.ContentRevision : string.Empty;
         public Vector2 Position => m_Position;
         public CharacterAnimationBlendSpaceSampleRole Role => m_Role;
         public float StationaryNormalizedTime => m_StationaryNormalizedTime;
@@ -129,6 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_SampleId = sampleId.IsValid ? sampleId.Value : throw new ArgumentException("Blend Space Sample identity is invalid.", nameof(sampleId)),
                 m_Sequence = m_Sequence,
+                m_Clip = m_Clip,
                 m_Position = m_Position,
                 m_Role = m_Role,
                 m_StationaryNormalizedTime = m_StationaryNormalizedTime,
@@ -153,6 +155,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Blend Space Sample Sequence binding is invalid.");
             sequence.RequireValid();
             m_Sequence = sequence;
+            m_Clip = sequence.Clip;
+        }
+
+        internal void SetClip(UnityAnimationClip clip)
+        {
+            if (!clip)
+                throw new ArgumentException("Blend Space Sample Clip binding is invalid.");
+            m_Clip = clip;
+            m_Sequence = null;
         }
 
         internal void SetRole(CharacterAnimationBlendSpaceSampleRole role, float stationaryNormalizedTime)

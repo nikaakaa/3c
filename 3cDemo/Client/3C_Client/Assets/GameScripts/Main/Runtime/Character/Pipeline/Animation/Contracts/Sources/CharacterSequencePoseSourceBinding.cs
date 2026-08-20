@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] CharacterAnimationSequenceAsset m_Sequence;
 
-        public override PresentationPoseSourceKind SourceKind => PresentationPoseSourceKind.Sequence;
+        public override PresentationPoseSourceKind SourceKind => PresentationPoseSourceKind.Clip;
         public override UnityEngine.Object SourceAsset => m_Sequence;
         public override CharacterAnimationRigDefinition Rig => m_Sequence ? m_Sequence.Rig : null;
         public override string FootAnalysisIdentity => m_Sequence ? m_Sequence.FootAnalysisIdentity : string.Empty;

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEditor;
 using UnityEngine;
@@ -35,9 +36,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             geometryValidation.RequireMatches(source.RigDefinition, source.RigCalibration);
             CharacterFootPlacementAnalysisThresholds thresholds = source.Thresholds;
             CharacterFootPlacementCurveReductionSettings reduction = source.Reduction;
+            CharacterAnimationClipContentIdentity clipIdentity =
+                CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clip);
             return new AnimationFootAnalysisArtifactIdentity(
-                AssetDatabase.AssetPathToGUID(clipPath),
-                AssetDatabase.GetAssetDependencyHash(clipPath).ToString(),
+                clipIdentity.AssetGuid,
+                clipIdentity.AnalysisInputHash,
                 AssetDatabase.AssetPathToGUID(sourcePath),
                 AssetDatabase.GetAssetDependencyHash(sourcePath).ToString(),
                 source.AnalysisSourceId.Value,
@@ -140,7 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static AnimationFootAnalysisArtifact Write(
             AnimationFootAnalysisArtifactIdentity identity,
             AnimationFootFeaturePair features,
-            AnimationFootSynchronizationDescriptor synchronization)
+            AnimationFootPhaseValidationDescriptor phaseValidation)
         {
             string path = GetPath(identity);
             string directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Artifact path has no directory.");
@@ -148,7 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             byte[] bytes = AnimationFootAnalysisArtifactCodec.Write(
                 identity,
                 features,
-                synchronization,
+                phaseValidation,
                 out _);
             string temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try

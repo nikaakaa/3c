@@ -77,10 +77,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         leader.PreviousMarkerId,
                         leader.NextMarkerId,
                         CompileKnots(
-                            leaderArtifact.Synchronization,
+                            leaderArtifact.PhaseValidation,
                             leaderBinding.DurationSeconds,
                             leader,
-                            followerArtifact.Synchronization,
+                            followerArtifact.PhaseValidation,
                             followerBinding.DurationSeconds,
                             follower)));
                 }
@@ -102,10 +102,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static AnimationFootPhaseWarpKnot[] CompileKnots(
-            AnimationFootSynchronizationDescriptor leaderDescriptor,
+            AnimationFootPhaseValidationDescriptor leaderDescriptor,
             float leaderDuration,
             AnimationMarkerSyncSegmentOccurrence leaderSegment,
-            AnimationFootSynchronizationDescriptor followerDescriptor,
+            AnimationFootPhaseValidationDescriptor followerDescriptor,
             float followerDuration,
             AnimationMarkerSyncSegmentOccurrence followerSegment)
         {
@@ -174,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static SegmentFeatures BuildFeatures(
-            AnimationFootSynchronizationDescriptor descriptor,
+            AnimationFootPhaseValidationDescriptor descriptor,
             float duration,
             AnimationMarkerSyncSegmentOccurrence segment,
             int intervals)
@@ -203,16 +203,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static FootSample Sample(
-            AnimationFootSynchronizationFootDescriptor descriptor,
+            AnimationFootPhaseValidationFootDescriptor descriptor,
             float normalizedTime)
         {
-            IReadOnlyList<AnimationFootSynchronizationSample> samples = descriptor.Samples;
+            IReadOnlyList<AnimationFootPhaseValidationSample> samples = descriptor.Samples;
             for (int i = 1; i < samples.Count; i++)
             {
-                AnimationFootSynchronizationSample next = samples[i];
+                AnimationFootPhaseValidationSample next = samples[i];
                 if (normalizedTime > next.NormalizedTime)
                     continue;
-                AnimationFootSynchronizationSample previous = samples[i - 1];
+                AnimationFootPhaseValidationSample previous = samples[i - 1];
                 float width = next.NormalizedTime - previous.NormalizedTime;
                 float fraction = width <= 0f
                     ? 0f
@@ -235,7 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         next.PlantConfidence,
                         fraction));
             }
-            AnimationFootSynchronizationSample last = samples[samples.Count - 1];
+            AnimationFootPhaseValidationSample last = samples[samples.Count - 1];
             return new FootSample(
                 last.RootLocalSolePlanarPosition,
                 last.CalibratedSoleHeight,

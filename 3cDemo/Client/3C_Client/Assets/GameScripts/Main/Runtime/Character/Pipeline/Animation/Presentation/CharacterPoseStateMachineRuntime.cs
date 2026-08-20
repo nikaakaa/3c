@@ -912,7 +912,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterPoseStateTransitionDescriptor transition =
                     m_Descriptor.Transitions[candidates[i]];
                 if (transition.SourceSync.Mode !=
-                        PoseStateSourceSyncMode.MarkerGroup ||
+                        PoseStateSourceSyncMode.LocomotionPhase ||
                     !UsesStatePoseRemainingTime(transition.Rule) ||
                     !TryResolveTargetMovementMode(
                         transition.Rule,
@@ -1069,7 +1069,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PendingTargetTransition = null;
             m_PendingTargetRuleSatisfied = false;
             m_PendingTargetSynchronized = false;
-            if (transition.SourceSync.Mode == PoseStateSourceSyncMode.MarkerGroup &&
+            if (transition.SourceSync.Mode == PoseStateSourceSyncMode.LocomotionPhase &&
                 !sources.TrySynchronize(transition.SourceSync, true, out _))
             {
                 throw new InvalidOperationException(
@@ -1238,7 +1238,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void UpdateSynchronization(ICharacterPoseStateSourceRuntime sources)
         {
-            if (m_ActiveTransition.SourceSync.Mode == PoseStateSourceSyncMode.MarkerGroup &&
+            if (m_ActiveTransition.SourceSync.Mode == PoseStateSourceSyncMode.LocomotionPhase &&
                 !sources.TrySynchronize(m_ActiveTransition.SourceSync, false, out _))
             {
                 throw new InvalidOperationException(

@@ -239,12 +239,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ActionAnimationPlaybackLifecyclePhase lifecyclePhase,
             ActionCommittedRawSample latestCommittedRawSample,
             PresentationPoseSampleTime projectedSampleTime,
-            PresentationPoseSampleTime effectiveSampleTime,
-            string previousMarkerId,
-            string nextMarkerId,
-            float markerSegmentFraction,
-            bool markerMapped,
-            bool markerRebased,
             bool retentionProjection,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             PresentationParameterPageId parameterPageId,
@@ -262,12 +256,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             LifecyclePhase = lifecyclePhase;
             LatestCommittedRawSample = latestCommittedRawSample;
             ProjectedSampleTime = projectedSampleTime;
-            EffectiveSampleTime = effectiveSampleTime;
-            PreviousMarkerId = previousMarkerId?.Trim() ?? string.Empty;
-            NextMarkerId = nextMarkerId?.Trim() ?? string.Empty;
-            MarkerSegmentFraction = markerSegmentFraction;
-            MarkerMapped = markerMapped;
-            MarkerRebased = markerRebased;
             RetentionProjection = retentionProjection;
             Clips = clips;
             ParameterPageId = parameterPageId;
@@ -288,12 +276,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public ActionAnimationPlaybackLifecyclePhase LifecyclePhase { get; }
         public ActionCommittedRawSample LatestCommittedRawSample { get; }
         public PresentationPoseSampleTime ProjectedSampleTime { get; }
-        public PresentationPoseSampleTime EffectiveSampleTime { get; }
-        public string PreviousMarkerId { get; }
-        public string NextMarkerId { get; }
-        public float MarkerSegmentFraction { get; }
-        public bool MarkerMapped { get; }
-        public bool MarkerRebased { get; }
         public bool RetentionProjection { get; }
         public AnimationReadOnlyBuffer<ClipSamplePlan> Clips { get; }
         public PresentationParameterPageId ParameterPageId { get; }
@@ -325,12 +307,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     LifecyclePhase == ActionAnimationPlaybackLifecyclePhase.Retired ||
                     !LatestCommittedRawSample.IsValid ||
                     !ProjectedSampleTime.IsValid ||
-                    !EffectiveSampleTime.IsValid ||
-                    !float.IsFinite(MarkerSegmentFraction) ||
-                    MarkerSegmentFraction < 0f ||
-                    MarkerSegmentFraction > 1f ||
-                    (string.IsNullOrEmpty(PreviousMarkerId) !=
-                     string.IsNullOrEmpty(NextMarkerId)) ||
                     Clips.Count == 0 ||
                     !ParameterPageId.IsValid ||
                     PoseParameters.Count == 0 ||

@@ -102,11 +102,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal AnimationPresentationFrameTransaction(
             int playbackCapacity,
-            int markerRelationCapacity,
             int backendReleaseCompletionCapacity)
         {
             if (playbackCapacity <= 0 ||
-                markerRelationCapacity <= 0 ||
                 backendReleaseCompletionCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(playbackCapacity));
@@ -117,12 +115,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActionSnapshots =
                 new FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleSnapshot>(
                     playbackCapacity);
-            MarkerPlaybackSnapshots =
-                new FixedCapacityFrameBuffer<ActionMarkerPlaybackSnapshot>(
-                    playbackCapacity);
-            MarkerRelationSnapshots =
-                new FixedCapacityFrameBuffer<ActionMarkerRelationSnapshot>(
-                    markerRelationCapacity);
             TimeSnapshots =
                 new FixedCapacityFrameBuffer<ActionPresentationTimeSnapshot>(
                     playbackCapacity);
@@ -159,10 +151,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ConsumedReleaseCompletions { get; }
         internal FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleSnapshot>
             ActionSnapshots { get; }
-        internal FixedCapacityFrameBuffer<ActionMarkerPlaybackSnapshot>
-            MarkerPlaybackSnapshots { get; }
-        internal FixedCapacityFrameBuffer<ActionMarkerRelationSnapshot>
-            MarkerRelationSnapshots { get; }
         internal FixedCapacityFrameBuffer<ActionPresentationTimeSnapshot>
             TimeSnapshots { get; }
         internal FixedCapacityFrameBuffer<AnimationPlaybackId>
@@ -336,8 +324,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             ConsumedReleaseCompletions.Clear();
             ActionSnapshots.Clear();
-            MarkerPlaybackSnapshots.Clear();
-            MarkerRelationSnapshots.Clear();
             TimeSnapshots.Clear();
             RetiredPlaybacks.Clear();
         }

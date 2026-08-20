@@ -177,7 +177,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 source.FootPlacements.ToArray(),
                 source.FullBodyIks.ToArray(),
                 source.FullBodyIkGoalInputValueIndices.ToArray(),
-                source.SequencePlayers.ToArray(),
+                source.ClipPlayers.ToArray(),
                 source.StateMachines.ToArray(),
                 source.AnimationSlots.ToArray(),
                 source.ActionPlaybackInputs.ToArray(),
@@ -221,7 +221,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static bool IsDirectPlayer(CharacterPoseOperationCode code) =>
             code == CharacterPoseOperationCode.SelectedPosePlayer ||
             code == CharacterPoseOperationCode.BlendSpacePlayer ||
-            code == CharacterPoseOperationCode.SequencePlayer;
+            code == CharacterPoseOperationCode.ClipPlayer;
 
         static void CollectPolicies(
             CharacterPresentationPoseGraphAsset owner,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using Unity.Collections;
@@ -155,7 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     .Where(operation => operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
                                         operation.Code == CharacterPoseOperationCode.BlendStack ||
                                         operation.Code == CharacterPoseOperationCode.BlendSpacePlayer ||
-                                        operation.Code == CharacterPoseOperationCode.SequencePlayer ||
+                                        operation.Code == CharacterPoseOperationCode.ClipPlayer ||
                                         operation.Code == CharacterPoseOperationCode.AnimationSlot)
                     .OrderBy(operation => operation.PlayerIndex)
                     .ToArray();

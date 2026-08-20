@@ -18,13 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ActionAnimationPlaybackLifecyclePhase lifecyclePhase,
             ActionCommittedSampleWindow committedWindow,
             PresentationPoseSampleTime projectedRawSample,
-            PresentationPoseSampleTime markerEffectiveSample,
-            bool retentionProjection,
-            string previousMarkerId,
-            string nextMarkerId,
-            float markerSegmentFraction,
-            bool markerMapped,
-            bool markerRebased)
+            bool retentionProjection)
         {
             PlaybackId = playbackId;
             ActionInstanceId = actionInstanceId;
@@ -32,13 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             LifecyclePhase = lifecyclePhase;
             CommittedWindow = committedWindow;
             ProjectedRawSample = projectedRawSample;
-            MarkerEffectiveSample = markerEffectiveSample;
             RetentionProjection = retentionProjection;
-            PreviousMarkerId = previousMarkerId?.Trim() ?? string.Empty;
-            NextMarkerId = nextMarkerId?.Trim() ?? string.Empty;
-            MarkerSegmentFraction = markerSegmentFraction;
-            MarkerMapped = markerMapped;
-            MarkerRebased = markerRebased;
             ProjectionKind = retentionProjection
                 ? ActionPresentationProjectionKind.BoundedExtrapolation
                 : committedWindow.HasNext
@@ -54,14 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ActionAnimationPlaybackLifecyclePhase LifecyclePhase { get; }
         public ActionCommittedSampleWindow CommittedWindow { get; }
         public PresentationPoseSampleTime ProjectedRawSample { get; }
-        public PresentationPoseSampleTime MarkerEffectiveSample { get; }
         public ActionPresentationProjectionKind ProjectionKind { get; }
         public bool RetentionProjection { get; }
-        public string PreviousMarkerId { get; }
-        public string NextMarkerId { get; }
-        public float MarkerSegmentFraction { get; }
-        public bool MarkerMapped { get; }
-        public bool MarkerRebased { get; }
         public bool IsValid =>
             PlaybackId.IsValid &&
             ActionInstanceId != 0 &&
@@ -71,10 +53,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             LifecyclePhase != ActionAnimationPlaybackLifecyclePhase.Retired &&
             CommittedWindow.IsValid &&
             ProjectedRawSample.IsValid &&
-            MarkerEffectiveSample.IsValid &&
-            Enum.IsDefined(typeof(ActionPresentationProjectionKind), ProjectionKind) &&
-            float.IsFinite(MarkerSegmentFraction) &&
-            MarkerSegmentFraction >= 0f &&
-            MarkerSegmentFraction <= 1f;
+            Enum.IsDefined(typeof(ActionPresentationProjectionKind), ProjectionKind);
     }
 }

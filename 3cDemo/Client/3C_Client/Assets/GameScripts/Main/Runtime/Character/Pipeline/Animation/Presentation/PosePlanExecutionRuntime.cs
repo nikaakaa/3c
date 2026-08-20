@@ -78,7 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         static readonly ProfilerMarker PrepareDirectMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Direct");
         static readonly ProfilerMarker PrepareSequenceMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Sequence");
+            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Clip");
         static readonly ProfilerMarker PrepareBlendSpaceMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.BlendSpace");
         static readonly ProfilerMarker ValidateMarker =
@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         enum StandaloneSourceReleaseOwner : byte
         {
             Direct = 1,
-            Sequence = 2,
+            Clip = 2,
             BlendSpace = 3
         }
 
@@ -237,7 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly RootOrientationWarpRuntime[] m_RootOrientationWarps;
         readonly AnimationSlotBlendJob[] m_SlotJobs;
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
-        readonly AnimationSelectedPosePlayerJob[] m_SequencePlayerJobs;
+        readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
         readonly AnimationPhysicalSourceIdentity[] m_DirectPhysicalSources;
         readonly AnimationPhysicalSourceIdentity[] m_SequencePhysicalSources;
@@ -304,7 +304,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         AnimationScriptPlayable[] m_SlotPlayables;
         AnimationScriptPlayable[] m_DirectPlayerPlayables;
-        AnimationScriptPlayable[] m_SequencePlayerPlayables;
+        AnimationScriptPlayable[] m_ClipPlayerPlayables;
         AnimationScriptPlayable[] m_BlendSpacePlayerPlayables;
         ulong m_CompletionIdentity = 1;
         ulong m_FrameCompletionContext;
@@ -376,7 +376,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             int sourceCapacity = CalculateSourceCapacity(projection.PosePlan);
             int physicalSourceCapacity = checked(
                 sourceCapacity +
-                projection.PosePlan.SequencePlayers.Count);
+                projection.PosePlan.ClipPlayers.Count);
             int clipCatalogCapacity =
                 AnimationPoseRequestWorkspaceLayoutFactory
                     .RequireClipCatalogCapacity(projection);
@@ -390,7 +390,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationBlendStackRuntime[] stacks = null;
             CharacterAnimationTransitionRouteRuntime[] stackRoutes = null;
             AnimationSelectedPosePlayerRuntime[] directPlayers = null;
-            AnimationSequencePlayerRuntime[] sequencePlayers = null;
+            AnimationClipPlayerRuntime[] clipPlayers = null;
             AnimationBlendSpacePlayerRuntime[] blendSpacePlayers = null;
             PoseStateAndSourceRuntime poseStateSources = null;
             AnimationPresentationRuntimeSnapshotPublisher diagnosticsPublisher = null;
@@ -531,13 +531,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_DirectPlayersByNode.Add(operation.NodeId, player);
                 }
                 directPlayers = directPlayerList.ToArray();
-                sequencePlayers = new AnimationSequencePlayerRuntime[projection.PosePlan.SequencePlayers.Count];
-                for (int sequenceIndex = 0; sequenceIndex < sequencePlayers.Length; sequenceIndex++)
+                clipPlayers = new AnimationClipPlayerRuntime[projection.PosePlan.ClipPlayers.Count];
+                for (int sequenceIndex = 0; sequenceIndex < clipPlayers.Length; sequenceIndex++)
                 {
-                    AnimationSequencePlayerRuntime sequence = AnimationSequencePlayerFactory.Create(
+                    AnimationClipPlayerRuntime sequence = AnimationClipPlayerFactory.Create(
                         projection,
-                        projection.PosePlan.SequencePlayers[sequenceIndex]);
-                    sequencePlayers[sequenceIndex] = sequence;
+                        projection.PosePlan.ClipPlayers[sequenceIndex]);
+                    clipPlayers[sequenceIndex] = sequence;
                     m_PlayerIndicesByNode.Add(sequence.NodeId, sequence.PlayerIndex);
                 }
                 blendSpacePlayers =
@@ -554,14 +554,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection.BlendSpaces[descriptor.BlendSpacePlanIndex],
                         projection.PosePlan,
                         projection.Rig,
-                        projection.FootAnalysis);
+                        projection.FootAnalysis,
+                        projection.ClipPhasePlans);
                     blendSpacePlayers[blendSpaceIndex] = player;
                     m_PlayerIndicesByNode.Add(player.NodeId, player.PlayerIndex);
                 }
                 poseStateSources =
                     new PoseStateAndSourceRuntime(
                         projection.PosePlan,
-                        sequencePlayers,
+                        projection.ClipPhasePlans,
+                        projection.SourcePhasePlans,
+                        clipPlayers,
                         blendSpacePlayers,
                         m_PlayerLinkedPoseFragmentIndices,
                         m_StateMachineLinkedPoseFragmentIndices,
@@ -618,10 +621,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     for (int i = directPlayers.Length - 1; i >= 0; i--)
                         directPlayers[i]?.Dispose();
                 }
-                if (sequencePlayers != null)
+                if (clipPlayers != null)
                 {
-                    for (int i = sequencePlayers.Length - 1; i >= 0; i--)
-                        sequencePlayers[i]?.Dispose();
+                    for (int i = clipPlayers.Length - 1; i >= 0; i--)
+                        clipPlayers[i]?.Dispose();
                 }
                 if (blendSpacePlayers != null)
                 {
@@ -657,7 +660,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_RootOrientationWarps[i] =
                     new RootOrientationWarpRuntime(
                         descriptor,
-                        sequencePlayers[descriptor.SequencePlayerIndex]);
+                        clipPlayers[descriptor.ClipPlayerIndex]);
             }
             m_MotionMatchingSourceUsages =
                 new MotionMatchingPosePlanSourceUsage[sourceCapacity];
@@ -670,15 +673,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_MotionMatchingHistoryCompletions.Length];
             m_SlotJobs = new AnimationSlotBlendJob[stacks.Length];
             m_DirectPlayerJobs = new AnimationSelectedPosePlayerJob[directPlayers.Length];
-            m_SequencePlayerJobs = new AnimationSelectedPosePlayerJob[sequencePlayers.Length];
+            m_ClipPlayerJobs = new AnimationSelectedPosePlayerJob[clipPlayers.Length];
             m_BlendSpacePlayerJobs =
                 new AnimationSelectedPosePlayerJob[blendSpacePlayers.Length];
             m_DirectPhysicalSources = new AnimationPhysicalSourceIdentity[directPlayers.Length];
-            m_SequencePhysicalSources = new AnimationPhysicalSourceIdentity[sequencePlayers.Length];
+            m_SequencePhysicalSources = new AnimationPhysicalSourceIdentity[clipPlayers.Length];
             m_BlendSpacePhysicalSources =
                 new AnimationPhysicalSourceIdentity[blendSpacePlayers.Length];
             m_DirectSourceIndices = new int[directPlayers.Length];
-            m_SequenceSourceIndices = new int[sequencePlayers.Length];
+            m_SequenceSourceIndices = new int[clipPlayers.Length];
             m_BlendSpaceSourceIndices = new int[blendSpacePlayers.Length];
             m_ClipCatalogScratch =
                 new AnimationPoseSourceClipBinding[clipCatalogCapacity];
@@ -777,11 +780,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     CharacterPresentationPoseOperation operation =
                         m_Projection.PosePlan.Operations[operationIndex];
-                    if (operation.Code != CharacterPoseOperationCode.SequencePlayer ||
+                    if (operation.Code != CharacterPoseOperationCode.ClipPlayer ||
                         !string.Equals(operation.NodeId.Value, nodeId, StringComparison.Ordinal))
                         continue;
-                    string error = m_PoseStateSources.SequencePlayers[
-                        operation.SequencePlayerIndex].ApplyTuning(value.FloatValue);
+                    string error = m_PoseStateSources.ClipPlayers[
+                        operation.ClipPlayerIndex].ApplyTuning(value.FloatValue);
                     if (!string.IsNullOrEmpty(error))
                         return error;
                     break;
@@ -1092,11 +1095,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
             }
             for (int i = 0;
-                 i < m_PoseStateSources.SequencePlayers.Length;
+                 i < m_PoseStateSources.ClipPlayers.Length;
                  i++)
             {
-                AnimationSequencePlayerRuntime player =
-                    m_PoseStateSources.SequencePlayers[i];
+                AnimationClipPlayerRuntime player =
+                    m_PoseStateSources.ClipPlayers[i];
                 int releaseCount = player.PendingReleaseCount;
                 standaloneReleaseCount = checked(
                     standaloneReleaseCount +
@@ -1115,7 +1118,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.NodeId,
                         default);
                     AddPreparedStandaloneSourceRelease(
-                        StandaloneSourceReleaseOwner.Sequence,
+                        StandaloneSourceReleaseOwner.Clip,
                         i,
                         sourceId,
                         player.NodeId,
@@ -1363,8 +1366,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             .ApplyPreparedRelease(
                                 in release.PlayerRelease);
                         break;
-                    case StandaloneSourceReleaseOwner.Sequence:
-                        m_PoseStateSources.SequencePlayers[
+                    case StandaloneSourceReleaseOwner.Clip:
+                        m_PoseStateSources.ClipPlayers[
                                 release.PlayerIndex]
                             .ApplyPreparedRelease(
                                 in release.PlayerRelease);
@@ -2136,13 +2139,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 selectionGeneration,
                 frame.ActionInstanceId);
             PresentationPoseSampleTime sampleTime =
-                frame.EffectiveSampleTime;
+                frame.ProjectedSampleTime;
             var request = new AnimationPoseSampleRequest(
                 sourceId,
                 frame.SourcePoseContinuityIdentity,
                 presentationRequestSequence,
                 binding.ProgramProducerIndex,
-                binding.Animation.MarkerBindingId,
                 sampleTime.SampleTime,
                 sampleTime.ContinuousTime,
                 sampleTime.Cycle,
@@ -2211,10 +2213,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
             if (m_HasSequencePreview)
             {
-                for (int i = 0; i < m_PoseStateSources.SequencePlayers.Length; i++)
+                for (int i = 0; i < m_PoseStateSources.ClipPlayers.Length; i++)
                 {
-                    AnimationSequencePlayerRuntime player =
-                        m_PoseStateSources.SequencePlayers[i];
+                    AnimationClipPlayerRuntime player =
+                        m_PoseStateSources.ClipPlayers[i];
                     bool selected = i == m_SequencePreviewPlayerIndex;
                     player.SetRelevant(selected);
                     if (selected)
@@ -2331,10 +2333,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_DirectSourceIndices[i] = -1;
                     }
                     for (int i = 0;
-                         i < m_PoseStateSources.SequencePlayers.Length;
+                         i < m_PoseStateSources.ClipPlayers.Length;
                          i++)
                     {
-                        m_PoseStateSources.SequencePlayers[i]
+                        m_PoseStateSources.ClipPlayers[i]
                             .BeginFrame(completionIdentity);
                         m_SequencePhysicalSources[i] = default;
                         m_SequenceSourceIndices[i] = -1;
@@ -2380,7 +2382,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     for (int playerIndex = 0;
                          playerIndex <
-                         m_PoseStateSources.SequencePlayers.Length;
+                         m_PoseStateSources.ClipPlayers.Length;
                          playerIndex++)
                         PrepareSequenceSource(playerIndex, presentationDeltaSeconds);
                 }
@@ -2430,15 +2432,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 for (int playerIndex = 0;
                      playerIndex <
-                     m_PoseStateSources.SequencePlayers.Length;
+                     m_PoseStateSources.ClipPlayers.Length;
                      playerIndex++)
                 {
-                    AnimationSequencePlayerRuntime player =
-                        m_PoseStateSources.SequencePlayers[
+                    AnimationClipPlayerRuntime player =
+                        m_PoseStateSources.ClipPlayers[
                             playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
                         m_Workspace.RequirePlayerWriteBinding(player.PlayerIndex, completionIdentity);
-                    m_SequencePlayerJobs[playerIndex] = player.PrepareJob(
+                    m_ClipPlayerJobs[playerIndex] = player.PrepareJob(
                         completionIdentity,
                         in write,
                         m_SequencePhysicalSources[playerIndex],
@@ -2617,9 +2619,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 for (int i = 0; i < m_DirectPlayers.Length; i++)
                     m_DirectPlayers[i].CompleteFrame();
                 for (int i = 0;
-                     i < m_PoseStateSources.SequencePlayers.Length;
+                     i < m_PoseStateSources.ClipPlayers.Length;
                      i++)
-                    m_PoseStateSources.SequencePlayers[i]
+                    m_PoseStateSources.ClipPlayers[i]
                         .CompleteFrame();
                 for (int i = 0;
                      i < m_PoseStateSources.BlendSpacePlayers.Length;
@@ -2872,12 +2874,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     DisposeStep(player.Dispose, ref failure);
             }
             for (int i =
-                     m_PoseStateSources.SequencePlayers.Length - 1;
+                     m_PoseStateSources.ClipPlayers.Length - 1;
                  i >= 0;
                  i--)
             {
-                AnimationSequencePlayerRuntime player =
-                    m_PoseStateSources.SequencePlayers[i];
+                AnimationClipPlayerRuntime player =
+                    m_PoseStateSources.ClipPlayers[i];
                 if (player != null)
                     DisposeStep(player.Dispose, ref failure);
             }
@@ -3066,7 +3068,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sample.SourcePoseContinuityIdentity,
                 sample.FrameSequence,
                 sourceOwnerIndex,
-                default,
                 time.SampleTime,
                 time.ContinuousTime,
                 time.Cycle,
@@ -3085,8 +3086,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void PrepareSequenceSource(int playerIndex, float presentationDeltaSeconds)
         {
-            AnimationSequencePlayerRuntime player =
-                m_PoseStateSources.SequencePlayers[playerIndex];
+            AnimationClipPlayerRuntime player =
+                m_PoseStateSources.ClipPlayers[playerIndex];
             bool selectedPreview = m_HasSequencePreview &&
                                    playerIndex == m_SequencePreviewPlayerIndex;
             if (!selectedPreview && !IsPlayerActive(player.PlayerIndex) ||
@@ -3119,32 +3120,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             RequireNoOpenMutation();
             if (!sourceIndex.IsValid || !double.IsFinite(sampleTime) || sampleTime < 0d)
-                throw new ArgumentException("Sequence Preview sample is invalid.");
+                throw new ArgumentException("Clip Preview sample is invalid.");
             int playerIndex = -1;
-            for (int i = 0; i < m_PoseStateSources.SequencePlayers.Length; i++)
+            for (int i = 0; i < m_PoseStateSources.ClipPlayers.Length; i++)
             {
-                if (m_PoseStateSources.SequencePlayers[i].SourceIndex != sourceIndex)
+                if (m_PoseStateSources.ClipPlayers[i].SourceIndex != sourceIndex)
                     continue;
                 playerIndex = i;
                 break;
             }
             if (playerIndex < 0)
                 throw new InvalidOperationException(
-                    $"Sequence Preview source #{sourceIndex.Value} has no compiled Sequence Player.");
+                    $"Clip Preview source #{sourceIndex.Value} has no compiled Clip Player.");
             int operationIndex = -1;
             for (int i = 0; i < m_Projection.PosePlan.Operations.Count; i++)
             {
                 CharacterPresentationPoseOperation operation =
                     m_Projection.PosePlan.Operations[i];
-                if (operation.Code != CharacterPoseOperationCode.SequencePlayer ||
-                    operation.SequencePlayerIndex != playerIndex)
+                if (operation.Code != CharacterPoseOperationCode.ClipPlayer ||
+                    operation.ClipPlayerIndex != playerIndex)
                     continue;
                 operationIndex = operation.Index;
                 break;
             }
             if (operationIndex < 0)
                 throw new InvalidOperationException(
-                    $"Sequence Preview source #{sourceIndex.Value} has no compiled Pose operation.");
+                    $"Clip Preview source #{sourceIndex.Value} has no compiled Pose operation.");
             m_SequencePreviewPlayerIndex = playerIndex;
             m_SequencePreviewOperationIndex = operationIndex;
             m_SequencePreviewTime = sampleTime;
@@ -3220,11 +3221,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             m_BlendSpacePlayerJobs[i]);
                     m_BlendSpacePlayerPlayables[i].SetProcessInputs(true);
                 }
-                m_SequencePlayerPlayables = new AnimationScriptPlayable[m_SequencePlayerJobs.Length];
-                for (int i = 0; i < m_SequencePlayerJobs.Length; i++)
+                m_ClipPlayerPlayables = new AnimationScriptPlayable[m_ClipPlayerJobs.Length];
+                for (int i = 0; i < m_ClipPlayerJobs.Length; i++)
                 {
-                    m_SequencePlayerPlayables[i] = m_Animancer.Graph.InsertOutputJob(m_SequencePlayerJobs[i]);
-                    m_SequencePlayerPlayables[i].SetProcessInputs(true);
+                    m_ClipPlayerPlayables[i] = m_Animancer.Graph.InsertOutputJob(m_ClipPlayerJobs[i]);
+                    m_ClipPlayerPlayables[i].SetProcessInputs(true);
                 }
                 m_DirectPlayerPlayables = new AnimationScriptPlayable[m_DirectPlayerJobs.Length];
                 for (int i = 0; i < m_DirectPlayerJobs.Length; i++)
@@ -3246,8 +3247,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_BlendSpacePlayerPlayables[i].SetJobData(
                     m_BlendSpacePlayerJobs[i]);
             }
-            for (int i = 0; i < m_SequencePlayerJobs.Length; i++)
-                m_SequencePlayerPlayables[i].SetJobData(m_SequencePlayerJobs[i]);
+            for (int i = 0; i < m_ClipPlayerJobs.Length; i++)
+                m_ClipPlayerPlayables[i].SetJobData(m_ClipPlayerJobs[i]);
             for (int i = 0; i < m_DirectPlayerJobs.Length; i++)
                 m_DirectPlayerPlayables[i].SetJobData(m_DirectPlayerJobs[i]);
             for (int i = 0; i < m_SlotJobs.Length; i++)
@@ -3306,8 +3307,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AnimancerUtilities.RemovePlayable(m_SlotPlayables[i]);
             for (int i = m_DirectPlayerPlayables.Length - 1; i >= 0; i--)
                 AnimancerUtilities.RemovePlayable(m_DirectPlayerPlayables[i]);
-            for (int i = m_SequencePlayerPlayables.Length - 1; i >= 0; i--)
-                AnimancerUtilities.RemovePlayable(m_SequencePlayerPlayables[i]);
+            for (int i = m_ClipPlayerPlayables.Length - 1; i >= 0; i--)
+                AnimancerUtilities.RemovePlayable(m_ClipPlayerPlayables[i]);
             for (int i = m_BlendSpacePlayerPlayables.Length - 1; i >= 0; i--)
                 AnimancerUtilities.RemovePlayable(m_BlendSpacePlayerPlayables[i]);
             m_JobsInstalled = false;
@@ -4201,11 +4202,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             for (int playerIndex = 0;
                  playerIndex <
-                 m_PoseStateSources.SequencePlayers.Length;
+                 m_PoseStateSources.ClipPlayers.Length;
                  playerIndex++)
             {
-                AnimationSequencePlayerRuntime player =
-                    m_PoseStateSources.SequencePlayers[
+                AnimationClipPlayerRuntime player =
+                    m_PoseStateSources.ClipPlayers[
                         playerIndex];
                 int releaseCount = player.PendingReleaseCount;
                 for (int releaseIndex = 0;
@@ -4423,7 +4424,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
             BuildSequenceClipCatalog(AnimationPoseSourceId sourceId)
         {
-            if (sourceId.SourceKind != AnimationPoseSourceKind.Sequence ||
+            if (sourceId.SourceKind != AnimationPoseSourceKind.Clip ||
                 !m_Projection.TryGetPoseSource(
                     sourceId.PresentationPoseSourceIndex,
                     out CharacterPresentationPoseSourcePlan source))

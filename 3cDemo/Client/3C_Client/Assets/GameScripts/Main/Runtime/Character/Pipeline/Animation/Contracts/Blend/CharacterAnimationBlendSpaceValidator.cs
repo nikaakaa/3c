@@ -88,8 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 CharacterAnimationBlendSpaceSample sample = asset.Samples[i];
                 string path = $"{assetPath}/samples/{i}";
-                if (sample == null || !sample.SampleId.IsValid || !sample.Sequence ||
-                    sample.Sequence.Rig != asset.Rig ||
+                if (sample == null || !sample.SampleId.IsValid || !sample.Clip ||
                     !Enum.IsDefined(typeof(CharacterAnimationBlendSpaceSampleRole), sample.Role) ||
                     !float.IsFinite(sample.Position.x) || !float.IsFinite(sample.Position.y) ||
                     sample.Position.x < asset.XAxis.Minimum || sample.Position.x > asset.XAxis.Maximum ||
@@ -99,15 +98,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     (!float.IsFinite(sample.StationaryNormalizedTime) || sample.StationaryNormalizedTime < 0f || sample.StationaryNormalizedTime > 1f))
                 {
                     report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidSample, path, "Sample identity, clip, position, role, or time is invalid.");
-                    continue;
-                }
-                try
-                {
-                    sample.Sequence.RequireValid();
-                }
-                catch (Exception exception)
-                {
-                    report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidSample, path, exception.Message);
                     continue;
                 }
                 path = $"{assetPath}/samples/{sample.SampleId.Value}";
@@ -184,83 +174,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidPhaseReference, assetPath, "SharedNormalizedPhase retains a reference sample.");
                 return;
             }
+            if (asset.PhasePolicy != CharacterAnimationBlendSpacePhasePolicy.LocomotionPhase)
+            {
+                report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidPhaseReference, assetPath, "Phase policy is outside the installed catalog.");
+                return;
+            }
             CharacterAnimationBlendSpaceSample reference = asset.FindSample(asset.PhaseReferenceSampleId);
             if (reference == null || reference.Role != CharacterAnimationBlendSpaceSampleRole.DynamicCycle)
                 report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidPhaseReference, assetPath, "Phase Reference Sample is missing or stationary.");
-            Dictionary<string, int> topology = null;
             for (int i = 0; i < asset.Samples.Count; i++)
             {
                 CharacterAnimationBlendSpaceSample sample = asset.Samples[i];
                 if (sample == null || sample.Role != CharacterAnimationBlendSpaceSampleRole.DynamicCycle)
                     continue;
                 string path = $"{assetPath}/samples/{sample.SampleId}";
-                Dictionary<string, int> candidate = BuildTopology(sample, asset.PhasePolicy, path, report);
-                if (candidate == null)
-                    continue;
-                if (topology == null)
-                    topology = candidate;
-                else if (!SameTopology(topology, candidate))
-                    report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidMarkerTopology, path, "Dynamic sample marker directed-pair topology differs from the Phase Reference topology.");
+                if (!sample.Clip || !sample.Clip.isLooping)
+                    report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidPhaseReference, path, "Locomotion Phase Dynamic sample requires a looping AnimationClip.");
             }
-        }
-
-        static Dictionary<string, int> BuildTopology(
-            CharacterAnimationBlendSpaceSample sample,
-            CharacterAnimationBlendSpacePhasePolicy phasePolicy,
-            string path,
-            CharacterAnimationBlendSpaceValidationReport report)
-        {
-            CharacterAnimationSequenceAsset sequence = sample.Sequence;
-            if (!sequence || sequence.SyncMode != AnimationSyncMode.MarkerGroup ||
-                sequence.SequenceTopology != AnimationMarkerSequenceTopology.Cyclic ||
-                sequence.SyncMarkers.Count < 2)
-            {
-                report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidMarkerTopology, path, "Dynamic marker phase sample requires a Cyclic Marker Group Sequence.");
-                return null;
-            }
-            AnimationSyncTimeMapping requiredMapping =
-                phasePolicy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase
-                    ? AnimationSyncTimeMapping.GeneratedFootPhase
-                    : AnimationSyncTimeMapping.MarkerSegmentFraction;
-            if (sequence.TimeMapping != requiredMapping)
-            {
-                report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidMarkerTopology, path, $"Sequence Time Mapping must be {requiredMapping}.");
-                return null;
-            }
-            var topology = new Dictionary<string, int>(StringComparer.Ordinal);
-            topology[$"group:{sequence.SyncGroupId}"] = 1;
-            topology[$"mapping:{sequence.TimeMapping}"] = 1;
-            int previousFrame = -1;
-            for (int i = 0; i < sequence.SyncMarkers.Count; i++)
-            {
-                AnimationSyncMarker marker = sequence.SyncMarkers[i];
-                if (marker == null || string.IsNullOrWhiteSpace(marker.MarkerId) ||
-                    marker.Frame < 0 || marker.Frame >= sequence.DurationFrame || marker.Frame <= previousFrame)
-                {
-                    report.Add(CharacterAnimationBlendSpaceValidationCode.InvalidMarkerTopology, path, "Marker identity, time, or stable order is invalid.");
-                    return null;
-                }
-                previousFrame = marker.Frame;
-                AnimationSyncMarker next = sequence.SyncMarkers[(i + 1) % sequence.SyncMarkers.Count];
-                if (next == null)
-                    return null;
-                string key = $"{marker.MarkerId}\u001f{next.MarkerId}";
-                topology.TryGetValue(key, out int count);
-                topology[key] = count + 1;
-            }
-            return topology;
-        }
-
-        static bool SameTopology(Dictionary<string, int> left, Dictionary<string, int> right)
-        {
-            if (left.Count != right.Count)
-                return false;
-            foreach (KeyValuePair<string, int> pair in left)
-            {
-                if (!right.TryGetValue(pair.Key, out int count) || count != pair.Value)
-                    return false;
-            }
-            return true;
         }
 
         static void ValidatePolicies(CharacterAnimationBlendSpaceAsset asset, string assetPath, CharacterAnimationBlendSpaceValidationReport report)

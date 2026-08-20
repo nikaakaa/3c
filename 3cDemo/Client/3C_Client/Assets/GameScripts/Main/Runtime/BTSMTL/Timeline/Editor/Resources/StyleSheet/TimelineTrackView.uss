@@ -12,35 +12,6 @@
     background-color: rgba(68, 192, 255, 0.29);
 }
 
-.animationMarkerSyncHeader {
-    position: absolute;
-    left: 0;
-    right: 0;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-.animationMarkerSyncLane {
-    position: absolute;
-    left: 0;
-    right: 0;
-    background-color: rgba(0, 0, 0, 0.28);
-}
-
-.animationMarkerSyncLane--enabled {
-    background-color: rgba(26, 101, 108, 0.22);
-}
-
-.animationMarkerSyncLaneSummary {
-    position: absolute;
-    right: 6px;
-    top: 3px;
-    font-size: 10px;
-    color: rgba(205, 220, 222, 0.72);
-    -unity-text-align: middle-right;
-}
-
 .timelineCurveChannelLane {
     position: absolute;
     left: 0;

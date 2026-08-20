@@ -1,5 +1,4 @@
 using System;
-using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEditor;
 using UnityEngine;
@@ -38,19 +37,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.ObjectField("Resource", m_Binding.SourceAsset, typeof(UnityEngine.Object), false);
                 EditorGUILayout.ObjectField("Rig", m_Binding.Rig, typeof(CharacterAnimationRigDefinition), false);
             }
-            if (m_Binding is CharacterSequencePoseSourceBinding sequence)
+            if (m_Binding is CharacterClipPoseSourceBinding clipBinding)
             {
-                EditorGUILayout.LabelField("Duration", sequence.Clip ? $"{sequence.Clip.length:0.###} s" : "Unavailable");
-                EditorGUILayout.LabelField("Loop", sequence.Loop ? "Yes" : "No");
-                EditorGUILayout.LabelField("Sync Group", string.IsNullOrEmpty(sequence.Sequence.SyncGroupId) ? "None" : sequence.Sequence.SyncGroupId);
-                EditorGUILayout.LabelField("Sync Role", sequence.Sequence.SyncRole.ToString());
-                EditorGUILayout.LabelField("Time Mapping", sequence.Sequence.TimeMapping.ToString());
-                EditorGUILayout.LabelField("Markers", sequence.Sequence.SyncMarkers.Count.ToString());
-                EditorGUILayout.LabelField("Material Curves", sequence.Sequence.CurveChannels.Count.ToString());
+                EditorGUILayout.LabelField("Duration", clipBinding.Clip ? $"{clipBinding.Clip.length:0.###} s" : "Unavailable");
+                EditorGUILayout.LabelField("Loop", clipBinding.Clip && clipBinding.Clip.isLooping ? "Yes" : "No");
             }
             EditorGUILayout.Space(6f);
-            if (GUILayout.Button("Open Sequence", GUILayout.Height(28f)))
-                OpenEditor();
             EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(!m_Binding.SourceAsset))
             {
@@ -63,24 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUIUtility.PingObject(m_Profile);
             }
             EditorGUILayout.EndHorizontal();
-            if (!string.IsNullOrEmpty(m_Error))
-                EditorGUILayout.HelpBox(m_Error, MessageType.Error);
-            EditorGUILayout.HelpBox("素材 Marker、Curve、Notify 与 Analysis 只在主 Timeline Editor 的 Sequence 文档中编辑。", MessageType.Info);
-        }
-
-        void OpenEditor()
-        {
-            try
-            {
-                if (m_Binding is not CharacterSequencePoseSourceBinding sequence || !sequence.Sequence)
-                    throw new InvalidOperationException("Pose Source Binding does not reference a Sequence document.");
-                TimelineEditorWindow.Open(sequence.Sequence);
-                m_Error = string.Empty;
-            }
-            catch (Exception exception)
-            {
-                m_Error = exception.Message;
-            }
+            EditorGUILayout.HelpBox("在Profile或Pose Graph提供精确Definition与场景Preview Target后，用Open Animation Clip进入Unity Animation Window。", MessageType.Info);
         }
     }
 }

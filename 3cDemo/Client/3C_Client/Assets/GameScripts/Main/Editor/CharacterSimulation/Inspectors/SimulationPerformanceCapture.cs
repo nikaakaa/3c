@@ -62,7 +62,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             "ThirdPerson.Presentation.Animation.Prepare.Workspace",
             "ThirdPerson.Presentation.Animation.Prepare.Stack",
             "ThirdPerson.Presentation.Animation.Prepare.Direct",
-            "ThirdPerson.Presentation.Animation.Prepare.Sequence",
+            "ThirdPerson.Presentation.Animation.Prepare.Clip",
             "ThirdPerson.Presentation.Animation.Prepare.BlendSpace",
             "ThirdPerson.Presentation.Animation.Validate",
             "ThirdPerson.Presentation.Animation.GraphEvaluate",

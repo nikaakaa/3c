@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         ConfigureTimelineClipEase,
         ConfigureTimelineCurveChannel,
         ConfigureAnimationTrackChannel,
-        EnsureAnimationSequenceSegment,
+        EnsureAnimationClipSegment,
         DeleteTimelineClip,
         EnsureTreeClipBlackboardWrite,
         DeleteTransition,
@@ -1336,27 +1336,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AnimationChannelId AnimationChannelId { get; }
     }
 
-    public sealed class AgentEnsureAnimationSequenceSegmentMutation : AgentTimelineClipMutation
+    public sealed class AgentEnsureAnimationClipSegmentMutation : AgentTimelineClipMutation
     {
-        public AgentEnsureAnimationSequenceSegmentMutation(
+        public AgentEnsureAnimationClipSegmentMutation(
             string id,
             string path,
             AgentTimelineTargetReference target,
-            AgentPackageAssetReferenceV3 sequence,
+            AgentPackageAssetReferenceV4 clip,
             int startFrame,
             int endFrame,
             int clipInFrame,
             ExtraPolationMode extraPolationMode)
-            : base(id, AgentMutationKind.EnsureAnimationSequenceSegment, "ensure_animation_sequence_segment", AgentMutationOutputKind.TimelineClip, path, target)
+            : base(id, AgentMutationKind.EnsureAnimationClipSegment, "ensure_animation_clip_segment", AgentMutationOutputKind.TimelineClip, path, target)
         {
-            Sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
+            Clip = clip ?? throw new ArgumentNullException(nameof(clip));
             StartFrame = startFrame;
             EndFrame = endFrame;
             ClipInFrame = clipInFrame;
             ExtraPolationMode = extraPolationMode;
         }
 
-        public AgentPackageAssetReferenceV3 Sequence { get; }
+        public AgentPackageAssetReferenceV4 Clip { get; }
         public int StartFrame { get; }
         public int EndFrame { get; }
         public int ClipInFrame { get; }

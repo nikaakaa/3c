@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ProviderId.IsValid &&
             SourceIndex.IsValid &&
             PlayerNodeId.IsValid &&
-            (SourceKind == AnimationPoseSourceKind.Sequence ||
+            (SourceKind == AnimationPoseSourceKind.Clip ||
              SourceKind == AnimationPoseSourceKind.BlendSpace ||
              SourceKind == AnimationPoseSourceKind.MotionMatching);
     }
@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (source == null ||
                     !authoredSources.TryAdd(
                         source.SourceIndex,
-                        AnimationPoseSourceKind.Sequence))
+                        AnimationPoseSourceKind.Clip))
                 {
                     throw new InvalidOperationException(
                         $"Presentation Pose source #{i} is invalid or duplicated.");

@@ -164,7 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.ConfigureTimelineClipEase] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineClipEase, AgentMutationOutputKind.None, LowerConfigureTimelineClipEase),
                 [AgentMutationKind.ConfigureTimelineCurveChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineCurveChannel, AgentMutationOutputKind.None, LowerConfigureTimelineCurveChannel),
                 [AgentMutationKind.ConfigureAnimationTrackChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAnimationTrackChannel, AgentMutationOutputKind.None, LowerConfigureAnimationTrackChannel),
-                [AgentMutationKind.EnsureAnimationSequenceSegment] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAnimationSequenceSegment, AgentMutationOutputKind.TimelineClip, LowerEnsureAnimationSequenceSegment),
+                [AgentMutationKind.EnsureAnimationClipSegment] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAnimationClipSegment, AgentMutationOutputKind.TimelineClip, LowerEnsureAnimationClipSegment),
                 [AgentMutationKind.DeleteTimelineClip] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineClip, AgentMutationOutputKind.None, LowerDeleteTimelineClip),
                 [AgentMutationKind.EnsureTreeClipBlackboardWrite] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTreeClipBlackboardWrite, AgentMutationOutputKind.None, LowerEnsureTreeClipBlackboardWrite),
                 [AgentMutationKind.DeleteTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTransition, AgentMutationOutputKind.None, LowerDeleteTransition),
@@ -1032,34 +1032,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : null;
         }
 
-        static AgentMutation LowerEnsureAnimationSequenceSegment(
+        static AgentMutation LowerEnsureAnimationClipSegment(
             AgentMutationPlanningContext context,
             AgentMutationDraft operation)
         {
-            ReadTimelineReference(context, operation, "ensure_animation_sequence_segment", out string timeline, out AgentPlannedIdentityReference timelineOutput);
+            ReadTimelineReference(context, operation, "ensure_animation_clip_segment", out string timeline, out AgentPlannedIdentityReference timelineOutput);
             string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
             string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
             AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
             if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
-                context.Error("clip", "animation_sequence_segment_reference_invalid", "Sequence Segment必须且只能提供clipAuthoringId或clipPlannedIdentity。");
-            AgentPackageAssetReferenceV3 sequence = operation.animationSequence;
-            bool localSequence = !string.IsNullOrWhiteSpace(sequence?.localId);
-            bool externalSequence = sequence != null &&
-                                    !string.IsNullOrWhiteSpace(sequence.assetPath) &&
-                                    !string.IsNullOrWhiteSpace(sequence.assetGuid) &&
-                                    sequence.localFileId != 0;
-            if (localSequence == externalSequence)
-                context.Error("animationSequence", "animation_sequence_reference_invalid", "Sequence Segment必须提供唯一local或外部Sequence引用。");
+                context.Error("clip", "animation_clip_segment_reference_invalid", "AnimationClip Segment必须且只能提供clipAuthoringId或clipPlannedIdentity。");
+            AgentPackageAssetReferenceV4 clipReference = operation.animationClip;
+            bool externalClip = clipReference != null &&
+                                string.IsNullOrWhiteSpace(clipReference.localId) &&
+                                !string.IsNullOrWhiteSpace(clipReference.assetPath) &&
+                                !string.IsNullOrWhiteSpace(clipReference.assetGuid) &&
+                                clipReference.localFileId != 0;
+            if (!externalClip)
+                context.Error("animationClip", "animation_clip_reference_invalid", "AnimationClip Segment必须提供现有原生Clip的结构化引用。");
             if (operation.startFrame < 0 || operation.endFrame <= operation.startFrame || operation.clipInFrame < 0)
-                context.Error("frames", "animation_sequence_segment_frames_invalid", "Sequence Segment必须满足0 <= Start < End且ClipIn >= 0。");
+                context.Error("frames", "animation_clip_segment_frames_invalid", "AnimationClip Segment必须满足0 <= Start < End且ClipIn >= 0。");
             if (!Enum.TryParse(operation.extraPolationMode, false, out ExtraPolationMode extraPolationMode))
-                context.Error("extraPolationMode", "animation_sequence_segment_extrapolation_invalid", $"Sequence Segment Extrapolation无效：{operation.extraPolationMode}");
+                context.Error("extraPolationMode", "animation_clip_segment_extrapolation_invalid", $"AnimationClip Segment Extrapolation无效：{operation.extraPolationMode}");
             return context.IsValid
-                ? new AgentEnsureAnimationSequenceSegmentMutation(
+                ? new AgentEnsureAnimationClipSegmentMutation(
                     operation.id,
                     context.Path,
                     new AgentTimelineTargetReference(timeline, timelineOutput, track, default, clip, clipOutput),
-                    sequence,
+                    clipReference,
                     operation.startFrame,
                     operation.endFrame,
                     operation.clipInFrame,

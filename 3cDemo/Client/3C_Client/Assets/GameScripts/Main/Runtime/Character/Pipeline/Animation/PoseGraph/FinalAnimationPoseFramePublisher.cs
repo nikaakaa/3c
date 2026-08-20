@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using Unity.Collections.LowLevel.Unsafe;
 
@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (operation.Code != CharacterPoseOperationCode.SelectedPosePlayer &&
                     operation.Code != CharacterPoseOperationCode.BlendStack &&
                     operation.Code != CharacterPoseOperationCode.BlendSpacePlayer &&
-                    operation.Code != CharacterPoseOperationCode.SequencePlayer &&
+                    operation.Code != CharacterPoseOperationCode.ClipPlayer &&
                     operation.Code != CharacterPoseOperationCode.AnimationSlot)
                     continue;
                 if (operation.PlayerIndex < 0 || operation.PlayerIndex >= m_PoseNodeIds.Length ||

@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Timeline = 1,
         MotionMatching = 2,
         BlendSpace = 3,
-        Sequence = 4
+        Clip = 4
     }
 
     public readonly struct AnimationPoseSourceId : IEquatable<AnimationPoseSourceId>
@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPoseSelectionGeneration selectionGeneration)
         {
             if (!presentationPoseSourceIndex.IsValid ||
-                sourceKind != AnimationPoseSourceKind.Sequence &&
+                sourceKind != AnimationPoseSourceKind.Clip &&
                 sourceKind != AnimationPoseSourceKind.BlendSpace &&
                 sourceKind != AnimationPoseSourceKind.MotionMatching ||
                 !selectionGeneration.IsValid)
@@ -76,9 +76,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationPoseSelectionGeneration SelectionGeneration { get; }
         public ulong SourceActionInstanceId { get; }
         public bool IsValid => (byte)SourceKind >= (byte)AnimationPoseSourceKind.Timeline &&
-                               (byte)SourceKind <= (byte)AnimationPoseSourceKind.Sequence &&
+                               (byte)SourceKind <= (byte)AnimationPoseSourceKind.Clip &&
                                SelectionGeneration.IsValid &&
-                               (SourceKind == AnimationPoseSourceKind.Sequence ||
+                               (SourceKind == AnimationPoseSourceKind.Clip ||
                                 SourceKind == AnimationPoseSourceKind.BlendSpace ||
                                 SourceKind == AnimationPoseSourceKind.MotionMatching
                                     ? PresentationPoseSourceIndex.IsValid && !PlaybackId.IsValid
@@ -108,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public override string ToString() =>
-            SourceKind == AnimationPoseSourceKind.Sequence ||
+            SourceKind == AnimationPoseSourceKind.Clip ||
             SourceKind == AnimationPoseSourceKind.BlendSpace ||
             SourceKind == AnimationPoseSourceKind.MotionMatching
             ? $"{PresentationPoseSourceIndex}/{SourceKind}/{SelectionGeneration}"
@@ -184,25 +184,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override bool Equals(object obj) => obj is PresentationParameterPageId other && Equals(other);
         public override int GetHashCode() => Value.GetHashCode();
         public override string ToString() => Value.ToString();
-    }
-
-    public readonly struct AnimationMarkerBindingId : IEquatable<AnimationMarkerBindingId>
-    {
-        public AnimationMarkerBindingId(string value)
-        {
-            Value = string.IsNullOrWhiteSpace(value)
-                ? throw new ArgumentException("Animation Marker Binding identity is empty.", nameof(value))
-                : value.Trim();
-        }
-
-        public string Value { get; }
-        public bool IsValid => !string.IsNullOrWhiteSpace(Value);
-        public bool Equals(AnimationMarkerBindingId other) => string.Equals(Value, other.Value, StringComparison.Ordinal);
-        public override bool Equals(object obj) => obj is AnimationMarkerBindingId other && Equals(other);
-        public override int GetHashCode() => Value?.GetHashCode() ?? 0;
-        public override string ToString() => Value ?? string.Empty;
-        public static bool operator ==(AnimationMarkerBindingId left, AnimationMarkerBindingId right) => left.Equals(right);
-        public static bool operator !=(AnimationMarkerBindingId left, AnimationMarkerBindingId right) => !left.Equals(right);
     }
 
     public enum PoseDiscontinuityReason : byte
@@ -352,7 +333,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong sourcePoseContinuityIdentity,
             ulong presentationRequestSequence,
             int sourceOwnerIndex,
-            AnimationMarkerBindingId markerBindingId,
             float visualSampleTime,
             double continuousVisualTime,
             int cycle,
@@ -367,7 +347,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SourcePoseContinuityIdentity = sourcePoseContinuityIdentity;
             PresentationRequestSequence = presentationRequestSequence;
             SourceOwnerIndex = sourceOwnerIndex;
-            MarkerBindingId = markerBindingId;
             VisualSampleTime = visualSampleTime;
             ContinuousVisualTime = continuousVisualTime;
             Cycle = cycle;
@@ -385,7 +364,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong SourcePoseContinuityIdentity { get; }
         internal ulong PresentationRequestSequence { get; }
         internal int SourceOwnerIndex { get; }
-        internal AnimationMarkerBindingId MarkerBindingId { get; }
         internal float VisualSampleTime { get; }
         internal double ContinuousVisualTime { get; }
         internal int Cycle { get; }
@@ -402,7 +380,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (!SourceId.IsValid ||
                     SourcePoseContinuityIdentity == 0 || PresentationRequestSequence == 0 || SourceOwnerIndex < 0 ||
-                    (SourceId.SourceKind == AnimationPoseSourceKind.Timeline) != MarkerBindingId.IsValid ||
                     !float.IsFinite(VisualSampleTime) || VisualSampleTime < 0f ||
                     double.IsNaN(ContinuousVisualTime) || double.IsInfinity(ContinuousVisualTime) || ContinuousVisualTime < 0d ||
                     Cycle < 0 || !float.IsFinite(VisualTimeScale) || VisualTimeScale < 0f ||

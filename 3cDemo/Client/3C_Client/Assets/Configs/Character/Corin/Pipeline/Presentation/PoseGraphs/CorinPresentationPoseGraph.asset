@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-8411527234393366902
+--- !u!114 &-7913529561183372159
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -9,32 +9,32 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Idle
+  m_EditorClassIdentifier: 
+--- !u!114 &-4893639115726007882
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Walk Start
+  m_EditorClassIdentifier: 
+--- !u!114 &-3925997148202382411
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Moving Turn
-  m_EditorClassIdentifier: 
---- !u!114 &-6787058357175954472
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
-  m_Name: Walk Loop
-  m_EditorClassIdentifier: 
---- !u!114 &-1663756737420138858
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
-  m_Name: Run Loop
   m_EditorClassIdentifier: 
 --- !u!114 &11400000
 MonoBehaviour:
@@ -50,7 +50,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_TypedGraph:
     m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
-    m_ContentRevision: f738d327412348d8b9e07bfeeb8abc73
+    m_ContentRevision: e8b5b1341e514a17acd33b697be8e03e
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -65,11 +65,6 @@ MonoBehaviour:
       m_DisplayName: Locomotion Pose State Machine
       m_Payload:
         rid: 665191900899704832
-      m_DynamicPorts: []
-    - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
-      m_DisplayName: Locomotion Inertialization
-      m_Payload:
-        rid: 665191900899704833
       m_DynamicPorts: []
     - m_NodeId: corin.full-body-action.playback-input
       m_DisplayName: Full Body Action Playback
@@ -124,16 +119,6 @@ MonoBehaviour:
         m_Order: 0
         m_InterfacePortId: 
     m_Edges:
-    - m_EdgeId: corin.locomotion.pose-state-machine-inertialization
-      m_SourceNodeId: corin.locomotion.pose-state-machine
-      m_SourcePortId: pose
-      m_TargetNodeId: 09e41ce9fa3f4440b10013916e72b185
-      m_TargetPortId: pose
-    - m_EdgeId: corin.locomotion.inertialization-full-body-action-slot
-      m_SourceNodeId: 09e41ce9fa3f4440b10013916e72b185
-      m_SourcePortId: result
-      m_TargetNodeId: corin.full-body-action.slot
-      m_TargetPortId: source-pose
     - m_EdgeId: corin.full-body-action.playback-input-slot
       m_SourceNodeId: corin.full-body-action.playback-input
       m_SourcePortId: action-playback
@@ -184,6 +169,11 @@ MonoBehaviour:
       m_SourcePortId: component-pose
       m_TargetNodeId: cc0cb7f36cb9426d88f6ae03f255a013
       m_TargetPortId: pose
+    - m_EdgeId: corin.locomotion.pose-state-machine-full-body-action-slot
+      m_SourceNodeId: corin.locomotion.pose-state-machine
+      m_SourcePortId: pose
+      m_TargetNodeId: corin.full-body-action.slot
+      m_TargetPortId: source-pose
     m_Layout:
     - m_NodeId: corin.full-body-action.playback-input
       m_Position: {x: -483.3333, y: 115.99999}
@@ -205,11 +195,9 @@ MonoBehaviour:
       m_Position: {x: 236.66666, y: 562}
     - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
       m_Position: {x: 692, y: 416}
-    - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
-      m_Position: {x: -190, y: -141.33334}
   m_TypedGraphCatalog:
   - m_GraphId: corin.locomotion.idle.graph
-    m_ContentRevision: dae5e9365ba74cd78bb57ce7533b1cbe
+    m_ContentRevision: de638fc3d48e490285a15d8fd7e61513
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -223,7 +211,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.idle.sequence
       m_DisplayName: Idle Sequence
       m_Payload:
-        rid: 665192033737244840
+        rid: 3396202774835757062
       m_DynamicPorts: []
     - m_NodeId: corin.locomotion.idle.output
       m_DisplayName: Output Pose
@@ -242,7 +230,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.idle.sequence
       m_Position: {x: -220.66667, y: 0}
   - m_GraphId: corin.locomotion.start.graph
-    m_ContentRevision: 8d5fbe7ff38341c88fa5f7462a3a019d
+    m_ContentRevision: 4b4358b357f54e7e80136bc509a4a658
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -256,7 +244,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.start.sequence
       m_DisplayName: Run Start Sequence
       m_Payload:
-        rid: 665192033737244841
+        rid: 3396202774835757063
       m_DynamicPorts: []
     - m_NodeId: corin.locomotion.start.output
       m_DisplayName: Output Pose
@@ -275,7 +263,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.start.output
       m_Position: {x: 220, y: 0}
   - m_GraphId: corin.locomotion.locomotion.graph
-    m_ContentRevision: e785b9dfa8ef4d95bd02b1cab923b7cc
+    m_ContentRevision: 3f5cf958d86c4e10a29329f795dea3fb
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -289,7 +277,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.locomotion.sequence
       m_DisplayName: Run Loop Sequence
       m_Payload:
-        rid: 3396202550353985538
+        rid: 3396202774835757064
       m_DynamicPorts: []
     - m_NodeId: corin.locomotion.locomotion.output
       m_DisplayName: Output Pose
@@ -308,7 +296,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.locomotion.output
       m_Position: {x: 220, y: 0}
   - m_GraphId: corin.locomotion.stop.graph
-    m_ContentRevision: 9d190b3397004ad0b74709b3743cc86e
+    m_ContentRevision: a35f5646be204862811a9151b1483fd9
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -322,7 +310,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.stop.sequence
       m_DisplayName: Run End Sequence
       m_Payload:
-        rid: 665192033737244843
+        rid: 3396202774835757065
       m_DynamicPorts: []
     - m_NodeId: corin.locomotion.stop.output
       m_DisplayName: Output Pose
@@ -341,7 +329,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.stop.output
       m_Position: {x: 220, y: 0}
   - m_GraphId: corin.locomotion.turn.graph
-    m_ContentRevision: 03f247529c1f49488e56fe0cf45d342b
+    m_ContentRevision: 3aed7de9a20f429d8366553a1274dd06
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -355,7 +343,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.turn.sequence
       m_DisplayName: Moving Turn Sequence
       m_Payload:
-        rid: 665192033737244844
+        rid: 3396202774835757066
       m_DynamicPorts: []
     - m_NodeId: corin.locomotion.turn.output
       m_DisplayName: Output Pose
@@ -374,7 +362,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.turn.sequence
       m_Position: {x: -300, y: 0}
   - m_GraphId: 239fb85af79509b36208db12ad91354f
-    m_ContentRevision: c1a8ad6f36bb482aab1b46579be126c1
+    m_ContentRevision: a9b75d2f628b4032b03035db896f93a2
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -393,7 +381,7 @@ MonoBehaviour:
     - m_NodeId: a60a24c736273ce8e07e2aaf8b3403f8
       m_DisplayName: Walk Start Sequence
       m_Payload:
-        rid: 665192033737244845
+        rid: 3396202774835757067
       m_DynamicPorts: []
     m_Edges:
     - m_EdgeId: 6363a088affe9653b8ee0d8a5576f4a0
@@ -407,7 +395,7 @@ MonoBehaviour:
     - m_NodeId: a60a24c736273ce8e07e2aaf8b3403f8
       m_Position: {x: -220, y: 0}
   - m_GraphId: 658ab38fd39b80592ae222925f31e25c
-    m_ContentRevision: 6b207176edd64b4392743aac0bc6025f
+    m_ContentRevision: ba33de827fa44015928393c4fffbbf4e
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -426,7 +414,7 @@ MonoBehaviour:
     - m_NodeId: cff873cb4c0040670d27858670fcfb31
       m_DisplayName: Walk Loop Sequence
       m_Payload:
-        rid: 3396202550353985539
+        rid: 3396202774835757068
       m_DynamicPorts: []
     m_Edges:
     - m_EdgeId: 4b9956bcabbd5e950a33d7b48cac1bca
@@ -455,13 +443,13 @@ MonoBehaviour:
     - m_ElementId: corin.locomotion.turn
       m_Position: {x: 381.3333, y: 509.99997}
   m_SourceSlots:
-  - {fileID: 3450945198615820384}
-  - {fileID: -8411527234393366902}
-  - {fileID: 6877363416557948613}
-  - {fileID: -1663756737420138858}
-  - {fileID: 1041388167119753750}
-  - {fileID: -6787058357175954472}
-  - {fileID: 5181372091040810034}
+  - {fileID: -3925997148202382411}
+  - {fileID: 7095868976490676571}
+  - {fileID: 8131560739780795392}
+  - {fileID: 6895642438991261946}
+  - {fileID: -7913529561183372159}
+  - {fileID: -4893639115726007882}
+  - {fileID: 4798961889804782150}
   references:
     version: 2
     RefIds:
@@ -471,7 +459,7 @@ MonoBehaviour:
       data:
         m_StateMachine:
           m_StateMachineId: corin.locomotion
-          m_ContentRevision: 329c9dda3dec4db9a44b84b997fc2abd
+          m_ContentRevision: 0ddcbc82c56b4ec2b010cbdf6883552e
           m_Entry:
             m_EntryId: corin.locomotion.entry
             m_TargetStateId: corin.locomotion.idle
@@ -554,7 +542,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -632,7 +620,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/54223f0b-f2e9-5178-ab79-bc4269701214
               m_OutputOperationId: matches-run-start-or-loop-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -720,7 +708,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
               m_OutputOperationId: ready-to-transition
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -768,7 +756,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.12
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -904,7 +892,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
               m_OutputOperationId: ready-to-transition
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1030,7 +1018,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/84c12f85-34ab-5f09-8b1f-c73166c3deb9
               m_OutputOperationId: matches-stop-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1078,7 +1066,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.1
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1126,7 +1114,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1204,7 +1192,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/01fa46e2-ef80-5ac4-9acb-d874fd5b5f6b
               m_OutputOperationId: matches-walk-start-or-loop-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1252,7 +1240,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1300,7 +1288,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1348,7 +1336,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.1
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1396,7 +1384,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1444,7 +1432,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1580,7 +1568,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: ready-to-transition
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1628,7 +1616,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1676,7 +1664,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.12
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1724,7 +1712,7 @@ MonoBehaviour:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
               m_OutputOperationId: matches-target-mode
-            m_BlendLogic: 2
+            m_BlendLogic: 1
             m_DurationSeconds: 0.12
             m_BlendMode: 1
             m_CustomBlendCurve: {fileID: 0}
@@ -1732,11 +1720,6 @@ MonoBehaviour:
               type: 2}
           m_Aliases: []
           m_MaxTransitionsPerFrame: 1
-    - rid: 665191900899704833
-      type: {class: CharacterInertializationPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_Policy: {fileID: 11400000, guid: 554032a3480e2ae489c2331dace715b3, type: 2}
     - rid: 665191900899704834
       type: {class: CharacterActionPlaybackInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
@@ -1804,83 +1787,76 @@ MonoBehaviour:
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data: 
-    - rid: 665192033737244840
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_SourceSlot: {fileID: 3450945198615820384}
-        m_Loop: 1
-        m_PlayRate: 1
-        m_InitialTime: 0
-        m_ClockSource: 0
-    - rid: 665192033737244841
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_SourceSlot: {fileID: 1041388167119753750}
-        m_Loop: 0
-        m_PlayRate: 1
-        m_InitialTime: 0
-        m_ClockSource: 1
-    - rid: 665192033737244843
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_SourceSlot: {fileID: 6877363416557948613}
-        m_Loop: 0
-        m_PlayRate: 1
-        m_InitialTime: 0
-        m_ClockSource: 1
-    - rid: 665192033737244844
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_SourceSlot: {fileID: -8411527234393366902}
-        m_Loop: 0
-        m_PlayRate: 1
-        m_InitialTime: 0
-        m_ClockSource: 1
-    - rid: 665192033737244845
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_SourceSlot: {fileID: 5181372091040810034}
-        m_Loop: 0
-        m_PlayRate: 1
-        m_InitialTime: 0
-        m_ClockSource: 1
     - rid: 665192033737244900
       type: {class: CharacterLocalToComponentPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data: 
+      data:
     - rid: 665192033737244901
       type: {class: CharacterComponentToLocalPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data: 
+      data:
     - rid: 3396202377909895169
       type: {class: CharacterFullBodyIkPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
         m_Profile: {fileID: 11400000, guid: d8baaf75d0994cf6aa8ed54c35542ea0, type: 2}
-    - rid: 3396202550353985538
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+    - rid: 3396202774835757062
+      type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
-        m_SourceSlot: {fileID: -1663756737420138858}
-        m_Loop: 1
+        m_SourceSlot: {fileID: -7913529561183372159}
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 0
+    - rid: 3396202774835757063
+      type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: 6895642438991261946}
         m_PlayRate: 1
         m_InitialTime: 0
         m_ClockSource: 1
-    - rid: 3396202550353985539
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+    - rid: 3396202774835757064
+      type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
-        m_SourceSlot: {fileID: -6787058357175954472}
-        m_Loop: 1
+        m_SourceSlot: {fileID: 8131560739780795392}
         m_PlayRate: 1
         m_InitialTime: 0
         m_ClockSource: 1
---- !u!114 &1041388167119753750
+    - rid: 3396202774835757065
+      type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: 4798961889804782150}
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 1
+    - rid: 3396202774835757066
+      type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: -3925997148202382411}
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 1
+    - rid: 3396202774835757067
+      type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: -4893639115726007882}
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 1
+    - rid: 3396202774835757068
+      type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: 7095868976490676571}
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 1
+--- !u!114 &4798961889804782150
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1889,10 +1865,22 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Run End
+  m_EditorClassIdentifier: 
+--- !u!114 &6895642438991261946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Run Start
   m_EditorClassIdentifier: 
---- !u!114 &3450945198615820384
+--- !u!114 &7095868976490676571
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1901,10 +1889,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
-  m_Name: Idle
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Walk Loop
   m_EditorClassIdentifier: 
---- !u!114 &5181372091040810034
+--- !u!114 &8131560739780795392
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1913,18 +1901,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
-  m_Name: Walk Start
-  m_EditorClassIdentifier: 
---- !u!114 &6877363416557948613
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
-  m_Name: Run End
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Run Loop
   m_EditorClassIdentifier: 

@@ -349,7 +349,7 @@ namespace BTSMTL.Diagnostics
         AnimationPlaybackSelected,
         AnimationPlaybackRetained,
         AnimationPlaybackRetired,
-        AnimationMarkerSync,
+        AnimationPhaseSync,
         MotionMatchingQuery,
         MotionMatchingTrajectory,
         MotionMatchingPoseHistory,

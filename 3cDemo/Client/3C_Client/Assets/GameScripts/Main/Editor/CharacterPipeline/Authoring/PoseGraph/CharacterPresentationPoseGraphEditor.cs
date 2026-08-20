@@ -683,8 +683,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     $"Pose Source Slot '{slot.name}' has no valid Binding in Profile '{m_Profile.name}'.");
 
-            if (openSource && binding is CharacterSequencePoseSourceBinding sequence && sequence.Sequence)
-                TimelineEditorWindow.Open(sequence.Sequence);
+            if (openSource && binding is CharacterClipPoseSourceBinding clipBinding && clipBinding.Clip)
+                CharacterAnimationClipAuthoringService.Open(new CharacterAnimationClipOpenRequest(
+                    m_Definition,
+                    m_Profile,
+                    clipBinding.Clip,
+                    m_PreviewPanel?.PreviewTarget));
             else if (openSource && binding is CharacterBlendSpacePoseSourceBinding blendSpace && blendSpace.BlendSpace)
                 CharacterAnimationBlendSpaceEditorWindow.Open(blendSpace.BlendSpace);
             else

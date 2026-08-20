@@ -188,7 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!ProviderId.IsValid ||
                     !PlayerNodeId.IsValid ||
                     !SourceIndex.IsValid ||
-                    SourceKind != AnimationPoseSourceKind.Sequence &&
+                    SourceKind != AnimationPoseSourceKind.Clip &&
                     SourceKind != AnimationPoseSourceKind.BlendSpace &&
                     SourceKind != AnimationPoseSourceKind.MotionMatching ||
                     !SourceGeneration.IsValid ||

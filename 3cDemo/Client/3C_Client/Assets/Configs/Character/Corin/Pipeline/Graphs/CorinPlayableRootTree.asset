@@ -3215,7 +3215,7 @@ MonoBehaviour:
           m_InputEdgeGUID: 
           m_OutputEdgeGUIDs: []
           m_Value: 0
-        m_OutputEdgeGUID: 
+        m_OutputEdgeGUID: 6d59e744-bb97-529d-b6cb-8e75f6bb164b
     - rid: 665191419356100163
       type: {class: LoopNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3225,8 +3225,8 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 260, y: 0}
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUID: 
+        m_InputEdgeGUID: 6d59e744-bb97-529d-b6cb-8e75f6bb164b
+        m_OutputEdgeGUID: 50bc9d9c-09df-5b18-98bd-c6901931b89c
         m_StopType: 0
     - rid: 665191419356100164
       type: {class: ParallelNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -3237,8 +3237,10 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 559.3333, y: 0}
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUIDs: []
+        m_InputEdgeGUID: 50bc9d9c-09df-5b18-98bd-c6901931b89c
+        m_OutputEdgeGUIDs:
+        - a4615273-cd1c-5322-8ccb-eedfe05ee9bd
+        - eece0465-79f5-5dbe-bc59-7eb53c6691b7
         m_ParallelType: 1
     - rid: 665191419356100167
       type: {class: StateMachineNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -3250,7 +3252,7 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 860, y: -29.333336}
-        m_InputEdgeGUID: 
+        m_InputEdgeGUID: a4615273-cd1c-5322-8ccb-eedfe05ee9bd
     - rid: 665191419356100168
       type: {class: StateMachineNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3261,7 +3263,7 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 876, y: 107.99999}
-        m_InputEdgeGUID: 
+        m_InputEdgeGUID: eece0465-79f5-5dbe-bc59-7eb53c6691b7
     - rid: 665191419356100193
       type: {class: FloatExposedProperty, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -5821,6 +5823,7 @@ MonoBehaviour:
         - rid: 665191601650270963
         - rid: 665191601650270964
         - rid: 665191803296678376
+        m_Sections: []
         m_Scale: 0.075977154
     - rid: 665191601650270947
       type: {class: TimelineData, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -5831,6 +5834,7 @@ MonoBehaviour:
         - rid: 665191601650270965
         - rid: 665191601650270966
         - rid: 665191601650270967
+        m_Sections: []
         m_Scale: 1
     - rid: 665191601650270948
       type: {class: TimelineData, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -5841,6 +5845,7 @@ MonoBehaviour:
         - rid: 665191601650270968
         - rid: 665191601650270969
         - rid: 665191601650270970
+        m_Sections: []
         m_Scale: 0.078047976
     - rid: 665191601650270961
       type: {class: AnimationTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -5944,7 +5949,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: 586c5f445307ebc459a07268831d5f25, type: 2}
+        Clip: {fileID: 7400000, guid: 4ef82b85767cffe4883132371252902e, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -7963,7 +7968,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: 1393834b968743d44afda26da8754186, type: 2}
+        Clip: {fileID: 7400000, guid: edd7c59a8dbf622489dcbd2692cd2ecd, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -13304,7 +13309,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: 7dc151b3b92f47b46860257c9fb25cac, type: 2}
+        Clip: {fileID: 7400000, guid: 6f9dc7e23ba63244e95d8f8d7142c5a2, type: 2}
         ExtraPolationMode: 1
         WeightCurve:
           serializedVersion: 2
@@ -20773,6 +20778,7 @@ MonoBehaviour:
         - rid: 665191753987391596
         - rid: 665191753987391597
         - rid: 665191803296678377
+        m_Sections: []
         m_Scale: 0.075977154
     - rid: 665191753987391592
       type: {class: TimelineData, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -20785,6 +20791,7 @@ MonoBehaviour:
         - rid: 665191753987391600
         - rid: 665191753987391601
         - rid: 665191803296678378
+        m_Sections: []
         m_Scale: 0.075977154
     - rid: 665191753987391593
       type: {class: TimelineData, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -20797,6 +20804,7 @@ MonoBehaviour:
         - rid: 665191753987391604
         - rid: 665191753987391605
         - rid: 665191803296678379
+        m_Sections: []
         m_Scale: 0.075977154
     - rid: 665191753987391594
       type: {class: AnimationTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -20925,7 +20933,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: f350f9e8bd7d132489983cf861d364a0, type: 2}
+        Clip: {fileID: 7400000, guid: 928dc4fc54458fe488f6ee2bd52054a7, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -24132,7 +24140,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: cbf549475d3d53049969e379be751c51, type: 2}
+        Clip: {fileID: 7400000, guid: c0186e9f72ed34e4dae58f9f7de9ffa0, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -27627,7 +27635,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: c9d84cf8f76c31340a657e94de7afb05, type: 2}
+        Clip: {fileID: 7400000, guid: cacfffd6d16755a40bd024ab1cfd8438, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -33921,7 +33929,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: 0b90b15ff3f0a33438ea233f36685e8c, type: 2}
+        Clip: {fileID: 7400000, guid: 69b4dda2a99b8c441833d55ec2229928, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -38656,7 +38664,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: f896916a727f0d44ebc8f436542faf30, type: 2}
+        Clip: {fileID: 7400000, guid: fe89c3755a34cf64ca6ec99408ab55d6, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -43391,7 +43399,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: c72e274b473106848af2282ab4ba0077, type: 2}
+        Clip: {fileID: 7400000, guid: 67587c79547407b4a9fb97cadcf2b6e6, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -50574,7 +50582,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Sequence: {fileID: 11400000, guid: eda84cad9f6c91b49b4386bf059a7100, type: 2}
+        Clip: {fileID: 7400000, guid: 4cfdcca827720544e9b01db0507ad2bf, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -78614,6 +78622,7 @@ MonoBehaviour:
         m_Name: CorinMovingTurnRootMotionTimeline
         m_Tracks:
         - rid: 665192033737245008
+        m_Sections: []
         m_Scale: 1
     - rid: 665192033737245008
       type: {class: MotionCurveTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}

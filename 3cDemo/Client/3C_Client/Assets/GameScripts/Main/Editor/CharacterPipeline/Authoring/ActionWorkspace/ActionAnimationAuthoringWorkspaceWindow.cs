@@ -814,7 +814,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AddBottomText(
                 $"Action Logic Time: tick {previous.LocalLogicTick}, time {previous.VisualTime:0.000}, cycle {previous.Cycle}");
             AddBottomText(
-                $"Presentation Time: {time.ProjectedRawSample.ContinuousTime:0.000} / {time.ProjectionKind} / marker {time.MarkerEffectiveSample.ContinuousTime:0.000}");
+                $"Presentation Time: {time.ProjectedRawSample.ContinuousTime:0.000} / {time.ProjectionKind}");
             AddBottomText(
                 $"AnimationSlot: {m_PreviewView.Slot.SlotId} / {m_PreviewView.Slot.ActionAvailability} / weight {m_PreviewView.Slot.ActionOutputWeight:0.###} / {m_PreviewView.Slot.TransitionExecution}");
             AddBottomText(
@@ -897,7 +897,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AddBottomText(
                 $"Projected Presentation Time: {time.ProjectedRawSample.ContinuousTime:0.000} / {time.ProjectionKind} / frame {time.PresentationFrame}");
             AddBottomText(
-                $"Marker Effective Time: {time.MarkerEffectiveSample.ContinuousTime:0.000} / {time.PreviousMarkerId}->{time.NextMarkerId} / fraction {time.MarkerSegmentFraction:0.###} / mapped {time.MarkerMapped} / rebased {time.MarkerRebased}");
+                $"Projected Raw Time: {time.ProjectedRawSample.ContinuousTime:0.000}");
             AddBottomText(
                 $"AnimationSlot: {m_LiveView.Slot.SlotId} / action {m_LiveView.Slot.SourceActionInstanceId} / {m_LiveView.Slot.ActionAvailability} / weight {m_LiveView.Slot.ActionOutputWeight:0.###} / {m_LiveView.Slot.TransitionExecution}");
             AddBottomText(

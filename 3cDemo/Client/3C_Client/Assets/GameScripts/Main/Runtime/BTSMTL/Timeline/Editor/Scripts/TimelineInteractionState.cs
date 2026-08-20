@@ -94,8 +94,6 @@ namespace BTSMTL.Timeline.Editor
                         return trackView.Track;
                     if (selection is TimelineSectionView sectionView)
                         return sectionView.Section;
-                    if (selection is AnimationTimePointView pointView)
-                        return pointView.Selection;
                     return null;
                 })
                 .Where(target => target != null)
@@ -121,8 +119,6 @@ namespace BTSMTL.Timeline.Editor
                 m_Host.PresentSelection(clipView.Clip);
             else if (selectable is TimelineSectionView sectionView)
                 m_Host.PresentSelection(sectionView.Section);
-            else if (selectable is AnimationTimePointView pointView)
-                m_Host.PresentSelection(pointView.Selection);
         }
 
         public void RemoveFromSelection(ISelectable selectable)

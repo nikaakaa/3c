@@ -20,6 +20,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
             AnimationBlendNodePayload[] blendNodes,
             CharacterPresentationPoseSourcePlan[] poseSources,
+            AnimationClipPhasePlan[] clipPhasePlans,
+            AnimationSourcePhasePlan[] sourcePhasePlans,
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
@@ -33,6 +35,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 reachableAnimationChannels,
                 blendNodes,
                 poseSources,
+                clipPhasePlans,
+                sourcePhasePlans,
                 sourceIndices,
                 curveIndices,
                 profileIndicesByIdentity,
@@ -93,6 +97,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Dictionary<PoseParameterId, int> parameterIndices,
                 AnimationBlendNodePayload[] blendNodes,
                 CharacterPresentationPoseSourcePlan[] poseSources,
+                AnimationClipPhasePlan[] clipPhasePlans,
+                AnimationSourcePhasePlan[] sourcePhasePlans,
                 IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
                 IReadOnlyDictionary<string, int> curveIndices,
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
@@ -109,6 +115,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .Select((value, index) => new KeyValuePair<PoseNodeId, int>(value.NodeId, index))
                     .ToDictionary(value => value.Key, value => value.Value);
                 PoseSources = poseSources.ToDictionary(value => value.SourceIndex);
+                ClipPhasePlans = clipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>();
+                SourcePhasePlans = sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>();
+                SourcePhasePlanIndices = SourcePhasePlans
+                    .Select((value, index) => new KeyValuePair<PresentationPoseSourceIndex, int>(value.SourceIndex, index))
+                    .ToDictionary(value => value.Key, value => value.Value);
                 SourceIndices = sourceIndices ?? throw new ArgumentNullException(nameof(sourceIndices));
                 CurveIndices = curveIndices ?? throw new ArgumentNullException(nameof(curveIndices));
                 ProfileIndicesByIdentity = profileIndicesByIdentity ??
@@ -127,6 +138,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public AnimationBlendNodePayload[] BlendNodes { get; }
             public Dictionary<PoseNodeId, int> BlendNodeIndices { get; }
             public Dictionary<PresentationPoseSourceIndex, CharacterPresentationPoseSourcePlan> PoseSources { get; }
+            public IReadOnlyList<AnimationClipPhasePlan> ClipPhasePlans { get; }
+            public IReadOnlyList<AnimationSourcePhasePlan> SourcePhasePlans { get; }
+            public Dictionary<PresentationPoseSourceIndex, int> SourcePhasePlanIndices { get; }
             public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices { get; }
             public IReadOnlyDictionary<string, int> CurveIndices { get; }
             public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
@@ -147,7 +161,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public List<CharacterPresentationFootPlacementDescriptor> FootPlacements { get; } = new List<CharacterPresentationFootPlacementDescriptor>();
             public List<CharacterPresentationFullBodyIkDescriptor> FullBodyIks { get; } = new List<CharacterPresentationFullBodyIkDescriptor>();
             public List<int> FullBodyIkGoalInputValueIndices { get; } = new List<int>();
-            public List<CharacterPresentationSequencePlayerDescriptor> SequencePlayers { get; } = new List<CharacterPresentationSequencePlayerDescriptor>();
+            public List<CharacterPresentationClipPlayerDescriptor> ClipPlayers { get; } = new List<CharacterPresentationClipPlayerDescriptor>();
             public List<CharacterPoseStateMachineDescriptor> StateMachines { get; } =
                 new List<CharacterPoseStateMachineDescriptor>();
             public List<CharacterAnimationSlotDescriptor> AnimationSlots { get; } =
@@ -195,6 +209,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
             AnimationBlendNodePayload[] blendNodes,
             CharacterPresentationPoseSourcePlan[] poseSources,
+            AnimationClipPhasePlan[] clipPhasePlans,
+            AnimationSourcePhasePlan[] sourcePhasePlans,
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
@@ -228,6 +244,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     rig,
                     blendNodes ?? Array.Empty<AnimationBlendNodePayload>(),
                     poseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>(),
+                    clipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>(),
+                    sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>(),
                     sourceIndices ?? new Dictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex>(),
                     curveIndices,
                     profileIndicesByIdentity,
@@ -247,6 +265,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             AnimationBlendNodePayload[] blendNodes,
             CharacterPresentationPoseSourcePlan[] poseSources,
+            AnimationClipPhasePlan[] clipPhasePlans,
+            AnimationSourcePhasePlan[] sourcePhasePlans,
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
@@ -276,6 +296,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 parameterIndices,
                 blendNodes,
                 poseSources,
+                clipPhasePlans,
+                sourcePhasePlans,
                 sourceIndices,
                 curveIndices,
                 profileIndicesByIdentity,
@@ -323,7 +345,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.FootPlacements.ToArray(),
                 state.FullBodyIks.ToArray(),
                 state.FullBodyIkGoalInputValueIndices.ToArray(),
-                state.SequencePlayers.ToArray(),
+                state.ClipPlayers.ToArray(),
                 state.StateMachines.ToArray(),
                 state.AnimationSlots.ToArray(),
                 state.ActionPlaybackInputs.ToArray(),
@@ -470,7 +492,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             CharacterPoseOperationCode.SelectedPosePlayer or
             CharacterPoseOperationCode.BlendSpacePlayer or
-            CharacterPoseOperationCode.SequencePlayer or
+            CharacterPoseOperationCode.ClipPlayer or
             CharacterPoseOperationCode.BlendStack or
             CharacterPoseOperationCode.AnimationSlot or
             CharacterPoseOperationCode.Inertialization or
@@ -544,7 +566,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
                 if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
                     operation.Code == CharacterPoseOperationCode.BlendSpacePlayer ||
-                    operation.Code == CharacterPoseOperationCode.SequencePlayer)
+                    operation.Code == CharacterPoseOperationCode.ClipPlayer)
                 {
                     contributionCapacityPerValue = checked(contributionCapacityPerValue + 1);
                     continue;
@@ -884,9 +906,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         scopedNodeId,
                         state)
                     : -1;
-                int sequencePlayerIndex = handler.SequencePlayer
-                    ? CompileSequencePlayer(
-                        RequirePayload<CharacterSequencePlayerPosePayload>(irNode),
+                int clipPlayerIndex = handler.ClipPlayer
+                    ? CompileClipPlayer(
+                        RequirePayload<CharacterClipPlayerPosePayload>(irNode),
                         scopedNodeId,
                         playerIndex,
                         state)
@@ -935,7 +957,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     outputFullBodyIkGoalSetValueIndex,
                     fullBodyIkGoalInputStart,
                     fullBodyIkGoalInputs.Length,
-                    sequencePlayerIndex,
+                    clipPlayerIndex,
                     stateMachineIndex,
                     animationSlotIndex,
                     linkedPoseCall.CallIndex,
@@ -1770,10 +1792,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationPoseOperation operation = state.Operations[operationIndex];
                 AnimationPoseSourceKind sourceKind;
                 PresentationPoseSourceIndex poseSourceIndex = default;
-                if (operation.Code == CharacterPoseOperationCode.SequencePlayer)
+                if (operation.Code == CharacterPoseOperationCode.ClipPlayer)
                 {
-                    sourceKind = AnimationPoseSourceKind.Sequence;
-                    poseSourceIndex = state.SequencePlayers[operation.SequencePlayerIndex].PresentationPoseSourceIndex;
+                    sourceKind = AnimationPoseSourceKind.Clip;
+                    poseSourceIndex = state.ClipPlayers[operation.ClipPlayerIndex].PresentationPoseSourceIndex;
                 }
                 else if (operation.Code == CharacterPoseOperationCode.BlendSpacePlayer)
                 {
@@ -1820,81 +1842,107 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             PoseStateSourceProviderPlan targetUsage = FindSyncProvider(targetState);
             if (sourceUsage == null || targetUsage == null)
                 return new CharacterPoseStateSourceSyncPlan(PoseStateSourceSyncMode.None);
-            CharacterPresentationPoseSourcePlan source = state.PoseSources[sourceUsage.PresentationPoseSourceIndex];
-            CharacterPresentationPoseSourcePlan target = state.PoseSources[targetUsage.PresentationPoseSourceIndex];
-            AnimationMarkerSyncBinding sourceBinding = source.MarkerSync;
-            AnimationMarkerSyncBinding targetBinding = target.MarkerSync;
-            if (!sourceBinding.IsMarkerGroup || !targetBinding.IsMarkerGroup ||
-                !string.Equals(
-                    sourceBinding.CanonicalGroupId,
-                    targetBinding.CanonicalGroupId,
-                    StringComparison.Ordinal))
+            PresentationPoseSourceIndex sourceIndex = sourceUsage.PresentationPoseSourceIndex;
+            PresentationPoseSourceIndex targetIndex = targetUsage.PresentationPoseSourceIndex;
+            string relationIdentity =
+                $"pose-state-phase/{stateMachineId}/{transition.TransitionId}/{sourceState.StateId}";
+            CharacterLocomotionSyncGroup sourceGroup = ResolveLocomotionSyncGroup(state, sourceIndex);
+            CharacterLocomotionSyncGroup targetGroup = ResolveLocomotionSyncGroup(state, targetIndex);
+            bool sourceHasPhase = state.SourcePhasePlanIndices.TryGetValue(
+                sourceIndex,
+                out int sourcePhasePlanIndex);
+            bool targetHasPhase = state.SourcePhasePlanIndices.TryGetValue(
+                targetIndex,
+                out int targetPhasePlanIndex);
+            if (sourceGroup == null || targetGroup == null ||
+                !string.Equals(sourceGroup.GroupId, targetGroup.GroupId, StringComparison.Ordinal))
             {
                 return new CharacterPoseStateSourceSyncPlan(PoseStateSourceSyncMode.None);
             }
-            if (sourceBinding.TimeMapping != targetBinding.TimeMapping)
+            if (sourceHasPhase || targetHasPhase)
             {
-                throw new InvalidOperationException(
-                    $"Pose State transition '{transition.TransitionId}' MarkerGroup time mapping does not match.");
-            }
-            bool sourceIsLeader = ResolveStateSyncLeader(
-                transition.TransitionId,
-                sourceBinding.SyncRole,
-                targetBinding.SyncRole);
-            AnimationMarkerSyncBinding leader = sourceIsLeader ? sourceBinding : targetBinding;
-            AnimationMarkerSyncBinding follower = sourceIsLeader ? targetBinding : sourceBinding;
-            for (int i = 0; i < leader.Segments.Count; i++)
-            {
-                AnimationMarkerSyncSegmentOccurrence segment = leader.Segments[i];
-                if (segment.Wraps)
-                    continue;
-                if (!follower.TryGetOccurrences(
-                        segment.PreviousMarkerId,
-                        segment.NextMarkerId,
-                        out AnimationMarkerSyncSegmentOccurrence[] occurrences) ||
-                    occurrences.Length == 0)
+                if (!sourceHasPhase || !targetHasPhase)
                 {
                     throw new InvalidOperationException(
-                        $"Pose State transition '{transition.TransitionId}' follower marker topology misses " +
-                        $"'{segment.PreviousMarkerId}->{segment.NextMarkerId}'.");
+                        $"Pose State transition '{transition.TransitionId}' has an incomplete Locomotion Phase plan inside Group '{sourceGroup.GroupId}'.");
                 }
-            }
-            string relationIdentity =
-                $"pose-state-sync/{stateMachineId}/{transition.TransitionId}/{sourceState.StateId}";
-            AnimationFootPhaseTimeWarpPlan warp = null;
-            if (sourceBinding.TimeMapping == AnimationSyncTimeMapping.GeneratedFootPhase)
-            {
-                CharacterPresentationPoseSourcePlan leaderSource =
-                    sourceIsLeader ? source : target;
-                CharacterPresentationPoseSourcePlan followerSource =
-                    sourceIsLeader ? target : source;
-                AnimationFootAnalysisArtifact leaderArtifact =
-                    state.FootAnalysis.RequireArtifact(
-                        AnimationFootAnalysisProjectionBuildData.PoseSourceBindingKey(
-                            leaderSource.BindingAssetIdentity));
-                AnimationFootAnalysisArtifact followerArtifact =
-                    state.FootAnalysis.RequireArtifact(
-                        AnimationFootAnalysisProjectionBuildData.PoseSourceBindingKey(
-                            followerSource.BindingAssetIdentity));
-                warp = AnimationFootPhaseTimeWarpCompiler.Compile(
+                AnimationSourcePhasePlan sourcePhase = state.SourcePhasePlans[sourcePhasePlanIndex];
+                AnimationSourcePhasePlan targetPhase = state.SourcePhasePlans[targetPhasePlanIndex];
+                CharacterClipPlayerClockSource sourceClock = RequireClipClock(state, sourceUsage.PlayerIndex);
+                CharacterClipPlayerClockSource targetClock = RequireClipClock(state, targetUsage.PlayerIndex);
+                bool sourceCovers = sourcePhase.ActualCoverage.EndSeconds - sourcePhase.ActualCoverage.StartSeconds >=
+                                    transition.DurationSeconds;
+                bool targetCovers = targetPhase.ActualCoverage.EndSeconds - targetPhase.ActualCoverage.StartSeconds >=
+                                    transition.DurationSeconds;
+                bool sourceIsLeader = sourceClock == targetClock
+                    ? sourceCovers
+                    : sourceClock == CharacterClipPlayerClockSource.CommittedMovement
+                        ? sourceCovers
+                        : !targetCovers;
+                if (sourceIsLeader && !sourceCovers || !sourceIsLeader && !targetCovers)
+                    throw new InvalidOperationException(
+                        $"Pose State transition '{transition.TransitionId}' has no Phase leader covering the full Blend window.");
+                AnimationClipPhasePlan sourceClipPhase =
+                    state.ClipPhasePlans[sourcePhase.ClockCarrierClipPlanIndex];
+                AnimationClipPhasePlan targetClipPhase =
+                    state.ClipPhasePlans[targetPhase.ClockCarrierClipPlanIndex];
+                var phaseRelation = new AnimationPhaseRelationPlan(
                     relationIdentity,
-                    leaderSource.BindingAssetIdentity,
-                    leader,
-                    leaderArtifact,
-                    followerSource.BindingAssetIdentity,
-                    follower,
-                    followerArtifact);
+                    transition.TransitionId,
+                    sourcePhasePlanIndex,
+                    targetPhasePlanIndex,
+                    sourceIsLeader,
+                    sourceIsLeader ? sourceClock : targetClock,
+                    StableHash.Compute(
+                        "animation-phase-relation-validation/v1",
+                        sourceClipPhase.ValidationIdentity,
+                        targetClipPhase.ValidationIdentity).Value);
+                return new CharacterPoseStateSourceSyncPlan(
+                    sourceUsage.PlayerIndex,
+                    targetUsage.PlayerIndex,
+                    sourceIndex,
+                    targetIndex,
+                    sourceGroup.GroupId,
+                    phaseRelation);
             }
-            return new CharacterPoseStateSourceSyncPlan(
-                relationIdentity,
-                sourceUsage.PlayerIndex,
-                targetUsage.PlayerIndex,
-                source.SourceIndex,
-                target.SourceIndex,
-                sourceBinding.CanonicalGroupId,
-                sourceIsLeader,
-                sourceBinding.TimeMapping,
-                warp);
+            return new CharacterPoseStateSourceSyncPlan(PoseStateSourceSyncMode.None);
+        }
+
+        static CharacterLocomotionSyncGroup ResolveLocomotionSyncGroup(
+            CompilationState state,
+            PresentationPoseSourceIndex sourceIndex)
+        {
+            CharacterPresentationPoseSourceSlot slot = state.SourceIndices
+                .FirstOrDefault(pair => pair.Value == sourceIndex).Key;
+            CharacterPresentationPoseSourceBinding binding = slot
+                ? state.Profile.FindPoseSourceBinding(slot)
+                : null;
+            if (binding is CharacterClipPoseSourceBinding clipBinding)
+                return state.Profile.FindLocomotionSyncGroup(clipBinding.Clip);
+            if (binding is CharacterBlendSpacePoseSourceBinding blendBinding && blendBinding.BlendSpace)
+            {
+                CharacterAnimationBlendSpaceSample reference =
+                    blendBinding.BlendSpace.FindSample(blendBinding.BlendSpace.PhaseReferenceSampleId);
+                return reference == null ? null : state.Profile.FindLocomotionSyncGroup(reference.Clip);
+            }
+            return null;
+        }
+
+        static CharacterClipPlayerClockSource RequireClipClock(CompilationState state, int playerIndex)
+        {
+            for (int i = 0; i < state.ClipPlayers.Count; i++)
+            {
+                if (state.ClipPlayers[i].PlayerIndex == playerIndex)
+                    return state.ClipPlayers[i].ClockSource;
+            }
+            for (int i = 0; i < state.Operations.Count; i++)
+            {
+                if (state.Operations[i].PlayerIndex == playerIndex &&
+                    state.Operations[i].Code == CharacterPoseOperationCode.BlendSpacePlayer)
+                    return CharacterClipPlayerClockSource.PresentationDelta;
+            }
+            throw new InvalidOperationException(
+                $"Locomotion Phase source Player #{playerIndex} is not a compiled Clip or Blend Space Player.");
         }
 
         static PoseStateSourceProviderPlan FindSyncProvider(CharacterPoseStateDescriptor state)
@@ -1903,7 +1951,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             for (int i = 0; i < state.SourceProviders.Count; i++)
             {
                 PoseStateSourceProviderPlan candidate = state.SourceProviders[i];
-                if (candidate.SourceKind != AnimationPoseSourceKind.Sequence &&
+                if (candidate.SourceKind != AnimationPoseSourceKind.Clip &&
                     candidate.SourceKind != AnimationPoseSourceKind.BlendSpace)
                     continue;
                 if (result != null)
@@ -1916,26 +1964,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return result;
         }
 
-        static bool ResolveStateSyncLeader(
-            PoseStateTransitionId transitionId,
-            AnimationMarkerSyncRole source,
-            AnimationMarkerSyncRole target)
-        {
-            if (source == AnimationMarkerSyncRole.AlwaysLeader && target == AnimationMarkerSyncRole.AlwaysLeader ||
-                source == AnimationMarkerSyncRole.AlwaysFollower && target == AnimationMarkerSyncRole.AlwaysFollower)
-            {
-                throw new InvalidOperationException(
-                    $"Pose State transition '{transitionId}' MarkerGroup roles do not resolve one leader.");
-            }
-            if (source == AnimationMarkerSyncRole.AlwaysLeader ||
-                target == AnimationMarkerSyncRole.AlwaysFollower)
-                return true;
-            if (target == AnimationMarkerSyncRole.AlwaysLeader ||
-                source == AnimationMarkerSyncRole.AlwaysFollower)
-                return false;
-            return true;
-        }
-
         static TransitionEndpointId RoutingEndpoint(
             PoseStateMachineId stateMachineId,
             PoseStateId stateId) =>
@@ -1946,16 +1974,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             PoseStateId sourceStateId) =>
             new TransitionRuleId($"pose-state/{transitionId}/{sourceStateId}");
 
-        static int CompileSequencePlayer(
-            CharacterSequencePlayerPosePayload payload,
+        static int CompileClipPlayer(
+            CharacterClipPlayerPosePayload payload,
             PoseNodeId scopedNodeId,
             int playerIndex,
             CompilationState state)
         {
             if (!payload.SourceSlot || !state.SourceIndices.TryGetValue(payload.SourceSlot, out PresentationPoseSourceIndex sourceIndex))
-                throw new InvalidOperationException($"Sequence Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
-            int index = state.SequencePlayers.Count;
-            state.SequencePlayers.Add(CharacterPresentationSequencePlayerCompiler.Compile(
+                throw new InvalidOperationException($"Clip Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
+            int index = state.ClipPlayers.Count;
+            state.ClipPlayers.Add(CharacterPresentationClipPlayerCompiler.Compile(
                 index,
                 playerIndex,
                 scopedNodeId,
@@ -1974,30 +2002,30 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 .SingleOrDefault(value =>
                     value.OutputValueIndex == inputValueIndex);
             if (source == null ||
-                source.Code != CharacterPoseOperationCode.SequencePlayer ||
-                (uint)source.SequencePlayerIndex >=
-                (uint)state.SequencePlayers.Count)
+                source.Code != CharacterPoseOperationCode.ClipPlayer ||
+                (uint)source.ClipPlayerIndex >=
+                (uint)state.ClipPlayers.Count)
             {
                 throw new InvalidOperationException(
-                    $"Root Orientation Warp '{scopedNodeId}' must receive Pose directly from one Sequence Player.");
+                    $"Root Orientation Warp '{scopedNodeId}' must receive Pose directly from one Clip Player.");
             }
-            CharacterPresentationSequencePlayerDescriptor sequence =
-                state.SequencePlayers[source.SequencePlayerIndex];
+            CharacterPresentationClipPlayerDescriptor clipPlayer =
+                state.ClipPlayers[source.ClipPlayerIndex];
             CharacterPresentationPoseSourcePlan poseSource =
-                state.PoseSources[sequence.PresentationPoseSourceIndex];
-            if (sequence.Loop ||
+                state.PoseSources[clipPlayer.PresentationPoseSourceIndex];
+            if (poseSource.Clip.isLooping ||
                 Math.Abs(poseSource.Clip.length - payload.YawCurve.Duration) >
                 0.0001f)
             {
                 throw new InvalidOperationException(
-                    $"Root Orientation Warp '{scopedNodeId}' Yaw profile must match its finite Sequence duration.");
+                    $"Root Orientation Warp '{scopedNodeId}' Yaw profile must match its finite Clip duration.");
             }
             int index = state.RootOrientationWarps.Count;
             state.RootOrientationWarps.Add(
                 new CharacterPresentationRootOrientationWarpDescriptor(
                     index,
                     scopedNodeId,
-                    source.SequencePlayerIndex,
+                    source.ClipPlayerIndex,
                     state.Rig.RequireRootBoneIndex(),
                     payload.YawCurve.Duration,
                     payload.YawCurve.TotalYaw,
@@ -2453,11 +2481,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             for (int i = 0; i < state.FullBodyIkGoalInputValueIndices.Count; i++)
                 values.Add($"full-body-ik-goal-input:{i}:{state.FullBodyIkGoalInputValueIndices[i]}");
-            for (int i = 0; i < state.SequencePlayers.Count; i++)
+            for (int i = 0; i < state.ClipPlayers.Count; i++)
             {
-                CharacterPresentationSequencePlayerDescriptor descriptor = state.SequencePlayers[i];
+                CharacterPresentationClipPlayerDescriptor descriptor = state.ClipPlayers[i];
                 values.Add(FormattableString.Invariant(
-                    $"sequence-player:{descriptor.Index}:{descriptor.NodeId}:{descriptor.PresentationPoseSourceIndex.Value}:{descriptor.Loop}:{descriptor.PlayRate:R}:{descriptor.InitialTime:R}:{(int)descriptor.ClockSource}:{descriptor.PlayerIndex}"));
+                    $"clip-player:{descriptor.Index}:{descriptor.NodeId}:{descriptor.PresentationPoseSourceIndex.Value}:{descriptor.PlayRate:R}:{descriptor.InitialTime:R}:{(int)descriptor.ClockSource}:{descriptor.PlayerIndex}"));
             }
             for (int i = 0; i < state.RootOrientationWarps.Count; i++)
             {
@@ -2465,7 +2493,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     state.RootOrientationWarps[i];
                 Keyframe[] keys = descriptor.YawCurve.keys;
                 values.Add(FormattableString.Invariant(
-                    $"root-orientation-warp:{descriptor.Index}:{descriptor.NodeId}:{descriptor.SequencePlayerIndex}:{descriptor.RootPhysicalBoneIndex}:{descriptor.Duration:R}:{descriptor.TotalYaw:R}:{keys.Length}"));
+                    $"root-orientation-warp:{descriptor.Index}:{descriptor.NodeId}:{descriptor.ClipPlayerIndex}:{descriptor.RootPhysicalBoneIndex}:{descriptor.Duration:R}:{descriptor.TotalYaw:R}:{keys.Length}"));
                 for (int keyIndex = 0; keyIndex < keys.Length; keyIndex++)
                 {
                     Keyframe key = keys[keyIndex];
@@ -2535,7 +2563,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPresentationPoseOperation operation = state.Operations[i];
                 values.Add(FormattableString.Invariant(
-                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalInputStart}:{operation.FullBodyIkGoalInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.SequencePlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
+                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalInputStart}:{operation.FullBodyIkGoalInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.ClipPlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
             }
             for (int i = 0; i < stages.Count; i++)
             {

@@ -179,32 +179,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     input.FindPropertyRelative("m_ProgramProducerId").stringValue);
             }
 
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Animation Marker Sync", EditorStyles.boldLabel);
-            for (int i = 0; i < producers.arraySize; i++)
-            {
-                SerializedProperty producer = producers.GetArrayElementAtIndex(i);
-                if (producer.FindPropertyRelative("m_Kind").enumValueIndex != (int)CharacterPresentationProducerKind.Animation)
-                    continue;
-                SerializedProperty markerSync = producer.FindPropertyRelative("m_Animation")?.FindPropertyRelative("m_MarkerSync");
-                if (markerSync == null)
-                    continue;
-                string producerIdentity = producer.FindPropertyRelative("m_ProgramProducerIdentity").stringValue;
-                string animationChannelId = producer.FindPropertyRelative("m_AnimationChannelId").stringValue;
-                SerializedProperty mode = markerSync.FindPropertyRelative("m_Mode");
-                SerializedProperty topology = markerSync.FindPropertyRelative("m_SequenceTopology");
-                SerializedProperty role = markerSync.FindPropertyRelative("m_SyncRole");
-                SerializedProperty markers = markerSync.FindPropertyRelative("m_Markers");
-                SerializedProperty segments = markerSync.FindPropertyRelative("m_Segments");
-                EditorGUILayout.LabelField(producerIdentity, EditorStyles.miniBoldLabel);
-                EditorGUI.indentLevel++;
-                EditorGUILayout.LabelField("Channel / Group", $"{animationChannelId} / {markerSync.FindPropertyRelative("m_CanonicalGroupId").stringValue}");
-                EditorGUILayout.LabelField(
-                    "Mode / Topology / Role",
-                    $"{mode.enumDisplayNames[mode.enumValueIndex]} / {topology.enumDisplayNames[topology.enumValueIndex]} / {role.enumDisplayNames[role.enumValueIndex]}");
-                EditorGUILayout.LabelField("Markers / Segments", $"{markers.arraySize} / {segments.arraySize}");
-                EditorGUI.indentLevel--;
-            }
         }
 
         void DrawLinkedPoseProjection(SerializedProperty projection)

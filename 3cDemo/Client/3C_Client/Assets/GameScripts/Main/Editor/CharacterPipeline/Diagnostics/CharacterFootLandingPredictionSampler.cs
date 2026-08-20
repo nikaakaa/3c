@@ -105,6 +105,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "StrideRootRelativeGroundTargetAlongUp,StrideSoleClearanceLiftAlongUp,StrideHadPreviousState,StrideSupportChanged," +
             "StridePreviousSlope,StrideSpringHandoffReason,StrideSpringVelocityReset," +
             "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput,StrideSpringInputVelocity,StrideSpringFrequency," +
+            "StrideUnclampedSpringTarget,StrideSupportReachAvailable,StrideSupportReachMinimumAlongUp,StrideSupportReachMaximumAlongUp," +
+            "StrideSupportReachTargetClamped,StrideSupportReachOutputClamped," +
             "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
             "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
             "FinalPelvisGoalX,FinalPelvisGoalY,FinalPelvisGoalZ," +
@@ -1015,6 +1017,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.SpringInput);
             Add(row, stride.SpringInputVelocity);
             Add(row, stride.SpringFrequency);
+            Add(row, stride.UnclampedSpringTarget);
+            Add(row, stride.SupportReachAvailable);
+            Add(row, stride.SupportReachMinimumAlongUp);
+            Add(row, stride.SupportReachMaximumAlongUp);
+            Add(row, stride.SupportReachTargetClamped);
+            Add(row, stride.SupportReachOutputClamped);
             Add(row, stride.SpringTarget);
             Add(row, stride.SpringOutput);
             Add(row, stride.SpringVelocity);

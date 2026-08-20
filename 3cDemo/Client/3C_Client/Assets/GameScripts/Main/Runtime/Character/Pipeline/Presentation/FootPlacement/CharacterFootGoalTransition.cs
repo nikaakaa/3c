@@ -170,6 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFullBodyIkGoal target,
             Vector3 originalComponentPosition,
             Quaternion originalComponentRotation,
+            Vector3 componentUp,
             ulong sourceGroundPathIdentity,
             float deltaSeconds,
             float halfLifeSeconds,
@@ -180,6 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!target.IsValid ||
                 target.Application != CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget ||
                 !Finite(originalComponentPosition) ||
+                !Finite(componentUp) || componentUp.sqrMagnitude <= 0.0001f ||
                 !Unit(originalComponentRotation) ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f ||
                 !float.IsFinite(halfLifeSeconds) || halfLifeSeconds <= 0f ||
@@ -220,7 +222,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float alpha = deltaSeconds <= 0f
                 ? 0f
                 : 1f - Mathf.Pow(0.5f, deltaSeconds / halfLifeSeconds);
-            bool directOutput = mode != CharacterFootGoalTransitionMode.Smooth;
+            Vector3 smoothedPositionCorrection = Vector3.LerpUnclamped(
+                committedPositionCorrection,
+                targetPositionCorrection,
+                alpha);
+            Quaternion smoothedRotationCorrection = Quaternion.SlerpUnclamped(
+                committedRotationCorrection,
+                targetRotationCorrection,
+                alpha).normalized;
+            float smoothedPositionWeight = Mathf.LerpUnclamped(
+                committedPositionWeight,
+                target.PositionWeight,
+                alpha);
+            float smoothedRotationWeight = Mathf.LerpUnclamped(
+                committedRotationWeight,
+                target.RotationWeight,
+                alpha);
 
             m_Pending.HasOutput = true;
             m_Pending.Mode = mode;
@@ -230,30 +247,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Pending.TargetRotationCorrection = targetRotationCorrection;
             m_Pending.TargetPositionWeight = target.PositionWeight;
             m_Pending.TargetRotationWeight = target.RotationWeight;
-            m_Pending.OutputPositionCorrection = directOutput
-                ? targetPositionCorrection
-                : Vector3.LerpUnclamped(
-                    committedPositionCorrection,
-                    targetPositionCorrection,
-                    alpha);
-            m_Pending.OutputRotationCorrection = directOutput
-                ? targetRotationCorrection
-                : Quaternion.SlerpUnclamped(
-                    committedRotationCorrection,
-                    targetRotationCorrection,
-                    alpha).normalized;
-            m_Pending.OutputPositionWeight = directOutput
-                ? target.PositionWeight
-                : Mathf.LerpUnclamped(
-                    committedPositionWeight,
-                    target.PositionWeight,
-                    alpha);
-            m_Pending.OutputRotationWeight = directOutput
-                ? target.RotationWeight
-                : Mathf.LerpUnclamped(
-                    committedRotationWeight,
-                    target.RotationWeight,
-                    alpha);
+            if (mode == CharacterFootGoalTransitionMode.DirectSupport)
+            {
+                m_Pending.OutputPositionCorrection = targetPositionCorrection;
+                m_Pending.OutputRotationCorrection = targetRotationCorrection;
+                m_Pending.OutputPositionWeight = target.PositionWeight;
+                m_Pending.OutputRotationWeight = target.RotationWeight;
+            }
+            else if (mode == CharacterFootGoalTransitionMode.LandingPreparation)
+            {
+                Vector3 up = componentUp.normalized;
+                float missingUpwardCorrection = Vector3.Dot(
+                    targetPositionCorrection - smoothedPositionCorrection,
+                    up);
+                m_Pending.OutputPositionCorrection = missingUpwardCorrection > 0f
+                    ? smoothedPositionCorrection + up * missingUpwardCorrection
+                    : smoothedPositionCorrection;
+                m_Pending.OutputRotationCorrection = smoothedRotationCorrection;
+                m_Pending.OutputPositionWeight = target.PositionWeight;
+                m_Pending.OutputRotationWeight = target.RotationWeight;
+            }
+            else
+            {
+                m_Pending.OutputPositionCorrection = smoothedPositionCorrection;
+                m_Pending.OutputRotationCorrection = smoothedRotationCorrection;
+                m_Pending.OutputPositionWeight = smoothedPositionWeight;
+                m_Pending.OutputRotationWeight = smoothedRotationWeight;
+            }
 
             Vector3 outputPosition = originalComponentPosition +
                                      m_Pending.OutputPositionCorrection;

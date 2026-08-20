@@ -458,7 +458,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 m_Report.Error(
                     path,
                     "sequence_pose_source_kind_invalid",
-                    "ClipPlayer必须引用Sequence Presentation Pose source。");
+                    "ClipPlayer必须引用Clip Presentation Pose source。");
             }
             if (node.Kind == CharacterPoseNodeKind.BlendSpacePlayer &&
                 source?.SourceKind != PresentationPoseSourceKind.BlendSpace)

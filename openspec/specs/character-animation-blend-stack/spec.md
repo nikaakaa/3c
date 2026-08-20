@@ -34,22 +34,6 @@ TBD - created by archiving change refactor-animation-playback-to-blend-stack. Up
 - **THEN** Evaluator MUST按BoneId分别计算weight
 - **AND** Runtime MUST不把单一scalar weight当作完整骨骼贡献
 
-### Requirement: Blend Stack必须只发布source usage而不得拥有Marker Sync
-
-Blend Stack MUST在source采样前声明当前与尚未exact release的live `PlayerSourceUsage`，并在source退出时发布精确release。连接显式MarkerSync时，Stack MUST只消费该节点为usage生成的effective sample page；未连接时 MUST使用Selection raw visual time。Stack MUST不读取MarkerId或SyncRole、不选择leader、不建立relation、不映射segment fraction，也 MUST不按blend weight推导同步方向。
-
-#### Scenario: Walk向Run CrossFade并显式同步
-
-- **WHEN** Blend Stack的Selection输入经过MarkerSync且usage同时包含Walk与Run
-- **THEN** MarkerSync MUST独立解析两者effective time
-- **AND** Blend Stack MUST独立计算两者CrossFade与per-bone weight
-
-#### Scenario: 同一Stack没有MarkerSync
-
-- **WHEN** Selection直接连接Blend Stack
-- **THEN** Stack MUST让每个live source按raw visual time采样
-- **AND** Runtime MUST不因两者属于同一SyncGroup而后台建立relation
-
 ### Requirement: Blend Stack容量必须通过Stored Pose连续压缩
 
 每个Blend Stack节点 MUST显式配置至少为2的`MaxActiveSourceEntries`。push超过容量或命中快速替换阈值时，Evaluator MUST在切换边界捕获当前完整local pose、pose velocity、Pose Parameter与左右脚feature aggregate为唯一Stored Pose，再原子移除被取代entry。Stored Pose MUST使用预分配workspace，MUST不引用AnimationClip、Selection、Marker或Gameplay事件。
@@ -122,3 +106,19 @@ Runtime MUST按Rig bone count、节点数量和各节点容量预分配source、
 - **WHEN** 作者在Live Debug选择一个Blend Stack节点和BoneId
 - **THEN** snapshot MUST解释该骨骼当前全部live与Stored贡献
 - **AND** diagnostics MUST不改变节点时钟或source lifetime
+
+### Requirement: Blend Stack必须只发布source usage而不得拥有Phase relation
+
+Blend Stack MUST在source采样前声明当前与尚未exact release的live `PlayerSourceUsage`，并在source退出时发布精确release。PoseState transition具有compiled `AnimationPhaseRelationPlan`时，Stack MUST只消费source-local endpoint已经解析的effective sample page；没有relation时 MUST使用各source raw visual time。Stack MUST不读取Phase Curve、Profile Group或Clip identity，不选择clock carrier、不建立relation、不执行forward/inverse映射，也 MUST不按blend weight推导同步方向。
+
+#### Scenario: Walk向Run CrossFade并同步Phase
+
+- **WHEN** PoseState edge具有合法Phase relation且usage同时包含Walk与Run
+- **THEN** source-local endpoint MUST独立解析两者effective time
+- **AND** Blend Stack MUST独立计算两者CrossFade与per-bone weight
+
+#### Scenario: 同一Stack没有Phase relation
+
+- **WHEN** source usage不属于共同Locomotion Sync Group
+- **THEN** Stack MUST让每个live source按raw visual time采样
+- **AND** Runtime MUST不因Clip显示名或blend weight后台建立relation

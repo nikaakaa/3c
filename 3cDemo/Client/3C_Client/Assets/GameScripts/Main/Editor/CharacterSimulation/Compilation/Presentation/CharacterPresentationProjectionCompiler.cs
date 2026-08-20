@@ -199,10 +199,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var diagnostics = new CharacterPresentationProjectionDiagnostic[errors.Count];
             for (int i = 0; i < errors.Count; i++)
             {
+                string message = errors[i] ?? string.Empty;
+                string code = "presentation_projection_invalid";
+                if (message.StartsWith("[animation_phase_quality_", StringComparison.Ordinal))
+                {
+                    int end = message.IndexOf(']');
+                    if (end > 1)
+                    {
+                        code = message.Substring(1, end - 1);
+                        message = message.Substring(end + 1).TrimStart();
+                    }
+                }
                 diagnostics[i] = new CharacterPresentationProjectionDiagnostic(
-                    "presentation_projection_invalid",
+                    code,
                     request.Artifact.Header.ProgramId.Value,
-                    errors[i]);
+                    message);
             }
             return new CharacterPresentationProjectionCompileResult(
                 projection,
@@ -504,6 +515,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 errors);
             AnimationClipPhasePlan[] clipPhasePlans = Array.Empty<AnimationClipPhasePlan>();
             AnimationSourcePhasePlan[] sourcePhasePlans = Array.Empty<AnimationSourcePhasePlan>();
+            AnimationFootPhaseValidationDescriptor[] clipPhaseValidations =
+                Array.Empty<AnimationFootPhaseValidationDescriptor>();
             try
             {
                 AnimationPhasePlanCompiler.CompileSources(
@@ -513,7 +526,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     blendSpacePlanBySource,
                     footAnalysisCompilation,
                     out clipPhasePlans,
-                    out sourcePhasePlans);
+                    out sourcePhasePlans,
+                    out clipPhaseValidations);
             }
             catch (Exception exception)
             {
@@ -532,6 +546,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 poseSources,
                 clipPhasePlans,
                 sourcePhasePlans,
+                clipPhaseValidations,
                 sourceCatalog.SourceIndices,
                 blendCatalogs?.CurveIndices,
                 blendCatalogs?.ProfileIndicesByIdentity,

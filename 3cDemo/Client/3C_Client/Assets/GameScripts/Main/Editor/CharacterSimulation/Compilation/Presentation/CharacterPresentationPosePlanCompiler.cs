@@ -22,6 +22,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPresentationPoseSourcePlan[] poseSources,
             AnimationClipPhasePlan[] clipPhasePlans,
             AnimationSourcePhasePlan[] sourcePhasePlans,
+            AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
@@ -37,6 +38,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 poseSources,
                 clipPhasePlans,
                 sourcePhasePlans,
+                clipPhaseValidations,
                 sourceIndices,
                 curveIndices,
                 profileIndicesByIdentity,
@@ -99,6 +101,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationPoseSourcePlan[] poseSources,
                 AnimationClipPhasePlan[] clipPhasePlans,
                 AnimationSourcePhasePlan[] sourcePhasePlans,
+                AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
                 IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
                 IReadOnlyDictionary<string, int> curveIndices,
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
@@ -117,6 +120,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 PoseSources = poseSources.ToDictionary(value => value.SourceIndex);
                 ClipPhasePlans = clipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>();
                 SourcePhasePlans = sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>();
+                ClipPhaseValidations = clipPhaseValidations ??
+                    Array.Empty<AnimationFootPhaseValidationDescriptor>();
+                if (ClipPhaseValidations.Count != ClipPhasePlans.Count)
+                    throw new InvalidOperationException("Animation Clip Phase validation catalog does not match the compiled plan catalog.");
                 SourcePhasePlanIndices = SourcePhasePlans
                     .Select((value, index) => new KeyValuePair<PresentationPoseSourceIndex, int>(value.SourceIndex, index))
                     .ToDictionary(value => value.Key, value => value.Value);
@@ -140,6 +147,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public Dictionary<PresentationPoseSourceIndex, CharacterPresentationPoseSourcePlan> PoseSources { get; }
             public IReadOnlyList<AnimationClipPhasePlan> ClipPhasePlans { get; }
             public IReadOnlyList<AnimationSourcePhasePlan> SourcePhasePlans { get; }
+            public IReadOnlyList<AnimationFootPhaseValidationDescriptor> ClipPhaseValidations { get; }
             public Dictionary<PresentationPoseSourceIndex, int> SourcePhasePlanIndices { get; }
             public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices { get; }
             public IReadOnlyDictionary<string, int> CurveIndices { get; }
@@ -211,6 +219,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPresentationPoseSourcePlan[] poseSources,
             AnimationClipPhasePlan[] clipPhasePlans,
             AnimationSourcePhasePlan[] sourcePhasePlans,
+            AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
@@ -246,6 +255,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     poseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>(),
                     clipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>(),
                     sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>(),
+                    clipPhaseValidations ?? Array.Empty<AnimationFootPhaseValidationDescriptor>(),
                     sourceIndices ?? new Dictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex>(),
                     curveIndices,
                     profileIndicesByIdentity,
@@ -267,6 +277,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPresentationPoseSourcePlan[] poseSources,
             AnimationClipPhasePlan[] clipPhasePlans,
             AnimationSourcePhasePlan[] sourcePhasePlans,
+            AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
@@ -298,6 +309,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 poseSources,
                 clipPhasePlans,
                 sourcePhasePlans,
+                clipPhaseValidations,
                 sourceIndices,
                 curveIndices,
                 profileIndicesByIdentity,
@@ -1886,6 +1898,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     state.ClipPhasePlans[sourcePhase.ClockCarrierClipPlanIndex];
                 AnimationClipPhasePlan targetClipPhase =
                     state.ClipPhasePlans[targetPhase.ClockCarrierClipPlanIndex];
+                string qualityValidationIdentity = AnimationPhaseRelationQualityCompiler.Validate(
+                    transition.TransitionId.Value,
+                    sourceClipPhase,
+                    state.ClipPhaseValidations[sourcePhase.ClockCarrierClipPlanIndex],
+                    sourcePhase.ActualCoverage,
+                    targetClipPhase,
+                    state.ClipPhaseValidations[targetPhase.ClockCarrierClipPlanIndex],
+                    targetPhase.ActualCoverage,
+                    transition.DurationSeconds);
                 var phaseRelation = new AnimationPhaseRelationPlan(
                     relationIdentity,
                     transition.TransitionId,
@@ -1896,7 +1917,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     StableHash.Compute(
                         "animation-phase-relation-validation/v1",
                         sourceClipPhase.ValidationIdentity,
-                        targetClipPhase.ValidationIdentity).Value);
+                        targetClipPhase.ValidationIdentity,
+                        qualityValidationIdentity).Value);
                 return new CharacterPoseStateSourceSyncPlan(
                     sourceUsage.PlayerIndex,
                     targetUsage.PlayerIndex,

@@ -30,19 +30,13 @@
 
 ### Requirement: 基础Pose必须由正式state-local source输出
 
-Base Pose、Idle、Move、Start、Stop、Turn与可选Motion Matching MUST来自Pose Graph中PoseStateMachine选择的SequencePlayer、BlendSpacePlayer或SelectedPosePlayer provider。Gameplay Program、Timeline、Action Lifecycle与AnimationChannel MUST不提供持续BaseLocomotion producer。Required source缺失、binding无效或首Pose不可用时 MUST报告typed Pending或Invalid，不得回退旧Timeline、默认Idle、bind pose或历史sample。
+Base Pose、Idle、Move、Start、Stop、Turn与可选Motion Matching MUST来自Pose Graph中PoseStateMachine选择的ClipPlayer、BlendSpacePlayer或SelectedPosePlayer provider。Gameplay Program、Timeline与Action Lifecycle MUST不提供持续BaseLocomotion producer。Required source缺失或Clip Phase relation无效时 MUST报告typed Pending或Invalid，不得回退旧Sequence、默认Idle、bind pose或历史sample。
 
-#### Scenario: 首次进入Idle
+#### Scenario: Clip binding失效
 
-- **WHEN** Entry选择Idle且source binding合法
-- **THEN** Idle provider MUST向State Player发布Ready sample
-- **AND** Runtime MUST不等待Gameplay Timeline
-
-#### Scenario: Locomotion binding缺失
-
-- **WHEN** active State引用缺失Source Slot、缺失Binding或Projection中不存在的dense source index
-- **THEN** Projection Build或Runtime preparation MUST失败
-- **AND** MUST不恢复旧BaseLocomotion producer
+- **WHEN** active PoseState的Clip Binding与Projection identity不一致
+- **THEN** provider MUST发布Invalid并阻止正式Pose提交
+- **AND** MUST不继续使用旧Sequence或上一帧source
 
 ### Requirement: 动画帧必须按固定职责顺序执行
 
@@ -82,7 +76,7 @@ PoseStateMachine MUST只向相关State的显式source plan提交固定容量dema
 
 ### Requirement: 每类连续性必须只有一个明确owner
 
-SequencePlayer、BlendSpacePlayer与SelectedPosePlayer MUST只管理自身source sample和discontinuity；PoseStateMachine Transition MUST拥有State到State的clock、blend和release；AnimationSlot MUST拥有Source Pose与Action source之间的handoff；显式BlendStack MUST只拥有自身连接source的entry、Stored Pose、dense per-bone blend和retirement；Inertialization MUST独占局部completed Pose history、residual与rebase。Runtime MUST不为AnimationChannel、Graph branch或Output自动创建隐藏Stack、StateMachine、Slot或全局Inertialization。
+ClipPlayer、BlendSpacePlayer与SelectedPosePlayer MUST只管理自身source sample和discontinuity；PoseStateMachine Transition MUST拥有State到State的clock、blend和release；AnimationSlot MUST拥有Source Pose与Action source之间的handoff；显式BlendStack MUST只拥有自身连接source的entry、Stored Pose、dense per-bone blend和retirement；Inertialization MUST独占局部completed Pose history、residual与rebase。Runtime MUST不为AnimationChannel、Graph branch或Output自动创建隐藏Stack、StateMachine、Slot或全局Inertialization。
 
 #### Scenario: PoseState连续切换
 
@@ -95,28 +89,6 @@ SequencePlayer、BlendSpacePlayer与SelectedPosePlayer MUST只管理自身source
 - **WHEN** Slot从Attack切换到Dodge
 - **THEN** Slot MUST按node-local route处理handoff
 - **AND** PoseStateMachine MUST不保存Action transition
-
-### Requirement: Marker同步必须编入对应source-local计划
-
-MarkerGroup binding MUST提供canonical SyncGroupId、topology、SyncRole、marker occurrence和duration。PoseState relation MUST以StateMachine、Transition generation和两侧Player operation identity为key；Action relation MUST以Slot、AnimationPlaybackId和source usage为key。Runtime MUST在source采样前按leader有向Marker pair与segment fraction生成effective sample，并在共同可见期间每帧持续求值。Pose Graph MUST不序列化MarkerSync节点，Runtime MUST不按State名、clip名、Action名、priority或weight推导relation。
-
-#### Scenario: Walk切换Run
-
-- **WHEN** Pose Transition两侧State的唯一同步候选source同组
-- **THEN** Source Sync Plan MUST持续映射Walk effective segment到Run
-- **AND** Gameplay movement MUST不等待marker边界
-
-#### Scenario: Action同步binding损坏
-
-- **WHEN** Slot要求同步但任一source缺少合法marker coverage
-- **THEN** Runtime MUST报告稳定typed invalid
-- **AND** MUST不退回normalized time或Animancer自动同步
-
-#### Scenario: 两侧source没有共同MarkerGroup
-
-- **WHEN** Compiler无法从两侧binding找到共同canonical MarkerGroup
-- **THEN** 两侧source MUST使用各自raw time
-- **AND** compiled plan MUST为None
 
 ### Requirement: Finite与Cyclic source时间必须保持明确拓扑
 
@@ -179,3 +151,29 @@ Animancer source backend MUST只按完整Action playback或Presentation Pose sou
 - **WHEN** authoring revision变化而Projection尚未显式Build
 - **THEN** Preview与Runtime preparation MUST停止
 - **AND** MUST不创建临时Plan、旧Projection fallback或独立PlayableGraph
+
+### Requirement: Locomotion Phase映射必须编入source-local计划
+
+Projection MUST把Locomotion Phase forward/inverse plan与可达relation编入对应source-local计划。每个relation plan MUST包含TransitionId、编译期固定leader、两侧秒域coverage与validation identity；Runtime MUST用`RelationIdentity + TransitionId + TransitionGeneration`建立唯一relation generation，并只用leader raw time、compiled forward phase、follower continuation cycle和compiled inverse plan求target effective Clip time。Runtime MUST不读取AnimationCurve、Profile、Foot Analysis artifact，不搜索Pose，也不得回退normalized time或旧Marker mapping。
+
+#### Scenario: RunLoop接任MovingTurn
+
+- **WHEN** MovingTurn到RunLoop relation具有合法Phase计划
+- **THEN** RunLoop Player MUST按Phase inverse得到effective time并采样Pose与Foot Feature
+- **AND** MovingTurn与RunLoop各自raw clock MUST保持不变
+
+### Requirement: Locomotion Phase relation必须服从Transition generation与Player continuation
+
+Compiler MUST按固定规则选择leader：两侧clock authority不同时`CommittedMovement`优先，同authority时outgoing source优先；候选必须覆盖完整Blend可见窗口，优先候选不足时 MAY选择另一侧，两侧都不足时 MUST Build失败。leader在一个relation generation内 MUST不按weight、sample、clock进度或有限端点动态变化。Transition replacement MUST先release旧generation再建立新generation；反向edge MUST使用自己的plan与generation。正常release MUST把最后effective time建立为follower自己的continuation anchor并删除relation generation；AlwaysResetOnEntry、branch replacement、Projection replacement、Presentation Reset与Dispose MUST清除不合法continuation和relation state。
+
+#### Scenario: 同authority的Turn进入RunLoop
+
+- **WHEN** MovingTurn与RunLoop都使用CommittedMovement且MovingTurn coverage覆盖完整Blend窗口
+- **THEN** Compiler MUST把outgoing MovingTurn固定为该edge relation的leader
+- **AND** Runtime MUST不因RunLoop weight超过MovingTurn而换leader
+
+#### Scenario: Transition在Blend中被替换
+
+- **WHEN** 当前relation generation尚未完成时更高优先级Transition替换目标State
+- **THEN** Runtime MUST按旧edge release规则关闭旧generation，再为新TransitionGeneration建立新relation
+- **AND** MUST不复用旧follower cycle、effective anchor或relation cursor

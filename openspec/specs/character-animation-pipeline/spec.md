@@ -8,13 +8,14 @@
 
 ### Requirement: Gameplay Timeline只能提交有限Action播放事实
 
-Compiler MUST把有限Action Timeline AnimationTrack降低为稳定producer binding、AnimationChannel binding、committed sample contract与marker binding。SimulationTick MUST只推进Gameplay Timeline logic time并提交Select、Sample、Complete或Release command；PresentationFrame sampler MUST按committed raw sample、cycle、PlaybackMode和source-local clip weight生成Action playback frame与typed parameter page。Timeline MUST不解析effective marker time、不创建Pose、transition、Bone Mask或IK plan。持续Idle、Walk、Run、Start、Stop与Turn MUST不依赖Gameplay Timeline或AnimationChannel。
+Compiler MUST把有限Action Timeline AnimationTrack降低为稳定producer binding、直接AnimationClip计划、committed sample contract与source-local Clip Weight计划。Producer binding MUST只保存Timeline/Track引用；Foot Analysis MUST从Profile Analysis Source、角色Rig与Clip Analysis Input Hash解析，Foot Placement Weight MUST通过唯一Clip Curve catalog从`presentation.foot-placement-weight`降低为`animation.foot-placement-weight`Runtime参数。SimulationTick MUST只推进Gameplay Timeline logic time并提交Select、Sample、Complete或Release command；PresentationFrame sampler MUST按committed raw sample、cycle、PlaybackMode和source-local clip weight生成Action playback frame与typed parameter page。Timeline MUST不解析Locomotion Phase、不创建Pose、transition、Bone Mask或IK plan。持续Idle、Walk、Run、Start、Stop与Turn MUST不依赖Gameplay Timeline或AnimationChannel。
 
 #### Scenario: Attack Timeline同时产生Window与动画
 
-- **WHEN** Attack Timeline在一个SimulationTick推进Window并选择Attack animation producer
+- **WHEN** Attack Timeline在一个SimulationTick推进Window并选择直接AnimationClip producer
 - **THEN** Window MUST进入Gameplay事实链
 - **AND** Action playback command MUST进入Presentation-owned inbox
+- **AND** Timeline MUST不创建Sequence或Marker binding
 
 #### Scenario: Locomotion持续播放
 
@@ -65,22 +66,6 @@ SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同�
 - **WHEN** consumer发布retirement permission且backend完成旧source物理释放
 - **THEN** Runtime MAY把workspace槽位分配给新source
 - **AND** 旧CaptureJob与新CaptureJob MUST不在同一次Evaluate写入同一槽位
-
-### Requirement: Marker effective time必须由source-local计划解析
-
-Action Timeline与Pose source只提交raw sample和marker binding。PoseState Transition的Source Sync Plan或AnimationSlot的Action source usage MUST在采样前解析effective time，并在共同可见期持续求值。Pose Graph MUST不序列化MarkerSync节点；Runtime MUST不按State、Action或clip显示名建立relation。
-
-#### Scenario: Walk到Run同步
-
-- **WHEN** Pose Transition启用MarkerGroup且两侧source binding合法
-- **THEN** Runtime MUST按有向marker pair和segment fraction映射target sample
-- **AND** Gameplay movement MUST不等待marker边界
-
-#### Scenario: Action不同步
-
-- **WHEN** Action binding的SyncMode为None
-- **THEN** Action source MUST使用raw visual time
-- **AND** Runtime MUST不自动补relation
 
 ### Requirement: 动画调试只能读取正式Snapshot
 

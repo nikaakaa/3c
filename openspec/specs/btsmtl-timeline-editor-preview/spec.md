@@ -3,76 +3,6 @@
 ## Purpose
 定义BTSMTL有限Action Timeline编辑器预览的正式链路：`TimelinePreviewSession`通过typed Action adapter接入唯一`AnimationPreviewRuntime`，复用Action lifecycle、AnimationSlot、Transition Routing、source backend与Pose Plan；持续Locomotion由Pose Graph Fact Preview负责，不恢复旧`TimelinePlayer`、BaseLocomotion Timeline、共享Playback总管或独立PlayableGraph。
 ## Requirements
-### Requirement: Source Time Authoring模块必须跨正式owner复用
-
-Timeline Field的time ruler、marker、curve与analysis interaction、geometry和rendering MUST被抽象为不依赖Timeline数据类型的Source Time Authoring模块。Timeline AnimationTrack/Clip与Presentation Pose Source binding MUST分别通过typed owner adapter使用同一模块，并把Mutation提交给各自正式owner。模块 MUST不复制数据、不创建Locomotion Timeline、不提供任意自定义curve或SerializedProperty入口。
-
-#### Scenario: Timeline与Pose Source编辑相同曲线类型
-
-- **WHEN** 作者分别编辑Attack Clip和Run Pose Source的Foot Placement Weight
-- **THEN** 两个页面 MUST共享key/tangent/selection/Undo交互实现
-- **AND** 数据 MUST分别只写入Timeline Clip与Profile binding
-
-#### Scenario: 提取模块后编辑Timeline marker
-
-- **WHEN** 作者在原Timeline页面拖动Attack marker
-- **THEN** Timeline AnimationTrack identity与Mutation语义 MUST保持不变
-- **AND** Presentation Profile MUST不获得副本
-
-### Requirement: Timeline Animation Analysis必须是按需领域工具
-
-Timeline窗口 MAY为有限Action AnimationClip通过显式Character Editor provider提供Animation Analysis面板。面板 MUST默认关闭，不占Track行；打开后 MUST显式显示当前Action Clip、Analysis Source、artifact状态、Left/Right选择与单一metric选择。持续Locomotion Pose source的Analysis MUST属于Profile source editor，Timeline窗口不得创建或反向搜索对应Timeline。生成曲线 MUST只读且不得进入Timeline selection、Undo或Curve Channel Catalog。
-
-#### Scenario: 查看Attack脚分析
-
-- **WHEN** 作者选中Attack AnimationClip、选择匹配Analysis Source并打开Analysis
-- **THEN** 面板 MUST允许选择一只脚和一个metric查看
-- **AND** Timeline主时间轴 MUST不增加Sole Speed、Height、Plant或Landing行
-
-#### Scenario: 查看Run Pose source脚分析
-
-- **WHEN** 作者从Run Sequence source打开Analysis
-- **THEN** 必须导航到Profile source editor
-- **AND** MUST不创建RunLoop Timeline或反向搜索Definition
-
-#### Scenario: 未选择Analysis Source
-
-- **WHEN** 独立Timeline打开Analysis但没有显式Source
-- **THEN** 面板 MUST显示Analysis Source Required
-- **AND** MUST不搜索引用该Timeline的Definition或Graph
-
-### Requirement: Timeline Analysis必须显示并显式应用脚接触候选
-
-Animation Analysis面板 MUST在有限Action artifact Ready时显示由左右脚PlantConfidence实际采样推导的contact候选及目标frame。候选 MUST保持瞬时只读，不得自动保存或成为第二份运行真相。作者确认目标Action AnimationTrack后，Apply MUST重新校验artifact、AnimationClip dependency、Analysis Source、Sampling Rig、Calibration、采样参数、Timeline映射和candidate revision，并通过Timeline正式mutation生成已有的AnimationSyncMarker作者数据。持续Locomotion Pose source候选只能由Profile source editor写入其binding。
-
-#### Scenario: 应用Action候选
-
-- **WHEN** 作者选择完整覆盖MarkerGroup/Finite AnimationTrack的Action Clip并确认Apply
-- **THEN** 面板 MUST把当前未过期候选写为正式LeftFootContact与RightFootContact Marker
-- **AND** MUST只替换这两类脚接触Marker、尽量保留匹配的stable marker identity并保留其它业务Marker
-- **AND** 写入 MUST进入既有Undo、dirty、validator、compiler与Agent v15链
-
-#### Scenario: 候选已经过期
-
-- **WHEN** 候选显示后artifact identity/content hash、Clip dependency或Timeline映射发生变化
-- **THEN** Apply MUST拒绝旧candidate revision
-- **AND** MUST不按缓存frame、clip名称或半周期假设继续写入Marker
-
-#### Scenario: producer级映射不唯一
-
-- **WHEN** 目标Track不是MarkerGroup/Cyclic，或存在多个AnimationClip，或单Clip没有完整覆盖Timeline
-- **THEN** 面板 MAY显示只读候选但 MUST禁用Apply并说明映射不唯一
-- **AND** MUST不选择权重最高Clip或按名称猜测Marker来源
-
-### Requirement: Timeline Analysis工具不得伪造Foot Placement世界
-
-Animation Analysis面板 MUST只显示离线AnimationClip局部特征。它 MUST不执行PhysicsScene查询、Foot Lock、Ground Envelope、Pelvis、Final IK或Camera，不得把离线plant confidence显示为Gameplay contact。
-
-#### Scenario: 预览Attack动画
-
-- **WHEN** 作者查看Attack的plant或landing metric
-- **THEN** 面板 MUST明确数据属于动画局部分析
-- **AND** MUST不显示虚构地面、锁脚或运行时IK结果
 
 ### Requirement: Timeline 编辑器预览使用管线预览会话
 
@@ -272,7 +202,7 @@ Timeline Live Debug MUST从共享provider的current Action playback summary显�
 
 ### Requirement: 预览采样必须复用正式动画Selection与Pose Plan
 
-有限Action Timeline Authoring Preview MUST把当前Track/Clip时间降低为正式Action Selection与Parameter page，并通过session-local Action command inbox执行匹配Projection的Action Playback Input、AnimationSlot、Transition Routing、Player和`CharacterPresentationPosePlan`。持续Locomotion Pose source、PoseStateMachine与Transition Rule预览 MUST属于Pose Graph Workspace，Timeline Preview不得伪造BaseLocomotion Timeline或Presentation Fact。具备正式Body与PhysicsScene上下文时 MAY执行FootPlacement，否则 MUST标记world-aware阶段Unavailable。Preview MUST不创建隐藏MarkerSync、固定per-slot Stack、隐藏Inertialization、简化PoseGraph、Animancer direct Play、假Foot Physics或自动全局平滑。
+有限Action Timeline Authoring Preview MUST把当前Track/Clip时间降低为正式Action Selection与Parameter page，并通过session-local Action command inbox执行匹配Projection的Action Playback Input、AnimationSlot、Transition Routing、Player和`CharacterPresentationPosePlan`。持续Locomotion Pose source、PoseStateMachine与Transition Rule预览 MUST属于Pose Graph Workspace，Timeline Preview不得伪造BaseLocomotion Timeline或Presentation Fact。具备正式Body与PhysicsScene上下文时 MAY执行FootPlacement，否则 MUST标记world-aware阶段Unavailable。Preview MUST不创建隐藏素材同步节点、固定per-slot Stack、隐藏Inertialization、简化PoseGraph、Animancer direct Play、假Foot Physics或自动全局平滑。
 
 #### Scenario: 当前时间采样
 
@@ -299,132 +229,6 @@ Timeline Live Debug MUST从共享provider的current Action playback summary显�
 - **THEN** Preview MUST重置Inertialization history
 - **AND** MUST不把seek解释为可惯性化的连续切换
 
-### Requirement: Timeline Editor 必须编辑 AnimationTrack Marker Sync
-
-Timeline Editor MUST在AnimationTrack Inspector与同一track时间轴中编辑SyncMode、SyncGroupId、Finite/Cyclic topology、SyncRole和marker。每个AnimationTrack MUST拥有一个固定存在、可折叠的`SYNC MARKERS`子轨；该子轨 MUST只是父Track作者数据的编辑投影，不得加入`TimelineData.Tracks`、获得独立AuthoringId、接受Clip或执行Tick。折叠状态 MUST只改变显示高度并保留group、topology、role和marker数量摘要。`None`子轨 MUST显示禁用摘要，`MarkerGroup`子轨 MUST按稳定MarkerAuthoringId显示、选择和拖动Point Marker，并按整数Timeline frame吸附。
-
-作者 MUST能在子轨空白帧通过右键菜单新增Marker。菜单 MUST从当前正式Definition authoring context内同AnimationChannelId、同显式MarkerSync可达集合、同canonical SyncGroup的AnimationTrack动态投影已使用MarkerId候选，并 MUST允许显式输入新的合法MarkerId。候选索引 MUST只读且不得序列化为全局catalog、Profile或Track副本。Marker右键菜单 MUST提供选择、定位、重命名与删除；Inspector MUST继续提供精确MarkerId和frame输入。新增、重命名、移动、删除与模式切换 MUST通过Timeline正式authoring API进入Undo、dirty、identity、唯一校验、RebindTimeline和Authoring Preview刷新链，不得使用YAML、SerializedProperty任意写入或独立FootPhase资产。
-
-#### Scenario: 拖动一个marker
-
-- **WHEN** 作者在AnimationTrack marker lane拖动RightPlant
-- **THEN** 编辑器 MUST保持该marker的AuthoringId
-- **AND** pointer capture期间 MUST只更新本地整数frame预览
-- **AND** 释放或意外失去capture时 MUST以一个Undo事务提交最后frame并触发正式validation、Projection stale状态与Preview刷新
-- **AND** Pointer Cancel MUST恢复原frame且不得写入资产
-
-#### Scenario: 在空白帧新增同组marker
-
-- **WHEN** 作者在Attack AnimationTrack的SYNC MARKERS子轨空白帧打开右键菜单
-- **THEN** 菜单 MUST显示同Action AnimationChannelId、同Slot可达集合其它有限Action Track已经使用的MarkerId候选
-- **AND** 选择候选 MUST通过正式authoring API在当前frame创建具有新AuthoringId的Marker
-
-#### Scenario: 为组创建首个marker名称
-
-- **WHEN** 当前Sync Group尚无MarkerId候选
-- **THEN** 作者 MUST能显式输入新的合法MarkerId
-- **AND** Editor MUST不创建独立Marker catalog作为先决条件
-
-#### Scenario: 删除marker点
-
-- **WHEN** 作者右键一个Marker并选择删除
-- **THEN** Editor MUST按MarkerAuthoringId调用正式删除API
-- **AND** Timeline、Inspector、pair coverage与Preview MUST在同一提交后刷新
-
-#### Scenario: 查看循环闭合
-
-- **WHEN** 作者展开Cyclic MarkerGroup子轨
-- **THEN** 子轨 MUST明确显示末Marker到下一周期首Marker的有向闭合关系
-- **AND** Preview游标 MUST突出当前有向Marker Pair与fraction
-- **AND** Finite子轨 MUST不显示回绕
-
-#### Scenario: 切换为None
-
-- **WHEN** 作者把MarkerGroup track切换为None
-- **THEN** authoring API MUST原子清空group、topology、SyncRole和markers
-- **AND** Undo MUST能恢复完整旧配置
-
-#### Scenario: shared producer调用拓扑冲突
-
-- **WHEN** 当前shared AnimationTrack同时被Once与Loop节点调用
-- **THEN** Timeline Editor MUST显示全部冲突call site的stable identity与来源定位
-- **AND** MUST不提供call site override作为修复
-
-#### Scenario: None动画轨仍显示固定子轨
-
-- **WHEN** 作者打开SyncMode为None的AnimationTrack
-- **THEN** clip row下方 MUST显示固定Marker Sync子轨和None摘要
-- **AND** 子轨 MUST不创建Timeline运行时Track
-
-#### Scenario: 折叠Marker子轨
-
-- **WHEN** 作者折叠SYNC MARKERS子轨
-- **THEN** Track Handle MUST保留SyncMode、Group、Topology、Role和Marker数量摘要
-- **AND** 折叠 MUST不修改Marker数据、Track组合顺序或运行时Projection
-
-#### Scenario: Track重排保持组合行
-
-- **WHEN** 作者拖动重排带Marker Sync子轨的AnimationTrack
-- **THEN** clip row、Marker子轨和左侧Track Handle MUST作为一个组合行移动
-- **AND** 不得与相邻Track重叠
-
-#### Scenario: Marker与Foot Placement曲线同时存在
-
-- **WHEN** AnimationTrack同时启用MarkerGroup且Clip拥有Foot Placement Weight曲线
-- **THEN** Marker MUST只显示在SYNC MARKERS子轨
-- **AND** Foot Placement Weight MUST只显示在独立CURVES子轨
-- **AND** 两者 MUST不共享key、contact、phase或运行时状态
-
-### Requirement: Authoring Preview 必须复用正式 Marker Sync 表现链
-
-有限Action Timeline Authoring Preview MUST通过CharacterPresentationProjection解析producer marker binding、Action AnimationChannelId与Slot/Player PoseNodeId，并复用session-local `CharacterActionPlaybackRuntime`、AnimationSlot、source backend与Pose Plan。单producer预览 MUST从正式relation snapshot显示raw/effective time和当前marker segment。持续Locomotion Sequence/BlendSpace source marker预览 MUST由Pose Graph Workspace从Profile binding执行，Timeline Editor不得复制或编辑这些marker。
-
-#### Scenario: 单producer预览marker
-
-- **WHEN** 作者拖动一个MarkerGroup AnimationTrack的Timeline游标
-- **THEN** Preview MUST显示该时间所在的marker pair与segment fraction
-- **AND** 在没有source handoff时effective time MUST等于raw time
-
-#### Scenario: 比较Locomotion Walk与Run handoff
-
-- **WHEN** 作者选择Walk与Run Presentation Pose source
-- **THEN** Pose Graph Workspace MUST通过正式source-local marker映射与PoseState transition执行比较
-- **AND** Timeline Preview MUST不生成BaseLocomotion Selection
-
-#### Scenario: Preview包含TreeClip或MotionWarp
-
-- **WHEN** 当前Timeline还包含TreeClip、MotionCurve或MotionWarp
-- **THEN** Authoring Preview MUST只显示并编辑这些track
-- **AND** MUST不创建Simulation Source、Pipeline、WorldSolver或Action target输入来执行它们
-
-### Requirement: Timeline Live Debug 必须显示正式 Sync Relation
-
-Timeline Live Debug MUST从共享RuntimeDebugSession的正式Animation trace显示有限Action source/target PlaybackId、AnimationChannelId、Slot/Player PoseNodeId、canonical SyncGroupId、有向marker pair、source fraction、target occurrence、raw/effective time、effective cycle、relation depth、lifecycle phase与detach/failure reason。PoseState Source Sync relation MUST在Pose Graph Live Debug显示PoseState、transition generation与Presentation source usage；Timeline Live Debug MAY提供只读跨工作区导航，但 MUST不把Pose relation伪装为Timeline playback。两者 MUST不按authoring游标重新采样、不推导State transition、不求值Pose Graph、不从Animancer weight重建贡献或维护第二份relation状态。
-
-#### Scenario: 观察连续切换
-
-- **WHEN** runtime发生`Attack1 -> Attack2 -> Dodge`且存在Action relation chain
-- **THEN** Live Debug MUST按playback generation显示每条source-target relation与depth
-- **AND** 显示值 MUST来自当帧正式runtime snapshot
-
-#### Scenario: source退休
-
-- **WHEN** source fade完成并触发target continuation rebase
-- **THEN** Live Debug MUST显示`SourceRetiredRebased`及最后raw/effective anchor
-- **AND** MUST不把该事件显示为Gameplay State transition
-
-#### Scenario: 观察Walk到Run
-
-- **WHEN** runtime发生PoseState Source Sync
-- **THEN** Timeline Live Debug MUST提供Open Pose Graph Live导航
-- **AND** MUST不生成虚假AnimationPlaybackId
-
-#### Scenario: target显式None
-
-- **WHEN** incoming target未参与Marker Sync
-- **THEN** Live Debug MUST显示`TargetExplicitNone`
-- **AND** MUST继续显示target原始Timeline采样与普通Animancer lifecycle
-
 ### Requirement: Timeline Live Debug 必须显示 MotionWarp 正式运行事实
 
 Live Debug MUST从正式runtime trace显示MotionWarp window首尾、source MotionCurve首尾与当前累计pose、ActionInstance、target snapshot、Translation/Rotation mode、未限制Target Pose、有效Target Pose、Limit结果、position/yaw progress、previous/current Warped Cumulative Pose、当前correction、final Action channel request和actual solver result。Live Debug MUST不重新计算Warp，也 MUST不读取mutable accumulator或scene target。
@@ -437,61 +241,38 @@ Live Debug MUST从正式runtime trace显示MotionWarp window首尾、source Moti
 
 ### Requirement: Timeline Editor 必须按时间语义抽象作者内容
 
-Timeline Editor MUST将作者内容明确分为占据起止区间的`Span Clip`、位于单一整数帧的`Point Marker`和沿时间连续求值的`Continuous Curve`。三类内容 MUST共享Timeline frame geometry、选择、帧吸附、pointer capture、本地草稿、单次Undo提交和提交后刷新合同，但 MUST继续使用各自正式数据所有权与authoring API。该抽象 MUST只属于Editor交互层，不得创建统一宽序列化DTO、新Runtime Track、第二份`TimelineData`或运行时按类型反射分派。
+Timeline Editor MUST将本地作者内容明确分为占据起止区间的`Span Clip`和沿时间连续求值的`Continuous Curve`。两类内容 MUST共享Timeline frame geometry、选择、帧吸附、pointer capture、本地草稿、单次Undo提交和提交后刷新合同，但 MUST继续使用各自正式数据所有权与authoring API。该抽象 MUST只属于Editor交互层，不得创建统一宽序列化DTO、新Runtime Track、第二份`TimelineData`或运行时按类型反射分派。AnimationClip注册Curve与Locomotion Phase MUST不进入该抽象。
 
-#### Scenario: 同一AnimationTrack展开全部作者内容
+#### Scenario: 同一AnimationTrack展开作者内容
 
-- **WHEN** 作者展开同时包含Animation Clip、Marker Sync和Foot Placement Weight的AnimationTrack
-- **THEN** Clip MUST显示在Span Clip行，Sync Marker MUST显示为Point Marker，Foot Placement Weight MUST显示在Continuous Curve行
-- **AND** 三类内容 MUST使用同一时间轴缩放与滚动坐标
-- **AND** Marker MUST不以曲线key或连续phase值显示
+- **WHEN** 作者展开包含Animation Segment、Weight和Ease的AnimationTrack
+- **THEN** Segment MUST显示在Span Clip行，Weight与Ease MUST显示在Continuous Curve行
+- **AND** Foot Placement Weight与Locomotion Phase MUST不显示为Timeline lane
 
 #### Scenario: 编辑器提交一次拖动
 
-- **WHEN** 作者拖动Point Marker或Continuous Curve key并释放指针
+- **WHEN** 作者拖动Continuous Curve key并释放指针
 - **THEN** pointer capture期间 MUST只更新当前元素的本地草稿
 - **AND** Pointer Up或意外Capture Out MUST只产生一个正式Undo事务
 - **AND** Pointer Cancel MUST丢弃草稿且不得修改资产
 
-#### Scenario: Editor抽象进入Runtime
-
-- **WHEN** Timeline编译或运行
-- **THEN** Runtime MUST继续消费现有Track、Clip、Projection和Program合同
-- **AND** MUST不存在Span、Point、Curve统一运行时解释器或第二条Tick路径
-
 ### Requirement: Timeline Editor 必须完整编辑显式注册的 Continuous Curve Channel
 
-Timeline Editor MUST通过显式typed Curve Channel Catalog显示和编辑Timeline Clip已经正式拥有的Continuous Curve。每个descriptor MUST声明稳定ChannelId、owner类型、显示名、颜色、time domain、value domain、单位、完整curve读取、正式owner mutation和领域validator。Catalog MUST首批覆盖Animation Clip的Weight、Ease In、Ease Out和Foot Placement Weight，MotionCurve Clip的Weight、Position X/Y/Z、Yaw和Ease In/Out，MotionWarp Clip的Position Progress与Yaw Progress，以及CameraStateClip与CameraResponseClip的Weight和Ease In/Out。Editor MUST不通过反射、字段名、SerializedProperty path或任意字符串发现和修改curve。
+Timeline Editor MUST通过显式typed Curve Channel Catalog显示和编辑Timeline owner已经正式拥有的Continuous Curve。每个descriptor MUST声明稳定ChannelId、owner类型、显示名、颜色、time domain、value domain、单位、完整curve读取、正式owner mutation和领域validator。Catalog MUST覆盖Animation Segment的Weight、Ease In和Ease Out，MotionCurve Clip的Weight、Position X/Y/Z、Yaw和Ease In/Out，MotionWarp Clip的Position Progress与Yaw Progress，以及CameraStateClip与CameraResponseClip的Weight和Ease In/Out。`presentation.locomotion-phase`、`presentation.foot-placement-weight`、AnimationClip骨骼曲线和其它Clip内注册Curve MUST只由Unity Animation Window编辑，不得进入Timeline Catalog。
 
-每个具有registered channel的Track MUST显示可折叠`CURVES`分组，展开后每个ChannelId拥有独立lane。每个Clip MUST只在自己的StartFrame..EndFrame范围显示自己的curve、key与边界；重叠Clip MUST不在作者层合并curve。Curve Lane MUST按完整`AnimationCurve.Evaluate`结果绘制插值，显示原始key、tangent handle、当前游标time/value、value reference与单位。Bounded channel MUST使用声明范围；unbounded channel MUST提供独立vertical fit、scale和zero line，不得Clamp到`[0,1]`。
+每个具有registered Timeline channel的Track MUST显示可折叠`CURVES`分组，展开后每个ChannelId拥有独立lane。每个Clip或Segment MUST只在自己的StartFrame..EndFrame范围显示自己的Timeline-local curve、key与边界；重叠内容 MUST不在作者层合并curve。Curve Lane MUST按完整`AnimationCurve.Evaluate`结果绘制插值，显示原始key、tangent handle、当前游标time/value、value reference与单位。
 
 #### Scenario: 展开Animation Track曲线
 
-- **WHEN** 作者展开包含Animation Clip的CURVES分组
-- **THEN** Editor MUST显示Weight、Ease In、Ease Out与Foot Placement Weight四个typed channel
-- **AND** Foot Placement Weight MUST只是其中一个channel，不得拥有专用Curve View实现
-- **AND** Sync Marker MUST继续只显示在独立SYNC MARKERS子轨
+- **WHEN** 作者展开包含Animation Segment的CURVES分组
+- **THEN** Editor MUST只显示Weight、Ease In与Ease Out三个Timeline-local typed channel
+- **AND** Foot Placement Weight与Locomotion Phase MUST不出现在该分组
 
 #### Scenario: 展开MotionCurve Track曲线
 
 - **WHEN** 作者展开MotionCurve Clip的CURVES分组
 - **THEN** Editor MUST显示Weight、Position X/Y/Z、Yaw与Ease In/Out
 - **AND** Position与Yaw MUST使用unbounded value view及明确单位
-- **AND** Editor MUST不把它们Clamp到权重范围
-
-#### Scenario: 展开MotionWarp与Camera曲线
-
-- **WHEN** 作者展开MotionWarp或Camera Clip的CURVES分组
-- **THEN** Editor MUST只显示Catalog为该owner登记的channel
-- **AND** MotionWarp progress MUST继续接受其单调与端点领域校验
-- **AND** Camera曲线 MUST继续由Camera领域消费者拥有运行语义
-
-#### Scenario: 绘制实际插值
-
-- **WHEN** channel包含非线性或weighted tangent key
-- **THEN** Curve Lane MUST按完整AnimationCurve插值绘制
-- **AND** MUST显示原始key与tangent handle
-- **AND** MUST不使用key之间的直线替代实际曲线
 
 ### Requirement: Curve Key编辑必须无损且原子
 
@@ -526,20 +307,19 @@ Curve mutation MUST原子保存pre/post wrap mode及每个key的time、value、i
 
 ### Requirement: Curve Editor必须保持领域运行链唯一
 
-通用Curve Editor MUST只提供作者投影与正式mutation，不得创建`GenericTimelineCurveRuntime`。Animation控制曲线 MUST继续进入CharacterPresentationProjection与现有Presentation consumer；MotionCurve和MotionWarp曲线 MUST继续进入Semantic IR、Numeric Program与各自evaluator/modifier；Camera曲线 MUST继续进入既有Camera compile/presentation链。RootMotionCurveAsset、导入AnimationClip骨骼/BlendShape/属性曲线和没有正式consumer的任意Float Curve MUST不进入Timeline Curve Channel Catalog。
+Timeline Curve Editor MUST只提供Timeline-local作者投影与正式mutation，不得创建`GenericTimelineCurveRuntime`。Animation Segment Weight/Ease MUST继续进入Action Presentation计划；MotionCurve和MotionWarp曲线 MUST继续进入Semantic IR、Numeric Program与各自evaluator/modifier；Camera曲线 MUST继续进入既有Camera compile/presentation链。AnimationClip注册表现Curve MUST由Clip Curve catalog、Animation Window入口与Character Presentation Projection链拥有，MUST不经过Timeline Curve MutationAdapter。RootMotionCurveAsset、导入AnimationClip骨骼/BlendShape/属性曲线和没有正式consumer的任意Float Curve MUST不进入Timeline Curve Channel Catalog。
 
 #### Scenario: 编辑MotionWarp progress
 
 - **WHEN** 作者修改MotionWarp Position Progress channel
 - **THEN** Timeline只通过MotionWarpClip正式mutation保存curve
 - **AND** 后续Compiler MUST沿既有MotionWarp semantic operation编译
-- **AND** Editor MUST不直接执行MotionWarp或创建第二runtime sampler
 
-#### Scenario: 请求任意自定义curve
+#### Scenario: 请求Clip注册Curve
 
-- **WHEN** 某功能只提供显示名但没有registered ChannelId、owner mutation、validator或runtime consumer
-- **THEN** Curve Editor MUST拒绝创建该channel
-- **AND** MUST不保存未知AnimationCurve字段或fallback数据
+- **WHEN** Timeline Curve Editor收到`presentation.locomotion-phase`或`presentation.foot-placement-weight`
+- **THEN** Catalog MUST拒绝该channel并提供Open Animation Clip导航
+- **AND** MUST不在Segment或Timeline创建Curve副本
 
 ### Requirement: Timeline Field内部交互、几何与渲染必须分属明确模块
 
@@ -570,3 +350,19 @@ Timeline Editor MUST保留现有TimelineEditorWindow、TimelineField、Inspector
 - **WHEN** 同一Timeline source存在多个runtime playback
 - **THEN** runtime overlay模块 MUST呈现各playback identity并服从Follow/Pin选择
 - **AND** rendering模块 MUST不按列表顺序静默选择赢家或调用preview evaluator
+
+### Requirement: Timeline Editor必须只编辑Action Timeline并导航直接AnimationClip
+
+Timeline Editor MUST只拥有有限Action的Track、Segment、Window、Motion、MotionWarp、Decision、Cue与Timeline-local Curve。Animation Segment MUST直接引用精确AnimationClip并保存Start/End、ClipIn、Extrapolation、Weight与Ease。作者双击Segment或执行Open Clip时，Editor MUST通过精确Character Definition、Profile、Clip与Preview Target打开Unity Animation Window。Timeline Editor MUST不提供Sequence模式、素材Marker lane、素材Curve lane、Foot Analysis面板或Sequence Preview。
+
+#### Scenario: 双击Attack Segment
+
+- **WHEN** 作者双击Attack Timeline中的Animation Segment
+- **THEN** 系统 MUST打开精确AnimationClip和正式Preview Target
+- **AND** Timeline selection与AnimationClip Curve MUST继续由各自owner保存
+
+#### Scenario: Timeline没有Character上下文
+
+- **WHEN** 作者独立打开shared Timeline
+- **THEN** Timeline本地Action编排 MUST保持可编辑
+- **AND** Open Clip需要的Preview Target不可解析时 MUST显示typed Unavailable而不搜索任意Definition

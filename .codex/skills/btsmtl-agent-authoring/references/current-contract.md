@@ -2,7 +2,7 @@
 
 ## 唯一外部合同
 
-Schema：`btsmtl-agent-authoring-document.v3`
+Schema：`btsmtl-agent-authoring-document.v4`
 
 Document固定为Unity项目根目录外部工作区中的目录包：
 
@@ -25,6 +25,8 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
       layout.json
     timelines/<stable-segment>/
       timeline.json
+      curves.json
+    animation-clips/<stable-segment>/
       curves.json
     ai/perception.json
     presentation/
@@ -123,7 +125,8 @@ Character editable：
 - blackboard declaration
 - action request与profile
 - sparse graph package
-- timeline正文与独立curve文件
+- timeline正文、直接AnimationClip Segment引用与独立Timeline-local curve文件
+- `editable/animation-clips/**/curves.json`中的原生AnimationClip注册表现Curve
 - Pose Graph-owned typed Source Slot子资产、Presentation Profile-owned typed Source Binding子资产、policy与有限Action producer binding
 - root-owned Pose Graph catalog、layout、parameter、typed node payload、显式`pose.local`/`pose.component` dynamic port、转换节点与edge
 - PoseStateMachine entry、带`Always Reset on Entry`的state、alias、transition、transition rule与blend策略；同步只由state source binding推导
@@ -140,17 +143,17 @@ Context：
 - Character Input、Action、Timeline与ActionContext asset catalog
 - AI受控Character合同
 - Presentation可引用的既有AnimationClip、Blend Space、Motion Matching Profile、Timeline/Animation Channel与Capability事实
-- Rig Definition v3、Physical/Virtual Bone、pelvis与左右腿chain、Body Motion、Foot Analysis identity/revision、Motion Matching索引与其它算法生成内容
+- Rig Definition v4、Physical/Virtual Bone、pelvis与左右腿chain、Body Motion、Foot Analysis identity/revision、Motion Matching索引与其它算法生成内容
 - Float32/Fixed Character Program、Presentation Projection、Native Pose Program与AIIntentProgram的identity/stale状态
 
-## Document v3 Presentation合同
+## Document v4 Presentation与AnimationClip合同
 
 Character Presentation是`editable/`中的正式目标状态：
 
 - `editable/presentation/profile.json`保存Profile稳定owner、policy、Pose Source Binding子资产、对应Graph-owned Source Slot、实际动画资源的结构化对象引用与有限Action producer binding。正式对象引用固定包含`assetPath + assetGuid + signed non-zero localFileId`；负`localFileId`是合法Unity子资产身份，只有0非法。新建Slot或Binding只在dry-run目标中使用`local:*`，成功apply后的reverse export必须替换为正式对象引用。
 - `editable/presentation/pose-graphs/<stable-segment>/graph.json`保存Graph role、parameter、Capability节点typed properties、dynamic port与edge。
 - 同目录`layout.json`只保存节点位置，目录segment、Graph id与layout graphId必须一致。
-- `editable/presentation/pose-state-machines/<stable-segment>/state-machine.json`保存entry、显式`alwaysResetOnEntry` state、alias、transition、规则图与blend策略。Transition禁止`targetResetPolicy`和`sourceSyncMode`；Sequence Player properties禁止`reset-on-entry`。
+- `editable/presentation/pose-state-machines/<stable-segment>/state-machine.json`保存entry、显式`alwaysResetOnEntry` state、alias、transition、规则图与blend策略。Transition禁止`targetResetPolicy`和`sourceSyncMode`；Clip Player properties禁止`reset-on-entry`。
 - 同目录`layout.json`只稀疏保存Entry、State与Alias的稳定identity和有限二维位置。缺失位置由稳定identity确定性排布；纯layout变化进入同一Presentation Mutation、Undo、hash与冲突判定，但不修改StateMachine `ContentRevision`，不使Projection stale，也不触发Build。
 - `readonly/presentation/linked-pose-interfaces/<stable-segment>/interface.json`保存稳定Interface identity、正式对象引用、revision、signature、Fact contract、execution contract、Entry与typed ports；任何改动都按readonly context冲突拒绝。
 - `editable/presentation/linked-pose-implementations/<stable-segment>/implementation.json`保存Implementation对象key、owner key、业务identity、revision、Interface与Graph owner正式引用或`local:*`计划identity、Entry到Graph映射；同目录`pose-graphs/**/{graph,layout}.json`与`pose-state-machines/**/{state-machine,layout}.json`保存完整Entry Graph闭包，不得内联到implementation正文。
@@ -165,35 +168,35 @@ Pose Transition混合JSON固定使用：
   "blendLogic": "StandardBlend",
   "durationSeconds": 0.18,
   "blendMode": "EaseInOut",
-  "blendProfileAssetId": "corin.animation-rig.locomotion-inertial-profile"
+  "blendProfileAssetId": "corin.animation-rig.locomotion-blend-profile"
 }
 ```
 
 `blendMode`只接受`Linear`、`EaseIn`、`EaseOut`、`EaseInOut`与`Custom`。Custom额外要求`customBlendCurveAssetId`，非Custom禁止该字段；Curve/Profile identity必须存在于`context/asset-catalog.json`并匹配`CharacterAnimationBlendCurveAsset`或`CharacterAnimationBlendProfile`类型。旧`blendCurveId`、旧`blendProfileId`、任意GUID文本和缺失引用均严格拒绝。人工Details与Document Reconciler都提交同一种typed Presentation Mutation，修改只使Projection stale，不自动Build。
 
-Pose State JSON必须显式保存`alwaysResetOnEntry`。StateMachine在State provider获得entry relevance前统一执行该语义。PoseState Compiler从Transition两侧State唯一的Sequence或BlendSpace provider读取Profile source binding；两侧共享同一canonical MarkerGroup才生成同步计划，无共同组生成None，多候选、角色冲突或同组topology不兼容直接失败。
+Pose State JSON必须显式保存`alwaysResetOnEntry`。StateMachine在State provider获得entry relevance前统一执行该语义。PoseState Compiler从Transition两侧State唯一的Clip或BlendSpace provider读取Profile source binding；只有两侧AnimationClip属于同一Profile Locomotion Sync Group时才生成Phase relation，无共同组生成None。同组端点必须具有合法per-clip Phase plan、实际秒域coverage与匹配Foot Analysis Phase Validation identity。
 
-Pose Graph-owned Source Slot与Profile-owned Source Binding可由Document通过同一typed Presentation Mutation创建、重命名、配置和删除。Sequence Binding完整保存`SyncMode/MarkerGroupId/Topology/SyncRole/Markers`和typed Foot Placement Weight curve；Marker writable owner与有限Action Timeline Track分离，不能互相复制。Binding中的Rig、source asset、Motion Matching Profile与Foot Analysis字段只能引用正式目录允许的既有资产；Document不能创建或修改Rig Definition v3、Bone、Virtual Bone、腿链、Foot Analysis、Motion Matching索引或generated payload。
+Pose Graph-owned Source Slot与Profile-owned Source Binding可由Document通过同一typed Presentation Mutation创建、重命名、配置和删除。Clip Binding只保存精确AnimationClip对象引用；Profile唯一保存Rig、Analysis Source与Locomotion Sync Group。两项注册Curve通过`editable/animation-clips/**/curves.json`修改，时间域固定为seconds。Document不能创建AnimationClip、修改骨骼曲线、AnimationEvent、import设置、Rig、Foot Analysis、Motion Matching索引或generated payload。
 
 Presentation目标使用两类分离的业务来源：
 
-- Sequence、Blend Space与Selected Pose Player的`pose-source-slot`属性必须引用精确Graph-owned typed Slot对象；`profile.json.poseSources`必须用精确Slot与Binding子资产引用绑定实际资源。Compiler按对象引用解析后生成Projection-local dense source index，Runtime不得保留作者Source字符串；按PlayerNodeId生成的typed provider identity只做帧内路由。
+- Clip、Blend Space与Selected Pose Player的`pose-source-slot`属性必须引用精确Graph-owned typed Slot对象；`profile.json.poseSources`必须用精确Slot与Binding子资产引用绑定实际资源。Compiler按对象引用解析后生成Projection-local dense source index，Runtime不得保留作者Source字符串；按PlayerNodeId生成的typed provider identity只做帧内路由。
 - ActionPlaybackInput与AnimationSlot只引用同一Document Timeline目标状态中已存在的Animation Channel，AnimationSlot是唯一consumer。
 - `profile.json.actionProducers`只允许引用同一Document中已经存在的Timeline与Animation track，不通过Presentation Mutation创建Timeline owner。
 
-不存在`MotionMatchingSelectionInput`、`AnimationSelection` port、Pose Graph `MarkerSync`或对应摘要。有限Action的Marker Sync由`editable/timelines/**/timeline.json`中的AnimationTrack唯一拥有；持续Pose Source的Marker Sync由`editable/presentation/profile.json`中的typed Source Binding唯一拥有。两类owner共用validator与时间编辑模块，但不得共享可写对象。
+不存在`MotionMatchingSelectionInput`、`AnimationSelection` port、素材Marker/Notify或对应摘要。Timeline只保存Action AnimationClip Segment与Timeline-local Curve；原生AnimationClip只保存骨骼动画和`presentation.locomotion-phase`、`presentation.foot-placement-weight`两项注册Curve；Profile只保存角色装配与Locomotion Sync Group。
 
 ## 正式调用链
 
 ```text
 five BTSMTL lifecycle MCP tools
-  -> AgentAuthoringDocumentApplicationService
-  -> AgentAuthoringDocumentExporter
-  -> AgentAuthoringPackageMapper
-  -> AgentAuthoringPresentationPackageCodec
-  -> AgentAuthoringDocumentCodec + AgentAuthoringDocumentStore
-  -> AgentDocumentReconciler
-  -> AgentAuthoringPresentationReconciler
+  -> AgentAuthoringDocumentTransactionServiceV4
+  -> AgentAuthoringDocumentV4Exporter
+  -> AgentAuthoringTargetMapper
+  -> AgentAuthoringPresentationPackageCodecV4
+  -> AgentAuthoringDocumentCodec + AgentAuthoringPackageStore
+  -> AgentDocumentMutationReconciler
+  -> AgentAuthoringPresentationReconcilerV4
   -> AgentMutationPlanner
   -> immutable AgentMutationPlan
   -> AgentMutationSession preflight
@@ -217,18 +220,18 @@ Character generated product发布是上述Document事务之外的显式精确Def
 |---|---|
 | `Mcp/BtsmtlAgentAuthoringMcpTools.cs` | 五个独立生命周期薄桥与严格参数边界 |
 | `AgentAuthoringServiceModels.cs` | 内部command与response |
-| `AgentAuthoringDocumentApplicationService.cs` | domain dispatch、同步状态、Undo、rollback、save、publish、反向同步 |
-| `AgentAuthoringDocumentModels.cs` | manifest、sync、package file与内部target |
+| `AgentAuthoringDocumentTransactionServiceV4.cs` | domain dispatch、同步状态、Undo、rollback、save、publish、反向同步 |
+| `AgentAuthoringDocumentV4Models.cs` | manifest、sync、package file与内部target |
 | `AgentAuthoringDocumentCodec.cs` | strict parse、canonical write、整包hash |
-| `AgentAuthoringDocumentStore.cs` | 确定目录、文件闭包与目录级原子发布 |
-| `AgentAuthoringPackageMapper.cs` | 稀疏package与内部完整target双向映射 |
+| `AgentAuthoringPackageStore.cs` | 确定目录、文件闭包、staging校验、package内容镜像与rollback恢复 |
+| `AgentAuthoringTargetMapper.cs` | 稀疏package与内部完整target双向映射 |
 | `AgentAuthoringCapabilityCatalog.cs` | stable node kind、typed property、port与system anchor唯一目录 |
-| `AgentAuthoringDocumentExporter.cs` | Character/AI canonical package投影 |
-| `AgentAuthoringPresentationDocumentModels.cs` | Document v3 Presentation Profile、Pose Graph与PoseStateMachine模型 |
-| `AgentAuthoringPresentationPackageCodec.cs` | Presentation分片路径、strict parse与文件闭包 |
-| `AgentAuthoringPresentationExporter.cs` | Presentation正式资产到canonical editable目标的投影 |
-| `AgentAuthoringPresentationReconciler.cs` | Presentation完整目标对账与typed Mutation事务规划 |
-| `AgentDocumentReconciler.cs` | 完整目标集合对账与最小Mutation计划入口 |
+| `AgentAuthoringDocumentV4Exporter.cs` | Character/AI canonical package投影 |
+| `AgentAuthoringPresentationPackageModels.cs` | Document v4 Presentation Profile、Pose Graph与PoseStateMachine模型 |
+| `AgentAuthoringPresentationPackageCodecV4.cs` | Presentation分片路径、strict parse与文件闭包 |
+| `AgentAuthoringPresentationPackageExporter.cs` | Presentation正式资产到canonical editable目标的投影 |
+| `AgentAuthoringPresentationReconcilerV4.cs` | Presentation完整目标对账与typed Mutation事务规划 |
+| `AgentDocumentMutationReconciler.cs` | 完整目标集合对账与最小Mutation计划入口 |
 | `AgentMutationPlanner.cs`、`AgentMutations.cs` | typed Mutation lowering与immutable plan |
 | `AgentMutationSession.cs` | 单次Index、anchor/reference resolver、symbol、diff、touched owner |
 | `AgentGraphLinkMutationHandler.cs` | flow/property edge创建、删除与改接 |
@@ -249,6 +252,6 @@ Character generated product发布是上述Document事务之外的显式精确Def
 
 保存文件后调用`btsmtl.dry_run_document`，再把返回的`documentHash`原样传给`btsmtl.apply_document.expected_document_hash`。
 
-修改Presentation时直接编辑Document v3的`editable/presentation/**`目标文件，Linked Interface只从`readonly/presentation/**`读取，随后对整个Document执行一次dry-run和同hash apply。不得增加Pose专用MCP action、直接切换活动runtime Implementation、Presentation专用apply或第二套事务。
+修改Presentation时直接编辑Document v4的`editable/presentation/**`目标文件，Linked Interface只从`readonly/presentation/**`读取，随后对整个Document执行一次dry-run和同hash apply。不得增加Pose专用MCP action、直接切换活动runtime Implementation、Presentation专用apply或第二套事务。
 
 完成代码修改时必须说明Agent合同已同步，或说明变化为什么完全不影响package editable/context、identity、ownership、Reconciler和Validator。

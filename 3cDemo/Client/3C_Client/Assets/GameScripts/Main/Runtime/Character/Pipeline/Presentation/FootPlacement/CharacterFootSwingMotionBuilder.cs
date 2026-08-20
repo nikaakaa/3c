@@ -30,8 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         InvalidSwingPhase = 14,
         StanceLandingUnavailable = 15,
         SupportOutsideSlideDistance = 16,
-        UnselectedSwing = 17,
-        SupportOutsideVerticalReach = 18
+        UnselectedSwing = 17
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics
@@ -57,7 +56,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSupportLockState supportLockState = CharacterFootSupportLockState.None,
             float supportHorizontalError = 0f,
             float supportUnlockRemainingSeconds = 0f,
-            Vector3 supportUnlockCorrection = default)
+            Vector3 supportUnlockCorrection = default,
+            float supportLockPreparationStartTimeToLandingSeconds = 0f,
+            float supportLockPreparationWeight = 0f)
         {
             State = state;
             RejectReason = rejectReason;
@@ -80,6 +81,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SupportHorizontalError = supportHorizontalError;
             SupportUnlockRemainingSeconds = supportUnlockRemainingSeconds;
             SupportUnlockCorrection = supportUnlockCorrection;
+            SupportLockPreparationStartTimeToLandingSeconds =
+                supportLockPreparationStartTimeToLandingSeconds;
+            SupportLockPreparationWeight = supportLockPreparationWeight;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -103,6 +107,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SupportHorizontalError { get; }
         public float SupportUnlockRemainingSeconds { get; }
         public Vector3 SupportUnlockCorrection { get; }
+        public float SupportLockPreparationStartTimeToLandingSeconds { get; }
+        public float SupportLockPreparationWeight { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 
@@ -118,7 +124,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp,
             in CharacterFootGroundPathDiagnostics groundPath,
             float landingPredictionError,
-            float landingConstraintWeight)
+            float landingConstraintWeight,
+            float landingPreparationStartTimeToLandingSeconds,
+            float landingPreparationWeight)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
@@ -152,7 +160,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 in groundPath,
                 landingPredictionError,
-                landingConstraintWeight);
+                landingConstraintWeight,
+                landingPreparationStartTimeToLandingSeconds,
+                landingPreparationWeight);
         }
 
         internal static CharacterFootSwingMotionDiagnostics BuildForSwing(
@@ -163,7 +173,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp,
             in CharacterFootGroundPathDiagnostics groundPath,
             float landingPredictionError,
-            float landingConstraintWeight)
+            float landingConstraintWeight,
+            float landingPreparationStartTimeToLandingSeconds,
+            float landingPreparationWeight)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
@@ -183,7 +195,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     originalAnkle);
             if (!float.IsFinite(landingPredictionError) || landingPredictionError < 0f ||
                 !float.IsFinite(landingConstraintWeight) ||
-                landingConstraintWeight < 0f || landingConstraintWeight > 1f)
+                landingConstraintWeight < 0f || landingConstraintWeight > 1f ||
+                !float.IsFinite(landingPreparationStartTimeToLandingSeconds) ||
+                landingPreparationStartTimeToLandingSeconds < 0f ||
+                !float.IsFinite(landingPreparationWeight) ||
+                landingPreparationWeight < 0f || landingPreparationWeight > 1f)
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.InvalidWeight,
                     landingEventIdentity,
@@ -306,6 +322,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             verticalCorrection = verticalCorrection > EndpointTolerance
                 ? verticalCorrection
                 : 0f;
+            float landingPlantHeight = Mathf.Max(
+                0f,
+                Vector3.Dot(groundPath.NextSwingLanding - originalSole, up));
+            float preparedLandingCorrection =
+                landingPlantHeight * landingPreparationWeight;
+            verticalCorrection = Mathf.Max(
+                verticalCorrection,
+                preparedLandingCorrection);
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = verticalCorrection > EndpointTolerance
@@ -328,7 +352,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctedSole,
                 correctedAnkle,
                 positionWeight,
-                0f);
+                0f,
+                supportLockPreparationStartTimeToLandingSeconds:
+                    landingPreparationStartTimeToLandingSeconds,
+                supportLockPreparationWeight: landingPreparationWeight);
         }
 
         internal static CharacterFootSwingMotionDiagnostics SuppressUnselected(

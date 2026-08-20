@@ -82,7 +82,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionSupportLockState,FootMotionSupportHorizontalError,FootMotionSupportUnlockRemainingSeconds," +
             "FootMotionSupportUnlockCorrectionX,FootMotionSupportUnlockCorrectionY,FootMotionSupportUnlockCorrectionZ," +
-            "GoalTransitionHasCommittedOutput,GoalTransitionHasPendingOutput," +
+            "FootMotionSupportLockPreparationStartTimeToLandingSeconds,FootMotionSupportLockPreparationWeight," +
+            "GoalTransitionMode,GoalTransitionHasCommittedOutput,GoalTransitionHasPendingOutput," +
             "GoalTransitionCommittedSourceGroundPathIdentity,GoalTransitionPendingSourceGroundPathIdentity," +
             "RawGoalPositionCorrectionX,RawGoalPositionCorrectionY,RawGoalPositionCorrectionZ," +
             "RawGoalRotationCorrectionX,RawGoalRotationCorrectionY,RawGoalRotationCorrectionZ,RawGoalRotationCorrectionW," +
@@ -960,7 +961,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SupportHorizontalError);
             Add(row, motion.SupportUnlockRemainingSeconds);
             Add(row, motion.SupportUnlockCorrection);
+            Add(row, motion.SupportLockPreparationStartTimeToLandingSeconds);
+            Add(row, motion.SupportLockPreparationWeight);
             CharacterFootGoalTransitionDiagnostics goalTransition = foot.GoalTransition;
+            Add(row, goalTransition.Mode.ToString());
             Add(row, goalTransition.HasCommittedOutput);
             Add(row, goalTransition.HasPendingOutput);
             Add(row, goalTransition.CommittedSourceGroundPathIdentity);

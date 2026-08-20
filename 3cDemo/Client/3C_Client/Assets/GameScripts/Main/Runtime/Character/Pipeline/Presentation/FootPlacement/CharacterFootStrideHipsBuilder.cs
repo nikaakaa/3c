@@ -8,7 +8,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         None = 0,
         Rejected = 1,
-        Accepted = 2
+        Accepted = 2,
+        Releasing = 3
     }
 
     public enum CharacterFootStrideRejectReason : byte
@@ -23,8 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         BodyNotGrounded = 7,
         ActionOccupied = 8,
         GroundPathRejected = 9,
-        InvalidInput = 10,
-        SupportNotLocked = 11
+        InvalidInput = 10
     }
 
     public enum CharacterFootStrideSlope : byte
@@ -61,8 +61,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 UnlockStartCorrection;
         internal float UnlockStartPositionWeight;
         internal float UnlockRemainingSeconds;
+        internal ulong PreparationEventIdentity;
+        internal float PreparationStartTimeToLandingSeconds;
+        internal float PreparationWeight;
 
-        internal void Clear()
+        internal void ClearSupport()
         {
             HasValue = false;
             LandingEventIdentity = 0;
@@ -72,6 +75,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             UnlockStartCorrection = default;
             UnlockStartPositionWeight = 0f;
             UnlockRemainingSeconds = 0f;
+        }
+
+        internal void Clear()
+        {
+            ClearSupport();
+            PreparationEventIdentity = 0;
+            PreparationStartTimeToLandingSeconds = 0f;
+            PreparationWeight = 0f;
         }
     }
 
@@ -175,6 +186,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PelvisDelta { get; }
         public float PositionWeight { get; }
         public bool Accepted => State == CharacterFootStrideState.Accepted;
+        public bool ProducesPelvisGoal =>
+            State == CharacterFootStrideState.Accepted ||
+            State == CharacterFootStrideState.Releasing;
     }
 
     internal struct CharacterFootPelvisSpringState
@@ -203,6 +217,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         const float GeometryEpsilon = 0.0001f;
         const float EndpointTolerance = 0.005f;
+
+        internal static float PrepareLandingLock(
+            in AnimationBiomechanicalStepHeader step,
+            bool hasNextSwingLanding,
+            ulong nextSwingLandingEventIdentity,
+            ref CharacterFootSupportLockFacts lockFacts)
+        {
+            bool valid = step.IsValid &&
+                         step.IsAuthoritative &&
+                         step.HasConsistentLandingEventIdentity &&
+                         (step.IsPreSwing || step.IsSwing) &&
+                         step.TimeToLandingSeconds > GeometryEpsilon &&
+                         hasNextSwingLanding &&
+                         nextSwingLandingEventIdentity == step.LandingEventIdentity;
+            if (!valid)
+                return 0f;
+
+            if (lockFacts.PreparationEventIdentity != step.LandingEventIdentity)
+            {
+                lockFacts.PreparationEventIdentity = step.LandingEventIdentity;
+                lockFacts.PreparationStartTimeToLandingSeconds = step.TimeToLandingSeconds;
+                lockFacts.PreparationWeight = 0f;
+            }
+
+            float start = lockFacts.PreparationStartTimeToLandingSeconds;
+            float candidate = start <= GeometryEpsilon
+                ? 1f
+                : Mathf.Clamp01(1f - step.TimeToLandingSeconds / start);
+            lockFacts.PreparationWeight = Mathf.Max(
+                lockFacts.PreparationWeight,
+                candidate);
+            return lockFacts.PreparationWeight;
+        }
 
         internal static bool TrySelectSwing(
             in AnimationBiomechanicalStepHeader leftStep,
@@ -362,8 +409,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasLastLanding,
             Vector3 lastLanding,
             ulong lastLandingEventIdentity,
-            float legLength,
-            float maximumReachableVerticalEdge,
             in CharacterFootMotionSettings settings,
             float deltaSeconds,
             ref CharacterFootSupportLockFacts lockFacts)
@@ -395,20 +440,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landingEventIdentity,
                     originalSole,
                     originalAnkle);
-            if (!IsSupportLandingReachable(
-                    animatedFoot,
-                    lastLanding,
-                    componentUp,
-                    legLength,
-                    maximumReachableVerticalEdge))
-            {
-                lockFacts.Clear();
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.SupportOutsideVerticalReach,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            }
             Vector3 up = componentUp.normalized;
             float plant = Vector3.Dot(lastLanding - originalSole, up);
             if (!float.IsFinite(plant))
@@ -476,7 +507,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             CharacterFootSupportLockState.Unlocked,
                             horizontalError,
                             lockFacts.UnlockRemainingSeconds,
-                            lockFacts.UnlockStartCorrection);
+                            lockFacts.UnlockStartCorrection,
+                            lockFacts.PreparationStartTimeToLandingSeconds,
+                            lockFacts.PreparationWeight);
                     }
                     lockFacts.Clear();
                 }
@@ -492,7 +525,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 targetOffset = horizontalOffset * slideT;
             Vector3 plantedSole = originalSole + targetOffset + up * plant;
             Vector3 plantedAnkle = originalAnkle + targetOffset + up * plant;
-            float positionWeight = footPlacementWeight;
+            if (lockFacts.PreparationEventIdentity != landingEventIdentity)
+                lockFacts.PreparationStartTimeToLandingSeconds = 0f;
+            lockFacts.PreparationEventIdentity = landingEventIdentity;
+            lockFacts.PreparationWeight = 1f;
+            float positionWeight = footPlacementWeight * lockFacts.PreparationWeight;
             CharacterFootSupportLockState lockState = horizontalError <= settings.LockDistance
                 ? CharacterFootSupportLockState.Locked
                 : CharacterFootSupportLockState.Sliding;
@@ -525,40 +562,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lockState,
                 horizontalError,
                 0f,
-                default);
-        }
-
-        internal static bool IsSupportLandingReachable(
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
-            Vector3 landing,
-            Vector3 componentUp,
-            float legLength,
-            float maximumReachableVerticalEdge)
-        {
-            if (!Finite(animatedFoot.HipPosition) ||
-                !Finite(animatedFoot.AnklePosition) ||
-                !Finite(animatedFoot.HeelPosition) ||
-                !Finite(animatedFoot.ToePosition) ||
-                !Finite(landing) ||
-                !Finite(componentUp) ||
-                componentUp.sqrMagnitude <= GeometryEpsilon ||
-                !float.IsFinite(legLength) || legLength <= GeometryEpsilon ||
-                !float.IsFinite(maximumReachableVerticalEdge) ||
-                maximumReachableVerticalEdge <= GeometryEpsilon)
-            {
-                return false;
-            }
-
-            Vector3 up = componentUp.normalized;
-            Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
-            Vector3 soleToAnkle = animatedFoot.AnklePosition - originalSole;
-            float verticalDistance = Mathf.Abs(Vector3.Dot(landing - originalSole, up));
-            if (verticalDistance > maximumReachableVerticalEdge)
-                return false;
-
-            Vector3 targetAnkle = landing + soleToAnkle;
-            float reachableLegLength = legLength + maximumReachableVerticalEdge;
-            return Vector3.Distance(animatedFoot.HipPosition, targetAnkle) <= reachableLegLength;
+                default,
+                lockFacts.PreparationStartTimeToLandingSeconds,
+                lockFacts.PreparationWeight);
         }
 
         internal static CharacterFootStrideHipsDiagnostics BuildRejected(
@@ -748,6 +754,103 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 previousOutput,
                 previousVelocity,
                 springInput,
+                springInputVelocity,
+                settings.PelvisSpringFrequency,
+                target,
+                springOutput,
+                springVelocity,
+                pelvisDelta,
+                positionWeight);
+        }
+
+        internal static CharacterFootStrideHipsDiagnostics BuildPelvisRelease(
+            CharacterFootStrideRejectReason reason,
+            Vector3 componentUp,
+            float footPlacementWeight,
+            float deltaSeconds,
+            in CharacterFootMotionSettings settings,
+            ref CharacterFootPelvisSpringState spring)
+        {
+            if (!spring.HasValue)
+                return BuildRejected(reason);
+            if (!Finite(componentUp) || componentUp.sqrMagnitude <= GeometryEpsilon ||
+                !float.IsFinite(footPlacementWeight) ||
+                footPlacementWeight < 0f || footPlacementWeight > 1f ||
+                !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
+            {
+                spring.Clear();
+                return BuildRejected(CharacterFootStrideRejectReason.InvalidInput);
+            }
+
+            Vector3 up = componentUp.normalized;
+            float previousTarget = spring.TargetAlongUp;
+            float previousOutput = spring.OutputAlongUp;
+            float previousVelocity = spring.VelocityAlongUp;
+            float target = 0f;
+            float nextTargetDirection = target - previousOutput;
+            CharacterFootPelvisSpringHandoffReason handoffReason =
+                CharacterFootPelvisSpringHandoffReason.SupportChanged;
+            if (spring.Slope != CharacterFootStrideSlope.Flat)
+                handoffReason |= CharacterFootPelvisSpringHandoffReason.SlopeChanged;
+            bool velocityReset = Mathf.Abs(nextTargetDirection) > GeometryEpsilon &&
+                                 previousVelocity * nextTargetDirection < 0f;
+            float springInputVelocity = velocityReset ? 0f : previousVelocity;
+            float springOutput = previousOutput;
+            float springVelocity = springInputVelocity;
+            if (deltaSeconds > 0f)
+            {
+                float omega = settings.PelvisSpringFrequency * 2f * Mathf.PI;
+                float x0 = previousOutput;
+                float j0 = springInputVelocity + omega * x0;
+                float decay = Mathf.Exp(-omega * deltaSeconds);
+                springOutput = (x0 + j0 * deltaSeconds) * decay;
+                springVelocity =
+                    (springInputVelocity - omega * j0 * deltaSeconds) * decay;
+            }
+            if (Mathf.Abs(springOutput) <= GeometryEpsilon &&
+                Mathf.Abs(springVelocity) <= GeometryEpsilon)
+            {
+                spring.Clear();
+                return BuildRejected(reason);
+            }
+
+            CharacterFootStrideSlope previousSlope = spring.Slope;
+            spring.HasValue = true;
+            spring.SupportSide = default;
+            spring.SupportLandingEventIdentity = 0;
+            spring.Slope = CharacterFootStrideSlope.Flat;
+            spring.TargetAlongUp = 0f;
+            spring.OutputAlongUp = springOutput;
+            spring.VelocityAlongUp = springVelocity;
+            Vector3 pelvisDelta = up * springOutput;
+            float positionWeight = Mathf.Abs(springOutput) > EndpointTolerance
+                ? footPlacementWeight
+                : 0f;
+            return new CharacterFootStrideHipsDiagnostics(
+                CharacterFootStrideState.Releasing,
+                reason,
+                default,
+                default,
+                default,
+                default,
+                0f,
+                CharacterFootStrideSlope.Flat,
+                default,
+                default,
+                default,
+                default,
+                default,
+                0f,
+                0f,
+                true,
+                true,
+                previousSlope,
+                handoffReason,
+                velocityReset,
+                previousTarget,
+                previousOutput,
+                previousVelocity,
+                previousOutput,
                 springInputVelocity,
                 settings.PelvisSpringFrequency,
                 target,

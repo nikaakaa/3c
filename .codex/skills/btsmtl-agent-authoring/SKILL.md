@@ -7,7 +7,7 @@ description: 通过唯一BTSMTL Agent Authoring Document读取、修改、对账
 
 ## 核心边界
 
-AI通过五个生命周期工具管理一个显式Document v3 JSON package，Graph、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
+AI通过五个生命周期工具管理一个显式Document v4 JSON package，Graph、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
 
 ```text
 btsmtl.checkout_document
@@ -57,13 +57,13 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
 
 ## 可写与只读边界
 
-Character Document v3正式可写：
+Character Document v4正式可写：
 
 - Blackboard declaration的基础字段，以及可选`inputBinding.inputValueId`和可选`factProjection`。禁止旧变量级网络策略字段、旧mode枚举、旧平铺input/projection字段或AI Character payload。
-- Pose Graph-owned typed Source Slot子资产、Presentation Profile-owned typed Source Binding子资产、policy与有限Action producer binding。
+- Pose Graph-owned typed Source Slot、Profile-owned direct Clip/Blend Space/Motion Matching Binding、Locomotion Sync Group、policy与有限Action producer binding。`editable/animation-clips/**/curves.json`只允许修改当前Definition可达原生AnimationClip的注册表现Curve；Timeline Animation Segment直接引用AnimationClip。
 - root-owned Pose Graph catalog中的Graph、layout、parameter、节点typed payload、dynamic port与edge。
 - Linked Pose Implementation及其Entry Graph闭包、Profile Group binding、通用selector envelope和Equipment精确mapping；Interface正文只读。
-- PoseStateMachine的entry、state、alias、transition、transition rule与blend/sync策略。
+- PoseStateMachine的entry、state、alias、transition、transition rule与blend策略；可选Locomotion Phase relation只从Profile Group与Clip曲线编译，不是Transition可写字段。
 - PoseStateMachine同目录layout只稀疏保存Entry、State与Alias的稳定identity和有限二维位置；纯layout apply不修改StateMachine `ContentRevision`，也不触发Build。
 
 以下内容只作为现有资产引用或`context`事实，不能通过Document创建或修改：
@@ -73,13 +73,13 @@ Character Document v3正式可写：
 - generated Character Program、Presentation Projection、Native Pose Program和AIIntentProgram身份与stale状态。
 - AI受控Character的Input/Request合同与capability catalog。
 
-Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Binding中的Rig、实际source asset、Motion Matching Profile与Foot Analysis字段只能引用正式目录允许的既有资产，可写的是Slot、Binding及其策略，不是被引用资产的内部内容。Linked Pose Interface以readonly context提供identity、revision、signature、Fact contract、Entry和typed ports；Implementation、Entry Graph、Group、selector与Equipment mapping通过同一typed Presentation Mutation和资产事务创建、配置、删除，并支持新对象`local:*`计划identity。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action、直接切换活动runtime Implementation或第二套Reconciler/Mutation入口。
+Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Clip Binding直接引用现有原生AnimationClip，Profile唯一装配Rig、Analysis Source与Locomotion Sync Group。Document只可修改注册Curve，不得创建Clip、修改骨骼曲线、AnimationEvent、import设置、Foot Analysis或generated payload。Linked Pose Interface以readonly context提供identity、revision、signature、Fact contract、Entry和typed ports；Implementation、Entry Graph、Group、selector与Equipment mapping通过同一typed Presentation Mutation和资产事务创建、配置、删除，并支持新对象`local:*`计划identity。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action、直接切换活动runtime Implementation或第二套Reconciler/Mutation入口。
 
 Presentation目标必须把State-local Pose Source与Action AnimationChannel分开：Pose Player的`pose-source-slot`必须是精确Graph-owned typed Slot对象引用，`profile.json.poseSources`必须用精确Slot与Binding子资产对象引用绑定实际资源；不得按名称、路径、数组index或字符串identity猜测。Projection编译后Runtime只按dense source index解析资源；按PlayerNodeId生成的typed provider identity只做帧内路由，不进入Document或资源查找。ActionPlaybackInput与AnimationSlot只引用Timeline目标状态中已存在的Animation Channel，AnimationSlot仍是Action channel唯一consumer；有限Action producer必须引用现有Timeline与Animation track。
 
 PoseStateMachine Transition混合字段固定为`blendLogic`、`durationSeconds`、`blendMode`、条件式`customBlendCurveAssetId`与`blendProfileAssetId`。Curve/Profile必须从只读Asset Catalog解析为强类型资产并提交同一Presentation Mutation；禁止恢复`blendCurveId`、旧`blendProfileId`或GUID文本输入。Custom必须带Curve Asset，非Custom不得保留Curve Asset；BlendStack只作为显式Pose Graph节点存在。
 
-不得恢复旧MotionMatchingSelectionInput、AnimationSelection port、Pose Graph MarkerSync、旧Layer、PoseSlot、TransitionLibrary、presentation第二MCP入口或generated payload写入。Timeline AnimationTrack自身的Marker Sync仍属于Timeline editable，不与已删除的Pose Graph MarkerSync节点混用。
+不得恢复旧MotionMatchingSelectionInput、AnimationSelection port、素材Marker/Notify、旧Layer、PoseSlot、TransitionLibrary、presentation第二MCP入口或generated payload写入。Timeline只拥有Action Segment与Timeline-local Curve；素材骨骼和两项注册表现Curve统一由原生AnimationClip拥有。
 
 ## 修改相关代码
 
@@ -88,10 +88,10 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 | 变化 | 必须同步 |
 |---|---|
 | Graph、Node、Edge、Port、StateMachine、Source Slot/Binding子资产或ownership | Document模型、Exporter、Reconciler、Mutation handler、Validator |
-| Timeline、Track、Clip、Marker、Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |
+| Timeline、Track、AnimationClip Segment、Timeline-local Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |`n| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v4 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
 | Input、ActionProfile、ActionContext或Blackboard identity | editable/context分区、Reconciler、AssetResolver、Validator |
 | AI Definition、Perception、Memory、Observation或Intent | AI editable/context、AI Snapshot、Reconciler、AI Compiler |
-| Presentation Profile、Pose Graph或PoseStateMachine | Document v3模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
+| Presentation Profile、Pose Graph或PoseStateMachine | Document v4模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
 | Rig、Bone、Virtual Bone、Body Motion、Foot Analysis或generated product | 只读context、context hash与current spec；不得增加Document Mutation |
 | MCP生命周期或事务生命周期 | application service、五个MCP薄桥、Editor Window、current spec、此技能 |
 
@@ -99,8 +99,8 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 
 ```text
 Package manifest + strict per-file parser
-  -> AgentDocumentReconciler
-  -> Presentation Reconciler
+  -> AgentDocumentMutationReconciler
+  -> AgentAuthoringPresentationReconcilerV4
   -> immutable AgentMutationPlan
   -> Mutation preflight
   -> one Undo transaction
@@ -112,7 +112,7 @@ Package manifest + strict per-file parser
 
 Character需要产物时，必须在上述Document事务完成后另行调用精确Definition的Build生命周期。
 
-Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不拥有Undo、rollback、dirty、SaveAssets或Document写回。Application service唯一拥有事务生命周期。
+Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不拥有Undo、rollback、dirty、SaveAssets或Document写回。Document Transaction Service唯一拥有事务生命周期，并以同目录staging校验、package内容镜像与rollback副本完成Windows安全发布。
 
 如果Document实体无法映射到正式Mutation，必须返回明确错误并扩展唯一Reconciler/handler链，不能手改YAML或添加fallback。
 
@@ -128,7 +128,7 @@ Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不�
 - Package严格拒绝清单外文件、未知字段、重复属性、非法数值、`.sync.json`语义改动和read-only context改动；Character必须包含完整Presentation目标文件闭包，每个Pose StateMachine必须同时具有`state-machine.json`与`layout.json`。
 - manifest外只允许由服务发现完整canonical `local:*` Pose State Graph/Subgraph的`graph.json + layout.json`创建对，以及graph-owned Inline Timeline的`timeline.json + curves.json`创建对；两者都属于同一Store、hash和apply生命周期，不是未知文件fallback。
 - dry-run不dirty、不保存、不build；apply使用同一Document hash，Character apply不build。
-- apply失败完整回滚并返回`ApplyFailed`；成功后Document从最终树规范化并回到`Clean`。
+- apply失败必须同时恢复Unity owner与正式package并返回`ApplyFailed`；成功后Document从最终树规范化并回到`Clean`。
 - 没有watcher、selection/focus自动执行、第二套graph/timeline/AI mutation service。
 - 不运行Unity batchmode，不新增测试，除非用户明确要求。
 - dotnet build使用`--disable-build-servers /nr:false /p:UseSharedCompilation=false`，随后立即`dotnet build-server shutdown`。

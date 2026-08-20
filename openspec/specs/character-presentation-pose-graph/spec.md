@@ -99,19 +99,19 @@ State在作者语义上 MAY拥有inline Pose subgraph，但serialized State MUST
 
 ### Requirement: State-local source必须由Profile binding和provider解析
 
-`SequencePlayer`、`BlendSpacePlayer`与Motion Matching `SelectedPosePlayer` MUST引用类型匹配的Graph-owned`CharacterPresentationPoseSourceSlot`对象。Projection Compiler MUST从精确Definition/Profile上下文为每个可达Slot解析唯一Profile-owned typed binding子资产，并将其降低为Projection-local dense source index、typed resource plan与只读source map。Provider MUST发布`PresentationPoseSourceSample`的Pending、Ready或Invalid；Player只消费匹配自身Player identity、dense source index、generation、Projection revision与frame lease的sample。Pose Graph MUST不保存作者可编辑Source Id、Provider Id、AnimationClip、Profile binding副本，也不得把state-local source包装成Gameplay producer、AnimationChannel或PlaybackId。
+`ClipPlayer`、`BlendSpacePlayer`与`SelectedPosePlayer` MUST引用类型匹配的Graph-owned Source Slot对象。Projection Compiler MUST从精确Definition/Profile解析唯一Binding；Clip Binding MUST直接提供AnimationClip。ClipPlayer MUST只保存Source Slot、Play Rate、Initial Time与Clock Source，不得保存Loop或Topology副本；Finite/Cyclic MUST只从AnimationClip正式Loop设置编译。Provider MUST发布带dense source index、generation、Projection revision与frame lease的`PresentationPoseSourceSample`。Pose Graph MUST不保存Sequence、AnimationClip副本、作者source字符串或Gameplay producer。
 
-#### Scenario: Idle SequencePlayer首次采样
+#### Scenario: ClipPlayer首次采样Idle
 
-- **WHEN** Idle State进入relevant且Source Slot对应的Profile binding合法
-- **THEN** Sequence provider MUST向Idle Player发布带正确dense source index的Ready sample
-- **AND** CharacterActionPlaybackRuntime MUST不登记该source
+- **WHEN** Idle State的ClipPlayer获得entry relevance
+- **THEN** provider MUST从Profile direct Clip Binding发布Ready sample
+- **AND** Player MUST不解析Sequence或AssetDatabase
 
-#### Scenario: Motion Matching sample投递到错误Player
+#### Scenario: ClipPlayer提交Loop字段
 
-- **WHEN** sample的Player identity、dense source index或Projection revision与当前demand不匹配
-- **THEN** Runtime MUST拒绝该sample
-- **AND** MUST不按Source Slot名称、资源名或旧Source Id猜测目标Player
+- **WHEN** 人工Capability或Document v4为ClipPlayer提供Loop、Topology或等价override
+- **THEN** typed parser或Validator MUST在Compiler前拒绝该字段
+- **AND** MUST不覆盖AnimationClip正式Loop设置
 
 ### Requirement: PoseState target必须经过readiness barrier
 
@@ -125,31 +125,13 @@ PoseStateMachine MUST先选择候选target并向其provider提交demand。只有
 
 ### Requirement: Pose State transition必须显式编译Routing并从source binding推导同步
 
-每条Transition MUST显式配置source、target、priority、Rule、`Standard Blend | Inertialization`、duration、`Linear | EaseIn | EaseOut | EaseInOut | Custom` Blend Mode、条件式强类型Custom Curve Asset与强类型Blend Profile，MUST不保存target reset或SourceSyncMode。Custom MUST引用合法Curve Asset，非Custom MUST不保存Custom引用，Standard Blend的零duration MUST表示Hard Cut，Inertialization MUST使用正duration。每个State MUST显式配置`Always Reset on Entry`，并由StateMachine在该State provider获得entry relevance之前统一执行或跳过重置；Sequence Player MUST不拥有第二份重进配置。Projection Compiler MUST把Blend Mode降低为canonical curve index、把Blend Profile降低为匹配同一Rig的dense profile index，并为transition生成固定Routing Plan、workspace、generation、capture/release layout。Compiler MUST检查两侧State唯一的Sequence或BlendSpace provider；只有两侧source binding共享同一canonical MarkerGroup时才生成Source Sync Plan，无共同组时生成None，多于一个同步候选、角色冲突或同组topology不兼容 MUST失败。Marker topology和effective sample映射 MUST属于该Transition的source-local plan，Pose Graph MUST不创建MarkerSync节点。Runtime与Preview MUST只执行匹配Projection revision的计划，不得现场重新编译。
+每条Transition MUST继续显式配置Rule、Blend Logic、duration、Blend Mode、Custom Curve与Blend Profile。Compiler MUST从两侧State唯一source usage与Profile Locomotion Sync Group推导可选source-to-source Phase relation；Direct Clip与Blend Space MUST先降低为正式`AnimationSourcePhasePlan`。两侧不属于同组时生成None，同组时必须编译合法per-clip Phase、实际秒域coverage与Foot Analysis质量结果，并按clock authority与完整Blend窗口coverage写入固定leader。Transition authoring MUST不保存同步开关、素材同步策略、leader role、leader override或phase容差；Projection relation MUST保存TransitionId，Runtime再与TransitionGeneration组合生命周期身份。
 
-#### Scenario: Walk到Run启用MarkerGroup
+#### Scenario: Turn进入RunLoop
 
-- **WHEN** Transition两侧唯一source binding共享canonical SyncGroup
-- **THEN** Source Sync Plan MUST在共同可见期间持续映射marker segment fraction
-- **AND** MUST不创建BaseLocomotion Animation Selection
-
-#### Scenario: State选择重进归零
-
-- **WHEN** `Always Reset on Entry`为true的State再次获得entry relevance
-- **THEN** StateMachine MUST在采样前重置该State的全部provider
-- **AND** Transition与Sequence Player MUST不参与决定是否重置
-
-#### Scenario: Target选择Inertialization
-
-- **WHEN** target Ready且compiled route为Inertialization
-- **THEN** transition owner MUST提交typed capture/release request
-- **AND** branch-local consumer MUST完成rebase与completion
-
-#### Scenario: Standard Blend使用每骨骼Profile
-
-- **WHEN** Transition的Blend Profile为不同Pose Bone配置不同duration multiplier
-- **THEN** Native Pose evaluator MUST对每根Physical与Virtual Bone使用同一canonical curve和各自duration求值
-- **AND** Pose Parameter MUST使用全局包络，左右脚Feature MUST使用对应脚骨骼包络
+- **WHEN** Turn与RunLoop属于同一Locomotion Sync Group且Transition条件成立
+- **THEN** target effective time MUST来自compiled Phase relation
+- **AND** Blend Routing MUST独立使用edge-owned Standard Blend计划
 
 ### Requirement: AnimationSlot必须是有限Action的唯一Pose插入口
 
@@ -243,7 +225,7 @@ FootPlacement MUST通过单次Frame事务输出Pelvis与双脚Goal；PoseBoneIKG
 
 #### Scenario: 查看Locomotion State
 
-- **WHEN** 作者选中Locomotion State的Sequence或BlendSpace Player
+- **WHEN** 作者选中Locomotion State的Clip或BlendSpace Player
 - **THEN** Authoring MUST显示类型匹配的Source Slot对象选择器
 - **AND** References MUST显示解析后的Profile binding、实际资源、owner与Open Source命令
 - **AND** MUST不显示BaseLocomotion Gameplay producer或可编辑Source Id
@@ -287,19 +269,18 @@ Pose Graph、PoseStateMachine、Node、Port与Edge MUST使用共享typed domain 
 #### Scenario: 新增Pose节点能力
 
 - **WHEN** 新Pose节点注册typed payload与compiler handler
-- **THEN** 人工创建菜单、Document v3、Validator和Compiler MUST识别同一Capability
+- **THEN** 人工创建菜单、Document v4、Validator和Compiler MUST识别同一Capability
 - **AND** MUST不复制Node/Port View或第二Compiler入口
 
 ### Requirement: Pose Graph UI必须保留准确术语和serialized identity
 
-UI MAY把正式`PoseStateMachine`显示为Animation State Machine、把`AnimationSlot`显示为Slot，并使用Anim Graph、Sequence Player、Transition Rule、State Alias、Layered Blend Per Bone、Inertialization、Sync Group、Pose Watch和Output Pose。系统 MUST在序列化、Undo、clipboard、Document、compiler source map与Diagnostics中保留项目serialized node kind和stable identity，但人工UI MUST默认使用业务显示名和Unity资源对象，不得把identity、GUID、hash或compiled index作为节点标题、Navigator项目、breadcrumb或可编辑字段。AnimationChannel仍是有限Action arbitration identity，BTSMTL Action Timeline职责近似Montage但不得伪装成Montage资产。
+UI MUST使用Clip Player、Blend Space Player、Selected Pose Player、Animation State Machine、Slot、Layered Blend Per Bone、Inertialization、Locomotion Phase Group、Pose Watch和Output Pose等准确术语。序列化、Document、Mutation、Compiler source map和Diagnostics MUST使用同一Clip命名；MUST不保留Clip Player显示名或旧node kind alias。
 
-#### Scenario: 显示FullBodyAction
+#### Scenario: 作者添加单Clip播放器
 
-- **WHEN** Navigator选中FullBodyAction Slot
-- **THEN** UI MUST显示Slot业务名与绑定Action AnimationChannel的业务名
-- **AND** 原始SlotId与AnimationChannelId MUST只在显式Diagnostics中只读出现
-- **AND** MUST不把AnimationChannel本身序列化为Slot
+- **WHEN** 作者在Pose Graph添加单AnimationClip state-local player
+- **THEN** Capability、节点标题、Document kind和编译诊断 MUST统一显示Clip Player
+- **AND** MUST不存在Clip Player兼容名称
 
 ### Requirement: Pose StateMachine layout必须是独立纯作者数据
 

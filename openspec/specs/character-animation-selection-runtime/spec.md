@@ -56,47 +56,19 @@ Pose source request、sample、clip、parameter和completion row MUST只属于�
 
 ### Requirement: Pose Graph必须显式选择source Player和transition owner
 
-`SequencePlayer`、`BlendSpacePlayer`、`SelectedPosePlayer`和`BlendStack` MUST只消费自身绑定或连接的state-local source。`PoseStateMachine` MUST唯一拥有State到State的transition workspace；`AnimationSlot` MUST唯一拥有Source Pose与有限Action playback之间的插入和handoff；显式`BlendStack` MUST只拥有其连接source的多entry连续性；`Inertialization` MUST只拥有直接上游Player或transition consumer的residual与rebase。Compiler与Runtime MUST不在Provider、AnimationChannel、Graph branch或OutputPose背后自动插入Player、Stack、Slot或Inertialization。
+`ClipPlayer`、`BlendSpacePlayer`、`SelectedPosePlayer`和`BlendStack` MUST只消费自身绑定或连接的state-local source。`PoseStateMachine` MUST唯一拥有State到State的transition workspace；`AnimationSlot` MUST唯一拥有Source Pose与有限Action playback之间的插入和handoff；显式`BlendStack` MUST只拥有其连接source的多entry连续性；`Inertialization` MUST只拥有直接上游Player或transition consumer的residual与rebase。Compiler与Runtime MUST不在Provider、AnimationChannel、Graph branch或OutputPose背后自动插入Player、Stack、Slot或Inertialization。
 
-#### Scenario: Idle使用SequencePlayer
+#### Scenario: Idle使用ClipPlayer
 
 - **WHEN** PoseStateMachine保持Idle State
-- **THEN** SequencePlayer MUST按Presentation时间采样正式source binding
+- **THEN** ClipPlayer MUST按Presentation时间采样正式direct Clip binding
 - **AND** Action playback lifecycle MUST不创建对应producer
 
-#### Scenario: Action Slot从Attack1切换到Attack2
+#### Scenario: Corin Locomotion切换
 
-- **WHEN** Slot收到新的Action playback generation
-- **THEN** Slot MUST按node-local compiled route处理handoff
-- **AND** Locomotion State transition MUST不保存该Action历史
-
-#### Scenario: MM Player连接局部Inertialization
-
-- **WHEN** Motion Matching sample发生source discontinuity
-- **THEN** Player MUST发布typed discontinuity
-- **AND** residual MUST只由连接的Inertialization拥有
-
-### Requirement: Marker时间映射必须属于source-local采样计划
-
-Marker topology、SyncGroup、SyncRole与marker occurrence MUST来自Presentation source binding或Action producer binding。PoseState source同步 MUST由Compiler根据Transition两侧State唯一的同步候选与共同canonical MarkerGroup生成具体Source Sync Plan；Transition不得保存同步开关。Action同步 MUST由具体AnimationSlot route和Action source usage拥有。Runtime MUST在source采样前生成effective sample，并在共同可见期间持续按有向Marker pair和segment fraction求值。Pose Graph MUST不序列化独立MarkerSync节点，Runtime与Preview MUST不按同名State、clip名称、Action名称或weight建立relation。
-
-#### Scenario: Walk State切换Run State
-
-- **WHEN** Transition两侧State的唯一同步候选属于同一canonical SyncGroup
-- **THEN** Source Sync Plan MUST持续把leader segment fraction映射到target sample
-- **AND** MUST不创建BaseLocomotion Gameplay Selection
-
-#### Scenario: Transition两侧没有共同同步组
-
-- **WHEN** 两侧source binding未声明同一canonical MarkerGroup
-- **THEN** 两侧Player MUST使用各自raw source time
-- **AND** Compiler MUST生成None计划
-
-#### Scenario: Action source同步数据损坏
-
-- **WHEN** Slot route要求同步但binding缺少合法segment、duration或role
-- **THEN** Runtime MUST报告稳定typed failure
-- **AND** MUST不回退normalized time或Animancer自动同步
+- **WHEN** Corin PoseState edge从Turn切换到RunLoop
+- **THEN** edge MUST执行显式编译的Standard Blend与可选Phase relation
+- **AND** MUST不自动插入Inertialization
 
 ### Requirement: Source usage、retention与release必须由实际consumer闭环
 
@@ -132,7 +104,7 @@ PoseState transition MUST按state relevance保留共同可见source；AnimationS
 
 ### Requirement: Animancer必须只负责source采样
 
-Animancer source backend MUST只按完整Action playback或Presentation Pose source identity创建或复用Sequence/ManualMixer playable，应用effective sample、loop、play rate和source-local clip weight，并把source capture job安装到同一PlayableGraph。它 MUST不仲裁Pose State或Action winner、不查询Transition Policy、不拥有跨source weight、不执行AnimationSlot、Layer composition、IK或FootPlacement，也 MUST不发布最终Pose。
+Animancer source backend MUST只按完整Action playback或Presentation Pose source identity创建或复用Clip/ManualMixer playable，应用compiled effective sample、loop、play rate和source-local clip weight，并把source capture job安装到同一PlayableGraph。它 MUST不仲裁Pose State或Action winner、不解析AnimationClip Curve、不选择Phase leader、不查询Transition Policy、不拥有跨source weight、不执行AnimationSlot、Layer composition、IK或FootPlacement，也 MUST不发布最终Pose。
 
 #### Scenario: PoseState transition共同采样两个source
 
@@ -155,3 +127,31 @@ Action Timeline Preview、Pose Graph Fact Preview和Motion Matching Query Fixtur
 - **WHEN** 作者seek到另一Action sample
 - **THEN** Preview MUST按正式Action lifecycle、Slot和reset policy更新
 - **AND** MUST不为预览平滑额外插入BlendStack
+
+### Requirement: Locomotion Phase映射必须属于source-local采样计划
+
+Direct Clip与Blend Space Locomotion source MUST各自编译为`AnimationSourcePhasePlan`。Direct Clip endpoint MUST使用该Clip的forward/inverse Phase plan；Blend Space endpoint MUST使用显式Phase Reference Sample作为raw clock carrier，并让全部正权重Dynamic Sample通过各自per-clip inverse plan采样同一unwrapped phase。PoseState source同步 MUST由Compiler根据Transition两侧唯一source usage和共同Profile Locomotion Sync Group生成relation；Transition authoring MUST不保存同步开关或leader override。Compiler MUST按clock authority与完整Blend窗口coverage写入固定leader，Runtime MUST用TransitionGeneration建立relation lifecycle并在source采样前生成effective phase/time。Runtime MUST不读取AnimationCurve、Profile或Foot Analysis，也 MUST不按State名、Clip名、weight或最高权重样本动态选择leader。
+
+#### Scenario: Walk State切换Run State
+
+- **WHEN** Transition两侧source endpoint属于同一Locomotion Sync Group
+- **THEN** relation MUST把leader source phase映射到target source endpoint
+- **AND** MUST不创建BaseLocomotion Gameplay Selection
+
+#### Scenario: Relation正常完成
+
+- **WHEN** TransitionGeneration完成并释放Phase relation
+- **THEN** follower MUST从最后effective time建立自身continuation anchor后关闭该generation
+- **AND** 下一次独立Transition MUST不复用旧leader、cycle或generation state
+
+#### Scenario: Transition两侧没有共同同步组
+
+- **WHEN** 两侧source endpoint不属于同一Profile Group
+- **THEN** 两侧Player MUST使用各自raw source time
+- **AND** Compiler MUST生成None relation
+
+#### Scenario: Phase plan损坏
+
+- **WHEN** source endpoint的Clip identity、Curve hash、coverage或inverse knots无效
+- **THEN** Runtime MUST报告稳定typed invalid并阻止本帧Pose publication
+- **AND** MUST不回退normalized time、Marker或Animancer自动同步

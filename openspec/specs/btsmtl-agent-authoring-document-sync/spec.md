@@ -5,47 +5,46 @@
 ## Requirements
 ### Requirement: Agent Authoring Document必须是按需生成的持久化目录包
 
-系统 MUST为每个已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v3`文档包。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
+系统 MUST为每个已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v4`文档包。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
 
 #### Scenario: AI首次编辑现有Character Controller
 
 - **WHEN** Agent对已有合法Character root显式checkout
-- **THEN** 系统 MUST从当前正式Graph、StateMachine、Timeline与可写依赖生成规范目录包
+- **THEN** 系统 MUST从当前正式Graph、StateMachine、Timeline、Presentation与可达Clip Curve生成规范目录包
 - **AND** response MUST返回唯一文档包绝对路径
 - **AND** 系统 MUST不修改或保存Unity资产
 
 #### Scenario: 普通人工编辑期间没有AI会话
 
-- **WHEN** 作者修改Graph或Timeline但没有显式checkout
+- **WHEN** 作者修改Graph、Timeline或AnimationClip但没有显式checkout
 - **THEN** 系统 MUST不创建或刷新文档包
 - **AND** MUST不触发reconcile、compile、build或publish
 
 ### Requirement: 物理分片不得改变Document整包同步语义
 
-文档包 MUST通过service-owned manifest声明唯一规范文件清单，并 MAY按Graph、Timeline、Curve、领域配置和只读context拆分JSON。AI MAY只读取和修改相关文件，但checkout、rebase、dry-run、apply、Conflict、hash锁定与反向导出 MUST始终以整个文档包为唯一提交单元。系统 MUST不提供文件级基线、文件级dirty、文件级apply或文件级Conflict。新增Pose State Graph或Subgraph时，AI MUST同时创建canonical segment目录内的`graph.json`与`layout.json`并使用`local:<meaningful-id>`；Store MUST严格解析完整文件对后形成当前生命周期请求的有效manifest，AI MUST不直接修改manifest。apply成功后的反向导出或显式rebase MUST由service发布新的canonical manifest。
+文档包 MUST通过service-owned manifest声明唯一规范文件清单，并 MAY按Graph、Timeline、Timeline Curve、AnimationClip Curve、Presentation、领域配置和只读context拆分JSON。AI MAY只读取和修改相关文件，但checkout、rebase、dry-run、apply、Conflict、hash锁定与反向导出 MUST始终以整个文档包为唯一提交单元。系统 MUST不提供文件级基线、文件级dirty、文件级apply或文件级Conflict。新增允许创建的Graph分片 MUST继续使用完整canonical文件对；AnimationClip分片 MUST只能引用当前Definition闭包中已有原生`.anim`，不得使用`local:*`创建Clip。AI MUST不直接修改manifest。
 
-#### Scenario: AI只修改一个Graph文件
+#### Scenario: AI只修改一个Clip Curve文件
 
-- **WHEN** AI只改动`editable/graphs/<graph-id>/graph.json`
+- **WHEN** AI只改动`editable/animation-clips/<clip-segment>/curves.json`
 - **THEN** 下一次显式状态查询 MUST把整个文档包判定为DocumentDirty
 - **AND** dry-run MUST严格读取整包并生成一个document hash
-- **AND** apply MUST不允许只提交该Graph文件
+- **AND** apply MUST不允许只提交该Clip文件
 
-#### Scenario: AI新增Pose State Graph分片
+#### Scenario: AI声明未知Clip分片
 
-- **WHEN** AI在graph local identity对应的canonical segment目录中同时新增严格合法的`graph.json`与`layout.json`
-- **THEN** Store MUST把该完整创建对加入当前请求的有效manifest并纳入editable hash与document hash
-- **AND** dry-run MUST把它降低为同一Presentation Reconciler中的Create Pose Graph计划
-- **AND** apply成功后的reverse export MUST用stable identity发布规范分片与service-owned manifest
+- **WHEN** AI加入不在manifest且不引用当前Asset Catalog原生Clip的目录
+- **THEN** Store MUST拒绝整包
+- **AND** MUST不把该目录解释为新建AnimationClip
 
 ### Requirement: 文档包必须分离可编辑authoring、只读context与service基线
 
-文档包 MUST包含service-owned `manifest.json`与`.sync.json`、AI可编辑`editable/`和service-owned只读`context/`。`.sync.json` MUST只保存base source revision、base editable hash与base context hash，不得保存业务authoring。Character Presentation的Profile、Pose Graph、PoseStateMachine、Pose source binding、AnimationSlot与Policy MUST进入`editable/presentation/`；Rig资源正文、Body Motion、Foot Analysis generated data、runtime state、Projection与Native Program MUST只进入紧凑只读context或完全省略。
+文档包 MUST包含service-owned `manifest.json`与`.sync.json`、AI可编辑`editable/`和service-owned只读`context/`。`.sync.json` MUST只保存base source revision、base editable hash与base context hash，不得保存业务authoring。Character Presentation的Profile、Pose Graph、PoseStateMachine、direct Clip Binding、Locomotion Sync Group、AnimationSlot与Policy MUST进入`editable/presentation/`；当前Definition可达原生AnimationClip注册Curve MUST进入`editable/animation-clips/`；Rig资源正文、Body Motion、Foot Analysis generated data、runtime state、Projection与Native Program MUST只进入紧凑只读context或完全省略。
 
 #### Scenario: AI读取Character文档包
 
 - **WHEN** checkout导出Character Controller
-- **THEN** editable MUST表达Agent正式可写的Graph、StateMachine、Condition、Timeline、Blackboard与Action结构
+- **THEN** editable MUST表达Agent正式可写的Graph、StateMachine、Condition、Timeline、Blackboard、Action、Presentation与Clip Curve结构
 - **AND** context MUST只读表达Node/Graph schema、可引用asset、dependency与必要能力摘要
 - **AND** 文档包 MUST不暴露Unity YAML、managed-reference布局或私有SerializedProperty path
 
@@ -109,13 +108,19 @@
 
 ### Requirement: Timeline结构与Curve payload必须分离
 
-每个Timeline目录 MUST使用`timeline.json`表达Timeline、Track、Clip、Marker、ownership和引用，使用`curves.json`表达完整Curve payload。Curve MUST只保存影响正式语义的字段；与catalog正式默认值相同的字段 MUST省略。AI修改Curve MUST提交该Curve完整目标状态，不得依赖key级MCP操作。
+每个Timeline目录 MUST使用`timeline.json`表达Timeline、Track、Segment、ownership和直接AnimationClip引用，使用`curves.json`表达Timeline-local完整Curve payload。Timeline JSON MUST不表达Marker、Sequence、Clip注册Curve或Foot Analysis。Curve MUST只保存影响正式Timeline语义的字段；与catalog正式默认值相同的字段 MUST省略。AI修改Curve MUST提交该Curve完整目标状态，不得依赖key级MCP操作。
 
-#### Scenario: AI只修改weighted curve
+#### Scenario: AI只修改Timeline weighted curve
 
-- **WHEN** AI替换`curves.json`中registered Channel的完整Curve
+- **WHEN** AI替换`curves.json`中Timeline-local registered Channel的完整Curve
 - **THEN** Reconciler MUST保留time、value、tangent、必要weight、weighted mode与wrap mode语义
 - **AND** MUST不要求AI调用`edit_curve_key`
+
+#### Scenario: Timeline提交Marker字段
+
+- **WHEN** `timeline.json`包含SyncMode、SyncGroup、Topology、Role或Marker
+- **THEN** strict parser MUST拒绝整包
+- **AND** MUST不忽略旧字段
 
 ### Requirement: 可编辑能力必须由唯一authoring capability catalog闭合
 
@@ -225,52 +230,33 @@ Graph编辑、Timeline编辑、Inspector修改、JSON保存、selection变化、
 
 ### Requirement: Presentation分片必须保持整包同步与稳定owner
 
-Document v3 MUST使用`editable/presentation/profile.json`、`editable/presentation/pose-graphs/<graph-id>/graph.json`、对应`layout.json`，以及`editable/presentation/pose-state-machines/<state-machine-id>/state-machine.json`与对应`layout.json`表达Presentation目标状态。Pose StateMachine的`state-machine.json` MUST只表达Entry、State、Alias、Transition、Rule与blend/sync语义；同目录`layout.json` MUST只稀疏表达合法Entry、State与Alias的稳定identity和有限二维位置。Profile binding子资产与Pose Graph Source Slot子资产 MUST通过包含asset GUID、有符号且非零local file id和一致asset path的结构化对象引用表达；负local file id MUST视为合法Unity子资产身份；新建子资产 MUST使用`local:*`计划identity并在apply成功后的reverse export中替换为正式对象引用。分片 MUST通过稳定owner identity互相引用，并继续服从整包checkout、hash、dry-run、apply、Conflict与反向导出语义；不得提供文件级apply、旧单文件闭包reader、缺失layout fallback、按显示名解析或缺失local file id fallback。
+Document v4 MUST使用`editable/presentation/profile.json`、`editable/presentation/pose-graphs/<graph-id>/graph.json`、对应`layout.json`，以及`editable/presentation/pose-state-machines/<state-machine-id>/state-machine.json`与对应`layout.json`表达Presentation目标状态。Profile MUST表达direct Clip Binding、Blend Space/MM Binding、有限Action producer binding与Locomotion Sync Group；Pose StateMachine MUST只表达Entry、State、Alias、Transition、Rule与Blend，不保存Marker或同步override。Profile binding、Pose Graph Source Slot与AnimationClip MUST通过包含asset GUID、有符号且非零local file id和一致asset path的结构化对象引用表达。新建子资产 MAY使用`local:*`，AnimationClip MUST不允许local identity。分片 MUST通过稳定owner identity互相引用，并继续服从整包checkout、hash、dry-run、apply、Conflict与反向导出语义；不得提供文件级apply、旧单文件reader、按显示名解析或缺失local file id fallback。
 
-#### Scenario: AI只修改一个Pose节点的Source Slot
+#### Scenario: AI只修改一个Clip Binding
 
-- **WHEN** 仅一个Pose Graph Player改为引用另一个既有Source Slot对象
-- **THEN** dry-run与apply MUST仍锁定并处理整个Document包及精确Profile/Pose Graph owner
+- **WHEN** 一个Pose Graph ClipPlayer改为引用另一个既有Source Slot且Profile Binding引用另一个原生Clip
+- **THEN** dry-run与apply MUST锁定整个Document包及精确Profile/Pose Graph/Clip owner
 - **AND** 反向导出 MUST更新整包基线与规范对象引用
 
 #### Scenario: AI创建Profile binding子资产
 
-- **WHEN** editable使用`local:*`声明一个新的Profile-owned binding并引用既有Source Slot
+- **WHEN** editable使用`local:*`声明新的Profile-owned binding并引用既有Source Slot与原生Clip
 - **THEN** Reconciler MUST生成typed子资产创建、Profile数组更新和资源配置Mutation
 - **AND** apply成功后reverse export MUST发布正式GUID与local file id引用
 
-#### Scenario: checkout导出Pose StateMachine
-
-- **WHEN** Character Document显式checkout包含一个正式Pose StateMachine
-- **THEN** 规范包 MUST在同一stable segment目录输出`state-machine.json`与`layout.json`
-- **AND** 两个文件 MUST使用相同StateMachine identity并共同进入manifest与document hash
-
-#### Scenario: AI只移动一个Pose State
-
-- **WHEN** AI只修改Pose StateMachine `layout.json`中一个合法State的位置
-- **THEN** Reconciler MUST生成同一正式layout owner的typed Presentation Mutation
-- **AND** apply MUST更新Undo、资产dirty与canonical package基线
-- **AND** MUST不修改StateMachine `ContentRevision`或发布Program、Projection与Native Pose Program
-
-#### Scenario: 旧闭包缺少StateMachine layout文件
-
-- **WHEN** 工具升级前的Document v3 manifest只包含Pose StateMachine `state-machine.json`
-- **THEN** dry-run与apply MUST拒绝该旧闭包并要求显式重新checkout
-- **AND** MUST不补写文件、兼容读取旧形状或建立两种apply路径
-
 ### Requirement: Presentation JSON必须由共享Capability生成稀疏typed字段
 
-Pose Graph node、port、field、StateMachine页面、Source Slot和Profile binding的JSON合同 MUST来自Graph Authoring Domain Framework的同一Authoring Capability Catalog。每个node MUST只包含当前capability有意义的typed payload与node-local动态port；Source关系 MUST使用结构化对象引用，不得输出作者Source Id、Provider Id、C#类型、SerializedProperty path、runtime枚举载荷或联合体空字段。
+Pose Graph node、port、field、StateMachine页面、Source Slot、Profile binding与Locomotion Sync Group的JSON合同 MUST来自Graph Authoring Domain Framework的同一Authoring Capability Catalog。每个node MUST只包含当前capability有意义的typed payload与node-local动态port；Source关系 MUST使用结构化对象引用。ClipPlayer MUST只引用类型匹配Source Slot，Profile Clip Binding MUST直接引用AnimationClip；JSON MUST不输出作者Source Id、Provider Id、Sequence、Marker、C#类型、SerializedProperty path、runtime枚举载荷或联合体空字段。
 
-#### Scenario: Sequence Player JSON包含Source Id字符串
+#### Scenario: Clip Player JSON包含Source Id字符串
 
-- **WHEN** Sequence Player payload包含`pose-source-id`、`provider-id`或任意字符串资源引用
+- **WHEN** Clip Player payload包含`pose-source-id`、`provider-id`或任意字符串资源引用
 - **THEN** strict parser MUST在Reconciler前拒绝该分片
 - **AND** MUST要求类型匹配的Source Slot对象引用
 
-#### Scenario: Sequence Player JSON包含IK字段
+#### Scenario: Clip Player JSON包含Sequence字段
 
-- **WHEN** Sequence Player payload包含TwoBoneIK字段或未知property
+- **WHEN** Clip Player或Binding payload包含Sequence引用、Marker或IK字段
 - **THEN** strict parser MUST在Reconciler前拒绝该分片
 - **AND** MUST不忽略字段或保留扩展字典
 
@@ -286,36 +272,58 @@ Pose Transition JSON MUST使用`blendLogic`、`durationSeconds`、`blendMode`、
 
 ### Requirement: Presentation Reconciler必须调用唯一Presentation Mutation
 
-Document v3 Reconciler MUST按owner依赖生成类型化Presentation Mutation计划，并与人工编辑共用validator、资产级transaction、子资产identity allocator、dirty owner与诊断。Source Slot和Profile binding的创建、修改、引用与删除 MUST在同一个正式资产事务中处理；Reconciler MUST不直接写Unity YAML、SerializedObject path、generated Projection或第二份字符串binding。
+Document v4 Reconciler MUST按owner依赖生成类型化Presentation Mutation计划，并与人工编辑共用validator、资产级transaction、子资产identity allocator、dirty owner与诊断。Source Slot、direct Clip/Blend Space/MM Binding、Locomotion Sync Group、Pose Graph和PoseStateMachine的创建、修改、引用与删除 MUST在同一个正式资产事务中处理；Reconciler MUST不直接写Unity YAML、SerializedObject path、generated Projection或第二份字符串binding。
 
-#### Scenario: apply新增Pose Source Slot与binding
+#### Scenario: apply新增Clip Source Slot与binding
 
-- **WHEN** 文档目标状态新增Graph-owned Source Slot、Profile-owned binding并让SequencePlayer引用该Slot
+- **WHEN** 文档目标状态新增Graph-owned Source Slot、Profile-owned direct Clip Binding并让ClipPlayer引用该Slot
 - **THEN** Reconciler MUST按子资产创建、binding配置、Player引用与owner保存顺序生成类型化Mutation
-- **AND** 任一失败 MUST回滚全部子资产、数组、节点引用、Gameplay、Timeline与Presentation变化
+- **AND** 任一失败 MUST回滚全部子资产、数组、节点引用、Gameplay、Timeline、Clip与Presentation变化
 
-#### Scenario: apply新增Pose State
+#### Scenario: apply修改Locomotion Sync Group
 
-- **WHEN** 文档目标状态新增Pose State、state-local graph与transition
-- **THEN** Reconciler MUST按owner、页面、节点、动态端口、edge与引用顺序生成类型化mutation
-- **AND** 任一失败 MUST回滚全部Gameplay、Timeline与Presentation变化
+- **WHEN** 文档目标状态调整Group中的原生AnimationClip成员
+- **THEN** Reconciler MUST使用结构化Clip引用生成Profile Mutation并校验成员唯一性
+- **AND** MUST不修改Clip Curve或自动Build Projection
 
-### Requirement: Document v3必须原子替代v2
+### Requirement: Document v4必须原子替代v3
 
-系统 MUST删除v2 schema、reader、writer、manifest识别、文档包兼容与升级器，只接受v3 Document。已有v2工作目录 MUST要求重新checkout生成v3，不得静默迁移、fallback读取或并存两种apply路径。五个生命周期工具及其事务语义 MUST保持不变。
+系统 MUST删除v3及更早schema、reader、writer、manifest识别、文档包兼容与升级器，只接受v4 Document。已有v3工作目录 MUST要求显式重新checkout生成v4，不得静默迁移、fallback读取或并存两种apply路径。五个生命周期工具及其事务语义 MUST保持不变。
 
-#### Scenario: 读取v2文档包
+#### Scenario: 读取v3文档包
 
-- **WHEN** service发现schema为`btsmtl-agent-authoring-document.v2`
+- **WHEN** service发现schema为`btsmtl-agent-authoring-document.v3`
 - **THEN** dry-run与apply MUST拒绝该文档且不修改资产
 - **AND** 调用方 MUST显式重新checkout
 
-### Requirement: Document v3失败恢复必须同时覆盖Unity owner与正式package
+### Requirement: Document v4失败恢复必须同时覆盖Unity owner与正式package
 
-Application Service MUST在首次Mutation前解析并锁定全部Gameplay、Timeline与Presentation serialized owner，并注册一个完整Undo事务。只有Mutation、全域Validator、Unity authoring保存、最终树反向导出、staging重读与hash校验、正式package原子替换全部成功后，apply才可返回`applied=true`、`saved=true`与`Clean`。任一步失败 MUST恢复全部Unity owner并保留上一份正式package；Character apply MUST不发布Program、Projection或Native Pose Program。
+Application Service MUST在首次Mutation前解析并锁定全部Gameplay、Timeline、AnimationClip与Presentation serialized owner，并注册一个完整Undo事务。只有Mutation、全域Validator、Unity authoring保存、最终树反向导出、staging重读与hash校验、正式package原子替换全部成功后，apply才可返回`applied=true`、`saved=true`与`Clean`。任一步失败 MUST恢复全部Unity owner并保留上一份正式package；Character apply MUST不发布Foot Analysis、Program、Projection或Native Pose Program。Clip registered Curve Mutation MUST只改变完整dependency baseline与Registered Curve Hash并使相关Projection stale，不得修改`AnimationClipAnalysisInputHash`或把匹配Artifact标记为stale。
 
-#### Scenario: Presentation Validator失败
+#### Scenario: Clip Curve Validator失败
 
-- **WHEN** Gameplay和Timeline mutation已经执行，但Presentation Validator发现AnimationSlot引用断裂
-- **THEN** Application Service MUST回滚同一事务内全部Gameplay、Timeline与Presentation owner
+- **WHEN** Gameplay和Timeline mutation已经执行，但Clip Curve Validator发现Phase非单调
+- **THEN** Application Service MUST回滚同一事务内全部Gameplay、Timeline、Clip与Presentation owner
 - **AND** 正式Document package MUST保持apply前内容且响应不得报告`Clean`
+
+### Requirement: AnimationClip注册Curve必须使用独立严格分片
+
+Document v4 MUST只为当前Definition闭包中实际可达且位于可写原生`.anim`的AnimationClip输出`editable/animation-clips/<stable-segment>/curves.json`。分片 MUST包含结构化Clip对象引用、完整dependency baseline、只读`AnimationClipAnalysisInputHash`和Clip Curve catalog允许的秒域完整canonical Curve；MUST不包含骨骼Curve、AnimationEvent、import设置、Rig、Foot Analysis Artifact、Phase Validation samples、Group或generated plan。Exporter、strict parser、Reconciler、handler、Validator与reverse exporter MUST复用同一Clip Curve capability，并按完整`EditorCurveBinding(path + type + property)`识别channel，不得只比较propertyName。
+
+#### Scenario: checkout导出RunLoop Curve
+
+- **WHEN** RunLoop原生Clip被当前Profile或Blend Space可达引用
+- **THEN** exporter MUST输出其允许的注册Curve与dependency baseline
+- **AND** MUST不导出骨骼曲线或Analysis payload
+
+#### Scenario: Document修改Foot Weight Curve
+
+- **WHEN** AI在dependency baseline与Analysis Input Hash仍匹配时替换Foot Placement Weight完整秒域Curve
+- **THEN** preflight MUST通过唯一Clip Curve Mutation校验完整binding、秒域、值域与Registered Curve Hash
+- **AND** apply成功后 MUST只使Projection stale，匹配Analysis Input Hash的Foot Analysis Artifact MUST继续Ready
+
+#### Scenario: Document修改只读导入子Clip
+
+- **WHEN** Clip分片引用ModelImporter子Clip或dependency baseline已变化
+- **THEN** preflight MUST拒绝Mutation并定位精确对象
+- **AND** MUST不复制或生成替代Clip

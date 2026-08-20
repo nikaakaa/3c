@@ -16,19 +16,19 @@
 
 ### Requirement: Bridge 必须复用正式 Agent compiler 与 BTSMTL authoring API
 
-MCP bridge MUST复用v3 package exporter、Document Reconciler、Mutation Compiler、domain Validator和Compile Report。全部Graph修改 MUST继续由typed handler通过`BaseGraph.CreateNode`、`BaseGraph.Link`、`BaseGraph.UnLink`、`BaseGraph.LinkProperty`、正式Property Edge断开、Timeline、Presentation与AI authoring API执行。Bridge MUST不直接写Unity YAML、Node集合、Edge集合、GUID映射或建立第二套Graph数据。
+MCP bridge MUST复用v4 package exporter、Document Reconciler、Mutation Compiler、domain Validator和Compile Report。全部Graph、Timeline、AnimationClip Curve与Presentation修改 MUST继续由typed handler通过正式BTSMTL、Timeline、Clip Curve、Presentation与AI authoring API执行。Bridge MUST不直接写Unity YAML、AnimationClip serialized curve、Node集合、Edge集合、GUID映射或建立第二套authoring数据。
 
-#### Scenario: Document新增状态和Transition
+#### Scenario: Bridge应用Clip Curve变化
 
-- **WHEN** dry-run读取包含新State、body Graph、Node与Transition的package
-- **THEN** Reconciler MUST生成受capability与Graph kind约束的typed Mutation
-- **AND** bridge MUST不解释创建顺序
+- **WHEN** v4 Character package包含合法Clip注册Curve变化
+- **THEN** Bridge MUST把整包交给统一Application Service和Clip Curve handler
+- **AND** MCP handler MUST不直接调用AnimationUtility或编辑`.anim`文本
 
-#### Scenario: Document包含未知Node或port
+#### Scenario: Bridge应用Graph变化
 
-- **WHEN** package包含catalog不支持的kind或逻辑port
-- **THEN** bridge MUST返回Reconciler或Compiler明确错误
-- **AND** MUST不创建placeholder、执行动态代码或写SerializedProperty
+- **WHEN** v4 package包含合法Graph目标变化
+- **THEN** handler MUST继续调用正式Graph authoring API
+- **AND** MUST不创建Node级MCP工具
 
 ### Requirement: Definition 目标必须由调用上下文显式提供
 
@@ -172,29 +172,23 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 
 ### Requirement: MCP bridge必须透传同一Document Character与AI事务
 
-五个BTSMTL lifecycle tool MUST接受并返回`btsmtl-agent-authoring-document.v3`同步与validation结果，并通过显式domain透传CharacterController或AIController generic事务。Character package MUST覆盖State、Action、Timeline、MotionWarp、Marker、Curve、Node、Edge与Presentation owner可写语义；AI package MUST覆盖Definition、Graph、Blackboard、Perception、Observation、Memory与Character input/request intent binding。Bridge MUST只调用统一Store、Reconciler、Mutation、transaction和Validator，不得新增domain专用action、Node级tool、Pose专用tool、Patch JSON、YAML、反射、任意字段写入或旧schema转换。
+五个BTSMTL lifecycle tool MUST接受并返回`btsmtl-agent-authoring-document.v4`同步与validation结果，并通过显式domain透传CharacterController或AIController generic事务。Character package MUST覆盖State、Action、Timeline、Timeline-local Curve、AnimationClip注册Curve、Node、Edge、direct Clip Binding、Locomotion Sync Group与Presentation owner可写语义；AI package MUST继续覆盖Definition、Graph、Blackboard、Perception、Observation、Memory与Character input/request intent binding。Bridge MUST只调用统一Store、Reconciler、Mutation、transaction和Validator，不得新增domain专用action、Node级tool、Clip级tool、Pose专用tool、Patch JSON、YAML、反射、任意字段写入或旧schema转换。
 
-#### Scenario: dry-run发现新增Pose Graph分片
+#### Scenario: dry-run发现Clip Curve分片
 
-- **WHEN** Character Document包含Store按完整canonical `local:*` graph/layout创建合同接纳的新分片
-- **THEN** dry-run MUST返回锁定有效manifest文件闭包的exact document hash与Create Pose Graph计划
-- **AND** apply MUST只接受该exact hash，并在成功reverse export后由service发布stable identity与canonical manifest
-- **AND** Bridge MUST不增加manifest编辑参数或Pose专用工具
-
-#### Scenario: Character Document修改Property Edge
-
-- **WHEN** Character package增加、删除或重接Property Edge目标状态
-- **THEN** bridge MUST把整包交给同一Reconciler与typed Mutation链
-- **AND** handler MUST调用正式Property Edge authoring API
+- **WHEN** Character Document包含manifest声明且引用现有原生Clip的Curve分片
+- **THEN** dry-run MUST返回锁定完整manifest的exact document hash与Clip Curve Mutation计划
+- **AND** apply MUST只接受该exact hash，并在成功reverse export后发布canonical package
+- **AND** Bridge MUST不增加Clip路径或curve key参数
 
 #### Scenario: AI Document修改Intent binding
 
 - **WHEN** AI package增加合法Character input/request binding
-- **THEN** bridge MUST把同一整包交给统一service
+- **THEN** bridge MUST把同一v4整包交给统一service
 - **AND** response MUST返回Mutation Plan、事务与Validator机器报告
 
 #### Scenario: bridge收到旧schema
 
-- **WHEN** 调用方提交v1单文件、v15-v17 Snapshot/Patch、operation或`patch_json`
+- **WHEN** 调用方提交v1/v2/v3、v15-v17 Snapshot/Patch、operation或`patch_json`
 - **THEN** bridge MUST返回unsupported schema或unsupported parameter
-- **AND** MUST不转换为v3文档包
+- **AND** MUST不转换为v4文档包

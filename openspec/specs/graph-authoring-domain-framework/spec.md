@@ -90,9 +90,9 @@ Graph Canvas MUST通过document projection和Capability生成通用Node View、P
 
 Details MUST只投影当前selection、当前capability与当前authoring mode允许查看或修改的字段和命令。Unity资源关系 MUST使用Capability声明的精确对象类型和对象选择器；领域identity关系 MUST使用精确上下文提供的可读选项目录。IdentityReference缺少选项目录时 MUST显示Unavailable并禁止编辑，不得退化为TextField；选项标签 MUST不拼接内部value。稳定identity、revision、GUID、local file id、compiled index、runtime handle、generated path、内部枚举载荷、缓存、Projection中间值与不适用nullable字段 MUST默认隐藏；只读References与Diagnostics MUST放入明确折叠区，且 MUST不伪装成可编辑属性。
 
-#### Scenario: 选择Sequence Player
+#### Scenario: 选择Clip Player
 
-- **WHEN** 作者在Authoring模式选择Sequence Player
+- **WHEN** 作者在Authoring模式选择Clip Player
 - **THEN** Details MUST显示类型受限的Source Slot对象选择、loop、play rate、sync与该节点真实可写策略
 - **AND** References MUST显示解析后的动画资源与唯一owner
 - **AND** MUST不显示Source Id、TwoBoneIK、Slot、compiled offset或联合体空字段
@@ -144,13 +144,19 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 ### Requirement: 人工编辑与Document Apply必须复用同一类型化Mutation
 
-窗口交互与Agent Authoring Document Reconciler MUST分别把用户操作或目标状态差异降低为同一领域类型化Mutation，再由同一Validator、transaction、dirty owner和Undo边界应用。系统 MUST不允许Document直接写Unity YAML、SerializedObject path或构造第二套Pose资产写服务。
+窗口交互与Agent Authoring Document Reconciler MUST分别把用户操作或目标状态差异降低为同一领域类型化Mutation，再由同一Validator、transaction、dirty owner和Undo边界应用。系统 MUST不允许Document直接写Unity YAML、SerializedObject path、AnimationClip序列化文本或构造第二套Pose/Clip资产写服务。
 
 #### Scenario: UI与Document修改同一Transition
 
-- **WHEN** 人工UI或Document v3修改Pose transition blend policy
+- **WHEN** 人工UI或Document v4修改Pose transition blend policy
 - **THEN** 两条入口 MUST生成同一种Presentation Mutation
 - **AND** 最终资产约束、诊断和revision变化 MUST一致
+
+#### Scenario: Animation Window入口与Document修改同一Clip Curve
+
+- **WHEN** 两条入口替换同一注册Curve
+- **THEN** 两条入口 MUST调用同一Clip Curve validator与Mutation语义
+- **AND** MUST进入各自单一Undo事务并产生相同canonical结果
 
 ### Requirement: Authoring节点与Runtime执行描述必须分离
 

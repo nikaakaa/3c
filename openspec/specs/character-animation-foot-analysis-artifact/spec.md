@@ -83,17 +83,17 @@ Analyzer MUST从Sampling Rig与Runtime共享的Rig Calibration绑定姿势得到
 
 ### Requirement: Definition Build必须精确消费Artifact并发布Projection
 
-Definition Build MUST收集全部可达持续Pose Source与有限Action Animation Clip binding，按精确`AnimationClip + Analysis Source + Geometry Validation` identity校验或生成artifact，再把feature按每个stable source binding嵌入CharacterPresentationProjection。相同AnimationClip MAY复用一次artifact读取，但每个binding MUST保持独立source identity。任一artifact缺失、损坏、Calibration revision不匹配或Geometry Validation identity过期 MUST阻止本次Program/Projection发布。Projection MUST发布Runtime可核对的Rig、Calibration、Artifact与Geometry Validation identity，不得发布Sampling Rig或Preview Clip对象。
+Definition Build MUST收集全部可达直接Clip Binding、Blend Space Dynamic Sample与有限Action AnimationClip引用，按精确`AnimationClipAnalysisInputHash + Analysis Source + Rig + Sampling Rig + Calibration + Geometry Validation` identity读取并校验已经显式生成的Artifact，再把普通Foot Feature按stable source binding嵌入CharacterPresentationProjection。完整Clip dependency与Registered Curve Hash MUST作为Projection依赖单独校验，不得进入Analysis Input Hash。相同AnimationClip MAY复用一次artifact读取，但每个source usage MUST保持独立identity。Locomotion Sync Group成员还 MUST使用Artifact的Editor-only Phase Validation Descriptor校验Landing/Plant onset、实际source coverage和每条可达PoseState relation的脚部相容性。任一Artifact缺失、损坏、Calibration revision不匹配、Geometry Validation过期或Phase关系质量失败 MUST阻止Projection发布。Definition Build MUST不现场运行Analyzer、不生成Artifact，也不得把Sampling Rig、Preview Clip对象、Phase Validation samples或pairwise warp payload发布进Projection。
 
-#### Scenario: Artifact Ready但几何验证过期
+#### Scenario: Artifact Ready但Phase接触侧相反
 
-- **WHEN** Artifact的Calibration revision匹配但Geometry Validation identity不匹配当前Sampling Rig与Preview Pose
-- **THEN** Definition Build MUST把Artifact判为Stale并阻止发布
-- **AND** MUST不只调用数值级Calibration验证继续Build
+- **WHEN** Clip的Phase整数inverse时间没有与右脚Landing/Plant onset对齐，或对应时刻左右脚接触顺序相反
+- **THEN** Definition Build MUST报告精确Clip、Phase、onset时间与接触语义冲突
+- **AND** MUST不发布Phase plan或修正Curve
 
 #### Scenario: Artifact完整匹配
 
-- **WHEN** Artifact payload、Calibration revision与Geometry Validation identity全部匹配
+- **WHEN** Artifact payload、Calibration revision、Geometry Validation identity与Phase关系质量全部匹配
 - **THEN** Definition Build MAY复用该payload而不重新采样AnimationClip
 - **AND** Projection MUST发布精确validation identity供Runtime create核对
 
@@ -107,18 +107,44 @@ Player Runtime MUST只从与Program和producer binding匹配的CharacterPresenta
 - **THEN** 已发布Player MUST继续只使用Projection运行
 - **AND** Runtime行为 MUST不依赖Editor cache存在
 
-### Requirement: Foot Analysis必须生成可校验的接触Marker候选
+### Requirement: Foot Analysis必须生成可显式应用的Locomotion Phase候选
 
-Ready artifact MAY按artifact sample rate从左右脚PlantConfidence推导离散contact onset候选。一个上升沿只有在其后的Plant状态连续维持至少Analysis Source `MinimumLandingSegmentSeconds`对应的循环样本数时才是稳定接触；单帧阈值穿越 MUST不产生候选。候选 MUST携带artifact identity与content hash、AnimationClip dependency、Timeline/Track/Clip stable identity、脚侧、源动画归一化时间、目标Timeline frame与置信值。候选 MUST是Editor session中的瞬时只读数据，不得写入artifact payload、Projection或Runtime。
+Editor-only Analysis工具 MAY从左右脚稳定Landing/Plant onset生成一条Locomotion Phase候选Curve。候选 MUST携带Artifact identity/content hash、AnimationClip Analysis Input Hash、候选生成时的Registered Curve Hash、完整Clip dependency baseline、Analysis Source、Sampling Rig、Calibration、采样参数、Clip实际秒域coverage与左右脚接触语义，并保持session-local只读。作者显式Apply时 MUST重新校验全部输入，并通过AnimationClip注册Curve正式Mutation替换`presentation.locomotion-phase`完整秒域Curve。Artifact、Profile、Timeline与Projection MUST不保存候选副本。
 
-#### Scenario: 循环步态生成左右脚候选
+#### Scenario: 作者应用RunLoop Phase候选
 
-- **WHEN** Ready artifact的左右脚PlantConfidence在循环边界内分别发生非接触到稳定接触的转换
-- **THEN** 系统 MUST按实际采样点生成LeftFootContact与RightFootContact候选
-- **AND** MUST按ClipIn与源动画cycle映射到目标Timeline frame，不得假设frame 0或半周期
+- **WHEN** RunLoop候选未过期且左右脚接触顺序合法
+- **THEN** Apply MUST把完整Phase Curve写入精确原生AnimationClip并进入一个Undo事务
+- **AND** MUST标记Projection stale而不自动Build或使Analysis Input Hash对应Artifact stale
 
-#### Scenario: 候选输入过期
+#### Scenario: 候选显示后Clip发生变化
 
-- **WHEN** AnimationClip import dependency、Analysis Source、Sampling Rig、Calibration、采样参数、artifact hash或Timeline映射在候选显示后改变
-- **THEN** Apply MUST重新解析并把旧候选判为Stale
-- **AND** MUST不按旧frame、clip名称或缓存曲线继续写入Marker
+- **WHEN** AnimationClip dependency baseline、Analysis Input Hash、Registered Curve Hash或Artifact identity在Apply前变化
+- **THEN** Apply MUST返回Stale并拒绝写入
+- **AND** MUST不按旧frame或旧接触样本继续生成Curve
+
+### Requirement: Foot Analysis必须校验可达Locomotion关系质量
+
+Projection Build MUST只针对PoseState实际可达relation和Gameplay committed clock解析的实际秒域coverage执行质量校验。校验 MUST覆盖Phase整数/半整数与左右脚Landing/Plant onset的时间误差、对侧脚状态、接触顺序、有限source终点双脚Plant差异、脚底位置/高度/速度差异、Transition可见窗口coverage、inverse斜率与跨cycle展开。门槛 MUST属于versioned compiler algorithm，不得成为Transition可调参数。失败 MUST产生稳定typed diagnostic并阻止发布，MUST不搜索其它Phase、禁用同步或使用旧plan。
+
+#### Scenario: MovingTurn只使用前28帧
+
+- **WHEN** MovingTurn Clip总长71帧但正式Gameplay clock只覆盖0至28帧
+- **THEN** 质量校验 MUST只把0至28帧作为source实际coverage
+- **AND** MUST不使用28帧后的接触样本证明出口相容
+
+### Requirement: Foot Analysis必须发布最小Editor-only Phase Validation Descriptor
+
+Foot Analysis Artifact MUST用`AnimationFootPhaseValidationDescriptor`原子取代旧`AnimationFootSynchronizationDescriptor`。新Descriptor MUST只保存按规范化素材时间排序的左右脚root-local平面位置、calibrated height、local velocity、Plant confidence与Landing/Plant onset事件，以及匹配的Analysis Input Hash；MUST不保存pairwise relation、leader、warp knot、Marker occurrence或Runtime cursor。Descriptor MUST只供Phase候选和Projection Build质量校验读取，MUST不进入Presentation Projection、Player、Snapshot、Replay或Runtime。
+
+#### Scenario: Projection Build校验有限出口
+
+- **WHEN** Compiler校验MovingTurn有限出口与RunLoop候选Phase
+- **THEN** Compiler MUST从匹配Analysis Input Hash的Phase Validation Descriptor读取双脚位置、高度、速度与onset
+- **AND** MUST不重新运行Analyzer或读取旧pairwise warp descriptor
+
+#### Scenario: Runtime加载Projection
+
+- **WHEN** Player加载已通过质量门槛的Presentation Projection
+- **THEN** Projection与Runtime MUST不包含Phase Validation samples
+- **AND** Runtime MUST只消费编译后的Phase plan与Artifact validation identity

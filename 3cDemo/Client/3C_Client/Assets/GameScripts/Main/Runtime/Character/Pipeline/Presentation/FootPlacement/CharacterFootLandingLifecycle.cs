@@ -68,8 +68,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathLanding lastLanding,
             bool hasNextSwingLanding,
             CharacterFootGroundPathLanding nextSwingLanding,
-            bool hasCompletionCandidate,
-            CharacterFootGroundPathLanding completionCandidate,
             float nextSwingPredictionError,
             float nextSwingConstraintWeight)
         {
@@ -79,8 +77,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LastLanding = lastLanding;
             HasNextSwingLanding = hasNextSwingLanding;
             NextSwingLanding = nextSwingLanding;
-            HasCompletionCandidate = hasCompletionCandidate;
-            CompletionCandidate = completionCandidate;
             NextSwingPredictionError = nextSwingPredictionError;
             NextSwingConstraintWeight = nextSwingConstraintWeight;
         }
@@ -93,8 +89,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasLastLanding ? LastLanding.LandingEventIdentity : 0;
         internal bool HasNextSwingLanding { get; }
         internal CharacterFootGroundPathLanding NextSwingLanding { get; }
-        internal bool HasCompletionCandidate { get; }
-        internal CharacterFootGroundPathLanding CompletionCandidate { get; }
         internal float NextSwingPredictionError { get; }
         internal float NextSwingConstraintWeight { get; }
     }
@@ -119,8 +113,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 State == CharacterFootLandingLifecycleState.Accepted &&
                 NextSwingLanding.HasValue,
                 State == CharacterFootLandingLifecycleState.Accepted &&
-                NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
-                NextSwingLanding.HasValue,
                 NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
                 State == CharacterFootLandingLifecycleState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
@@ -235,9 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Pending.State = CharacterFootLandingLifecycleState.Accepted;
         }
 
-        internal void PromoteLanded(
-            in AnimationBiomechanicalStepHeader step,
-            bool completionCandidateReachable)
+        internal void PromoteLanded(in AnimationBiomechanicalStepHeader step)
         {
             RequirePending();
             bool hasCurrentEvent = step.IsAuthoritative &&
@@ -258,7 +248,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                            currentEventIdentity != acceptedEventIdentity;
                 if (completedInPlace || advancedToNextEvent)
                 {
-                    m_Pending.LastLanding = completionCandidateReachable
+                    m_Pending.LastLanding = m_Pending.State ==
+                                            CharacterFootLandingLifecycleState.Accepted
                         ? m_Pending.NextSwingLanding
                         : default;
                     m_Pending.TrackedEventIdentity = 0;

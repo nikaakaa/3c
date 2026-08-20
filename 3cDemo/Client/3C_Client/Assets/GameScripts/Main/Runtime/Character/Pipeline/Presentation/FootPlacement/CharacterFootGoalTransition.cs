@@ -4,6 +4,13 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    public enum CharacterFootGoalTransitionMode : byte
+    {
+        Smooth = 0,
+        LandingPreparation = 1,
+        DirectSupport = 2
+    }
+
     public readonly struct CharacterFootGoalTransitionDiagnostics
     {
         internal CharacterFootGoalTransitionDiagnostics(
@@ -11,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGoalTransitionSnapshot pending,
             float halfLifeSeconds)
         {
+            Mode = pending.Mode;
             HasCommittedOutput = committed.HasOutput;
             HasPendingOutput = pending.HasOutput;
             CommittedSourceGroundPathIdentity = committed.SourceGroundPathIdentity;
@@ -31,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HalfLifeSeconds = halfLifeSeconds;
         }
 
+        public CharacterFootGoalTransitionMode Mode { get; }
         public bool HasCommittedOutput { get; }
         public bool HasPendingOutput { get; }
         public ulong CommittedSourceGroundPathIdentity { get; }
@@ -55,6 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootGoalTransitionSnapshot(
             bool hasOutput,
+            CharacterFootGoalTransitionMode mode,
             ulong sourceGroundPathIdentity,
             Vector3 originalComponentPosition,
             Vector3 targetPositionCorrection,
@@ -67,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float outputRotationWeight)
         {
             HasOutput = hasOutput;
+            Mode = mode;
             SourceGroundPathIdentity = sourceGroundPathIdentity;
             OriginalComponentPosition = originalComponentPosition;
             TargetPositionCorrection = targetPositionCorrection;
@@ -80,6 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal bool HasOutput { get; }
+        internal CharacterFootGoalTransitionMode Mode { get; }
         internal ulong SourceGroundPathIdentity { get; }
         internal Vector3 OriginalComponentPosition { get; }
         internal Vector3 TargetPositionCorrection { get; }
@@ -95,6 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     struct CharacterFootGoalTransitionFrame
     {
         internal bool HasOutput;
+        internal CharacterFootGoalTransitionMode Mode;
         internal ulong SourceGroundPathIdentity;
         internal Vector3 OriginalComponentPosition;
         internal Vector3 TargetPositionCorrection;
@@ -109,6 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGoalTransitionSnapshot Snapshot =>
             new CharacterFootGoalTransitionSnapshot(
                 HasOutput,
+                Mode,
                 SourceGroundPathIdentity,
                 OriginalComponentPosition,
                 TargetPositionCorrection,
@@ -159,6 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong sourceGroundPathIdentity,
             float deltaSeconds,
             float halfLifeSeconds,
+            CharacterFootGoalTransitionMode mode,
             bool hardOwnershipLoss)
         {
             RequirePending();
@@ -167,7 +182,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !Finite(originalComponentPosition) ||
                 !Unit(originalComponentRotation) ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f ||
-                !float.IsFinite(halfLifeSeconds) || halfLifeSeconds <= 0f)
+                !float.IsFinite(halfLifeSeconds) || halfLifeSeconds <= 0f ||
+                mode != CharacterFootGoalTransitionMode.Smooth &&
+                mode != CharacterFootGoalTransitionMode.LandingPreparation &&
+                mode != CharacterFootGoalTransitionMode.DirectSupport)
             {
                 throw new ArgumentException("Foot Goal transition input is invalid.");
             }
@@ -202,30 +220,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float alpha = deltaSeconds <= 0f
                 ? 0f
                 : 1f - Mathf.Pow(0.5f, deltaSeconds / halfLifeSeconds);
+            bool directOutput = mode != CharacterFootGoalTransitionMode.Smooth;
 
             m_Pending.HasOutput = true;
+            m_Pending.Mode = mode;
             m_Pending.SourceGroundPathIdentity = sourceGroundPathIdentity;
             m_Pending.OriginalComponentPosition = originalComponentPosition;
             m_Pending.TargetPositionCorrection = targetPositionCorrection;
             m_Pending.TargetRotationCorrection = targetRotationCorrection;
             m_Pending.TargetPositionWeight = target.PositionWeight;
             m_Pending.TargetRotationWeight = target.RotationWeight;
-            m_Pending.OutputPositionCorrection = Vector3.LerpUnclamped(
-                committedPositionCorrection,
-                targetPositionCorrection,
-                alpha);
-            m_Pending.OutputRotationCorrection = Quaternion.SlerpUnclamped(
-                committedRotationCorrection,
-                targetRotationCorrection,
-                alpha).normalized;
-            m_Pending.OutputPositionWeight = Mathf.LerpUnclamped(
-                committedPositionWeight,
-                target.PositionWeight,
-                alpha);
-            m_Pending.OutputRotationWeight = Mathf.LerpUnclamped(
-                committedRotationWeight,
-                target.RotationWeight,
-                alpha);
+            m_Pending.OutputPositionCorrection = directOutput
+                ? targetPositionCorrection
+                : Vector3.LerpUnclamped(
+                    committedPositionCorrection,
+                    targetPositionCorrection,
+                    alpha);
+            m_Pending.OutputRotationCorrection = directOutput
+                ? targetRotationCorrection
+                : Quaternion.SlerpUnclamped(
+                    committedRotationCorrection,
+                    targetRotationCorrection,
+                    alpha).normalized;
+            m_Pending.OutputPositionWeight = directOutput
+                ? target.PositionWeight
+                : Mathf.LerpUnclamped(
+                    committedPositionWeight,
+                    target.PositionWeight,
+                    alpha);
+            m_Pending.OutputRotationWeight = directOutput
+                ? target.RotationWeight
+                : Mathf.LerpUnclamped(
+                    committedRotationWeight,
+                    target.RotationWeight,
+                    alpha);
 
             Vector3 outputPosition = originalComponentPosition +
                                      m_Pending.OutputPositionCorrection;

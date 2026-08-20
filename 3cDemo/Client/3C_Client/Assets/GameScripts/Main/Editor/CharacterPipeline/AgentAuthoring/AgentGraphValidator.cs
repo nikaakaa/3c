@@ -453,7 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             }
             if (node.Kind == CharacterPoseNodeKind.SequencePlayer &&
-                source?.SourceKind != PresentationPoseSourceKind.Sequence)
+                source?.SourceKind != PresentationPoseSourceKind.Clip)
             {
                 m_Report.Error(
                     path,

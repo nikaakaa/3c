@@ -1,28 +1,28 @@
 ## 1. 收口被取代的实现基线
 
-- [ ] 1.1 盘点`AnimationSequenceAsset`、`CharacterAnimationSequenceAsset`及其全部Runtime、Editor、Projection和Document引用。
-- [ ] 1.2 盘点`AnimationSyncMode`、`AnimationSyncTimeMapping`、Marker Group、SyncRole、Topology与Point Marker全部引用。
-- [ ] 1.3 盘点Foot Analysis同步descriptor、pairwise warp compiler、Projection plan与Runtime mapper全部引用。
-- [ ] 1.4 盘点Sequence Notify authoring、payload、Projection、snapshot、preview与runtime全部引用。
-- [ ] 1.5 盘点Corin 19个Sequence到AnimationClip、Pose Binding、Blend Space Sample和Timeline Segment的精确引用关系。
-- [ ] 1.6 盘点active Blend Space中Sequence、Marker phase和GeneratedFootPhase冲突字段与实现。
-- [ ] 1.7 固定新链的schema、algorithm、Projection与Document版本提升清单。
-- [ ] 1.8 固定完整Clip dependency、Analysis Input、注册Curve与Artifact validation四类身份边界。
+- [x] 1.1 盘点`AnimationSequenceAsset`、`CharacterAnimationSequenceAsset`及其全部Runtime、Editor、Projection和Document引用。
+- [x] 1.2 盘点`AnimationSyncMode`、`AnimationSyncTimeMapping`、Marker Group、SyncRole、Topology与Point Marker全部引用。
+- [x] 1.3 盘点Foot Analysis同步descriptor、pairwise warp compiler、Projection plan与Runtime mapper全部引用。
+- [x] 1.4 盘点Sequence Notify authoring、payload、Projection、snapshot、preview与runtime全部引用。
+- [x] 1.5 盘点Corin 19个Sequence到AnimationClip、Pose Binding、Blend Space Sample和Timeline Segment的精确引用关系。
+- [x] 1.6 盘点active Blend Space中Sequence、Marker phase和GeneratedFootPhase冲突字段与实现。
+- [x] 1.7 固定新链的schema、algorithm、Projection与Document版本提升清单。
+- [x] 1.8 固定完整Clip dependency、Analysis Input、注册Curve与Artifact validation四类身份边界。
 
 ## 2. 建立AnimationClip注册曲线合同
 
-- [ ] 2.1 定义唯一注册曲线catalog并登记`presentation.locomotion-phase`。
-- [ ] 2.2 在同一catalog登记`presentation.foot-placement-weight`。
-- [ ] 2.3 为每项channel定义唯一Unity EditorCurveBinding、值域、切线限制和必填条件。
-- [ ] 2.4 把注册Curve key time固定为Clip秒域，并建立canonical读取与有限值校验。
+- [x] 2.1 定义唯一注册曲线catalog并登记`presentation.locomotion-phase`。
+- [x] 2.2 在同一catalog登记`presentation.foot-placement-weight`。
+- [x] 2.3 为每项channel定义唯一Unity EditorCurveBinding、值域、切线限制和必填条件。
+- [x] 2.4 把注册Curve key time固定为Clip秒域，并建立canonical读取与有限值校验。
 - [ ] 2.5 建立AnimationClip注册曲线canonical写入与Undo mutation。
-- [ ] 2.6 建立AnimationClip对象引用、dependency hash与注册曲线hash身份。
-- [ ] 2.7 严格拒绝ModelImporter子Clip、只读Clip和非原生`.anim`作者目标。
+- [x] 2.6 建立AnimationClip对象引用、dependency hash与注册曲线hash身份。
+- [x] 2.7 严格拒绝ModelImporter子Clip、只读Clip和非原生`.anim`作者目标。
 - [ ] 2.8 删除DefaultPlayRate素材字段并把正式默认倍率固定为1。
 - [ ] 2.9 从AnimationClip正式Loop设置解析Cyclic/Finite事实并删除重复Topology作者字段。
-- [ ] 2.10 从排除注册表现Curve的骨骼/Root曲线与正式Clip设置计算唯一`SourceDurationSeconds`。
-- [ ] 2.11 建立只包含骨骼/Root曲线、正式Loop与基础时长的`AnimationClipAnalysisInputHash`。
-- [ ] 2.12 分离完整Unity dependency baseline、Analysis Input Hash、Registered Curve Hash与Artifact validation identity。
+- [x] 2.10 从排除注册表现Curve的骨骼/Root曲线与正式Clip设置计算唯一`SourceDurationSeconds`。
+- [x] 2.11 建立只包含骨骼/Root曲线、正式Loop与基础时长的`AnimationClipAnalysisInputHash`。
+- [x] 2.12 分离完整Unity dependency baseline、Analysis Input Hash、Registered Curve Hash与Artifact validation identity。
 - [ ] 2.13 让Direct Clip、Action、Blend Space与Motion Matching resolver只按同一catalog精确binding读取作者Curve。
 - [ ] 2.14 把`presentation.foot-placement-weight`唯一降低为Runtime `animation.foot-placement-weight`参数并删除第二channel入口。
 
@@ -79,8 +79,8 @@
 - [ ] 6.4 让Runtime继续从Projection curve求Foot Placement Weight。
 - [ ] 6.5 删除Sequence、Binding、Timeline Segment和Blend Space Sample上的Foot Weight副本。
 - [ ] 6.6 缺失或值域非法时阻止Projection发布，不生成常量1。
-- [ ] 6.7 修改Motion Matching Clip parameter resolver复用唯一注册Curve catalog。
-- [ ] 6.8 删除按`animation.foot-placement-weight`或仅按propertyName直接搜索AnimationClip Curve的旧resolver路径。
+- [x] 6.7 修改Motion Matching Clip parameter resolver复用唯一注册Curve catalog。
+- [x] 6.8 删除按`animation.foot-placement-weight`或仅按propertyName直接搜索AnimationClip Curve的旧resolver路径。
 
 ## 7. 以Locomotion Phase取代Marker与GeneratedFootPhase
 
@@ -102,7 +102,7 @@
 - [ ] 7.16 为每条relation生成只引用source endpoint与per-clip plan的Phase relation plan。
 - [ ] 7.17 删除`AnimationSyncMode`和`AnimationSyncTimeMapping`枚举。
 - [ ] 7.18 删除Marker Group、SyncRole、Topology和Point Marker作者合同。
-- [ ] 7.19 用Editor-only `AnimationFootPhaseValidationDescriptor`原子取代`AnimationFootSynchronizationDescriptor`及其artifact codec字段。
+- [x] 7.19 用Editor-only `AnimationFootPhaseValidationDescriptor`原子取代`AnimationFootSynchronizationDescriptor`及其artifact codec字段。
 - [ ] 7.20 删除`AnimationFootPhaseTimeWarpCompiler`、pairwise plan和warp knot payload。
 - [ ] 7.21 让Phase relation plan保存TransitionId、固定leader、两侧秒域coverage和validation identity。
 - [ ] 7.22 固定relation runtime identity为`RelationIdentity + TransitionId + TransitionGeneration`。
@@ -116,10 +116,10 @@
 - [ ] 8.5 计算整个Transition可见窗口的Phase coverage与inverse斜率质量。
 - [ ] 8.6 把质量门槛固定在versioned compiler algorithm而不是Transition配置。
 - [ ] 8.7 为Coverage、ContactSide、TerminalPose、WarpSlope和QualityLimit建立typed Build failure。
-- [ ] 8.8 删除只服务pairwise warp的计划字段，并保留质量门槛所需的最小位置、高度、速度、Plant与Landing onset采样payload。
-- [ ] 8.9 保持Foot Analysis普通Foot Feature、Landing与Foot Placement输入不变。
-- [ ] 8.10 把Foot Analysis Artifact identity从完整Clip dependency改为`AnimationClipAnalysisInputHash`。
-- [ ] 8.11 确认注册Curve Mutation只使Projection stale，骨骼/Root/Loop/基础时长变化才使Artifact stale。
+- [x] 8.8 删除只服务pairwise warp的计划字段，并保留质量门槛所需的最小位置、高度、速度、Plant与Landing onset采样payload。
+- [x] 8.9 保持Foot Analysis普通Foot Feature、Landing与Foot Placement输入不变。
+- [x] 8.10 把Foot Analysis Artifact identity从完整Clip dependency改为`AnimationClipAnalysisInputHash`。
+- [x] 8.11 确认注册Curve Mutation只使Projection stale，骨骼/Root/Loop/基础时长变化才使Artifact stale。
 
 ## 9. 收口Phase Runtime
 
@@ -159,7 +159,7 @@
 - [ ] 11.2 保留Start/End、ClipIn、Extrapolation、Weight和Ease编排字段。
 - [ ] 11.3 修改Action presentation sampler直接解析AnimationClip plan。
 - [ ] 11.4 修改Action producer binding和source map使用Clip object identity。
-- [ ] 11.5 删除Action producer binding中的Foot Analysis identity副本，统一从Profile Analysis Source与Clip identity解析Artifact。
+- [x] 11.5 删除Action producer binding中的Foot Analysis identity副本，统一从Profile Analysis Source与Clip identity解析Artifact。
 - [ ] 11.6 删除Action Marker Sync relation编译与Runtime mapping。
 - [ ] 11.7 删除AnimationTrack Marker Sync、Time Mapping和Marker diagnostics。
 - [ ] 11.8 删除Sequence Notify到Action Projection与Snapshot的全部路径。

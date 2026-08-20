@@ -428,7 +428,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentException("A valid Animancer source asset is required.", nameof(source));
             Undo.RecordObject(profile, "Configure Timeline Animation Producer Binding");
             AnimationProducerPresentationBinding binding = RequireBinding(profile, producerId);
-            binding.ConfigureTimeline(producerId, source, ResolveFootAnalysisIdentity(profile));
+            binding.ConfigureTimeline(producerId, source);
             EditorUtility.SetDirty(profile);
         }
 

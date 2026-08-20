@@ -1795,7 +1795,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             PresentationPoseSourceKind kind,
             AgentDocumentPresentationEditable presentation)
         {
-            if (kind == PresentationPoseSourceKind.Sequence)
+            if (kind == PresentationPoseSourceKind.Clip)
                 return (presentation.animationSequences ?? new List<AgentPackageAnimationSequenceFile>())
                     .Any(value => string.Equals(ReferenceIdentity(value?.asset), ReferenceIdentity(source.source), StringComparison.Ordinal));
             if (kind == PresentationPoseSourceKind.BlendSpace)

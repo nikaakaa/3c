@@ -50,7 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         string m_BuildMessage = string.Empty;
         string m_NewPoseSourceName = string.Empty;
         PresentationPoseSourceKind m_NewPoseSourceKind =
-            PresentationPoseSourceKind.Sequence;
+            PresentationPoseSourceKind.Clip;
         CharacterAnimationSequenceAsset m_NewPoseSourceSequence;
         CharacterAnimationBlendSpaceAsset m_NewPoseSourceBlendSpace;
         CharacterMotionMatchingProfile m_NewPoseSourceMotionMatching;
@@ -601,7 +601,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Source Type",
                     m_NewPoseSourceKind);
             bool canCreate = !string.IsNullOrWhiteSpace(m_NewPoseSourceName);
-            if (m_NewPoseSourceKind == PresentationPoseSourceKind.Sequence)
+            if (m_NewPoseSourceKind == PresentationPoseSourceKind.Clip)
             {
                 m_NewPoseSourceSequence = EditorGUILayout.ObjectField(
                     "Sequence",
@@ -645,7 +645,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     try
                     {
-                        if (m_NewPoseSourceKind == PresentationPoseSourceKind.Sequence)
+                        if (m_NewPoseSourceKind == PresentationPoseSourceKind.Clip)
                         {
                             CharacterAnimationPresentationAuthoringService
                                 .CreateSequencePoseSource(

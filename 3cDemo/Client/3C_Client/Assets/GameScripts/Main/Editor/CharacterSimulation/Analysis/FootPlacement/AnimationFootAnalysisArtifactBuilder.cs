@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return AnimationFootAnalysisArtifactStore.Write(
                 identity,
                 result.Features,
-                result.Synchronization);
+                result.PhaseValidation);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections;
 using UnityEditor;
@@ -316,12 +317,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             UnityEngine.AnimationClip clip,
             AnimationFootContactSchedule contactSchedule)
         {
-            if (!float.IsFinite(clip.length) || clip.length <= 0f)
-                throw new InvalidOperationException("AnimationClip duration is not finite and positive");
+            float sourceDuration =
+                CharacterAnimationClipRegisteredCurveCatalog.ResolveSourceDurationSeconds(clip);
             samplingContext.BeginClip(clip);
-            int intervals = Mathf.Max(2, Mathf.RoundToInt(clip.length * source.SampleRate));
+            int intervals = Mathf.Max(2, Mathf.RoundToInt(sourceDuration * source.SampleRate));
             int sampleCount = intervals + 1;
-            float step = clip.length / intervals;
+            float step = sourceDuration / intervals;
             var leftHeelPositions = new Vector3[sampleCount];
             var leftToePositions = new Vector3[sampleCount];
             var leftAnklePositions = new Vector3[sampleCount];
@@ -492,15 +493,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 "Right");
             return new AnimationFootAnalysisBuildResult(
                 features,
-                new AnimationFootSynchronizationDescriptor(
+                new AnimationFootPhaseValidationDescriptor(
                     source.SampleRate,
-                    clip.length,
-                    BuildSynchronizationFoot(
+                    sourceDuration,
+                    BuildPhaseValidationFoot(
                         left,
-                        samplingContext.GroundReferenceHeight),
-                    BuildSynchronizationFoot(
+                        samplingContext.GroundReferenceHeight,
+                        leftLandingSamples),
+                    BuildPhaseValidationFoot(
                         right,
-                        samplingContext.GroundReferenceHeight)));
+                        samplingContext.GroundReferenceHeight,
+                        rightLandingSamples)));
         }
 
         static void ValidateFlatReconstruction(
@@ -649,23 +652,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             new InvalidOperationException(
                 $"{side} Foot Analysis flat reconstruction failed for {field} at source {sourceIndex}, route {routeIndex}: {error} > {tolerance}.");
 
-        static AnimationFootSynchronizationFootDescriptor BuildSynchronizationFoot(
+        static AnimationFootPhaseValidationFootDescriptor BuildPhaseValidationFoot(
             SampledFoot foot,
-            float groundReferenceHeight)
+            float groundReferenceHeight,
+            IReadOnlyCollection<int> landingSamples)
         {
             int last = foot.SolePositions.Length - 1;
-            var samples = new AnimationFootSynchronizationSample[last + 1];
+            var onset = new HashSet<int>(landingSamples ?? Array.Empty<int>());
+            var samples = new AnimationFootPhaseValidationSample[last + 1];
             for (int i = 0; i <= last; i++)
             {
                 Vector3 position = foot.SolePositions[i];
-                samples[i] = new AnimationFootSynchronizationSample(
+                samples[i] = new AnimationFootPhaseValidationSample(
                     i / (float)last,
                     new Vector2(position.x, position.z),
                     foot.Heights[i] - groundReferenceHeight,
                     foot.Velocities[i],
-                    foot.PlantConfidence[i]);
+                    foot.PlantConfidence[i],
+                    onset.Contains(i));
             }
-            return new AnimationFootSynchronizationFootDescriptor(samples);
+            return new AnimationFootPhaseValidationFootDescriptor(samples);
         }
 
         static SampledFoot AnalyzeFoot(

@@ -8,9 +8,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     public enum PresentationPoseSourceKind : byte
     {
-        Sequence = 1,
+        Clip = 1,
         BlendSpace = 2,
-        MotionMatching = 3
+        MotionMatching = 3,
+        Sequence = 4
     }
 
     public readonly struct PresentationPoseSourceIndex : IEquatable<PresentationPoseSourceIndex>, IComparable<PresentationPoseSourceIndex>
@@ -34,47 +35,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class PresentationPoseSourceMarker
-    {
-        [SerializeField] string m_AuthoringId = string.Empty;
-        [SerializeField] string m_MarkerId = string.Empty;
-        [SerializeField] int m_Frame;
-
-        public string AuthoringId => m_AuthoringId ?? string.Empty;
-        public string MarkerId => m_MarkerId ?? string.Empty;
-        public int Frame => m_Frame;
-
-        public PresentationPoseSourceMarker()
-        {
-        }
-
-        public PresentationPoseSourceMarker(string authoringId, string markerId, int frame)
-        {
-            if (string.IsNullOrWhiteSpace(authoringId) || string.IsNullOrWhiteSpace(markerId) || frame < 0)
-                throw new ArgumentException("Presentation Pose source marker is invalid.");
-            m_AuthoringId = authoringId.Trim();
-            m_MarkerId = markerId.Trim();
-            m_Frame = frame;
-        }
-    }
-
-    [Serializable]
     public sealed class CharacterPresentationPoseSourcePlan
     {
-        public const string CurrentSchemaVersion = "character-presentation-pose-source-plan/v5";
+        public const string CurrentSchemaVersion = "character-presentation-clip-source-plan/v1";
 
         [SerializeField] string m_SchemaVersion = CurrentSchemaVersion;
         [SerializeField] int m_SourceIndex = -1;
         [SerializeField] string m_BindingAssetIdentity = string.Empty;
-        [SerializeField] string m_SequenceAuthoringId = string.Empty;
-        [SerializeField] string m_SequenceContentRevision = string.Empty;
         [SerializeField] string m_DisplayName = string.Empty;
         [SerializeField] AnimationClip m_Clip;
+        [SerializeField] string m_ClipIdentity = string.Empty;
+        [SerializeField] string m_FullClipDependencyHash = string.Empty;
+        [SerializeField] string m_AnalysisInputHash = string.Empty;
+        [SerializeField] string m_RegisteredCurveHash = string.Empty;
         [SerializeField] string m_RigId = string.Empty;
         [SerializeField] string m_RigRevision = string.Empty;
         [SerializeField] bool m_Loop;
-        [SerializeField] float m_DefaultPlayRate;
-        [SerializeField] AnimationMarkerSyncBinding m_MarkerSync;
+        [SerializeField] float m_SourceDurationSeconds;
         [SerializeField] AnimationCurve m_FootPlacementWeightCurve;
         [SerializeField] string m_FootAnalysisIdentity = string.Empty;
         [SerializeField] AnimationFootFeatureCurveSet m_LeftFootFeatures;
@@ -84,25 +61,74 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPresentationPoseSourcePlan(
             PresentationPoseSourceIndex sourceIndex,
             string bindingAssetIdentity,
+            CharacterClipPoseSourceBinding binding,
+            CharacterAnimationRigDefinition rig,
+            string footAnalysisIdentity,
+            string clipIdentity,
+            string fullClipDependencyHash,
+            string analysisInputHash,
+            string registeredCurveHash,
+            float sourceDurationSeconds,
+            bool loop,
+            AnimationCurve normalizedFootPlacementWeightCurve,
+            AnimationFootFeaturePair footFeatures)
+        {
+            if (!sourceIndex.IsValid || string.IsNullOrWhiteSpace(bindingAssetIdentity) ||
+                !binding || !rig || string.IsNullOrWhiteSpace(footAnalysisIdentity) ||
+                string.IsNullOrWhiteSpace(clipIdentity) ||
+                string.IsNullOrWhiteSpace(fullClipDependencyHash) ||
+                string.IsNullOrWhiteSpace(analysisInputHash) ||
+                string.IsNullOrWhiteSpace(registeredCurveHash) ||
+                !float.IsFinite(sourceDurationSeconds) || sourceDurationSeconds <= 0f ||
+                normalizedFootPlacementWeightCurve == null ||
+                normalizedFootPlacementWeightCurve.length < 2 || !footFeatures.IsValid)
+            {
+                throw new ArgumentException("Presentation Clip source compile input is incomplete.");
+            }
+            binding.RequireValid(rig);
+            m_SourceIndex = sourceIndex.Value;
+            m_BindingAssetIdentity = bindingAssetIdentity.Trim();
+            m_DisplayName = binding.Slot.name;
+            m_Clip = binding.Clip;
+            m_ClipIdentity = clipIdentity.Trim();
+            m_FullClipDependencyHash = fullClipDependencyHash.Trim();
+            m_AnalysisInputHash = analysisInputHash.Trim();
+            m_RegisteredCurveHash = registeredCurveHash.Trim();
+            m_RigId = rig.RigId;
+            m_RigRevision = rig.Revision;
+            m_Loop = loop;
+            m_SourceDurationSeconds = sourceDurationSeconds;
+            m_FootPlacementWeightCurve = normalizedFootPlacementWeightCurve;
+            m_FootAnalysisIdentity = footAnalysisIdentity.Trim();
+            m_LeftFootFeatures = footFeatures.Left;
+            m_RightFootFeatures = footFeatures.Right;
+            m_ContentRevision = $"{binding.ContentRevision}:{m_RegisteredCurveHash}";
+            RequireValid();
+        }
+
+        internal CharacterPresentationPoseSourcePlan(
+            PresentationPoseSourceIndex sourceIndex,
+            string bindingAssetIdentity,
             CharacterSequencePoseSourceBinding binding,
             AnimationFootFeaturePair footFeatures)
         {
             if (!sourceIndex.IsValid || string.IsNullOrWhiteSpace(bindingAssetIdentity) ||
                 !binding || !footFeatures.IsValid)
-                throw new ArgumentException("Presentation Pose source compile input is incomplete.");
+                throw new ArgumentException("Legacy Presentation Sequence source compile input is incomplete.");
             CharacterAnimationSequenceAsset sequence = binding.Sequence;
             binding.RequireValid(sequence ? sequence.Rig : null);
             m_SourceIndex = sourceIndex.Value;
             m_BindingAssetIdentity = bindingAssetIdentity.Trim();
-            m_SequenceAuthoringId = sequence.AuthoringId;
-            m_SequenceContentRevision = sequence.ContentRevision;
             m_DisplayName = binding.Slot.name;
             m_Clip = sequence.Clip;
+            m_ClipIdentity = sequence.AuthoringId;
+            m_FullClipDependencyHash = sequence.ContentRevision;
+            m_AnalysisInputHash = sequence.ContentRevision;
+            m_RegisteredCurveHash = sequence.ContentRevision;
             m_RigId = sequence.Rig.RigId;
             m_RigRevision = sequence.Rig.Revision;
             m_Loop = sequence.Loop;
-            m_DefaultPlayRate = sequence.DefaultPlayRate;
-            m_MarkerSync = CompileMarkerSync(sequence);
+            m_SourceDurationSeconds = sequence.Clip.length;
             m_FootPlacementWeightCurve = sequence.FootPlacementWeightCurve;
             m_FootAnalysisIdentity = sequence.FootAnalysisIdentity;
             m_LeftFootFeatures = footFeatures.Left;
@@ -115,15 +141,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public PresentationPoseSourceIndex SourceIndex =>
             m_SourceIndex < 0 ? default : new PresentationPoseSourceIndex(m_SourceIndex);
         public string BindingAssetIdentity => m_BindingAssetIdentity ?? string.Empty;
-        public string SequenceAuthoringId => m_SequenceAuthoringId ?? string.Empty;
-        public string SequenceContentRevision => m_SequenceContentRevision ?? string.Empty;
         public string DisplayName => m_DisplayName ?? string.Empty;
         public AnimationClip Clip => m_Clip;
+        public string ClipIdentity => m_ClipIdentity ?? string.Empty;
+        public string FullClipDependencyHash => m_FullClipDependencyHash ?? string.Empty;
+        public string AnalysisInputHash => m_AnalysisInputHash ?? string.Empty;
+        public string RegisteredCurveHash => m_RegisteredCurveHash ?? string.Empty;
         public string RigId => m_RigId ?? string.Empty;
         public string RigRevision => m_RigRevision ?? string.Empty;
         public bool Loop => m_Loop;
-        public float DefaultPlayRate => m_DefaultPlayRate;
-        public AnimationMarkerSyncBinding MarkerSync => m_MarkerSync;
+        public float SourceDurationSeconds => m_SourceDurationSeconds;
         public PoseParameterId FootPlacementWeightParameterId => AnimationPoseParameterIds.FootPlacementWeight;
         public string FootAnalysisIdentity => m_FootAnalysisIdentity ?? string.Empty;
         public AnimationFootFeatureCurveSet LeftFootFeatures => m_LeftFootFeatures;
@@ -134,18 +161,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!string.Equals(SchemaVersion, CurrentSchemaVersion, StringComparison.Ordinal) ||
                 !SourceIndex.IsValid || string.IsNullOrWhiteSpace(BindingAssetIdentity) ||
-                !AuthoringIdentity.IsValid(SequenceAuthoringId) ||
-                string.IsNullOrWhiteSpace(SequenceContentRevision) ||
-                string.IsNullOrWhiteSpace(DisplayName) || !Clip || string.IsNullOrWhiteSpace(RigId) ||
-                string.IsNullOrWhiteSpace(RigRevision) ||
-                !float.IsFinite(DefaultPlayRate) || DefaultPlayRate <= 0f ||
-                m_MarkerSync == null || !m_MarkerSync.TryValidate(out _) ||
+                string.IsNullOrWhiteSpace(DisplayName) || !Clip ||
+                string.IsNullOrWhiteSpace(ClipIdentity) ||
+                string.IsNullOrWhiteSpace(FullClipDependencyHash) ||
+                string.IsNullOrWhiteSpace(AnalysisInputHash) ||
+                string.IsNullOrWhiteSpace(RegisteredCurveHash) ||
+                string.IsNullOrWhiteSpace(RigId) || string.IsNullOrWhiteSpace(RigRevision) ||
+                !float.IsFinite(SourceDurationSeconds) || SourceDurationSeconds <= 0f ||
                 m_FootPlacementWeightCurve == null || m_FootPlacementWeightCurve.length == 0 ||
                 string.IsNullOrWhiteSpace(FootAnalysisIdentity) ||
                 m_LeftFootFeatures == null || m_RightFootFeatures == null ||
                 string.IsNullOrWhiteSpace(ContentRevision))
             {
-                throw new InvalidOperationException($"Compiled Presentation Pose source '{DisplayName}' is invalid.");
+                throw new InvalidOperationException($"Compiled Presentation Clip source '{DisplayName}' is invalid.");
             }
         }
 
@@ -159,63 +187,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             float value = m_FootPlacementWeightCurve.Evaluate(Mathf.Clamp01(normalizedTime));
             if (!float.IsFinite(value))
-                throw new InvalidOperationException($"Presentation Pose source '{DisplayName}' produced an invalid Foot Placement Weight.");
+                throw new InvalidOperationException($"Presentation Clip source '{DisplayName}' produced an invalid Foot Placement Weight.");
             return Mathf.Clamp01(value);
         }
 
-        public static AnimationMarkerSyncBinding CompileMarkerSync(AnimationSequenceAsset sequence)
-        {
-            if (sequence.SyncMode == AnimationSyncMode.None)
-                return new AnimationMarkerSyncBinding();
-            int durationFrame = sequence.DurationFrame;
-            var markers = new AnimationMarkerSyncMarkerBinding[sequence.SyncMarkers.Count];
-            for (int i = 0; i < markers.Length; i++)
-            {
-                AnimationSyncMarker marker = sequence.SyncMarkers[i];
-                markers[i] = new AnimationMarkerSyncMarkerBinding(
-                    marker.AuthoringId,
-                    marker.MarkerId,
-                    marker.Frame,
-                    marker.Frame / sequence.Clip.frameRate);
-            }
-            int segmentCount = markers.Length - 1 +
-                               (sequence.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic ? 1 : 0);
-            var segments = new AnimationMarkerSyncSegmentOccurrence[segmentCount];
-            for (int i = 0; i < markers.Length - 1; i++)
-            {
-                segments[i] = new AnimationMarkerSyncSegmentOccurrence(
-                    i,
-                    i,
-                    i + 1,
-                    markers[i].MarkerId,
-                    markers[i + 1].MarkerId,
-                    markers[i].TimeSeconds,
-                    markers[i + 1].TimeSeconds,
-                    false);
-            }
-            if (sequence.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic)
-            {
-                int index = segments.Length - 1;
-                segments[index] = new AnimationMarkerSyncSegmentOccurrence(
-                    index,
-                    markers.Length - 1,
-                    0,
-                    markers[markers.Length - 1].MarkerId,
-                    markers[0].MarkerId,
-                    markers[markers.Length - 1].TimeSeconds,
-                    sequence.Clip.length + markers[0].TimeSeconds,
-                    true);
-            }
-            return new AnimationMarkerSyncBinding(
-                AnimationSyncMode.MarkerGroup,
-                sequence.TimeMapping,
-                sequence.SyncGroupId,
-                sequence.SequenceTopology,
-                sequence.SyncRole,
-                durationFrame,
-                sequence.Clip.length,
-                markers,
-                segments);
-        }
+        public string SequenceAuthoringId => ClipIdentity;
+        public string SequenceContentRevision => RegisteredCurveHash;
+        public float DefaultPlayRate => 1f;
+        public AnimationMarkerSyncBinding MarkerSync => new AnimationMarkerSyncBinding();
     }
 }

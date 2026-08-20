@@ -251,8 +251,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var binding = new AnimationProducerPresentationBinding();
             binding.ConfigureTimeline(
                 new AnimationProducerId(timeline.Data.AuthoringId, track.AuthoringId),
-                source,
-                FootAnalysisIdentity);
+                source);
             profile.SetProducerBindings(new[] { binding });
             var errors = new List<string>();
             if (!profile.CollectConfigurationErrors(errors))

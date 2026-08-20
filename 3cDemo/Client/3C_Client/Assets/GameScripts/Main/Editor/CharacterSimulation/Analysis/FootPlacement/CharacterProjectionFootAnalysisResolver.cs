@@ -69,10 +69,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ? AnimationFootAnalysisProjectionBuildData.PoseSourceBindingKey(bindingIdentity)
                 : string.Empty;
             CharacterSequencePoseSourceBinding sequence = binding as CharacterSequencePoseSourceBinding;
+            CharacterClipPoseSourceBinding directClip = binding as CharacterClipPoseSourceBinding;
             CharacterBlendSpacePoseSourceBinding blendSpace = binding as CharacterBlendSpacePoseSourceBinding;
             if (!profile || !binding || string.IsNullOrWhiteSpace(bindingIdentity) ||
-                sequence == null && blendSpace == null ||
+                sequence == null && directClip == null && blendSpace == null ||
                 sequence != null && !sequence.Clip ||
+                directClip != null && !directClip.Clip ||
                 blendSpace != null && !blendSpace.BlendSpace)
             {
                 return new CharacterFootAnalysisArtifactDiagnostic(
@@ -95,16 +97,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     AnimationFootAnalysisArtifactStatus.Missing,
                     bindingKey,
                     string.Join("\n", errors));
-            }
-            if (!string.Equals(
-                    binding.FootAnalysisIdentity,
-                    source.AnalysisSourceId.Value,
-                    StringComparison.Ordinal))
-            {
-                return new CharacterFootAnalysisArtifactDiagnostic(
-                    AnimationFootAnalysisArtifactStatus.Stale,
-                    bindingKey,
-                    $"Binding analysis identity '{binding.FootAnalysisIdentity}' does not match Profile source '{source.AnalysisSourceId.Value}'.");
             }
             if (blendSpace != null)
             {
@@ -132,24 +124,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
             try
             {
+                UnityEngine.AnimationClip clip = directClip ? directClip.Clip : sequence.Clip;
                 AnimationFootAnalysisArtifactIdentity expected =
                     AnimationFootAnalysisArtifactBuilder.GetExpectedIdentity(
-                        sequence.Clip,
+                        clip,
                         source,
-                        BuildSchedule(sequence.Sequence.SyncMarkers, sequence.Clip.length, sequence.Clip.frameRate));
+                        AnimationFootContactSchedule.Inferred);
                 AnimationFootAnalysisArtifactInspection inspection =
                     AnimationFootAnalysisArtifactStore.Inspect(expected);
                 return new CharacterFootAnalysisArtifactDiagnostic(
                     inspection.Status,
                     bindingKey,
-                    $"{binding.name} / {sequence.Clip.name} / {expected.IdentityHash.Value} / {inspection.Error}");
+                    $"{binding.name} / {clip.name} / {expected.IdentityHash.Value} / {inspection.Error}");
             }
             catch (Exception exception)
             {
                 return new CharacterFootAnalysisArtifactDiagnostic(
                     AnimationFootAnalysisArtifactStatus.Corrupt,
                     bindingKey,
-                    $"{binding.name} / {sequence.Clip.name} / {exception.Message}");
+                    $"{binding.name} / {(directClip ? directClip.Clip.name : sequence.Clip.name)} / {exception.Message}");
             }
         }
 
@@ -183,7 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string bindingKey = sample != null && sample.SampleId.IsValid
                     ? AnimationFootAnalysisProjectionBuildData.BlendSpaceBindingKey(asset.BlendSpaceId, sample.SampleId)
                     : string.Empty;
-                if (sample == null || !sample.SampleId.IsValid || !sample.Sequence || !sample.Clip)
+                if (sample == null || !sample.SampleId.IsValid || !sample.Clip)
                 {
                     diagnostics.Add(new CharacterFootAnalysisArtifactDiagnostic(
                         AnimationFootAnalysisArtifactStatus.Missing,
@@ -197,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         AnimationFootAnalysisArtifactBuilder.GetExpectedIdentity(
                             sample.Clip,
                             source,
-                            BuildSchedule(sample.Sequence.SyncMarkers, sample.Clip.length, sample.Clip.frameRate));
+                            AnimationFootContactSchedule.Inferred);
                     AnimationFootAnalysisArtifactInspection inspection =
                         AnimationFootAnalysisArtifactStore.Inspect(expected);
                     diagnostics.Add(new CharacterFootAnalysisArtifactDiagnostic(
@@ -539,6 +532,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     errors?.Add($"Foot Analysis Presentation Pose source binding #{bindingIndex} is incomplete.");
                     continue;
                 }
+                if (binding is CharacterClipPoseSourceBinding directClip)
+                {
+                    if (!directClip.Clip)
+                        errors?.Add($"Foot Analysis Clip Pose source binding #{bindingIndex} has no AnimationClip.");
+                    else
+                        result.Add(new ClipBinding(
+                            CharacterPresentationAssetObjectIdentity.Require(directClip),
+                            directClip.Clip,
+                            AnimationFootContactSchedule.Inferred));
+                    continue;
+                }
                 if (binding is CharacterSequencePoseSourceBinding sequence)
                 {
                     if (!sequence.Clip)
@@ -547,7 +551,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         result.Add(new ClipBinding(
                             CharacterPresentationAssetObjectIdentity.Require(sequence),
                             sequence.Clip,
-                            BuildSchedule(sequence.Sequence.SyncMarkers, sequence.Clip.length, sequence.Clip.frameRate)));
+                            AnimationFootContactSchedule.Inferred));
                     continue;
                 }
                 CharacterAnimationBlendSpaceAsset blendSpace =
@@ -560,7 +564,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 for (int sampleIndex = 0; sampleIndex < blendSpace.Samples.Count; sampleIndex++)
                 {
                     CharacterAnimationBlendSpaceSample sample = blendSpace.Samples[sampleIndex];
-                    if (sample == null || !sample.SampleId.IsValid || !sample.Sequence || !sample.Clip)
+                    if (sample == null || !sample.SampleId.IsValid || !sample.Clip)
                     {
                         errors?.Add(
                             $"Foot Analysis Blend Space '{blendSpace.name}' Sample #{sampleIndex} is incomplete.");
@@ -571,7 +575,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             blendSpace.BlendSpaceId,
                             sample.SampleId,
                             sample.Clip,
-                            BuildSchedule(sample.Sequence.SyncMarkers, sample.Clip.length, sample.Clip.frameRate));
+                            AnimationFootContactSchedule.Inferred);
                     if (blendSpaceBindings.Add(sampleBinding.BindingKey))
                         result.Add(sampleBinding);
                 }
@@ -593,17 +597,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     {
                         if (track.Clips[clipIndex] is not BTSMTL.Timeline.AnimationClip clip)
                             continue;
-                        if (clip.Sequence is not CharacterAnimationSequenceAsset sequence || !sequence.Clip)
+                        UnityEngine.AnimationClip sourceClip = clip.ResolvedClip;
+                        if (!sourceClip)
                         {
-                            errors?.Add($"Foot Analysis Timeline '{timeline.AuthoringId}' Track '{track.AuthoringId}' Segment '{clip.AuthoringId}' has no Character Animation Sequence.");
+                            errors?.Add($"Foot Analysis Timeline '{timeline.AuthoringId}' Track '{track.AuthoringId}' Segment '{clip.AuthoringId}' has no AnimationClip.");
                             continue;
                         }
                         result.Add(new ClipBinding(
                             timeline.AuthoringId,
                             track.AuthoringId,
                             clip.AuthoringId,
-                            sequence.Clip,
-                            BuildSchedule(sequence.SyncMarkers, sequence.Clip.length, sequence.Clip.frameRate)));
+                            sourceClip,
+                            AnimationFootContactSchedule.Inferred));
                     }
                 }
             }
@@ -628,7 +633,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 result.Add(new ClipBinding(
                     source.BindingAssetIdentity,
                     source.Clip,
-                    BuildSchedule(source.MarkerSync.Markers, source.MarkerSync.DurationSeconds)));
+                    AnimationFootContactSchedule.Inferred));
             }
             for (int producerIndex = 0; producerIndex < projection.Producers.Count; producerIndex++)
             {
@@ -648,7 +653,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         producer.ProducerId.TrackAuthoringId,
                         clip.ClipAuthoringId,
                         clip.Clip,
-                        BuildSchedule(clip.SequenceMarkerSync.Markers, clip.SequenceMarkerSync.DurationSeconds)));
+                        AnimationFootContactSchedule.Inferred));
                 }
             }
             for (int planIndex = 0; planIndex < projection.BlendSpaces.Count; planIndex++)
@@ -671,7 +676,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         plan.BlendSpaceId,
                         sample.SampleId,
                         sample.Clip,
-                        BuildSchedule(sample.Markers)));
+                        AnimationFootContactSchedule.Inferred));
                 }
             }
             SortBindings(result);

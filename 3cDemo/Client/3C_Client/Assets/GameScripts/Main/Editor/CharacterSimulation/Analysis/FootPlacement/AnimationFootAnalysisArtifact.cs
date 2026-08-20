@@ -79,11 +79,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class AnimationFootAnalysisArtifactIdentity
     {
-        public const int CurrentFormatVersion = 29;
+        public const int CurrentFormatVersion = 30;
 
         public AnimationFootAnalysisArtifactIdentity(
             string clipAssetGuid,
-            string clipDependencyHash,
+            string clipAnalysisInputHash,
             string analysisSourceAssetGuid,
             string analysisSourceDependencyHash,
             string analysisSourceId,
@@ -116,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string algorithmVersion)
         {
             ClipAssetGuid = RequireGuid(clipAssetGuid, nameof(clipAssetGuid));
-            ClipDependencyHash = RequireHash(clipDependencyHash, nameof(clipDependencyHash));
+            ClipAnalysisInputHash = RequireHash(clipAnalysisInputHash, nameof(clipAnalysisInputHash));
             AnalysisSourceAssetGuid = RequireGuid(analysisSourceAssetGuid, nameof(analysisSourceAssetGuid));
             AnalysisSourceDependencyHash = RequireHash(analysisSourceDependencyHash, nameof(analysisSourceDependencyHash));
             AnalysisSourceId = RequireText(analysisSourceId, nameof(analysisSourceId));
@@ -156,7 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public int FormatVersion => CurrentFormatVersion;
         public string ClipAssetGuid { get; }
-        public string ClipDependencyHash { get; }
+        public string ClipAnalysisInputHash { get; }
         public string AnalysisSourceAssetGuid { get; }
         public string AnalysisSourceDependencyHash { get; }
         public string AnalysisSourceId { get; }
@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public bool EqualsExact(AnimationFootAnalysisArtifactIdentity other) =>
             other != null && IdentityHash.Equals(other.IdentityHash) &&
             string.Equals(ClipAssetGuid, other.ClipAssetGuid, StringComparison.Ordinal) &&
-            string.Equals(ClipDependencyHash, other.ClipDependencyHash, StringComparison.Ordinal) &&
+            string.Equals(ClipAnalysisInputHash, other.ClipAnalysisInputHash, StringComparison.Ordinal) &&
             string.Equals(AnalysisSourceAssetGuid, other.AnalysisSourceAssetGuid, StringComparison.Ordinal) &&
             string.Equals(AnalysisSourceDependencyHash, other.AnalysisSourceDependencyHash, StringComparison.Ordinal) &&
             string.Equals(AnalysisSourceId, other.AnalysisSourceId, StringComparison.Ordinal) &&
@@ -225,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             return new[]
             {
-                "animation-foot-analysis-artifact/v18", ClipAssetGuid, ClipDependencyHash,
+                "animation-foot-analysis-artifact/v19", ClipAssetGuid, ClipAnalysisInputHash,
                 AnalysisSourceAssetGuid, AnalysisSourceDependencyHash, AnalysisSourceId,
                 AnalysisVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 RigAssetGuid, RigId, RigRevision, RigContentHash,
@@ -289,7 +289,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public AnimationFootAnalysisArtifact(
             AnimationFootAnalysisArtifactIdentity identity,
             AnimationFootFeaturePair features,
-            AnimationFootSynchronizationDescriptor synchronization,
+            AnimationFootPhaseValidationDescriptor phaseValidation,
             StableHash contentHash)
         {
             Identity = identity ?? throw new ArgumentNullException(nameof(identity));
@@ -297,33 +297,35 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentException("Animation Foot Analysis artifact features are invalid.", nameof(features));
             if (!contentHash.IsValid)
                 throw new ArgumentException("Animation Foot Analysis artifact content hash is invalid.", nameof(contentHash));
-            Synchronization = synchronization ??
-                throw new ArgumentNullException(nameof(synchronization));
-            Synchronization.RequireValid();
+            PhaseValidation = phaseValidation ??
+                throw new ArgumentNullException(nameof(phaseValidation));
+            PhaseValidation.RequireValid();
             Features = features;
             ContentHash = contentHash;
         }
 
         public AnimationFootAnalysisArtifactIdentity Identity { get; }
         public AnimationFootFeaturePair Features { get; }
-        public AnimationFootSynchronizationDescriptor Synchronization { get; }
+        public AnimationFootPhaseValidationDescriptor PhaseValidation { get; }
         public StableHash ContentHash { get; }
     }
 
-    public readonly struct AnimationFootSynchronizationSample
+    public readonly struct AnimationFootPhaseValidationSample
     {
-        public AnimationFootSynchronizationSample(
+        public AnimationFootPhaseValidationSample(
             float normalizedTime,
             Vector2 rootLocalSolePlanarPosition,
             float calibratedSoleHeight,
             Vector3 soleLocalVelocity,
-            float plantConfidence)
+            float plantConfidence,
+            bool landingOnset)
         {
             NormalizedTime = normalizedTime;
             RootLocalSolePlanarPosition = rootLocalSolePlanarPosition;
             CalibratedSoleHeight = calibratedSoleHeight;
             SoleLocalVelocity = soleLocalVelocity;
             PlantConfidence = plantConfidence;
+            LandingOnset = landingOnset;
             RequireValid();
         }
 
@@ -332,6 +334,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public float CalibratedSoleHeight { get; }
         public Vector3 SoleLocalVelocity { get; }
         public float PlantConfidence { get; }
+        public bool LandingOnset { get; }
 
         public void RequireValid()
         {
@@ -343,48 +346,48 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 !float.IsFinite(SoleLocalVelocity.y) ||
                 !float.IsFinite(SoleLocalVelocity.z) ||
                 !float.IsFinite(PlantConfidence) || PlantConfidence < 0f || PlantConfidence > 1f)
-                throw new InvalidOperationException("Foot synchronization sample is invalid.");
+                throw new InvalidOperationException("Foot Phase validation sample is invalid.");
         }
     }
 
-    public sealed class AnimationFootSynchronizationFootDescriptor
+    public sealed class AnimationFootPhaseValidationFootDescriptor
     {
-        readonly AnimationFootSynchronizationSample[] m_Samples;
+        readonly AnimationFootPhaseValidationSample[] m_Samples;
 
-        public AnimationFootSynchronizationFootDescriptor(
-            AnimationFootSynchronizationSample[] samples)
+        public AnimationFootPhaseValidationFootDescriptor(
+            AnimationFootPhaseValidationSample[] samples)
         {
             m_Samples = samples == null
                 ? throw new ArgumentNullException(nameof(samples))
-                : (AnimationFootSynchronizationSample[])samples.Clone();
+                : (AnimationFootPhaseValidationSample[])samples.Clone();
             RequireValid();
         }
 
-        public IReadOnlyList<AnimationFootSynchronizationSample> Samples => m_Samples;
+        public IReadOnlyList<AnimationFootPhaseValidationSample> Samples => m_Samples;
 
         public void RequireValid()
         {
             if (m_Samples == null || m_Samples.Length < 3)
-                throw new InvalidOperationException("Foot synchronization descriptor requires at least three samples.");
+                throw new InvalidOperationException("Foot Phase validation descriptor requires at least three samples.");
             for (int i = 0; i < m_Samples.Length; i++)
             {
                 m_Samples[i].RequireValid();
                 if (i > 0 && m_Samples[i].NormalizedTime <= m_Samples[i - 1].NormalizedTime)
-                    throw new InvalidOperationException("Foot synchronization sample time is not strictly increasing.");
+                    throw new InvalidOperationException("Foot Phase validation sample time is not strictly increasing.");
             }
             if (m_Samples[0].NormalizedTime != 0f ||
                 m_Samples[m_Samples.Length - 1].NormalizedTime != 1f)
-                throw new InvalidOperationException("Foot synchronization descriptor must cover normalized time [0, 1].");
+                throw new InvalidOperationException("Foot Phase validation descriptor must cover normalized time [0, 1].");
         }
     }
 
-    public sealed class AnimationFootSynchronizationDescriptor
+    public sealed class AnimationFootPhaseValidationDescriptor
     {
-        public AnimationFootSynchronizationDescriptor(
+        public AnimationFootPhaseValidationDescriptor(
             float sampleRate,
             float durationSeconds,
-            AnimationFootSynchronizationFootDescriptor left,
-            AnimationFootSynchronizationFootDescriptor right)
+            AnimationFootPhaseValidationFootDescriptor left,
+            AnimationFootPhaseValidationFootDescriptor right)
         {
             SampleRate = sampleRate;
             DurationSeconds = durationSeconds;
@@ -395,18 +398,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public float SampleRate { get; }
         public float DurationSeconds { get; }
-        public AnimationFootSynchronizationFootDescriptor Left { get; }
-        public AnimationFootSynchronizationFootDescriptor Right { get; }
+        public AnimationFootPhaseValidationFootDescriptor Left { get; }
+        public AnimationFootPhaseValidationFootDescriptor Right { get; }
 
         public void RequireValid()
         {
             if (!float.IsFinite(SampleRate) || SampleRate <= 0f ||
                 !float.IsFinite(DurationSeconds) || DurationSeconds <= 0f)
-                throw new InvalidOperationException("Foot synchronization descriptor timing is invalid.");
+                throw new InvalidOperationException("Foot Phase validation descriptor timing is invalid.");
             Left?.RequireValid();
             Right?.RequireValid();
             if (Left == null || Right == null || Left.Samples.Count != Right.Samples.Count)
-                throw new InvalidOperationException("Foot synchronization descriptor sample counts do not match.");
+                throw new InvalidOperationException("Foot Phase validation descriptor sample counts do not match.");
         }
     }
 
@@ -414,17 +417,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public AnimationFootAnalysisBuildResult(
             AnimationFootFeaturePair features,
-            AnimationFootSynchronizationDescriptor synchronization)
+            AnimationFootPhaseValidationDescriptor phaseValidation)
         {
             if (!features.IsValid)
                 throw new ArgumentException("Foot Analysis features are invalid.", nameof(features));
             Features = features;
-            Synchronization = synchronization ?? throw new ArgumentNullException(nameof(synchronization));
-            Synchronization.RequireValid();
+            PhaseValidation = phaseValidation ?? throw new ArgumentNullException(nameof(phaseValidation));
+            PhaseValidation.RequireValid();
         }
 
         public AnimationFootFeaturePair Features { get; }
-        public AnimationFootSynchronizationDescriptor Synchronization { get; }
+        public AnimationFootPhaseValidationDescriptor PhaseValidation { get; }
     }
 
     public readonly struct AnimationFootAnalysisArtifactInspection

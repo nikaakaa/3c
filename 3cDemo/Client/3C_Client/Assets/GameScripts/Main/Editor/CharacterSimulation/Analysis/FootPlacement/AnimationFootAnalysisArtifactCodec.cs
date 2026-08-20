@@ -14,28 +14,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         const int MaximumPayloadBytes = 64 * 1024 * 1024;
         const int MaximumStringBytes = 16 * 1024;
         const int MaximumKeysPerCurve = 1024 * 1024;
-        const int MaximumSynchronizationSamples = 1024 * 1024;
+        const int MaximumPhaseValidationSamples = 1024 * 1024;
 
         public static byte[] Write(
             AnimationFootAnalysisArtifactIdentity identity,
             AnimationFootFeaturePair features,
-            AnimationFootSynchronizationDescriptor synchronization,
+            AnimationFootPhaseValidationDescriptor phaseValidation,
             out StableHash contentHash)
         {
             if (identity == null)
                 throw new ArgumentNullException(nameof(identity));
             if (!features.IsValid)
                 throw new ArgumentException("Animation Foot Analysis features are invalid.", nameof(features));
-            if (synchronization == null)
-                throw new ArgumentNullException(nameof(synchronization));
-            synchronization.RequireValid();
+            if (phaseValidation == null)
+                throw new ArgumentNullException(nameof(phaseValidation));
+            phaseValidation.RequireValid();
             byte[] payload;
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
             {
                 WriteIdentity(writer, identity);
                 WriteFeaturePair(writer, features);
-                WriteSynchronizationDescriptor(writer, synchronization);
+                WritePhaseValidationDescriptor(writer, phaseValidation);
                 writer.Flush();
                 payload = stream.ToArray();
             }
@@ -79,14 +79,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             using var payloadReader = new BinaryReader(payloadStream, Encoding.UTF8, true);
             AnimationFootAnalysisArtifactIdentity identity = ReadIdentity(payloadReader);
             AnimationFootFeaturePair features = ReadFeaturePair(payloadReader);
-            AnimationFootSynchronizationDescriptor synchronization =
-                ReadSynchronizationDescriptor(payloadReader);
+            AnimationFootPhaseValidationDescriptor phaseValidation =
+                ReadPhaseValidationDescriptor(payloadReader);
             if (payloadStream.Position != payloadStream.Length)
                 throw new InvalidDataException("Animation Foot Analysis payload has trailing bytes.");
             return new AnimationFootAnalysisArtifact(
                 identity,
                 features,
-                synchronization,
+                phaseValidation,
                 actualHash);
         }
 
@@ -94,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             writer.Write(value.FormatVersion);
             WriteString(writer, value.ClipAssetGuid);
-            WriteString(writer, value.ClipDependencyHash);
+            WriteString(writer, value.ClipAnalysisInputHash);
             WriteString(writer, value.AnalysisSourceAssetGuid);
             WriteString(writer, value.AnalysisSourceDependencyHash);
             WriteString(writer, value.AnalysisSourceId);
@@ -175,34 +175,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static AnimationFootFeaturePair ReadFeaturePair(BinaryReader reader) =>
             new AnimationFootFeaturePair(ReadCurveSet(reader), ReadCurveSet(reader));
 
-        static void WriteSynchronizationDescriptor(
+        static void WritePhaseValidationDescriptor(
             BinaryWriter writer,
-            AnimationFootSynchronizationDescriptor value)
+            AnimationFootPhaseValidationDescriptor value)
         {
             value.RequireValid();
             writer.Write(value.SampleRate);
             writer.Write(value.DurationSeconds);
-            WriteSynchronizationFoot(writer, value.Left);
-            WriteSynchronizationFoot(writer, value.Right);
+            WritePhaseValidationFoot(writer, value.Left);
+            WritePhaseValidationFoot(writer, value.Right);
         }
 
-        static AnimationFootSynchronizationDescriptor ReadSynchronizationDescriptor(
+        static AnimationFootPhaseValidationDescriptor ReadPhaseValidationDescriptor(
             BinaryReader reader) =>
-            new AnimationFootSynchronizationDescriptor(
-                ReadFinite(reader, "synchronization sample rate"),
-                ReadFinite(reader, "synchronization duration"),
-                ReadSynchronizationFoot(reader),
-                ReadSynchronizationFoot(reader));
+            new AnimationFootPhaseValidationDescriptor(
+                ReadFinite(reader, "Phase validation sample rate"),
+                ReadFinite(reader, "Phase validation duration"),
+                ReadPhaseValidationFoot(reader),
+                ReadPhaseValidationFoot(reader));
 
-        static void WriteSynchronizationFoot(
+        static void WritePhaseValidationFoot(
             BinaryWriter writer,
-            AnimationFootSynchronizationFootDescriptor value)
+            AnimationFootPhaseValidationFootDescriptor value)
         {
             value.RequireValid();
             writer.Write(value.Samples.Count);
             for (int i = 0; i < value.Samples.Count; i++)
             {
-                AnimationFootSynchronizationSample sample = value.Samples[i];
+                AnimationFootPhaseValidationSample sample = value.Samples[i];
                 sample.RequireValid();
                 writer.Write(sample.NormalizedTime);
                 writer.Write(sample.RootLocalSolePlanarPosition.x);
@@ -212,31 +212,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 writer.Write(sample.SoleLocalVelocity.y);
                 writer.Write(sample.SoleLocalVelocity.z);
                 writer.Write(sample.PlantConfidence);
+                writer.Write(sample.LandingOnset);
             }
         }
 
-        static AnimationFootSynchronizationFootDescriptor ReadSynchronizationFoot(
+        static AnimationFootPhaseValidationFootDescriptor ReadPhaseValidationFoot(
             BinaryReader reader)
         {
             int count = reader.ReadInt32();
-            if (count < 3 || count > MaximumSynchronizationSamples)
-                throw new InvalidDataException("Foot synchronization sample count is invalid.");
-            var samples = new AnimationFootSynchronizationSample[count];
+            if (count < 3 || count > MaximumPhaseValidationSamples)
+                throw new InvalidDataException("Foot Phase validation sample count is invalid.");
+            var samples = new AnimationFootPhaseValidationSample[count];
             for (int i = 0; i < count; i++)
             {
-                samples[i] = new AnimationFootSynchronizationSample(
-                    ReadFinite(reader, "synchronization normalized time"),
+                samples[i] = new AnimationFootPhaseValidationSample(
+                    ReadFinite(reader, "Phase validation normalized time"),
                     new Vector2(
-                        ReadFinite(reader, "synchronization planar x"),
-                        ReadFinite(reader, "synchronization planar z")),
-                    ReadFinite(reader, "synchronization height"),
+                        ReadFinite(reader, "Phase validation planar x"),
+                        ReadFinite(reader, "Phase validation planar z")),
+                    ReadFinite(reader, "Phase validation height"),
                     new Vector3(
-                        ReadFinite(reader, "synchronization velocity x"),
-                        ReadFinite(reader, "synchronization velocity y"),
-                        ReadFinite(reader, "synchronization velocity z")),
-                    ReadFinite(reader, "synchronization plant confidence"));
+                        ReadFinite(reader, "Phase validation velocity x"),
+                        ReadFinite(reader, "Phase validation velocity y"),
+                        ReadFinite(reader, "Phase validation velocity z")),
+                    ReadFinite(reader, "Phase validation plant confidence"),
+                    reader.ReadBoolean());
             }
-            return new AnimationFootSynchronizationFootDescriptor(samples);
+            return new AnimationFootPhaseValidationFootDescriptor(samples);
         }
 
         static void WriteCurveSet(BinaryWriter writer, AnimationFootFeatureCurveSet value)

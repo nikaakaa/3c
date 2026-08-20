@@ -55,13 +55,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float pull,
             float reach,
             float bendWeight,
-            float bendClamp)
+            float bendClamp,
+            CharacterFullBodyIkLegPoseDiagnostics legPose)
         {
             Limb = limb;
             Pull = pull;
             Reach = reach;
             BendWeight = bendWeight;
             BendClamp = bendClamp;
+            LegPose = legPose;
         }
 
         public CharacterFullBodyIkLimbSlot Limb { get; }
@@ -69,6 +71,77 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float Reach { get; }
         public float BendWeight { get; }
         public float BendClamp { get; }
+        public CharacterFullBodyIkLegPoseDiagnostics LegPose { get; }
+    }
+
+    public readonly struct CharacterFullBodyIkLegPoseDiagnostics
+    {
+        internal CharacterFullBodyIkLegPoseDiagnostics(
+            Vector3 originalHip,
+            Vector3 originalKnee,
+            Vector3 originalAnkle,
+            Vector3 targetAnkle,
+            Vector3 solvedHip,
+            Vector3 solvedKnee,
+            Vector3 solvedAnkle,
+            Vector3 effectiveBendDirection,
+            float originalBendDegrees,
+            float solvedBendDegrees,
+            float originalExtensionRatio,
+            float targetExtensionRatio,
+            float solvedExtensionRatio,
+            float originalCompressionReserve,
+            float targetCompressionReserve,
+            float solvedCompressionReserve,
+            float animatedBendDirectionPreviousDot,
+            float effectiveBendDirectionPreviousDot,
+            float stabilizationWeight,
+            bool retainedPreviousBendDirection)
+        {
+            OriginalHip = originalHip;
+            OriginalKnee = originalKnee;
+            OriginalAnkle = originalAnkle;
+            TargetAnkle = targetAnkle;
+            SolvedHip = solvedHip;
+            SolvedKnee = solvedKnee;
+            SolvedAnkle = solvedAnkle;
+            EffectiveBendDirection = effectiveBendDirection;
+            OriginalBendDegrees = originalBendDegrees;
+            SolvedBendDegrees = solvedBendDegrees;
+            OriginalExtensionRatio = originalExtensionRatio;
+            TargetExtensionRatio = targetExtensionRatio;
+            SolvedExtensionRatio = solvedExtensionRatio;
+            OriginalCompressionReserve = originalCompressionReserve;
+            TargetCompressionReserve = targetCompressionReserve;
+            SolvedCompressionReserve = solvedCompressionReserve;
+            AnimatedBendDirectionPreviousDot = animatedBendDirectionPreviousDot;
+            EffectiveBendDirectionPreviousDot = effectiveBendDirectionPreviousDot;
+            StabilizationWeight = stabilizationWeight;
+            RetainedPreviousBendDirection = retainedPreviousBendDirection;
+            IsAvailable = true;
+        }
+
+        public Vector3 OriginalHip { get; }
+        public Vector3 OriginalKnee { get; }
+        public Vector3 OriginalAnkle { get; }
+        public Vector3 TargetAnkle { get; }
+        public Vector3 SolvedHip { get; }
+        public Vector3 SolvedKnee { get; }
+        public Vector3 SolvedAnkle { get; }
+        public Vector3 EffectiveBendDirection { get; }
+        public float OriginalBendDegrees { get; }
+        public float SolvedBendDegrees { get; }
+        public float OriginalExtensionRatio { get; }
+        public float TargetExtensionRatio { get; }
+        public float SolvedExtensionRatio { get; }
+        public float OriginalCompressionReserve { get; }
+        public float TargetCompressionReserve { get; }
+        public float SolvedCompressionReserve { get; }
+        public float AnimatedBendDirectionPreviousDot { get; }
+        public float EffectiveBendDirectionPreviousDot { get; }
+        public float StabilizationWeight { get; }
+        public bool RetainedPreviousBendDirection { get; }
+        public bool IsAvailable { get; }
     }
 
     public readonly struct CharacterFullBodyIkSolverDiagnostics

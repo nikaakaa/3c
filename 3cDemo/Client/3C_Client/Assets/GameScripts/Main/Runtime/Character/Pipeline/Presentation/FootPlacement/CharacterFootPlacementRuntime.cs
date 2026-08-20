@@ -1204,6 +1204,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float supportLegLength = supportSide == CharacterFootSide.Left
                 ? m_Rig.LeftLegLength
                 : m_Rig.RightLegLength;
+            Vector3 supportAnimatedAnkle = supportSide == CharacterFootSide.Left
+                ? pose.Left.AnklePosition
+                : pose.Right.AnklePosition;
+            float supportLegCompressionReserve = Mathf.Max(
+                0f,
+                supportLegLength - Vector3.Distance(supportHip, supportAnimatedAnkle));
             return CharacterFootStrideHipsBuilder.BuildPelvis(
                 supportSide,
                 supportLandingEventIdentity,
@@ -1217,6 +1223,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportHip,
                 supportMotion.CorrectedAnkle,
                 supportLegLength,
+                supportLegCompressionReserve,
                 pose.Left.HeelPosition * 0.5f + pose.Left.ToePosition * 0.5f,
                 pose.Right.HeelPosition * 0.5f + pose.Right.ToePosition * 0.5f,
                 leftCorrectedSole,

@@ -225,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                             break;
                     }
                 }
-                CaptureFoot(snapshot.FootIk);
+                CaptureFootPlacement(snapshot.FootPlacement);
                 if (IsAmplifiedJump())
                 {
                     Debug.Log(
@@ -273,14 +273,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 return new PoseDelta(maxPosition, maxRotation, maxPositionBone, maxRotationBone);
             }
 
-            void CaptureFoot(AnimationFootIkRuntimeSnapshot footIk)
+            void CaptureFootPlacement(
+                AnimationFootPlacementRuntimeSnapshot footPlacement)
             {
-                if (!footIk.IsAvailable)
+                if (!footPlacement.IsAvailable)
                     return;
-                Vector3 leftGoal = footIk.LeftGoal.ComponentPosition;
-                Vector3 rightGoal = footIk.RightGoal.ComponentPosition;
-                Vector3 leftSolved = footIk.LeftFoot.SolvedComponentPosition;
-                Vector3 rightSolved = footIk.RightFoot.SolvedComponentPosition;
+                Vector3 leftGoal = footPlacement.LeftGoal.ComponentPosition;
+                Vector3 rightGoal = footPlacement.RightGoal.ComponentPosition;
+                Vector3 leftSolved =
+                    footPlacement.LeftFoot.SolvedComponentPosition;
+                Vector3 rightSolved =
+                    footPlacement.RightFoot.SolvedComponentPosition;
                 if (m_HasPreviousFoot)
                 {
                     LeftGoalDelta = Vector3.Distance(m_PreviousLeftGoal, leftGoal);

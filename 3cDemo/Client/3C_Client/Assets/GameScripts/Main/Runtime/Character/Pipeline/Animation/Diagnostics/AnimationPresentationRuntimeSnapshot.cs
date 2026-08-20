@@ -7,6 +7,36 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
+    internal readonly struct AnimationPhysicalBoneWriteDiagnostics
+    {
+        internal AnimationPhysicalBoneWriteDiagnostics(
+            ulong completionIdentity,
+            Vector3 leftAnkleComponentPosition,
+            Vector3 rightAnkleComponentPosition,
+            Vector3 pelvisComponentPosition)
+        {
+            CompletionIdentity = completionIdentity;
+            LeftAnkleComponentPosition = leftAnkleComponentPosition;
+            RightAnkleComponentPosition = rightAnkleComponentPosition;
+            PelvisComponentPosition = pelvisComponentPosition;
+        }
+
+        internal ulong CompletionIdentity { get; }
+        internal Vector3 LeftAnkleComponentPosition { get; }
+        internal Vector3 RightAnkleComponentPosition { get; }
+        internal Vector3 PelvisComponentPosition { get; }
+        internal bool IsAvailable =>
+            CompletionIdentity != 0 &&
+            IsFinite(LeftAnkleComponentPosition) &&
+            IsFinite(RightAnkleComponentPosition) &&
+            IsFinite(PelvisComponentPosition);
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) &&
+            float.IsFinite(value.y) &&
+            float.IsFinite(value.z);
+    }
+
     public readonly struct AnimationPoseBoneSnapshot
     {
         internal AnimationPoseBoneSnapshot(
@@ -696,15 +726,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         internal CharacterFootLandingPredictionDiagnostics LandingPrediction;
         internal CharacterFullBodyIkSolverDiagnostics Solver;
+        internal CharacterFullBodyIkEffectorDiagnostics Pelvis;
         internal CharacterFullBodyIkEffectorDiagnostics LeftFoot;
         internal CharacterFullBodyIkEffectorDiagnostics RightFoot;
+        internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
 
         internal void Clear()
         {
             LandingPrediction = default;
             Solver = default;
+            Pelvis = default;
             LeftFoot = default;
             RightFoot = default;
+            PhysicalWrite = default;
         }
     }
 
@@ -771,6 +805,72 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     return ref s_DefaultEffector;
                 RequireValid();
                 return ref m_Page.RightFoot;
+            }
+        }
+
+        public ref readonly CharacterFullBodyIkEffectorDiagnostics Pelvis
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultEffector;
+                RequireValid();
+                return ref m_Page.Pelvis;
+            }
+        }
+
+        public bool PhysicalWriteAvailable
+        {
+            get
+            {
+                if (m_Page == null)
+                    return false;
+                RequireValid();
+                return m_Page.PhysicalWrite.IsAvailable;
+            }
+        }
+
+        public ulong PhysicalWriteCompletionIdentity
+        {
+            get
+            {
+                if (m_Page == null)
+                    return 0;
+                RequireValid();
+                return m_Page.PhysicalWrite.CompletionIdentity;
+            }
+        }
+
+        public Vector3 LeftPhysicalAnkleComponentPosition
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.PhysicalWrite.LeftAnkleComponentPosition;
+            }
+        }
+
+        public Vector3 RightPhysicalAnkleComponentPosition
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.PhysicalWrite.RightAnkleComponentPosition;
+            }
+        }
+
+        public Vector3 PhysicalPelvisComponentPosition
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.PhysicalWrite.PelvisComponentPosition;
             }
         }
 

@@ -1637,6 +1637,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             using (DiagnosticsMarker.Auto())
             {
+                AnimationPhysicalBoneWriteDiagnostics physicalWrite =
+                    m_FinalWriter.Diagnostics;
                 m_DiagnosticsPublisher.BeginFrame(
                     in m_LastCompletedFrame,
                     in finalRead,
@@ -1648,6 +1650,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_RootOrientationWarps,
                     linkedPose,
                     in m_LastFootLandingPredictionDiagnostics,
+                    in physicalWrite,
                     interest);
             }
         }
@@ -2654,7 +2657,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 switch (operation.Code)
                 {
                     case CharacterPoseOperationCode.FootPlacement:
-                        PrepareFootGrounding(
+                        PrepareFootPlacement(
                             actorId,
                             renderFrame,
                             presentationDeltaSeconds,
@@ -2674,7 +2677,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        void PrepareFootGrounding(
+        void PrepareFootPlacement(
             ActorId actorId,
             ulong renderFrame,
             float presentationDeltaSeconds,
@@ -2684,8 +2687,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong completionIdentity,
             in AnimationPoseGraphNativeOperation operation)
         {
-            CharacterPresentationFootGroundingDescriptor descriptor =
-                m_Projection.PosePlan.FootGroundings[operation.FootGroundingIndex];
+            CharacterPresentationFootPlacementDescriptor descriptor =
+                m_Projection.PosePlan.FootPlacements[operation.FootPlacementIndex];
             CharacterFullBodyIkGoalSetHeader goalSet;
             if (footPlacement == null)
             {
@@ -2727,7 +2730,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 var goalOutput = new Unity.Collections.NativeSlice<CharacterFullBodyIkGoal>(
                     m_PosePlan.FullBodyIkGoals,
                     descriptor.GoalWorkspaceOffset,
-                    CharacterPresentationFootGroundingDescriptor.GoalCount);
+                    CharacterPresentationFootPlacementDescriptor.GoalCount);
                 goalSet = footPlacement.EvaluateFrame(
                     in planningFrame,
                     goalOutput,

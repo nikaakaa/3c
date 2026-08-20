@@ -12,14 +12,28 @@ namespace ThirdPersonSimulation
             float continuationVelocityX,
             float continuationVelocityZ,
             float currentSegmentRemainingSeconds,
-            bool hasContinuation)
+            bool hasContinuation,
+            float sampleTime0,
+            float sampleTime1,
+            float sampleTime2,
+            float sampleTime3)
         {
             if (!actorId.IsValid || !float.IsFinite(durationSeconds) || durationSeconds <= 0f ||
                 !float.IsFinite(currentVelocityX) || !float.IsFinite(currentVelocityZ) ||
                 !float.IsFinite(continuationVelocityX) || !float.IsFinite(continuationVelocityZ) ||
                 (!float.IsFinite(currentSegmentRemainingSeconds) &&
                  !float.IsPositiveInfinity(currentSegmentRemainingSeconds)) ||
-                currentSegmentRemainingSeconds < 0f)
+                currentSegmentRemainingSeconds < 0f ||
+                !ValidSampleTime(sampleTime0, durationSeconds) ||
+                !ValidSampleTime(sampleTime1, durationSeconds) ||
+                !ValidSampleTime(sampleTime2, durationSeconds) ||
+                !ValidSampleTime(sampleTime3, durationSeconds) ||
+                !ContainsDuration(
+                    durationSeconds,
+                    sampleTime0,
+                    sampleTime1,
+                    sampleTime2,
+                    sampleTime3))
             {
                 throw new ArgumentException("Future Body Translation request is invalid.");
             }
@@ -31,6 +45,10 @@ namespace ThirdPersonSimulation
             ContinuationVelocityZ = continuationVelocityZ;
             CurrentSegmentRemainingSeconds = currentSegmentRemainingSeconds;
             HasContinuation = hasContinuation;
+            SampleTime0 = sampleTime0;
+            SampleTime1 = sampleTime1;
+            SampleTime2 = sampleTime2;
+            SampleTime3 = sampleTime3;
         }
 
         public ActorId ActorId { get; }
@@ -41,6 +59,34 @@ namespace ThirdPersonSimulation
         public float ContinuationVelocityZ { get; }
         public float CurrentSegmentRemainingSeconds { get; }
         public bool HasContinuation { get; }
+
+        internal float SampleTime0 { get; }
+        internal float SampleTime1 { get; }
+        internal float SampleTime2 { get; }
+        internal float SampleTime3 { get; }
+
+        internal float SampleTimeAt(int index) => index switch
+        {
+            0 => SampleTime0,
+            1 => SampleTime1,
+            2 => SampleTime2,
+            3 => SampleTime3,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+        static bool ValidSampleTime(float value, float duration) =>
+            float.IsFinite(value) && value >= 0f && value <= duration + 0.0001f;
+
+        static bool ContainsDuration(
+            float duration,
+            float sampleTime0,
+            float sampleTime1,
+            float sampleTime2,
+            float sampleTime3) =>
+            Math.Abs(sampleTime0 - duration) <= 0.0001f ||
+            Math.Abs(sampleTime1 - duration) <= 0.0001f ||
+            Math.Abs(sampleTime2 - duration) <= 0.0001f ||
+            Math.Abs(sampleTime3 - duration) <= 0.0001f;
     }
 
     public readonly struct CharacterFutureBodyTranslationSample

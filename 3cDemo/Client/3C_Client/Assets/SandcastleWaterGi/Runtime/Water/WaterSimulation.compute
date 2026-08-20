@@ -1,0 +1,298 @@
+// ============================================================
+// WaterSimulation.compute
+// Rebuilt from Sandcastle Demo's Water.asset compute kernels
+// (Initialization / VelocityIntegration / HeightIntegration /
+// UpdateTangent / Advection / UpdateFloor / BlurFloor /
+// SubtractFloor / CopyGroundHeight / Paint).
+//
+// Shallow-water simulation on a grid. The original packs everything
+// into 16-byte cells with 24-bit fixed point and 8-bit tangents;
+// this rebuild uses readable float4 cells with the same physics:
+//
+//   v  += g * dt * grad(h)          (semi-implicit Euler)
+//   h  += dt * div(h * v)           (directional fluxes)
+//   h   = relaxed toward neighbours (stability, like the original)
+//   h  -= dt * evaporation
+//   v   = clamped, damped at the domain border (smoothstep falloff)
+//   tangent = normalised height gradient (for the water shader)
+//
+// The bed (sand) height comes from a heightmap shared with
+// GiLighting: R = world height. Water flows downhill, pools in
+// hollows, and dries on high ground.
+// ============================================================
+
+#pragma kernel Initialize
+#pragma kernel VelocityIntegration
+#pragma kernel HeightIntegration
+#pragma kernel UpdateTangent
+#pragma kernel Advection
+#pragma kernel UpdateFloor
+#pragma kernel BlurFloor
+
+RWStructuredBuffer<float4> _CellsA;   // x=height y=vx z=vy w=wave
+RWStructuredBuffer<float4> _CellsB;   // xy=tangent z=floor w=crest
+Texture2D<float4> _Heightmap;         // sand bed, R = world height
+StructuredBuffer<float4> _GroundCells; // sand sim cells (GroundSimulation)
+int2 _GroundRes;
+float2 _GroundSize;
+float2 _GroundOrigin;
+
+float2 _WorldSize;
+float2 _OriginOffset;
+int2 _Resolution;
+float _Gravity;          // original Water.gravityForce
+float _Evaporation;      // original Water.evaporationFactor
+float _DeltaTime;
+float _MaxVelocity;
+float _WaterLevel;
+float _WaveAmplitude;
+float _WavePhase;
+float _Damping;
+
+// ---------- helpers ----------
+
+float BedHeight(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _Resolution - 1);
+    return _Heightmap.Load(int3(cc, 0)).r;
+}
+
+float4 CellA(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _Resolution - 1);
+    return _CellsA[cc.x + cc.y * _Resolution.x];
+}
+
+float4 CellB(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _Resolution - 1);
+    return _CellsB[cc.x + cc.y * _Resolution.x];
+}
+
+float GroundAt(int2 c)
+{
+    int2 cc = clamp(c, int2(0, 0), _GroundRes - 1);
+    return _GroundCells[cc.x + cc.y * _GroundRes.x].x;
+}
+
+// smoothstep border falloff (original: smoothstep over 50 cells)
+float BorderWeight(int2 c)
+{
+    float2 uv = ((float2)c + 0.5) / (float2)_Resolution;
+    float2 d = min(uv * 50.0, 1.0);
+    float2 r = min((1.0 - uv) * 50.0, 1.0);
+    float sx = d.x * d.x * (3.0 - 2.0 * d.x);
+    float sy = d.y * d.y * (3.0 - 2.0 * d.y);
+    float rx = r.x * r.x * (3.0 - 2.0 * r.x);
+    float ry = r.y * r.y * (3.0 - 2.0 * r.y);
+    // 1 at the border ring, 0 far from it (inverted: this damps motion
+    // near the edge so water settles instead of bouncing)
+    return 1.0 - (sx * sy * rx * ry);
+}
+
+// ---------- Initialize ----------
+
+[numthreads(32, 32, 1)]
+void Initialize(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+    // flood the beach: water everywhere below the water level
+    float bed = BedHeight(c);
+    float h = max(_WaterLevel - bed, 0.0);
+    _CellsA[i] = float4(h, 0, 0, 0);
+    _CellsB[i] = float4(0, 0, bed, h);
+}
+
+// ---------- VelocityIntegration ----------
+// original: decode 4 neighbours, dv = g * 0.5 * dt * (hL-hR, hD-hU),
+// damp, kill flow into dry cells, clamp to max velocity, re-pack.
+
+[numthreads(32, 32, 1)]
+void VelocityIntegration(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float4 cell = _CellsA[i];
+    float h = cell.x;
+
+    float hL = CellA(c + int2(-1, 0)).x;
+    float hR = CellA(c + int2(1, 0)).x;
+    float hD = CellA(c + int2(0, -1)).x;
+    float hU = CellA(c + int2(0, 1)).x;
+
+    float dt = min(_DeltaTime, 0.05); // stability clamp
+
+    // gravity gradient (semi-implicit)
+    float2 grad = float2(hL - hR, hD - hU) * 0.5;
+    float2 v = cell.yz + grad * (_Gravity * dt);
+
+    // damping + border relaxation (original damping chain)
+    float w = BorderWeight(c);
+    v *= 1.0 - _Damping * dt * (1.0 + 3.0 * (1.0 - w));
+
+    // no flow into dry cells (original direction flags kill the flux)
+    if (hL <= 0.001 && v.x < 0.0) v.x = 0.0;
+    if (hR <= 0.001 && v.x > 0.0) v.x = 0.0;
+    if (hD <= 0.001 && v.y < 0.0) v.y = 0.0;
+    if (hU <= 0.001 && v.y > 0.0) v.y = 0.0;
+
+    // velocity cap (original cb0[156].x)
+    float speed = length(v);
+    if (speed > _MaxVelocity) v *= _MaxVelocity / speed;
+
+    _CellsA[i] = float4(h, v, cell.w);
+}
+
+// ---------- HeightIntegration ----------
+// original: per-direction flux = u * dh/dx * dt, dry threshold 0.05,
+// constrained relaxation toward neighbour average, evaporation,
+// wave source, border smoothstep.
+
+[numthreads(32, 32, 1)]
+void HeightIntegration(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float4 cell = _CellsA[i];
+    float h = cell.x;
+    float dt = min(_DeltaTime, 0.05);
+
+    // directional fluxes (like the original four-direction pass)
+    float fluxX = CellA(c + int2(-1, 0)).y * (CellA(c + int2(-1, 0)).x - h)
+                + CellA(c + int2(1, 0)).y * (h - CellA(c + int2(1, 0)).x);
+    float fluxY = CellA(c + int2(0, -1)).z * (CellA(c + int2(0, -1)).x - h)
+                + CellA(c + int2(0, 1)).z * (h - CellA(c + int2(0, 1)).x);
+    h += 0.5 * dt * (fluxX + fluxY);
+
+    // dry threshold + constrained relaxation (original 0.05 / 0.5 mix)
+    h = max(h - 0.05, 0.0);
+    float avg = (CellA(c + int2(-1, 0)).x + CellA(c + int2(1, 0)).x
+               + CellA(c + int2(0, -1)).x + CellA(c + int2(0, 1)).x) * 0.25;
+    float relaxed = h + 0.5 * (avg - h);
+    h = (relaxed > 0.001) ? relaxed : h;
+
+    // evaporation (original cb0[155].z * cb0[156].y * 0.001)
+    h -= _Evaporation * dt;
+
+    // optional wave source (original sincos wave term)
+    float2 p = _OriginOffset + ((float2)c + 0.5) * (_WorldSize / (float2)_Resolution);
+    float wv = sin(p.x * 0.4 + _WavePhase) * 0.6
+             + sin(p.y * 0.33 - _WavePhase * 0.8) * 0.4;
+    h += _WaveAmplitude * wv * 0.05;
+
+    // stay above the bed; cells below the bed dry out entirely
+    float bed = BedHeight(c);
+    if (h <= bed) h = 0.0;
+    float depth = h - bed;
+
+    _CellsA[i] = float4(h, cell.yz, cell.w);
+    _CellsB[i] = float4(CellB(c).xy, bed, depth > 0.0 ? depth : 0.0);
+}
+
+// ---------- UpdateTangent ----------
+// normalised height gradient, stored for the vertex shader
+
+[numthreads(32, 32, 1)]
+void UpdateTangent(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float hL = CellA(c + int2(-1, 0)).x;
+    float hR = CellA(c + int2(1, 0)).x;
+    float hD = CellA(c + int2(0, -1)).x;
+    float hU = CellA(c + int2(0, 1)).x;
+
+    float2 grad = float2(hL - hR, hD - hU);
+    float len = length(grad);
+    float2 tangent = len > 1e-6 ? grad / len : float2(0, 0);
+
+    float4 b = CellB(c);
+    _CellsB[i] = float4(tangent, b.z, b.w);
+}
+
+// ---------- Advection ----------
+// semi-Lagrangian: trace the cell back along its velocity, bilinear
+// sample the field there, write back (original water_Advection).
+
+[numthreads(32, 32, 1)]
+void Advection(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float2 cellSize = _WorldSize / (float2)_Resolution;
+    float4 cell = CellA(c);
+
+    // sample point = grid uv - velocity * dt / cellSize
+    float2 uv = ((float2)c + 0.5) / (float2)_Resolution;
+    uv -= cell.yz * (_DeltaTime / cellSize);
+    float2 grid = uv * (float2)_Resolution - 0.5;
+
+    int2 c0 = int2(floor(grid));
+    float2 f = frac(grid);
+    float4 v00 = CellA(clamp(c0, int2(0, 0), _Resolution - 1));
+    float4 v10 = CellA(clamp(c0 + int2(1, 0), int2(0, 0), _Resolution - 1));
+    float4 v01 = CellA(clamp(c0 + int2(0, 1), int2(0, 0), _Resolution - 1));
+    float4 v11 = CellA(clamp(c0 + int2(1, 1), int2(0, 0), _Resolution - 1));
+    float4 adv = lerp(lerp(v00, v10, f.x), lerp(v01, v11, f.x), f.y);
+
+    // keep the original height blend (stability) but carry advected velocity
+    _CellsA[i] = float4(cell.x, adv.yz, cell.w);
+}
+
+// ---------- UpdateFloor ----------
+// bilinearly sample the sand simulation height into the water floor
+// (original water_UpdateFloor reads the Ground buffer).
+
+[numthreads(32, 32, 1)]
+void UpdateFloor(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float2 uv = ((float2)c + 0.5) / (float2)_Resolution;
+    float2 g = uv * (float2)_GroundRes - 0.5;
+    int2 c0 = int2(floor(g));
+    float2 f = frac(g);
+
+    float h00 = GroundAt(c0);
+    float h10 = GroundAt(c0 + int2(1, 0));
+    float h01 = GroundAt(c0 + int2(0, 1));
+    float h11 = GroundAt(c0 + int2(1, 1));
+    float floorH = lerp(lerp(h00, h10, f.x), lerp(h01, h11, f.x), f.y);
+
+    float4 b = CellB(c);
+    _CellsB[i] = float4(b.xy, floorH, b.w);
+}
+
+// ---------- BlurFloor ----------
+// original water_BlurFloor: iterative 4-neighbour relaxation of the
+// bed so sand deposits spread smoothly.
+
+[numthreads(32, 32, 1)]
+void BlurFloor(uint3 id : SV_DispatchThreadID)
+{
+    int2 c = id.xy;
+    if (any(c >= _Resolution)) return;
+    int i = c.x + c.y * _Resolution.x;
+
+    float fC = CellB(c).z;
+    float fL = CellB(c + int2(-1, 0)).z;
+    float fR = CellB(c + int2(1, 0)).z;
+    float fD = CellB(c + int2(0, -1)).z;
+    float fU = CellB(c + int2(0, 1)).z;
+    float blurred = (fL + fR + fD + fU) * 0.25;
+
+    float4 b = CellB(c);
+    _CellsB[i] = float4(b.xy, lerp(fC, blurred, 0.5), b.w);
+}

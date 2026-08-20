@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using Unity.Collections;
 using UnityEngine;
 
@@ -10,10 +11,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
     {
         readonly CharacterAnimationRigPayload m_Rig;
         readonly IReadOnlyList<Transform> m_Bones;
+        readonly Transform m_ComponentRoot;
         readonly int m_RootBoneIndex;
+        readonly int m_LeftAnkleBoneIndex;
+        readonly int m_RightAnkleBoneIndex;
+        readonly int m_PelvisBoneIndex;
         readonly CharacterAnimationRootBonePolicy m_RootBonePolicy;
         readonly AnimationLocalBonePose m_RootReferencePose;
         readonly AnimationLocalBonePose[] m_ReferencePoses;
+        AnimationPhysicalBoneWriteDiagnostics m_Diagnostics;
 
         internal AnimationFinalPosePhysicalWriter(
             CharacterAnimationRigBinding binding,
@@ -24,7 +30,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             binding.RequireValid(rig);
             m_Bones = binding.PhysicalBones;
+            m_ComponentRoot = binding.Animator.transform;
             m_RootBoneIndex = rig.RootPhysicalBoneIndex;
+            m_LeftAnkleBoneIndex = rig.LeftLeg.AnklePhysicalBoneIndex;
+            m_RightAnkleBoneIndex = rig.RightLeg.AnklePhysicalBoneIndex;
+            m_PelvisBoneIndex = rig.PelvisPhysicalBoneIndex;
             m_RootBonePolicy = rig.RootBonePolicy;
             CharacterAnimationPhysicalBonePayload root =
                 rig.PhysicalBones[m_RootBoneIndex];
@@ -47,6 +57,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new InvalidOperationException(
                     "Animation root reference pose is invalid.");
         }
+
+        internal AnimationPhysicalBoneWriteDiagnostics Diagnostics =>
+            m_Diagnostics;
 
         internal void Write(
             in AnimationFinalPoseNativeReadBinding pending,
@@ -100,7 +113,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             committedOutcome[0] = pendingValid
                 ? AnimationFinalPoseWriteOutcome.Committed
                 : AnimationFinalPoseWriteOutcome.TypedInvalid;
+            if (pendingValid)
+            {
+                m_Diagnostics = new AnimationPhysicalBoneWriteDiagnostics(
+                    pending.CompletionIdentity,
+                    CaptureComponentPosition(m_LeftAnkleBoneIndex),
+                    CaptureComponentPosition(m_RightAnkleBoneIndex),
+                    CaptureComponentPosition(m_PelvisBoneIndex));
+            }
         }
+
+        Vector3 CaptureComponentPosition(int boneIndex) =>
+            m_ComponentRoot.InverseTransformPoint(m_Bones[boneIndex].position);
 
         AnimationLocalBonePose ResolvePose(
             in AnimationFinalPoseNativeReadBinding pending,

@@ -342,12 +342,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         throw new InvalidOperationException("World-Aware Presentation Root must match Presentation VisualRoot exactly.");
                     CharacterFootPlacementRuntimeSettings footPlacementSettings =
                         descriptor.Profile.BuildSettings(projection, rig);
+                    var worldQuery = new CharacterFootPlacementWorldQueryBackend(
+                        physicsScene,
+                        rig,
+                        footPlacementSettings.LandingPrediction.HitCapacity,
+                        footPlacementSettings.GroundDetection.SegmentHitCapacity);
                     footPlacement = new CharacterFootPlacementRuntime(
                         actorId,
                         footPlacementSettings,
                         rig,
-                        physicsScene,
-                        futureBodyTranslationSource);
+                        futureBodyTranslationSource,
+                        worldQuery);
                 }
                 if (cameraRig)
                 {

@@ -29,7 +29,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         NegativeVerticalCorrection = 13,
         InvalidSwingPhase = 14,
         StanceLandingUnavailable = 15,
-        SupportOutsideSlideDistance = 16
+        SupportOutsideSlideDistance = 16,
+        UnselectedSwing = 17
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics
@@ -326,6 +327,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctedSole,
                 correctedAnkle,
                 positionWeight,
+                0f);
+        }
+
+        internal static CharacterFootSwingMotionDiagnostics SuppressUnselected(
+            in CharacterFootSwingMotionDiagnostics motion)
+        {
+            if (!motion.Accepted)
+                return motion;
+            return new CharacterFootSwingMotionDiagnostics(
+                CharacterFootSwingMotionState.Rejected,
+                CharacterFootSwingMotionRejectReason.UnselectedSwing,
+                motion.LandingEventIdentity,
+                motion.GroundPathInputIdentity,
+                motion.OriginalSole,
+                motion.OriginalAnkle,
+                motion.Distance,
+                motion.Progress,
+                motion.BaselineSample,
+                motion.EnvelopeSample,
+                motion.VerticalCorrection,
+                motion.LandingPredictionError,
+                motion.LandingConstraintWeight,
+                motion.OriginalSole,
+                motion.OriginalAnkle,
+                0f,
                 0f);
         }
 

@@ -63,10 +63,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (consumerOwners.Add(ownerId))
                     AddFullBodyIkFields(profile, ownerId, fields);
             }
-            for (int i = 0; i < projection.PosePlan.FootGroundings.Count; i++)
+            for (int i = 0; i < projection.PosePlan.FootPlacements.Count; i++)
             {
                 CharacterFootPlacementProfile profile =
-                    projection.PosePlan.FootGroundings[i].Profile;
+                    projection.PosePlan.FootPlacements[i].Profile;
                 string ownerId = $"foot-placement-profile:{profile.ProfileId}";
                 if (consumerOwners.Add(ownerId))
                     AddFootPlacementFields(profile, ownerId, fields);

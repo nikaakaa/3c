@@ -81,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         readonly MotionMatchingBasePoseContinuityIdentity[] m_Continuities;
         readonly Vector3[] m_Positions;
         readonly Vector3[] m_Velocities;
-        readonly AnimationFootPlacementSample[] m_FootPlacement;
+        readonly AnimationFootPlacementHistorySample[] m_FootPlacement;
         readonly Vector3[] m_PendingPositions;
         readonly Vector3[] m_PendingVelocities;
         int m_Start;
@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         PendingMutation m_PendingMutation;
         float m_PendingPresentationTime;
         MotionMatchingBasePoseContinuityIdentity m_PendingContinuity;
-        AnimationFootPlacementSample m_PendingFootPlacement;
+        AnimationFootPlacementHistorySample m_PendingFootPlacement;
         ulong m_PendingResetSequence;
         int m_PendingPreviousPhysical;
         float m_PendingDeltaTime;
@@ -107,7 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_Continuities = new MotionMatchingBasePoseContinuityIdentity[capacity];
             m_Positions = new Vector3[capacity * boneCount];
             m_Velocities = new Vector3[capacity * boneCount];
-            m_FootPlacement = new AnimationFootPlacementSample[capacity];
+            m_FootPlacement = new AnimationFootPlacementHistorySample[capacity];
             m_PendingPositions = new Vector3[boneCount];
             m_PendingVelocities = new Vector3[boneCount];
         }
@@ -118,7 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public bool HasGap => m_HasGap;
         public ulong ResetSequence => m_ResetSequence;
         public float LatestPresentationTime => m_Count == 0 ? 0f : m_PresentationTimes[PhysicalIndex(m_Count - 1)];
-        public AnimationFootPlacementSample LatestFootPlacement => m_Count == 0 ? default : m_FootPlacement[PhysicalIndex(m_Count - 1)];
+        public AnimationFootPlacementHistorySample LatestFootPlacement => m_Count == 0 ? default : m_FootPlacement[PhysicalIndex(m_Count - 1)];
         public MotionMatchingBasePoseContinuityIdentity LatestContinuity => m_Count == 0 ? default : m_Continuities[PhysicalIndex(m_Count - 1)];
 
         internal void BeginFrame()
@@ -201,7 +201,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                                boneIndex]) /
                           m_PendingDeltaTime;
             }
-            m_PendingFootPlacement = footPlacement;
+            m_PendingFootPlacement = new AnimationFootPlacementHistorySample(in footPlacement);
             m_PendingMutation = PendingMutation.Append;
         }
 

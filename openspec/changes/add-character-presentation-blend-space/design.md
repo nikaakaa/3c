@@ -8,8 +8,8 @@
 Committed Body / Intent
   -> CharacterPresentationFactFrame
   -> Locomotion PoseStateMachine
-       -> SequencePlayer / BlendSpacePlayer / Motion Matching Player
-  -> branch-local Inertialization
+       -> ClipPlayer / BlendSpacePlayer / Motion Matching Player
+  -> edge-owned Standard Blend或显式Inertialization
   -> FullBodyAction AnimationSlot
   -> Pose composition / ModifyBone
   -> FootGrounding Baseline Goals
@@ -36,7 +36,7 @@ Committed Body / Intent
 - Direct blend、Simple Directional、嵌套Blend Space或运行时动态样本集合。
 - Motion Matching查询、轨迹预测或候选打分。
 - 跨来源CrossFade、Stored Pose、Inertial residual、FootGrounding、PredictiveFootPlacementModifier、FullBodyIK和最终Animator写回。
-- Agent对Presentation资产的写入。
+- Agent直接修改Blend Space资源正文或generated数据；Document只写共享Pose capability与Profile binding。
 
 ## Concept Mapping
 
@@ -48,7 +48,7 @@ Committed Body / Intent
 | `FreeformCartesian2D` | Blend Space二维Cartesian | `CartesianMixerState` | 平移速度向量空间 |
 | `FreeformDirectional2D` | Blend Space二维Directional | `DirectionalMixerState` | 方向与幅值空间 |
 | `BlendStack` | Blend Stack / temporal transition | 不由Mixer负责 | 只保留跨来源时间历史 |
-| `State Source Sync` | State edge source handoff同步 | 项目现有Marker算法 | 只处理PoseState来源间raw-to-effective phase |
+| `State Source Phase Relation` | State edge source handoff同步 | 项目编译Phase计划 | 只处理PoseState来源间raw-to-effective phase |
 
 名称只表达接近的学习概念，不宣称内部等同UE。特别是项目的world-aware value节点是`FootGrounding`与可选`PredictiveFootPlacementModifier`，pure-pose solver是`FullBodyIK`，三者都不叫Post Process Anim Blueprint。
 
@@ -58,7 +58,7 @@ Committed Body / Intent
 |---|---|---|---|
 | Presentation Fact | committed Body / Intent | 提供Pose参数，不选择动画资源 | typed parameter page |
 | PoseStateMachine | Fact、State rule与edge policy | 决定State relevance、source clock与跨State transition | relevant inline subgraph |
-| State Source Sync | edge两侧source usage与marker schema | State切换时映射canonical phase | target source effective phase |
+| State Source Phase Relation | edge两侧source phase endpoint | State切换时映射unwrapped locomotion phase | target source effective phase |
 | BlendSpace weight evaluator | 编译样本表与轴值 | 计算确定性normalized weights | weighted SampleId列表 |
 | BlendSpace phase mapper | canonical phase与样本phase binding | 得到每个样本的effective clip time | ClipSamplePlan time |
 | Animancer backend | ClipSamplePlan | 创建/复用Playable并采样骨骼 | sampled source pose |
@@ -70,7 +70,7 @@ Committed Body / Intent
 
 ## Decision 1: 新增BlendSpacePlayer，不复用BlendStack
 
-`BlendSpacePlayer`是PoseState inline source目录中的显式Player，与`SequencePlayer`和State内部MM Player并列。它消费编译后的BlendSpace Pose source descriptor、State source clock与Presentation Fact参数；参数输入只决定同一BlendSpace资产内的样本贡献。
+`BlendSpacePlayer`是PoseState inline source目录中的显式Player，与`ClipPlayer`和State内部MM Player并列。它消费编译后的BlendSpace Pose source descriptor、State source clock与Presentation Fact参数；参数输入只决定同一BlendSpace资产内的样本贡献。
 
 它不保存旧State source entry。State re-entry、target reset或source revision发生离散变化时，节点发布typed discontinuity。作者需要平滑时显式连接局部`Inertialization`；跨State Standard Blend或Inertialization由transition edge拥有，不能要求BlendSpacePlayer暗中长成第二个transition owner。
 
@@ -124,6 +124,7 @@ Compiler从PoseState inline subgraph中的BlendSpacePlayer解析唯一Pose sourc
 - `BlendSpaceMode`。
 - X轴和可选Y轴：稳定ParameterId、显示名、单位、最小值、最大值。
 - `BlendSpacePhasePolicy`。
+- LocomotionPhase模式的稳定Phase Reference SampleId。
 - 稳定Sample列表。
 - source-local Pose Parameter policy表。
 - Editor Preview配置，只用于authoring，不进入runtime选择逻辑。
@@ -135,7 +136,7 @@ Compiler从PoseState inline subgraph中的BlendSpacePlayer解析唯一Pose sourc
 - 1D或2D坐标。
 - `DynamicCycle`或`StationaryPose`角色。
 - StationaryPose使用的固定normalized sample time。
-- DynamicCycle的canonical marker binding或normalized phase binding。
+- DynamicCycle的直接AnimationClip引用；Phase数据只来自Clip注册Curve与Profile Group。
 - 对应Foot Analysis source identity。
 
 样本不保存Runtime weight、当前time、Playable、Transform或Animator state。
@@ -151,18 +152,18 @@ Compiler从PoseState inline subgraph中的BlendSpacePlayer解析唯一Pose sourc
 - StationaryPose始终采样其固定normalized time。
 - 适用于作者已经对齐周期、或中心静止姿势与循环样本混合的资产。
 
-### MarkerSynchronizedPhase
+### LocomotionPhase
 
 - 资产指定一个稳定Phase Reference Sample；它必须是DynamicCycle。
-- 参考样本的marker序列把raw/effective source time转换为canonical marker segment与segment fraction。
-- 所有DynamicCycle样本必须提供相同MarkerId循环拓扑，但各marker时间可以不同。
-- 每个样本按自己的marker segment映射effective clip time。
-- StationaryPose不需要marker，始终采样固定时间，也不得成为Phase Reference。
-- Marker缺失、顺序不一致或reference失效时编译失败，不回退SharedNormalizedPhase。
+- 参考样本只作为source raw clock carrier，通过自己的`time -> unwrapped phase` forward plan得到canonical phase。
+- 所有DynamicCycle样本的AnimationClip必须属于同一Profile Locomotion Sync Group，并具有合法per-clip forward/inverse Phase plan。
+- 每个样本通过自己的`unwrapped phase -> time` inverse plan得到effective clip time；资产不保存reference-to-sample pairwise warp。
+- StationaryPose不参加Phase inverse，始终采样固定时间，也不得成为Phase Reference。
+- Group、Curve、Reference或coverage无效时编译失败，不回退SharedNormalizedPhase。
 
-参数变化不会动态选最高权重样本作为phase leader。固定Phase Reference保证速度或方向跨区域时步态phase不因leader切换跳变。该选择少了UE式动态leader自由度，但更容易诊断，也与项目显式MarkerSync原则一致。
+参数变化不会动态选最高权重样本作为phase leader。固定Phase Reference保证速度或方向跨区域时source clock不因leader切换跳变，同时所有样本只共享一个展开Phase值。代价是作者必须显式维护Reference，但避免了按权重切换leader和pairwise warp的运行时状态。
 
-PoseState transition edge的State Source Sync处理BlendSpace source与其它State source之间的handoff；内部phase mapper处理一个BlendSpace source内的child sample。二者共享编译marker schema和phase数据类型，但状态所有者不同，不互相扫描。
+Projection把Direct Clip与Blend Space都降低为`AnimationSourcePhasePlan`。PoseState transition edge的Phase Relation处理BlendSpace source与其它State source之间的handoff；BlendSpace内部phase mapper把同一unwrapped phase分发给各child sample。二者共享per-clip Phase plan，但状态所有者不同，不互相扫描。
 
 ## Pose Graph Contract
 
@@ -193,7 +194,7 @@ Projection Compiler按以下顺序工作：
 PoseState inline BlendSpacePlayer
   -> Profile Presentation Pose source binding
   -> asset structural validation
-  -> clip / marker / foot artifact resolution
+  -> direct clip / registered phase curve / foot artifact resolution
   -> weight solver compilation
   -> phase table compilation
   -> pose parameter policy compilation
@@ -207,12 +208,12 @@ Projection payload只保存Runtime需要的数据：
 - mode和dense axis contract。
 - stable sample table与clip resource binding。
 - 预计算weight solver data。
-- phase reference和dense marker phase table。
+- phase policy、Phase Reference与per-clip forward/inverse plan index。
 - Foot Analysis artifact bindings。
 - Pose Parameter policy与dense channel mapping。
 - 最大active sample数、ClipSamplePlan workspace offset和diagnostic source map。
 
-Runtime不得读取ScriptableObject、AssetDatabase、Timeline authoring、AnimationTrack marker或Profile。
+Runtime不得读取ScriptableObject、AnimationClip Curve、AssetDatabase、Timeline authoring、Marker或Profile。
 
 ## Runtime Flow
 
@@ -270,12 +271,12 @@ Live Debug只读取Runtime Snapshot，不重新计算权重。
 
 ## Agent Boundary
 
-Character Document v3从共享capability导出以下Blend Space作者语义：
+Character Document v4从共享capability导出以下Blend Space作者语义：
 
 - BlendSpace asset identity、revision、mode、axis ParameterId和sample count。
 - Source Slot对象到Profile-owned typed Blend Space Binding与实际资源。
 - BlendSpacePlayer NodeId、输入ParameterId和Projection compile status。
-- stale、missing artifact、marker topology、Rig或parameter mismatch诊断。
+- stale、missing artifact、Phase Curve/Group、Rig或parameter mismatch诊断。
 
 Snapshot不输出每个clip的generated Foot Analysis payload，不输出Runtime weight/time，也不把BlendSpace Sample伪装为Timeline Clip。Patch catalog、lowerer、handler、validator和MCP action不增加BlendSpace mutation。正式修改入口只有Character Animation Authoring Workspace和Presentation Authoring Service。
 
@@ -286,13 +287,13 @@ Snapshot不输出每个clip的generated Foot Analysis payload，不输出Runtime
 ```text
 Presentation Fact
   -> Locomotion PoseStateMachine
-       -> BlendSpacePlayer或明确SequencePlayer
-  -> Inertialization
+       -> BlendSpacePlayer或明确ClipPlayer
+  -> Standard Blend
   -> AnimationSlot
   -> Pose composition
 ```
 
-Corin是否使用BlendSpace取决于正式素材是否完整；素材不完整时使用明确SequencePlayer State，不恢复Timeline locomotion producer。
+Corin是否使用BlendSpace取决于正式素材是否完整；素材不完整时使用明确ClipPlayer State，不恢复Timeline locomotion producer。Corin Locomotion edge统一使用Standard Blend，不连接局部Inertialization。
 
 后续Blend Space演示使用独立CharacterPipelineDefinition、AnimationPresentationProfile和Pose Graph：
 
@@ -300,7 +301,7 @@ Corin是否使用BlendSpace取决于正式素材是否完整；素材不完整�
 Demo Presentation Fact
   -> Demo Locomotion PoseState
        -> BlendSpacePlayer(Speed，必要时LocalVelocityX/Y)
-  -> Inertialization
+  -> 显式Transition Policy
   -> Demo base pose composition
 ```
 
@@ -347,7 +348,7 @@ Demo Presentation Fact
 ### State Source Sync与连续性职责
 
 - PoseState source usage保存State index、Player index、NodeId、source kind和Projection-local dense source index；它不是按AnimationChannel、显示名或字符串猜测播放器的旁路索引。
-- State Source Sync由transition edge消费source/target usage并发布target effective phase；`BlendSpacePlayer`再把该phase映射为各Sample的effective time。
+- State Source Phase Relation由transition edge消费source/target endpoint并发布target unwrapped phase；`BlendSpacePlayer`再通过各Sample的per-clip inverse plan映射effective time。
 - PoseState transition edge唯一拥有跨State Standard Blend或Inertialization；AnimationSlot唯一拥有Action source切换；显式`Inertialization`唯一拥有单一Pose residual与rebase。`BlendSpacePlayer`不持有旧State source、Stored Pose或transition算法。
 
 ### Profile、Projection与采样入口
@@ -366,7 +367,7 @@ Demo Presentation Fact
 - `CharacterAnimationBlendSpaceEditorWindow`复用`GraphAuthoringEditorShell`。正式页面为Navigator、1D/2D Canvas、Authoring、Live、References、Preview与Diagnostics；全部写操作进入`CharacterAnimationBlendSpaceAuthoringService`，Compile、Foot Analysis和Definition Build只由明确按钮触发。
 - Preview必须选择精确场景`CharacterPipelineHost`与PoseState，构造正式Fact、State relevance、typed Parameter page和clock，再调用同一`CharacterAnimationPresentationRuntime`与Projection Pose Plan；不得创建临时PlayableGraph或临时编译Projection。
 - Projection Build必须确认BlendSpace轴ParameterId拥有正式`CharacterPresentationProgramParameterFrame` provider；Runtime resolver不得按ParameterId复制Body字段映射，Preview不得把参数伪造成速度向量。
-- Agent authoring schema由`refactor-pose-graph-to-btsmtl-authoring-domain`统一升级为`btsmtl-agent-authoring-document.v3`。BlendSpacePlayer typed payload与Profile binding进入Presentation editable；Blend Space资源正文、sample分析结果、generated payload和runtime weight只进入只读context或diagnostics。不存在Patch DTO或Blend Space专用MCP action。
+- Agent authoring schema由`replace-animation-sequence-with-clip-authoring`统一升级为`btsmtl-agent-authoring-document.v4`。BlendSpacePlayer typed payload与Profile binding进入Presentation editable；Blend Space资源正文、sample分析结果、generated payload和runtime weight只进入只读context或diagnostics。不存在Patch DTO或Blend Space专用MCP action。
 
 ### 分裂路径审计
 
@@ -374,6 +375,6 @@ Demo Presentation Fact
 - `AnimationBlendStackRuntime`没有Blend Space mode或axis合同；`BlendSpacePlayer`没有CrossFade、Stored Pose、旧source retention或per-bone transition字段。
 - `AnimancerPoseSamplingBackend`只把`ClipSamplePlan`的clip binding、time和weight应用到`ManualMixerState` child，不读取Mixer `Parameter`。
 - Runtime Blend Space resolver只从`CharacterPresentationProjection.BlendSpacePlayers`和PoseState source descriptor建立采样计划，不读取`AssetDatabase`、authoring `ScriptableObject`、clip名称或Gameplay producer显示名。
-- Marker topology缺失时返回`MissingMarkerSegment`并清空time page；数值求解失败返回typed failure，不切换到normalized phase或最近样本。
-- Marker Phase Reference删除由正式Authoring Service在Undo前拒绝；资产层也拒绝缺少当前reference的Sample集合，不隐式改写phase policy。
+- LocomotionPhase的Group、Curve、Reference或coverage缺失时返回对应typed failure并清空time page；数值求解失败不切换到normalized phase或最近样本。
+- Phase Reference删除由正式Authoring Service在Undo前拒绝；资产层也拒绝缺少当前reference的Sample集合，不隐式改写phase policy。
 - 没有旧Blend Space Workbench、Pose专用MCP写入口或第二个临时PlayableGraph。

@@ -91,14 +91,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
             "StrideStartX,StrideStartY,StrideStartZ,StrideEndX,StrideEndY,StrideEndZ," +
+            "StrideSampledGroundX,StrideSampledGroundY,StrideSampledGroundZ," +
+            "StridePoseRootPositionX,StridePoseRootPositionY,StridePoseRootPositionZ," +
             "StrideAnimatedPelvisX,StrideAnimatedPelvisY,StrideAnimatedPelvisZ," +
             "StrideAnimatedPelvisComponentPositionX,StrideAnimatedPelvisComponentPositionY,StrideAnimatedPelvisComponentPositionZ," +
             "StrideRawPelvisDeltaX,StrideRawPelvisDeltaY,StrideRawPelvisDeltaZ," +
-            "StrideRawPelvisTargetAlongUp,StrideClearanceCorrectionAlongUp,StrideHadPreviousState,StrideSupportChanged," +
-            "StridePreviousStrideStartX,StridePreviousStrideStartY,StridePreviousStrideStartZ,StrideRebaseAlongUp," +
-            "StridePreviousRawPelvisTargetAlongUp,StrideRebasedPreviousRawPelvisTargetAlongUp," +
-            "StridePreviousSpringOutput,StrideRebasedPreviousSpringOutput,StrideNecessaryDelta,StrideSpringInput," +
-            "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity,StrideSpringDelta," +
+            "StrideRootRelativeGroundTargetAlongUp,StrideSoleClearanceLiftAlongUp,StrideHadPreviousState,StrideSupportChanged," +
+            "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput," +
+            "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
             "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
             "FinalPelvisGoalX,FinalPelvisGoalY,FinalPelvisGoalZ," +
             "FinalPhysicalPelvisComponentPositionX,FinalPhysicalPelvisComponentPositionY,FinalPhysicalPelvisComponentPositionZ,FinalPhysicalPelvisGoalResidual," +
@@ -857,6 +857,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, ground.MaximumReachableVerticalEdge);
             Add(row, ground.EnvelopeVertexCount);
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
+            CharacterFullBodyIkGoal footGoal = foot.Goal;
             Add(row, motion.State.ToString());
             Add(row, motion.RejectReason.ToString());
             Add(row, motion.LandingEventIdentity);
@@ -911,25 +912,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.Slope.ToString());
             Add(row, stride.StrideStart);
             Add(row, stride.StrideEnd);
+            Add(row, stride.SampledGround);
+            Add(row, stride.PoseRootPosition);
             Add(row, stride.AnimatedPelvis);
             Add(row, stride.AnimatedPelvisComponentPosition);
             Add(row, stride.RawPelvisDelta);
-            Add(row, stride.RawPelvisTargetAlongUp);
-            Add(row, stride.ClearanceCorrectionAlongUp);
+            Add(row, stride.RootRelativeGroundTargetAlongUp);
+            Add(row, stride.SoleClearanceLiftAlongUp);
             Add(row, stride.HadPreviousState);
             Add(row, stride.SupportChanged);
-            Add(row, stride.PreviousStrideStart);
-            Add(row, stride.RebaseAlongUp);
-            Add(row, stride.PreviousRawPelvisTargetAlongUp);
-            Add(row, stride.RebasedPreviousRawPelvisTargetAlongUp);
+            Add(row, stride.PreviousSpringTarget);
             Add(row, stride.PreviousSpringOutput);
-            Add(row, stride.RebasedPreviousSpringOutput);
-            Add(row, stride.NecessaryDelta);
+            Add(row, stride.PreviousSpringVelocity);
             Add(row, stride.SpringInput);
             Add(row, stride.SpringTarget);
             Add(row, stride.SpringOutput);
             Add(row, stride.SpringVelocity);
-            Add(row, stride.SpringDelta);
             Add(row, stride.PelvisDelta);
             Add(row, stride.PositionWeight);
             Add(row, frame.PelvisGoal.ComponentPosition);
@@ -974,10 +972,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, ik.PhysicalAnkleComponentPosition);
             Add(
                 row,
-                ik.PhysicalWriteAvailable
+                ik.PhysicalWriteAvailable && foot.Goal.PositionWeight > 0f
                     ? Vector3.Distance(
                         ik.PhysicalAnkleComponentPosition,
-                        foot.Goal.ComponentPosition)
+                        ResolveWeightedAnkleComponentPosition(
+                            in goalTransition,
+                            in footGoal))
                     : 0f);
             bool hasContact = groundContactIndex < ground.ContactCount;
             CharacterFootGroundContact contact = hasContact
@@ -997,6 +997,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, hasEnvelopeVertex ? groundContactIndex : -1);
             Add(row, envelopeVertex.Position);
             writer.WriteLine(row);
+        }
+
+        static Vector3 ResolveWeightedAnkleComponentPosition(
+            in CharacterFootGoalTransitionDiagnostics goalTransition,
+            in CharacterFullBodyIkGoal goal)
+        {
+            Vector3 originalComponentPosition = goalTransition.OriginalComponentPosition;
+            return originalComponentPosition +
+                   (goal.ComponentPosition - originalComponentPosition) *
+                   goal.PositionWeight;
         }
 
         static void Add(StringBuilder row, string value)

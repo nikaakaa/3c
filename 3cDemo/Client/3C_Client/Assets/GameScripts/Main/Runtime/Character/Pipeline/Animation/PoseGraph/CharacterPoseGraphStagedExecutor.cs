@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using Unity.Collections;
@@ -213,7 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly int m_BoneCount;
         readonly int m_ParameterCount;
         readonly int m_PoseValueCount;
-        readonly int m_FootGroundingCount;
+        readonly int m_FootPlacementCount;
         readonly int m_ContributionStride;
         readonly int m_OutputOperationIndex;
         readonly int m_OutputValueIndex;
@@ -256,7 +256,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FullBodyIkGoalInputValueIndices = program.FullBodyIkGoalInputValueIndices;
             m_FullBodyIkGoalSets = program.FullBodyIkGoalSets;
             m_FullBodyIkGoals = program.FullBodyIkGoals;
-            m_FootGroundingCount = program.FootGroundingCount;
+            m_FootPlacementCount = program.FootPlacementCount;
             m_LinkedPoseCalls = program.LinkedPoseCalls;
             m_LinkedPoseCandidates = program.LinkedPoseCandidates;
             m_LinkedPoseCallControls = program.LinkedPoseCallControls;
@@ -2175,7 +2175,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             int output = operation.OutputFullBodyIkGoalSetValueIndex;
             bool descriptorValid = operation.Code == CharacterPoseOperationCode.FootPlacement &&
-                                   (uint)operation.FootGroundingIndex < (uint)m_FootGroundingCount;
+                                   (uint)operation.FootPlacementIndex < (uint)m_FootPlacementCount;
             if (!descriptorValid || (uint)output >= (uint)m_FullBodyIkGoalSets.Length)
             {
                 return false;
@@ -2383,7 +2383,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return AnimationPoseNativeInvalidReason.WorldContextUnavailable;
             }
             return operation.Code == CharacterPoseOperationCode.FootPlacement
-                ? AnimationPoseNativeInvalidReason.FootGroundingInvalid
+                ? AnimationPoseNativeInvalidReason.FootPlacementInvalid
                 : operation.Code == CharacterPoseOperationCode.PoseBoneIKGoals ||
                   operation.Code == CharacterPoseOperationCode.EmptyFullBodyIkGoals ||
                   operation.Code == CharacterPoseOperationCode.LinkedPoseCall &&
@@ -3864,23 +3864,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static bool IsValidRootLocalFootRoute(AnimationPredictedFootStepSample value)
         {
-            if (value.RootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.RootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.AuthoredFootPlanarRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.AnimationClearanceHeights.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+            if (value.Route.RootLocalFoot.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.Route.RootLocalAnkle.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.Route.RootLocalHip.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.Route.AuthoredFootPlanar.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.Route.AnimationClearance.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
                 !IsWeight(value.LandingPhase) ||
                 !IsFinite(value.OpposingRootLocalSoleRotation) ||
                 Quaternion.Dot(value.OpposingRootLocalSoleRotation, value.OpposingRootLocalSoleRotation) <= 0.000001f)
                 return false;
-            for (int i = 0; i < value.RootLocalFootRoute.Length; i++)
+            for (int i = 0; i < value.Route.RootLocalFoot.Length; i++)
             {
-                if (!IsFinite(value.RootLocalFootRoute[i]) ||
-                    !IsFinite(value.RootLocalAnkleRoute[i]) ||
-                    !IsFinite(value.RootLocalHipRoute[i]) ||
-                    !IsFinite(value.AuthoredFootPlanarRoute[i]) ||
-                    !float.IsFinite(value.AnimationClearanceHeights[i]) ||
-                    value.AnimationClearanceHeights[i] < 0f)
+                if (!IsFinite(value.Route.RootLocalFoot[i]) ||
+                    !IsFinite(value.Route.RootLocalAnkle[i]) ||
+                    !IsFinite(value.Route.RootLocalHip[i]) ||
+                    !IsFinite(value.Route.AuthoredFootPlanar[i]) ||
+                    !float.IsFinite(value.Route.AnimationClearance[i]) ||
+                    value.Route.AnimationClearance[i] < 0f)
                     return false;
             }
             return true;
@@ -4096,8 +4096,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         operation.InputValueIndexB == -1 &&
                         operation.OutputFullBodyIkGoalSetValueIndex >= 0 &&
                         operation.FullBodyIkGoalInputCount == 0 &&
-                        operation.FootGroundingIndex >= 0 &&
-                        operation.FootGroundingIndex < program.FootGroundingCount,
+                        operation.FootPlacementIndex >= 0 &&
+                        operation.FootPlacementIndex < program.FootPlacementCount,
                     CharacterPoseOperationCode.FullBodyIK =>
                         inputA && operation.InputValueIndexB == -1 &&
                         operation.OutputFullBodyIkGoalSetValueIndex == -1 &&

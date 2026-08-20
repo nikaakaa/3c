@@ -55,7 +55,9 @@
 
 ## 第 2 步：人跟着当前步伐站起来
 
-状态：未确认
+状态：已取得有效失败样本，待修正后复验
+
+代码已接入 `ResolveStrideHips -> BuildPelvis -> CreatePelvisGoal`，骨盆目标与左右脚目标写入同一 GoalSet，并由唯一 `PelvisPreSolveTranslation` 消费。2026-08-20样本已经恢复正式Gameplay Timeline和647个Accepted Stride，但暴露出骨盆空间错误：旧实现把`rise * progress`整段步伐高度叠加到已经沿Traversal Ramp升降的Pose Root，又在支撑切换时把Component修正按Stride Start高度重基，连续有效步伐的Pelvis Goal单帧最大跳变约0.815米。修正后必须使用`sampledGround - poseRootPosition`作为地面修正，支撑切换只更新同一临界弹簧目标；双脚净空只消费经过最终Goal换代和Position Weight后的实际Sole抬升。
 
 ### 操作
 
@@ -72,8 +74,9 @@
 
 - `StrideState = Accepted` 时，`StrideSupportSide`、`StrideSwingSide`、`StrideStart*`、`StrideEnd*` 和 `StrideProgress` 同一 Completion 内一致。
 - `StrideSlope` 与起止点沿 `GroundPathComponentUp` 的符号一致。
-- `CommittedSpring*` 与`PendingSpringInput*`证明Pending从Committed复制；支撑切换前后必须记录旧/新stride start、重基量、重基后的raw target/output、necessary、closed-form spring output/velocity。
-- `StrideRawPelvisDelta*`、`StrideSpringTarget`、`StrideSpringOutput`、`StridePelvisDelta*` 有唯一总目标与最终 Goal 分解；`springDelta` 不得再次加到 `FinalPelvisGoal*`。
+- `StrideSampledGround*`、`StridePoseRootPosition*`与`StrideRootRelativeGroundTargetAlongUp`必须能重算唯一地面修正；`StrideSoleClearanceLiftAlongUp`只记录最终加权双脚Goal Sole相对原生双脚的额外抬升。
+- `StridePreviousSpringTarget/Output/Velocity`与`StrideSpringInput/Target/Output/Velocity`必须证明支撑切换只更新target，input连续等于上一Committed output，不存在Stride Start重基或necessary delta直通。
+- `StrideRawPelvisDelta*`、`StrideSpringTarget`、`StrideSpringOutput`、`StridePelvisDelta*`有唯一总目标与最终Goal分解；地面修正或净空抬升不得在`SpringOutput`后再次叠加到`FinalPelvisGoal*`。
 - 以CSV中的frequency、deltaSeconds、spring input/velocity重算design闭式公式，必须在浮点容差内等于Pending spring output/velocity；不得出现显式Euler积分或可调damping ratio字段。
 - `PelvisPositionWeight > 0` 时，`FinalPelvisGoal*`、`FinalPhysicalPelvisComponentPosition*` 和 `FinalPhysicalPelvisGoalResidual` 必须来自同一 Completion。
 - 没有完整步伐或 Path rejected 的帧，`PelvisPositionWeight = 0`，不得沿用上一帧骨盆 Goal。
@@ -89,7 +92,7 @@
 - 对账：同一 `CompletionIdentity` 上 `PelvisPositionWeight > 0` 的 105 个帧均有 `FinalIkPelvisAvailable`；`FinalIkInputCompletionIdentity`、`FinalIkOutputCompletionIdentity` 与 `FinalPhysicalWriteCompletionIdentity` 一致，`FinalIkPelvisPositionResidual` 最大为 `0`，`FinalPhysicalPelvisGoalResidual` 最大约 `3.6e-7`。
 - Scene：`Assets/Screenshots/foot-ik-runtime-game-mid.png`、`Assets/Screenshots/foot-ik-runtime-scene-mid.png`。
 - 结论：旧记录不能作为本轮证据；盆骨、FullBodyIK 和 Physical Writer 尚未验收。
-- 最新失败样本：`Temp/FootLandingSamples/foot-landing-20260819-140819-595-bafd5e2d66ad49be9b46c1190172ac65.csv` 共205帧，`maxPelvisStep=1.696/1.717`、`pelvisCuts=37/28`，证明未验收Pelvis输出已经进入FBBIK并造成米级跳变。本轮已把当前阶段恢复为Swing-only输出；修正结果必须重新采样，旧CSV不能作为通过证据。
+- 历史失败样本：`Temp/FootLandingSamples/foot-landing-20260819-140819-595-bafd5e2d66ad49be9b46c1190172ac65.csv`共205帧，`maxPelvisStep=1.696/1.717`、`pelvisCuts=37/28`。当前Pelvis接线已替代当时的Swing-only状态，该CSV只保留作回归基线。
 
 ## 第 3 步：Ground Envelope 越过踢面
 

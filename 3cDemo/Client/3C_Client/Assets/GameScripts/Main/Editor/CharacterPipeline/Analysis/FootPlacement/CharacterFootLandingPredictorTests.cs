@@ -77,22 +77,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 in settings,
                 world,
                 out CharacterFootPlacementQueryRequest query,
-                out CharacterFootLandingSupport support);
+                out CharacterFootLandingSupport support,
+                out CharacterFootLandingQueryRejectReason queryRejectReason);
 
             Assert.That(accepted, Is.False);
             Assert.That(query.Purpose, Is.EqualTo(CharacterFootPlacementQueryPurpose.FutureLanding));
             Assert.That(support.SurfaceIdentity, Is.EqualTo(0));
+            Assert.That(queryRejectReason, Is.EqualTo(CharacterFootLandingQueryRejectReason.NoHit));
         }
 
         sealed class MissingWorldQuery : ICharacterFootLandingWorldQuery
         {
-            public bool TryQuery(
-                in CharacterFootPlacementQueryRequest request,
-                out CharacterFootLandingSupport support)
-            {
-                support = default;
-                return false;
-            }
+            public CharacterFootLandingQueryResult Query(
+                in CharacterFootPlacementQueryRequest request) =>
+                new CharacterFootLandingQueryResult(
+                    CharacterFootLandingQueryRejectReason.NoHit,
+                    default);
         }
     }
 }

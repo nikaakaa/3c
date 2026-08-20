@@ -6,29 +6,29 @@
 ## Requirements
 ### Requirement: Pose Graph必须唯一表达完整表现拓扑
 
-`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`ProgramParameterInput -> PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> FootPlacement -> LegIK -> ComponentToLocalPose -> OutputPose`。图 MAY包含`SelectedPosePlayer`、`BlendStack`、`Inertialization`、`BlendPose`、`LayeredBoneBlend`、`AdditivePose`、`PoseParameterResolve`、`ModifyBone`、`PoseSubgraph`、`BlendSpacePlayer`、`SequencePlayer`、`ActionPlaybackInput`、`GraphInput`、`GraphOutput`、`TwoBoneIK`、`FootPlacement`、`LegIK`与两个显式空间转换节点。Runtime MUST不在图外补建基础动画、Player、StateMachine、Slot、Blend、IK、FootPlacement、LegIK、空间转换或第二Output路径；Pose Graph MUST不保存旧AnimationSelectionInput、MotionMatchingSelectionInput或MarkerSync节点。
+`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`ProgramParameterInput -> PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> Goal Sources -> FullBodyIK -> ComponentToLocalPose -> OutputPose`。FootPlacement与PoseBoneIKGoals MUST从同一Component Pose扇出typed Goal Set，唯一FullBodyIK MUST消费原始Component Pose与全部不重叠Goal Set。Runtime MUST不在图外补建Player、StateMachine、Slot、Blend、IK、FootPlacement、空间转换或第二Output路径。
 
 #### Scenario: 检查Corin正式表现链
 
 - **WHEN** 作者打开Corin Pose Graph
-- **THEN** 图 MUST能沿typed edge追踪PoseState基础Pose、Action Slot、Local/Component转换、FootPlacement目标、LegIK结果和最终输出
-- **AND** MUST不显示BaseLocomotion Gameplay AnimationChannel、图外FootPlacement Pass或隐藏LegIK
+- **THEN** 图 MUST能沿typed edge追踪PoseState基础Pose、Action Slot、Local/Component转换、FootPlacement Goals、唯一FullBodyIK和最终输出
+- **AND** MUST不显示图外Foot Placement、LegIK、TwoBoneIK或第二FullBodyIK
 
 ### Requirement: Pose端口必须显式区分空间并允许typed控制目标
 
-Pose Graph MUST使用`pose.local`与`pose.component`两种稳定Pose端口类型，并使用`component.biped-leg-targets`表达同帧Component空间双腿目标。Sequence、Blend、StateMachine、Slot、Inertialization、Layered、Additive与Root Orientation操作 MUST在Local Pose工作；ModifyBone、TwoBoneIK、FootPlacement与LegIK MUST位于Component Pose段。FootPlacement MUST输出Component Pose与typed targets；LegIK MUST同时消费二者。Local与Component Pose只能通过显式转换节点转换；targets不得通过Pose转换、隐式cast或Skeleton可写IK骨伪装。OutputPose MUST只接收Local Pose。
+Pose Graph MUST使用`pose.local`、`pose.component`与`component.full-body-ik-goals`三种稳定端口类型。FootPlacement与PoseBoneIKGoals只读Component Pose并输出Goal Set；FullBodyIK接收一个Component Pose和稳定动态Goal输入集合，并输出Component Pose。Local与Component Pose只能通过显式转换节点转换；Goal Set不得通过Pose转换、隐式cast或Skeleton可写IK骨伪装。OutputPose MUST只接收Local Pose。
 
-#### Scenario: 作者只连接FootPlacement Pose输出
+#### Scenario: Foot Placement未连接FullBodyIK
 
-- **WHEN** FootPlacement Component Pose继续到Output路径但targets没有连接LegIK
-- **THEN** Canvas连接诊断与Validator MUST显示未完成的Foot Placement链
-- **AND** Compiler MUST拒绝生成隐藏LegIK
+- **WHEN** FootPlacement Goal Set没有连接唯一FullBodyIK
+- **THEN** Canvas连接诊断、Validator与Compiler MUST拒绝该图
+- **AND** Runtime MUST不隐藏补建IK
 
-#### Scenario: FootPlacement连接LegIK
+#### Scenario: Foot与Hand Goals连接
 
-- **WHEN** 作者把同一FootPlacement的Component Pose与targets连接到LegIK
-- **THEN** Compiler MUST保留连续Component Pose段并生成world-aware到pure pose依赖
-- **AND** MUST不插入额外Local/Component转换
+- **WHEN** FootPlacement与PoseBoneIKGoals读取同一Component Pose并连接FullBodyIK
+- **THEN** Compiler MUST保留两个typed Goal Set并汇聚到唯一FullBodyIK
+- **AND** MUST拒绝重复effector slot
 
 #### Scenario: 作者把Sequence直接连接FootPlacement
 
@@ -36,33 +36,27 @@ Pose Graph MUST使用`pose.local`与`pose.component`两种稳定Pose端口类型
 - **THEN** Graph Canvas与Validator MUST拒绝该edge
 - **AND** MUST要求作者显式插入LocalToComponentPose
 
-#### Scenario: 多个骨骼控制共享一次空间转换
+#### Scenario: Component控制与Goal链共享一次空间转换
 
-- **WHEN** 作者在LocalToComponentPose与ComponentToLocalPose之间连接ModifyBone、TwoBoneIK和FootPlacement
+- **WHEN** 作者在LocalToComponentPose与ComponentToLocalPose之间连接ModifyBone、Goal Sources和FullBodyIK
 - **THEN** Compiler MUST保留一个连续Component Pose段
 - **AND** MUST不为每个控制节点隐藏插入额外转换
 
 ### Requirement: Pose Plan必须按拓扑编译为有序执行阶段
 
-Projection Compiler MUST按typed依赖、Pose空间与execution domain将同一Pose DAG编译为有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwarePose`与`FinalPublication`stage。FootPlacement MUST生成WorldAwarePose stage并发布Component Pose与targets completion；其后LegIK MUST生成PurePose stage并同时消费两项输出。一个world-aware stage完成后 MUST允许后续PurePose或另一个world-aware stage继续消费其输出。stage table MUST只属于generated plan，不得写入authoring Graph。每个source每帧 MUST最多capture一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由final writer写一次。
+Projection Compiler MUST按typed依赖、Pose空间与execution domain将同一Pose DAG编译为有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`stage。FootPlacement完成Goal后才能调度唯一FullBodyIK；Value stage不得持有Pose输出或write set。stage table MUST只属于generated plan，不得写入authoring Graph。每个source每帧 MUST最多capture一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由final writer写一次。
 
-#### Scenario: FootPlacement后执行LegIK与ModifyBone
+#### Scenario: Foot Placement后执行FullBodyIK
 
-- **WHEN** 合法Component Pose图把LegIK和ModifyBone依次连接在FootPlacement之后
-- **THEN** Compiler MUST生成FootPlacement world-aware、LegIK pure pose和后续ModifyBone stage
-- **AND** 后续节点 MUST消费真实已求解Pose而不是FootPlacement输入副本
+- **WHEN** FootPlacement与其它Goal Source完成同帧Goal
+- **THEN** Compiler MUST在其后生成唯一FullBodyIK pure pose stage
+- **AND** 后续节点 MUST消费FBBIK输出而不是输入Pose副本
 
-#### Scenario: LegIK targets失效
+#### Scenario: Goal lineage失效
 
-- **WHEN** targets Frame、Completion或Rig identity与LegIK Pose输入不匹配
-- **THEN** executor MUST阻止LegIK、后续stage和FinalPublication
+- **WHEN** Goal Set的Frame、Completion或Rig identity与FullBodyIK Pose输入不匹配
+- **THEN** executor MUST阻止FullBodyIK、后续stage和FinalPublication
 - **AND** 已跨过Animancer Evaluate Barrier的Animation Presentation Runtime MUST进入Faulted
-
-#### Scenario: FootPlacement之后继续ModifyBone
-
-- **WHEN** 合法Component Pose图把ModifyBone连接在FootPlacement之后
-- **THEN** Compiler MUST生成world-aware stage后的后续PurePose stage
-- **AND** ModifyBone MUST消费FootPlacement实际输出而不是其输入副本
 
 #### Scenario: World-aware阶段失败
 
@@ -199,9 +193,9 @@ Pose Graph MUST声明稳定ParameterId、类型、默认值与允许来源。`Pr
 - **THEN** Compiler MUST校验ParameterId、类型和page layout
 - **AND** Runtime MUST不读取Gameplay对象
 
-### Requirement: Rig、Mask和Pose运输必须使用Rig v3
+### Requirement: Rig、Mask和Pose运输必须使用Rig v4
 
-Rig v3 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式声明Pelvis与左右`Hip -> Knee -> Ankle -> Toe`Physical Bone chain。所有source capture、Pose workspace、空间转换、Mask、Blend Profile、composition和IK MUST按PoseBoneCount运输；Animator binding与final writer MUST只读写PhysicalBoneCount。Virtual Bone MUST由已采样Physical Pose按编译依赖顺序派生，不得绑定Transform或直接写Animator。Bone Mask、Additive、ModifyBone、TwoBoneIK和FootPlacement引用 MUST匹配同一RigId与revision，未知BoneId、跨Rig引用、重复写冲突、非法腿链或非法Virtual依赖 MUST使Build失败。
+Rig v4 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式声明Solver Root、Pelvis、Spine、Arm与Leg chain。所有source capture、Pose workspace、空间转换、Mask、Blend Profile、composition和IK MUST按PoseBoneCount运输；Animator binding与final writer MUST只读写PhysicalBoneCount。Virtual Bone MUST由已采样Physical Pose按编译依赖顺序派生，不得绑定Transform或直接写Animator。未知BoneId、跨Rig引用、重复写冲突、非法FBBIK chain或非法Virtual依赖 MUST使Build失败。
 
 #### Scenario: source capture包含Virtual Bone
 
@@ -215,27 +209,27 @@ Rig v3 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式
 - **THEN** Projection Build MUST失败
 - **AND** Runtime MUST不补默认权重
 
-#### Scenario: FootPlacement腿链来自旧Prefab组件
+#### Scenario: FBBIK binding来自旧Prefab组件
 
-- **WHEN** Runtime Prefab仍保存第二份Foot Placement hip、knee、ankle或toe引用
+- **WHEN** Runtime Prefab仍依赖FinalIK BipedReferences或第二份骨骼映射
 - **THEN** Definition validation MUST失败
-- **AND** MUST不从该组件或Transform名称迁回Rig v3
+- **AND** MUST不从该组件或Transform名称迁回Rig v4
 
-### Requirement: TwoBoneIK与LegIK必须使用明确且不同的目标合同
+### Requirement: Goal Sources与FullBodyIK必须使用统一typed目标合同
 
-`TwoBoneIK` MUST接收并输出Component Pose，显式引用Physical end bone、Pose catalog中的effector reference与joint target reference、local offset和end rotation policy。Compiler MUST从Rig v3解析唯一Physical chain并验证reference依赖；Runtime MUST只修改该Physical chain。`LegIK` MUST接收FootPlacement Component Pose与`component.biped-leg-targets`，从Rig v3解析左右Physical腿链，并把BendPlaneNormal转换为KneeDirection后执行保持骨长的双腿求解。TwoBoneIK的joint target direction与LegIK的bend plane normal MUST使用不同字段、ABI与diagnostic名称，不得共用含糊`BendDirection`。Virtual Bone对两者只读，并在Physical写入后按依赖重算。
+FootPlacement MUST通过单次Frame事务输出Pelvis与双脚Goal；PoseBoneIKGoals MUST输出其它effector Goal。FullBodyIK MUST消费原始Component Pose与全部不重叠Goal Set，并通过项目Pose Buffer backend调用唯一FinalIK FBBIK，只修改Rig v4 Physical biped。系统 MUST不保留Predictive Modifier ABI、Grounding覆盖协议、LegIK、TwoBoneIK或第二腿目标ABI。
 
-#### Scenario: 手臂IK使用Virtual effector
+#### Scenario: 同帧Goal完成
 
-- **WHEN** TwoBoneIK的effector引用Virtual Bone
-- **THEN** Solver MUST读取其派生Component Pose作为目标
-- **AND** MUST只写肩肘腕Physical chain
+- **WHEN** Foot与Hand Goal具有相同Frame、Completion和Rig
+- **THEN** 唯一FBBIK MUST一次验证并求解全部有效目标
+- **AND** MUST拒绝重复effector slot
 
-#### Scenario: LegIK消费FootPlacement目标
+#### Scenario: Foot Placement Goal权重为零
 
-- **WHEN** LegIK收到同call-site合法Component Pose与双腿targets
-- **THEN** Solver MUST只写Rig v3左右Hip、Knee、Ankle链及其依赖
-- **AND** MUST不query world、重新应用pelvis或读取第二Weight
+- **WHEN** FootPlacement发布三个合法零权重Goal
+- **THEN** FullBodyIK MUST验证Goal lineage后跳过FBBIK Update
+- **AND** 输出Pose MUST保持输入Pose不变
 
 #### Scenario: Preview缺少world context
 
@@ -262,23 +256,23 @@ Rig v3 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式
 
 ### Requirement: Pose Watch必须只观察已完成Pose与typed目标Value
 
-Editor MUST允许按稳定PoseNodeId与call-site订阅Pose Watch，并允许FootPlacement targets使用只读Target Watch。Watch selection、颜色、显隐和面板状态 MUST只属于editor view-state。Preview或Runtime diagnostics MUST从同一帧已完成workspace复制固定容量的目标Pose、Pose空间、targets与contribution，不得重新执行节点、第二次采样source、修改Player/transition/history或改变FinalAnimationPoseFrame。FootPlacement MUST在pelvis Pose与targets同时完成后发布completion；LegIK MUST在双腿求解完成后发布可观察Pose。
+Editor MUST允许按稳定PoseNodeId与call-site订阅Pose Watch，并允许Goal Set使用只读Target Watch。Watch selection、颜色、显隐和面板状态 MUST只属于editor view-state。Preview或Runtime diagnostics MUST从同一帧已完成workspace复制固定容量的Goal、Pose与contribution，不得重新执行节点、第二次采样source、修改Player/transition/history或改变FinalAnimationPoseFrame。
 
-#### Scenario: 同时观察FootPlacement和LegIK
+#### Scenario: 同时观察FootPlacement和FullBodyIK
 
-- **WHEN** FootPlacement与LegIK都启用Watch
-- **THEN** FootPlacement Watch MUST显示应用pelvis后的Pose与左右目标，LegIK Watch MUST显示最终双腿Pose
-- **AND** 两者 MUST共享同一Frame与FootPlacement Completion lineage
+- **WHEN** FootPlacement Goal与FullBodyIK Pose都启用Watch
+- **THEN** 两者 MUST共享同一Frame、Completion和Rig lineage
+- **AND** Watch MUST不重新执行world query或FBBIK
 
 #### Scenario: 同时观察State Player和FootPlacement
 
 - **WHEN** 两个节点都启用Pose Watch
-- **THEN** diagnostics MUST从同一frame lineage发布Local State Player Pose、应用pelvis后的FootPlacement Pose与LegIK已求解Pose
+- **THEN** diagnostics MUST从同一frame lineage发布Local State Player Pose、FootPlacement Goal与FullBodyIK输出Pose
 - **AND** MUST不额外Evaluate PlayableGraph或读取Transform反推结果
 
 ### Requirement: Preview、Runtime与Live Debug必须复用同一固定Pose Plan
 
-Projection Compiler MUST把Pose Graph降低为固定Fact/parameter、source demand/capture、空间化PurePose、world-aware Pose与final publication stage table。每帧每个source、Player、transition、Slot、composition、转换、IK、world-aware control和writer MUST只执行一次正式计划，所有source合计只进行一次正式PlayableGraph Evaluate。Action Timeline Preview、Pose Graph Fact Preview、MM Query Fixture、Live Debug与正式Runtime MUST使用同一Projection revision、Routing Plan、stage table、source backend和completion语义；精确Host world context完整时Preview MUST执行FootPlacement真实stage，不完整时 MUST报告typed Unavailable。Graph mutation或Stale Projection时Preview MUST停止并等待显式Build。
+Projection Compiler MUST把Pose Graph降低为固定Fact/parameter、source demand/capture、空间化PurePose、world-aware value、FullBodyIK与final publication stage table。每帧每个source、Player、transition、Slot、composition、转换、Goal Source、FBBIK和writer MUST只执行一次正式计划，所有source合计只进行一次正式PlayableGraph Evaluate。Preview、Live Debug与正式Runtime MUST使用同一Projection revision、stage table、world-query backend、FinalIK Pose Buffer backend和completion语义；精确Host world context不完整时 MUST报告typed Unavailable。Graph mutation或Stale Projection时Preview MUST停止并等待显式Build。
 
 #### Scenario: Graph修改后继续Preview
 

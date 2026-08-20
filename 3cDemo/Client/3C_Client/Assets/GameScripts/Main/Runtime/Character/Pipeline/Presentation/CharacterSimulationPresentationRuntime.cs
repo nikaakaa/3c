@@ -67,7 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Animation = animation ?? throw new ArgumentNullException(nameof(animation));
             m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             m_LinkedPose = new CharacterEquipmentLinkedPoseRuntime(actorId, projection);
-            bool requiresFootPlacement = projection.PosePlan.FootGroundings.Count == 1;
+            bool requiresFootPlacement = projection.PosePlan.FootPlacements.Count == 1;
             if (requiresFootPlacement != (footPlacement != null))
                 throw new InvalidOperationException("Foot Placement runtime must match the compiled Pose Graph node exactly.");
             m_FootPlacement = footPlacement;

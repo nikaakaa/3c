@@ -1,10 +1,12 @@
 # Tasks
 
+> `LocomotionPhase`、direct Clip、Phase source endpoint与旧Marker删除只由`replace-animation-sequence-with-clip-authoring`的第7、9、10、14组任务实施；本change不保留重复任务或第二迁移路径。
+
 ## 1. 统一实施基线与依赖
 
 - [x] 1.1 记录最终Pose Graph节点、端口和阶段枚举的安装版本。
 - [x] 1.2 记录AnimationSelectionFrame、source identity和generation的最终合同。
-- [x] 1.3 记录MarkerSync输入输出和PlayerSourceUsage的最终合同。
+- [x] 1.3 记录PoseState source phase endpoint和PlayerSourceUsage的最终合同。
 - [x] 1.4 记录SelectedPosePlayer、BlendStack和Inertialization的最终职责边界。
 - [x] 1.5 记录CharacterAnimationPresentationProfile的正式producer binding入口。
 - [x] 1.6 记录Projection schema、ContractHash和revision发布入口。
@@ -23,7 +25,6 @@
 - [x] 2.5 新增`CharacterAnimationBlendSpaceMode`有限枚举。
 - [x] 2.6 只登记`Linear1D`、`FreeformCartesian2D`和`FreeformDirectional2D`。
 - [x] 2.7 新增`CharacterAnimationBlendSpacePhasePolicy`有限枚举。
-- [x] 2.8 只登记`SharedNormalizedPhase`与`MarkerSynchronizedPhase`。
 - [x] 2.9 新增`CharacterAnimationBlendSpaceSampleRole`有限枚举。
 - [x] 2.10 只登记`DynamicCycle`与`StationaryPose`。
 - [x] 2.11 新增source-local Pose Parameter解析策略枚举。
@@ -45,7 +46,7 @@
 - [x] 3.12 让Sample保存DynamicCycle或StationaryPose角色。
 - [x] 3.13 让StationaryPose保存显式固定normalized sample time。
 - [x] 3.14 让DynamicCycle保存phase binding。
-- [x] 3.15 让Marker模式保存唯一Phase Reference SampleId。
+- [x] 3.15 让需要统一source clock的phase策略保存唯一Phase Reference SampleId。
 - [x] 3.16 新增每ParameterId的显式source-local解析policy记录。
 - [x] 3.17 新增只属于Editor authoring的Preview设置记录。
 - [x] 3.18 确保资产不序列化Runtime weight、time、Playable、Animator或Transform状态。
@@ -58,12 +59,12 @@
 - [x] 4.4 实现轴ParameterId与range更新。
 - [x] 4.5 实现Sample创建并生成新SampleId。
 - [x] 4.6 实现Sample复制并生成不同SampleId。
-- [x] 4.7 实现Sample删除，并在删除Marker Phase Reference前要求作者先显式更换reference或phase policy。
+- [x] 4.7 实现Sample删除，并在删除Phase Reference前要求作者先显式更换reference或phase policy。
 - [x] 4.8 实现Sample位置更新。
 - [x] 4.9 实现Sample clip更新并刷新clip content identity。
 - [x] 4.10 实现Sample role与stationary time更新。
 - [x] 4.11 实现phase policy与reference sample更新。
-- [x] 4.12 实现marker phase binding更新。
+- [x] 4.12 实现phase policy与Phase Reference更新。
 - [x] 4.13 实现Pose Parameter policy完整替换。
 - [x] 4.14 让全部mutation进入Undo、dirty和content revision递增。
 - [x] 4.15 禁止Inspector直接修改serialized list形成第二套mutation逻辑。
@@ -84,9 +85,8 @@
 - [x] 5.12 校验Directional零向量样本唯一。
 - [x] 5.13 校验Directional同方向同半径样本不重复。
 - [x] 5.14 校验StationaryPose固定时间位于合法normalized范围。
-- [x] 5.15 校验Marker模式Phase Reference存在且为DynamicCycle。
-- [x] 5.16 校验全部DynamicCycle拥有统一MarkerId循环拓扑。
-- [x] 5.17 校验SharedNormalized模式不残留Marker reference权威字段。
+- [x] 5.15 校验需要Reference的phase策略具有合法DynamicCycle Reference。
+- [x] 5.17 校验SharedNormalized模式不残留Phase Reference权威字段。
 - [x] 5.18 校验全部可发布Pose Parameter拥有显式policy。
 - [x] 5.19 输出带AssetId、SampleId和ParameterId的机器可读诊断。
 
@@ -117,16 +117,12 @@
 - [x] 7.2 定义per-sample effective time输出page。
 - [x] 7.3 编译SharedNormalizedPhase的clip length和loop映射。
 - [x] 7.4 编译StationaryPose固定sample time。
-- [x] 7.5 编译MarkerSynchronizedPhase的reference sample。
-- [x] 7.6 编译统一MarkerId dense index。
-- [x] 7.7 编译每个DynamicCycle的marker时间表。
-- [x] 7.8 把reference sample raw/effective time解析为canonical segment和fraction。
-- [x] 7.9 把canonical segment和fraction映射到每个child sample time。
+
+
+
 - [x] 7.10 让StationaryPose跳过cycle映射并保持固定sample time。
-- [x] 7.11 保留Selection cycle、loop和play rate的正式语义。
-- [x] 7.12 定义外部MarkerSync effective phase进入BlendSpacePlayer的合同。
+- [x] 7.11 保留source raw clock、loop和play rate的正式语义。
 - [x] 7.13 禁止根据每帧最大weight动态更换phase reference。
-- [x] 7.14 禁止Marker模式缺失数据时改走SharedNormalizedPhase。
 
 ## 8. 扩展表现资源binding与Projection源模型
 
@@ -169,7 +165,6 @@
 - [x] 10.7 校验可达BlendSpace资产轴接口一致。
 - [x] 10.8 校验可达BlendSpace资产Rig一致。
 - [x] 10.9 校验节点输出只能进入合法Pose/Discontinuity consumer。
-- [x] 10.10 校验MarkerSync与BlendSpacePlayer的一对一source usage关系。
 - [x] 10.11 禁止Graph compiler自动插入BlendStack或Inertialization。
 - [x] 10.12 输出带NodeId、producer identity、AssetId和ParameterId的诊断。
 
@@ -203,7 +198,7 @@
 - [x] 12.7 保持source pose capture由现有Playable链完成。
 - [x] 12.8 在sample退出正权重集合时按正式source资源规则释放或停用child。
 - [x] 12.9 禁止Animancer重新计算BlendSpace weight。
-- [x] 12.10 禁止Animancer选择phase leader或执行Marker映射。
+- [x] 12.10 禁止Animancer读取Phase Curve、选择phase leader或执行source relation。
 - [x] 12.11 禁止直接使用MixerState内部Parameter作为Runtime权威。
 - [x] 12.12 禁止为Preview创建第二套临时PlayableGraph。
 
@@ -228,12 +223,8 @@
 - [x] 13.17 参数缺失时按节点availability合同输出NoPose或失败。
 - [x] 13.18 数值失败时发布诊断并禁止复用上一帧weight/time。
 
-## 14. 接入MarkerSync与连续性节点
+## 14. 保持连续性节点职责
 
-- [x] 14.1 扩展MarkerSync source schema识别BlendSpace canonical marker topology。
-- [x] 14.2 让MarkerSync只输出BlendSpace source级effective phase。
-- [x] 14.3 让BlendSpacePlayer内部映射child sample time。
-- [x] 14.4 保持MarkerSync不读取sample weight。
 - [x] 14.5 保持BlendSpacePlayer不拥有跨source handoff relation。
 - [x] 14.6 让source变化发布discontinuity给下游Inertialization。
 - [x] 14.7 保持Inertialization只读取最终单Pose history。
@@ -296,7 +287,7 @@
 - [x] 18.3 在Authoring页编辑Sample clip、position和role。
 - [x] 18.4 在Authoring页编辑StationaryPose固定time。
 - [x] 18.5 在Authoring页编辑Phase Reference。
-- [x] 18.6 在Authoring页编辑sample marker binding。
+
 - [x] 18.7 在Authoring页展示Foot Analysis artifact状态。
 - [x] 18.8 在Authoring页编辑Pose Parameter policy表。
 - [x] 18.9 在Live页显示runtime parameter、weight、phase和effective time。
@@ -358,7 +349,6 @@
 - [x] 22.1 盘点Corin BaseLocomotion全部可达AnimationChannel和producer identity。
 - [x] 22.2 确认现有素材只覆盖离散Idle、起步、循环、停步与转身，不具备正式八向样本集合。
 - [x] 22.3 为Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd与MovingTurn分别配置Timeline source。
-- [x] 22.4 让Corin BaseLocomotion保持`Selection -> MarkerSync -> SelectedPosePlayer -> Inertialization`。
 - [x] 22.5 保持FullBodyAction BlendStack分支不承担BlendSpace参数插值。
 - [x] 22.6 删除Corin临时Locomotion BlendSpace资产。
 - [x] 22.7 删除Corin主图临时BlendSpacePlayer与速度轴输入节点。
@@ -384,7 +374,6 @@
 - [x] 23.4 删除任何Animancer MixerState Parameter权威读取路径。
 - [x] 23.5 删除任何Runtime ScriptableObject或AssetDatabase查找。
 - [x] 23.6 删除任何按clip名或producer显示名匹配sample的路径。
-- [x] 23.7 删除任何Marker到Normalized的自动fallback。
 - [x] 23.8 删除任何数值失败时选择最近样本的fallback。
 - [x] 23.9 删除任何旧Workbench Blend Space窗口或菜单。
 - [x] 23.10 删除任何Agent Patch/MCP Presentation写入口草稿。

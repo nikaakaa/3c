@@ -295,8 +295,6 @@ namespace ThirdPersonCharacter.Pipeline
                 desiredDirection,
                 new Vector2(bodyFrame.TargetVelocity.x, bodyFrame.TargetVelocity.z),
                 desiredDirection,
-                0f,
-                false,
                 facingError,
                 motionPhase,
                 CharacterPresentationTrajectoryIntent.StationaryMovementModeId,

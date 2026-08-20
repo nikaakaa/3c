@@ -60,29 +60,29 @@
 
 ## 4. 当前步伐与主辅支撑仲裁
 
-- [ ] 4.1 实现支撑资格：Fact Grounded、权威Step非Swing、有效LastLanding且该脚未被有限Action占用。
-- [ ] 4.2 实现摆动资格：权威Step为Swing、NextSwingLanding与Selected Query Event/revision一致且未被Action占用。
-- [ ] 4.3 两脚同时满足摆动合同且都有增量时只保留垂直包络增量较大的一脚。
-- [ ] 4.4 双Swing未选中的脚只有拥有合法支撑资格时才进入支撑合同，否则发布原生事实和零权重。
-- [ ] 4.5 处理无LastLanding、Event/revision不一致、无唯一摆动脚与退化步伐的typed拒绝原因。
-- [ ] 4.6 支撑切换只由Accepted事件晋级或权威Step身份交换触发，不比较Sole前后位置。
+- [x] 4.1 实现普通支撑资格：Fact Grounded、权威Step非Swing、有效LastLanding且该脚未被有限Action占用。
+- [x] 4.2 实现摆动资格：Selected Query的权威Step为Swing、NextSwingLanding与Selected Query Event/revision一致且未被Action占用；单一Swing的步伐资格不依赖包络垂直增量。
+- [x] 4.3 两脚同时满足摆动合同且都有增量时只保留垂直包络增量较大的一脚。
+- [x] 4.4 双Swing未选中的脚只有自身也是完整摆动候选且拥有有效LastLanding时才进入支撑合同，否则发布原生事实和零权重。
+- [x] 4.5 处理无LastLanding、Event/revision不一致、无唯一摆动脚与退化步伐的typed拒绝原因。
+- [x] 4.6 支撑切换只由LastLanding Event identity变化或权威Step身份交换触发，不比较Sole前后位置或端点距离。
 - [ ] 4.7 `StrideSwitchCooldownSeconds`只延迟两个仍合法候选；旧支撑变Swing、失去LastLanding、离地或被Action占用时立即失效。
 - [ ] 4.8 GroundedStationary不发布步伐骨盆或Swing Envelope，并分别计算主脚与辅脚锁脚状态。
 - [ ] 4.9 Pivot主脚保持Locked Goal，辅脚按自身误差重新进入Locked、Sliding或Unlocked。
 
 ## 5. 步伐骨盆与临界弹簧
 
-- [ ] 5.1 实现步伐水平轴、Pose Root投影与`strideProgress`纯计算Builder。
-- [ ] 5.2 按起点到终点的Component Up高差确定Flat、Ascending、Descending。
-- [ ] 5.3 实现上坡落地后抬升和下坡支撑仍接触时下降的有符号`rawPelvisTargetAlongUp`。
-- [ ] 5.4 每帧计算前把Committed spring的旧起点、raw target、output、velocity与SupportSide逐字段复制到Pending。
-- [ ] 5.5 按`dot(previousStrideStart - strideStart, ComponentUp)`把旧raw target与旧output重基到新起点坐标系。
-- [ ] 5.6 同支撑连续帧只把新旧raw target差作为necessary delta，支撑切换时necessary delta为零。
-- [ ] 5.7 按design闭式公式实现固定临界阻尼积分，`deltaSeconds = 0`时保持输入和速度。
-- [ ] 5.8 保证`springOutput`是唯一最终骨盆输出，禁止把`springDelta`诊断再次叠加到Goal。
-- [ ] 5.9 使用修正后的双脚Sole与同帧原生动画净空计算骨盆下限，并把不足差值补入总输出。
-- [ ] 5.10 没有完整步伐、Path rejected、空中或Action占用时清零骨盆Goal，不沿用上一帧目标。
-- [ ] 5.11 骨盆只输出`PelvisPreSolveTranslation`，不写VisualRoot、Gameplay Body、KCC或Set Mesh。
+- [x] 5.1 实现步伐水平轴、Pose Root投影与`strideProgress`纯计算Builder。
+- [x] 5.2 按起点到终点的Component Up高差确定Flat、Ascending、Descending。
+- [x] 5.3 实现上坡落地后抬升和下坡支撑仍接触时下降的有符号`rootRelativeGroundTargetAlongUp = dot(sampledGround - poseRootPosition, ComponentUp)`，不重复叠加Gameplay Body已经走过的楼梯高度。
+- [x] 5.4 每帧计算前把Committed spring的target、output、velocity、SupportSide与SupportLandingEventIdentity逐字段复制到Pending。
+- [x] 5.5 删除Stride Start坐标重基；弹簧状态始终表达相对同帧Pose Root的Component Up修正。
+- [x] 5.6 支撑切换、实时换踏面和目标变化都只更新唯一spring target，不把target差作为necessary delta直通最终Goal。
+- [x] 5.7 按design闭式公式实现固定临界阻尼积分，`deltaSeconds = 0`时保持输入和速度。
+- [x] 5.8 保证`springOutput`是唯一最终骨盆输出，地面修正与净空抬升不得在弹簧后再次叠加。
+- [x] 5.9 使用经过最终Goal换代与Position Weight后的双脚Sole计算相对原生双脚的额外抬升，并把该值合入唯一spring target。
+- [x] 5.10 没有完整步伐、Path rejected、空中或Action占用时清零骨盆Goal，不沿用上一帧目标。
+- [x] 5.11 骨盆只输出`PelvisPreSolveTranslation`，不写VisualRoot、Gameplay Body、KCC或Set Mesh。
 
 ## 6. 支撑脚接地、锁入与释放
 
@@ -126,7 +126,7 @@
 - [ ] 8.10 增加Current Visible Position/Rotation、Virtual Body/Revision Position/Rotation/Forward、visible/requested/applied/residual yaw与Pivot主支撑身份诊断。
 - [ ] 8.11 增加每脚ActionInstance、Action脚权重、Fact Grounded与HorizontalSpeed诊断。
 - [ ] 8.12 增加Lock Event、准备起始时间/权重、锁脚状态、水平误差、释放起点修正/权重/剩余时间诊断。
-- [ ] 8.13 增加PreviousStrideStart、重基前后raw target、necessary、spring input/output/velocity与最终Pelvis Goal诊断。
+- [x] 8.13 增加sampled ground、Pose Root、root-relative ground target、weighted Sole clearance lift、previous spring target/output/velocity、spring input/target/output/velocity与最终Pelvis Goal诊断，并删除旧重基与necessary字段。
 - [x] 8.14 增加原始Goal修正、Committed/Pending换代输出、原始/最终权重、半衰期与Source Path identity诊断。
 - [ ] 8.15 Gizmo只显示Committed事实，不重新查询、重算Path/Envelope、推进状态或执行FBBIK；状态只用颜色和线框。
 - [ ] 8.16 CSV增加上述字段以及最终物理Pelvis/Ankle、Goal residual、写入Completion与typed rejection。

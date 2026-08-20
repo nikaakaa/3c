@@ -7,7 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         int Count { get; }
         bool HasGap { get; }
         ulong ResetSequence { get; }
-        AnimationFootPlacementSample LatestFootPlacement { get; }
+        AnimationFootPlacementHistorySample LatestFootPlacement { get; }
         bool CoversSecondsBeforeLatest(float secondsBeforeLatest);
         bool TrySampleBone(
             float secondsBeforeLatest,

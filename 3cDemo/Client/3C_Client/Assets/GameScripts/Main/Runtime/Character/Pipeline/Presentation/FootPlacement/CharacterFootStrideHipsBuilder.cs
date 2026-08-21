@@ -45,62 +45,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         TargetCrossedOutput = 4
     }
 
-    public enum CharacterFootSupportLockState : byte
-    {
-        None = 0,
-        Locked = 1,
-        Sliding = 2,
-        Unlocked = 3,
-        SwingHandoff = 4
-    }
-
-    internal struct CharacterFootSupportLockFacts
-    {
-        internal bool HasValue;
-        internal ulong LandingEventIdentity;
-        internal CharacterFootSupportLockState State;
-        internal Vector3 TargetAnkle;
-        internal float PositionWeight;
-        internal Vector3 UnlockStartCorrection;
-        internal float UnlockStartPositionWeight;
-        internal float UnlockRemainingSeconds;
-        internal Vector3 OutputAnkle;
-        internal Vector3 OutputVelocity;
-        internal ulong SwingHandoffLandingEventIdentity;
-        internal Vector3 SwingHandoffPreviousTargetAnkle;
-        internal Vector3 SwingHandoffStartOffset;
-        internal Vector3 SwingHandoffStartOffsetVelocity;
-        internal float SwingHandoffElapsedSeconds;
-        internal bool SwingHandoffTrajectoryInitialized;
-        internal bool SwingHandoffHasPredictedTarget;
-
-        internal void ClearSupport()
-        {
-            HasValue = false;
-            LandingEventIdentity = 0;
-            State = CharacterFootSupportLockState.None;
-            TargetAnkle = default;
-            PositionWeight = 0f;
-            UnlockStartCorrection = default;
-            UnlockStartPositionWeight = 0f;
-            UnlockRemainingSeconds = 0f;
-            OutputAnkle = default;
-            OutputVelocity = default;
-            SwingHandoffLandingEventIdentity = 0;
-            SwingHandoffPreviousTargetAnkle = default;
-            SwingHandoffStartOffset = default;
-            SwingHandoffStartOffsetVelocity = default;
-            SwingHandoffElapsedSeconds = 0f;
-            SwingHandoffTrajectoryInitialized = false;
-            SwingHandoffHasPredictedTarget = false;
-        }
-
-        internal void Clear()
-        {
-            ClearSupport();
-        }
-    }
-
     internal struct CharacterFootLockPreparationFacts
     {
         internal ulong LandingEventIdentity;
@@ -365,13 +309,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             bool leftRetainable = IsRetainablePrimarySupport(in leftMotion);
             bool rightRetainable = IsRetainablePrimarySupport(in rightMotion);
+            bool leftCandidate = IsAcquirablePrimarySupport(in leftMotion);
+            bool rightCandidate = IsAcquirablePrimarySupport(in rightMotion);
             if (primarySupport.HasValue)
             {
                 bool retained = primarySupport.Side == CharacterFootSide.Left
                     ? leftRetainable &&
-                      leftMotion.LandingEventIdentity == primarySupport.LandingEventIdentity
+                      leftMotion.LandingEventIdentity == primarySupport.LandingEventIdentity &&
+                      (!rightCandidate ||
+                       leftMotion.SupportWeight >= rightMotion.SupportWeight)
                     : rightRetainable &&
-                      rightMotion.LandingEventIdentity == primarySupport.LandingEventIdentity;
+                      rightMotion.LandingEventIdentity == primarySupport.LandingEventIdentity &&
+                      (!leftCandidate ||
+                       rightMotion.SupportWeight >= leftMotion.SupportWeight);
                 if (retained)
                 {
                     primarySupport.Retained = true;
@@ -379,8 +329,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
             }
 
-            bool leftCandidate = IsAcquirablePrimarySupport(in leftMotion);
-            bool rightCandidate = IsAcquirablePrimarySupport(in rightMotion);
             if (!leftCandidate && !rightCandidate)
             {
                 primarySupport.Clear();
@@ -389,6 +337,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             bool selectLeft = leftCandidate &&
                 (!rightCandidate ||
+                 leftMotion.SupportWeight > rightMotion.SupportWeight ||
+                 Mathf.Abs(leftMotion.SupportWeight - rightMotion.SupportWeight) <=
+                 GeometryEpsilon &&
                  leftMotion.SupportHorizontalError <= rightMotion.SupportHorizontalError);
             primarySupport.HasValue = true;
             primarySupport.Side = selectLeft
@@ -444,12 +395,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasPrimarySupport,
             CharacterFootSide primarySupportSide,
             ulong primarySupportLandingEventIdentity,
-            bool hasLeftLastLanding,
-            Vector3 leftLastLanding,
-            ulong leftLastLandingEventIdentity,
-            bool hasRightLastLanding,
-            Vector3 rightLastLanding,
-            ulong rightLastLandingEventIdentity,
+            Vector3 primarySupportContactAnchor,
             bool hasLeftNextSwingLanding,
             Vector3 leftNextSwingLanding,
             ulong leftNextSwingEventIdentity,
@@ -474,7 +420,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (!hasPrimarySupport ||
                 primarySupportLandingEventIdentity == 0 ||
-                primarySupportSide == selectedSwingSide)
+                primarySupportSide == selectedSwingSide ||
+                !Finite(primarySupportContactAnchor))
             {
                 rejectReason = CharacterFootStrideRejectReason.SupportUnavailable;
                 return false;
@@ -491,13 +438,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason = CharacterFootStrideRejectReason.SupportUnavailable;
                     return false;
                 }
-                if (!hasRightLastLanding || rightLastLandingEventIdentity == 0 ||
-                    rightLastLandingEventIdentity != primarySupportLandingEventIdentity ||
-                    !Finite(rightLastLanding))
-                {
-                    rejectReason = CharacterFootStrideRejectReason.MissingSupportLanding;
-                    return false;
-                }
                 if (!hasLeftNextSwingLanding ||
                     leftNextSwingEventIdentity != leftSwingStep.LandingEventIdentity ||
                     !Finite(leftNextSwingLanding))
@@ -510,7 +450,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 supportSide = CharacterFootSide.Right;
                 swingSide = CharacterFootSide.Left;
-                strideStart = rightLastLanding;
+                strideStart = primarySupportContactAnchor;
                 strideEnd = leftNextSwingLanding;
             }
             else
@@ -525,13 +465,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason = CharacterFootStrideRejectReason.SupportUnavailable;
                     return false;
                 }
-                if (!hasLeftLastLanding || leftLastLandingEventIdentity == 0 ||
-                    leftLastLandingEventIdentity != primarySupportLandingEventIdentity ||
-                    !Finite(leftLastLanding))
-                {
-                    rejectReason = CharacterFootStrideRejectReason.MissingSupportLanding;
-                    return false;
-                }
                 if (!hasRightNextSwingLanding ||
                     rightNextSwingEventIdentity != rightSwingStep.LandingEventIdentity ||
                     !Finite(rightNextSwingLanding))
@@ -544,7 +477,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 supportSide = CharacterFootSide.Left;
                 swingSide = CharacterFootSide.Right;
-                strideStart = leftLastLanding;
+                strideStart = primarySupportContactAnchor;
                 strideEnd = rightNextSwingLanding;
             }
             if (!Finite(componentUp) || componentUp.sqrMagnitude <= GeometryEpsilon)
@@ -554,439 +487,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             rejectReason = CharacterFootStrideRejectReason.None;
             return true;
-        }
-
-        internal static CharacterFootSwingMotionDiagnostics BuildStancePlant(
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in AnimationBiomechanicalStepHeader step,
-            float footPlacementWeight,
-            Vector3 componentUp,
-            bool hasLastLanding,
-            Vector3 lastLanding,
-            ulong lastLandingEventIdentity,
-            float preparationStartTimeToLandingSeconds,
-            float preparationWeight,
-            in CharacterFootMotionSettings settings,
-            float deltaSeconds,
-            ref CharacterFootSupportLockFacts lockFacts)
-        {
-            Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
-            Vector3 originalAnkle = animatedFoot.AnklePosition;
-            ulong landingEventIdentity = hasLastLanding ? lastLandingEventIdentity : 0;
-            if (!step.IsValid || !step.IsAuthoritative)
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.StepUnavailable,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            if (!Finite(componentUp) || componentUp.sqrMagnitude <= GeometryEpsilon)
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.InvalidComponentUp,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            if (!float.IsFinite(footPlacementWeight) || footPlacementWeight < 0f || footPlacementWeight > 1f)
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.InvalidWeight,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            if (!hasLastLanding || landingEventIdentity == 0 || !Finite(lastLanding))
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.StanceLandingUnavailable,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            Vector3 up = componentUp.normalized;
-            float plant = Vector3.Dot(lastLanding - originalSole, up);
-            if (!float.IsFinite(plant))
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.StanceLandingUnavailable,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            plant = Mathf.Max(0f, plant);
-            Vector3 horizontalOffset = Vector3.ProjectOnPlane(lastLanding - originalSole, up);
-            float horizontalError = horizontalOffset.magnitude;
-            if (!float.IsFinite(horizontalError))
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.StanceLandingUnavailable,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            bool sameLockEvent = lockFacts.HasValue &&
-                                 lockFacts.LandingEventIdentity == landingEventIdentity;
-            if (sameLockEvent &&
-                lockFacts.State == CharacterFootSupportLockState.Unlocked)
-            {
-                return ContinueSupportUnlock(
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle,
-                    up,
-                    horizontalError,
-                    preparationStartTimeToLandingSeconds,
-                    preparationWeight,
-                    in settings,
-                    deltaSeconds,
-                    false,
-                    ref lockFacts);
-            }
-            if (horizontalError > settings.SlideDistance)
-            {
-                if (!sameLockEvent)
-                {
-                    lockFacts.ClearSupport();
-                    return RejectedPlant(
-                        CharacterFootSwingMotionRejectReason.SupportOutsideSlideDistance,
-                        landingEventIdentity,
-                        originalSole,
-                        originalAnkle);
-                }
-                BeginSupportUnlock(originalAnkle, in settings, ref lockFacts);
-                return ContinueSupportUnlock(
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle,
-                    up,
-                    horizontalError,
-                    preparationStartTimeToLandingSeconds,
-                    preparationWeight,
-                    in settings,
-                    deltaSeconds,
-                    true,
-                    ref lockFacts);
-            }
-
-            CharacterFootSupportLockState previousState = sameLockEvent
-                ? lockFacts.State
-                : CharacterFootSupportLockState.None;
-            CharacterFootSupportLockState lockState = previousState switch
-            {
-                CharacterFootSupportLockState.Locked =>
-                    horizontalError <= settings.LockDistance
-                        ? CharacterFootSupportLockState.Locked
-                        : CharacterFootSupportLockState.Sliding,
-                CharacterFootSupportLockState.Sliding =>
-                    CharacterFootSupportLockState.Sliding,
-                _ => horizontalError <= settings.LockDistance
-                    ? CharacterFootSupportLockState.Locked
-                    : CharacterFootSupportLockState.Sliding
-            };
-            float slideT = lockState == CharacterFootSupportLockState.Locked
-                ? 1f
-                : Mathf.InverseLerp(
-                    settings.SlideDistance,
-                    settings.LockDistance,
-                    horizontalError);
-            Vector3 targetOffset = horizontalOffset * slideT;
-            Vector3 targetAnkle = originalAnkle + targetOffset + up * plant;
-            if (sameLockEvent && previousState == CharacterFootSupportLockState.Locked &&
-                lockState == CharacterFootSupportLockState.Locked)
-            {
-                targetAnkle = lockFacts.TargetAnkle;
-            }
-            else if (sameLockEvent &&
-                     (previousState == CharacterFootSupportLockState.Locked ||
-                      previousState == CharacterFootSupportLockState.Sliding))
-            {
-                float lockedHeight = Vector3.Dot(lockFacts.TargetAnkle, up);
-                targetAnkle += up * (lockedHeight - Vector3.Dot(targetAnkle, up));
-            }
-            Vector3 ankleDelta = targetAnkle - originalAnkle;
-            Vector3 targetSole = originalSole + ankleDelta;
-            float verticalCorrection = Vector3.Dot(ankleDelta, up);
-            float positionWeight = footPlacementWeight;
-            Vector3 outputVelocity = sameLockEvent &&
-                                     deltaSeconds > GeometryEpsilon
-                ? (targetAnkle - lockFacts.OutputAnkle) / deltaSeconds
-                : default;
-            lockFacts.HasValue = true;
-            lockFacts.LandingEventIdentity = landingEventIdentity;
-            lockFacts.State = lockState;
-            lockFacts.TargetAnkle = targetAnkle;
-            lockFacts.PositionWeight = positionWeight;
-            lockFacts.UnlockStartCorrection = default;
-            lockFacts.UnlockStartPositionWeight = 0f;
-            lockFacts.UnlockRemainingSeconds = 0f;
-            lockFacts.OutputAnkle = targetAnkle;
-            lockFacts.OutputVelocity = outputVelocity;
-            lockFacts.SwingHandoffLandingEventIdentity = 0;
-            lockFacts.SwingHandoffPreviousTargetAnkle = default;
-            lockFacts.SwingHandoffStartOffset = default;
-            lockFacts.SwingHandoffStartOffsetVelocity = default;
-            lockFacts.SwingHandoffElapsedSeconds = 0f;
-            lockFacts.SwingHandoffTrajectoryInitialized = false;
-            lockFacts.SwingHandoffHasPredictedTarget = false;
-            return new CharacterFootSwingMotionDiagnostics(
-                CharacterFootSwingMotionState.Accepted,
-                CharacterFootSwingMotionRejectReason.None,
-                landingEventIdentity,
-                0,
-                originalSole,
-                originalAnkle,
-                0f,
-                0f,
-                lastLanding,
-                targetSole,
-                verticalCorrection,
-                0f,
-                1f,
-                targetSole,
-                targetAnkle,
-                positionWeight,
-                0f,
-                lockState,
-                horizontalError,
-                0f,
-                default,
-                preparationStartTimeToLandingSeconds,
-                preparationWeight);
-        }
-
-        internal static CharacterFootSwingMotionDiagnostics BuildSwingHandoff(
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in CharacterFootSwingMotionDiagnostics swingMotion,
-            ulong handoffLandingEventIdentity,
-            Vector3 componentUp,
-            in CharacterFootMotionSettings settings,
-            float deltaSeconds,
-            ref CharacterFootSupportLockFacts lockFacts)
-        {
-            Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
-            Vector3 originalAnkle = animatedFoot.AnklePosition;
-            if (!lockFacts.HasValue || handoffLandingEventIdentity == 0 ||
-                !Finite(componentUp) || componentUp.sqrMagnitude <= GeometryEpsilon ||
-                !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
-            {
-                throw new InvalidOperationException("Foot swing handoff input is invalid.");
-            }
-
-            bool beginning = lockFacts.State != CharacterFootSupportLockState.SwingHandoff;
-            bool hasPredictedTarget = swingMotion.Accepted &&
-                                      swingMotion.LandingEventIdentity ==
-                                      handoffLandingEventIdentity;
-            Vector3 handoffTargetAnkle = hasPredictedTarget
-                ? swingMotion.CorrectedAnkle
-                : originalAnkle;
-            bool handoffChanged = !beginning &&
-                                  lockFacts.SwingHandoffLandingEventIdentity !=
-                                  handoffLandingEventIdentity;
-            bool targetAvailabilityChanged = !beginning &&
-                                             lockFacts.SwingHandoffHasPredictedTarget !=
-                                             hasPredictedTarget;
-            if (beginning || handoffChanged || targetAvailabilityChanged)
-            {
-                lockFacts.State = CharacterFootSupportLockState.SwingHandoff;
-                lockFacts.OutputAnkle = Finite(lockFacts.OutputAnkle)
-                    ? lockFacts.OutputAnkle
-                    : lockFacts.TargetAnkle;
-                lockFacts.OutputVelocity = Finite(lockFacts.OutputVelocity)
-                    ? lockFacts.OutputVelocity
-                    : default;
-                lockFacts.SwingHandoffLandingEventIdentity = handoffLandingEventIdentity;
-                lockFacts.SwingHandoffPreviousTargetAnkle = handoffTargetAnkle;
-                lockFacts.SwingHandoffStartOffset = default;
-                lockFacts.SwingHandoffStartOffsetVelocity = default;
-                lockFacts.SwingHandoffElapsedSeconds = 0f;
-                lockFacts.SwingHandoffTrajectoryInitialized = false;
-                lockFacts.SwingHandoffHasPredictedTarget = hasPredictedTarget;
-                lockFacts.UnlockStartPositionWeight = lockFacts.PositionWeight;
-                lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
-            }
-            else if (deltaSeconds > 0f)
-            {
-                Vector3 targetVelocity =
-                    (handoffTargetAnkle - lockFacts.SwingHandoffPreviousTargetAnkle) /
-                    deltaSeconds;
-                if (!lockFacts.SwingHandoffTrajectoryInitialized)
-                {
-                    lockFacts.SwingHandoffStartOffset =
-                        lockFacts.OutputAnkle - handoffTargetAnkle;
-                    lockFacts.SwingHandoffStartOffsetVelocity =
-                        lockFacts.OutputVelocity - targetVelocity;
-                    lockFacts.SwingHandoffTrajectoryInitialized = true;
-                }
-                lockFacts.SwingHandoffElapsedSeconds = Mathf.Min(
-                    settings.UnlockBlendSeconds,
-                    lockFacts.SwingHandoffElapsedSeconds + deltaSeconds);
-                EvaluateHandoffResidual(
-                    lockFacts.SwingHandoffStartOffset,
-                    lockFacts.SwingHandoffStartOffsetVelocity,
-                    settings.UnlockBlendSeconds,
-                    lockFacts.SwingHandoffElapsedSeconds,
-                    out Vector3 offset,
-                    out Vector3 offsetVelocity);
-                lockFacts.OutputAnkle = handoffTargetAnkle + offset;
-                lockFacts.OutputVelocity = targetVelocity + offsetVelocity;
-                float progress = lockFacts.SwingHandoffElapsedSeconds /
-                                 settings.UnlockBlendSeconds;
-                float weightProgress = progress * progress * (3f - 2f * progress);
-                float targetWeight = hasPredictedTarget
-                    ? swingMotion.PositionWeight
-                    : lockFacts.UnlockStartPositionWeight;
-                lockFacts.PositionWeight = Mathf.Lerp(
-                    lockFacts.UnlockStartPositionWeight,
-                    targetWeight,
-                    weightProgress);
-                lockFacts.UnlockRemainingSeconds = Mathf.Max(
-                    0f,
-                    settings.UnlockBlendSeconds -
-                    lockFacts.SwingHandoffElapsedSeconds);
-                lockFacts.SwingHandoffPreviousTargetAnkle = handoffTargetAnkle;
-            }
-
-            if (!Finite(lockFacts.OutputAnkle) ||
-                !Finite(lockFacts.OutputVelocity) ||
-                !Finite(lockFacts.SwingHandoffPreviousTargetAnkle) ||
-                !Finite(lockFacts.SwingHandoffStartOffset) ||
-                !Finite(lockFacts.SwingHandoffStartOffsetVelocity))
-            {
-                throw new InvalidOperationException("Foot swing handoff state is invalid.");
-            }
-
-            if (lockFacts.UnlockRemainingSeconds <= GeometryEpsilon &&
-                hasPredictedTarget)
-            {
-                lockFacts.ClearSupport();
-                return swingMotion;
-            }
-
-            Vector3 up = componentUp.normalized;
-            Vector3 correction = lockFacts.OutputAnkle - originalAnkle;
-            Vector3 correctedSole = originalSole + correction;
-            float horizontalError = Vector3.ProjectOnPlane(
-                handoffTargetAnkle - lockFacts.OutputAnkle,
-                up).magnitude;
-            return new CharacterFootSwingMotionDiagnostics(
-                CharacterFootSwingMotionState.Accepted,
-                CharacterFootSwingMotionRejectReason.None,
-                lockFacts.SwingHandoffLandingEventIdentity,
-                hasPredictedTarget ? swingMotion.GroundPathInputIdentity : 0,
-                originalSole,
-                originalAnkle,
-                hasPredictedTarget ? swingMotion.Distance : 0f,
-                hasPredictedTarget ? swingMotion.Progress : 0f,
-                hasPredictedTarget ? swingMotion.BaselineSample : default,
-                hasPredictedTarget ? swingMotion.EnvelopeSample : default,
-                Vector3.Dot(correction, up),
-                hasPredictedTarget ? swingMotion.LandingPredictionError : 0f,
-                hasPredictedTarget ? swingMotion.LandingConstraintWeight : 0f,
-                correctedSole,
-                lockFacts.OutputAnkle,
-                lockFacts.PositionWeight,
-                0f,
-                CharacterFootSupportLockState.SwingHandoff,
-                horizontalError,
-                lockFacts.UnlockRemainingSeconds,
-                correction,
-                hasPredictedTarget
-                    ? swingMotion.SupportLockPreparationStartTimeToLandingSeconds
-                    : 0f,
-                hasPredictedTarget ? swingMotion.SupportLockPreparationWeight : 0f);
-        }
-
-        static void EvaluateHandoffResidual(
-            Vector3 startOffset,
-            Vector3 startOffsetVelocity,
-            float duration,
-            float elapsedSeconds,
-            out Vector3 offset,
-            out Vector3 offsetVelocity)
-        {
-            float t = Mathf.Clamp01(elapsedSeconds / duration);
-            float t2 = t * t;
-            float t3 = t2 * t;
-            float h00 = 2f * t3 - 3f * t2 + 1f;
-            float h10 = t3 - 2f * t2 + t;
-            offset = h00 * startOffset +
-                     h10 * duration * startOffsetVelocity;
-            float dh00 = 6f * t2 - 6f * t;
-            float dh10 = 3f * t2 - 4f * t + 1f;
-            offsetVelocity = (dh00 * startOffset +
-                              dh10 * duration * startOffsetVelocity) /
-                             duration;
-        }
-
-        static void BeginSupportUnlock(
-            Vector3 originalAnkle,
-            in CharacterFootMotionSettings settings,
-            ref CharacterFootSupportLockFacts lockFacts)
-        {
-            lockFacts.State = CharacterFootSupportLockState.Unlocked;
-            lockFacts.UnlockStartCorrection = lockFacts.TargetAnkle - originalAnkle;
-            lockFacts.UnlockStartPositionWeight = lockFacts.PositionWeight;
-            lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
-            lockFacts.SwingHandoffLandingEventIdentity = 0;
-            lockFacts.SwingHandoffPreviousTargetAnkle = default;
-            lockFacts.SwingHandoffStartOffset = default;
-            lockFacts.SwingHandoffStartOffsetVelocity = default;
-            lockFacts.SwingHandoffElapsedSeconds = 0f;
-            lockFacts.SwingHandoffTrajectoryInitialized = false;
-            lockFacts.SwingHandoffHasPredictedTarget = false;
-        }
-
-        static CharacterFootSwingMotionDiagnostics ContinueSupportUnlock(
-            ulong landingEventIdentity,
-            Vector3 originalSole,
-            Vector3 originalAnkle,
-            Vector3 up,
-            float horizontalError,
-            float preparationStartTimeToLandingSeconds,
-            float preparationWeight,
-            in CharacterFootMotionSettings settings,
-            float deltaSeconds,
-            bool beganUnlock,
-            ref CharacterFootSupportLockFacts lockFacts)
-        {
-            if (!beganUnlock && deltaSeconds > 0f)
-                lockFacts.UnlockRemainingSeconds = Mathf.Max(
-                    0f,
-                    lockFacts.UnlockRemainingSeconds - deltaSeconds);
-            if (lockFacts.UnlockRemainingSeconds <= GeometryEpsilon)
-            {
-                lockFacts.ClearSupport();
-                return RejectedPlant(
-                    CharacterFootSwingMotionRejectReason.SupportOwnershipReleased,
-                    landingEventIdentity,
-                    originalSole,
-                    originalAnkle);
-            }
-
-            float releaseAlpha = lockFacts.UnlockRemainingSeconds /
-                                 settings.UnlockBlendSeconds;
-            float releaseWeight = lockFacts.UnlockStartPositionWeight * releaseAlpha;
-            Vector3 releasedAnkle = originalAnkle + lockFacts.UnlockStartCorrection;
-            Vector3 releasedSole = originalSole + lockFacts.UnlockStartCorrection;
-            lockFacts.OutputVelocity = !beganUnlock && deltaSeconds > GeometryEpsilon
-                ? (releasedAnkle - lockFacts.OutputAnkle) / deltaSeconds
-                : default;
-            lockFacts.OutputAnkle = releasedAnkle;
-            lockFacts.PositionWeight = releaseWeight;
-            return new CharacterFootSwingMotionDiagnostics(
-                CharacterFootSwingMotionState.Accepted,
-                CharacterFootSwingMotionRejectReason.None,
-                landingEventIdentity,
-                0,
-                originalSole,
-                originalAnkle,
-                horizontalError,
-                0f,
-                default,
-                default,
-                Vector3.Dot(lockFacts.UnlockStartCorrection, up),
-                0f,
-                1f,
-                releasedSole,
-                releasedAnkle,
-                releaseWeight,
-                0f,
-                CharacterFootSupportLockState.Unlocked,
-                horizontalError,
-                lockFacts.UnlockRemainingSeconds,
-                lockFacts.UnlockStartCorrection,
-                preparationStartTimeToLandingSeconds,
-                preparationWeight);
         }
 
         internal static CharacterFootStrideHipsDiagnostics BuildRejected(
@@ -1411,14 +911,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionDiagnostics motion) =>
             motion.Accepted &&
             motion.LandingEventIdentity != 0 &&
+            motion.SupportWeight > GeometryEpsilon &&
             (motion.SupportLockState == CharacterFootSupportLockState.Locked ||
-             motion.SupportLockState == CharacterFootSupportLockState.Sliding);
+             motion.SupportLockState == CharacterFootSupportLockState.Sliding ||
+             motion.SupportLockState == CharacterFootSupportLockState.Releasing);
 
         static bool IsAcquirablePrimarySupport(
             in CharacterFootSwingMotionDiagnostics motion) =>
-            motion.Accepted &&
-            motion.LandingEventIdentity != 0 &&
-            motion.SupportLockState == CharacterFootSupportLockState.Locked;
+            IsRetainablePrimarySupport(in motion) &&
+            (motion.SupportLockState == CharacterFootSupportLockState.Locked ||
+             motion.SupportLockState == CharacterFootSupportLockState.Sliding);
 
         static CharacterFootSwingMotionDiagnostics RejectedPlant(
             CharacterFootSwingMotionRejectReason reason,

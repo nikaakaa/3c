@@ -28,10 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         EnvelopeSampleUnavailable = 12,
         NegativeVerticalCorrection = 13,
         InvalidSwingPhase = 14,
-        StanceLandingUnavailable = 15,
-        SupportOutsideSlideDistance = 16,
-        UnselectedSwing = 17,
-        SupportOwnershipReleased = 18
+        UnselectedSwing = 15
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics
@@ -56,10 +53,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float rotationWeight,
             CharacterFootSupportLockState supportLockState = CharacterFootSupportLockState.None,
             float supportHorizontalError = 0f,
-            float supportUnlockRemainingSeconds = 0f,
-            Vector3 supportUnlockCorrection = default,
             float supportLockPreparationStartTimeToLandingSeconds = 0f,
-            float supportLockPreparationWeight = 0f)
+            float supportLockPreparationWeight = 0f,
+            float supportConstraintWeight = 0f,
+            float supportWeight = 0f,
+            Vector3 supportContactAnchor = default)
         {
             State = state;
             RejectReason = rejectReason;
@@ -80,11 +78,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RotationWeight = rotationWeight;
             SupportLockState = supportLockState;
             SupportHorizontalError = supportHorizontalError;
-            SupportUnlockRemainingSeconds = supportUnlockRemainingSeconds;
-            SupportUnlockCorrection = supportUnlockCorrection;
             SupportLockPreparationStartTimeToLandingSeconds =
                 supportLockPreparationStartTimeToLandingSeconds;
             SupportLockPreparationWeight = supportLockPreparationWeight;
+            SupportConstraintWeight = supportConstraintWeight;
+            SupportWeight = supportWeight;
+            SupportContactAnchor = supportContactAnchor;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -106,11 +105,499 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float RotationWeight { get; }
         public CharacterFootSupportLockState SupportLockState { get; }
         public float SupportHorizontalError { get; }
-        public float SupportUnlockRemainingSeconds { get; }
-        public Vector3 SupportUnlockCorrection { get; }
         public float SupportLockPreparationStartTimeToLandingSeconds { get; }
         public float SupportLockPreparationWeight { get; }
+        public float SupportConstraintWeight { get; }
+        public float SupportWeight { get; }
+        public Vector3 SupportContactAnchor { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
+
+        internal CharacterFootSwingMotionDiagnostics WithResolvedOutput(
+            Vector3 correctedSole,
+            Vector3 correctedAnkle,
+            Vector3 componentUp,
+            float positionWeight,
+            float rotationWeight) =>
+            new CharacterFootSwingMotionDiagnostics(
+                State,
+                RejectReason,
+                LandingEventIdentity,
+                GroundPathInputIdentity,
+                OriginalSole,
+                OriginalAnkle,
+                Distance,
+                Progress,
+                BaselineSample,
+                EnvelopeSample,
+                Vector3.Dot(
+                    correctedAnkle - OriginalAnkle,
+                    componentUp.normalized),
+                LandingPredictionError,
+                LandingConstraintWeight,
+                correctedSole,
+                correctedAnkle,
+                positionWeight,
+                rotationWeight,
+                SupportLockState,
+                SupportHorizontalError,
+                SupportLockPreparationStartTimeToLandingSeconds,
+                SupportLockPreparationWeight,
+                SupportConstraintWeight,
+                SupportWeight,
+                SupportContactAnchor);
+    }
+
+    public enum CharacterFootSupportLockState : byte
+    {
+        None = 0,
+        Acquiring = 1,
+        Locked = 2,
+        Sliding = 3,
+        Releasing = 4
+    }
+
+    internal struct CharacterFootSupportLockFacts
+    {
+        internal bool HasValue;
+        internal ulong LandingEventIdentity;
+        internal CharacterFootSupportLockState State;
+        internal Vector3 ContactAnchor;
+        internal Vector3 OutputAnkle;
+        internal Vector3 TransitionStartCorrection;
+        internal float TransitionElapsedSeconds;
+        internal float TransitionDurationSeconds;
+        internal float PositionWeight;
+        internal float ContactWeight;
+        internal float SupportWeight;
+        internal float TransitionStartContactWeight;
+        internal float TransitionStartSupportWeight;
+
+        internal void Clear()
+        {
+            HasValue = false;
+            LandingEventIdentity = 0;
+            State = CharacterFootSupportLockState.None;
+            ContactAnchor = default;
+            OutputAnkle = default;
+            TransitionStartCorrection = default;
+            TransitionElapsedSeconds = 0f;
+            TransitionDurationSeconds = 0f;
+            PositionWeight = 0f;
+            ContactWeight = 0f;
+            SupportWeight = 0f;
+            TransitionStartContactWeight = 0f;
+            TransitionStartSupportWeight = 0f;
+        }
+    }
+
+    internal readonly struct CharacterFootContactFrame
+    {
+        internal CharacterFootContactFrame(
+            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in CharacterFootSwingMotionDiagnostics stableSwingMotion,
+            bool hasLastLanding,
+            in CharacterFootGroundPathLanding lastLanding,
+            bool hardOwnershipLoss,
+            float footPlacementWeight,
+            Vector3 componentUp,
+            float deltaSeconds,
+            float landingPreparationStartTimeToLandingSeconds,
+            float landingPreparationWeight,
+            in CharacterFootMotionSettings settings)
+        {
+            AnimatedFoot = animatedFoot;
+            CurrentStep = currentStep;
+            StableSwingMotion = stableSwingMotion;
+            HasLastLanding = hasLastLanding;
+            LastLanding = lastLanding;
+            HardOwnershipLoss = hardOwnershipLoss;
+            FootPlacementWeight = footPlacementWeight;
+            ComponentUp = componentUp;
+            DeltaSeconds = deltaSeconds;
+            LandingPreparationStartTimeToLandingSeconds =
+                landingPreparationStartTimeToLandingSeconds;
+            LandingPreparationWeight = landingPreparationWeight;
+            Settings = settings;
+        }
+
+        internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
+        internal AnimationBiomechanicalStepHeader CurrentStep { get; }
+        internal CharacterFootSwingMotionDiagnostics StableSwingMotion { get; }
+        internal bool HasLastLanding { get; }
+        internal CharacterFootGroundPathLanding LastLanding { get; }
+        internal bool HardOwnershipLoss { get; }
+        internal float FootPlacementWeight { get; }
+        internal Vector3 ComponentUp { get; }
+        internal float DeltaSeconds { get; }
+        internal float LandingPreparationStartTimeToLandingSeconds { get; }
+        internal float LandingPreparationWeight { get; }
+        internal CharacterFootMotionSettings Settings { get; }
+    }
+
+    internal static class CharacterFootContactStateMachine
+    {
+        const float GeometryEpsilon = 0.0001f;
+
+        internal static CharacterFootSwingMotionDiagnostics Resolve(
+            in CharacterFootContactFrame frame,
+            ref CharacterFootSupportLockFacts facts)
+        {
+            RequireValid(in frame);
+            if (frame.HardOwnershipLoss)
+            {
+                facts.Clear();
+                CharacterFootSwingMotionDiagnostics stableSwingMotion =
+                    frame.StableSwingMotion;
+                return CharacterFootSwingMotionBuilder.SuppressUnselected(
+                    in stableSwingMotion);
+            }
+            if (!facts.HasValue)
+            {
+                return CanAcquire(in frame)
+                    ? BeginAcquire(in frame, ref facts)
+                    : frame.StableSwingMotion;
+            }
+            return facts.State switch
+            {
+                CharacterFootSupportLockState.Acquiring =>
+                    ResolveAcquire(in frame, ref facts),
+                CharacterFootSupportLockState.Locked =>
+                    ResolveContact(in frame, false, ref facts),
+                CharacterFootSupportLockState.Sliding =>
+                    ResolveContact(in frame, true, ref facts),
+                CharacterFootSupportLockState.Releasing =>
+                    ResolveRelease(in frame, ref facts),
+                _ => throw new InvalidOperationException("Foot Contact state is invalid.")
+            };
+        }
+
+        static CharacterFootSwingMotionDiagnostics BeginAcquire(
+            in CharacterFootContactFrame frame,
+            ref CharacterFootSupportLockFacts facts)
+        {
+            Vector3 up = frame.ComponentUp.normalized;
+            Vector3 originalSole = ResolveOriginalSole(frame.AnimatedFoot);
+            Vector3 contactTarget = ResolveContactTarget(
+                frame.AnimatedFoot,
+                frame.LastLanding.Point);
+            Vector3 initialOutput = ClampAboveContact(
+                frame.StableSwingMotion.CorrectedAnkle,
+                frame.AnimatedFoot,
+                frame.LastLanding.Point,
+                up);
+            float horizontalError = Vector3.ProjectOnPlane(
+                frame.LastLanding.Point - originalSole,
+                up).magnitude;
+            if (horizontalError > frame.Settings.SlideDistance)
+                return frame.StableSwingMotion;
+            facts.HasValue = true;
+            facts.LandingEventIdentity = frame.LastLanding.LandingEventIdentity;
+            facts.State = CharacterFootSupportLockState.Acquiring;
+            facts.ContactAnchor = frame.LastLanding.Point;
+            facts.OutputAnkle = initialOutput;
+            facts.TransitionStartCorrection = initialOutput - contactTarget;
+            facts.TransitionElapsedSeconds = 0f;
+            facts.TransitionDurationSeconds = frame.Settings.ContactTransitionSeconds;
+            facts.PositionWeight = frame.FootPlacementWeight;
+            facts.ContactWeight = 0f;
+            facts.SupportWeight = 0f;
+            return CreateContactMotion(
+                in frame,
+                in facts,
+                initialOutput,
+                CharacterFootSupportLockState.Acquiring,
+                horizontalError,
+                0f,
+                0f);
+        }
+
+        static CharacterFootSwingMotionDiagnostics ResolveAcquire(
+            in CharacterFootContactFrame frame,
+            ref CharacterFootSupportLockFacts facts)
+        {
+            if (ShouldRelease(in frame))
+                return BeginRelease(in frame, ref facts);
+            Vector3 up = frame.ComponentUp.normalized;
+            Vector3 originalSole = ResolveOriginalSole(frame.AnimatedFoot);
+            Vector3 contactTarget = ResolveContactTarget(
+                frame.AnimatedFoot,
+                facts.ContactAnchor);
+            float horizontalError = Vector3.ProjectOnPlane(
+                facts.ContactAnchor - originalSole,
+                up).magnitude;
+            if (horizontalError > frame.Settings.SlideDistance)
+                return BeginRelease(in frame, ref facts);
+            float progress = AdvanceTransition(in frame, ref facts);
+            float blend = Smooth(progress);
+            Vector3 output = contactTarget +
+                             facts.TransitionStartCorrection * (1f - blend);
+            output = ClampAboveContact(
+                output,
+                frame.AnimatedFoot,
+                facts.ContactAnchor,
+                up);
+            facts.OutputAnkle = output;
+            if (progress >= 1f - GeometryEpsilon ||
+                Vector3.Distance(
+                    ResolveOutputSole(frame.AnimatedFoot, output),
+                    facts.ContactAnchor) <= frame.Settings.LandingUpdateDistance)
+            {
+                facts.State = CharacterFootSupportLockState.Locked;
+                facts.OutputAnkle = contactTarget;
+                facts.TransitionStartCorrection = default;
+                facts.TransitionElapsedSeconds = 0f;
+                facts.TransitionDurationSeconds = 0f;
+                facts.ContactWeight = 1f;
+                facts.SupportWeight = 1f;
+                return CreateContactMotion(
+                    in frame,
+                    in facts,
+                    contactTarget,
+                    CharacterFootSupportLockState.Locked,
+                    horizontalError,
+                    1f,
+                    1f);
+            }
+            facts.ContactWeight = blend;
+            facts.SupportWeight = 0f;
+            return CreateContactMotion(
+                in frame,
+                in facts,
+                output,
+                CharacterFootSupportLockState.Acquiring,
+                horizontalError,
+                blend,
+                0f);
+        }
+
+        static CharacterFootSwingMotionDiagnostics ResolveContact(
+            in CharacterFootContactFrame frame,
+            bool wasSliding,
+            ref CharacterFootSupportLockFacts facts)
+        {
+            if (ShouldRelease(in frame))
+                return BeginRelease(in frame, ref facts);
+            Vector3 up = frame.ComponentUp.normalized;
+            Vector3 originalSole = ResolveOriginalSole(frame.AnimatedFoot);
+            Vector3 correction = facts.ContactAnchor - originalSole;
+            Vector3 horizontal = Vector3.ProjectOnPlane(correction, up);
+            float horizontalError = horizontal.magnitude;
+            if (horizontalError > frame.Settings.SlideDistance)
+                return BeginRelease(in frame, ref facts);
+            bool sliding = horizontalError > frame.Settings.LockDistance;
+            if (wasSliding && horizontalError <= frame.Settings.LockDistance)
+                sliding = false;
+            float horizontalWeight = sliding
+                ? Mathf.InverseLerp(
+                    frame.Settings.SlideDistance,
+                    frame.Settings.LockDistance,
+                    horizontalError)
+                : 1f;
+            Vector3 target = frame.AnimatedFoot.AnklePosition +
+                             horizontal * horizontalWeight +
+                             up * Vector3.Dot(correction, up);
+            facts.State = sliding
+                ? CharacterFootSupportLockState.Sliding
+                : CharacterFootSupportLockState.Locked;
+            facts.OutputAnkle = target;
+            facts.ContactWeight = 1f;
+            facts.SupportWeight = 1f;
+            return CreateContactMotion(
+                in frame,
+                in facts,
+                target,
+                facts.State,
+                horizontalError,
+                1f,
+                1f);
+        }
+
+        static CharacterFootSwingMotionDiagnostics BeginRelease(
+            in CharacterFootContactFrame frame,
+            ref CharacterFootSupportLockFacts facts)
+        {
+            Vector3 stableTarget = frame.StableSwingMotion.CorrectedAnkle;
+            float startContactWeight = facts.ContactWeight;
+            float startSupportWeight = facts.SupportWeight;
+            facts.State = CharacterFootSupportLockState.Releasing;
+            facts.TransitionStartCorrection = facts.OutputAnkle - stableTarget;
+            facts.TransitionElapsedSeconds = 0f;
+            facts.TransitionDurationSeconds = frame.Settings.ContactTransitionSeconds;
+            facts.TransitionStartContactWeight = startContactWeight;
+            facts.TransitionStartSupportWeight = startSupportWeight;
+            return CreateContactMotion(
+                in frame,
+                in facts,
+                facts.OutputAnkle,
+                CharacterFootSupportLockState.Releasing,
+                ResolveHorizontalError(in frame, in facts),
+                startContactWeight,
+                startSupportWeight);
+        }
+
+        static CharacterFootSwingMotionDiagnostics ResolveRelease(
+            in CharacterFootContactFrame frame,
+            ref CharacterFootSupportLockFacts facts)
+        {
+            float progress = AdvanceTransition(in frame, ref facts);
+            float blend = Smooth(progress);
+            Vector3 stableTarget = frame.StableSwingMotion.CorrectedAnkle;
+            Vector3 output = stableTarget +
+                             facts.TransitionStartCorrection * (1f - blend);
+            float horizontalError = ResolveHorizontalError(in frame, in facts);
+            facts.OutputAnkle = output;
+            if (progress >= 1f - GeometryEpsilon)
+            {
+                facts.Clear();
+                return frame.StableSwingMotion;
+            }
+            facts.ContactWeight = facts.TransitionStartContactWeight * (1f - blend);
+            facts.SupportWeight = facts.TransitionStartSupportWeight * (1f - blend);
+            return CreateContactMotion(
+                in frame,
+                in facts,
+                output,
+                CharacterFootSupportLockState.Releasing,
+                horizontalError,
+                facts.ContactWeight,
+                facts.SupportWeight);
+        }
+
+        static CharacterFootSwingMotionDiagnostics CreateContactMotion(
+            in CharacterFootContactFrame frame,
+            in CharacterFootSupportLockFacts facts,
+            Vector3 outputAnkle,
+            CharacterFootSupportLockState state,
+            float horizontalError,
+            float constraintWeight,
+            float supportWeight)
+        {
+            Vector3 originalSole = ResolveOriginalSole(frame.AnimatedFoot);
+            Vector3 originalAnkle = frame.AnimatedFoot.AnklePosition;
+            Vector3 outputSole = ResolveOutputSole(frame.AnimatedFoot, outputAnkle);
+            return new CharacterFootSwingMotionDiagnostics(
+                CharacterFootSwingMotionState.Accepted,
+                CharacterFootSwingMotionRejectReason.None,
+                facts.LandingEventIdentity,
+                frame.StableSwingMotion.GroundPathInputIdentity,
+                originalSole,
+                originalAnkle,
+                frame.StableSwingMotion.Distance,
+                frame.StableSwingMotion.Progress,
+                frame.StableSwingMotion.BaselineSample,
+                frame.StableSwingMotion.EnvelopeSample,
+                Vector3.Dot(outputAnkle - originalAnkle, frame.ComponentUp.normalized),
+                frame.StableSwingMotion.LandingPredictionError,
+                frame.StableSwingMotion.LandingConstraintWeight,
+                outputSole,
+                outputAnkle,
+                state == CharacterFootSupportLockState.Releasing
+                    ? Mathf.Lerp(
+                        frame.StableSwingMotion.PositionWeight,
+                        facts.PositionWeight,
+                        constraintWeight)
+                    : facts.PositionWeight,
+                0f,
+                state,
+                horizontalError,
+                frame.LandingPreparationStartTimeToLandingSeconds,
+                frame.LandingPreparationWeight,
+                constraintWeight,
+                supportWeight,
+                facts.ContactAnchor);
+        }
+
+        static bool CanAcquire(in CharacterFootContactFrame frame) =>
+            frame.HasLastLanding &&
+            frame.LastLanding.LandingEventIdentity != 0 &&
+            frame.CurrentStep.IsValid &&
+            frame.CurrentStep.IsAuthoritative &&
+            frame.CurrentStep.HasConsistentLandingEventIdentity &&
+            frame.CurrentStep.ConstraintWeight > CharacterPoseConstraintMath.Epsilon &&
+            frame.CurrentStep.SupportWeight > CharacterPoseConstraintMath.Epsilon &&
+            frame.CurrentStep.LandingEventIdentity ==
+            frame.LastLanding.LandingEventIdentity &&
+            !IsExplicitRelease(frame.CurrentStep);
+
+        static bool ShouldRelease(in CharacterFootContactFrame frame) =>
+            IsExplicitRelease(frame.CurrentStep);
+
+        static bool IsExplicitRelease(AnimationBiomechanicalStepHeader step) =>
+            step.IsValid &&
+            step.IsAuthoritative &&
+            step.HasConsistentLandingEventIdentity &&
+            step.ConstraintWeight < 1f - CharacterPoseConstraintMath.Epsilon &&
+            (step.IsSwing ||
+             step.IsPreSwing && step.EventPhase >= step.ReleasePhase);
+
+        static float AdvanceTransition(
+            in CharacterFootContactFrame frame,
+            ref CharacterFootSupportLockFacts facts)
+        {
+            facts.TransitionElapsedSeconds = Mathf.Min(
+                facts.TransitionDurationSeconds,
+                facts.TransitionElapsedSeconds + frame.DeltaSeconds);
+            return facts.TransitionDurationSeconds > GeometryEpsilon
+                ? Mathf.Clamp01(
+                    facts.TransitionElapsedSeconds /
+                    facts.TransitionDurationSeconds)
+                : 1f;
+        }
+
+        static float ResolveHorizontalError(
+            in CharacterFootContactFrame frame,
+            in CharacterFootSupportLockFacts facts) =>
+            Vector3.ProjectOnPlane(
+                facts.ContactAnchor - ResolveOriginalSole(frame.AnimatedFoot),
+                frame.ComponentUp.normalized).magnitude;
+
+        static Vector3 ResolveContactTarget(
+            CharacterFootPlacementAnimatedFootPose foot,
+            Vector3 contactAnchor) =>
+            foot.AnklePosition + contactAnchor - ResolveOriginalSole(foot);
+
+        static Vector3 ClampAboveContact(
+            Vector3 ankle,
+            CharacterFootPlacementAnimatedFootPose foot,
+            Vector3 contactAnchor,
+            Vector3 up)
+        {
+            Vector3 sole = ResolveOutputSole(foot, ankle);
+            float penetration = Vector3.Dot(contactAnchor - sole, up);
+            return penetration > 0f ? ankle + up * penetration : ankle;
+        }
+
+        static Vector3 ResolveOriginalSole(CharacterFootPlacementAnimatedFootPose foot) =>
+            (foot.HeelPosition + foot.ToePosition) * 0.5f;
+
+        static Vector3 ResolveOutputSole(
+            CharacterFootPlacementAnimatedFootPose foot,
+            Vector3 outputAnkle) =>
+            ResolveOriginalSole(foot) + outputAnkle - foot.AnklePosition;
+
+        static float Smooth(float value)
+        {
+            float t = Mathf.Clamp01(value);
+            return t * t * (3f - 2f * t);
+        }
+
+        static void RequireValid(in CharacterFootContactFrame frame)
+        {
+            if (!Finite(frame.ComponentUp) ||
+                frame.ComponentUp.sqrMagnitude <= GeometryEpsilon ||
+                !float.IsFinite(frame.FootPlacementWeight) ||
+                frame.FootPlacementWeight < 0f || frame.FootPlacementWeight > 1f ||
+                !float.IsFinite(frame.DeltaSeconds) || frame.DeltaSeconds < 0f)
+            {
+                throw new InvalidOperationException("Foot Contact frame is invalid.");
+            }
+        }
+
+        static bool Finite(Vector3 value) =>
+            float.IsFinite(value.x) &&
+            float.IsFinite(value.y) &&
+            float.IsFinite(value.z);
     }
 
     internal static class CharacterFootSwingMotionBuilder

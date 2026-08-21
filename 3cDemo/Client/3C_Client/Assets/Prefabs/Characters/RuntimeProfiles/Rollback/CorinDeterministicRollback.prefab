@@ -2842,7 +2842,7 @@ MonoBehaviour:
   m_SessionHost: {fileID: 0}
   m_Endpoint: {fileID: 11400000, guid: 8d74303ed678d11429d7e215a8949a08, type: 2}
   m_Program: {fileID: 11400000, guid: 91063668fd0eaa84d9b7d688aadbc90a, type: 2}
-  m_PresentationProjection: {fileID: 11400000, guid: fa99c676efd5bb74e882aa27036865ab,
+  m_PresentationProjection: {fileID: 11400000, guid: f365735adcfd49c4e96070df6bcd3bc4,
     type: 2}
   m_InputProfile: {fileID: 11400000, guid: be650df85b1e49ab9d1cefc91c6cc809, type: 2}
   m_ActorId: rollback-actor-a

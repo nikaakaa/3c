@@ -60,7 +60,7 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
 Character Document v4正式可写：
 
 - Blackboard declaration的基础字段，以及可选`inputBinding.inputValueId`和可选`factProjection`。禁止旧变量级网络策略字段、旧mode枚举、旧平铺input/projection字段或AI Character payload。
-- Pose Graph-owned typed Source Slot、Profile-owned direct Clip/Blend Space/Motion Matching Binding、Locomotion Sync Group、policy与有限Action producer binding。`editable/animation-clips/**/curves.json`只允许修改当前Definition可达原生AnimationClip的注册表现Curve；Timeline Animation Segment直接引用AnimationClip。
+- Pose Graph-owned typed Source Slot、Profile-owned direct Clip/Blend Space/Motion Matching Binding、Locomotion Sync Group、policy与有限Action producer binding。`editable/animation-clips/**/curves.json`只允许修改当前Definition可达原生AnimationClip的注册表现Curve；从目标分片移除已有channel表达正式删除，删除必填Foot Weight或仍为Group成员的Phase必须被Validator拒绝。Timeline Animation Segment直接引用AnimationClip。
 - root-owned Pose Graph catalog中的Graph、layout、parameter、节点typed payload、dynamic port与edge。
 - Linked Pose Implementation及其Entry Graph闭包、Profile Group binding、通用selector envelope和Equipment精确mapping；Interface正文只读。
 - PoseStateMachine的entry、state、alias、transition、transition rule与blend策略；可选Locomotion Phase relation只从Profile Group与Clip曲线编译，不是Transition可写字段。
@@ -73,7 +73,7 @@ Character Document v4正式可写：
 - generated Character Program、Presentation Projection、Native Pose Program和AIIntentProgram身份与stale状态。
 - AI受控Character的Input/Request合同与capability catalog。
 
-Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Clip Binding直接引用现有原生AnimationClip，Profile唯一装配Rig、Analysis Source与Locomotion Sync Group。Document只可修改注册Curve，不得创建Clip、修改骨骼曲线、AnimationEvent、import设置、Foot Analysis或generated payload。Linked Pose Interface以readonly context提供identity、revision、signature、Fact contract、Entry和typed ports；Implementation、Entry Graph、Group、selector与Equipment mapping通过同一typed Presentation Mutation和资产事务创建、配置、删除，并支持新对象`local:*`计划identity。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action、直接切换活动runtime Implementation或第二套Reconciler/Mutation入口。
+Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Clip Binding直接引用现有原生AnimationClip，Profile唯一装配Rig、Analysis Source与Locomotion Sync Group。Document只可完整替换或删除注册Curve，不得创建Clip、修改骨骼曲线、AnimationEvent、import设置、Foot Analysis或generated payload。Clip Curve变化必须进入planned/applied diff与同一Undo owner；reverse export必须从最终Clip省略已删除channel。Linked Pose Interface以readonly context提供identity、revision、signature、Fact contract、Entry和typed ports；Implementation、Entry Graph、Group、selector与Equipment mapping通过同一typed Presentation Mutation和资产事务创建、配置、删除，并支持新对象`local:*`计划identity。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action、直接切换活动runtime Implementation或第二套Reconciler/Mutation入口。
 
 Presentation目标必须把State-local Pose Source与Action AnimationChannel分开：Pose Player的`pose-source-slot`必须是精确Graph-owned typed Slot对象引用，`profile.json.poseSources`必须用精确Slot与Binding子资产对象引用绑定实际资源；不得按名称、路径、数组index或字符串identity猜测。Projection编译后Runtime只按dense source index解析资源；按PlayerNodeId生成的typed provider identity只做帧内路由，不进入Document或资源查找。ActionPlaybackInput与AnimationSlot只引用Timeline目标状态中已存在的Animation Channel，AnimationSlot仍是Action channel唯一consumer；有限Action producer必须引用现有Timeline与Animation track。
 
@@ -88,7 +88,8 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 | 变化 | 必须同步 |
 |---|---|
 | Graph、Node、Edge、Port、StateMachine、Source Slot/Binding子资产或ownership | Document模型、Exporter、Reconciler、Mutation handler、Validator |
-| Timeline、Track、AnimationClip Segment、Timeline-local Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |`n| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v4 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
+| Timeline、Track、AnimationClip Segment、Timeline-local Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |
+| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v4 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
 | Input、ActionProfile、ActionContext或Blackboard identity | editable/context分区、Reconciler、AssetResolver、Validator |
 | AI Definition、Perception、Memory、Observation或Intent | AI editable/context、AI Snapshot、Reconciler、AI Compiler |
 | Presentation Profile、Pose Graph或PoseStateMachine | Document v4模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |

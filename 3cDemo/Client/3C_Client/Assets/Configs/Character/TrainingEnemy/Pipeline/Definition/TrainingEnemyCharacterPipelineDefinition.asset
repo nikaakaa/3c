@@ -16,8 +16,7 @@ MonoBehaviour:
   m_SimulationTickRate: 60
   m_SimulationProgram: {fileID: 11400000, guid: 871f835c3a194e749a6fcf09a2e3fadf,
     type: 2}
-  m_PresentationProjection: {fileID: 11400000, guid: ab8af7c6850cf2446b670852fd187ad0,
-    type: 2}
+  m_PresentationProjection: {fileID: 0}
   m_InputProfile: {fileID: 11400000, guid: 6290d5451b68bf54fa674117349bd002, type: 2}
   m_GameplayEffectProfile: {fileID: 11400000, guid: 5fe6d018d695ccb41a71ec15961ce609,
     type: 2}

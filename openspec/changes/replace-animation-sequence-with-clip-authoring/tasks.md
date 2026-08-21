@@ -198,10 +198,10 @@
 - [x] 13.3 在Corin Profile建立唯一`Locomotion.Gait` Phase Group。
 - [x] 13.4 把19个Sequence归一化Foot Placement Weight按各自`SourceDurationSeconds`无损迁入对应Clip秒域channel。
 - [x] 13.5 把WalkLoop与RunLoop正式Phase曲线写入对应Clip。
-- [x] 13.6 把合法WalkStart与RunStart实际秒域coverage正式Phase曲线写入对应Clip。
+- [x] 13.6 对WalkStart与RunStart实际秒域coverage生成Phase候选，并在有限出口质量不相容后保持组外、删除无消费Phase曲线。
 - [x] 13.7 不迁移MovingTurn当前0-71 Marker plan。
-- [x] 13.8 按正式Timeline frame rate把Gameplay 0-28帧换算为秒域coverage，作者MovingTurn Phase并接入质量Build。
-- [x] 13.9 当前MovingTurn内容不相容时保持Character Build失败并删除旧generated Projection引用。
+- [x] 13.8 按正式Timeline frame rate把Gameplay 0-28帧换算为秒域coverage，生成MovingTurn Phase候选并接入质量Build。
+- [x] 13.9 MovingTurn有限出口与RunLoop不相容时移出Sync Group并删除无消费Phase曲线，保持显式Standard Blend且不发布旧Projection。
 - [x] 13.10 把全部Corin Locomotion Transition迁移为Standard Blend。
 - [x] 13.11 删除未再引用的Corin Locomotion Inertialization Policy与配置资产。
 - [x] 13.12 删除Corin全部19个Sequence资产及`.meta`。
@@ -227,3 +227,17 @@
 - [x] 14.12 使用禁用共享编译服务的参数构建全部受影响Runtime与Editor工程。
 - [x] 14.13 构建结束后立即执行`dotnet build-server shutdown`。
 - [x] 14.14 运行本change及全量OpenSpec strict validation并清除冲突口径。
+
+## 15. 收口运行产品与迁移残口
+
+- [x] 15.1 复现Gameplay Lab Fixed Host缺少Presentation Projection，并确认旧generated GUID仍被Variant与Prefab引用。
+- [x] 15.2 修正Phase候选的覆盖外对侧Landing夹持、同脚replant过滤、循环跨边界展开与有限边界插值。
+- [x] 15.3 让Document v4 Clip曲线变化进入planned/applied diff，并支持删除目标分片中缺失的注册Curve。
+- [x] 15.4 对账Corin五个Locomotion Artifact，只保留质量相容的WalkLoop与RunLoop作为`Locomotion.Gait`成员。
+- [x] 15.5 把循环inverse负周期等价解推进到最早非负时间，并将Phase Plan与关系质量算法提升到当前版本。
+- [x] 15.6 连续重建Float32与Fixed并确认它们具有相同SourceRevision、SemanticHash、严格ContractHash与ProjectionRevision，继续精确校验完整contract。
+- [x] 15.7 显式重建Corin Float32、Fixed与Gameplay Lab资产，更新Variant、Fixed角色、Rollback root/template并清除旧Projection GUID。
+- [x] 15.8 在Gameplay Lab实例化Runtime Root前校验Variant的Program、Projection、Composition、WorldSolver与Prefab闭包。
+- [x] 15.9 删除TrainingEnemy旧Sequence/Marker generated Projection并清空Definition引用，保留缺少原生Foot Weight的明确Build失败。
+- [x] 15.10 清除Animation Sequence旧诊断、局部变量、Inspector与Point Marker残留术语。
+- [x] 15.11 同步current truth、spec delta与技能合同，完成受影响工程构建及全量strict validation。

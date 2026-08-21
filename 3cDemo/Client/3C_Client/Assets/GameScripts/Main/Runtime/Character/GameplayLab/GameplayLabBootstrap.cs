@@ -119,6 +119,7 @@ namespace ThirdPersonGameplay.Lab
                 GameplayLabSessionVariantDefinition variant = m_Variants[i];
                 if (!variant)
                     throw new InvalidOperationException($"Gameplay Lab Variant at index {i} is missing.");
+                variant.RequireComplete();
                 if (!ids.Add(variant.VariantId))
                     throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' is configured more than once.");
                 if (variant.IsExternalLaunchVariant &&

@@ -8,7 +8,6 @@ namespace BTSMTL.Timeline
     public enum TimelineAuthoringContentKind : byte
     {
         SpanClip,
-        PointMarker,
         ContinuousCurve
     }
 

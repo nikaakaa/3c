@@ -24,16 +24,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public PoseSourceConsumer(
                 CharacterTypedPoseNode machine,
                 CharacterPoseStateDefinition state,
-                CharacterTypedPoseNode sequence)
+                CharacterTypedPoseNode player)
             {
                 Machine = machine;
                 State = state;
-                Sequence = sequence;
+                Player = player;
             }
 
             public CharacterTypedPoseNode Machine { get; }
             public CharacterPoseStateDefinition State { get; }
-            public CharacterTypedPoseNode Sequence { get; }
+            public CharacterTypedPoseNode Player { get; }
         }
 
         readonly List<CharacterPipelineDefinition> m_Contexts = new List<CharacterPipelineDefinition>();
@@ -584,7 +584,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? consumer.State.StateId.Value
                     : consumer.State.DisplayName;
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField($"{machineName} / {stateName} / {consumer.Sequence.NodeId}");
+                EditorGUILayout.LabelField($"{machineName} / {stateName} / {consumer.Player.NodeId}");
                 if (GUILayout.Button("Open PoseState", GUILayout.Width(110f)))
                     OpenPoseSourceConsumer(profile, consumer);
                 EditorGUILayout.EndHorizontal();
@@ -773,14 +773,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             state.PoseGraphId,
                             out CharacterTypedPoseGraph stateGraph))
                         continue;
-                    for (int sequenceIndex = 0; sequenceIndex < stateGraph.Nodes.Count; sequenceIndex++)
+                    for (int stateNodeIndex = 0; stateNodeIndex < stateGraph.Nodes.Count; stateNodeIndex++)
                     {
-                        CharacterTypedPoseNode sequence = stateGraph.Nodes[sequenceIndex];
-                        if ((sequence?.Kind == CharacterPoseNodeKind.ClipPlayer ||
-                             sequence?.Kind == CharacterPoseNodeKind.BlendSpacePlayer) &&
-                            sequence.PresentationPoseSourceSlot == slot)
+                        CharacterTypedPoseNode player = stateGraph.Nodes[stateNodeIndex];
+                        if ((player?.Kind == CharacterPoseNodeKind.ClipPlayer ||
+                             player?.Kind == CharacterPoseNodeKind.BlendSpacePlayer) &&
+                            player.PresentationPoseSourceSlot == slot)
                         {
-                            consumers.Add(new PoseSourceConsumer(machine, state, sequence));
+                            consumers.Add(new PoseSourceConsumer(machine, state, player));
                         }
                     }
                 }
@@ -793,7 +793,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             CharacterPresentationPoseGraphEditorWindow window =
                 CharacterPresentationPoseGraphEditorWindow.Open(profile);
-            window.FocusStateSequence(consumer.Machine, consumer.State, consumer.Sequence.NodeId);
+            window.FocusStatePlayer(consumer.Machine, consumer.State, consumer.Player.NodeId);
         }
 
         static CharacterFootPlacementAnalysisSource ResolveAnalysisSource(

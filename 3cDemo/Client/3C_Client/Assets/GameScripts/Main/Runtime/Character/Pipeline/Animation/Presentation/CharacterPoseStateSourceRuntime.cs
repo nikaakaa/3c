@@ -416,14 +416,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             if (m_FrameOpen || m_SourceSyncRelationJournalCount != 0)
                 throw new InvalidOperationException("Pose State and source frame is already open.");
-            int sequenceCount = 0;
+            int clipPlayerCount = 0;
             int blendSpaceCount = 0;
             int stateMachineCount = 0;
             int motionMatchingCount = 0;
             try
             {
-                for (; sequenceCount < m_ClipPlayers.Length; sequenceCount++)
-                    m_ClipPlayers[sequenceCount].BeginFrame();
+                for (; clipPlayerCount < m_ClipPlayers.Length; clipPlayerCount++)
+                    m_ClipPlayers[clipPlayerCount].BeginFrame();
                 for (; blendSpaceCount < m_BlendSpacePlayers.Length; blendSpaceCount++)
                     m_BlendSpacePlayers[blendSpaceCount].BeginFrame();
                 for (; stateMachineCount < m_StateMachines.Length; stateMachineCount++)
@@ -440,7 +440,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_StateMachines[i].DiscardFrame();
                 for (int i = blendSpaceCount - 1; i >= 0; i--)
                     m_BlendSpacePlayers[i].DiscardFrame();
-                for (int i = sequenceCount - 1; i >= 0; i--)
+                for (int i = clipPlayerCount - 1; i >= 0; i--)
                     m_ClipPlayers[i].DiscardFrame();
                 throw;
             }

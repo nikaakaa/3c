@@ -532,13 +532,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 directPlayers = directPlayerList.ToArray();
                 clipPlayers = new AnimationClipPlayerRuntime[projection.PosePlan.ClipPlayers.Count];
-                for (int sequenceIndex = 0; sequenceIndex < clipPlayers.Length; sequenceIndex++)
+                for (int clipPlayerIndex = 0; clipPlayerIndex < clipPlayers.Length; clipPlayerIndex++)
                 {
-                    AnimationClipPlayerRuntime sequence = AnimationClipPlayerFactory.Create(
+                    AnimationClipPlayerRuntime clipPlayer = AnimationClipPlayerFactory.Create(
                         projection,
-                        projection.PosePlan.ClipPlayers[sequenceIndex]);
-                    clipPlayers[sequenceIndex] = sequence;
-                    m_PlayerIndicesByNode.Add(sequence.NodeId, sequence.PlayerIndex);
+                        projection.PosePlan.ClipPlayers[clipPlayerIndex]);
+                    clipPlayers[clipPlayerIndex] = clipPlayer;
+                    m_PlayerIndicesByNode.Add(clipPlayer.NodeId, clipPlayer.PlayerIndex);
                 }
                 blendSpacePlayers =
                     new AnimationBlendSpacePlayerRuntime[projection.BlendSpacePlayers.Count];

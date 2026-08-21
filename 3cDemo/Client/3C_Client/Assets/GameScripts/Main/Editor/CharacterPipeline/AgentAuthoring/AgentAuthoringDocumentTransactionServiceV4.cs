@@ -620,6 +620,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         curve.channelId,
                         ConvertCurve(curve));
                 }
+                var targetChannels = new HashSet<string>(
+                    plan.Target.curves.Select(value => value.channelId),
+                    StringComparer.Ordinal);
+                for (int channelIndex = 0;
+                     channelIndex < CharacterAnimationClipRegisteredCurveCatalog.Channels.Count;
+                     channelIndex++)
+                {
+                    string channelId = CharacterAnimationClipRegisteredCurveCatalog.Channels[channelIndex].ChannelId;
+                    if (!targetChannels.Contains(channelId))
+                        CharacterAnimationClipRegisteredCurveCatalog.Remove(plan.Clip, channelId);
+                }
             }
         }
 

@@ -66,6 +66,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         }
 
 #if UNITY_EDITOR
+        public void SetPresentationProjectionAuthoring(
+            CharacterPresentationProjectionAsset projection)
+        {
+            m_PresentationProjection = projection
+                ? projection
+                : throw new ArgumentNullException(nameof(projection));
+        }
+
         public void SetAuthoring(
             SimulationSessionHost sessionHost,
             RollbackEndpointAuthoringDefinition endpoint,

@@ -221,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report);
 
             IReadOnlyList<AgentAnimationClipCurveMutationPlan> animationClips =
-                BuildAnimationClipCurvePlan(current, normalized, report);
+                BuildAnimationClipCurvePlan(current, normalized, builder, report);
             if (report.HasErrors())
                 return false;
             CharacterLocomotionSyncGroup[] locomotionSyncGroups =
@@ -229,6 +229,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             bool setLocomotionSyncGroups = !JToken.DeepEquals(
                 AgentAuthoringDocumentCodec.ToToken(current.profile.locomotionSyncGroups),
                 AgentAuthoringDocumentCodec.ToToken(normalized.profile.locomotionSyncGroups));
+            if (setLocomotionSyncGroups)
+            {
+                builder.Direct(
+                    "SetLocomotionSyncGroups",
+                    profileGuid,
+                    "editable/presentation/profile.json.locomotionSyncGroups",
+                    $"groups={locomotionSyncGroups.Length}");
+            }
             if (report.HasErrors())
                 return false;
 
@@ -292,9 +300,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static IReadOnlyList<AgentAnimationClipCurveMutationPlan> BuildAnimationClipCurvePlan(
             AgentDocumentPresentationEditable current,
             AgentDocumentPresentationEditable target,
+            PlanBuilder builder,
             AgentCompileReport report)
         {
             var result = new List<AgentAnimationClipCurveMutationPlan>();
+            var locomotionMembers = new HashSet<string>(
+                (target.profile?.locomotionSyncGroups ??
+                 new List<AgentPackageLocomotionSyncGroup>())
+                .SelectMany(value => value.members ??
+                    new List<AgentPackageAssetReferenceV4>())
+                .Select(ReferenceIdentity),
+                StringComparer.Ordinal);
             Dictionary<string, AgentPackageAnimationClipCurvesFile> currentById =
                 (current.animationClips ?? new List<AgentPackageAnimationClipCurvesFile>())
                 .ToDictionary(value => value.id, StringComparer.Ordinal);
@@ -310,7 +326,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "Document不能创建、删除或替换Definition闭包中的AnimationClip分片。");
                 return result;
             }
-            foreach (KeyValuePair<string, AgentPackageAnimationClipCurvesFile> pair in targetById)
+            foreach (KeyValuePair<string, AgentPackageAnimationClipCurvesFile> pair in
+                     targetById.OrderBy(value => value.Key, StringComparer.Ordinal))
             {
                 AgentPackageAnimationClipCurvesFile previous = currentById[pair.Key];
                 AgentPackageAnimationClipCurvesFile next = pair.Value;
@@ -361,14 +378,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         report.Error(
                             $"editable/animation-clips/{pair.Key}/curves.json.curves[{curveIndex}]",
                             "animation_clip_curve_channel_invalid",
-                            exception.Message);
+                        exception.Message);
                     }
+                }
+                if (!channelIds.Contains(
+                        CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight))
+                {
+                    report.Error(
+                        $"editable/animation-clips/{pair.Key}/curves.json",
+                        "animation_clip_foot_weight_required",
+                        "当前Definition可达AnimationClip必须保留Foot Placement Weight注册Curve。");
+                }
+                bool hasPhase = channelIds.Contains(
+                    CharacterAnimationClipRegisteredCurveChannels.LocomotionPhase);
+                bool requiresPhase = locomotionMembers.Contains(pair.Key);
+                if (hasPhase != requiresPhase)
+                {
+                    report.Error(
+                        $"editable/animation-clips/{pair.Key}/curves.json",
+                        "animation_clip_phase_group_mismatch",
+                        requiresPhase
+                            ? "Locomotion Sync Group成员必须具有Locomotion Phase注册Curve。"
+                            : "非Locomotion Sync Group成员不得保留无消费Locomotion Phase注册Curve。");
                 }
                 if (!JToken.DeepEquals(
                         AgentAuthoringDocumentCodec.ToToken(previous),
                         AgentAuthoringDocumentCodec.ToToken(next)))
                 {
                     result.Add(new AgentAnimationClipCurveMutationPlan(clip, next));
+                    builder.Direct(
+                        "ReplaceAnimationClipCurves",
+                        identity.AssetGuid,
+                        $"editable/animation-clips/{pair.Key}/curves.json",
+                        string.Join(",", next.curves
+                            .Select(value => value.channelId)
+                            .OrderBy(value => value, StringComparer.Ordinal)));
                 }
             }
             return result;
@@ -3239,6 +3283,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 m_ProfileTransaction.Add(mutation);
                 Add(path, mutation, null);
+            }
+
+            public void Direct(
+                string action,
+                string owner,
+                string path,
+                string detail)
+            {
+                m_Report.plannedDiff.Add(new AgentCompileDiffEntry
+                {
+                    mutationId =
+                        "presentation-" +
+                        m_Sequence.Index++.ToString("D4"),
+                    action = action,
+                    graph = owner,
+                    target = path,
+                    detail = detail ?? string.Empty
+                });
             }
 
             void Add(

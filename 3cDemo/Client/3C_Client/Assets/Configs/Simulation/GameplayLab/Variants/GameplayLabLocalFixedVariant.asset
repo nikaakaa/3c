@@ -23,7 +23,7 @@ MonoBehaviour:
   m_DefinitionGuid: c7a7c1e3f7e64d81b5a04a90cbeb8d4e
   m_Composition: {fileID: 11400000, guid: 79505af9210f85e43b5654aec3484cd8, type: 2}
   m_Program: {fileID: 11400000, guid: 91063668fd0eaa84d9b7d688aadbc90a, type: 2}
-  m_PresentationProjection: {fileID: 11400000, guid: fa99c676efd5bb74e882aa27036865ab,
+  m_PresentationProjection: {fileID: 11400000, guid: f365735adcfd49c4e96070df6bcd3bc4,
     type: 2}
   m_WorldSolver: {fileID: 11400000, guid: 329a97239e12fac4dbe21a2325533ccc, type: 2}
   m_CollisionWorld: {fileID: 11400000, guid: d0b6f91c641a9a94aaeabe7bb97263e6, type: 2}

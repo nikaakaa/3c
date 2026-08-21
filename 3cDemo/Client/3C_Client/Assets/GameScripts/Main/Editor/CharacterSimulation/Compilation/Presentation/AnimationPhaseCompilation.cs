@@ -324,13 +324,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     static class AnimationPhaseRelationQualityCompiler
     {
-        const string AlgorithmVersion = "animation-phase-relation-quality/v1";
+        const string AlgorithmVersion = "animation-phase-relation-quality/v2";
         const float PlantThreshold = 0.5f;
         const float MaximumPlanarDifference = 0.35f;
         const float MaximumHeightDifference = 0.12f;
         const float MaximumVelocityDifference = 2.5f;
         const float MinimumInverseSlope = 0.01f;
-        const float MaximumInverseSlope = 2f;
+        const float MaximumInverseSlope = 2.1f;
 
         readonly struct FootSample
         {

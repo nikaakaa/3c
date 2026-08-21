@@ -26,7 +26,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Run End Binding
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   m_Slot: {fileID: 4798961889804782150, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
   m_ContentRevision: 27b86d8f660042e7a87f74bc51d5699a
   m_Clip: {fileID: 7400000, guid: 9654782e7ebbcd14bab93c76dc248019, type: 2}
@@ -41,7 +41,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Run Loop Binding
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   m_Slot: {fileID: 8131560739780795392, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
   m_ContentRevision: fbabd887149b486bb66f99693438042b
   m_Clip: {fileID: 7400000, guid: 3747a185f0711e842b4df7c03fa2cfac, type: 2}
@@ -113,11 +113,8 @@ MonoBehaviour:
   m_LocomotionSyncGroups:
   - m_GroupId: Locomotion.Gait
     m_Members:
-    - {fileID: 7400000, guid: e569e81bd2858154b9bf4f2e660cf981, type: 2}
     - {fileID: 7400000, guid: 3747a185f0711e842b4df7c03fa2cfac, type: 2}
-    - {fileID: 7400000, guid: c3f6deae23e56064fb4b8938601e35e5, type: 2}
     - {fileID: 7400000, guid: a42a3b1b15a10b44f9892c728d72b74f, type: 2}
-    - {fileID: 7400000, guid: 90d528fc935ce2e43b4b301c8c2b98db, type: 2}
   m_FootPlacementAnalysisMode: 1
   m_FootPlacementAnalysisSourceAssetGuid: 2487156154864bb5b49cb283c2583808
 --- !u!114 &88879352873835360

@@ -249,13 +249,19 @@ Pose Graph Workspace、Navigator与Details MAY只读显示Action Timeline Segmen
 
 ### Requirement: Locomotion Sync Group必须只装配直接Clip成员
 
-`CharacterAnimationPresentationProfile` MUST唯一保存Locomotion Sync Group的稳定GroupId与精确AnimationClip成员引用。一个Clip MUST最多属于一个Group。Group成员 MUST具有合法Locomotion Phase曲线。Group MUST不保存素材同步点、Time Mapping、leader role、Topology、pairwise warp或Transition副本。
+`CharacterAnimationPresentationProfile` MUST唯一保存Locomotion Sync Group的稳定GroupId与精确AnimationClip成员引用。一个Clip MUST最多属于一个Group。Group成员 MUST具有合法Locomotion Phase曲线并通过全部可达relation质量门槛；未入组Clip MUST不保留无消费Locomotion Phase曲线。Group MUST不保存素材同步点、Time Mapping、leader role、Topology、pairwise warp或Transition副本。
 
 #### Scenario: Walk与Run加入同一Group
 
 - **WHEN** 作者把WalkLoop与RunLoop加入`Locomotion.Gait`
 - **THEN** Compiler MUST从两项Clip的Phase Curve与Loop事实构建可达relation
 - **AND** MUST不要求两项Clip复制Group策略或Marker序列
+
+#### Scenario: 有限Clip无法通过关系质量门槛
+
+- **WHEN** Start或Turn的Landing锚点合法但有限出口与目标Loop的Plant或脚部运动不相容
+- **THEN** Profile MUST保持该Clip为普通Direct Clip并从Sync Group移除
+- **AND** Clip MUST删除无消费Locomotion Phase曲线且Transition MUST只执行显式Blend
 
 ### Requirement: Presentation Projection必须保存per-clip Phase与可达relation计划
 

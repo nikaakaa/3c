@@ -168,6 +168,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorUtility.SetDirty(clip);
         }
 
+        public static void Remove(AnimationClip clip, string channelId)
+        {
+            RequireNativeClip(clip);
+            CharacterAnimationClipRegisteredCurveDescriptor descriptor = Require(channelId);
+            AnimationUtility.SetEditorCurve(clip, descriptor.Binding, null);
+            EditorUtility.SetDirty(clip);
+        }
+
         public static void Validate(AnimationClip clip, string channelId, AnimationCurve curve)
         {
             RequireNativeClip(clip);

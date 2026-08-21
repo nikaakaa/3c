@@ -17,6 +17,7 @@ MonoBehaviour:
     m_Name: Training Enemy Attack
     m_Tracks:
     - rid: 3396202407018103044
+    m_Sections: []
     m_Scale: 1
   references:
     version: 2
@@ -30,11 +31,6 @@ MonoBehaviour:
         m_Clips:
         - rid: 3396202407018103045
         m_AnimationChannelId: training-enemy.monster.animation.full-body
-        m_SyncMode: 1
-        m_SyncGroupId: 
-        m_SequenceTopology: 0
-        m_SyncRole: 0
-        m_SyncMarkers: []
     - rid: 3396202407018103045
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -112,30 +108,6 @@ MonoBehaviour:
             time: 1
             value: 1
             inSlope: 1
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 1
-            value: 1
-            inSlope: 0
             outSlope: 0
             tangentMode: 0
             weightedMode: 0

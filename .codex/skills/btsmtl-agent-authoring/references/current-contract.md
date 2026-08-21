@@ -126,7 +126,7 @@ Character editable：
 - action request与profile
 - sparse graph package
 - timeline正文、直接AnimationClip Segment引用与独立Timeline-local curve文件
-- `editable/animation-clips/**/curves.json`中的原生AnimationClip注册表现Curve
+- `editable/animation-clips/**/curves.json`中的原生AnimationClip注册表现Curve完整目标集合；省略已有channel表达删除
 - Pose Graph-owned typed Source Slot子资产、Presentation Profile-owned typed Source Binding子资产、policy与有限Action producer binding
 - root-owned Pose Graph catalog、layout、parameter、typed node payload、显式`pose.local`/`pose.component` dynamic port、转换节点与edge
 - PoseStateMachine entry、带`Always Reset on Entry`的state、alias、transition、transition rule与blend策略；同步只由state source binding推导
@@ -176,7 +176,7 @@ Pose Transition混合JSON固定使用：
 
 Pose State JSON必须显式保存`alwaysResetOnEntry`。StateMachine在State provider获得entry relevance前统一执行该语义。PoseState Compiler从Transition两侧State唯一的Clip或BlendSpace provider读取Profile source binding；只有两侧AnimationClip属于同一Profile Locomotion Sync Group时才生成Phase relation，无共同组生成None。同组端点必须具有合法per-clip Phase plan、实际秒域coverage与匹配Foot Analysis Phase Validation identity。
 
-Pose Graph-owned Source Slot与Profile-owned Source Binding可由Document通过同一typed Presentation Mutation创建、重命名、配置和删除。Clip Binding只保存精确AnimationClip对象引用；Profile唯一保存Rig、Analysis Source与Locomotion Sync Group。两项注册Curve通过`editable/animation-clips/**/curves.json`修改，时间域固定为seconds。Document不能创建AnimationClip、修改骨骼曲线、AnimationEvent、import设置、Rig、Foot Analysis、Motion Matching索引或generated payload。
+Pose Graph-owned Source Slot与Profile-owned Source Binding可由Document通过同一typed Presentation Mutation创建、重命名、配置和删除。Clip Binding只保存精确AnimationClip对象引用；Profile唯一保存Rig、Analysis Source与Locomotion Sync Group。两项注册Curve通过`editable/animation-clips/**/curves.json`完整替换或删除，时间域固定为seconds；全部变化必须进入planned/applied diff、同一Undo owner和最终reverse export。可达Clip的Foot Weight必填，Locomotion Phase只允许Group成员保留。Document不能创建AnimationClip、修改骨骼曲线、AnimationEvent、import设置、Rig、Foot Analysis、Motion Matching索引或generated payload。
 
 Presentation目标使用两类分离的业务来源：
 

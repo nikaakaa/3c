@@ -93,8 +93,8 @@
 - Profile、Pose Source Binding、Blend Space Sample与Action Timeline只引用AnimationClip或Profile Sync Group，不存在Sequence对象、Marker副本或素材Curve副本。
 - 全部Clip消费者只读取`presentation.foot-placement-weight`唯一作者channel，并统一降低为`animation.foot-placement-weight`Runtime参数；Motion Matching不保留第二channel resolver。
 - 修改注册表现Curve只使依赖Projection stale；骨骼、Root、Loop或基础素材时长变化才使Foot Analysis Artifact stale。
-- Corin可达Locomotion Clip具有可见、严格校验的Locomotion Phase曲线；MovingTurn只按Gameplay实际0-28帧覆盖参与关系编译。
-- 不相容的MovingTurn到RunLoop关系在Projection Build明确失败，不能发布一条数学合法但腿部错误的映射。
+- Corin只有正式Sync Group成员具有可见、严格校验的Locomotion Phase曲线；WalkLoop与RunLoop按真实Landing和完整循环coverage参与关系编译，Start与Turn素材若不相容则保持组外并删除无消费Phase曲线。
+- 不相容的MovingTurn、Start或其它有限素材不得形成Phase relation；Projection Build不能发布一条数学合法但Plant、脚底位置、高度或速度错误的映射，也不得用旧产物或normalized time回退。
 - Runtime只消费Projection中的per-clip phase plan和relation引用，不读取AnimationClip Editor曲线、Foot Analysis artifact或Profile现场搜索。
 - Corin Locomotion不再使用Inertialization；正确脚相之后由Standard Blend完成可预测混合。
 - Agent Document、人工Animation Window、Profile Inspector和Character Build观察到同一Clip曲线与Sync Group真相，没有Sequence或Marker旧路径。

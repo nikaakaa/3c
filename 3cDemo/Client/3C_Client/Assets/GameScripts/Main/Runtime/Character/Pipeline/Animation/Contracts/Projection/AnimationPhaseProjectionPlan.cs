@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class AnimationClipPhasePlan
     {
-        public const string SchemaVersion = "animation-clip-phase-plan/v1";
+        public const string SchemaVersion = "animation-clip-phase-plan/v2";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] string m_ClipIdentity = string.Empty;
@@ -186,7 +186,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 localPhase -= PhaseSpan;
                 cycle += 1d;
             }
-            return cycle * SourceDurationSeconds + InterpolateInverse((float)localPhase);
+            double result = cycle * SourceDurationSeconds + InterpolateInverse((float)localPhase);
+            if (result < 0d)
+                result += Math.Ceiling(-result / SourceDurationSeconds) * SourceDurationSeconds;
+            return result;
         }
 
         float InterpolateForward(float time)

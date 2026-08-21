@@ -308,7 +308,7 @@ Application Service MUST在首次Mutation前解析并锁定全部Gameplay、Time
 
 ### Requirement: AnimationClip注册Curve必须使用独立严格分片
 
-Document v4 MUST只为当前Definition闭包中实际可达且位于可写原生`.anim`的AnimationClip输出`editable/animation-clips/<stable-segment>/curves.json`。分片 MUST包含结构化Clip对象引用、完整dependency baseline、只读`AnimationClipAnalysisInputHash`和Clip Curve catalog允许的秒域完整canonical Curve；MUST不包含骨骼Curve、AnimationEvent、import设置、Rig、Foot Analysis Artifact、Phase Validation samples、Group或generated plan。Exporter、strict parser、Reconciler、handler、Validator与reverse exporter MUST复用同一Clip Curve capability，并按完整`EditorCurveBinding(path + type + property)`识别channel，不得只比较propertyName。
+Document v4 MUST只为当前Definition闭包中实际可达且位于可写原生`.anim`的AnimationClip输出`editable/animation-clips/<stable-segment>/curves.json`。分片 MUST包含结构化Clip对象引用、完整dependency baseline、只读`AnimationClipAnalysisInputHash`和Clip Curve catalog允许的秒域完整canonical Curve目标集合；从目标集合省略已有channel MUST表达删除。可达Clip的Foot Weight删除和仍为Locomotion Sync Group成员的Phase删除 MUST被Validator拒绝。分片 MUST不包含骨骼Curve、AnimationEvent、import设置、Rig、Foot Analysis Artifact、Phase Validation samples、Group或generated plan。Exporter、strict parser、Reconciler、handler、Validator与reverse exporter MUST复用同一Clip Curve capability，并按完整`EditorCurveBinding(path + type + property)`识别channel，不得只比较propertyName。每项替换或删除 MUST进入planned/applied diff、同一AnimationClip Undo owner与最终reverse export。
 
 #### Scenario: checkout导出RunLoop Curve
 
@@ -321,6 +321,12 @@ Document v4 MUST只为当前Definition闭包中实际可达且位于可写原生
 - **WHEN** AI在dependency baseline与Analysis Input Hash仍匹配时替换Foot Placement Weight完整秒域Curve
 - **THEN** preflight MUST通过唯一Clip Curve Mutation校验完整binding、秒域、值域与Registered Curve Hash
 - **AND** apply成功后 MUST只使Projection stale，匹配Analysis Input Hash的Foot Analysis Artifact MUST继续Ready
+
+#### Scenario: 组外Clip删除Locomotion Phase
+
+- **WHEN** Document从非Group成员Clip的Curve目标集合移除`presentation.locomotion-phase`
+- **THEN** dry-run MUST计划Clip Curve删除并锁定该AnimationClip owner
+- **AND** apply MUST删除完整EditorCurveBinding且reverse export MUST省略该channel
 
 #### Scenario: Document修改只读导入子Clip
 

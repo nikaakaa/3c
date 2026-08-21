@@ -18,7 +18,7 @@ Corin每个持续Locomotion Clip、Blend Space或Motion Matching source MUST拥�
 
 ### Requirement: Corin Walk与Run MAY共享Locomotion.Gait
 
-Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion PoseStateMachine可达分支中通过Profile共享`Locomotion.Gait` Sync Group。Group MUST只装配精确AnimationClip成员；每个Direct Clip endpoint和Blend Space Dynamic Sample MUST具有合法Locomotion Phase Curve。source-local Phase映射 MUST只影响Pose sample time，不得改变Pose transition rule、Gameplay movement、Motion request或WorldSolver结果。Corin MUST不为Phase同步恢复Timeline producer。
+Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion PoseStateMachine可达分支中通过Profile共享`Locomotion.Gait` Sync Group。Group MUST只装配通过Foot Analysis关系质量门槛的精确AnimationClip成员；不相容有限素材 MUST保持组外并删除无消费Phase曲线。每个Group成员Direct Clip endpoint和Blend Space Dynamic Sample MUST具有合法Locomotion Phase Curve。source-local Phase映射 MUST只影响Pose sample time，不得改变Pose transition rule、Gameplay movement、Motion request或WorldSolver结果。Corin MUST不为Phase同步恢复Timeline producer。
 
 #### Scenario: Walk Pose切换Run Pose
 
@@ -26,9 +26,15 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 - **THEN** source-local relation MUST按compiled unwrapped Phase解析target sample time
 - **AND** Gameplay Program MUST不产生WalkLoop或RunLoop playback
 
+#### Scenario: Start或Turn有限出口不相容
+
+- **WHEN** 有限素材无法满足目标Loop的Plant、位置、高度或速度质量门槛
+- **THEN** Profile MUST保持该Clip为组外Direct Clip并删除其Locomotion Phase曲线
+- **AND** 对应edge MUST只执行显式Standard Blend
+
 ### Requirement: Corin旧Locomotion Timeline数据必须原子迁移
 
-旧Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd与MovingTurn Timeline中的数据 MUST按用途迁移：AnimationClip引用迁入Profile Clip Binding，归一化Foot Placement Weight按`SourceDurationSeconds`换算为秒域并与Locomotion Phase写入原生AnimationClip注册Curve，Rig与Foot Analysis进入Profile统一装配；真实影响Body的Motion数据迁入唯一Gameplay Motion owner；无正式消费方的数据删除。ClipPlayer MUST删除Loop副本并只消费AnimationClip正式Loop设置。迁移完成后 MUST删除旧TimelineNode、BaseLocomotion AnimationChannel producer、Sequence、Marker、source binding副本、lifecycle配置、ActionOverride与旧ownership Blackboard declaration，MUST不保留旧新双写。
+旧Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd与MovingTurn Timeline中的数据 MUST按用途迁移：AnimationClip引用迁入Profile Clip Binding，全部Foot Placement Weight按`SourceDurationSeconds`换算为秒域注册Curve，只有正式Group成员写入Locomotion Phase；Rig与Foot Analysis进入Profile统一装配，真实影响Body的Motion数据迁入唯一Gameplay Motion owner，无正式消费方的数据删除。ClipPlayer MUST删除Loop副本并只消费AnimationClip正式Loop设置。迁移完成后 MUST删除旧TimelineNode、BaseLocomotion AnimationChannel producer、Sequence、Marker、source binding副本、lifecycle配置、ActionOverride与旧ownership Blackboard declaration，MUST不保留旧新双写。
 
 #### Scenario: 迁移RunLoop
 

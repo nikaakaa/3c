@@ -48,6 +48,14 @@ namespace ThirdPersonGameplay.Lab
         public bool IsExternalLaunchVariant => !string.IsNullOrEmpty(m_ExternalLaunchArgumentPrefix);
         public string ExternalLaunchArgumentPrefix => m_ExternalLaunchArgumentPrefix;
 
+        public void RequireComplete()
+        {
+            _ = Program;
+            _ = PresentationProjection;
+            _ = WorldSolver;
+            ValidateComposition(Composition);
+        }
+
         public bool MatchesExternalLaunch(string[] arguments)
         {
             if (!IsExternalLaunchVariant || arguments == null)

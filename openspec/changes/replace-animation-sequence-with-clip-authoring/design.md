@@ -189,7 +189,7 @@ AnimationPhaseRelationPlan
   FollowerActualCoverage
 ```
 
-实际coverage统一使用秒域，来自Gameplay committed movement clock、有限state lifecycle、Timeline frame到秒的正式换算、ClipIn和Player使用方式的联合结果。MovingTurn的Gameplay Timeline以正式Timeline frame rate把0-28帧换算为秒，因此只使用该区间，不再按Clip 0-71帧假设业务出口。
+实际coverage统一使用秒域，来自Gameplay committed movement clock、有限state lifecycle、Timeline frame到秒的正式换算、ClipIn和Player使用方式的联合结果。有限素材只有在该coverage内全部可达relation通过质量门槛时才能加入Sync Group；不相容素材保持普通Direct Clip并删除无消费Phase曲线，edge只执行显式Standard Blend。
 
 Foot Analysis Artifact删除旧pairwise warp descriptor，但保留新的Editor-only `AnimationFootPhaseValidationDescriptor`。Descriptor按`AnimationClipAnalysisInputHash`保存左右脚随规范化素材时间采样的root-local平面位置、calibrated height、local velocity、Plant confidence与Landing/Plant onset事件；它只服务候选生成与Projection Build质量门槛，不进入Projection或Runtime。
 
@@ -298,9 +298,9 @@ editable/animation-clips/<stable-segment>/curves.json
 2. 把19个Sequence的归一化Foot Placement Weight曲线按`SourceDurationSeconds`无损换算成秒域并写入对应19个原生`.anim`唯一注册channel。
 3. 让全部Pose Binding、Blend Space Sample和Action Timeline Segment直接引用对应Clip，并删除Action producer的Foot Analysis identity副本。
 4. 删除全部Sequence资产、Notify数据、DefaultPlayRate、Player Loop、Rig/Analysis副本和Document Sequence分片。
-5. 为Walk/Run循环和合法Start素材作者正式Locomotion Phase曲线；Curve写回不使步骤1的Artifact过期。
-6. MovingTurn不迁移当前错误0-71 Marker计划；先把Gameplay 0-28帧按正式Timeline frame rate换算为秒域coverage，再作者Phase并由Foot Analysis质量门槛检查。
-7. 当前MovingTurn内容无法接入RunLoop时保持Build失败，直到动画内容或Gameplay生命周期被正式重做；不得发布旧Projection。
+5. 为Walk/Run循环作者正式Locomotion Phase曲线；对Start与Turn构建候选并执行正式关系质量检查，Curve写回不使步骤1的Artifact过期。
+6. MovingTurn不迁移当前错误0-71 Marker计划；其0-28帧候选与WalkStart、RunStart有限出口若无法匹配Loop的Plant、位置、高度和速度，则从Sync Group移除并删除Phase曲线。
+7. 只有质量相容的WalkLoop与RunLoop形成正式Phase relation；有限Start与Turn继续使用显式Standard Blend，不新增同步禁用开关、fallback或隐藏relation。
 8. Corin Locomotion Transition全部迁移为Standard Blend并删除未引用Inertialization配置。
 9. 显式重建Presentation Projection、Float32/Fixed Program与Native Pose产品；只有分析输入真实变化时才再次重建Foot Analysis。
 
@@ -384,9 +384,9 @@ Animation Window已经负责骨骼曲线、关键帧、切线和Preview交互。
 
 1. 静态删除审计确认代码、资产和Document schema中不存在Sequence、Marker Sync、GeneratedFootPhase和Corin Locomotion Inertialization正式引用。
 2. 使用禁用共享编译服务的参数构建受影响Runtime与Editor工程，并立即关闭.NET build server。
-3. Character Build对缺失Curve、Phase非单调、onset错误、coverage越界、identity不匹配和MovingTurn到RunLoop不相容分别返回typed failure，且不发布旧Projection。
+3. Character Build对缺失Curve、Phase非单调、onset错误、coverage越界、identity不匹配和有限素材到Loop不相容分别返回typed failure；正式内容必须移除不相容Group成员后再发布，不得发布旧Projection。
 4. Unity人工作者链从Profile、Blend Space和Action Workspace打开同一原生AnimationClip，确认都进入Animation Window且读取同一注册Curve。
-5. 用户在真实Gameplay中验证`TurnBack -> RunLoop`、`MovingTurn -> RunLoop`、Walk/Run切换和Start进入Loop；观察左右脚接触顺序、腿部混合和Standard Blend，不使用离线重放。
+5. 用户在真实Gameplay中验证WalkLoop/RunLoop Phase切换，以及Start、Turn进入Loop时只执行Standard Blend；观察左右脚接触顺序和腿部混合，不使用离线重放。
 6. Document v4执行checkout、修改Clip Curve/Profile Group/Timeline Clip引用、dry-run、同hash apply、reverse export与validate；注册Curve apply后Artifact保持Ready，v3 package必须在Mutation前拒绝。
 
 ## OpenSpec Reconciliation

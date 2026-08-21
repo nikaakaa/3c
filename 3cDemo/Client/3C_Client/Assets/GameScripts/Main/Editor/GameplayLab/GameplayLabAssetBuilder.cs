@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Animancer;
+using BTSMTL.Timeline;
 using Cinemachine;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.AI;
@@ -48,6 +49,7 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string CharacterDefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
         const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
         const string TrainingEnemyPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/AI/TrainingEnemyMonster.prefab";
+        const string TrainingEnemyAttackTimelinePath = "Assets/Configs/Character/TrainingEnemy/Pipeline/Graphs/Timelines/TrainingEnemyAttackTimeline.asset";
         const string FixedPlayerProfilePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinGameplayLabFixedPlayer.prefab";
         const string FixedTargetProfilePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinGameplayLabFixedTarget.prefab";
         const string AnimationRigTemplatePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
@@ -84,6 +86,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be rebuilt in Play Mode.");
             EnsureFolders();
+            NormalizeTrainingEnemyTimeline();
             CharacterRuntimeProfileRootHierarchyBuilder.Synchronize();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram =
@@ -91,6 +94,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             CharacterPresentationProjectionAsset projection = definition.PresentationProjection
                 ? definition.PresentationProjection
                 : throw new InvalidOperationException("Gameplay Lab Character Definition has no published Projection.");
+            SynchronizeRollbackTemplateProjection(projection);
             DeterministicKccWorldSolverDefinition solver =
                 LoadRequired<DeterministicKccWorldSolverDefinition>(FixedSolverPath);
             DeterministicCollisionWorldAsset collision =
@@ -149,6 +153,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be synchronized in Play Mode.");
             EnsureFolders();
+            NormalizeTrainingEnemyTimeline();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             if (!definition.SimulationProgram || !definition.PresentationProjection)
                 throw new InvalidOperationException("Gameplay Lab Float32 player products are missing.");
@@ -638,6 +643,19 @@ namespace ThirdPersonGameplay.Editor.Lab
             return fixedHost;
         }
 
+        static void NormalizeTrainingEnemyTimeline()
+        {
+            TimelineAsset timeline = LoadRequired<TimelineAsset>(TrainingEnemyAttackTimelinePath);
+            foreach (AnimationTrack track in timeline.Data.Tracks.OfType<AnimationTrack>())
+            {
+                if (!track.AnimationChannelId.IsValid)
+                    throw new InvalidOperationException("Training Enemy Animation Track has no formal Animation Channel identity.");
+                track.SetAnimationChannelId(track.AnimationChannelId);
+            }
+            EditorUtility.SetDirty(timeline);
+            AssetDatabase.SaveAssetIfDirty(timeline);
+        }
+
         public static void RebuildFixedCharacterPrefabs()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -647,6 +665,10 @@ namespace ThirdPersonGameplay.Editor.Lab
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram =
                 LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+            SynchronizeRollbackTemplateProjection(
+                definition.PresentationProjection
+                    ? definition.PresentationProjection
+                    : throw new InvalidOperationException("Gameplay Lab Character Definition has no published Projection."));
             SimulationSessionCompositionDefinition fixedComposition =
                 LoadRequired<SimulationSessionCompositionDefinition>(FixedCompositionPath);
             BuildFixedRuntimeProfiles(definition, fixedProgram);
@@ -686,6 +708,26 @@ namespace ThirdPersonGameplay.Editor.Lab
                 if (previous.IsValid() && previous.isLoaded)
                     SceneManager.SetActiveScene(previous);
                 EditorSceneManager.CloseScene(workspace, true);
+            }
+        }
+
+        static void SynchronizeRollbackTemplateProjection(
+            CharacterPresentationProjectionAsset projection)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(AnimationRigTemplatePrefabPath);
+            try
+            {
+                DeterministicRollbackCharacterHost host =
+                    root.GetComponent<DeterministicRollbackCharacterHost>() ??
+                    throw new InvalidOperationException(
+                        $"Rollback Character Prefab '{AnimationRigTemplatePrefabPath}' has no DeterministicRollbackCharacterHost.");
+                host.SetPresentationProjectionAuthoring(projection);
+                EditorUtility.SetDirty(host);
+                PrefabUtility.SaveAsPrefabAsset(root, AnimationRigTemplatePrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
             }
         }
 

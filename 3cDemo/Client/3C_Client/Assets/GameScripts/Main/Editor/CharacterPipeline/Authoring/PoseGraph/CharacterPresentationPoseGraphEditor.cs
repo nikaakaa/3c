@@ -257,7 +257,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             BindCurrentGraph(true);
         }
 
-        public void FocusStateSequence(
+        public void FocusStatePlayer(
             CharacterTypedPoseNode machine,
             CharacterPoseStateDefinition state,
             PoseNodeId sequenceNodeId)

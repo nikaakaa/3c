@@ -67,7 +67,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 OutputAnkle;
         internal Vector3 OutputVelocity;
         internal ulong SwingHandoffLandingEventIdentity;
-        internal Vector3 SwingHandoffTargetAnkle;
+        internal Vector3 SwingHandoffPreviousTargetAnkle;
+        internal Vector3 SwingHandoffStartOffset;
+        internal Vector3 SwingHandoffStartOffsetVelocity;
+        internal float SwingHandoffElapsedSeconds;
+        internal bool SwingHandoffTrajectoryInitialized;
+        internal bool SwingHandoffHasPredictedTarget;
 
         internal void ClearSupport()
         {
@@ -82,7 +87,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OutputAnkle = default;
             OutputVelocity = default;
             SwingHandoffLandingEventIdentity = 0;
-            SwingHandoffTargetAnkle = default;
+            SwingHandoffPreviousTargetAnkle = default;
+            SwingHandoffStartOffset = default;
+            SwingHandoffStartOffsetVelocity = default;
+            SwingHandoffElapsedSeconds = 0f;
+            SwingHandoffTrajectoryInitialized = false;
+            SwingHandoffHasPredictedTarget = false;
         }
 
         internal void Clear()
@@ -702,7 +712,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             lockFacts.OutputAnkle = targetAnkle;
             lockFacts.OutputVelocity = outputVelocity;
             lockFacts.SwingHandoffLandingEventIdentity = 0;
-            lockFacts.SwingHandoffTargetAnkle = default;
+            lockFacts.SwingHandoffPreviousTargetAnkle = default;
+            lockFacts.SwingHandoffStartOffset = default;
+            lockFacts.SwingHandoffStartOffsetVelocity = default;
+            lockFacts.SwingHandoffElapsedSeconds = 0f;
+            lockFacts.SwingHandoffTrajectoryInitialized = false;
+            lockFacts.SwingHandoffHasPredictedTarget = false;
             return new CharacterFootSwingMotionDiagnostics(
                 CharacterFootSwingMotionState.Accepted,
                 CharacterFootSwingMotionRejectReason.None,
@@ -754,7 +769,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 handoffTargetAnkle = hasPredictedTarget
                 ? swingMotion.CorrectedAnkle
                 : originalAnkle;
-            if (beginning)
+            bool handoffChanged = !beginning &&
+                                  lockFacts.SwingHandoffLandingEventIdentity !=
+                                  handoffLandingEventIdentity;
+            bool targetAvailabilityChanged = !beginning &&
+                                             lockFacts.SwingHandoffHasPredictedTarget !=
+                                             hasPredictedTarget;
+            if (beginning || handoffChanged || targetAvailabilityChanged)
             {
                 lockFacts.State = CharacterFootSupportLockState.SwingHandoff;
                 lockFacts.OutputAnkle = Finite(lockFacts.OutputAnkle)
@@ -764,65 +785,78 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? lockFacts.OutputVelocity
                     : default;
                 lockFacts.SwingHandoffLandingEventIdentity = handoffLandingEventIdentity;
-                lockFacts.SwingHandoffTargetAnkle = handoffTargetAnkle;
+                lockFacts.SwingHandoffPreviousTargetAnkle = handoffTargetAnkle;
+                lockFacts.SwingHandoffStartOffset = default;
+                lockFacts.SwingHandoffStartOffsetVelocity = default;
+                lockFacts.SwingHandoffElapsedSeconds = 0f;
+                lockFacts.SwingHandoffTrajectoryInitialized = false;
+                lockFacts.SwingHandoffHasPredictedTarget = hasPredictedTarget;
                 lockFacts.UnlockStartPositionWeight = lockFacts.PositionWeight;
                 lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
             }
-            else
+            else if (deltaSeconds > 0f)
             {
-                if (lockFacts.SwingHandoffLandingEventIdentity != handoffLandingEventIdentity)
+                Vector3 targetVelocity =
+                    (handoffTargetAnkle - lockFacts.SwingHandoffPreviousTargetAnkle) /
+                    deltaSeconds;
+                if (!lockFacts.SwingHandoffTrajectoryInitialized)
                 {
-                    lockFacts.SwingHandoffLandingEventIdentity = handoffLandingEventIdentity;
-                    lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
+                    lockFacts.SwingHandoffStartOffset =
+                        lockFacts.OutputAnkle - handoffTargetAnkle;
+                    lockFacts.SwingHandoffStartOffsetVelocity =
+                        lockFacts.OutputVelocity - targetVelocity;
+                    lockFacts.SwingHandoffTrajectoryInitialized = true;
                 }
-                lockFacts.SwingHandoffTargetAnkle = handoffTargetAnkle;
+                lockFacts.SwingHandoffElapsedSeconds = Mathf.Min(
+                    settings.UnlockBlendSeconds,
+                    lockFacts.SwingHandoffElapsedSeconds + deltaSeconds);
+                EvaluateHandoffResidual(
+                    lockFacts.SwingHandoffStartOffset,
+                    lockFacts.SwingHandoffStartOffsetVelocity,
+                    settings.UnlockBlendSeconds,
+                    lockFacts.SwingHandoffElapsedSeconds,
+                    out Vector3 offset,
+                    out Vector3 offsetVelocity);
+                lockFacts.OutputAnkle = handoffTargetAnkle + offset;
+                lockFacts.OutputVelocity = targetVelocity + offsetVelocity;
+                float progress = lockFacts.SwingHandoffElapsedSeconds /
+                                 settings.UnlockBlendSeconds;
+                float weightProgress = progress * progress * (3f - 2f * progress);
+                float targetWeight = hasPredictedTarget
+                    ? swingMotion.PositionWeight
+                    : lockFacts.UnlockStartPositionWeight;
+                lockFacts.PositionWeight = Mathf.Lerp(
+                    lockFacts.UnlockStartPositionWeight,
+                    targetWeight,
+                    weightProgress);
+                lockFacts.UnlockRemainingSeconds = Mathf.Max(
+                    0f,
+                    settings.UnlockBlendSeconds -
+                    lockFacts.SwingHandoffElapsedSeconds);
+                lockFacts.SwingHandoffPreviousTargetAnkle = handoffTargetAnkle;
             }
 
             if (!Finite(lockFacts.OutputAnkle) ||
                 !Finite(lockFacts.OutputVelocity) ||
-                !Finite(lockFacts.SwingHandoffTargetAnkle))
+                !Finite(lockFacts.SwingHandoffPreviousTargetAnkle) ||
+                !Finite(lockFacts.SwingHandoffStartOffset) ||
+                !Finite(lockFacts.SwingHandoffStartOffsetVelocity))
             {
                 throw new InvalidOperationException("Foot swing handoff state is invalid.");
             }
 
-            bool hasCurrentTarget = handoffLandingEventIdentity ==
-                                    lockFacts.SwingHandoffLandingEventIdentity;
-            if (!beginning && deltaSeconds > 0f &&
-                lockFacts.UnlockRemainingSeconds > GeometryEpsilon)
-            {
-                float duration = lockFacts.UnlockRemainingSeconds;
-                float step = Mathf.Min(deltaSeconds, duration);
-                AdvanceHermite(
-                    lockFacts.OutputAnkle,
-                    lockFacts.OutputVelocity,
-                    lockFacts.SwingHandoffTargetAnkle,
-                    duration,
-                    step,
-                    out lockFacts.OutputAnkle,
-                    out lockFacts.OutputVelocity);
-                float targetWeight = hasPredictedTarget
-                    ? swingMotion.PositionWeight
-                    : lockFacts.PositionWeight;
-                lockFacts.PositionWeight = Mathf.Lerp(
-                    lockFacts.PositionWeight,
-                    targetWeight,
-                    step / duration);
-                lockFacts.UnlockRemainingSeconds = Mathf.Max(0f, duration - step);
-            }
-
-            if (lockFacts.UnlockRemainingSeconds <= GeometryEpsilon && hasCurrentTarget)
+            if (lockFacts.UnlockRemainingSeconds <= GeometryEpsilon &&
+                hasPredictedTarget)
             {
                 lockFacts.ClearSupport();
-                return hasPredictedTarget
-                    ? swingMotion
-                    : CharacterFootSwingMotionBuilder.SuppressUnselected(in swingMotion);
+                return swingMotion;
             }
 
             Vector3 up = componentUp.normalized;
             Vector3 correction = lockFacts.OutputAnkle - originalAnkle;
             Vector3 correctedSole = originalSole + correction;
             float horizontalError = Vector3.ProjectOnPlane(
-                lockFacts.SwingHandoffTargetAnkle - lockFacts.OutputAnkle,
+                handoffTargetAnkle - lockFacts.OutputAnkle,
                 up).magnitude;
             return new CharacterFootSwingMotionDiagnostics(
                 CharacterFootSwingMotionState.Accepted,
@@ -852,28 +886,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasPredictedTarget ? swingMotion.SupportLockPreparationWeight : 0f);
         }
 
-        static void AdvanceHermite(
-            Vector3 start,
-            Vector3 startVelocity,
-            Vector3 end,
+        static void EvaluateHandoffResidual(
+            Vector3 startOffset,
+            Vector3 startOffsetVelocity,
             float duration,
-            float step,
-            out Vector3 position,
-            out Vector3 velocity)
+            float elapsedSeconds,
+            out Vector3 offset,
+            out Vector3 offsetVelocity)
         {
-            float t = Mathf.Clamp01(step / duration);
+            float t = Mathf.Clamp01(elapsedSeconds / duration);
             float t2 = t * t;
             float t3 = t2 * t;
             float h00 = 2f * t3 - 3f * t2 + 1f;
             float h10 = t3 - 2f * t2 + t;
-            float h01 = -2f * t3 + 3f * t2;
-            position = h00 * start + h10 * duration * startVelocity + h01 * end;
+            offset = h00 * startOffset +
+                     h10 * duration * startOffsetVelocity;
             float dh00 = 6f * t2 - 6f * t;
             float dh10 = 3f * t2 - 4f * t + 1f;
-            float dh01 = -6f * t2 + 6f * t;
-            velocity = (dh00 * start +
-                        dh10 * duration * startVelocity +
-                        dh01 * end) / duration;
+            offsetVelocity = (dh00 * startOffset +
+                              dh10 * duration * startOffsetVelocity) /
+                             duration;
         }
 
         static void BeginSupportUnlock(
@@ -886,7 +918,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             lockFacts.UnlockStartPositionWeight = lockFacts.PositionWeight;
             lockFacts.UnlockRemainingSeconds = settings.UnlockBlendSeconds;
             lockFacts.SwingHandoffLandingEventIdentity = 0;
-            lockFacts.SwingHandoffTargetAnkle = default;
+            lockFacts.SwingHandoffPreviousTargetAnkle = default;
+            lockFacts.SwingHandoffStartOffset = default;
+            lockFacts.SwingHandoffStartOffsetVelocity = default;
+            lockFacts.SwingHandoffElapsedSeconds = 0f;
+            lockFacts.SwingHandoffTrajectoryInitialized = false;
+            lockFacts.SwingHandoffHasPredictedTarget = false;
         }
 
         static CharacterFootSwingMotionDiagnostics ContinueSupportUnlock(

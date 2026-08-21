@@ -198,14 +198,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float goalTransitionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
-            float unlockBlendSeconds,
+            float contactTransitionSeconds,
             float pelvisSpringFrequency)
         {
             LandingUpdateDistance = landingUpdateDistance;
             GoalTransitionHalfLifeSeconds = goalTransitionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
-            UnlockBlendSeconds = unlockBlendSeconds;
+            ContactTransitionSeconds = contactTransitionSeconds;
             PelvisSpringFrequency = pelvisSpringFrequency;
             RequireValid();
         }
@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float GoalTransitionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
-        internal float UnlockBlendSeconds { get; }
+        internal float ContactTransitionSeconds { get; }
         internal float PelvisSpringFrequency { get; }
 
         internal void RequireValid()
@@ -225,8 +225,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LockDistance <= LandingUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
-                !float.IsFinite(UnlockBlendSeconds) ||
-                UnlockBlendSeconds <= 0f ||
+                !float.IsFinite(ContactTransitionSeconds) ||
+                ContactTransitionSeconds <= 0f ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f)
             {
                 throw new InvalidOperationException(

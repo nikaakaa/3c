@@ -106,6 +106,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ContributionContinuityIdentity = source.ContributionContinuityIdentity;
             LandingEventIdentity = source.LandingEventIdentity;
             RootLocalLanding = source.IsValid ? source.Route.RootLocalLanding : default;
+            ConstraintWeight = source.IsValid ? source.CurrentConstraintWeight : 0f;
+            SupportWeight = source.IsValid ? source.CurrentSupportWeight : 0f;
             m_IsSpecified = source.IsValid ? (byte)1 : (byte)0;
             m_HasLandingEvent = source.HasLandingEvent ? (byte)1 : (byte)0;
             m_IsAuthoritative = source.IsAuthoritative ? (byte)1 : (byte)0;
@@ -134,6 +136,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public ulong ContributionContinuityIdentity { get; }
         public ulong LandingEventIdentity { get; }
         public Vector3 RootLocalLanding { get; }
+        public float ConstraintWeight { get; }
+        public float SupportWeight { get; }
         public bool IsValid => m_IsSpecified != 0;
         public bool HasLandingEvent => m_HasLandingEvent != 0;
         public bool IsAuthoritative => m_IsAuthoritative != 0;

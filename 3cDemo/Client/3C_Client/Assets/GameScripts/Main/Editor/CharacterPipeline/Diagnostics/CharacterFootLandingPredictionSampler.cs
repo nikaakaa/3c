@@ -81,9 +81,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
-            "FootMotionSupportLockState,FootMotionSupportHorizontalError,FootMotionSupportUnlockRemainingSeconds," +
-            "FootMotionSupportUnlockCorrectionX,FootMotionSupportUnlockCorrectionY,FootMotionSupportUnlockCorrectionZ," +
+            "FootMotionSupportLockState,FootMotionSupportHorizontalError," +
             "FootMotionSupportLockPreparationStartTimeToLandingSeconds,FootMotionSupportLockPreparationWeight," +
+            "FootMotionSupportConstraintWeight,FootMotionSupportWeight," +
+            "FootMotionSupportContactAnchorX,FootMotionSupportContactAnchorY,FootMotionSupportContactAnchorZ," +
             "GoalTransitionMode,GoalTransitionHasCommittedOutput,GoalTransitionHasPendingOutput," +
             "GoalTransitionCommittedSourceGroundPathIdentity,GoalTransitionPendingSourceGroundPathIdentity," +
             "RawGoalPositionCorrectionX,RawGoalPositionCorrectionY,RawGoalPositionCorrectionZ," +
@@ -985,10 +986,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.RotationWeight);
             Add(row, motion.SupportLockState.ToString());
             Add(row, motion.SupportHorizontalError);
-            Add(row, motion.SupportUnlockRemainingSeconds);
-            Add(row, motion.SupportUnlockCorrection);
             Add(row, motion.SupportLockPreparationStartTimeToLandingSeconds);
             Add(row, motion.SupportLockPreparationWeight);
+            Add(row, motion.SupportConstraintWeight);
+            Add(row, motion.SupportWeight);
+            Add(row, motion.SupportContactAnchor);
             CharacterFootGoalTransitionDiagnostics goalTransition = foot.GoalTransition;
             Add(row, goalTransition.Mode.ToString());
             Add(row, goalTransition.HasCommittedOutput);

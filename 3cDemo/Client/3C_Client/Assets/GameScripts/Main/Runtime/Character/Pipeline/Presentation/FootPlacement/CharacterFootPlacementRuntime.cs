@@ -314,46 +314,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftSwingMotion,
                 in rightSwingMotion,
                 out CharacterFootSide selectedSwingSide);
-            CharacterFootSwingMotionDiagnostics leftFootMotion = ResolveFootMotion(
-                pose.Left,
-                in leftCurrentStep,
-                in leftSwingMotion,
-                hasLeftLastLanding,
-                leftLastLanding,
-                facts.Grounded,
-                in leftAction,
-                footPlacementWeight,
-                componentUp,
-                frame.PresentationDeltaSeconds,
-                ref m_PendingLeftLockPreparation,
-                ref m_PendingLeftSupportLock);
-            CharacterFootSwingMotionDiagnostics rightFootMotion = ResolveFootMotion(
-                pose.Right,
-                in rightCurrentStep,
-                in rightSwingMotion,
-                hasRightLastLanding,
-                rightLastLanding,
-                facts.Grounded,
-                in rightAction,
-                footPlacementWeight,
-                componentUp,
-                frame.PresentationDeltaSeconds,
-                ref m_PendingRightLockPreparation,
-                ref m_PendingRightSupportLock);
-            CharacterFootStrideHipsBuilder.ResolvePrimarySupport(
-                in leftFootMotion,
-                in rightFootMotion,
-                ref m_PendingPrimarySupport);
-            CharacterFootPrimarySupportDiagnostics primarySupport =
-                m_PendingPrimarySupport.Diagnostics;
             leftGoal = CreateFootGoal(
                 CharacterFootSide.Left,
                 pose.Left,
-                in leftFootMotion);
+                in leftSwingMotion);
             rightGoal = CreateFootGoal(
                 CharacterFootSide.Right,
                 pose.Right,
-                in rightFootMotion);
+                in rightSwingMotion);
             Transform goalRoot = m_Rig.PoseRoot;
             Vector3 leftOriginalComponentPosition = goalRoot.InverseTransformPoint(
                 pose.Left.AnklePosition);
@@ -371,12 +339,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftGroundPath.Accepted ? leftGroundPath.InputIdentity : 0,
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion.GoalTransitionHalfLifeSeconds,
-                ResolveGoalTransitionMode(in leftFootMotion),
-                leftFootMotion.SupportLockPreparationWeight,
-                IsHardFootOwnershipLoss(
-                    facts.Grounded,
-                    in leftAction,
-                    in leftFootMotion));
+                ResolveFootGoalTransitionMode(
+                    in leftSelectedStep,
+                    in leftSwingMotion),
+                leftSwingMotion.SupportLockPreparationWeight,
+                IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction));
             rightGoal = m_RightGoalTransition.Resolve(
                 in rightGoal,
                 rightOriginalComponentPosition,
@@ -385,12 +352,73 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightGroundPath.Accepted ? rightGroundPath.InputIdentity : 0,
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion.GoalTransitionHalfLifeSeconds,
-                ResolveGoalTransitionMode(in rightFootMotion),
-                rightFootMotion.SupportLockPreparationWeight,
-                IsHardFootOwnershipLoss(
-                    facts.Grounded,
-                    in rightAction,
-                    in rightFootMotion));
+                ResolveFootGoalTransitionMode(
+                    in rightSelectedStep,
+                    in rightSwingMotion),
+                rightSwingMotion.SupportLockPreparationWeight,
+                IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction));
+            CharacterFootSwingMotionDiagnostics leftStableSwingMotion =
+                ResolveFootMotionOutput(
+                pose.Left,
+                in leftSwingMotion,
+                in leftGoal,
+                goalRoot,
+                componentUp);
+            CharacterFootSwingMotionDiagnostics rightStableSwingMotion =
+                ResolveFootMotionOutput(
+                pose.Right,
+                in rightSwingMotion,
+                in rightGoal,
+                goalRoot,
+                componentUp);
+            var leftContactFrame = new CharacterFootContactFrame(
+                pose.Left,
+                in leftCurrentStep,
+                in leftStableSwingMotion,
+                hasLeftLastLanding,
+                in leftLastLanding,
+                IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction),
+                footPlacementWeight,
+                componentUp,
+                frame.PresentationDeltaSeconds,
+                m_PendingLeftLockPreparation.StartTimeToLandingSeconds,
+                m_PendingLeftLockPreparation.Weight,
+                m_Settings.FootMotion);
+            var rightContactFrame = new CharacterFootContactFrame(
+                pose.Right,
+                in rightCurrentStep,
+                in rightStableSwingMotion,
+                hasRightLastLanding,
+                in rightLastLanding,
+                IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction),
+                footPlacementWeight,
+                componentUp,
+                frame.PresentationDeltaSeconds,
+                m_PendingRightLockPreparation.StartTimeToLandingSeconds,
+                m_PendingRightLockPreparation.Weight,
+                m_Settings.FootMotion);
+            CharacterFootSwingMotionDiagnostics leftFootMotion =
+                CharacterFootContactStateMachine.Resolve(
+                    in leftContactFrame,
+                    ref m_PendingLeftSupportLock);
+            CharacterFootSwingMotionDiagnostics rightFootMotion =
+                CharacterFootContactStateMachine.Resolve(
+                    in rightContactFrame,
+                    ref m_PendingRightSupportLock);
+            leftGoal = CreateFootGoal(
+                CharacterFootSide.Left,
+                pose.Left,
+                in leftFootMotion);
+            rightGoal = CreateFootGoal(
+                CharacterFootSide.Right,
+                pose.Right,
+                in rightFootMotion);
+            CharacterFootStrideHipsBuilder.ResolvePrimarySupport(
+                in leftFootMotion,
+                in rightFootMotion,
+                ref m_PendingPrimarySupport);
+            CharacterFootPrimarySupportDiagnostics primarySupport =
+                m_PendingPrimarySupport.Diagnostics;
             Vector3 leftCorrectedSole = ResolveWeightedGoalSole(
                 pose.Left,
                 in leftGoal,
@@ -404,10 +432,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightSelectedStep,
                 hasSelectedSwing,
                 selectedSwingSide,
-                hasLeftLastLanding,
-                leftLastLanding,
-                hasRightLastLanding,
-                rightLastLanding,
                 hasLeftNextSwingLanding,
                 leftNextSwingLanding,
                 hasRightNextSwingLanding,
@@ -1104,10 +1128,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in AnimationBiomechanicalStepHeader rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
-            bool hasLeftLastLanding,
-            CharacterFootGroundPathLanding leftLastLanding,
-            bool hasRightLastLanding,
-            CharacterFootGroundPathLanding rightLastLanding,
             bool hasLeftNextSwingLanding,
             CharacterFootGroundPathLanding leftNextSwingLanding,
             bool hasRightNextSwingLanding,
@@ -1134,6 +1154,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return RejectStride(CharacterFootStrideRejectReason.BodyNotGrounded);
             if (leftAction.IsOccupied || rightAction.IsOccupied)
                 return RejectStride(CharacterFootStrideRejectReason.ActionOccupied);
+            Vector3 primarySupportContactAnchor = primarySupport.HasValue
+                ? primarySupport.Side == CharacterFootSide.Left
+                    ? leftFootMotion.SupportContactAnchor
+                    : rightFootMotion.SupportContactAnchor
+                : default;
             if (!CharacterFootStrideHipsBuilder.TryResolveStride(
                     in leftSwingStep,
                     in rightSwingStep,
@@ -1142,12 +1167,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     primarySupport.HasValue,
                     primarySupport.Side,
                     primarySupport.LandingEventIdentity,
-                    hasLeftLastLanding,
-                    hasLeftLastLanding ? leftLastLanding.Point : default,
-                    hasLeftLastLanding ? leftLastLanding.LandingEventIdentity : 0,
-                    hasRightLastLanding,
-                    hasRightLastLanding ? rightLastLanding.Point : default,
-                    hasRightLastLanding ? rightLastLanding.LandingEventIdentity : 0,
+                    primarySupportContactAnchor,
                     hasLeftNextSwingLanding,
                     hasLeftNextSwingLanding ? leftNextSwingLanding.Point : default,
                     hasLeftNextSwingLanding ? leftNextSwingLanding.LandingEventIdentity : 0,
@@ -1181,11 +1201,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? leftFootMotion
                     : rightFootMotion;
             bool validSupport = supportMotion.Accepted &&
-                                (supportMotion.SupportLockState == CharacterFootSupportLockState.Locked ||
-                                 supportMotion.SupportLockState == CharacterFootSupportLockState.Sliding);
-            ulong supportLandingEventIdentity = supportSide == CharacterFootSide.Left
-                ? leftLastLanding.LandingEventIdentity
-                : rightLastLanding.LandingEventIdentity;
+                                supportMotion.SupportWeight >
+                                CharacterPoseConstraintMath.Epsilon &&
+                                 (supportMotion.SupportLockState == CharacterFootSupportLockState.Locked ||
+                                  supportMotion.SupportLockState == CharacterFootSupportLockState.Sliding ||
+                                  supportMotion.SupportLockState == CharacterFootSupportLockState.Releasing);
+            ulong supportLandingEventIdentity = primarySupport.LandingEventIdentity;
             if (!validSupport ||
                 supportMotion.LandingEventIdentity != supportLandingEventIdentity)
             {
@@ -1248,102 +1269,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    (targetAnkle - foot.AnklePosition) * goal.PositionWeight;
         }
 
-        CharacterFootSwingMotionDiagnostics ResolveFootMotion(
-            CharacterFootPlacementAnimatedFootPose foot,
-            in AnimationBiomechanicalStepHeader currentStep,
-            in CharacterFootSwingMotionDiagnostics swingMotion,
-            bool hasLastLanding,
-            CharacterFootGroundPathLanding lastLanding,
-            bool grounded,
-            in CharacterFootActionOccupancy action,
-            float footPlacementWeight,
-            Vector3 componentUp,
-            float deltaSeconds,
-            ref CharacterFootLockPreparationFacts preparation,
-            ref CharacterFootSupportLockFacts supportLock)
-        {
-            if (!grounded || action.IsOccupied)
-            {
-                supportLock.Clear();
-                preparation.Clear();
-                return CharacterFootSwingMotionBuilder.SuppressUnselected(in swingMotion);
-            }
-            if (supportLock.HasValue &&
-                supportLock.State == CharacterFootSupportLockState.SwingHandoff)
-            {
-                return CharacterFootStrideHipsBuilder.BuildSwingHandoff(
-                    foot,
-                    in swingMotion,
-                    supportLock.SwingHandoffLandingEventIdentity,
-                    componentUp,
-                    m_Settings.FootMotion,
-                    deltaSeconds,
-                    ref supportLock);
-            }
-            if (!currentStep.IsValid || !currentStep.IsAuthoritative ||
-                !hasLastLanding)
-            {
-                supportLock.Clear();
-                preparation.Clear();
-                return CharacterFootSwingMotionBuilder.SuppressUnselected(in swingMotion);
-            }
-
-            bool ownsSwing = currentStep.HasConsistentLandingEventIdentity &&
-                             currentStep.IsSwing &&
-                             currentStep.LandingEventIdentity != 0 &&
-                             currentStep.LandingEventIdentity !=
-                             lastLanding.LandingEventIdentity;
-            if (ownsSwing && supportLock.HasValue)
-            {
-                return CharacterFootStrideHipsBuilder.BuildSwingHandoff(
-                    foot,
-                    in swingMotion,
-                    currentStep.LandingEventIdentity,
-                    componentUp,
-                    m_Settings.FootMotion,
-                    deltaSeconds,
-                    ref supportLock);
-            }
-            if (ownsSwing)
-                return swingMotion.Accepted &&
-                       swingMotion.LandingEventIdentity == currentStep.LandingEventIdentity
-                    ? swingMotion
-                    : CharacterFootSwingMotionBuilder.SuppressUnselected(in swingMotion);
-
-            return CharacterFootStrideHipsBuilder.BuildStancePlant(
-                foot,
-                in currentStep,
-                footPlacementWeight,
-                componentUp,
-                true,
-                lastLanding.Point,
-                lastLanding.LandingEventIdentity,
-                preparation.StartTimeToLandingSeconds,
-                preparation.Weight,
-                m_Settings.FootMotion,
-                deltaSeconds,
-                ref supportLock);
-        }
-
-        static bool IsHardFootOwnershipLoss(
-            bool grounded,
-            in CharacterFootActionOccupancy action,
+        static CharacterFootGoalTransitionMode ResolveFootGoalTransitionMode(
+            in AnimationBiomechanicalStepHeader step,
             in CharacterFootSwingMotionDiagnostics motion) =>
-            !grounded || action.IsOccupied ||
-            motion.RejectReason == CharacterFootSwingMotionRejectReason.StepUnavailable ||
-            motion.RejectReason == CharacterFootSwingMotionRejectReason.StanceLandingUnavailable;
+            motion.Accepted &&
+            motion.SupportLockState == CharacterFootSupportLockState.None &&
+            step.IsValid &&
+            step.EventPhase >= step.ApproachContactPhase
+                ? CharacterFootGoalTransitionMode.LandingPreparation
+                : CharacterFootGoalTransitionMode.Smooth;
 
-        static CharacterFootGoalTransitionMode ResolveGoalTransitionMode(
-            in CharacterFootSwingMotionDiagnostics motion)
+        static bool IsHardFootGoalOwnershipLoss(
+            bool grounded,
+            in CharacterFootActionOccupancy action) =>
+            !grounded || action.IsOccupied;
+
+        static CharacterFootSwingMotionDiagnostics ResolveFootMotionOutput(
+            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootSwingMotionDiagnostics motion,
+            in CharacterFullBodyIkGoal goal,
+            Transform poseRoot,
+            Vector3 componentUp)
         {
-            if (!motion.Accepted)
-                return motion.RejectReason ==
-                       CharacterFootSwingMotionRejectReason.SupportOwnershipReleased
-                    ? CharacterFootGoalTransitionMode.Released
-                    : CharacterFootGoalTransitionMode.Smooth;
-            if (motion.SupportLockState != CharacterFootSupportLockState.None)
-                return CharacterFootGoalTransitionMode.DirectSupport;
-            return CharacterFootGoalTransitionMode.LandingPreparation;
+            Vector3 targetAnkle = poseRoot.TransformPoint(goal.ComponentPosition);
+            Vector3 originalSole = (foot.HeelPosition + foot.ToePosition) * 0.5f;
+            Vector3 targetSole = originalSole + targetAnkle - foot.AnklePosition;
+            return motion.WithResolvedOutput(
+                targetSole,
+                targetAnkle,
+                componentUp,
+                goal.PositionWeight,
+                goal.RotationWeight);
         }
 
         CharacterFootStrideHipsDiagnostics RejectStride(

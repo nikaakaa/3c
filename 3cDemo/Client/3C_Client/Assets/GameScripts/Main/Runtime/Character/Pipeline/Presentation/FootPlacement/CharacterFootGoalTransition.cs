@@ -7,9 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootGoalTransitionMode : byte
     {
         Smooth = 0,
-        LandingPreparation = 1,
-        DirectSupport = 2,
-        Released = 3
+        LandingPreparation = 1
     }
 
     public readonly struct CharacterFootGoalTransitionDiagnostics
@@ -190,9 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !float.IsFinite(landingConvergenceWeight) ||
                 landingConvergenceWeight < 0f || landingConvergenceWeight > 1f ||
                 mode != CharacterFootGoalTransitionMode.Smooth &&
-                mode != CharacterFootGoalTransitionMode.LandingPreparation &&
-                mode != CharacterFootGoalTransitionMode.DirectSupport &&
-                mode != CharacterFootGoalTransitionMode.Released)
+                mode != CharacterFootGoalTransitionMode.LandingPreparation)
             {
                 throw new ArgumentException("Foot Goal transition input is invalid.");
             }
@@ -252,21 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Pending.TargetRotationCorrection = targetRotationCorrection;
             m_Pending.TargetPositionWeight = target.PositionWeight;
             m_Pending.TargetRotationWeight = target.RotationWeight;
-            if (mode == CharacterFootGoalTransitionMode.Released)
-            {
-                m_Pending.OutputPositionCorrection = default;
-                m_Pending.OutputRotationCorrection = Quaternion.identity;
-                m_Pending.OutputPositionWeight = 0f;
-                m_Pending.OutputRotationWeight = 0f;
-            }
-            else if (mode == CharacterFootGoalTransitionMode.DirectSupport)
-            {
-                m_Pending.OutputPositionCorrection = targetPositionCorrection;
-                m_Pending.OutputRotationCorrection = targetRotationCorrection;
-                m_Pending.OutputPositionWeight = target.PositionWeight;
-                m_Pending.OutputRotationWeight = target.RotationWeight;
-            }
-            else if (mode == CharacterFootGoalTransitionMode.LandingPreparation)
+            if (mode == CharacterFootGoalTransitionMode.LandingPreparation)
             {
                 Vector3 up = componentUp.normalized;
                 Vector3 convergedPositionCorrection = Vector3.LerpUnclamped(

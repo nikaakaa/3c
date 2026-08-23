@@ -1,35 +1,55 @@
 ## ADDED Requirements
 
-### Requirement: Foot Analysis必须证明Predictive Constraint锁入与释放连续性
+### Requirement: Foot Analysis必须发布单调Landing Height计划与唯一Plant事实
 
-Projection Build MUST对全部接入Predictive Foot Placement的可达循环Locomotion Clip及Blend Space Dynamic Sample，使用精确匹配的Foot Analysis Artifact验证每个左右脚Landing Event的Constraint与Support连续区间。每个正式Event MUST具有稳定Event identity、开始落脚前接近0的Constraint起点、连续单调上升到完全踩实的区间、非零Support区间，以及开始抬脚后连续单调下降回接近0的释放区间。
+Projection Build MUST对全部接入Predictive Foot Placement的可达循环Locomotion Clip及Blend Space Dynamic Sample，验证每个Landing Event的Approach、Landing Height、Plant、Support与Release覆盖。
 
-连续性门槛 MUST属于versioned compiler algorithm，不得成为Runtime Contact Duration、Transition HalfLife或素材专属可调补偿。Artifact缺失、事件覆盖不完整、Constraint跳过锁入区间、未达到完整锁定、Release缺失、左右脚事件重叠非法或实际source coverage截断正式区间时 MUST阻止Projection发布；Runtime不得用固定0.12秒、默认曲线、旧GoalTransition或Safety Release替代正常动画Transition。
+每个正式Event MUST具有：
 
-#### Scenario: 循环Run的左脚Constraint完整
+```text
+稳定Event identity
+ApproachStarted分析事实
+唯一LandingStarted
+LandingStarted到PlantStarted之间从0单调到1的LandingHeightProgress
+唯一PlantStarted
+非零Support区间
+唯一ReleaseStarted与单调ReleaseProgress
+```
 
-- **WHEN** 左脚Event在开始落脚前从接近0连续上升到1，保持非零Support，并在开始抬脚后连续下降回接近0
-- **THEN** Projection Build MUST发布该Event的稳定Biomechanical Step Constraint/Support计划
-- **AND** Runtime Landing与正常Release MAY直接使用该计划作为单调Transition进度
+Build MUST从显式Marker或versioned分析算法中只选择一组规范Landing/Plant事实；显式Marker存在时不得并行发布推断Trigger。Constraint和PlantConfidence MAY作为Editor分析输入，但 MUST不原样发布为Runtime LandingHeightProgress、Plant Trigger、Ownership或Release Progress。
 
-#### Scenario: Constraint在开始落脚时从0跳到1
+Build MUST在实际source coverage中验证Landing Height窗口晚于长Approach、结束不晚于Plant、进度单调完整，并结合腿长、脚高、垂直速度和Support事实拒绝明显不可达窗口。没有合法窗口 MUST阻止Projection发布；Runtime不得生成固定Duration或fallback曲线。
 
-- **WHEN** 可达循环Locomotion Clip的某脚Constraint没有连续锁入覆盖而在相邻采样间从接近0直接跳到1
-- **THEN** Projection Build MUST拒绝该素材并报告Clip、脚侧、Event identity和缺失区间
-- **AND** MUST不生成固定Contact Duration或运行时平滑补偿
+#### Scenario: 循环Run具有合法Landing计划
 
-#### Scenario: 有限source出口截断Release
+- **WHEN** 左脚Event具有晚期LandingStarted、单调LandingHeightProgress、唯一PlantStarted与Support区间
+- **THEN** Projection MUST发布这些规范事实
+- **AND** Runtime MUST只用LandingHeightProgress驱动垂直交接，只用PlantStarted提交Anchor
 
-- **WHEN** Clip总时长包含完整开始抬脚区间，但正式PoseState source coverage在Release前结束
-- **THEN** 质量校验 MUST按实际coverage判定Predictive Constraint合同不完整
-- **AND** MUST不使用coverage外样本证明该Event可正常释放
+#### Scenario: PlantConfidence先升后降
 
-### Requirement: Foot Analysis必须发布空间Foot Path采样所需的脚部事实
+- **WHEN** PlantConfidence在Plant前先达到局部高值、随后下降、再脉冲跨过接触阈值
+- **THEN** Build MAY用完整曲线推断唯一Plant onset
+- **AND** MUST不把PlantConfidence原值发布为LandingHeightProgress或Runtime Ownership
 
-Projection中每脚Biomechanical Step计划 MUST继续携带稳定Landing Event、RootLocalLanding、Constraint、Support与Phase事实；Runtime Swing空间进度 MUST从同帧原生Animated Sole和两次世界Landing计算，不得由Artifact发布预计算世界Path进度、FootPath Correction、Ground Height或IK Goal。Foot Analysis只证明动画接触时序和提供root-local事实，不拥有Runtime地形、Path Transition或FrozenPatch。
+#### Scenario: Constraint从最高点开始上升
 
-#### Scenario: Runtime在不同台阶显示同一Run Clip
+- **WHEN** Constraint覆盖从Approach Contact到Plant的长区间，直接投影未来Patch会产生不可达负高度目标
+- **THEN** Build MUST不把该原始Constraint当LandingHeightProgress
+- **AND** Runtime MUST不在ApproachStarted时冻结Patch或向下拖脚
 
-- **WHEN** 同一个已验证Run Clip分别在平地与楼梯运行
-- **THEN** 两次运行 MUST消费相同的Biomechanical Step Event/Constraint/Support计划
-- **AND** 各自的Swing空间进度、Ground Envelope和FrozenPatch MUST只由当前Presentation Frame与World Query生成
+#### Scenario: Landing计划不完整
+
+- **WHEN** 实际source coverage中LandingHeightProgress没有从0单调覆盖到1或结束晚于PlantStarted
+- **THEN** Build MUST拒绝Projection并报告Clip、脚侧、Event和缺失区间
+- **AND** MUST不使用固定0.12秒、GoalTransition或Runtime平滑补偿
+
+### Requirement: Foot Analysis必须保持Runtime地形与Anchor隔离
+
+Projection中每脚计划 MUST携带Event、RootLocalLanding、ApproachStarted、LandingStarted、LandingHeightProgress、PlantStarted、Support和Release事实。Runtime Swing空间进度 MUST从同帧Animated Sole和世界Landing计算；Artifact MUST不发布世界Path、Ground Height、Contact Patch、Anchor或IK Goal。
+
+#### Scenario: 同一Run运行在不同台阶
+
+- **WHEN** 同一已验证Run分别在平地和楼梯运行
+- **THEN** 两次运行 MUST消费相同动画时序计划
+- **AND** Ground Envelope、Frozen Patch与Committed Anchor MUST只由当前Presentation、State Machine和World Query生成

@@ -1,6 +1,6 @@
 ## 1. 收敛最终Foot IK合同
 
-- [x] 1.1 对账current `character-foot-placement-presentation`、917基线、KKK参考与GDC学习文案，明确保留Animated Sole空间进度、FootPath增量和开始落脚时锁点，拒绝Set Mesh、双IK与Current Trace补洞
+- [x] 1.1 对账current `character-foot-placement-presentation`、917/d24/df74/8fc行为备份、KKK参考与GDC学习文案，明确保留Animated Sole空间进度、FootPath增量、唯一Correction Owner和Plant时Anchor提交，拒绝Set Mesh、双IK与Current Trace补洞
 - [x] 1.2 对账当前实现，列出需要删除的Plant总处理器、旧状态、LandingPreparation、ContactTransition、GoalSet兼容容器和过期CSV字段
 - [x] 1.3 复用唯一`refactor-character-pose-constraint-transaction` change，确认不恢复被删除的Predictive/Reactive并行active change或创建第二Foot IK proposal
 - [x] 1.4 对比三个current spec与`openspec/project.md`，记录Swing-only、plural GoalSet、LegIK术语和当前实现真相的差异
@@ -21,31 +21,32 @@
 - [ ] 3.4 让同Event Path Target变化保留Context中的唯一Effective Correction/Velocity并只替换Target，Swing状态使用临界阻尼更新且不重启固定Duration
 - [ ] 3.5 将Swing Progress改为Animated Sole在LastContact到NextLanding方向上的空间投影比例
 - [ ] 3.6 让Baseline与Envelope按同一纵向进度采样，把Raw Swing Correction改为非负`Envelope Sample - Baseline Sample`沿Component Up增量，并让Path Target逐值乘同帧动画Foot Placement Weight
-- [ ] 3.7 删除Phase采样、`Envelope - Animated Sole`、实时Landing Height下限、LandingPreparation和任何CurrentTrace第二Swing高度来源
-- [ ] 3.8 只有Swing中的Effective Correction误差、Effective Velocity和连续帧数同时满足门槛时发布Path Stable；Rebasing结果允许连续Swing但不得取得锁脚资格或进入Pelvis Stride
-- [ ] 3.9 扩展Foot Analysis/Projection Build质量校验，证明每个Predictive循环Event具有完整Constraint锁入、Support和Release实际coverage，删除Runtime固定Duration补偿
+- [ ] 3.7 删除Phase采样、`Envelope - Animated Sole`、实时Path硬地面下限、LandingPreparation和任何CurrentTrace第二Swing高度来源
+- [ ] 3.8 只有Swing中的Effective Correction误差、Effective Velocity和连续帧数同时满足门槛时发布Path Stable；Tracking Status不得成为Landing事件准入或第二状态机，Rebasing实时Proposal不得进入Pelvis Stride
+- [ ] 3.9 扩展Foot Analysis/Projection Build质量校验，发布唯一LandingStarted、单调LandingHeightProgress、唯一PlantStarted、Support和单调Release Progress；禁止Runtime直接解释Constraint或PlantConfidence
 
 ## 4. 重建单脚Constraint状态机
 
-- [ ] 4.1 新增固定布局CharacterFootStateContext，集中保存`Swing/Landing/Locked/Releasing/UnlockedSupport`五状态、Path事实、Active/Consumed Event、FrozenPatch、唯一Effective Correction/Velocity、TransitionCause、Residual、Progress与ReleaseTargetState
+- [ ] 4.1 新增固定布局CharacterFootStateContext，集中保存`Swing/Landing/Locked/Releasing/UnlockedSupport`五状态、Path事实、Active/Consumed Event、FrozenContactPatch、CommittedAnchor、唯一Effective Correction/Velocity、TransitionCause、Landing/Release Residual与Progress
 - [ ] 4.2 删除`Tracking/Acquiring/Committed/Closed`旧状态、ContactOwnership主控制字段、Sliding水平削弱和旧Plant命名
-- [ ] 4.3 在CharacterFootStateMachine内部新增纯Trigger Resolver，按Hard Invalid、Action、Invalid、Grounded/Reachability、超距、开始抬脚、开始落脚、Path Revision固定优先级归一同帧事实
+- [ ] 4.3 在CharacterFootStateMachine内部新增纯Trigger Resolver，按Hard Invalid、Action、Invalid、Grounded/Reachability、Anchor超距、ReleaseStarted、PlantStarted、LandingStarted固定优先级归一同帧事实；Path Observation先更新但不作为状态Trigger
 - [ ] 4.4 实现CharacterFootStateMachine唯一Context写入路径，一次Evaluate最多转换一次状态并同时生成Pending Context与Resolved Foot；内部纯计算不得保存第二状态页或Correction
-- [ ] 4.5 实现Swing到Landing：动画开始落脚时，只有Path Stable、Proposal/Event匹配、Grounded、Action未占用和目标可达才冻结完整Patch；否则进入UnlockedSupport并消费Event
-- [ ] 4.6 实现Landing锁入：入口捕获一次AcquireResidual，按动画ConstraintWeight单调上升，完成后进入Locked
-- [ ] 4.7 实现Locked：Effective Correction严格等于FrozenAnchor减Animated Sole，非零Goal权重1，LockDistance只发布NearRelease，ReleaseDistance触发Releasing
-- [ ] 4.8 实现正常Releasing：入口捕获一次ReleaseResidual，只按动画Constraint下降回到原生动画脚，期间只更新下一Event Path事实；完成后同一个Effective Correction/Velocity进入Swing
-- [ ] 4.9 实现Grounded丢失、Contact超距与不可达的正式Safety Release，使用ContactLossReleaseSeconds且与正常Release互斥
-- [ ] 4.10 实现Action硬抢占和Reset/Retarget硬失效；Action消费当前Event但不运行Foot Release，lineage失效清空Consumed Event
+- [ ] 4.5 实现Swing到Landing：Projection发布LandingStarted时只要求合法匹配Patch、Grounded、Action未占用和Patch可达；冻结Surface/Plane/Normal而非Prediction XYZ，Path Settled不得成为准入条件
+- [ ] 4.6 实现Landing垂直交接：保留动画脚XZ，入口捕获一次LandingResidual，只按Projection的单调LandingHeightProgress投影FrozenPatch；实时Path不执行硬地面下限
+- [ ] 4.7 实现PlantStarted原子提交：用当帧Effective Sole投影FrozenPatch生成CommittedAnchor；Anchor XZ不得来自Prediction Point，准入失败进入UnlockedSupport，不新增Planting/Acquiring状态
+- [ ] 4.8 实现Locked：Effective Correction严格等于CommittedAnchor减Animated Sole，非零Goal权重1，LockDistance只发布NearRelease，ReleaseDistance触发Releasing；删除Sliding
+- [ ] 4.9 实现正常Releasing：入口捕获一次ReleaseResidual，只按权威Release进度回到原生动画脚，期间只更新下一Event Path事实；完成后同一个Effective Correction/Velocity进入Swing
+- [ ] 4.10 实现Grounded丢失、Anchor超距与不可达的正式Safety Release，使用ContactLossReleaseSeconds且与正常Release互斥
+- [ ] 4.11 实现Action硬抢占和Reset/Retarget硬失效；Action消费当前Event但不运行Foot Release，lineage失效清空Consumed Event
 
 ## 5. 深化Foot Placement Module与Pelvis数据流
 
 - [ ] 5.1 删除CharacterFootPlantTransaction、旧CharacterFootPlantModule和对外Route/Reducer/Resolver/Builder浅链，建立唯一深CharacterFootPlacementModule Interface
 - [ ] 5.2 建立左右CharacterFootStateMachine；把Landing Prediction、Ground Path、Swing Target、Trigger、Constraint数学和Resolved Foot Builder收为Implementation内部纯函数或内部Module，禁止它们拥有Pending/Committed与跨帧输出
-- [ ] 5.3 生成左右Resolved Foot与唯一Resolved Foot Pair，聚合Path状态、Constraint状态、Patch、Correction、Final Sole/Ankle、Contact Reference和Support Intent
-- [ ] 5.4 让Primary Support只消费Resolved Support Intent，并保留上一Committed选择直到另一侧正式取得更高支撑意图
-- [ ] 5.5 让Pelvis只消费Resolved Foot Pair、Support选择和腿可达事实；Rebasing中的不稳定Path不得改变Stride终点
-- [ ] 5.6 让Pelvis Target先通过支撑腿可达区间限制，再由唯一临界阻尼Spring输出；脚与盆骨必须保存相同Patch identity
+- [ ] 5.3 生成左右Resolved Foot与唯一Resolved Foot Pair，聚合Path状态、Constraint状态、FrozenPatch、CommittedAnchor、Correction、Final Sole/Ankle、Contact Reference和Support Intent
+- [ ] 5.4 让Support Intent直接来自Biomechanical Support并与Contact Ownership分离；Landing尚未Locked时也能发布正式承重意图
+- [ ] 5.5 让Primary Support与Pelvis只消费Resolved Foot Pair；Rebasing实时Proposal不得改变Stride终点，Landing Patch不得伪造Anchor
+- [ ] 5.6 让Pelvis Target同时通过上一支撑腿与正在Landing腿的可达区间，再由唯一临界阻尼Spring输出；不得等Locked帧才突然接入Landing腿
 
 ## 6. 完成唯一Goal贡献ABI
 
@@ -69,8 +70,8 @@
 - [ ] 8.1 在BeginFrame冻结并预验证Foot/FBBIK/Physical diagnostics interest与固定容量
 - [ ] 8.2 新增Pending Runtime Result到Pending Diagnostics页的单向no-throw深冻结Projector，删除运行方法中的`*Diagnostics`/`*Snapshot`依赖和可变页浅引用
 - [ ] 8.3 让Physical Writer成功Apply时把实际Write Completion和最终Physical Bone位置写入同一Pending Diagnostics页
-- [ ] 8.4 重写CSV为Path Tracking Status/Target、唯一Effective Correction/Velocity、Constraint State/Trigger/Cause、Active/Consumed Event、Patch、Residual/Progress、Final Sole、Pelvis Reference、Goal/Solved/Physical Residual
-- [ ] 8.5 删除LandingPreparation、OwnershipHalfLife、CurrentTrace、旧Plant State、SupportLock、GoalTransition和其它兼容CSV/Gizmo字段
+- [ ] 8.4 重写CSV为Path Tracking Status/Target、唯一Effective Correction/Velocity、Constraint State/Trigger/Cause、LandingStarted/LandingHeightProgress/PlantStarted/ReleaseProgress、Active/Consumed Event、FrozenPatch、CommittedAnchor、Residual、SupportIntent、Final Sole、Pelvis Reference、Goal/Solved/Physical Residual
+- [ ] 8.5 删除LandingPreparation、OwnershipHalfLife、CurrentTrace、PlantConfidence Ownership、Sliding、SupportLock、GoalTransition和其它兼容CSV/Gizmo字段
 - [ ] 8.6 让Gizmo、CSV、Trace和Pose Watch只读取同Frame/Completion/Rig/Bank identity的Committed深冻结页，无interest时不复制Ground Path大页或逐腿Pose
 
 ## 9. 激进清理与最终一致性

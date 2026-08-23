@@ -45,20 +45,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         TargetCrossedOutput = 4
     }
 
-    internal struct CharacterFootLockPreparationFacts
-    {
-        internal ulong LandingEventIdentity;
-        internal float StartTimeToLandingSeconds;
-        internal float Weight;
-
-        internal void Clear()
-        {
-            LandingEventIdentity = 0;
-            StartTimeToLandingSeconds = 0f;
-            Weight = 0f;
-        }
-    }
-
     internal struct CharacterFootPrimarySupportFacts
     {
         internal bool HasValue;
@@ -257,50 +243,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         const float GeometryEpsilon = 0.0001f;
         const float EndpointTolerance = 0.005f;
-
-        internal static float PrepareLandingLock(
-            in AnimationBiomechanicalStepHeader step,
-            bool hasNextSwingLanding,
-            ulong nextSwingLandingEventIdentity,
-            ref CharacterFootLockPreparationFacts preparation)
-        {
-            bool valid = step.IsValid &&
-                         step.IsAuthoritative &&
-                         step.HasConsistentLandingEventIdentity &&
-                         (step.IsPreSwing || step.IsSwing) &&
-                         step.TimeToLandingSeconds > GeometryEpsilon &&
-                         hasNextSwingLanding &&
-                         nextSwingLandingEventIdentity == step.LandingEventIdentity;
-            if (!valid)
-                return 0f;
-
-            if (preparation.LandingEventIdentity != step.LandingEventIdentity)
-            {
-                preparation.LandingEventIdentity = step.LandingEventIdentity;
-                preparation.StartTimeToLandingSeconds = step.TimeToLandingSeconds;
-                preparation.Weight = 0f;
-            }
-
-            float start = preparation.StartTimeToLandingSeconds;
-            float candidate = start <= GeometryEpsilon
-                ? 1f
-                : Mathf.Clamp01(1f - step.TimeToLandingSeconds / start);
-            preparation.Weight = Mathf.Max(
-                preparation.Weight,
-                candidate);
-            return preparation.Weight;
-        }
-
-        internal static void CompleteLandingLockPreparation(
-            ulong landingEventIdentity,
-            ref CharacterFootLockPreparationFacts preparation)
-        {
-            if (landingEventIdentity != 0 &&
-                preparation.LandingEventIdentity == landingEventIdentity)
-            {
-                preparation.Weight = 1f;
-            }
-        }
 
         internal static void ResolvePrimarySupport(
             in CharacterFootSwingMotionDiagnostics leftMotion,

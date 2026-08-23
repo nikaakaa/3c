@@ -53,11 +53,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float rotationWeight,
             CharacterFootSupportLockState supportLockState = CharacterFootSupportLockState.None,
             float supportHorizontalError = 0f,
-            float supportLockPreparationStartTimeToLandingSeconds = 0f,
-            float supportLockPreparationWeight = 0f,
             float supportConstraintWeight = 0f,
             float supportWeight = 0f,
-            Vector3 supportContactAnchor = default)
+            Vector3 supportContactAnchor = default,
+            float plantConfidence = 0f)
         {
             State = state;
             RejectReason = rejectReason;
@@ -78,12 +77,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RotationWeight = rotationWeight;
             SupportLockState = supportLockState;
             SupportHorizontalError = supportHorizontalError;
-            SupportLockPreparationStartTimeToLandingSeconds =
-                supportLockPreparationStartTimeToLandingSeconds;
-            SupportLockPreparationWeight = supportLockPreparationWeight;
             SupportConstraintWeight = supportConstraintWeight;
             SupportWeight = supportWeight;
             SupportContactAnchor = supportContactAnchor;
+            PlantConfidence = plantConfidence;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -105,11 +102,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float RotationWeight { get; }
         public CharacterFootSupportLockState SupportLockState { get; }
         public float SupportHorizontalError { get; }
-        public float SupportLockPreparationStartTimeToLandingSeconds { get; }
-        public float SupportLockPreparationWeight { get; }
         public float SupportConstraintWeight { get; }
         public float SupportWeight { get; }
         public Vector3 SupportContactAnchor { get; }
+        public float PlantConfidence { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
 
         internal CharacterFootSwingMotionDiagnostics WithResolvedOutput(
@@ -140,11 +136,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rotationWeight,
                 SupportLockState,
                 SupportHorizontalError,
-                SupportLockPreparationStartTimeToLandingSeconds,
-                SupportLockPreparationWeight,
                 SupportConstraintWeight,
                 SupportWeight,
-                SupportContactAnchor);
+                SupportContactAnchor,
+                PlantConfidence);
+
+        internal CharacterFootSwingMotionDiagnostics WithPlantConfidence(
+            float plantConfidence) =>
+            new CharacterFootSwingMotionDiagnostics(
+                State,
+                RejectReason,
+                LandingEventIdentity,
+                GroundPathInputIdentity,
+                OriginalSole,
+                OriginalAnkle,
+                Distance,
+                Progress,
+                BaselineSample,
+                EnvelopeSample,
+                VerticalCorrection,
+                LandingPredictionError,
+                LandingConstraintWeight,
+                CorrectedSole,
+                CorrectedAnkle,
+                PositionWeight,
+                RotationWeight,
+                SupportLockState,
+                SupportHorizontalError,
+                SupportConstraintWeight,
+                SupportWeight,
+                SupportContactAnchor,
+                plantConfidence);
     }
 
     public enum CharacterFootSupportLockState : byte
@@ -159,34 +181,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal struct CharacterFootSupportLockFacts
     {
         internal bool HasValue;
+        internal bool PlantCycleConsumed;
         internal ulong LandingEventIdentity;
         internal CharacterFootSupportLockState State;
         internal Vector3 ContactAnchor;
         internal Vector3 OutputAnkle;
-        internal Vector3 TransitionStartCorrection;
-        internal float TransitionElapsedSeconds;
-        internal float TransitionDurationSeconds;
         internal float PositionWeight;
         internal float ContactWeight;
         internal float SupportWeight;
-        internal float TransitionStartContactWeight;
-        internal float TransitionStartSupportWeight;
 
-        internal void Clear()
+        internal void Clear(bool plantCycleConsumed = false)
         {
             HasValue = false;
+            PlantCycleConsumed = plantCycleConsumed;
             LandingEventIdentity = 0;
             State = CharacterFootSupportLockState.None;
             ContactAnchor = default;
             OutputAnkle = default;
-            TransitionStartCorrection = default;
-            TransitionElapsedSeconds = 0f;
-            TransitionDurationSeconds = 0f;
             PositionWeight = 0f;
             ContactWeight = 0f;
             SupportWeight = 0f;
-            TransitionStartContactWeight = 0f;
-            TransitionStartSupportWeight = 0f;
         }
     }
 
@@ -194,44 +208,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootContactFrame(
             CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in AnimationBiomechanicalStepHeader currentStep,
             in CharacterFootSwingMotionDiagnostics stableSwingMotion,
-            bool hasLastLanding,
-            in CharacterFootGroundPathLanding lastLanding,
+            bool hasLanding,
+            in CharacterFootGroundPathLanding landing,
             bool hardOwnershipLoss,
             float footPlacementWeight,
             Vector3 componentUp,
-            float deltaSeconds,
-            float landingPreparationStartTimeToLandingSeconds,
-            float landingPreparationWeight,
             in CharacterFootMotionSettings settings)
         {
             AnimatedFoot = animatedFoot;
-            CurrentStep = currentStep;
             StableSwingMotion = stableSwingMotion;
-            HasLastLanding = hasLastLanding;
-            LastLanding = lastLanding;
+            HasLanding = hasLanding;
+            Landing = landing;
             HardOwnershipLoss = hardOwnershipLoss;
             FootPlacementWeight = footPlacementWeight;
             ComponentUp = componentUp;
-            DeltaSeconds = deltaSeconds;
-            LandingPreparationStartTimeToLandingSeconds =
-                landingPreparationStartTimeToLandingSeconds;
-            LandingPreparationWeight = landingPreparationWeight;
             Settings = settings;
         }
 
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
-        internal AnimationBiomechanicalStepHeader CurrentStep { get; }
         internal CharacterFootSwingMotionDiagnostics StableSwingMotion { get; }
-        internal bool HasLastLanding { get; }
-        internal CharacterFootGroundPathLanding LastLanding { get; }
+        internal bool HasLanding { get; }
+        internal CharacterFootGroundPathLanding Landing { get; }
         internal bool HardOwnershipLoss { get; }
         internal float FootPlacementWeight { get; }
         internal Vector3 ComponentUp { get; }
-        internal float DeltaSeconds { get; }
-        internal float LandingPreparationStartTimeToLandingSeconds { get; }
-        internal float LandingPreparationWeight { get; }
         internal CharacterFootMotionSettings Settings { get; }
     }
 
@@ -244,9 +245,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootSupportLockFacts facts)
         {
             RequireValid(in frame);
+            float plantConfidence = frame.StableSwingMotion.PlantConfidence;
             if (frame.HardOwnershipLoss)
             {
-                facts.Clear();
+                facts.Clear(
+                    plantConfidence >=
+                    AnimationFootConstraintFacts.GroundedMinimumConfidence);
                 CharacterFootSwingMotionDiagnostics stableSwingMotion =
                     frame.StableSwingMotion;
                 return CharacterFootSwingMotionBuilder.SuppressUnselected(
@@ -254,9 +258,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (!facts.HasValue)
             {
-                return CanAcquire(in frame)
-                    ? BeginAcquire(in frame, ref facts)
-                    : frame.StableSwingMotion;
+                if (plantConfidence <
+                    AnimationFootConstraintFacts.GroundedMinimumConfidence)
+                {
+                    facts.PlantCycleConsumed = false;
+                    return frame.StableSwingMotion;
+                }
+                if (facts.PlantCycleConsumed)
+                    return frame.StableSwingMotion;
+                facts.PlantCycleConsumed = true;
+                if (CanAcquire(in frame))
+                    return BeginAcquire(in frame, ref facts);
+                return frame.StableSwingMotion;
             }
             return facts.State switch
             {
@@ -280,27 +293,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole = ResolveOriginalSole(frame.AnimatedFoot);
             Vector3 contactTarget = ResolveContactTarget(
                 frame.AnimatedFoot,
-                frame.LastLanding.Point);
+                frame.Landing.Point);
             Vector3 initialOutput = frame.StableSwingMotion.CorrectedAnkle;
             float horizontalError = Vector3.ProjectOnPlane(
-                frame.LastLanding.Point - originalSole,
+                frame.Landing.Point - originalSole,
                 up).magnitude;
-            if (horizontalError > frame.Settings.SlideDistance)
+            if (horizontalError > frame.Settings.LockDistance)
                 return frame.StableSwingMotion;
             facts.HasValue = true;
-            facts.LandingEventIdentity = frame.LastLanding.LandingEventIdentity;
+            facts.PlantCycleConsumed = true;
+            facts.LandingEventIdentity = frame.Landing.LandingEventIdentity;
             facts.State = CharacterFootSupportLockState.Acquiring;
-            facts.ContactAnchor = frame.LastLanding.Point;
-            facts.OutputAnkle = initialOutput;
-            facts.TransitionStartCorrection = initialOutput - contactTarget;
-            facts.TransitionElapsedSeconds = 0f;
-            facts.TransitionDurationSeconds = frame.Settings.ContactTransitionSeconds;
+            facts.ContactAnchor = frame.Landing.Point;
             facts.PositionWeight = frame.FootPlacementWeight;
-            facts.ContactWeight = 0f;
+            facts.ContactWeight = ResolvePlantOwnership(
+                frame.StableSwingMotion.PlantConfidence);
             facts.SupportWeight = 0f;
+            Vector3 output = Vector3.LerpUnclamped(
+                initialOutput,
+                contactTarget,
+                facts.ContactWeight);
+            facts.OutputAnkle = output;
             if (Vector3.Distance(
-                    ResolveOutputSole(frame.AnimatedFoot, initialOutput),
-                    frame.LastLanding.Point) <= frame.Settings.LandingUpdateDistance)
+                    ResolveOutputSole(frame.AnimatedFoot, output),
+                    frame.Landing.Point) <= frame.Settings.LandingUpdateDistance ||
+                facts.ContactWeight >= 1f - GeometryEpsilon)
             {
                 return CompleteLock(
                     in frame,
@@ -311,10 +328,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return CreateContactMotion(
                 in frame,
                 in facts,
-                initialOutput,
+                output,
                 CharacterFootSupportLockState.Acquiring,
                 horizontalError,
-                0f,
+                facts.ContactWeight,
                 0f);
         }
 
@@ -322,7 +339,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootContactFrame frame,
             ref CharacterFootSupportLockFacts facts)
         {
-            if (ShouldRelease(in frame))
+            if (frame.StableSwingMotion.PlantConfidence <
+                AnimationFootConstraintFacts.GroundedMinimumConfidence)
                 return BeginRelease(in frame, ref facts);
             Vector3 up = frame.ComponentUp.normalized;
             Vector3 originalSole = ResolveOriginalSole(frame.AnimatedFoot);
@@ -334,10 +352,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 up).magnitude;
             if (horizontalError > frame.Settings.SlideDistance)
                 return BeginRelease(in frame, ref facts);
-            float progress = AdvanceTransition(in frame, ref facts);
-            float blend = Smooth(progress);
-            Vector3 output = contactTarget +
-                             facts.TransitionStartCorrection * (1f - blend);
+            float progress = Mathf.Max(
+                facts.ContactWeight,
+                ResolvePlantOwnership(frame.StableSwingMotion.PlantConfidence));
+            Vector3 output = Vector3.LerpUnclamped(
+                frame.StableSwingMotion.CorrectedAnkle,
+                contactTarget,
+                progress);
             facts.OutputAnkle = output;
             if (progress >= 1f - GeometryEpsilon ||
                 Vector3.Distance(
@@ -350,7 +371,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     contactTarget,
                     horizontalError);
             }
-            facts.ContactWeight = blend;
+            facts.ContactWeight = progress;
             facts.SupportWeight = 0f;
             return CreateContactMotion(
                 in frame,
@@ -358,7 +379,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 output,
                 CharacterFootSupportLockState.Acquiring,
                 horizontalError,
-                blend,
+                progress,
                 0f);
         }
 
@@ -367,7 +388,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool wasSliding,
             ref CharacterFootSupportLockFacts facts)
         {
-            if (ShouldRelease(in frame))
+            if (frame.StableSwingMotion.PlantConfidence <
+                AnimationFootConstraintFacts.LockedMinimumConfidence)
                 return BeginRelease(in frame, ref facts);
             Vector3 up = frame.ComponentUp.normalized;
             Vector3 originalSole = ResolveOriginalSole(frame.AnimatedFoot);
@@ -408,50 +430,41 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootContactFrame frame,
             ref CharacterFootSupportLockFacts facts)
         {
-            Vector3 stableTarget = frame.StableSwingMotion.CorrectedAnkle;
-            float startContactWeight = facts.ContactWeight;
-            float startSupportWeight = facts.SupportWeight;
             facts.State = CharacterFootSupportLockState.Releasing;
-            facts.TransitionStartCorrection = facts.OutputAnkle - stableTarget;
-            facts.TransitionElapsedSeconds = 0f;
-            facts.TransitionDurationSeconds = frame.Settings.ContactTransitionSeconds;
-            facts.TransitionStartContactWeight = startContactWeight;
-            facts.TransitionStartSupportWeight = startSupportWeight;
-            return CreateContactMotion(
-                in frame,
-                in facts,
-                facts.OutputAnkle,
-                CharacterFootSupportLockState.Releasing,
-                ResolveHorizontalError(in frame, in facts),
-                startContactWeight,
-                startSupportWeight);
+            return ResolveRelease(in frame, ref facts);
         }
 
         static CharacterFootSwingMotionDiagnostics ResolveRelease(
             in CharacterFootContactFrame frame,
             ref CharacterFootSupportLockFacts facts)
         {
-            float progress = AdvanceTransition(in frame, ref facts);
-            float blend = Smooth(progress);
+            float ownership = Mathf.Min(
+                facts.ContactWeight,
+                ResolvePlantOwnership(frame.StableSwingMotion.PlantConfidence));
             Vector3 stableTarget = frame.StableSwingMotion.CorrectedAnkle;
-            Vector3 output = stableTarget +
-                             facts.TransitionStartCorrection * (1f - blend);
+            Vector3 contactTarget = ResolveContactTarget(
+                frame.AnimatedFoot,
+                facts.ContactAnchor);
+            Vector3 output = Vector3.LerpUnclamped(
+                stableTarget,
+                contactTarget,
+                ownership);
             float horizontalError = ResolveHorizontalError(in frame, in facts);
             facts.OutputAnkle = output;
-            if (progress >= 1f - GeometryEpsilon)
+            facts.ContactWeight = ownership;
+            facts.SupportWeight = Mathf.Min(facts.SupportWeight, ownership);
+            if (ownership <= GeometryEpsilon)
             {
-                facts.Clear();
+                facts.Clear(false);
                 return frame.StableSwingMotion;
             }
-            facts.ContactWeight = facts.TransitionStartContactWeight * (1f - blend);
-            facts.SupportWeight = facts.TransitionStartSupportWeight * (1f - blend);
             return CreateContactMotion(
                 in frame,
                 in facts,
                 output,
                 CharacterFootSupportLockState.Releasing,
                 horizontalError,
-                facts.ContactWeight,
+                ownership,
                 facts.SupportWeight);
         }
 
@@ -483,20 +496,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.StableSwingMotion.LandingConstraintWeight,
                 outputSole,
                 outputAnkle,
-                state == CharacterFootSupportLockState.Releasing
-                    ? Mathf.Lerp(
-                        frame.StableSwingMotion.PositionWeight,
-                        facts.PositionWeight,
-                        constraintWeight)
-                    : facts.PositionWeight,
+                facts.PositionWeight,
                 0f,
                 state,
                 horizontalError,
-                frame.LandingPreparationStartTimeToLandingSeconds,
-                frame.LandingPreparationWeight,
                 constraintWeight,
                 supportWeight,
-                facts.ContactAnchor);
+                facts.ContactAnchor,
+                frame.StableSwingMotion.PlantConfidence);
         }
 
         static CharacterFootSwingMotionDiagnostics CompleteLock(
@@ -507,9 +514,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             facts.State = CharacterFootSupportLockState.Locked;
             facts.OutputAnkle = contactTarget;
-            facts.TransitionStartCorrection = default;
-            facts.TransitionElapsedSeconds = 0f;
-            facts.TransitionDurationSeconds = 0f;
             facts.ContactWeight = 1f;
             facts.SupportWeight = 1f;
             return CreateContactMotion(
@@ -523,41 +527,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static bool CanAcquire(in CharacterFootContactFrame frame) =>
-            frame.HasLastLanding &&
-            frame.LastLanding.LandingEventIdentity != 0 &&
-            frame.CurrentStep.IsValid &&
-            frame.CurrentStep.IsAuthoritative &&
-            frame.CurrentStep.HasConsistentLandingEventIdentity &&
-            frame.CurrentStep.ConstraintWeight > CharacterPoseConstraintMath.Epsilon &&
-            frame.CurrentStep.SupportWeight > CharacterPoseConstraintMath.Epsilon &&
-            frame.CurrentStep.LandingEventIdentity ==
-            frame.LastLanding.LandingEventIdentity &&
-            !IsExplicitRelease(frame.CurrentStep);
+            frame.HasLanding &&
+            frame.Landing.LandingEventIdentity != 0 &&
+            frame.StableSwingMotion.PlantConfidence >=
+            AnimationFootConstraintFacts.GroundedMinimumConfidence;
 
-        static bool ShouldRelease(in CharacterFootContactFrame frame) =>
-            IsExplicitRelease(frame.CurrentStep);
-
-        static bool IsExplicitRelease(AnimationBiomechanicalStepHeader step) =>
-            step.IsValid &&
-            step.IsAuthoritative &&
-            step.HasConsistentLandingEventIdentity &&
-            step.ConstraintWeight < 1f - CharacterPoseConstraintMath.Epsilon &&
-            (step.IsSwing ||
-             step.IsPreSwing && step.EventPhase >= step.ReleasePhase);
-
-        static float AdvanceTransition(
-            in CharacterFootContactFrame frame,
-            ref CharacterFootSupportLockFacts facts)
-        {
-            facts.TransitionElapsedSeconds = Mathf.Min(
-                facts.TransitionDurationSeconds,
-                facts.TransitionElapsedSeconds + frame.DeltaSeconds);
-            return facts.TransitionDurationSeconds > GeometryEpsilon
-                ? Mathf.Clamp01(
-                    facts.TransitionElapsedSeconds /
-                    facts.TransitionDurationSeconds)
-                : 1f;
-        }
+        static float ResolvePlantOwnership(float plantConfidence) =>
+            Mathf.InverseLerp(
+                AnimationFootConstraintFacts.GroundedMinimumConfidence,
+                AnimationFootConstraintFacts.LockedMinimumConfidence,
+                plantConfidence);
 
         static float ResolveHorizontalError(
             in CharacterFootContactFrame frame,
@@ -579,19 +558,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 outputAnkle) =>
             ResolveOriginalSole(foot) + outputAnkle - foot.AnklePosition;
 
-        static float Smooth(float value)
-        {
-            float t = Mathf.Clamp01(value);
-            return t * t * (3f - 2f * t);
-        }
-
         static void RequireValid(in CharacterFootContactFrame frame)
         {
             if (!Finite(frame.ComponentUp) ||
                 frame.ComponentUp.sqrMagnitude <= GeometryEpsilon ||
                 !float.IsFinite(frame.FootPlacementWeight) ||
                 frame.FootPlacementWeight < 0f || frame.FootPlacementWeight > 1f ||
-                !float.IsFinite(frame.DeltaSeconds) || frame.DeltaSeconds < 0f)
+                !float.IsFinite(frame.StableSwingMotion.PlantConfidence) ||
+                frame.StableSwingMotion.PlantConfidence < 0f ||
+                frame.StableSwingMotion.PlantConfidence > 1f)
             {
                 throw new InvalidOperationException("Foot Contact frame is invalid.");
             }
@@ -615,9 +590,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp,
             in CharacterFootGroundPathDiagnostics groundPath,
             float landingPredictionError,
-            float landingConstraintWeight,
-            float landingPreparationStartTimeToLandingSeconds,
-            float landingPreparationWeight)
+            float landingConstraintWeight)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
@@ -651,9 +624,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 in groundPath,
                 landingPredictionError,
-                landingConstraintWeight,
-                landingPreparationStartTimeToLandingSeconds,
-                landingPreparationWeight);
+                landingConstraintWeight);
         }
 
         internal static CharacterFootSwingMotionDiagnostics BuildForSwing(
@@ -664,9 +635,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp,
             in CharacterFootGroundPathDiagnostics groundPath,
             float landingPredictionError,
-            float landingConstraintWeight,
-            float landingPreparationStartTimeToLandingSeconds,
-            float landingPreparationWeight)
+            float landingConstraintWeight)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
@@ -686,11 +655,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     originalAnkle);
             if (!float.IsFinite(landingPredictionError) || landingPredictionError < 0f ||
                 !float.IsFinite(landingConstraintWeight) ||
-                landingConstraintWeight < 0f || landingConstraintWeight > 1f ||
-                !float.IsFinite(landingPreparationStartTimeToLandingSeconds) ||
-                landingPreparationStartTimeToLandingSeconds < 0f ||
-                !float.IsFinite(landingPreparationWeight) ||
-                landingPreparationWeight < 0f || landingPreparationWeight > 1f)
+                landingConstraintWeight < 0f || landingConstraintWeight > 1f)
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.InvalidWeight,
                     landingEventIdentity,
@@ -827,10 +792,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctedSole,
                 correctedAnkle,
                 positionWeight,
-                0f,
-                supportLockPreparationStartTimeToLandingSeconds:
-                    landingPreparationStartTimeToLandingSeconds,
-                supportLockPreparationWeight: landingPreparationWeight);
+                0f);
         }
 
         internal static CharacterFootSwingMotionDiagnostics SuppressUnselected(
@@ -855,7 +817,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.OriginalSole,
                 motion.OriginalAnkle,
                 0f,
-                0f);
+                0f,
+                plantConfidence: motion.PlantConfidence);
         }
 
         static bool TryResolveSwingPhaseWeight(

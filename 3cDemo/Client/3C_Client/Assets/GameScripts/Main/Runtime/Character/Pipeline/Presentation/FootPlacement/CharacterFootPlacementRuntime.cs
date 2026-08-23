@@ -69,10 +69,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterFootSupportLockFacts m_CommittedRightSupportLock;
         CharacterFootSupportLockFacts m_PendingLeftSupportLock;
         CharacterFootSupportLockFacts m_PendingRightSupportLock;
-        CharacterFootLockPreparationFacts m_CommittedLeftLockPreparation;
-        CharacterFootLockPreparationFacts m_CommittedRightLockPreparation;
-        CharacterFootLockPreparationFacts m_PendingLeftLockPreparation;
-        CharacterFootLockPreparationFacts m_PendingRightLockPreparation;
         CharacterFootPrimarySupportFacts m_CommittedPrimarySupport;
         CharacterFootPrimarySupportFacts m_PendingPrimarySupport;
         bool m_HasPendingFrame;
@@ -182,8 +178,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingPelvisSpring = m_CommittedPelvisSpring;
             m_PendingLeftSupportLock = m_CommittedLeftSupportLock;
             m_PendingRightSupportLock = m_CommittedRightSupportLock;
-            m_PendingLeftLockPreparation = m_CommittedLeftLockPreparation;
-            m_PendingRightLockPreparation = m_CommittedRightLockPreparation;
             m_PendingPrimarySupport = m_CommittedPrimarySupport;
 
             m_LeftLandingLifecycle.PromoteLanded(frame.Pose.LeftFootSteps.CurrentStep);
@@ -191,13 +185,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             CharacterFootLandingSnapshot leftLanding = m_LeftLandingLifecycle.Pending;
             CharacterFootLandingSnapshot rightLanding = m_RightLandingLifecycle.Pending;
-            CharacterFootStrideHipsBuilder.CompleteLandingLockPreparation(
-                leftLanding.LastLandingEventIdentity,
-                ref m_PendingLeftLockPreparation);
-            CharacterFootStrideHipsBuilder.CompleteLandingLockPreparation(
-                rightLanding.LastLandingEventIdentity,
-                ref m_PendingRightLockPreparation);
-
             CharacterFootLandingPredictionPair leftPair = PredictFootPair(
                 CharacterFootSide.Left,
                 frame.Pose.LeftFootSteps,
@@ -224,8 +211,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingPredictionFootDiagnostics leftIncoming = leftPair.Incoming;
             CharacterFootLandingPredictionFootDiagnostics rightCurrent = rightPair.Current;
             CharacterFootLandingPredictionFootDiagnostics rightIncoming = rightPair.Incoming;
-            AnimationBiomechanicalStepHeader leftCurrentStep = frame.Pose.LeftFootSteps.CurrentStep;
-            AnimationBiomechanicalStepHeader rightCurrentStep = frame.Pose.RightFootSteps.CurrentStep;
             CharacterFootLandingPredictionFootDiagnostics left = leftPair.Selected;
             AnimationBiomechanicalStepHeader leftSelectedStep = leftPair.SelectedStep;
             CharacterFootLandingPredictionFootDiagnostics right = rightPair.Selected;
@@ -248,22 +233,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathLanding leftNextSwingLanding = leftLanding.NextSwingLanding;
             CharacterFootGroundPathLanding rightLastLanding = rightLanding.LastLanding;
             CharacterFootGroundPathLanding rightNextSwingLanding = rightLanding.NextSwingLanding;
-            float leftLandingPreparationWeight =
-                CharacterFootStrideHipsBuilder.PrepareLandingLock(
-                    in leftSelectedStep,
-                    hasLeftNextSwingLanding,
-                    hasLeftNextSwingLanding
-                        ? leftNextSwingLanding.LandingEventIdentity
-                        : 0,
-                    ref m_PendingLeftLockPreparation);
-            float rightLandingPreparationWeight =
-                CharacterFootStrideHipsBuilder.PrepareLandingLock(
-                    in rightSelectedStep,
-                    hasRightNextSwingLanding,
-                    hasRightNextSwingLanding
-                        ? rightNextSwingLanding.LandingEventIdentity
-                        : 0,
-                    ref m_PendingRightLockPreparation);
+            bool hasLeftContactLanding = leftLanding.HasPromotedLanding;
+            CharacterFootGroundPathLanding leftContactLanding =
+                hasLeftContactLanding ? leftLanding.PromotedLanding : default;
+            if (!hasLeftContactLanding)
+            {
+                hasLeftContactLanding = leftLanding.TryResolveLanding(
+                    leftSelectedStep.LandingEventIdentity,
+                    out leftContactLanding);
+            }
+            bool hasRightContactLanding = rightLanding.HasPromotedLanding;
+            CharacterFootGroundPathLanding rightContactLanding =
+                hasRightContactLanding ? rightLanding.PromotedLanding : default;
+            if (!hasRightContactLanding)
+            {
+                hasRightContactLanding = rightLanding.TryResolveLanding(
+                    rightSelectedStep.LandingEventIdentity,
+                    out rightContactLanding);
+            }
             CharacterFootGroundPathDiagnostics leftGroundPath = PrepareGroundPath(
                 CharacterFootSide.Left,
                 hasLeftLastLanding,
@@ -294,9 +281,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentUp,
                     in leftGroundPath,
                     leftLanding.NextSwingPredictionError,
-                    leftSelectedStep.ConstraintWeight,
-                    m_PendingLeftLockPreparation.StartTimeToLandingSeconds,
-                    leftLandingPreparationWeight);
+                    leftSelectedStep.ConstraintWeight)
+                .WithPlantConfidence(
+                    frame.Pose.LeftFootSteps.Kinematics.PlantConfidence);
             CharacterFootSwingMotionDiagnostics rightSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
                     pose.Right,
@@ -305,9 +292,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentUp,
                     in rightGroundPath,
                     rightLanding.NextSwingPredictionError,
-                    rightSelectedStep.ConstraintWeight,
-                    m_PendingRightLockPreparation.StartTimeToLandingSeconds,
-                    rightLandingPreparationWeight);
+                    rightSelectedStep.ConstraintWeight)
+                .WithPlantConfidence(
+                    frame.Pose.RightFootSteps.Kinematics.PlantConfidence);
             bool hasSelectedSwing = CharacterFootStrideHipsBuilder.TrySelectSwing(
                 in leftSelectedStep,
                 in rightSelectedStep,
@@ -341,7 +328,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion.GoalTransitionHalfLifeSeconds,
                 CharacterFootGoalTransitionMode.Smooth,
-                leftSwingMotion.SupportLockPreparationWeight,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction));
             rightGoal = m_RightGoalTransition.Resolve(
                 in rightGoal,
@@ -353,7 +339,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion.GoalTransitionHalfLifeSeconds,
                 CharacterFootGoalTransitionMode.Smooth,
-                rightSwingMotion.SupportLockPreparationWeight,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction));
             CharacterFootSwingMotionDiagnostics leftStableSwingMotion =
                 ResolveFootMotionOutput(
@@ -371,29 +356,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp);
             var leftContactFrame = new CharacterFootContactFrame(
                 pose.Left,
-                in leftCurrentStep,
                 in leftStableSwingMotion,
-                hasLeftLastLanding,
-                in leftLastLanding,
+                hasLeftContactLanding,
+                in leftContactLanding,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction),
                 footPlacementWeight,
                 componentUp,
-                frame.PresentationDeltaSeconds,
-                m_PendingLeftLockPreparation.StartTimeToLandingSeconds,
-                m_PendingLeftLockPreparation.Weight,
                 m_Settings.FootMotion);
             var rightContactFrame = new CharacterFootContactFrame(
                 pose.Right,
-                in rightCurrentStep,
                 in rightStableSwingMotion,
-                hasRightLastLanding,
-                in rightLastLanding,
+                hasRightContactLanding,
+                in rightContactLanding,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction),
                 footPlacementWeight,
                 componentUp,
-                frame.PresentationDeltaSeconds,
-                m_PendingRightLockPreparation.StartTimeToLandingSeconds,
-                m_PendingRightLockPreparation.Weight,
                 m_Settings.FootMotion);
             CharacterFootSwingMotionDiagnostics leftFootMotion =
                 CharacterFootContactStateMachine.Resolve(
@@ -508,8 +485,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CommittedPelvisSpring = m_PendingPelvisSpring;
             m_CommittedLeftSupportLock = m_PendingLeftSupportLock;
             m_CommittedRightSupportLock = m_PendingRightSupportLock;
-            m_CommittedLeftLockPreparation = m_PendingLeftLockPreparation;
-            m_CommittedRightLockPreparation = m_PendingRightLockPreparation;
             m_CommittedPrimarySupport = m_PendingPrimarySupport;
             m_LeftGroundPath.Seal();
             m_RightGroundPath.Seal();
@@ -520,8 +495,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingPelvisSpring.Clear();
             m_PendingLeftSupportLock.Clear();
             m_PendingRightSupportLock.Clear();
-            m_PendingLeftLockPreparation.Clear();
-            m_PendingRightLockPreparation.Clear();
             m_PendingPrimarySupport.Clear();
             m_PendingDiagnostics = default;
             m_HasPendingFrame = false;
@@ -540,8 +513,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingPelvisSpring.Clear();
             m_PendingLeftSupportLock.Clear();
             m_PendingRightSupportLock.Clear();
-            m_PendingLeftLockPreparation.Clear();
-            m_PendingRightLockPreparation.Clear();
             m_PendingPrimarySupport.Clear();
             m_PendingDiagnostics = default;
             m_HasPendingFrame = false;
@@ -1023,10 +994,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CommittedRightSupportLock.Clear();
             m_PendingLeftSupportLock.Clear();
             m_PendingRightSupportLock.Clear();
-            m_CommittedLeftLockPreparation.Clear();
-            m_CommittedRightLockPreparation.Clear();
-            m_PendingLeftLockPreparation.Clear();
-            m_PendingRightLockPreparation.Clear();
             m_CommittedPrimarySupport.Clear();
             m_PendingPrimarySupport.Clear();
         }

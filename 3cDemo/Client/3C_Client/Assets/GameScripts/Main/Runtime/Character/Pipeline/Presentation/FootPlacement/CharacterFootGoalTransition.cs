@@ -6,8 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     public enum CharacterFootGoalTransitionMode : byte
     {
-        Smooth = 0,
-        LandingPreparation = 1
+        Smooth = 0
     }
 
     public readonly struct CharacterFootGoalTransitionDiagnostics
@@ -180,7 +179,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float deltaSeconds,
             float halfLifeSeconds,
             CharacterFootGoalTransitionMode mode,
-            float landingConvergenceWeight,
             bool hardOwnershipLoss)
         {
             RequirePending();
@@ -192,10 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !Unit(componentFrameRotation) ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f ||
                 !float.IsFinite(halfLifeSeconds) || halfLifeSeconds <= 0f ||
-                !float.IsFinite(landingConvergenceWeight) ||
-                landingConvergenceWeight < 0f || landingConvergenceWeight > 1f ||
-                mode != CharacterFootGoalTransitionMode.Smooth &&
-                mode != CharacterFootGoalTransitionMode.LandingPreparation)
+                mode != CharacterFootGoalTransitionMode.Smooth)
             {
                 throw new ArgumentException("Foot Goal transition input is invalid.");
             }
@@ -258,33 +253,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Pending.TargetRotationCorrection = targetRotationCorrection;
             m_Pending.TargetPositionWeight = target.PositionWeight;
             m_Pending.TargetRotationWeight = target.RotationWeight;
-            if (mode == CharacterFootGoalTransitionMode.LandingPreparation)
-            {
-                Vector3 up = componentUp.normalized;
-                Vector3 convergedPositionCorrection = Vector3.LerpUnclamped(
-                    smoothedPositionCorrection,
-                    targetPositionCorrection,
-                    landingConvergenceWeight);
-                float missingUpwardCorrection = Vector3.Dot(
-                    targetPositionCorrection - convergedPositionCorrection,
-                    up);
-                m_Pending.OutputPositionCorrection = missingUpwardCorrection > 0f
-                    ? convergedPositionCorrection + up * missingUpwardCorrection
-                    : convergedPositionCorrection;
-                m_Pending.OutputRotationCorrection = Quaternion.SlerpUnclamped(
-                    smoothedRotationCorrection,
-                    targetRotationCorrection,
-                    landingConvergenceWeight).normalized;
-                m_Pending.OutputPositionWeight = target.PositionWeight;
-                m_Pending.OutputRotationWeight = target.RotationWeight;
-            }
-            else
-            {
-                m_Pending.OutputPositionCorrection = smoothedPositionCorrection;
-                m_Pending.OutputRotationCorrection = smoothedRotationCorrection;
-                m_Pending.OutputPositionWeight = smoothedPositionWeight;
-                m_Pending.OutputRotationWeight = smoothedRotationWeight;
-            }
+            Vector3 up = componentUp.normalized;
+            float missingUpwardCorrection = Vector3.Dot(
+                targetPositionCorrection - smoothedPositionCorrection,
+                up);
+            bool hasAcceptedGroundTarget = sourceGroundPathIdentity != 0 &&
+                                           target.PositionWeight >
+                                           CharacterPoseConstraintMath.Epsilon;
+            m_Pending.OutputPositionCorrection = hasAcceptedGroundTarget &&
+                                                 missingUpwardCorrection > 0f
+                ? smoothedPositionCorrection + up * missingUpwardCorrection
+                : smoothedPositionCorrection;
+            m_Pending.OutputRotationCorrection = smoothedRotationCorrection;
+            m_Pending.OutputPositionWeight = smoothedPositionWeight;
+            m_Pending.OutputRotationWeight = smoothedRotationWeight;
 
             Vector3 outputPosition = originalComponentPosition +
                                      m_Pending.OutputPositionCorrection;

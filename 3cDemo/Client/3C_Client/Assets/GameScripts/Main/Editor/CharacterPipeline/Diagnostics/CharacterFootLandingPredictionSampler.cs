@@ -78,11 +78,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionOriginalAnkleX,FootMotionOriginalAnkleY,FootMotionOriginalAnkleZ," +
             "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ," +
             "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionVerticalCorrection," +
-            "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight," +
+            "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight,FootMotionPlantConfidence," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionSupportLockState,FootMotionSupportHorizontalError," +
-            "FootMotionSupportLockPreparationStartTimeToLandingSeconds,FootMotionSupportLockPreparationWeight," +
             "FootMotionSupportConstraintWeight,FootMotionSupportWeight," +
             "FootMotionSupportContactAnchorX,FootMotionSupportContactAnchorY,FootMotionSupportContactAnchorZ," +
             "GoalTransitionMode,GoalTransitionHasCommittedOutput,GoalTransitionHasPendingOutput," +
@@ -980,14 +979,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.VerticalCorrection);
             Add(row, motion.LandingPredictionError);
             Add(row, motion.LandingConstraintWeight);
+            Add(row, motion.PlantConfidence);
             Add(row, motion.CorrectedSole);
             Add(row, motion.CorrectedAnkle);
             Add(row, motion.PositionWeight);
             Add(row, motion.RotationWeight);
             Add(row, motion.SupportLockState.ToString());
             Add(row, motion.SupportHorizontalError);
-            Add(row, motion.SupportLockPreparationStartTimeToLandingSeconds);
-            Add(row, motion.SupportLockPreparationWeight);
             Add(row, motion.SupportConstraintWeight);
             Add(row, motion.SupportWeight);
             Add(row, motion.SupportContactAnchor);

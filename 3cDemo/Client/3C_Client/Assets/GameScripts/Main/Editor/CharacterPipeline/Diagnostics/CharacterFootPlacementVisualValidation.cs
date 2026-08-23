@@ -347,7 +347,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             state switch
             {
                 CharacterFootSupportLockState.Acquiring => new Color(0.1f, 0.75f, 1f, 1f),
-                CharacterFootSupportLockState.Landing => new Color(0.1f, 0.45f, 1f, 1f),
                 CharacterFootSupportLockState.Locked => new Color(0.2f, 1f, 0.25f, 1f),
                 CharacterFootSupportLockState.Sliding => new Color(1f, 0.8f, 0.1f, 1f),
                 CharacterFootSupportLockState.Releasing => new Color(0.85f, 0.35f, 1f, 1f),

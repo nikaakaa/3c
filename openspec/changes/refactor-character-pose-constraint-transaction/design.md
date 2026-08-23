@@ -2,16 +2,16 @@
 
 ## Context
 
-当前代码是`91758ff7`基线：Landing Lifecycle、Ground Path、GoalTransition、Contact State、Primary Support和Pelvis由`CharacterFootPlacementRuntime`按固定顺序直接编排，各自持有局部Pending/Committed；Pose Graph使用多个Goal Set输入，FBBIK腿部历史不属于Foot同一根事务。该基线保留了FootDown锁点、LandingPreparation和GoalTransition连续性，但仍存在多状态Owner、Path与Contact双重过渡、Pelvis实时Route依赖、Sliding削弱和顺序提交。
+当前代码是`91758ff7`基线：Landing Lifecycle、Ground Path、GoalTransition、Contact State、Primary Support和Pelvis由`CharacterFootPlacementRuntime`按固定顺序直接编排，各自持有局部Pending/Committed；Pose Graph使用多个Goal Set输入，FBBIK腿部历史不属于Foot同一根事务。该基线保留了开始落脚时锁点、LandingPreparation和GoalTransition连续性，但仍存在多状态Owner、Path与Contact双重过渡、Pelvis实时Route依赖、Sliding削弱和顺序提交。
 
-KKK参考提供了两个应保留的工程事实：FootPath是相对BasePath的增量；FootDown后必须停止采样当前事件的新FootPath并把脚锁向稳定落点。GDC提供了三个上层约束：保留动画水平运动和抬脚轮廓、Foot Path是脚不能穿过的地面下界、Locked/Sliding/Unlocked必须按误差选择而不是把脚无限拉向Anchor。
+KKK参考提供了两个应保留的工程事实：FootPath是相对BasePath的增量；动画开始落脚后必须停止采样当前事件的新FootPath并把脚锁向稳定落点。GDC提供了三个上层约束：保留动画水平运动和抬脚轮廓、Foot Path是脚不能穿过的地面下界、Locked/Sliding/Unlocked必须按误差选择而不是把脚无限拉向Anchor。
 
 本设计不照搬KKK的Current Trace取高、Set Mesh和预测/传统IK双路径，也不把GDC没有定义的Revision、Transition或FinalIK细节伪装成原文。项目选择是：单一Predictive正式链、Path Stable/Rebasing、五状态Foot Constraint、Resolved Foot Pair、根Bank原子提交和未来Reactive统一Target入口。
 
 ## Goals
 
 - 让FootPath采样严格恢复为动画空间进度与`Envelope - Baseline`增量。
-- 让Path变化只有一个连续性Owner，并在FootDown前明确Stable或Rebasing。
+- 让Path变化只有一个连续性Owner，并在开始落脚前明确Stable或Rebasing。
 - 让每脚Constraint状态与真实控制权一致，锁点前后没有隐藏权重或第二平滑。
 - 让左右脚、Support、Pelvis、Goal、BendHistory和Physical Write服从同一根事务。
 - 让内部实现按Route、Swing、Constraint、Resolved Foot、Support、Pelvis分层，不再形成Plant总处理器。
@@ -22,6 +22,26 @@ KKK参考提供了两个应保留的工程事实：FootPath是相对BasePath的�
 - 不增加Current Foot Trace、传统Foot IK、iStep、Heel/Toe、脚掌旋转、移动平台、Pivot或专用楼梯动画。
 - 不修改Gameplay、KCC、网络或rollback。
 - 不把Foot Constraint做成作者可编辑Graph；它是固定Runtime状态机。
+
+## Terminology
+
+本设计不再使用含义模糊的`FootDown`。正式时刻固定为：
+
+```text
+开始落脚（LandingStarted）
+    同一权威Landing Event的Constraint Weight从接近0开始上升
+    表示动画开始把脚从摆动交给接触约束
+
+完全踩实（FullyPlanted）
+    Constraint Weight到达1且Support Weight非零
+    表示动画已经进入完整承重区间
+
+开始抬脚（ReleaseStarted）
+    Constraint Weight开始下降，或权威Step进入正式Release区间
+    表示动画开始把脚从接触约束交还给摆动
+```
+
+`LandingStarted`不是Physics命中、Body Grounded、脚骨高度阈值、`TimeToLanding == 0`或已经Locked。`FullyPlanted`也不等于Solver已经把物理脚写到Anchor；Locked仍必须等待Constraint状态、Goal、FBBIK和Physical结果全部成立。
 
 ## Decision 1: 保留唯一Pose Constraint根事务
 
@@ -185,7 +205,7 @@ SwingEffectiveCorrection =
 
 动画仍决定脚的水平位置、原生抬脚高度、最高点时刻和旋转；FootPath只抬高其运行地面基线。地形高度、坡度和Correction大小不产生Lift状态。
 
-Rebasing中的Output可继续驱动Swing，保证当前脚连续；但FootDown只有Path Stable才能冻结Patch。这样平滑和必达不再互相补偿：Path未收敛时允许本次不锁，不允许为了必达突然加速。
+Rebasing中的Output可继续驱动Swing，保证当前脚连续；但开始落脚时只有Path Stable才能冻结Patch。这样平滑和必达不再互相补偿：Path未收敛时允许本次不锁，不允许为了必达突然加速。
 
 ## Decision 5: Constraint使用五状态固定图
 
@@ -218,25 +238,25 @@ ReleaseTargetState
 ```text
 Swing
   -> Landing:
-       FootDown开始 && Path Stable && Proposal/Event有效
+       LandingStarted && Path Stable && Proposal/Event有效
   -> UnlockedSupport:
-       FootDown开始 && Path未Stable或Proposal无效
+       LandingStarted && Path未Stable或Proposal无效
 
 Landing
   -> Locked:
-       ConstraintWeight到1 && Support有效 && Contact可达
+       FullyPlanted && Contact可达
   -> Releasing:
-       FootUp提前、Grounded丢失或Contact超距
+       完全踩实前已经开始抬脚、Grounded丢失或Contact超距
   -> UnlockedSupport:
        锁入失效且没有可释放Patch
 
 Locked
   -> Releasing:
-       FootUp、Grounded丢失、Contact超距或Contact不可达
+       ReleaseStarted、Grounded丢失、Contact超距或Contact不可达
 
 Releasing
   -> Swing:
-       正常FootUp/Safety Release完成且当前进入Swing
+       正常开始抬脚/Safety Release完成且当前进入Swing
   -> UnlockedSupport:
        Release完成但动画仍处于Support
 
@@ -295,7 +315,7 @@ Locked非零Goal权重严格为1。`animation.foot-placement-weight`只用于Swi
 ```text
 ReleaseResidual = CurrentEffectiveCorrection
 ReleaseStartConstraintWeight = CurrentConstraintWeight
-TransitionCause = AnimationFootUp
+TransitionCause = AnimationReleaseStarted
 ReleaseTargetState = Swing
 ```
 
@@ -318,7 +338,7 @@ p = SmoothStep(elapsed / ContactLossReleaseSeconds)
 EffectiveCorrection = ReleaseResidual * (1 - p)
 ```
 
-Safety与正常Release由`TransitionCause`互斥选择，不同时计算。FootUp优先使用动画曲线；Safety只处理没有正常曲线的外部接触丢失。
+Safety与正常Release由`TransitionCause`互斥选择，不同时计算。开始抬脚优先使用动画曲线；Safety只处理没有正常曲线的外部接触丢失。
 
 ## Decision 7: Path Revision的打断规则
 
@@ -347,8 +367,8 @@ UnlockedSupport + PathRevision:
 3. 非有限或lineage invalid
 4. Grounded丢失 / Contact不可达
 5. Contact超距
-6. FootUp
-7. FootDown
+6. 开始抬脚（ReleaseStarted）
+7. 开始落脚（LandingStarted）
 8. Path Revision
 ```
 
@@ -421,7 +441,7 @@ Goal/Solved/Physical Position与Residual
 
 ### 完整照搬KKK
 
-可以获得FootPath增量、Current Trace取高和Predictive/传统IK切换，但会引入Set Mesh、第二IK路径和边缘高度跳变。只采用FootPath增量、空间采样和FootDown锁点时机。
+可以获得FootPath增量、Current Trace取高和Predictive/传统IK切换，但会引入Set Mesh、第二IK路径和边缘高度跳变。只采用FootPath增量、空间采样和开始落脚时的锁点时机。
 
 ### 只按GDC概念实现
 
@@ -429,9 +449,9 @@ Goal/Solved/Physical Position与Residual
 
 ### Path变化使用固定Duration Lerp
 
-实现简单，但频繁Path变化会不断重启、产生滞留；临近FootDown又会在“没到点”和“强制跳点”之间摆动。采用保留Output/Velocity的临界阻尼Target跟随。
+实现简单，但频繁Path变化会不断重启、产生滞留；临近开始落脚又会在“没到点”和“强制跳点”之间摆动。采用保留Output/Velocity的临界阻尼Target跟随。
 
-### FootDown强制追到新Path
+### 开始落脚时强制追到新Path
 
 保证落点必达，但剩余时间越短速度越大，直接制造垂直设置、腿奇异点和Pelvis拉扯。采用Path未Settled则UnlockedSupport，不强制锁。
 

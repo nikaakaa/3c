@@ -1,6 +1,6 @@
 ## 1. 收敛最终Foot IK合同
 
-- [x] 1.1 对账current `character-foot-placement-presentation`、917基线、KKK参考与GDC学习文案，明确保留Animated Sole空间进度、FootPath增量和FootDown锁点，拒绝Set Mesh、双IK与Current Trace补洞
+- [x] 1.1 对账current `character-foot-placement-presentation`、917基线、KKK参考与GDC学习文案，明确保留Animated Sole空间进度、FootPath增量和开始落脚时锁点，拒绝Set Mesh、双IK与Current Trace补洞
 - [x] 1.2 对账当前实现，列出需要删除的Plant总处理器、旧状态、LandingPreparation、ContactTransition、GoalSet兼容容器和过期CSV字段
 - [x] 1.3 复用唯一`refactor-character-pose-constraint-transaction` change，确认不恢复被删除的Predictive/Reactive并行active change或创建第二Foot IK proposal
 - [x] 1.4 对比三个current spec与`openspec/project.md`，记录Swing-only、plural GoalSet、LegIK术语和当前实现真相的差异
@@ -29,9 +29,9 @@
 
 - [ ] 4.1 新增`Swing/Landing/Locked/Releasing/UnlockedSupport`五状态、Active/Consumed Event、FrozenPatch、TransitionCause、Residual、Progress与ReleaseTargetState正式合同
 - [ ] 4.2 删除`Tracking/Acquiring/Committed/Closed`旧状态、ContactOwnership主控制字段、Sliding水平削弱和旧Plant命名
-- [ ] 4.3 新增纯Constraint Trigger Resolver，按Hard Invalid、Action、Invalid、Grounded/Reachability、超距、FootUp、FootDown、Path Revision固定优先级归一同帧事实
+- [ ] 4.3 新增纯Constraint Trigger Resolver，按Hard Invalid、Action、Invalid、Grounded/Reachability、超距、开始抬脚、开始落脚、Path Revision固定优先级归一同帧事实
 - [ ] 4.4 新增纯Constraint Reducer，只执行状态转换、Event消费、Patch冻结与Transition入口事实，不查询世界、采样Path、生成Goal或计算Pelvis
-- [ ] 4.5 实现Swing到Landing：只有Path Stable、Proposal/Event匹配、Grounded、Action未占用和目标可达时冻结完整Patch；否则FootDown进入UnlockedSupport并消费Event
+- [ ] 4.5 实现Swing到Landing：动画开始落脚时，只有Path Stable、Proposal/Event匹配、Grounded、Action未占用和目标可达才冻结完整Patch；否则进入UnlockedSupport并消费Event
 - [ ] 4.6 实现Landing锁入：入口捕获一次AcquireResidual，按动画ConstraintWeight单调上升，完成后进入Locked
 - [ ] 4.7 实现Locked：Effective Correction严格等于FrozenAnchor减Animated Sole，非零Goal权重1，LockDistance只发布NearRelease，ReleaseDistance触发Releasing
 - [ ] 4.8 实现正常Releasing：入口捕获一次ReleaseResidual，只按动画Constraint下降回到原生动画脚，期间Path只更新Next Route

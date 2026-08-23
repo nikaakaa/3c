@@ -114,20 +114,11 @@
 - [ ] 5.13 扩展Runtime diagnostics snapshot暴露竖直correction量。
 - [ ] 5.14 保持诊断字段只读且不成为任何运行输入。
 
-## 6. 保持Foot Placement与Camera单路消费
+## 6. 保持Camera单路消费
 
-- [ ] 6.1 保持Corin Foot Placement Mask包含`Ground`。
-- [ ] 6.2 保持Corin Foot Placement Mask包含`FootPlacementSurface`。
-- [ ] 6.3 保持Corin Foot Placement Mask排除`CharacterTraversal`。
-- [ ] 6.4 保持离散楼梯Foot support直接来自`Ground`Collider。
-- [ ] 6.5 保持Ramp楼梯Foot support直接来自`FootPlacementSurface`Collider。
-- [ ] 6.6 保持`Lyra Current Grounding -> Stance Stabilization -> Pelvis Resolve` FootGrounding与可选Swing Predictive Modifier不读取竖直Follower私有状态。
-- [ ] 6.7 保持FootGrounding只读取正式最终Body Frame；stance anchor只使用合法current surface local anchor，不建立Actor Movement Compensation或第二Body filter。
-- [ ] 6.8 保持Pelvis补偿不写VisualRoot。
-- [ ] 6.9 保持唯一FullBodyIK只消费FootGrounding或可选Modifier发布的最终typed Goal Set，不重复world query。
-- [ ] 6.10 保持默认Camera使用最终Body Frame visible position。
-- [ ] 6.11 保持Camera不读取logic Body Y或KCC Step diagnostics。
-- [ ] 6.12 保持Camera不创建第二份台阶竖直Follower。
+- [ ] 6.1 保持默认Camera使用最终Body Frame visible position。
+- [ ] 6.2 保持Camera不读取logic Body Y或KCC Step diagnostics。
+- [ ] 6.3 保持Camera不创建第二份台阶竖直Follower。
 
 ## 7. 作者连续离散楼梯内容
 
@@ -173,7 +164,6 @@
 - [ ] 9.1 更新current `character-stair-surface-authoring` spec。
 - [ ] 9.2 更新current `deterministic-kcc-world-solver` spec中的Ramp绑定范围。
 - [ ] 9.3 更新current `character-presentation-interpolation` spec。
-- [ ] 9.4 更新current `character-foot-placement-presentation` spec。
 - [ ] 9.5 更新current `character-camera-pipeline` spec。
 - [ ] 9.6 更新`openspec/project.md`两种楼梯当前口径。
 - [ ] 9.7 更新KCC implementation inventory中的离散楼梯内容与Artifact身份。

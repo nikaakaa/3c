@@ -86,3 +86,5 @@ node_modules/
 .env.*
 !.env.example
 /3cDemo/Client/3C_Client/AgentAuthoring/
+ExternalDownloads/PhilippeKccReference/Package/
+ExternalDownloads/ZZZ_Studio/

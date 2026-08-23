@@ -48,11 +48,11 @@ ComponentUp * max(
 
 Route MUST保存Path Target、Output、Velocity和Settled Frame Count。同Event Path Target变化时 MUST保留上一Committed Output与Velocity并只替换Target；Path MUST仅在输出误差、速度和连续帧数同时满足正式门槛时成为Stable。Rebasing Output MAY继续驱动Swing以保持连续，但 MUST不取得锁脚资格，也 MUST不作为Pelvis Stride终点。
 
-每脚Constraint状态 MUST只包含`Swing`、`Landing`、`Locked`、`Releasing`与`UnlockedSupport`。FootDown只有在Path Stable、Proposal/Event匹配、Grounded、Action未占用和目标可达时才能冻结完整Patch并进入Landing；否则 MUST进入UnlockedSupport并消费该Event，不得为了必达提高修正速度、垂直设置到新Path或在落地后晚到重锁。
+每脚Constraint状态 MUST只包含`Swing`、`Landing`、`Locked`、`Releasing`与`UnlockedSupport`。开始落脚表示同一权威Event的Constraint Weight从接近0开始上升；该时刻只有在Path Stable、Proposal/Event匹配、Grounded、Action未占用和目标可达时才能冻结完整Patch并进入Landing。否则 MUST进入UnlockedSupport并消费该Event，不得为了必达提高修正速度、垂直设置到新Path或在落地后晚到重锁。
 
 Landing入口 MUST只捕获一次`CurrentEffectiveCorrection - FrozenContactCorrection`残差，并按动画Biomechanical Constraint Weight的单调上升衰减；Locked MUST严格输出`FrozenAnchor - AnimatedSole`。Locked非零Goal权重 MUST为1，不能再乘小于1的FootPlacement/Contact权重或通过horizontalWeight削弱Anchor。
 
-正常FootUp MUST进入Releasing并只按Constraint Weight下降衰减入口Residual到原生动画脚；Grounded丢失、Contact超距或不可达 MUST使用正式Safety Release时间。Releasing期间Path Revision MUST只更新Next Route，不能改变当前Release目标。完成后根据动画Phase进入Swing或UnlockedSupport，并清除FrozenPatch。
+正常开始抬脚 MUST进入Releasing并只按Constraint Weight下降衰减入口Residual到原生动画脚；Grounded丢失、Contact超距或不可达 MUST使用正式Safety Release时间。Releasing期间Path Revision MUST只更新Next Route，不能改变当前Release目标。完成后根据动画Phase进入Swing或UnlockedSupport，并清除FrozenPatch。
 
 #### Scenario: Swing脚采样台阶FootPath
 
@@ -66,9 +66,9 @@ Landing入口 MUST只捕获一次`CurrentEffectiveCorrection - FrozenContactCorr
 - **THEN** Route MUST进入Rebasing并保留上一Output与Velocity，只替换Target
 - **AND** MUST不重新从旧Path起点播放固定Duration插值
 
-#### Scenario: FootDown时Path仍在Rebasing
+#### Scenario: 开始落脚时Path仍在Rebasing
 
-- **WHEN** Constraint开始上升但Path尚未满足Settled距离、速度与连续帧门槛
+- **WHEN** 同一权威Event开始落脚、Constraint Weight开始上升，但Path尚未满足Settled距离、速度与连续帧门槛
 - **THEN** 当前Event MUST进入UnlockedSupport并被消费
 - **AND** Runtime MUST不冻结Patch、强制追点或在后续Support帧重新锁该Event
 
@@ -80,7 +80,7 @@ Landing入口 MUST只捕获一次`CurrentEffectiveCorrection - FrozenContactCorr
 
 #### Scenario: 正常锁入和释放
 
-- **WHEN** Landing脚的Constraint Weight连续上升到1后又在FootUp连续下降到0
+- **WHEN** Landing脚的Constraint Weight连续上升到1，随后在开始抬脚后连续下降到0
 - **THEN** Landing MUST从入口当前输出连续收敛到Frozen Contact并进入Locked
 - **AND** Releasing MUST从入口Locked输出连续回到原生动画脚，且两个过程都不得重新捕获起点或叠加第二平滑
 
@@ -148,7 +148,7 @@ Foot Constraint MUST使用固定typed State Page保存State、Active/Consumed Ev
 
 #### Scenario: 同帧多个打断成立
 
-- **WHEN** Action占用、Grounded丢失、FootUp和Path Revision在同一帧同时成立
+- **WHEN** Action占用、Grounded丢失、开始抬脚和Path Revision在同一帧同时成立
 - **THEN** Trigger Resolver MUST按正式优先级只向Constraint Reducer提交一个Constraint Trigger
 - **AND** Route MAY独立更新Next Event，但 MUST不修改Reducer已经冻结的Active Patch
 

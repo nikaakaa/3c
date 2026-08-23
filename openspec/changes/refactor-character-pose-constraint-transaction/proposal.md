@@ -6,9 +6,9 @@
 
 current `character-foot-placement-presentation`已经给出正确Swing口径：用原生Animated Sole在`LastLanding -> NextLanding`之间的空间进度，同时采样Landing Baseline和Ground Envelope，只把`Envelope - Baseline`的非负高度增量叠加到动画脚。当前代码却按动画Phase采样Envelope，并使用`Envelope - Animated Sole`再叠加实时Landing Preparation高度，导致Path变化直接改变脚的世界高度目标。
 
-KKK参考同样把FootPath视为相对BasePath的增量，并明确指出FootPath平滑会让落地脚来不及到点，因此在FootDown时停止采样当前Path、把脚过渡并锁定到落点。参考实现中的直接Current Trace取高、Set Mesh、预测IK/传统IK双路径和边缘跳变属于实现补丁，不作为本项目正式链路。本change采用KKK的运动口径与锁点时机、GDC的约束分层和项目现有根事务，重新定义一条可解释的正式链。
+KKK参考同样把FootPath视为相对BasePath的增量，并明确指出FootPath平滑会让落地脚来不及到点，因此在动画开始落脚时停止采样当前Path、把脚过渡并锁定到落点。参考实现中的直接Current Trace取高、Set Mesh、预测IK/传统IK双路径和边缘跳变属于实现补丁，不作为本项目正式链路。本change采用KKK的运动口径与锁点时机、GDC的约束分层和项目现有根事务，重新定义一条可解释的正式链。
 
-本次继续使用唯一change-id，不新建第二Foot IK proposal。基线中仍正确的Landing Prediction、Ground Path、空间FootPath增量、FootDown锁点和Pelvis业务约束迁入新模型；旧GoalTransition、LandingLifecycle、Contact State、顺序Seal、plural GoalSet和Solver对象历史不作为兼容路径保留。
+本次继续使用唯一change-id，不新建第二Foot IK proposal。基线中仍正确的Landing Prediction、Ground Path、空间FootPath增量、开始落脚时锁点和Pelvis业务约束迁入新模型；旧GoalTransition、LandingLifecycle、Contact State、顺序Seal、plural GoalSet和Solver对象历史不作为兼容路径保留。
 
 ## What Changes
 
@@ -17,9 +17,9 @@ KKK参考同样把FootPath视为相对BasePath的增量，并明确指出FootPat
 - Route只拥有下一Landing Event的Prediction、Proposal、Ground Path与Path连续性。Path连续性状态固定为`Stable/Rebasing`；Path Target变化时保留当前Correction和Velocity，只替换Target，不重启定时Lerp。
 - Swing只消费同帧原生动画脚与稳定Path结果。空间进度来自Animated Sole在`LastLanding -> NextLanding`方向上的投影；FootPath修正严格为`Envelope Sample - Landing Baseline Sample`的非负Component Up增量，不增加实时Landing Height下限，不按地形高度创建Lift状态，不修改动画脚水平位置或旋转。
 - 每脚Constraint状态固定为`Swing/Landing/Locked/Releasing/UnlockedSupport`。`ConsumedEventIdentity`负责阻止同一事件晚到重锁，不保留`Tracking/Closed`状态；`Landing`承担锁入过程，`Releasing`承担正常或安全释放，`UnlockedSupport`显式表达动画已经承重但本次没有世界Anchor。
-- `Swing`中的Path Revision只触发Path Rebase。FootDown时只有`Path Stable + Proposal有效 + Event匹配 + Grounded + Action未占用 + 目标可达`才能冻结完整Patch并进入Landing；Path仍在Rebasing或Proposal无效时进入UnlockedSupport，本事件不得为了必达而垂直设置或晚到重锁。
+- `Swing`中的Path Revision只触发Path Rebase。动画开始落脚时，只有`Path Stable + Proposal有效 + Event匹配 + Grounded + Action未占用 + 目标可达`才能冻结完整Patch并进入Landing；Path仍在Rebasing或Proposal无效时进入UnlockedSupport，本事件不得为了必达而垂直设置或晚到重锁。
 - Landing入口只捕获一次`AcquireResidual = CurrentEffectiveCorrection - FrozenContactCorrection`，进度使用动画Biomechanical `ConstraintWeight`的单调上升；Locked严格输出Frozen Contact Correction，不能再乘小于1的Contact/FootPlacement权重，也不能通过`horizontalWeight`削弱Anchor。
-- 正常FootUp进入Releasing，入口只捕获一次相对原生动画脚的Release Residual，进度使用动画Constraint下降；Grounded丢失或Contact超距使用正式`ContactLossReleaseSeconds`安全释放。Release期间当前Path不改变目标，只更新Next Route；结束后才由Swing Path Rebase接入新Path。
+- 正常开始抬脚时进入Releasing，入口只捕获一次相对原生动画脚的Release Residual，进度使用动画Constraint下降；Grounded丢失或Contact超距使用正式`ContactLossReleaseSeconds`安全释放。Release期间当前Path不改变目标，只更新Next Route；结束后才由Swing Path Rebase接入新Path。
 - 有限Action占脚属于硬抢占：当帧清Patch、Residual和当前Event，事件记为Consumed，Foot IK Correction归零，连续性只由既有Action Slot Pose Blend负责。Reset、Retarget、Pose discontinuity与Dispose清除全部Route/Constraint/Consumed状态并回到与新lineage一致的初始状态。
 - `ResolvedFootResult`是单脚唯一正式输出，聚合Route lineage、Path稳定性、Constraint State、Frozen Patch、Effective Correction、Final Sole/Ankle、Support Intent与typed Outcome。Primary Support和Pelvis只能消费左右Resolved Foot Pair；Swing Path处于Rebasing时不得把不稳定Stride终点送入Pelvis。
 - Foot Placement、PoseBone等来源发布真正独立的typed Goal Contribution；唯一Assembler发布一个Goal Set，唯一FBBIK只消费该Goal Set。删除Contribution复用GoalSet Header、plural GoalSet workspace/input和旧兼容端口。
@@ -39,7 +39,7 @@ KKK参考同样把FootPath视为相对BasePath的增量，并明确指出FootPat
 
 - current `character-foot-placement-presentation`要求Animated Sole空间进度、Landing Baseline与Ground Envelope共同形成纯垂直增量。本change保留并强化该口径；现有active change中的Phase采样、`Envelope - Animated Sole`和Landing Preparation实时高度全部删除。
 - current spec禁止Foot Lock、Pelvis和跨帧连续性，因为它表达的是早期Swing-only阶段。本change用正式Constraint状态、Frozen Patch、Resolved Foot Pair和Pelvis Result替换该阶段边界，同时保留“不重建动画水平步态”和“FootPath只提供地面增量”的原始约束。
-- current Ground Path要求同一事件Prediction持续更新并按死区重建Path。本change新增Stable/Rebasing输出连续性；Prediction和Ground Path事实仍可更新，但FootDown冻结后不得改变Active Patch。
+- current Ground Path要求同一事件Prediction持续更新并按死区重建Path。本change新增Stable/Rebasing输出连续性；Prediction和Ground Path事实仍可更新，但开始落脚并冻结后不得改变Active Patch。
 - current `character-animation-foot-analysis-artifact`已经保存连续脚部feature、Plant confidence与Landing onset，但没有证明Runtime正常Lock/Release所需的Constraint从0到1再回0的实际coverage。本change新增Build期连续性门槛，拒绝用Runtime固定Duration替代缺失动画语义。
 - current `character-presentation-pose-graph`仍要求多个Goal Set直接汇入FBBIK。本change继续使用现有active delta的Goal Contribution与唯一Assembler模型，并完成底层ABI清理。
 - current `character-animation-pipeline`仍使用FootPlacement Targets与LegIK术语。本change继续把正式链收敛为Goal Contributions、唯一Goal Set与唯一FBBIK，并让全部Foot/FBBIK跨帧事实随根Bank原子提交。
@@ -63,7 +63,7 @@ Route State只包含Path Stable/Rebasing及typed availability
 Swing Progress来自Animated Sole空间投影，不来自Phase Lerp
 Swing Correction逐值等于非负(Envelope Sample - Baseline Sample)沿Component Up的增量
 Path Target变化不重置Correction或Velocity
-FootDown时Path未Settled不得强制追点或创建Anchor
+开始落脚时Path未Settled不得强制追点或创建Anchor
 Landing/Locked/Releasing期间Path Revision只更新Next Route
 Locked Final Sole逐值等于Frozen Anchor，不受FootPlacementWeight或horizontalWeight削弱
 正常Release由Constraint下降驱动，Grounded/超距只由正式Safety Release驱动

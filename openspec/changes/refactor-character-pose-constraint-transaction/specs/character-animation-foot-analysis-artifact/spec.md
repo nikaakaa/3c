@@ -2,17 +2,17 @@
 
 ### Requirement: Foot Analysis必须证明Predictive Constraint锁入与释放连续性
 
-Projection Build MUST对全部接入Predictive Foot Placement的可达循环Locomotion Clip及Blend Space Dynamic Sample，使用精确匹配的Foot Analysis Artifact验证每个左右脚Landing Event的Constraint与Support连续区间。每个正式Event MUST具有稳定Event identity、FootDown前接近0的Constraint起点、连续单调上升到完整锁定的区间、非零Support区间，以及FootUp时连续单调下降回接近0的释放区间。
+Projection Build MUST对全部接入Predictive Foot Placement的可达循环Locomotion Clip及Blend Space Dynamic Sample，使用精确匹配的Foot Analysis Artifact验证每个左右脚Landing Event的Constraint与Support连续区间。每个正式Event MUST具有稳定Event identity、开始落脚前接近0的Constraint起点、连续单调上升到完全踩实的区间、非零Support区间，以及开始抬脚后连续单调下降回接近0的释放区间。
 
 连续性门槛 MUST属于versioned compiler algorithm，不得成为Runtime Contact Duration、Transition HalfLife或素材专属可调补偿。Artifact缺失、事件覆盖不完整、Constraint跳过锁入区间、未达到完整锁定、Release缺失、左右脚事件重叠非法或实际source coverage截断正式区间时 MUST阻止Projection发布；Runtime不得用固定0.12秒、默认曲线、旧GoalTransition或Safety Release替代正常动画Transition。
 
 #### Scenario: 循环Run的左脚Constraint完整
 
-- **WHEN** 左脚Event在FootDown前从接近0连续上升到1，保持非零Support，并在FootUp连续下降回接近0
+- **WHEN** 左脚Event在开始落脚前从接近0连续上升到1，保持非零Support，并在开始抬脚后连续下降回接近0
 - **THEN** Projection Build MUST发布该Event的稳定Biomechanical Step Constraint/Support计划
 - **AND** Runtime Landing与正常Release MAY直接使用该计划作为单调Transition进度
 
-#### Scenario: Constraint在FootDown从0跳到1
+#### Scenario: Constraint在开始落脚时从0跳到1
 
 - **WHEN** 可达循环Locomotion Clip的某脚Constraint没有连续锁入覆盖而在相邻采样间从接近0直接跳到1
 - **THEN** Projection Build MUST拒绝该素材并报告Clip、脚侧、Event identity和缺失区间
@@ -20,7 +20,7 @@ Projection Build MUST对全部接入Predictive Foot Placement的可达循环Loco
 
 #### Scenario: 有限source出口截断Release
 
-- **WHEN** Clip总时长包含完整FootUp，但正式PoseState source coverage在Release前结束
+- **WHEN** Clip总时长包含完整开始抬脚区间，但正式PoseState source coverage在Release前结束
 - **THEN** 质量校验 MUST按实际coverage判定Predictive Constraint合同不完整
 - **AND** MUST不使用coverage外样本证明该Event可正常释放
 

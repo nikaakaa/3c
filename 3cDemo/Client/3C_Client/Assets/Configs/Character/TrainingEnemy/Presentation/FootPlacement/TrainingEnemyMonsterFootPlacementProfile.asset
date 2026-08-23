@@ -36,7 +36,7 @@ MonoBehaviour:
     m_MaximumReachableVerticalEdge: 0.3
   m_FootMotion:
     m_LandingUpdateDistance: 0.005
-    m_GoalTransitionHalfLifeSeconds: 0.03
+    m_EffectiveCorrectionHalfLifeSeconds: 0.03
     m_LockDistance: 0.08
     m_SlideDistance: 0.2
     m_PelvisSpringFrequency: 3

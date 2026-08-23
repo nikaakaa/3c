@@ -84,17 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSupportLockState,FootMotionSupportHorizontalError," +
             "FootMotionSupportConstraintWeight,FootMotionSupportWeight," +
             "FootMotionSupportContactAnchorX,FootMotionSupportContactAnchorY,FootMotionSupportContactAnchorZ," +
-            "GoalTransitionMode,GoalTransitionHasCommittedOutput,GoalTransitionHasPendingOutput," +
-            "GoalTransitionCommittedSourceGroundPathIdentity,GoalTransitionPendingSourceGroundPathIdentity," +
-            "RawGoalPositionCorrectionX,RawGoalPositionCorrectionY,RawGoalPositionCorrectionZ," +
-            "RawGoalRotationCorrectionX,RawGoalRotationCorrectionY,RawGoalRotationCorrectionZ,RawGoalRotationCorrectionW," +
-            "RawGoalPositionWeight,RawGoalRotationWeight," +
-            "CommittedGoalTransitionPositionCorrectionX,CommittedGoalTransitionPositionCorrectionY,CommittedGoalTransitionPositionCorrectionZ," +
-            "CommittedGoalTransitionRotationCorrectionX,CommittedGoalTransitionRotationCorrectionY,CommittedGoalTransitionRotationCorrectionZ,CommittedGoalTransitionRotationCorrectionW," +
-            "CommittedGoalTransitionPositionWeight,CommittedGoalTransitionRotationWeight," +
-            "PendingGoalTransitionPositionCorrectionX,PendingGoalTransitionPositionCorrectionY,PendingGoalTransitionPositionCorrectionZ," +
-            "PendingGoalTransitionRotationCorrectionX,PendingGoalTransitionRotationCorrectionY,PendingGoalTransitionRotationCorrectionZ,PendingGoalTransitionRotationCorrectionW," +
-            "PendingGoalTransitionPositionWeight,PendingGoalTransitionRotationWeight,GoalTransitionHalfLifeSeconds," +
+            "FootMotionDesiredCorrectionX,FootMotionDesiredCorrectionY,FootMotionDesiredCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
             "StrideStartX,StrideStartY,StrideStartZ,StrideEndX,StrideEndY,StrideEndZ," +
@@ -989,25 +979,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SupportConstraintWeight);
             Add(row, motion.SupportWeight);
             Add(row, motion.SupportContactAnchor);
-            CharacterFootGoalTransitionDiagnostics goalTransition = foot.GoalTransition;
-            Add(row, goalTransition.Mode.ToString());
-            Add(row, goalTransition.HasCommittedOutput);
-            Add(row, goalTransition.HasPendingOutput);
-            Add(row, goalTransition.CommittedSourceGroundPathIdentity);
-            Add(row, goalTransition.PendingSourceGroundPathIdentity);
-            Add(row, goalTransition.RawPositionCorrection);
-            Add(row, goalTransition.RawRotationCorrection);
-            Add(row, goalTransition.RawPositionWeight);
-            Add(row, goalTransition.RawRotationWeight);
-            Add(row, goalTransition.CommittedPositionCorrection);
-            Add(row, goalTransition.CommittedRotationCorrection);
-            Add(row, goalTransition.CommittedPositionWeight);
-            Add(row, goalTransition.CommittedRotationWeight);
-            Add(row, goalTransition.PendingPositionCorrection);
-            Add(row, goalTransition.PendingRotationCorrection);
-            Add(row, goalTransition.PendingPositionWeight);
-            Add(row, goalTransition.PendingRotationWeight);
-            Add(row, goalTransition.HalfLifeSeconds);
+            Add(row, motion.DesiredCorrection);
             Add(row, foot.Goal.ComponentPosition);
             Add(row, foot.Goal.ComponentRotation);
             Add(row, foot.Goal.PositionWeight);
@@ -1121,11 +1093,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, ik.PhysicalAnkleComponentPosition);
             Add(
                 row,
-                ik.PhysicalWriteAvailable && foot.Goal.PositionWeight > 0f
+                ik.PhysicalWriteAvailable && legPose.IsAvailable &&
+                foot.Goal.PositionWeight > 0f
                     ? Vector3.Distance(
                         ik.PhysicalAnkleComponentPosition,
                         ResolveWeightedAnkleComponentPosition(
-                            in goalTransition,
+                            legPose.OriginalAnkle,
                             in footGoal))
                     : 0f);
             bool hasContact = groundContactIndex < ground.ContactCount;
@@ -1149,10 +1122,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static Vector3 ResolveWeightedAnkleComponentPosition(
-            in CharacterFootGoalTransitionDiagnostics goalTransition,
+            Vector3 originalComponentPosition,
             in CharacterFullBodyIkGoal goal)
         {
-            Vector3 originalComponentPosition = goalTransition.OriginalComponentPosition;
             return originalComponentPosition +
                    (goal.ComponentPosition - originalComponentPosition) *
                    goal.PositionWeight;

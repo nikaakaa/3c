@@ -92,6 +92,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in frame,
                         ref desiredCorrection);
                     break;
+                case CharacterFootSupportLockState.Landing:
+                    ResolveLandingHeightIntent(
+                        in frame,
+                        swingCorrection,
+                        ref desiredCorrection,
+                        ref preserveOutput);
+                    break;
                 case CharacterFootSupportLockState.Acquiring:
                     ResolveAcquiringIntent(
                         in frame,
@@ -201,14 +208,95 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationFootConstraintFacts.GroundedMinimumConfidence)
             {
                 m_Pending.PlantCycleConsumed = false;
+                if (plantConfidence > GeometryEpsilon &&
+                    CanBeginLandingHeight(in frame))
+                {
+                    BeginLandingHeight(
+                        in frame,
+                        ref desiredCorrection);
+                }
                 return;
             }
             if (m_Pending.PlantCycleConsumed)
                 return;
 
             m_Pending.PlantCycleConsumed = true;
-            if (!CanAcquire(in frame))
+            TryBeginAcquire(
+                in frame,
+                ref desiredCorrection);
+        }
+
+        void BeginLandingHeight(
+            in CharacterFootEffectiveConstraintFrame frame,
+            ref Vector3 desiredCorrection)
+        {
+            Vector3 heightCorrection = ResolveLandingHeightCorrection(
+                frame.AnimatedFoot,
+                frame.Landing.Point,
+                frame.ComponentUp);
+            m_Pending.State = CharacterFootSupportLockState.Landing;
+            m_Pending.LandingEventIdentity =
+                frame.Landing.LandingEventIdentity;
+            m_Pending.LandingHeightPoint = frame.Landing.Point;
+            m_Pending.LandingHeightResidual =
+                m_Pending.OutputCorrection - heightCorrection;
+            m_Pending.LandingHeightStartConfidence =
+                frame.SwingMotion.PlantConfidence;
+            m_Pending.LandingHeightProgress = 0f;
+            desiredCorrection = heightCorrection;
+        }
+
+        void ResolveLandingHeightIntent(
+            in CharacterFootEffectiveConstraintFrame frame,
+            Vector3 swingCorrection,
+            ref Vector3 desiredCorrection,
+            ref bool preserveOutput)
+        {
+            if (!IsLandingHeightEventCurrent(in frame))
+            {
+                CancelLandingHeight(swingCorrection);
+                desiredCorrection = swingCorrection;
+                preserveOutput = true;
                 return;
+            }
+
+            Vector3 heightCorrection = ResolveLandingHeightCorrection(
+                frame.AnimatedFoot,
+                m_Pending.LandingHeightPoint,
+                frame.ComponentUp);
+            m_Pending.LandingHeightProgress = Mathf.Max(
+                m_Pending.LandingHeightProgress,
+                ResolveLandingHeightProgress(
+                    m_Pending.LandingHeightStartConfidence,
+                    frame.SwingMotion.PlantConfidence));
+            m_Pending.OutputCorrection = heightCorrection +
+                                         m_Pending.LandingHeightResidual *
+                                         (1f - m_Pending.LandingHeightProgress);
+            desiredCorrection = heightCorrection;
+            preserveOutput = true;
+
+            if (frame.SwingMotion.PlantConfidence <
+                AnimationFootConstraintFacts.GroundedMinimumConfidence)
+            {
+                return;
+            }
+
+            m_Pending.PlantCycleConsumed = true;
+            if (!TryBeginAcquire(
+                    in frame,
+                    ref desiredCorrection))
+            {
+                CancelLandingHeight(swingCorrection);
+                desiredCorrection = swingCorrection;
+            }
+        }
+
+        bool TryBeginAcquire(
+            in CharacterFootEffectiveConstraintFrame frame,
+            ref Vector3 desiredCorrection)
+        {
+            if (!CanAcquire(in frame))
+                return false;
 
             Vector3 contactCorrection = ResolveContactCorrection(
                 frame.AnimatedFoot,
@@ -217,7 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 contactCorrection,
                 frame.ComponentUp);
             if (horizontalError > frame.Settings.LockDistance)
-                return;
+                return false;
 
             m_Pending.HasContact = true;
             m_Pending.LandingEventIdentity = frame.Landing.LandingEventIdentity;
@@ -231,7 +319,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Pending.OutputCorrection - contactCorrection;
             m_Pending.ContactProgress = 0f;
             m_Pending.ReleaseStartResidual = 0f;
+            ClearLandingHeightFacts();
             desiredCorrection = contactCorrection;
+            return true;
+        }
+
+        void CancelLandingHeight(Vector3 swingCorrection)
+        {
+            m_Pending.State = CharacterFootSupportLockState.None;
+            m_Pending.SwingResidual =
+                m_Pending.OutputCorrection - swingCorrection;
+            m_Pending.LandingEventIdentity = 0;
+            ClearLandingHeightFacts();
+        }
+
+        void ClearLandingHeightFacts()
+        {
+            m_Pending.LandingHeightPoint = default;
+            m_Pending.LandingHeightResidual = default;
+            m_Pending.LandingHeightStartConfidence = 0f;
+            m_Pending.LandingHeightProgress = 0f;
         }
 
         void ResolveAcquiringIntent(
@@ -426,6 +533,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             switch (state)
             {
+                case CharacterFootSupportLockState.Landing:
+                    return m_Pending.LandingHeightProgress;
                 case CharacterFootSupportLockState.Acquiring:
                     return m_Pending.ContactProgress;
                 case CharacterFootSupportLockState.Locked:
@@ -496,6 +605,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             frame.HasLanding &&
             frame.Landing.LandingEventIdentity != 0;
 
+        bool CanBeginLandingHeight(
+            in CharacterFootEffectiveConstraintFrame frame) =>
+            !m_Pending.PlantCycleConsumed &&
+            frame.HasLanding &&
+            frame.Landing.LandingEventIdentity != 0 &&
+            frame.Landing.LandingEventIdentity ==
+            frame.SwingMotion.LandingEventIdentity &&
+            frame.SwingMotion.LandingConstraintWeight >=
+            AnimationFootConstraintFacts.LockedMinimumConfidence;
+
+        bool IsLandingHeightEventCurrent(
+            in CharacterFootEffectiveConstraintFrame frame) =>
+            frame.HasLanding &&
+            frame.Landing.LandingEventIdentity ==
+            m_Pending.LandingEventIdentity &&
+            frame.SwingMotion.LandingEventIdentity ==
+            m_Pending.LandingEventIdentity &&
+            frame.SwingMotion.LandingConstraintWeight + GeometryEpsilon >=
+            AnimationFootConstraintFacts.LockedMinimumConfidence;
+
+        static float ResolveLandingHeightProgress(
+            float startConfidence,
+            float currentConfidence) =>
+            startConfidence >=
+            AnimationFootConstraintFacts.GroundedMinimumConfidence - GeometryEpsilon
+                ? 1f
+                : Mathf.InverseLerp(
+                    startConfidence,
+                    AnimationFootConstraintFacts.GroundedMinimumConfidence,
+                    currentConfidence);
+
         static Vector3 ResolveSwingCorrection(
             CharacterFootPlacementAnimatedFootPose foot,
             in CharacterFootSwingMotionDiagnostics swing) =>
@@ -507,6 +647,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose foot,
             Vector3 contactAnchor) =>
             contactAnchor - ResolveOriginalSole(foot);
+
+        static Vector3 ResolveLandingHeightCorrection(
+            CharacterFootPlacementAnimatedFootPose foot,
+            Vector3 landingPoint,
+            Vector3 componentUp)
+        {
+            Vector3 up = componentUp.normalized;
+            return up * Vector3.Dot(
+                landingPoint - ResolveOriginalSole(foot),
+                up);
+        }
 
         static Vector3 ResolveSlidingCorrection(
             Vector3 fullCorrection,
@@ -617,8 +768,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal Vector3 ContactAnchor;
             internal Vector3 OutputCorrection;
             internal Vector3 AcquireResidual;
+            internal Vector3 LandingHeightPoint;
+            internal Vector3 LandingHeightResidual;
             internal Vector3 ReleaseTargetCorrection;
             internal Vector3 ReleaseResidual;
+            internal float LandingHeightStartConfidence;
+            internal float LandingHeightProgress;
             internal float ContactProgress;
             internal float ReleaseStartResidual;
 

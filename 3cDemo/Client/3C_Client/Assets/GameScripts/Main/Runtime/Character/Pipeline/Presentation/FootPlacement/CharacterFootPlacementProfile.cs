@@ -178,7 +178,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_GoalTransitionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
-        [SerializeField] float m_UnlockBlendSeconds = 0.12f;
         [SerializeField] float m_PelvisSpringFrequency = 3f;
 
         internal CharacterFootMotionSettings Build() =>
@@ -187,7 +186,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_GoalTransitionHalfLifeSeconds,
                 m_LockDistance,
                 m_SlideDistance,
-                m_UnlockBlendSeconds,
                 m_PelvisSpringFrequency);
     }
 
@@ -198,14 +196,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float goalTransitionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
-            float contactTransitionSeconds,
             float pelvisSpringFrequency)
         {
             LandingUpdateDistance = landingUpdateDistance;
             GoalTransitionHalfLifeSeconds = goalTransitionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
-            ContactTransitionSeconds = contactTransitionSeconds;
             PelvisSpringFrequency = pelvisSpringFrequency;
             RequireValid();
         }
@@ -214,7 +210,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float GoalTransitionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
-        internal float ContactTransitionSeconds { get; }
         internal float PelvisSpringFrequency { get; }
 
         internal void RequireValid()
@@ -225,8 +220,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LockDistance <= LandingUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
-                !float.IsFinite(ContactTransitionSeconds) ||
-                ContactTransitionSeconds <= 0f ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f)
             {
                 throw new InvalidOperationException(

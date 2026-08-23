@@ -69,7 +69,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasNextSwingLanding,
             CharacterFootGroundPathLanding nextSwingLanding,
             float nextSwingPredictionError,
-            float nextSwingConstraintWeight)
+            float nextSwingConstraintWeight,
+            bool hasPromotedLanding,
+            CharacterFootGroundPathLanding promotedLanding)
         {
             State = state;
             EventIdentity = eventIdentity;
@@ -79,6 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingLanding = nextSwingLanding;
             NextSwingPredictionError = nextSwingPredictionError;
             NextSwingConstraintWeight = nextSwingConstraintWeight;
+            HasPromotedLanding = hasPromotedLanding;
+            PromotedLanding = promotedLanding;
         }
 
         internal CharacterFootLandingLifecycleState State { get; }
@@ -91,12 +95,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathLanding NextSwingLanding { get; }
         internal float NextSwingPredictionError { get; }
         internal float NextSwingConstraintWeight { get; }
+        internal bool HasPromotedLanding { get; }
+        internal CharacterFootGroundPathLanding PromotedLanding { get; }
+
+        internal bool TryResolveLanding(
+            ulong landingEventIdentity,
+            out CharacterFootGroundPathLanding landing)
+        {
+            if (landingEventIdentity != 0 &&
+                HasNextSwingLanding &&
+                NextSwingLanding.LandingEventIdentity == landingEventIdentity)
+            {
+                landing = NextSwingLanding;
+                return true;
+            }
+            if (landingEventIdentity != 0 &&
+                HasLastLanding &&
+                LastLanding.LandingEventIdentity == landingEventIdentity)
+            {
+                landing = LastLanding;
+                return true;
+            }
+            landing = default;
+            return false;
+        }
     }
 
     struct CharacterFootLandingLifecycleFrame
     {
         internal CharacterFootLandingFact LastLanding;
         internal CharacterFootLandingFact NextSwingLanding;
+        internal CharacterFootLandingFact PromotedLanding;
         internal Vector3 NextSwingReferencePoint;
         internal float NextSwingPredictionError;
         internal float NextSwingConstraintWeight;
@@ -117,7 +146,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 State == CharacterFootLandingLifecycleState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
                 State == CharacterFootLandingLifecycleState.Accepted &&
-                NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f);
+                NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
+                PromotedLanding.HasValue,
+                PromotedLanding.HasValue ? PromotedLanding.Resolve() : default);
 
         internal void InvalidateCurrentLanding()
         {
@@ -158,6 +189,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void BeginPending()
         {
             m_Pending = m_Committed;
+            m_Pending.PromotedLanding = default;
             m_HasPending = true;
         }
 
@@ -252,6 +284,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                             CharacterFootLandingLifecycleState.Accepted
                         ? m_Pending.NextSwingLanding
                         : default;
+                    m_Pending.PromotedLanding = m_Pending.LastLanding;
                     m_Pending.TrackedEventIdentity = 0;
                     m_Pending.ClearNextSwingLanding();
                 }

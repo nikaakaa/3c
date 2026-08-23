@@ -2,229 +2,147 @@
 
 ## Context
 
-当前代码是`91758ff7`基线：Landing Lifecycle、Ground Path、GoalTransition、Contact State、Primary Support和Pelvis由`CharacterFootPlacementRuntime`按固定顺序直接编排，各自持有局部Pending/Committed；Pose Graph使用多个Goal Set输入，FBBIK腿部历史不属于Foot同一根事务。该基线保留了开始落脚时锁点、LandingPreparation和GoalTransition连续性，但仍存在多状态Owner、Path与Contact双重过渡、Pelvis实时Path依赖、Sliding削弱和顺序提交。
+当前Committed代码基线是`8fc704a`。它已删除旧`CharacterFootGoalTransition`并用`CharacterFootEffectiveConstraint`统一单脚Output Correction，但仍使用`None/Acquiring/Locked/Sliding/Releasing`实验状态、实时Path向上硬地面下限、PlantConfidence直接Ownership和分散Pending/Committed。`194953`采样证明它能41/42次Locked且Anchor正确，也证明实时Path硬下限会把Path Revision直接变成18cm级脚高跳变。
 
-KKK参考提供了两个应保留的工程事实：FootPath是相对BasePath的增量；动画开始落脚后必须停止采样当前事件的新FootPath并把脚锁向稳定落点。GDC提供了三个上层约束：保留动画水平运动和抬脚轮廓、Foot Path是脚不能穿过的地面下界、Locked/Sliding/Unlocked必须按误差选择而不是把脚无限拉向Anchor。
+后续实验形成五条不能回退的证据：
 
-本设计不照搬KKK的Current Trace取高、Set Mesh和预测/传统IK双路径，也不把GDC没有定义的Revision、Transition或FinalIK细节伪装成原文。项目选择是：单一Predictive正式链、每脚一个显式typed状态机上下文、五状态Foot Constraint、唯一Effective Correction、Resolved Foot Pair、根Bank原子提交和未来Reactive统一输入入口。
+- Swing FootPath必须是非负`Envelope - Baseline`；删除负Swing修正后，29/29次Acquire成功Locked，最大Solver残差从49.96cm降到0.23cm。
+- Constraint从脚到最高点后的Approach开始上升；直接用未来Patch平面驱动脚会产生最低约-1.07m修正和完全伸直奇异位形。
+- PlantConfidence不是单调Transition Alpha；55次Landing中54次Progress始终为0，Plant帧再从0跳到1，最大修正跳变28.68cm。
+- Prediction Point、Contact Patch和Committed Anchor必须分型；提前冻结Prediction XYZ会产生最大2.17m水平过期。
+- 视觉Path Settled不能成为Landing事件准入；5mm准入实验最终0次Locked。
+
+因此本设计保留五状态，不增加Approach或Acquiring状态，但要求Foot Analysis/Projection先发布一段真正晚期、单调、覆盖到Plant的Landing Height计划。没有通过Build质量门槛的素材不能接入正式Predictive Foot Placement，Runtime不提供固定Duration或原始曲线fallback。
 
 ## Goals
 
-- 让FootPath采样严格恢复为动画空间进度与`Envelope - Baseline`增量。
-- 让每脚全部持久事实集中在一个显式typed State Context中，并由一个State Machine唯一写入。
-- 让全脚只有一个Effective Correction/Velocity连续性Owner，并在开始落脚前明确Stable或Rebasing。
-- 让每脚Constraint状态与真实控制权一致，锁点前后没有隐藏权重或第二平滑。
-- 让左右脚、Support、Pelvis、Goal、BendHistory和Physical Write服从同一根事务。
-- 让Foot Placement形成外部Interface窄、内部Implementation完整的深Module，不再要求调用方编排浅Module链。
-- 为未来Reactive保留唯一Target语义，不创建未接线状态或第二运行链。
+- 对外只暴露一个深`CharacterFootPlacementModule` Interface。
+- 每脚状态集中在显式typed `CharacterFootStateContext`，由一个State Machine唯一写入。
+- 全脚只有一个Effective Correction/Velocity连续性Owner。
+- 严格分开Prediction、Frozen Contact Patch和Committed Anchor。
+- Swing只使用非负FootPath；Landing只在已验证晚期窗口沿Component Up交接。
+- Support Intent不依赖Anchor是否Locked。
+- Foot、Pelvis、Goal、Solver、Writer和Diagnostics服从一个根事务。
 
 ## Non-Goals
 
-- 不增加Current Foot Trace、传统Foot IK、iStep、Heel/Toe、脚掌旋转、移动平台、Pivot或专用楼梯动画。
+- 不增加Current Foot Trace、传统Foot IK、iStep、Heel/Toe双点、脚掌旋转、移动平台、Pivot或专用楼梯动画。
 - 不修改Gameplay、KCC、网络或rollback。
-- 不把Foot Constraint做成作者可编辑Graph；它是固定Runtime状态机。
+- 不把Foot状态机做成作者可编辑Graph。
+- 不在本change接入Reactive，只固定以后必须复用的Patch准入入口。
 
 ## Terminology
 
-本设计不再使用含义模糊的`FootDown`。正式时刻固定为：
-
 ```text
-开始落脚（LandingStarted）
-    同一权威Landing Event的Constraint Weight从接近0开始上升
-    表示动画开始把脚从摆动交给接触约束
+ApproachStarted
+    脚从最高点开始下降的分析事实
+    不触发Foot状态或脚Goal
 
-完全踩实（FullyPlanted）
-    Constraint Weight到达1且Support Weight非零
-    表示动画已经进入完整承重区间
+LandingStarted
+    Foot Analysis/Projection发布的唯一晚期高度交接起点
+    触发Swing进入Landing
+    冻结Contact Patch，但不创建Anchor
 
-开始抬脚（ReleaseStarted）
-    Constraint Weight开始下降，或权威Step进入正式Release区间
-    表示动画开始把脚从接触约束交还给摆动
+LandingHeightProgress
+    Projection发布的0到1单调进度
+    必须在LandingStarted到PlantStarted之间完整覆盖
+    不能直接使用Constraint或PlantConfidence原值
+
+PlantStarted
+    Projection发布的唯一权威Plant onset
+    触发Landing进入Locked，不是额外状态
+
+ReleaseStarted
+    Projection发布的唯一正常Release事实
 ```
 
-`LandingStarted`不是Physics命中、Body Grounded、脚骨高度阈值、`TimeToLanding == 0`或已经Locked。`FullyPlanted`也不等于Solver已经把物理脚写到Anchor；Locked仍必须等待Constraint状态、Goal、FBBIK和Physical结果全部成立。
+Build从显式Foot Contact Marker或versioned推断算法中只选择一个规范PlantStarted；Runtime不按PlantConfidence阈值生成第二Trigger。
 
-## Decision 1: 保留唯一Pose Constraint根事务
-
-唯一外部Interface继续为：
+## Decision 1: 唯一根事务与深Module
 
 ```text
-BeginFrame(FrameHeader)
-PrepareFootPlacement(FrameInput, Producer)
-AssembleGoals(Contributions)
-SolveFullBodyIk(ComponentPose, GoalSet)
-CompletePhysicalWrite(WriteOutcome)
-CompleteFrame(Seal | Discard)
-Invalidate(Reset | Retarget | Discontinuity | Dispose)
+BeginFrame
+-> CharacterFootPlacementModule
+-> Goal Assembler
+-> FBBIK
+-> Physical Writer
+-> Seal | Discard
 ```
 
-`PosePlanExecutionRuntime`是唯一物理Owner。调用方不得取得根Bank、左右Foot页、BendHistory或GoalAssembly的可变引用。所有Foot内部Implementation通过根Runtime提供的窄操作写Pending页；Seal只切换一个已验证Bank identity。
+每个根Bank固定包含左右Foot Context与Ground Path payload、Resolved Foot Pair、Primary Support、Pelvis Spring、Goal Contributions/Goal Set、BendHistory/Solver Outcome和Diagnostics页。调用方不得取得可变Bank或逐模块Seal。
 
-每个Bank固定包含：
-
-```text
-Frame/Completion/Rig lineage
-左右CharacterFootStateContext及其固定容量Ground Path payload页
-左右Resolved Foot
-Primary Support
-Pelvis Spring
-Body Trajectory memo
-Goal Contributions与唯一Goal Set
-左右BendHistory与Solver Outcome
-Foot/FBBIK/Physical Diagnostics冻结页
-```
-
-Reset、Retarget、Pose discontinuity与Dispose统一失效整个Bank、左右Foot State Context、Frozen Patch、Consumed Event、Effective Correction/Velocity、Pelvis Spring和BendHistory；不逐模块补清理。
-
-## Decision 2: Foot Placement使用深Module与显式typed状态机上下文
-
-对外只有一个`CharacterFootPlacementModule` Interface：
+Foot Placement外部只调用：
 
 ```text
-PrepareFootPlacement(CharacterFootPlacementFrameInput)
+PrepareFootPlacement(FrameInput)
     -> CharacterFootPlacementResult
 ```
 
-调用方只提供同帧不可变输入并接收最终Result，不知道Landing Prediction、Ground Path、状态转换、Support、Pelvis或Goal编码的执行顺序，也不能取得任何可变状态引用。
+Implementation内部执行左右State Machine、Resolved Foot Pair、Support/Pelvis和三个Goal Contribution。Landing Predictor、Ground Builder、Swing Target、Trigger Resolver和Constraint数学只能是纯函数或内部Module，不能拥有第二份跨帧状态。
 
-Module Implementation内部固定为：
-
-```text
-同帧不可变Frame Input
--> Left CharacterFootStateMachine
--> Right CharacterFootStateMachine
--> CharacterResolvedFootPair
--> Support/Pelvis内部计算
--> 三个Goal Contribution
--> CharacterFootPlacementResult
-```
-
-每脚状态机读取上一Committed Context并生成同一Bank的Pending Context与Resolved Foot。正式Context固定为：
+## Decision 2: 显式typed Foot State Context
 
 ```text
-CharacterFootStateContext
-    ConstraintState
-    ActiveEventIdentity / ConsumedEventIdentity
-    LastCommittedContact
-    NextLandingProposal / GroundPathIdentity / GroundPathPayloadHandle
-    PathTargetCorrection / PathTrackingStatus / SettledFrameCount
-    FrozenPatch
-    EffectiveCorrection / EffectiveVelocity
-    TransitionCause / StartCorrection / StartConstraintWeight / Progress
-    ReleaseTargetState
-```
-
-本文把该Context称为“显式typed状态机黑板”，但它不是Gameplay Blackboard：没有运行时字符串Key、共享Dictionary、动态字段、跨系统读写或按名称fallback。Raw Contact、Edge与Envelope使用Context显式引用的固定容量payload页；World Query Adapter和纯Builder只能在State Machine一次Evaluate期间填充各自的Pending payload，payload不保存Constraint、Transition、Correction或跨帧控制状态，因此不是第二状态Owner。`CharacterFootStateMachine`是Context的唯一写入者；Diagnostics、Pelvis、Goal Encoder和其它Module都只能读取已完成Result。
-
-Landing Predictor、Proposal死区、Ground Envelope Builder、Swing Target Calculator、Trigger Resolver、Constraint数学和Resolved Foot Builder可以在Implementation内部拆成纯函数或内部Module，但它们不形成外部Seam，不保存自己的Pending/Committed、Output、Velocity、Residual或状态页。删除`CharacterFootPlantTransaction`、旧`CharacterFootPlantModule`、`CharacterFootRouteModule`及包含实现状态的`*Contracts`杂糅Interface。
-
-## Decision 3: State Machine唯一拥有Path跟踪与Effective Correction
-
-Ground Path只生成不可变事实：
-
-```text
-HasPath
-TrackedEventIdentity
+ConstraintState
+ActiveEventIdentity / ConsumedEventIdentity
 LastCommittedContact
+NextLandingProposal / GroundPathIdentity / payload handle
+PathTargetCorrection / EffectiveCorrection / EffectiveVelocity
+PathTrackingStatus / SettledFrameCount
+FrozenContactPatch
+CommittedAnchor
+LandingResidual / ReleaseResidual
+LandingHeightProgress / ReleaseProgress
+TransitionCause
+```
+
+Context不是Gameplay Blackboard：没有字符串Key、共享Dictionary、动态字段或跨系统写入。只有`CharacterFootStateMachine`能写。
+
+## Decision 3: Prediction、Patch与Anchor严格分型
+
+```text
 NextLandingProposal
-GroundPathIdentity
-TargetCorrectionAlongUp
+    Swing中允许更新的预测位置
+    不能直接控制当前脚
+
+FrozenContactPatch
+    Event / Path / Surface / PlanePoint / PlaneNormal
+    表示选中了哪块地面
+    不拥有最终脚XZ
+
+CommittedAnchor
+    Event / Patch / WorldPoint / WorldNormal
+    Plant后真正锁住的世界点
 ```
 
-同一Event的新Landing在更新死区内时复用现有Proposal与Ground Path。超过死区后重建Ground Path并只替换Context中的Path Target。Ground Path没有自己的Output、Velocity、Lerp、Spring、Pending/Committed或Stable状态机。
-
-Swing状态使用Context中唯一的Effective Correction/Velocity执行一维Component Up临界阻尼，不使用每次Revision重启的固定时长Lerp：
+Landing只冻结Patch。Plant时：
 
 ```text
-omega = PathCorrectionFrequency * 2 * PI
-x0 = EffectiveCorrectionAlongUp - PathTargetCorrectionAlongUp
-j0 = EffectiveVelocityAlongUp + omega * x0
-decay = exp(-omega * dt)
-
-NextEffectiveCorrectionAlongUp =
-    PathTargetCorrectionAlongUp + (x0 + j0 * dt) * decay
-NextEffectiveVelocityAlongUp =
-    (EffectiveVelocityAlongUp - omega * j0 * dt) * decay
+CurrentEffectiveSole = AnimatedSole + EffectiveCorrection
+CommittedAnchor = ProjectAlongComponentUp(
+    CurrentEffectiveSole,
+    FrozenContactPatch)
 ```
 
-新Target到来时直接以上一Committed Effective Correction/Velocity继续。`Stable/Rebasing`是State Context发布的Path Tracking Status，不是另一个状态机：
+Anchor XZ来自Plant当帧脚底，不来自旧Prediction Point。Patch不可投影、身份失效或准入差异超容差时进入UnlockedSupport，不创建替代Anchor。
+
+## Decision 4: Swing只使用非负FootPath
 
 ```text
-Stable =
-    ConstraintState == Swing
-    && abs(EffectiveCorrection - PathTarget) <= PathSettledDistance
-    && abs(EffectiveVelocity) <= PathSettledSpeed
-    && 连续满足PathSettledFrameCount帧
-
-其余合法跟踪状态 = Rebasing
-无合法Path = Unavailable
-```
-
-正式配置：
-
-```text
-PathCorrectionFrequency
-PathSettledDistance
-PathSettledSpeed
-PathSettledFrameCount
-ContactLossReleaseSeconds
-LockDistance
-ReleaseDistance
-```
-
-删除`ContactTransitionSeconds`、Ownership HalfLife、Landing Preparation Start Time和实时Landing Height下限。
-
-## Decision 4: Swing严格使用动画空间进度与FootPath增量
-
-输入：
-
-```text
-Animated Sole
-LastCommittedContact
-NextLandingProposal
-Ground Envelope与Path Target事实
-Component Up
-```
-
-空间进度：
-
-```text
-direction = ProjectOnPlane(NextLanding - LastContact, Up)
-progress = clamp01(
-    dot(ProjectOnPlane(AnimatedSole - LastContact, Up), normalize(direction))
-    / length(direction))
-```
-
-Baseline与Envelope必须按同一纵向进度采样：
-
-```text
+progress = AnimatedSole在LastContact到NextLanding方向上的空间投影
 BaselineSample = Lerp(LastContact, NextLanding, progress)
-EnvelopeSample = SampleEnvelopeByLongitudinalProgress(progress)
+EnvelopeSample = SampleEnvelope(progress)
 
-RawPathDelta = max(
-    0,
-    dot(EnvelopeSample - BaselineSample, Up))
-```
-
-Swing Target：
-
-```text
-RawSwingCorrection = Up * RawPathDelta
+RawPathDelta = max(0, EnvelopeHeight - BaselineHeight)
 PathTargetCorrection =
-    animation.foot-placement-weight * RawSwingCorrection
-
-Swing状态下：
-EffectiveCorrection/Velocity
-    临界阻尼追踪PathTargetCorrection
+    animation.foot-placement-weight * Up * RawPathDelta
 ```
 
-动画仍决定脚的水平位置、原生抬脚高度、最高点时刻和旋转；FootPath只抬高其运行地面基线。地形高度、坡度和Correction大小不产生Lift状态。
+动画决定脚XZ、下降轨迹、最高点和旋转。Swing不得使用`Baseline - AnimatedSole`或未来Landing高度向下拉脚，也不得把实时Path Target作为硬地面下限。
 
-Rebasing时仍使用同一个Effective Correction驱动Swing，保证当前脚连续；但开始落脚时只有Path Tracking Status为Stable才能冻结Patch。这样平滑和必达不再互相补偿：Path未收敛时允许本次不锁，不允许为了必达突然加速。
+Path变化只替换Target，保留Effective Correction/Velocity。`Stable/Rebasing/Unavailable`只表示跟踪质量，不是第二状态机，也不决定Landing事件是否存在。
 
-## Decision 5: Constraint使用五状态固定图
-
-正式状态：
+## Decision 5: 五状态图
 
 ```text
 Swing
@@ -234,43 +152,33 @@ Releasing
 UnlockedSupport
 ```
 
-辅助事实：
-
-```text
-ActiveEventIdentity
-ConsumedEventIdentity
-FrozenPatch
-TransitionCause
-TransitionStartConstraintWeight
-TransitionProgress
-TransitionResidual
-ReleaseTargetState
-```
-
-状态图：
-
 ```text
 Swing
   -> Landing:
-       LandingStarted && Path Stable && Proposal/Event有效
+       LandingStarted && Patch/Event有效
+       && Grounded && Action未占用
   -> UnlockedSupport:
-       LandingStarted && Path未Stable或Proposal无效
+       LandingStarted但没有合法Patch
+       或PlantStarted到达时仍没有Frozen Patch
 
 Landing
   -> Locked:
-       FullyPlanted && Contact可达
-  -> Releasing:
-       完全踩实前已经开始抬脚、Grounded丢失或Contact超距
+       PlantStarted
+       && LandingHeightProgress已完整覆盖
+       && Frozen Patch有效
+       && 当帧Effective Sole可在容差内投影到Patch
   -> UnlockedSupport:
-       锁入失效且没有可释放Patch
+       PlantStarted但进度/Patch/投影准入失败
+  -> Releasing:
+       ReleaseStarted、Grounded丢失或Patch失效
 
 Locked
   -> Releasing:
-       ReleaseStarted、Grounded丢失、Contact超距或Contact不可达
+       ReleaseStarted、Grounded丢失、Anchor超距或不可达
 
 Releasing
   -> Swing:
-       正常开始抬脚/Safety Release完成且当前进入Swing
+       Release完成且新Swing Event有效
   -> UnlockedSupport:
        Release完成但动画仍处于Support
 
@@ -279,238 +187,136 @@ UnlockedSupport
        新Swing Event开始
 ```
 
-同一Event完成Landing、Locked、Release或直接进入UnlockedSupport后写入`ConsumedEventIdentity`；相同Event不得重新进入Landing。Path Tracking Status只是Context事实，不是Constraint State；`Closed`由Consumed Event表达；`Committed`改名Locked以避免与根Bank Commit混淆；`Acquiring`语义由Landing承担。
+PlantStarted只是一条`Landing -> Locked` Transition，不增加Planting/Acquiring状态。`Sliding`不属于正式状态。相同Event完成或失败后写入Consumed Event，不能晚到重锁。
 
-有限Action占脚不进入Releasing：当帧清Patch与Residual、消费当前Event，并根据动画Phase落到Swing或UnlockedSupport。Reset/Retarget/Discontinuity清Consumed Event并重建lineage。
+## Decision 6: Landing使用编译后的单调高度计划
 
-## Decision 6: Landing与Release只有一个连续性Owner
-
-五个Constraint状态始终写同一组`EffectiveCorrection/EffectiveVelocity`。不存在Path Output、GoalTransition Output、Contact Ownership Output或状态间复制的第二修正。任何状态转换入口的第一帧 MUST逐值保持上一帧Effective Correction；Velocity继续来自同一Context，不能由另一个Module恢复旧值。
-
-### Landing锁入
-
-进入Landing时原子冻结：
+进入Landing时：
 
 ```text
-FrozenPatch = Stable Proposal的Event/Path/Surface/Point/Normal
-AcquireResidual =
-    CurrentEffectiveCorrection - FrozenContactCorrectionAtEntry
-StartConstraintWeight = CurrentConstraintWeight
-Progress = 0
+FrozenPatch = Event/Path/Surface/PlanePoint/Normal
+
+LandingCorrection =
+    ProjectAlongComponentUp(AnimatedSole, FrozenPatch)
+    - AnimatedSole
+
+LandingResidual =
+    CurrentEffectiveCorrection - LandingCorrection
 ```
 
-后续：
+后续只读取Projection计划：
 
 ```text
-p = clamp01(
-    (CurrentConstraintWeight - StartConstraintWeight)
-    / (1 - StartConstraintWeight))
-p = max(PreviousProgress, p)
+p = max(PreviousProgress, LandingHeightProgress)
 
 EffectiveCorrection =
-    CurrentFrozenContactCorrection
-    + AcquireResidual * (1 - p)
+    CurrentLandingCorrection
+    + LandingResidual * (1 - p)
 ```
 
-`CurrentFrozenContactCorrection`允许随同帧Animated Sole变化，但Frozen世界Point/Normal/Surface/Path identity不可变化。动画Foot Analysis/Build必须证明Constraint曲线在正式循环步中从接近0连续到1；若进入Landing时已经直接为1且无法形成连续区间，Build拒绝该素材合同，Runtime不补固定Duration。
+Landing第一帧等于进入前Output；动画XZ保持不变。实时Path Revision只能准备下一Event。Landing不执行实时Path硬地面下限。
 
-### Locked
+Build必须证明：
+
+- `LandingHeightProgress`在实际source coverage中从0单调到1。
+- 结束不晚于唯一PlantStarted。
+- Landing开始时Frozen Patch垂直目标处于正式腿长/Pelvis可达范围。
+- Progress不能由Runtime固定Duration、Constraint原值或PlantConfidence原值补造。
+
+## Decision 7: Plant原子创建Anchor并进入Locked
 
 ```text
-EffectiveCorrection = FrozenAnchor - AnimatedSole
+CurrentEffectiveSole = AnimatedSole + EffectiveCorrection
+CommittedAnchor = ProjectAlongComponentUp(
+    CurrentEffectiveSole,
+    FrozenPatch)
+
+AnchorEntryDifference =
+    CurrentEffectiveCorrection
+    - (CommittedAnchor - AnimatedSole)
 ```
 
-Locked非零Goal权重严格为1。`animation.foot-placement-weight`只用于Swing；进入Landing必须证明Constraint/Foot Placement语义允许完整锁定，Locked不得再乘全局Strength、Ownership或horizontalWeight。
+AnchorEntryDifference必须处于正式几何容差内。State Machine在同一次`Landing -> Locked` Transition中创建Anchor并输出严格Anchor；不存在Plant后的固定Duration Acquire或隐藏HasAnchor子状态。
 
-当水平误差超过`LockDistance`但未超过`ReleaseDistance`时只发布NearRelease事实，不移动Anchor；超过`ReleaseDistance`进入Releasing。本change不实现GDC Sliding状态，因为移动Anchor会重新引入第二位置Owner；未来若业务需要Sliding必须另立change替换该决策。
+```text
+Locked EffectiveCorrection = CommittedAnchor - AnimatedSole
+Locked GoalWeight = 1
+```
 
-### 正常Release
+Locked后Path、Prediction和Patch Proposal失去当前脚位置控制权；Anchor超距进入Releasing，不实现Sliding。
 
-入口：
+## Decision 8: Release从当前Output返回动画
 
 ```text
 ReleaseResidual = CurrentEffectiveCorrection
-ReleaseStartConstraintWeight = CurrentConstraintWeight
-TransitionCause = AnimationReleaseStarted
-ReleaseTargetState = Swing
-```
-
-后续：
-
-```text
-p = clamp01(1 - CurrentConstraintWeight / ReleaseStartConstraintWeight)
-p = max(PreviousProgress, p)
+p = Projection发布的单调ReleaseProgress
 EffectiveCorrection = ReleaseResidual * (1 - p)
 ```
 
-Release目标是原生动画脚Correction零，不消费实时Path。下一Event的Prediction、Ground Path和Path Target事实可以继续更新，但没有后台Path Output。Release完成进入Swing后，同一个Effective Correction从当前零值、同一个Effective Velocity开始追踪最新Path Target，不复制、恢复或重置第二份连续状态。
+Grounded丢失、Anchor超距或不可达使用正式Safety Release。正常与Safety Release互斥。Release期间Path只更新下一Event；完成后同一个Effective Correction/Velocity进入Swing。
 
-### Safety Release
-
-Grounded丢失、Contact超距或Contact不可达使用：
+## Decision 9: 数据更新与Trigger顺序
 
 ```text
-p = SmoothStep(elapsed / ContactLossReleaseSeconds)
-EffectiveCorrection = ReleaseResidual * (1 - p)
+1. 生成本帧Prediction/Patch/Path事实
+2. 更新Swing Target与Tracking Status
+3. 读取Projection的Landing/Plant/Release事实
+4. 归一一个Constraint Trigger
+5. 最多执行一次状态转换
+6. 生成Resolved Foot
 ```
 
-Safety与正常Release由`TransitionCause`互斥选择，不同时计算。开始抬脚优先使用动画曲线；Safety只处理没有正常曲线的外部接触丢失。
+Landing后Frozen Patch不变，Locked后Anchor不变，Releasing目标不变。Trigger优先级为Reset/Retarget/Dispose、Action、invalid、Grounded/Anchor invalid、Anchor超距、ReleaseStarted、PlantStarted、LandingStarted。
 
-## Decision 7: Path Revision的打断规则
+## Decision 10: Support、Pelvis与最终Goal
 
-```text
-Swing + PathRevision:
-    State Machine只替换Path Target
-    同一个Effective Correction/Velocity继续追踪并发布Rebasing
+Resolved Foot包含Path tracking、状态与Trigger、Frozen Patch、Committed Anchor、Effective Correction/Velocity、Final Sole/Ankle、Contact Reference、Support Intent与typed Outcome。
 
-Landing + PathRevision:
-    Active FrozenPatch不变，只更新下一Event的Path事实
+Support Intent来自动画Biomechanical Support事实，与Contact Ownership分离。Landing开始即可发布Support Intent；Primary Support不能要求Locked。Pelvis同时约束上一支撑腿与正在Landing腿的可达区间，不能等Locked帧才突然下移。
 
-Locked + PathRevision:
-    Anchor不变，只更新下一Event的Path事实
-
-Releasing + PathRevision:
-    Release目标不变，只更新下一Event的Path事实
-
-UnlockedSupport + PathRevision:
-    只准备下一Swing Event
-```
-
-同帧优先级：
-
-```text
-1. Reset / Retarget / Pose discontinuity / Dispose
-2. Action Foot Occupancy
-3. 非有限或lineage invalid
-4. Grounded丢失 / Contact不可达
-5. Contact超距
-6. 开始抬脚（ReleaseStarted）
-7. 开始落脚（LandingStarted）
-8. Path Revision
-```
-
-State Machine内部的Trigger Resolver先把同帧事实归一为一个Constraint Trigger，再由State Machine执行最多一次Constraint状态转换。Prediction与Ground Path内部计算可以在同帧更新下一Event事实，但只有State Machine能写Context，并且不得修改已经冻结的Active Patch。
-
-## Decision 8: Resolved Foot Pair与Pelvis
-
-每脚输出：
-
-```text
-PathEventIdentity/Identity/TrackingStatus/Target
-ConstraintState/Trigger/TransitionCause
-Active/Consumed Event
-FrozenPatch
-Effective Correction/Velocity
-Final Sole/Ankle
-Resolved Contact Reference
-Support Intent
-typed Outcome
-```
-
-Contact Reference规则：
-
-- Swing且Path Stable时使用稳定Next Landing Proposal。
-- Swing且Path Rebasing时标记UnavailableForStride，不把不稳定终点送入Pelvis。
-- Landing/Locked/Releasing使用同一FrozenPatch。
-- UnlockedSupport使用Final Sole与动画Support Intent，不伪造Patch。
-
-Primary Support只比较左右Support Intent与上一Committed选择。Pelvis只读取Resolved Pair、Support选择、腿长和Pelvis Spring；不读取Foot State Context、GroundPath、Prediction或World Query。Target先受支撑腿可达区间限制，再用临界阻尼Spring输出；Path Rebasing不能改变当前Pelvis Stride终点。
-
-## Decision 9: Goal、FBBIK与Physical结果
-
-Foot与Pelvis只发布真正独立的`CharacterFullBodyIkGoalContribution`。Contribution不复用GoalSet Header；唯一Assembler验证Slot、Application、Frame、Completion、Rig与容量后生成一个Goal Set。FBBIK只消费一个GoalSet value index。
-
-Goal Encoder规范：
+Goal Encoder只执行：
 
 ```text
 GoalPosition = AnimationAnkle + EffectiveCorrection
 GoalWeight = EffectiveCorrection非零 ? 1 : 0
 ```
 
-编码后不得再平滑、缩放、Clamp或读取Constraint状态。
+编码后不得再平滑、缩放、Clamp或读取状态。Landing腿不可达和Locked Solver/Physical残差必须发布typed invalid并阻止根Bank Seal。
 
-FBBIK输出必须区分Target、Solved Position与Physical Write Position。Locked脚若在正式支撑腿可达限制后仍产生超过Solver残差容差的结果，Frame发布typed invalid并阻止根Bank Seal；不得静默保留Locked状态和穿模Physical Pose。
+## Decision 11: Diagnostics与Reactive
 
-## Decision 10: Diagnostics与Reactive扩展边界
+Diagnostics记录Path Tracking、LandingHeightProgress、状态与Trigger、唯一PlantStarted、Frozen Patch、Committed Anchor、Effective Correction/Velocity、Landing/Release Residual、Support Intent、Pelvis双腿可达、Goal/Solved/Physical结果。Diagnostics不能反向影响状态。
 
-Diagnostics在BeginFrame冻结interest，只从已完成Pending Context与Result深复制。正式CSV删除旧Plant State、LandingPreparation、OwnershipHalfLife、CurrentTrace和重复Goal权重，新增：
+未来Reactive只能通过Frame Input提供Patch或Plant Observation；Landing前可参与Patch选择，Plant时可验证Patch，Locked/Releasing不能移动Anchor。不得创建第二状态写入者、Goal、Pelvis、Solver、Writer或根Bank。
 
-```text
-PathTrackingStatus/Identity/Target/SettledFrames
-ConstraintState/Trigger/TransitionCause
-Active/ConsumedEventIdentity
-FrozenPatchIdentity/Point/Normal/Surface
-EffectiveCorrection/EffectiveVelocity
-Acquire/ReleaseResidual与Progress
-ResolvedFinalSole
-Pelvis读取的Reference identity
-Goal/Solved/Physical Position与Residual
-```
+## Rejected Alternatives
 
-未来Reactive只能在独立change中向`CharacterFootFrameInput`新增typed高优先级意图，并由同一`CharacterFootStateMachine`按Trigger优先级处理。它必须在Constraint进入Landing前完成Target选择；Landing/Locked/Releasing不能被Reactive直接改Context、Anchor、Effective Correction或Goal。Reactive不得创建第二状态写入者、第二Goal、第二Pelvis、第二Solver、第二Physical Writer或第二根Bank。本change不创建空SourceKind、Reactive状态或未接线Adapter。
-
-## Alternatives Considered
-
-### 多个typed状态页与浅Module链
-
-可以让Path、Constraint和Transition分别拥有单一Writer，也方便独立检查纯数学，但调用方或维护者必须理解`Route -> Swing Resolver -> Constraint Reducer -> Constraint Resolver -> Resolved Foot Builder`的顺序、页有效期和交接合同。Path Output/Velocity与Constraint Residual仍形成两个连续性Owner，Releasing到Swing必须跨Module复制或重置状态。拒绝，改为一个深Foot Placement Module和每脚一个State Context。
-
-### 通用共享Blackboard
-
-把字段放进共享Dictionary或运行时Key系统，短期容易查看和让Reactive接线，但任何Module都可能写入，字段有效期、清理和顺序只能靠约定，旧值也可能跨Event残留。拒绝。正式“状态机黑板”只指固定布局的`CharacterFootStateContext`，它随根Bank原子提交且只有`CharacterFootStateMachine`能写。
-
-### 显式typed状态机上下文
-
-一个Context集中一只脚的Event、Path Target、Constraint State、Frozen Patch、Transition和唯一Effective Correction/Velocity；外部只调用深`CharacterFootPlacementModule`并读取Result。代价是State Machine Implementation更集中、Context字段必须按状态维护严格不变量；收益是状态、控制权、清理和诊断具有单点Locality。本设计采用该方案。
-
-### 原样恢复917基线
-
-可以快速恢复已知视觉水平，但会恢复GoalTransition、多个独立Pending/Committed owner、Sliding水平削弱和Pelvis实时Path旁路，继续无法解释控制权限。拒绝。
-
-### 完整照搬KKK
-
-可以获得FootPath增量、Current Trace取高和Predictive/传统IK切换，但会引入Set Mesh、第二IK路径和边缘高度跳变。只采用FootPath增量、空间采样和开始落脚时的锁点时机。
-
-### 只按GDC概念实现
-
-概念边界正确，但GDC没有定义项目所需的Path Revision、状态事务、Transition数学和FinalIK提交语义。必须补项目正式决策。
-
-### Path变化使用固定Duration Lerp
-
-实现简单，但频繁Path变化会不断重启、产生滞留；临近开始落脚又会在“没到点”和“强制跳点”之间摆动。采用保留同一个Effective Correction/Velocity的临界阻尼Target跟随。
-
-### 开始落脚时强制追到新Path
-
-保证落点必达，但剩余时间越短速度越大，直接制造垂直设置、腿奇异点和Pelvis拉扯。采用Path未Settled则UnlockedSupport，不强制锁。
-
-### 增加Sliding状态
-
-符合GDC完整约束模型并能减轻水平误差，但当前静态楼梯范围的首要目标是明确锁点和释放边界；Sliding需要正式Anchor移动策略，否则会恢复第二位置Owner。本change明确不实现。
-
-### 现在预建Reactive状态
-
-方便未来接线，但没有生产者、准入、Transition和验收合同，会形成未接线正式代码。只在设计中固定未来统一Target边界。
+- 917多Owner与8fc实时Path硬地面下限。
+- 所有状态使用一个固定半衰期。
+- Path残差小于5mm才允许Landing。
+- Landing提前冻结完整Prediction XYZ。
+- Runtime直接读取PlantConfidence作为进度或Ownership。
+- 从Approach Contact开始直接把未来Patch平面变成脚Goal。
+- 增加Planting/Acquiring状态掩盖Landing没有完成。
 
 ## Risks And Tradeoffs
 
-- Path未Settled时不锁，极端急转的一步可能按动画落地甚至出现局部穿模；收益是不会为了必达制造整腿跳变和骨盆拉扯。
-- Locked严格Anchor会更依赖腿可达和Pelvis预限制；收益是状态名称与物理目标一致，不再用隐藏权重掩盖不可达。
-- 不实现Current Trace意味着Ground Envelope必须真正覆盖中间障碍；若仍穿模，应修正Path采集/采样，不在最终Goal后追加第二高度来源。
-- 不实现Sliding会让大水平误差更早Release；收益是静态地面Anchor只有一个Owner。
-- Constraint曲线成为正常Lock/Release唯一进度，需要Foot Analysis/Build严格验证连续覆盖；收益是删除任意0.12秒和双重平滑。
-- 单脚State Machine的Implementation会比拆散的浅Module更集中；收益是外部Interface更小，一只脚的状态、写权限、清理和转换都具有单点Locality。内部纯算法仍可拆文件，但不能拥有第二份跨帧状态。
-- 根双Bank和Diagnostics深冻结增加固定内存，但替代散落状态和可变页浅引用，不增加运行真相数量。
+- 实时Swing Path不执行硬地面下限；极端迟到高台阶可能短暂穿模，但不会垂直设置。
+- 没有合法单调Landing Height计划的素材将Build失败；不提供Runtime fallback。
+- Plant时Landing未完成会进入UnlockedSupport；不为显示Locked瞬移脚。
+- Locked严格Anchor依赖Landing腿可达和Pelvis预限制。
+- 不实现Sliding会让大水平误差更早Release，但Anchor只有一个Owner。
 
 ## Migration Plan
 
-1. 保留并复核根Bank、Goal Assembler、唯一FBBIK/Writer与BendHistory事务骨架。
-2. 新增左右`CharacterFootStateContext`并让`CharacterFootStateMachine`成为唯一写入者，删除Route/Constraint/GoalTransition各自的Pending/Committed与状态页。
-3. 把Landing Prediction、Ground Path、Swing Target、Trigger和Constraint数学收进深`CharacterFootPlacementModule`的Implementation，删除对外浅Module调用链。
-4. 把Swing采样恢复为Animated Sole空间进度和`Envelope - Baseline`增量，并让唯一Effective Correction/Velocity临界阻尼追踪Path Target。
-5. 实现`Swing/Landing/Locked/Releasing/UnlockedSupport`五状态图，确保所有转换继续写同一个Effective Correction/Velocity。
-6. 迁移Support/Pelvis只消费新Resolved Foot Pair，并阻止Rebasing Path进入Stride。
-7. 完成独立Goal Contribution ABI和唯一GoalSet workspace清理。
-8. 完成Physical Writer预验证、BendHistory lineage与Solver/Physical残差验证。
-9. 重写Diagnostics Projector、CSV、Gizmo、Pose Watch和Live字段，只读取Committed深冻结页。
-10. 删除旧Plant类型、Route命名、状态、配置、CSV列、兼容Goal容器和临时junction/重复文件路径。
-11. 更新`openspec/project.md`为实际实现状态，执行严格OpenSpec校验、Runtime/Editor编译和静态唯一性检查。
+1. 以`8fc704a`和实验账本为行为证据，保留唯一Correction与非负Swing FootPath。
+2. 在Foot Analysis/Projection新增唯一LandingStarted、单调LandingHeightProgress、唯一PlantStarted与ReleaseProgress合同。
+3. 建立左右Foot State Context并删除分散Pending/Committed。
+4. 把Prediction、Ground Path、Swing Target、Trigger和Constraint数学收进深Foot Placement Module。
+5. 实现`Swing/Landing/Locked/Releasing/UnlockedSupport`五状态。
+6. 新增Frozen Patch与Committed Anchor分型；Landing冻结Patch，Plant生成Anchor。
+7. 迁移Landing Support Intent与双腿可达区间。
+8. 完成Goal Contribution、唯一GoalSet、BendHistory和Writer闭包。
+9. 重写Diagnostics并保留精简实验账本。
+10. 删除旧状态、GoalTransition、Sliding、PlantConfidence Ownership和兼容路径。
+11. 更新project truth并执行严格校验、Runtime/Editor编译和静态唯一性检查。

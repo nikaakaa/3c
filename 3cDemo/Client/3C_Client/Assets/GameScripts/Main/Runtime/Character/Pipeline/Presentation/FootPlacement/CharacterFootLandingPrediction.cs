@@ -143,7 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Goal = goal;
             GroundPath = default;
             FootMotion = default;
-            GoalTransition = default;
         }
 
         CharacterFootLandingPredictionFootDiagnostics(
@@ -173,7 +172,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Goal = source.Goal;
             GroundPath = groundPath;
             FootMotion = source.FootMotion;
-            GoalTransition = source.GoalTransition;
         }
 
         CharacterFootLandingPredictionFootDiagnostics(
@@ -206,13 +204,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Goal = goal;
             GroundPath = source.GroundPath;
             FootMotion = source.FootMotion;
-            GoalTransition = source.GoalTransition;
         }
 
         CharacterFootLandingPredictionFootDiagnostics(
             in CharacterFootLandingPredictionFootDiagnostics source,
             in CharacterFootSwingMotionDiagnostics footMotion,
-            in CharacterFootGoalTransitionDiagnostics goalTransition,
             CharacterFullBodyIkGoal goal)
         {
             Side = source.Side;
@@ -238,7 +234,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Goal = goal;
             GroundPath = source.GroundPath;
             FootMotion = footMotion;
-            GoalTransition = goalTransition;
         }
         public CharacterFootSide Side { get; }
         public CharacterFootLandingPredictionState State { get; }
@@ -263,7 +258,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFullBodyIkGoal Goal { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
-        public CharacterFootGoalTransitionDiagnostics GoalTransition { get; }
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
 
         internal CharacterFootLandingPredictionFootDiagnostics WithLiveStep(
@@ -283,12 +277,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootLandingPredictionFootDiagnostics WithFootMotion(
             in CharacterFootSwingMotionDiagnostics footMotion,
-            in CharacterFootGoalTransitionDiagnostics goalTransition,
             CharacterFullBodyIkGoal goal) =>
             new CharacterFootLandingPredictionFootDiagnostics(
                 in this,
                 in footMotion,
-                in goalTransition,
                 goal);
     }
 

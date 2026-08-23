@@ -175,7 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterFootMotionAuthoringSettings
     {
         [SerializeField] float m_LandingUpdateDistance = 0.005f;
-        [SerializeField] float m_GoalTransitionHalfLifeSeconds = 0.03f;
+        [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_PelvisSpringFrequency = 3f;
@@ -183,7 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(
                 m_LandingUpdateDistance,
-                m_GoalTransitionHalfLifeSeconds,
+                m_EffectiveCorrectionHalfLifeSeconds,
                 m_LockDistance,
                 m_SlideDistance,
                 m_PelvisSpringFrequency);
@@ -193,13 +193,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootMotionSettings(
             float landingUpdateDistance,
-            float goalTransitionHalfLifeSeconds,
+            float effectiveCorrectionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
             float pelvisSpringFrequency)
         {
             LandingUpdateDistance = landingUpdateDistance;
-            GoalTransitionHalfLifeSeconds = goalTransitionHalfLifeSeconds;
+            EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
             PelvisSpringFrequency = pelvisSpringFrequency;
@@ -207,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal float LandingUpdateDistance { get; }
-        internal float GoalTransitionHalfLifeSeconds { get; }
+        internal float EffectiveCorrectionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
         internal float PelvisSpringFrequency { get; }
@@ -215,7 +215,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void RequireValid()
         {
             if (!float.IsFinite(LandingUpdateDistance) || LandingUpdateDistance <= 0f ||
-                !float.IsFinite(GoalTransitionHalfLifeSeconds) || GoalTransitionHalfLifeSeconds <= 0f ||
+                !float.IsFinite(EffectiveCorrectionHalfLifeSeconds) ||
+                EffectiveCorrectionHalfLifeSeconds <= 0f ||
                 !float.IsFinite(LockDistance) ||
                 LockDistance <= LandingUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||

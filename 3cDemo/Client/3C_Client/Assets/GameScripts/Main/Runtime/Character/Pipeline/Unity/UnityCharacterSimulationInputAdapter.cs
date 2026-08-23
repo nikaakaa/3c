@@ -57,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             var errors = new List<string>();
             if (!profile.CollectConfigurationErrors(errors))
                 throw new InvalidOperationException(string.Join("\n", errors));
+            Actions.bindingMask = InputBinding.MaskByGroup(profile.BindingGroup);
             m_RequiresCameraBasis = RequiresCameraBasis(program);
             BuildBindings();
             RequireActionTargetInput();
@@ -65,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         }
 
         public string SourceIdentity =>
-            $"UnityInputSystem/Float32/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
+            $"UnityInputSystem/Float32/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
         public SimulationNumericProfile NumericProfile => Float32SimulationNumericProfile.Value;
         public ProgramId CharacterProgramId => m_Program.Manifest.ProgramId;
         public ProgramHash CharacterProgramHash => m_Program.ProgramHash;

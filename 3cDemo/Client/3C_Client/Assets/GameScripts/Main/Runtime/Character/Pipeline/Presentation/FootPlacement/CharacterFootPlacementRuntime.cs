@@ -294,7 +294,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentUp,
                     in leftGroundPath,
                     leftLanding.NextSwingPredictionError,
-                    leftLanding.NextSwingConstraintWeight,
+                    leftSelectedStep.ConstraintWeight,
                     m_PendingLeftLockPreparation.StartTimeToLandingSeconds,
                     leftLandingPreparationWeight);
             CharacterFootSwingMotionDiagnostics rightSwingMotion =
@@ -305,7 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentUp,
                     in rightGroundPath,
                     rightLanding.NextSwingPredictionError,
-                    rightLanding.NextSwingConstraintWeight,
+                    rightSelectedStep.ConstraintWeight,
                     m_PendingRightLockPreparation.StartTimeToLandingSeconds,
                     rightLandingPreparationWeight);
             bool hasSelectedSwing = CharacterFootStrideHipsBuilder.TrySelectSwing(
@@ -335,26 +335,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftGoal,
                 leftOriginalComponentPosition,
                 leftOriginalComponentRotation,
+                goalRoot.rotation,
                 goalRoot.InverseTransformDirection(componentUp),
                 leftGroundPath.Accepted ? leftGroundPath.InputIdentity : 0,
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion.GoalTransitionHalfLifeSeconds,
-                ResolveFootGoalTransitionMode(
-                    in leftSelectedStep,
-                    in leftSwingMotion),
+                CharacterFootGoalTransitionMode.Smooth,
                 leftSwingMotion.SupportLockPreparationWeight,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction));
             rightGoal = m_RightGoalTransition.Resolve(
                 in rightGoal,
                 rightOriginalComponentPosition,
                 rightOriginalComponentRotation,
+                goalRoot.rotation,
                 goalRoot.InverseTransformDirection(componentUp),
                 rightGroundPath.Accepted ? rightGroundPath.InputIdentity : 0,
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion.GoalTransitionHalfLifeSeconds,
-                ResolveFootGoalTransitionMode(
-                    in rightSelectedStep,
-                    in rightSwingMotion),
+                CharacterFootGoalTransitionMode.Smooth,
                 rightSwingMotion.SupportLockPreparationWeight,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction));
             CharacterFootSwingMotionDiagnostics leftStableSwingMotion =
@@ -1269,16 +1267,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    (targetAnkle - foot.AnklePosition) * goal.PositionWeight;
         }
 
-        static CharacterFootGoalTransitionMode ResolveFootGoalTransitionMode(
-            in AnimationBiomechanicalStepHeader step,
-            in CharacterFootSwingMotionDiagnostics motion) =>
-            motion.Accepted &&
-            motion.SupportLockState == CharacterFootSupportLockState.None &&
-            step.IsValid &&
-            step.EventPhase >= step.ApproachContactPhase
-                ? CharacterFootGoalTransitionMode.LandingPreparation
-                : CharacterFootGoalTransitionMode.Smooth;
-
         static bool IsHardFootGoalOwnershipLoss(
             bool grounded,
             in CharacterFootActionOccupancy action) =>
@@ -1360,10 +1348,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionDiagnostics motion)
         {
             Transform root = m_Rig.PoseRoot;
-            Vector3 anklePosition = motion.Accepted
+            bool hasEffectiveOutput = motion.Accepted ||
+                                      motion.PositionWeight >
+                                      CharacterPoseConstraintMath.Epsilon;
+            Vector3 anklePosition = hasEffectiveOutput
                 ? motion.CorrectedAnkle
                 : foot.AnklePosition;
-            float positionWeight = motion.Accepted
+            float positionWeight = hasEffectiveOutput
                 ? motion.PositionWeight
                 : 0f;
             return new CharacterFullBodyIkGoal(

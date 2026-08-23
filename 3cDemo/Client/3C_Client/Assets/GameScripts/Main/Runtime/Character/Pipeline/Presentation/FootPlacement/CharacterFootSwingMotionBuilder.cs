@@ -281,11 +281,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 contactTarget = ResolveContactTarget(
                 frame.AnimatedFoot,
                 frame.LastLanding.Point);
-            Vector3 initialOutput = ClampAboveContact(
-                frame.StableSwingMotion.CorrectedAnkle,
-                frame.AnimatedFoot,
-                frame.LastLanding.Point,
-                up);
+            Vector3 initialOutput = frame.StableSwingMotion.CorrectedAnkle;
             float horizontalError = Vector3.ProjectOnPlane(
                 frame.LastLanding.Point - originalSole,
                 up).magnitude;
@@ -302,6 +298,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             facts.PositionWeight = frame.FootPlacementWeight;
             facts.ContactWeight = 0f;
             facts.SupportWeight = 0f;
+            if (Vector3.Distance(
+                    ResolveOutputSole(frame.AnimatedFoot, initialOutput),
+                    frame.LastLanding.Point) <= frame.Settings.LandingUpdateDistance)
+            {
+                return CompleteLock(
+                    in frame,
+                    ref facts,
+                    contactTarget,
+                    horizontalError);
+            }
             return CreateContactMotion(
                 in frame,
                 in facts,
@@ -332,32 +338,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float blend = Smooth(progress);
             Vector3 output = contactTarget +
                              facts.TransitionStartCorrection * (1f - blend);
-            output = ClampAboveContact(
-                output,
-                frame.AnimatedFoot,
-                facts.ContactAnchor,
-                up);
             facts.OutputAnkle = output;
             if (progress >= 1f - GeometryEpsilon ||
                 Vector3.Distance(
                     ResolveOutputSole(frame.AnimatedFoot, output),
                     facts.ContactAnchor) <= frame.Settings.LandingUpdateDistance)
             {
-                facts.State = CharacterFootSupportLockState.Locked;
-                facts.OutputAnkle = contactTarget;
-                facts.TransitionStartCorrection = default;
-                facts.TransitionElapsedSeconds = 0f;
-                facts.TransitionDurationSeconds = 0f;
-                facts.ContactWeight = 1f;
-                facts.SupportWeight = 1f;
-                return CreateContactMotion(
+                return CompleteLock(
                     in frame,
-                    in facts,
+                    ref facts,
                     contactTarget,
-                    CharacterFootSupportLockState.Locked,
-                    horizontalError,
-                    1f,
-                    1f);
+                    horizontalError);
             }
             facts.ContactWeight = blend;
             facts.SupportWeight = 0f;
@@ -508,6 +499,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 facts.ContactAnchor);
         }
 
+        static CharacterFootSwingMotionDiagnostics CompleteLock(
+            in CharacterFootContactFrame frame,
+            ref CharacterFootSupportLockFacts facts,
+            Vector3 contactTarget,
+            float horizontalError)
+        {
+            facts.State = CharacterFootSupportLockState.Locked;
+            facts.OutputAnkle = contactTarget;
+            facts.TransitionStartCorrection = default;
+            facts.TransitionElapsedSeconds = 0f;
+            facts.TransitionDurationSeconds = 0f;
+            facts.ContactWeight = 1f;
+            facts.SupportWeight = 1f;
+            return CreateContactMotion(
+                in frame,
+                in facts,
+                contactTarget,
+                CharacterFootSupportLockState.Locked,
+                horizontalError,
+                1f,
+                1f);
+        }
+
         static bool CanAcquire(in CharacterFootContactFrame frame) =>
             frame.HasLastLanding &&
             frame.LastLanding.LandingEventIdentity != 0 &&
@@ -556,17 +570,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose foot,
             Vector3 contactAnchor) =>
             foot.AnklePosition + contactAnchor - ResolveOriginalSole(foot);
-
-        static Vector3 ClampAboveContact(
-            Vector3 ankle,
-            CharacterFootPlacementAnimatedFootPose foot,
-            Vector3 contactAnchor,
-            Vector3 up)
-        {
-            Vector3 sole = ResolveOutputSole(foot, ankle);
-            float penetration = Vector3.Dot(contactAnchor - sole, up);
-            return penetration > 0f ? ankle + up * penetration : ankle;
-        }
 
         static Vector3 ResolveOriginalSole(CharacterFootPlacementAnimatedFootPose foot) =>
             (foot.HeelPosition + foot.ToePosition) * 0.5f;
@@ -774,7 +777,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     baselineSample);
 
             float envelopeFloorLift = Vector3.Dot(
-                envelopeSample - originalSole,
+                envelopeSample - baselineSample,
                 up);
             if (!float.IsFinite(envelopeFloorLift))
                 return Rejected(
@@ -787,15 +790,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     progress,
                     baselineSample,
                     envelopeSample);
-            float verticalCorrection = Mathf.Max(0f, envelopeFloorLift);
-            float landingPlantHeight = Mathf.Max(
-                0f,
-                Vector3.Dot(groundPath.NextSwingLanding - originalSole, up));
-            float preparedLandingCorrection =
-                landingPlantHeight * landingPreparationWeight;
-            verticalCorrection = Mathf.Max(
-                verticalCorrection,
-                preparedLandingCorrection);
+            float baselineHeightError = Vector3.Dot(
+                baselineSample - originalSole,
+                up);
+            if (!float.IsFinite(baselineHeightError))
+                return Rejected(
+                    CharacterFootSwingMotionRejectReason.NegativeVerticalCorrection,
+                    landingEventIdentity,
+                    groundPath.InputIdentity,
+                    originalSole,
+                    originalAnkle,
+                    distance,
+                    progress,
+                    baselineSample,
+                    envelopeSample);
+            float verticalCorrection =
+                Mathf.Max(0f, envelopeFloorLift) +
+                landingConstraintWeight * baselineHeightError;
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = footPlacementWeight;

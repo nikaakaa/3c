@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_SourceAsset: {fileID: -944628639613478452, guid: 1949afa4194c50648a6e39fd2d067d67,
     type: 3}
+  m_BindingGroup: Keyboard&Mouse
   m_InputValues:
   - m_InputValueId: MoveAxis
     m_ValueType: 2

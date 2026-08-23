@@ -21,10 +21,14 @@ namespace ThirdPersonCharacter.Pipeline.Input
     public sealed class CharacterInputProfile : ScriptableObject
     {
         [SerializeField] InputActionAsset m_SourceAsset;
+        [SerializeField] string m_BindingGroup;
         [SerializeField] List<CharacterInputValueDefinition> m_InputValues = new List<CharacterInputValueDefinition>();
         [SerializeField] List<CharacterActionRequestDefinition> m_ActionRequests = new List<CharacterActionRequestDefinition>();
 
         public InputActionAsset SourceAsset => m_SourceAsset;
+        public string BindingGroup => string.IsNullOrWhiteSpace(m_BindingGroup)
+            ? string.Empty
+            : m_BindingGroup.Trim();
         public IReadOnlyList<CharacterInputValueDefinition> InputValues => m_InputValues;
         public IReadOnlyList<CharacterActionRequestDefinition> ActionRequests => m_ActionRequests;
 
@@ -38,6 +42,28 @@ namespace ThirdPersonCharacter.Pipeline.Input
             {
                 errors?.Add($"{name}: source InputActionAsset is missing.");
                 valid = false;
+            }
+            else
+            {
+                string bindingGroup = BindingGroup;
+                bool found = false;
+                for (int i = 0; i < m_SourceAsset.controlSchemes.Count; i++)
+                {
+                    if (!string.Equals(
+                            m_SourceAsset.controlSchemes[i].bindingGroup,
+                            bindingGroup,
+                            StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+                    found = true;
+                    break;
+                }
+                if (string.IsNullOrEmpty(bindingGroup) || !found)
+                {
+                    errors?.Add($"{name}: binding group '{bindingGroup}' is not declared by the source InputActionAsset.");
+                    valid = false;
+                }
             }
 
             for (int i = 0; i < m_InputValues.Count; i++)

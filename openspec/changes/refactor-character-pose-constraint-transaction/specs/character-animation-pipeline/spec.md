@@ -4,7 +4,7 @@
 
 SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application seam。Runtime MUST消费Committed Body/Intent、Program parameter和有限Action command，构造Presentation Fact，并按Projection编译的有序Pose Plan执行PoseStateMachine、state-local provider、AnimationSlot、Local/Component Pose转换、Component Pose控制、Foot Placement、Goal Contribution汇聚、唯一FullBodyIK、后续Pose stage与FinalPublication。
 
-唯一`PosePlanExecutionRuntime` MUST构造并持有唯一`CharacterPoseConstraintRuntime`与根Bank；正式Runtime和Preview MUST通过同一Factory取得该所有权关系。Staged Executor只能按编译Pose阶段调用该实例，MUST不为Foot Placement、Goal Assembler、FBBIK或Diagnostics创建第二根事务、第二Committed identity或独立Seal顺序。
+唯一`PosePlanExecutionRuntime` MUST构造并持有唯一`CharacterPoseConstraintRuntime`与根Bank；正式Runtime和Preview MUST通过同一Factory取得该所有权关系。Staged Executor只能按编译Pose阶段调用该实例，MUST不为Foot Placement、Goal Assembler、FBBIK或Diagnostics创建第二根事务、第二Committed identity或独立Seal顺序。根Runtime MUST只拥有阶段顺序、lineage、页选择和事务生命周期，不得实现Foot、Pelvis、Goal Assembly或Solver数学。
 
 Foot Placement与PoseBone Goal来源 MUST只发布typed Goal Contribution。唯一Goal Assembler MUST在预分配页中验证Frame、Completion、Rig、Slot与重复贡献并发布一个Goal Set；唯一FullBodyIK MUST只消费该Goal Set与同一Component Pose。Foot Placement、Goal Assembler、FBBIK BendHistory和紧凑Outcome MUST写入同一CharacterPoseConstraint Pending Bank。任一stage失败 MUST阻断后续stage与FinalPublication；跨过Animancer Evaluate Barrier后的失败 MUST使同一Actor Runtime进入Faulted。
 
@@ -34,9 +34,9 @@ Runtime MUST在Frame开始冻结并预验证Live、Capture、Pose Watch与detail
 
 ### Requirement: 动画表现帧必须使用预分配暂存事务
 
-`CharacterAnimationPresentationRuntime` MUST为每个Actor使用唯一`Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现帧事务。Pose Constraint阶段 MUST预分配两个根Bank，统一包含Foot Placement运行页、Primary Support、Pelvis Spring、Goal Contribution/Goal Set页、FBBIK BendHistory、紧凑Outcome与按interest启用的Diagnostics页。
+`CharacterAnimationPresentationRuntime` MUST为每个Actor使用唯一`Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现帧事务。Pose Constraint阶段 MUST预分配两个根Bank，统一持有Foot Placement运行页、Primary Support/Pelvis页、Goal Contribution/Goal Set页、FBBIK BendHistory/紧凑Outcome页与按interest启用的Diagnostics页。根Bank和大页 MUST是预分配引用对象；运行方法 MUST不按值传递完整Bank、Ground Path固定页、FixedList payload或Diagnostics聚合体。
 
-每帧 MUST只读取Committed Bank并写另一Pending Bank。Foot、Pelvis、Goal与Bend不得各自拥有对外Committed identity或由调用方顺序Seal。进入Writer前 MUST完成全部lineage、容量、Goal重复、FBBIK binding、Solver outcome和Writer binding验证；Writer成功后Seal MUST只执行no-throw的根Committed Bank identity切换与已验证journal发布。Discard MUST不切换根identity。
+每帧 MUST只读取Committed Bank并写另一Pending Bank。Foot、Pelvis、Goal与Bend不得各自拥有对外Committed identity或由调用方顺序Seal。进入Writer前 MUST完成全部lineage、容量、Goal重复、FBBIK binding、Solver outcome和Writer binding验证；Writer成功后Seal MUST只执行no-throw的根Committed Bank identity切换与已验证journal发布。Discard MUST不切换根identity。大页归属根Bank MUST不允许把其业务数学搬入根Runtime。
 
 存在Diagnostics interest时，Pending Diagnostics页 MUST在进入Writer前从同一Pending Runtime Result完成Foot、Pelvis、Goal与Bend字段的固定容量冻结与验证；Writer成功Apply时 MUST把实际Write Completion与最终Physical Bone位置写入同一Pending页。根Bank切换后只发布该Committed页。Diagnostics投影不得发生在根Bank切换之后，也不得成为修改Committed状态的延迟步骤。
 
@@ -45,6 +45,12 @@ Runtime MUST在Frame开始冻结并预验证Live、Capture、Pose Watch与detail
 - **WHEN** FBBIK已经更新Pending BendHistory但后续Pose stage或Writer验证失败
 - **THEN** Committed Foot、Pelvis、Goal与BendHistory MUST全部保持上一成功帧
 - **AND** 下一帧FBBIK MUST从上一Committed BendHistory重建Vendor状态
+
+#### Scenario: Vendor存在未建模跨帧状态
+
+- **WHEN** FBBIK Vendor对象中任一字段会影响下一帧结果但不能从Committed BendHistory、Profile和当前Goal精确重建
+- **THEN** BendHistory迁移 MUST阻止实施完成并报告该状态所有权
+- **AND** Runtime MUST不使用默认值、近似初始化或视觉相似结果替代8fc行为
 
 #### Scenario: 正常提交Pose Constraint Bank
 

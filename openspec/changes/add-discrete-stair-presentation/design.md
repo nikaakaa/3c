@@ -26,7 +26,7 @@ Ramp楼梯
 - 不修改KCC的前提下正式接入连续真实台阶内容。
 - 让Ramp和真实台阶共用同一Collision Artifact、角色配置和Runtime组合。
 - 只对接地竖直不连续增加有限表现修正，不给普通地面和坡面增加持续拖尾。
-- 让VisualRoot、Foot Placement与默认Camera继续消费同一个最终Body Frame。
+- 让VisualRoot与默认Camera继续消费同一个最终Body Frame。
 - 保持所有表现修正不进入Gameplay、Snapshot、Hash、网络或动画事务。
 
 ## Non-Goals
@@ -36,7 +36,7 @@ Ramp楼梯
 - 不改变角色胶囊尺寸。
 - 不为真实台阶增加新Unity Layer。
 - 不让Runtime识别对象名、Tag、Stair identity或Collision Artifact来判断楼梯。
-- 不增加Foot Placement楼梯状态、第二IK、Camera独立Body filter或Animation Timeline事件。
+- 不增加Camera独立Body filter或Animation Timeline事件。
 - 不自动生成场景几何、Bake、Build或运行Unity。
 - 不新增测试；用户负责Unity端到端验收。
 
@@ -83,7 +83,7 @@ Committed/Selected Body interval
   -> CharacterVisualTrajectoryFollower
   -> CharacterGroundedVerticalTrajectoryFollower
   -> CharacterBodyPresentationFrame
-  -> VisualRoot / Foot Placement / Camera
+  -> VisualRoot / Camera
 ```
 
 新阶段不是MonoBehaviour，也没有独立Tick、Transform或Body历史。它只保存当前竖直offset、offset velocity、当前interval identity和有限诊断状态。
@@ -129,7 +129,6 @@ abs(CurrentPosition.y - PreviousPosition.y) >= DiscontinuityThreshold
 - 独立竖直阶段：不改变既有branch follower含义，职责和诊断清晰；代价是Body Runtime多维护一个很小的表现状态。
 - 直接删除现有Grounded Y清零：会让所有branch correction、坡面和普通Grounded移动都进入通用position弹簧，形成长期拖尾，不采用。
 - 从KCC Step diagnostics触发：能知道物理原因，但会让通用Presentation依赖具体Solver、ABI和网络传播，不采用。
-- 只靠Foot Placement移动骨盆：脚可能稳定，但VisualRoot和Camera仍然按级跳，不采用。
 
 ## Decision 4: 竖直响应配置独立于网络纠偏配置
 
@@ -148,7 +147,7 @@ SettleDistanceMeters
 
 `CharacterVisualTrajectoryMode.Direct/BoundedCorrection`继续只决定target branch变化时的水平与yaw响应。Grounded Vertical Response单独决定普通canonical interval中的竖直不连续表现。两者不得互相推断，也不得由SourceMode、Network Model、Camera ownership或Actor名称选择。
 
-Corin Direct、Rollback与Observed三个正式Body Profile都显式配置`BoundedDiscontinuityCorrection`。初始作者值与现有Foot Placement突变口径对齐：阈值0.05m、最大误差0.30m；half-life与settle distance作为Body Profile显式值保存，不从KCC MaximumStepHeight或Foot Profile运行时读取。
+Corin Direct、Rollback与Observed三个正式Body Profile都显式配置`BoundedDiscontinuityCorrection`。初始作者值为阈值0.05m、最大误差0.30m；half-life与settle distance作为Body Profile显式值保存，不从KCC MaximumStepHeight读取。
 
 ### Tradeoff
 
@@ -156,14 +155,7 @@ Corin Direct、Rollback与Observed三个正式Body Profile都显式配置`Bounde
 - 复用PositionHalfLife与MaximumHorizontalError：字段更少，但会把网络水平纠偏手感和楼梯竖直响应绑定，不采用。
 - 从KCC配置读取MaximumStepHeight：参数看似一致，但Presentation开始依赖具体World Solver配置，不采用。
 
-## Decision 5: Predictive Foot Placement和Camera不增加第二套楼梯逻辑
-
-普通FootGrounding与可选Predictive Modifier通过唯一world-query backend查询`Ground | FootPlacementSurface`并排除`CharacterTraversal`：
-
-- Ramp楼梯让FootGrounding的Lyra current Sphere Trace命中`FootPlacementSurface`，合法stance脚 MAY基于该命中建立surface-local anchor，可选Modifier只为未被anchor拥有的Swing脚得到Future Landing。
-- 离散楼梯让两个阶段从同一组`Ground`阶梯Collider得到各自归属的current hit或Future支撑。
-
-Body竖直阶段改变最终visible delta；普通FootGrounding读取正式Body Frame并按Lyra current trace、foot offset/normal smoothing、contact/anchor稳定和唯一Pelvis resolve生成Baseline Goals，可选Modifier只从Future Support/Envelope修改未被anchor拥有的Swing脚。两者都不得读取竖直阶段私有offset、维护第二Body filter或根据它切换Surface。
+## Decision 5: Camera不增加第二套楼梯逻辑
 
 默认Camera继续由`CharacterCameraPresentationRuntime`使用最终`CharacterBodyPresentationFrame.VisiblePosition`和既有bind offset生成follow point。它不读取logic body、KCC diagnostics或场景楼梯，也不保存第二份台阶vertical filter。Cinemachine adapter现有阻尼仍只是CameraRig实现细节。
 
@@ -185,7 +177,7 @@ Body竖直阶段改变最终visible delta；普通FootGrounding读取正式Body 
 2. 显式迁移Corin Direct、Rollback与Observed Body Profile。
 3. 实现独立`CharacterGroundedVerticalTrajectoryFollower`及其有限结果。
 4. 将该阶段接入Body Runtime唯一Present路径、Reset路径与diagnostics。
-5. 保持Foot Placement和Camera只消费最终Body Frame并补齐只读诊断字段。
+5. 保持Camera只消费最终Body Frame并补齐只读诊断字段。
 6. 在共享环境Prefab持久化作者`DiscreteStairs_Rise0.14_Run0.45`及其唯一Ground Surface owner。
 7. 通过现有显式菜单重新Bake唯一Collision Artifact。
 8. 更新current specs、`openspec/project.md`和KCC implementation inventory中的楼梯内容与Artifact身份。

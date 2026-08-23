@@ -80,6 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             var errors = new List<string>();
             if (!profile.CollectConfigurationErrors(errors))
                 throw new InvalidOperationException(string.Join("\n", errors));
+            Actions.bindingMask = InputBinding.MaskByGroup(profile.BindingGroup);
             BuildBindings();
             BuildActionTargetInputs();
             ValidateActionTargetInput();
@@ -89,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
 
         public string SourceIdentity =>
-            $"UnityInputSystem/FixedQ32.32/{m_Program.ProgramHash}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
+            $"UnityInputSystem/FixedQ32.32/{m_Program.ProgramHash}/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
         public ProgramId CharacterProgramId => m_Program.Manifest.ProgramId;
         public ProgramHash CharacterProgramHash => m_Program.ProgramHash;
         public InputActionAsset Actions => m_Profile.SourceAsset;

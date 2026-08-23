@@ -38,7 +38,7 @@ Pose Plan Compiler MUST把Goal Contribution收集、唯一Goal Assembler、FBBIK
 
 ### Requirement: Goal Sources与FullBodyIK必须使用统一typed目标合同
 
-全部Goal Source MUST发布`CharacterFullBodyIkGoalContribution`，至少携带Frame、Completion、Rig、Producer、Slot、Application、Component空间目标与权重。唯一Goal Assembler MUST把合法Contribution规范化为一个`CharacterFullBodyIkGoalSet`；FBBIK MUST不理解Foot Placement Route、Contact Patch、Ownership、Pelvis选择或Diagnostics。
+全部Goal Source MUST发布`CharacterFullBodyIkGoalContribution`，至少携带Frame、Completion、Rig、Producer、Slot、Application、Component空间目标与权重。唯一Goal Assembler MUST把合法Contribution规范化为一个`CharacterFullBodyIkGoalSet`；FBBIK MUST不理解Foot State Context、Contact Patch、Constraint State、Pelvis选择或Diagnostics。
 
 FBBIK腿Effector跨帧稳定策略 MUST由正式FullBodyIK Profile和Pending BendHistory决定。Solver MUST不通过搜索FootPlacement SourceKind启用隐藏状态规则；Vendor FinalIK对象内部字段不得成为跨帧真相。
 

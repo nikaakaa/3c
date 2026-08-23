@@ -65,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasOutput,
             CharacterFootGoalTransitionMode mode,
             ulong sourceGroundPathIdentity,
+            Quaternion componentFrameRotation,
             Vector3 originalComponentPosition,
             Vector3 targetPositionCorrection,
             Quaternion targetRotationCorrection,
@@ -78,6 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasOutput = hasOutput;
             Mode = mode;
             SourceGroundPathIdentity = sourceGroundPathIdentity;
+            ComponentFrameRotation = componentFrameRotation;
             OriginalComponentPosition = originalComponentPosition;
             TargetPositionCorrection = targetPositionCorrection;
             TargetRotationCorrection = targetRotationCorrection;
@@ -92,6 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasOutput { get; }
         internal CharacterFootGoalTransitionMode Mode { get; }
         internal ulong SourceGroundPathIdentity { get; }
+        internal Quaternion ComponentFrameRotation { get; }
         internal Vector3 OriginalComponentPosition { get; }
         internal Vector3 TargetPositionCorrection { get; }
         internal Quaternion TargetRotationCorrection { get; }
@@ -108,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasOutput;
         internal CharacterFootGoalTransitionMode Mode;
         internal ulong SourceGroundPathIdentity;
+        internal Quaternion ComponentFrameRotation;
         internal Vector3 OriginalComponentPosition;
         internal Vector3 TargetPositionCorrection;
         internal Quaternion TargetRotationCorrection;
@@ -123,6 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasOutput,
                 Mode,
                 SourceGroundPathIdentity,
+                HasOutput ? ComponentFrameRotation : Quaternion.identity,
                 OriginalComponentPosition,
                 TargetPositionCorrection,
                 HasOutput ? TargetRotationCorrection : Quaternion.identity,
@@ -169,6 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFullBodyIkGoal target,
             Vector3 originalComponentPosition,
             Quaternion originalComponentRotation,
+            Quaternion componentFrameRotation,
             Vector3 componentUp,
             ulong sourceGroundPathIdentity,
             float deltaSeconds,
@@ -183,6 +189,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !Finite(originalComponentPosition) ||
                 !Finite(componentUp) || componentUp.sqrMagnitude <= 0.0001f ||
                 !Unit(originalComponentRotation) ||
+                !Unit(componentFrameRotation) ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f ||
                 !float.IsFinite(halfLifeSeconds) || halfLifeSeconds <= 0f ||
                 !float.IsFinite(landingConvergenceWeight) ||
@@ -209,7 +216,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion targetRotationCorrection =
                 (Quaternion.Inverse(originalComponentRotation) * target.ComponentRotation).normalized;
             Vector3 committedPositionCorrection = m_Committed.HasOutput
-                ? m_Committed.OutputPositionCorrection
+                ? (Quaternion.Inverse(componentFrameRotation) *
+                   m_Committed.ComponentFrameRotation) *
+                  m_Committed.OutputPositionCorrection
                 : default;
             Quaternion committedRotationCorrection = m_Committed.HasOutput
                 ? m_Committed.OutputRotationCorrection
@@ -243,6 +252,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Pending.HasOutput = true;
             m_Pending.Mode = mode;
             m_Pending.SourceGroundPathIdentity = sourceGroundPathIdentity;
+            m_Pending.ComponentFrameRotation = componentFrameRotation;
             m_Pending.OriginalComponentPosition = originalComponentPosition;
             m_Pending.TargetPositionCorrection = targetPositionCorrection;
             m_Pending.TargetRotationCorrection = targetRotationCorrection;

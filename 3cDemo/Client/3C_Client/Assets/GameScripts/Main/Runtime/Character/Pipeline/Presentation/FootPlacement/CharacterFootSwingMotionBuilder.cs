@@ -146,8 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Acquiring = 1,
         Locked = 2,
         Sliding = 3,
-        Releasing = 4,
-        Landing = 5
+        Releasing = 4
     }
 
     internal static class CharacterFootSwingMotionBuilder
@@ -327,7 +326,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     progress,
                     baselineSample,
                     envelopeSample);
-            float verticalCorrection = Mathf.Max(0f, envelopeFloorLift);
+            float baselineHeightError = Vector3.Dot(
+                baselineSample - originalSole,
+                up);
+            if (!float.IsFinite(baselineHeightError))
+                return Rejected(
+                    CharacterFootSwingMotionRejectReason.NegativeVerticalCorrection,
+                    landingEventIdentity,
+                    groundPath.InputIdentity,
+                    originalSole,
+                    originalAnkle,
+                    distance,
+                    progress,
+                    baselineSample,
+                    envelopeSample);
+            float verticalCorrection =
+                Mathf.Max(0f, envelopeFloorLift) +
+                landingConstraintWeight * baselineHeightError;
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = footPlacementWeight;

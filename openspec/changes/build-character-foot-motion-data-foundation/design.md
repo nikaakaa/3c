@@ -88,6 +88,8 @@ Step Time = NextLandingAbsoluteTime - SampleAbsoluteTime
 
 有限Clip使用素材边界补全Event外侧的解释域，但边界不生成Landing Event：首个Landing之前以Clip开始姿态作为该步起点；最后一个Landing完成后Step Time保持0、Step Distance保持该已完成步的距离，Foot Path继续相对最后Landing高度解释。若有限Clip某脚整段没有Landing，该脚进入显式No Step域：Event页为空、Step Time/Distance为0、Foot Height相对Calibration Ground记录，Contact与Lock仍按证据生成；不得伪造Landing。Loop Clip是否属于移动循环只由Motion Reference实际Root净位移判定：净位移非零时左右任一脚没有Landing必须整体失败，净位移为零时允许Stationary No Step。不得根据Clip名称预设Walk、Run、Grounded或Flight。
 
+位置展开只属于Loop Clip。有限Clip的每个Path Sample必须直接读取同索引Raw Sole，尤其最后一帧不得因为`sample == intervals`而映射成“下一周期第0帧 + 整段Root变换”。语义Validator必须逐帧验证有限Clip的`Animation Height == Raw Sole Motion Y`以及`Height Above Path == max(0, Animation Height - Baseline Height)`。
+
 每个Landing记录RootLocalLanding与MotionSpaceLanding：
 
 ```text

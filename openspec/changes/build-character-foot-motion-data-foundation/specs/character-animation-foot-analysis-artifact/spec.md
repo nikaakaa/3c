@@ -36,7 +36,7 @@ StepTime = NextLandingAbsoluteTime - SampleAbsoluteTime
 
 同一Event内Step Time MUST有限、非负并按素材绝对时间单调趋近0。Landing采样帧 MUST记录0，下一采样帧 MAY切换到下一Event的时间。
 
-有限Clip的首个Landing之前 MUST以Clip开始姿态作为该Landing事务的距离与Path起点，但 MUST不生成虚假Landing Event。最后一个Landing完成后Step Time MUST保持0，Step Distance MUST保持该已完成Landing事务的距离，Foot Path MUST继续相对最后Landing高度解释。若有限Clip某脚整段没有合法Landing Event，该脚 MUST进入显式No Step域：Event页为空、Step Time/Distance为0、Foot Height相对Calibration Ground记录，Contact/Lock仍按证据生成；MUST不伪造Landing或阻止另一脚的数据生成。Loop Clip的Motion Reference Root净位移非零时，左右任一脚没有Landing、Step Time全0或Step Distance全0 MUST整体失败并禁止Apply；Root净位移为零时 MAY形成Stationary No Step。系统 MUST不根据Clip名称预设Grounded或Flight比例。
+有限Clip的首个Landing之前 MUST以Clip开始姿态作为该Landing事务的距离与Path起点，但 MUST不生成虚假Landing Event。最后一个Landing完成后Step Time MUST保持0，Step Distance MUST保持该已完成Landing事务的距离，Foot Path MUST继续相对最后Landing高度解释。有限Clip位置 MUST逐索引直接读取同帧Raw Sample，MUST不因最后一帧索引等于区间数而使用Loop展开或下一周期首帧；其每帧Foot Path Animation Height MUST等于同帧Raw Sole Motion Y。若有限Clip某脚整段没有合法Landing Event，该脚 MUST进入显式No Step域：Event页为空、Step Time/Distance为0、Foot Height相对Calibration Ground记录，Contact/Lock仍按证据生成；MUST不伪造Landing或阻止另一脚的数据生成。Loop Clip的Motion Reference Root净位移非零时，左右任一脚没有Landing、Step Time全0或Step Distance全0 MUST整体失败并禁止Apply；Root净位移为零时 MAY形成Stationary No Step。系统 MUST不根据Clip名称预设Grounded或Flight比例。
 
 每个Landing MUST记录RootLocalLanding、MotionSpaceLanding和LandingSoleRotation。相邻同脚Landing MUST生成：
 
@@ -138,7 +138,7 @@ Support MUST表达动画承重意图，并且 MUST不以Contact、Lock Mode或Lo
 
 ### Requirement: Foot Motion派生数据必须通过跨曲线语义验证
 
-Analyzer MUST在发布Artifact前验证Ground Pose结果有限、Landing帧Step Time与Foot Height归零、Lock Mode与Weight共享有效Anchor、Support总和与绝对Candidate Presence一致、双脚弱Candidate时Support为0。该验证 MUST使用生成过程中的Raw与Candidate事实，不得从已Apply Curve反推。格式合法或Bake Session状态`Same` MUST不代表语义验证通过。
+Analyzer MUST在发布Artifact前验证Ground Pose结果有限、Landing帧Step Time与Foot Height归零、有限Clip的派生Animation Height与同帧Raw Sole Height一致、Height Above Path与Animation Height/Baseline关系一致、Lock Mode与Weight共享有效Anchor、Support总和与绝对Candidate Presence一致、双脚弱Candidate时Support为0。该验证 MUST使用生成过程中的Raw与Candidate事实，不得从已Apply Curve反推。格式合法或Bake Session状态`Same` MUST不代表语义验证通过。
 
 #### Scenario: Support归一化掩盖腾空
 

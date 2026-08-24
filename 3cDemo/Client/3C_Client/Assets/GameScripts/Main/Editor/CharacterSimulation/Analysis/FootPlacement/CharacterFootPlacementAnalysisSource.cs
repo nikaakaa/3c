@@ -167,7 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         menuName = "3C/Editor/Foot Placement Analysis Source")]
     public sealed class CharacterFootPlacementAnalysisSource : ScriptableObject
     {
-        public const string AlgorithmVersion = "animation-foot-analysis/v78";
+        public const string AlgorithmVersion = "animation-foot-analysis/v79";
 
         [SerializeField] string m_AnalysisSourceId = string.Empty;
         [SerializeField, Min(1)] int m_AnalysisVersion = 1;

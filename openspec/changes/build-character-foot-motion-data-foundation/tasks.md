@@ -81,11 +81,12 @@
 
 ## 11. 完成Ground Pose与Support语义收口
 
-- [ ] 11.1 允许Motion Reference Root曲线在Unity原生最后一个Source Sample区间Clamp，只让有界收稳尾段延伸到第二个区间，并拒绝更长或仍明显运动的提前结束
-- [ ] 11.2 从Sole平地目标、Sole-Ankle局部关系、双骨段长度与作者膝弯平面生成确定性Ground Pose目标、Residual与Reach
-- [ ] 11.3 让Pos Error保存Ankle/Knee RMS修正加Residual，Rot Error保存Sole到Ground-aligned目标的Quaternion角度
-- [ ] 11.4 从Ground proximity、垂直稳定度、Root-local向下伸展和Hip-Ankle姿态生成绝对Support Candidate
-- [ ] 11.5 让Support输出`Presence × Share`，禁止单侧弱Candidate固定提升为1，并允许明确腾空左右为0
-- [ ] 11.6 增加Ground Pose、Landing、Lock与Support跨曲线语义Validator，明确区分Same与业务正确
-- [ ] 11.7 升级Analyzer身份，使用唯一Bake Session重建并显式Replace全部Corin Target 22条Curve
-- [ ] 11.8 逐Clip审计Artifact与正式Curve，执行规定参数编译、Unity Console、git diff与全量严格OpenSpec校验
+- [x] 11.1 允许Motion Reference Root曲线在Unity原生最后一个Source Sample区间Clamp，只让有界收稳尾段延伸到第二个区间，并拒绝更长或仍明显运动的提前结束
+- [x] 11.2 从Sole平地目标、Sole-Ankle局部关系、双骨段长度与作者膝弯平面生成确定性Ground Pose目标、Residual与Reach
+- [x] 11.3 让Pos Error保存Ankle/Knee RMS修正加Residual，Rot Error保存Sole到Ground-aligned目标的Quaternion角度
+- [x] 11.4 从Ground proximity、垂直稳定度、Root-local向下伸展和Hip-Ankle姿态生成绝对Support Candidate
+- [x] 11.5 让Support输出`Presence × Share`，禁止单侧弱Candidate固定提升为1，并允许明确腾空左右为0
+- [x] 11.6 增加Ground Pose、Landing、Lock与Support跨曲线语义Validator，明确区分Same与业务正确
+- [x] 11.7 让有限Clip逐索引读取自身Raw Sample，并验证派生Animation Height不得在末帧绕回下一周期首帧
+- [x] 11.8 升级Analyzer身份，使用唯一Bake Session重建并显式Replace全部Corin Target 22条Curve
+- [x] 11.9 逐Clip审计Artifact与正式Curve，执行规定参数编译、Unity Console、git diff与全量严格OpenSpec校验

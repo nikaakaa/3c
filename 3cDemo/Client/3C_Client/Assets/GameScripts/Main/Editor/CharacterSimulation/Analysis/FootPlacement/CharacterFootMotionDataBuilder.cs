@@ -734,6 +734,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             FootWork foot,
             string side)
         {
+            for (int i = 0; i < foot.Step.Length; i++)
+            {
+                AnimationFootMotionStepEvidence step = foot.Step[i];
+                float expectedHeight = foot.Raw.Samples[i].Sole.MotionPosition.y;
+                float expectedAbovePath = Mathf.Max(0f, step.AnimationHeight - step.BaselineHeight);
+                if (!input.Loop && Mathf.Abs(step.AnimationHeight - expectedHeight) > 0.00001f)
+                    throw new InvalidOperationException(
+                        $"{side} Foot Motion finite Height source mismatch at sample {i}: " +
+                        $"Raw={expectedHeight:R}; Derived={step.AnimationHeight:R}.");
+                if (Mathf.Abs(step.HeightAbovePath - expectedAbovePath) > 0.00001f)
+                    throw new InvalidOperationException(
+                        $"{side} Foot Motion Height Above Path mismatch at sample {i}: " +
+                        $"Expected={expectedAbovePath:R}; Actual={step.HeightAbovePath:R}.");
+            }
             if (!MovingLoop(input))
                 return;
             if (!foot.Contact.Any(value => value >= 0.5f))
@@ -852,6 +866,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Vector3[] positions,
             int sample)
         {
+            if (!input.Loop)
+            {
+                if ((uint)sample >= (uint)positions.Length)
+                    throw new ArgumentOutOfRangeException(nameof(sample));
+                return positions[sample];
+            }
             int intervals = positions.Length - 1;
             int cycle = FloorDiv(sample, intervals);
             int local = Mod(sample, intervals);

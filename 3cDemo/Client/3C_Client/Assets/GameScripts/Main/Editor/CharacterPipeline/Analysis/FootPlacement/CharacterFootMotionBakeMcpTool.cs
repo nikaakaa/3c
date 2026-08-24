@@ -38,6 +38,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             [ToolParameter("Explicit true confirmation required to replace Different or Partial existing Curves.", Required = false)]
             public bool replace_existing { get; set; }
+
+            [ToolParameter("Include per-sample Raw, Step, Filter and Constraint evidence in the response.", Required = false)]
+            public bool include_samples { get; set; }
         }
 
         public static object HandleCommand(JObject @params)
@@ -47,6 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string targetPath = @params?["target_clip_asset_path"]?.Value<string>() ?? string.Empty;
             string expectedPlanHash = @params?["expected_plan_hash"]?.Value<string>() ?? string.Empty;
             bool replaceExisting = @params?["replace_existing"]?.Value<bool>() ?? false;
+            bool includeSamples = @params?["include_samples"]?.Value<bool>() ?? false;
             try
             {
                 CharacterFootPlacementAnalysisSource source =
@@ -57,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case "analyze":
                     {
                         CharacterFootMotionBakePlan plan = CharacterFootMotionBakeService.Analyze(source, target);
-                        return Success(plan, false);
+                        return Success(plan, false, includeSamples);
                     }
                     case "apply":
                     {
@@ -69,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             plan,
                             expectedPlanHash,
                             replaceExisting);
-                        return Success(result.Plan, result.Applied);
+                        return Success(result.Plan, result.Applied, includeSamples);
                     }
                     default:
                         return new ErrorResponse("invalid_action", new { action });
@@ -89,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static object Success(CharacterFootMotionBakePlan plan, bool applied) =>
+        static object Success(CharacterFootMotionBakePlan plan, bool applied, bool includeSamples) =>
             new
             {
                 success = true,
@@ -110,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     requires_replace = plan.RequiresReplace,
                     no_change = plan.IsNoChange,
                     applied,
-                    metrics = Metrics(plan),
+                    metrics = Metrics(plan, includeSamples),
                     changed_channels = plan.ChangedChannels.Select(value => new
                     {
                         channel_id = value.ChannelId,
@@ -120,7 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             };
 
-        static object Metrics(CharacterFootMotionBakePlan plan)
+        static object Metrics(CharacterFootMotionBakePlan plan, bool includeSamples)
         {
             AnimationFootAnalysisArtifactInspection inspection =
                 AnimationFootAnalysisArtifactBuilder.Inspect(plan.TargetClip, plan.Source);
@@ -157,12 +161,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 zero_support_count = zeroSupport,
                 maximum_support_sum = maximumSupportSum,
                 maximum_support_when_both_contact_false = maximumSupportWhenBothContactFalse,
-                left = FootMetrics(data.Left, activeCount),
-                right = FootMetrics(data.Right, activeCount)
+                left = FootMetrics(data.Left, data.Raw.Left, data.Raw.GroundReferenceHeight, activeCount),
+                right = FootMetrics(data.Right, data.Raw.Right, data.Raw.GroundReferenceHeight, activeCount),
+                samples = includeSamples
+                    ? Enumerable.Range(0, activeCount)
+                        .Select(index => SampleMetrics(data, index))
+                        .ToArray()
+                    : null
             };
         }
 
-        static object FootMetrics(AnimationFootMotionFootPage foot, int activeCount)
+        static object SampleMetrics(AnimationFootMotionDataDescriptor data, int index) =>
+            new
+            {
+                sample = index,
+                time = data.Left.Samples[index].TimeSeconds,
+                root_y = data.Raw.RootSamples[index].Position.y,
+                left = SampleFootMetrics(
+                    data.Left.Samples[index],
+                    data.Raw.Left.Samples[index],
+                    data.Raw.GroundReferenceHeight),
+                right = SampleFootMetrics(
+                    data.Right.Samples[index],
+                    data.Raw.Right.Samples[index],
+                    data.Raw.GroundReferenceHeight)
+            };
+
+        static object SampleFootMetrics(
+            AnimationFootMotionDerivedSample sample,
+            AnimationFootMotionRawSample raw,
+            float groundReferenceHeight) =>
+            new
+            {
+                sole_height = raw.Sole.MotionPosition.y - groundReferenceHeight,
+                sole_vertical_speed = raw.SoleVelocity.y,
+                step_time = sample.Step.TimeSeconds,
+                step_distance = sample.Step.Distance,
+                foot_height = sample.Step.HeightAbovePath,
+                toe_height = sample.Filter.ToeHeight,
+                toe_speed = sample.Filter.ToeSpeed,
+                position_error = sample.Filter.PositionError,
+                rotation_error = sample.Filter.RotationError,
+                contact = sample.Filter.Contact,
+                lock_mode = (byte)sample.Constraint.LockMode,
+                lock_weight = sample.Constraint.LockWeight,
+                support_candidate = sample.Constraint.SupportCandidate,
+                support = sample.Constraint.Support
+            };
+
+        static object FootMetrics(
+            AnimationFootMotionFootPage foot,
+            AnimationFootMotionRawFootPage raw,
+            float groundReferenceHeight,
+            int activeCount)
         {
             int landing = 0;
             int liftOff = 0;
@@ -181,6 +232,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             float maximumLockWeight = 0f;
             float maximumSupportCandidate = 0f;
             float maximumSupport = 0f;
+            float minimumHeelHeight = float.PositiveInfinity;
+            float maximumHeelHeight = float.NegativeInfinity;
+            float minimumSoleHeight = float.PositiveInfinity;
+            float maximumSoleHeight = float.NegativeInfinity;
+            int maximumFootHeightSample = 0;
+            float maximumFootHeightBaseline = 0f;
+            float maximumFootHeightAnimation = 0f;
             for (int i = 0; i < foot.Events.Count; i++)
             {
                 if (foot.Events[i].Kind == AnimationFootMotionEventKind.Landing)
@@ -197,7 +255,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     locked++;
                 maximumStepTime = Mathf.Max(maximumStepTime, sample.Step.TimeSeconds);
                 maximumStepDistance = Mathf.Max(maximumStepDistance, sample.Step.Distance);
-                maximumFootHeight = Mathf.Max(maximumFootHeight, sample.Step.HeightAbovePath);
+                if (sample.Step.HeightAbovePath > maximumFootHeight)
+                {
+                    maximumFootHeight = sample.Step.HeightAbovePath;
+                    maximumFootHeightSample = i;
+                    maximumFootHeightBaseline = sample.Step.BaselineHeight;
+                    maximumFootHeightAnimation = sample.Step.AnimationHeight;
+                }
                 minimumToeHeight = Mathf.Min(minimumToeHeight, sample.Filter.ToeHeight);
                 maximumToeHeight = Mathf.Max(maximumToeHeight, sample.Filter.ToeHeight);
                 maximumToeSpeed = Mathf.Max(maximumToeSpeed, sample.Filter.ToeSpeed);
@@ -210,16 +274,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     maximumSupportCandidate,
                     sample.Constraint.SupportCandidate);
                 maximumSupport = Mathf.Max(maximumSupport, sample.Constraint.Support);
+                AnimationFootMotionRawSample rawSample = raw.Samples[i];
+                float heelHeight = rawSample.Heel.MotionPosition.y - groundReferenceHeight;
+                float soleHeight = rawSample.Sole.MotionPosition.y - groundReferenceHeight;
+                minimumHeelHeight = Mathf.Min(minimumHeelHeight, heelHeight);
+                maximumHeelHeight = Mathf.Max(maximumHeelHeight, heelHeight);
+                minimumSoleHeight = Mathf.Min(minimumSoleHeight, soleHeight);
+                maximumSoleHeight = Mathf.Max(maximumSoleHeight, soleHeight);
             }
             return new
             {
                 landing_count = landing,
                 lift_off_count = liftOff,
+                landing_samples = foot.Events
+                    .Where(value => value.Kind == AnimationFootMotionEventKind.Landing)
+                    .Select(value => value.SampleIndex)
+                    .ToArray(),
+                lift_off_samples = foot.Events
+                    .Where(value => value.Kind == AnimationFootMotionEventKind.LiftOff)
+                    .Select(value => value.SampleIndex)
+                    .ToArray(),
                 contact_sample_count = contact,
                 locked_sample_count = locked,
                 maximum_step_time = maximumStepTime,
                 maximum_step_distance = maximumStepDistance,
                 maximum_foot_height = maximumFootHeight,
+                maximum_foot_height_sample = maximumFootHeightSample,
+                maximum_foot_height_baseline = maximumFootHeightBaseline,
+                maximum_foot_height_animation = maximumFootHeightAnimation,
+                minimum_heel_height = minimumHeelHeight,
+                maximum_heel_height = maximumHeelHeight,
+                minimum_sole_height = minimumSoleHeight,
+                maximum_sole_height = maximumSoleHeight,
                 minimum_toe_height = minimumToeHeight,
                 maximum_toe_height = maximumToeHeight,
                 maximum_toe_speed = maximumToeSpeed,

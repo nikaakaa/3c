@@ -21,7 +21,7 @@ GDC参考要求每脚自动生成预测所需的Step delay/time与distance、Foo
 - `.anim`中的22条曲线成为正式作者真相并进入Registered Curve Hash；Library Artifact只保存可重建原始证据和候选lineage，不拥有Apply后的第二份正式曲线。
 - Agent Document与Animation Window统一通过唯一channel catalog识别这些曲线；不按propertyName猜测或提供key级写入。
 - 删除当前失败实验生成的Contact/Support曲线并重新生成：Contact/Lock使用Motion Reference地面相对速度，Support只使用动画承重姿态且不由Contact/Lock门控，不从旧Phase、Constraint、PlantConfidence或旧曲线复制。
-- Ground Pose Filter必须从逐采样Sole平地目标与Hip/Knee/Ankle双骨段几何生成真实关节修正和不可达残差；Support必须同时保存绝对Presence与左右Share，禁止把任意弱单侧Candidate归一为1，并以跨曲线语义Validator阻止格式合法但业务矛盾的数据Apply。
+- Ground Pose Filter必须从逐采样Sole平地目标与Hip/Knee/Ankle双骨段几何生成真实关节修正和不可达残差；Support必须同时保存绝对Presence与左右Share，禁止把任意弱单侧Candidate归一为1；有限Clip不得用Loop展开函数把末帧替换成下一周期首帧，并以跨曲线语义Validator阻止格式合法但业务矛盾的数据Apply。
 
 ## Dependency And Ordering
 
@@ -70,6 +70,7 @@ Lock Mode只取Unlocked/Sliding/Locked且Lock Weight连续
 Support独立于Contact/Lock门控，Sliding或暂时不可锁的承重脚仍可非零
 Ground Pose Pos/Rot Error来自正式逐采样腿链几何而非Sole高度与Up夹角别名
 Support左右和表达绝对Presence，腾空时可为0，单侧弱Candidate不得提升成1
+有限Clip每帧Foot Path Animation Height逐值等于同帧Raw Sole Height，末帧不得绕回首帧
 循环Locomotion左右脚都必须生成Landing、非零Step Time/Dist、Contact与Support，否则禁止Apply
 应用曲线不改变AnimationClipAnalysisInputHash，只改变Registered Curve Hash
 Projection与Runtime不包含新消费字段

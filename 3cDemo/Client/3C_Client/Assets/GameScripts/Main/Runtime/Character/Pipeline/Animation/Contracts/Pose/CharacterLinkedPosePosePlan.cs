@@ -343,12 +343,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     for (int outputIndex = 0; outputIndex < outputs.Length; outputIndex++)
                     {
                         CharacterLinkedPosePortValueBinding output = outputs[outputIndex];
+                        if (output.Kind != CharacterPosePortKind.LocalPose &&
+                            output.Kind != CharacterPosePortKind.ComponentPose)
+                        {
+                            throw new InvalidOperationException(
+                                $"Linked Pose fragment #{fragmentIndex} may only publish Pose values.");
+                        }
                         bool produced = Operations
                             .Skip(fragment.OperationStart)
                             .Take(fragment.OperationCount)
-                            .Any(value => output.Kind == CharacterPosePortKind.FullBodyIkGoals
-                                ? value.OutputFullBodyIkGoalSetValueIndex == output.ValueIndex
-                                : value.OutputValueIndex == output.ValueIndex);
+                            .Any(value => value.OutputValueIndex == output.ValueIndex);
                         if (!produced)
                         {
                             produced = fragment.Inputs.Any(value => value.Kind == output.Kind && value.ValueIndex == output.ValueIndex);
@@ -358,10 +362,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                 }
                 int poseOutputCount = expectedOutputs.Count(value => value.Kind == CharacterPosePortKind.LocalPose || value.Kind == CharacterPosePortKind.ComponentPose);
-                int goalOutputCount = expectedOutputs.Count(value => value.Kind == CharacterPosePortKind.FullBodyIkGoals);
-                if (poseOutputCount > 1 || goalOutputCount > 1 || poseOutputCount + goalOutputCount != expectedOutputs.Length ||
-                    (poseOutputCount == 1) != (operation.OutputValueIndex >= 0) ||
-                    (goalOutputCount == 1) != (operation.OutputFullBodyIkGoalSetValueIndex >= 0))
+                if (poseOutputCount != 1 || poseOutputCount != expectedOutputs.Length ||
+                    operation.OutputValueIndex < 0 ||
+                    operation.OutputFullBodyIkGoalContributionValueIndex >= 0 ||
+                    operation.OutputFullBodyIkGoalSetValueIndex >= 0)
                 {
                     throw new InvalidOperationException($"Linked Pose Call '{call.NodeId}' output workspace does not match its Interface Entry.");
                 }

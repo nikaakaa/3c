@@ -280,7 +280,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             CharacterBodyPresentationRuntime body = null;
             CharacterAnimationPresentationRuntime animation = null;
-            CharacterFootPlacementRuntime footPlacement = null;
+            CharacterFootPlacementModule footPlacement = null;
             CharacterCameraPresentationRuntime camera = null;
             CharacterEquipmentVisualRuntime equipment = null;
             CharacterMotionMatchingPresentationModule motionMatching = null;
@@ -305,13 +305,46 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         bodySourceMode,
                         projection);
                 }
+                if (projection.PosePlan.FootPlacements.Count == 1)
+                {
+                    if (!worldAwareBinding)
+                        throw new ArgumentNullException(nameof(worldAwareBinding));
+                    if (!physicsScene.IsValid())
+                        throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
+                    CharacterPresentationFootPlacementDescriptor descriptor =
+                        projection.PosePlan.FootPlacements[0];
+                    CharacterFootPlacementPublicationValidation.Require(projection, descriptor.Calibration);
+                    CharacterFootPlacementPoseRig rig = new CharacterFootPlacementPoseRig(
+                        descriptor.Calibration,
+                        projection.Rig,
+                        animationRigBinding,
+                        worldAwareBinding);
+                    rig.RequireValid();
+                    if (rig.VisualRoot != rootHierarchy.VisualRoot)
+                        throw new InvalidOperationException("World-Aware Presentation Root must match Presentation VisualRoot exactly.");
+                    CharacterFootPlacementModuleSettings footPlacementSettings =
+                        descriptor.Profile.BuildSettings(projection, rig);
+                    var worldQuery = new CharacterFootPlacementWorldQueryBackend(
+                        physicsScene,
+                        rig,
+                        footPlacementSettings.LandingPrediction.HitCapacity,
+                        footPlacementSettings.GroundDetection.SegmentHitCapacity);
+                    footPlacement = new CharacterFootPlacementModule(
+                        actorId,
+                        footPlacementSettings,
+                        rig,
+                        futureBodyTranslationSource,
+                        worldQuery);
+                }
                 animation = new CharacterAnimationPresentationRuntime(
                     actorId,
                     animationBindings,
                     motionMatching,
                     animancer,
                     animationRigBinding,
+                    footPlacement,
                     true);
+                footPlacement = null;
                 animation.SetTuningBinding(
                     new CharacterPoseTuningRuntimeBinding(
                         new CharacterPoseTuningTargetIdentity(
@@ -331,37 +364,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     projection,
                     equipmentRigCatalog,
                     diagnostics);
-                if (projection.PosePlan.FootPlacements.Count == 1)
-                {
-                    if (!worldAwareBinding)
-                        throw new ArgumentNullException(nameof(worldAwareBinding));
-                    if (!physicsScene.IsValid())
-                        throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
-                    CharacterPresentationFootPlacementDescriptor descriptor =
-                        projection.PosePlan.FootPlacements[0];
-                    CharacterFootPlacementPublicationValidation.Require(projection, descriptor.Calibration);
-                    CharacterFootPlacementPoseRig rig = new CharacterFootPlacementPoseRig(
-                        descriptor.Calibration,
-                        projection.Rig,
-                        animationRigBinding,
-                        worldAwareBinding);
-                    rig.RequireValid();
-                    if (rig.VisualRoot != rootHierarchy.VisualRoot)
-                        throw new InvalidOperationException("World-Aware Presentation Root must match Presentation VisualRoot exactly.");
-                    CharacterFootPlacementRuntimeSettings footPlacementSettings =
-                        descriptor.Profile.BuildSettings(projection, rig);
-                    var worldQuery = new CharacterFootPlacementWorldQueryBackend(
-                        physicsScene,
-                        rig,
-                        footPlacementSettings.LandingPrediction.HitCapacity,
-                        footPlacementSettings.GroundDetection.SegmentHitCapacity);
-                    footPlacement = new CharacterFootPlacementRuntime(
-                        actorId,
-                        footPlacementSettings,
-                        rig,
-                        futureBodyTranslationSource,
-                        worldQuery);
-                }
                 if (cameraRig)
                 {
                     camera = new CharacterCameraPresentationRuntime(
@@ -386,14 +388,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     body,
                     animation,
                     equipment,
-                    footPlacement,
                     camera,
                     poseRoot,
                     diagnostics);
                 body = null;
                 animation = null;
                 equipment = null;
-                footPlacement = null;
                 camera = null;
                 return new CharacterPresentationRuntimeBinding(projection, runtime);
             }
@@ -417,7 +417,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         public static void Dispose(
             CharacterCameraPresentationRuntime camera,
-            CharacterFootPlacementRuntime footPlacement,
+            CharacterEquipmentVisualRuntime equipment,
+            CharacterAnimationPresentationRuntime animation,
+            CharacterBodyPresentationRuntime body) =>
+            Dispose(camera, null, equipment, animation, body);
+
+        public static void Dispose(
+            CharacterCameraPresentationRuntime camera,
+            CharacterFootPlacementModule footPlacement,
             CharacterEquipmentVisualRuntime equipment,
             CharacterAnimationPresentationRuntime animation,
             CharacterBodyPresentationRuntime body)

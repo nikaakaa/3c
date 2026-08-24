@@ -481,6 +481,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPosePortKind.ActionPlayback,
             "component.full-body-ik-goals" =>
                 CharacterPosePortKind.FullBodyIkGoals,
+            "component.full-body-ik-goal-contribution" =>
+                CharacterPosePortKind.FullBodyIkGoalContribution,
             _ => throw new InvalidOperationException(
                 $"Unknown Pose clipboard port value type '{value}'.")
         };

@@ -40,11 +40,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int index,
             CharacterPoseOperationCode code,
             int outputPoseValueIndex,
+            int outputFullBodyIkGoalContributionValueIndex,
             int outputFullBodyIkGoalSetValueIndex,
+            int inputFullBodyIkGoalSetValueIndex,
             int inputPoseValueIndexA,
             int inputPoseValueIndexB,
-            int fullBodyIkGoalInputStart,
-            int fullBodyIkGoalInputCount,
+            int fullBodyIkGoalContributionInputStart,
+            int fullBodyIkGoalContributionInputCount,
             int playerIndex,
             AnimationSelectionAvailabilityPolicy playerOutputPolicy,
             int parameterIndex,
@@ -68,19 +70,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (index < 0 ||
                 !Enum.IsDefined(typeof(CharacterPoseOperationCode), code) ||
-                outputPoseValueIndex < -1 || outputFullBodyIkGoalSetValueIndex < -1 ||
-                fullBodyIkGoalInputStart < -1 || fullBodyIkGoalInputCount < 0 ||
+                outputPoseValueIndex < -1 ||
+                outputFullBodyIkGoalContributionValueIndex < -1 ||
+                outputFullBodyIkGoalSetValueIndex < -1 ||
+                inputFullBodyIkGoalSetValueIndex < -1 ||
+                fullBodyIkGoalContributionInputStart < -1 ||
+                fullBodyIkGoalContributionInputCount < 0 ||
                 frameCacheIndex != index ||
                 !float.IsFinite(weight) || weight < 0f || weight > 1f)
                 throw new ArgumentException("Animation Pose Graph Native operation header is invalid.");
             Index = index;
             Code = code;
             OutputValueIndex = outputPoseValueIndex;
+            OutputFullBodyIkGoalContributionValueIndex =
+                outputFullBodyIkGoalContributionValueIndex;
             OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
+            InputFullBodyIkGoalSetValueIndex = inputFullBodyIkGoalSetValueIndex;
             InputValueIndexA = inputPoseValueIndexA;
             InputValueIndexB = inputPoseValueIndexB;
-            FullBodyIkGoalInputStart = fullBodyIkGoalInputStart;
-            FullBodyIkGoalInputCount = fullBodyIkGoalInputCount;
+            FullBodyIkGoalContributionInputStart =
+                fullBodyIkGoalContributionInputStart;
+            FullBodyIkGoalContributionInputCount =
+                fullBodyIkGoalContributionInputCount;
             PhysicalPlayerIndex = playerIndex;
             AnimationSelectionAvailabilityPolicy = playerOutputPolicy;
             ParameterIndex = parameterIndex;
@@ -106,11 +117,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int Index { get; }
         internal CharacterPoseOperationCode Code { get; }
         internal int OutputValueIndex { get; }
+        internal int OutputFullBodyIkGoalContributionValueIndex { get; }
         internal int OutputFullBodyIkGoalSetValueIndex { get; }
+        internal int InputFullBodyIkGoalSetValueIndex { get; }
         internal int InputValueIndexA { get; }
         internal int InputValueIndexB { get; }
-        internal int FullBodyIkGoalInputStart { get; }
-        internal int FullBodyIkGoalInputCount { get; }
+        internal int FullBodyIkGoalContributionInputStart { get; }
+        internal int FullBodyIkGoalContributionInputCount { get; }
         internal int PhysicalPlayerIndex { get; }
         internal AnimationSelectionAvailabilityPolicy AnimationSelectionAvailabilityPolicy { get; }
         internal int ParameterIndex { get; }
@@ -136,11 +149,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Index,
             Code,
             OutputValueIndex,
+            OutputFullBodyIkGoalContributionValueIndex,
             OutputFullBodyIkGoalSetValueIndex,
+            InputFullBodyIkGoalSetValueIndex,
             InputValueIndexA,
             InputValueIndexB,
-            FullBodyIkGoalInputStart,
-            FullBodyIkGoalInputCount,
+            FullBodyIkGoalContributionInputStart,
+            FullBodyIkGoalContributionInputCount,
             PhysicalPlayerIndex,
             AnimationSelectionAvailabilityPolicy,
             ParameterIndex,
@@ -169,11 +184,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Index,
             CharacterPoseOperationCode.PoseStateMachine,
             OutputValueIndex,
+            OutputFullBodyIkGoalContributionValueIndex,
             OutputFullBodyIkGoalSetValueIndex,
+            InputFullBodyIkGoalSetValueIndex,
             sourcePoseValueIndex,
             targetPoseValueIndex,
-            FullBodyIkGoalInputStart,
-            FullBodyIkGoalInputCount,
+            FullBodyIkGoalContributionInputStart,
+            FullBodyIkGoalContributionInputCount,
             PhysicalPlayerIndex,
             AnimationSelectionAvailabilityPolicy,
             ParameterIndex,
@@ -214,23 +231,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal AnimationPoseGraphNativeLinkedPoseCandidate(
             int fragmentIndex,
-            int outputPoseValueIndex,
-            int outputFullBodyIkGoalSetValueIndex)
+            int outputPoseValueIndex)
         {
-            if (fragmentIndex < 0 || outputPoseValueIndex < -1 ||
-                outputFullBodyIkGoalSetValueIndex < -1 ||
-                outputPoseValueIndex < 0 && outputFullBodyIkGoalSetValueIndex < 0)
+            if (fragmentIndex < 0 || outputPoseValueIndex < 0)
             {
                 throw new ArgumentException("Linked Pose native candidate output is invalid.");
             }
             FragmentIndex = fragmentIndex;
             OutputPoseValueIndex = outputPoseValueIndex;
-            OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
         }
 
         internal int FragmentIndex { get; }
         internal int OutputPoseValueIndex { get; }
-        internal int OutputFullBodyIkGoalSetValueIndex { get; }
     }
 
     internal readonly struct AnimationPoseGraphNativeLinkedPoseCallControl
@@ -398,18 +410,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal AnimationPoseGraphNativePoseBoneIkGoalRange(
             int descriptorOffset,
             int descriptorCount,
-            int goalWorkspaceOffset)
+            int contributionGoalWorkspaceOffset)
         {
-            if (descriptorOffset < 0 || descriptorCount <= 0 || goalWorkspaceOffset < 0)
+            if (descriptorOffset < 0 || descriptorCount <= 0 ||
+                contributionGoalWorkspaceOffset < 0)
                 throw new ArgumentException("Pose Bone IK Goal native range is invalid.");
             DescriptorOffset = descriptorOffset;
             DescriptorCount = descriptorCount;
-            GoalWorkspaceOffset = goalWorkspaceOffset;
+            ContributionGoalWorkspaceOffset = contributionGoalWorkspaceOffset;
         }
 
         internal int DescriptorOffset { get; }
         internal int DescriptorCount { get; }
-        internal int GoalWorkspaceOffset { get; }
+        internal int ContributionGoalWorkspaceOffset { get; }
     }
 
     internal sealed class CharacterPoseGraphNativeProgram : IDisposable
@@ -422,10 +435,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationSlotControls;
             internal NativeArray<CharacterRootOrientationWarpNativeControl>
                 RootOrientationWarpControls;
-            internal NativeArray<CharacterFullBodyIkGoalSetHeader>
-                FullBodyIkGoalSets;
+            internal NativeArray<CharacterFullBodyIkGoalContributionHeader>
+                FullBodyIkGoalContributions;
             internal NativeArray<CharacterFullBodyIkGoal>
-                FullBodyIkGoals;
+                FullBodyIkContributionGoals;
             internal NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl>
                 LinkedPoseCallControls;
             internal NativeArray<byte>
@@ -449,9 +462,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<CharacterVirtualBoneDescriptor> m_VirtualBones;
         NativeArray<AnimationPoseGraphNativePoseBoneIkGoalRange> m_PoseBoneIkGoalRanges;
         NativeArray<CharacterPoseBoneIkGoalDescriptor> m_PoseBoneIkGoalDescriptors;
-        NativeArray<int> m_FullBodyIkGoalInputValueIndices;
-        NativeArray<CharacterFullBodyIkGoalSetHeader> m_FullBodyIkGoalSets;
-        NativeArray<CharacterFullBodyIkGoal> m_FullBodyIkGoals;
+        NativeArray<int> m_FullBodyIkGoalContributionInputValueIndices;
+        NativeArray<CharacterFullBodyIkGoalContributionHeader>
+            m_FullBodyIkGoalContributions;
+        NativeArray<CharacterFullBodyIkGoal> m_FullBodyIkContributionGoals;
         NativeArray<AnimationPoseGraphNativeLinkedPoseCall> m_LinkedPoseCalls;
         NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate> m_LinkedPoseCandidates;
         NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> m_LinkedPoseCallControls;
@@ -469,6 +483,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_PoseValueCount;
         int m_FootPlacementCount;
         int m_FullBodyIkCount;
+        int m_FullBodyIkGoalSetValueCount;
         int m_ContributionStride;
         int m_FrameCacheCount;
         int m_OutputOperationIndex;
@@ -516,6 +531,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PoseValueCount = program.PoseValueWorkspaceCount;
                 m_FootPlacementCount = program.FootPlacements.Count;
                 m_FullBodyIkCount = program.FullBodyIks.Count;
+                m_FullBodyIkGoalSetValueCount =
+                    program.FullBodyIkGoalSetWorkspaceCount;
                 m_ContributionStride = program.ContributionWorkspaceCount / program.PoseValueWorkspaceCount;
                 m_FrameCacheCount = program.FrameCacheCount;
                 m_OutputOperationIndex = program.OutputOperationIndex;
@@ -559,9 +576,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PoseBoneIkGoalRanges = Allocate<AnimationPoseGraphNativePoseBoneIkGoalRange>(program.PoseBoneIkGoalSources.Count);
                 int poseBoneGoalCount = program.PoseBoneIkGoalSources.Sum(value => value.GoalCount);
                 m_PoseBoneIkGoalDescriptors = Allocate<CharacterPoseBoneIkGoalDescriptor>(poseBoneGoalCount);
-                m_FullBodyIkGoalInputValueIndices = Allocate<int>(program.FullBodyIkGoalInputValueIndices.Count);
-                m_FullBodyIkGoalSets = AllocateClear<CharacterFullBodyIkGoalSetHeader>(program.FullBodyIkGoalSetWorkspaceCount);
-                m_FullBodyIkGoals = AllocateClear<CharacterFullBodyIkGoal>(program.FullBodyIkGoalWorkspaceCount);
+                m_FullBodyIkGoalContributionInputValueIndices = Allocate<int>(
+                    program.FullBodyIkGoalContributionInputValueIndices.Count);
+                m_FullBodyIkGoalContributions =
+                    AllocateClear<CharacterFullBodyIkGoalContributionHeader>(
+                        program.FullBodyIkGoalContributionWorkspaceCount);
+                m_FullBodyIkContributionGoals = AllocateClear<CharacterFullBodyIkGoal>(
+                    program.FullBodyIkGoalContributionGoalWorkspaceCount);
                 int linkedPoseCandidateCount = program.LinkedPoseCalls.Sum(value => value.FragmentIndices.Count);
                 m_LinkedPoseCalls = Allocate<AnimationPoseGraphNativeLinkedPoseCall>(program.LinkedPoseCalls.Count);
                 m_LinkedPoseCandidates = Allocate<AnimationPoseGraphNativeLinkedPoseCandidate>(linkedPoseCandidateCount);
@@ -597,6 +618,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int PoseValueCount => m_PoseValueCount;
         internal int FootPlacementCount => m_FootPlacementCount;
         internal int FullBodyIkCount => m_FullBodyIkCount;
+        internal int FullBodyIkGoalSetValueCount => m_FullBodyIkGoalSetValueCount;
         internal int ContributionStride => m_ContributionStride;
         internal int FrameCacheCount => m_FrameCacheCount;
         internal int OutputOperationIndex => m_OutputOperationIndex;
@@ -643,9 +665,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<CharacterVirtualBoneDescriptor> VirtualBones => m_VirtualBones;
         internal NativeArray<AnimationPoseGraphNativePoseBoneIkGoalRange> PoseBoneIkGoalRanges => m_PoseBoneIkGoalRanges;
         internal NativeArray<CharacterPoseBoneIkGoalDescriptor> PoseBoneIkGoalDescriptors => m_PoseBoneIkGoalDescriptors;
-        internal NativeArray<int> FullBodyIkGoalInputValueIndices => m_FullBodyIkGoalInputValueIndices;
-        internal NativeArray<CharacterFullBodyIkGoalSetHeader> FullBodyIkGoalSets => m_FullBodyIkGoalSets;
-        internal NativeArray<CharacterFullBodyIkGoal> FullBodyIkGoals => m_FullBodyIkGoals;
+        internal NativeArray<int> FullBodyIkGoalContributionInputValueIndices =>
+            m_FullBodyIkGoalContributionInputValueIndices;
+        internal NativeArray<CharacterFullBodyIkGoalContributionHeader>
+            FullBodyIkGoalContributions => m_FullBodyIkGoalContributions;
+        internal NativeArray<CharacterFullBodyIkGoal> FullBodyIkContributionGoals =>
+            m_FullBodyIkContributionGoals;
         internal NativeArray<AnimationPoseGraphNativeLinkedPoseCall> LinkedPoseCalls => m_LinkedPoseCalls;
         internal NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate> LinkedPoseCandidates => m_LinkedPoseCandidates;
         internal NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> LinkedPoseCallControls => m_LinkedPoseCallControls;
@@ -662,10 +687,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_FrameOpen)
                 throw new InvalidOperationException("Character Pose Graph frame is already open.");
             BindPage(m_PendingPage);
-            for (int i = 0; i < m_FullBodyIkGoalSets.Length; i++)
-                m_FullBodyIkGoalSets[i] = default;
-            for (int i = 0; i < m_FullBodyIkGoals.Length; i++)
-                m_FullBodyIkGoals[i] = default;
+            for (int i = 0; i < m_FullBodyIkGoalContributions.Length; i++)
+                m_FullBodyIkGoalContributions[i] = default;
+            for (int i = 0; i < m_FullBodyIkContributionGoals.Length; i++)
+                m_FullBodyIkContributionGoals[i] = default;
             for (int i = 0; i < m_LinkedPoseCallControls.Length; i++)
                 m_LinkedPoseCallControls[i] = AnimationPoseGraphNativeLinkedPoseCallControl.Inactive;
             for (int i = 0; i < m_LinkedPoseActiveFragments.Length; i++)
@@ -900,7 +925,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PoseBoneIkGoalRanges[sourceIndex] = new AnimationPoseGraphNativePoseBoneIkGoalRange(
                     poseBoneGoalOffset,
                     source.GoalCount,
-                    source.GoalWorkspaceOffset);
+                    source.ContributionGoalWorkspaceOffset);
                 for (int goalIndex = 0; goalIndex < source.GoalCount; goalIndex++)
                 {
                     CharacterPresentationPoseBoneIkGoalBindingDescriptor binding = source.Bindings[goalIndex];
@@ -915,8 +940,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             if (poseBoneGoalOffset != m_PoseBoneIkGoalDescriptors.Length)
                 throw new InvalidOperationException("Pose Bone IK Goal native descriptor layout is inconsistent.");
-            for (int inputIndex = 0; inputIndex < m_FullBodyIkGoalInputValueIndices.Length; inputIndex++)
-                m_FullBodyIkGoalInputValueIndices[inputIndex] = program.FullBodyIkGoalInputValueIndices[inputIndex];
+            for (int inputIndex = 0;
+                 inputIndex < m_FullBodyIkGoalContributionInputValueIndices.Length;
+                 inputIndex++)
+            {
+                m_FullBodyIkGoalContributionInputValueIndices[inputIndex] =
+                    program.FullBodyIkGoalContributionInputValueIndices[inputIndex];
+            }
             for (int i = 0; i < program.StateMachines.Count; i++)
             {
                 CharacterPoseStateMachineDescriptor machine = program.StateMachines[i];
@@ -956,7 +986,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException($"Linked Pose native call #{callIndex} references an invalid fragment.");
                     CharacterLinkedPoseEntryFragmentPlanDescriptor fragment = program.LinkedPoseFragments[fragmentIndex];
                     int outputPoseValueIndex = -1;
-                    int outputGoalSetValueIndex = -1;
                     for (int outputIndex = 0; outputIndex < fragment.Outputs.Count; outputIndex++)
                     {
                         CharacterLinkedPosePortValueBinding output = fragment.Outputs[outputIndex];
@@ -967,22 +996,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 throw new InvalidOperationException($"Linked Pose fragment #{fragmentIndex} has multiple Pose outputs.");
                             outputPoseValueIndex = output.ValueIndex;
                         }
-                        else if (output.Kind == CharacterPosePortKind.FullBodyIkGoals)
+                        else
                         {
-                            if (outputGoalSetValueIndex >= 0 && outputGoalSetValueIndex != output.ValueIndex)
-                                throw new InvalidOperationException($"Linked Pose fragment #{fragmentIndex} has multiple Goal Set outputs.");
-                            outputGoalSetValueIndex = output.ValueIndex;
+                            throw new InvalidOperationException(
+                                $"Linked Pose fragment #{fragmentIndex} has a non-Pose output.");
                         }
                     }
-                    if ((callOperation.OutputValueIndex >= 0) != (outputPoseValueIndex >= 0) ||
-                        (callOperation.OutputFullBodyIkGoalSetValueIndex >= 0) != (outputGoalSetValueIndex >= 0))
+                    if (callOperation.OutputValueIndex < 0 ||
+                        callOperation.OutputFullBodyIkGoalSetValueIndex >= 0 ||
+                        outputPoseValueIndex < 0)
                     {
                         throw new InvalidOperationException($"Linked Pose fragment #{fragmentIndex} output ABI does not match call #{callIndex}.");
                     }
                     m_LinkedPoseCandidates[candidateIndex] = new AnimationPoseGraphNativeLinkedPoseCandidate(
                         fragmentIndex,
-                        outputPoseValueIndex,
-                        outputGoalSetValueIndex);
+                        outputPoseValueIndex);
                     m_LinkedPoseCandidateImplementationIds[candidateIndex] = fragment.ImplementationId;
                     candidateIndex++;
                 }
@@ -1067,11 +1095,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.Index,
                     operation.Code,
                     operation.OutputValueIndex,
+                    operation.OutputFullBodyIkGoalContributionValueIndex,
                     operation.OutputFullBodyIkGoalSetValueIndex,
+                    operation.InputFullBodyIkGoalSetValueIndex,
                     operation.InputValueIndexA,
                     operation.InputValueIndexB,
-                    operation.FullBodyIkGoalInputStart,
-                    operation.FullBodyIkGoalInputCount,
+                    operation.FullBodyIkGoalContributionInputStart,
+                    operation.FullBodyIkGoalContributionInputCount,
                     operation.PlayerIndex,
                     outputPolicy,
                     operation.ParameterIndex,
@@ -1145,8 +1175,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_RootOrientationWarps.Length != m_RootOrientationWarpControls.Length ||
                 !m_VirtualBones.IsCreated || m_VirtualBones.Length != m_BoneCounts.VirtualBoneCount ||
                 !m_PoseBoneIkGoalRanges.IsCreated || !m_PoseBoneIkGoalDescriptors.IsCreated ||
-                !m_FullBodyIkGoalInputValueIndices.IsCreated ||
-                !m_FullBodyIkGoalSets.IsCreated || !m_FullBodyIkGoals.IsCreated ||
+                !m_FullBodyIkGoalContributionInputValueIndices.IsCreated ||
+                !m_FullBodyIkGoalContributions.IsCreated ||
+                !m_FullBodyIkContributionGoals.IsCreated ||
                 !m_LinkedPoseCalls.IsCreated || !m_LinkedPoseCandidates.IsCreated ||
                 !m_LinkedPoseCallControls.IsCreated || !m_LinkedPoseActiveFragments.IsCreated ||
                 m_LinkedPoseCallGroupIds == null ||
@@ -1186,10 +1217,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPoseGraphNativeLinkedPoseCandidate candidate = m_LinkedPoseCandidates[candidateIndex];
                 if ((uint)candidate.FragmentIndex >= (uint)m_LinkedPoseActiveFragments.Length ||
-                    candidate.OutputPoseValueIndex < -1 || candidate.OutputPoseValueIndex >= m_PoseValueCount ||
-                    candidate.OutputFullBodyIkGoalSetValueIndex < -1 ||
-                    candidate.OutputFullBodyIkGoalSetValueIndex >= m_FullBodyIkGoalSets.Length ||
-                    candidate.OutputPoseValueIndex < 0 && candidate.OutputFullBodyIkGoalSetValueIndex < 0 ||
+                    candidate.OutputPoseValueIndex < 0 ||
+                    candidate.OutputPoseValueIndex >= m_PoseValueCount ||
                     !m_LinkedPoseCandidateImplementationIds[candidateIndex].IsValid)
                 {
                     throw new InvalidOperationException($"Linked Pose native candidate #{candidateIndex} is invalid.");
@@ -1234,9 +1263,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseOperationCode.RootOrientationWarp => true,
             CharacterPoseOperationCode.FootPlacement => true,
             CharacterPoseOperationCode.PoseBoneIKGoals => true,
+            CharacterPoseOperationCode.FullBodyIkGoalAssembler => true,
             CharacterPoseOperationCode.FullBodyIK => true,
             CharacterPoseOperationCode.LinkedPoseCall => true,
-            CharacterPoseOperationCode.EmptyFullBodyIkGoals => true,
             CharacterPoseOperationCode.LocalToComponentPose => true,
             CharacterPoseOperationCode.ComponentToLocalPose => true,
             CharacterPoseOperationCode.StatePoseOutput => true,
@@ -1262,7 +1291,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LinkedPoseCandidateImplementationIds = null;
             DisposeArray(ref m_LinkedPoseCandidates);
             DisposeArray(ref m_LinkedPoseCalls);
-            DisposeArray(ref m_FullBodyIkGoalInputValueIndices);
+            DisposeArray(ref m_FullBodyIkGoalContributionInputValueIndices);
             DisposeArray(ref m_PoseBoneIkGoalDescriptors);
             DisposeArray(ref m_PoseBoneIkGoalRanges);
             DisposeArray(ref m_VirtualBones);
@@ -1304,8 +1333,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             StateMachineControls = m_StateMachineControls,
             AnimationSlotControls = m_AnimationSlotControls,
             RootOrientationWarpControls = m_RootOrientationWarpControls,
-            FullBodyIkGoalSets = m_FullBodyIkGoalSets,
-            FullBodyIkGoals = m_FullBodyIkGoals,
+            FullBodyIkGoalContributions = m_FullBodyIkGoalContributions,
+            FullBodyIkContributionGoals = m_FullBodyIkContributionGoals,
             LinkedPoseCallControls = m_LinkedPoseCallControls,
             LinkedPoseActiveFragments = m_LinkedPoseActiveFragments
         };
@@ -1318,8 +1347,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 page.StateMachineControls = Allocate<CharacterPoseStateMachineNativeControl>(m_StateMachineControls.Length);
                 page.AnimationSlotControls = Allocate<CharacterAnimationSlotNativeControl>(m_AnimationSlotControls.Length);
                 page.RootOrientationWarpControls = AllocateClear<CharacterRootOrientationWarpNativeControl>(m_RootOrientationWarpControls.Length);
-                page.FullBodyIkGoalSets = AllocateClear<CharacterFullBodyIkGoalSetHeader>(m_FullBodyIkGoalSets.Length);
-                page.FullBodyIkGoals = AllocateClear<CharacterFullBodyIkGoal>(m_FullBodyIkGoals.Length);
+                page.FullBodyIkGoalContributions =
+                    AllocateClear<CharacterFullBodyIkGoalContributionHeader>(
+                        m_FullBodyIkGoalContributions.Length);
+                page.FullBodyIkContributionGoals = AllocateClear<CharacterFullBodyIkGoal>(
+                    m_FullBodyIkContributionGoals.Length);
                 page.LinkedPoseCallControls = Allocate<AnimationPoseGraphNativeLinkedPoseCallControl>(m_LinkedPoseCallControls.Length);
                 for (int i = 0; i < page.LinkedPoseCallControls.Length; i++)
                     page.LinkedPoseCallControls[i] = AnimationPoseGraphNativeLinkedPoseCallControl.Inactive;
@@ -1340,8 +1372,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_StateMachineControls = page.StateMachineControls;
             m_AnimationSlotControls = page.AnimationSlotControls;
             m_RootOrientationWarpControls = page.RootOrientationWarpControls;
-            m_FullBodyIkGoalSets = page.FullBodyIkGoalSets;
-            m_FullBodyIkGoals = page.FullBodyIkGoals;
+            m_FullBodyIkGoalContributions = page.FullBodyIkGoalContributions;
+            m_FullBodyIkContributionGoals = page.FullBodyIkContributionGoals;
             m_LinkedPoseCallControls = page.LinkedPoseCallControls;
             m_LinkedPoseActiveFragments = page.LinkedPoseActiveFragments;
         }
@@ -1352,8 +1384,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             DisposeArray(ref page.LinkedPoseActiveFragments);
             DisposeArray(ref page.LinkedPoseCallControls);
-            DisposeArray(ref page.FullBodyIkGoals);
-            DisposeArray(ref page.FullBodyIkGoalSets);
+            DisposeArray(ref page.FullBodyIkContributionGoals);
+            DisposeArray(ref page.FullBodyIkGoalContributions);
             DisposeArray(ref page.RootOrientationWarpControls);
             DisposeArray(ref page.AnimationSlotControls);
             DisposeArray(ref page.StateMachineControls);

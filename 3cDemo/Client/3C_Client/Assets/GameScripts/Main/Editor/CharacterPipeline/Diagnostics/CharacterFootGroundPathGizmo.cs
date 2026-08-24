@@ -93,7 +93,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Gizmos.DrawSphere(motion.OriginalSole, 0.025f);
             if (motion.Accepted)
             {
-                Color color = SupportColor(motion.SupportLockState, foot.Side);
+                Color color = SupportColor(
+                    motion.ConstraintState,
+                    motion.LockResponse,
+                    foot.Side);
                 Gizmos.color = color;
                 Gizmos.DrawSphere(motion.CorrectedSole, 0.035f);
                 Handles.color = color;
@@ -213,13 +216,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? new Color(0.1f, 0.8f, 1f)
                 : new Color(1f, 0.35f, 0.75f);
 
-        static Color SupportColor(CharacterFootSupportLockState state, CharacterFootSide side) =>
+        static Color SupportColor(
+            CharacterFootConstraintState state,
+            CharacterFootLockResponse response,
+            CharacterFootSide side) =>
             state switch
             {
-                CharacterFootSupportLockState.Acquiring => new Color(0.1f, 0.75f, 1f),
-                CharacterFootSupportLockState.Locked => new Color(0.2f, 1f, 0.25f),
-                CharacterFootSupportLockState.Sliding => new Color(1f, 0.8f, 0.1f),
-                CharacterFootSupportLockState.Releasing => new Color(0.85f, 0.35f, 1f),
+                CharacterFootConstraintState.Landing => new Color(0.1f, 0.75f, 1f),
+                CharacterFootConstraintState.Locked when response == CharacterFootLockResponse.Sliding =>
+                    new Color(1f, 0.8f, 0.1f),
+                CharacterFootConstraintState.Locked => new Color(0.2f, 1f, 0.25f),
+                CharacterFootConstraintState.Releasing => new Color(0.85f, 0.35f, 1f),
                 _ => FootColor(side)
             };
     }

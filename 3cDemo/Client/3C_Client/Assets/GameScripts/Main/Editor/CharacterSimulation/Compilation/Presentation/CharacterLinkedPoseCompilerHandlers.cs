@@ -40,13 +40,4 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 sourcePath,
                 "Linked Pose Call Group, Interface or Entry identity is missing.");
     }
-
-    internal sealed class CharacterEmptyFullBodyIkGoalsCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterEmptyFullBodyIkGoalsPayload>
-    {
-        public override CharacterPoseNodeKind Kind =>
-            CharacterPoseNodeKind.EmptyFullBodyIkGoals;
-        public override CharacterPoseOperationCode Code =>
-            CharacterPoseOperationCode.EmptyFullBodyIkGoals;
-    }
 }

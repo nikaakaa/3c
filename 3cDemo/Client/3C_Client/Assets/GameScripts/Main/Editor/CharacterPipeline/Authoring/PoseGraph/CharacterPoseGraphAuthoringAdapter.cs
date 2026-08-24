@@ -867,6 +867,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPosePortKind.PoseDiscontinuity => "pose.discontinuity",
             CharacterPosePortKind.ActionPlayback => "pose.action-playback",
             CharacterPosePortKind.FullBodyIkGoals => "component.full-body-ik-goals",
+            CharacterPosePortKind.FullBodyIkGoalContribution => "component.full-body-ik-goal-contribution",
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }
@@ -1254,6 +1255,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case CharacterPoseNodeKind.AnimationSlot:
                 case CharacterPoseNodeKind.ModifyBone:
                 case CharacterPoseNodeKind.FootPlacement:
+                case CharacterPoseNodeKind.FullBodyIkGoalAssembler:
                 case CharacterPoseNodeKind.FullBodyIK:
                 case CharacterPoseNodeKind.LocalToComponentPose:
                 case CharacterPoseNodeKind.ComponentToLocalPose:

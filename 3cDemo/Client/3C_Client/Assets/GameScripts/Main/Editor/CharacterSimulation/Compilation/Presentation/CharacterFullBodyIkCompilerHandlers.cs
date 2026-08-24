@@ -158,4 +158,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
     }
+
+    internal sealed class CharacterFullBodyIkGoalAssemblerCompilerHandler :
+        CharacterPoseCompilerHandler<CharacterFullBodyIkGoalAssemblerPayload>
+    {
+        public override CharacterPoseNodeKind Kind =>
+            CharacterPoseNodeKind.FullBodyIkGoalAssembler;
+        public override CharacterPoseOperationCode Code =>
+            CharacterPoseOperationCode.FullBodyIkGoalAssembler;
+
+        public override CharacterPoseNodePayload CreatePayload(
+            CharacterPoseAuthoringPayloadInput input) =>
+            new CharacterFullBodyIkGoalAssemblerPayload();
+    }
 }

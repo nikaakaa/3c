@@ -88,13 +88,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"reset={group.StateReset} completed={entry.Completed} " +
                         $"sources={entry.SourceDemandCount} " +
                         $"operations={group.ActiveCapacity.OperationCount}/{group.MaximumCapacity.OperationCount}";
-                    if (entry.GoalCompletionIdentity != 0)
-                    {
-                        details +=
-                            $" goals={entry.GoalAvailability}:{entry.GoalCount} " +
-                            $"rig={entry.GoalRigId}@{entry.GoalRigRevision} " +
-                            $"goalCompletion={entry.GoalCompletionIdentity}";
-                    }
                 }
                 return new GraphAuthoringRuntimeTraceProjection(
                     node.NodeId,

@@ -669,12 +669,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             int stageCount,
             int sourceDemandCount,
             ulong completionIdentity,
-            bool completed,
-            CharacterFullBodyIkGoalSetAvailability goalAvailability,
-            int goalCount,
-            string goalRigId,
-            string goalRigRevision,
-            ulong goalCompletionIdentity)
+            bool completed)
         {
             GroupId = groupId;
             InterfaceId = interfaceId;
@@ -692,11 +687,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             SourceDemandCount = sourceDemandCount;
             CompletionIdentity = completionIdentity;
             Completed = completed;
-            GoalAvailability = goalAvailability;
-            GoalCount = goalCount;
-            GoalRigId = goalRigId ?? string.Empty;
-            GoalRigRevision = goalRigRevision ?? string.Empty;
-            GoalCompletionIdentity = goalCompletionIdentity;
         }
 
         public LinkedPoseGroupId GroupId { get; }
@@ -715,11 +705,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public int SourceDemandCount { get; }
         public ulong CompletionIdentity { get; }
         public bool Completed { get; }
-        public CharacterFullBodyIkGoalSetAvailability GoalAvailability { get; }
-        public int GoalCount { get; }
-        public string GoalRigId { get; }
-        public string GoalRigRevision { get; }
-        public ulong GoalCompletionIdentity { get; }
     }
 
     internal sealed class AnimationFootPlacementRuntimeSnapshotPage
@@ -1253,12 +1238,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         {
             RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
             AnimationPoseWatchSnapshot watch = m_PoseWatches[watchIndex];
-            int count = watch.Availability == AnimationPoseWatchAvailability.Targets
-                ? watch.GoalSet.GoalCount
-                : 0;
+            int count = watch.Availability != AnimationPoseWatchAvailability.Targets
+                ? 0
+                : watch.GoalContribution.IsValid
+                    ? watch.GoalContribution.GoalCount
+                    : watch.GoalSet.GoalCount;
+            int offset = watch.GoalContribution.IsValid
+                ? watch.GoalContribution.GoalOffset
+                : watch.GoalSet.GoalOffset;
             return new AnimationReadOnlyBuffer<CharacterFullBodyIkGoal>(
                 m_PoseWatchFullBodyIkGoals,
-                watch.GoalSet.GoalOffset,
+                offset,
                 count,
                 m_Lease,
                 m_LeaseIdentity);

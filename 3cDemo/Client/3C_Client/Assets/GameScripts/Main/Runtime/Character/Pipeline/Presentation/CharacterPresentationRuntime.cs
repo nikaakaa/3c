@@ -87,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterMotionMatchingPresentationModule motionMatching,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding rigBinding,
+            CharacterFootPlacementModule footPlacement,
             bool ownsGraphClock)
         {
             m_ActorId = actorId.IsValid
@@ -162,6 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         animancer,
                         rigBinding,
                         bindings.Projection,
+                        footPlacement,
                         ownsGraphClock);
                 m_CapacityMetrics =
                     m_PoseRuntime.CreateCapacityMetrics(
@@ -202,6 +204,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_MotionMatching.Enabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_PoseRuntime.DiagnosticsInterest;
+        internal bool HasFootPlacement => m_PoseRuntime.HasFootPlacement;
+
+        internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
+            m_PoseRuntime.ResetFootPlacement(in reset);
+
+        internal void RetargetFootPlacement(ulong resetSequence) =>
+            m_PoseRuntime.RetargetFootPlacement(resetSequence);
         public AnimationPresentationRuntimeMetrics RuntimeMetrics =>
             new AnimationPresentationRuntimeMetrics(
                 in m_CapacityMetrics,
@@ -386,7 +395,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            CharacterFootPlacementRuntime footPlacement,
             RuntimeDiagnosticsContext diagnostics = null)
         {
             CharacterPresentationProgramParameterFrame parameterFrame =
@@ -401,7 +409,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in factFrame,
                 in parameterFrame,
                 linkedPose,
-                footPlacement,
                 diagnostics);
         }
 
@@ -430,7 +437,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in bodyFrame,
                     in factFrame,
                     linkedPose,
-                    null,
                     null);
             }
             finally
@@ -448,11 +454,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterPresentationFactFrame factFrame,
             in CharacterPresentationProgramParameterFrame parameterFrame,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            CharacterFootPlacementRuntime footPlacement,
             RuntimeDiagnosticsContext diagnostics = null)
         {
             RequirePresentable();
-            ApplyPendingTuning(presentationFrame, footPlacement);
+            ApplyPendingTuning(presentationFrame);
             if (linkedPose == null)
                 throw new ArgumentNullException(nameof(linkedPose));
             ValidateFrame(
@@ -483,6 +488,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationFrame,
                     latestSimulationTick,
                     publishStateDiagnostics,
+                    diagnosticsInterest,
                     linkedPose);
             }
             string frameStage = "ActionLifecycle";
@@ -600,7 +606,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationFrame,
                     in bodyFrame,
                     in factFrame,
-                    footPlacement,
                     in preparedPose,
                     m_EnterEvaluateBarrier);
                 AnimationPresentationFrameOutcome poseOutcome =
@@ -646,10 +651,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     CommitFrameTransaction(
                         transaction,
-                        linkedPose,
-                        footPlacement,
-                        presentationFrame,
-                        preparedPose.CompletionIdentity);
+                        linkedPose);
                     composedPose =
                         m_PoseRuntime.FinalizeCommittedFrame();
                 }
@@ -712,8 +714,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Exception discardFailure =
                         DiscardFrameTransaction(
                             transaction,
-                            linkedPose,
-                            footPlacement);
+                            linkedPose);
                     if (discardFailure != null)
                     {
                         throw new AggregateException(
@@ -724,8 +725,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 else
                 {
-                    if (footPlacement?.HasPendingFrame == true)
-                        footPlacement.DiscardPendingFrame();
+                    m_PoseRuntime.DiscardPoseConstraintsAfterBarrier();
                     MarkFaulted(transaction);
                     linkedPose.Discard();
                 }
@@ -755,8 +755,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         void ApplyPendingTuning(
-            ulong presentationFrame,
-            CharacterFootPlacementRuntime footPlacement)
+            ulong presentationFrame)
         {
             if (m_TuningBinding is null)
                 return;
@@ -771,15 +770,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     string error = m_PoseRuntime.ApplyTuning(
                         m_Bindings.Projection.TuningLayout,
                         block,
-                        resetOwnerState,
-                        footPlacement);
+                        resetOwnerState);
                     if (string.IsNullOrEmpty(error) || previous == null)
                         return error;
                     string rollbackError = m_PoseRuntime.ApplyTuning(
                         m_Bindings.Projection.TuningLayout,
                         previous,
-                        false,
-                        footPlacement);
+                        false);
                     return string.IsNullOrEmpty(rollbackError)
                         ? error
                         : $"{error} Rollback failed: {rollbackError}";
@@ -868,6 +865,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong presentationFrame,
             ulong bodyTick,
             bool captureDiagnostics,
+            AnimationPresentationDiagnosticsInterest diagnosticsInterest,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
             PresentationFrameWorkspaceLease workspaceLease = default;
@@ -909,6 +907,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 pose = m_PoseRuntime.BeginPendingFrame(
                     frameIdentity,
+                    presentationFrame,
+                    diagnosticsInterest,
                     linkedPose);
                 m_FrameTransaction.Begin(
                     frameIdentity,
@@ -1331,10 +1331,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void CommitFrameTransaction(
             AnimationPresentationFrameTransaction transaction,
-            CharacterLinkedPoseRuntimeSession linkedPose,
-            CharacterFootPlacementRuntime footPlacement,
-            ulong renderFrame,
-            ulong completionIdentity)
+            CharacterLinkedPoseRuntimeSession linkedPose)
         {
             if (transaction == null ||
                 !transaction.IsValid)
@@ -1358,15 +1355,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseRuntime.SealFrame(
                 transaction.PoseLease);
             linkedPose.Seal();
-            if (footPlacement?.HasPendingFrame == true)
-                footPlacement.SealFrame(renderFrame, completionIdentity);
             transaction.MarkSealed();
         }
 
         Exception DiscardFrameTransaction(
             AnimationPresentationFrameTransaction transaction,
-            CharacterLinkedPoseRuntimeSession linkedPose,
-            CharacterFootPlacementRuntime footPlacement)
+            CharacterLinkedPoseRuntimeSession linkedPose)
         {
             if (transaction == null ||
                 transaction.Closed)
@@ -1374,12 +1368,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return null;
             }
             Exception failure = null;
-            if (footPlacement?.HasPendingFrame == true)
-            {
-                DiscardStep(
-                    footPlacement.DiscardPendingFrame,
-                    ref failure);
-            }
             DiscardStep(
                 () => m_PoseRuntime.DiscardPendingFrame(
                     transaction.PoseLease),

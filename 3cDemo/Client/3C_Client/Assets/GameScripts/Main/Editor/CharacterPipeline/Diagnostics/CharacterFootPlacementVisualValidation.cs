@@ -231,7 +231,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!motion.Accepted)
                 return;
             Marker(motion.OriginalSole, path.ComponentUp, Color.white, 0.05f);
-            Marker(motion.CorrectedSole, path.ComponentUp, SupportColor(motion.SupportLockState), 0.065f);
+            Marker(
+                motion.CorrectedSole,
+                path.ComponentUp,
+                SupportColor(motion.ConstraintState, motion.LockResponse),
+                0.065f);
             if (motion.BaselineSample != default)
                 Line(motion.OriginalSole, motion.BaselineSample, new Color(0.2f, 1f, 0.25f, 0.8f));
             if (motion.EnvelopeSample != default)
@@ -343,13 +347,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             GL.Vertex(to);
         }
 
-        static Color SupportColor(CharacterFootSupportLockState state) =>
+        static Color SupportColor(
+            CharacterFootConstraintState state,
+            CharacterFootLockResponse response) =>
             state switch
             {
-                CharacterFootSupportLockState.Acquiring => new Color(0.1f, 0.75f, 1f, 1f),
-                CharacterFootSupportLockState.Locked => new Color(0.2f, 1f, 0.25f, 1f),
-                CharacterFootSupportLockState.Sliding => new Color(1f, 0.8f, 0.1f, 1f),
-                CharacterFootSupportLockState.Releasing => new Color(0.85f, 0.35f, 1f, 1f),
+                CharacterFootConstraintState.Landing => new Color(0.1f, 0.75f, 1f, 1f),
+                CharacterFootConstraintState.Locked when response == CharacterFootLockResponse.Sliding =>
+                    new Color(1f, 0.8f, 0.1f, 1f),
+                CharacterFootConstraintState.Locked => new Color(0.2f, 1f, 0.25f, 1f),
+                CharacterFootConstraintState.Releasing => new Color(0.85f, 0.35f, 1f, 1f),
                 _ => Color.white
             };
     }

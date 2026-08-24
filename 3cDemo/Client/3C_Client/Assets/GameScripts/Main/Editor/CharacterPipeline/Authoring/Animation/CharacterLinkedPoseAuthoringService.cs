@@ -544,27 +544,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     outputPort.PortId));
                 return;
             }
-            if (input.Kind != CharacterPosePortKind.ComponentPose ||
-                output.Kind != CharacterPosePortKind.FullBodyIkGoals)
-                return;
-            var emptyId = new PoseNodeId($"{entry.EntryId}.empty");
-            var empty = new CharacterTypedPoseNode(
-                emptyId,
-                "Empty Full Body IK Goals",
-                new CharacterEmptyFullBodyIkGoalsPayload());
-            nodes.Insert(1, empty);
-            edges.Add(new CharacterPoseEdge(
-                $"{entry.EntryId}.pose-input",
-                inputId,
-                inputPort.PortId,
-                emptyId,
-                new PosePortId("pose")));
-            edges.Add(new CharacterPoseEdge(
-                $"{entry.EntryId}.goals-output",
-                emptyId,
-                new PosePortId("goals"),
-                outputId,
-                outputPort.PortId));
         }
 
         static void ApplyProfile(

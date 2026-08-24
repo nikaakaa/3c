@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public static class CharacterPoseBoneIkGoalSource
     {
-        public static CharacterFullBodyIkGoalSetHeader Produce(
+        public static CharacterFullBodyIkGoalContributionHeader Produce(
             NativeSlice<AnimationLocalBonePose> componentPose,
             NativeSlice<CharacterPoseBoneIkGoalDescriptor> descriptors,
             NativeSlice<CharacterFullBodyIkGoal> goalOutput,
@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterFullBodyIkGoalSourceKind.PoseBone,
                     i);
             }
-            return new CharacterFullBodyIkGoalSetHeader(
+            return new CharacterFullBodyIkGoalContributionHeader(
                 frameSequence,
                 completionIdentity,
                 rigId,
@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 producerCallSiteIndex,
                 goalWorkspaceOffset,
                 descriptors.Length,
-                CharacterFullBodyIkGoalSetAvailability.Ready);
+                CharacterFullBodyIkGoalContributionAvailability.Ready);
         }
     }
 }

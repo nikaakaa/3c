@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPresentationPosePlan m_Program;
         readonly CharacterPoseGraphNativeProgram m_NativeProgram;
-        readonly CharacterFinalIkFullBodySolver[] m_FullBodyIkSolvers;
+        readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly AnimationPoseNativeWorkspace m_Workspace;
         readonly Page[] m_Pages;
         readonly Guid[] m_InterestOwnerIds = new Guid[InterestOwnerCapacity];
@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal AnimationPresentationRuntimeSnapshotPublisher(
             CharacterPresentationProjection projection,
             CharacterPoseGraphNativeProgram nativeProgram,
-            CharacterFinalIkFullBodySolver[] fullBodyIkSolvers,
+            CharacterPoseConstraintRuntime poseConstraints,
             in CharacterPoseGraphNativeBinding initialFrame,
             AnimationPoseNativeWorkspace workspace,
             int physicalSourceCapacity)
@@ -54,12 +54,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Program = projection.PosePlan ?? throw new ArgumentException("Animation Pose Program is missing.", nameof(projection));
             m_NativeProgram = nativeProgram ?? throw new ArgumentNullException(nameof(nativeProgram));
-            m_FullBodyIkSolvers = fullBodyIkSolvers ?? throw new ArgumentNullException(nameof(fullBodyIkSolvers));
+            m_PoseConstraints = poseConstraints ?? throw new ArgumentNullException(nameof(poseConstraints));
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Program.RequireValid();
             m_NativeProgram.RequireValid();
-            if (m_FullBodyIkSolvers.Length != m_Program.FullBodyIks.Count)
-                throw new ArgumentException("FullBodyIK diagnostics solver layout is inconsistent.", nameof(fullBodyIkSolvers));
+            if (m_PoseConstraints.FullBodyIkSolverCount != m_Program.FullBodyIks.Count)
+                throw new ArgumentException("FullBodyIK diagnostics solver layout is inconsistent.", nameof(poseConstraints));
             initialFrame.RequireValid();
             if (physicalSourceCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(physicalSourceCapacity));
@@ -243,25 +243,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     completed = frame.FrameCacheCompletedAt[operationIndex] == frame.CompletionIdentity;
                 }
 
-                CharacterFullBodyIkGoalSetAvailability goalAvailability =
-                    CharacterFullBodyIkGoalSetAvailability.Invalid;
-                int goalCount = 0;
-                string goalRigId = string.Empty;
-                string goalRigRevision = string.Empty;
-                ulong goalCompletionIdentity = 0;
-                int goalSetIndex = callOperation.OutputFullBodyIkGoalSetValueIndex;
-                if ((uint)goalSetIndex < (uint)m_NativeProgram.FullBodyIkGoalSets.Length)
-                {
-                    CharacterFullBodyIkGoalSetHeader header = m_NativeProgram.FullBodyIkGoalSets[goalSetIndex];
-                    if (header.IsValid)
-                    {
-                        goalAvailability = header.Availability;
-                        goalCount = header.GoalCount;
-                        goalRigId = header.RigId.ToString();
-                        goalRigRevision = header.RigRevision.ToString();
-                        goalCompletionIdentity = header.CompletionIdentity;
-                    }
-                }
                 page.LinkedPoseEntries[callIndex] = new AnimationLinkedPoseEntryRuntimeSnapshot(
                     call.GroupId,
                     call.InterfaceId,
@@ -278,12 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     fragment.StageCount,
                     fragment.SourceIndices.Count,
                     completionIdentity,
-                    completed,
-                    goalAvailability,
-                    goalCount,
-                    goalRigId,
-                    goalRigRevision,
-                    goalCompletionIdentity);
+                    completed);
             }
             page.LinkedPoseEntryCount = m_Program.LinkedPoseCalls.Count;
         }
@@ -921,6 +897,87 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 AnimationLinkedPoseEntryRuntimeSnapshot linkedPoseEntry =
                     FindLinkedPoseEntry(page, operation);
                 ulong completion = frame.FrameCacheCompletedAt[operation.Index];
+                if (operation.OutputFullBodyIkGoalContributionValueIndex >= 0)
+                {
+                    int contributionValueIndex =
+                        operation.OutputFullBodyIkGoalContributionValueIndex;
+                    AnimationFullBodyIkGoalContributionSnapshot contribution = default;
+                    AnimationPoseWatchAvailability goalAvailability =
+                        completion != frame.CompletionIdentity
+                            ? AnimationPoseWatchAvailability.NotCompleted
+                            : AnimationPoseWatchAvailability.Invalid;
+                    if ((uint)contributionValueIndex <
+                        (uint)m_NativeProgram.FullBodyIkGoalContributions.Length)
+                    {
+                        CharacterFullBodyIkGoalContributionHeader header =
+                            m_NativeProgram.FullBodyIkGoalContributions[
+                                contributionValueIndex];
+                        if (header.IsValid &&
+                            header.CompletionIdentity == completion &&
+                            header.ProducerOperationIndex == operation.Index &&
+                            header.GoalOffset <=
+                            m_NativeProgram.FullBodyIkContributionGoals.Length -
+                            header.GoalCount)
+                        {
+                            contribution =
+                                new AnimationFullBodyIkGoalContributionSnapshot(
+                                    in header,
+                                    goalOffset);
+                            if (header.Availability ==
+                                CharacterFullBodyIkGoalContributionAvailability.Ready)
+                            {
+                                for (int goalIndex = 0;
+                                     goalIndex < header.GoalCount;
+                                     goalIndex++)
+                                {
+                                    page.PoseWatchFullBodyIkGoals[
+                                            goalOffset + goalIndex] =
+                                        m_NativeProgram.FullBodyIkContributionGoals[
+                                            header.GoalOffset + goalIndex];
+                                }
+                                goalAvailability =
+                                    AnimationPoseWatchAvailability.Targets;
+                            }
+                            else
+                            {
+                                goalAvailability =
+                                    AnimationPoseWatchAvailability
+                                        .WorldContextUnavailable;
+                            }
+                        }
+                    }
+                    if (operation.Code == CharacterPoseOperationCode.FootPlacement &&
+                        footLandingPrediction.IsCompleted &&
+                        footLandingPrediction.CompletionIdentity == completion &&
+                        footLandingPrediction.FrameSequence ==
+                        contribution.FrameSequence)
+                    {
+                        page.PoseWatchFootLandingPredictions[watchIndex] =
+                            footLandingPrediction;
+                    }
+                    page.PoseWatches[watchIndex] = new AnimationPoseWatchSnapshot(
+                        identity,
+                        operation.Index,
+                        operation.Code,
+                        FindStageIndex(operation.Index),
+                        operation.ExecutionDomain,
+                        CharacterPoseSpace.None,
+                        linkedPoseEntry,
+                        contribution,
+                        default,
+                        poseOffset,
+                        boneCount,
+                        contributionOffset,
+                        0,
+                        goalAvailability,
+                        goalAvailability == AnimationPoseWatchAvailability.Invalid
+                            ? frame.PoseGraphInvalidReason[0]
+                            : AnimationPoseNativeInvalidReason.None,
+                        operation.Weight,
+                        0,
+                        completion);
+                    continue;
+                }
                 if (operation.OutputFullBodyIkGoalSetValueIndex >= 0)
                 {
                     int goalSetIndex = operation.OutputFullBodyIkGoalSetValueIndex;
@@ -929,32 +986,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         completion != frame.CompletionIdentity
                             ? AnimationPoseWatchAvailability.NotCompleted
                             : AnimationPoseWatchAvailability.Invalid;
-                    if ((uint)goalSetIndex < (uint)m_NativeProgram.FullBodyIkGoalSets.Length)
+                    if ((uint)goalSetIndex <
+                            (uint)m_Program.FullBodyIkGoalSetWorkspaceCount &&
+                        operation.Code ==
+                        CharacterPoseOperationCode.FullBodyIkGoalAssembler)
                     {
                         CharacterFullBodyIkGoalSetHeader header =
-                            m_NativeProgram.FullBodyIkGoalSets[goalSetIndex];
+                            m_PoseConstraints.GetCommittedAssembledGoalSet(0);
                         if (header.IsValid &&
                             header.CompletionIdentity == completion &&
-                            header.ProducerOperationIndex == operation.Index &&
-                            header.GoalOffset <=
-                                m_NativeProgram.FullBodyIkGoals.Length - header.GoalCount)
+                            header.ProducerOperationIndex == operation.Index)
                         {
                             goalSet = new AnimationFullBodyIkGoalSetSnapshot(
                                 in header,
                                 goalOffset);
-                            if (header.Availability == CharacterFullBodyIkGoalSetAvailability.Ready)
+                            for (int goalIndex = 0;
+                                 goalIndex < header.GoalCount;
+                                 goalIndex++)
                             {
-                                for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
-                                {
-                                    page.PoseWatchFullBodyIkGoals[goalOffset + goalIndex] =
-                                        m_NativeProgram.FullBodyIkGoals[header.GoalOffset + goalIndex];
-                                }
-                                goalAvailability = AnimationPoseWatchAvailability.Targets;
+                                page.PoseWatchFullBodyIkGoals[goalOffset + goalIndex] =
+                                    m_PoseConstraints.GetCommittedAssembledGoal(
+                                        0,
+                                        goalIndex);
                             }
-                            else
-                            {
-                                goalAvailability = AnimationPoseWatchAvailability.WorldContextUnavailable;
-                            }
+                            goalAvailability = AnimationPoseWatchAvailability.Targets;
                         }
                     }
                     if (operation.Code == CharacterPoseOperationCode.FootPlacement &&
@@ -973,6 +1028,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         operation.ExecutionDomain,
                         CharacterPoseSpace.None,
                         linkedPoseEntry,
+                        default,
                         goalSet,
                         poseOffset,
                         boneCount,
@@ -1035,23 +1091,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     }
                 }
                 if (operation.Code == CharacterPoseOperationCode.FullBodyIK &&
-                    (uint)operation.FullBodyIkIndex < (uint)m_FullBodyIkSolvers.Length)
+                    (uint)operation.FullBodyIkIndex <
+                    (uint)m_PoseConstraints.FullBodyIkSolverCount)
                 {
-                    CharacterFinalIkFullBodySolver solver = m_FullBodyIkSolvers[operation.FullBodyIkIndex];
-                    CharacterFullBodyIkSolverDiagnostics diagnostics = solver.Diagnostics;
+                    int solverIndex = operation.FullBodyIkIndex;
+                    CharacterFullBodyIkSolverDiagnostics diagnostics =
+                        m_PoseConstraints.GetSolverDiagnostics(solverIndex);
                     if (diagnostics.IsCompleted &&
                         diagnostics.InputCompletionIdentity == completion)
                     {
                         page.PoseWatchFullBodyIkSolvers[watchIndex] = diagnostics;
-                        for (int effectorIndex = 0; effectorIndex < solver.DiagnosticEffectorCount; effectorIndex++)
+                        for (int effectorIndex = 0;
+                             effectorIndex <
+                             m_PoseConstraints.GetSolverEffectorCount(solverIndex);
+                             effectorIndex++)
                         {
                             page.PoseWatchFullBodyIkEffectors[effectorOffset + effectorIndex] =
-                                solver.GetDiagnosticEffector(effectorIndex);
+                                m_PoseConstraints.GetSolverEffector(
+                                    solverIndex,
+                                    effectorIndex);
                         }
-                        for (int limbIndex = 0; limbIndex < solver.DiagnosticLimbCount; limbIndex++)
+                        for (int limbIndex = 0;
+                             limbIndex < m_PoseConstraints.GetSolverLimbCount(solverIndex);
+                             limbIndex++)
                         {
                             page.PoseWatchFullBodyIkLimbs[limbOffset + limbIndex] =
-                                solver.GetDiagnosticLimb(limbIndex);
+                                m_PoseConstraints.GetSolverLimb(
+                                    solverIndex,
+                                    limbIndex);
                         }
                     }
                 }
@@ -1063,6 +1130,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     operation.ExecutionDomain,
                     operation.OutputPoseSpace,
                     linkedPoseEntry,
+                    default,
                     default,
                     poseOffset,
                     boneCount,
@@ -1091,10 +1159,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CharacterFullBodyIkEffectorDiagnostics rightFoot = default;
             CharacterFullBodyIkLimbDiagnostics leftLeg = default;
             CharacterFullBodyIkLimbDiagnostics rightLeg = default;
-            for (int solverIndex = 0; solverIndex < m_FullBodyIkSolvers.Length; solverIndex++)
+            for (int solverIndex = 0;
+                 solverIndex < m_PoseConstraints.FullBodyIkSolverCount;
+                 solverIndex++)
             {
-                CharacterFinalIkFullBodySolver solver = m_FullBodyIkSolvers[solverIndex];
-                CharacterFullBodyIkSolverDiagnostics candidate = solver.Diagnostics;
+                CharacterFullBodyIkSolverDiagnostics candidate =
+                    m_PoseConstraints.GetSolverDiagnostics(solverIndex);
                 if (!candidate.IsCompleted ||
                     candidate.InputCompletionIdentity != page.CompletionIdentity ||
                     candidate.FrameSequence != footLandingPrediction.FrameSequence)
@@ -1102,9 +1172,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     continue;
                 }
                 bool containsFoot = false;
-                for (int effectorIndex = 0; effectorIndex < solver.DiagnosticEffectorCount; effectorIndex++)
+                for (int effectorIndex = 0;
+                     effectorIndex < m_PoseConstraints.GetSolverEffectorCount(solverIndex);
+                     effectorIndex++)
                 {
-                    CharacterFullBodyIkEffectorDiagnostics effector = solver.GetDiagnosticEffector(effectorIndex);
+                    CharacterFullBodyIkEffectorDiagnostics effector =
+                        m_PoseConstraints.GetSolverEffector(
+                            solverIndex,
+                            effectorIndex);
                     if (effector.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
                     {
                         pelvis = effector;
@@ -1123,9 +1198,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 }
                 if (!containsFoot)
                     continue;
-                for (int limbIndex = 0; limbIndex < solver.DiagnosticLimbCount; limbIndex++)
+                for (int limbIndex = 0;
+                     limbIndex < m_PoseConstraints.GetSolverLimbCount(solverIndex);
+                     limbIndex++)
                 {
-                    CharacterFullBodyIkLimbDiagnostics limb = solver.GetDiagnosticLimb(limbIndex);
+                    CharacterFullBodyIkLimbDiagnostics limb =
+                        m_PoseConstraints.GetSolverLimb(solverIndex, limbIndex);
                     if (limb.Limb == CharacterFullBodyIkLimbSlot.LeftLeg)
                         leftLeg = limb;
                     else if (limb.Limb == CharacterFullBodyIkLimbSlot.RightLeg)
@@ -1159,6 +1237,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CharacterPresentationPoseOperation operation = m_Program.Operations[i];
                 CharacterPresentationPoseSourceMapEntry source = m_Program.SourceMap[i];
                 if ((operation.OutputValueIndex < 0 &&
+                     operation.OutputFullBodyIkGoalContributionValueIndex < 0 &&
                      operation.OutputFullBodyIkGoalSetValueIndex < 0) ||
                     !string.Equals(source.GraphId, identity.GraphId, StringComparison.Ordinal) ||
                     !source.NodeId.Equals(identity.NodeId) ||
@@ -1236,6 +1315,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 -1,
                 default,
                 CharacterPoseSpace.None,
+                default,
                 default,
                 default,
                 poseOffset,

@@ -2074,6 +2074,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             "pose.discontinuity" => true,
             "pose.action-playback" => true,
             "component.full-body-ik-goals" => true,
+            "component.full-body-ik-goal-contribution" => true,
             _ => false
         };
 

@@ -62,33 +62,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] int m_Index = -1;
         [SerializeField] string m_NodeId = string.Empty;
-        [SerializeField] int m_GoalWorkspaceOffset = -1;
+        [SerializeField] int m_ContributionGoalWorkspaceOffset = -1;
         [SerializeField] CharacterPresentationPoseBoneIkGoalBindingDescriptor[] m_Bindings =
             Array.Empty<CharacterPresentationPoseBoneIkGoalBindingDescriptor>();
 
         public CharacterPresentationPoseBoneIkGoalsDescriptor(
             int index,
             PoseNodeId nodeId,
-            int goalWorkspaceOffset,
+            int contributionGoalWorkspaceOffset,
             CharacterPresentationPoseBoneIkGoalBindingDescriptor[] bindings)
         {
             m_Index = index;
             m_NodeId = nodeId.IsValid ? nodeId.Value : string.Empty;
-            m_GoalWorkspaceOffset = goalWorkspaceOffset;
+            m_ContributionGoalWorkspaceOffset = contributionGoalWorkspaceOffset;
             m_Bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
             RequireValid();
         }
 
         public int Index => m_Index;
         public PoseNodeId NodeId => new PoseNodeId(m_NodeId);
-        public int GoalWorkspaceOffset => m_GoalWorkspaceOffset;
+        public int ContributionGoalWorkspaceOffset =>
+            m_ContributionGoalWorkspaceOffset;
         public IReadOnlyList<CharacterPresentationPoseBoneIkGoalBindingDescriptor> Bindings =>
             m_Bindings ?? Array.Empty<CharacterPresentationPoseBoneIkGoalBindingDescriptor>();
         public int GoalCount => Bindings.Count;
 
         public void RequireValid()
         {
-            if (Index < 0 || !NodeId.IsValid || GoalWorkspaceOffset < 0 ||
+            if (Index < 0 || !NodeId.IsValid ||
+                ContributionGoalWorkspaceOffset < 0 ||
                 GoalCount <= 0 || GoalCount > CharacterFullBodyIkGoalSetHeader.MaximumGoalCount)
             {
                 throw new InvalidOperationException("Pose Bone IK Goals descriptor is invalid.");
@@ -118,14 +120,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterFootPlacementRigCalibration m_Calibration;
         [SerializeField] string m_CalibrationId = string.Empty;
         [SerializeField] string m_CalibrationRevision = string.Empty;
-        [SerializeField] int m_GoalWorkspaceOffset = -1;
+        [SerializeField] int m_ContributionGoalWorkspaceOffset = -1;
 
         public CharacterPresentationFootPlacementDescriptor(
             int index,
             PoseNodeId nodeId,
             CharacterFootPlacementProfile profile,
             CharacterFootPlacementRigCalibration calibration,
-            int goalWorkspaceOffset)
+            int contributionGoalWorkspaceOffset)
         {
             m_Index = index;
             m_NodeId = nodeId.IsValid ? nodeId.Value : string.Empty;
@@ -133,7 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Calibration = calibration ? calibration : throw new ArgumentNullException(nameof(calibration));
             m_CalibrationId = calibration.CalibrationId.Value;
             m_CalibrationRevision = calibration.ContentRevision;
-            m_GoalWorkspaceOffset = goalWorkspaceOffset;
+            m_ContributionGoalWorkspaceOffset = contributionGoalWorkspaceOffset;
             RequireValid(calibration.RigId, calibration.RigRevision);
         }
 
@@ -143,11 +145,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterFootPlacementRigCalibration Calibration => m_Calibration;
         public string CalibrationId => m_CalibrationId ?? string.Empty;
         public string CalibrationRevision => m_CalibrationRevision ?? string.Empty;
-        public int GoalWorkspaceOffset => m_GoalWorkspaceOffset;
+        public int ContributionGoalWorkspaceOffset =>
+            m_ContributionGoalWorkspaceOffset;
 
         public void RequireValid(string rigId, string rigRevision)
         {
-            if (Index < 0 || !NodeId.IsValid || GoalWorkspaceOffset < 0 || !Profile || !Calibration)
+            if (Index < 0 || !NodeId.IsValid ||
+                ContributionGoalWorkspaceOffset < 0 || !Profile || !Calibration)
                 throw new InvalidOperationException("Foot Placement descriptor is invalid.");
             Profile.RequireValid();
             Calibration.RequireValid();

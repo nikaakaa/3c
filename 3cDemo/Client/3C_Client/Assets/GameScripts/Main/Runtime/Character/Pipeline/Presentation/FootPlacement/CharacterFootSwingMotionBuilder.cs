@@ -4,6 +4,129 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    public enum CharacterFootConstraintState : byte
+    {
+        Swing = 0,
+        Landing = 1,
+        Locked = 2,
+        Releasing = 3,
+        UnlockedSupport = 4
+    }
+
+    public enum CharacterFootLockResponse : byte
+    {
+        None = 0,
+        FullAnchor = 1,
+        Sliding = 2
+    }
+
+    public enum CharacterFootSupportEligibility : byte
+    {
+        None = 0,
+        RetainOnly = 1,
+        AcquireAndRetain = 2
+    }
+
+    internal enum CharacterFootResolvedOutcome : byte
+    {
+        Ready = 1
+    }
+
+    internal readonly struct CharacterFootContactReference
+    {
+        internal CharacterFootContactReference(
+            ulong eventIdentity,
+            Vector3 point)
+        {
+            EventIdentity = eventIdentity;
+            Point = point;
+            IsAvailable = eventIdentity != 0;
+        }
+
+        internal bool IsAvailable { get; }
+        internal ulong EventIdentity { get; }
+        internal Vector3 Point { get; }
+    }
+
+    internal readonly struct CharacterFootPelvisReachReference
+    {
+        internal CharacterFootPelvisReachReference(
+            ulong eventIdentity,
+            Vector3 point)
+        {
+            EventIdentity = eventIdentity;
+            Point = point;
+            IsAvailable = eventIdentity != 0;
+        }
+
+        internal bool IsAvailable { get; }
+        internal ulong EventIdentity { get; }
+        internal Vector3 Point { get; }
+    }
+
+    internal readonly struct CharacterResolvedFootResult
+    {
+        internal CharacterResolvedFootResult(
+            CharacterFootSide side,
+            Vector3 finalSole,
+            Vector3 finalAnkle,
+            Vector3 effectiveCorrection,
+            float goalWeight,
+            in CharacterFootContactReference contactReference,
+            float contactOwnership,
+            CharacterFootSupportEligibility supportEligibility,
+            float supportWeight,
+            float supportIntentWeight,
+            float supportHorizontalError,
+            ulong supportEventIdentity,
+            in CharacterFootPelvisReachReference pelvisReachReference)
+        {
+            Side = side;
+            FinalSole = finalSole;
+            FinalAnkle = finalAnkle;
+            EffectiveCorrection = effectiveCorrection;
+            GoalWeight = goalWeight;
+            ContactReference = contactReference;
+            ContactOwnership = contactOwnership;
+            SupportEligibility = supportEligibility;
+            SupportWeight = supportWeight;
+            SupportIntentWeight = supportIntentWeight;
+            SupportHorizontalError = supportHorizontalError;
+            SupportEventIdentity = supportEventIdentity;
+            PelvisReachReference = pelvisReachReference;
+            Outcome = CharacterFootResolvedOutcome.Ready;
+        }
+
+        internal CharacterFootSide Side { get; }
+        internal Vector3 FinalSole { get; }
+        internal Vector3 FinalAnkle { get; }
+        internal Vector3 EffectiveCorrection { get; }
+        internal float GoalWeight { get; }
+        internal CharacterFootContactReference ContactReference { get; }
+        internal float ContactOwnership { get; }
+        internal CharacterFootSupportEligibility SupportEligibility { get; }
+        internal float SupportWeight { get; }
+        internal float SupportIntentWeight { get; }
+        internal float SupportHorizontalError { get; }
+        internal ulong SupportEventIdentity { get; }
+        internal CharacterFootPelvisReachReference PelvisReachReference { get; }
+        internal CharacterFootResolvedOutcome Outcome { get; }
+    }
+
+    internal readonly struct CharacterResolvedFootPair
+    {
+        internal CharacterResolvedFootPair(
+            in CharacterResolvedFootResult left,
+            in CharacterResolvedFootResult right)
+        {
+            Left = left;
+            Right = right;
+        }
+
+        internal CharacterResolvedFootResult Left { get; }
+        internal CharacterResolvedFootResult Right { get; }
+    }
+
     public enum CharacterFootSwingMotionState : byte
     {
         None = 0,
@@ -51,9 +174,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 correctedAnkle,
             float positionWeight,
             float rotationWeight,
-            CharacterFootSupportLockState supportLockState = CharacterFootSupportLockState.None,
+            CharacterFootConstraintState constraintState = CharacterFootConstraintState.Swing,
+            CharacterFootLockResponse lockResponse = CharacterFootLockResponse.None,
             float supportHorizontalError = 0f,
-            float supportConstraintWeight = 0f,
+            float contactOwnership = 0f,
             float supportWeight = 0f,
             Vector3 supportContactAnchor = default,
             float plantConfidence = 0f,
@@ -76,9 +200,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CorrectedAnkle = correctedAnkle;
             PositionWeight = positionWeight;
             RotationWeight = rotationWeight;
-            SupportLockState = supportLockState;
+            ConstraintState = constraintState;
+            LockResponse = lockResponse;
             SupportHorizontalError = supportHorizontalError;
-            SupportConstraintWeight = supportConstraintWeight;
+            ContactOwnership = contactOwnership;
             SupportWeight = supportWeight;
             SupportContactAnchor = supportContactAnchor;
             PlantConfidence = plantConfidence;
@@ -102,9 +227,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 CorrectedAnkle { get; }
         public float PositionWeight { get; }
         public float RotationWeight { get; }
-        public CharacterFootSupportLockState SupportLockState { get; }
+        public CharacterFootConstraintState ConstraintState { get; }
+        public CharacterFootLockResponse LockResponse { get; }
         public float SupportHorizontalError { get; }
-        public float SupportConstraintWeight { get; }
+        public float ContactOwnership { get; }
         public float SupportWeight { get; }
         public Vector3 SupportContactAnchor { get; }
         public float PlantConfidence { get; }
@@ -131,22 +257,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CorrectedAnkle,
                 PositionWeight,
                 RotationWeight,
-                SupportLockState,
+                ConstraintState,
+                LockResponse,
                 SupportHorizontalError,
-                SupportConstraintWeight,
+                ContactOwnership,
                 SupportWeight,
                 SupportContactAnchor,
                 plantConfidence,
                 DesiredCorrection);
-    }
-
-    public enum CharacterFootSupportLockState : byte
-    {
-        None = 0,
-        Acquiring = 1,
-        Locked = 2,
-        Sliding = 3,
-        Releasing = 4
     }
 
     internal static class CharacterFootSwingMotionBuilder

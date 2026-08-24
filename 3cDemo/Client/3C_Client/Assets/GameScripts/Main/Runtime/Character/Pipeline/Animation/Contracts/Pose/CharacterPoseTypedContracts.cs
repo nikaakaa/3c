@@ -62,7 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable] public sealed class CharacterOutputPosePayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.OutputPose; }
     [Serializable] public sealed class CharacterLocalToComponentPosePayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.LocalToComponentPose; }
     [Serializable] public sealed class CharacterComponentToLocalPosePayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.ComponentToLocalPose; }
-    [Serializable] public sealed class CharacterEmptyFullBodyIkGoalsPayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.EmptyFullBodyIkGoals; }
+    [Serializable] public sealed class CharacterFullBodyIkGoalAssemblerPayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FullBodyIkGoalAssembler; }
 
     [Serializable]
     public sealed class CharacterLinkedPoseCallPayload : CharacterPoseNodePayload

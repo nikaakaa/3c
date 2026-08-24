@@ -178,10 +178,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         PoseBoneIKGoals = 29,
         FullBodyIK = 30,
         LinkedPoseCall = 31,
-        EmptyFullBodyIkGoals = 32,
         MotionMatchingPose = 33,
         PoseHistoryCollector = 34,
-        EntryPoseInput = 35
+        EntryPoseInput = 35,
+        FullBodyIkGoalAssembler = 36
     }
 
     public enum CharacterPosePortKind : byte
@@ -195,7 +195,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         PoseHistory = 10,
         Trajectory = 11,
         PresentationFacts = 12,
-        MotionMatchingBinding = 13
+        MotionMatchingBinding = 13,
+        FullBodyIkGoalContribution = 14
     }
 
     public enum CharacterPoseSpace : byte

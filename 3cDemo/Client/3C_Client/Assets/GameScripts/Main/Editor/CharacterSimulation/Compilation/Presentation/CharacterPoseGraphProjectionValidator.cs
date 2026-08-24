@@ -1061,7 +1061,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var edgeIds =
                 new HashSet<string>(StringComparer.Ordinal);
             var componentPoseProducers = new Dictionary<PoseNodeId, PoseNodeId>();
-            var goalProducers = new Dictionary<PoseNodeId, List<PoseNodeId>>();
+            var contributionProducers =
+                new Dictionary<PoseNodeId, List<PoseNodeId>>();
+            var goalSetProducers =
+                new Dictionary<PoseNodeId, List<PoseNodeId>>();
             var goalConsumerCounts = new Dictionary<PoseNodeId, int>();
             for (int i = 0; i < graph.Edges.Count; i++)
             {
@@ -1113,35 +1116,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Pose Edge '{edge.EdgeId}' connects '{source.Kind}' to '{target.Kind}'.",
                         graph.GraphId);
                 }
-                else if (source.Kind == CharacterPosePortKind.FullBodyIkGoals)
+                else if (source.Kind ==
+                         CharacterPosePortKind.FullBodyIkGoalContribution)
                 {
                     bool sourceAllowed = sourceNode.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
-                                         sourceNode.Kind == CharacterPoseNodeKind.FootPlacement ||
-                                         sourceNode.Kind == CharacterPoseNodeKind.GraphInput ||
-                                         sourceNode.Kind == CharacterPoseNodeKind.PoseSubgraph;
-                    bool targetAllowed = targetNode.Kind == CharacterPoseNodeKind.FullBodyIK ||
-                                         targetNode.Kind == CharacterPoseNodeKind.GraphOutput ||
-                                         targetNode.Kind == CharacterPoseNodeKind.PoseSubgraph;
+                                         sourceNode.Kind == CharacterPoseNodeKind.FootPlacement;
+                    bool targetAllowed = targetNode.Kind ==
+                                         CharacterPoseNodeKind.FullBodyIkGoalAssembler;
                     if (!sourceAllowed || !targetAllowed)
                     {
                         Report(
                             report,
                             CharacterPoseGraphValidationCode.FullBodyIkInvalid,
-                            $"Pose Edge '{edge.EdgeId}' connects Full Body IK Goals outside a Goal Source, Full Body IK or an explicitly typed Subgraph boundary.",
+                            $"Pose Edge '{edge.EdgeId}' must connect a Goal Contribution Source to the unique Goal Assembler.",
                             graph.GraphId,
                             edge.TargetNodeId,
                             edge.TargetPortId);
                     }
                     else
                     {
-                        if (sourceNode.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
-                            sourceNode.Kind == CharacterPoseNodeKind.FootPlacement)
-                        {
-                            goalConsumerCounts.TryGetValue(edge.SourceNodeId, out int count);
-                            goalConsumerCounts[edge.SourceNodeId] = count + 1;
-                        }
-                        if (targetNode.Kind == CharacterPoseNodeKind.FullBodyIK)
-                            Add(goalProducers, edge.TargetNodeId, edge.SourceNodeId);
+                        goalConsumerCounts.TryGetValue(edge.SourceNodeId, out int count);
+                        goalConsumerCounts[edge.SourceNodeId] = count + 1;
+                        Add(contributionProducers, edge.TargetNodeId, edge.SourceNodeId);
+                    }
+                }
+                else if (source.Kind == CharacterPosePortKind.FullBodyIkGoals)
+                {
+                    bool sourceAllowed = sourceNode.Kind ==
+                                         CharacterPoseNodeKind.FullBodyIkGoalAssembler;
+                    bool targetAllowed = targetNode.Kind ==
+                                         CharacterPoseNodeKind.FullBodyIK;
+                    if (!sourceAllowed || !targetAllowed)
+                    {
+                        Report(
+                            report,
+                            CharacterPoseGraphValidationCode.FullBodyIkInvalid,
+                            $"Pose Edge '{edge.EdgeId}' must connect the unique Goal Assembler to Full Body IK.",
+                            graph.GraphId,
+                            edge.TargetNodeId,
+                            edge.TargetPortId);
+                    }
+                    else
+                    {
+                        goalConsumerCounts.TryGetValue(edge.SourceNodeId, out int count);
+                        goalConsumerCounts[edge.SourceNodeId] = count + 1;
+                        Add(goalSetProducers, edge.TargetNodeId, edge.SourceNodeId);
                     }
                 }
                 else if (source.Kind == CharacterPosePortKind.ComponentPose &&
@@ -1202,7 +1221,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 graph,
                 nodes,
                 componentPoseProducers,
-                goalProducers,
+                contributionProducers,
+                goalSetProducers,
                 goalConsumerCounts,
                 requireFullBodyIk,
                 report);
@@ -1224,12 +1244,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterTypedPoseGraph graph,
             IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
             IReadOnlyDictionary<PoseNodeId, PoseNodeId> componentPoseProducers,
-            IReadOnlyDictionary<PoseNodeId, List<PoseNodeId>> goalProducers,
+            IReadOnlyDictionary<PoseNodeId, List<PoseNodeId>> contributionProducers,
+            IReadOnlyDictionary<PoseNodeId, List<PoseNodeId>> goalSetProducers,
             IReadOnlyDictionary<PoseNodeId, int> goalConsumerCounts,
             bool requireFullBodyIk,
             CharacterPoseGraphValidationReport report)
         {
             int solverCount = 0;
+            int assemblerCount = 0;
             foreach (CharacterTypedPoseNode node in nodes.Values)
             {
                 if (node.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
@@ -1249,21 +1271,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                     continue;
                 }
+                if (node.Kind == CharacterPoseNodeKind.FullBodyIkGoalAssembler)
+                {
+                    assemblerCount++;
+                    contributionProducers.TryGetValue(
+                        node.NodeId,
+                        out List<PoseNodeId> contributions);
+                    goalConsumerCounts.TryGetValue(node.NodeId, out int consumerCount);
+                    if (consumerCount != 1)
+                    {
+                        Report(
+                            report,
+                            CharacterPoseGraphValidationCode.FullBodyIkInvalid,
+                            $"Goal Assembler '{node.NodeId}' requires exactly one Full Body IK consumer.",
+                            graph.GraphId,
+                            node.NodeId);
+                    }
+                    continue;
+                }
                 if (node.Kind != CharacterPoseNodeKind.FullBodyIK)
                     continue;
                 solverCount++;
                 if (!componentPoseProducers.TryGetValue(node.NodeId, out PoseNodeId poseProducer) ||
-                    !goalProducers.TryGetValue(node.NodeId, out List<PoseNodeId> sources) ||
-                    sources.Count == 0)
+                    !goalSetProducers.TryGetValue(node.NodeId, out List<PoseNodeId> assemblers) ||
+                    assemblers.Count != 1 ||
+                    !nodes.TryGetValue(assemblers[0], out CharacterTypedPoseNode assembler) ||
+                    assembler.Kind != CharacterPoseNodeKind.FullBodyIkGoalAssembler)
                 {
                     Report(
                         report,
                         CharacterPoseGraphValidationCode.FullBodyIkInvalid,
-                        $"Full Body IK '{node.NodeId}' requires one Component Pose and one or more Goal Sets.",
+                        $"Full Body IK '{node.NodeId}' requires one Component Pose and the unique Goal Assembler output.",
                         graph.GraphId,
                         node.NodeId);
                     continue;
                 }
+                if (!contributionProducers.TryGetValue(
+                        assembler.NodeId,
+                        out List<PoseNodeId> sources))
+                    continue;
                 for (int i = 0; i < sources.Count; i++)
                 {
                     PoseNodeId source = sources[i];
@@ -1289,6 +1335,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     report,
                     CharacterPoseGraphValidationCode.FullBodyIkInvalid,
                     $"Root Pose Graph '{graph.GraphId}' requires exactly one Full Body IK node.",
+                    graph.GraphId);
+            }
+            if (requireFullBodyIk && assemblerCount != 1)
+            {
+                Report(
+                    report,
+                    CharacterPoseGraphValidationCode.FullBodyIkInvalid,
+                    $"Root Pose Graph '{graph.GraphId}' requires exactly one Goal Assembler node.",
                     graph.GraphId);
             }
         }

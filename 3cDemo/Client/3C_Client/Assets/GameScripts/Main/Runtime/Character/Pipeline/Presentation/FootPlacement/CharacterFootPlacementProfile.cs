@@ -287,7 +287,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireValid();
         }
 
-        internal CharacterFootPlacementRuntimeSettings BuildSettings(
+        internal CharacterFootPlacementModuleSettings BuildSettings(
             CharacterPresentationProjection projection,
             CharacterFootPlacementPoseRig rig)
         {
@@ -302,7 +302,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException(
                     "Foot Placement Profile build Rig identity is stale.");
             }
-            return new CharacterFootPlacementRuntimeSettings(
+            return new CharacterFootPlacementModuleSettings(
                 ProfileId,
                 Revision,
                 projection.PosePlan.PlanHash,
@@ -323,9 +323,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 
-    internal sealed class CharacterFootPlacementRuntimeSettings
+    internal sealed class CharacterFootPlacementModuleSettings
     {
-        internal CharacterFootPlacementRuntimeSettings(
+        internal CharacterFootPlacementModuleSettings(
             string profileId,
             string profileRevision,
             string posePlanHash,

@@ -576,6 +576,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     footPlacement,
                     fullBodyIkSolvers,
                     finalWriter,
+                    poseProgram.FullBodyIkGoalContributionCount,
+                    poseProgram.FullBodyIkContributionGoalCount,
                     projection.Rig.RigId,
                     projection.Rig.RigRevision);
                 diagnosticsPublisher = new AnimationPresentationRuntimeSnapshotPublisher(
@@ -1049,9 +1051,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             for (int i = 0; i < m_DirectPlayers.Length; i++)
                 m_DirectPlayers[i].CommitFrame();
             m_PoseStateSources.CommitFrame();
-            m_PoseConstraints.SealFrame(
-                lease.FrameIdentity,
-                m_PendingCompletedFrame.CompletionIdentity);
+            m_PoseConstraints.SealFrame();
             m_LastCompletedFrame = m_PendingCompletedFrame;
             m_HasCompletedFrame = true;
             m_PendingCompletedFrame = default;
@@ -1655,6 +1655,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                     m_PoseConstraints.PhysicalWriteDiagnostics;
+                ref readonly CharacterFootLandingPredictionDiagnostics footDiagnostics =
+                    ref m_PoseConstraints.CommittedFootDiagnostics.Value;
+                CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
+                    m_PoseConstraints.GetSolverDiagnostics(0);
+                if (m_PoseConstraints.CommittedBankIdentity == 0 ||
+                    footDiagnostics.FrameSequence !=
+                    m_PoseConstraints.CommittedRenderFrame ||
+                    footDiagnostics.CompletionIdentity !=
+                    m_LastCompletedFrame.CompletionIdentity ||
+                    solverDiagnostics.OutputCompletionIdentity !=
+                    m_LastCompletedFrame.CompletionIdentity ||
+                    !physicalWrite.IsAvailable ||
+                    physicalWrite.CompletionIdentity !=
+                    m_LastCompletedFrame.CompletionIdentity)
+                {
+                    throw new InvalidOperationException(
+                        "Animation diagnostics Pose Constraint Bank lineage is inconsistent.");
+                }
                 m_DiagnosticsPublisher.BeginFrame(
                     in m_LastCompletedFrame,
                     in finalRead,
@@ -1665,7 +1683,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PhysicalSources,
                     m_RootOrientationWarps,
                     linkedPose,
-                    in m_PoseConstraints.CommittedFootDiagnostics.Value,
+                    in footDiagnostics,
                     in physicalWrite,
                     interest);
             }
@@ -2574,10 +2592,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     {
                         AnimationPoseGraphNativeStage stage =
                             m_PosePlan.Stages[stageIndex];
+                        CharacterPoseWorldAwareStageInput worldInput = default;
                         if (stage.ExecutionDomain ==
                             CharacterPoseExecutionDomain.WorldAwareValue)
                         {
-                            PrepareWorldAwareStage(
+                            worldInput = BuildWorldAwareStageInput(
                                 actorId,
                                 renderFrame,
                                 presentationDeltaSeconds,
@@ -2588,7 +2607,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         }
                         if (!poseExecutor.ExecuteStage(
                                 stageIndex,
-                                presentationDeltaSeconds))
+                                presentationDeltaSeconds,
+                                in worldInput))
                             break;
                     }
                     poseExecutor.CompleteStagedEvaluation();
@@ -2597,6 +2617,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             using (FinalWriteMarker.Auto())
             {
+                if (finalRead.Availability[0] == AnimationPoseAvailability.Pose)
+                {
+                    m_PoseConstraints.ValidateCompletedFrameBeforeWrite(
+                        m_ActiveFrameLease.FrameIdentity,
+                        renderFrame,
+                        completionIdentity);
+                }
                 m_PoseConstraints.WritePhysicalPose(
                     in finalRead,
                     hasCommittedFinal,
@@ -2649,7 +2676,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        void PrepareWorldAwareStage(
+        CharacterPoseWorldAwareStageInput BuildWorldAwareStageInput(
             ActorId actorId,
             ulong renderFrame,
             float presentationDeltaSeconds,
@@ -2658,7 +2685,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong completionIdentity,
             in AnimationPoseGraphNativeStage stage)
         {
-            bool preparedAny = false;
+            CharacterPoseWorldAwareStageInput result = default;
             for (int operationIndex = stage.OperationStart;
                  operationIndex < stage.OperationStart +
                  stage.OperationCount;
@@ -2669,7 +2696,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 switch (operation.Code)
                 {
                     case CharacterPoseOperationCode.FootPlacement:
-                        PrepareFootPlacement(
+                        if (result.HasFootPlacement)
+                        {
+                            throw new InvalidOperationException(
+                                "World-Aware Pose stage contains multiple Foot Placement operations.");
+                        }
+                        result = BuildFootPlacementInput(
                             actorId,
                             renderFrame,
                             presentationDeltaSeconds,
@@ -2677,18 +2709,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             in factFrame,
                             completionIdentity,
                             in operation);
-                        preparedAny = true;
                         break;
                 }
             }
-            if (!preparedAny)
+            if (!result.HasFootPlacement)
             {
                 throw new InvalidOperationException(
                     "World-Aware Pose stage has no supported planner operation.");
             }
+            return result;
         }
 
-        void PrepareFootPlacement(
+        CharacterPoseWorldAwareStageInput BuildFootPlacementInput(
             ActorId actorId,
             ulong renderFrame,
             float presentationDeltaSeconds,
@@ -2699,60 +2731,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             CharacterPresentationFootPlacementDescriptor descriptor =
                 m_Projection.PosePlan.FootPlacements[operation.FootPlacementIndex];
-            CharacterFullBodyIkGoalContributionHeader contribution;
             if (!m_PoseConstraints.HasFootPlacement)
             {
-                contribution = new CharacterFullBodyIkGoalContributionHeader(
-                    renderFrame,
-                    completionIdentity,
-                    new FixedString64Bytes(m_Projection.PosePlan.RigId),
-                    new FixedString64Bytes(m_Projection.PosePlan.RigRevision),
+                return new CharacterPoseWorldAwareStageInput(
                     operation.Index,
-                    operation.FrameCacheIndex,
-                    descriptor.ContributionGoalWorkspaceOffset,
-                    0,
-                    CharacterFullBodyIkGoalContributionAvailability.WorldContextUnavailable);
+                    descriptor.ContributionGoalWorkspaceOffset);
             }
-            else
-            {
-                AnimationPoseValueNativeReadBinding inputBinding =
-                    m_Workspace.RequirePoseValueReadBinding(
-                        operation.InputValueIndexA,
-                        completionIdentity);
-                int contributionCount =
-                    m_FramePublisher.ResolveContributions(
-                        in inputBinding,
-                        m_PhysicalSources,
-                        m_FootPlacementContributions);
-                var input = new CharacterFootPlacementPoseInput(
-                    m_Projection.PosePlan.PlanHash,
+            AnimationPoseValueNativeReadBinding inputBinding =
+                m_Workspace.RequirePoseValueReadBinding(
+                    operation.InputValueIndexA,
+                    completionIdentity);
+            int contributionCount =
+                m_FramePublisher.ResolveContributions(
                     in inputBinding,
-                    m_FootPlacementContributions,
-                    contributionCount);
-                var planningFrame =
-                    new CharacterFootPlacementFrameInput(
-                        actorId,
-                        renderFrame,
-                        presentationDeltaSeconds,
-                        bodyFrame,
-                        in factFrame,
-                        in input);
-                var goalOutput = new Unity.Collections.NativeSlice<CharacterFullBodyIkGoal>(
-                    m_PosePlan.FullBodyIkContributionGoals,
-                    descriptor.ContributionGoalWorkspaceOffset,
-                    CharacterPresentationFootPlacementDescriptor.GoalCount);
-                contribution = m_PoseConstraints.PrepareFootPlacement(
-                    in planningFrame,
-                    goalOutput,
-                    descriptor.ContributionGoalWorkspaceOffset,
-                    operation.Index,
-                    operation.FrameCacheIndex,
-                    operation.ParameterIndex);
+                    m_PhysicalSources,
+                    m_FootPlacementContributions);
+            var input = new CharacterFootPlacementPoseInput(
+                m_Projection.PosePlan.PlanHash,
+                in inputBinding,
+                m_FootPlacementContributions,
+                contributionCount);
+            if ((uint)operation.ParameterIndex >=
+                    (uint)inputBinding.PoseParameters.Length ||
+                inputBinding.PoseParameterAvailability[operation.ParameterIndex] == 0 ||
+                !float.IsFinite(inputBinding.PoseParameters[operation.ParameterIndex]))
+            {
+                throw new InvalidOperationException(
+                    "Foot Placement parameter input is unavailable.");
             }
-            NativeArray<CharacterFullBodyIkGoalContributionHeader> contributions =
-                m_PosePlan.FullBodyIkGoalContributions;
-            contributions[operation.OutputFullBodyIkGoalContributionValueIndex] =
-                contribution;
+            float footPlacementWeight =
+                inputBinding.PoseParameters[operation.ParameterIndex];
+            var planningFrame = new CharacterFootPlacementFrameInput(
+                actorId,
+                renderFrame,
+                presentationDeltaSeconds,
+                footPlacementWeight,
+                bodyFrame,
+                in factFrame,
+                in input);
+            return new CharacterPoseWorldAwareStageInput(
+                operation.Index,
+                descriptor.ContributionGoalWorkspaceOffset,
+                in planningFrame);
         }
 
         private bool TryCopyCompletedPlayerPose(
@@ -4694,491 +4714,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(PosePlanExecutionRuntime));
-        }
-    }
-}
-
-namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
-{
-    internal sealed class CharacterPoseConstraintRuntime : IDisposable
-    {
-        sealed class Bank
-        {
-            internal Bank(
-                int solverCount,
-                CharacterFootPlacementModule footPlacement)
-            {
-                SolverOutcomes = new CharacterFullBodyIkResult[solverCount];
-                BendHistories = new CharacterFullBodyIkBendHistory[solverCount];
-                GoalSets = new NativeArray<CharacterFullBodyIkGoalSetHeader>(
-                    1,
-                    Allocator.Persistent,
-                    NativeArrayOptions.ClearMemory);
-                Goals = new NativeArray<CharacterFullBodyIkGoal>(
-                    CharacterFullBodyIkGoalSetHeader.MaximumGoalCount,
-                    Allocator.Persistent,
-                    NativeArrayOptions.ClearMemory);
-                GoalSetIndices = new NativeArray<int>(
-                    1,
-                    Allocator.Persistent,
-                    NativeArrayOptions.ClearMemory);
-                FootPlacement = footPlacement?.CreateBank();
-            }
-
-            internal readonly CharacterFullBodyIkResult[] SolverOutcomes;
-            internal readonly CharacterFullBodyIkBendHistory[] BendHistories;
-            internal NativeArray<CharacterFullBodyIkGoalSetHeader> GoalSets;
-            internal NativeArray<CharacterFullBodyIkGoal> Goals;
-            internal NativeArray<int> GoalSetIndices;
-            internal readonly CharacterFootPlacementBank FootPlacement;
-            internal ulong Identity;
-            internal ulong FrameIdentity;
-            internal ulong RenderFrame;
-            internal ulong CompletionIdentity;
-            internal FixedString64Bytes RigId;
-            internal FixedString64Bytes RigRevision;
-            internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
-            internal AnimationPresentationDiagnosticsInterest DiagnosticsInterest;
-
-            internal void Begin(
-                ulong frameIdentity,
-                ulong renderFrame,
-                AnimationPresentationDiagnosticsInterest diagnosticsInterest,
-                Bank committed,
-                FixedString64Bytes rigId,
-                FixedString64Bytes rigRevision)
-            {
-                FrameIdentity = frameIdentity;
-                RenderFrame = renderFrame;
-                CompletionIdentity = 0;
-                DiagnosticsInterest = diagnosticsInterest;
-                RigId = rigId;
-                RigRevision = rigRevision;
-                PhysicalWrite = default;
-                Array.Clear(SolverOutcomes, 0, SolverOutcomes.Length);
-                GoalSets[0] = default;
-                GoalSetIndices[0] = 0;
-                for (int i = 0; i < Goals.Length; i++)
-                    Goals[i] = default;
-                if (committed == null)
-                    Array.Clear(BendHistories, 0, BendHistories.Length);
-                else
-                    Array.Copy(
-                        committed.BendHistories,
-                        BendHistories,
-                        BendHistories.Length);
-            }
-
-            internal void ClearPending()
-            {
-                FrameIdentity = 0;
-                RenderFrame = 0;
-                CompletionIdentity = 0;
-                DiagnosticsInterest = AnimationPresentationDiagnosticsInterest.None;
-                RigId = default;
-                RigRevision = default;
-                PhysicalWrite = default;
-                Array.Clear(SolverOutcomes, 0, SolverOutcomes.Length);
-                GoalSets[0] = default;
-                GoalSetIndices[0] = 0;
-                for (int i = 0; i < Goals.Length; i++)
-                    Goals[i] = default;
-                Array.Clear(BendHistories, 0, BendHistories.Length);
-            }
-
-            internal void Dispose()
-            {
-                if (GoalSetIndices.IsCreated)
-                    GoalSetIndices.Dispose();
-                if (Goals.IsCreated)
-                    Goals.Dispose();
-                if (GoalSets.IsCreated)
-                    GoalSets.Dispose();
-            }
-        }
-
-        readonly CharacterFootPlacementModule m_FootPlacement;
-        readonly CharacterFinalIkFullBodySolver[] m_Solvers;
-        readonly CharacterFullBodyIkGoalAssembler m_GoalAssembler;
-        readonly AnimationFinalPosePhysicalWriter m_FinalWriter;
-        readonly FixedString64Bytes m_RigId;
-        readonly FixedString64Bytes m_RigRevision;
-        readonly CharacterFootPlacementDiagnosticsPage m_EmptyFootDiagnostics =
-            new CharacterFootPlacementDiagnosticsPage();
-        readonly Bank m_First;
-        readonly Bank m_Second;
-
-        Bank m_Committed;
-        Bank m_Pending;
-        ulong m_NextBankIdentity = 1;
-        bool m_HasCommitted;
-        bool m_HasPending;
-        bool m_Disposed;
-
-        internal CharacterPoseConstraintRuntime(
-            CharacterFootPlacementModule footPlacement,
-            CharacterFinalIkFullBodySolver[] solvers,
-            AnimationFinalPosePhysicalWriter finalWriter,
-            string rigId,
-            string rigRevision)
-        {
-            m_FootPlacement = footPlacement;
-            m_Solvers = solvers ?? throw new ArgumentNullException(nameof(solvers));
-            m_GoalAssembler = new CharacterFullBodyIkGoalAssembler();
-            m_FinalWriter = finalWriter ?? throw new ArgumentNullException(nameof(finalWriter));
-            m_RigId = new FixedString64Bytes(rigId ?? string.Empty);
-            m_RigRevision = new FixedString64Bytes(rigRevision ?? string.Empty);
-            if (m_RigId.Length == 0 || m_RigRevision.Length == 0)
-                throw new ArgumentException("Pose Constraint Rig lineage is invalid.");
-            for (int i = 0; i < m_Solvers.Length; i++)
-            {
-                if (m_Solvers[i] == null)
-                    throw new ArgumentException("Pose Constraint solver collection is incomplete.", nameof(solvers));
-            }
-            if (m_Solvers.Length != 1)
-                throw new ArgumentException("Pose Constraint requires exactly one Full Body IK solver.", nameof(solvers));
-            m_First = new Bank(m_Solvers.Length, m_FootPlacement);
-            m_Second = new Bank(m_Solvers.Length, m_FootPlacement);
-        }
-
-        internal bool HasFootPlacement => m_FootPlacement != null;
-        internal int FullBodyIkSolverCount => m_Solvers.Length;
-        internal bool IsFullBodyIkPrepared(int solverIndex) =>
-            (uint)solverIndex < (uint)m_Solvers.Length &&
-            m_Solvers[solverIndex].IsPrepared;
-        internal CharacterFullBodyIkSolverDiagnostics GetSolverDiagnostics(
-            int solverIndex) => m_Solvers[solverIndex].Diagnostics;
-        internal int GetSolverEffectorCount(int solverIndex) =>
-            m_Solvers[solverIndex].DiagnosticEffectorCount;
-        internal CharacterFullBodyIkEffectorDiagnostics GetSolverEffector(
-            int solverIndex,
-            int effectorIndex) =>
-            m_Solvers[solverIndex].GetDiagnosticEffector(effectorIndex);
-        internal int GetSolverLimbCount(int solverIndex) =>
-            m_Solvers[solverIndex].DiagnosticLimbCount;
-        internal CharacterFullBodyIkLimbDiagnostics GetSolverLimb(
-            int solverIndex,
-            int limbIndex) =>
-            m_Solvers[solverIndex].GetDiagnosticLimb(limbIndex);
-        internal CharacterFullBodyIkGoalSetHeader GetCommittedAssembledGoalSet(
-            int solverIndex) =>
-            m_HasCommitted && (uint)solverIndex < (uint)m_Solvers.Length
-                ? m_Committed.GoalSets[0]
-                : default;
-        internal CharacterFullBodyIkGoal GetCommittedAssembledGoal(
-            int solverIndex,
-            int goalIndex)
-        {
-            CharacterFullBodyIkGoalSetHeader header =
-                GetCommittedAssembledGoalSet(solverIndex);
-            if ((uint)goalIndex >= (uint)header.GoalCount)
-                throw new ArgumentOutOfRangeException(nameof(goalIndex));
-            return m_Committed.Goals[header.GoalOffset + goalIndex];
-        }
-        internal bool HasPendingFrame => m_HasPending;
-        internal bool HasPendingAssembledGoalSet =>
-            m_HasPending && m_Pending.GoalSets[0].IsValid;
-        internal ulong CommittedBankIdentity => m_HasCommitted ? m_Committed.Identity : 0;
-        internal CharacterFootPlacementDiagnosticsPage FootDiagnostics =>
-            m_FootPlacement != null
-                ? m_FootPlacement.GetDiagnostics(
-                    m_HasPending
-                        ? m_Pending.FootPlacement
-                        : m_HasCommitted
-                            ? m_Committed.FootPlacement
-                            : null)
-                : default;
-        internal CharacterFootPlacementDiagnosticsPage CommittedFootDiagnostics =>
-            m_HasCommitted && m_Committed.FootPlacement != null
-                ? m_Committed.FootPlacement.Diagnostics
-                : m_EmptyFootDiagnostics;
-        internal AnimationPhysicalBoneWriteDiagnostics PhysicalWriteDiagnostics =>
-            m_HasCommitted ? m_Committed.PhysicalWrite : default;
-
-        internal void BeginFrame(
-            ulong frameIdentity,
-            ulong renderFrame,
-            AnimationPresentationDiagnosticsInterest diagnosticsInterest)
-        {
-            RequireAlive();
-            if (frameIdentity == 0 || renderFrame == 0)
-                throw new ArgumentOutOfRangeException(nameof(frameIdentity));
-            if (m_HasPending)
-                throw new InvalidOperationException("Pose Constraint frame is already open.");
-            m_Pending = m_HasCommitted && ReferenceEquals(m_Committed, m_First)
-                ? m_Second
-                : m_First;
-            m_Pending.Begin(
-                frameIdentity,
-                renderFrame,
-                diagnosticsInterest,
-                m_HasCommitted ? m_Committed : null,
-                m_RigId,
-                m_RigRevision);
-            m_FootPlacement?.BeginFrame(
-                m_HasCommitted ? m_Committed.FootPlacement : null,
-                m_Pending.FootPlacement,
-                diagnosticsInterest != AnimationPresentationDiagnosticsInterest.None);
-            m_HasPending = true;
-        }
-
-        internal CharacterFullBodyIkGoalContributionHeader PrepareFootPlacement(
-            in CharacterFootPlacementFrameInput frame,
-            NativeSlice<CharacterFullBodyIkGoal> goalOutput,
-            int goalOffset,
-            int producerOperationIndex,
-            int producerCallSiteIndex,
-            int parameterIndex)
-        {
-            RequireRenderFrame(frame.RenderFrame, frame.Pose.CompletionIdentity);
-            if (m_FootPlacement == null)
-                throw new InvalidOperationException("Pose Constraint Foot Placement module is unavailable.");
-            return m_FootPlacement.EvaluateFrame(
-                m_HasCommitted ? m_Committed.FootPlacement : null,
-                m_Pending.FootPlacement,
-                in frame,
-                goalOutput,
-                goalOffset,
-                producerOperationIndex,
-                producerCallSiteIndex,
-                parameterIndex);
-        }
-
-        internal CharacterFullBodyIkResult AssembleFullBodyIkGoals(
-            NativeSlice<int> contributionValueIndices,
-            NativeArray<CharacterFullBodyIkGoalContributionHeader> contributions,
-            NativeArray<CharacterFullBodyIkGoal> contributionGoals,
-            int producerOperationIndex,
-            int producerCallSiteIndex,
-            ulong frameSequence,
-            ulong completionIdentity,
-            out CharacterFullBodyIkGoalSetHeader goalSet)
-        {
-            RequireRenderFrame(frameSequence, completionIdentity);
-            if (m_Pending.GoalSets[0].IsValid)
-                throw new InvalidOperationException("Full Body IK Goals were already assembled for this frame.");
-            CharacterFullBodyIkResult result = m_GoalAssembler.Assemble(
-                contributionValueIndices,
-                contributions,
-                contributionGoals,
-                frameSequence,
-                completionIdentity,
-                m_RigId,
-                m_RigRevision,
-                producerOperationIndex,
-                producerCallSiteIndex,
-                m_Pending.GoalSets,
-                m_Pending.Goals,
-                m_Pending.GoalSetIndices);
-            if (!result.Succeeded)
-            {
-                m_Pending.SolverOutcomes[0] = result;
-                goalSet = default;
-                return result;
-            }
-            goalSet = m_Pending.GoalSets[0];
-            return result;
-        }
-
-        internal CharacterFullBodyIkResult SolveFullBodyIk(
-            int solverIndex,
-            NativeSlice<AnimationLocalBonePose> pendingOutputComponentPose,
-            int producerOperationIndex,
-            int producerCallSiteIndex,
-            ulong frameSequence,
-            ulong completionIdentity,
-            bool recordDiagnostics)
-        {
-            RequireRenderFrame(frameSequence, completionIdentity);
-            if (solverIndex != 0 || !m_Pending.GoalSets[0].IsValid)
-                throw new InvalidOperationException("Full Body IK requires the unique assembled Goal Set.");
-            CharacterFullBodyIkResult result = m_Solvers[solverIndex].SolvePrepared(
-                pendingOutputComponentPose,
-                new NativeSlice<int>(m_Pending.GoalSetIndices),
-                m_Pending.GoalSets,
-                m_Pending.Goals,
-                ref m_Pending.BendHistories[solverIndex],
-                frameSequence,
-                completionIdentity,
-                recordDiagnostics);
-            m_Pending.SolverOutcomes[solverIndex] = result;
-            return result;
-        }
-
-        internal string ApplyTuning(
-            CharacterPoseTuningLayout layout,
-            CharacterPoseTuningParameterBlock block,
-            bool resetOwnerState)
-        {
-            RequireAlive();
-            for (int i = 0; i < m_Solvers.Length; i++)
-            {
-                string error = m_Solvers[i].ApplyTuning(
-                    layout,
-                    block,
-                    resetOwnerState);
-                if (!string.IsNullOrEmpty(error))
-                    return error;
-            }
-            if (resetOwnerState)
-                ClearBendHistories();
-            return m_FootPlacement?.ApplyTuning(layout, block, resetOwnerState) ?? string.Empty;
-        }
-
-        internal bool TryGetFullBodyIkFailure(
-            int solverIndex,
-            ulong completionIdentity,
-            out CharacterFullBodyIkResult result)
-        {
-            RequireAlive();
-            result = default;
-            if ((uint)solverIndex >= (uint)m_Solvers.Length)
-                return false;
-            CharacterFinalIkFullBodySolver solver = m_Solvers[solverIndex];
-            result = solver.LastResult;
-            return solver.LastCompletionIdentity == completionIdentity && !result.Succeeded;
-        }
-
-        internal void ValidateWriterBeforeEvaluate(
-            in AnimationFinalPoseNativeReadBinding pending,
-            bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed) =>
-            m_FinalWriter.ValidateBindingsBeforeEvaluate(
-                in pending,
-                hasCommitted,
-                in committed);
-
-        internal void WritePhysicalPose(
-            in AnimationFinalPoseNativeReadBinding pending,
-            bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed)
-        {
-            m_FinalWriter.Write(
-                in pending,
-                hasCommitted,
-                in committed);
-            m_Pending.PhysicalWrite = m_FinalWriter.Diagnostics;
-        }
-
-        internal void SealFrame(ulong frameIdentity, ulong completionIdentity)
-        {
-            RequireTransactionFrame(frameIdentity, completionIdentity);
-            m_FootPlacement?.SealFrame(
-                m_Pending.FootPlacement,
-                m_Pending.RenderFrame,
-                completionIdentity);
-            m_Pending.Identity = m_NextBankIdentity++;
-            m_Committed = m_Pending;
-            m_HasCommitted = true;
-            m_Pending = null;
-            m_HasPending = false;
-        }
-
-        internal void DiscardFrame()
-        {
-            RequireAlive();
-            if (!m_HasPending)
-                return;
-            m_FootPlacement?.DiscardFrame(
-                m_HasCommitted ? m_Committed.FootPlacement : null,
-                m_Pending.FootPlacement);
-            m_Pending.ClearPending();
-            m_Pending = null;
-            m_HasPending = false;
-        }
-
-        internal void ResetSolvers()
-        {
-            RequireAlive();
-            for (int i = 0; i < m_Solvers.Length; i++)
-                m_Solvers[i].Reset();
-            ClearBendHistories();
-        }
-
-        internal void ResetFootPlacement(in CharacterFootPlacementReset reset)
-        {
-            RequireAlive();
-            if (m_FootPlacement == null)
-                return;
-            if (m_HasPending)
-                DiscardFrame();
-            m_First.FootPlacement.Reset();
-            m_Second.FootPlacement.Reset();
-            m_FootPlacement.ResetShared(in reset);
-        }
-
-        internal void RetargetFootPlacement(ulong resetSequence)
-        {
-            RequireAlive();
-            if (m_FootPlacement == null)
-                return;
-            if (m_HasPending)
-                DiscardFrame();
-            m_First.FootPlacement.Reset();
-            m_Second.FootPlacement.Reset();
-            m_FootPlacement.RetargetShared(resetSequence);
-        }
-
-        void RequireRenderFrame(ulong renderFrame, ulong completionIdentity)
-        {
-            RequireAlive();
-            if (!m_HasPending || m_Pending.RenderFrame != renderFrame)
-                throw new InvalidOperationException("Pose Constraint pending frame identity is inconsistent.");
-            BindCompletion(completionIdentity);
-        }
-
-        void RequireTransactionFrame(ulong frameIdentity, ulong completionIdentity)
-        {
-            RequireAlive();
-            if (!m_HasPending || m_Pending.FrameIdentity != frameIdentity)
-                throw new InvalidOperationException("Pose Constraint pending transaction identity is inconsistent.");
-            BindCompletion(completionIdentity);
-        }
-
-        void BindCompletion(ulong completionIdentity)
-        {
-            if (completionIdentity == 0)
-                throw new ArgumentOutOfRangeException(nameof(completionIdentity));
-            if (m_Pending.CompletionIdentity == 0)
-                m_Pending.CompletionIdentity = completionIdentity;
-            else if (m_Pending.CompletionIdentity != completionIdentity)
-                throw new InvalidOperationException("Pose Constraint pending completion identity is inconsistent.");
-        }
-
-        void ClearBendHistories()
-        {
-            Array.Clear(m_First.BendHistories, 0, m_First.BendHistories.Length);
-            Array.Clear(m_Second.BendHistories, 0, m_Second.BendHistories.Length);
-        }
-
-        void RequireAlive()
-        {
-            if (m_Disposed)
-                throw new ObjectDisposedException(nameof(CharacterPoseConstraintRuntime));
-        }
-
-        public void Dispose()
-        {
-            if (m_Disposed)
-                return;
-            m_Disposed = true;
-            if (m_HasPending)
-                m_FootPlacement?.DiscardFrame(
-                    m_HasCommitted ? m_Committed.FootPlacement : null,
-                    m_Pending.FootPlacement);
-            m_FootPlacement?.Dispose();
-            for (int i = m_Solvers.Length - 1; i >= 0; i--)
-                m_Solvers[i].Reset();
-            m_First.FootPlacement?.Reset();
-            m_Second.FootPlacement?.Reset();
-            m_First.ClearPending();
-            m_Second.ClearPending();
-            m_First.Dispose();
-            m_Second.Dispose();
-            m_Committed = null;
-            m_Pending = null;
-            m_HasCommitted = false;
-            m_HasPending = false;
         }
     }
 }

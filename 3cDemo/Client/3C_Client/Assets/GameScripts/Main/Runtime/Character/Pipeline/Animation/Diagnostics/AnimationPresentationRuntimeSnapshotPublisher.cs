@@ -907,16 +907,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                             ? AnimationPoseWatchAvailability.NotCompleted
                             : AnimationPoseWatchAvailability.Invalid;
                     if ((uint)contributionValueIndex <
-                        (uint)m_NativeProgram.FullBodyIkGoalContributions.Length)
+                        (uint)m_PoseConstraints.FullBodyIkGoalContributionCount)
                     {
                         CharacterFullBodyIkGoalContributionHeader header =
-                            m_NativeProgram.FullBodyIkGoalContributions[
-                                contributionValueIndex];
+                            m_PoseConstraints.GetCommittedGoalContribution(
+                                contributionValueIndex);
                         if (header.IsValid &&
                             header.CompletionIdentity == completion &&
                             header.ProducerOperationIndex == operation.Index &&
                             header.GoalOffset <=
-                            m_NativeProgram.FullBodyIkContributionGoals.Length -
+                            m_PoseConstraints.FullBodyIkContributionGoalCount -
                             header.GoalCount)
                         {
                             contribution =
@@ -932,8 +932,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                                 {
                                     page.PoseWatchFullBodyIkGoals[
                                             goalOffset + goalIndex] =
-                                        m_NativeProgram.FullBodyIkContributionGoals[
-                                            header.GoalOffset + goalIndex];
+                                        m_PoseConstraints.GetCommittedContributionGoal(
+                                            header.GoalOffset + goalIndex);
                                 }
                                 goalAvailability =
                                     AnimationPoseWatchAvailability.Targets;

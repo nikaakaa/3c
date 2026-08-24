@@ -50,9 +50,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (string.IsNullOrWhiteSpace(posePlanHash) ||
                 binding.CompletionIdentity == 0 ||
                 binding.DensePoses.Length == 0 ||
-                binding.PoseParameters.Length == 0 ||
-                binding.PoseParameterAvailability.Length !=
-                binding.PoseParameters.Length ||
                 binding.Availability[0] != AnimationPoseAvailability.Pose ||
                 binding.InvalidReason[0] !=
                 AnimationPoseNativeInvalidReason.None ||
@@ -68,9 +65,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PosePlanHash = posePlanHash;
             CompletionIdentity = binding.CompletionIdentity;
             DenseComponentPoses = binding.DensePoses;
-            PoseParameters = binding.PoseParameters;
-            PoseParameterAvailability =
-                binding.PoseParameterAvailability;
             AnimationFootFeatureSample left = binding.LeftFootFeatures[0];
             AnimationFootFeatureSample right = binding.RightFootFeatures[0];
             if (!left.IsValid || !right.IsValid)
@@ -89,13 +83,59 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal string PosePlanHash { get; }
         internal ulong CompletionIdentity { get; }
         internal NativeSlice<AnimationLocalBonePose> DenseComponentPoses { get; }
-        internal NativeSlice<float> PoseParameters { get; }
-        internal NativeSlice<byte> PoseParameterAvailability { get; }
         internal AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
         internal AnimationBiomechanicalStepReadPage RightFootSteps { get; }
         internal ulong ContinuityIdentity { get; }
         internal AnimationPoseSourceContribution[] Contributions { get; }
         internal int ContributionCount { get; }
+    }
+
+    internal readonly struct CharacterFootPlacementResult
+    {
+        internal CharacterFootPlacementResult(
+            ulong frameSequence,
+            ulong completionIdentity,
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
+            in CharacterResolvedFootPair feet,
+            in CharacterFootPrimarySupportResult primarySupport,
+            in CharacterFootStrideHipsResult pelvis,
+            CharacterFullBodyIkGoal pelvisGoal,
+            CharacterFullBodyIkGoal leftGoal,
+            CharacterFullBodyIkGoal rightGoal)
+        {
+            if (frameSequence == 0 || completionIdentity == 0 ||
+                rigId.Length == 0 || rigRevision.Length == 0 ||
+                feet.FrameSequence != frameSequence ||
+                feet.CompletionIdentity != completionIdentity ||
+                !feet.RigId.Equals(rigId) ||
+                !feet.RigRevision.Equals(rigRevision) ||
+                !pelvisGoal.IsValid || !leftGoal.IsValid || !rightGoal.IsValid)
+            {
+                throw new ArgumentException("Foot Placement Result is invalid.");
+            }
+            FrameSequence = frameSequence;
+            CompletionIdentity = completionIdentity;
+            RigId = rigId;
+            RigRevision = rigRevision;
+            Feet = feet;
+            PrimarySupport = primarySupport;
+            Pelvis = pelvis;
+            PelvisGoal = pelvisGoal;
+            LeftGoal = leftGoal;
+            RightGoal = rightGoal;
+        }
+
+        internal ulong FrameSequence { get; }
+        internal ulong CompletionIdentity { get; }
+        internal FixedString64Bytes RigId { get; }
+        internal FixedString64Bytes RigRevision { get; }
+        internal CharacterResolvedFootPair Feet { get; }
+        internal CharacterFootPrimarySupportResult PrimarySupport { get; }
+        internal CharacterFootStrideHipsResult Pelvis { get; }
+        internal CharacterFullBodyIkGoal PelvisGoal { get; }
+        internal CharacterFullBodyIkGoal LeftGoal { get; }
+        internal CharacterFullBodyIkGoal RightGoal { get; }
     }
 
 }

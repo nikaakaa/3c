@@ -34,13 +34,13 @@ Node Definition MUST只拥有单节点局部语义，不得查询其它节点或
 
 ### Requirement: Pose Compiler必须使用固定不可逆Pass链
 
-唯一Pose Compiler Module MUST按`Graph Closure -> Typed Lowering -> Topology -> Value Plan -> Workspace Plan -> Family Payload -> Stage Schedule -> Seal Program Image`顺序执行。每个Pass MUST只消费上一个或明确前置Pass的不可变Result，不得原地修改共享`CompilationState`、回读后续Pass的临时字段或让多个Pass共同拥有同一可变集合。Compiler外部Interface MUST只接受一个typed Compilation Request并返回一个Program Image或结构化失败。
+唯一Pose Compiler Module MUST按`Graph Closure -> Typed Lowering -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Bind Family Payload -> Seal Program Image`顺序执行。Symbolic Family Lowering MUST先固定每个Operation的Family、symbolic typed value依赖、跨帧状态需求、Frame页需求与Workspace需求；Stage固定后 Value Lifetime才能计算真实消费寿命，Workspace Plan才能分配容量，Bind Family Payload只能绑定既有typed handle而不得发现新的Operation或容量需求。每个Pass MUST只消费上一个或明确前置Pass的不可变Result，不得原地修改共享`CompilationState`、回读后续Pass的临时字段或让多个Pass共同拥有同一可变集合。Compiler外部Interface MUST只接受一个typed Compilation Request并返回一个Program Image或结构化失败。
 
 #### Scenario: Value规划失败
 
 - **WHEN** Typed Topology合法但Value生命周期或类型无法分配
 - **THEN** Value Plan Pass MUST返回带Pass、GraphId、NodeId、PortId和reason的失败
-- **AND** Workspace、Payload、Stage和Program Image MUST不生成部分结果
+- **AND** Symbolic Operation、Stage、Workspace、Payload和Program Image MUST不生成部分结果
 
 #### Scenario: Compiler入口调用
 
@@ -86,12 +86,12 @@ Topology Pass MUST从typed IR建立唯一有向拓扑和稳定执行依赖，验
 
 ### Requirement: Value与Workspace必须由独立Pass按类型和寿命规划
 
-Value Plan Pass MUST为Local Pose、Component Pose、Parameter、Discontinuity、Source Demand、Goal Contribution、Goal Set、Control与Output分配typed Value地址和生命周期。Workspace Plan Pass MUST按Program topology、Rig、节点状态、source并发、Constraint容量、Inertialization、Operation completion、Final Pose和Diagnostics manifest分配固定页与handle。两者 MUST不使用作者字符串、运行时动态扩容或万能Value slot。
+Value Lifetime Pass MUST按已经固定的Stage Schedule为Local Pose、Component Pose、Parameter、Discontinuity、Source Demand、Goal Contribution、Goal Set、Control与Output分配typed Value地址和生命周期。Workspace Plan Pass MUST按Symbolic Operation需求、Stage、Value寿命、Rig、节点状态、source并发、Constraint容量、Inertialization、Operation completion、Final Pose和Diagnostics manifest分配固定页与handle。两者 MUST不使用作者字符串、运行时动态扩容或万能Value slot，也 MUST不允许后续Bind Family Payload回写容量。
 
 #### Scenario: 两类Value错误复用
 
 - **WHEN** 某Operation尝试把Goal Contribution地址作为Goal Set或Pose地址使用
-- **THEN** Value Plan或Program Image Seal MUST拒绝该引用
+- **THEN** Value Lifetime或Program Image Seal MUST拒绝该引用
 - **AND** Runtime MUST不通过共享整数index解释不同Value种类
 
 #### Scenario: 编译容量不足
@@ -102,7 +102,7 @@ Value Plan Pass MUST为Local Pose、Component Pose、Parameter、Discontinuity�
 
 ### Requirement: Operation必须使用公共Header与分段Family Payload
 
-Program ABI MUST使用公共`CharacterPoseOperationHeader`保存Operation index、Operation Code/Family、Execution Domain、Payload index和typed输入输出Value range。Player、StateMachine、AnimationSlot、Blend、Inertialization、Composition、Space Conversion、Component Control、Goal Contribution、Goal Assembler、FullBodyIK、Linked Pose与Output MUST分别保存到对应固定Family Payload页。系统 MUST不保留包含全部节点可选字段的万能Operation记录，也 MUST不使用大量`-1`组合表达字段不适用。
+Program ABI MUST使用公共`CharacterPoseOperationHeader`保存Operation index、Operation Code/Family、Execution Domain、Payload index和typed输入输出Value range。Parameter Input/Resolve、Player、StateMachine、Action Input、AnimationSlot、Blend、Inertialization、Composition、Space Conversion、Component Control、Motion Matching、Pose History、Goal Contribution、Goal Assembler、FullBodyIK、Linked Pose与Output MUST分别保存到对应固定Family Payload页。系统 MUST不保留包含全部节点可选字段的万能Operation记录，也 MUST不使用大量`-1`组合表达字段不适用。
 
 #### Scenario: Player Operation被错误绑定到FBBIK Payload
 
@@ -116,9 +116,19 @@ Program ABI MUST使用公共`CharacterPoseOperationHeader`保存Operation index�
 - **THEN** schema变化 MUST只修改对应Definition、Family Payload、Family Evaluator和必要source map
 - **AND** 无关Player、Blend、Slot和Output Payload MUST不增加占位字段
 
+### Requirement: 全部现行Operation必须进入唯一Family迁移表
+
+ABI切换前 MUST为全部现行Operation Code建立并封存唯一迁移表，至少记录新Operation Family、跨帧状态Owner、Frame页Owner、Execution Domain、symbolic Value依赖、Workspace需求和删除的旧万能字段。Parameter、Action Input、Motion Matching chooser/capture/processing/internal blend、Pose History、Constraint与Output MUST全部进入该表；未映射Operation MUST阻止Projection schema切换，系统 MUST不保留旧reader处理遗漏项。
+
+#### Scenario: Motion Matching History Commit未映射
+
+- **WHEN** 迁移表缺少当前正式`PoseHistoryCommit`或任一Motion Matching Operation Code
+- **THEN** Character Build MUST在创建新Program Image前失败并定位缺失Code
+- **AND** MUST不把该Operation降级为通用Payload、跳过执行或交给旧Native Program
+
 ### Requirement: Stage Schedule必须由typed依赖和Execution Domain唯一生成
 
-Stage Schedule Pass MUST按Topology Plan、Value readiness、Pose空间和Execution Domain生成固定`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并为每个Operation分配恰好一个Stage位置。Schedule MUST静态保证source每帧最多capture一次、每Operation最多执行一次、Constraint结果先于消费者、唯一Final Pose在全部依赖完成后发布。Runtime与Preview MUST只执行该Schedule，不得现场重新排序。
+Stage Schedule Pass MUST按Topology Plan、Symbolic Operation依赖、Pose空间和Execution Domain生成固定`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并为每个Operation分配恰好一个Stage位置。Schedule MUST静态保证source每帧最多capture一次、每Operation最多执行一次、每个Constraint Family Operation在自己的位置调用一次、Constraint完整结果先于消费者、唯一Final Pose在全部依赖完成后发布。Runtime与Preview MUST只执行该Schedule，不得现场重新排序。
 
 #### Scenario: Operation出现在两个Stage
 
@@ -128,7 +138,7 @@ Stage Schedule Pass MUST按Topology Plan、Value readiness、Pose空间和Execut
 
 ### Requirement: Program Image必须在Seal后不可变且自描述完整
 
-Seal Program Image Pass MUST验证全部Pass identity、schema、Rig、Operation Header、Family Payload、typed Value、Workspace handle、Stage、Source Map、容量和hash，并发布不可变`CharacterPoseProgramImage`。Program Image MUST包含Runtime装配所需的完整固定数据，不得保存authoring asset、Editor对象、Actor状态、Frame页或运行时编译器。任何内容或schema变化 MUST提升正式identity并要求显式Build。
+Seal Program Image Pass MUST验证全部Pass identity、schema、Rig、Operation Header、Family Payload、typed Value、Workspace handle、Stage、Source Map、容量和hash，并把不可变`CharacterPoseProgramImage`作为`CharacterPresentationProjection`内部唯一Pose程序随同一ProjectionRevision发布。Program Image MUST包含Runtime装配所需的完整固定数据，不得保存authoring asset、Editor对象、Actor状态、Frame页或运行时编译器。Runtime MUST不从Projection复制、转换或构造第二Native Program容器；任何内容或schema变化 MUST提升正式identity并要求显式Build。
 
 #### Scenario: Runtime加载Program Image
 

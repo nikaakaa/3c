@@ -3,9 +3,7 @@
 ## Purpose
 
 定义Gameplay Timeline、Presentation Fact、state-local Pose source、有限Action playback、唯一编译Pose Plan与预分配表现帧事务之间的角色动画输出链。
-
 ## Requirements
-
 ### Requirement: Gameplay Timeline只能提交有限Action播放事实
 
 Compiler MUST把有限Action Timeline AnimationTrack降低为稳定producer binding、直接AnimationClip计划、committed sample contract与source-local Clip Weight计划。Producer binding MUST只保存Timeline/Track引用；Foot Analysis MUST从Profile Analysis Source、角色Rig与Clip Analysis Input Hash解析，Foot Placement Weight MUST通过唯一Clip Curve catalog从`presentation.foot-placement-weight`降低为`animation.foot-placement-weight`Runtime参数。SimulationTick MUST只推进Gameplay Timeline logic time并提交Select、Sample、Complete或Release command；PresentationFrame sampler MUST按committed raw sample、cycle、PlaybackMode和source-local clip weight生成Action playback frame与typed parameter page。Timeline MUST不解析Locomotion Phase、不创建Pose、transition、Bone Mask或IK plan。持续Idle、Walk、Run、Start、Stop与Turn MUST不依赖Gameplay Timeline或AnimationChannel。
@@ -35,54 +33,53 @@ Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；A
 
 ### Requirement: CharacterSimulationPresentationRuntime必须执行唯一编译Pose Plan
 
-SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application boundary。Runtime MUST消费committed Body/Intent、Program parameter和有限Action command，构造Presentation Fact，并按Projection编译的ordered staged Pose Plan执行PoseStateMachine、state-local provider demand/readiness、ActionPlaybackInput、AnimationSlot、Local Pose composition、显式`LocalToComponentPose`、Component Pose骨骼控制、world-aware FootPlacement规划与pelvis输出、typed双腿targets、pure pose LegIK、显式`ComponentToLocalPose`、后续Pose stage及FinalPublication。所有Player、Routing、Inertialization、source capture、空间转换、target value和output completion MUST位于同一帧固定计划和同一次PlayableGraph Evaluate。任一stage失败 MUST阻断后续stage与FinalPublication；若已跨过Animancer Evaluate Barrier，同一Actor Animation Runtime MUST进入Faulted且不得逆序恢复状态或Physical Bone快照。Runtime MUST不创建图外基础动画、Stack、FootPlacement、LegIK、隐式Pose空间转换、world-aware postprocess、第二Pose Graph或第二final writer。
+SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application seam。Runtime MUST消费Committed Body/Intent、Program parameter和有限Action command，构造Presentation Fact，并按Projection编译的有序Pose Plan执行PoseStateMachine、state-local provider、AnimationSlot、Local/Component Pose转换、Component Pose控制、Foot Placement、Goal Contribution汇聚、唯一FullBodyIK、后续Pose stage与FinalPublication。
 
-#### Scenario: FootPlacement完成后LegIK失败
+唯一`PosePlanExecutionRuntime` MUST构造并持有唯一`CharacterPoseConstraintRuntime`与根Bank；正式Runtime和Preview MUST通过同一Factory取得该所有权关系。Staged Executor只能按编译Pose阶段调用该实例，MUST不为Foot Placement、Goal Assembler、FBBIK或Diagnostics创建第二根事务、第二Committed identity或独立Seal顺序。根Runtime MUST只拥有阶段顺序、lineage、页选择和事务生命周期，不得实现Foot、Pelvis、Goal Assembly或Solver数学。
 
-- **WHEN** FootPlacement已发布pelvis Pose与targets但LegIK报告退化bend plane
-- **THEN** Runtime MUST阻断ComponentToLocalPose与FinalPublication并进入正式Faulted路径
-- **AND** MUST不发布只有pelvis补偿而没有双腿求解的部分Pose
+Foot Placement与PoseBone Goal来源 MUST只发布typed Goal Contribution。唯一Goal Assembler MUST在预分配页中验证Frame、Completion、Rig、Slot与重复贡献并发布一个Goal Set；唯一FullBodyIK MUST只消费该Goal Set与同一Component Pose。Foot Placement、Goal Assembler、FBBIK BendHistory和紧凑Outcome MUST写入同一CharacterPoseConstraint Pending Bank。任一stage失败 MUST阻断后续stage与FinalPublication；跨过Animancer Evaluate Barrier后的失败 MUST使同一Actor Runtime进入Faulted。
 
-#### Scenario: 正常Foot Placement表现帧
+#### Scenario: 正常执行Foot Placement与FBBIK
 
-- **WHEN** FootPlacement与LegIK依次完成且全部completion匹配
-- **THEN** Runtime MUST只发布LegIK及后续stage形成的唯一OutputPose
-- **AND** MUST不在图外再次执行Foot Placement或腿部solver
+- **WHEN** Foot Placement与PoseBone贡献通过唯一Assembler形成合法Goal Set且FBBIK成功
+- **THEN** Runtime MUST只发布同一Completion的一个Goal Set、一次FBBIK结果和唯一OutputPose
+- **AND** Foot、Pelvis与BendHistory MUST属于同一Pending Bank
 
-#### Scenario: Commit Attack producer
+#### Scenario: Goal Slot重复
 
-- **WHEN** Program提交FullBodyAction Attack command
-- **THEN** Runtime MUST把Action frame送入绑定的ActionPlaybackInput与AnimationSlot
-- **AND** 如何覆盖Source Pose与何时释放 MUST只由compiled Routing Plan决定
+- **WHEN** 两个Goal Contribution尝试写入同一FBBIK Effector Slot
+- **THEN** Goal Assembler MUST在不可逆Writer前使整帧typed invalid
+- **AND** Runtime MUST不按顺序覆盖、择优或创建第二Goal Set
 
-#### Scenario: Locomotion target Pending
+### Requirement: 唯一FBBIK必须使用单数运行合同与显式产出证明
 
-- **WHEN** PoseStateMachine选择新target但provider尚未Ready
-- **THEN** Runtime MUST保持现有合法Source Pose
-- **AND** MUST不启动target transition或使用旧Timeline fallback
+`CharacterAnimationPresentationProfile` MUST是FullBodyIK Profile唯一作者Owner；FullBodyIK Pose节点 MUST只表达拓扑且不得保存第二份Profile引用。Compiler MUST从当前Presentation Profile生成Descriptor，Descriptor MUST冻结Profile Id与Revision并在Runtime构造前和当前Profile精确对账。
 
-#### Scenario: Player source槽位复用
+Pose Constraint Runtime MUST只保存一个Solver、一个Goal Set、一个BendHistory和一个Solver Outcome，不得使用长度为1的Solver、Outcome、Goal Set或Goal Set Index数组。Solver Outcome MUST显式记录Produced、Frame、Completion与Rig lineage；默认值 MUST表示本帧未执行并阻止Physical Writer。
 
-- **WHEN** consumer发布retirement permission且backend完成旧source物理释放
-- **THEN** Runtime MAY把workspace槽位分配给新source
-- **AND** 旧CaptureJob与新CaptureJob MUST不在同一次Evaluate写入同一槽位
+#### Scenario: Solver未执行
+
+- **WHEN** Goal Assembler已经完成但当前Frame与Completion没有产生FBBIK Solver Outcome
+- **THEN** Physical Writer前验证 MUST失败并Discard根Pending Bank
+- **AND** 默认Result MUST不能被解释为本帧Solver成功
+
+#### Scenario: Profile修改后使用旧Projection
+
+- **WHEN** Descriptor冻结的Profile Revision与当前唯一Profile Revision不一致
+- **THEN** Runtime构造 MUST拒绝旧Projection
+- **AND** MUST不把旧Plan identity与新Solver参数组合运行
 
 ### Requirement: 动画调试只能读取正式Snapshot
 
-系统 MUST从`CharacterActionPlaybackRuntime`、PoseState provider、Player、Routing、source backend与Pose Plan导出只读snapshot。Snapshot MAY包含Action PlaybackId/channel/lifecycle、Projection-local dense source index、PlayerNodeId、generation、frame lease、Pending/Ready/Invalid、raw/effective sample、relation、source usage、transition、Inertialization residual、Pose contribution及ordered stage/FinalPublication completion。Snapshot MUST不参与Gameplay、source选择或最终播放，Editor MUST不从Animancer weight重建事实。Runtime MUST先读取显式Live、Capture、Pose Watch与detail interest；没有任何interest时 MUST不执行BlendStack、StateMachine、Inertialization、Operation contribution、Final Pose或逐骨骼weight复制。有interest时 MUST只从成功Seal的Committed页复制到预分配diagnostics页，不得读取或发布Pending帧。
+系统 MUST从同一Pending Bank已经完成并通过容量、Frame、Completion与Rig lineage验证的Runtime Result、source backend、Pose Plan、Goal Assembler、FBBIK与待写Final Pose冻结只读Diagnostics页。运行Result与Diagnostics MUST严格分型；任何运行算法 MUST不读取Diagnostics决定source、Foot Proposal、Ownership、Pelvis、Goal、Bend或最终Pose。
 
-#### Scenario: 导出每帧调试数据
+Runtime MUST在Frame开始冻结并预验证Live、Capture、Pose Watch与detail interest及固定容量。没有interest时 MUST跳过大页、逐骨骼和逐接触Diagnostics复制；有interest时 MUST在Physical Writer前从已完成Pending Result no-throw地写入Pending Diagnostics页。根Bank成功切换后只能发布已随Bank提交的Committed Diagnostics，不得继续写Committed页或在回调中补算。Diagnostics interest、Projector和发布回调 MUST不改变正式求解路径、状态容量与结果。
 
-- **WHEN** 正式Runtime或Preview完成表现帧且存在匹配diagnostics interest
-- **THEN** MAY发布匹配Projection revision的只读snapshot
-- **AND** Snapshot MUST只表达同一completion identity的Committed结果
-- **AND** 关闭调试历史 MUST不影响正式播放
+#### Scenario: Diagnostics interest中途变化
 
-#### Scenario: 没有调试关注者
-
-- **WHEN** 当前Actor没有Live、Capture、Pose Watch或detail interest
-- **THEN** Runtime MUST跳过Operation、Final Pose、Pose Watch和逐骨骼diagnostics复制
-- **AND** 正式Pose求值、Final Writer与completion MUST保持不变
+- **WHEN** Editor在当前表现帧中途打开Foot Placement或FBBIK detail interest
+- **THEN** 本帧运行Result MUST保持不变且完整诊断 MAY从下一成功帧开始
+- **AND** Runtime MUST不读取Pending页补齐半帧Snapshot
 
 ### Requirement: 不得恢复Timeline或Preview分裂路径
 
@@ -126,24 +123,33 @@ Action lifecycle MUST只以所选producer的第一份匹配generation的合法vi
 
 ### Requirement: 动画表现帧必须使用预分配暂存事务
 
-`CharacterAnimationPresentationRuntime` MUST为每个Actor使用唯一`Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现帧事务。Runtime创建时 MUST按Projection编译容量一次分配Committed/Pending Dense Pose页、Native workspace页、Inertialization页、Final Pose页、pending scalar state、mutation journal与source lifecycle command batch。PresentationFrame MUST只读取Committed状态并写Pending页或journal；MUST不通过`CaptureState`、`Clone`、`ToArray`、新建数组、Dictionary或List复制完整旧状态以建立回滚点。成功帧 MUST通过页索引交换和已验证journal提交新状态；Animancer Evaluate Barrier前失败 MUST只丢弃Pending，不恢复Committed对象图；Barrier期间或之后失败 MUST使同一Actor Animation Runtime进入Faulted，不逆序恢复状态或Physical Bone快照。
+`CharacterAnimationPresentationRuntime` MUST为每个Actor使用唯一`Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现帧事务。Pose Constraint阶段 MUST预分配两个根Bank，统一持有Foot Placement运行页、Primary Support/Pelvis页、Goal Contribution/Goal Set页、FBBIK BendHistory/紧凑Outcome页与按interest启用的Diagnostics页。根Bank和大页 MUST是预分配引用对象；运行方法 MUST不按值传递完整Bank、Ground Path固定页、FixedList payload或Diagnostics聚合体。
 
-#### Scenario: 普通动画表现帧成功
+每帧 MUST只读取Committed Bank并写另一Pending Bank。Foot、Pelvis、Goal与Bend不得各自拥有对外Committed identity或由调用方顺序Seal。进入Writer前 MUST完成全部lineage、容量、Goal重复、FBBIK binding、Solver outcome和Writer binding验证；Writer成功后Seal MUST只执行no-throw的根Committed Bank identity切换与已验证journal发布。Discard MUST不切换根identity。大页归属根Bank MUST不允许把其业务数学搬入根Runtime。
 
-- **WHEN** 一个Actor使用合法Projection完成普通PresentationFrame且没有诊断interest
-- **THEN** Runtime MUST直接生成Pending Pose与Pending Module状态并在成功后交换Committed页
-- **AND** 事务、Pose发布与关闭的diagnostics MUST不产生每帧托管分配
-- **AND** Runtime MUST不复制完整BlendStack、Pose workspace、Inertialization history、Physical Source registry或骨骼Transform
+存在Diagnostics interest时，Pending Diagnostics页 MUST在进入Writer前从同一Pending Runtime Result完成Foot、Pelvis、Goal与Bend字段的固定容量冻结与验证；Writer成功Apply时 MUST把实际Write Completion与最终Physical Bone位置写入同一Pending页。根Bank切换后只发布该Committed页。Diagnostics投影不得发生在根Bank切换之后，也不得成为修改Committed状态的延迟步骤。
 
-#### Scenario: Evaluate前验证失败
+#### Scenario: FBBIK后续阶段失败
 
-- **WHEN** Pending帧在进入Animancer Evaluate前发现identity、容量、source ownership或release依赖不合法
-- **THEN** Runtime MUST丢弃本帧Pending页、journal和prepared resource
-- **AND** 已提交Action、PoseState、Slot、Transition、source ownership、Final Pose与Physical Bones MUST保持不变
+- **WHEN** FBBIK已经更新Pending BendHistory但后续Pose stage或Writer验证失败
+- **THEN** Committed Foot、Pelvis、Goal与BendHistory MUST全部保持上一成功帧
+- **AND** 下一帧FBBIK MUST从上一Committed BendHistory重建Vendor状态
+
+#### Scenario: Vendor存在未建模跨帧状态
+
+- **WHEN** FBBIK Vendor对象中任一字段会影响下一帧结果但不能从Committed BendHistory、Profile和当前Goal精确重建
+- **THEN** BendHistory迁移 MUST阻止实施完成并报告该状态所有权
+- **AND** Runtime MUST不使用默认值、近似初始化或视觉相似结果替代8fc行为
+
+#### Scenario: 正常提交Pose Constraint Bank
+
+- **WHEN** Foot Placement、Goal Assembler、FBBIK和Final Writer全部通过同一Completion验证
+- **THEN** Seal MUST只发布一个新的Committed Bank identity
+- **AND** 任一正式读者 MUST不观察到左右脚、盆骨或BendHistory的部分提交
 
 ### Requirement: Dense状态与稀疏生命周期必须使用不同暂存策略
 
-每帧完整生成的Dense Pose、velocity、weight、parameter、Native result与Inertialization next state MUST直接写入固定Committed/Pending双页。Action registry、command inbox cursor、sample/Marker cursor、source ownership、usage、retirement与release handshake MUST使用固定容量pending scalar或mutation journal。journal MUST在Evaluate前完成identity、顺序、重复项、容量和依赖验证，Seal MUST只按固定顺序应用已验证mutation。系统 MUST不为了统一API把稀疏Registry整页复制，也 MUST不把Dense Pose降低为逐骨骼托管mutation对象。
+每帧完整生成的Dense Pose、velocity、weight、parameter、Native result与Inertialization next state MUST直接写入固定Committed/Pending双页。Action registry、command inbox cursor、sample/Phase cursor、source ownership、usage、retirement与release handshake MUST使用固定容量pending scalar或mutation journal。journal MUST在Evaluate前完成identity、顺序、重复项、容量和依赖验证，Seal MUST只按固定顺序应用已验证mutation。系统 MUST不为了统一API把稀疏Registry整页复制，也 MUST不把Dense Pose降低为逐骨骼托管mutation对象。
 
 #### Scenario: 本帧只有一个Action生命周期变化
 
@@ -159,37 +165,33 @@ Action lifecycle MUST只以所选producer的第一份匹配generation的合法vi
 
 ### Requirement: Animancer Evaluate必须是唯一不可逆提交门槛
 
-唯一正式Animancer Graph Evaluate MUST作为动画表现帧不可逆Animancer Evaluate Barrier。进入Barrier前，Runtime MUST完成全部托管identity、容量、readiness、source、release、Job binding与Final Writer binding验证，并且 MUST不消费command acknowledgement、不提交lifecycle、不销毁Committed source、不发布release completion或Final Pose。Barrier之后的Seal MUST不执行动态查找、编译、扩容或业务输入验证，只可交换固定页、应用已验证mutation并发布成功结果。
+唯一正式Animancer Graph Evaluate MUST作为动画表现帧不可逆Barrier。进入Barrier前，Runtime MUST完成Projection/Profile/Rig/World Context、全部托管identity、静态Goal Slot冲突、固定容量、readiness、source、Diagnostics interest/capacity、FinalIK binding和Final Writer binding验证，并且不得声称已经生成依赖同帧Component Pose的Foot Result、Contact Patch、运行时Goal或FBBIK Pending State，也不得提交Foot、Pelvis、BendHistory、Diagnostics或Final Pose。
 
-#### Scenario: Barrier前Module准备失败
+Animancer Evaluate产生同帧Component Pose后，Barrier内的world-aware Foot Placement、Goal Assembler与FBBIK MUST按编译阶段生成Pending Result、Goal Set、Pending Component Pose与Pending BendHistory，并完成运行时lineage、重复Slot、非有限值与Solver outcome验证。Barrier之后只可按已冻结interest把已完成Pending Result投影到固定Pending Diagnostics页、验证Native/Writer outcome、执行唯一Physical Writer和发布已验证根Bank；不得动态查找、编译、扩容或重新计算Foot Placement业务。Barrier内或之后失败 MUST Discard根Pending Bank并使Actor Runtime进入Faulted；Writer之后若出现Unity引擎异常，系统不得恢复旧Transform后继续运行。
 
-- **WHEN** Player、Slot、Routing或source backend在Prepare阶段报告不可提交结果
-- **THEN** Runtime MUST不调用Animancer Evaluate
-- **AND** MUST不修改Physical Bones或任何已提交外部资源
+#### Scenario: Barrier前Foot Placement静态准备失败
 
-#### Scenario: Barrier成功完成
+- **WHEN** Foot Placement的Profile、Rig、World Context、编译容量、静态Goal Slot或binding在进入Barrier前Invalid
+- **THEN** Runtime MUST不执行FBBIK或Physical Writer
+- **AND** 根Pending Bank MUST被Discard
 
-- **WHEN** Pending状态、Job binding与Final Writer binding全部通过验证且Graph Evaluate成功
-- **THEN** Runtime MUST以同一completion identity Seal全部Module状态
-- **AND** command acknowledgement、lifecycle、retirement、release completion与Final Pose MUST只属于该成功帧
+#### Scenario: Barrier内Foot Placement运行结果失败
+
+- **WHEN** Animancer Evaluate已经产生Component Pose，但Foot Placement Patch、运行时Goal lineage、Goal Assembler或FBBIK outcome在Barrier内Invalid
+- **THEN** Runtime MUST阻断后续Pose stage与Physical Writer并Discard根Pending Bank
+- **AND** 同一Actor Animation Runtime MUST进入Faulted，不得把该失败降级成可恢复的Barrier前Discard
 
 ### Requirement: Final Pose写入必须在整Rig验证后原子选择Committed或Pending结果
 
-`AnimationFinalPosePhysicalWriter` MUST同时读取当前Committed Final Pose与本帧Pending Final Pose，并在写入任何Physical Bone前验证全部Physical Bone Transform binding、PhysicalBoneCount、Pose availability、continuity identity、graph completion和frame completion。全部合法时 MUST写入Pending Pose；typed Pending、Unavailable或Invalid时 MUST保持Committed Pose并禁止提交Pending页。由于该outcome在Evaluate Barrier内产生，外层Runtime MUST进入Faulted。Writer MUST不先写部分骨骼再报告失败，Physical Bone local pose MUST不再由表现帧事务提前捕获或在失败后恢复。
+`AnimationFinalPosePhysicalWriter` MUST同时读取当前Committed Final Pose与本帧Pending Final Pose，并在写入任何Physical Bone前验证全部Physical Bone Transform binding、PhysicalBoneCount、Pose availability、continuity identity、graph completion、Goal/FBBIK completion和frame completion。全部合法时 MUST一次写入完整Pending Physical Pose；Invalid时 MUST保持Committed Pose并阻止根Bank发布。
 
-#### Scenario: Pending Pose全部合法
+Physical Writer成功之后不得再执行可能失败的Foot、Pelvis、Goal、Bend或Diagnostics业务验证。随后根Bank Seal只可进行no-throw identity切换；Writer抛出Unity引擎异常时Actor MUST进入Faulted，不能伪装成可回滚继续运行。
 
-- **WHEN** Pose Graph完成且全部Physical Bone handle和Pending local pose合法
-- **THEN** Final Writer MUST在同一Evaluate Barrier写入完整Pending Physical Pose
-- **AND** Seal MUST把对应Pending Final Pose页提升为Committed
+#### Scenario: Writer成功后发布根Bank
 
-#### Scenario: Pending Pose无效
-
-- **WHEN** Pose Graph发布typed Invalid、completion不匹配或任一Physical Bone在写入前验证失败
-- **THEN** Final Writer MUST不把部分Pending Pose留在可见Rig
-- **AND** Runtime MUST保持上一Committed Pose并丢弃本帧Pending结果
-- **AND** 当前Actor Animation Presentation Runtime MUST进入Faulted并拒绝下一帧
-- **AND** MUST不分配或恢复Physical Transform快照
+- **WHEN** Writer已经完整写入匹配Completion的Pending Pose
+- **THEN** Runtime MUST发布同Completion的Foot、Pelvis、Goal与BendHistory根Bank
+- **AND** MUST不在发布前后执行新的业务查询或重新选择Goal
 
 ### Requirement: Physical Source资源生命周期必须延迟提交
 

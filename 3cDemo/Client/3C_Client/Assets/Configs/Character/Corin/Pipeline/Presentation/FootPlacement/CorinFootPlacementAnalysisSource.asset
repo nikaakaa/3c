@@ -34,3 +34,47 @@ MonoBehaviour:
     m_ConfidenceTolerance: 0.005
     m_LandingDelayTolerance: 0.002
     m_LandingOffsetTolerance: 0.001
+  m_MotionRootBoneId: animation-bone/Bip001
+  m_MotionReferences:
+  - m_TargetClipAssetGuid: 4bd2aa40793a8a5449b6ef7f4de23426
+    m_MotionReferenceClipAssetGuid: 8c7c70840c9030e40a85ce02fd44abd2
+  - m_TargetClipAssetGuid: 1085463043eec484c9173b05b7037f92
+    m_MotionReferenceClipAssetGuid: b366720336dc71a4fb9332245a0bfc04
+  - m_TargetClipAssetGuid: 69b4dda2a99b8c441833d55ec2229928
+    m_MotionReferenceClipAssetGuid: 691310491513fde48b1807dcece401f0
+  - m_TargetClipAssetGuid: 4ef82b85767cffe4883132371252902e
+    m_MotionReferenceClipAssetGuid: 800f4840b7a4c0249a84624240a98521
+  - m_TargetClipAssetGuid: fe89c3755a34cf64ca6ec99408ab55d6
+    m_MotionReferenceClipAssetGuid: 86f6720229044e94bae3f2df7132d170
+  - m_TargetClipAssetGuid: 928dc4fc54458fe488f6ee2bd52054a7
+    m_MotionReferenceClipAssetGuid: 856921a1b76f1c64ab14701fd51da8a9
+  - m_TargetClipAssetGuid: 67587c79547407b4a9fb97cadcf2b6e6
+    m_MotionReferenceClipAssetGuid: 3f5ed4d8f1b6f024c8676a84939cf4e8
+  - m_TargetClipAssetGuid: c0186e9f72ed34e4dae58f9f7de9ffa0
+    m_MotionReferenceClipAssetGuid: edd3281b20c171d4e9cb04a9679fa926
+  - m_TargetClipAssetGuid: 4cfdcca827720544e9b01db0507ad2bf
+    m_MotionReferenceClipAssetGuid: b376aaad61175d141b11255a9b9b3625
+  - m_TargetClipAssetGuid: cacfffd6d16755a40bd024ab1cfd8438
+    m_MotionReferenceClipAssetGuid: a69d162548ad1ea4ba6aa784cc4ed76f
+  - m_TargetClipAssetGuid: edd7c59a8dbf622489dcbd2692cd2ecd
+    m_MotionReferenceClipAssetGuid: ea0f0136feeeb0240a923dedeae262df
+  - m_TargetClipAssetGuid: 6f9dc7e23ba63244e95d8f8d7142c5a2
+    m_MotionReferenceClipAssetGuid: c55773925e53bc245bae15be4f62b854
+  - m_TargetClipAssetGuid: 7dbd59f643bcfbe4495990d45ad359ef
+    m_MotionReferenceClipAssetGuid: 8e1af862b7fe6f6418ebfa5a11e9740a
+  - m_TargetClipAssetGuid: e569e81bd2858154b9bf4f2e660cf981
+    m_MotionReferenceClipAssetGuid: a8eff0c3e11042246bd72768f1b0cc9e
+  - m_TargetClipAssetGuid: 9654782e7ebbcd14bab93c76dc248019
+    m_MotionReferenceClipAssetGuid: df70b8d21a64e7a4d9a4a306b4d52eb3
+  - m_TargetClipAssetGuid: 3747a185f0711e842b4df7c03fa2cfac
+    m_MotionReferenceClipAssetGuid: f38d9501dc11d064683bedd3d439f712
+  - m_TargetClipAssetGuid: c3f6deae23e56064fb4b8938601e35e5
+    m_MotionReferenceClipAssetGuid: 4a75222c6f7c0134ea92ac10a89cf2cd
+  - m_TargetClipAssetGuid: d755c1356df159543a0c6d3b2230648f
+    m_MotionReferenceClipAssetGuid: cbb3d1ef2fc883149b251be26c11d059
+  - m_TargetClipAssetGuid: 64c2e8fcb3d40744f8728f513cfef052
+    m_MotionReferenceClipAssetGuid: d73b687101cae234d8a23dd0eacd461f
+  - m_TargetClipAssetGuid: a42a3b1b15a10b44f9892c728d72b74f
+    m_MotionReferenceClipAssetGuid: 538bdf8d515d33642abcc3719cdf5de3
+  - m_TargetClipAssetGuid: 90d528fc935ce2e43b4b301c8c2b98db
+    m_MotionReferenceClipAssetGuid: 84839828061e7744399676d8f2ddda67

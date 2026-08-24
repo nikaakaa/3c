@@ -38,9 +38,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterFootPlacementCurveReductionSettings reduction = source.Reduction;
             CharacterAnimationClipContentIdentity clipIdentity =
                 CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clip);
+            CharacterFootMotionReference motionReference = source.RequireMotionReference(clip);
+            _ = CharacterFootMotionReferencePairValidator.RequireCompatible(
+                in motionReference,
+                source.RigDefinition,
+                source.MotionRootBoneId);
+            CharacterAnimationClipContentIdentity motionReferenceIdentity =
+                CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(motionReference.MotionReference);
             return new AnimationFootAnalysisArtifactIdentity(
                 clipIdentity.AssetGuid,
                 clipIdentity.AnalysisInputHash,
+                motionReferenceIdentity.AssetGuid,
+                motionReferenceIdentity.AnalysisInputHash,
                 AssetDatabase.AssetPathToGUID(sourcePath),
                 AssetDatabase.GetAssetDependencyHash(sourcePath).ToString(),
                 source.AnalysisSourceId.Value,
@@ -140,10 +149,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
+        public static void PruneTargetArtifacts(AnimationFootAnalysisArtifactIdentity current)
+        {
+            string currentPath = GetPath(current);
+            string directory = Path.GetDirectoryName(currentPath) ??
+                               throw new InvalidOperationException("Artifact path has no Target directory.");
+            if (!Directory.Exists(directory))
+                return;
+            foreach (string path in Directory.EnumerateFiles(directory, "*.foot-analysis", SearchOption.TopDirectoryOnly))
+            {
+                if (!string.Equals(
+                        Path.GetFullPath(path),
+                        Path.GetFullPath(currentPath),
+                        StringComparison.OrdinalIgnoreCase))
+                    File.Delete(path);
+            }
+        }
+
         public static AnimationFootAnalysisArtifact Write(
             AnimationFootAnalysisArtifactIdentity identity,
             AnimationFootFeaturePair features,
-            AnimationFootPhaseValidationDescriptor phaseValidation)
+            AnimationFootPhaseValidationDescriptor phaseValidation,
+            AnimationFootMotionDataDescriptor motionData)
         {
             string path = GetPath(identity);
             string directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Artifact path has no directory.");
@@ -152,6 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 identity,
                 features,
                 phaseValidation,
+                motionData,
                 out _);
             string temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try

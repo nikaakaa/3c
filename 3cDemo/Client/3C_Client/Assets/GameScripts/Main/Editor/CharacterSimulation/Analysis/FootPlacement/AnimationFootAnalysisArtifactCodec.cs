@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootAnalysisArtifactIdentity identity,
             AnimationFootFeaturePair features,
             AnimationFootPhaseValidationDescriptor phaseValidation,
+            AnimationFootMotionDataDescriptor motionData,
             out StableHash contentHash)
         {
             if (identity == null)
@@ -29,6 +30,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (phaseValidation == null)
                 throw new ArgumentNullException(nameof(phaseValidation));
             phaseValidation.RequireValid();
+            if (motionData == null)
+                throw new ArgumentNullException(nameof(motionData));
             byte[] payload;
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
@@ -36,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 WriteIdentity(writer, identity);
                 WriteFeaturePair(writer, features);
                 WritePhaseValidationDescriptor(writer, phaseValidation);
+                WriteMotionData(writer, motionData);
                 writer.Flush();
                 payload = stream.ToArray();
             }
@@ -81,12 +85,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootFeaturePair features = ReadFeaturePair(payloadReader);
             AnimationFootPhaseValidationDescriptor phaseValidation =
                 ReadPhaseValidationDescriptor(payloadReader);
+            AnimationFootMotionDataDescriptor motionData = ReadMotionData(payloadReader);
             if (payloadStream.Position != payloadStream.Length)
                 throw new InvalidDataException("Animation Foot Analysis payload has trailing bytes.");
             return new AnimationFootAnalysisArtifact(
                 identity,
                 features,
                 phaseValidation,
+                motionData,
                 actualHash);
         }
 
@@ -95,6 +101,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             writer.Write(value.FormatVersion);
             WriteString(writer, value.ClipAssetGuid);
             WriteString(writer, value.ClipAnalysisInputHash);
+            WriteString(writer, value.MotionReferenceClipAssetGuid);
+            WriteString(writer, value.MotionReferenceClipAnalysisInputHash);
             WriteString(writer, value.AnalysisSourceAssetGuid);
             WriteString(writer, value.AnalysisSourceDependencyHash);
             WriteString(writer, value.AnalysisSourceId);
@@ -134,6 +142,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (version != AnimationFootAnalysisArtifactIdentity.CurrentFormatVersion)
                 throw new InvalidDataException($"Animation Foot Analysis payload format '{version}' is unsupported.");
             var identity = new AnimationFootAnalysisArtifactIdentity(
+                ReadString(reader),
+                ReadString(reader),
                 ReadString(reader),
                 ReadString(reader),
                 ReadString(reader),
@@ -239,6 +249,225 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     reader.ReadBoolean());
             }
             return new AnimationFootPhaseValidationFootDescriptor(samples);
+        }
+
+        static void WriteMotionData(BinaryWriter writer, AnimationFootMotionDataDescriptor value)
+        {
+            AnimationFootMotionRawPage raw = value.Raw;
+            writer.Write(raw.SampleRate);
+            writer.Write(raw.DurationSeconds);
+            writer.Write(raw.GroundReferenceHeight);
+            writer.Write(raw.RootSamples.Count);
+            for (int i = 0; i < raw.RootSamples.Count; i++)
+            {
+                AnimationFootMotionRootSample sample = raw.RootSamples[i];
+                writer.Write(sample.TimeSeconds);
+                WriteVector(writer, sample.Position);
+                WriteQuaternion(writer, sample.Rotation);
+            }
+            WriteMotionRawFoot(writer, raw.Left);
+            WriteMotionRawFoot(writer, raw.Right);
+            WriteMotionFoot(writer, value.Left);
+            WriteMotionFoot(writer, value.Right);
+        }
+
+        static AnimationFootMotionDataDescriptor ReadMotionData(BinaryReader reader)
+        {
+            float sampleRate = ReadFinite(reader, "Foot Motion sample rate");
+            float duration = ReadFinite(reader, "Foot Motion duration");
+            float ground = ReadFinite(reader, "Foot Motion ground reference");
+            int count = ReadSampleCount(reader, "Foot Motion root");
+            var roots = new AnimationFootMotionRootSample[count];
+            for (int i = 0; i < count; i++)
+            {
+                roots[i] = new AnimationFootMotionRootSample(
+                    ReadFinite(reader, "Foot Motion root time"),
+                    ReadVector(reader, "Foot Motion root position"),
+                    ReadQuaternion(reader, "Foot Motion root rotation"));
+            }
+            AnimationFootMotionRawFootPage leftRaw = ReadMotionRawFoot(reader);
+            AnimationFootMotionRawFootPage rightRaw = ReadMotionRawFoot(reader);
+            return new AnimationFootMotionDataDescriptor(
+                new AnimationFootMotionRawPage(sampleRate, duration, ground, roots, leftRaw, rightRaw),
+                ReadMotionFoot(reader),
+                ReadMotionFoot(reader));
+        }
+
+        static void WriteMotionRawFoot(BinaryWriter writer, AnimationFootMotionRawFootPage value)
+        {
+            writer.Write(value.RigLegLength);
+            writer.Write(value.Samples.Count);
+            for (int i = 0; i < value.Samples.Count; i++)
+            {
+                AnimationFootMotionRawSample sample = value.Samples[i];
+                writer.Write(sample.TimeSeconds);
+                WriteMotionPose(writer, sample.Hip);
+                WriteMotionPose(writer, sample.Knee);
+                WriteMotionPose(writer, sample.Ankle);
+                WriteMotionPose(writer, sample.Heel);
+                WriteMotionPose(writer, sample.Toe);
+                WriteMotionPose(writer, sample.Sole);
+                WriteVector(writer, sample.SoleVelocity);
+                WriteVector(writer, sample.ToeVelocity);
+                WriteVector(writer, sample.SoleAngularVelocity);
+            }
+        }
+
+        static AnimationFootMotionRawFootPage ReadMotionRawFoot(BinaryReader reader)
+        {
+            float legLength = ReadFinite(reader, "Foot Motion leg length");
+            int count = ReadSampleCount(reader, "Foot Motion raw foot");
+            var samples = new AnimationFootMotionRawSample[count];
+            for (int i = 0; i < count; i++)
+            {
+                samples[i] = new AnimationFootMotionRawSample(
+                    ReadFinite(reader, "Foot Motion raw time"),
+                    ReadMotionPose(reader),
+                    ReadMotionPose(reader),
+                    ReadMotionPose(reader),
+                    ReadMotionPose(reader),
+                    ReadMotionPose(reader),
+                    ReadMotionPose(reader),
+                    ReadVector(reader, "Foot Motion sole velocity"),
+                    ReadVector(reader, "Foot Motion toe velocity"),
+                    ReadVector(reader, "Foot Motion angular velocity"));
+            }
+            return new AnimationFootMotionRawFootPage(legLength, samples);
+        }
+
+        static void WriteMotionPose(BinaryWriter writer, AnimationFootMotionPose value)
+        {
+            WriteVector(writer, value.RootLocalPosition);
+            WriteQuaternion(writer, value.RootLocalRotation);
+            WriteVector(writer, value.MotionPosition);
+            WriteQuaternion(writer, value.MotionRotation);
+        }
+
+        static AnimationFootMotionPose ReadMotionPose(BinaryReader reader) =>
+            new AnimationFootMotionPose(
+                ReadVector(reader, "Foot Motion root-local position"),
+                ReadQuaternion(reader, "Foot Motion root-local rotation"),
+                ReadVector(reader, "Foot Motion motion position"),
+                ReadQuaternion(reader, "Foot Motion motion rotation"));
+
+        static void WriteMotionFoot(BinaryWriter writer, AnimationFootMotionFootPage value)
+        {
+            writer.Write(value.Events.Count);
+            for (int i = 0; i < value.Events.Count; i++)
+            {
+                AnimationFootMotionEvent footEvent = value.Events[i];
+                writer.Write((byte)footEvent.Kind);
+                writer.Write(footEvent.SampleIndex);
+                writer.Write(footEvent.Ordinal);
+                writer.Write(footEvent.CycleOffset);
+                WriteVector(writer, footEvent.RootLocalSolePosition);
+                WriteVector(writer, footEvent.MotionSolePosition);
+                WriteQuaternion(writer, footEvent.SoleRotation);
+            }
+            writer.Write(value.Diagnostics.Count);
+            for (int i = 0; i < value.Diagnostics.Count; i++)
+            {
+                writer.Write((byte)value.Diagnostics[i].Code);
+                writer.Write(value.Diagnostics[i].SampleIndex);
+            }
+            writer.Write(value.Samples.Count);
+            for (int i = 0; i < value.Samples.Count; i++)
+            {
+                AnimationFootMotionDerivedSample sample = value.Samples[i];
+                writer.Write(sample.TimeSeconds);
+                writer.Write(sample.Step.Available);
+                writer.Write(sample.Step.LandingOrdinal);
+                writer.Write(sample.Step.TimeSeconds);
+                writer.Write(sample.Step.Distance);
+                writer.Write(sample.Step.PathProgress);
+                writer.Write(sample.Step.BaselineHeight);
+                writer.Write(sample.Step.AnimationHeight);
+                writer.Write(sample.Step.HeightAbovePath);
+                writer.Write(sample.Filter.ToeHeight);
+                writer.Write(sample.Filter.ToeSpeed);
+                writer.Write(sample.Filter.PositionError);
+                writer.Write(sample.Filter.RotationError);
+                writer.Write(sample.Filter.Contact);
+                writer.Write((byte)sample.Constraint.LockMode);
+                writer.Write(sample.Constraint.LockWeight);
+                writer.Write(sample.Constraint.SupportCandidate);
+                writer.Write(sample.Constraint.Support);
+            }
+            WriteString(writer, value.Diagnostic);
+        }
+
+        static AnimationFootMotionFootPage ReadMotionFoot(BinaryReader reader)
+        {
+            int eventCount = reader.ReadInt32();
+            if (eventCount < 0 || eventCount > MaximumPhaseValidationSamples)
+                throw new InvalidDataException("Foot Motion event count is invalid.");
+            var events = new AnimationFootMotionEvent[eventCount];
+            for (int i = 0; i < eventCount; i++)
+            {
+                byte kind = reader.ReadByte();
+                if (!Enum.IsDefined(typeof(AnimationFootMotionEventKind), kind))
+                    throw new InvalidDataException("Foot Motion event kind is invalid.");
+                events[i] = new AnimationFootMotionEvent(
+                    (AnimationFootMotionEventKind)kind,
+                    reader.ReadInt32(),
+                    reader.ReadInt32(),
+                    reader.ReadInt32(),
+                    ReadVector(reader, "Foot Motion event root-local position"),
+                    ReadVector(reader, "Foot Motion event motion position"),
+                    ReadQuaternion(reader, "Foot Motion event rotation"));
+            }
+            int diagnosticCount = reader.ReadInt32();
+            if (diagnosticCount < 0 || diagnosticCount > MaximumPhaseValidationSamples)
+                throw new InvalidDataException("Foot Motion diagnostic count is invalid.");
+            var diagnostics = new AnimationFootMotionDiagnostic[diagnosticCount];
+            for (int i = 0; i < diagnosticCount; i++)
+            {
+                byte code = reader.ReadByte();
+                if (!Enum.IsDefined(typeof(AnimationFootMotionDiagnosticCode), code))
+                    throw new InvalidDataException("Foot Motion diagnostic code is invalid.");
+                diagnostics[i] = new AnimationFootMotionDiagnostic(
+                    (AnimationFootMotionDiagnosticCode)code,
+                    reader.ReadInt32());
+            }
+            int sampleCount = ReadSampleCount(reader, "Foot Motion derived foot");
+            var samples = new AnimationFootMotionDerivedSample[sampleCount];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float time = ReadFinite(reader, "Foot Motion derived time");
+                var step = new AnimationFootMotionStepEvidence(
+                    reader.ReadBoolean(),
+                    reader.ReadInt32(),
+                    ReadFinite(reader, "Foot Motion step time"),
+                    ReadFinite(reader, "Foot Motion step distance"),
+                    ReadFinite(reader, "Foot Motion path progress"),
+                    ReadFinite(reader, "Foot Motion baseline height"),
+                    ReadFinite(reader, "Foot Motion animation height"),
+                    ReadFinite(reader, "Foot Motion height above path"));
+                var filter = new AnimationFootMotionFilterEvidence(
+                    ReadFinite(reader, "Foot Motion toe height"),
+                    ReadFinite(reader, "Foot Motion toe speed"),
+                    ReadFinite(reader, "Foot Motion position error"),
+                    ReadFinite(reader, "Foot Motion rotation error"),
+                    ReadFinite(reader, "Foot Motion contact"));
+                byte mode = reader.ReadByte();
+                if (mode > 2)
+                    throw new InvalidDataException("Foot Motion lock mode is invalid.");
+                var constraint = new AnimationFootMotionConstraintEvidence(
+                    (AnimationFootLockMode)mode,
+                    ReadFinite(reader, "Foot Motion lock weight"),
+                    ReadFinite(reader, "Foot Motion support candidate"),
+                    ReadFinite(reader, "Foot Motion support"));
+                samples[i] = new AnimationFootMotionDerivedSample(time, step, filter, constraint);
+            }
+            return new AnimationFootMotionFootPage(events, diagnostics, samples, ReadString(reader));
+        }
+
+        static int ReadSampleCount(BinaryReader reader, string field)
+        {
+            int count = reader.ReadInt32();
+            if (count < 3 || count > MaximumPhaseValidationSamples)
+                throw new InvalidDataException($"{field} sample count is invalid.");
+            return count;
         }
 
         static void WriteCurveSet(BinaryWriter writer, AnimationFootFeatureCurveSet value)
@@ -532,6 +761,41 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!float.IsFinite(value))
                 throw new InvalidDataException($"Animation Foot Analysis {field} is not finite.");
         }
+
+        static void WriteVector(BinaryWriter writer, Vector3 value)
+        {
+            RequireFinite(value.x, "vector x");
+            RequireFinite(value.y, "vector y");
+            RequireFinite(value.z, "vector z");
+            writer.Write(value.x);
+            writer.Write(value.y);
+            writer.Write(value.z);
+        }
+
+        static Vector3 ReadVector(BinaryReader reader, string field) =>
+            new Vector3(
+                ReadFinite(reader, field + " x"),
+                ReadFinite(reader, field + " y"),
+                ReadFinite(reader, field + " z"));
+
+        static void WriteQuaternion(BinaryWriter writer, Quaternion value)
+        {
+            RequireFinite(value.x, "quaternion x");
+            RequireFinite(value.y, "quaternion y");
+            RequireFinite(value.z, "quaternion z");
+            RequireFinite(value.w, "quaternion w");
+            writer.Write(value.x);
+            writer.Write(value.y);
+            writer.Write(value.z);
+            writer.Write(value.w);
+        }
+
+        static Quaternion ReadQuaternion(BinaryReader reader, string field) =>
+            new Quaternion(
+                ReadFinite(reader, field + " x"),
+                ReadFinite(reader, field + " y"),
+                ReadFinite(reader, field + " z"),
+                ReadFinite(reader, field + " w"));
 
         static void WriteString(BinaryWriter writer, string value)
         {

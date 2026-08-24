@@ -2,19 +2,27 @@
 
 ## Purpose
 
-定义Corin当前Landing Prediction、Foot Placement Goal事务与唯一FinalIK FBBIK之间的正式表现边界。
+定义Corin Landing Prediction、Ground Path、双脚状态、Support、Pelvis、Goal Contribution与唯一FinalIK FBBIK之间的正式表现边界。
 ## Requirements
 ### Requirement: Foot Placement必须是唯一Goal事务
 
-`CharacterFootPlacementRuntime` MUST只消费同帧Component Pose、左右原子Biomechanical Step Read Page、Body Presentation、Locomotion Motion Timeline、正式Future Body Translation与当前PhysicsScene，并只输出Pelvis、LeftFoot、RightFoot三个Goal。一次Frame只能拥有一个Pending结果，并且必须由外层表现事务`Seal`或`Discard`。
+唯一`CharacterPoseConstraintRuntime` MUST为每个Actor和表现帧建立匹配Frame、Completion与Rig lineage的Pending根Bank。根Runtime MUST只管理阶段顺序、lineage、页所有权、Seal/Discard/Invalidate和失败传播，不得实现Foot、Pelvis、Goal或Solver数学。
 
-系统 MUST不提供第二Grounding、第二Pelvis、LegIK、TwoBoneIK、默认地面、固定高度、fallback、兼容Goal链或FBBIK后处理。
+Foot Placement MUST形成一个深`CharacterFootPlacementModule`，其外部Interface只接收同帧不可变Frame Input并发布一个`CharacterFootPlacementResult`。调用方 MUST不知道或编排Landing Prediction、Ground Path、左右脚状态、Support、Pelvis与Goal编码顺序。
 
-#### Scenario: 一帧完成
+Module Implementation MUST先通过World Query Adapter生成不可变Observation Page，再为左右脚各执行一次`CharacterFootStateMachine`并生成唯一Resolved Foot Pair，最后计算Primary Support、Pelvis与三个typed Goal Contribution。State Machine MUST不直接调用SphereCast、访问Collider或保存Unity查询对象；不得发布第二Goal Set、第二Pelvis、第二FBBIK或第二Physical Writer。
 
-- **WHEN** Foot Placement完成左右脚Landing判断
-- **THEN** Runtime MUST发布同Frame、Completion与Rig identity的三个Goal
-- **AND** 外层事务 MUST对该Pending结果执行一次`Seal`或`Discard`
+#### Scenario: 正常生成Foot Placement结果
+
+- **WHEN** 同一表现帧具有合法Component Pose、Step、Body、World Query、Profile和根Pending Bank
+- **THEN** Foot Placement MUST生成同Frame、Completion与Rig lineage的Resolved Foot Pair、Pelvis Result和三个Goal Contribution
+- **AND** 调用方 MUST不取得或逐个提交Foot Context、Ground Path、Pelvis或Solver状态
+
+#### Scenario: 重复执行Foot Placement
+
+- **WHEN** 同一Frame与Completion第二次请求Foot Placement Prepare
+- **THEN** 根Runtime MUST报告非法调用顺序并阻止整帧发布
+- **AND** MUST不建立第二Foot Placement事务
 
 ### Requirement: Landing Prediction必须形成独立世界事实
 
@@ -41,41 +49,55 @@ SphereCast MUST从Raw Landing上方沿Component Down使用Profile声明的半径
 - **THEN** 该脚 MUST发布`GroundQueryCapacityExceeded`
 - **AND** MUST不接受截断命中集合中的任何Surface
 
-### Requirement: 当前阶段必须只生成Swing脚垂直Goal
+### Requirement: Foot Placement必须通过统一状态机生成双脚修正
 
-Foot Placement MUST只在Current Step权威且处于Swing、Landing Event identity与该脚NextSwingLanding一致、Ground Path全部Edge通过Reachability、状态为Accepted、Ground Envelope端点合法且垂直增量严格大于几何容差时，为该脚生成非零位置Goal。PreSwing、支撑脚、Landing完成帧、`UnreachableEdge`、其它Ground Path Rejected、身份不一致和垂直增量处于容差内的脚 MUST继续发布原生Ankle位置与旋转，但位置和旋转权重都为零。Pelvis Goal MUST继续保持零位置和旋转权重。
+每只脚 MUST只有一个固定typed `CharacterFootStateContext`、一个`CharacterFootStateMachine`和一个Effective Correction Owner。State Machine MUST用以下确定映射重新解释`8fc704a74ed3548c3357eff5c2d45f52d8366a4b`行为：
 
-Swing Foot Motion MUST使用同帧Original Component Pose中的Animated Sole计算`LastLanding -> NextSwingLanding`水平纵向进度，并按该进度分别采样Ground Envelope和两个Landing端点之间的直线基线。最终Ankle与Sole MUST只沿`Component Up`增加`Ground Envelope Sample高度 - Baseline Sample高度`，该增量 MUST在数值容差外保持非负。系统 MUST保留原生动画的水平位置、抬脚高度和旋转，不得把NextSwingLanding直接作为Ankle目标，不得从输入方向、速度方向或旧IK Pose重建脚轨迹。
+```text
+None且PlantCycle未消费 -> Swing
+None且PlantCycle已消费 -> UnlockedSupport
+Acquiring -> Landing
+Locked -> Locked / FullAnchor Response
+Sliding -> Locked / Sliding Response
+Releasing -> Releasing
+```
 
-具有有效非零垂直增量的Swing脚Position Weight MUST只使用同帧现有`animation.foot-placement-weight`作为上限；Rotation Weight MUST为零。通过输入合同但垂直增量为零的Foot Motion MUST保持Accepted诊断并发布零权重Goal，使FullBodyIK跳过无意义的FBBIK Update。系统 MUST不叠加Landing Confidence、摆动相位、预测误差、跨帧Goal平滑、Spring、Pelvis、Foot Lock、Constraint、Anchor、脚底旋转或FBBIK后处理。
+Sliding Response MUST只属于Locked内部计算事实，不得拥有独立Event、Anchor、Transition或Output。系统 MUST保持8fc的状态条件、比较顺序、公式、阈值和逐帧结果，不得因新命名改变行为。
 
-同一`LandingEventIdentity`的Accepted落点 MUST在PreSwing或Swing阶段接受实时权威预测更新。更新距离小于正式Profile的死区时 MUST复用当前落点。预测点漂移 MUST不降低Position Weight。事件完成时 MUST使用最后一个Accepted落点晋升为LastLanding，支撑脚不得继续追逐新路径。不可走 MUST只由Ground Path typed rejection表达，不得用预测误差权重假装拒绝。
+Swing MUST继续使用动画Phase、Last Landing、Next Landing与Ground Envelope：
 
-#### Scenario: Swing脚经过台阶包络
+```text
+phase = InverseLerp(LiftOffPhase, LandingPhase, EventPhase)
+progress = SmoothStep(0, 1, phase)
+baseline = Lerp(LastLanding, NextLanding, progress)
+envelope = SampleEnvelopeByArcLength(progress)
+vertical = max(0, dot(envelope - baseline, ComponentUp))
+         + LandingConstraintWeight * dot(baseline - AnimatedSole, ComponentUp)
+```
 
-- **WHEN** Current authoritative Swing Step与全部Edge可达的Accepted Ground Path属于同一Landing Event且Ground Envelope高于Landing基线
-- **THEN** Foot Placement MUST把原生Ankle沿Component Up抬高对应的包络增量
-- **AND** MUST保持原生Ankle在垂直于Component Up平面内的位置不变
-- **AND** 唯一FullBodyIK MUST消费该同帧Goal并执行一次FBBIK
+同Event Path Revision MUST继续按LandingUpdateDistance捕获`PreviousOutput - NewSwingCorrection`残差，并按EffectiveCorrectionHalfLife衰减。Swing、Landing与Locked MUST继续执行8fc向上RaiseToFloor。
 
-#### Scenario: Swing脚经过平地包络
+PlantConfidence首次达到0.5 MUST消费本轮Plant；只有合法Landing且水平误差不超过LockDistance才进入Landing并使用Landing Point创建Anchor。Landing Contact Progress MUST保持历史最大`InverseLerp(0.5, 0.75, PlantConfidence)`；达到1进入Locked。Landing、Locked、Sliding Response与Releasing的准入、释放和完成条件 MUST逐值保持8fc。
 
-- **WHEN** Ground Envelope与LastLanding到NextSwingLanding基线重合
-- **THEN** Vertical Correction MUST为零
-- **AND** Foot Motion MUST保持Accepted且Foot Goal Position Weight MUST为零
-- **AND** 唯一FullBodyIK MUST验证Goal lineage后跳过FBBIK Update
+Locked FullAnchor Response MUST使用完整Anchor修正。Sliding Response MUST保持8fc的水平权重公式和进入首帧保留Output行为。Releasing MUST保持移动Swing Target残差与HalfLife衰减。Contact Ownership、Support Weight和Goal Position Weight MUST逐值保持8fc。
 
-#### Scenario: Ground Path不可用
+#### Scenario: Acquiring重新解释为Landing
 
-- **WHEN** Current Step处于Swing但Ground Path为`UnreachableEdge`、其它Rejected、Envelope非法或Landing Event identity不一致
-- **THEN** 该脚 MUST发布明确Foot Motion rejection和零权重Goal
-- **AND** MUST不沿用上一帧Goal、默认Envelope或LastLanding到NextSwingLanding直线
+- **WHEN** PlantConfidence首次达到0.5且Landing与LockDistance准入合法
+- **THEN** 新State Machine MUST进入Landing并产生与8fc Acquiring相同的Anchor、Acquire Residual、Progress和Output
+- **AND** MUST不引入新的LandingStarted、固定Duration或动画Contact Plan
 
-#### Scenario: 支撑脚与Pelvis参与同帧GoalSet
+#### Scenario: Sliding重新解释为Locked Response
 
-- **WHEN** 另一只脚拥有有效Swing Foot Goal
-- **THEN** 支撑脚和Pelvis Goal权重 MUST保持为零
-- **AND** 本阶段 MUST不根据Swing脚高度移动Pelvis
+- **WHEN** Locked脚水平误差大于LockDistance且不超过SlideDistance
+- **THEN** State Machine MUST保持Locked生命周期并使用与8fc Sliding相同的水平修正、首帧保留和HalfLife追踪
+- **AND** Sliding Response MUST不形成第二状态机或第二Anchor Owner
+
+#### Scenario: 相同基线输入
+
+- **WHEN** 新Module收到与8fc相同的Frame Input和映射后的上一帧Context
+- **THEN** Swing、Anchor、Correction、Ownership、Support、Pelvis与Goal结果 MUST逐帧等价
+- **AND** 任一差异 MUST作为重构回归而不是行为优化
 
 ### Requirement: Foot Placement配置与Rig必须显式
 
@@ -97,33 +119,17 @@ Landing、Goal、查询命中和diagnostics只属于Presentation。它们 MUST�
 - **THEN** 两端 MAY独立计算Landing diagnostics
 - **AND** 结果 MUST不改变Gameplay或网络确认
 
-### Requirement: Foot Placement诊断必须只显示当前事实
+### Requirement: Foot Placement诊断必须只显示正式结果
 
-Scene诊断 MUST保留上一已提交Accepted Landing、下一Landing Event的Cached Accepted Landing、左右脚Ground Envelope和上游Invalid Segment，并从最近一次成功Seal的只读摘要显示当前Swing脚的Original Animated Sole、Corrected Sole及二者之间的实际垂直修正。Original Sole MUST使用白色小标记；Corrected Sole MUST使用对应脚颜色；修正 MUST使用细线；Active Swing的Foot Motion rejection MUST在Original Sole位置显示红色线框标记。
+Runtime Result MUST与Diagnostics严格分型。Diagnostics MUST从Pending Context、Observation、Resolved Result和后续阶段Result单向深冻结Phase Progress、Baseline、Envelope、Swing Correction、Residual、Anchor、Contact Progress、Ownership、Support Eligibility、Support、Pelvis与Goal/Solved/Physical结果，并可发布新五状态和Lock Response。
 
-只读摘要与CSV MUST记录Foot Motion State、typed Reject Reason、Landing Event、Ground Path identity、Reachability状态、路径distance与progress、Original Sole与Ankle、Baseline Sample、Envelope Sample、Vertical Correction、Corrected Sole、最终Component Ankle Goal和实际Goal权重。Diagnostics与Gizmo MUST不重新采样动画、查询世界、计算Reachability、采样Envelope、计算Foot Motion或执行FBBIK，也 MUST不显示文字、伪路径或Pelvis结果。
+Gizmo、CSV、Trace与Pose Watch MUST只读取相同Frame、Completion、Rig和Bank identity的Committed页。Diagnostics MUST不查询世界、修改Context、选择Support、生成Goal或执行FBBIK。
 
-Foot Placement Scene诊断与CSV MUST区分Ground Path、Foot Motion、Goal、FullBodyIK结果和最终物理骨骼写入。Scene Gizmo不得把Goal存在或画面抖动描述为最终骨骼已经改变；CSV除Goal与FullBodyIK字段外，MUST记录唯一final writer写入后的物理脚踝组件位置、写入Completion identity及相对Goal残差。最终骨骼消费仍 MUST通过现有同帧FootPlacement Goal Target Watch与FullBodyIK Pose Watch验证；两者 MUST具有相同Frame、Completion和Rig lineage，FullBodyIK effector diagnostics MUST记录对应脚的目标、solved position和residual，物理脚踝字段 MUST来自final writer写入后的Transform而不是Goal或Solver缓存。
+#### Scenario: 捕获重构后基线事实
 
-#### Scenario: 查看有效Swing Foot Motion
-
-- **WHEN** 用户查看最近一次成功Seal且具有有效Swing Foot Goal的Scene诊断
-- **THEN** Corrected Sole与Original Sole的差 MUST逐值等于Component Up乘Vertical Correction
-- **AND** CSV中的最终Goal、Position Weight和Pelvis Weight MUST逐值等于同一GoalSet事实
-
-#### Scenario: 查看失败Swing Foot Motion
-
-- **WHEN** 当前Swing脚因Ground Path或Foot Motion合同失败而发布零权重Goal
-- **THEN** Scene诊断 MUST在Original Sole显示红色失败标记
-- **AND** CSV MUST记录对应typed Reject Reason且不得保留上一帧Corrected Sole或Goal
-
-#### Scenario: 验证Goal已经改变最终脚骨骼
-
-- **WHEN** 当前Swing脚发布非零位置Goal且唯一FullBodyIK成功完成同帧求解
-- **THEN** FootPlacement Goal Target Watch与FullBodyIK Pose Watch MUST具有相同Frame、Completion和Rig lineage
-- **AND** FullBodyIK对应脚effector diagnostics MUST记录该Goal与最终solved position
-- **AND** CSV中的FinalPhysicalWriteCompletionIdentity MUST与该帧Completion一致，FinalPhysicalAnkleComponentPosition MUST来自final writer之后的Transform
-- **AND** 用户 MUST不从Scene Gizmo或抖动单独推断骨骼已经消费Goal
+- **WHEN** Foot、Pelvis、Goal、FBBIK和Pending Pose完成验证
+- **THEN** Diagnostics MUST发布可对账8fc的同帧正式事实和新状态映射
+- **AND** Diagnostics命名变化 MUST不改变Runtime Result
 
 ### Requirement: Ground Path必须使用上一已提交落点与下一事件落点
 
@@ -192,12 +198,68 @@ Ground Envelope Builder MUST把Raw Contacts投影到脚步纵向与Component Up�
 
 ### Requirement: Ground Path模块必须保持抽象与实现分离
 
-Foot Placement Runtime MUST只依赖World Query合同、Ground Envelope Builder和预分配结果页。纯Builder MUST不引用`PhysicsScene`、`Collider`、`RaycastHit`、Gizmo或Editor类型；Unity Backend MUST不选择Step、构造Hull或写Goal；Gizmo MUST不重新查询或重算算法。
+Foot Placement核心 MUST只依赖现有World Query合同、Ground Envelope Builder和预分配Observation页。Unity Adapter只执行8fc已有查询与固定容量写入；不得选择Step、保存Foot状态、平滑Correction、创建Anchor、构造Pelvis或写Goal。State Machine MUST只消费不可变Observation，不得直接访问Unity查询对象。
 
-Raw Contacts、Builder workspace和Envelope顶点 MUST预分配。左右脚 MUST各自只有一个Committed Page和一个Pending Page，并随外层Foot Placement事务执行`Seal`或`Discard`。
+Landing Lifecycle的Previous/Next Landing、更新死区、晋升、Prediction Error和Constraint Weight MUST迁入Foot Context并保持8fc行为。Ground Path payload与Foot Context MUST属于同一根Bank，只有State Machine可以写Context。
 
-#### Scenario: 提交Foot Placement Frame
+#### Scenario: 整帧Discard
 
-- **WHEN** 外层Frame成功Seal
-- **THEN** Raw Contacts与Ground Envelope MUST作为同一Foot Placement结果原子提交
-- **AND** Debug读取 MUST不改变下一帧状态
+- **WHEN** Pending Ground Path与Foot Context已生成但后续阶段失败
+- **THEN** Committed Context、Path、Correction、Anchor与Pelvis状态 MUST保持上一成功帧
+- **AND** 下一帧 MUST不读取被丢弃的事实
+
+### Requirement: Foot Constraint必须由显式typed State Context驱动
+
+每只脚 MUST使用一个固定布局`CharacterFootStateContext`集中保存Landing Event、PlantCycleConsumed、Path Residual、Contact Anchor/Progress、唯一Effective Correction、Acquire/Release Residual、顶层State与Lock Response。系统 MUST不使用字符串Key、共享Dictionary、Gameplay Blackboard、动态字段或可变Diagnostics保存Foot状态。
+
+State Machine MUST是Context唯一写入者，并在一次Evaluate中生成Pending Context和Resolved Foot。调用方、Pelvis、Goal与Diagnostics MUST不能直接写Context。
+
+Foot Module MUST由根Bank显式取得Committed与Pending页并执行一次Evaluate；不得保存第二套Committed/Pending指针或公开Begin、Complete、Discard生命周期。State Machine的一次Evaluate MUST内部完成Landing晋升、Next Swing捕获与Constraint解析，外层Implementation MUST不编排三个独立入口。
+
+#### Scenario: Action硬失去脚所有权
+
+- **WHEN** Action占用该脚且当前PlantConfidence不低于0.5
+- **THEN** State Machine MUST按8fc清空输出与接触状态，并把本轮Plant保持为已消费的UnlockedSupport映射
+- **AND** Action、调用方和Diagnostics MUST不直接修改Context字段
+
+### Requirement: Future Body Translation必须写入固定Workspace
+
+Foot Placement MUST为每个根Bank预分配固定容量Future Body Translation Workspace，并把它交给正式Translation Source写入。Translation Source MUST只更新有效Sample数量和内容，不得为每次活跃预测新建Trajectory对象、临时Sample数组或复制Sample集合。
+
+#### Scenario: 同一帧左右脚请求未来Body平移
+
+- **WHEN** 左右脚需要同一Body、Timeline与Duration范围的未来平移
+- **THEN** Foot Module MUST在本帧只填充一次Pending Workspace并让两脚读取同一只读结果
+- **AND** 预测不得产生托管堆分配
+
+### Requirement: Resolved Foot必须形成紧凑下游合同
+
+`CharacterResolvedFootResult`正式下游合同 MUST包含Frame/Completion/Rig/Side、Final Sole/Ankle、Effective Correction、Goal Weight、Contact Reference/Ownership、Support Eligibility、Support Weight、Support Intent Weight、Support Horizontal Error、Support Event lineage、typed Pelvis Reach Reference与Outcome。Support Eligibility MUST只包含`None`、`RetainOnly`与`AcquireAndRetain`。
+
+State Machine MUST按8fc映射发布Eligibility：Swing、Landing和UnlockedSupport为None，Releasing为RetainOnly，Locked无论FullAnchor或Sliding Response均为AcquireAndRetain。重构阶段Support Intent Weight MUST逐值等于8fc Support Weight；Pelvis Reach Reference MUST只在现有Contact可参与Pelvis时指向与Contact Reference相同的点，其余状态为Unavailable。State、Lock Response、Path、Anchor内部历史、Acquire/Release Residual和其它Context字段 MUST不进入正式Resolved Result；它们 MAY只进入Diagnostics。
+
+Resolved Foot Pair MUST只组合同Frame/Completion/Rig的左右Result，不重新计算状态、Support或Goal，不得成为第二Blackboard。
+
+#### Scenario: Locked使用Sliding Response
+
+- **WHEN** Locked脚当前使用Sliding Response
+- **THEN** Resolved Foot MUST发布AcquireAndRetain及与8fc相同的Support Weight、Horizontal Error和Contact Reference
+- **AND** MUST不向Primary Support暴露Lock Response
+
+#### Scenario: Releasing只能保留支撑
+
+- **WHEN** 脚处于Releasing
+- **THEN** Resolved Foot MUST发布RetainOnly及与8fc相同的残余Support Weight
+- **AND** Primary Support MUST不能从无Primary状态新获取该脚
+
+### Requirement: Pelvis必须只消费Resolved Foot Pair并保持基线结果
+
+Primary Support MUST只读取Resolved Pair中的Support Eligibility、Support Weight、Support Horizontal Error、Support Event identity和Contact Reference：AcquireAndRetain可获取并保留，RetainOnly只能保留，None不能参与。Selector MUST不读取Foot State、Lock Response或Context。
+
+Stride与Pelvis MUST只读取Primary Support Result及Resolved Pair中的Final Sole、Pelvis Reach Reference和lineage。Stride端点、支持腿可达区间、Pelvis Target、Handoff与Spring MUST保持8fc逐值结果。本change MUST不读取Foot State/Lock Response、不提前接入Landing腿或读取新的Path Proposal改变Pelvis。
+
+#### Scenario: Sliding Response脚成为Primary Support
+
+- **WHEN** 一只Resolved Foot发布AcquireAndRetain且其内部脚处于Sliding Response
+- **THEN** Primary Support MUST按8fc把它视为可获取且可保留候选
+- **AND** Primary Support与Pelvis MUST不需要读取Sliding Response并产生与旧Sliding状态相同的结果

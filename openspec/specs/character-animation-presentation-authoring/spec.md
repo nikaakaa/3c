@@ -2,11 +2,11 @@
 
 ## Purpose
 
-定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition只引用CharacterAnimationPresentationProfile，Profile唯一引用Pose Graph、state-local Pose source、有限Action producer、node-local Policy、Rig与Foot Analysis，Profile Inspector和Pose Graph Workspace提供各自唯一入口，并由编译链生成CharacterPresentationProjection。
+定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition只引用CharacterAnimationPresentationProfile，Profile唯一引用Pose Graph、state-local Pose source、有限Action producer、node-local Policy、Rig、FullBodyIK Profile与Foot Analysis，Profile Inspector和Pose Graph Workspace提供各自唯一入口，并由编译链生成CharacterPresentationProjection。
 ## Requirements
 ### Requirement: Presentation Profile必须唯一绑定Pose source
 
-Pose Graph MUST唯一拥有typed Source Slot，`CharacterAnimationPresentationProfile` MUST为每个Slot拥有唯一类型匹配Binding。Clip Binding MUST直接引用精确AnimationClip；Blend Space与Motion Matching Binding MUST继续引用各自正式资源。Profile MUST唯一引用角色Rig Definition、Foot Analysis Source、有限Action producer binding和Locomotion Sync Group。Clip Binding与Action producer binding MUST不保存Sequence、Rig副本、Analysis identity副本、素材Curve、Marker、Group、Role、Topology或Time Mapping。Blend Space与Motion Matching资源内部为各自Artifact保存的Rig/Analysis compatibility identity MAY保留，但只能作为Profile选择的准入约束，不得成为第二角色配置owner。
+Pose Graph MUST唯一拥有typed Source Slot，`CharacterAnimationPresentationProfile` MUST为每个Slot拥有唯一类型匹配Binding。Clip Binding MUST直接引用精确AnimationClip；Blend Space与Motion Matching Binding MUST继续引用各自正式资源。Profile MUST唯一引用角色Rig Definition、FullBodyIK Profile、Foot Analysis Source、有限Action producer binding和Locomotion Sync Group。Clip Binding与Action producer binding MUST不保存旧包装资产、Rig副本、Analysis identity副本或素材注册Curve副本。Blend Space与Motion Matching资源内部为各自Artifact保存的Rig/Analysis compatibility identity MAY保留，但只能作为Profile选择的准入约束，不得成为第二角色配置owner。
 
 #### Scenario: ClipPlayer解析RunLoop
 
@@ -62,7 +62,7 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: Pipeline Definition 必须引用唯一 Animation Presentation Profile
 
-`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存动画表现数据。Profile MUST唯一引用Pose Graph、Profile-owned Pose source binding子资产、有限Action producer source binding、node-local Policy、Rig与Foot Analysis配置。Pose Graph MUST唯一保存Presentation Fact Input、PoseStateMachine、Graph-owned Source Slot子资产、ClipPlayer、AnimationSlot、Selection Player、composition、FootPlacement与Output topology。Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter与Prefab MUST不复制这些配置。
+`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存动画表现数据。Profile MUST唯一引用Pose Graph、Profile-owned Pose source binding子资产、有限Action producer source binding、node-local Policy、Rig、FullBodyIK Profile与Foot Analysis配置。Pose Graph MUST唯一保存Presentation Fact Input、PoseStateMachine、Graph-owned Source Slot子资产、ClipPlayer、BlendSpacePlayer、SelectedPosePlayer、AnimationSlot、composition、Local/Component Pose转换、FootPlacement、PoseBoneIKGoals、Goal Assembler、FullBodyIK与Output topology。Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter与Prefab MUST不复制这些配置。
 
 #### Scenario: Corin配置动画表现
 
@@ -128,7 +128,7 @@ Blend Policy MUST属于明确的transition owner：PoseState Transition edge、A
 
 ### Requirement: CharacterAnimationPresentationProfile Inspector必须是唯一Presentation配置入口
 
-Profile Inspector MUST唯一编辑Pose Graph、Profile-owned Pose source binding子资产、Blend Policy、Inertialization Policy、Rig Definition、有限Action producer source binding、Foot Analysis Mode与Analysis Source。Timeline Editor继续唯一编辑Action producer-local Clip Segment、Window、Motion、Cue和Timeline-local Curve。持续Locomotion Clip的骨骼与注册曲线归属原生AnimationClip，角色Rig、Analysis Source与Locomotion Sync Group归属Profile；系统 MUST不要求为该source创建Timeline。Inspector MUST通过类型受限Unity对象选择器和可读业务名编辑资源，不得要求作者输入Source Id、Provider Id、GUID、local file id、revision或hash。
+Profile Inspector MUST唯一编辑Pose Graph、Profile-owned Pose source binding子资产、Blend Policy、Inertialization Policy、Rig Definition、FullBodyIK Profile、有限Action producer source binding、Foot Analysis Mode与Analysis Source。Timeline Editor继续唯一编辑Action producer-local Clip Segment、Window、Motion、Cue和Timeline-local Curve。持续Locomotion Clip的骨骼与注册曲线归属原生AnimationClip，角色Rig、FullBodyIK Profile、Analysis Source与Locomotion Sync Group归属Profile；系统 MUST不要求为该source创建Timeline。Inspector MUST通过类型受限Unity对象选择器和可读业务名编辑资源，不得要求作者输入Source Id、Provider Id、GUID、local file id、revision或hash。
 
 #### Scenario: 从Profile打开Timeline Analysis
 

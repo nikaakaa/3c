@@ -147,7 +147,8 @@ Animancer Evaluate / Source Capture
     |
     v
 CharacterPoseProgramRuntime.CompleteEvaluation
-    -> 在编译Operation位置调用CharacterPoseConstraintRuntime一次
+    -> 在每个Constraint Family Operation位置调用对应typed入口一次
+    -> Constraint Complete只验证闭包并发布最终Result
     -> CharacterPoseProgramResult
     |
     v
@@ -184,7 +185,7 @@ ResultPageLease
 
 ### CharacterPoseProgramImage
 
-Program Image在Projection Build后不可变，包含：
+Program Image在Projection Build后不可变，并作为`CharacterPresentationProjection`内部唯一Pose程序随同一ProjectionRevision原子发布。Runtime直接读取该Image并装配Actor Module，不再把Projection Pose Plan复制或转换为第二个Native Program容器。Program Image包含：
 
 ```text
 SchemaVersion
@@ -227,7 +228,7 @@ Inertialization history与accumulator
 program-local persistent control state
 ```
 
-Source物理资源状态归Source Module，Foot/Goal/FBBIK状态归Constraint Runtime，Committed Final Pose归Final Publication；Program Actor State只保存Pose Program节点状态，不复制其它Module真相。
+Source物理资源状态归Source Module，Foot/Goal/FBBIK状态归Constraint Runtime，Committed/Pending Final Pose物理页归Final Publication；Program Actor State只保存Pose Program节点状态，不复制其它Module真相。
 
 ### CharacterPoseFrameTransaction
 
@@ -237,7 +238,7 @@ Frame Transaction只保存当前Pending结果：
 Frame Lease与唯一lineage
 Pending node control state
 Source Demand与Source Binding只读页
-Pose/Value workspace
+Pose/Value workspace，Final Output只保存Publication Pending页的typed write handle
 Operation completion页
 Module Result引用
 固定mutation journal
@@ -294,19 +295,19 @@ Clip、Blend Space、Motion Matching和有限Action是Source Module内部的真�
 
 ## Decision 5: Pose Constraint是Program调用的深Module，不是Program布局的一部分
 
-前置Foot change完成后，`CharacterPoseConstraintRuntime`已经拥有Foot、Goal、Assembler、FBBIK和BendHistory。本change只收紧其外部Interface：
+前置Foot change完成后，`CharacterPoseConstraintRuntime`已经拥有Foot、Goal、Assembler、FBBIK和BendHistory。本change只收紧其外部Interface，并保持Graph中的Constraint Operation仍由Program Runtime逐个调度：
 
 ```text
-BeginFrame(FrameLease, ComponentPoseDescriptor, ConstraintFacts)
-PrepareFootPlacement(...)
-ProducePoseBoneContributions(...)
-AssembleGoals()
-SolveFullBodyIk()
-Validate()
+BeginFrame(FrameLineage, ConstraintFrameFacts)
+ExecuteFootPlacement(FootPlacementHandle, ComponentPoseView)
+ExecutePoseBoneContribution(PoseBoneContributionHandle, ComponentPoseView)
+ExecuteGoalAssembler(GoalAssemblerHandle)
+ExecuteFullBodyIk(FullBodyIkHandle, ComponentPoseWriteView)
+Complete()
 -> CharacterPoseConstraintResult
 ```
 
-实际方法可以合并得更深，但调用方只能看到业务输入、阶段Outcome和最终Result；不得看到：
+每个typed Handle只表达对应Family的编译身份、typed Value引用与固定Result slot，不暴露Program数组布局。每个Constraint Operation在自己的Stage位置恰好调用一次对应入口并写入唯一Operation completion；`Complete`只验证整个Constraint闭包并发布最终Result，不重新执行任何Operation。调用方只能看到业务输入、阶段Outcome和最终Result；不得看到：
 
 ```text
 NativeSlice<CharacterFullBodyIkGoal>
@@ -318,7 +319,7 @@ Bank内部页
 Diagnostics页
 ```
 
-Program Image中的Constraint Operation Payload只保存编译Handle，例如Constraint application identity、typed value refs和固定Result slot。Program Runtime遇到该Operation时调用Constraint Runtime一次，并把返回Result映射到Program Value；外层Runtime不得提前执行，Executor不得再次验证业务算法。
+Program Image中的Constraint Operation Payload只保存上述typed编译Handle。Program Runtime遇到每个Constraint Family Operation时调用对应Constraint入口一次，并把返回的per-operation Result映射到Program Value；Constraint Module不得扫描Program或维护第二份Stage Schedule，外层Runtime不得提前执行，Executor不得再次验证业务算法。
 
 Foot行为、Support、Pelvis、Goal编码和Bend策略以依赖change归档结果为Oracle，本change不调整公式或阈值。
 
@@ -353,8 +354,8 @@ World Context在Frame开始以typed Adapter准备；Program Runtime只在编译�
 `CharacterFinalPosePublication`是具体深Module，拥有：
 
 ```text
-Committed Final Pose页
-Pending Final Pose页
+Committed Final Pose物理页
+Pending Final Pose物理页
 完整Physical Bone binding
 Final Writer Job binding
 整Rig预验证
@@ -362,7 +363,7 @@ Final Writer Job binding
 Publication Result
 ```
 
-它只接收完成的Program Output Pose与同一lineage，不读取Graph节点、Goal来源、Foot状态或Constraint内部Result。写任何Physical Bone前验证全部binding、Pose availability、Rig、continuity和completion；合法时一次写完整Pending Pose，不合法时保持Committed Pose并遵守现有Barrier/Fault规则。
+Program Image的Output Family不拥有第二Final Pose buffer，只持有指向Publication Pending页的typed write handle。Program Runtime执行Output Operation时通过该handle写入Pending Final Pose并发布只读`ProgramOutputPoseResult`；Final Publication随后只接收该Result与同一lineage，不读取Graph节点、Goal来源、Foot状态或Constraint内部Result。写任何Physical Bone前验证全部binding、Pose availability、Rig、continuity和completion；合法时一次写完整Pending Pose，不合法时保持Committed Pose并遵守现有Barrier/Fault规则。
 
 Physical Writer成功后不得再运行会因业务数据失败的计算。Seal只发布已经验证的Program、Constraint、Source lifecycle和Final Publication结果。
 
@@ -406,7 +407,7 @@ Definition只负责单节点局部合同。以下全局规则仍由Topology Pass
 
 不继续使用`Player/BlendPolicy/StateMachine/AnimationSlot/Inertialization/...`二十多个布尔能力。调用方需要业务信息时读取结构化定义，例如Ports、Placement、OperationFamily或SourceBindingRequirement，而不是自行switch NodeKind。
 
-Agent Document、Clipboard和Editor不再复制Payload字段表。Definition变化如果改变authoring语义，必须同步Document schema、exporter、reconciler、mutation和validator；但它们通过同一定义投影，不保留第二catalog。
+Agent Document、Clipboard和Editor不再复制Payload字段表。Definition只向现有Graph Authoring Capability、Document模型/strict codec、Exporter、Reconciler、typed Mutation与Validator投影节点局部字段、端口和role语义；它不得接管Document package路径、文件闭包、diff、Undo、rollback、save或reverse export事务。Definition变化如果改变authoring语义，必须同步这些正式调用者，但Reconciler与Document Transaction Service继续分别拥有唯一对账和事务生命周期，不建立Definition专用apply入口或第二catalog。
 
 ## Decision 9: Compiler使用固定不可逆Pass
 
@@ -432,23 +433,27 @@ Compile(CharacterPoseCompilationRequest)
    typed nodes/edges
    -> CharacterPoseTopologyPlan
 
-4. ValuePlanPass
-   topology
-   -> CharacterPoseValuePlan
+4. SymbolicFamilyLoweringPass
+   typed IR + topology
+   -> CharacterPoseSymbolicOperationPlan
 
-5. WorkspacePlanPass
-   topology + values + Rig + capacities
-   -> CharacterPoseWorkspacePlan
-
-6. FamilyPayloadPass
-   typed IR + topology + value/workspace handles
-   -> CharacterPoseFamilyPayloadPlan
-
-7. StageSchedulePass
-   topology + execution domains + payload plan
+5. StageSchedulePass
+   topology + symbolic operations + execution domains
    -> CharacterPoseStageSchedule
 
-8. SealProgramImagePass
+6. ValueLifetimePass
+   topology + symbolic operations + stage schedule
+   -> CharacterPoseValuePlan
+
+7. WorkspacePlanPass
+   topology + symbolic operations + schedule + values + Rig + capacities
+   -> CharacterPoseWorkspacePlan
+
+8. BindFamilyPayloadPass
+   symbolic operations + stage/value/workspace handles
+   -> CharacterPoseFamilyPayloadPlan
+
+9. SealProgramImagePass
    全部不可变结果
    -> CharacterPoseProgramImage
 ```
@@ -486,23 +491,30 @@ CharacterPoseValueReference
     Access
 ```
 
-Operation-specific数据进入Family页，例如：
+Operation-specific数据进入Family页。全部现行Operation Code在ABI切换前必须进入以下唯一映射，不能遗漏后再保留旧Operation reader：
 
 ```text
-PlayerPayload[]
-StateMachinePayload[]
-AnimationSlotPayload[]
-BlendPayload[]
-InertializationPayload[]
-CompositionPayload[]
-SpaceConversionPayload[]
-ComponentControlPayload[]
-GoalContributionPayload[]
-GoalAssemblerPayload[]
-FullBodyIkPayload[]
-LinkedPosePayload[]
-OutputPayload[]
+ParameterInputPayload[]          <- ProgramParameterInput
+ParameterResolvePayload[]        <- PoseParameterResolve
+PlayerPayload[]                  <- SelectedPosePlayer / ClipPlayer / BlendSpacePlayer
+StateMachinePayload[]            <- PoseStateMachine / StatePoseOutput
+ActionInputPayload[]              <- ActionPlaybackInput
+AnimationSlotPayload[]            <- AnimationSlot
+BlendPayload[]                    <- BlendStack / BlendPose
+InertializationPayload[]          <- Inertialization
+CompositionPayload[]              <- LayeredBoneBlend / AdditivePose
+SpaceConversionPayload[]          <- LocalToComponentPose / ComponentToLocalPose
+ComponentControlPayload[]         <- ModifyBone / RootOrientationWarp
+MotionMatchingPayload[]           <- MotionMatchingPose / ChooserResolve / EntrySourceCapture / EntryProcessing / InternalBlend
+PoseHistoryPayload[]              <- PoseHistoryRead / PoseHistoryCommit
+GoalContributionPayload[]         <- FootPlacement / PoseBoneIKGoals
+GoalAssemblerPayload[]            <- FullBodyIkGoalAssembler
+FullBodyIkPayload[]               <- FullBodyIK
+LinkedPosePayload[]               <- LinkedPoseCall
+OutputPayload[]                   <- OutputPose
 ```
+
+`SymbolicFamilyLoweringPass`先产生上述Family、symbolic typed value依赖、跨帧状态需求、Frame页需求与Workspace需求，不分配物理index。`StageSchedulePass`固定执行位置后，`ValueLifetimePass`才能按真实消费阶段计算寿命；`WorkspacePlanPass`据此分配容量；最后`BindFamilyPayloadPass`只把symbolic引用绑定为typed handle，不得发现新的Operation、状态页或容量需求。
 
 同一Family可在内部再用小型typed variant，但不得恢复全系统万能record。Seal时必须证明：
 
@@ -542,7 +554,7 @@ Node control pending pages
 Inertialization pages
 Contribution/Goal handles
 Operation completion pages
-Final Output page
+Final Output typed handle，指向Publication Pending Final Pose物理页
 ```
 
 Program Runtime是这些页的唯一布局解释者。Constraint和Source Module只通过typed Handle/Result交换，不索引Program内部数组。
@@ -653,18 +665,19 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 迁移在同一change中顺序完成，但不保留并行运行路径：
 
 1. 等待Foot两项change和Blend Space完成归档，固定完整动画行为与Projection作为Oracle。
-2. 建立Frame lineage、typed Result和Module依赖规则，先让现有实现按新结果合同对账。
-3. 将`CharacterPoseConstraintRuntime`移出巨型文件并收紧Interface；删除布局泄露调用。
+2. 建立Frame lineage、typed Result和Module依赖规则，只让现有单一路径携带新身份与结果合同，不提前创建空壳Module或收窄根Runtime。
+3. 将`CharacterPoseConstraintRuntime`移入正式目录并按每个Constraint Family Operation收窄typed Handle/Result Interface；删除布局泄露调用。
 4. 提取`CharacterPoseSourceModule`，原子迁移provider、Animancer、Physical Source和release所有权；从旧Runtime删除对应字段与方法。
-5. 建立`CharacterPoseProgramImage + CharacterPoseActorState + CharacterPoseFrameTransaction`，把旧Native Program可变状态迁入唯一Owner。
-6. 建立持久`CharacterPoseProgramRuntime`和Executor，迁移PoseState、Player、Slot、Blend、Inertialization与Operation执行；删除外层World-aware预执行和旧Staged Executor双Owner。
-7. 建立`CharacterFinalPosePublication`，迁移Final Pose页、完整验证和Writer；旧Runtime不再直接操作Physical Bones。
-8. 建立Node Definition Module，一次性迁移Capability、Authoring、Document、Clipboard、Mutation、local validation和lowering；删除旧Handler Registry与重复switch。
-9. 将Compiler拆成固定Pass，删除中央`CompilationState`和pass-through入口。
-10. 原子切换分段Operation ABI、Program Image codec、Projection schema和Runtime reader；删除万能Operation与旧reader。
-11. 将Diagnostics改为Committed Result Projector；删除对内部Program/Workspace/Constraint的读取。
-12. 迁移Preview到同一Factory和Program Image，删除简化或重复执行路径。
-13. 搜索并删除旧类、旧字段、旧codec、旧validator知识、兼容版本和未引用路径，更新project truth并完成编译与严格校验。
+5. 建立Projection内部唯一`CharacterPoseProgramImage + CharacterPoseActorState + CharacterPoseFrameTransaction`，把旧Native Program可变状态迁入唯一Owner。
+6. 建立持久`CharacterPoseProgramRuntime`和Executor，迁移PoseState、Player、Slot、Blend、Inertialization与Operation执行；删除外层World-aware Operation扫描和旧Staged Executor双Owner。
+7. 建立`CharacterFinalPosePublication`，迁移唯一Committed/Pending Final Pose物理页、完整验证和Writer；Output Family只保留typed write handle，旧Runtime不再直接操作Physical Bones。
+8. 在四个Module都接通后收窄`CharacterAnimationPresentationRuntime`，删除其节点、offset、Constraint、source和Writer知识，只保留Frame阶段协调与唯一Seal/Discard/Fault。
+9. 建立Node Definition Module，一次性迁移Capability、Authoring、Document节点局部投影、Clipboard、Mutation、local validation和lowering；保留唯一Document Reconciler与Transaction Service，删除旧Handler Registry与重复switch。
+10. 将Compiler拆成`Symbolic Family -> Schedule -> Value Lifetime -> Workspace -> Bind Payload`固定Pass，删除中央`CompilationState`和pass-through入口。
+11. 完成全部现行Operation Code到Family/Owner/Domain映射后，原子切换分段Operation ABI、Projection内Program Image schema和Runtime reader；删除万能Operation、第二Native Program容器与旧reader。
+12. 将Diagnostics改为Committed Result Projector；删除对内部Program/Workspace/Constraint的读取。
+13. 迁移Preview到同一Factory和Program Image，删除简化或重复执行路径。
+14. 搜索并删除旧类、旧字段、旧codec、旧validator知识、兼容版本和未引用路径，更新project truth并完成编译与严格校验。
 
 每一步替代完成后立即删除旧Owner。允许中间commit暂时无法编译，但不允许为了保持可运行而让新旧Owner同时执行、双写或通过开关切换。
 
@@ -682,23 +695,29 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 
 代价是迁移早期仍短暂使用当前正式ABI；它不是fallback，而是尚未被后续任务替换的当前单一路径。
 
-### 3. Node Definition集中与全局Validator分离
+### 3. Stage与Family需求先于Value/Workspace物理布局
+
+先分配Value和Workspace再生成Family与Stage，会迫使后续Pass回写容量或让Topology提前承载全部Family Implementation知识。这里先产生symbolic Family Operation并固定Stage，再计算Value寿命与Workspace，最后只绑定typed handle。
+
+代价是Compiler多一个symbolic Operation Result，但它集中表达编译需求，不进入Runtime，也不复制最终Payload页。
+
+### 4. Node Definition集中与全局Validator分离
 
 把所有规则塞进Node Definition可以看起来“单一真相”，但唯一Output、Goal Slot冲突和Stage依赖本质上是Graph全局关系。强塞会让Definition相互查询并重新形成中央耦合。因此Definition只拥有局部语义，Topology Pass拥有全局规则。
 
-### 4. Program Runtime较深
+### 5. Program Runtime较深
 
 Program Runtime内部仍会包含多种节点Implementation和大量Native页；这是有意的Depth，不意味着回到巨型类。区别在于外部Interface很小、内部按Family保持Locality，且Program、Actor State、Frame数据已经分型。
 
-### 5. Source Module不拥有逻辑选择
+### 6. Source Module不拥有逻辑选择
 
 把Player、Blend和Transition一起放进Source Module可以减少表面Module数量，但会让Animancer资源生命周期重新成为动画选择权威。这里保留Program节点作为逻辑Owner，Source Module只实现采样与物理资源。
 
-### 6. 不建立通用Operation插件系统
+### 7. 不建立通用Operation插件系统
 
 运行时可注册任意Handler能让节点“看起来可扩展”，但会破坏固定Projection、AOT可知容量、Stage静态证明和错误Locality。新增节点仍通过Editor Node Definition和编译后的有限Operation Family扩展；Runtime Family目录是显式封闭ABI，不使用反射或服务定位器。
 
-### 7. Projection破坏性重建
+### 8. Projection破坏性重建
 
 分段ABI要求提升Projection schema并重建全部generated Projection。保留旧reader可减少一次内容重建，但会永久保留两套Operation解释规则，因此本change选择显式重建并删除旧schema。
 
@@ -717,6 +736,9 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 - active Foot change与本change都会修改`character-animation-pipeline`和`character-presentation-pose-graph`。通过明确顺序解决：先归档Foot架构与行为change，本change delta以归档后的Goal Contribution/Assembler/FBBIK合同为基线。
 - active Blend Space change会修改Pose node、Projection和source runtime。通过先归档Blend Space解决；本change迁移其最终节点Definition与Source Adapter，不修改算法。
 - current Pose authoring requirement写明`compiler handler`。本change明确修改为唯一Node Definition Adapter并删除Handler Registry。
+- current `graph-authoring-domain-framework`要求Capability直接保存Compiler Handler。本change同步修改为Pose Node Definition向共享Capability投影UI与Document语义，Compiler从同一Definition取得typed lowering；Definition不得接管Document Reconciler或Transaction Service。
+- current `btsmtl-compiled-simulation-program`与`project.md`并存`CharacterPresentationPoseProgram`、Native Pose Program称呼。本change统一为`CharacterPresentationProjection`内部唯一`CharacterPoseProgramImage`，Runtime不生成第二程序容器。
+- 前置Pose Constraint change归档后，`character-foot-placement-presentation`会把Physical diagnostics放入Constraint根Bank。本change同步迁移为Constraint Committed Result只拥有Foot/Goal/FBBIK事实，Physical结果只属于Final Publication Committed Result，由Diagnostics Projector按同lineage组合。
 - current动画事务允许各Module拥有内部Pending页，但没有明确Program Image、Actor State和Frame Transaction。新增runtime architecture spec把三种寿命分型，同时保留现有Barrier和Dense/Journal政策。
 - current Diagnostics允许从完成workspace复制。本change收紧为运行帧内按interest冻结、Seal后只读取Committed Result，避免跨Owner读取；可观察字段不减少。
 - archived设计曾表达Module分层，但archive不作为current truth。本change不依赖archive实现，只把仍有价值且与current spec一致的职责重新形成正式delta。

@@ -110,13 +110,13 @@ Blend Space资产 MUST为每个可发布source-local ParameterId声明`RequireAl
 
 ### Requirement: Foot Analysis feature必须使用姿势相同的样本贡献
 
-每个BlendSpace sample MUST通过稳定AssetId/SampleId/Clip/Rig/Calibration identity绑定正式Foot Analysis artifact。Runtime MUST按每个样本effective time读取feature，并用与骨骼姿势相同的最终sample weight聚合左右脚feature和source contribution。BlendSpacePlayer MUST不执行Physics query、foot grounding、contact/anchor、pelvis goal或IK；唯一FootGrounding MUST继续消费composition后的最终贡献并按`Lyra Current Grounding -> Stance Stabilization -> Pelvis Resolve`生成Baseline Goals，可选Predictive Modifier只消费未被anchor拥有的Swing脚下一落地贡献，并由下游唯一FullBodyIK消费最终Goal Set。
+每个BlendSpace sample MUST通过稳定AssetId/SampleId/Clip/Rig/Calibration identity绑定正式Foot Analysis artifact。Runtime MUST按每个样本effective time读取feature，并用与骨骼姿势相同的最终sample weight聚合左右脚feature和source contribution。BlendSpacePlayer MUST不执行Physics query、Foot State、contact/anchor、Pelvis、Goal Assembly或IK；唯一CharacterFootPlacementModule MUST消费composition后的最终贡献并生成Resolved Foot Pair、Pelvis Result与typed Goal Contribution，唯一Goal Assembler MUST形成一个Goal Set，下游唯一FullBodyIK MUST只求解一次。
 
 #### Scenario: Walk与Run共同贡献
 
 - **WHEN** Walk和Run样本分别以0.4与0.6权重生成Pose
 - **THEN** 左右脚feature MUST按同一0.4与0.6贡献聚合
-- **AND** FootGrounding MUST只生成一次Baseline Goals，可选PredictiveFootPlacementModifier MUST只改写一次Swing脚，FullBodyIK MUST只求解一次
+- **AND** CharacterFootPlacementModule MUST只执行一次，Goal Assembler MUST只形成一个Goal Set，FullBodyIK MUST只求解一次
 
 ### Requirement: Blend Space必须拥有正式资产编辑体验
 

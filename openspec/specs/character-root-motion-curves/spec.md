@@ -148,7 +148,7 @@ Timeline中的MotionCurve Clip MUST继续唯一保存Weight、Position X/Y/Z、Y
 - **WHEN** 作者展开MotionCurve Clip的Position Z channel并移动key
 - **THEN** Curve Editor MUST按Clip-local time与meter value显示和提交完整curve
 - **AND** Semantic Compiler MUST沿既有MotionCurve operation重新编译该curve
-- **AND** Animation、Marker Sync与Presentation MUST不成为该位移的第二消费者
+- **AND** Animation采样与Presentation MUST不成为该位移的第二消费者
 
 #### Scenario: MotionCurve引用RootMotionCurveAsset
 

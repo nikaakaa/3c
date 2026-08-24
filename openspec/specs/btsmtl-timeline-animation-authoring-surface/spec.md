@@ -53,22 +53,6 @@ Timeline Editor MUST提供显式Editor-only tool provider合同和不使用反�
 - **THEN** Session MUST拒绝该Mutation
 - **AND** provider只能返回Open Animation Clip导航请求
 
-### Requirement: Timeline上下文必须区分作者、Topology、领域工具与Runtime Debug
-
-本地作者上下文、跨producer Topology context、领域工具输入与Runtime Debug binding MUST是四个独立合同。任何合同缺失 MUST只禁用依赖它的功能，不得由其它合同补全、猜测或转型替代。
-
-#### Scenario: 只有Runtime Debug binding
-
-- **WHEN** Timeline附着运行实例但没有Character authoring topology
-- **THEN** Live Debug MAY显示正式playback状态
-- **AND** Marker group作者校验与Foot Analysis MUST不从运行实例推导作者上下文
-
-#### Scenario: 只有Marker topology context
-
-- **WHEN** Timeline从Graph打开但没有选择Analysis Source
-- **THEN** Marker group校验 MAY工作
-- **AND** Foot Analysis MUST继续要求自己的显式领域输入
-
 ### Requirement: Timeline上下文必须区分作者、领域工具与Runtime Debug
 
 本地作者上下文、领域工具输入与Runtime Debug binding MUST是三个独立合同。任何合同缺失 MUST只禁用依赖它的功能，不得由其它合同补全、猜测或转型替代。Marker topology与Sequence document context MUST不存在。

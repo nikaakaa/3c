@@ -321,7 +321,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     clip = value.clip,
                     writable = value.clip.assetPath.EndsWith(".anim", StringComparison.OrdinalIgnoreCase),
                     dependencyBaseline = value.dependencyBaseline,
-                    analysisInputHash = value.analysisInputHash
+                    analysisInputHash = value.analysisInputHash,
+                    registeredCurveHash = value.registeredCurveHash
                 })
                 .ToList();
         }

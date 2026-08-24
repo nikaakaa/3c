@@ -186,6 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentPackageAssetReferenceV4 clip;
         public string dependencyBaseline;
         public string analysisInputHash;
+        public string registeredCurveHash;
         public List<AgentPackageCurve> curves = new List<AgentPackageCurve>();
     }
 

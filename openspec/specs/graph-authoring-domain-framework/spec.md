@@ -32,25 +32,29 @@
 
 ### Requirement: Authoring Capability Catalog必须是UI与Document的唯一语义目录
 
-唯一Framework MUST通过`GraphAuthoringCapabilityCatalog`查询每个domain的Graph kind、node kind、typed payload、静态/动态logical port、数据类型、Pose空间、非Pose瞬时value空间、execution domain、允许连接、资源引用、创建菜单、显示标题、Details provider、Mutation入口与Compiler handler。人工UI、Document exporter、strict parser、Reconciler、Validator和Compiler MUST读取同一Capability；固定port MUST不在实例数据中复制。Capability未声明的字段、port、Pose空间转换、瞬时value lineage或execution domain MUST不被任何入口创建或保存，系统 MUST不按C#类型名、显示名、窗口类型或字段路径重复硬编码能力。
+唯一Framework MUST继续通过`GraphAuthoringCapabilityCatalog`查询每个domain的Graph kind、node kind、typed payload、静态/动态logical port、数据类型、Pose空间、非Pose瞬时value空间、execution domain、允许连接、资源引用、创建菜单、显示标题、Details provider与Mutation入口。Pose领域 MUST由唯一`CharacterPoseNodeDefinitionModule`为每个正式Node Kind集中声明Payload、字段、端口、Graph Role、Execution Domain、Operation Family、局部校验与typed lowering，并向共享Capability、人工UI、Document、Clipboard、Mutation、Validator和Compiler投影同一节点局部语义；Capability MUST不再保存与Pose Definition重复的Compiler Handler或布尔能力矩阵。
 
-#### Scenario: FootPlacement声明双输出
+BTSMTL、AI与其它Graph领域 MAY通过各自正式Definition Adapter向同一Framework提供Capability，但 MUST不被迫引用Pose运行类型。人工UI、Document exporter、strict parser、Reconciler、Validator和Compiler MUST读取同一领域Definition/Capability投影；固定port MUST不在实例数据中复制。Definition与Capability未声明的字段、port、Pose空间转换、瞬时value lineage或execution domain MUST不被任何入口创建或保存，系统 MUST不按C#类型名、显示名、窗口类型或字段路径重复硬编码能力。
 
-- **WHEN** FootPlacement Capability声明`pose.component`与`component.biped-leg-targets`两个输出
-- **THEN** Canvas、Document、Validator与Compiler MUST从同一Capability识别两个稳定port及其lineage规则
-- **AND** MUST不把targets伪装成Pose、动态字符串port或隐藏Compiler字段
+Pose Node Definition只拥有节点局部作者与lowering语义，MUST不接管Document package路径、文件闭包、diff、Undo、rollback、save或reverse export事务；现有Reconciler与Document Transaction Service MUST继续分别拥有唯一对账和事务生命周期。
 
-#### Scenario: targets连接错误节点
+#### Scenario: FootPlacement声明Goal Contribution输出
 
-- **WHEN** 作者或Document把`component.biped-leg-targets`连接到未声明该输入类型的节点
+- **WHEN** FootPlacement Pose Definition声明`component.full-body-ik-goal-contribution`输出
+- **THEN** Capability、Canvas、Document、Validator与Compiler MUST从同一Definition投影识别稳定port及其lineage规则
+- **AND** MUST不把Goal Contribution伪装成Pose、动态字符串port或隐藏Compiler字段
+
+#### Scenario: Goal Contribution连接错误节点
+
+- **WHEN** 作者或Document把`component.full-body-ik-goal-contribution`连接到未声明该输入类型的节点
 - **THEN** Mutation MUST在写资产前拒绝
 - **AND** Compiler MUST继续执行同一规则作为完整性校验
 
 #### Scenario: 新增Pose节点能力
 
 - **WHEN** 开发者注册一个新的Component Pose骨骼控制节点
-- **THEN** 同一Capability MUST声明其Component Pose端口、execution domain、typed payload与compiler handler
-- **AND** 人工创建菜单、Document、Validator和Compiler MUST同时识别该能力
+- **THEN** 唯一Pose Definition MUST声明其Component Pose端口、execution domain、typed payload、Operation Family与typed lowering
+- **AND** Capability、人工创建菜单、Document、Validator和Compiler MUST同时识别该能力且不得注册第二Compiler Handler
 
 #### Scenario: capability未声明字段
 
@@ -64,15 +68,21 @@
 - **THEN** 共享connection policy MUST在Mutation前拒绝
 - **AND** Compiler MUST继续执行同一规则作为完整性校验
 
+#### Scenario: Definition尝试接管Document事务
+
+- **WHEN** Pose Definition Adapter尝试直接修改Unity对象、执行apply、创建Undo或发布canonical package
+- **THEN** Framework MUST拒绝该依赖并保持正式Reconciler与Transaction Service调用链
+- **AND** MUST不建立Pose专用Document入口或第二事务Owner
+
 ### Requirement: Graph Canvas必须复用统一节点与端口投影
 
 Graph Canvas MUST通过document projection和Capability生成通用Node View、Port View、Edge View、创建菜单、搜索结果与clipboard payload。领域adapter MAY提供业务标题、图标、颜色、状态badge与特殊交互命令，但 MUST不重新实现selection、拖线、框选、复制粘贴、Undo或GraphView生命周期。固定端口 MUST来自Capability；动态端口 MUST由node-local稳定identity声明并接受同一port policy裁决。Pose端口 MUST从stable type投影Local/Component空间颜色和标签；非Pose瞬时control value MUST使用独立稳定类型、标签与颜色。转换节点 MUST作为普通serialized authoring节点显示。Canvas MUST不根据C#类型名、显示名或Compiler operation猜测空间，也 MUST不隐藏插入未序列化节点。
 
-#### Scenario: 作者连接FootPlacement与LegIK
+#### Scenario: 作者连接Goal Contribution与Assembler
 
-- **WHEN** 作者从FootPlacement拖出Component Pose和Biped Leg Targets到LegIK
-- **THEN** Canvas MUST显示两条不同类型edge并保留各自稳定port identity
-- **AND** 框选、复制粘贴、Undo与Document往返 MUST保持完整双edge拓扑
+- **WHEN** 作者从FootPlacement拖出Goal Contribution并连接唯一Goal Assembler
+- **THEN** Canvas MUST显示typed Contribution edge并保留稳定port identity
+- **AND** 框选、复制粘贴、Undo与Document往返 MUST保持Contribution到Assembler的完整拓扑
 
 #### Scenario: 节点拥有动态输入
 
@@ -95,7 +105,7 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 - **WHEN** 作者在Authoring模式选择Clip Player
 - **THEN** Details MUST显示类型受限的Source Slot对象选择、loop、play rate、sync与该节点真实可写策略
 - **AND** References MUST显示解析后的动画资源与唯一owner
-- **AND** MUST不显示Source Id、TwoBoneIK、Slot、compiled offset或联合体空字段
+- **AND** MUST不显示Source Id、内部Operation Family、compiled offset或联合体空字段
 
 #### Scenario: identity选项目录不可用
 

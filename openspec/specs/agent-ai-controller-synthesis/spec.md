@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义Agent通过统一Document v3目录包、Mutation、Validator与固定生命周期工具读取、修改和验证BTSMTL AI Controller资产的正式合同。
+定义Agent通过统一Document v4目录包、Mutation、Validator与固定生命周期工具读取、修改和验证BTSMTL AI Controller资产的正式合同。
 ## Requirements
 ### Requirement: Agent必须通过正式AI Authoring合同修改AI Controller
 

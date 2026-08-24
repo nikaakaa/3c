@@ -1,7 +1,7 @@
 # btsmtl-agent-authoring-document-sync Specification
 
 ## Purpose
-定义BTSMTL Agent Authoring Document v3目录包的分片、规范编码、Gameplay/Timeline/Presentation声明式Mutation、事务apply与反向发布合同。
+定义BTSMTL Agent Authoring Document v4目录包的分片、规范编码、Gameplay/Timeline/Presentation声明式Mutation、事务apply与反向发布合同。
 ## Requirements
 ### Requirement: Agent Authoring Document必须是按需生成的持久化目录包
 

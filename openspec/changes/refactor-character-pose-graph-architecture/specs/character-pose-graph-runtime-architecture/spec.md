@@ -20,11 +20,11 @@
 
 系统 MUST使用唯一`CharacterPoseProgramRuntime`拥有逻辑节点与Operation执行，唯一`CharacterPoseSourceModule`拥有source sample与物理Playable生命周期，唯一`CharacterPoseConstraintRuntime`拥有Foot/Goal/FBBIK，唯一`CharacterFinalPosePublication`拥有Final Pose与Physical Writer。Diagnostics MUST只作为Committed Result Projector存在。任何业务状态、结果页或写入动作 MUST恰有一个Owner，不得由外层协调器、Preview或Diagnostics复制。
 
-#### Scenario: Foot Placement Operation执行
+#### Scenario: Constraint Family Operations执行
 
-- **WHEN** Program Stage到达Foot Placement Operation
-- **THEN** Program Runtime MUST恰好调用一次Constraint Runtime并消费其typed Result
-- **AND** Source Module、外层Runtime与Diagnostics MUST不再次执行或修改Foot结果
+- **WHEN** Program Stage依次到达Foot Placement、PoseBone Contribution、Goal Assembler与FBBIK Operation
+- **THEN** Program Runtime MUST在每个Operation位置通过对应typed编译Handle恰好调用一次Constraint Runtime入口并写入各自唯一completion
+- **AND** Constraint Module MUST不扫描Program或维护第二份Stage Schedule，Source Module、外层Runtime与Diagnostics MUST不再次执行或修改Constraint结果
 
 #### Scenario: 最终Physical Pose写入
 
@@ -34,7 +34,7 @@
 
 ### Requirement: Program Image、Actor State与Frame Transaction必须完全分型
 
-`CharacterPoseProgramImage` MUST是由Projection Build发布的不可变程序，只保存schema、identity、Rig、Stage、Operation Header、Family Payload、typed Value layout、Workspace layout、Source Map和容量。`CharacterPoseActorState` MUST只保存Pose Program逻辑节点的跨帧Committed状态。`CharacterPoseFrameTransaction` MUST只保存当前Frame的Pending控制、Value、completion、Module Result引用、journal和可选Diagnostics页。三者 MUST不互相复制不同寿命的真相。
+`CharacterPoseProgramImage` MUST是由Projection Build发布并保存在`CharacterPresentationProjection`内部的唯一不可变Pose程序，只保存schema、identity、Rig、Stage、Operation Header、Family Payload、typed Value layout、Workspace layout、Source Map和容量。Runtime MUST不从Projection复制、转换或构造第二Native Program容器。`CharacterPoseActorState` MUST只保存Pose Program逻辑节点的跨帧Committed状态。`CharacterPoseFrameTransaction` MUST只保存当前Frame的Pending控制、Value、completion、Module Result引用、journal和可选Diagnostics页。三者 MUST不互相复制不同寿命的真相。
 
 #### Scenario: 同一Program供两个Actor使用
 
@@ -66,7 +66,7 @@
 
 ### Requirement: Pose Program Runtime必须是唯一Operation执行Owner
 
-`CharacterPoseProgramRuntime` MUST按Program Image的Stage Schedule执行每个Operation恰好一次，并在唯一Operation Completion页记录结果。外层Runtime MUST不预执行World-aware Operation，Source Module MUST不扫描Operation决定逻辑状态，Constraint Module MUST不反向扫描Program，Diagnostics与Pose Watch MUST不重放Operation。Program Runtime MUST使用持久Executor Implementation，不得每帧通过巨型构造重新展开Program和Workspace全部页。
+`CharacterPoseProgramRuntime` MUST按Program Image的Stage Schedule执行每个Operation恰好一次，并在唯一Operation Completion页记录结果。Foot Placement、PoseBone Contribution、Goal Assembler与FBBIK等Constraint Family MUST各自在自己的Operation位置通过typed编译Handle调用Constraint Module一次；Constraint `Complete`只能验证完整闭包并发布最终Constraint Result，不得重新执行Operation。外层Runtime MUST不预执行World-aware Operation，Source Module MUST不扫描Operation决定逻辑状态，Constraint Module MUST不反向扫描Program或拥有第二Schedule，Diagnostics与Pose Watch MUST不重放Operation。Program Runtime MUST使用持久Executor Implementation，不得每帧通过巨型构造重新展开Program和Workspace全部页。
 
 #### Scenario: World-aware Foot节点
 
@@ -114,7 +114,7 @@
 
 ### Requirement: Final Pose Publication必须原子拥有最终结果与Physical写入
 
-`CharacterFinalPosePublication` MUST拥有Committed/Pending Final Pose、完整Physical Bone binding、Final Writer binding、整Rig预验证、唯一Apply和Publication Result。它 MUST在写任何Physical Bone前验证Pose availability、Rig、continuity、Program completion、Constraint completion和Frame lineage；合法时一次写入完整Pending Pose，非法时保持Committed Pose并返回正式失败。当前只有一个Writer Implementation，系统 MUST不建立第二Writer、图外Transform写入或运行时Writer选择。
+`CharacterFinalPosePublication` MUST唯一拥有Committed/Pending Final Pose物理页、完整Physical Bone binding、Final Writer binding、整Rig预验证、唯一Apply和Publication Result。Program Image的Output Family MUST只保存指向Publication Pending页的typed write handle；Program Runtime通过该handle写入Output Pose并发布只读`ProgramOutputPoseResult`，MUST不在Program Workspace分配第二Final Pose buffer。Final Publication MUST在写任何Physical Bone前验证Pose availability、Rig、continuity、Program completion、Constraint completion和Frame lineage；合法时一次写入完整Pending Pose，非法时保持Committed Pose并返回正式失败。当前只有一个Writer Implementation，系统 MUST不建立第二Writer、第二Final Pose页、图外Transform写入或运行时Writer选择。
 
 #### Scenario: Pending Pose完整合法
 

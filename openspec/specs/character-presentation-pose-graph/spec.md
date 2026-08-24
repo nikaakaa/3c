@@ -6,64 +6,39 @@
 ## Requirements
 ### Requirement: Pose Graph必须唯一表达完整表现拓扑
 
-`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`ProgramParameterInput -> PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> Goal Sources -> FullBodyIK -> ComponentToLocalPose -> OutputPose`。FootPlacement与PoseBoneIKGoals MUST从同一Component Pose扇出typed Goal Set，唯一FullBodyIK MUST消费原始Component Pose与全部不重叠Goal Set。Runtime MUST不在图外补建Player、StateMachine、Slot、Blend、IK、FootPlacement、空间转换或第二Output路径。
+`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`ProgramParameterInput -> PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> Goal Contributions -> Goal Assembler -> FullBodyIK -> ComponentToLocalPose -> OutputPose`。FootPlacement与PoseBoneIKGoals MUST从同一Component Pose扇出typed Goal Contribution，唯一Goal Assembler MUST形成一个Goal Set，唯一FullBodyIK MUST消费原始Component Pose与该Goal Set。
 
-#### Scenario: 检查Corin正式表现链
+Runtime MUST不在图外补建Goal Assembler、Foot Placement、FBBIK、空间转换、第二Goal Set、第二Pose Graph或第二Output路径。
 
-- **WHEN** 作者打开Corin Pose Graph
-- **THEN** 图 MUST能沿typed edge追踪PoseState基础Pose、Action Slot、Local/Component转换、FootPlacement Goals、唯一FullBodyIK和最终输出
-- **AND** MUST不显示图外Foot Placement、LegIK、TwoBoneIK或第二FullBodyIK
+#### Scenario: 查看完整Foot Placement拓扑
+
+- **WHEN** 作者查看包含FootPlacement与PoseBone Goal来源的正式Pose Graph
+- **THEN** 图 MUST明确显示两个Goal Contribution进入唯一Assembler，再进入唯一FullBodyIK
+- **AND** MUST不存在多个Goal Set并行汇入FBBIK的隐藏拓扑
 
 ### Requirement: Pose端口必须显式区分空间并允许typed控制目标
 
-Pose Graph MUST使用`pose.local`、`pose.component`与`component.full-body-ik-goals`三种稳定端口类型。FootPlacement与PoseBoneIKGoals只读Component Pose并输出Goal Set；FullBodyIK接收一个Component Pose和稳定动态Goal输入集合，并输出Component Pose。Local与Component Pose只能通过显式转换节点转换；Goal Set不得通过Pose转换、隐式cast或Skeleton可写IK骨伪装。OutputPose MUST只接收Local Pose。
+Pose Graph MUST使用`pose.local`、`pose.component`、`component.full-body-ik-goal-contribution`与`component.full-body-ik-goals`稳定端口类型。FootPlacement与PoseBoneIKGoals只读Component Pose并输出Goal Contribution；Goal Assembler接收固定typed Contribution集合并输出唯一Goal Set；FullBodyIK接收一个Component Pose和一个Goal Set并输出Component Pose。
 
-#### Scenario: Foot Placement未连接FullBodyIK
+Goal Contribution、Goal Set与Pose空间不得隐式cast、复用同一端口或通过Skeleton可写IK骨伪装。Goal Assembler MUST拒绝重复Effector Slot、错误Application、不同Frame/Completion/Rig lineage和超过编译容量的Contribution。
 
-- **WHEN** FootPlacement Goal Set没有连接唯一FullBodyIK
-- **THEN** Canvas连接诊断、Validator与Compiler MUST拒绝该图
-- **AND** Runtime MUST不隐藏补建IK
+#### Scenario: FootPlacement与PoseBone贡献同一Slot
 
-#### Scenario: Foot与Hand Goals连接
-
-- **WHEN** FootPlacement与PoseBoneIKGoals读取同一Component Pose并连接FullBodyIK
-- **THEN** Compiler MUST保留两个typed Goal Set并汇聚到唯一FullBodyIK
-- **AND** MUST拒绝重复effector slot
-
-#### Scenario: 作者把Sequence直接连接FootPlacement
-
-- **WHEN** Local Pose Sequence输出连接Component Pose FootPlacement输入
-- **THEN** Graph Canvas与Validator MUST拒绝该edge
-- **AND** MUST要求作者显式插入LocalToComponentPose
-
-#### Scenario: Component控制与Goal链共享一次空间转换
-
-- **WHEN** 作者在LocalToComponentPose与ComponentToLocalPose之间连接ModifyBone、Goal Sources和FullBodyIK
-- **THEN** Compiler MUST保留一个连续Component Pose段
-- **AND** MUST不为每个控制节点隐藏插入额外转换
+- **WHEN** Compiler发现FootPlacement与PoseBoneIKGoals可能写入同一Effector Slot
+- **THEN** Character Build MUST报告两个producer与冲突Slot并拒绝Projection发布
+- **AND** Runtime MUST不依赖Goal连接顺序决定覆盖者
 
 ### Requirement: Pose Plan必须按拓扑编译为有序执行阶段
 
-Projection Compiler MUST按typed依赖、Pose空间与execution domain将同一Pose DAG编译为有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`stage。FootPlacement完成Goal后才能调度唯一FullBodyIK；Value stage不得持有Pose输出或write set。stage table MUST只属于generated plan，不得写入authoring Graph。每个source每帧 MUST最多capture一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由final writer写一次。
+Pose Plan Compiler MUST把Goal Contribution收集、唯一Goal Assembler、FBBIK和OutputPose编译为固定有序阶段，并为Pose Constraint根Bank分配固定Foot Result、Goal Contribution、Goal Set与BendHistory容量。Projection MUST静态证明每条正式路径最多一个Goal Assembler、一个Goal Set、一个FBBIK、一个OutputPose和一个Final Writer。
 
-#### Scenario: Foot Placement后执行FullBodyIK
+运行时 MUST按编译索引执行Contribution生产与Assembler，不查找作者字符串或动态扩容。正式空Goal输入 MUST由唯一Assembler输出`GoalCount=0`；不得使用Empty Goal兼容节点、Goal Set passthrough/copy或第二Assembler。
 
-- **WHEN** FootPlacement与其它Goal Source完成同帧Goal
-- **THEN** Compiler MUST在其后生成唯一FullBodyIK pure pose stage
-- **AND** 后续节点 MUST消费FBBIK输出而不是输入Pose副本
+#### Scenario: 编译无Goal贡献的角色
 
-#### Scenario: Goal lineage失效
-
-- **WHEN** Goal Set的Frame、Completion或Rig identity与FullBodyIK Pose输入不匹配
-- **THEN** executor MUST阻止FullBodyIK、后续stage和FinalPublication
-- **AND** 已跨过Animancer Evaluate Barrier的Animation Presentation Runtime MUST进入Faulted
-
-#### Scenario: World-aware阶段失败
-
-- **WHEN** world context在当前Presentation transaction失效
-- **THEN** executor MUST阻止后续stage和FinalPublication
-- **AND** 已跨过Animancer Evaluate Barrier的Animation Presentation Runtime MUST进入Faulted
-- **AND** MUST不逆序恢复已跨Barrier的状态或Physical Bone快照
+- **WHEN** 某角色的正式Pose Graph没有任何有效Goal Contribution
+- **THEN** 唯一Assembler MUST编译为固定容量零贡献并发布`GoalCount=0`
+- **AND** Compiler MUST不插入Empty Goal fallback或删除唯一FBBIK拓扑
 
 ### Requirement: PoseStateMachine必须是纯表现状态机
 
@@ -199,25 +174,15 @@ Rig v4 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式
 
 ### Requirement: Goal Sources与FullBodyIK必须使用统一typed目标合同
 
-FootPlacement MUST通过单次Frame事务输出Pelvis与双脚Goal；PoseBoneIKGoals MUST输出其它effector Goal。FullBodyIK MUST消费原始Component Pose与全部不重叠Goal Set，并通过项目Pose Buffer backend调用唯一FinalIK FBBIK，只修改Rig v4 Physical biped。系统 MUST不保留Predictive Modifier ABI、Grounding覆盖协议、LegIK、TwoBoneIK或第二腿目标ABI。
+全部Goal Source MUST发布`CharacterFullBodyIkGoalContribution`，至少携带Frame、Completion、Rig、Producer、Slot、Application、Component空间目标与权重。Foot Goal Encoder MUST只读取Resolved Foot的Effective Correction与Goal Weight，Pelvis Goal Encoder MUST只读取Pelvis Result；两者 MUST不读取Foot State、Lock Response、Context、Path、Residual或Diagnostics。唯一Goal Assembler MUST把合法Contribution规范化为一个`CharacterFullBodyIkGoalSet`；FBBIK MUST不理解Foot State Context、Contact Patch、Constraint State、Pelvis选择或Diagnostics。
 
-#### Scenario: 同帧Goal完成
+FBBIK腿Effector跨帧稳定策略 MUST由正式FullBodyIK Profile和Pending BendHistory决定。Solver MUST不通过搜索FootPlacement SourceKind启用隐藏状态规则；Vendor FinalIK对象内部字段不得成为跨帧真相。
 
-- **WHEN** Foot与Hand Goal具有相同Frame、Completion和Rig
-- **THEN** 唯一FBBIK MUST一次验证并求解全部有效目标
-- **AND** MUST拒绝重复effector slot
+#### Scenario: FBBIK消费Foot Placement贡献
 
-#### Scenario: Foot Placement Goal权重为零
-
-- **WHEN** FootPlacement发布三个合法零权重Goal
-- **THEN** FullBodyIK MUST验证Goal lineage后跳过FBBIK Update
-- **AND** 输出Pose MUST保持输入Pose不变
-
-#### Scenario: Preview缺少world context
-
-- **WHEN** Pose Plan到达FootPlacement但Preview没有合法world context
-- **THEN** world-aware阶段 MUST报告Unavailable
-- **AND** MUST不伪造FootPlacement输出或FinalAnimationPoseFrame
+- **WHEN** FootPlacement贡献左右脚与Pelvis Slot且Assembler完成唯一Goal Set
+- **THEN** FBBIK MUST只按Goal Application、Slot、Profile与Pending BendHistory执行求解
+- **AND** MUST不回调FootPlacement、读取Ground Path或修改Contact ownership
 
 ### Requirement: Pose Graph工作区必须准确映射Authoring、Live与References
 

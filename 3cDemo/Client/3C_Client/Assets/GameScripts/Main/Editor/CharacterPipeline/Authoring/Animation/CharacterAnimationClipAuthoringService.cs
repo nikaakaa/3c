@@ -43,10 +43,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static void Open(CharacterAnimationClipOpenRequest request)
         {
             request.RequireValid();
-            CharacterAnimationClipAuthoringCurveReceiver[] receivers =
-                request.PreviewTarget.GetComponents<CharacterAnimationClipAuthoringCurveReceiver>();
+            ClipCurves[] receivers = request.PreviewTarget.GetComponents<ClipCurves>();
             if (receivers.Length == 0)
-                Undo.AddComponent<CharacterAnimationClipAuthoringCurveReceiver>(request.PreviewTarget);
+                Undo.AddComponent<ClipCurves>(request.PreviewTarget);
             else if (receivers.Length != 1)
                 throw new InvalidOperationException("AnimationClip Preview Target contains duplicate authoring Curve receivers.");
             Selection.activeGameObject = request.PreviewTarget;

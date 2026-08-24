@@ -40,7 +40,7 @@ Base Pose、Idle、Move、Start、Stop、Turn与可选Motion Matching MUST来自
 
 ### Requirement: 动画帧必须按固定职责顺序执行
 
-每个PresentationFrame MUST按固定顺序读取committed Body/Intent与Program parameter、构造Fact、求值PoseStateMachine、提交target provider demand、解析readiness、采样state-local source、消费有限Action frame、执行Transition Routing与AnimationSlot、执行Local Pose composition与Virtual Bone派生、显式转换到Component Pose、执行TwoBoneIK等Component Pose控制、由FootPlacement规划pelvis与typed双腿targets、由LegIK求解Physical腿链、显式转回Local Pose，最后发布FinalAnimationPoseFrame。Action visual sampler MUST只生成有限Action sample；PoseState provider MUST只处理其state-local source。任一阶段 MUST不重新仲裁其它阶段的选择或写回Gameplay。
+每个PresentationFrame MUST按固定顺序读取committed Body/Intent与Program parameter、构造Fact、求值PoseStateMachine、提交target provider demand、解析readiness、采样state-local source、消费有限Action frame、执行Transition Routing与AnimationSlot、执行Local Pose composition与Virtual Bone派生、显式转换到Component Pose、执行Component Pose控制、让FootPlacement与PoseBone目标源发布typed Goal Contribution、由唯一Goal Assembler形成一个Goal Set、由唯一FullBodyIK求解Component Pose、显式转回Local Pose，最后发布FinalAnimationPoseFrame。Action visual sampler MUST只生成有限Action sample；PoseState provider MUST只处理其state-local source。任一阶段 MUST不重新仲裁其它阶段的选择或写回Gameplay。
 
 #### Scenario: 攻击期间角色速度归零
 
@@ -102,7 +102,7 @@ Runtime MUST支持Cyclic与Finite source之间的显式同组映射。Cyclic sou
 
 #### Scenario: Finite coverage耗尽
 
-- **WHEN** relation要求Finite target越过marker coverage
+- **WHEN** relation要求Finite target越过编译Phase coverage
 - **THEN** Runtime MUST报告FiniteCoverageExceeded
 - **AND** MUST不回绕或静默解除同步
 

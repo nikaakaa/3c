@@ -1243,18 +1243,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                   Asset(clip.clip) && clips.Add(ReferenceIdentity(clip.clip)) &&
                                   string.Equals(clip.id, ReferenceIdentity(clip.clip), StringComparison.Ordinal) &&
                                   Identity(clip.dependencyBaseline) && Identity(clip.analysisInputHash) &&
-                                  clip.curves != null && clip.curves.Count <= 2;
+                                  Identity(clip.registeredCurveHash) &&
+                                  clip.curves != null &&
+                                  clip.curves.Count <= CharacterAnimationClipRegisteredCurveCatalog.Channels.Count;
                 var channels = new HashSet<string>(StringComparer.Ordinal);
                 foreach (AgentPackageCurve curve in clip?.curves ?? new List<AgentPackageCurve>())
                 {
                     entryValid &= curve != null &&
-                                  (string.Equals(curve.channelId, CharacterAnimationClipRegisteredCurveChannels.LocomotionPhase, StringComparison.Ordinal) ||
-                                   string.Equals(curve.channelId, CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight, StringComparison.Ordinal)) &&
+                                  RegisteredChannel(curve.channelId) &&
                                   channels.Add(curve.channelId) &&
                                   string.Equals(curve.timeDomain, "seconds", StringComparison.Ordinal) &&
                                   curve.keys != null && curve.keys.Count >= 2 &&
                                   ValidateClipCurveKeys(curve);
                 }
+                int footMotionCount = CharacterAnimationClipRegisteredCurveCatalog.FootMotionChannels.Count(
+                    value => channels.Contains(value.ChannelId));
+                entryValid &= footMotionCount == 0 ||
+                              footMotionCount == CharacterAnimationClipRegisteredCurveCatalog.FootMotionChannels.Count;
                 if (entryValid)
                     continue;
                 report.Error(path, "animation_clip_curve_fragment_invalid", "AnimationClip Curve分片的对象引用、baseline、channel、秒域或key合同非法。");
@@ -1265,19 +1270,50 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool ValidateClipCurveKeys(AgentPackageCurve curve)
         {
+            CharacterAnimationClipRegisteredCurveDescriptor descriptor;
+            try
+            {
+                descriptor = CharacterAnimationClipRegisteredCurveCatalog.Require(curve.channelId);
+            }
+            catch
+            {
+                return false;
+            }
             float previousTime = -1f;
             for (int i = 0; i < curve.keys.Count; i++)
             {
                 AgentAnimationCurveKey key = curve.keys[i];
                 if (key == null || !float.IsFinite(key.time) || key.time < 0f || key.time <= previousTime ||
-                    !float.IsFinite(key.value) || !float.IsFinite(key.inTangent) || !float.IsFinite(key.outTangent) ||
+                    !float.IsFinite(key.value) ||
+                    !ValidTangent(key.inTangent, descriptor.AllowConstantTangents) ||
+                    !ValidTangent(key.outTangent, descriptor.AllowConstantTangents) ||
                     !float.IsFinite(key.inWeight) || !float.IsFinite(key.outWeight) ||
-                    string.Equals(curve.channelId, CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight, StringComparison.Ordinal) &&
-                    (key.value < 0f || key.value > 1f))
+                    descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.Normalized01 &&
+                    (key.value < 0f || key.value > 1f) ||
+                    descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.NonNegative &&
+                    key.value < 0f ||
+                    descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.LockMode &&
+                    key.value != 0f && key.value != 1f && key.value != 2f)
                     return false;
                 previousTime = key.time;
             }
             return true;
+        }
+
+        static bool ValidTangent(float value, bool allowConstant) =>
+            float.IsFinite(value) || allowConstant && float.IsPositiveInfinity(value);
+
+        static bool RegisteredChannel(string channelId)
+        {
+            try
+            {
+                _ = CharacterAnimationClipRegisteredCurveCatalog.Require(channelId);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
         static bool ValidateImplementation(
             AgentPackageLinkedPoseImplementationFile implementation,

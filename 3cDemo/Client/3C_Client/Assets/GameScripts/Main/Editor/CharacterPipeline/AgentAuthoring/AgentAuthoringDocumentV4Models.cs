@@ -160,6 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool writable;
         public string dependencyBaseline;
         public string analysisInputHash;
+        public string registeredCurveHash;
     }
 
     [Serializable]

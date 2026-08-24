@@ -20,7 +20,7 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 - Projection Compiler把Blend Space authoring编译为固定样本表、权重求解数据、canonical phase映射、Foot Analysis绑定、参数策略和有界workspace；Runtime不读取authoring asset、不动态构建三角关系、不搜索资源。
 - `BlendSpacePlayer`内部只拥有同一Blend Space来源内的参数插值、canonical phase到各样本时间的映射、多clip加权采样和source-local feature聚合。跨State Phase handoff与过渡由PoseState transition edge拥有，Action来源切换由AnimationSlot拥有，单Pose跳变平滑仍只允许由明确连接的`Inertialization`拥有；Corin Locomotion统一使用Standard Blend，不连接Inertialization。
 - 时间策略必须在资产上显式选择`SharedNormalizedPhase`或`LocomotionPhase`。LocomotionPhase使用稳定Phase Reference Sample承载source raw clock，并复用Profile Group中每个Clip的forward/inverse Phase plan；不保存Marker拓扑、pairwise warp，也不按最大weight动态更换leader。缺失Group、Reference或Phase Curve时编译失败，不回退normalized time。
-- Foot Analysis按每个真实样本clip生成和绑定；Runtime用与骨骼姿势相同的最终样本权重聚合左右脚feature与source contribution，之后先由唯一`FootGrounding`生成Lyra current/contact/anchor/pelvis Baseline Goals，再由可选`PredictiveFootPlacementModifier`只改写未被anchor拥有的Swing脚。
+- Foot Analysis按每个真实样本clip生成和绑定；Runtime用与骨骼姿势相同的最终样本权重聚合左右脚feature与source contribution，之后由唯一`CharacterFootPlacementModule`消费最终贡献，生成Resolved Foot Pair、Pelvis Result与typed Goal Contribution，再由唯一Goal Assembler和唯一FullBodyIK完成求解。
 - 在正式Character Animation Authoring Workspace中增加Blend Space资产模式：Navigator、参数空间视图、Details、Preview、编译诊断和引用关系使用现有workspace外壳，不创建旧Workbench或第二个编辑器体系。
 - Pose Graph Details与Live Debug显示参数值、落点、有效样本、归一化权重、canonical phase、每样本有效时间、foot contribution和Projection revision；Preview与Runtime执行同一编译计划。
 - Character Document v4通过共享Pose capability表达BlendSpacePlayer typed payload与Profile source binding；Blend Space资源正文、generated payload和运行时权重继续只读，且不增加专用MCP action。
@@ -28,7 +28,7 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 
 ## 后续动画职责重构关系
 
-本change已经安装`BlendSpacePlayer`的通用source-local参数混合能力。剩余独立演示内容任务 MUST在`refactor-animation-control-boundaries`完成后继续，并直接把BlendSpacePlayer放入PoseState inline subgraph；不得再创建Gameplay BaseLocomotion Selection、Timeline locomotion producer或旧Selection Input接线。已完成任务保留其当时实施记录，不作为剩余任务的目标拓扑。
+本change已经安装`BlendSpacePlayer`的通用source-local参数混合能力。剩余独立演示内容任务 MUST直接把BlendSpacePlayer放入PoseState inline subgraph；不得再创建Gameplay BaseLocomotion Selection、Timeline locomotion producer或旧Selection Input接线。已完成任务保留其当时实施记录，不作为剩余任务的目标拓扑。
 
 ## Capabilities
 
@@ -49,14 +49,14 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 - current `character-animation-foot-analysis-artifact`按Timeline/Track/Clip绑定分析产物。本change为BlendSpaceAsset/SampleId/Clip增加并列正式source identity；同一个BlendSpace sample不得同时从Timeline与BlendSpace读取两份feature。
 - 当前Character Document负责Presentation editable。本change只提供Blend Space领域能力与独立内容，并由`replace-animation-sequence-with-clip-authoring`统一重基线到Document v4。
 - current Pose Graph合同已经包含显式Player与线性Native Pose Plan；本change在该拓扑上增加正式BlendSpacePlayer，不回到隐藏per-slot装配。
-- active `refactor-animation-control-boundaries`规定持续Locomotion source只能位于PoseState inline subgraph。本change把BlendSpacePlayer加入该有限Player目录，并保持Presentation Fact只携带参数、不携带最终样本权重。
+- current Pose Graph规定持续Locomotion source只能位于PoseState inline subgraph。本change把BlendSpacePlayer加入该有限Player目录，并保持Presentation Fact只携带参数、不携带最终样本权重。
 - current BlendStack合同规定BlendStack独占跨source过渡。本change不把参数空间插值塞入BlendStack，也不让BlendSpacePlayer保留旧来源。
 - `refactor-pose-graph-to-btsmtl-authoring-domain`提供唯一Navigator、Canvas、Details、Bottom Dock、Pose Watch、Capability和显式Compile边界；本change不得保留独立BlendSpace节点UI或字段switch。
 - current Timeline authoring合同把Timeline和独立领域工具分开。本change使用独立Blend Space资产模式，不把二维样本空间伪装成Timeline lane。
 
 ## Dependencies And Sequencing
 
-1. `refactor-animation-control-boundaries`已经固定Presentation Fact、PoseStateMachine、state-local source、Player、BlendStack与局部Inertialization边界。
+1. current specs已经固定Presentation Fact、PoseStateMachine、state-local source、Player、BlendStack与局部Inertialization边界。
 2. Pose authoring framework负责把BlendSpacePlayer接入唯一Capability、typed payload、Document v4、共享UI和Pose IR handler；本change不得建立独立GraphView、Inspector switch或第二Presentation Mutation。
 3. Virtual Bone change要求BlendSpace每个sample通过统一source capture输出完整PoseBoneCount；BlendSpace不得自行派生第二份Virtual Bone。
 4. 剩余任务只创建独立Blend Space内容演示，不修改Corin主图，也不阻塞Character authoring、Fixed产品或DeterministicRollback闭环。演示只在完整样本、Projection、Profile、PoseState和全部source binding能一次配置时创建。
@@ -68,7 +68,7 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 - 不把Animancer MixerState作为权重、时钟或同步权威；只复用其可见算法语义和现有采样后端。
 - 不提供`Direct`模式。显式权重组合已经由BlendPose、LayeredBoneBlend和AdditivePose表达，新增Direct会形成重复权威。
 - 不提供`SimpleDirectional2D`、嵌套Blend Space、任意子图或动态运行时样本增删。当前正式目录只覆盖项目移动业务需要且能与Animancer公开算法逐一对应的三种模式。
-- 不在Blend Space里执行Gameplay状态选择、Motion Matching查询、Root Motion移动决策、跨来源CrossFade、惯性、FootGrounding、PredictiveFootPlacementModifier、FullBodyIK或最终Animator输出。
+- 不在Blend Space里执行Gameplay状态选择、Motion Matching查询、Root Motion移动决策、跨来源CrossFade、惯性、Foot Placement、Goal Assembly、FullBodyIK或最终Animator输出。
 - 不增加Pose专用MCP action、任意SerializedProperty写入或第二个Presentation authoring服务。
 
 ## Breaking Changes
@@ -83,6 +83,6 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 
 - 作者能在正式workspace创建、编辑、编译和预览三种正式Blend Space资产，并在Pose Graph中通过显式BlendSpacePlayer使用它们。
 - 参数落点在Preview与Runtime得到相同的稳定SampleId集合、归一化权重、canonical phase、样本时间、Pose Parameter和Foot feature贡献。
-- BlendSpacePlayer、PoseState Phase relation、Transition/BlendStack、显式Inertialization、`Lyra Current Grounding -> Stance Stabilization -> Pelvis Resolve` FootGrounding、可选Swing脚Predictive Modifier与FullBodyIK各自只有一项清晰职责，代码链中没有第二个权重、过渡、同步、Grounding或IK权威。
+- BlendSpacePlayer、PoseState Phase relation、Transition/BlendStack、显式Inertialization、唯一CharacterFootPlacementModule、唯一Goal Assembler与唯一FullBodyIK各自只有一项清晰职责，代码链中没有第二个权重、过渡、同步、Foot状态、Goal或IK权威。
 - Corin正式Profile、Projection和Pose Graph只走PoseState持续Locomotion链；后续Blend Space演示拥有独立Definition、Profile和Pose Graph，不污染当前双端帧同步验证配置。
 - Character Document v4能往返BlendSpacePlayer与Profile binding；Blend Space资源正文和generated诊断保持只读。

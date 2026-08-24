@@ -152,19 +152,19 @@ SimulationCommitter MUST使用presentation-owned持久队列保存未消费的�
 
 ### Requirement: PresentationFrame必须输出完整最终Pose Plan结果
 
-PresentationFrame MUST消费committed Body/Intent、构造typed Presentation Fact，并消费完整有限Action playback batch与Parameter page；随后按Projection编译的ordered stage table执行PoseState selection、State source demand、source-local Phase resolve、source capture、Action playback、AnimationSlot、Transition Routing、Local Pose composition、显式Local/Component转换、Component Pose骨骼控制、world-aware FootPlacement规划与pelvis输出、typed双腿targets、pure pose LegIK、后续Pose stage与FinalPublication。只有唯一OutputPose及全部必需stage完成后才可由唯一final writer发布`FinalAnimationPoseFrame`并推进Camera；任一Fact、source、Phase endpoint、Player、Slot、转换、Pose operation、world query、Planner、targets validation或LegIK solver失败 MUST阻止部分最终结果发布，不得沿用上一帧、只发布pelvis Pose或绕过节点。
+PresentationFrame MUST消费committed Body/Intent、构造typed Presentation Fact，并消费完整有限Action playback batch与Parameter page；随后按Projection编译的ordered stage table执行PoseState selection、State source demand、source-local Phase resolve、source capture、Action playback、AnimationSlot、Transition Routing、Local Pose composition、显式Local/Component转换、Component Pose控制、FootPlacement与PoseBone Goal Contribution、唯一Goal Assembler、唯一FullBodyIK、后续Pose stage与FinalPublication。只有唯一OutputPose及全部必需stage完成后才可由唯一final writer发布`FinalAnimationPoseFrame`并推进Camera；任一Fact、source、Phase endpoint、Player、Slot、转换、Pose operation、world query、Goal Contribution、Goal Assembly或FullBodyIK失败 MUST阻止部分最终结果发布，不得沿用上一帧、只发布pelvis Pose或绕过节点。
 
-#### Scenario: FootPlacement targets与LegIK Pose不匹配
+#### Scenario: Goal Contribution与Component Pose lineage不匹配
 
-- **WHEN** 同帧targets CompletionIdentity或Rig revision与LegIK Component Pose输入不一致
-- **THEN** PresentationFrame MUST阻断LegIK、后续stage和FinalPublication
-- **AND** MUST不使用上一次targets或按节点顺序猜测配对
+- **WHEN** 同帧Goal Contribution的CompletionIdentity或Rig revision与FullBodyIK Component Pose输入不一致
+- **THEN** PresentationFrame MUST阻断Goal Assembly、FullBodyIK、后续stage和FinalPublication
+- **AND** MUST不使用上一次Goal或按节点顺序猜测配对
 
-#### Scenario: 完整Foot Placement链成功
+#### Scenario: 完整Goal链成功
 
-- **WHEN** FootPlacement发布合法pelvis Pose与targets且LegIK完成左右腿求解
-- **THEN** FinalAnimationPoseFrame MUST包含LegIK输出及全部后续Pose操作
-- **AND** Runtime MUST不保留第二Foot Placement或图外Leg IK结果
+- **WHEN** FootPlacement与PoseBone目标源发布合法Contribution、唯一Assembler形成Goal Set且FullBodyIK完成求解
+- **THEN** FinalAnimationPoseFrame MUST包含唯一FullBodyIK输出及全部后续Pose操作
+- **AND** Runtime MUST不保留第二Goal Set、第二FullBodyIK或图外骨骼结果
 
 #### Scenario: Action等待第一Sample
 
@@ -215,7 +215,7 @@ Program Finalize MUST在State、Action、interruption与Timeline request处理�
 
 ### Requirement: PresentationFrame必须原子提交动画播放与Pose节点生命周期
 
-PresentationFrame MUST在同一外层事务中提交Presentation Fact page、PoseStateMachine active/target state、Sequence/Selection source usage、Phase relation/effective sample page、AnimationSlot state、BlendStack状态、Transition Routing capture/release、Inertialization、空间转换、Pose operation completion、world-aware plan、Component Pose solver结果和final publication。Reset、branch replacement或Projection replacement MUST按compiled stage与operation清理或重建全部stateful节点。Animancer Evaluate Barrier前失败 MUST只Discard Pending；stage失败已经跨过Barrier时 MUST阻断后续stage与final publication并使同一Actor Animation Presentation Runtime进入Faulted，不得恢复状态或Physical Bone快照。任何路径不得只提交Action playback、FootPlacement plan或中间Pose而保留旧Output。
+PresentationFrame MUST在同一外层事务中提交Presentation Fact page、PoseStateMachine active/target state、Clip/BlendSpace/MM source usage、Phase relation/effective sample page、AnimationSlot state、BlendStack状态、Transition Routing capture/release、Inertialization、空间转换、Pose operation completion、world-aware plan、Component Pose solver结果和final publication。Reset、branch replacement或Projection replacement MUST按compiled stage与operation清理或重建全部stateful节点。Animancer Evaluate Barrier前失败 MUST只Discard Pending；stage失败已经跨过Barrier时 MUST阻断后续stage与final publication并使同一Actor Animation Presentation Runtime进入Faulted，不得恢复状态或Physical Bone快照。任何路径不得只提交Action playback、FootPlacement plan或中间Pose而保留旧Output。
 
 #### Scenario: Action Selection与首个Sample同批
 

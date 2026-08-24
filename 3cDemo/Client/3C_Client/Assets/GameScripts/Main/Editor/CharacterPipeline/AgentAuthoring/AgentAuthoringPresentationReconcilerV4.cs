@@ -351,7 +351,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     continue;
                 }
                 if (!string.Equals(next.dependencyBaseline, identity.FullDependencyHash, StringComparison.Ordinal) ||
-                    !string.Equals(next.analysisInputHash, identity.AnalysisInputHash, StringComparison.Ordinal))
+                    !string.Equals(next.analysisInputHash, identity.AnalysisInputHash, StringComparison.Ordinal) ||
+                    !string.Equals(next.registeredCurveHash, identity.RegisteredCurveHash, StringComparison.Ordinal))
                 {
                     report.Error(
                         $"editable/animation-clips/{pair.Key}/curves.json",
@@ -380,6 +381,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             "animation_clip_curve_channel_invalid",
                         exception.Message);
                     }
+                }
+                int footMotionCount = CharacterAnimationClipRegisteredCurveCatalog.FootMotionChannels.Count(
+                    value => channelIds.Contains(value.ChannelId));
+                if (footMotionCount != 0 &&
+                    footMotionCount != CharacterAnimationClipRegisteredCurveCatalog.FootMotionChannels.Count)
+                {
+                    report.Error(
+                        $"editable/animation-clips/{pair.Key}/curves.json",
+                        "animation_clip_foot_motion_group_incomplete",
+                        "Foot Motion Curve必须以左右脚22条完整数据组提交。");
                 }
                 if (!channelIds.Contains(
                         CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight))

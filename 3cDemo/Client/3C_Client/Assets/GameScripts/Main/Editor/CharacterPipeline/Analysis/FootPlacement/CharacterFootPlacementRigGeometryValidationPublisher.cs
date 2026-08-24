@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!string.Equals(identity.SamplingRigAssetGuid, source.SamplingRigAssetGuid, StringComparison.Ordinal) ||
                 !string.Equals(identity.SamplingRigDependencyHash, ComputeDependencyHash(samplingRigPath).Value, StringComparison.Ordinal) ||
                 !string.Equals(identity.PreviewClipAssetGuid, previewClipGuid, StringComparison.Ordinal) ||
-                !string.Equals(identity.PreviewClipDependencyHash, ComputeDependencyHash(previewClipPath).Value, StringComparison.Ordinal) ||
+                !string.Equals(identity.PreviewClipDependencyHash, ComputePreviewPoseHash(source.CalibrationPreviewClip).Value, StringComparison.Ordinal) ||
                 BitConverter.SingleToInt32Bits(identity.PreviewNormalizedTime) != BitConverter.SingleToInt32Bits(source.CalibrationPreviewNormalizedTime))
                 throw new InvalidOperationException("Foot Placement geometry validation identity is stale for the current Sampling Rig or Calibration Preview Pose.");
             return identity;
@@ -62,7 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 source.SamplingRigAssetGuid,
                 ComputeDependencyHash(samplingRigPath).Value,
                 previewClipGuid,
-                ComputeDependencyHash(previewClipPath).Value,
+                ComputePreviewPoseHash(source.CalibrationPreviewClip).Value,
                 source.CalibrationPreviewNormalizedTime);
             source.RigCalibration.PublishGeometryValidation(identity);
             return identity;
@@ -83,6 +83,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "unity-asset-dependency/v1",
                 AssetDatabase.GetAssetDependencyHash(assetPath).ToString());
         }
+
+        static StableHash ComputePreviewPoseHash(AnimationClip clip) =>
+            StableHash.Compute(
+                "character-foot-placement-preview-pose/v1",
+                CharacterAnimationClipRegisteredCurveCatalog.ComputeAnalysisInputHash(clip));
 
         static string Format(CharacterFootPlacementFootRigGeometry value)
         {

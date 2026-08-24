@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEditor;
@@ -6,6 +8,68 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
+    [Serializable]
+    public sealed class CharacterFootMotionReferenceBinding
+    {
+        [SerializeField] string m_TargetClipAssetGuid = string.Empty;
+        [SerializeField] string m_MotionReferenceClipAssetGuid = string.Empty;
+
+        public string TargetClipAssetGuid => m_TargetClipAssetGuid ?? string.Empty;
+        public string MotionReferenceClipAssetGuid => m_MotionReferenceClipAssetGuid ?? string.Empty;
+
+        public static CharacterFootMotionReferenceBinding Create(
+            AnimationClip target,
+            AnimationClip motionReference)
+        {
+            if (!target || !motionReference)
+                throw new ArgumentException("Foot Motion reference binding requires Target and Motion Reference clips.");
+            var result = new CharacterFootMotionReferenceBinding
+            {
+                m_TargetClipAssetGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(target)),
+                m_MotionReferenceClipAssetGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(motionReference))
+            };
+            result.RequireValid();
+            return result;
+        }
+
+        public AnimationClip RequireTargetClip() => RequireClip(TargetClipAssetGuid, "Target");
+        public AnimationClip RequireMotionReferenceClip() => RequireClip(MotionReferenceClipAssetGuid, "Motion Reference");
+
+        public void RequireValid()
+        {
+            if (!CharacterFootPlacementAnalysisSource.IsAssetGuid(TargetClipAssetGuid) ||
+                !CharacterFootPlacementAnalysisSource.IsAssetGuid(MotionReferenceClipAssetGuid) ||
+                string.Equals(TargetClipAssetGuid, MotionReferenceClipAssetGuid, StringComparison.Ordinal))
+                throw new InvalidOperationException("Foot Motion reference binding identity or usage is invalid.");
+            _ = RequireTargetClip();
+            _ = RequireMotionReferenceClip();
+        }
+
+        static AnimationClip RequireClip(string guid, string role)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            AnimationClip clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+            if (!clip || !path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase) ||
+                AssetDatabase.LoadMainAssetAtPath(path) != clip)
+                throw new InvalidOperationException($"Foot Motion {role} GUID '{guid}' does not resolve to a native AnimationClip.");
+            return clip;
+        }
+    }
+
+    public readonly struct CharacterFootMotionReference
+    {
+        public CharacterFootMotionReference(
+            AnimationClip target,
+            AnimationClip motionReference)
+        {
+            Target = target ? target : throw new ArgumentNullException(nameof(target));
+            MotionReference = motionReference ? motionReference : throw new ArgumentNullException(nameof(motionReference));
+        }
+
+        public AnimationClip Target { get; }
+        public AnimationClip MotionReference { get; }
+    }
+
     public readonly struct CharacterFootPlacementAnalysisSourceId : IEquatable<CharacterFootPlacementAnalysisSourceId>
     {
         public CharacterFootPlacementAnalysisSourceId(string value)
@@ -103,7 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         menuName = "3C/Editor/Foot Placement Analysis Source")]
     public sealed class CharacterFootPlacementAnalysisSource : ScriptableObject
     {
-        public const string AlgorithmVersion = "animation-foot-analysis/v68";
+        public const string AlgorithmVersion = "animation-foot-analysis/v78";
 
         [SerializeField] string m_AnalysisSourceId = string.Empty;
         [SerializeField, Min(1)] int m_AnalysisVersion = 1;
@@ -115,6 +179,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         [SerializeField, Min(1f)] float m_SampleRate = 60f;
         [SerializeField] CharacterFootPlacementAnalysisThresholds m_Thresholds = new CharacterFootPlacementAnalysisThresholds();
         [SerializeField] CharacterFootPlacementCurveReductionSettings m_Reduction = new CharacterFootPlacementCurveReductionSettings();
+        [SerializeField] string m_MotionRootBoneId = string.Empty;
+        [SerializeField] CharacterFootMotionReferenceBinding[] m_MotionReferences = Array.Empty<CharacterFootMotionReferenceBinding>();
 
         public CharacterFootPlacementAnalysisSourceId AnalysisSourceId =>
             new CharacterFootPlacementAnalysisSourceId(m_AnalysisSourceId);
@@ -129,6 +195,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public float SampleRate => m_SampleRate;
         public CharacterFootPlacementAnalysisThresholds Thresholds => m_Thresholds;
         public CharacterFootPlacementCurveReductionSettings Reduction => m_Reduction;
+        public AnimationBoneId MotionRootBoneId => string.IsNullOrWhiteSpace(m_MotionRootBoneId)
+            ? default
+            : new AnimationBoneId(m_MotionRootBoneId);
+        public IReadOnlyList<CharacterFootMotionReferenceBinding> MotionReferences => m_MotionReferences;
 
         public void Configure(
             CharacterFootPlacementAnalysisSourceId sourceId,
@@ -151,6 +221,35 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Reduction.RequireValid();
         }
 
+        public void ConfigureMotionReferences(
+            AnimationBoneId motionRootBoneId,
+            IEnumerable<CharacterFootMotionReferenceBinding> bindings)
+        {
+            CharacterFootMotionReferenceBinding[] values = bindings?.ToArray() ??
+                                                          throw new ArgumentNullException(nameof(bindings));
+            if (values.Length == 0)
+                throw new InvalidOperationException("Foot Analysis requires explicit Motion Reference bindings.");
+            if (!motionRootBoneId.IsValid)
+                throw new ArgumentException("Foot Analysis Motion Root BoneId is invalid.", nameof(motionRootBoneId));
+            m_MotionRootBoneId = motionRootBoneId.Value;
+            m_MotionReferences = values;
+            RequireMotionReferences();
+        }
+
+        public CharacterFootMotionReference RequireMotionReference(AnimationClip target)
+        {
+            if (!target)
+                throw new ArgumentNullException(nameof(target));
+            string targetGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(target));
+            CharacterFootMotionReferenceBinding binding = m_MotionReferences?.SingleOrDefault(value =>
+                value != null && string.Equals(value.TargetClipAssetGuid, targetGuid, StringComparison.Ordinal));
+            if (binding == null)
+                throw new InvalidOperationException($"Foot Analysis Target '{target.name}' has no explicit Motion Reference binding.");
+            return new CharacterFootMotionReference(
+                binding.RequireTargetClip(),
+                binding.RequireMotionReferenceClip());
+        }
+
         public void RequireValid()
         {
             RequireCalibrationAuthoringInput();
@@ -161,6 +260,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new InvalidOperationException("Foot Analysis settings are incomplete.");
             m_Thresholds.RequireValid();
             m_Reduction.RequireValid();
+            RequireMotionReferences();
         }
 
         public void RequireCalibrationAuthoringInput()
@@ -197,6 +297,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     return false;
             }
             return true;
+        }
+
+        void RequireMotionReferences()
+        {
+            if (m_MotionReferences == null || m_MotionReferences.Length == 0)
+                throw new InvalidOperationException("Foot Analysis requires explicit Motion Reference bindings.");
+            if (!MotionRootBoneId.IsValid || !m_RigDefinition ||
+                m_RigDefinition.RequirePhysicalBoneIndex(MotionRootBoneId) < 0)
+                throw new InvalidOperationException("Foot Analysis Motion Root BoneId is missing from the Rig.");
+            var targets = new HashSet<string>(StringComparer.Ordinal);
+            var references = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < m_MotionReferences.Length; i++)
+            {
+                CharacterFootMotionReferenceBinding binding = m_MotionReferences[i] ??
+                                                              throw new InvalidOperationException($"Foot Motion reference binding #{i} is missing.");
+                binding.RequireValid();
+                if (!targets.Add(binding.TargetClipAssetGuid))
+                    throw new InvalidOperationException($"Foot Motion Target '{binding.TargetClipAssetGuid}' is duplicated.");
+                if (!references.Add(binding.MotionReferenceClipAssetGuid))
+                    throw new InvalidOperationException($"Foot Motion Reference '{binding.MotionReferenceClipAssetGuid}' is reused by multiple Targets.");
+            }
         }
     }
 }

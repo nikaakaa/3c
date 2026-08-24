@@ -666,6 +666,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             }
                             CharacterAnimationClipContentIdentity clipIdentity =
                                 CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(sample.Clip);
+                            CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(sample.Clip);
                             AnimationCurve footWeight = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                                 sample.Clip,
                                 CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight);
@@ -726,6 +727,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         }
                         CharacterAnimationClipContentIdentity clipIdentity =
                             CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(directClip.Clip);
+                        CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(directClip.Clip);
                         AnimationCurve secondsCurve = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                             directClip.Clip,
                             CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight);
@@ -1038,6 +1040,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 CharacterAnimationClipContentIdentity clipIdentity =
                     CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(sourceClip);
+                CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(sourceClip);
                 AnimationCurve footWeight = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                     sourceClip,
                     CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight);

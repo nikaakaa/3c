@@ -79,11 +79,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class AnimationFootAnalysisArtifactIdentity
     {
-        public const int CurrentFormatVersion = 30;
+        public const int CurrentFormatVersion = 35;
 
         public AnimationFootAnalysisArtifactIdentity(
             string clipAssetGuid,
             string clipAnalysisInputHash,
+            string motionReferenceClipAssetGuid,
+            string motionReferenceClipAnalysisInputHash,
             string analysisSourceAssetGuid,
             string analysisSourceDependencyHash,
             string analysisSourceId,
@@ -117,6 +119,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             ClipAssetGuid = RequireGuid(clipAssetGuid, nameof(clipAssetGuid));
             ClipAnalysisInputHash = RequireHash(clipAnalysisInputHash, nameof(clipAnalysisInputHash));
+            MotionReferenceClipAssetGuid = RequireGuid(motionReferenceClipAssetGuid, nameof(motionReferenceClipAssetGuid));
+            MotionReferenceClipAnalysisInputHash = RequireHash(motionReferenceClipAnalysisInputHash, nameof(motionReferenceClipAnalysisInputHash));
             AnalysisSourceAssetGuid = RequireGuid(analysisSourceAssetGuid, nameof(analysisSourceAssetGuid));
             AnalysisSourceDependencyHash = RequireHash(analysisSourceDependencyHash, nameof(analysisSourceDependencyHash));
             AnalysisSourceId = RequireText(analysisSourceId, nameof(analysisSourceId));
@@ -157,6 +161,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public int FormatVersion => CurrentFormatVersion;
         public string ClipAssetGuid { get; }
         public string ClipAnalysisInputHash { get; }
+        public string MotionReferenceClipAssetGuid { get; }
+        public string MotionReferenceClipAnalysisInputHash { get; }
         public string AnalysisSourceAssetGuid { get; }
         public string AnalysisSourceDependencyHash { get; }
         public string AnalysisSourceId { get; }
@@ -193,6 +199,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             other != null && IdentityHash.Equals(other.IdentityHash) &&
             string.Equals(ClipAssetGuid, other.ClipAssetGuid, StringComparison.Ordinal) &&
             string.Equals(ClipAnalysisInputHash, other.ClipAnalysisInputHash, StringComparison.Ordinal) &&
+            string.Equals(MotionReferenceClipAssetGuid, other.MotionReferenceClipAssetGuid, StringComparison.Ordinal) &&
+            string.Equals(MotionReferenceClipAnalysisInputHash, other.MotionReferenceClipAnalysisInputHash, StringComparison.Ordinal) &&
             string.Equals(AnalysisSourceAssetGuid, other.AnalysisSourceAssetGuid, StringComparison.Ordinal) &&
             string.Equals(AnalysisSourceDependencyHash, other.AnalysisSourceDependencyHash, StringComparison.Ordinal) &&
             string.Equals(AnalysisSourceId, other.AnalysisSourceId, StringComparison.Ordinal) &&
@@ -225,7 +233,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             return new[]
             {
-                "animation-foot-analysis-artifact/v19", ClipAssetGuid, ClipAnalysisInputHash,
+                "animation-foot-analysis-artifact/v23", ClipAssetGuid, ClipAnalysisInputHash,
+                MotionReferenceClipAssetGuid, MotionReferenceClipAnalysisInputHash,
                 AnalysisSourceAssetGuid, AnalysisSourceDependencyHash, AnalysisSourceId,
                 AnalysisVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 RigAssetGuid, RigId, RigRevision, RigContentHash,
@@ -290,6 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootAnalysisArtifactIdentity identity,
             AnimationFootFeaturePair features,
             AnimationFootPhaseValidationDescriptor phaseValidation,
+            AnimationFootMotionDataDescriptor motionData,
             StableHash contentHash)
         {
             Identity = identity ?? throw new ArgumentNullException(nameof(identity));
@@ -300,6 +310,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             PhaseValidation = phaseValidation ??
                 throw new ArgumentNullException(nameof(phaseValidation));
             PhaseValidation.RequireValid();
+            MotionData = motionData ?? throw new ArgumentNullException(nameof(motionData));
             Features = features;
             ContentHash = contentHash;
         }
@@ -307,6 +318,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public AnimationFootAnalysisArtifactIdentity Identity { get; }
         public AnimationFootFeaturePair Features { get; }
         public AnimationFootPhaseValidationDescriptor PhaseValidation { get; }
+        public AnimationFootMotionDataDescriptor MotionData { get; }
         public StableHash ContentHash { get; }
     }
 
@@ -417,17 +429,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public AnimationFootAnalysisBuildResult(
             AnimationFootFeaturePair features,
-            AnimationFootPhaseValidationDescriptor phaseValidation)
+            AnimationFootPhaseValidationDescriptor phaseValidation,
+            AnimationFootMotionDataDescriptor motionData)
         {
             if (!features.IsValid)
                 throw new ArgumentException("Foot Analysis features are invalid.", nameof(features));
             Features = features;
             PhaseValidation = phaseValidation ?? throw new ArgumentNullException(nameof(phaseValidation));
             PhaseValidation.RequireValid();
+            MotionData = motionData ?? throw new ArgumentNullException(nameof(motionData));
         }
 
         public AnimationFootFeaturePair Features { get; }
         public AnimationFootPhaseValidationDescriptor PhaseValidation { get; }
+        public AnimationFootMotionDataDescriptor MotionData { get; }
     }
 
     public readonly struct AnimationFootAnalysisArtifactInspection

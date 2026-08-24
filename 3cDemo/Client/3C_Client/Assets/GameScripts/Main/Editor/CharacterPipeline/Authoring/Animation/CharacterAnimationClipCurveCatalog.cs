@@ -12,7 +12,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public enum CharacterAnimationClipRegisteredCurveValueDomain : byte
     {
         Normalized01 = 1,
-        UnwrappedPhase = 2
+        UnwrappedPhase = 2,
+        NonNegative = 3,
+        Signed = 4,
+        LockMode = 5
     }
 
     public sealed class CharacterAnimationClipRegisteredCurveDescriptor
@@ -23,7 +26,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorCurveBinding binding,
             CharacterAnimationClipRegisteredCurveValueDomain valueDomain,
             bool requireFullSourceCoverage,
-            bool requireStrictMonotonic)
+            bool requireStrictMonotonic,
+            bool footMotionData,
+            bool allowConstantTangents,
+            string unit)
         {
             ChannelId = channelId;
             RuntimeParameterId = runtimeParameterId;
@@ -31,6 +37,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ValueDomain = valueDomain;
             RequireFullSourceCoverage = requireFullSourceCoverage;
             RequireStrictMonotonic = requireStrictMonotonic;
+            FootMotionData = footMotionData;
+            AllowConstantTangents = allowConstantTangents;
+            Unit = unit;
         }
 
         public string ChannelId { get; }
@@ -39,6 +48,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterAnimationClipRegisteredCurveValueDomain ValueDomain { get; }
         public bool RequireFullSourceCoverage { get; }
         public bool RequireStrictMonotonic { get; }
+        public bool FootMotionData { get; }
+        public bool AllowConstantTangents { get; }
+        public string Unit { get; }
     }
 
     public readonly struct CharacterAnimationClipContentIdentity
@@ -80,30 +92,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static readonly CharacterAnimationClipRegisteredCurveDescriptor[] Descriptors =
         {
-            new CharacterAnimationClipRegisteredCurveDescriptor(
+            Curve(
                 CharacterAnimationClipRegisteredCurveChannels.LocomotionPhase,
                 string.Empty,
-                EditorCurveBinding.FloatCurve(
-                    string.Empty,
-                    typeof(CharacterAnimationClipAuthoringCurveReceiver),
-                    CharacterAnimationClipRegisteredCurveChannels.LocomotionPhaseProperty),
+                CharacterAnimationClipRegisteredCurveChannels.LocomotionPhaseProperty,
                 CharacterAnimationClipRegisteredCurveValueDomain.UnwrappedPhase,
-                false,
-                true),
-            new CharacterAnimationClipRegisteredCurveDescriptor(
+                true,
+                true,
+                false),
+            Curve(
                 CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight,
                 AnimationPoseParameterIds.FootPlacementWeight.Value,
-                EditorCurveBinding.FloatCurve(
-                    string.Empty,
-                    typeof(CharacterAnimationClipAuthoringCurveReceiver),
-                    CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeightProperty),
+                CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeightProperty,
                 CharacterAnimationClipRegisteredCurveValueDomain.Normalized01,
                 true,
-                false)
+                false,
+                false),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftStepTime, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftStepTimeProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightStepTime, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightStepTimeProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftStepDistance, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftStepDistanceProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightStepDistance, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightStepDistanceProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftFootHeight, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftFootHeightProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightFootHeight, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightFootHeightProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftToeHeight, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftToeHeightProperty, CharacterAnimationClipRegisteredCurveValueDomain.Signed, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightToeHeight, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightToeHeightProperty, CharacterAnimationClipRegisteredCurveValueDomain.Signed, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftToeSpeed, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftToeSpeedProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightToeSpeed, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightToeSpeedProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftPositionError, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftPositionErrorProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightPositionError, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightPositionErrorProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftRotationError, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftRotationErrorProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightRotationError, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightRotationErrorProperty, CharacterAnimationClipRegisteredCurveValueDomain.NonNegative, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftContact, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftContactProperty, CharacterAnimationClipRegisteredCurveValueDomain.Normalized01, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightContact, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightContactProperty, CharacterAnimationClipRegisteredCurveValueDomain.Normalized01, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftLockMode, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftLockModeProperty, CharacterAnimationClipRegisteredCurveValueDomain.LockMode, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightLockMode, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightLockModeProperty, CharacterAnimationClipRegisteredCurveValueDomain.LockMode, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftLockWeight, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftLockWeightProperty, CharacterAnimationClipRegisteredCurveValueDomain.Normalized01, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightLockWeight, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightLockWeightProperty, CharacterAnimationClipRegisteredCurveValueDomain.Normalized01, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.LeftSupport, string.Empty, CharacterAnimationClipRegisteredCurveChannels.LeftSupportProperty, CharacterAnimationClipRegisteredCurveValueDomain.Normalized01, true, false, true),
+            Curve(CharacterAnimationClipRegisteredCurveChannels.RightSupport, string.Empty, CharacterAnimationClipRegisteredCurveChannels.RightSupportProperty, CharacterAnimationClipRegisteredCurveValueDomain.Normalized01, true, false, true)
         };
 
         public static IReadOnlyList<CharacterAnimationClipRegisteredCurveDescriptor> Channels =>
             Descriptors;
+
+        public static IReadOnlyList<CharacterAnimationClipRegisteredCurveDescriptor> FootMotionChannels { get; } =
+            Descriptors.Where(value => value.FootMotionData).ToArray();
 
         public static CharacterAnimationClipRegisteredCurveDescriptor Require(string channelId)
         {
@@ -168,12 +201,70 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorUtility.SetDirty(clip);
         }
 
+        public static void ReplaceFootMotionGroup(
+            AnimationClip clip,
+            IReadOnlyDictionary<string, AnimationCurve> curves)
+        {
+            RequireNativeClip(clip);
+            if (curves == null || curves.Count != FootMotionChannels.Count)
+                throw new InvalidOperationException("Foot Motion Curve mutation requires the complete 22-channel group.");
+            float sourceDuration = ResolveSourceDurationSeconds(clip);
+            var replacements = new AnimationCurve[FootMotionChannels.Count];
+            var previous = new AnimationCurve[FootMotionChannels.Count];
+            var bindings = new EditorCurveBinding[FootMotionChannels.Count];
+            for (int i = 0; i < FootMotionChannels.Count; i++)
+            {
+                CharacterAnimationClipRegisteredCurveDescriptor descriptor = FootMotionChannels[i];
+                if (!curves.TryGetValue(descriptor.ChannelId, out AnimationCurve curve))
+                    throw new InvalidOperationException(
+                        $"Foot Motion Curve group is missing '{descriptor.ChannelId}'.");
+                Validate(clip, descriptor, curve, sourceDuration);
+                replacements[i] = Copy(curve);
+                bindings[i] = descriptor.Binding;
+                AnimationCurve current = AnimationUtility.GetEditorCurve(clip, descriptor.Binding);
+                previous[i] = current == null ? null : Copy(current);
+            }
+            try
+            {
+                AnimationUtility.SetEditorCurves(clip, bindings, replacements);
+                EditorUtility.SetDirty(clip);
+            }
+            catch
+            {
+                AnimationUtility.SetEditorCurves(clip, bindings, previous);
+                throw;
+            }
+        }
+
         public static void Remove(AnimationClip clip, string channelId)
         {
             RequireNativeClip(clip);
             CharacterAnimationClipRegisteredCurveDescriptor descriptor = Require(channelId);
             AnimationUtility.SetEditorCurve(clip, descriptor.Binding, null);
             EditorUtility.SetDirty(clip);
+        }
+
+        public static void ValidateFootMotionGroupRequired(AnimationClip clip)
+        {
+            RequireNativeClip(clip);
+            for (int i = 0; i < FootMotionChannels.Count; i++)
+                _ = ReadRequired(clip, FootMotionChannels[i].ChannelId);
+        }
+
+        public static bool MigrateLegacyReceiverBindings(AnimationClip clip)
+        {
+            RequireNativeClip(clip);
+            bool changed = MigrateLegacyBinding(
+                clip,
+                "m_LocomotionPhase",
+                Require(CharacterAnimationClipRegisteredCurveChannels.LocomotionPhase).Binding);
+            changed |= MigrateLegacyBinding(
+                clip,
+                "m_FootPlacementWeight",
+                Require(CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight).Binding);
+            if (changed)
+                EditorUtility.SetDirty(clip);
+            return changed;
         }
 
         public static void Validate(AnimationClip clip, string channelId, AnimationCurve curve)
@@ -238,7 +329,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static string ComputeRegisteredCurveHash(AnimationClip clip)
         {
             RequireNativeClip(clip);
-            var tokens = new List<string> { "character-animation-clip-registered-curves/v1" };
+            var tokens = new List<string> { "character-animation-clip-registered-curves/v2" };
             for (int i = 0; i < Descriptors.Length; i++)
             {
                 CharacterAnimationClipRegisteredCurveDescriptor descriptor = Descriptors[i];
@@ -355,7 +446,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 Keyframe key = keys[i];
                 if (!float.IsFinite(key.time) || !float.IsFinite(key.value) ||
-                    !float.IsFinite(key.inTangent) || !float.IsFinite(key.outTangent) ||
+                    (!float.IsFinite(key.inTangent) &&
+                     (!descriptor.AllowConstantTangents || !float.IsPositiveInfinity(key.inTangent)) ||
+                     !float.IsFinite(key.outTangent) &&
+                     (!descriptor.AllowConstantTangents || !float.IsPositiveInfinity(key.outTangent))) ||
                     !float.IsFinite(key.inWeight) || !float.IsFinite(key.outWeight) ||
                     key.time < -TimeTolerance || key.time > sourceDuration + TimeTolerance ||
                     i > 0 && key.time <= keys[i - 1].time)
@@ -368,6 +462,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     throw new InvalidOperationException(
                         $"AnimationClip '{clip.name}' Curve '{descriptor.ChannelId}' key #{i} is outside [0, 1].");
+                }
+                if (descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.NonNegative &&
+                    key.value < -ValueTolerance)
+                {
+                    throw new InvalidOperationException(
+                        $"AnimationClip '{clip.name}' Curve '{descriptor.ChannelId}' key #{i} is negative.");
+                }
+                if (descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.LockMode &&
+                    key.value != 0f && key.value != 1f && key.value != 2f)
+                {
+                    throw new InvalidOperationException(
+                        $"AnimationClip '{clip.name}' Curve '{descriptor.ChannelId}' key #{i} is not a Lock Mode value.");
                 }
                 if (descriptor.RequireStrictMonotonic && key.weightedMode != WeightedMode.None)
                 {
@@ -386,6 +492,73 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RequireStrictMonotonic(clip, descriptor, keys);
             if (descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.Normalized01)
                 RequireNormalizedRange(clip, descriptor, curve, keys);
+            if (descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.NonNegative)
+                RequireNonNegativeRange(clip, descriptor, curve, keys);
+            if (descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.LockMode)
+                RequireLockMode(clip, descriptor, curve, keys);
+        }
+
+        static CharacterAnimationClipRegisteredCurveDescriptor Curve(
+            string channelId,
+            string runtimeParameterId,
+            string property,
+            CharacterAnimationClipRegisteredCurveValueDomain valueDomain,
+            bool requireFullSourceCoverage,
+            bool requireStrictMonotonic,
+            bool footMotionData) =>
+            new CharacterAnimationClipRegisteredCurveDescriptor(
+                channelId,
+                runtimeParameterId,
+                EditorCurveBinding.FloatCurve(string.Empty, typeof(ClipCurves), property),
+                valueDomain,
+                requireFullSourceCoverage,
+                requireStrictMonotonic,
+                footMotionData,
+                valueDomain == CharacterAnimationClipRegisteredCurveValueDomain.LockMode ||
+                channelId.EndsWith("step-time-seconds", StringComparison.Ordinal) ||
+                channelId.EndsWith("step-distance", StringComparison.Ordinal),
+                ResolveUnit(channelId, valueDomain));
+
+        static string ResolveUnit(
+            string channelId,
+            CharacterAnimationClipRegisteredCurveValueDomain valueDomain)
+        {
+            if (channelId.EndsWith("step-time-seconds", StringComparison.Ordinal))
+                return "Seconds";
+            if (channelId.EndsWith("toe-speed", StringComparison.Ordinal))
+                return "MetersPerSecond";
+            if (channelId.EndsWith("ground-pose-rotation-error", StringComparison.Ordinal))
+                return "Degrees";
+            if (channelId.EndsWith("lock-mode", StringComparison.Ordinal))
+                return "LockMode";
+            if (channelId.Contains("distance", StringComparison.Ordinal) ||
+                channelId.Contains("height", StringComparison.Ordinal) ||
+                channelId.EndsWith("ground-pose-position-error", StringComparison.Ordinal))
+                return "Meters";
+            if (valueDomain == CharacterAnimationClipRegisteredCurveValueDomain.UnwrappedPhase)
+                return "Phase";
+            return "Weight";
+        }
+
+        static bool MigrateLegacyBinding(
+            AnimationClip clip,
+            string legacyProperty,
+            EditorCurveBinding target)
+        {
+            EditorCurveBinding legacy = EditorCurveBinding.FloatCurve(
+                string.Empty,
+                typeof(ClipCurves),
+                legacyProperty);
+            AnimationCurve source = AnimationUtility.GetEditorCurve(clip, legacy);
+            if (source == null)
+                return false;
+            AnimationCurve current = AnimationUtility.GetEditorCurve(clip, target);
+            if (current != null)
+                throw new InvalidOperationException(
+                    $"AnimationClip '{clip.name}' contains both legacy '{legacyProperty}' and current '{target.propertyName}' bindings.");
+            AnimationUtility.SetEditorCurve(clip, target, Copy(source));
+            AnimationUtility.SetEditorCurve(clip, legacy, null);
+            return true;
         }
 
         static void RequireStrictMonotonic(
@@ -436,6 +609,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         throw new InvalidOperationException(
                             $"AnimationClip '{clip.name}' Curve '{descriptor.ChannelId}' leaves [0, 1] inside segment #{i}.");
                 }
+            }
+        }
+
+        static void RequireNonNegativeRange(
+            AnimationClip clip,
+            CharacterAnimationClipRegisteredCurveDescriptor descriptor,
+            AnimationCurve curve,
+            IReadOnlyList<Keyframe> keys)
+        {
+            for (int i = 0; i < keys.Count - 1; i++)
+            {
+                float start = keys[i].time;
+                float end = keys[i + 1].time;
+                for (int sample = 1; sample < 32; sample++)
+                {
+                    float value = curve.Evaluate(Mathf.Lerp(start, end, sample / 32f));
+                    if (!float.IsFinite(value) || value < -ValueTolerance)
+                        throw new InvalidOperationException(
+                            $"AnimationClip '{clip.name}' Curve '{descriptor.ChannelId}' becomes negative inside segment #{i}.");
+                }
+            }
+        }
+
+        static void RequireLockMode(
+            AnimationClip clip,
+            CharacterAnimationClipRegisteredCurveDescriptor descriptor,
+            AnimationCurve curve,
+            IReadOnlyList<Keyframe> keys)
+        {
+            for (int i = 0; i < keys.Count - 1; i++)
+            {
+                float midpoint = (keys[i].time + keys[i + 1].time) * 0.5f;
+                if (curve.Evaluate(midpoint) != keys[i].value)
+                    throw new InvalidOperationException(
+                        $"AnimationClip '{clip.name}' Curve '{descriptor.ChannelId}' segment #{i} is not Constant.");
             }
         }
 

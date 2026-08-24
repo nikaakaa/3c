@@ -4,7 +4,7 @@
 
 SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application seam。其内部唯一`CharacterAnimationPresentationRuntime` MUST消费Committed Body/Intent、Program parameter与有限Action command并构造Presentation Fact，但 MUST只负责Frame Lease、固定Module顺序、Animancer Evaluate Barrier、统一Seal/Discard/Fault和外部输入输出装配。
 
-正式运行 MUST由唯一`CharacterPoseProgramRuntime`执行Program Image中的PoseStateMachine、Player、AnimationSlot、Local/Component Pose、Goal、FBBIK和Output Operation；唯一`CharacterPoseSourceModule`负责source sample、Animancer/Playable与物理source生命周期；唯一`CharacterPoseConstraintRuntime`负责Foot Placement、PoseBone Goal、Goal Contribution、Assembler、唯一Goal Set、FBBIK与BendHistory；唯一`CharacterFinalPosePublication`负责Final Pose与Physical Writer。Module间 MUST只交换同Frame、Completion、Program、Projection与Rig lineage的typed Result。外层Runtime、Preview与Diagnostics MUST不创建第二Program State、第二Operation执行、第二Constraint事务、第二Goal Set、第二FBBIK或第二Writer。
+正式运行 MUST由唯一`CharacterPoseProgramRuntime`执行Projection内部Program Image中的PoseStateMachine、Player、AnimationSlot、Local/Component Pose、Constraint Family与Output Operation；唯一`CharacterPoseSourceModule`负责source sample、Animancer/Playable与物理source生命周期；唯一`CharacterPoseConstraintRuntime`负责Foot Placement、PoseBone Goal、Goal Contribution、Assembler、唯一Goal Set、FBBIK与BendHistory；唯一`CharacterFinalPosePublication`负责唯一Committed/Pending Final Pose物理页与Physical Writer。Program Runtime MUST在每个Constraint Family Operation位置通过typed编译Handle调用一次对应Constraint入口，Constraint Module MUST不扫描Program或维护第二份Schedule。Module间 MUST只交换同Frame、Completion、Program、Projection与Rig lineage的typed Result。外层Runtime、Preview与Diagnostics MUST不创建第二Program Image、第二Program State、第二Operation执行、第二Constraint事务、第二Goal Set、第二FBBIK、第二Final Pose页或第二Writer。
 
 #### Scenario: 正常执行Foot Placement与FBBIK
 
@@ -44,7 +44,7 @@ Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint 
 
 ### Requirement: 动画表现帧必须使用预分配暂存事务
 
-`CharacterAnimationPresentationRuntime` MUST为每个Actor使用唯一`Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现帧事务。Runtime创建时 MUST从不可变`CharacterPoseProgramImage`的Capacity Manifest一次分配`CharacterPoseActorState`、`CharacterPoseFrameTransaction`、Source页、Program Value/Operation页、Constraint Bank、Final Pose页、pending scalar state、mutation journal、prepared/deferred source命令与interest-gated Diagnostics页。
+`CharacterAnimationPresentationRuntime` MUST为每个Actor使用唯一`Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现帧事务。Runtime创建时 MUST从Projection内部不可变`CharacterPoseProgramImage`的Capacity Manifest一次分配`CharacterPoseActorState`、`CharacterPoseFrameTransaction`、Source页、Program Value/Operation页、Constraint Bank、Final Publication唯一Committed/Pending Pose物理页、pending scalar state、mutation journal、prepared/deferred source命令与interest-gated Diagnostics页。Program Image与Program Workspace MUST不再分配第二Final Pose buffer。
 
 每帧 MUST只读取Committed Actor/Module状态并写Pending Frame页。Program Image MUST不保存Pending/Committed页或当前Frame状态；Actor State MUST不复制Source物理资源、Constraint Bank或Final Pose；Frame Transaction MUST不成为允许任意Module读写的共享黑板。所有Module MUST共享根Frame lineage并由唯一Seal/Discard决定提交，MUST不通过`CaptureState`、`Clone`、`ToArray`、新建Dictionary/List或完整旧状态复制建立回滚点。
 
@@ -80,7 +80,7 @@ Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint 
 
 唯一正式Animancer Graph Evaluate MUST继续作为动画表现帧不可逆Barrier。进入Barrier前，根Runtime MUST完成Program Image/Profile/Rig/World Context、Module容量、source readiness/ownership、Diagnostics interest、Constraint静态binding、Final Writer binding和Frame lineage验证；Program Runtime MUST完成Control与Source Demand，Source Module MUST完成sample/Playable/capture准备，但不得提交Actor State、source ownership、Constraint Bank、Final Pose或command acknowledgement。
 
-Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operation、world-aware Constraint、Goal Assembly、FBBIK、Output和Final Publication。每个Operation MUST由Program Runtime调度一次，Constraint与Writer MUST各由唯一Module执行一次。Barrier之后只可统一提升已验证Pending页、应用journal、acknowledge command、执行deferred release并发布结果；不得动态查找、编译、扩容、再次执行Operation或补算Diagnostics。
+Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operation、world-aware Constraint、Goal Assembly、FBBIK、Output和Final Publication。每个Operation MUST由Program Runtime调度一次；每个Constraint Family Operation MUST在自己的Stage位置调用一次Constraint Module对应入口，Constraint `Complete`只验证完整闭包；Writer MUST只由Final Publication执行一次。Barrier之后只可统一提升已验证Pending页、应用journal、acknowledge command、执行deferred release并发布结果；不得动态查找、编译、扩容、再次执行Operation或补算Diagnostics。
 
 #### Scenario: Barrier前Source Module失败
 
@@ -102,7 +102,7 @@ Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operat
 
 ### Requirement: Final Pose写入必须在整Rig验证后原子选择Committed或Pending结果
 
-唯一`CharacterFinalPosePublication` MUST同时拥有当前Committed Final Pose、本帧Pending Final Pose、完整Physical Bone binding、Final Writer binding和Publication Result。它 MUST在写任何Physical Bone前验证PhysicalBoneCount、Pose availability、continuity、Program completion、Constraint completion、Rig与Frame lineage；全部合法时一次写入完整Pending Physical Pose，Invalid时保持Committed Pose并阻止所有Pending Module Result提交。Program Runtime、Source Module、Constraint Module、Diagnostics和外层Runtime MUST不写Physical Transform或保存第二Final Pose真相。
+唯一`CharacterFinalPosePublication` MUST同时拥有当前Committed Final Pose物理页、本帧Pending Final Pose物理页、完整Physical Bone binding、Final Writer binding和Publication Result。Program Image的Output Family MUST只保存指向Pending页的typed write handle；Program Runtime通过该handle写入Output Pose并发布只读Result，不得在Program Workspace保存第二Final Pose页。Final Publication MUST在写任何Physical Bone前验证PhysicalBoneCount、Pose availability、continuity、Program completion、Constraint completion、Rig与Frame lineage；全部合法时一次写入完整Pending Physical Pose，Invalid时保持Committed Pose并阻止所有Pending Module Result提交。Source Module、Constraint Module、Diagnostics和外层Runtime MUST不写Physical Transform或保存第二Final Pose真相。
 
 #### Scenario: Pending Pose全部合法
 

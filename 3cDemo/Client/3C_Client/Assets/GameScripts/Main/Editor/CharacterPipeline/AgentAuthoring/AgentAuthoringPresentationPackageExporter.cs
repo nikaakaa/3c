@@ -325,7 +325,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     id = $"{reference.assetGuid}:{reference.localFileId}",
                     clip = reference,
                     dependencyBaseline = identity.FullDependencyHash,
-                    analysisInputHash = identity.AnalysisInputHash
+                    analysisInputHash = identity.AnalysisInputHash,
+                    registeredCurveHash = identity.RegisteredCurveHash
                 };
                 for (int channelIndex = 0;
                      channelIndex < CharacterAnimationClipRegisteredCurveCatalog.Channels.Count;
@@ -344,7 +345,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     AgentPackageCurve exported = ExportCurve(curve);
                     exported.channelId = descriptor.ChannelId;
                     exported.bounded = descriptor.ValueDomain ==
-                                       CharacterAnimationClipRegisteredCurveValueDomain.Normalized01;
+                                           CharacterAnimationClipRegisteredCurveValueDomain.Normalized01 ||
+                                       descriptor.ValueDomain ==
+                                           CharacterAnimationClipRegisteredCurveValueDomain.LockMode;
+                    exported.minimum = descriptor.ValueDomain ==
+                                       CharacterAnimationClipRegisteredCurveValueDomain.Signed
+                        ? float.NegativeInfinity
+                        : 0f;
+                    exported.maximum = descriptor.ValueDomain ==
+                                       CharacterAnimationClipRegisteredCurveValueDomain.Normalized01
+                        ? 1f
+                        : descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.LockMode
+                            ? 2f
+                            : float.PositiveInfinity;
+                    exported.unit = descriptor.Unit;
                     file.curves.Add(exported);
                 }
                 destination.animationClips.Add(file);

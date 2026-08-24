@@ -38,11 +38,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(source));
             AnimationFootContactSchedule schedule = contactSchedule ?? AnimationFootContactSchedule.Inferred;
             AnimationFootAnalysisArtifactIdentity identity = GetExpectedIdentity(clip, source, schedule);
-            AnimationFootAnalysisBuildResult result = CharacterFootPlacementAnimationAnalyzer.Analyze(clip, source, schedule);
+            CharacterFootMotionReference motionReference = source.RequireMotionReference(clip);
+            AnimationFootAnalysisBuildResult result = CharacterFootPlacementAnimationAnalyzer.Analyze(
+                clip,
+                in motionReference,
+                source,
+                schedule);
             return AnimationFootAnalysisArtifactStore.Write(
                 identity,
                 result.Features,
-                result.PhaseValidation);
+                result.PhaseValidation,
+                result.MotionData);
         }
     }
 }

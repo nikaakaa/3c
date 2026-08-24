@@ -110,7 +110,7 @@ Corin Gameplay MUST只为FullBodyAction及其它有限Gameplay-owned channel提�
 
 ### Requirement: Corin必须使用PoseStateMachine加Action Slot的唯一表现拓扑
 
-Corin Presentation Pose Graph MUST以typed Presentation Fact驱动Locomotion PoseStateMachine，以FullBodyAction exact playback驱动唯一AnimationSlot，并在同一Pose Plan完成transition、composition、Local/Component Pose显式转换、TwoBoneIK、FootPlacement pelvis/targets规划、LegIK腿链求解与Output。Corin MUST不同时保留BaseLocomotion Selection Input、旧Timeline Player、共享Playback总管或第二动画链。
+Corin Presentation Pose Graph MUST以typed Presentation Fact驱动Locomotion PoseStateMachine，以FullBodyAction exact playback驱动唯一AnimationSlot，并在同一Pose Plan完成transition、composition、Local/Component Pose显式转换、Component Pose控制、FootPlacement与PoseBone Goal Contribution、唯一Goal Assembler、唯一FullBodyIK与Output。Corin MUST不同时保留BaseLocomotion Selection Input、旧Timeline Player、共享Playback总管或第二动画链。
 
 #### Scenario: 编译Corin Pose Graph
 

@@ -2,9 +2,9 @@
 
 ### Requirement: Pose Plan必须按拓扑编译为有序执行阶段
 
-唯一Pose Compiler Module MUST通过`Graph Closure -> Typed IR -> Topology -> Value Plan -> Workspace Plan -> Family Payload -> Stage Schedule -> Seal Program Image`固定Pass链，把同一Pose DAG编译为不可变`CharacterPoseProgramImage`。Program Image MUST按typed依赖、Pose空间与Execution Domain保存有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并使用公共Operation Header、typed Value Reference和分段Operation Family Payload；MUST不保存万能Operation可选字段、Actor State或Frame Pending页。
+唯一Pose Compiler Module MUST通过`Graph Closure -> Typed IR -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Bind Family Payload -> Seal Program Image`固定Pass链，把同一Pose DAG编译为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`。Program Image MUST按typed依赖、Pose空间与Execution Domain保存有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并使用公共Operation Header、typed Value Reference和分段Operation Family Payload；MUST不保存万能Operation可选字段、Actor State或Frame Pending页，Runtime MUST不构造第二Native Program容器。
 
-Goal Contribution收集、唯一Goal Assembler、唯一Goal Set、FBBIK和OutputPose MUST进入固定阶段，Projection MUST静态证明每条正式路径最多一个Assembler、一个Goal Set、一个FBBIK、一个OutputPose和一个Final Writer。每个source每帧 MUST最多capture一次，每个Operation MUST恰好执行一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由Final Publication中的唯一Writer写一次。Runtime MUST不重新编译、重排、补执行或解释authoring Graph。
+Goal Contribution收集、唯一Goal Assembler、唯一Goal Set、FBBIK和OutputPose MUST进入固定阶段，Projection MUST静态证明每条正式路径最多一个Assembler、一个Goal Set、一个FBBIK、一个OutputPose和一个Final Writer。每个Constraint Family Operation MUST在自己的Stage位置通过typed编译Handle调用Constraint Module一次，Constraint不得扫描Program或维护第二Schedule。Output Family MUST只保存指向Final Publication唯一Pending Pose物理页的typed write handle，不得分配第二Final Pose buffer。每个source每帧 MUST最多capture一次，每个Operation MUST恰好执行一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由Final Publication中的唯一Writer写一次。Runtime MUST不重新编译、重排、补执行或解释authoring Graph。
 
 #### Scenario: Foot Placement后执行FullBodyIK
 
@@ -42,7 +42,7 @@ Editor MUST允许按稳定PoseNodeId与call-site订阅Pose Watch，并允许Goal
 
 ### Requirement: Preview、Runtime与Live Debug必须复用同一固定Pose Plan
 
-Projection Compiler MUST把Pose Graph降低为唯一不可变`CharacterPoseProgramImage`，并由同一Factory装配`CharacterPoseProgramRuntime`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、`CharacterFinalPosePublication`和Frame Transaction。正式Runtime与Preview MUST使用同一Program Image schema、Stage Schedule、Operation Family evaluator、source backend、world-query Adapter、FinalIK Pose Buffer backend、Final Writer和completion语义；Live Debug MUST只读取对应Committed Result。每帧每个source、Player、Transition、Slot、composition、转换、Goal Source、Assembler、FBBIK和Writer MUST只执行一次正式计划。Graph mutation或Stale Projection时Preview MUST停止并等待显式Build。
+Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`，并由同一Factory装配`CharacterPoseProgramRuntime`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、`CharacterFinalPosePublication`和Frame Transaction。正式Runtime与Preview MUST直接读取同一Projection内Program Image，不得复制或转换为第二Native Program；二者 MUST使用同一Program Image schema、Stage Schedule、Operation Family evaluator、source backend、world-query Adapter、FinalIK Pose Buffer backend、Final Writer和completion语义；Live Debug MUST只读取对应Committed Result。每帧每个source、Player、Transition、Slot、composition、转换、Goal Source、Assembler、FBBIK和Writer MUST只执行一次正式计划。Graph mutation或Stale Projection时Preview MUST停止并等待显式Build。
 
 #### Scenario: Graph修改后继续Preview
 

@@ -1,7 +1,7 @@
 # agent-character-controller-synthesis Specification
 
 ## Purpose
-定义Agent在编辑器内通过Document v3目录包、canonical Snapshot、Mutation Compiler、Validator与Report生成并修复正式BTSMTL角色控制器资产的唯一链路。
+定义Agent在编辑器内通过Document v4目录包、canonical Snapshot、Mutation Compiler、Validator与Report生成并修复正式BTSMTL角色控制器资产的唯一链路。
 ## Requirements
 ### Requirement: Agent必须保持Generated Foot Analysis只读
 
@@ -35,7 +35,7 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 ### Requirement: Agent Snapshot 必须是只读投影
 
-系统 MUST从当前`CharacterPipelineDefinition`和BTSMTL树生成只读canonical Snapshot，作为Document package checkout和Reconciler比较的唯一当前状态投影。Snapshot MUST包含Agent正式可写结构、stable identity、ownership与可引用catalog。Pose Graph、PoseStateMachine、Graph-owned typed Source Slot、Profile-owned direct Clip/BlendSpace/MM Binding、Locomotion Sync Group、AnimationSlot、有限Action channel binding、Timeline direct Clip引用、当前Definition可达原生AnimationClip注册Curve和node-local Policy MUST进入Document v4 editable目标状态；Rig/Virtual Bone资源正文、Body Motion、Foot Analysis、runtime state和generated product MUST只进入紧凑只读context或完全省略。Clip与子资产引用 MUST使用`assetPath + assetGuid + signed non-zero localFileId`结构化身份。Projection-local dense index、runtime generation、lease与provider index MUST不进入editable。Snapshot MUST不包含Sequence、Marker Sync、Timeline locomotion producer、旧Selection、runtime临时状态、Unity YAML或generated payload，也不得因导出触发Build。
+系统 MUST从当前`CharacterPipelineDefinition`和BTSMTL树生成只读canonical Snapshot，作为Document package checkout和Reconciler比较的唯一当前状态投影。Snapshot MUST包含Agent正式可写结构、stable identity、ownership与可引用catalog。Pose Graph、PoseStateMachine、Graph-owned typed Source Slot、Profile-owned direct Clip/BlendSpace/MM Binding、Locomotion Sync Group、AnimationSlot、有限Action channel binding、Timeline direct Clip引用、当前Definition可达原生AnimationClip注册Curve和node-local Policy MUST进入Document v4 editable目标状态；Rig/Virtual Bone资源正文、Body Motion、Foot Analysis、runtime state和generated product MUST只进入紧凑只读context或完全省略。Clip与子资产引用 MUST使用`assetPath + assetGuid + signed non-zero localFileId`结构化身份。Projection-local dense index、runtime generation、lease与provider index MUST不进入editable。Snapshot MUST不包含旧Sequence同步数据、Timeline locomotion producer、旧Selection、runtime临时状态、Unity YAML或generated payload，也不得因导出触发Build。
 
 #### Scenario: checkout生成Character Document package
 

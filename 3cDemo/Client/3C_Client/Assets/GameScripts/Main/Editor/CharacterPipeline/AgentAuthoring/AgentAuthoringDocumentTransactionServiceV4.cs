@@ -607,19 +607,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     !string.Equals(
                         identity.AnalysisInputHash,
                         plan.Target.analysisInputHash,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(
+                        identity.RegisteredCurveHash,
+                        plan.Target.registeredCurveHash,
                         StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
                         $"AnimationClip '{plan.Clip.name}' dependency changed after preflight.");
                 }
+                var footMotionCurves = new Dictionary<string, AnimationCurve>(StringComparer.Ordinal);
                 for (int curveIndex = 0; curveIndex < plan.Target.curves.Count; curveIndex++)
                 {
                     AgentPackageCurve curve = plan.Target.curves[curveIndex];
+                    CharacterAnimationClipRegisteredCurveDescriptor descriptor =
+                        CharacterAnimationClipRegisteredCurveCatalog.Require(curve.channelId);
+                    if (descriptor.FootMotionData)
+                    {
+                        footMotionCurves.Add(curve.channelId, ConvertCurve(curve));
+                        continue;
+                    }
                     CharacterAnimationClipRegisteredCurveCatalog.Replace(
                         plan.Clip,
                         curve.channelId,
                         ConvertCurve(curve));
                 }
+                if (footMotionCurves.Count > 0)
+                    CharacterAnimationClipRegisteredCurveCatalog.ReplaceFootMotionGroup(
+                        plan.Clip,
+                        footMotionCurves);
                 var targetChannels = new HashSet<string>(
                     plan.Target.curves.Select(value => value.channelId),
                     StringComparer.Ordinal);

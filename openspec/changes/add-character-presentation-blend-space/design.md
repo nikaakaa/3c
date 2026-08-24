@@ -12,8 +12,8 @@ Committed Body / Intent
   -> edge-owned Standard Blend或显式Inertialization
   -> FullBodyAction AnimationSlot
   -> Pose composition / ModifyBone
-  -> FootGrounding Baseline Goals
-  -> optional PredictiveFootPlacementModifier Final Goals
+  -> CharacterFootPlacementModule Goal Contributions
+  -> Goal Assembler
   -> FullBodyIK
   -> OutputPose
 ```
@@ -35,7 +35,7 @@ Committed Body / Intent
 - UE Animation Blueprint Event Graph、Montage、Sync Group自动leader、Notify或Root Motion业务决策。
 - Direct blend、Simple Directional、嵌套Blend Space或运行时动态样本集合。
 - Motion Matching查询、轨迹预测或候选打分。
-- 跨来源CrossFade、Stored Pose、Inertial residual、FootGrounding、PredictiveFootPlacementModifier、FullBodyIK和最终Animator写回。
+- 跨来源CrossFade、Stored Pose、Inertial residual、Foot Placement、Goal Assembly、FullBodyIK和最终Animator写回。
 - Agent直接修改Blend Space资源正文或generated数据；Document只写共享Pose capability与Profile binding。
 
 ## Concept Mapping
@@ -50,7 +50,7 @@ Committed Body / Intent
 | `BlendStack` | Blend Stack / temporal transition | 不由Mixer负责 | 只保留跨来源时间历史 |
 | `State Source Phase Relation` | State edge source handoff同步 | 项目编译Phase计划 | 只处理PoseState来源间raw-to-effective phase |
 
-名称只表达接近的学习概念，不宣称内部等同UE。特别是项目的world-aware value节点是`FootGrounding`与可选`PredictiveFootPlacementModifier`，pure-pose solver是`FullBodyIK`，三者都不叫Post Process Anim Blueprint。
+名称只表达接近的学习概念，不宣称内部等同UE。项目的world-aware value节点由唯一`CharacterFootPlacementModule`提供Goal Contribution，唯一Goal Assembler形成Goal Set，pure-pose solver是`FullBodyIK`；三者都不属于BlendSpacePlayer。
 
 ## Responsibility Model
 
@@ -65,8 +65,9 @@ Committed Body / Intent
 | BlendSpacePlayer | 上述三项结果 | 聚合source-local Pose、curve、foot feature | Pose Value + discontinuity |
 | Inertialization | 单Pose discontinuity | residual/rebase | 连续Pose Value |
 | BlendStack | 多source history | CrossFade/Stored/release | 跨来源Pose Value |
-| FootGrounding / Predictive Modifier | composition后Component Pose与foot contribution | Lyra current、contact/anchor/pelvis Baseline、可选未anchored Swing预测与typed Goals | Goal Set |
-| FullBodyIK | 原始Component Pose与全部Goal Sets | 单次FinalIK FBBIK | solved Component Pose |
+| CharacterFootPlacementModule | composition后Component Pose与foot contribution | Observation、双脚State/Context、Resolved Foot、Support、Pelvis与typed Goal Contribution | Goal Contributions |
+| Goal Assembler | typed Goal Contribution集合 | 验证lineage、容量与重复Slot并规范化 | 唯一Goal Set |
+| FullBodyIK | 原始Component Pose与唯一Goal Set | 单次FinalIK FBBIK | solved Component Pose |
 
 ## Decision 1: 新增BlendSpacePlayer，不复用BlendStack
 
@@ -239,7 +240,7 @@ Runtime不得读取ScriptableObject、AnimationClip Curve、AssetDatabase、Time
 
 没有全局默认策略。未知ParameterId或policy缺失编译失败。
 
-每个样本的Foot Analysis feature按其effective sample time读取，再按姿势相同权重聚合。进入后续Blend、LayeredBoneBlend或BlendStack时，现有source contribution继续乘上外层权重；FootGrounding只读取最终实际脚部贡献生成Baseline Goals，可选PredictiveFootPlacementModifier只改写未被anchor拥有的Swing脚。BlendSpace不得自己执行射线、contact/anchor、pelvis goal或IK。
+每个样本的Foot Analysis feature按其effective sample time读取，再按姿势相同权重聚合。进入后续Blend、LayeredBoneBlend或BlendStack时，现有source contribution继续乘上外层权重；唯一CharacterFootPlacementModule只读取最终实际脚部贡献生成Resolved Foot、Support、Pelvis与Goal Contribution。BlendSpace不得自己执行世界查询、Foot State、Anchor、Pelvis、Goal Assembly或IK。
 
 ## Authoring Workspace
 
@@ -247,12 +248,12 @@ Blend Space使用Character Animation Authoring Workspace的正式外壳：
 
 - Navigator：资产、轴、Sample、编译产物层级。
 - Canvas：1D刻度线或2D参数空间，显示采样点、当前preview落点和有效贡献连线。
-- Details / Authoring：模式、轴范围、phase策略、sample clip、位置、角色、marker、Foot Analysis与参数策略。
+- Details / Authoring：模式、轴范围、phase策略、sample clip、位置、角色、Foot Analysis与参数策略。
 - Details / Live：当前参数、SampleId、weight、phase、effective time、feature availability和runtime revision。
 - Details / References：Profile Pose source binding、PoseState、Pose Graph BlendSpacePlayer、Rig、clip、artifact与Projection引用。
 - Bottom Dock：Preview controls、compile diagnostics、Pose Watch和reference problems。
 
-拖动样本、编辑轴或marker只修改authoring并标记stale；只有显式Compile/Build发布Projection。Preview在stale时明确拒绝或显示旧revision，不自动build。
+拖动样本、编辑轴、phase或策略只修改authoring并标记stale；只有显式Compile/Build发布Projection。Preview在stale时明确拒绝或显示旧revision，不自动build。
 
 ## Preview And Diagnostics
 
@@ -265,7 +266,7 @@ Diagnostics按NodeId和SampleId输出：
 - X/Y原值、range处理结果和parameter availability。
 - active sample、weight、canonical phase、effective time。
 - Pose Parameter和foot feature来源。
-- downstream discontinuity、Inertialization、FootGrounding、PredictiveFootPlacementModifier与FullBodyIK状态。
+- downstream discontinuity、Inertialization、Foot Placement、Goal Assembly与FullBodyIK状态。
 
 Live Debug只读取Runtime Snapshot，不重新计算权重。
 
@@ -282,7 +283,7 @@ Snapshot不输出每个clip的generated Foot Analysis payload，不输出Runtime
 
 ## 最终PoseState与独立演示边界
 
-`refactor-animation-control-boundaries`完成后的Corin主图：
+当前Corin主图：
 
 ```text
 Presentation Fact
@@ -341,7 +342,7 @@ Demo Presentation Fact
 ### Pose Graph与PoseState合同
 
 - 第二阶段实施必须在当前PoseState/AnimationSlot ABI上原子升级Pose Operation、Pose Plan Schema和Runtime ABI；不得保留旧Selection版BlendSpace reader。
-- Projection Compiler按拓扑、Pose空间与execution domain生成ordered stage table；`BlendSpacePlayer`属于source/player pose生产，`FootGrounding`与图中显式存在的`PredictiveFootPlacementModifier`属于DAG中对应位置的world-aware value stage，`FullBodyIK`属于消费最终Goal Set的pure-pose stage，不再存在固定`WorldAwarePostProcess`尾阶段。
+- Projection Compiler按拓扑、Pose空间与execution domain生成ordered stage table；`BlendSpacePlayer`属于source/player pose生产，`CharacterFootPlacementModule`属于DAG中对应位置的world-aware value stage，唯一Goal Assembler形成Goal Set，`FullBodyIK`属于消费该Goal Set的pure-pose stage，不存在固定`WorldAwarePostProcess`尾阶段。
 - `BlendSpacePlayer`固定保存必需typed Blend Space Source Slot对象引用，拥有必需`X`、可选`Y`输入，以及`Pose`、`Discontinuity`输出。X/Y只接受typed Fact Parameter edge。
 - BlendSpace source usage由编译后的PoseState descriptor发布；不得创建Gameplay `AnimationSelectionFrame`、`AnimationPlaybackId`或BaseLocomotion channel binding。
 

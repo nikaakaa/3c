@@ -410,12 +410,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterFullBodyIkPosePayload : CharacterPoseNodePayload
     {
-        [SerializeField] CharacterFullBodyIkProfile m_Profile;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FullBodyIK;
-        public CharacterFullBodyIkProfile Profile => m_Profile;
         public CharacterFullBodyIkPosePayload() { }
-        public CharacterFullBodyIkPosePayload(CharacterFullBodyIkProfile profile) =>
-            m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
     }
 
     [Serializable]
@@ -490,8 +486,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             (m_Payload as CharacterFootPlacementPosePayload)?.Profile;
         public CharacterFootPlacementRigCalibration FootPlacementCalibration =>
             (m_Payload as CharacterFootPlacementPosePayload)?.Calibration;
-        public CharacterFullBodyIkProfile FullBodyIkProfile =>
-            (m_Payload as CharacterFullBodyIkPosePayload)?.Profile;
         public LinkedPoseGroupId LinkedPoseGroupId =>
             (m_Payload as CharacterLinkedPoseCallPayload)?.GroupId ?? default;
         public LinkedPoseInterfaceId LinkedPoseInterfaceId =>

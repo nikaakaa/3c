@@ -70,3 +70,13 @@
 - [x] 8.5 更新`openspec/project.md`为实际重构状态，并保留后续行为change尚未实施的准确说明
 - [x] 8.6 使用规定参数编译Runtime与Editor工程，并在每次构建后立即关闭dotnet build server
 - [x] 8.7 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验
+
+## 9. 闭合实现审查暴露的剩余所有权
+
+- [x] 9.1 删除FullBodyIK Pose节点内的Profile引用，让`CharacterAnimationPresentationProfile`成为唯一作者配置Owner，并让Descriptor校验构建时Profile Revision
+- [x] 9.2 将唯一FBBIK Runtime、BendHistory、Goal Set、Solver Outcome与Diagnostics改为单数合同，删除长度为1的plural容器、索引和循环
+- [x] 9.3 让Solver Outcome显式保存Produced、Frame、Completion与Rig lineage，默认值不得通过Writer前验证
+- [x] 9.4 将Foot StateMachine收为一次Evaluate调用，并让根Bank直接提供Committed/Pending页，Foot Module不得拥有第二套事务状态
+- [x] 9.5 按Foot、FBBIK与Physical detail interest冻结诊断；合法无Foot Pose Plan不得读取Foot Diagnostics
+- [x] 9.6 让Future Body Translation写入调用方预分配的固定Workspace，不得为每次活跃预测新建Trajectory或复制Sample数组
+- [x] 9.7 重新执行规定参数的Runtime/Editor编译、`git diff --check`和OpenSpec严格校验

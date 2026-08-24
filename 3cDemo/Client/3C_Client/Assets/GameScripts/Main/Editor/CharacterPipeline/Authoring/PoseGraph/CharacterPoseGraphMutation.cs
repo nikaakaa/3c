@@ -1355,7 +1355,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterRootOrientationWarpPosePayload current when fieldId == "yaw-curve" => new CharacterRootOrientationWarpPosePayload(Require<ThirdPersonCharacter.Pipeline.Motion.RootMotion.RootMotionCurveAsset>(value, fieldId)),
                 CharacterPoseBoneIkGoalsPayload current when fieldId == "bindings" => new CharacterPoseBoneIkGoalsPayload(Require<CharacterPoseBoneIkGoalBinding[]>(value, fieldId)),
                 CharacterFootPlacementPosePayload current => SetFootPlacement(current, fieldId, value),
-                CharacterFullBodyIkPosePayload current when fieldId == "profile" => new CharacterFullBodyIkPosePayload(Require<CharacterFullBodyIkProfile>(value, fieldId)),
                 CharacterPoseSubgraphPayload current when fieldId == "graph-id" => new CharacterPoseSubgraphPayload(Subgraph(value)),
                 _ => throw new InvalidOperationException($"Pose payload '{payload.GetType().Name}' does not declare writable field '{fieldId}'.")
             };

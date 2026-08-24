@@ -2308,8 +2308,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int output = operation.OutputValueIndex;
             int goalSetIndex = operation.InputFullBodyIkGoalSetValueIndex;
             if (!IsInputReady(input, operation.Index) ||
-                operation.FullBodyIkIndex < 0 ||
-                (uint)operation.FullBodyIkIndex >= (uint)m_PoseConstraints.FullBodyIkSolverCount ||
+                operation.FullBodyIkIndex != 0 ||
                 (uint)goalSetIndex >= (uint)m_FullBodyIkGoalSetValueCount ||
                 !m_PoseConstraints.HasPendingAssembledGoalSet ||
                 !TryCopyValue(input, output, operation.Index))
@@ -2326,13 +2325,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PoseOffset(output),
                 m_BoneCount);
             CharacterFullBodyIkResult result = m_PoseConstraints.SolveFullBodyIk(
-                operation.FullBodyIkIndex,
                 outputPose,
                 operation.Index,
                 operation.FrameCacheIndex,
                 m_FrameSequence,
-                m_CompletionIdentity,
-                m_RecordDiagnostics);
+                m_CompletionIdentity);
             if (!result.Succeeded)
             {
                 SetInvalid(output, m_ValueContinuityIdentities[output],
@@ -3994,7 +3991,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(program));
             program.RequireValid();
             if (poseConstraints == null ||
-                poseConstraints.FullBodyIkSolverCount != program.FullBodyIkCount ||
+                program.FullBodyIkCount != 1 ||
                 poseConstraints.FullBodyIkGoalContributionCount !=
                 program.FullBodyIkGoalContributionCount ||
                 poseConstraints.FullBodyIkContributionGoalCount !=
@@ -4176,8 +4173,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         operation.FullBodyIkIndex >= 0 &&
                         operation.FullBodyIkIndex < program.FullBodyIkCount &&
                         operation.FullBodyIkGoalContributionInputCount == 0 &&
-                        poseConstraints.IsFullBodyIkPrepared(
-                            operation.FullBodyIkIndex),
+                        poseConstraints.IsFullBodyIkPrepared,
                     CharacterPoseOperationCode.LinkedPoseCall =>
                         validPoseInputA && operation.InputValueIndexB == -1 &&
                         operation.LinkedPoseCallIndex >= 0 &&

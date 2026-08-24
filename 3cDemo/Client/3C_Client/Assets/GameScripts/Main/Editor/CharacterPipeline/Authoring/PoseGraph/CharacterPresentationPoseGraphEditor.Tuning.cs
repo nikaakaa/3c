@@ -81,12 +81,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 foreach (CharacterTypedPoseNode node in graph.Nodes)
                 {
-                    if (node?.Payload is CharacterFullBodyIkPosePayload fullBody &&
-                        fullBody.Profile)
-                    {
-                        profiles[$"full-body:{fullBody.Profile.ProfileId}"] =
-                            fullBody.Profile.Revision;
-                    }
                     if (node?.Payload is CharacterFootPlacementPosePayload foot &&
                         foot.Profile)
                     {

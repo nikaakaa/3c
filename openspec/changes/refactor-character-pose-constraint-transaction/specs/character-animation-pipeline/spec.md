@@ -58,6 +58,24 @@ Runtime MUST在Frame开始冻结并预验证Live、Capture、Pose Watch与detail
 - **THEN** Seal MUST只发布一个新的Committed Bank identity
 - **AND** 任一正式读者 MUST不观察到左右脚、盆骨或BendHistory的部分提交
 
+### Requirement: 唯一FBBIK必须使用单数运行合同与显式产出证明
+
+`CharacterAnimationPresentationProfile` MUST是FullBodyIK Profile唯一作者Owner；FullBodyIK Pose节点 MUST只表达拓扑且不得保存第二份Profile引用。Compiler MUST从当前Presentation Profile生成Descriptor，Descriptor MUST冻结Profile Id与Revision并在Runtime构造前和当前Profile精确对账。
+
+Pose Constraint Runtime MUST只保存一个Solver、一个Goal Set、一个BendHistory和一个Solver Outcome，不得使用长度为1的Solver、Outcome、Goal Set或Goal Set Index数组。Solver Outcome MUST显式记录Produced、Frame、Completion与Rig lineage；默认值 MUST表示本帧未执行并阻止Physical Writer。
+
+#### Scenario: Solver未执行
+
+- **WHEN** Goal Assembler已经完成但当前Frame与Completion没有产生FBBIK Solver Outcome
+- **THEN** Physical Writer前验证 MUST失败并Discard根Pending Bank
+- **AND** 默认Result MUST不能被解释为本帧Solver成功
+
+#### Scenario: Profile修改后使用旧Projection
+
+- **WHEN** Descriptor冻结的Profile Revision与当前唯一Profile Revision不一致
+- **THEN** Runtime构造 MUST拒绝旧Projection
+- **AND** MUST不把旧Plan identity与新Solver参数组合运行
+
 ### Requirement: Animancer Evaluate必须是唯一不可逆提交门槛
 
 唯一正式Animancer Graph Evaluate MUST作为动画表现帧不可逆Barrier。进入Barrier前，Runtime MUST完成Projection/Profile/Rig/World Context、全部托管identity、静态Goal Slot冲突、固定容量、readiness、source、Diagnostics interest/capacity、FinalIK binding和Final Writer binding验证，并且不得声称已经生成依赖同帧Component Pose的Foot Result、Contact Patch、运行时Goal或FBBIK Pending State，也不得提交Foot、Pelvis、BendHistory、Diagnostics或Final Pose。

@@ -44,15 +44,15 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,
-            out CharacterFutureBodyTranslation translation)
+            CharacterFutureBodyTranslation output)
         {
             if (m_Disposed || LifecycleState != SimulationSessionLifecycleState.Active ||
                 m_FutureBodyTranslationSource == null)
             {
-                translation = null;
+                output?.Clear();
                 return false;
             }
-            return m_FutureBodyTranslationSource.TryPredict(in request, out translation);
+            return m_FutureBodyTranslationSource.TryPredict(in request, output);
         }
 
         public void LogicTick(SimulationSessionLogicTickContext context)

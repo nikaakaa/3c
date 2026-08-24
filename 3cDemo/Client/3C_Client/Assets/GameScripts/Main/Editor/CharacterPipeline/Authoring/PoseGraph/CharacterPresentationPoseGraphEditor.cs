@@ -627,14 +627,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterTypedPoseNode typed =
                 m_Document.Graph.Nodes.Single(value =>
                     value.NodeId.Value == nodeId.Value);
-            CharacterFullBodyIkPosePayload payload =
-                typed.Payload as CharacterFullBodyIkPosePayload ??
+            _ = typed.Payload as CharacterFullBodyIkPosePayload ??
                 throw new InvalidOperationException(
                     $"Pose node '{typed.NodeId}' is not a Full Body IK node.");
-            CharacterFullBodyIkProfile profile = payload.Profile;
+            CharacterFullBodyIkProfile profile = m_Profile?.FullBodyIkProfile;
             if (!profile)
                 throw new InvalidOperationException(
-                    $"Full Body IK node '{typed.NodeId}' has no Profile.");
+                    "Animation Presentation Profile has no Full Body IK Profile.");
             Selection.activeObject = profile;
             EditorGUIUtility.PingObject(profile);
             AssetDatabase.OpenAsset(profile);

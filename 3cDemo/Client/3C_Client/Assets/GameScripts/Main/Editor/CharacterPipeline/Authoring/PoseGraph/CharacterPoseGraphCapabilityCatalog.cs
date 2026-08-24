@@ -229,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 GraphAuthoringDynamicPortPolicy.OrderedInputs,
                 executionDomain: CharacterPoseExecutionDomain.PureValue));
             catalog.Register(Node<CharacterFullBodyIkPosePayload>(CharacterPoseNodeKind.FullBodyIK, allPoseGraphs, "Full Body IK", "Constraints", constraintColor,
-                Fields(AssetField("profile", "FinalIK FBBIK Profile", "full-body-ik-profile", typeof(CharacterFullBodyIkProfile)), ReadOnlyField("backend", "Solver Backend", GraphAuthoringFieldValueKind.String)),
+                Fields(ReadOnlyField("backend", "Solver Backend", GraphAuthoringFieldValueKind.String)),
                 Ports(In("pose", "Component Pose", "pose.component"), In("goals", "Full Body IK Goals", "component.full-body-ik-goals"), Out("result", "Solved Component Pose", "pose.component")),
                 commands: new[]
                 {

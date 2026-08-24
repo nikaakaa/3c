@@ -253,6 +253,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (!CharacterPoseTuningAuthoringService.TryCompileCurrentBlock(
                     m_Window.AssetContext,
+                    m_Window.ProfileContext,
                     projection,
                     m_TuningLayout,
                     m_TuningBlock,
@@ -985,6 +986,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 if (!CharacterPoseTuningAuthoringService.TryCompileCurrentBlock(
                         m_Window.AssetContext,
+                        m_Window.ProfileContext,
                         projection,
                         m_TuningLayout,
                         m_TuningBlock,
@@ -1164,6 +1166,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!CharacterPoseTuningAuthoringService.TryReadCurrentValue(
                     m_Window.AssetContext,
+                    m_Window.ProfileContext,
                     entry,
                     out CharacterPoseTuningValue currentValue,
                     out string readError))

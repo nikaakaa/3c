@@ -266,14 +266,86 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootMotionSettings Settings { get; }
     }
 
+    internal readonly struct CharacterFootStateEvaluation
+    {
+        internal CharacterFootStateEvaluation(
+            CharacterFootSide side,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in AnimationBiomechanicalStepHeader selectedStep,
+            in CharacterFootLandingPredictionResult landingPrediction,
+            in CharacterFootStateFrame frame)
+        {
+            Side = side;
+            CurrentStep = currentStep;
+            SelectedStep = selectedStep;
+            LandingPrediction = landingPrediction;
+            Frame = frame;
+        }
+
+        internal CharacterFootSide Side { get; }
+        internal AnimationBiomechanicalStepHeader CurrentStep { get; }
+        internal AnimationBiomechanicalStepHeader SelectedStep { get; }
+        internal CharacterFootLandingPredictionResult LandingPrediction { get; }
+        internal CharacterFootStateFrame Frame { get; }
+    }
+
     internal static class CharacterFootStateMachine
     {
         const float GeometryEpsilon = 0.0001f;
 
-        internal static void BeginFrame(ref CharacterFootStateContext context) =>
-            context.BeginFrame();
+        internal static CharacterFootLandingSnapshot ProjectLandingBeforePrediction(
+            in CharacterFootStateContext context,
+            in AnimationBiomechanicalStepHeader currentStep)
+        {
+            CharacterFootStateContext projected = context;
+            projected.BeginFrame();
+            PromoteLanded(ref projected, in currentStep);
+            return projected.LandingSnapshot;
+        }
 
-        internal static void PromoteLanded(
+        internal static CharacterFootLandingSnapshot ProjectLandingAfterPrediction(
+            in CharacterFootStateContext context,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in AnimationBiomechanicalStepHeader selectedStep,
+            in CharacterFootLandingPredictionResult landingPrediction,
+            in CharacterFootMotionSettings settings)
+        {
+            CharacterFootStateContext projected = context;
+            projected.BeginFrame();
+            PromoteLanded(ref projected, in currentStep);
+            CaptureNextSwing(
+                ref projected,
+                in selectedStep,
+                in landingPrediction,
+                in settings);
+            return projected.LandingSnapshot;
+        }
+
+        internal static CharacterResolvedFootResult Evaluate(
+            ref CharacterFootStateContext context,
+            in CharacterFootStateEvaluation evaluation,
+            out CharacterFootSwingMotionResult result)
+        {
+            AnimationBiomechanicalStepHeader currentStep = evaluation.CurrentStep;
+            AnimationBiomechanicalStepHeader selectedStep = evaluation.SelectedStep;
+            CharacterFootLandingPredictionResult landingPrediction =
+                evaluation.LandingPrediction;
+            CharacterFootStateFrame frame = evaluation.Frame;
+            context.BeginFrame();
+            PromoteLanded(ref context, in currentStep);
+            CaptureNextSwing(
+                ref context,
+                in selectedStep,
+                in landingPrediction,
+                frame.Settings);
+            return Resolve(
+                ref context,
+                evaluation.Side,
+                in frame,
+                out result);
+        }
+
+        static void PromoteLanded(
             ref CharacterFootStateContext context,
             in AnimationBiomechanicalStepHeader step)
         {
@@ -313,7 +385,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.ObservedCurrentEventIdentity = currentEventIdentity;
         }
 
-        internal static void CaptureNextSwing(
+        static void CaptureNextSwing(
             ref CharacterFootStateContext context,
             in AnimationBiomechanicalStepHeader step,
             in CharacterFootLandingPredictionResult diagnostics,
@@ -369,7 +441,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
         }
 
-        internal static CharacterResolvedFootResult Resolve(
+        static CharacterResolvedFootResult Resolve(
             ref CharacterFootStateContext context,
             CharacterFootSide side,
             in CharacterFootStateFrame frame,

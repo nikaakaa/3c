@@ -10,18 +10,22 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
         public bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,
-            out CharacterFutureBodyTranslation translation)
+            CharacterFutureBodyTranslation output)
         {
             RequireAlive();
             RequireCurrent();
-            translation = null;
+            if (output == null)
+                throw new ArgumentNullException(nameof(output));
+            output.Clear();
             int actorIndex = FindBinding(request.ActorId);
             if (actorIndex < 0 || m_KccStates == null || actorIndex >= m_KccStates.Length)
                 return false;
             Span<float> sampleTimes = stackalloc float[4];
             int sampleCount = CollectSampleTimes(in request, sampleTimes);
             WorldBodyState body = m_Current.Bodies[actorIndex];
-            var samples = new CharacterFutureBodyTranslationSample[sampleCount + 1];
+            Span<CharacterFutureBodyTranslationSample> samples =
+                stackalloc CharacterFutureBodyTranslationSample[
+                    CharacterFutureBodyTranslation.MaximumSampleCount];
             samples[0] = new CharacterFutureBodyTranslationSample(
                 0f,
                 0f,
@@ -69,9 +73,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
             {
                 return false;
             }
-            translation = new CharacterFutureBodyTranslation(
+            output.Set(
                 FutureBodyTranslationSourceIdentity,
-                samples);
+                samples.Slice(0, sampleCount + 1));
             return true;
         }
 

@@ -271,8 +271,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterFullBodyIkResult SolvePrepared(
             NativeSlice<AnimationLocalBonePose> pendingOutputComponentPose,
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader goalSet,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
             ref CharacterFullBodyIkBendHistory bendHistory,
             ulong frameSequence,
@@ -282,51 +281,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (recordDiagnostics)
                 BeginDiagnostics(frameSequence);
             if (!m_Prepared)
+            {
                 return CompleteResult(
                     CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.NotPrepared),
-                    goalSetValueIndices,
-                    goalSets,
+                    in goalSet,
                     goalWorkspace,
                     completionIdentity,
                     recordDiagnostics);
+            }
             if (!IsValidPosePage(pendingOutputComponentPose))
+            {
                 return CompleteResult(
                     CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.InvalidPosePage),
-                    goalSetValueIndices,
-                    goalSets,
+                    in goalSet,
                     goalWorkspace,
                     completionIdentity,
                     recordDiagnostics);
+            }
 
             try
             {
                 m_Backend.Bind(pendingOutputComponentPose);
                 CharacterFullBodyIkResult goalResult = ApplyGoals(
-                    goalSetValueIndices,
-                    goalSets,
+                    in goalSet,
                     goalWorkspace,
                     ref bendHistory,
                     frameSequence,
                     completionIdentity);
                 if (!goalResult.Succeeded)
+                {
                     return CompleteResult(
                         goalResult,
-                        goalSetValueIndices,
-                        goalSets,
+                        in goalSet,
                         goalWorkspace,
                         completionIdentity,
                         recordDiagnostics);
-                if (!HasEffectiveGoal(
-                        goalSetValueIndices,
-                        goalSets,
-                        goalWorkspace))
+                }
+                if (!HasEffectiveGoal(in goalSet, goalWorkspace))
                 {
                     bendHistory.SourceCompletionIdentity = completionIdentity;
                     bendHistory.Revision++;
                     return CompleteResult(
                         goalResult,
-                        goalSetValueIndices,
-                        goalSets,
+                        in goalSet,
                         goalWorkspace,
                         completionIdentity,
                         recordDiagnostics);
@@ -334,24 +331,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Solver.Update();
                 m_Backend.RebuildVirtualBones();
                 if (!IsValidPosePage(pendingOutputComponentPose))
+                {
                     return CompleteResult(
                         CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.NonFiniteOutput),
-                        goalSetValueIndices,
-                        goalSets,
+                        in goalSet,
                         goalWorkspace,
                         completionIdentity,
                         recordDiagnostics);
+                }
                 CharacterFullBodyIkResult solvedResult = ValidateSolvedFootGoals(
                     goalResult,
-                    goalSetValueIndices,
-                    goalSets,
+                    in goalSet,
                     goalWorkspace);
                 bendHistory.SourceCompletionIdentity = completionIdentity;
                 bendHistory.Revision++;
                 return CompleteResult(
                     solvedResult,
-                    goalSetValueIndices,
-                    goalSets,
+                    in goalSet,
                     goalWorkspace,
                     completionIdentity,
                     recordDiagnostics);
@@ -360,8 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 return CompleteResult(
                     CharacterFullBodyIkResult.FailSolver(exception),
-                    goalSetValueIndices,
-                    goalSets,
+                    in goalSet,
                     goalWorkspace,
                     completionIdentity,
                     recordDiagnostics);
@@ -423,125 +418,110 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         CharacterFullBodyIkResult ApplyGoals(
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
             ref CharacterFullBodyIkBendHistory bendHistory,
             ulong frameSequence,
             ulong completionIdentity)
         {
-            if (!goalSets.IsCreated || !goalWorkspace.IsCreated ||
-                goalSetValueIndices.Length == 0)
+            if (!goalWorkspace.IsCreated)
                 return CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.InvalidGoalWorkspace);
-            ushort occupiedSlots = 0;
-            int appliedGoalCount = 0;
-            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            if (!header.IsValid ||
+                header.FrameSequence != frameSequence ||
+                header.CompletionIdentity != completionIdentity ||
+                !header.RigId.Equals(m_RigId) ||
+                !header.RigRevision.Equals(m_RigRevision) ||
+                header.GoalOffset > goalWorkspace.Length - header.GoalCount)
             {
-                int valueIndex = goalSetValueIndices[setIndex];
-                if ((uint)valueIndex >= (uint)goalSets.Length)
-                    return CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.InvalidGoalWorkspace, setIndex);
-                CharacterFullBodyIkGoalSetHeader header = goalSets[valueIndex];
-                if (!header.IsValid ||
-                    header.FrameSequence != frameSequence ||
-                    header.CompletionIdentity != completionIdentity ||
-                    !header.RigId.Equals(m_RigId) ||
-                    !header.RigRevision.Equals(m_RigRevision) ||
-                    header.GoalOffset > goalWorkspace.Length - header.GoalCount)
+                return CharacterFullBodyIkResult.Fail(
+                    CharacterFullBodyIkFailure.GoalLineageMismatch,
+                    0);
+            }
+            if (header.Availability != CharacterFullBodyIkGoalSetAvailability.Ready)
+            {
+                return CharacterFullBodyIkResult.Fail(
+                    CharacterFullBodyIkFailure.InvalidGoalWorkspace,
+                    0);
+            }
+
+            ushort occupiedSlots = 0;
+            for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
+            {
+                CharacterFullBodyIkGoal goal =
+                    goalWorkspace[header.GoalOffset + goalIndex];
+                if (!goal.IsValid)
                 {
-                    return CharacterFullBodyIkResult.Fail(
-                        CharacterFullBodyIkFailure.GoalLineageMismatch,
-                        setIndex);
-                }
-                if (header.Availability != CharacterFullBodyIkGoalSetAvailability.Ready)
                     return CharacterFullBodyIkResult.Fail(
                         CharacterFullBodyIkFailure.InvalidGoalWorkspace,
-                        setIndex);
-                for (int localGoalIndex = 0; localGoalIndex < header.GoalCount; localGoalIndex++)
-                {
-                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + localGoalIndex];
-                    if (!goal.IsValid)
-                    {
-                        return CharacterFullBodyIkResult.Fail(
-                            CharacterFullBodyIkFailure.InvalidGoalWorkspace,
-                            setIndex,
-                            goal.Slot);
-                    }
-                    int slotBit = 1 << ((int)goal.Slot - 1);
-                    if ((occupiedSlots & slotBit) != 0)
-                    {
-                        return CharacterFullBodyIkResult.Fail(
-                            CharacterFullBodyIkFailure.DuplicateEffectorSlot,
-                            setIndex,
-                            goal.Slot);
-                    }
-                    occupiedSlots = (ushort)(occupiedSlots | slotBit);
-                    appliedGoalCount++;
+                        0,
+                        goal.Slot);
                 }
+                int slotBit = 1 << ((int)goal.Slot - 1);
+                if ((occupiedSlots & slotBit) != 0)
+                {
+                    return CharacterFullBodyIkResult.Fail(
+                        CharacterFullBodyIkFailure.DuplicateEffectorSlot,
+                        0,
+                        goal.Slot);
+                }
+                occupiedSlots = (ushort)(occupiedSlots | slotBit);
             }
 
             CharacterFullBodyIkResult pelvisResult = ApplyPelvisGoal(
-                goalSetValueIndices,
-                goalSets,
+                in header,
                 goalWorkspace);
             if (!pelvisResult.Succeeded)
                 return pelvisResult;
-            ApplyFootPlacementPreSolveRotations(
-                goalSetValueIndices,
-                goalSets,
-                goalWorkspace);
-            ushort identityPoseBoneSlots = CollectIdentityPoseBoneSlots(
-                goalSetValueIndices,
-                goalSets,
-                goalWorkspace);
+            ApplyFootPlacementPreSolveRotations(in header, goalWorkspace);
+            ushort identityPoseBoneSlots =
+                CollectIdentityPoseBoneSlots(in header, goalWorkspace);
             ResetEffectorsToPose();
-            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
             {
-                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
-                for (int localGoalIndex = 0; localGoalIndex < header.GoalCount; localGoalIndex++)
-                {
-                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + localGoalIndex];
-                    if (goal.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
-                        continue;
-                    int slotBit = 1 << ((int)goal.Slot - 1);
-                    if ((identityPoseBoneSlots & slotBit) != 0)
-                        continue;
-                    ApplyEffectorGoal(goal);
-                }
+                CharacterFullBodyIkGoal goal =
+                    goalWorkspace[header.GoalOffset + goalIndex];
+                if (goal.Slot ==
+                    CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
+                    continue;
+                int slotBit = 1 << ((int)goal.Slot - 1);
+                if ((identityPoseBoneSlots & slotBit) != 0)
+                    continue;
+                ApplyEffectorGoal(goal);
             }
             ApplyLegBendStabilization(
-                goalSetValueIndices,
-                goalSets,
+                in header,
                 goalWorkspace,
                 ref bendHistory);
-            return CharacterFullBodyIkResult.Success(appliedGoalCount);
+            return CharacterFullBodyIkResult.Success(header.GoalCount);
         }
 
         CharacterFullBodyIkResult ApplyPelvisGoal(
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
         {
-            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
             {
-                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
-                for (int localGoalIndex = 0; localGoalIndex < header.GoalCount; localGoalIndex++)
+                CharacterFullBodyIkGoal goal =
+                    goalWorkspace[header.GoalOffset + goalIndex];
+                if (goal.Slot !=
+                    CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
+                    continue;
+                if (goal.Application !=
+                    CharacterFullBodyIkGoalApplication.PelvisPreSolveTranslation)
                 {
-                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + localGoalIndex];
-                    if (goal.Slot != CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
-                        continue;
-                    if (goal.Application != CharacterFullBodyIkGoalApplication.PelvisPreSolveTranslation)
-                    {
-                        return CharacterFullBodyIkResult.Fail(
-                            CharacterFullBodyIkFailure.UnsupportedPelvisGoal,
-                            setIndex,
-                            goal.Slot);
-                    }
-                    IndexedBoneHandle pelvis = new IndexedBoneHandle(m_Rig.PelvisPhysicalBoneIndex);
-                    m_Backend.SetComponentPosition(
-                        pelvis,
-                        m_Backend.GetComponentPosition(pelvis) + goal.ComponentPosition * goal.PositionWeight);
-                    m_DiagnosticPelvisTranslation = goal.ComponentPosition * goal.PositionWeight;
+                    return CharacterFullBodyIkResult.Fail(
+                        CharacterFullBodyIkFailure.UnsupportedPelvisGoal,
+                        0,
+                        goal.Slot);
                 }
+                IndexedBoneHandle pelvis =
+                    new IndexedBoneHandle(m_Rig.PelvisPhysicalBoneIndex);
+                m_Backend.SetComponentPosition(
+                    pelvis,
+                    m_Backend.GetComponentPosition(pelvis) +
+                    goal.ComponentPosition * goal.PositionWeight);
+                m_DiagnosticPelvisTranslation =
+                    goal.ComponentPosition * goal.PositionWeight;
             }
             return CharacterFullBodyIkResult.Success(0);
         }
@@ -567,85 +547,86 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         void ApplyFootPlacementPreSolveRotations(
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
         {
-            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
             {
-                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
-                for (int localGoalIndex = 0; localGoalIndex < header.GoalCount; localGoalIndex++)
+                CharacterFullBodyIkGoal goal =
+                    goalWorkspace[header.GoalOffset + goalIndex];
+                if (goal.Application !=
+                        CharacterFullBodyIkGoalApplication
+                            .FootPlacementEffectorTarget ||
+                    goal.RotationWeight <= CharacterPoseConstraintMath.Epsilon)
                 {
-                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + localGoalIndex];
-                    if (goal.Application != CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget ||
-                        goal.RotationWeight <= CharacterPoseConstraintMath.Epsilon)
-                    {
-                        continue;
-                    }
-                    IKEffector effector = m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
-                    Quaternion current = m_Backend.GetComponentRotation(effector.boneHandle);
-                    Quaternion offset = goal.ComponentRotation * Quaternion.Inverse(current);
-                    Quaternion weightedOffset = Quaternion.Slerp(
-                        Quaternion.identity,
-                        offset,
-                        goal.RotationWeight);
-                    Quaternion weightedRotation = (weightedOffset * current).normalized;
-                    m_Backend.SetComponentRotation(
-                        effector.boneHandle,
-                        weightedRotation);
+                    continue;
                 }
+                IKEffector effector =
+                    m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
+                Quaternion current =
+                    m_Backend.GetComponentRotation(effector.boneHandle);
+                Quaternion offset =
+                    goal.ComponentRotation * Quaternion.Inverse(current);
+                Quaternion weightedOffset = Quaternion.Slerp(
+                    Quaternion.identity,
+                    offset,
+                    goal.RotationWeight);
+                Quaternion weightedRotation =
+                    (weightedOffset * current).normalized;
+                m_Backend.SetComponentRotation(
+                    effector.boneHandle,
+                    weightedRotation);
             }
         }
 
         ushort CollectIdentityPoseBoneSlots(
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
         {
             ushort slots = 0;
-            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
             {
-                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
-                for (int localGoalIndex = 0; localGoalIndex < header.GoalCount; localGoalIndex++)
+                CharacterFullBodyIkGoal goal =
+                    goalWorkspace[header.GoalOffset + goalIndex];
+                if (goal.SourceKind !=
+                        CharacterFullBodyIkGoalSourceKind.PoseBone ||
+                    goal.Slot ==
+                        CharacterFullBodyIkEffectorSlot
+                            .PelvisPreSolveTranslation)
                 {
-                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + localGoalIndex];
-                    if (goal.SourceKind != CharacterFullBodyIkGoalSourceKind.PoseBone ||
-                        goal.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
-                    {
-                        continue;
-                    }
-                    IKEffector effector = m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
-                    bool positionUnchanged = goal.PositionWeight <= CharacterPoseConstraintMath.Epsilon ||
-                                             (goal.ComponentPosition - m_Backend.GetComponentPosition(effector.boneHandle))
-                                             .sqrMagnitude <= CharacterPoseConstraintMath.Epsilon;
-                    bool rotationUnchanged = goal.RotationWeight <= CharacterPoseConstraintMath.Epsilon ||
-                                             Mathf.Abs(Quaternion.Dot(
-                                                 goal.ComponentRotation,
-                                                 m_Backend.GetComponentRotation(effector.boneHandle))) >=
-                                             1f - CharacterPoseConstraintMath.Epsilon;
-                    if (positionUnchanged && rotationUnchanged)
-                        slots = (ushort)(slots | 1 << ((int)goal.Slot - 1));
+                    continue;
                 }
+                IKEffector effector =
+                    m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
+                bool positionUnchanged =
+                    goal.PositionWeight <= CharacterPoseConstraintMath.Epsilon ||
+                    (goal.ComponentPosition -
+                     m_Backend.GetComponentPosition(effector.boneHandle))
+                    .sqrMagnitude <= CharacterPoseConstraintMath.Epsilon;
+                bool rotationUnchanged =
+                    goal.RotationWeight <= CharacterPoseConstraintMath.Epsilon ||
+                    Mathf.Abs(Quaternion.Dot(
+                        goal.ComponentRotation,
+                        m_Backend.GetComponentRotation(effector.boneHandle))) >=
+                    1f - CharacterPoseConstraintMath.Epsilon;
+                if (positionUnchanged && rotationUnchanged)
+                    slots = (ushort)(slots | 1 << ((int)goal.Slot - 1));
             }
             return slots;
         }
 
         static bool HasEffectiveGoal(
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
         {
-            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
             {
-                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
-                for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
+                CharacterFullBodyIkGoal goal =
+                    goalWorkspace[header.GoalOffset + goalIndex];
+                if (goal.PositionWeight > CharacterPoseConstraintMath.Epsilon ||
+                    goal.RotationWeight > CharacterPoseConstraintMath.Epsilon)
                 {
-                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + goalIndex];
-                    if (goal.PositionWeight > CharacterPoseConstraintMath.Epsilon ||
-                        goal.RotationWeight > CharacterPoseConstraintMath.Epsilon)
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
             return false;
@@ -666,21 +647,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         void ApplyLegBendStabilization(
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
             ref CharacterFullBodyIkBendHistory bendHistory)
         {
             bool hasLeftGoal = TryFindFootPlacementGoal(
                 CharacterFullBodyIkEffectorSlot.LeftFoot,
-                goalSetValueIndices,
-                goalSets,
+                in header,
                 goalWorkspace,
                 out CharacterFullBodyIkGoal leftGoal);
             bool hasRightGoal = TryFindFootPlacementGoal(
                 CharacterFullBodyIkEffectorSlot.RightFoot,
-                goalSetValueIndices,
-                goalSets,
+                in header,
                 goalWorkspace,
                 out CharacterFullBodyIkGoal rightGoal);
             m_LeftLegSolveFrame = ApplyLegBendStabilization(
@@ -811,25 +789,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static bool TryFindFootPlacementGoal(
             CharacterFullBodyIkEffectorSlot slot,
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
             out CharacterFullBodyIkGoal result)
         {
-            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
             {
-                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
-                for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
+                CharacterFullBodyIkGoal candidate =
+                    goalWorkspace[header.GoalOffset + goalIndex];
+                if (candidate.Slot != slot ||
+                    candidate.Application !=
+                    CharacterFullBodyIkGoalApplication
+                        .FootPlacementEffectorTarget)
                 {
-                    CharacterFullBodyIkGoal candidate = goalWorkspace[header.GoalOffset + goalIndex];
-                    if (candidate.Slot != slot ||
-                        candidate.Application != CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget)
-                    {
-                        continue;
-                    }
-                    result = candidate;
-                    return true;
+                    continue;
                 }
+                result = candidate;
+                return true;
             }
             result = default;
             return false;
@@ -967,45 +943,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         CharacterFullBodyIkResult ValidateSolvedFootGoals(
             CharacterFullBodyIkResult solvedResult,
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
         {
-            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
             {
-                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
-                for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
+                CharacterFullBodyIkGoal goal =
+                    goalWorkspace[header.GoalOffset + goalIndex];
+                if (goal.Application !=
+                        CharacterFullBodyIkGoalApplication
+                            .FootPlacementEffectorTarget ||
+                    goal.PositionWeight <
+                        1f - CharacterPoseConstraintMath.Epsilon)
                 {
-                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + goalIndex];
-                    if (goal.Application != CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget ||
-                        goal.PositionWeight < 1f - CharacterPoseConstraintMath.Epsilon)
-                    {
-                        continue;
-                    }
-                    IKEffector effector = m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
-                    Vector3 solverPosition = effector.GetNode(m_Solver).solverPosition;
-                    Vector3 solvedPosition = m_Backend.GetComponentPosition(effector.boneHandle);
-                    if (!CharacterPoseConstraintMath.IsFinite(solverPosition))
-                    {
-                        return CharacterFullBodyIkResult.Fail(
-                            CharacterFullBodyIkFailure.NonFiniteOutput,
-                            setIndex,
-                            goal.Slot);
-                    }
-                    float solverResidual = Vector3.Distance(solverPosition, goal.ComponentPosition);
-                    float residual = Vector3.Distance(solvedPosition, goal.ComponentPosition);
-                    if (solverResidual > FootEffectorSolverResidualTolerance)
-                    {
-                        return CharacterFullBodyIkResult.FailFootSolverResidual(
-                            setIndex,
-                            goal.Slot,
-                            solvedResult.AppliedGoalCount,
-                            goal.ComponentPosition,
-                            solverPosition,
-                            solvedPosition,
-                            goal.SourceKind,
-                            residual);
-                    }
+                    continue;
+                }
+                IKEffector effector =
+                    m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
+                Vector3 solverPosition =
+                    effector.GetNode(m_Solver).solverPosition;
+                Vector3 solvedPosition =
+                    m_Backend.GetComponentPosition(effector.boneHandle);
+                if (!CharacterPoseConstraintMath.IsFinite(solverPosition))
+                {
+                    return CharacterFullBodyIkResult.Fail(
+                        CharacterFullBodyIkFailure.NonFiniteOutput,
+                        0,
+                        goal.Slot);
+                }
+                float solverResidual =
+                    Vector3.Distance(solverPosition, goal.ComponentPosition);
+                float residual =
+                    Vector3.Distance(solvedPosition, goal.ComponentPosition);
+                if (solverResidual > FootEffectorSolverResidualTolerance)
+                {
+                    return CharacterFullBodyIkResult.FailFootSolverResidual(
+                        0,
+                        goal.Slot,
+                        solvedResult.AppliedGoalCount,
+                        goal.ComponentPosition,
+                        solverPosition,
+                        solvedPosition,
+                        goal.SourceKind,
+                        residual);
                 }
             }
             return solvedResult;
@@ -1046,8 +1026,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         CharacterFullBodyIkResult CompleteResult(
             CharacterFullBodyIkResult result,
-            NativeSlice<int> goalSetValueIndices,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            in CharacterFullBodyIkGoalSetHeader header,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
             ulong completionIdentity,
             bool recordDiagnostics)
@@ -1055,42 +1034,56 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!recordDiagnostics)
                 return result;
             if (result.Succeeded ||
-                result.Failure == CharacterFullBodyIkFailure.FootEffectorSolverResidualExceeded)
+                result.Failure ==
+                CharacterFullBodyIkFailure.FootEffectorSolverResidualExceeded)
             {
-                for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+                for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
                 {
-                    CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
-                    for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
+                    CharacterFullBodyIkGoal goal =
+                        goalWorkspace[header.GoalOffset + goalIndex];
+                    Vector3 solvedPosition;
+                    Quaternion solvedRotation;
+                    float positionResidual;
+                    float rotationResidual;
+                    if (goal.Slot ==
+                        CharacterFullBodyIkEffectorSlot
+                            .PelvisPreSolveTranslation)
                     {
-                        CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + goalIndex];
-                        Vector3 solvedPosition;
-                        Quaternion solvedRotation;
-                        float positionResidual;
-                        float rotationResidual;
-                        if (goal.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
-                        {
-                            IndexedBoneHandle pelvis = new IndexedBoneHandle(m_Rig.PelvisPhysicalBoneIndex);
-                            solvedPosition = m_Backend.GetComponentPosition(pelvis);
-                            solvedRotation = m_Backend.GetComponentRotation(pelvis);
-                            positionResidual = 0f;
-                            rotationResidual = 0f;
-                        }
-                        else
-                        {
-                            IKEffector effector = m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
-                            solvedPosition = m_Backend.GetComponentPosition(effector.boneHandle);
-                            solvedRotation = m_Backend.GetComponentRotation(effector.boneHandle);
-                            positionResidual = Vector3.Distance(solvedPosition, goal.ComponentPosition);
-                            rotationResidual = Quaternion.Angle(solvedRotation, goal.ComponentRotation);
-                        }
-                        m_DiagnosticEffectors[m_DiagnosticEffectorCount++] =
-                            new CharacterFullBodyIkEffectorDiagnostics(
-                                goal,
-                                solvedPosition,
-                                solvedRotation,
-                                positionResidual,
-                                rotationResidual);
+                        IndexedBoneHandle pelvis =
+                            new IndexedBoneHandle(
+                                m_Rig.PelvisPhysicalBoneIndex);
+                        solvedPosition =
+                            m_Backend.GetComponentPosition(pelvis);
+                        solvedRotation =
+                            m_Backend.GetComponentRotation(pelvis);
+                        positionResidual = 0f;
+                        rotationResidual = 0f;
                     }
+                    else
+                    {
+                        IKEffector effector =
+                            m_Solver.GetEffector(
+                                ToFinalIkEffector(goal.Slot));
+                        solvedPosition =
+                            m_Backend.GetComponentPosition(
+                                effector.boneHandle);
+                        solvedRotation =
+                            m_Backend.GetComponentRotation(
+                                effector.boneHandle);
+                        positionResidual = Vector3.Distance(
+                            solvedPosition,
+                            goal.ComponentPosition);
+                        rotationResidual = Quaternion.Angle(
+                            solvedRotation,
+                            goal.ComponentRotation);
+                    }
+                    m_DiagnosticEffectors[m_DiagnosticEffectorCount++] =
+                        new CharacterFullBodyIkEffectorDiagnostics(
+                            goal,
+                            solvedPosition,
+                            solvedRotation,
+                            positionResidual,
+                            rotationResidual);
                 }
             }
             CopyLimbDiagnostics();

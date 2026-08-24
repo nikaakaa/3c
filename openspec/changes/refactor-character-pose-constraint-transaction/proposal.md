@@ -46,6 +46,7 @@ FBBIK输入、BendHistory与Physical Writer输入相同
 - Affected specs: `character-foot-placement-presentation`、`character-animation-pipeline`、`character-presentation-pose-graph`
 - Affected runtime: Foot Placement Module、Foot Context/State Machine、Resolved Foot Pair、Primary Support/Pelvis、Pose Constraint根Bank、Goal ABI、FBBIK BendHistory、Physical Writer、Diagnostics
 - Affected editor: Projection Goal拓扑、CSV、Gizmo、Pose Watch与Live Diagnostics的数据来源
+- Affected simulation interface: Future Body Translation改为调用方预分配Workspace写入，不改变KCC预测数学
 - 不修改Foot Analysis Artifact、动画曲线、Gameplay Body、KCC、VisualRoot、网络状态或rollback snapshot
 
 ## Current Spec Comparison

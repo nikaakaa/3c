@@ -691,6 +691,44 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EnvelopeWorkspace.Clear();
         }
     }
+
+    internal readonly struct CharacterFootGroundPathResult
+    {
+        readonly CharacterFootGroundPathPage m_Page;
+
+        internal CharacterFootGroundPathResult(
+            CharacterFootGroundPathPage page,
+            bool queryExecutedThisFrame)
+        {
+            m_Page = page ?? throw new ArgumentNullException(nameof(page));
+            QueryExecutedThisFrame = queryExecutedThisFrame;
+        }
+
+        internal CharacterFootGroundPathPage Page =>
+            m_Page ?? throw new InvalidOperationException("Ground Path Result is unavailable.");
+        internal CharacterFootGroundPathState State => Page.State;
+        internal CharacterFootGroundPathRejectReason RejectReason => Page.RejectReason;
+        internal bool QueryExecutedThisFrame { get; }
+        internal int SegmentCount => Page.SegmentCount;
+        internal ulong InputIdentity => Page.Input.Identity;
+        internal ulong LastLandingEventIdentity =>
+            Page.HasInput ? Page.Input.Key.LastLandingEventIdentity : 0;
+        internal ulong NextSwingLandingEventIdentity =>
+            Page.HasInput ? Page.Input.Key.NextSwingLandingEventIdentity : 0;
+        internal Vector3 LastLanding => Page.HasInput ? Page.Input.LastLanding : default;
+        internal Vector3 NextSwingLanding =>
+            Page.HasInput ? Page.Input.NextSwingLanding : default;
+        internal int ContactCount => Page.Contacts.Count;
+        internal int EnvelopeVertexCount => Page.Envelope.Count;
+        internal bool Accepted => State == CharacterFootGroundPathState.Accepted;
+
+        internal CharacterFootGroundContact ContactAt(int index) =>
+            Page.Contacts.ContactAt(index);
+
+        internal CharacterFootGroundEnvelopeVertex EnvelopeVertexAt(int index) =>
+            Page.Envelope.VertexAt(index);
+    }
+
     readonly struct CharacterFootGroundPathDiagnosticContacts
     {
         readonly CharacterFootGroundContact m_0;
@@ -1137,12 +1175,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootGroundEnvelopeDiagnosticVertices m_Envelope;
 
         internal CharacterFootGroundPathDiagnostics(
-            CharacterFootGroundPathPage page,
-            bool queryExecutedThisFrame)
+            in CharacterFootGroundPathResult result)
         {
+            CharacterFootGroundPathPage page = result.Page;
             State = page.State;
             RejectReason = page.RejectReason;
-            QueryExecutedThisFrame = queryExecutedThisFrame;
+            QueryExecutedThisFrame = result.QueryExecutedThisFrame;
             SegmentCount = page.SegmentCount;
             InputIdentity = page.Input.Identity;
             LastLandingEventIdentity = page.HasInput

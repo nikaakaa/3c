@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation;
+using Unity.Collections;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -49,7 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootLandingFact Create(
             in AnimationBiomechanicalStepHeader step,
-            in CharacterFootLandingPredictionFootDiagnostics diagnostics) =>
+            in CharacterFootLandingPredictionResult diagnostics) =>
             new CharacterFootLandingFact(
                 step.LandingEventIdentity,
                 diagnostics.TrajectoryGeneration,
@@ -221,8 +222,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct CharacterFootStateFrame
     {
         internal CharacterFootStateFrame(
+            ulong frameSequence,
+            ulong completionIdentity,
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in CharacterFootSwingMotionDiagnostics swingMotion,
+            in CharacterFootSwingMotionResult swingMotion,
             bool hasLanding,
             in CharacterFootGroundPathLanding landing,
             bool hardOwnershipLoss,
@@ -231,6 +236,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float deltaSeconds,
             in CharacterFootMotionSettings settings)
         {
+            FrameSequence = frameSequence;
+            CompletionIdentity = completionIdentity;
+            RigId = rigId;
+            RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
             SwingMotion = swingMotion;
             HasLanding = hasLanding;
@@ -242,8 +251,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Settings = settings;
         }
 
+        internal ulong FrameSequence { get; }
+        internal ulong CompletionIdentity { get; }
+        internal FixedString64Bytes RigId { get; }
+        internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
-        internal CharacterFootSwingMotionDiagnostics SwingMotion { get; }
+        internal CharacterFootSwingMotionResult SwingMotion { get; }
         internal bool HasLanding { get; }
         internal CharacterFootGroundPathLanding Landing { get; }
         internal bool HardOwnershipLoss { get; }
@@ -303,7 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal static void CaptureNextSwing(
             ref CharacterFootStateContext context,
             in AnimationBiomechanicalStepHeader step,
-            in CharacterFootLandingPredictionFootDiagnostics diagnostics,
+            in CharacterFootLandingPredictionResult diagnostics,
             in CharacterFootMotionSettings settings)
         {
             CharacterFootLandingSnapshot snapshot = context.LandingSnapshot;
@@ -360,17 +373,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootStateContext context,
             CharacterFootSide side,
             in CharacterFootStateFrame frame,
-            out CharacterFootSwingMotionDiagnostics diagnostics)
+            out CharacterFootSwingMotionResult result)
         {
             RequireValid(in frame);
-            CharacterFootSwingMotionDiagnostics swing = frame.SwingMotion;
+            CharacterFootSwingMotionResult swing = frame.SwingMotion;
             float plantConfidence = swing.PlantConfidence;
             Vector3 swingCorrection = ResolveSwingCorrection(frame.AnimatedFoot, in swing);
             if (frame.HardOwnershipLoss)
             {
                 context.ClearConstraint(
                     plantConfidence >= AnimationFootConstraintFacts.GroundedMinimumConfidence);
-                CharacterFootSwingMotionDiagnostics suppressed =
+                CharacterFootSwingMotionResult suppressed =
                     CharacterFootSwingMotionBuilder.SuppressUnselected(in swing);
                 return BuildOutput(
                     ref context,
@@ -378,7 +391,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in frame,
                     in suppressed,
                     default,
-                    out diagnostics);
+                    out result);
             }
             if (!context.HasOutput)
             {
@@ -439,13 +452,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in frame,
                 in swing,
                 desiredCorrection,
-                out diagnostics);
+                out result);
         }
 
         static void ResolveSwingOutput(
             ref CharacterFootStateContext context,
             in CharacterFootStateFrame frame,
-            in CharacterFootSwingMotionDiagnostics swing,
+            in CharacterFootSwingMotionResult swing,
             Vector3 swingCorrection)
         {
             bool hasPath = swing.Accepted && frame.HasLanding &&
@@ -648,9 +661,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootStateContext context,
             CharacterFootSide side,
             in CharacterFootStateFrame frame,
-            in CharacterFootSwingMotionDiagnostics swing,
+            in CharacterFootSwingMotionResult swing,
             Vector3 desiredCorrection,
-            out CharacterFootSwingMotionDiagnostics diagnostics)
+            out CharacterFootSwingMotionResult result)
         {
             bool hasContact = context.HasContact;
             Vector3 outputCorrection = context.EffectiveCorrection;
@@ -683,7 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong landingEventIdentity = hasContact
                 ? context.ContactEventIdentity
                 : swing.LandingEventIdentity;
-            diagnostics = new CharacterFootSwingMotionDiagnostics(
+            result = new CharacterFootSwingMotionResult(
                 outputState,
                 rejectReason,
                 landingEventIdentity,
@@ -721,6 +734,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         context.ContactAnchor)
                     : default;
             return new CharacterResolvedFootResult(
+                frame.FrameSequence,
+                frame.CompletionIdentity,
+                frame.RigId,
+                frame.RigRevision,
                 side,
                 originalSole + outputCorrection,
                 originalAnkle + outputCorrection,
@@ -769,7 +786,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static void ResolveGroundFloor(
             ref CharacterFootStateContext context,
             in CharacterFootStateFrame frame,
-            in CharacterFootSwingMotionDiagnostics swing,
+            in CharacterFootSwingMotionResult swing,
             Vector3 swingCorrection)
         {
             Vector3 floorCorrection;
@@ -817,7 +834,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static Vector3 ResolveSwingCorrection(
             CharacterFootPlacementAnimatedFootPose foot,
-            in CharacterFootSwingMotionDiagnostics swing) =>
+            in CharacterFootSwingMotionResult swing) =>
             swing.Accepted
                 ? swing.CorrectedAnkle - foot.AnklePosition
                 : default;
@@ -866,7 +883,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static void RequireValid(in CharacterFootStateFrame frame)
         {
-            if (!Finite(frame.ComponentUp) ||
+            if (frame.FrameSequence == 0 ||
+                frame.CompletionIdentity == 0 ||
+                frame.RigId.Length == 0 ||
+                frame.RigRevision.Length == 0 ||
+                !Finite(frame.ComponentUp) ||
                 frame.ComponentUp.sqrMagnitude <= GeometryEpsilon ||
                 !float.IsFinite(frame.FootPlacementWeight) ||
                 frame.FootPlacementWeight < 0f ||

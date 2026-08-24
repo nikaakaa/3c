@@ -163,8 +163,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterFullBodyIkLimbDiagnostics[] m_DiagnosticLimbs =
             new CharacterFullBodyIkLimbDiagnostics[4];
         CharacterFullBodyIkSolverDiagnostics m_Diagnostics;
-        CharacterFullBodyIkResult m_LastResult;
-        ulong m_LastCompletionIdentity;
         ActiveTuning m_ActiveTuning;
         Vector3 m_DiagnosticPelvisTranslation;
         LegSolveFrame m_LeftLegSolveFrame;
@@ -195,20 +193,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string ProfileId => m_Profile.ProfileId;
         public string ProfileRevision => m_Profile.Revision;
         public bool IsPrepared => m_Prepared;
-        public CharacterFullBodyIkSolverDiagnostics Diagnostics => m_Diagnostics;
-        internal CharacterFullBodyIkResult LastResult => m_LastResult;
-        internal ulong LastCompletionIdentity => m_LastCompletionIdentity;
-        public int DiagnosticEffectorCount => m_DiagnosticEffectorCount;
-        public int DiagnosticLimbCount => m_DiagnosticLimbs.Length;
+        internal CharacterFullBodyIkSolverDiagnostics Diagnostics => m_Diagnostics;
+        internal int DiagnosticEffectorCount => m_DiagnosticEffectorCount;
+        internal int DiagnosticLimbCount => m_DiagnosticLimbs.Length;
 
-        public CharacterFullBodyIkEffectorDiagnostics GetDiagnosticEffector(int index)
+        internal CharacterFullBodyIkEffectorDiagnostics GetDiagnosticEffector(int index)
         {
             if ((uint)index >= (uint)m_DiagnosticEffectorCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
             return m_DiagnosticEffectors[index];
         }
 
-        public CharacterFullBodyIkLimbDiagnostics GetDiagnosticLimb(int index)
+        internal CharacterFullBodyIkLimbDiagnostics GetDiagnosticLimb(int index)
         {
             if ((uint)index >= (uint)m_DiagnosticLimbs.Length)
                 throw new ArgumentOutOfRangeException(nameof(index));
@@ -385,8 +381,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 effector.positionOffset = Vector3.zero;
             }
             m_Diagnostics = default;
-            m_LastResult = default;
-            m_LastCompletionIdentity = 0;
             m_DiagnosticPelvisTranslation = Vector3.zero;
             ResetLegBendState();
             m_DiagnosticFrameSequence = 0;
@@ -1058,8 +1052,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity,
             bool recordDiagnostics)
         {
-            m_LastResult = result;
-            m_LastCompletionIdentity = completionIdentity;
             if (!recordDiagnostics)
                 return result;
             if (result.Succeeded ||

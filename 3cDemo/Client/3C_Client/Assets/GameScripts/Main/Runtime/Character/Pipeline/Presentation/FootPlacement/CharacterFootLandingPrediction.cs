@@ -89,9 +89,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPlacementQueryRequest request);
     }
 
-    public readonly struct CharacterFootLandingPredictionFootDiagnostics
+    internal readonly struct CharacterFootLandingPredictionResult
     {
-        internal CharacterFootLandingPredictionFootDiagnostics(
+        internal CharacterFootLandingPredictionResult(
             CharacterFootSide side,
             CharacterFootLandingPredictionState state,
             CharacterFootLandingPredictionRejectReason rejectReason,
@@ -145,9 +145,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootMotion = default;
         }
 
-        CharacterFootLandingPredictionFootDiagnostics(
-            in CharacterFootLandingPredictionFootDiagnostics source,
-            in CharacterFootGroundPathDiagnostics groundPath)
+        CharacterFootLandingPredictionResult(
+            in CharacterFootLandingPredictionResult source,
+            in CharacterFootGroundPathResult groundPath)
         {
             Side = source.Side;
             State = source.State;
@@ -174,8 +174,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootMotion = source.FootMotion;
         }
 
-        CharacterFootLandingPredictionFootDiagnostics(
-            in CharacterFootLandingPredictionFootDiagnostics source,
+        CharacterFootLandingPredictionResult(
+            in CharacterFootLandingPredictionResult source,
             CharacterFootLandingStepSource stepSource,
             AnimationBiomechanicalStepHeader step,
             Vector3 currentAnimatedSole,
@@ -206,9 +206,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootMotion = source.FootMotion;
         }
 
-        CharacterFootLandingPredictionFootDiagnostics(
-            in CharacterFootLandingPredictionFootDiagnostics source,
-            in CharacterFootSwingMotionDiagnostics footMotion,
+        CharacterFootLandingPredictionResult(
+            in CharacterFootLandingPredictionResult source,
+            in CharacterFootSwingMotionResult footMotion,
             CharacterFullBodyIkGoal goal)
         {
             Side = source.Side;
@@ -256,32 +256,90 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 LandingNormal { get; }
         public float QueryDistance { get; }
         public CharacterFullBodyIkGoal Goal { get; }
-        public CharacterFootGroundPathDiagnostics GroundPath { get; }
-        public CharacterFootSwingMotionDiagnostics FootMotion { get; }
+        internal CharacterFootGroundPathResult GroundPath { get; }
+        internal CharacterFootSwingMotionResult FootMotion { get; }
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
 
-        internal CharacterFootLandingPredictionFootDiagnostics WithLiveStep(
+        internal CharacterFootLandingPredictionResult WithLiveStep(
             CharacterFootLandingStepSource stepSource,
             AnimationBiomechanicalStepHeader step,
             Vector3 currentAnimatedSole,
             CharacterFullBodyIkGoal goal) =>
-            new CharacterFootLandingPredictionFootDiagnostics(
+            new CharacterFootLandingPredictionResult(
                 in this,
                 stepSource,
                 step,
                 currentAnimatedSole,
                 goal);
-        internal CharacterFootLandingPredictionFootDiagnostics WithGroundPath(
-            in CharacterFootGroundPathDiagnostics groundPath) =>
-            new CharacterFootLandingPredictionFootDiagnostics(in this, in groundPath);
+        internal CharacterFootLandingPredictionResult WithGroundPath(
+            in CharacterFootGroundPathResult groundPath) =>
+            new CharacterFootLandingPredictionResult(in this, in groundPath);
 
-        internal CharacterFootLandingPredictionFootDiagnostics WithFootMotion(
-            in CharacterFootSwingMotionDiagnostics footMotion,
+        internal CharacterFootLandingPredictionResult WithFootMotion(
+            in CharacterFootSwingMotionResult footMotion,
             CharacterFullBodyIkGoal goal) =>
-            new CharacterFootLandingPredictionFootDiagnostics(
+            new CharacterFootLandingPredictionResult(
                 in this,
                 in footMotion,
                 goal);
+    }
+
+    public readonly struct CharacterFootLandingPredictionFootDiagnostics
+    {
+        internal CharacterFootLandingPredictionFootDiagnostics(
+            in CharacterFootLandingPredictionResult result)
+        {
+            Side = result.Side;
+            State = result.State;
+            RejectReason = result.RejectReason;
+            StepSource = result.StepSource;
+            LandingEventIdentity = result.LandingEventIdentity;
+            TrajectoryGeneration = result.TrajectoryGeneration;
+            LandingConfidence = result.LandingConfidence;
+            TimeToLandingSeconds = result.TimeToLandingSeconds;
+            RootLocalLanding = result.RootLocalLanding;
+            FutureBodyTranslationAvailable = result.FutureBodyTranslationAvailable;
+            FutureBodyTranslationSourceIdentity = result.FutureBodyTranslationSourceIdentity;
+            FutureBodyRelativeTranslation = result.FutureBodyRelativeTranslation;
+            FutureBodyTranslationVelocity = result.FutureBodyTranslationVelocity;
+            CurrentAnimatedSole = result.CurrentAnimatedSole;
+            RawLandingCandidate = result.RawLandingCandidate;
+            Query = result.Query;
+            SurfaceIdentity = result.SurfaceIdentity;
+            LandingPoint = result.LandingPoint;
+            LandingNormal = result.LandingNormal;
+            QueryDistance = result.QueryDistance;
+            Goal = result.Goal;
+            CharacterFootGroundPathResult groundPath = result.GroundPath;
+            CharacterFootSwingMotionResult footMotion = result.FootMotion;
+            GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
+            FootMotion = new CharacterFootSwingMotionDiagnostics(in footMotion);
+        }
+
+        public CharacterFootSide Side { get; }
+        public CharacterFootLandingPredictionState State { get; }
+        public CharacterFootLandingPredictionRejectReason RejectReason { get; }
+        public CharacterFootLandingStepSource StepSource { get; }
+        public ulong LandingEventIdentity { get; }
+        public ulong TrajectoryGeneration { get; }
+        public float LandingConfidence { get; }
+        public float TimeToLandingSeconds { get; }
+        public Vector3 RootLocalLanding { get; }
+        public bool FutureBodyTranslationAvailable { get; }
+        public string FutureBodyTranslationSourceIdentity { get; }
+        public Vector3 FutureBodyRelativeTranslation { get; }
+        public Vector3 FutureBodyTranslationVelocity { get; }
+        public Vector3 CurrentAnimatedSole { get; }
+        public Vector3 RawLandingCandidate { get; }
+        public CharacterFootPlacementQueryRequest Query { get; }
+        public int SurfaceIdentity { get; }
+        public Vector3 LandingPoint { get; }
+        public Vector3 LandingNormal { get; }
+        public float QueryDistance { get; }
+        public CharacterFullBodyIkGoal Goal { get; }
+        public CharacterFootGroundPathDiagnostics GroundPath { get; }
+        public CharacterFootSwingMotionDiagnostics FootMotion { get; }
+        public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
     }
 
     public readonly struct CharacterFootLandingPredictionInputDiagnostics

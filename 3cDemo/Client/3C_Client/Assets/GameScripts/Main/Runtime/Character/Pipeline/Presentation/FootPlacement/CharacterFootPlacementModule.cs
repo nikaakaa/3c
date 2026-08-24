@@ -27,7 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPelvisSpringState PelvisSpring;
         internal CharacterFootPrimarySupportFacts PrimarySupport;
         internal CharacterResolvedFootPair ResolvedFeet;
-        internal CharacterFootStrideHipsDiagnostics StrideHips;
+        internal CharacterFootStrideHipsResult StrideHips;
         internal CharacterFullBodyIkGoal PelvisGoal;
         internal CharacterFullBodyIkGoal LeftGoal;
         internal CharacterFullBodyIkGoal RightGoal;
@@ -132,9 +132,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     readonly struct CharacterFootLandingPredictionPair
     {
         internal CharacterFootLandingPredictionPair(
-            CharacterFootLandingPredictionFootDiagnostics current,
-            CharacterFootLandingPredictionFootDiagnostics incoming,
-            CharacterFootLandingPredictionFootDiagnostics selected,
+            CharacterFootLandingPredictionResult current,
+            CharacterFootLandingPredictionResult incoming,
+            CharacterFootLandingPredictionResult selected,
             AnimationBiomechanicalStepHeader selectedStep)
         {
             Current = current;
@@ -143,9 +143,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SelectedStep = selectedStep;
         }
 
-        internal CharacterFootLandingPredictionFootDiagnostics Current { get; }
-        internal CharacterFootLandingPredictionFootDiagnostics Incoming { get; }
-        internal CharacterFootLandingPredictionFootDiagnostics Selected { get; }
+        internal CharacterFootLandingPredictionResult Current { get; }
+        internal CharacterFootLandingPredictionResult Incoming { get; }
+        internal CharacterFootLandingPredictionResult Selected { get; }
         internal AnimationBiomechanicalStepHeader SelectedStep { get; }
     }
 
@@ -172,6 +172,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootGroundPathPagePool m_LeftGroundPath;
         readonly CharacterFootGroundPathPagePool m_RightGroundPath;
 
+        CharacterFootPlacementBank m_CommittedFrameBank;
+        CharacterFootPlacementBank m_PendingFrameBank;
         bool m_Disposed;
 
         internal CharacterFootPlacementModule(
@@ -207,24 +209,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireAlive();
             if (pending == null)
                 throw new ArgumentNullException(nameof(pending));
+            if (m_PendingFrameBank != null)
+                throw new InvalidOperationException("Foot Placement frame is already open.");
             pending.Begin(committed, recordDiagnostics);
+            m_CommittedFrameBank = committed;
+            m_PendingFrameBank = pending;
         }
 
-        internal CharacterFootPlacementDiagnosticsPage GetDiagnostics(
-            CharacterFootPlacementBank bank) =>
-            bank?.Diagnostics;
-
-        internal CharacterFullBodyIkGoalContributionHeader EvaluateFrame(
-            CharacterFootPlacementBank committedBank,
-            CharacterFootPlacementBank bank,
-            in CharacterFootPlacementFrameInput frame,
-            NativeSlice<CharacterFullBodyIkGoal> goalOutput,
-            int goalOffset,
-            int producerOperationIndex,
-            int producerCallSiteIndex,
-            int parameterIndex)
+        internal CharacterFootPlacementResult EvaluateFrame(
+            in CharacterFootPlacementFrameInput frame)
         {
             RequireAlive();
+            CharacterFootPlacementBank committedBank = m_CommittedFrameBank;
+            CharacterFootPlacementBank bank = m_PendingFrameBank;
             if (bank == null || !bank.HasFrame)
                 throw new InvalidOperationException("Foot Placement has no open bank.");
             if (bank.FrameSequence != 0)
@@ -234,12 +231,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.Pose.PosePlanHash,
                     m_Settings.PosePlanHash,
                     StringComparison.Ordinal) ||
-                goalOutput.Length != CharacterPresentationFootPlacementDescriptor.GoalCount ||
-                goalOffset < 0 || producerOperationIndex < 0 ||
-                producerCallSiteIndex < 0 || parameterIndex < 0 ||
-                parameterIndex >= frame.Pose.PoseParameters.Length ||
-                frame.Pose.PoseParameterAvailability[parameterIndex] == 0 ||
-                !float.IsFinite(frame.Pose.PoseParameters[parameterIndex]))
+                frame.FootPlacementWeight < 0f ||
+                frame.FootPlacementWeight > 1f)
             {
                 throw new ArgumentException("Foot Placement frame contract is inconsistent.");
             }
@@ -266,15 +259,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float currentSegmentRemainingSeconds = timeline.IsValid
                 ? ResolveCurrentSegmentRemainingSeconds(timeline, frame.Body)
                 : 0f;
-            var inputDiagnostics = new CharacterFootLandingPredictionInputDiagnostics(
-                frame.PresentationDeltaSeconds,
-                frame.Body,
-                facts.Grounded,
-                facts.HorizontalSpeed,
-                in leftAction,
-                in rightAction,
-                in timeline,
-                currentSegmentRemainingSeconds);
             CharacterFutureBodyTranslation bodyTrajectory = ResolveBodyTrajectory(
                 bank,
                 frame.Pose.LeftFootSteps,
@@ -315,13 +299,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in frame,
                 in rightLanding,
                 rightLanding.LastLandingEventIdentity);
-            CharacterFootLandingPredictionFootDiagnostics leftCurrent = leftPair.Current;
-            CharacterFootLandingPredictionFootDiagnostics leftIncoming = leftPair.Incoming;
-            CharacterFootLandingPredictionFootDiagnostics rightCurrent = rightPair.Current;
-            CharacterFootLandingPredictionFootDiagnostics rightIncoming = rightPair.Incoming;
-            CharacterFootLandingPredictionFootDiagnostics left = leftPair.Selected;
+            CharacterFootLandingPredictionResult leftCurrent = leftPair.Current;
+            CharacterFootLandingPredictionResult leftIncoming = leftPair.Incoming;
+            CharacterFootLandingPredictionResult rightCurrent = rightPair.Current;
+            CharacterFootLandingPredictionResult rightIncoming = rightPair.Incoming;
+            CharacterFootLandingPredictionResult left = leftPair.Selected;
             AnimationBiomechanicalStepHeader leftSelectedStep = leftPair.SelectedStep;
-            CharacterFootLandingPredictionFootDiagnostics right = rightPair.Selected;
+            CharacterFootLandingPredictionResult right = rightPair.Selected;
             AnimationBiomechanicalStepHeader rightSelectedStep = rightPair.SelectedStep;
             CharacterFootStateMachine.CaptureNextSwing(
                 ref bank.LeftFoot,
@@ -361,33 +345,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rightSelectedStep.LandingEventIdentity,
                     out rightContactLanding);
             }
-            CharacterFootGroundPathDiagnostics leftGroundPath = PrepareGroundPath(
+            CharacterFootGroundPathResult leftGroundPath = PrepareGroundPath(
                 CharacterFootSide.Left,
                 hasLeftLastLanding,
                 leftLastLanding,
                 hasLeftNextSwingLanding,
                 leftNextSwingLanding,
                 componentUp,
-                inputDiagnostics.TimelineAuthorityTick,
+                timeline.IsValid ? timeline.AuthorityTick.Value : 0,
                 m_LeftGroundPath,
                 committedBank?.LeftGroundPath,
                 out bank.LeftGroundPath);
-            CharacterFootGroundPathDiagnostics rightGroundPath = PrepareGroundPath(
+            CharacterFootGroundPathResult rightGroundPath = PrepareGroundPath(
                 CharacterFootSide.Right,
                 hasRightLastLanding,
                 rightLastLanding,
                 hasRightNextSwingLanding,
                 rightNextSwingLanding,
                 componentUp,
-                inputDiagnostics.TimelineAuthorityTick,
+                timeline.IsValid ? timeline.AuthorityTick.Value : 0,
                 m_RightGroundPath,
                 committedBank?.RightGroundPath,
                 out bank.RightGroundPath);
             left = left.WithGroundPath(in leftGroundPath);
             right = right.WithGroundPath(in rightGroundPath);
 
-            float footPlacementWeight = frame.Pose.PoseParameters[parameterIndex];
-            CharacterFootSwingMotionDiagnostics leftSwingMotion =
+            float footPlacementWeight = frame.FootPlacementWeight;
+            CharacterFootSwingMotionResult leftSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
                     pose.Left,
                     in leftSelectedStep,
@@ -398,7 +382,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     leftSelectedStep.ConstraintWeight)
                 .WithPlantConfidence(
                     frame.Pose.LeftFootSteps.Kinematics.PlantConfidence);
-            CharacterFootSwingMotionDiagnostics rightSwingMotion =
+            CharacterFootSwingMotionResult rightSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
                     pose.Right,
                     in rightSelectedStep,
@@ -417,6 +401,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out CharacterFootSide selectedSwingSide);
             Transform goalRoot = m_Rig.PoseRoot;
             var leftConstraintFrame = new CharacterFootStateFrame(
+                frame.RenderFrame,
+                frame.Pose.CompletionIdentity,
+                new FixedString64Bytes(m_Rig.Rig.RigId),
+                new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Left,
                 in leftSwingMotion,
                 hasLeftContactLanding,
@@ -427,6 +415,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion);
             var rightConstraintFrame = new CharacterFootStateFrame(
+                frame.RenderFrame,
+                frame.Pose.CompletionIdentity,
+                new FixedString64Bytes(m_Rig.Rig.RigId),
+                new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Right,
                 in rightSwingMotion,
                 hasRightContactLanding,
@@ -441,13 +433,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref bank.LeftFoot,
                     CharacterFootSide.Left,
                     in leftConstraintFrame,
-                    out CharacterFootSwingMotionDiagnostics leftFootMotion);
+                    out CharacterFootSwingMotionResult leftFootMotion);
             CharacterResolvedFootResult rightResolved =
                 CharacterFootStateMachine.Resolve(
                     ref bank.RightFoot,
                     CharacterFootSide.Right,
                     in rightConstraintFrame,
-                    out CharacterFootSwingMotionDiagnostics rightFootMotion);
+                    out CharacterFootSwingMotionResult rightFootMotion);
             var resolvedPair = new CharacterResolvedFootPair(
                 in leftResolved,
                 in rightResolved);
@@ -464,8 +456,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftResolved,
                 in rightResolved,
                 ref bank.PrimarySupport);
-            CharacterFootPrimarySupportDiagnostics primarySupport =
-                bank.PrimarySupport.Diagnostics;
+            CharacterFootPrimarySupportResult primarySupport =
+                bank.PrimarySupport.Result;
             Vector3 leftCorrectedSole = ResolveWeightedGoalSole(
                 pose.Left,
                 in leftGoal,
@@ -474,7 +466,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.Right,
                 in rightGoal,
                 goalRoot);
-            CharacterFootStrideHipsDiagnostics strideHips = ResolveStrideHips(
+            CharacterFootStrideIntentResult strideIntent =
+                CharacterFootStrideHipsBuilder.ResolveIntent(
                 in leftSelectedStep,
                 in rightSelectedStep,
                 hasSelectedSwing,
@@ -486,12 +479,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftGroundPath.Accepted,
                 rightGroundPath.Accepted,
                 facts.Grounded,
-                in leftAction,
-                in rightAction,
-                in leftFootMotion,
-                in rightFootMotion,
+                leftAction.IsOccupied || rightAction.IsOccupied,
                 in resolvedPair,
                 in primarySupport,
+                componentUp);
+            var pelvisFrame = new CharacterFootPelvisFrame(
                 componentUp,
                 m_Rig.PoseRoot.position,
                 m_Rig.PoseRoot.TransformPoint(pose.PelvisLocalPosition),
@@ -499,8 +491,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in pose,
                 leftCorrectedSole,
                 rightCorrectedSole,
+                m_Rig.LeftLegLength,
+                m_Rig.RightLegLength,
                 footPlacementWeight,
-                frame.PresentationDeltaSeconds,
+                frame.PresentationDeltaSeconds);
+            CharacterFootStrideHipsResult strideHips = ResolveStrideHips(
+                in strideIntent,
+                in resolvedPair,
+                in primarySupport,
+                in pelvisFrame,
                 ref bank.PelvisSpring);
             pelvisGoal = CreatePelvisGoal(in strideHips, m_Rig.PoseRoot);
             bank.StrideHips = strideHips;
@@ -513,9 +512,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightFootMotion,
                 rightGoal);
 
-            goalOutput[0] = pelvisGoal;
-            goalOutput[1] = leftGoal;
-            goalOutput[2] = rightGoal;
             bank.PelvisGoal = pelvisGoal;
             bank.LeftGoal = leftGoal;
             bank.RightGoal = rightGoal;
@@ -523,36 +519,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bank.CompletionIdentity = frame.Pose.CompletionIdentity;
             if (bank.RecordDiagnostics)
             {
+                var inputDiagnostics = new CharacterFootLandingPredictionInputDiagnostics(
+                    frame.PresentationDeltaSeconds,
+                    frame.Body,
+                    facts.Grounded,
+                    facts.HorizontalSpeed,
+                    in leftAction,
+                    in rightAction,
+                    in timeline,
+                    currentSegmentRemainingSeconds);
+                var leftDiagnostics =
+                    new CharacterFootLandingPredictionFootDiagnostics(in left);
+                var rightDiagnostics =
+                    new CharacterFootLandingPredictionFootDiagnostics(in right);
+                var primarySupportDiagnostics =
+                    new CharacterFootPrimarySupportDiagnostics(in primarySupport);
+                var strideDiagnostics =
+                    new CharacterFootStrideHipsDiagnostics(in strideHips);
                 var diagnostics = new CharacterFootLandingPredictionDiagnostics(
                     frame.RenderFrame,
                     frame.Pose.CompletionIdentity,
                     m_Rig.VisualRoot.GetInstanceID(),
                     inputDiagnostics,
-                    in primarySupport,
+                    in primarySupportDiagnostics,
                     pelvisGoal,
-                    in strideHips,
-                    left,
-                    right);
+                    in strideDiagnostics,
+                    leftDiagnostics,
+                    rightDiagnostics);
                 bank.Diagnostics.Set(in diagnostics);
             }
-            return new CharacterFullBodyIkGoalContributionHeader(
+            return new CharacterFootPlacementResult(
                 frame.RenderFrame,
                 frame.Pose.CompletionIdentity,
-                m_Rig.Rig.RigId,
-                m_Rig.Rig.RigRevision,
-                producerOperationIndex,
-                producerCallSiteIndex,
-                goalOffset,
-                CharacterPresentationFootPlacementDescriptor.GoalCount,
-                CharacterFullBodyIkGoalContributionAvailability.Ready);
+                new FixedString64Bytes(m_Rig.Rig.RigId),
+                new FixedString64Bytes(m_Rig.Rig.RigRevision),
+                in resolvedPair,
+                in primarySupport,
+                in strideHips,
+                pelvisGoal,
+                leftGoal,
+                rightGoal);
         }
 
-        internal void SealFrame(
-            CharacterFootPlacementBank bank,
+        internal void ValidateFrame(
             ulong renderFrame,
             ulong completionIdentity)
         {
             RequireAlive();
+            CharacterFootPlacementBank bank = m_PendingFrameBank;
             if (bank == null || !bank.HasFrame ||
                 bank.FrameSequence != renderFrame ||
                 bank.CompletionIdentity != completionIdentity)
@@ -560,19 +574,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException(
                     "Foot Placement pending completion identity is inconsistent.");
             }
+        }
+
+        internal void CompleteFrame()
+        {
+            CharacterFootPlacementBank bank = m_PendingFrameBank;
             bank.HasFrame = false;
-            if (bank.Diagnostics.HasValue)
+            m_CommittedFrameBank = null;
+            m_PendingFrameBank = null;
+        }
+
+        internal void PublishCommittedDiagnostics(CharacterFootPlacementBank bank)
+        {
+            if (bank == null || !bank.Diagnostics.HasValue)
+                return;
+            try
             {
                 CharacterFootLandingPredictionDebugRegistry.Publish(
                     in bank.Diagnostics.Value);
             }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
         }
 
-        internal void DiscardFrame(
-            CharacterFootPlacementBank committed,
-            CharacterFootPlacementBank pending)
+        internal void DiscardFrame()
         {
             RequireAlive();
+            CharacterFootPlacementBank committed = m_CommittedFrameBank;
+            CharacterFootPlacementBank pending = m_PendingFrameBank;
             CharacterFootGroundPathPagePool.Discard(
                 pending?.LeftGroundPath,
                 committed?.LeftGroundPath);
@@ -580,6 +611,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pending?.RightGroundPath,
                 committed?.RightGroundPath);
             pending?.ClearPending();
+            m_CommittedFrameBank = null;
+            m_PendingFrameBank = null;
         }
 
         internal void ResetShared(in CharacterFootPlacementReset reset)
@@ -614,7 +647,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return string.Empty;
         }
 
-        CharacterFootGroundPathDiagnostics PrepareGroundPath(
+        CharacterFootGroundPathResult PrepareGroundPath(
             CharacterFootSide side,
             bool hasLastLanding,
             CharacterFootGroundPathLanding lastLanding,
@@ -635,7 +668,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     0,
                     default,
                     default);
-                return new CharacterFootGroundPathDiagnostics(pendingPage, false);
+                return new CharacterFootGroundPathResult(pendingPage, false);
             }
             if (!hasNextSwingLanding)
             {
@@ -643,7 +676,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pendingPage.SetRejected(
                     CharacterFootGroundPathRejectReason.NextLandingUnavailable,
                     false, 0, default, default);
-                return new CharacterFootGroundPathDiagnostics(pendingPage, false);
+                return new CharacterFootGroundPathResult(pendingPage, false);
             }
 
             CharacterFootGroundPathInputKey key =
@@ -660,7 +693,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 committedPage.Input.Key.Equals(key))
             {
                 pendingPage = CharacterFootGroundPathPagePool.ReuseCommitted(committedPage);
-                return new CharacterFootGroundPathDiagnostics(pendingPage, false);
+                return new CharacterFootGroundPathResult(pendingPage, false);
             }
 
             pendingPage = pool.AcquireWritable(committedPage);
@@ -680,7 +713,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pendingPage.SetRejected(
                     CharacterFootGroundPathRejectReason.InvalidRequest,
                     false, 0, default, default);
-                return new CharacterFootGroundPathDiagnostics(pendingPage, false);
+                return new CharacterFootGroundPathResult(pendingPage, false);
             }
 
             CharacterFootGroundPathQueryRequest query = input.Query;
@@ -711,7 +744,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pendingPage.SetRejected(
                     result.RejectReason, true, result.SegmentCount,
                     in input, default);
-            return new CharacterFootGroundPathDiagnostics(pendingPage, true);
+            return new CharacterFootGroundPathResult(pendingPage, true);
         }
 
         CharacterFootLandingPredictionPair PredictFootPair(
@@ -747,7 +780,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 landing.NextSwingLanding.LandingEventIdentity == selectedHeader.LandingEventIdentity
                 ? landing.NextSwingLanding.SurfaceIdentity
                 : 0;
-            CharacterFootLandingPredictionFootDiagnostics current = selectCurrent
+            CharacterFootLandingPredictionResult current = selectCurrent
                 ? PredictStep(
                     side,
                     steps.CurrentStep,
@@ -769,7 +802,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     default,
                     goal);
-            CharacterFootLandingPredictionFootDiagnostics incoming = selectIncoming
+            CharacterFootLandingPredictionResult incoming = selectIncoming
                 ? PredictStep(
                     side,
                     steps.IncomingStep,
@@ -791,7 +824,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     default,
                     goal);
-            CharacterFootLandingPredictionFootDiagnostics selected = selectCurrent
+            CharacterFootLandingPredictionResult selected = selectCurrent
                 ? current
                 : selectIncoming ? incoming : current;
             AnimationBiomechanicalStepHeader selectedStep = selectCurrent
@@ -812,7 +845,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             step.TimeToLandingSeconds <= maximumPredictionTimeSeconds &&
             step.LandingEventIdentity != lastLandingEventIdentity;
 
-        CharacterFootLandingPredictionFootDiagnostics PredictStep(
+        CharacterFootLandingPredictionResult PredictStep(
             CharacterFootSide side,
             AnimationBiomechanicalStepHeader step,
             CharacterFootLandingStepSource stepSource,
@@ -935,7 +968,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out CharacterFootPlacementQueryRequest query,
                 out CharacterFootLandingSupport support,
                 out CharacterFootLandingQueryRejectReason queryRejectReason);
-            return new CharacterFootLandingPredictionFootDiagnostics(
+            return new CharacterFootLandingPredictionResult(
                 side,
                 accepted
                     ? CharacterFootLandingPredictionState.Accepted
@@ -1057,7 +1090,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return (float)(remainingTicks / timeline.TickRate);
         }
 
-        static CharacterFootLandingPredictionFootDiagnostics Rejected(
+        static CharacterFootLandingPredictionResult Rejected(
             CharacterFootSide side,
             CharacterFootLandingPredictionRejectReason reason,
             CharacterFootLandingStepSource stepSource,
@@ -1067,7 +1100,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 rawLanding,
             CharacterFootPlacementQueryRequest query,
             CharacterFullBodyIkGoal goal) =>
-            new CharacterFootLandingPredictionFootDiagnostics(
+            new CharacterFootLandingPredictionResult(
                 side,
                 CharacterFootLandingPredictionState.Rejected,
                 reason,
@@ -1120,85 +1153,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 selectedWeight);
         }
 
-        CharacterFootStrideHipsDiagnostics ResolveStrideHips(
-            in AnimationBiomechanicalStepHeader leftSwingStep,
-            in AnimationBiomechanicalStepHeader rightSwingStep,
-            bool hasSelectedSwing,
-            CharacterFootSide selectedSwingSide,
-            bool hasLeftNextSwingLanding,
-            CharacterFootGroundPathLanding leftNextSwingLanding,
-            bool hasRightNextSwingLanding,
-            CharacterFootGroundPathLanding rightNextSwingLanding,
-            bool leftGroundPathAccepted,
-            bool rightGroundPathAccepted,
-            bool grounded,
-            in CharacterFootActionOccupancy leftAction,
-            in CharacterFootActionOccupancy rightAction,
-            in CharacterFootSwingMotionDiagnostics leftFootMotion,
-            in CharacterFootSwingMotionDiagnostics rightFootMotion,
+        CharacterFootStrideHipsResult ResolveStrideHips(
+            in CharacterFootStrideIntentResult intent,
             in CharacterResolvedFootPair resolvedPair,
-            in CharacterFootPrimarySupportDiagnostics primarySupport,
-            Vector3 componentUp,
-            Vector3 poseRootPosition,
-            Vector3 animatedPelvis,
-            Vector3 animatedPelvisComponentPosition,
-            in CharacterFootPlacementAnimatedPose pose,
-            Vector3 leftCorrectedSole,
-            Vector3 rightCorrectedSole,
-            float footPlacementWeight,
-            float deltaSeconds,
+            in CharacterFootPrimarySupportResult primarySupport,
+            in CharacterFootPelvisFrame frame,
             ref CharacterFootPelvisSpringState pelvisSpring)
         {
-            if (!grounded)
-                return RejectStride(CharacterFootStrideRejectReason.BodyNotGrounded);
-            if (leftAction.IsOccupied || rightAction.IsOccupied)
-                return RejectStride(CharacterFootStrideRejectReason.ActionOccupied);
-            Vector3 primarySupportContactAnchor = primarySupport.HasValue
-                ? primarySupport.Side == CharacterFootSide.Left
-                    ? resolvedPair.Left.PelvisReachReference.Point
-                    : resolvedPair.Right.PelvisReachReference.Point
-                : default;
-            if (!CharacterFootStrideHipsBuilder.TryResolveStride(
-                    in leftSwingStep,
-                    in rightSwingStep,
-                    hasSelectedSwing,
-                    selectedSwingSide,
-                    primarySupport.HasValue,
-                    primarySupport.Side,
-                    primarySupport.LandingEventIdentity,
-                    primarySupportContactAnchor,
-                    hasLeftNextSwingLanding,
-                    hasLeftNextSwingLanding ? leftNextSwingLanding.Point : default,
-                    hasLeftNextSwingLanding ? leftNextSwingLanding.LandingEventIdentity : 0,
-                    hasRightNextSwingLanding,
-                    hasRightNextSwingLanding ? rightNextSwingLanding.Point : default,
-                    hasRightNextSwingLanding ? rightNextSwingLanding.LandingEventIdentity : 0,
-                    componentUp,
-                    out CharacterFootSide supportSide,
-                    out CharacterFootSide swingSide,
-                    out Vector3 strideStart,
-                    out Vector3 strideEnd,
-                    out CharacterFootStrideRejectReason rejectReason))
+            if (!intent.Accepted)
             {
+                if (!intent.ReleasePelvis)
+                    return CharacterFootStrideHipsBuilder.BuildRejected(
+                        intent.RejectReason);
                 return ReleaseStride(
-                    rejectReason,
-                    componentUp,
-                    footPlacementWeight,
-                    deltaSeconds,
+                    intent.RejectReason,
+                    frame.ComponentUp,
+                    frame.FootPlacementWeight,
+                    frame.DeltaSeconds,
                     ref pelvisSpring);
             }
-            bool groundPathAccepted = swingSide == CharacterFootSide.Left
-                ? leftGroundPathAccepted
-                : rightGroundPathAccepted;
-            if (!groundPathAccepted)
-                return ReleaseStride(
-                    CharacterFootStrideRejectReason.GroundPathRejected,
-                    componentUp,
-                    footPlacementWeight,
-                    deltaSeconds,
-                    ref pelvisSpring);
             CharacterResolvedFootResult supportMotion =
-                supportSide == CharacterFootSide.Left
+                intent.SupportSide == CharacterFootSide.Left
                     ? resolvedPair.Left
                     : resolvedPair.Right;
             bool validSupport =
@@ -1214,47 +1189,46 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return ReleaseStride(
                     CharacterFootStrideRejectReason.SupportUnavailable,
-                    componentUp,
-                    footPlacementWeight,
-                    deltaSeconds,
+                    frame.ComponentUp,
+                    frame.FootPlacementWeight,
+                    frame.DeltaSeconds,
                     ref pelvisSpring);
             }
-            float swingTimeToLanding = swingSide == CharacterFootSide.Left
-                ? leftSwingStep.TimeToLandingSeconds
-                : rightSwingStep.TimeToLandingSeconds;
-            Vector3 supportHip = supportSide == CharacterFootSide.Left
-                ? pose.Left.HipPosition
-                : pose.Right.HipPosition;
-            float supportLegLength = supportSide == CharacterFootSide.Left
-                ? m_Rig.LeftLegLength
-                : m_Rig.RightLegLength;
-            Vector3 supportAnimatedAnkle = supportSide == CharacterFootSide.Left
-                ? pose.Left.AnklePosition
-                : pose.Right.AnklePosition;
+            Vector3 supportHip = intent.SupportSide == CharacterFootSide.Left
+                ? frame.Pose.Left.HipPosition
+                : frame.Pose.Right.HipPosition;
+            float supportLegLength = intent.SupportSide == CharacterFootSide.Left
+                ? frame.LeftLegLength
+                : frame.RightLegLength;
+            Vector3 supportAnimatedAnkle = intent.SupportSide == CharacterFootSide.Left
+                ? frame.Pose.Left.AnklePosition
+                : frame.Pose.Right.AnklePosition;
             float supportLegCompressionReserve = Mathf.Max(
                 0f,
                 supportLegLength - Vector3.Distance(supportHip, supportAnimatedAnkle));
             return CharacterFootStrideHipsBuilder.BuildPelvis(
-                supportSide,
+                intent.SupportSide,
                 supportLandingEventIdentity,
-                swingSide,
-                strideStart,
-                strideEnd,
-                poseRootPosition,
-                componentUp,
-                animatedPelvis,
-                animatedPelvisComponentPosition,
+                intent.SwingSide,
+                intent.StrideStart,
+                intent.StrideEnd,
+                frame.PoseRootPosition,
+                frame.ComponentUp,
+                frame.AnimatedPelvis,
+                frame.AnimatedPelvisComponentPosition,
                 supportHip,
                 supportMotion.FinalAnkle,
                 supportLegLength,
                 supportLegCompressionReserve,
-                pose.Left.HeelPosition * 0.5f + pose.Left.ToePosition * 0.5f,
-                pose.Right.HeelPosition * 0.5f + pose.Right.ToePosition * 0.5f,
-                leftCorrectedSole,
-                rightCorrectedSole,
-                swingTimeToLanding,
-                footPlacementWeight,
-                deltaSeconds,
+                frame.Pose.Left.HeelPosition * 0.5f +
+                frame.Pose.Left.ToePosition * 0.5f,
+                frame.Pose.Right.HeelPosition * 0.5f +
+                frame.Pose.Right.ToePosition * 0.5f,
+                frame.LeftCorrectedSole,
+                frame.RightCorrectedSole,
+                intent.SwingTimeToLanding,
+                frame.FootPlacementWeight,
+                frame.DeltaSeconds,
                 m_Settings.FootMotion,
                 ref pelvisSpring);
         }
@@ -1277,13 +1251,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootActionOccupancy action) =>
             !grounded || action.IsOccupied;
 
-        CharacterFootStrideHipsDiagnostics RejectStride(
-            CharacterFootStrideRejectReason reason)
-        {
-            return CharacterFootStrideHipsBuilder.BuildRejected(reason);
-        }
-
-        CharacterFootStrideHipsDiagnostics ReleaseStride(
+        CharacterFootStrideHipsResult ReleaseStride(
             CharacterFootStrideRejectReason reason,
             Vector3 componentUp,
             float footPlacementWeight,
@@ -1301,7 +1269,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CreatePelvisGoal(default, null);
 
         static CharacterFullBodyIkGoal CreatePelvisGoal(
-            in CharacterFootStrideHipsDiagnostics strideHips,
+            in CharacterFootStrideHipsResult strideHips,
             Transform poseRoot)
         {
             Vector3 translation = default;

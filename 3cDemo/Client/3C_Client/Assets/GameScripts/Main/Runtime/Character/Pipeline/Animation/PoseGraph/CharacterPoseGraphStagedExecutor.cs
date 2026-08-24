@@ -1,12 +1,49 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    internal readonly struct CharacterPoseWorldAwareStageInput
+    {
+        internal CharacterPoseWorldAwareStageInput(
+            int operationIndex,
+            int contributionGoalOffset,
+            in CharacterFootPlacementFrameInput footPlacement)
+        {
+            if (operationIndex < 0 || contributionGoalOffset < 0)
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            OperationIndex = operationIndex;
+            ContributionGoalOffset = contributionGoalOffset;
+            FootPlacement = footPlacement;
+            HasFootPlacement = true;
+            WorldContextAvailable = true;
+        }
+
+        internal CharacterPoseWorldAwareStageInput(
+            int operationIndex,
+            int contributionGoalOffset)
+        {
+            if (operationIndex < 0 || contributionGoalOffset < 0)
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            OperationIndex = operationIndex;
+            ContributionGoalOffset = contributionGoalOffset;
+            FootPlacement = default;
+            HasFootPlacement = true;
+            WorldContextAvailable = false;
+        }
+
+        internal int OperationIndex { get; }
+        internal int ContributionGoalOffset { get; }
+        internal CharacterFootPlacementFrameInput FootPlacement { get; }
+        internal bool HasFootPlacement { get; }
+        internal bool WorldContextAvailable { get; }
+    }
+
     internal struct CharacterPoseGraphStagedExecutor
     {
         const float ScaleEpsilon = 0.000001f;
@@ -74,9 +111,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly NativeArray<CharacterPoseBoneIkGoalDescriptor> m_PoseBoneIkGoalDescriptors;
         [ReadOnly]
         readonly NativeArray<int> m_FullBodyIkGoalContributionInputValueIndices;
-        NativeArray<CharacterFullBodyIkGoalContributionHeader>
-            m_FullBodyIkGoalContributions;
-        NativeArray<CharacterFullBodyIkGoal> m_FullBodyIkContributionGoals;
         readonly int m_FullBodyIkGoalSetValueCount;
         [ReadOnly]
         readonly NativeArray<AnimationPoseGraphNativeLinkedPoseCall> m_LinkedPoseCalls;
@@ -257,8 +291,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseBoneIkGoalDescriptors = program.PoseBoneIkGoalDescriptors;
             m_FullBodyIkGoalContributionInputValueIndices =
                 program.FullBodyIkGoalContributionInputValueIndices;
-            m_FullBodyIkGoalContributions = program.FullBodyIkGoalContributions;
-            m_FullBodyIkContributionGoals = program.FullBodyIkContributionGoals;
             m_FullBodyIkGoalSetValueCount = program.FullBodyIkGoalSetValueCount;
             m_FootPlacementCount = program.FootPlacementCount;
             m_LinkedPoseCalls = program.LinkedPoseCalls;
@@ -379,7 +411,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseGraphCompletedAt[0] = 0;
         }
 
-        internal bool ExecuteStage(int stageIndex, float deltaSeconds)
+        internal bool ExecuteStage(
+            int stageIndex,
+            float deltaSeconds,
+            in CharacterPoseWorldAwareStageInput worldInput)
         {
             if ((uint)stageIndex >= (uint)m_Stages.Length ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f ||
@@ -471,7 +506,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         break;
                     case CharacterPoseOperationCode.FootPlacement:
                         using (IkGoalMarker.Auto())
-                            valueOperationValid = EvaluateWorldAwareFootGoal(operation);
+                            valueOperationValid = EvaluateWorldAwareFootGoal(
+                                operation,
+                                in worldInput);
                         break;
                     case CharacterPoseOperationCode.FullBodyIkGoalAssembler:
                         using (IkGoalMarker.Auto())
@@ -2100,7 +2137,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int output = operation.OutputFullBodyIkGoalContributionValueIndex;
             if (!IsInputReady(input, operation.Index) ||
                 (uint)operation.PoseBoneIkGoalsIndex >= (uint)m_PoseBoneIkGoalRanges.Length ||
-                (uint)output >= (uint)m_FullBodyIkGoalContributions.Length ||
+                (uint)output >=
+                (uint)m_PoseConstraints.FullBodyIkGoalContributionCount ||
                 m_ValueAvailability[input] != AnimationPoseAvailability.Pose)
             {
                 return false;
@@ -2109,7 +2147,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PoseBoneIkGoalRanges[operation.PoseBoneIkGoalsIndex];
             if (range.DescriptorOffset > m_PoseBoneIkGoalDescriptors.Length - range.DescriptorCount ||
                 range.ContributionGoalWorkspaceOffset >
-                m_FullBodyIkContributionGoals.Length - range.DescriptorCount)
+                m_PoseConstraints.FullBodyIkContributionGoalCount -
+                range.DescriptorCount)
             {
                 return false;
             }
@@ -2122,23 +2161,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_PoseBoneIkGoalDescriptors,
                     range.DescriptorOffset,
                     range.DescriptorCount);
-            NativeSlice<CharacterFullBodyIkGoal> goals = new NativeSlice<CharacterFullBodyIkGoal>(
-                m_FullBodyIkContributionGoals,
-                range.ContributionGoalWorkspaceOffset,
-                range.DescriptorCount);
-            m_FullBodyIkGoalContributions[output] =
-                CharacterPoseBoneIkGoalSource.Produce(
-                componentPose,
-                descriptors,
-                goals,
-                range.ContributionGoalWorkspaceOffset,
-                m_FrameSequence,
-                m_CompletionIdentity,
-                m_RigId,
-                m_RigRevision,
-                operation.Index,
-                operation.FrameCacheIndex);
-            return true;
+            CharacterFullBodyIkGoalContributionHeader contribution =
+                m_PoseConstraints.ProducePoseBoneIkGoals(
+                    output,
+                    range.ContributionGoalWorkspaceOffset,
+                    componentPose,
+                    descriptors,
+                    operation.Index,
+                    operation.FrameCacheIndex,
+                    m_FrameSequence,
+                    m_CompletionIdentity);
+            return contribution.IsValid;
         }
 
         bool RebuildComponentDescendants(int inputOffset, int outputOffset, int rootIndex)
@@ -2177,18 +2210,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static AnimationLocalBonePose ToPose(CharacterComponentBonePose value) =>
             new AnimationLocalBonePose(value.Position, value.Rotation, value.Scale);
 
-        bool EvaluateWorldAwareFootGoal(AnimationPoseGraphNativeOperation operation)
+        bool EvaluateWorldAwareFootGoal(
+            AnimationPoseGraphNativeOperation operation,
+            in CharacterPoseWorldAwareStageInput worldInput)
         {
             int output = operation.OutputFullBodyIkGoalContributionValueIndex;
             bool descriptorValid = operation.Code == CharacterPoseOperationCode.FootPlacement &&
                                    (uint)operation.FootPlacementIndex < (uint)m_FootPlacementCount;
             if (!descriptorValid ||
-                (uint)output >= (uint)m_FullBodyIkGoalContributions.Length)
+                !worldInput.HasFootPlacement ||
+                worldInput.OperationIndex != operation.Index ||
+                (uint)output >=
+                (uint)m_PoseConstraints.FullBodyIkGoalContributionCount)
             {
                 return false;
             }
-            CharacterFullBodyIkGoalContributionHeader header =
-                m_FullBodyIkGoalContributions[output];
+            CharacterFullBodyIkGoalContributionHeader header;
+            if (worldInput.WorldContextAvailable)
+            {
+                CharacterFootPlacementFrameInput footPlacement =
+                    worldInput.FootPlacement;
+                header = m_PoseConstraints.PrepareFootPlacement(
+                    in footPlacement,
+                    output,
+                    worldInput.ContributionGoalOffset,
+                    operation.Index,
+                    operation.FrameCacheIndex);
+            }
+            else
+            {
+                header = new CharacterFullBodyIkGoalContributionHeader(
+                    m_FrameSequence,
+                    m_CompletionIdentity,
+                    m_RigId,
+                    m_RigRevision,
+                    operation.Index,
+                    operation.FrameCacheIndex,
+                    worldInput.ContributionGoalOffset,
+                    0,
+                    CharacterFullBodyIkGoalContributionAvailability
+                        .WorldContextUnavailable);
+                m_PoseConstraints.RecordUnavailableGoalContribution(
+                    output,
+                    in header);
+            }
             return header.IsValid &&
                    header.FrameSequence == m_FrameSequence &&
                    header.CompletionIdentity == m_CompletionIdentity &&
@@ -2197,7 +2262,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                    header.RigId.Equals(m_RigId) &&
                    header.RigRevision.Equals(m_RigRevision) &&
                    header.GoalOffset <=
-                       m_FullBodyIkContributionGoals.Length - header.GoalCount &&
+                       m_PoseConstraints.FullBodyIkContributionGoalCount -
+                       header.GoalCount &&
                    header.Availability ==
                        CharacterFullBodyIkGoalContributionAvailability.Ready;
         }
@@ -2224,8 +2290,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterFullBodyIkResult result =
                 m_PoseConstraints.AssembleFullBodyIkGoals(
                     contributionInputs,
-                    m_FullBodyIkGoalContributions,
-                    m_FullBodyIkContributionGoals,
                     operation.Index,
                     operation.FrameCacheIndex,
                     m_FrameSequence,
@@ -2352,9 +2416,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (operation.Code == CharacterPoseOperationCode.FootPlacement &&
                 (uint)operation.OutputFullBodyIkGoalContributionValueIndex <
-                (uint)m_FullBodyIkGoalContributions.Length &&
-                m_FullBodyIkGoalContributions[
-                        operation.OutputFullBodyIkGoalContributionValueIndex]
+                (uint)m_PoseConstraints.FullBodyIkGoalContributionCount &&
+                m_PoseConstraints.GetPendingGoalContribution(
+                        operation.OutputFullBodyIkGoalContributionValueIndex)
                     .Availability ==
                 CharacterFullBodyIkGoalContributionAvailability.WorldContextUnavailable)
             {
@@ -3930,7 +3994,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(program));
             program.RequireValid();
             if (poseConstraints == null ||
-                poseConstraints.FullBodyIkSolverCount != program.FullBodyIkCount)
+                poseConstraints.FullBodyIkSolverCount != program.FullBodyIkCount ||
+                poseConstraints.FullBodyIkGoalContributionCount !=
+                program.FullBodyIkGoalContributionCount ||
+                poseConstraints.FullBodyIkContributionGoalCount !=
+                program.FullBodyIkContributionGoalCount)
             {
                 throw new ArgumentException("FinalIK Full Body solver layout is invalid.", nameof(poseConstraints));
             }
@@ -3996,7 +4064,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.OutputValueIndex >= program.PoseValueCount ||
                     operation.OutputFullBodyIkGoalContributionValueIndex < -1 ||
                     operation.OutputFullBodyIkGoalContributionValueIndex >=
-                    program.FullBodyIkGoalContributions.Length ||
+                    poseConstraints.FullBodyIkGoalContributionCount ||
                     operation.OutputFullBodyIkGoalSetValueIndex < -1 ||
                     operation.OutputFullBodyIkGoalSetValueIndex >=
                     program.FullBodyIkGoalSetValueCount ||

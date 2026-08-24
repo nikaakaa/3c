@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation;
+using Unity.Collections;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -67,6 +68,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct CharacterResolvedFootResult
     {
         internal CharacterResolvedFootResult(
+            ulong frameSequence,
+            ulong completionIdentity,
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
             CharacterFootSide side,
             Vector3 finalSole,
             Vector3 finalAnkle,
@@ -81,6 +86,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong supportEventIdentity,
             in CharacterFootPelvisReachReference pelvisReachReference)
         {
+            FrameSequence = frameSequence;
+            CompletionIdentity = completionIdentity;
+            RigId = rigId;
+            RigRevision = rigRevision;
             Side = side;
             FinalSole = finalSole;
             FinalAnkle = finalAnkle;
@@ -97,6 +106,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Outcome = CharacterFootResolvedOutcome.Ready;
         }
 
+        internal ulong FrameSequence { get; }
+        internal ulong CompletionIdentity { get; }
+        internal FixedString64Bytes RigId { get; }
+        internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootSide Side { get; }
         internal Vector3 FinalSole { get; }
         internal Vector3 FinalAnkle { get; }
@@ -119,10 +132,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterResolvedFootResult left,
             in CharacterResolvedFootResult right)
         {
+            if (left.Outcome != CharacterFootResolvedOutcome.Ready ||
+                right.Outcome != CharacterFootResolvedOutcome.Ready ||
+                left.FrameSequence == 0 ||
+                left.FrameSequence != right.FrameSequence ||
+                left.CompletionIdentity == 0 ||
+                left.CompletionIdentity != right.CompletionIdentity ||
+                !left.RigId.Equals(right.RigId) ||
+                !left.RigRevision.Equals(right.RigRevision))
+            {
+                throw new InvalidOperationException(
+                    "Resolved Foot Pair lineage is inconsistent.");
+            }
+            FrameSequence = left.FrameSequence;
+            CompletionIdentity = left.CompletionIdentity;
+            RigId = left.RigId;
+            RigRevision = left.RigRevision;
             Left = left;
             Right = right;
         }
 
+        internal ulong FrameSequence { get; }
+        internal ulong CompletionIdentity { get; }
+        internal FixedString64Bytes RigId { get; }
+        internal FixedString64Bytes RigRevision { get; }
         internal CharacterResolvedFootResult Left { get; }
         internal CharacterResolvedFootResult Right { get; }
     }
@@ -154,9 +187,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         UnselectedSwing = 15
     }
 
-    public readonly struct CharacterFootSwingMotionDiagnostics
+    internal readonly struct CharacterFootSwingMotionResult
     {
-        internal CharacterFootSwingMotionDiagnostics(
+        internal CharacterFootSwingMotionResult(
             CharacterFootSwingMotionState state,
             CharacterFootSwingMotionRejectReason rejectReason,
             ulong landingEventIdentity,
@@ -237,9 +270,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 DesiredCorrection { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
 
-        internal CharacterFootSwingMotionDiagnostics WithPlantConfidence(
+        internal CharacterFootSwingMotionResult WithPlantConfidence(
             float plantConfidence) =>
-            new CharacterFootSwingMotionDiagnostics(
+            new CharacterFootSwingMotionResult(
                 State,
                 RejectReason,
                 LandingEventIdentity,
@@ -267,17 +300,77 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 DesiredCorrection);
     }
 
+    public readonly struct CharacterFootSwingMotionDiagnostics
+    {
+        internal CharacterFootSwingMotionDiagnostics(
+            in CharacterFootSwingMotionResult result)
+        {
+            State = result.State;
+            RejectReason = result.RejectReason;
+            LandingEventIdentity = result.LandingEventIdentity;
+            GroundPathInputIdentity = result.GroundPathInputIdentity;
+            OriginalSole = result.OriginalSole;
+            OriginalAnkle = result.OriginalAnkle;
+            Distance = result.Distance;
+            Progress = result.Progress;
+            BaselineSample = result.BaselineSample;
+            EnvelopeSample = result.EnvelopeSample;
+            VerticalCorrection = result.VerticalCorrection;
+            LandingPredictionError = result.LandingPredictionError;
+            LandingConstraintWeight = result.LandingConstraintWeight;
+            CorrectedSole = result.CorrectedSole;
+            CorrectedAnkle = result.CorrectedAnkle;
+            PositionWeight = result.PositionWeight;
+            RotationWeight = result.RotationWeight;
+            ConstraintState = result.ConstraintState;
+            LockResponse = result.LockResponse;
+            SupportHorizontalError = result.SupportHorizontalError;
+            ContactOwnership = result.ContactOwnership;
+            SupportWeight = result.SupportWeight;
+            SupportContactAnchor = result.SupportContactAnchor;
+            PlantConfidence = result.PlantConfidence;
+            DesiredCorrection = result.DesiredCorrection;
+        }
+
+        public CharacterFootSwingMotionState State { get; }
+        public CharacterFootSwingMotionRejectReason RejectReason { get; }
+        public ulong LandingEventIdentity { get; }
+        public ulong GroundPathInputIdentity { get; }
+        public Vector3 OriginalSole { get; }
+        public Vector3 OriginalAnkle { get; }
+        public float Distance { get; }
+        public float Progress { get; }
+        public Vector3 BaselineSample { get; }
+        public Vector3 EnvelopeSample { get; }
+        public float VerticalCorrection { get; }
+        public float LandingPredictionError { get; }
+        public float LandingConstraintWeight { get; }
+        public Vector3 CorrectedSole { get; }
+        public Vector3 CorrectedAnkle { get; }
+        public float PositionWeight { get; }
+        public float RotationWeight { get; }
+        public CharacterFootConstraintState ConstraintState { get; }
+        public CharacterFootLockResponse LockResponse { get; }
+        public float SupportHorizontalError { get; }
+        public float ContactOwnership { get; }
+        public float SupportWeight { get; }
+        public Vector3 SupportContactAnchor { get; }
+        public float PlantConfidence { get; }
+        public Vector3 DesiredCorrection { get; }
+        public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
+    }
+
     internal static class CharacterFootSwingMotionBuilder
     {
         const float GeometryEpsilon = 0.0001f;
         const float EndpointTolerance = 0.005f;
 
-        internal static CharacterFootSwingMotionDiagnostics Build(
+        internal static CharacterFootSwingMotionResult Build(
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             in AnimationBiomechanicalStepHeader step,
             float footPlacementWeight,
             Vector3 componentUp,
-            in CharacterFootGroundPathDiagnostics groundPath,
+            in CharacterFootGroundPathResult groundPath,
             float landingPredictionError,
             float landingConstraintWeight)
         {
@@ -316,13 +409,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 landingConstraintWeight);
         }
 
-        internal static CharacterFootSwingMotionDiagnostics BuildForSwing(
+        internal static CharacterFootSwingMotionResult BuildForSwing(
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             in AnimationBiomechanicalStepHeader step,
             ulong landingEventIdentity,
             float footPlacementWeight,
             Vector3 componentUp,
-            in CharacterFootGroundPathDiagnostics groundPath,
+            in CharacterFootGroundPathResult groundPath,
             float landingPredictionError,
             float landingConstraintWeight)
         {
@@ -464,7 +557,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = footPlacementWeight;
-            return new CharacterFootSwingMotionDiagnostics(
+            return new CharacterFootSwingMotionResult(
                 CharacterFootSwingMotionState.Accepted,
                 CharacterFootSwingMotionRejectReason.None,
                 landingEventIdentity,
@@ -484,12 +577,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f);
         }
 
-        internal static CharacterFootSwingMotionDiagnostics SuppressUnselected(
-            in CharacterFootSwingMotionDiagnostics motion)
+        internal static CharacterFootSwingMotionResult SuppressUnselected(
+            in CharacterFootSwingMotionResult motion)
         {
             if (!motion.Accepted)
                 return motion;
-            return new CharacterFootSwingMotionDiagnostics(
+            return new CharacterFootSwingMotionResult(
                 CharacterFootSwingMotionState.Rejected,
                 CharacterFootSwingMotionRejectReason.UnselectedSwing,
                 motion.LandingEventIdentity,
@@ -529,7 +622,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static bool TrySampleEnvelope(
-            in CharacterFootGroundPathDiagnostics groundPath,
+            in CharacterFootGroundPathResult groundPath,
             float progress,
             out Vector3 sample,
             out CharacterFootSwingMotionRejectReason rejectReason)
@@ -607,7 +700,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return true;
         }
 
-        static CharacterFootSwingMotionDiagnostics Rejected(
+        static CharacterFootSwingMotionResult Rejected(
             CharacterFootSwingMotionRejectReason reason,
             ulong landingEventIdentity,
             ulong groundPathInputIdentity,
@@ -620,7 +713,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float verticalCorrection = 0f,
             float landingPredictionError = 0f,
             float landingConstraintWeight = 0f) =>
-            new CharacterFootSwingMotionDiagnostics(
+            new CharacterFootSwingMotionResult(
                 CharacterFootSwingMotionState.Rejected,
                 reason,
                 landingEventIdentity,

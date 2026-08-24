@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -16,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public static class CharacterFootLandingPredictionSampler
     {
         const int MaximumPendingFrameCount = 256;
+        const int MaximumQueuedFrameCount = 256;
         const double SamplingStartTimeoutSeconds = 30d;
         const double SamplingFlushIntervalSeconds = 0.5d;
         const string GameplayLabPlayerActorId = "gameplay-lab-player";
@@ -177,8 +180,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             readonly FileStream m_Stream;
             readonly StreamWriter m_Writer;
             readonly StringBuilder m_Row = new StringBuilder(2048);
-            double m_NextFlushTime;
-            bool m_Disposed;
+            readonly BlockingCollection<CapturedFrame> m_Queue =
+                new BlockingCollection<CapturedFrame>(
+                    new ConcurrentQueue<CapturedFrame>(),
+                    MaximumQueuedFrameCount);
+            readonly Thread m_WriterThread;
+            Exception m_Failure;
+            int m_AcceptedFrameCount;
+            int m_WrittenFrameCount;
+            int m_Disposed;
 
             internal SamplingSession(in SamplingProgramIdentity program)
             {
@@ -214,20 +224,87 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 m_Stream = stream;
                 m_Writer = writer;
-                m_NextFlushTime =
-                    EditorApplication.timeSinceStartup + SamplingFlushIntervalSeconds;
+                m_WriterThread = new Thread(WriteLoop)
+                {
+                    IsBackground = true,
+                    Name = $"Foot Landing CSV {SampleIdentity:N}",
+                    Priority = System.Threading.ThreadPriority.BelowNormal
+                };
+                m_WriterThread.Start();
             }
 
             internal Guid SampleIdentity { get; }
             internal DateTime StartedUtc { get; }
             internal SamplingProgramIdentity Program { get; }
             internal string Path { get; }
-            internal int FrameCount { get; private set; }
+            internal int FrameCount => Volatile.Read(ref m_AcceptedFrameCount);
+            internal int WrittenFrameCount => Volatile.Read(ref m_WrittenFrameCount);
 
-            internal void Write(CapturedFrame captured)
+            internal void Enqueue(CapturedFrame captured)
             {
-                if (m_Disposed)
+                if (captured == null)
+                    throw new ArgumentNullException(nameof(captured));
+                RequireHealthy();
+                if (!m_Queue.TryAdd(captured))
+                {
+                    throw new InvalidOperationException(
+                        "Foot Landing CSV writer queue capacity was exceeded.");
+                }
+                Interlocked.Increment(ref m_AcceptedFrameCount);
+                RequireHealthy();
+            }
+
+            internal void RequireHealthy()
+            {
+                if (Volatile.Read(ref m_Disposed) != 0)
                     throw new ObjectDisposedException(nameof(SamplingSession));
+                Exception failure = Volatile.Read(ref m_Failure);
+                if (failure != null)
+                {
+                    throw new IOException(
+                        "Foot Landing CSV background writer failed.",
+                        failure);
+                }
+            }
+
+            void WriteLoop()
+            {
+                long flushIntervalTicks =
+                    TimeSpan.FromSeconds(SamplingFlushIntervalSeconds).Ticks;
+                long nextFlushTicks = DateTime.UtcNow.Ticks + flushIntervalTicks;
+                try
+                {
+                    foreach (CapturedFrame captured in m_Queue.GetConsumingEnumerable())
+                    {
+                        Write(captured);
+                        Interlocked.Increment(ref m_WrittenFrameCount);
+                        long now = DateTime.UtcNow.Ticks;
+                        if (now < nextFlushTicks)
+                            continue;
+                        FlushToDisk();
+                        nextFlushTicks = now + flushIntervalTicks;
+                    }
+                    FlushToDisk();
+                }
+                catch (Exception exception)
+                {
+                    Volatile.Write(ref m_Failure, exception);
+                }
+                finally
+                {
+                    try
+                    {
+                        m_Writer.Dispose();
+                    }
+                    catch (Exception exception)
+                    {
+                        Volatile.Write(ref m_Failure, exception);
+                    }
+                }
+            }
+
+            void Write(CapturedFrame captured)
+            {
                 CharacterFootLandingPredictionDiagnostics frame = captured.Foot;
                 FootIkCapture left = captured.Left;
                 FootIkCapture right = captured.Right;
@@ -254,15 +331,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     in roots,
                     captured.TargetRuntimeInstanceId,
                     captured.TargetHostInstanceId);
-                FrameCount++;
-            }
-
-            internal void FlushIfDue(double time)
-            {
-                if (m_Disposed || time < m_NextFlushTime)
-                    return;
-                FlushToDisk();
-                m_NextFlushTime = time + SamplingFlushIntervalSeconds;
             }
 
             void FlushToDisk()
@@ -273,16 +341,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             public void Dispose()
             {
-                if (m_Disposed)
+                if (Interlocked.Exchange(ref m_Disposed, 1) != 0)
                     return;
-                m_Disposed = true;
-                try
+                m_Queue.CompleteAdding();
+                if (!m_WriterThread.Join(TimeSpan.FromSeconds(30)))
                 {
-                    FlushToDisk();
+                    throw new TimeoutException(
+                        "Foot Landing CSV background writer did not stop within 30 seconds.");
                 }
-                finally
+                m_Queue.Dispose();
+                Exception failure = Volatile.Read(ref m_Failure);
+                if (failure != null)
                 {
-                    m_Writer.Dispose();
+                    throw new IOException(
+                        "Foot Landing CSV background writer failed.",
+                        failure);
+                }
+                if (WrittenFrameCount != FrameCount)
+                {
+                    throw new InvalidOperationException(
+                        "Foot Landing CSV background writer did not persist every captured frame.");
                 }
             }
         }
@@ -571,6 +649,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ConfigureTargets();
             SamplingSession session = s_Session ?? throw new InvalidOperationException(
                 "Foot Landing sampling has no active persistent session.");
+            session.RequireHealthy();
             for (int pendingIndex = 0; pendingIndex < s_PendingFrames.Count;)
             {
                 PendingFrame pending = s_PendingFrames[pendingIndex];
@@ -584,12 +663,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 }
                 if (resolution == PendingFrameResolution.Captured)
-                    session.Write(captured);
+                    session.Enqueue(captured);
                 else
                     s_DroppedPendingFrameCount++;
                 s_PendingFrames.RemoveAt(pendingIndex);
             }
-            session.FlushIfDue(EditorApplication.timeSinceStartup);
+            session.RequireHealthy();
         }
 
         enum PendingFrameResolution : byte
@@ -932,10 +1011,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Session = null;
             if (session == null)
                 return;
-            s_LastSavedFrameCount = session.FrameCount;
             s_LastSavedPath = session.Path;
             s_LastSavedSampleIdentity = session.SampleIdentity.ToString("N");
-            session.Dispose();
+            try
+            {
+                session.Dispose();
+            }
+            finally
+            {
+                s_LastSavedFrameCount = session.WrittenFrameCount;
+            }
         }
 
         static void FailActiveSampling(Exception exception)

@@ -88,8 +88,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             GoalOffset >= 0 &&
             GoalCount >= 0 &&
             GoalCount <= CharacterFullBodyIkGoalSetHeader.MaximumGoalCount &&
-            (Availability == CharacterFullBodyIkGoalSetAvailability.Ready ||
-             Availability == CharacterFullBodyIkGoalSetAvailability.WorldContextUnavailable && GoalCount == 0);
+            Availability == CharacterFullBodyIkGoalSetAvailability.Ready;
+    }
+
+    public readonly struct AnimationFullBodyIkGoalContributionSnapshot
+    {
+        internal AnimationFullBodyIkGoalContributionSnapshot(
+            in CharacterFullBodyIkGoalContributionHeader header,
+            int copiedGoalOffset)
+        {
+            FrameSequence = header.FrameSequence;
+            CompletionIdentity = header.CompletionIdentity;
+            RigId = header.RigId.ToString();
+            RigRevision = header.RigRevision.ToString();
+            ProducerOperationIndex = header.ProducerOperationIndex;
+            ProducerCallSiteIndex = header.ProducerCallSiteIndex;
+            GoalOffset = copiedGoalOffset;
+            GoalCount = header.GoalCount;
+            Availability = header.Availability;
+        }
+
+        public ulong FrameSequence { get; }
+        public ulong CompletionIdentity { get; }
+        public string RigId { get; }
+        public string RigRevision { get; }
+        public int ProducerOperationIndex { get; }
+        public int ProducerCallSiteIndex { get; }
+        internal int GoalOffset { get; }
+        public int GoalCount { get; }
+        public CharacterFullBodyIkGoalContributionAvailability Availability { get; }
+        public bool IsValid =>
+            FrameSequence != 0 &&
+            CompletionIdentity != 0 &&
+            !string.IsNullOrEmpty(RigId) &&
+            !string.IsNullOrEmpty(RigRevision) &&
+            ProducerOperationIndex >= 0 &&
+            ProducerCallSiteIndex >= 0 &&
+            GoalOffset >= 0 &&
+            GoalCount >= 0 &&
+            GoalCount <= CharacterFullBodyIkGoalSetHeader.MaximumGoalCount &&
+            (Availability == CharacterFullBodyIkGoalContributionAvailability.Ready ||
+             Availability == CharacterFullBodyIkGoalContributionAvailability.WorldContextUnavailable &&
+             GoalCount == 0);
     }
 
     public readonly struct AnimationPoseWatchSnapshot
@@ -102,6 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CharacterPoseExecutionDomain executionDomain,
             CharacterPoseSpace outputPoseSpace,
             AnimationLinkedPoseEntryRuntimeSnapshot linkedPoseEntry,
+            AnimationFullBodyIkGoalContributionSnapshot goalContribution,
             AnimationFullBodyIkGoalSetSnapshot goalSet,
             int poseOffset,
             int boneCount,
@@ -120,6 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ExecutionDomain = executionDomain;
             OutputPoseSpace = outputPoseSpace;
             LinkedPoseEntry = linkedPoseEntry;
+            GoalContribution = goalContribution;
             GoalSet = goalSet;
             PoseOffset = poseOffset;
             BoneCount = boneCount;
@@ -139,6 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public CharacterPoseExecutionDomain ExecutionDomain { get; }
         public CharacterPoseSpace OutputPoseSpace { get; }
         public AnimationLinkedPoseEntryRuntimeSnapshot LinkedPoseEntry { get; }
+        public AnimationFullBodyIkGoalContributionSnapshot GoalContribution { get; }
         public AnimationFullBodyIkGoalSetSnapshot GoalSet { get; }
         internal int PoseOffset { get; }
         public int BoneCount { get; }

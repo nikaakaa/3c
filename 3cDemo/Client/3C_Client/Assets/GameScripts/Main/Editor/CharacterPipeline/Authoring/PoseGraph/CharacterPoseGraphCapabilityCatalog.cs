@@ -217,16 +217,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 UnaryLocalPosePorts()));
             catalog.Register(Node<CharacterFootPlacementPosePayload>(CharacterPoseNodeKind.FootPlacement, allPoseGraphs, "Foot Placement", "Goal Sources", constraintColor,
                 Fields(AssetField("profile", "Profile", "foot-placement-profile", typeof(CharacterFootPlacementProfile)), AssetField("calibration", "Calibration", "foot-placement-calibration", typeof(CharacterFootPlacementRigCalibration))),
-                Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight", "pose.parameter"), Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
+                Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight", "pose.parameter"), Out("contribution", "Goal Contribution", "component.full-body-ik-goal-contribution")),
                 executionDomain: CharacterPoseExecutionDomain.WorldAwareValue));
             catalog.Register(Node<CharacterPoseBoneIkGoalsPayload>(CharacterPoseNodeKind.PoseBoneIKGoals, allPoseGraphsWithLinkedEntry, "Pose Bone IK Goals", "Goal Sources", constraintColor,
                 Fields(Field("bindings", "Effector Bindings", GraphAuthoringFieldValueKind.Object, "full-body-ik-goal-binding")),
-                Ports(In("pose", "Component Pose", "pose.component"), Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
+                Ports(In("pose", "Component Pose", "pose.component"), Out("contribution", "Goal Contribution", "component.full-body-ik-goal-contribution")),
+                executionDomain: CharacterPoseExecutionDomain.PureValue));
+            catalog.Register(Node<CharacterFullBodyIkGoalAssemblerPayload>(CharacterPoseNodeKind.FullBodyIkGoalAssembler, allPoseGraphs, "Goal Assembler", "Goal Sources", constraintColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
+                GraphAuthoringDynamicPortPolicy.OrderedInputs,
                 executionDomain: CharacterPoseExecutionDomain.PureValue));
             catalog.Register(Node<CharacterFullBodyIkPosePayload>(CharacterPoseNodeKind.FullBodyIK, allPoseGraphs, "Full Body IK", "Constraints", constraintColor,
                 Fields(AssetField("profile", "FinalIK FBBIK Profile", "full-body-ik-profile", typeof(CharacterFullBodyIkProfile)), ReadOnlyField("backend", "Solver Backend", GraphAuthoringFieldValueKind.String)),
-                Ports(In("pose", "Component Pose", "pose.component"), Out("result", "Solved Component Pose", "pose.component")),
-                GraphAuthoringDynamicPortPolicy.OrderedInputs,
+                Ports(In("pose", "Component Pose", "pose.component"), In("goals", "Full Body IK Goals", "component.full-body-ik-goals"), Out("result", "Solved Component Pose", "pose.component")),
                 commands: new[]
                 {
                     new GraphAuthoringCommandDescriptor(OpenFullBodyIkProfile, "Edit FinalIK FBBIK Profile", false)
@@ -245,10 +249,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Field("entry-id", "Entry", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-entry")),
                 Array.Empty<GraphAuthoringPortDescriptor>(),
                 GraphAuthoringDynamicPortPolicy.OrderedBidirectional));
-            catalog.Register(Node<CharacterEmptyFullBodyIkGoalsPayload>(CharacterPoseNodeKind.EmptyFullBodyIkGoals, linkedEntryOnly, "Empty Full Body IK Goals", "Goal Sources", constraintColor,
-                Array.Empty<GraphAuthoringFieldDescriptor>(),
-                Ports(In("pose", "Component Pose", "pose.component"), Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
-                executionDomain: CharacterPoseExecutionDomain.PureValue));
             catalog.Register(Node<CharacterPoseSubgraphPayload>(CharacterPoseNodeKind.PoseSubgraph, allPoseGraphsWithLinkedEntry, "Pose Subgraph", "Graph", blendColor,
                 Fields(Field("graph-id", "Graph", GraphAuthoringFieldValueKind.IdentityReference, "pose-graph")),
                 Array.Empty<GraphAuthoringPortDescriptor>(),
@@ -747,6 +747,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPosePortKind.ActionPlayback,
                 "component.full-body-ik-goals" =>
                     CharacterPosePortKind.FullBodyIkGoals,
+                "component.full-body-ik-goal-contribution" =>
+                    CharacterPosePortKind.FullBodyIkGoalContribution,
                 "pose.history" => CharacterPosePortKind.PoseHistory,
                 "motion-matching.trajectory" => CharacterPosePortKind.Trajectory,
                 "presentation.facts" => CharacterPosePortKind.PresentationFacts,
@@ -768,6 +770,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "pose.action-playback",
                 CharacterPosePortKind.FullBodyIkGoals =>
                     "component.full-body-ik-goals",
+                CharacterPosePortKind.FullBodyIkGoalContribution =>
+                    "component.full-body-ik-goal-contribution",
                 CharacterPosePortKind.PoseHistory => "pose.history",
                 CharacterPosePortKind.Trajectory => "motion-matching.trajectory",
                 CharacterPosePortKind.PresentationFacts => "presentation.facts",

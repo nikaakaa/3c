@@ -5,6 +5,22 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    internal struct CharacterFullBodyIkBendHistory
+    {
+        internal Vector3 LeftStableDirection;
+        internal Vector3 RightStableDirection;
+        internal Vector3 LeftAppliedDirection;
+        internal Vector3 RightAppliedDirection;
+        internal ulong SourceCompletionIdentity;
+        internal ulong Revision;
+        internal bool HasLeftStableDirection;
+        internal bool HasRightStableDirection;
+        internal bool HasLeftAppliedDirection;
+        internal bool HasRightAppliedDirection;
+
+        internal void Clear() => this = default;
+    }
+
     public enum CharacterFullBodyIkFailure : byte
     {
         None = 0,
@@ -153,16 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Vector3 m_DiagnosticPelvisTranslation;
         LegSolveFrame m_LeftLegSolveFrame;
         LegSolveFrame m_RightLegSolveFrame;
-        Vector3 m_LeftStableBendDirection;
-        Vector3 m_RightStableBendDirection;
-        Vector3 m_LeftAppliedBendDirection;
-        Vector3 m_RightAppliedBendDirection;
         ulong m_DiagnosticFrameSequence;
         int m_DiagnosticEffectorCount;
-        bool m_HasLeftStableBendDirection;
-        bool m_HasRightStableBendDirection;
-        bool m_HasLeftAppliedBendDirection;
-        bool m_HasRightAppliedBendDirection;
         bool m_Prepared;
 
         public CharacterFinalIkFullBodySolver(
@@ -265,11 +273,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public CharacterFullBodyIkResult SolvePrepared(
+        internal CharacterFullBodyIkResult SolvePrepared(
             NativeSlice<AnimationLocalBonePose> pendingOutputComponentPose,
             NativeSlice<int> goalSetValueIndices,
             NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
+            ref CharacterFullBodyIkBendHistory bendHistory,
             ulong frameSequence,
             ulong completionIdentity,
             bool recordDiagnostics)
@@ -300,6 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     goalSetValueIndices,
                     goalSets,
                     goalWorkspace,
+                    ref bendHistory,
                     frameSequence,
                     completionIdentity);
                 if (!goalResult.Succeeded)
@@ -315,6 +325,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         goalSets,
                         goalWorkspace))
                 {
+                    bendHistory.SourceCompletionIdentity = completionIdentity;
+                    bendHistory.Revision++;
                     return CompleteResult(
                         goalResult,
                         goalSetValueIndices,
@@ -338,6 +350,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     goalSetValueIndices,
                     goalSets,
                     goalWorkspace);
+                bendHistory.SourceCompletionIdentity = completionIdentity;
+                bendHistory.Revision++;
                 return CompleteResult(
                     solvedResult,
                     goalSetValueIndices,
@@ -418,6 +432,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<int> goalSetValueIndices,
             NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
+            ref CharacterFullBodyIkBendHistory bendHistory,
             ulong frameSequence,
             ulong completionIdentity)
         {
@@ -502,7 +517,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ApplyLegBendStabilization(
                 goalSetValueIndices,
                 goalSets,
-                goalWorkspace);
+                goalWorkspace,
+                ref bendHistory);
             return CharacterFullBodyIkResult.Success(appliedGoalCount);
         }
 
@@ -658,7 +674,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ApplyLegBendStabilization(
             NativeSlice<int> goalSetValueIndices,
             NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
-            NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
+            NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
+            ref CharacterFullBodyIkBendHistory bendHistory)
         {
             bool hasLeftGoal = TryFindFootPlacementGoal(
                 CharacterFullBodyIkEffectorSlot.LeftFoot,
@@ -678,20 +695,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ActiveTuning.LeftLeg,
                 hasLeftGoal,
                 in leftGoal,
-                ref m_LeftStableBendDirection,
-                ref m_HasLeftStableBendDirection,
-                ref m_LeftAppliedBendDirection,
-                ref m_HasLeftAppliedBendDirection);
+                ref bendHistory.LeftStableDirection,
+                ref bendHistory.HasLeftStableDirection,
+                ref bendHistory.LeftAppliedDirection,
+                ref bendHistory.HasLeftAppliedDirection);
             m_RightLegSolveFrame = ApplyLegBendStabilization(
                 m_Rig.RightLeg,
                 FullBodyBipedChain.RightLeg,
                 m_ActiveTuning.RightLeg,
                 hasRightGoal,
                 in rightGoal,
-                ref m_RightStableBendDirection,
-                ref m_HasRightStableBendDirection,
-                ref m_RightAppliedBendDirection,
-                ref m_HasRightAppliedBendDirection);
+                ref bendHistory.RightStableDirection,
+                ref bendHistory.HasRightStableDirection,
+                ref bendHistory.RightAppliedDirection,
+                ref bendHistory.HasRightAppliedDirection);
         }
 
         LegSolveFrame ApplyLegBendStabilization(
@@ -948,14 +965,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_LeftLegSolveFrame = default;
             m_RightLegSolveFrame = default;
-            m_LeftStableBendDirection = default;
-            m_RightStableBendDirection = default;
-            m_LeftAppliedBendDirection = default;
-            m_RightAppliedBendDirection = default;
-            m_HasLeftStableBendDirection = false;
-            m_HasRightStableBendDirection = false;
-            m_HasLeftAppliedBendDirection = false;
-            m_HasRightAppliedBendDirection = false;
             m_Solver.GetBendConstraint(FullBodyBipedChain.LeftLeg).weight =
                 m_ActiveTuning.LeftLeg.BendConstraintWeight;
             m_Solver.GetBendConstraint(FullBodyBipedChain.RightLeg).weight =

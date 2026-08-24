@@ -28,6 +28,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum CharacterFullBodyIkGoalSetAvailability : byte
     {
         Invalid = 0,
+        Ready = 1
+    }
+
+    public enum CharacterFullBodyIkGoalContributionAvailability : byte
+    {
+        Invalid = 0,
         Ready = 1,
         WorldContextUnavailable = 2
     }
@@ -185,8 +191,55 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             GoalOffset >= 0 &&
             GoalCount >= 0 &&
             GoalCount <= MaximumGoalCount &&
-            (Availability == CharacterFullBodyIkGoalSetAvailability.Ready ||
-             Availability == CharacterFullBodyIkGoalSetAvailability.WorldContextUnavailable && GoalCount == 0);
+            Availability == CharacterFullBodyIkGoalSetAvailability.Ready;
+    }
+
+    public readonly struct CharacterFullBodyIkGoalContributionHeader
+    {
+        public CharacterFullBodyIkGoalContributionHeader(
+            ulong frameSequence,
+            ulong completionIdentity,
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
+            int producerOperationIndex,
+            int producerCallSiteIndex,
+            int goalOffset,
+            int goalCount,
+            CharacterFullBodyIkGoalContributionAvailability availability)
+        {
+            FrameSequence = frameSequence;
+            CompletionIdentity = completionIdentity;
+            RigId = rigId;
+            RigRevision = rigRevision;
+            ProducerOperationIndex = producerOperationIndex;
+            ProducerCallSiteIndex = producerCallSiteIndex;
+            GoalOffset = goalOffset;
+            GoalCount = goalCount;
+            Availability = availability;
+        }
+
+        public ulong FrameSequence { get; }
+        public ulong CompletionIdentity { get; }
+        public FixedString64Bytes RigId { get; }
+        public FixedString64Bytes RigRevision { get; }
+        public int ProducerOperationIndex { get; }
+        public int ProducerCallSiteIndex { get; }
+        public int GoalOffset { get; }
+        public int GoalCount { get; }
+        public CharacterFullBodyIkGoalContributionAvailability Availability { get; }
+
+        public bool IsValid =>
+            FrameSequence != 0 &&
+            CompletionIdentity != 0 &&
+            RigId.Length > 0 &&
+            RigRevision.Length > 0 &&
+            ProducerOperationIndex >= 0 &&
+            ProducerCallSiteIndex >= 0 &&
+            GoalOffset >= 0 &&
+            GoalCount >= 0 &&
+            GoalCount <= CharacterFullBodyIkGoalSetHeader.MaximumGoalCount &&
+            (Availability == CharacterFullBodyIkGoalContributionAvailability.Ready ||
+             Availability == CharacterFullBodyIkGoalContributionAvailability.WorldContextUnavailable && GoalCount == 0);
     }
 
     public readonly struct CharacterFullBodyIkGoalSet

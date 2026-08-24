@@ -183,13 +183,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void RequireValid()
         {
             if (!PortId.IsValid || !Enum.IsDefined(typeof(CharacterPosePortDirection), Direction) ||
-                !Enum.IsDefined(typeof(CharacterPosePortKind), Kind) || Order < 0)
+                !Enum.IsDefined(typeof(CharacterPosePortKind), Kind) || Order < 0 ||
+                Kind == CharacterPosePortKind.FullBodyIkGoals ||
+                Kind == CharacterPosePortKind.FullBodyIkGoalContribution)
             {
                 throw new InvalidOperationException("Linked Pose interface port is invalid.");
             }
             CharacterPoseSpace expected = Kind == CharacterPosePortKind.LocalPose
                 ? CharacterPoseSpace.Local
-                : Kind == CharacterPosePortKind.ComponentPose || Kind == CharacterPosePortKind.FullBodyIkGoals
+                : Kind == CharacterPosePortKind.ComponentPose
                     ? CharacterPoseSpace.Component
                     : CharacterPoseSpace.None;
             if (Space != expected)

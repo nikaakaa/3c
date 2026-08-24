@@ -29,7 +29,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterAnimationPresentationRuntime m_Animation;
         readonly CharacterEquipmentVisualRuntime m_Equipment;
         readonly CharacterEquipmentLinkedPoseRuntime m_LinkedPose;
-        readonly CharacterFootPlacementRuntime m_FootPlacement;
         readonly CharacterCameraPresentationRuntime m_Camera;
         readonly Transform m_VisualRoot;
         readonly Transform m_PoseRoot;
@@ -53,7 +52,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationRuntime body,
             CharacterAnimationPresentationRuntime animation,
             CharacterEquipmentVisualRuntime equipment,
-            CharacterFootPlacementRuntime footPlacement,
             CharacterCameraPresentationRuntime camera,
             Transform poseRoot,
             RuntimeDiagnosticsContext diagnostics)
@@ -68,9 +66,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             m_LinkedPose = new CharacterEquipmentLinkedPoseRuntime(actorId, projection);
             bool requiresFootPlacement = projection.PosePlan.FootPlacements.Count == 1;
-            if (requiresFootPlacement != (footPlacement != null))
+            if (requiresFootPlacement != m_Animation.HasFootPlacement)
                 throw new InvalidOperationException("Foot Placement runtime must match the compiled Pose Graph node exactly.");
-            m_FootPlacement = footPlacement;
             m_Camera = camera;
             m_VisualRoot = m_Body.VisualRoot;
             m_PoseRoot = poseRoot
@@ -315,12 +312,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (bodyFrame.ResetReason == CharacterBodyPresentationResetReason.CommittedBranchReplacement)
                     {
                         m_Animation.RetargetBodyBranch(bodyFrame.ResetSequence);
-                        m_FootPlacement?.RetargetBodyBranch(bodyFrame.ResetSequence);
+                        m_Animation.RetargetFootPlacement(bodyFrame.ResetSequence);
                     }
                     else
                     {
                         m_Animation.ResetPoseBranch(bodyFrame.ResetSequence);
-                        m_FootPlacement?.Reset(new CharacterFootPlacementReset(
+                        m_Animation.ResetFootPlacement(new CharacterFootPlacementReset(
                             m_ActorId,
                             context.RenderFrame,
                             bodyFrame.ResetSequence,
@@ -407,7 +404,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_LinkedPose.Reset();
             m_Equipment.Reset();
             m_Camera?.Reset();
-            m_FootPlacement?.Reset(new CharacterFootPlacementReset(
+            m_Animation.ResetFootPlacement(new CharacterFootPlacementReset(
                 m_ActorId,
                 0,
                 0,
@@ -431,7 +428,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             m_Disposed = true;
             m_CurrentFrameSignals.Clear();
-            CharacterPresentationModuleLifetime.Dispose(m_Camera, m_FootPlacement, m_Equipment, m_Animation, m_Body);
+            CharacterPresentationModuleLifetime.Dispose(m_Camera, m_Equipment, m_Animation, m_Body);
         }
 
         ComposedAnimationPoseFrame PresentAnimation(
@@ -450,7 +447,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in bodyFrame,
                     in factFrame,
                     m_LinkedPose.Session,
-                    m_FootPlacement,
                     m_Diagnostics);
             }
         }
@@ -542,7 +538,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!m_PoseHasOutput)
                 return;
-            m_FootPlacement?.Reset(new CharacterFootPlacementReset(
+            m_Animation.ResetFootPlacement(new CharacterFootPlacementReset(
                 m_ActorId,
                 renderFrame,
                 resetSequence,

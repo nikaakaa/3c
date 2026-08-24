@@ -245,8 +245,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         const float EndpointTolerance = 0.005f;
 
         internal static void ResolvePrimarySupport(
-            in CharacterFootSwingMotionDiagnostics leftMotion,
-            in CharacterFootSwingMotionDiagnostics rightMotion,
+            in CharacterResolvedFootResult leftMotion,
+            in CharacterResolvedFootResult rightMotion,
             ref CharacterFootPrimarySupportFacts primarySupport)
         {
             bool leftRetainable = IsRetainablePrimarySupport(in leftMotion);
@@ -257,11 +257,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 bool retained = primarySupport.Side == CharacterFootSide.Left
                     ? leftRetainable &&
-                      leftMotion.LandingEventIdentity == primarySupport.LandingEventIdentity &&
+                      leftMotion.SupportEventIdentity == primarySupport.LandingEventIdentity &&
                       (!rightCandidate ||
                        leftMotion.SupportWeight >= rightMotion.SupportWeight)
                     : rightRetainable &&
-                      rightMotion.LandingEventIdentity == primarySupport.LandingEventIdentity &&
+                      rightMotion.SupportEventIdentity == primarySupport.LandingEventIdentity &&
                       (!leftCandidate ||
                        rightMotion.SupportWeight >= leftMotion.SupportWeight);
                 if (retained)
@@ -288,8 +288,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? CharacterFootSide.Left
                 : CharacterFootSide.Right;
             primarySupport.LandingEventIdentity = selectLeft
-                ? leftMotion.LandingEventIdentity
-                : rightMotion.LandingEventIdentity;
+                ? leftMotion.SupportEventIdentity
+                : rightMotion.SupportEventIdentity;
             primarySupport.Retained = false;
         }
 
@@ -850,19 +850,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             step.HasConsistentLandingEventIdentity;
 
         static bool IsRetainablePrimarySupport(
-            in CharacterFootSwingMotionDiagnostics motion) =>
-            motion.Accepted &&
-            motion.LandingEventIdentity != 0 &&
+            in CharacterResolvedFootResult motion) =>
+            motion.Outcome == CharacterFootResolvedOutcome.Ready &&
+            motion.ContactReference.IsAvailable &&
+            motion.SupportEventIdentity != 0 &&
             motion.SupportWeight > GeometryEpsilon &&
-            (motion.SupportLockState == CharacterFootSupportLockState.Locked ||
-             motion.SupportLockState == CharacterFootSupportLockState.Sliding ||
-             motion.SupportLockState == CharacterFootSupportLockState.Releasing);
+            motion.SupportEligibility != CharacterFootSupportEligibility.None;
 
         static bool IsAcquirablePrimarySupport(
-            in CharacterFootSwingMotionDiagnostics motion) =>
+            in CharacterResolvedFootResult motion) =>
             IsRetainablePrimarySupport(in motion) &&
-            (motion.SupportLockState == CharacterFootSupportLockState.Locked ||
-             motion.SupportLockState == CharacterFootSupportLockState.Sliding);
+            motion.SupportEligibility ==
+            CharacterFootSupportEligibility.AcquireAndRetain;
 
         static CharacterFootSwingMotionDiagnostics RejectedPlant(
             CharacterFootSwingMotionRejectReason reason,

@@ -643,17 +643,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 
-    internal sealed class CharacterFootGroundPathFootState
+    internal sealed class CharacterFootGroundPathPagePool
     {
         readonly CharacterFootGroundPathPage m_First;
         readonly CharacterFootGroundPathPage m_Second;
 
-        CharacterFootGroundPathPage m_Committed;
-        CharacterFootGroundPathPage m_Pending;
-        bool m_HasCommitted;
-        bool m_HasPending;
-
-        internal CharacterFootGroundPathFootState(int contactCapacity)
+        internal CharacterFootGroundPathPagePool(int contactCapacity)
         {
             m_First = new CharacterFootGroundPathPage(contactCapacity);
             m_Second = new CharacterFootGroundPathPage(contactCapacity);
@@ -662,61 +657,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootGroundEnvelopeWorkspace EnvelopeWorkspace { get; }
 
-        internal bool HasCommittedInput => m_HasCommitted && m_Committed.HasInput;
-        internal CharacterFootGroundPathInputKey CommittedKey => m_Committed.Input.Key;
-        internal bool CommittedAccepted =>
-            m_HasCommitted && m_Committed.State == CharacterFootGroundPathState.Accepted;
-
-        internal CharacterFootGroundPathPage BeginPending()
+        internal CharacterFootGroundPathPage AcquireWritable(
+            CharacterFootGroundPathPage committed)
         {
-            if (m_HasPending)
-                throw new InvalidOperationException("Ground Path already has a pending page.");
-            m_Pending = m_HasCommitted && ReferenceEquals(m_Committed, m_First)
+            CharacterFootGroundPathPage pending =
+                ReferenceEquals(committed, m_First)
                 ? m_Second
                 : m_First;
-            m_Pending.Clear();
-            m_HasPending = true;
-            return m_Pending;
+            pending.Clear();
+            return pending;
         }
 
-        internal CharacterFootGroundPathPage ReuseCommitted()
+        internal static CharacterFootGroundPathPage ReuseCommitted(
+            CharacterFootGroundPathPage committed)
         {
-            if (m_HasPending || !m_HasCommitted)
+            if (committed == null)
                 throw new InvalidOperationException("Ground Path committed page is unavailable.");
-            m_Pending = m_Committed;
-            m_HasPending = true;
-            return m_Pending;
+            return committed;
         }
 
-        internal void Seal()
+        internal static void Discard(
+            CharacterFootGroundPathPage pending,
+            CharacterFootGroundPathPage committed)
         {
-            if (!m_HasPending)
-                throw new InvalidOperationException("Ground Path has no pending page.");
-            m_Committed = m_Pending;
-            m_HasCommitted = true;
-            m_Pending = null;
-            m_HasPending = false;
-        }
-
-        internal void Discard()
-        {
-            if (m_HasPending)
-            {
-                if (!ReferenceEquals(m_Pending, m_Committed))
-                    m_Pending.Clear();
-                m_Pending = null;
-                m_HasPending = false;
-            }
+            if (pending != null && !ReferenceEquals(pending, committed))
+                pending.Clear();
         }
 
         internal void Reset()
         {
             m_First.Clear();
             m_Second.Clear();
-            m_Committed = null;
-            m_Pending = null;
-            m_HasCommitted = false;
-            m_HasPending = false;
             EnvelopeWorkspace.Clear();
         }
     }

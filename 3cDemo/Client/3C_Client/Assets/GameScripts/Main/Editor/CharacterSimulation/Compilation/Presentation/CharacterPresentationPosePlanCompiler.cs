@@ -168,7 +168,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public List<CharacterPresentationPoseBoneIkGoalsDescriptor> PoseBoneIkGoalSources { get; } = new List<CharacterPresentationPoseBoneIkGoalsDescriptor>();
             public List<CharacterPresentationFootPlacementDescriptor> FootPlacements { get; } = new List<CharacterPresentationFootPlacementDescriptor>();
             public List<CharacterPresentationFullBodyIkDescriptor> FullBodyIks { get; } = new List<CharacterPresentationFullBodyIkDescriptor>();
-            public List<int> FullBodyIkGoalInputValueIndices { get; } = new List<int>();
+            public List<int> FullBodyIkGoalContributionInputValueIndices { get; } =
+                new List<int>();
             public List<CharacterPresentationClipPlayerDescriptor> ClipPlayers { get; } = new List<CharacterPresentationClipPlayerDescriptor>();
             public List<CharacterPoseStateMachineDescriptor> StateMachines { get; } =
                 new List<CharacterPoseStateMachineDescriptor>();
@@ -182,8 +183,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public HashSet<string> GraphCallStack { get; } =
                 new HashSet<string>(StringComparer.Ordinal);
             public int PoseValueCount { get; set; }
+            public int FullBodyIkGoalContributionValueCount { get; set; }
             public int FullBodyIkGoalSetValueCount { get; set; }
-            public int FullBodyIkGoalWorkspaceCount { get; set; }
+            public int FullBodyIkGoalContributionGoalWorkspaceCount { get; set; }
             public int PlayerCount { get; set; }
             public int OutputOperationIndex { get; set; } = -1;
         }
@@ -356,7 +358,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.PoseBoneIkGoalSources.ToArray(),
                 state.FootPlacements.ToArray(),
                 state.FullBodyIks.ToArray(),
-                state.FullBodyIkGoalInputValueIndices.ToArray(),
+                state.FullBodyIkGoalContributionInputValueIndices.ToArray(),
                 state.ClipPlayers.ToArray(),
                 state.StateMachines.ToArray(),
                 state.AnimationSlots.ToArray(),
@@ -367,8 +369,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.SourceMap.ToArray(),
                 stages,
                 workspace.PoseValueCapacity,
+                state.FullBodyIkGoalContributionValueCount,
                 state.FullBodyIkGoalSetValueCount,
-                state.FullBodyIkGoalWorkspaceCount,
+                state.FullBodyIkGoalContributionGoalWorkspaceCount,
                 workspace.ParameterValueCapacity,
                 workspace.ContributionCapacity,
                 workspace.FrameCacheCapacity,
@@ -516,13 +519,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseOperationCode.RootOrientationWarp or
             CharacterPoseOperationCode.FootPlacement or
             CharacterPoseOperationCode.PoseBoneIKGoals or
+            CharacterPoseOperationCode.FullBodyIkGoalAssembler or
             CharacterPoseOperationCode.FullBodyIK or
             CharacterPoseOperationCode.LocalToComponentPose or
             CharacterPoseOperationCode.ComponentToLocalPose or
             CharacterPoseOperationCode.StatePoseOutput or
             CharacterPoseOperationCode.PoseStateMachine or
             CharacterPoseOperationCode.LinkedPoseCall or
-            CharacterPoseOperationCode.EmptyFullBodyIkGoals or
             CharacterPoseOperationCode.MotionMatchingPose or
             CharacterPoseOperationCode.PoseHistoryRead or
             CharacterPoseOperationCode.OutputPose => true,
@@ -535,8 +538,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException("Pose Native plan requires operations and Pose values.");
             var producer = Enumerable.Repeat(-1, state.PoseValueCount).ToArray();
             var lastUse = Enumerable.Repeat(-1, state.PoseValueCount).ToArray();
-            var goalSetProducer = Enumerable.Repeat(-1, state.FullBodyIkGoalSetValueCount).ToArray();
-            var goalSetLastUse = Enumerable.Repeat(-1, state.FullBodyIkGoalSetValueCount).ToArray();
+            var goalContributionProducer = Enumerable.Repeat(
+                -1,
+                state.FullBodyIkGoalContributionValueCount).ToArray();
+            var goalContributionLastUse = Enumerable.Repeat(
+                -1,
+                state.FullBodyIkGoalContributionValueCount).ToArray();
+            var goalSetProducer = Enumerable.Repeat(
+                -1,
+                state.FullBodyIkGoalSetValueCount).ToArray();
+            var goalSetLastUse = Enumerable.Repeat(
+                -1,
+                state.FullBodyIkGoalSetValueCount).ToArray();
             int contributionCapacityPerValue = 0;
             for (int i = 0; i < state.Operations.Count; i++)
             {
@@ -547,32 +560,68 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 RegisterPoseOutput(operation.OutputValueIndex, i, producer, lastUse, operation.NodeId);
                 RegisterPoseInput(operation.InputValueIndexA, i, producer, lastUse, operation.NodeId);
                 RegisterPoseInput(operation.InputValueIndexB, i, producer, lastUse, operation.NodeId);
+                RegisterFullBodyIkGoalContributionOutput(
+                    operation.OutputFullBodyIkGoalContributionValueIndex,
+                    i,
+                    goalContributionProducer,
+                    goalContributionLastUse,
+                    operation.NodeId);
                 RegisterFullBodyIkGoalSetOutput(
                     operation.OutputFullBodyIkGoalSetValueIndex,
                     i,
                     goalSetProducer,
                     goalSetLastUse,
                     operation.NodeId);
-                for (int inputIndex = 0; inputIndex < operation.FullBodyIkGoalInputCount; inputIndex++)
-                    RegisterFullBodyIkGoalSetInput(
-                        state.FullBodyIkGoalInputValueIndices[operation.FullBodyIkGoalInputStart + inputIndex],
+                for (int inputIndex = 0;
+                     inputIndex < operation.FullBodyIkGoalContributionInputCount;
+                     inputIndex++)
+                {
+                    RegisterFullBodyIkGoalContributionInput(
+                        state.FullBodyIkGoalContributionInputValueIndices[
+                            operation.FullBodyIkGoalContributionInputStart + inputIndex],
                         i,
-                        goalSetProducer,
-                        goalSetLastUse,
+                        goalContributionProducer,
+                        goalContributionLastUse,
                         operation.NodeId);
+                }
+                RegisterFullBodyIkGoalSetInput(
+                    operation.InputFullBodyIkGoalSetValueIndex,
+                    i,
+                    goalSetProducer,
+                    goalSetLastUse,
+                    operation.NodeId);
                 if (operation.Code == CharacterPoseOperationCode.LinkedPoseCall)
                 {
-                    CharacterLinkedPoseCallPlanDescriptor call = state.LinkedCalls[operation.LinkedPoseCallIndex];
-                    for (int fragmentOffset = 0; fragmentOffset < call.FragmentIndices.Count; fragmentOffset++)
+                    CharacterLinkedPoseCallPlanDescriptor call =
+                        state.LinkedCalls[operation.LinkedPoseCallIndex];
+                    for (int fragmentOffset = 0;
+                         fragmentOffset < call.FragmentIndices.Count;
+                         fragmentOffset++)
                     {
-                        CharacterLinkedPoseEntryFragmentPlanDescriptor fragment = state.LinkedFragments[call.FragmentIndices[fragmentOffset]];
-                        for (int outputIndex = 0; outputIndex < fragment.Outputs.Count; outputIndex++)
+                        CharacterLinkedPoseEntryFragmentPlanDescriptor fragment =
+                            state.LinkedFragments[call.FragmentIndices[fragmentOffset]];
+                        for (int outputIndex = 0;
+                             outputIndex < fragment.Outputs.Count;
+                             outputIndex++)
                         {
-                            CharacterLinkedPosePortValueBinding binding = fragment.Outputs[outputIndex];
-                            if (binding.Kind == CharacterPosePortKind.FullBodyIkGoals)
-                                RegisterFullBodyIkGoalSetInput(binding.ValueIndex, i, goalSetProducer, goalSetLastUse, operation.NodeId);
-                            else if (binding.Kind == CharacterPosePortKind.LocalPose || binding.Kind == CharacterPosePortKind.ComponentPose)
-                                RegisterPoseInput(binding.ValueIndex, i, producer, lastUse, operation.NodeId);
+                            CharacterLinkedPosePortValueBinding binding =
+                                fragment.Outputs[outputIndex];
+                            if (binding.Kind == CharacterPosePortKind.LocalPose ||
+                                binding.Kind == CharacterPosePortKind.ComponentPose)
+                            {
+                                RegisterPoseInput(
+                                    binding.ValueIndex,
+                                    i,
+                                    producer,
+                                    lastUse,
+                                    operation.NodeId);
+                            }
+                            else if (binding.Kind == CharacterPosePortKind.FullBodyIkGoals ||
+                                     binding.Kind == CharacterPosePortKind.FullBodyIkGoalContribution)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Linked Pose Call '{operation.NodeId}' cannot pass Full Body IK Goals or Contributions.");
+                            }
                         }
                     }
                 }
@@ -610,6 +659,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 if (goalSetProducer[i] < 0 || goalSetLastUse[i] <= goalSetProducer[i])
                     throw new InvalidOperationException($"Pose Native plan Full Body IK Goal Set value '{i}' has an invalid lifetime.");
+            }
+            for (int i = 0; i < goalContributionProducer.Length; i++)
+            {
+                if (goalContributionProducer[i] < 0 ||
+                    goalContributionLastUse[i] <= goalContributionProducer[i])
+                {
+                    throw new InvalidOperationException(
+                        $"Pose Native plan Full Body IK Goal Contribution value '{i}' has an invalid lifetime.");
+                }
             }
             if (contributionCapacityPerValue <= 0)
                 throw new InvalidOperationException("Pose Plan requires at least one Player contribution capacity.");
@@ -671,6 +729,24 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             lastUse[valueIndex] = operationIndex;
         }
 
+        static void RegisterFullBodyIkGoalContributionOutput(
+            int valueIndex,
+            int operationIndex,
+            int[] producer,
+            int[] lastUse,
+            PoseNodeId nodeId)
+        {
+            if (valueIndex < 0)
+                return;
+            if ((uint)valueIndex >= (uint)producer.Length || producer[valueIndex] >= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Pose Native plan node '{nodeId}' publishes invalid or duplicate Full Body IK Goal Contribution value '{valueIndex}'.");
+            }
+            producer[valueIndex] = operationIndex;
+            lastUse[valueIndex] = operationIndex;
+        }
+
         static void RegisterFullBodyIkGoalSetInput(
             int valueIndex,
             int operationIndex,
@@ -685,6 +761,24 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 throw new InvalidOperationException(
                     $"Pose Native plan node '{nodeId}' consumes Full Body IK Goal Set value '{valueIndex}' before it is published.");
+            }
+            lastUse[valueIndex] = Math.Max(lastUse[valueIndex], operationIndex);
+        }
+
+        static void RegisterFullBodyIkGoalContributionInput(
+            int valueIndex,
+            int operationIndex,
+            int[] producer,
+            int[] lastUse,
+            PoseNodeId nodeId)
+        {
+            if (valueIndex < 0)
+                return;
+            if ((uint)valueIndex >= (uint)producer.Length || producer[valueIndex] < 0 ||
+                producer[valueIndex] >= operationIndex)
+            {
+                throw new InvalidOperationException(
+                    $"Pose Native plan node '{nodeId}' consumes Full Body IK Goal Contribution value '{valueIndex}' before it is published.");
             }
             lastUse[valueIndex] = Math.Max(lastUse[valueIndex], operationIndex);
         }
@@ -789,6 +883,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                            .PoseOutput
                     ? state.PoseValueCount++
                     : -1;
+                int outputFullBodyIkGoalContributionValueIndex = HasOutput(
+                    node,
+                    CharacterPosePortKind.FullBodyIkGoalContribution)
+                    ? state.FullBodyIkGoalContributionValueCount++
+                    : -1;
                 int outputFullBodyIkGoalSetValueIndex = HasOutput(
                     node,
                     CharacterPosePortKind.FullBodyIkGoals)
@@ -796,16 +895,33 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     : -1;
                 int inputA = RequireOptionalPoseInput(node, 0, incoming, scope, values);
                 int inputB = RequireOptionalPoseInput(node, 1, incoming, scope, values);
-                int[] fullBodyIkGoalInputs = GetInputIndices(
+                int[] fullBodyIkGoalContributionInputs = GetInputIndices(
+                    node,
+                    CharacterPosePortKind.FullBodyIkGoalContribution,
+                    incoming,
+                    scope,
+                    values);
+                int fullBodyIkGoalContributionInputStart =
+                    fullBodyIkGoalContributionInputs.Length == 0
+                    ? -1
+                    : state.FullBodyIkGoalContributionInputValueIndices.Count;
+                state.FullBodyIkGoalContributionInputValueIndices.AddRange(
+                    fullBodyIkGoalContributionInputs);
+                int[] fullBodyIkGoalSetInputs = GetInputIndices(
                     node,
                     CharacterPosePortKind.FullBodyIkGoals,
                     incoming,
                     scope,
                     values);
-                int fullBodyIkGoalInputStart = fullBodyIkGoalInputs.Length == 0
-                    ? -1
-                    : state.FullBodyIkGoalInputValueIndices.Count;
-                state.FullBodyIkGoalInputValueIndices.AddRange(fullBodyIkGoalInputs);
+                if (fullBodyIkGoalSetInputs.Length > 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Pose Node '{scopedNodeId}' has more than one Full Body IK Goal Set input.");
+                }
+                int inputFullBodyIkGoalSetValueIndex =
+                    fullBodyIkGoalSetInputs.Length == 1
+                        ? fullBodyIkGoalSetInputs[0]
+                        : -1;
                 int controlInputOperationIndex = -1;
                 int parameterIndex = -1;
                 int parameterIndexB = TryGetInputIndex(
@@ -966,9 +1082,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     poseBoneIkGoalsIndex,
                     footPlacementIndex,
                     fullBodyIkIndex,
+                    outputFullBodyIkGoalContributionValueIndex,
                     outputFullBodyIkGoalSetValueIndex,
-                    fullBodyIkGoalInputStart,
-                    fullBodyIkGoalInputs.Length,
+                    inputFullBodyIkGoalSetValueIndex,
+                    fullBodyIkGoalContributionInputStart,
+                    fullBodyIkGoalContributionInputs.Length,
                     clipPlayerIndex,
                     stateMachineIndex,
                     animationSlotIndex,
@@ -982,6 +1100,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     node,
                     scope,
                     outputValueIndex,
+                    outputFullBodyIkGoalContributionValueIndex,
                     outputFullBodyIkGoalSetValueIndex,
                     parameterIndex,
                     operationIndex,
@@ -1437,9 +1556,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     binding.RotationWeight);
             }
             int index = state.PoseBoneIkGoalSources.Count;
-            int goalOffset = state.FullBodyIkGoalWorkspaceCount;
-            state.FullBodyIkGoalWorkspaceCount = checked(
-                state.FullBodyIkGoalWorkspaceCount + bindings.Length);
+            int goalOffset = state.FullBodyIkGoalContributionGoalWorkspaceCount;
+            state.FullBodyIkGoalContributionGoalWorkspaceCount = checked(
+                state.FullBodyIkGoalContributionGoalWorkspaceCount + bindings.Length);
             state.PoseBoneIkGoalSources.Add(
                 new CharacterPresentationPoseBoneIkGoalsDescriptor(
                     index,
@@ -1460,9 +1579,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (state.FootPlacements.Count != 0)
                 throw new InvalidOperationException("Pose Plan contains more than one Foot Placement node.");
             int index = state.FootPlacements.Count;
-            int goalOffset = state.FullBodyIkGoalWorkspaceCount;
-            state.FullBodyIkGoalWorkspaceCount = checked(
-                state.FullBodyIkGoalWorkspaceCount +
+            int goalOffset = state.FullBodyIkGoalContributionGoalWorkspaceCount;
+            state.FullBodyIkGoalContributionGoalWorkspaceCount = checked(
+                state.FullBodyIkGoalContributionGoalWorkspaceCount +
                 CharacterPresentationFootPlacementDescriptor.GoalCount);
             state.FootPlacements.Add(
                 new CharacterPresentationFootPlacementDescriptor(
@@ -2154,6 +2273,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterTypedPoseNode node,
             string scope,
             int poseValue,
+            int fullBodyIkGoalContributionValue,
             int fullBodyIkGoalSetValue,
             int parameterValue,
             int operationIndex,
@@ -2174,6 +2294,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     CharacterPosePortKind.ComponentPose => poseValue,
                     CharacterPosePortKind.PoseDiscontinuity => poseValue,
                     CharacterPosePortKind.FullBodyIkGoals => fullBodyIkGoalSetValue,
+                    CharacterPosePortKind.FullBodyIkGoalContribution =>
+                        fullBodyIkGoalContributionValue,
                     _ => -1
                 };
                 if (index < 0)
@@ -2480,7 +2602,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPresentationPoseBoneIkGoalsDescriptor descriptor =
                     state.PoseBoneIkGoalSources[i];
-                values.Add($"pose-bone-ik-goals:{i}:{descriptor.NodeId}:{descriptor.GoalWorkspaceOffset}:{descriptor.GoalCount}");
+                values.Add($"pose-bone-ik-goals:{i}:{descriptor.NodeId}:{descriptor.ContributionGoalWorkspaceOffset}:{descriptor.GoalCount}");
                 for (int bindingIndex = 0; bindingIndex < descriptor.Bindings.Count; bindingIndex++)
                 {
                     CharacterPresentationPoseBoneIkGoalBindingDescriptor binding = descriptor.Bindings[bindingIndex];
@@ -2493,7 +2615,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationFootPlacementDescriptor descriptor =
                     state.FootPlacements[i];
                 values.Add(
-                    $"foot-placement:{i}:{descriptor.NodeId}:{descriptor.Profile.ProfileId}:{descriptor.Profile.Revision}:{descriptor.CalibrationId}:{descriptor.CalibrationRevision}:{descriptor.GoalWorkspaceOffset}");
+                    $"foot-placement:{i}:{descriptor.NodeId}:{descriptor.Profile.ProfileId}:{descriptor.Profile.Revision}:{descriptor.CalibrationId}:{descriptor.CalibrationRevision}:{descriptor.ContributionGoalWorkspaceOffset}");
             }
             for (int i = 0; i < state.FullBodyIks.Count; i++)
             {
@@ -2501,8 +2623,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 values.Add(
                     $"full-body-ik:{i}:{descriptor.NodeId}:{descriptor.ProfileId}:{descriptor.ProfileRevision}:{descriptor.BackendIdentity}:{descriptor.BackendSourceRevision}");
             }
-            for (int i = 0; i < state.FullBodyIkGoalInputValueIndices.Count; i++)
-                values.Add($"full-body-ik-goal-input:{i}:{state.FullBodyIkGoalInputValueIndices[i]}");
+            for (int i = 0;
+                 i < state.FullBodyIkGoalContributionInputValueIndices.Count;
+                 i++)
+            {
+                values.Add(
+                    $"full-body-ik-goal-contribution-input:{i}:{state.FullBodyIkGoalContributionInputValueIndices[i]}");
+            }
             for (int i = 0; i < state.ClipPlayers.Count; i++)
             {
                 CharacterPresentationClipPlayerDescriptor descriptor = state.ClipPlayers[i];
@@ -2585,7 +2712,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPresentationPoseOperation operation = state.Operations[i];
                 values.Add(FormattableString.Invariant(
-                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalInputStart}:{operation.FullBodyIkGoalInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.ClipPlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
+                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalContributionValueIndex}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.InputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalContributionInputStart}:{operation.FullBodyIkGoalContributionInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.ClipPlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
             }
             for (int i = 0; i < stages.Count; i++)
             {
@@ -2593,7 +2720,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 values.Add(
                     $"stage:{stage.Index}:{(int)stage.ExecutionDomain}:{(int)stage.InputPoseSpace}:{(int)stage.OutputPoseSpace}:{stage.OperationStart}:{stage.OperationCount}:{stage.NativeOperationStart}:{stage.NativeOperationCount}:{stage.PoseWorkspaceStart}:{stage.PoseWorkspaceCount}:{stage.CompletionIndex}:{stage.DiagnosticIndex}");
             }
-            values.Add(FormattableString.Invariant($"workspace:{poseWorkspace}:{state.FullBodyIkGoalSetValueCount}:{state.FullBodyIkGoalWorkspaceCount}:{parameterWorkspace}:{contributionWorkspace}:{frameCache}:{state.OutputOperationIndex}"));
+            values.Add(FormattableString.Invariant(
+                $"workspace:{poseWorkspace}:{state.FullBodyIkGoalContributionValueCount}:{state.FullBodyIkGoalSetValueCount}:{state.FullBodyIkGoalContributionGoalWorkspaceCount}:{parameterWorkspace}:{contributionWorkspace}:{frameCache}:{state.OutputOperationIndex}"));
             return StableHash.Compute(values.ToArray()).ToString();
         }
     }

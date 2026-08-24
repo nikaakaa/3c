@@ -10,10 +10,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         public static readonly LinkedPoseInterfaceId InterfaceId = new LinkedPoseInterfaceId("character.equipment-pose");
         public static readonly LinkedPoseEntryId EquipmentPoseEntryId = new LinkedPoseEntryId("equipment.pose");
-        public static readonly LinkedPoseEntryId EquipmentHandGoalsEntryId = new LinkedPoseEntryId("equipment.hand-goals");
         public static readonly PoseInterfacePortId PoseInputPortId = new PoseInterfacePortId("input.pose");
         public static readonly PoseInterfacePortId PoseOutputPortId = new PoseInterfacePortId("output.pose");
-        public static readonly PoseInterfacePortId GoalsOutputPortId = new PoseInterfacePortId("output.goals");
 
         public static CharacterLinkedPoseInterfaceEntryDescriptor[] CreateEntries()
         {
@@ -26,14 +24,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     {
                         new CharacterLinkedPoseInterfacePortDescriptor(PoseInputPortId, CharacterPosePortDirection.Input, CharacterPosePortKind.LocalPose, CharacterPoseSpace.Local, true, 0),
                         new CharacterLinkedPoseInterfacePortDescriptor(PoseOutputPortId, CharacterPosePortDirection.Output, CharacterPosePortKind.LocalPose, CharacterPoseSpace.Local, true, 1)
-                    }),
-                new CharacterLinkedPoseInterfaceEntryDescriptor(
-                    EquipmentHandGoalsEntryId,
-                    CharacterPoseExecutionDomain.PureValue,
-                    new[]
-                    {
-                        new CharacterLinkedPoseInterfacePortDescriptor(PoseInputPortId, CharacterPosePortDirection.Input, CharacterPosePortKind.ComponentPose, CharacterPoseSpace.Component, true, 0),
-                        new CharacterLinkedPoseInterfacePortDescriptor(GoalsOutputPortId, CharacterPosePortDirection.Output, CharacterPosePortKind.FullBodyIkGoals, CharacterPoseSpace.Component, true, 1)
                     })
             };
         }
@@ -41,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public static void RequireFormalContract(CharacterLinkedPoseInterfaceAsset value)
         {
             value?.RequireValid();
-            if (!value || value.InterfaceId != InterfaceId || value.Revision.Value != 1)
+            if (!value || value.InterfaceId != InterfaceId || value.Revision.Value != 2)
                 throw new InvalidOperationException("Equipment Linked Pose Interface identity or revision is invalid.");
             CharacterLinkedPoseInterfaceEntryDescriptor[] expected = CreateEntries();
             if (value.Entries.Count != expected.Length)

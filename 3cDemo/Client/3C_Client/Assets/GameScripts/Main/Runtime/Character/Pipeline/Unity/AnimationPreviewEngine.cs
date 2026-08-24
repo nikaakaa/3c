@@ -22,7 +22,6 @@ namespace ThirdPersonCharacter.Pipeline
         readonly CharacterEquipmentLinkedPoseRuntime m_LinkedPose;
         readonly CharacterEquipmentPreviewFixture
             m_EquipmentFixture;
-        readonly CharacterFootPlacementRuntime m_FootPlacement;
         readonly bool m_WorldContextAvailable;
         readonly ActorId m_PreviewActorId;
         readonly Guid m_DiagnosticsOwnerId;
@@ -100,22 +99,9 @@ namespace ThirdPersonCharacter.Pipeline
                     CharacterBodyPresentationSourceMode.CommittedStream,
                     m_Projection);
             CharacterAnimationPresentationRuntime playback = null;
-            CharacterFootPlacementRuntime footPlacement = null;
+            CharacterFootPlacementModule footPlacement = null;
             try
             {
-                playback = new CharacterAnimationPresentationRuntime(
-                    m_PreviewActorId,
-                    animationBindings,
-                    motionMatching,
-                    animancer,
-                    animationRigBinding,
-                    false);
-                playback.SetDiagnosticsInterest(
-                    m_DiagnosticsOwnerId,
-                    AnimationPresentationDiagnosticsInterest.LiveState |
-                    AnimationPresentationDiagnosticsInterest.OperationDetail |
-                    AnimationPresentationDiagnosticsInterest.FinalPoseDetail);
-                motionMatching = null;
                 if (m_Projection.PosePlan.FootPlacements.Count == 1 && worldAwareBinding)
                 {
                     worldAwareBinding.RequireValid();
@@ -130,20 +116,35 @@ namespace ThirdPersonCharacter.Pipeline
                         animationRigBinding,
                         worldAwareBinding);
                     rig.RequireValid();
-                    CharacterFootPlacementRuntimeSettings footPlacementSettings =
+                    CharacterFootPlacementModuleSettings footPlacementSettings =
                         descriptor.Profile.BuildSettings(m_Projection, rig);
                     var worldQuery = new CharacterFootPlacementWorldQueryBackend(
                         physicsScene,
                         rig,
                         footPlacementSettings.LandingPrediction.HitCapacity,
                         footPlacementSettings.GroundDetection.SegmentHitCapacity);
-                    footPlacement = new CharacterFootPlacementRuntime(
+                    footPlacement = new CharacterFootPlacementModule(
                         m_PreviewActorId,
                         footPlacementSettings,
                         rig,
                         null,
                         worldQuery);
                 }
+                playback = new CharacterAnimationPresentationRuntime(
+                    m_PreviewActorId,
+                    animationBindings,
+                    motionMatching,
+                    animancer,
+                    animationRigBinding,
+                    footPlacement,
+                    false);
+                footPlacement = null;
+                playback.SetDiagnosticsInterest(
+                    m_DiagnosticsOwnerId,
+                    AnimationPresentationDiagnosticsInterest.LiveState |
+                    AnimationPresentationDiagnosticsInterest.OperationDetail |
+                    AnimationPresentationDiagnosticsInterest.FinalPoseDetail);
+                motionMatching = null;
                 var tuningTarget = new CharacterPoseTuningTargetIdentity(
                     m_PreviewActorId.Value,
                     m_Projection.ProgramId,
@@ -159,10 +160,9 @@ namespace ThirdPersonCharacter.Pipeline
                         m_Projection.TuningDefaultBlock,
                         m_Projection.PublishedParameterRevision));
                 m_Playback = playback;
-                m_FootPlacement = footPlacement;
                 m_WorldContextAvailable =
                     m_Projection.PosePlan.FootPlacements.Count == 0 ||
-                    m_FootPlacement != null;
+                    m_Playback.HasFootPlacement;
             }
             catch
             {
@@ -357,7 +357,6 @@ namespace ThirdPersonCharacter.Pipeline
                 in bodyFrame,
                 in factFrame,
                 m_LinkedPose.Session,
-                m_FootPlacement,
                 null);
             m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
                 m_Projection.PosePlan,
@@ -426,7 +425,6 @@ namespace ThirdPersonCharacter.Pipeline
                     in factFrame,
                     in parameterFrame,
                     m_LinkedPose.Session,
-                    m_FootPlacement,
                     null);
             }
             else
@@ -439,7 +437,6 @@ namespace ThirdPersonCharacter.Pipeline
                     in bodyFrame,
                     in factFrame,
                     m_LinkedPose.Session,
-                    m_FootPlacement,
                     null);
             }
             m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
@@ -482,7 +479,6 @@ namespace ThirdPersonCharacter.Pipeline
                     in bodyFrame,
                     in factFrame,
                     m_LinkedPose.Session,
-                    m_FootPlacement,
                     null);
             m_PosePlanStages =
                 CharacterPosePlanStageSnapshotFactory
@@ -527,7 +523,6 @@ namespace ThirdPersonCharacter.Pipeline
                     in bodyFrame,
                     in factFrame,
                     m_LinkedPose.Session,
-                    m_FootPlacement,
                     null);
                 m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
                     m_Projection.PosePlan,
@@ -555,7 +550,6 @@ namespace ThirdPersonCharacter.Pipeline
 
         public void Dispose()
         {
-            m_FootPlacement?.Dispose();
             m_Playback.RemoveDiagnosticsInterest(
                 m_DiagnosticsOwnerId);
             m_Playback.Dispose();
@@ -563,7 +557,7 @@ namespace ThirdPersonCharacter.Pipeline
 
         void ResetFootPlacement(ulong renderFrame)
         {
-            m_FootPlacement?.Reset(
+            m_Playback.ResetFootPlacement(
                 new CharacterFootPlacementReset(
                     m_PreviewActorId,
                     renderFrame,

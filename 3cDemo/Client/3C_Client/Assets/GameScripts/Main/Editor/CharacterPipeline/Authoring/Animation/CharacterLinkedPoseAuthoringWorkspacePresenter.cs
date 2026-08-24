@@ -647,7 +647,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 AddSection("Boundary");
                 foreach (CharacterTypedPoseNode node in graph.Nodes)
                     AddLink(node.DisplayName, "linked-entry:" + m_Window.FindImplementationId(entry) + ":" + entry.EntryId.Value);
-                AddHelp("Entry Graph 初始只拥有 Graph Input/Graph Output；Empty 模板额外拥有显式 Empty Full Body IK Goals 节点。", HelpBoxMessageType.Info);
+                AddHelp("Entry Graph 初始只拥有 Graph Input/Graph Output。", HelpBoxMessageType.Info);
             }
             AddDiagnostics(CollectEntryDiagnostics(entry));
         }

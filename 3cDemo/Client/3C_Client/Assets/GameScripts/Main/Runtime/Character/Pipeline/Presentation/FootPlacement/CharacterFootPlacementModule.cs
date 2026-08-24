@@ -33,7 +33,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFullBodyIkGoal RightGoal;
         internal CharacterFootGroundPathPage LeftGroundPath;
         internal CharacterFootGroundPathPage RightGroundPath;
-        internal CharacterFutureBodyTranslation BodyTrajectory;
+        internal readonly CharacterFutureBodyTranslation BodyTrajectory =
+            new CharacterFutureBodyTranslation();
         internal ulong BodyTrajectoryTick;
         internal ulong BodyTrajectoryResetSequence;
         internal ulong BodyTrajectoryGeneration;
@@ -68,7 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RightGoal = default;
                 LeftGroundPath = null;
                 RightGroundPath = null;
-                BodyTrajectory = committed.BodyTrajectory;
+                BodyTrajectory.CopyFrom(committed.BodyTrajectory);
                 BodyTrajectoryTick = committed.BodyTrajectoryTick;
                 BodyTrajectoryResetSequence = committed.BodyTrajectoryResetSequence;
                 BodyTrajectoryGeneration = committed.BodyTrajectoryGeneration;
@@ -77,8 +78,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasBodyTrajectoryAttempt = committed.HasBodyTrajectoryAttempt;
                 Diagnostics.Clear();
             }
-            CharacterFootStateMachine.BeginFrame(ref LeftFoot);
-            CharacterFootStateMachine.BeginFrame(ref RightFoot);
             FrameSequence = 0;
             CompletionIdentity = 0;
             RecordDiagnostics = recordDiagnostics;
@@ -114,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RightGoal = default;
             LeftGroundPath = null;
             RightGroundPath = null;
-            BodyTrajectory = null;
+            BodyTrajectory.Clear();
             BodyTrajectoryTick = 0;
             BodyTrajectoryResetSequence = 0;
             BodyTrajectoryGeneration = 0;
@@ -172,8 +171,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootGroundPathPagePool m_LeftGroundPath;
         readonly CharacterFootGroundPathPagePool m_RightGroundPath;
 
-        CharacterFootPlacementBank m_CommittedFrameBank;
-        CharacterFootPlacementBank m_PendingFrameBank;
         bool m_Disposed;
 
         internal CharacterFootPlacementModule(
@@ -201,27 +198,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPlacementBank CreateBank() =>
             new CharacterFootPlacementBank();
 
-        internal void BeginFrame(
-            CharacterFootPlacementBank committed,
-            CharacterFootPlacementBank pending,
-            bool recordDiagnostics)
-        {
-            RequireAlive();
-            if (pending == null)
-                throw new ArgumentNullException(nameof(pending));
-            if (m_PendingFrameBank != null)
-                throw new InvalidOperationException("Foot Placement frame is already open.");
-            pending.Begin(committed, recordDiagnostics);
-            m_CommittedFrameBank = committed;
-            m_PendingFrameBank = pending;
-        }
-
         internal CharacterFootPlacementResult EvaluateFrame(
-            in CharacterFootPlacementFrameInput frame)
+            in CharacterFootPlacementFrameInput frame,
+            CharacterFootPlacementBank committedBank,
+            CharacterFootPlacementBank bank)
         {
             RequireAlive();
-            CharacterFootPlacementBank committedBank = m_CommittedFrameBank;
-            CharacterFootPlacementBank bank = m_PendingFrameBank;
             if (bank == null || !bank.HasFrame)
                 throw new InvalidOperationException("Foot Placement has no open bank.");
             if (bank.FrameSequence != 0)
@@ -267,16 +249,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentSegmentRemainingSeconds,
                 frame.Body);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
+            AnimationBiomechanicalStepHeader leftCurrentStep =
+                frame.Pose.LeftFootSteps.CurrentStep;
+            AnimationBiomechanicalStepHeader rightCurrentStep =
+                frame.Pose.RightFootSteps.CurrentStep;
 
-            CharacterFootStateMachine.PromoteLanded(
-                ref bank.LeftFoot,
-                frame.Pose.LeftFootSteps.CurrentStep);
-            CharacterFootStateMachine.PromoteLanded(
-                ref bank.RightFoot,
-                frame.Pose.RightFootSteps.CurrentStep);
-
-            CharacterFootLandingSnapshot leftLanding = bank.LeftFoot.LandingSnapshot;
-            CharacterFootLandingSnapshot rightLanding = bank.RightFoot.LandingSnapshot;
+            CharacterFootLandingSnapshot leftLanding =
+                CharacterFootStateMachine.ProjectLandingBeforePrediction(
+                    in bank.LeftFoot,
+                    in leftCurrentStep);
+            CharacterFootLandingSnapshot rightLanding =
+                CharacterFootStateMachine.ProjectLandingBeforePrediction(
+                    in bank.RightFoot,
+                    in rightCurrentStep);
             CharacterFootLandingPredictionPair leftPair = PredictFootPair(
                 CharacterFootSide.Left,
                 frame.Pose.LeftFootSteps,
@@ -307,18 +292,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationBiomechanicalStepHeader leftSelectedStep = leftPair.SelectedStep;
             CharacterFootLandingPredictionResult right = rightPair.Selected;
             AnimationBiomechanicalStepHeader rightSelectedStep = rightPair.SelectedStep;
-            CharacterFootStateMachine.CaptureNextSwing(
-                ref bank.LeftFoot,
+            leftLanding = CharacterFootStateMachine.ProjectLandingAfterPrediction(
+                in bank.LeftFoot,
+                in leftCurrentStep,
                 in leftSelectedStep,
                 in left,
                 m_Settings.FootMotion);
-            CharacterFootStateMachine.CaptureNextSwing(
-                ref bank.RightFoot,
+            rightLanding = CharacterFootStateMachine.ProjectLandingAfterPrediction(
+                in bank.RightFoot,
+                in rightCurrentStep,
                 in rightSelectedStep,
                 in right,
                 m_Settings.FootMotion);
-            leftLanding = bank.LeftFoot.LandingSnapshot;
-            rightLanding = bank.RightFoot.LandingSnapshot;
             bool hasLeftLastLanding = leftLanding.HasLastLanding;
             bool hasLeftNextSwingLanding = leftLanding.HasNextSwingLanding;
             bool hasRightLastLanding = rightLanding.HasLastLanding;
@@ -428,17 +413,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 frame.PresentationDeltaSeconds,
                 m_Settings.FootMotion);
+            var leftEvaluation = new CharacterFootStateEvaluation(
+                CharacterFootSide.Left,
+                in leftCurrentStep,
+                in leftSelectedStep,
+                in left,
+                in leftConstraintFrame);
+            var rightEvaluation = new CharacterFootStateEvaluation(
+                CharacterFootSide.Right,
+                in rightCurrentStep,
+                in rightSelectedStep,
+                in right,
+                in rightConstraintFrame);
             CharacterResolvedFootResult leftResolved =
-                CharacterFootStateMachine.Resolve(
+                CharacterFootStateMachine.Evaluate(
                     ref bank.LeftFoot,
-                    CharacterFootSide.Left,
-                    in leftConstraintFrame,
+                    in leftEvaluation,
                     out CharacterFootSwingMotionResult leftFootMotion);
             CharacterResolvedFootResult rightResolved =
-                CharacterFootStateMachine.Resolve(
+                CharacterFootStateMachine.Evaluate(
                     ref bank.RightFoot,
-                    CharacterFootSide.Right,
-                    in rightConstraintFrame,
+                    in rightEvaluation,
                     out CharacterFootSwingMotionResult rightFootMotion);
             var resolvedPair = new CharacterResolvedFootPair(
                 in leftResolved,
@@ -562,11 +557,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal void ValidateFrame(
+            CharacterFootPlacementBank bank,
             ulong renderFrame,
             ulong completionIdentity)
         {
             RequireAlive();
-            CharacterFootPlacementBank bank = m_PendingFrameBank;
             if (bank == null || !bank.HasFrame ||
                 bank.FrameSequence != renderFrame ||
                 bank.CompletionIdentity != completionIdentity)
@@ -574,14 +569,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException(
                     "Foot Placement pending completion identity is inconsistent.");
             }
-        }
-
-        internal void CompleteFrame()
-        {
-            CharacterFootPlacementBank bank = m_PendingFrameBank;
-            bank.HasFrame = false;
-            m_CommittedFrameBank = null;
-            m_PendingFrameBank = null;
         }
 
         internal void PublishCommittedDiagnostics(CharacterFootPlacementBank bank)
@@ -599,20 +586,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        internal void DiscardFrame()
+        internal void ReleasePendingPages(
+            CharacterFootPlacementBank committed,
+            CharacterFootPlacementBank pending)
         {
             RequireAlive();
-            CharacterFootPlacementBank committed = m_CommittedFrameBank;
-            CharacterFootPlacementBank pending = m_PendingFrameBank;
             CharacterFootGroundPathPagePool.Discard(
                 pending?.LeftGroundPath,
                 committed?.LeftGroundPath);
             CharacterFootGroundPathPagePool.Discard(
                 pending?.RightGroundPath,
                 committed?.RightGroundPath);
-            pending?.ClearPending();
-            m_CommittedFrameBank = null;
-            m_PendingFrameBank = null;
         }
 
         internal void ResetShared(in CharacterFootPlacementReset reset)
@@ -1032,7 +1016,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (sameCommittedBody &&
                 duration <= bank.BodyTrajectoryRequestedDuration + 0.0001f)
             {
-                return bank.BodyTrajectory;
+                return bank.BodyTrajectory.IsAvailable
+                    ? bank.BodyTrajectory
+                    : null;
             }
 
             bank.HasBodyTrajectoryAttempt = true;
@@ -1041,7 +1027,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bank.BodyTrajectoryGeneration = timeline.Generation;
             bank.BodyTrajectoryAuthorityTick = timeline.AuthorityTick.Value;
             bank.BodyTrajectoryRequestedDuration = duration;
-            bank.BodyTrajectory = null;
+            bank.BodyTrajectory.Clear();
 
             var request = new CharacterFutureBodyTranslationRequest(
                 m_ActorId,
@@ -1058,11 +1044,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightIncomingTime);
             if (m_FutureBodyTranslationSource.TryPredict(
                     in request,
-                    out CharacterFutureBodyTranslation trajectory))
-            {
-                bank.BodyTrajectory = trajectory;
-            }
-            return bank.BodyTrajectory;
+                    bank.BodyTrajectory))
+                return bank.BodyTrajectory;
+            return null;
         }
 
         static float ResolvePredictionTime(

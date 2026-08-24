@@ -381,7 +381,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             AnimationPoseNativeWorkspace workspace = null;
             CharacterPoseGraphNativeProgram poseProgram = null;
-            CharacterFinalIkFullBodySolver[] fullBodyIkSolvers = null;
+            CharacterFinalIkFullBodySolver fullBodyIkSolver = null;
             CharacterPoseConstraintRuntime poseConstraints = null;
             PoseInertializationNativeProgram inertializationProgram = null;
             PhysicalPoseSourceRegistry physicalSources = null;
@@ -406,19 +406,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.Rig,
                     projection.BlendCurveCatalog,
                     projection.BlendProfileCatalog);
-                fullBodyIkSolvers = new CharacterFinalIkFullBodySolver[
-                    projection.PosePlan.FullBodyIks.Count];
-                for (int solverIndex = 0; solverIndex < fullBodyIkSolvers.Length; solverIndex++)
-                {
-                    CharacterPresentationFullBodyIkDescriptor descriptor =
-                        projection.PosePlan.FullBodyIks[solverIndex];
-                    descriptor.RequireValid();
-                    fullBodyIkSolvers[solverIndex] = new CharacterFinalIkFullBodySolver(
-                        projection.Rig,
-                        descriptor.Profile,
-                        poseProgram.ParentIndices,
-                        poseProgram.VirtualBones);
-                }
+                if (projection.PosePlan.FullBodyIks.Count != 1)
+                    throw new InvalidOperationException(
+                        "Pose Plan requires exactly one Full Body IK descriptor.");
+                CharacterPresentationFullBodyIkDescriptor fullBodyIkDescriptor =
+                    projection.PosePlan.FullBodyIks[0];
+                fullBodyIkDescriptor.RequireValid();
+                fullBodyIkSolver = new CharacterFinalIkFullBodySolver(
+                    projection.Rig,
+                    fullBodyIkDescriptor.Profile,
+                    poseProgram.ParentIndices,
+                    poseProgram.VirtualBones);
                 inertializationProgram = new PoseInertializationNativeProgram(
                     projection.PosePlan,
                     projection.BlendCurveCatalog,
@@ -574,7 +572,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.Rig);
                 poseConstraints = new CharacterPoseConstraintRuntime(
                     footPlacement,
-                    fullBodyIkSolvers,
+                    fullBodyIkSolver,
                     finalWriter,
                     poseProgram.FullBodyIkGoalContributionCount,
                     poseProgram.FullBodyIkContributionGoalCount,
@@ -904,7 +902,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     continue;
                 }
                 return m_PoseConstraints.TryGetFullBodyIkFailure(
-                    operation.FullBodyIkIndex,
                     completionIdentity,
                     out result);
             }
@@ -1653,22 +1650,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             using (DiagnosticsMarker.Auto())
             {
+                bool requiresFoot = m_PoseConstraints.HasFootPlacement &&
+                                    CharacterPoseConstraintRuntime
+                                        .RequiresFootDiagnostics(interest);
+                bool requiresSolver = CharacterPoseConstraintRuntime
+                    .RequiresFullBodyIkDiagnostics(interest);
+                bool requiresPhysical = CharacterPoseConstraintRuntime
+                    .RequiresPhysicalDiagnostics(interest);
                 AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                     m_PoseConstraints.PhysicalWriteDiagnostics;
+                CharacterFootPlacementDiagnosticsPage footPage =
+                    m_PoseConstraints.CommittedFootDiagnostics;
                 ref readonly CharacterFootLandingPredictionDiagnostics footDiagnostics =
-                    ref m_PoseConstraints.CommittedFootDiagnostics.Value;
+                    ref footPage.Value;
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
-                    m_PoseConstraints.GetSolverDiagnostics(0);
+                    m_PoseConstraints.GetSolverDiagnostics();
                 if (m_PoseConstraints.CommittedBankIdentity == 0 ||
-                    footDiagnostics.FrameSequence !=
-                    m_PoseConstraints.CommittedRenderFrame ||
-                    footDiagnostics.CompletionIdentity !=
-                    m_LastCompletedFrame.CompletionIdentity ||
+                    requiresFoot &&
+                    (!m_PoseConstraints.HasCommittedFootDiagnostics ||
+                     footDiagnostics.FrameSequence !=
+                     m_PoseConstraints.CommittedRenderFrame ||
+                     footDiagnostics.CompletionIdentity !=
+                     m_LastCompletedFrame.CompletionIdentity) ||
+                    requiresSolver &&
                     solverDiagnostics.OutputCompletionIdentity !=
                     m_LastCompletedFrame.CompletionIdentity ||
-                    !physicalWrite.IsAvailable ||
-                    physicalWrite.CompletionIdentity !=
-                    m_LastCompletedFrame.CompletionIdentity)
+                    requiresPhysical &&
+                    (!physicalWrite.IsAvailable ||
+                     physicalWrite.CompletionIdentity !=
+                     m_LastCompletedFrame.CompletionIdentity))
                 {
                     throw new InvalidOperationException(
                         "Animation diagnostics Pose Constraint Bank lineage is inconsistent.");

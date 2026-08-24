@@ -1030,7 +1030,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     : -1;
                 int fullBodyIkIndex = handler.Kind == CharacterPoseNodeKind.FullBodyIK
                     ? CompileFullBodyIk(
-                        RequirePayload<CharacterFullBodyIkPosePayload>(irNode),
                         scopedNodeId,
                         state)
                     : -1;
@@ -1594,16 +1593,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static int CompileFullBodyIk(
-            CharacterFullBodyIkPosePayload payload,
             PoseNodeId scopedNodeId,
             CompilationState state)
         {
+            CharacterFullBodyIkProfile profile = state.Profile.FullBodyIkProfile;
+            if (!profile)
+                throw new InvalidOperationException("Animation Presentation Profile has no Full Body IK Profile.");
+            profile.RequireValid();
             int index = state.FullBodyIks.Count;
             state.FullBodyIks.Add(
                 new CharacterPresentationFullBodyIkDescriptor(
                     index,
                     scopedNodeId,
-                    payload.Profile));
+                    profile));
             return index;
         }
 

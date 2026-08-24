@@ -123,25 +123,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.FullBodyIK;
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
-            new CharacterFullBodyIkPosePayload(
-                input.Require<CharacterFullBodyIkProfile>("profile"));
+            new CharacterFullBodyIkPosePayload();
 
         protected override object ReadField(CharacterFullBodyIkPosePayload payload, string field) =>
-            field switch
-            {
-                "profile" => payload.Profile,
-                "backend" => CharacterFinalIkPoseBufferBackend.SourceIdentity,
-                _ => base.ReadField(payload, field)
-            };
-
-        protected override void Validate(CharacterFullBodyIkPosePayload payload, string sourcePath)
-        {
-            CharacterPoseCompilerHandlerValidation.Require(
-                payload.Profile,
-                sourcePath,
-                "FinalIK FBBIK Profile is missing.");
-            payload.Profile.RequireValid();
-        }
+            field == "backend"
+                ? CharacterFinalIkPoseBufferBackend.SourceIdentity
+                : base.ReadField(payload, field);
 
         protected override void ValidateRig(
             CharacterFullBodyIkPosePayload payload,

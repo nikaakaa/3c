@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static bool TryReadCurrentValue(
             CharacterPresentationPoseGraphAsset asset,
+            CharacterAnimationPresentationProfile profile,
             CharacterPoseTuningLayoutEntry entry,
             out CharacterPoseTuningValue value,
             out string error)
@@ -44,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException("Pose tuning requires an exact Pose Graph owner.");
                 if (entry == null)
                     throw new InvalidOperationException("Pose tuning field is missing.");
-                value = ReadCurrentValue(asset, entry);
+                value = ReadCurrentValue(asset, profile, entry);
                 return true;
             }
             catch (Exception exception)
@@ -56,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static bool TryCompileCurrentBlock(
             CharacterPresentationPoseGraphAsset asset,
+            CharacterAnimationPresentationProfile profile,
             CharacterPresentationProjection projection,
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock source,
@@ -92,6 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         continue;
                     CharacterPoseTuningValue value = ReadCurrentValue(
                         asset,
+                        profile,
                         entry);
                     result = CharacterPoseTuningCandidateCompiler.CompileBlock(
                         layout,
@@ -132,7 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (entry.OwnerId.StartsWith("full-body-ik-profile:", StringComparison.Ordinal))
             {
-                CharacterFullBodyIkProfile owner = FindFullBodyIkProfile(asset, entry.OwnerId);
+                CharacterFullBodyIkProfile owner = FindFullBodyIkProfile(profile, entry.OwnerId);
                 ApplyProfile(owner, entry, value);
                 return;
             }
@@ -159,6 +162,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static CharacterPoseTuningValue ReadCurrentValue(
             CharacterPresentationPoseGraphAsset asset,
+            CharacterAnimationPresentationProfile profile,
             CharacterPoseTuningLayoutEntry entry)
         {
             if (entry.OwnerId.StartsWith(
@@ -166,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     StringComparison.Ordinal))
             {
                 return ReadFullBodyIkValue(
-                    FindFullBodyIkProfile(asset, entry.OwnerId),
+                    FindFullBodyIkProfile(profile, entry.OwnerId),
                     entry.FieldId.Substring(entry.OwnerId.Length + 1));
             }
             if (entry.OwnerId.StartsWith(
@@ -480,17 +484,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static CharacterFullBodyIkProfile FindFullBodyIkProfile(
-            CharacterPresentationPoseGraphAsset asset,
+            CharacterAnimationPresentationProfile profile,
             string ownerId)
         {
-            return asset.EnumerateGraphs()
-                .Where(graph => graph != null)
-                .SelectMany(graph => graph.Nodes)
-                .Where(node => node?.Payload is CharacterFullBodyIkPosePayload)
-                .Select(node => ((CharacterFullBodyIkPosePayload)node.Payload).Profile)
-                .Where(profile => profile && $"full-body-ik-profile:{profile.ProfileId}" == ownerId)
-                .Distinct()
-                .SingleOrDefault();
+            CharacterFullBodyIkProfile owner = profile?.FullBodyIkProfile;
+            return owner && $"full-body-ik-profile:{owner.ProfileId}" == ownerId
+                ? owner
+                : null;
         }
 
         static CharacterFootPlacementProfile FindFootPlacementProfile(

@@ -1811,7 +1811,6 @@ MonoBehaviour:
       type: {class: CharacterFullBodyIkPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
-        m_Profile: {fileID: 11400000, guid: d8baaf75d0994cf6aa8ed54c35542ea0, type: 2}
     - rid: 3396202774835757062
       type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}

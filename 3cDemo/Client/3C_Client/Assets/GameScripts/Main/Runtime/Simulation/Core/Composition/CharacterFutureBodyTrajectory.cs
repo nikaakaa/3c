@@ -128,16 +128,33 @@ namespace ThirdPersonSimulation
 
     public sealed class CharacterFutureBodyTranslation
     {
+        public const int MaximumSampleCount = 5;
         readonly CharacterFutureBodyTranslationSample[] m_Samples;
+        string m_SourceIdentity = string.Empty;
+        int m_SampleCount;
 
-        public CharacterFutureBodyTranslation(
-            string sourceIdentity,
-            CharacterFutureBodyTranslationSample[] samples)
+        public CharacterFutureBodyTranslation()
         {
-            SourceIdentity = SimulationIdentity.Require(sourceIdentity, nameof(sourceIdentity));
-            if (samples == null || samples.Length < 2 || samples[0].ElapsedSeconds != 0f)
+            m_Samples = new CharacterFutureBodyTranslationSample[MaximumSampleCount];
+        }
+
+        public string SourceIdentity => m_SourceIdentity;
+        public int SampleCount => m_SampleCount;
+        public bool IsAvailable => m_SampleCount >= 2;
+        public float DurationSeconds => IsAvailable
+            ? m_Samples[m_SampleCount - 1].ElapsedSeconds
+            : 0f;
+
+        public void Set(
+            string sourceIdentity,
+            ReadOnlySpan<CharacterFutureBodyTranslationSample> samples)
+        {
+            string identity = SimulationIdentity.Require(
+                sourceIdentity,
+                nameof(sourceIdentity));
+            if (samples.Length < 2 || samples.Length > m_Samples.Length ||
+                samples[0].ElapsedSeconds != 0f)
                 throw new ArgumentException("Future Body Translation requires an anchored sample sequence.", nameof(samples));
-            m_Samples = new CharacterFutureBodyTranslationSample[samples.Length];
             float previousTime = -1f;
             for (int i = 0; i < samples.Length; i++)
             {
@@ -147,22 +164,41 @@ namespace ThirdPersonSimulation
                 m_Samples[i] = sample;
                 previousTime = sample.ElapsedSeconds;
             }
+            for (int i = samples.Length; i < m_Samples.Length; i++)
+                m_Samples[i] = default;
+            m_SourceIdentity = identity;
+            m_SampleCount = samples.Length;
         }
 
-        public string SourceIdentity { get; }
-        public int SampleCount => m_Samples.Length;
-        public float DurationSeconds => m_Samples[m_Samples.Length - 1].ElapsedSeconds;
+        public void CopyFrom(CharacterFutureBodyTranslation source)
+        {
+            if (source == null || !source.IsAvailable)
+            {
+                Clear();
+                return;
+            }
+            m_SourceIdentity = source.m_SourceIdentity;
+            m_SampleCount = source.m_SampleCount;
+            Array.Copy(source.m_Samples, m_Samples, m_Samples.Length);
+        }
+
+        public void Clear()
+        {
+            m_SourceIdentity = string.Empty;
+            m_SampleCount = 0;
+            Array.Clear(m_Samples, 0, m_Samples.Length);
+        }
 
         public CharacterFutureBodyTranslationSample SampleAt(int index)
         {
-            if ((uint)index >= (uint)m_Samples.Length)
+            if ((uint)index >= (uint)m_SampleCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
             return m_Samples[index];
         }
 
         public CharacterFutureBodyTranslationSample Evaluate(float elapsedSeconds)
         {
-            if (!float.IsFinite(elapsedSeconds) || elapsedSeconds < 0f ||
+            if (!IsAvailable || !float.IsFinite(elapsedSeconds) || elapsedSeconds < 0f ||
                 elapsedSeconds > DurationSeconds + 0.0001f)
             {
                 throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
@@ -170,7 +206,7 @@ namespace ThirdPersonSimulation
             float time = Math.Min(elapsedSeconds, DurationSeconds);
             if (time <= 0f)
                 return m_Samples[0];
-            for (int i = 1; i < m_Samples.Length; i++)
+            for (int i = 1; i < m_SampleCount; i++)
             {
                 CharacterFutureBodyTranslationSample end = m_Samples[i];
                 if (time > end.ElapsedSeconds)
@@ -189,7 +225,7 @@ namespace ThirdPersonSimulation
                     Lerp(start.VelocityY, end.VelocityY, t),
                     Lerp(start.VelocityZ, end.VelocityZ, t));
             }
-            return m_Samples[m_Samples.Length - 1];
+            return m_Samples[m_SampleCount - 1];
         }
 
         static float Lerp(float start, float end, float t) => start + (end - start) * t;
@@ -199,6 +235,6 @@ namespace ThirdPersonSimulation
     {
         bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,
-            out CharacterFutureBodyTranslation translation);
+            CharacterFutureBodyTranslation output);
     }
 }

@@ -199,6 +199,18 @@ Diagnostics只从Pending Context、Observation、Resolved Result和后续阶段R
 
 Diagnostics不能读取世界、选择Support、生成Goal或修改Context。无interest时不复制大页。
 
+## Decision 10: 唯一FBBIK配置与单数运行合同
+
+`CharacterAnimationPresentationProfile`是FullBodyIK Profile唯一作者Owner。FullBodyIK Pose节点只表达拓扑，不保存Profile；Compiler必须从当前Presentation Profile生成Descriptor。Descriptor必须冻结Profile Id与Revision，并在加载与构造Runtime时和当前Profile精确对账。
+
+运行时固定只有一个FBBIK Solver、一个BendHistory、一个Goal Set和一个Solver Outcome，不得继续使用长度为1的数组、Goal Set索引或遍历接口。Solver Outcome必须显式保存Produced、Frame、Completion与Rig lineage；默认值表示未执行，不能通过Physical Writer前验证。
+
+## Decision 11: 子模块页所有权与固定预测Workspace
+
+根Bank直接拥有Foot Committed/Pending页并把本帧页显式交给Foot Module单次Evaluate。Foot Module可以保存不可变依赖与算法Implementation，但不得保存第二套Committed/Pending指针、Begin/Complete/Discard事务状态。State Machine必须用一个Evaluate调用内部完成Landing晋升、Next Swing捕获和Constraint解析，外层不得编排其内部转换顺序。
+
+Future Body Translation Source必须写入调用方预分配的固定容量Workspace。一次预测只更新Sample数量和内容，不得创建Trajectory对象、临时Sample数组或构造时复制数组；同一根Bank在一帧内继续复用一次预测结果。
+
 ## Rejected Alternatives
 
 - 原样保留Landing Lifecycle和Effective Constraint类作为兼容层。

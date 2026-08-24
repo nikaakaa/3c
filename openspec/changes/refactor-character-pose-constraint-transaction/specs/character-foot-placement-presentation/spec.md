@@ -107,11 +107,23 @@ Landing Lifecycle的Previous/Next Landing、更新死区、晋升、Prediction E
 
 State Machine MUST是Context唯一写入者，并在一次Evaluate中生成Pending Context和Resolved Foot。调用方、Pelvis、Goal与Diagnostics MUST不能直接写Context。
 
+Foot Module MUST由根Bank显式取得Committed与Pending页并执行一次Evaluate；不得保存第二套Committed/Pending指针或公开Begin、Complete、Discard生命周期。State Machine的一次Evaluate MUST内部完成Landing晋升、Next Swing捕获与Constraint解析，外层Implementation MUST不编排三个独立入口。
+
 #### Scenario: Action硬失去脚所有权
 
 - **WHEN** Action占用该脚且当前PlantConfidence不低于0.5
 - **THEN** State Machine MUST按8fc清空输出与接触状态，并把本轮Plant保持为已消费的UnlockedSupport映射
 - **AND** Action、调用方和Diagnostics MUST不直接修改Context字段
+
+### Requirement: Future Body Translation必须写入固定Workspace
+
+Foot Placement MUST为每个根Bank预分配固定容量Future Body Translation Workspace，并把它交给正式Translation Source写入。Translation Source MUST只更新有效Sample数量和内容，不得为每次活跃预测新建Trajectory对象、临时Sample数组或复制Sample集合。
+
+#### Scenario: 同一帧左右脚请求未来Body平移
+
+- **WHEN** 左右脚需要同一Body、Timeline与Duration范围的未来平移
+- **THEN** Foot Module MUST在本帧只填充一次Pending Workspace并让两脚读取同一只读结果
+- **AND** 预测不得产生托管堆分配
 
 ### Requirement: Resolved Foot必须形成紧凑下游合同
 

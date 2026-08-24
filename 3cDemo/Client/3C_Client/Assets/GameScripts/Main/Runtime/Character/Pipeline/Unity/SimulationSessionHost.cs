@@ -45,15 +45,15 @@ namespace ThirdPersonCharacter.Pipeline
 
         public bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,
-            out CharacterFutureBodyTranslation translation)
+            CharacterFutureBodyTranslation output)
         {
             if (m_Disposed || m_Quiesced || m_State != SimulationSessionLifecycleState.Active ||
                 m_Runtime is not ICharacterFutureBodyTranslationSource source)
             {
-                translation = null;
+                output?.Clear();
                 return false;
             }
-            return source.TryPredict(in request, out translation);
+            return source.TryPredict(in request, output);
         }
 
         public void BindComposition(SimulationSessionCompositionDefinition composition)

@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Program.RequireValid();
             m_NativeProgram.RequireValid();
-            if (m_PoseConstraints.FullBodyIkSolverCount != m_Program.FullBodyIks.Count)
+            if (m_Program.FullBodyIks.Count != 1)
                 throw new ArgumentException("FullBodyIK diagnostics solver layout is inconsistent.", nameof(poseConstraints));
             initialFrame.RequireValid();
             if (physicalSourceCapacity <= 0)
@@ -992,7 +992,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         CharacterPoseOperationCode.FullBodyIkGoalAssembler)
                     {
                         CharacterFullBodyIkGoalSetHeader header =
-                            m_PoseConstraints.GetCommittedAssembledGoalSet(0);
+                            m_PoseConstraints.GetCommittedAssembledGoalSet();
                         if (header.IsValid &&
                             header.CompletionIdentity == completion &&
                             header.ProducerOperationIndex == operation.Index)
@@ -1006,7 +1006,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                             {
                                 page.PoseWatchFullBodyIkGoals[goalOffset + goalIndex] =
                                     m_PoseConstraints.GetCommittedAssembledGoal(
-                                        0,
                                         goalIndex);
                             }
                             goalAvailability = AnimationPoseWatchAvailability.Targets;
@@ -1091,33 +1090,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     }
                 }
                 if (operation.Code == CharacterPoseOperationCode.FullBodyIK &&
-                    (uint)operation.FullBodyIkIndex <
-                    (uint)m_PoseConstraints.FullBodyIkSolverCount)
+                    operation.FullBodyIkIndex == 0)
                 {
-                    int solverIndex = operation.FullBodyIkIndex;
                     CharacterFullBodyIkSolverDiagnostics diagnostics =
-                        m_PoseConstraints.GetSolverDiagnostics(solverIndex);
+                        m_PoseConstraints.GetSolverDiagnostics();
                     if (diagnostics.IsCompleted &&
                         diagnostics.InputCompletionIdentity == completion)
                     {
                         page.PoseWatchFullBodyIkSolvers[watchIndex] = diagnostics;
                         for (int effectorIndex = 0;
                              effectorIndex <
-                             m_PoseConstraints.GetSolverEffectorCount(solverIndex);
+                             m_PoseConstraints.GetSolverEffectorCount();
                              effectorIndex++)
                         {
                             page.PoseWatchFullBodyIkEffectors[effectorOffset + effectorIndex] =
                                 m_PoseConstraints.GetSolverEffector(
-                                    solverIndex,
                                     effectorIndex);
                         }
                         for (int limbIndex = 0;
-                             limbIndex < m_PoseConstraints.GetSolverLimbCount(solverIndex);
+                             limbIndex < m_PoseConstraints.GetSolverLimbCount();
                              limbIndex++)
                         {
                             page.PoseWatchFullBodyIkLimbs[limbOffset + limbIndex] =
                                 m_PoseConstraints.GetSolverLimb(
-                                    solverIndex,
                                     limbIndex);
                         }
                     }
@@ -1159,26 +1154,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CharacterFullBodyIkEffectorDiagnostics rightFoot = default;
             CharacterFullBodyIkLimbDiagnostics leftLeg = default;
             CharacterFullBodyIkLimbDiagnostics rightLeg = default;
-            for (int solverIndex = 0;
-                 solverIndex < m_PoseConstraints.FullBodyIkSolverCount;
-                 solverIndex++)
+            CharacterFullBodyIkSolverDiagnostics candidate =
+                m_PoseConstraints.GetSolverDiagnostics();
+            if (candidate.IsCompleted &&
+                candidate.InputCompletionIdentity == page.CompletionIdentity &&
+                candidate.FrameSequence == footLandingPrediction.FrameSequence)
             {
-                CharacterFullBodyIkSolverDiagnostics candidate =
-                    m_PoseConstraints.GetSolverDiagnostics(solverIndex);
-                if (!candidate.IsCompleted ||
-                    candidate.InputCompletionIdentity != page.CompletionIdentity ||
-                    candidate.FrameSequence != footLandingPrediction.FrameSequence)
-                {
-                    continue;
-                }
                 bool containsFoot = false;
                 for (int effectorIndex = 0;
-                     effectorIndex < m_PoseConstraints.GetSolverEffectorCount(solverIndex);
+                     effectorIndex < m_PoseConstraints.GetSolverEffectorCount();
                      effectorIndex++)
                 {
                     CharacterFullBodyIkEffectorDiagnostics effector =
                         m_PoseConstraints.GetSolverEffector(
-                            solverIndex,
                             effectorIndex);
                     if (effector.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
                     {
@@ -1196,21 +1184,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         containsFoot = true;
                     }
                 }
-                if (!containsFoot)
-                    continue;
-                for (int limbIndex = 0;
-                     limbIndex < m_PoseConstraints.GetSolverLimbCount(solverIndex);
-                     limbIndex++)
+                if (containsFoot)
                 {
-                    CharacterFullBodyIkLimbDiagnostics limb =
-                        m_PoseConstraints.GetSolverLimb(solverIndex, limbIndex);
-                    if (limb.Limb == CharacterFullBodyIkLimbSlot.LeftLeg)
-                        leftLeg = limb;
-                    else if (limb.Limb == CharacterFullBodyIkLimbSlot.RightLeg)
-                        rightLeg = limb;
+                    for (int limbIndex = 0;
+                         limbIndex < m_PoseConstraints.GetSolverLimbCount();
+                         limbIndex++)
+                    {
+                        CharacterFullBodyIkLimbDiagnostics limb =
+                            m_PoseConstraints.GetSolverLimb(limbIndex);
+                        if (limb.Limb == CharacterFullBodyIkLimbSlot.LeftLeg)
+                            leftLeg = limb;
+                        else if (limb.Limb == CharacterFullBodyIkLimbSlot.RightLeg)
+                            rightLeg = limb;
+                    }
+                    solverDiagnostics = candidate;
                 }
-                solverDiagnostics = candidate;
-                break;
             }
             page.FootPlacement.LandingPrediction = footLandingPrediction;
             page.FootPlacement.Solver = solverDiagnostics;

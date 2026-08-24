@@ -209,6 +209,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (Index < 0 || !NodeId.IsValid || !Profile ||
                 !string.Equals(ProfileId, Profile.ProfileId, StringComparison.Ordinal) ||
+                !string.Equals(ProfileRevision, Profile.Revision, StringComparison.Ordinal) ||
                 !string.Equals(BackendIdentity, CharacterFinalIkPoseBufferBackend.SourceIdentity, StringComparison.Ordinal) ||
                 !string.Equals(BackendSourceRevision, CharacterFinalIkPoseBufferBackend.AuditedVendorSourceRevision, StringComparison.Ordinal))
                 throw new InvalidOperationException("Full Body IK descriptor is invalid.");

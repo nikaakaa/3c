@@ -14,15 +14,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FixedString64Bytes expectedRigRevision,
             int producerOperationIndex,
             int producerCallSiteIndex,
-            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSetOutput,
             NativeArray<CharacterFullBodyIkGoal> goalOutput,
-            NativeArray<int> goalSetIndexOutput)
+            out CharacterFullBodyIkGoalSetHeader goalSetOutput)
         {
+            goalSetOutput = default;
             if (!contributionHeaders.IsCreated || !contributionGoals.IsCreated ||
-                !goalSetOutput.IsCreated || goalSetOutput.Length != 1 ||
                 !goalOutput.IsCreated ||
-                goalOutput.Length != CharacterFullBodyIkGoalSetHeader.MaximumGoalCount ||
-                !goalSetIndexOutput.IsCreated || goalSetIndexOutput.Length != 1)
+                goalOutput.Length != CharacterFullBodyIkGoalSetHeader.MaximumGoalCount)
             {
                 return CharacterFullBodyIkResult.Fail(
                     CharacterFullBodyIkFailure.InvalidGoalWorkspace);
@@ -86,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             for (int i = count; i < goalOutput.Length; i++)
                 goalOutput[i] = default;
-            goalSetOutput[0] = new CharacterFullBodyIkGoalSetHeader(
+            goalSetOutput = new CharacterFullBodyIkGoalSetHeader(
                 frameSequence,
                 completionIdentity,
                 expectedRigId,
@@ -96,7 +94,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 0,
                 count,
                 CharacterFullBodyIkGoalSetAvailability.Ready);
-            goalSetIndexOutput[0] = 0;
             return CharacterFullBodyIkResult.Success(count);
         }
     }

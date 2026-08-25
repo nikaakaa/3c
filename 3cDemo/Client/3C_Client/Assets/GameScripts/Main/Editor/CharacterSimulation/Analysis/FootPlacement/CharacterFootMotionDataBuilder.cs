@@ -73,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public float[] SupportCandidate;
             public float[] Support;
             public float SupportGroundScoreMax;
-            public float SupportVerticalScoreMax;
+            public float SupportEnvelopeScoreMax;
             public float SupportExtensionScoreMax;
             public float SupportDownwardScoreMax;
             public float SupportExtensionRatioMax;
@@ -97,6 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootMotionRootSample[] roots = BuildRoots(input, step);
             FootWork left = BuildFoot(input, input.Left, step);
             FootWork right = BuildFoot(input, input.Right, step);
+            ReconcileLoopSymmetry(input, left, right);
             BuildSupport(left, right);
             ValidateDerivedData(input, left, right);
             return new AnimationFootMotionDataDescriptor(
@@ -121,10 +122,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Vector3[] toeVelocity = Velocity(input, source.ToePositions, step);
             Vector3[] heelVelocity = Velocity(input, source.HeelPositions, step);
             Vector3[] angularVelocity = AngularVelocity(input, source.SoleRotations, step);
-            float[] supportVerticalScores = BuildSupportVerticalScore(
-                input,
-                source.SolePositions,
-                step);
             float[] supportDownwardScores = BuildSupportDownwardScore(input, source);
             var rawSamples = new AnimationFootMotionRawSample[count];
             var toeHeight = new float[count];
@@ -135,7 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var reachable = new float[count];
             var supportCandidate = new float[count];
             float supportGroundScoreMax = 0f;
-            float supportVerticalScoreMax = 0f;
+            float supportEnvelopeScoreMax = 0f;
             float supportExtensionScoreMax = 0f;
             float supportDownwardScoreMax = 0f;
             float supportExtensionRatioMax = 0f;
@@ -181,28 +178,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     Mathf.Max(heelScore, toeScore) *
                     Mathf.Lerp(0.85f, 1f, positionScore) *
                     Mathf.Lerp(0.9f, 1f, rotationScore));
-                supportCandidate[i] = BuildSupportCandidate(
-                    input,
-                    source,
-                    i,
-                    supportVerticalScores[i],
-                    supportDownwardScores[i],
-                    out float supportGroundScore,
-                    out float supportVerticalEvidence,
-                    out float supportExtensionScore,
-                    out float supportDownwardScore,
-                    out float supportExtensionRatio);
-                supportGroundScoreMax = Mathf.Max(supportGroundScoreMax, supportGroundScore);
-                supportVerticalScoreMax = Mathf.Max(supportVerticalScoreMax, supportVerticalEvidence);
-                supportExtensionScoreMax = Mathf.Max(supportExtensionScoreMax, supportExtensionScore);
-                supportDownwardScoreMax = Mathf.Max(supportDownwardScoreMax, supportDownwardScore);
-                supportExtensionRatioMax = Mathf.Max(supportExtensionRatioMax, supportExtensionRatio);
             }
             float[] contact = ContactWithHysteresis(
                 contactRaw,
                 input.Loop,
                 step,
                 input.Thresholds.MinimumLandingSegmentSeconds);
+            float[] supportEnvelope = BuildSupportContactEnvelope(input, contact, step);
+            for (int i = 0; i < count; i++)
+            {
+                supportCandidate[i] = BuildSupportCandidate(
+                    input,
+                    source,
+                    i,
+                    supportEnvelope[i],
+                    supportDownwardScores[i],
+                    out float supportGroundScore,
+                    out float supportEnvelopeEvidence,
+                    out float supportExtensionScore,
+                    out float supportDownwardScore,
+                    out float supportExtensionRatio);
+                supportGroundScoreMax = Mathf.Max(supportGroundScoreMax, supportGroundScore);
+                supportEnvelopeScoreMax = Mathf.Max(supportEnvelopeScoreMax, supportEnvelopeEvidence);
+                supportExtensionScoreMax = Mathf.Max(supportExtensionScoreMax, supportExtensionScore);
+                supportDownwardScoreMax = Mathf.Max(supportDownwardScoreMax, supportDownwardScore);
+                supportExtensionRatioMax = Mathf.Max(supportExtensionRatioMax, supportExtensionRatio);
+            }
             AnimationFootMotionEvent[] events = BuildEvents(input, source, contact);
             if (MovingLoop(input) &&
                 !events.Any(value => value.Kind == AnimationFootMotionEventKind.Landing))
@@ -245,7 +246,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 SupportCandidate = supportCandidate,
                 Support = new float[count],
                 SupportGroundScoreMax = supportGroundScoreMax,
-                SupportVerticalScoreMax = supportVerticalScoreMax,
+                SupportEnvelopeScoreMax = supportEnvelopeScoreMax,
                 SupportExtensionScoreMax = supportExtensionScoreMax,
                 SupportDownwardScoreMax = supportDownwardScoreMax,
                 SupportExtensionRatioMax = supportExtensionRatioMax,
@@ -254,6 +255,81 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 Diagnostics = diagnostics,
                 Diagnostic = diagnostic
             };
+        }
+
+        static void ReconcileLoopSymmetry(
+            CharacterFootMotionDataInput input,
+            FootWork left,
+            FootWork right)
+        {
+            if (!MovingLoop(input))
+                return;
+            int activeCount = left.Contact.Length - 1;
+            int shift = ResolveOpposingPhaseShift(
+                left.Contact,
+                right.Contact,
+                activeCount);
+            var visited = new bool[activeCount];
+            for (int leftIndex = 0; leftIndex < activeCount; leftIndex++)
+            {
+                if (visited[leftIndex])
+                    continue;
+                int rightIndex = (leftIndex + shift) % activeCount;
+                int pairedLeft = (rightIndex + activeCount - shift) % activeCount;
+                visited[leftIndex] = true;
+                visited[pairedLeft] = true;
+                bool locked =
+                    left.LockMode[leftIndex] == AnimationFootLockMode.Locked &&
+                    right.LockMode[rightIndex] == AnimationFootLockMode.Locked;
+                bool contacting = left.Contact[leftIndex] >= 0.5f ||
+                                  right.Contact[rightIndex] >= 0.5f;
+                AnimationFootLockMode mode = locked
+                    ? AnimationFootLockMode.Locked
+                    : contacting
+                        ? AnimationFootLockMode.Sliding
+                        : AnimationFootLockMode.Unlocked;
+                float weight = locked
+                    ? Mathf.Min(
+                        left.LockWeight[leftIndex],
+                        right.LockWeight[rightIndex])
+                    : 0f;
+                float supportCandidate =
+                    (left.SupportCandidate[leftIndex] +
+                     right.SupportCandidate[rightIndex]) * 0.5f;
+                left.LockMode[leftIndex] = mode;
+                right.LockMode[rightIndex] = mode;
+                left.LockWeight[leftIndex] = weight;
+                right.LockWeight[rightIndex] = weight;
+                left.SupportCandidate[leftIndex] = supportCandidate;
+                right.SupportCandidate[rightIndex] = supportCandidate;
+            }
+            left.LockMode[activeCount] = left.LockMode[0];
+            right.LockMode[activeCount] = right.LockMode[0];
+            left.LockWeight[activeCount] = left.LockWeight[0];
+            right.LockWeight[activeCount] = right.LockWeight[0];
+            left.SupportCandidate[activeCount] = left.SupportCandidate[0];
+            right.SupportCandidate[activeCount] = right.SupportCandidate[0];
+        }
+
+        static int ResolveOpposingPhaseShift(
+            float[] left,
+            float[] right,
+            int activeCount)
+        {
+            int bestShift = 0;
+            float bestError = float.PositiveInfinity;
+            for (int shift = 1; shift < activeCount; shift++)
+            {
+                float error = 0f;
+                for (int i = 0; i < activeCount; i++)
+                    error += Mathf.Abs(left[i] - right[(i + shift) % activeCount]);
+                if (error < bestError)
+                {
+                    bestError = error;
+                    bestShift = shift;
+                }
+            }
+            return bestShift;
         }
 
         static AnimationFootMotionPose Pose(
@@ -372,7 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterFootMotionDataInput input,
             CharacterFootMotionSampleInput foot,
             int index,
-            float supportVerticalScore,
+            float supportEnvelope,
             float supportDownwardScore,
             out float groundScore,
             out float verticalScore,
@@ -387,7 +463,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 input.Thresholds.PlantEnterHeight,
                 input.Thresholds.PlantExitHeight,
                 Mathf.Max(0f, supportHeight));
-            verticalScore = supportVerticalScore;
+            verticalScore = supportEnvelope;
             downwardScore = supportDownwardScore;
             Vector3 rootLocalHip = RootLocal(input, index, foot.HipPositions[index]);
             Vector3 rootLocalAnkle = RootLocal(input, index, foot.AnklePositions[index]);
@@ -411,9 +487,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             float maximum = float.NegativeInfinity;
             for (int i = 0; i < extent.Length; i++)
             {
-                Vector3 rootLocalHip = RootLocal(input, i, foot.HipPositions[i]);
-                Vector3 rootLocalSole = RootLocal(input, i, foot.SolePositions[i]);
-                extent[i] = Vector3.Dot(rootLocalHip - rootLocalSole, Vector3.up);
+                extent[i] = Vector3.Dot(
+                    foot.HipPositions[i] - foot.SolePositions[i],
+                    Vector3.up);
                 maximum = Mathf.Max(maximum, extent[i]);
             }
             var result = new float[extent.Length];
@@ -423,47 +499,64 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return result;
         }
 
-        static float[] BuildSupportVerticalScore(
+        static float[] BuildSupportContactEnvelope(
             CharacterFootMotionDataInput input,
-            Vector3[] solePositions,
+            float[] contact,
             float step)
         {
-            int intervals = solePositions.Length - 1;
-            int activeCount = input.Loop ? intervals : solePositions.Length;
-            int radius = Mathf.Max(
+            int intervals = contact.Length - 1;
+            int activeCount = input.Loop ? intervals : contact.Length;
+            int rampRadius = Mathf.Max(
                 1,
-                Mathf.CeilToInt(
-                    input.Thresholds.MinimumLandingSegmentSeconds /
-                    (2f * step)));
-            float enterDistance = input.Thresholds.PlantEnterContactSpeed *
-                                  input.Thresholds.MinimumLandingSegmentSeconds;
-            float exitDistance = input.Thresholds.PlantExitContactSpeed *
-                                 input.Thresholds.MinimumLandingSegmentSeconds;
-            var result = new float[solePositions.Length];
+                Mathf.CeilToInt(input.Thresholds.MinimumLandingSegmentSeconds / step));
+            var result = new float[contact.Length];
             for (int i = 0; i < activeCount; i++)
             {
-                float minimum = float.PositiveInfinity;
-                float maximum = float.NegativeInfinity;
-                for (int offset = -radius; offset <= radius; offset++)
-                {
-                    int sample = input.Loop
-                        ? i + offset
-                        : Mathf.Clamp(i + offset, 0, activeCount - 1);
-                    Vector3 position = input.Loop
-                        ? UnwrappedPosition(input, solePositions, sample)
-                        : solePositions[sample];
-                    float height = Vector3.Dot(position, Vector3.up);
-                    minimum = Mathf.Min(minimum, height);
-                    maximum = Mathf.Max(maximum, height);
-                }
-                result[i] = 1f - Mathf.InverseLerp(
-                    enterDistance,
-                    exitDistance,
-                    maximum - minimum);
+                if (contact[i] <= 0.5f)
+                    continue;
+                int before = SupportContactDistance(
+                    contact,
+                    i,
+                    -1,
+                    activeCount,
+                    input.Loop,
+                    rampRadius);
+                int after = SupportContactDistance(
+                    contact,
+                    i,
+                    1,
+                    activeCount,
+                    input.Loop,
+                    rampRadius);
+                result[i] = Mathf.Clamp01(
+                    (Mathf.Min(before, after) + 1f) /
+                    (rampRadius + 1f));
             }
             if (input.Loop)
                 result[intervals] = result[0];
             return result;
+        }
+
+        static int SupportContactDistance(
+            float[] contact,
+            int index,
+            int direction,
+            int activeCount,
+            bool loop,
+            int maximum)
+        {
+            int distance = 0;
+            for (int offset = 1; offset <= maximum; offset++)
+            {
+                int sample = index + direction * offset;
+                if (!loop && (sample < 0 || sample >= activeCount))
+                    return maximum;
+                sample = ((sample % activeCount) + activeCount) % activeCount;
+                if (contact[sample] <= 0.5f)
+                    break;
+                distance++;
+            }
+            return distance;
         }
 
         static AnimationFootMotionRootSample[] BuildRoots(CharacterFootMotionDataInput input, float step)
@@ -691,9 +784,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         $"Foot Motion Support is missing on a Loop animation: " +
                         $"LeftCandidateMax={left.SupportCandidate.Max():R}; " +
                         $"RightCandidateMax={right.SupportCandidate.Max():R}; " +
-                        $"LeftScores={left.SupportGroundScoreMax:R}/{left.SupportVerticalScoreMax:R}/" +
+                        $"LeftScores={left.SupportGroundScoreMax:R}/{left.SupportEnvelopeScoreMax:R}/" +
                         $"{left.SupportExtensionScoreMax:R}/{left.SupportDownwardScoreMax:R}; " +
-                        $"RightScores={right.SupportGroundScoreMax:R}/{right.SupportVerticalScoreMax:R}/" +
+                        $"RightScores={right.SupportGroundScoreMax:R}/{right.SupportEnvelopeScoreMax:R}/" +
                         $"{right.SupportExtensionScoreMax:R}/{right.SupportDownwardScoreMax:R}; " +
                         $"ExtensionRatios={left.SupportExtensionRatioMax:R}/{right.SupportExtensionRatioMax:R}.");
             }

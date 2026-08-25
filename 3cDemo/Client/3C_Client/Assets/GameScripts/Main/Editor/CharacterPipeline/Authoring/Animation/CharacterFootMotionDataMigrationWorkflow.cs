@@ -14,7 +14,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string ValidateMenuPath = "Tools/3C/Character/Validate Corin Foot Motion Curves";
         const string ClipFolder = "Assets/AssetArt/Animation/MyDemoNeed/Corin/PipelineInplace";
         const string MotionFolder = "Assets/AssetArt/Animation/MyDemoNeed/Corin/WithWeaponRootmotion";
-        const string BaseMotionFolder = "Assets/AssetArt/Animation/MyDemoNeed/Corin/Rootmotion";
         const string SourcePath = "Assets/Configs/Character/Corin/Pipeline/Presentation/FootPlacement/CorinFootPlacementAnalysisSource.asset";
 
         static CharacterFootPlacementAnalysisSource s_Source;
@@ -202,7 +201,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Pair("Corin_Pipeline_DodgeForward_Inplace.anim", "Corin_Evade_Front_WithWeaponRootmotion.anim"),
                 Pair("Corin_Pipeline_Idle_Inplace.anim", "Corin_Idle_WithWeaponRootmotion.anim"),
                 Pair("Corin_Pipeline_MovingTurn_Inplace.anim", "Corin_TurnBack_WithWeaponRootmotion.anim"),
-                Pair("Corin_Pipeline_RunEnd_Inplace.anim", "Corin_RunEnd_Rootmotion.anim", BaseMotionFolder),
+                Pair("Corin_Pipeline_RunEnd_Inplace.anim", "Corin_RunEnd_WithWeaponRootmotion.anim"),
                 Pair("Corin_Pipeline_RunLoop_Inplace.anim", "Corin_RunLoop_WithWeaponRootmotion.anim"),
                 Pair("Corin_Pipeline_RunStart_Inplace.anim", "Corin_RunStart_WithWeaponRootmotion.anim"),
                 Pair("Corin_Pipeline_RushAttack_End_Inplace.anim", "Corin_Attack_Rush_End_WithWeaponRootmotion.anim"),

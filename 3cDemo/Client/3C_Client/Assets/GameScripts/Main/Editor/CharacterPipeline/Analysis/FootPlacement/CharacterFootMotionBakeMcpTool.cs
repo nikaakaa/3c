@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     [McpForUnityTool(
         "character.foot_motion_bake",
-        Description = "Analyze or apply one exact Foot Motion Target AnimationClip through the formal Bake Session. Resolves Motion Reference from the exact Analysis Source, returns a 22-channel diff and requires the exact plan hash plus explicit replace_existing to overwrite different or partial author Curves.",
+        Description = "Analyze, apply or replace the source of one exact Foot Motion Target AnimationClip through the formal Bake Session. Resolves Motion Reference from the exact Analysis Source, returns a 22-channel diff and requires explicit replacement authority for destructive writes.",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -36,8 +36,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             [ToolParameter("Exact plan hash returned by analyze. Required for apply.", Required = false)]
             public string expected_plan_hash { get; set; }
 
+            [ToolParameter("Exact Assets/... path to one native source AnimationClip. Required for replace_source.", Required = false)]
+            public string source_clip_asset_path { get; set; }
+
             [ToolParameter("Explicit true confirmation required to replace Different or Partial existing Curves.", Required = false)]
             public bool replace_existing { get; set; }
+
+            [ToolParameter("Normalize source Root X/Z while replacing the Target source.", Required = false)]
+            public bool normalize_root_translation { get; set; }
 
             [ToolParameter("Include per-sample Raw, Step, Filter and Constraint evidence in the response.", Required = false)]
             public bool include_samples { get; set; }
@@ -48,8 +54,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string action = @params?["action"]?.Value<string>() ?? string.Empty;
             string sourcePath = @params?["analysis_source_asset_path"]?.Value<string>() ?? string.Empty;
             string targetPath = @params?["target_clip_asset_path"]?.Value<string>() ?? string.Empty;
+            string clipSourcePath = @params?["source_clip_asset_path"]?.Value<string>() ?? string.Empty;
             string expectedPlanHash = @params?["expected_plan_hash"]?.Value<string>() ?? string.Empty;
             bool replaceExisting = @params?["replace_existing"]?.Value<bool>() ?? false;
+            bool normalizeRootTranslation = @params?["normalize_root_translation"]?.Value<bool>() ?? false;
             bool includeSamples = @params?["include_samples"]?.Value<bool>() ?? false;
             try
             {
@@ -75,6 +83,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             replaceExisting);
                         return Success(result.Plan, result.Applied, includeSamples);
                     }
+                    case "replace_source":
+                    {
+                        if (!replaceExisting)
+                            return new ErrorResponse("replace_existing_required", new { target_clip_asset_path = targetPath });
+                        AnimationClip clipSource = LoadExact<AnimationClip>(
+                            clipSourcePath,
+                            ".anim",
+                            "Source AnimationClip");
+                        CharacterAnimationClipAuthoringService.ReplaceSource(
+                            clipSource,
+                            target,
+                            normalizeRootTranslation);
+                        CharacterFootMotionBakePlan plan = CharacterFootMotionBakeService.Analyze(source, target);
+                        return Success(plan, false, includeSamples);
+                    }
                     default:
                         return new ErrorResponse("invalid_action", new { action });
                 }
@@ -88,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         action,
                         analysis_source_asset_path = sourcePath,
                         target_clip_asset_path = targetPath,
+                        source_clip_asset_path = clipSourcePath,
                         message = exception.Message
                     });
             }

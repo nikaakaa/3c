@@ -329,6 +329,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 out float landingPhase,
                 out Quaternion opposingRootLocalSoleRotation,
                 out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> biomechanicalRoute);
+            if (HasFormalStepEvent)
+                landingPhase = 1f;
             float scaledBiomechanicalIndex = Mathf.Clamp01(eventPhase) * (biomechanicalRoute.Length - 1);
             int firstBiomechanicalIndex = Mathf.Min(
                 biomechanicalRoute.Length - 1,

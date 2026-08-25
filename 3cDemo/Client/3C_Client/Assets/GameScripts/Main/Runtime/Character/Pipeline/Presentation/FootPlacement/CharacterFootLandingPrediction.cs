@@ -100,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong trajectoryGeneration,
             float landingConfidence,
             float timeToLandingSeconds,
+            float stepDistance,
             Vector3 rootLocalLanding,
             bool futureBodyTranslationAvailable,
             string futureBodyTranslationSourceIdentity,
@@ -118,6 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TrajectoryGeneration = trajectoryGeneration;
             LandingConfidence = landingConfidence;
             TimeToLandingSeconds = timeToLandingSeconds;
+            StepDistance = stepDistance;
             RootLocalLanding = rootLocalLanding;
             FutureBodyTranslationAvailable = futureBodyTranslationAvailable;
             FutureBodyTranslationSourceIdentity = futureBodyTranslationSourceIdentity ?? string.Empty;
@@ -157,6 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TrajectoryGeneration = source.TrajectoryGeneration;
             LandingConfidence = source.LandingConfidence;
             TimeToLandingSeconds = source.TimeToLandingSeconds;
+            StepDistance = source.StepDistance;
             RootLocalLanding = source.RootLocalLanding;
             FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
             FutureBodyTranslationSourceIdentity = source.FutureBodyTranslationSourceIdentity;
@@ -189,6 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TrajectoryGeneration = source.TrajectoryGeneration;
             LandingConfidence = step.Confidence;
             TimeToLandingSeconds = step.TimeToLandingSeconds;
+            StepDistance = step.StepDistance;
             RootLocalLanding = step.RootLocalLanding;
             FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
             FutureBodyTranslationSourceIdentity = source.FutureBodyTranslationSourceIdentity;
@@ -219,6 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TrajectoryGeneration = source.TrajectoryGeneration;
             LandingConfidence = source.LandingConfidence;
             TimeToLandingSeconds = source.TimeToLandingSeconds;
+            StepDistance = source.StepDistance;
             RootLocalLanding = source.RootLocalLanding;
             FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
             FutureBodyTranslationSourceIdentity = source.FutureBodyTranslationSourceIdentity;
@@ -243,6 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong TrajectoryGeneration { get; }
         public float LandingConfidence { get; }
         public float TimeToLandingSeconds { get; }
+        public float StepDistance { get; }
         public Vector3 RootLocalLanding { get; }
         public bool FutureBodyTranslationAvailable { get; }
         public string FutureBodyTranslationSourceIdentity { get; }
@@ -297,6 +303,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TrajectoryGeneration = result.TrajectoryGeneration;
             LandingConfidence = result.LandingConfidence;
             TimeToLandingSeconds = result.TimeToLandingSeconds;
+            StepDistance = result.StepDistance;
             RootLocalLanding = result.RootLocalLanding;
             FutureBodyTranslationAvailable = result.FutureBodyTranslationAvailable;
             FutureBodyTranslationSourceIdentity = result.FutureBodyTranslationSourceIdentity;
@@ -324,6 +331,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong TrajectoryGeneration { get; }
         public float LandingConfidence { get; }
         public float TimeToLandingSeconds { get; }
+        public float StepDistance { get; }
         public Vector3 RootLocalLanding { get; }
         public bool FutureBodyTranslationAvailable { get; }
         public string FutureBodyTranslationSourceIdentity { get; }

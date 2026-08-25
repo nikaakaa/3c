@@ -95,6 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SourceLandingCycleOffset = source.SourceLandingCycleOffset;
             Confidence = source.Confidence;
             TimeToLandingSeconds = source.TimeToLandingSeconds;
+            StepDistance = source.StepDistance;
             EventPhase = source.EventPhase;
             ReleasePhase = source.ReleasePhase;
             LiftOffPhase = source.LiftOffPhase;
@@ -125,6 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int SourceLandingCycleOffset { get; }
         public float Confidence { get; }
         public float TimeToLandingSeconds { get; }
+        public float StepDistance { get; }
         public float EventPhase { get; }
         public float ReleasePhase { get; }
         public float LiftOffPhase { get; }

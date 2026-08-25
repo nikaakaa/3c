@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string Header =
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
-            "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
+            "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds,StepDistance," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
             "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
@@ -1153,6 +1153,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.TrajectoryGeneration);
             Add(row, foot.LandingConfidence);
             Add(row, foot.TimeToLandingSeconds);
+            Add(row, foot.StepDistance);
             Add(row, foot.RootLocalLanding);
             Add(row, input.PresentationDeltaSeconds);
             Add(row, input.PreviousBodyTick);

@@ -366,7 +366,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             throw new InvalidOperationException("Resolved artifact did not preserve the expected identity.");
                         artifacts.Add(expected.IdentityHash.Value, artifact);
                     }
-                    if (!features.TryAdd(binding.BindingKey, artifact.Features))
+                    AnimationFootFeaturePair runtimeFeatures =
+                        CharacterFootStepEventProjectionCompiler.Build(
+                            binding.Clip,
+                            artifact);
+                    if (!features.TryAdd(binding.BindingKey, runtimeFeatures))
                         errors?.Add($"Foot Analysis stable clip binding '{binding.BindingKey}' is duplicated.");
                     if (!artifactsByBinding.TryAdd(binding.BindingKey, artifact))
                         errors?.Add($"Foot Analysis artifact binding '{binding.BindingKey}' is duplicated.");

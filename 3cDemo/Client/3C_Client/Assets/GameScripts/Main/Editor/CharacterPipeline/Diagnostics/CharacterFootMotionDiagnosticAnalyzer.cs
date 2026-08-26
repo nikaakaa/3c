@@ -981,9 +981,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["swingCounterfactualAvailable"] =
                         counterfactual?.available == true,
                     ["pathRevisionCounterfactual"] =
-                        counterfactual?.classification == "PathRevision",
+                        counterfactual?.classification == "PathRevision" &&
+                        pathStageAnalysis.firstAmplificationStage?.stage ==
+                        CharacterFootPathStageNames
+                            .PathTargetToSwingTarget,
                     ["swingPhaseAdvance"] =
-                        counterfactual?.classification ==
+                        pathStageAnalysis.firstAmplificationStage?.stage ==
                         "SwingPhaseAdvance",
                     ["unanchoredSwingEligible"] = unanchoredSwingEligible
                 };

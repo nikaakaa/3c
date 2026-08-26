@@ -61,7 +61,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         double m_AutoSampleStopTime;
         bool m_LastSamplingCapturing;
         bool m_LastSamplingStarting;
-        bool m_LastSamplingFinalizing;
         string m_LastSamplingSavedPath = string.Empty;
 
         [MenuItem("Tools/3C/Launcher", false, -1000)]
@@ -83,21 +82,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
             bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
-            bool finalizing = CharacterFootLandingPredictionSampler.IsFinalizing;
             string samplesPath = CharacterFootLandingPredictionSampler.LastSavedPath;
             if (capturing == m_LastSamplingCapturing &&
                 starting == m_LastSamplingStarting &&
-                finalizing == m_LastSamplingFinalizing &&
                 string.Equals(samplesPath, m_LastSamplingSavedPath, StringComparison.Ordinal))
             {
                 return;
             }
             m_LastSamplingCapturing = capturing;
             m_LastSamplingStarting = starting;
-            if (m_LastSamplingFinalizing && !finalizing)
-                m_DiagnosticSummary =
-                    CharacterFootLandingPredictionSampler.LastDiagnosticSummary;
-            m_LastSamplingFinalizing = finalizing;
             m_LastSamplingSavedPath = samplesPath;
             Repaint();
         }
@@ -255,31 +248,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
             bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
-            bool finalizing = CharacterFootLandingPredictionSampler.IsFinalizing;
             string samplesPath = CharacterFootLandingPredictionSampler.LastSavedPath;
-            string geometryPath =
-                CharacterFootLandingPredictionSampler.LastSavedGeometryPath;
             string factsPath = CharacterFootLandingPredictionSampler.LastSavedFactsPath;
             string diagnosisDirectory =
                 CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory;
             string sampleDirectory = CharacterFootLandingPredictionSampler.LastSavedDirectory;
             EditorGUILayout.LabelField(
                 "Foot Landing Sampling",
-                capturing
-                    ? "Recording"
-                    : starting
-                        ? "Starting"
-                        : finalizing
-                            ? "Finalizing"
-                            : "Idle");
+                capturing ? "Recording" : starting ? "Starting" : "Idle");
             using (new EditorGUILayout.HorizontalScope())
             {
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling ||
                            !EditorApplication.isPlaying ||
                            capturing ||
-                           starting ||
-                           finalizing))
+                           starting))
                 {
                     if (GUILayout.Button("Start Sampling"))
                         StartManualSample();
@@ -306,7 +289,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            !EditorApplication.isPlaying ||
                            capturing ||
                            starting ||
-                           finalizing ||
                            m_AutoSampleStopTime > 0d))
                 {
                     if (GUILayout.Button("Auto Sample 8s"))
@@ -318,7 +300,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            !EditorApplication.isPlaying ||
                            capturing ||
                            starting ||
-                           finalizing ||
                            GameplayLabFootIkKeyboardRouteDriver.IsActive ||
                            GameplayLabFootIkKeyboardRouteDriver.IsPending ||
                            m_AutoSampleStopTime > 0d))
@@ -340,7 +321,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                        !EditorApplication.isPlaying ||
                        capturing ||
                        starting ||
-                       finalizing ||
                        GameplayLabFootIkKeyboardRouteDriver.IsActive ||
                        GameplayLabFootIkKeyboardRouteDriver.IsPending ||
                        m_AutoSampleStopTime > 0d))
@@ -395,14 +375,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 EditorGUILayout.LabelField("Last Samples");
                 EditorGUILayout.SelectableLabel(
                     samplesPath,
-                    EditorStyles.textField,
-                    GUILayout.Height(EditorGUIUtility.singleLineHeight));
-            }
-            if (!string.IsNullOrEmpty(geometryPath))
-            {
-                EditorGUILayout.LabelField("Last Ground Path Geometry");
-                EditorGUILayout.SelectableLabel(
-                    geometryPath,
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
@@ -761,12 +733,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void ShowLastDiagnostics()
         {
-            if (CharacterFootLandingPredictionSampler.IsFinalizing)
-            {
-                m_DiagnosticSummary = "Foot Landing finalizing capture package.";
-                Repaint();
-                return;
-            }
             m_DiagnosticSummary =
                 CharacterFootLandingPredictionSampler.LastDiagnosticSummary;
             Debug.Log(
@@ -796,7 +762,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             m_LastSamplingCapturing = CharacterFootLandingPredictionSampler.IsCapturing;
             m_LastSamplingStarting = CharacterFootLandingPredictionSampler.IsStartPending;
-            m_LastSamplingFinalizing = CharacterFootLandingPredictionSampler.IsFinalizing;
             m_LastSamplingSavedPath = CharacterFootLandingPredictionSampler.LastSavedPath;
         }
     }

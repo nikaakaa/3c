@@ -253,8 +253,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Pose.LeftFootSteps.CurrentStep;
             AnimationBiomechanicalStepHeader rightCurrentStep =
                 frame.Pose.RightFootSteps.CurrentStep;
-            AnimationFootStepObservationFrame formalFootMotion =
-                frame.Pose.FootStepObservation;
 
             CharacterFootLandingSnapshot leftLanding =
                 CharacterFootStateMachine.ProjectLandingBeforePrediction(
@@ -394,7 +392,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Left,
                 in leftSwingMotion,
-                formalFootMotion.Left.TimeToLandingSeconds,
                 hasLeftContactLanding,
                 in leftContactLanding,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction),
@@ -409,7 +406,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Right,
                 in rightSwingMotion,
-                formalFootMotion.Right.TimeToLandingSeconds,
                 hasRightContactLanding,
                 in rightContactLanding,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction),

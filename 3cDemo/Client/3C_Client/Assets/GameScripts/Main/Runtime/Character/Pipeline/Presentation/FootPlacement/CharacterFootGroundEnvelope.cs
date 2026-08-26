@@ -696,4 +696,105 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static ulong RotateLeft(ulong value, int count) =>
             value << count | value >> (64 - count);
     }
+
+    internal static class CharacterFootGroundEnvelopeSampler
+    {
+        const float GeometryEpsilon = 0.0001f;
+
+        internal static bool TrySampleAt(
+            in CharacterFootGroundPathResult groundPath,
+            Vector3 worldPoint,
+            Vector3 componentUp,
+            out Vector3 sample)
+        {
+            sample = default;
+            if (!groundPath.Accepted ||
+                groundPath.EnvelopeVertexCount < 2 ||
+                !Finite(worldPoint) ||
+                !Finite(componentUp) ||
+                componentUp.sqrMagnitude <= GeometryEpsilon ||
+                !float.IsFinite(groundPath.QueryRadius) ||
+                groundPath.QueryRadius <= 0f)
+                return false;
+            Vector3 up = componentUp.normalized;
+            Vector3 horizontal = Vector3.ProjectOnPlane(
+                groundPath.NextSwingLanding - groundPath.LastLanding,
+                up);
+            float pathLength = horizontal.magnitude;
+            if (!float.IsFinite(pathLength) || pathLength <= GeometryEpsilon)
+                return false;
+            Vector3 forward = horizontal / pathLength;
+            Vector3 relative = worldPoint - groundPath.LastLanding;
+            float distance = Mathf.Clamp(Vector3.Dot(relative, forward), 0f, pathLength);
+            Vector3 projected = groundPath.LastLanding + forward * distance;
+            float corridorDistance = Vector3.ProjectOnPlane(
+                worldPoint - projected,
+                up).magnitude;
+            if (!float.IsFinite(corridorDistance) ||
+                corridorDistance > groundPath.QueryRadius + GeometryEpsilon)
+                return false;
+            return TrySampleDistance(
+                in groundPath,
+                distance,
+                forward,
+                up,
+                out sample);
+        }
+
+        static bool TrySampleDistance(
+            in CharacterFootGroundPathResult groundPath,
+            float distance,
+            Vector3 forward,
+            Vector3 up,
+            out Vector3 sample)
+        {
+            Vector3 origin = groundPath.LastLanding;
+            bool found = false;
+            float maximumHeight = float.NegativeInfinity;
+            Vector3 previous = groundPath.EnvelopeVertexAt(0).Position;
+            for (int i = 1; i < groundPath.EnvelopeVertexCount; i++)
+            {
+                Vector3 current = groundPath.EnvelopeVertexAt(i).Position;
+                if (!Finite(previous) || !Finite(current))
+                {
+                    sample = default;
+                    return false;
+                }
+                float previousDistance = Vector3.Dot(previous - origin, forward);
+                float currentDistance = Vector3.Dot(current - origin, forward);
+                float minimumDistance = Mathf.Min(previousDistance, currentDistance);
+                float maximumDistance = Mathf.Max(previousDistance, currentDistance);
+                if (distance >= minimumDistance - GeometryEpsilon &&
+                    distance <= maximumDistance + GeometryEpsilon)
+                {
+                    float previousHeight = Vector3.Dot(previous - origin, up);
+                    float currentHeight = Vector3.Dot(current - origin, up);
+                    float segmentDistance = currentDistance - previousDistance;
+                    float height = Mathf.Abs(segmentDistance) <= GeometryEpsilon
+                        ? Mathf.Max(previousHeight, currentHeight)
+                        : Mathf.Lerp(
+                            previousHeight,
+                            currentHeight,
+                            Mathf.Clamp01((distance - previousDistance) / segmentDistance));
+                    if (!float.IsFinite(height))
+                    {
+                        sample = default;
+                        return false;
+                    }
+                    maximumHeight = found ? Mathf.Max(maximumHeight, height) : height;
+                    found = true;
+                }
+                previous = current;
+            }
+            sample = found
+                ? origin + forward * distance + up * maximumHeight
+                : default;
+            return found && Finite(sample);
+        }
+
+        static bool Finite(Vector3 value) =>
+            float.IsFinite(value.x) &&
+            float.IsFinite(value.y) &&
+            float.IsFinite(value.z);
+    }
 }

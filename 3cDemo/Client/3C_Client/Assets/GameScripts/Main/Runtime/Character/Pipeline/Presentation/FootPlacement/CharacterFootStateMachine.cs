@@ -453,6 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CharacterFootSwingMotionResult swingMotion,
+            in CharacterFootGroundPathResult groundPath,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
             bool hardOwnershipLoss,
@@ -467,6 +468,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
             SwingMotion = swingMotion;
+            GroundPath = groundPath;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
             HardOwnershipLoss = hardOwnershipLoss;
@@ -482,6 +484,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
+        internal CharacterFootGroundPathResult GroundPath { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool HardOwnershipLoss { get; }
@@ -774,14 +777,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 0f;
             float envelopeClearanceBeforeMeters = envelopeAvailable
                 ? Vector3.Dot(
-                    ResolveOriginalSole(frame.AnimatedFoot) +
-                    correctionBeforeSafetyFloor - swing.EnvelopeSample,
+                    correctionBeforeSafetyFloor - groundFloorCorrection,
                     up)
                 : 0f;
             float envelopeClearanceAfterMeters = envelopeAvailable
                 ? Vector3.Dot(
-                    ResolveOriginalSole(frame.AnimatedFoot) +
-                    context.EffectiveCorrection - swing.EnvelopeSample,
+                    context.EffectiveCorrection - groundFloorCorrection,
                     up)
                 : 0f;
             continuityFact = continuityFact.Complete(
@@ -1210,15 +1211,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             envelopeAvailable = false;
             floorCorrection = default;
+            CharacterFootGroundPathResult groundPath = frame.GroundPath;
             switch (context.ConstraintState)
             {
                 case CharacterFootConstraintState.Swing when swing.Accepted:
                 case CharacterFootConstraintState.UnlockedSupport when swing.Accepted:
-                    envelopeAvailable = true;
-                    floorCorrection = ResolveSwingGroundFloor(
+                    envelopeAvailable = TryResolveSwingGroundFloor(
                         frame.AnimatedFoot,
+                        in groundPath,
                         in swing,
-                        frame.ComponentUp);
+                        frame.ComponentUp,
+                        out floorCorrection);
+                    if (!envelopeAvailable)
+                        return false;
                     break;
                 case CharacterFootConstraintState.Landing:
                 case CharacterFootConstraintState.Locked:
@@ -1236,15 +1241,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return true;
         }
 
-        static Vector3 ResolveSwingGroundFloor(
+        static bool TryResolveSwingGroundFloor(
             CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootGroundPathResult groundPath,
             in CharacterFootSwingMotionResult swing,
-            Vector3 componentUp)
+            Vector3 componentUp,
+            out Vector3 floorCorrection)
         {
+            floorCorrection = default;
+            if (!groundPath.Accepted ||
+                groundPath.InputIdentity != swing.GroundPathInputIdentity ||
+                groundPath.NextSwingLandingEventIdentity != swing.LandingEventIdentity ||
+                !float.IsFinite(groundPath.QueryRadius) ||
+                groundPath.QueryRadius <= 0f)
+                return false;
             Vector3 up = componentUp.normalized;
-            return up * Vector3.Dot(
-                swing.EnvelopeSample - ResolveOriginalSole(foot),
-                up);
+            Vector3 originalSole = ResolveOriginalSole(foot);
+            if (!CharacterFootGroundEnvelopeSampler.TrySampleAt(
+                    in groundPath,
+                    originalSole,
+                    componentUp,
+                    out Vector3 sample))
+                return false;
+            floorCorrection = up * Vector3.Dot(sample - originalSole, up);
+            return Finite(floorCorrection);
         }
 
         static Vector3 RaiseToFloor(
@@ -1370,6 +1390,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (frame.SwingMotion.Accepted &&
                  frame.SwingMotion.SwingPathReference.LandingEventIdentity !=
                  frame.SwingMotion.LandingEventIdentity) ||
+                (frame.SwingMotion.Accepted &&
+                 (!frame.GroundPath.Accepted ||
+                  frame.GroundPath.InputIdentity !=
+                  frame.SwingMotion.GroundPathInputIdentity)) ||
                 (frame.HasContactLanding &&
                  frame.ContactLanding.LandingEventIdentity == 0))
                 throw new InvalidOperationException("Foot state frame is invalid.");

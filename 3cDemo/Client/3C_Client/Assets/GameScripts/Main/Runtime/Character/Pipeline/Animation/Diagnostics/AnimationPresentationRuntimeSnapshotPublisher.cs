@@ -378,12 +378,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal AnimationPresentationRuntimeSnapshot Publish(
             AnimationReleasedPoseSourceSnapshot[] releases,
             int releaseCount,
+            IReadOnlyList<AnimationClipPlayerRuntime> clipPlayers,
             IReadOnlyList<AnimationBlendSpacePlayerRuntime> blendSpacePlayers)
         {
             RequireAlive();
             if (m_PendingPageIndex < 0 || m_PendingCompletionIdentity == 0)
                 throw new InvalidOperationException("Animation runtime diagnostics has no completed native frame.");
             Page page = m_Pages[m_PendingPageIndex];
+            page.FootStepObservation = RequiresBasicState(page.Interest)
+                ? ResolveFootStepObservation(page, clipPlayers)
+                : default;
             int blendSpacePlayerCount = 0;
             int blendSpaceSampleCount = 0;
             if (RequiresBasicState(page.Interest))
@@ -433,6 +437,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_PendingPageIndex = -1;
             m_PendingCompletionIdentity = 0;
             return m_Current;
+        }
+
+        static AnimationFootStepObservationRuntimeSnapshot ResolveFootStepObservation(
+            Page page,
+            IReadOnlyList<AnimationClipPlayerRuntime> clipPlayers)
+        {
+            AnimationPoseSourceId sourceId = default;
+            float sourceWeight = -1f;
+            for (int i = 0; i < page.FinalContributionCount; i++)
+            {
+                AnimationPoseSourceContribution contribution = page.FinalContributions[i];
+                if (contribution.Kind != AnimationPoseContributionKind.Live ||
+                    contribution.Weight <= sourceWeight)
+                {
+                    continue;
+                }
+                sourceId = contribution.SourceId;
+                sourceWeight = contribution.Weight;
+            }
+            if (!sourceId.IsValid || clipPlayers == null)
+                return default;
+            for (int i = 0; i < clipPlayers.Count; i++)
+            {
+                AnimationClipPlayerRuntime player = clipPlayers[i];
+                if (!player.SourceId.Equals(sourceId))
+                    continue;
+                return player.CreateFootStepObservationSnapshot(sourceWeight);
+            }
+            return default;
         }
 
         internal void Invalidate()
@@ -1581,6 +1614,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal AnimationBiomechanicalStepReadPage LeftFootSteps;
             internal AnimationBiomechanicalStepReadPage RightFootSteps;
             internal bool HasFootFeatures;
+            internal AnimationFootStepObservationRuntimeSnapshot FootStepObservation;
             internal readonly AnimationFootPlacementRuntimeSnapshotPage FootPlacement;
 
             internal void ClearCounts()
@@ -1602,6 +1636,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 LinkedPoseGroupCount = 0;
                 LinkedPoseEntryCount = 0;
                 PoseWatchCount = 0;
+                FootStepObservation = default;
                 FootPlacement.Clear();
             }
 
@@ -1627,6 +1662,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     LeftFootSteps,
                     RightFootSteps,
                     HasFootFeatures,
+                    FootStepObservation,
                     new AnimationFootPlacementRuntimeSnapshot(
                         FootPlacement,
                         Lease,

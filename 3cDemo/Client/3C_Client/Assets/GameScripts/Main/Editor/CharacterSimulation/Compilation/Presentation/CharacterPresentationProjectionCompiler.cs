@@ -743,6 +743,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             clipIdentity.RegisteredCurveHash,
                             clipIdentity.SourceDurationSeconds,
                             NormalizeRegisteredCurve(secondsCurve, clipIdentity.SourceDurationSeconds),
+                            CompileFootStepObservation(
+                                directClip.Clip,
+                                clipIdentity.SourceDurationSeconds),
                             directFeatures));
                         continue;
                     }
@@ -772,6 +775,123 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 postWrapMode = source.postWrapMode
             };
         }
+
+        static AnimationFootStepObservationCurvePair CompileFootStepObservation(
+            UnityEngine.AnimationClip clip,
+            float sourceDurationSeconds) =>
+            new AnimationFootStepObservationCurvePair(
+                new AnimationFootStepObservationCurveSet(
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftStepTime),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftStepDistance),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftFootHeight),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftToeHeight),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftToeSpeed),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftPositionError),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftRotationError),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftContact),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftLockMode),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftLockWeight),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.LeftSupport),
+                        sourceDurationSeconds)),
+                new AnimationFootStepObservationCurveSet(
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightStepTime),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightStepDistance),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightFootHeight),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightToeHeight),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightToeSpeed),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightPositionError),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightRotationError),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightContact),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightLockMode),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightLockWeight),
+                        sourceDurationSeconds),
+                    NormalizeRegisteredCurve(
+                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                            clip,
+                            CharacterAnimationClipRegisteredCurveChannels.RightSupport),
+                        sourceDurationSeconds)));
 
         static void ValidateClipPlayers(
             CharacterPresentationPosePlan posePlan,

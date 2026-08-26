@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPresentationPoseSourcePlan
     {
-        public const string CurrentSchemaVersion = "character-presentation-clip-source-plan/v1";
+        public const string CurrentSchemaVersion = "character-presentation-clip-source-plan/v2";
 
         [SerializeField] string m_SchemaVersion = CurrentSchemaVersion;
         [SerializeField] int m_SourceIndex = -1;
@@ -51,6 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_RigRevision = string.Empty;
         [SerializeField] float m_SourceDurationSeconds;
         [SerializeField] AnimationCurve m_FootPlacementWeightCurve;
+        [SerializeField] AnimationFootStepObservationCurvePair m_FootStepObservation;
         [SerializeField] string m_FootAnalysisIdentity = string.Empty;
         [SerializeField] AnimationFootFeatureCurveSet m_LeftFootFeatures;
         [SerializeField] AnimationFootFeatureCurveSet m_RightFootFeatures;
@@ -68,6 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string registeredCurveHash,
             float sourceDurationSeconds,
             AnimationCurve normalizedFootPlacementWeightCurve,
+            AnimationFootStepObservationCurvePair footStepObservation,
             AnimationFootFeaturePair footFeatures)
         {
             if (!sourceIndex.IsValid || string.IsNullOrWhiteSpace(bindingAssetIdentity) ||
@@ -78,7 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string.IsNullOrWhiteSpace(registeredCurveHash) ||
                 !float.IsFinite(sourceDurationSeconds) || sourceDurationSeconds <= 0f ||
                 normalizedFootPlacementWeightCurve == null ||
-                normalizedFootPlacementWeightCurve.length < 2 || !footFeatures.IsValid)
+                normalizedFootPlacementWeightCurve.length < 2 || footStepObservation == null ||
+                !footFeatures.IsValid)
             {
                 throw new ArgumentException("Presentation Clip source compile input is incomplete.");
             }
@@ -95,6 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RigRevision = rig.Revision;
             m_SourceDurationSeconds = sourceDurationSeconds;
             m_FootPlacementWeightCurve = normalizedFootPlacementWeightCurve;
+            m_FootStepObservation = footStepObservation;
             m_FootAnalysisIdentity = footAnalysisIdentity.Trim();
             m_LeftFootFeatures = footFeatures.Left;
             m_RightFootFeatures = footFeatures.Right;
@@ -116,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string RigRevision => m_RigRevision ?? string.Empty;
         public float SourceDurationSeconds => m_SourceDurationSeconds;
         public PoseParameterId FootPlacementWeightParameterId => AnimationPoseParameterIds.FootPlacementWeight;
+        public AnimationFootStepObservationCurvePair FootStepObservation => m_FootStepObservation;
         public string FootAnalysisIdentity => m_FootAnalysisIdentity ?? string.Empty;
         public AnimationFootFeatureCurveSet LeftFootFeatures => m_LeftFootFeatures;
         public AnimationFootFeatureCurveSet RightFootFeatures => m_RightFootFeatures;
@@ -133,12 +138,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string.IsNullOrWhiteSpace(RigId) || string.IsNullOrWhiteSpace(RigRevision) ||
                 !float.IsFinite(SourceDurationSeconds) || SourceDurationSeconds <= 0f ||
                 m_FootPlacementWeightCurve == null || m_FootPlacementWeightCurve.length == 0 ||
+                m_FootStepObservation == null ||
                 string.IsNullOrWhiteSpace(FootAnalysisIdentity) ||
                 m_LeftFootFeatures == null || m_RightFootFeatures == null ||
                 string.IsNullOrWhiteSpace(ContentRevision))
             {
                 throw new InvalidOperationException($"Compiled Presentation Clip source '{DisplayName}' is invalid.");
             }
+            m_FootStepObservation.RequireValid();
         }
 
         public float SampleFootPlacementWeight(float normalizedTime)

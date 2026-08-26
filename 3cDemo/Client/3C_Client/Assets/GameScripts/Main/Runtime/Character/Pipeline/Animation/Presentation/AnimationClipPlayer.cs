@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -357,6 +358,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal float Duration => m_Source.Clip.length;
         internal CharacterClipPlayerClockSource ClockSource => m_Descriptor.ClockSource;
         internal float PlayRate => m_PlayRate;
+
+        internal AnimationFootStepObservationRuntimeSnapshot CreateFootStepObservationSnapshot(
+            float sourceWeight)
+        {
+            RequireAlive();
+            if (!IsRelevant || !HasCompletedFrame || !SourceId.IsValid ||
+                !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f)
+            {
+                throw new InvalidOperationException(
+                    $"Clip Player '{NodeId}' Foot Step observation is unavailable.");
+            }
+            float normalizedTime = Duration > 0f
+                ? Mathf.Clamp01(SampleTime / Duration)
+                : 0f;
+            return new AnimationFootStepObservationRuntimeSnapshot(
+                NodeId,
+                SourceIndex,
+                SourceId,
+                m_Source.ClipIdentity,
+                sourceWeight,
+                normalizedTime,
+                m_Source.FootStepObservation.Left.Sample(normalizedTime),
+                m_Source.FootStepObservation.Right.Sample(normalizedTime));
+        }
 
         internal string ApplyTuning(float playRate)
         {

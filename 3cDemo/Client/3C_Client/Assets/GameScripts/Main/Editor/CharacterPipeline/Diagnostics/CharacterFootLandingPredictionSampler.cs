@@ -30,6 +30,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
+            "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
+            "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
+            "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
             "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
@@ -308,6 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootLandingPredictionDiagnostics frame = captured.Foot;
                 FootIkCapture left = captured.Left;
                 FootIkCapture right = captured.Right;
+                FootStepObservationCapture footStepObservation = captured.FootStepObservation;
                 RootHierarchyCapture roots = captured.Roots;
                 CharacterFootLandingPredictionFootDiagnostics leftFoot = frame.Left;
                 CharacterFootLandingPredictionFootDiagnostics rightFoot = frame.Right;
@@ -318,6 +322,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     in frame,
                     in leftFoot,
                     in left,
+                    in footStepObservation,
                     in roots,
                     captured.TargetRuntimeInstanceId,
                     captured.TargetHostInstanceId);
@@ -328,6 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     in frame,
                     in rightFoot,
                     in right,
+                    in footStepObservation,
                     in roots,
                     captured.TargetRuntimeInstanceId,
                     captured.TargetHostInstanceId);
@@ -440,12 +446,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Quaternion PoseRootWorldRotation { get; }
         }
 
+        readonly struct FootStepObservationCapture
+        {
+            internal FootStepObservationCapture(
+                string sourceIdentity,
+                float weight,
+                float normalizedTime,
+                AnimationFootStepObservationSample left,
+                AnimationFootStepObservationSample right)
+            {
+                if (string.IsNullOrWhiteSpace(sourceIdentity) ||
+                    !float.IsFinite(weight) || weight < 0f || weight > 1f ||
+                    !float.IsFinite(normalizedTime) || normalizedTime < 0f || normalizedTime > 1f ||
+                    !left.IsValid || !right.IsValid)
+                {
+                    throw new ArgumentException("Foot Step observation capture is invalid.");
+                }
+                SourceIdentity = sourceIdentity.Trim();
+                Weight = weight;
+                NormalizedTime = normalizedTime;
+                Left = left;
+                Right = right;
+                m_IsSpecified = 1;
+            }
+
+            readonly byte m_IsSpecified;
+            internal string SourceIdentity { get; }
+            internal float Weight { get; }
+            internal float NormalizedTime { get; }
+            internal AnimationFootStepObservationSample Left { get; }
+            internal AnimationFootStepObservationSample Right { get; }
+            internal bool IsValid => m_IsSpecified != 0;
+        }
+
         sealed class CapturedFrame
         {
             internal CapturedFrame(
                 in CharacterFootLandingPredictionDiagnostics foot,
                 FootIkCapture left,
                 FootIkCapture right,
+                FootStepObservationCapture footStepObservation,
                 Vector3 physicalPelvisComponentPosition,
                 RootHierarchyCapture roots,
                 Guid targetRuntimeInstanceId,
@@ -454,6 +494,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Foot = foot;
                 Left = left;
                 Right = right;
+                FootStepObservation = footStepObservation;
                 PhysicalPelvisComponentPosition = physicalPelvisComponentPosition;
                 Roots = roots;
                 TargetRuntimeInstanceId = targetRuntimeInstanceId;
@@ -463,6 +504,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal CharacterFootLandingPredictionDiagnostics Foot { get; }
             internal FootIkCapture Left { get; }
             internal FootIkCapture Right { get; }
+            internal FootStepObservationCapture FootStepObservation { get; }
             internal Vector3 PhysicalPelvisComponentPosition { get; }
             internal RootHierarchyCapture Roots { get; }
             internal Guid TargetRuntimeInstanceId { get; }
@@ -727,6 +769,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.PhysicalWriteCompletionIdentity,
                         placement.RightPhysicalAnkleComponentPosition,
                         placement.PhysicalPelvisComponentPosition),
+                    CaptureFootStepObservation(debugView.PosePlan),
                     placement.PhysicalPelvisComponentPosition,
                     new RootHierarchyCapture(s_TargetRootHierarchy),
                     target.RuntimeInstanceId,
@@ -735,6 +778,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             captured = default;
             return PendingFrameResolution.Waiting;
+        }
+
+        static FootStepObservationCapture CaptureFootStepObservation(
+            AnimationPresentationRuntimeSnapshot snapshot)
+        {
+            AnimationFootStepObservationRuntimeSnapshot observation =
+                snapshot.FootStepObservation;
+            return observation.IsValid
+                ? new FootStepObservationCapture(
+                    observation.SourceIdentity,
+                    observation.SourceWeight,
+                    observation.NormalizedTime,
+                    observation.Left,
+                    observation.Right)
+                : default;
         }
 
         static void ConfigureTargets()
@@ -1102,6 +1160,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in CharacterFootLandingPredictionDiagnostics frame,
             in CharacterFootLandingPredictionFootDiagnostics foot,
             in FootIkCapture ik,
+            in FootStepObservationCapture footStepObservation,
             in RootHierarchyCapture roots,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId)
@@ -1114,6 +1173,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int contactIndex = 0; contactIndex < rowCount; contactIndex++)
                 WriteRow(
                     session, writer, row, in frame, in foot, in ik,
+                    in footStepObservation,
                     in roots,
                     targetRuntimeInstanceId, targetHostInstanceId, contactIndex);
         }
@@ -1125,6 +1185,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in CharacterFootLandingPredictionDiagnostics frame,
             in CharacterFootLandingPredictionFootDiagnostics foot,
             in FootIkCapture ik,
+            in FootStepObservationCapture footStepObservation,
             in RootHierarchyCapture roots,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId,
@@ -1153,6 +1214,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.TrajectoryGeneration);
             Add(row, foot.LandingConfidence);
             Add(row, foot.TimeToLandingSeconds);
+            AnimationFootStepObservationSample observedStep =
+                foot.Side == CharacterFootSide.Left
+                    ? footStepObservation.Left
+                    : footStepObservation.Right;
+            bool hasObservedStep = footStepObservation.IsValid && observedStep.IsValid;
+            Add(row, hasObservedStep);
+            Add(row, hasObservedStep ? footStepObservation.SourceIdentity : string.Empty);
+            Add(row, hasObservedStep ? footStepObservation.Weight : 0f);
+            Add(row, hasObservedStep ? footStepObservation.NormalizedTime : 0f);
+            Add(row, hasObservedStep ? observedStep.TimeToLandingSeconds : 0f);
+            Add(row, hasObservedStep ? observedStep.Distance : 0f);
+            Add(row, hasObservedStep ? observedStep.FootHeight : 0f);
+            Add(row, hasObservedStep ? observedStep.ToeHeight : 0f);
+            Add(row, hasObservedStep ? observedStep.ToeSpeed : 0f);
+            Add(row, hasObservedStep ? observedStep.PositionError : 0f);
+            Add(row, hasObservedStep ? observedStep.RotationError : 0f);
+            Add(row, hasObservedStep ? observedStep.Contact : 0f);
+            Add(row, hasObservedStep ? observedStep.LockMode.ToString() : string.Empty);
+            Add(row, hasObservedStep ? observedStep.LockWeight : 0f);
+            Add(row, hasObservedStep ? observedStep.Support : 0f);
             Add(row, foot.RootLocalLanding);
             Add(row, input.PresentationDeltaSeconds);
             Add(row, input.PreviousBodyTick);

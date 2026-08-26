@@ -1708,6 +1708,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_DiagnosticsPublisher.Publish(
                     m_ReleasedSources,
                     m_ReleasedSourceCount,
+                    m_PoseStateSources.ClipPlayers,
                     m_PoseStateSources.BlendSpacePlayers);
             }
             return true;

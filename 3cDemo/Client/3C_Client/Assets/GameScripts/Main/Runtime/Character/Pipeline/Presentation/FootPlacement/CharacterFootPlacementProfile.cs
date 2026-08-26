@@ -179,7 +179,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_PelvisSpringFrequency = 3f;
-        [SerializeField] float m_MinimumLandingLegCompressionReserve = 0.02f;
 
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(
@@ -187,8 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_EffectiveCorrectionHalfLifeSeconds,
                 m_LockDistance,
                 m_SlideDistance,
-                m_PelvisSpringFrequency,
-                m_MinimumLandingLegCompressionReserve);
+                m_PelvisSpringFrequency);
     }
 
     internal readonly struct CharacterFootMotionSettings
@@ -198,16 +196,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float effectiveCorrectionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
-            float pelvisSpringFrequency,
-            float minimumLandingLegCompressionReserve)
+            float pelvisSpringFrequency)
         {
             LandingUpdateDistance = landingUpdateDistance;
             EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
             PelvisSpringFrequency = pelvisSpringFrequency;
-            MinimumLandingLegCompressionReserve =
-                minimumLandingLegCompressionReserve;
             RequireValid();
         }
 
@@ -216,7 +211,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
         internal float PelvisSpringFrequency { get; }
-        internal float MinimumLandingLegCompressionReserve { get; }
 
         internal void RequireValid()
         {
@@ -227,9 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LockDistance <= LandingUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
-                !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f ||
-                !float.IsFinite(MinimumLandingLegCompressionReserve) ||
-                MinimumLandingLegCompressionReserve <= 0f)
+                !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f)
             {
                 throw new InvalidOperationException(
                     "Foot Motion settings are invalid.");

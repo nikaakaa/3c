@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     [McpForUnityTool(
         "character.fixed_input_trace",
-        Description = "Record canonical character input per Fixed simulation Tick, list saved JSON traces, or replay one trace while keeping camera controls live. Replay restarts the recorded Gameplay Lab variant, owns character input, automatically captures Foot Landing samples, and publishes samples.csv, facts.json, and diagnoses/ at completion.",
+        Description = "Record canonical character input per Fixed simulation Tick, capture or consume a Live Presentation Schedule, list saved traces, or replay one trace while keeping camera controls live.",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: record_start, record_stop, replay_last, replay_start, list_traces, status, or stop. Defaults to status.", Required = false)]
+            [ToolParameter("Action: record_start, record_stop, replay_last, replay_start, schedule_record_start, schedule_replay_start, list_traces, status, or stop. Defaults to status.", Required = false)]
             public string action { get; set; }
 
             [ToolParameter("Exact trace_id returned by record_stop or list_traces. Used by replay_start; omitted means latest.", Required = false)]
@@ -50,6 +50,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case "replay_start":
                         CharacterFixedInputTraceWorkflow.ReplayTrace(traceId);
                         return Success("Canonical Fixed input replay requested.", false);
+                    case "schedule_record_start":
+                        CharacterFixedInputTraceWorkflow.RecordPresentationSchedule(
+                            traceId);
+                        return Success(
+                            "Canonical Live Presentation Schedule capture requested.",
+                            false);
+                    case "schedule_replay_start":
+                        CharacterFixedInputTraceWorkflow
+                            .ReplayWithPresentationSchedule(traceId);
+                        return Success(
+                            "Scripted Presentation Schedule replay requested.",
+                            false);
                     case "list_traces":
                         return Success("Canonical Fixed input traces listed.", true);
                     case "status":
@@ -96,6 +108,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     trace_directory = CharacterFixedInputTraceWorkflow.TraceDirectory,
                     last_trace_id = CharacterFixedInputTraceWorkflow.LastTraceId,
                     last_trace_path = CharacterFixedInputTraceWorkflow.LastTracePath,
+                    presentation_schedule_path =
+                        CharacterFixedInputTraceWorkflow
+                            .LastPresentationSchedulePath,
+                    replay_proof_path =
+                        CharacterFixedInputTraceWorkflow.LastReplayProofPath,
+                    replay_comparison =
+                        CharacterFixedInputTraceWorkflow.LastReplayComparison,
                     foot_sampling = CharacterFootLandingPredictionSampler.IsCapturing,
                     foot_sampling_finalizing = CharacterFootLandingPredictionSampler.IsFinalizing,
                     samples_path = CharacterFootLandingPredictionSampler.LastSavedPath,

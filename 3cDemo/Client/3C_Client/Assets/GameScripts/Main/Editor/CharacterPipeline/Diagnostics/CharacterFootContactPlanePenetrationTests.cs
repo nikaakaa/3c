@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         [Test]
-        public void SealedSamplesPublishSixDeterministicDiagnosisFiles()
+        public void SealedSamplesPublishEightDeterministicDiagnosisFiles()
         {
             string directory = Path.Combine(
                 Path.GetTempPath(),
@@ -76,20 +76,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Set(row, indices, "PresentationDeltaSeconds", "0.016666667");
                 Set(row, indices, "Grounded", "1");
                 Set(row, indices, "InputFormalStepSourceIdentity", "source");
+                Set(row, indices, "InputFormalStepObservationAvailable", "1");
+                Set(
+                    row,
+                    indices,
+                    "InputFormalStepContributionContinuityIdentity",
+                    "1");
+                Set(row, indices, "InputFormalStepCompletionIdentity", "1");
                 Set(row, indices, "InputFormalLockMode", "Unlocked");
                 Set(row, indices, "GroundPathState", "Accepted");
                 Set(row, indices, "GroundPathComponentUpY", "1");
+                Set(row, indices, "CurrentFloorState", "Rejected");
+                Set(
+                    row,
+                    indices,
+                    "CurrentFloorRejectReason",
+                    "SwingUnavailable");
                 Set(row, indices, "FootMotionState", "Accepted");
+                Set(row, indices, "FootMotionRejectReason", "None");
                 Set(row, indices, "FootMotionConstraintState", "Swing");
+                Set(row, indices, "FootMotionPathRevisionReason", "None");
                 Set(
                     row,
                     indices,
                     "FootContactPlanePenetrationAvailability",
                     CharacterFootContactPlanePenetrationAvailability
                         .ContactLifecycleUnavailable.ToString());
+                string[] right = (string[])row.Clone();
+                Set(right, indices, "Side", "Right");
                 File.WriteAllLines(
                     samplesPath,
-                    new[] { csvHeader, string.Join(",", row) });
+                    new[]
+                    {
+                        csvHeader,
+                        string.Join(",", row),
+                        string.Join(",", right)
+                    });
+                File.WriteAllText(
+                    Path.Combine(
+                        directory,
+                        "ground-path-geometry.csv"),
+                    ResolveGeometryHeader() +
+                    Environment.NewLine);
                 CharacterFootMotionDiagnosticAnalysis result =
                     CharacterFootMotionDiagnosticAnalyzer.Analyze(samplesPath);
                 Assert.That(File.Exists(result.FactsPath), Is.True);
@@ -103,7 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Assert.That(
                     penetration["coverage"]?["unavailableReasons"]?
                         .Value<int>("ContactLifecycleUnavailable"),
-                    Is.EqualTo(1));
+                    Is.EqualTo(2));
                 string firstFacts = File.ReadAllText(result.FactsPath);
                 var firstDiagnoses = Directory
                     .GetFiles(result.DiagnosisDirectory, "*.json")
@@ -111,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Path.GetFileName,
                         File.ReadAllText,
                         StringComparer.Ordinal);
-                Assert.That(firstDiagnoses.Count, Is.EqualTo(6));
+                Assert.That(firstDiagnoses.Count, Is.EqualTo(8));
                 CharacterFootMotionDiagnosticAnalyzer.Analyze(samplesPath);
                 Assert.That(File.ReadAllText(result.FactsPath), Is.EqualTo(firstFacts));
                 foreach (KeyValuePair<string, string> entry in firstDiagnoses)
@@ -140,6 +168,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             (string)typeof(CharacterFootLandingPredictionSampler)
                 .GetField(
                     "Header",
+                    BindingFlags.Static | BindingFlags.NonPublic)
+                .GetRawConstantValue();
+
+        static string ResolveGeometryHeader() =>
+            (string)typeof(CharacterFootLandingPredictionSampler)
+                .GetField(
+                    "GeometryHeader",
                     BindingFlags.Static | BindingFlags.NonPublic)
                 .GetRawConstantValue();
     }

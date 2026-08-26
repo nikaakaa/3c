@@ -699,6 +699,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static bool s_Capturing;
         static bool s_StartPending;
+        static bool s_ControlledCaptureWindow;
+        static bool s_CaptureWindowOpen;
         static double s_StartDeadline;
         static string s_LastStartFailure = string.Empty;
         static string s_StartWaitReason = string.Empty;
@@ -724,6 +726,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static bool IsCapturing => s_Capturing;
         public static bool IsStartPending => s_StartPending;
         public static bool IsFinalizing => s_Finalization != null;
+        public static bool IsControlledCaptureWindow =>
+            s_Capturing && s_ControlledCaptureWindow;
+        public static bool IsCaptureWindowOpen =>
+            s_Capturing && s_CaptureWindowOpen;
         public static string LastStartFailure => s_LastStartFailure;
         public static string LastSavedPath => s_LastSavedPath;
         public static string LastSavedGeometryPath => s_LastSavedGeometryPath;
@@ -781,7 +787,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        public static void StartSampling()
+        public static void StartSampling() => StartSampling(false);
+
+        public static void StartControlledSampling() => StartSampling(true);
+
+        public static void OpenControlledCaptureWindow()
+        {
+            if (!s_Capturing || !s_ControlledCaptureWindow ||
+                s_CaptureWindowOpen)
+            {
+                throw new InvalidOperationException(
+                    "Foot Landing controlled capture window cannot open in the current state.");
+            }
+            s_CaptureWindowOpen = true;
+        }
+
+        public static void CloseControlledCaptureWindow()
+        {
+            if (!s_Capturing || !s_ControlledCaptureWindow ||
+                !s_CaptureWindowOpen)
+            {
+                throw new InvalidOperationException(
+                    "Foot Landing controlled capture window cannot close in the current state.");
+            }
+            s_CaptureWindowOpen = false;
+        }
+
+        static void StartSampling(bool controlledCaptureWindow)
         {
             if (!EditorApplication.isPlaying)
                 throw new InvalidOperationException(
@@ -805,6 +837,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastFinalizationFailure = string.Empty;
             s_LastStartFailure = string.Empty;
             s_StartWaitReason = string.Empty;
+            s_ControlledCaptureWindow = controlledCaptureWindow;
+            s_CaptureWindowOpen = !controlledCaptureWindow;
             s_StartPending = true;
             s_StartDeadline = EditorApplication.timeSinceStartup + SamplingStartTimeoutSeconds;
             EditorApplication.update -= PollSamplingStart;
@@ -903,7 +937,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void Capture(in CharacterFootLandingPredictionDiagnostics diagnostics)
         {
-            if (!s_Capturing)
+            if (!s_Capturing || !s_CaptureWindowOpen)
                 return;
             if (diagnostics.RootInstanceId != s_TargetRootInstanceId)
                 return;
@@ -1261,6 +1295,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_StartPending = false;
             s_StartDeadline = 0d;
             s_StartWaitReason = string.Empty;
+            s_ControlledCaptureWindow = false;
+            s_CaptureWindowOpen = false;
             s_PendingFrames.Clear();
             ResetTargetBinding();
         }
@@ -1273,6 +1309,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.update -= ProcessPendingFrames;
             RemoveTargetDiagnostics();
             s_Capturing = false;
+            s_ControlledCaptureWindow = false;
+            s_CaptureWindowOpen = false;
         }
 
         static string StopAndSave()

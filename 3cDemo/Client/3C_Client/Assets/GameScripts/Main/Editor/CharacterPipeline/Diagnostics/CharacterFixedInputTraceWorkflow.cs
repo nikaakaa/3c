@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
+using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
@@ -45,6 +46,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public static class CharacterFixedInputTraceWorkflow
     {
         const string Schema = "character-fixed-input-trace/2";
+        const string ReplayProofSchema = "character-fixed-input-replay-proof/2";
+        const string ReplayTickDriveMode = "one-fixed-tick-per-presentation-frame";
+        const string ReplayPresentationClockMode = "logic-locked";
         const string PlayerActorId = "gameplay-lab-player";
         const string PendingOperationKey = "ThirdPerson.CharacterInputTrace.PendingOperation.v1";
         const string PendingTracePathKey = "ThirdPerson.CharacterInputTrace.PendingTracePath.v1";
@@ -67,6 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool s_ReplayOwnsSampling;
         static bool s_ReplayWaitingForSampling;
         static bool s_ReplayFinalizing;
+        static bool s_ReplayOwnsTickDrive;
+        static int s_ReplayIssuedTickCount;
         static TraceDocument s_PendingReplayDocument;
         static TraceDocument s_ActiveReplayDocument;
         static FixedCharacterInputReplayEvidence s_LastReplayEvidence;
@@ -181,6 +187,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException("Use Stop and Save Input to finish an active recording.");
             ClearPending();
             s_ReplayWaitingForSampling = false;
+            CloseReplaySamplingWindow();
+            ReleaseReplayTickDrive();
             s_PendingReplayDocument = null;
             s_ActiveReplayDocument = null;
             s_LastReplayEvidence = null;
@@ -293,7 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Replay start state does not match the recording. PositionError={positionError:0.###}, YawError={yawError:0.###}.");
                 }
                 ResetPendingDeadline();
-                CharacterFootLandingPredictionSampler.StartSampling();
+                CharacterFootLandingPredictionSampler.StartControlledSampling();
                 s_ReplayOwnsSampling = true;
                 s_ReplayWaitingForSampling = true;
                 EditorApplication.isPaused = false;
@@ -308,6 +316,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ? "Foot Landing sampling did not start."
                         : CharacterFootLandingPredictionSampler.LastStartFailure);
             FixedCharacterInputTraceModule.StartReplay();
+            CharacterFootLandingPredictionSampler.OpenControlledCaptureWindow();
+            BeginReplayTickDrive(trace.Frames.Count);
             s_ReplayWaitingForSampling = false;
             ClearPending();
             FixedCharacterInputTraceStatus status = FixedCharacterInputTraceModule.Status;
@@ -361,9 +371,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             FixedCharacterInputTraceStatus status = FixedCharacterInputTraceModule.Status;
             if (status.Mode == FixedCharacterInputTraceMode.Faulted)
+            {
+                CloseReplaySamplingWindow();
+                ReleaseReplayTickDrive();
                 throw new InvalidOperationException(status.Message);
+            }
+            if (status.Mode == FixedCharacterInputTraceMode.Replaying)
+            {
+                AdvanceReplayTickDrive(status);
+                return;
+            }
             if (status.Mode != FixedCharacterInputTraceMode.Completed)
                 return;
+            CloseReplaySamplingWindow();
+            ReleaseReplayTickDrive();
             s_LastReplayEvidence =
                 FixedCharacterInputTraceModule.CaptureReplayEvidence();
             if (s_ReplayOwnsSampling &&
@@ -430,7 +451,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ReplayFootSampleDocument sample = ReadReplayFootSample();
             var document = new ReplayProofDocument
             {
-                schema = "character-fixed-input-replay-proof/1",
+                schema = ReplayProofSchema,
                 run_id = Guid.NewGuid().ToString("N"),
                 created_utc = DateTime.UtcNow.ToString(
                     "O",
@@ -440,6 +461,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 start_body_hash = evidence.StartBodyHash.ToString(),
                 replay_start_tick = evidence.ReplayStartTick,
                 frame_count = evidence.Frames.Count,
+                tick_drive_mode = ReplayTickDriveMode,
+                presentation_clock_mode = ReplayPresentationClockMode,
                 input_sequence_hash = evidence.InputSequenceHash.ToString(),
                 body_trajectory_hash = evidence.BodyTrajectoryHash.ToString(),
                 foot_sample = sample,
@@ -451,16 +474,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!string.IsNullOrEmpty(baselinePath))
             {
                 ReplayProofDocument baseline = ReadReplayProof(baselinePath);
-                CompareReplayProofs(baseline, document);
-                document.comparison = new ReplayComparisonDocument
-                {
-                    baseline_available = true,
-                    matched = true,
-                    baseline_path = baselinePath,
-                    compared_frame_count = document.frame_count
-                };
-                s_LastReplayComparison =
-                    $"matched:{document.frame_count}:{baselinePath}";
+                document.comparison = CompareReplayProofs(
+                    baseline,
+                    document,
+                    baselinePath);
+                s_LastReplayComparison = document.comparison.matched
+                    ? $"matched:{document.frame_count}:{baselinePath}"
+                    : $"mismatch:{document.comparison.divergent_frame_count}:{baselinePath}";
             }
             else
             {
@@ -469,7 +489,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     baseline_available = false,
                     matched = true,
                     baseline_path = string.Empty,
-                    compared_frame_count = 0
+                    compared_frame_count = 0,
+                    aggregate_mismatches = Array.Empty<ReplayMismatchDocument>(),
+                    divergent_frame_count = 0,
+                    first_divergent_relative_frame = -1,
+                    first_frame_mismatches = Array.Empty<ReplayMismatchDocument>()
                 };
                 s_LastReplayComparison =
                     $"baseline-created:{document.frame_count}";
@@ -494,6 +518,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw;
             }
             s_LastReplayProofPath = path;
+            if (!document.comparison.matched)
+                throw new InvalidDataException(
+                    DescribeReplayComparisonFailure(document.comparison, path));
             s_ActiveReplayDocument = null;
             s_LastReplayEvidence = null;
         }
@@ -565,42 +592,77 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return frames;
         }
 
-        static void CompareReplayProofs(
+        static ReplayComparisonDocument CompareReplayProofs(
             ReplayProofDocument baseline,
-            ReplayProofDocument current)
+            ReplayProofDocument current,
+            string baselinePath)
         {
-            if (!string.Equals(
-                    baseline.trace_id,
-                    current.trace_id,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    baseline.trace_content_hash,
-                    current.trace_content_hash,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    baseline.start_body_hash,
-                    current.start_body_hash,
-                    StringComparison.Ordinal) ||
-                baseline.frame_count != current.frame_count ||
-                !string.Equals(
-                    baseline.input_sequence_hash,
-                    current.input_sequence_hash,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    baseline.body_trajectory_hash,
-                    current.body_trajectory_hash,
-                    StringComparison.Ordinal) ||
-                baseline.foot_sample.sampling_relative_frame_count !=
-                current.foot_sample.sampling_relative_frame_count)
-            {
-                throw new InvalidDataException(
-                    "Fixed input replay aggregate proof does not match its baseline.");
-            }
-            for (int i = 0; i < current.frames.Length; i++)
+            var aggregate = new List<ReplayMismatchDocument>();
+            AddReplayMismatch(
+                aggregate,
+                "trace_id",
+                baseline.trace_id,
+                current.trace_id);
+            AddReplayMismatch(
+                aggregate,
+                "trace_content_hash",
+                baseline.trace_content_hash,
+                current.trace_content_hash);
+            AddReplayMismatch(
+                aggregate,
+                "start_body_hash",
+                baseline.start_body_hash,
+                current.start_body_hash);
+            AddReplayMismatch(
+                aggregate,
+                "frame_count",
+                baseline.frame_count.ToString(CultureInfo.InvariantCulture),
+                current.frame_count.ToString(CultureInfo.InvariantCulture));
+            AddReplayMismatch(
+                aggregate,
+                "tick_drive_mode",
+                baseline.tick_drive_mode,
+                current.tick_drive_mode);
+            AddReplayMismatch(
+                aggregate,
+                "presentation_clock_mode",
+                baseline.presentation_clock_mode,
+                current.presentation_clock_mode);
+            AddReplayMismatch(
+                aggregate,
+                "input_sequence_hash",
+                baseline.input_sequence_hash,
+                current.input_sequence_hash);
+            AddReplayMismatch(
+                aggregate,
+                "body_trajectory_hash",
+                baseline.body_trajectory_hash,
+                current.body_trajectory_hash);
+            AddReplayMismatch(
+                aggregate,
+                "sampling_relative_frame_count",
+                baseline.foot_sample.sampling_relative_frame_count.ToString(
+                    CultureInfo.InvariantCulture),
+                current.foot_sample.sampling_relative_frame_count.ToString(
+                    CultureInfo.InvariantCulture));
+            AddReplayMismatch(
+                aggregate,
+                "proof_frame_count",
+                baseline.frames.Length.ToString(CultureInfo.InvariantCulture),
+                current.frames.Length.ToString(CultureInfo.InvariantCulture));
+
+            int comparedFrameCount = Math.Min(
+                baseline.frames.Length,
+                current.frames.Length);
+            int divergentFrameCount = 0;
+            int firstDivergentRelativeFrame = -1;
+            var firstFrameMismatches = new List<ReplayMismatchDocument>();
+            for (int i = 0; i < comparedFrameCount; i++)
             {
                 ReplayProofFrameDocument left = baseline.frames[i];
                 ReplayProofFrameDocument right = current.frames[i];
-                if (left.relative_frame != right.relative_frame ||
+                bool differs =
+                    left.relative_frame != right.relative_frame ||
                     left.recorded_tick != right.recorded_tick ||
                     !string.Equals(
                         left.input_hash,
@@ -609,12 +671,87 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !string.Equals(
                         left.body_hash,
                         right.body_hash,
-                        StringComparison.Ordinal))
-                {
-                    throw new InvalidDataException(
-                        $"Fixed input replay proof diverged at relative frame {i}.");
-                }
+                        StringComparison.Ordinal);
+                if (!differs)
+                    continue;
+                divergentFrameCount++;
+                if (firstDivergentRelativeFrame >= 0)
+                    continue;
+                firstDivergentRelativeFrame = right.relative_frame;
+                AddReplayMismatch(
+                    firstFrameMismatches,
+                    "relative_frame",
+                    left.relative_frame.ToString(CultureInfo.InvariantCulture),
+                    right.relative_frame.ToString(CultureInfo.InvariantCulture));
+                AddReplayMismatch(
+                    firstFrameMismatches,
+                    "recorded_tick",
+                    left.recorded_tick.ToString(CultureInfo.InvariantCulture),
+                    right.recorded_tick.ToString(CultureInfo.InvariantCulture));
+                AddReplayMismatch(
+                    firstFrameMismatches,
+                    "input_hash",
+                    left.input_hash,
+                    right.input_hash);
+                AddReplayMismatch(
+                    firstFrameMismatches,
+                    "body_hash",
+                    left.body_hash,
+                    right.body_hash);
             }
+            return new ReplayComparisonDocument
+            {
+                baseline_available = true,
+                matched = aggregate.Count == 0 &&
+                          divergentFrameCount == 0,
+                baseline_path = baselinePath,
+                compared_frame_count = comparedFrameCount,
+                aggregate_mismatches = aggregate.ToArray(),
+                divergent_frame_count = divergentFrameCount,
+                first_divergent_relative_frame =
+                    firstDivergentRelativeFrame,
+                first_frame_mismatches =
+                    firstFrameMismatches.ToArray()
+            };
+        }
+
+        static void AddReplayMismatch(
+            ICollection<ReplayMismatchDocument> mismatches,
+            string field,
+            string baseline,
+            string candidate)
+        {
+            if (string.Equals(
+                    baseline,
+                    candidate,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+            mismatches.Add(new ReplayMismatchDocument
+            {
+                field = field,
+                baseline = baseline ?? string.Empty,
+                candidate = candidate ?? string.Empty
+            });
+        }
+
+        static string DescribeReplayComparisonFailure(
+            ReplayComparisonDocument comparison,
+            string candidatePath)
+        {
+            string aggregateFields = string.Join(
+                ",",
+                comparison.aggregate_mismatches.Select(value => value.field));
+            string firstFrameFields = string.Join(
+                ",",
+                comparison.first_frame_mismatches.Select(value => value.field));
+            return
+                $"Fixed input replay proof mismatch. Candidate={candidatePath}, " +
+                $"AggregateFields=[{aggregateFields}], " +
+                $"DivergentFrameCount={comparison.divergent_frame_count}, " +
+                $"FirstDivergentRelativeFrame={comparison.first_divergent_relative_frame}, " +
+                $"FirstFrameFields=[{firstFrameFields}].";
         }
 
         static ReplayProofDocument ReadReplayProof(string path)
@@ -623,8 +760,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 JsonConvert.DeserializeObject<ReplayProofDocument>(
                     File.ReadAllText(path, Encoding.UTF8));
             if (document == null ||
-                document.schema !=
-                "character-fixed-input-replay-proof/1" ||
+                document.schema != ReplayProofSchema ||
                 document.frame_count <= 0 ||
                 document.frames == null ||
                 document.frames.Length != document.frame_count ||
@@ -655,6 +791,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 hash,
                 document.frame_count.ToString(
                     CultureInfo.InvariantCulture));
+            AppendHash(hash, document.tick_drive_mode);
+            AppendHash(hash, document.presentation_clock_mode);
             AppendHash(hash, document.input_sequence_hash);
             AppendHash(hash, document.body_trajectory_hash);
             AppendHash(
@@ -699,7 +837,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Application.dataPath,
                     "..",
                     "Temp",
-                    "CharacterInputReplayProofs")),
+                    "CharacterInputReplayProofs",
+                    "v2")),
                 traceId);
 
         static void StartPendingPlayMode()
@@ -745,6 +884,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (IsReplaying)
             {
+                AbandonReplayTickDrive();
                 if (s_ReplayOwnsSampling &&
                     (CharacterFootLandingPredictionSampler.IsCapturing ||
                      CharacterFootLandingPredictionSampler.IsStartPending))
@@ -768,6 +908,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             s_ReplayOwnsSampling = false;
             s_ReplayFinalizing = false;
+            AbandonReplayTickDrive();
             FixedCharacterInputTraceModule.Stop();
         }
 
@@ -780,6 +921,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_PendingReplayDocument = null;
             s_ActiveReplayDocument = null;
             s_LastReplayEvidence = null;
+            CloseReplaySamplingWindow();
+            ReleaseReplayTickDrive();
             if (s_ReplayOwnsSampling &&
                 (CharacterFootLandingPredictionSampler.IsCapturing ||
                  CharacterFootLandingPredictionSampler.IsStartPending))
@@ -1093,6 +1236,81 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ResetPendingDeadline();
         }
 
+        static void BeginReplayTickDrive(int frameCount)
+        {
+            if (frameCount <= 0 || s_ReplayOwnsTickDrive ||
+                !GameplayTickSystem.IsInitialized)
+            {
+                throw new InvalidOperationException(
+                    "Canonical Fixed replay Tick drive is unavailable.");
+            }
+            RequireTickDriveCommand(GameplayTickDriveCommand.SetPresentationClock(
+                GameplayPresentationDebugClockMode.LogicLockedPresentation));
+            RequireTickDriveCommand(GameplayTickDriveCommand.Step(1));
+            s_ReplayOwnsTickDrive = true;
+            s_ReplayIssuedTickCount = 1;
+        }
+
+        static void AdvanceReplayTickDrive(FixedCharacterInputTraceStatus status)
+        {
+            if (!s_ReplayOwnsTickDrive ||
+                status.ReplayedFrameCount > s_ReplayIssuedTickCount)
+            {
+                throw new InvalidOperationException(
+                    "Canonical Fixed replay Tick drive lost its frame boundary.");
+            }
+            if (status.ReplayedFrameCount < s_ReplayIssuedTickCount ||
+                s_ReplayIssuedTickCount >= status.FrameCount)
+            {
+                return;
+            }
+            RequireTickDriveCommand(GameplayTickDriveCommand.Step(1));
+            s_ReplayIssuedTickCount++;
+        }
+
+        static void ReleaseReplayTickDrive()
+        {
+            if (!s_ReplayOwnsTickDrive)
+                return;
+            if (!GameplayTickSystem.IsInitialized)
+            {
+                AbandonReplayTickDrive();
+                return;
+            }
+            try
+            {
+                RequireTickDriveCommand(GameplayTickDriveCommand.SetPresentationClock(
+                    GameplayPresentationDebugClockMode.LivePresentation));
+                RequireTickDriveCommand(GameplayTickDriveCommand.SetRealtime());
+            }
+            finally
+            {
+                AbandonReplayTickDrive();
+            }
+        }
+
+        static void AbandonReplayTickDrive()
+        {
+            s_ReplayOwnsTickDrive = false;
+            s_ReplayIssuedTickCount = 0;
+        }
+
+        static void RequireTickDriveCommand(GameplayTickDriveCommand command)
+        {
+            if (!GameplayTickSystem.EnqueueDriveCommand(command))
+                throw new InvalidOperationException(
+                    "Gameplay Tick System rejected the canonical Fixed replay drive command.");
+        }
+
+        static void CloseReplaySamplingWindow()
+        {
+            if (CharacterFootLandingPredictionSampler.IsControlledCaptureWindow &&
+                CharacterFootLandingPredictionSampler.IsCaptureWindowOpen)
+            {
+                CharacterFootLandingPredictionSampler.CloseControlledCaptureWindow();
+            }
+        }
+
         static PendingLaunchPhase ReadPendingLaunchPhase()
         {
             var phase = (PendingLaunchPhase)EditorPrefs.GetInt(
@@ -1170,6 +1388,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string start_body_hash;
             public ulong replay_start_tick;
             public int frame_count;
+            public string tick_drive_mode;
+            public string presentation_clock_mode;
             public string input_sequence_hash;
             public string body_trajectory_hash;
             public ReplayFootSampleDocument foot_sample;
@@ -1215,6 +1435,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public bool matched;
             public string baseline_path;
             public int compared_frame_count;
+            public ReplayMismatchDocument[] aggregate_mismatches;
+            public int divergent_frame_count;
+            public int first_divergent_relative_frame;
+            public ReplayMismatchDocument[] first_frame_mismatches;
+        }
+
+        [Serializable]
+        sealed class ReplayMismatchDocument
+        {
+            public string field;
+            public string baseline;
+            public string candidate;
         }
 
         [Serializable]

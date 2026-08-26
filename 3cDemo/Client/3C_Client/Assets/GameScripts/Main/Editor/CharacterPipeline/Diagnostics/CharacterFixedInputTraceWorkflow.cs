@@ -50,9 +50,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string PendingTracePathKey = "ThirdPerson.CharacterInputTrace.PendingTracePath.v1";
         const string PendingVariantKey = "ThirdPerson.CharacterInputTrace.PendingVariant.v1";
         const string PendingDeadlineKey = "ThirdPerson.CharacterInputTrace.PendingDeadline.v1";
+        const string PendingLaunchPhaseKey = "ThirdPerson.CharacterInputTrace.PendingLaunchPhase.v1";
         const double PendingSeconds = 60d;
         const float PositionTolerance = 0.1f;
         const float YawTolerance = 2f;
+
+        enum PendingLaunchPhase
+        {
+            AwaitingEditMode = 1,
+            ReadyToPlay = 2,
+            AwaitingPlayMode = 3,
+            Running = 4
+        }
 
         static int s_RecordingVariantIndex;
         static bool s_ReplayOwnsSampling;
@@ -79,8 +88,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (IsPending)
             {
                 EnsurePendingTracePreparation();
-                if (EditorApplication.isPlaying)
+                if (EditorApplication.isPlaying &&
+                    ReadPendingLaunchPhase() == PendingLaunchPhase.AwaitingPlayMode)
+                {
+                    WritePendingLaunchPhase(PendingLaunchPhase.Running);
                     ResetPendingDeadline();
+                }
             }
         }
 
@@ -321,11 +334,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (DateTime.UtcNow.Ticks > ReadPendingDeadline())
                 throw new TimeoutException($"Canonical Fixed input {PendingOperation} timed out while starting Gameplay Lab.");
-            if (!EditorApplication.isPlaying)
+            PendingLaunchPhase phase = ReadPendingLaunchPhase();
+            if (phase == PendingLaunchPhase.ReadyToPlay)
             {
                 StartPendingPlayMode();
                 return;
             }
+            if (phase != PendingLaunchPhase.Running || !EditorApplication.isPlaying)
+                return;
             EnsurePendingTracePreparation();
             string operation = PendingOperation;
             if (string.Equals(operation, "record", StringComparison.Ordinal))
@@ -688,12 +704,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void StartPendingPlayMode()
         {
-            if (!IsPending || EditorApplication.isPlayingOrWillChangePlaymode)
+            if (!IsPending ||
+                ReadPendingLaunchPhase() != PendingLaunchPhase.ReadyToPlay ||
+                EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
             EnsurePendingTracePreparation();
             IGameplayLabLauncherOperations operations = RequireLauncher();
             int variantIndex = EditorPrefs.GetInt(PendingVariantKey, -1);
             ResetPendingDeadline();
+            WritePendingLaunchPhase(PendingLaunchPhase.AwaitingPlayMode);
             operations.Play(variantIndex);
         }
 
@@ -701,12 +720,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (state == PlayModeStateChange.EnteredPlayMode && IsPending)
             {
+                if (ReadPendingLaunchPhase() != PendingLaunchPhase.AwaitingPlayMode)
+                    return;
+                WritePendingLaunchPhase(PendingLaunchPhase.Running);
                 ResetPendingDeadline();
                 EditorApplication.isPaused = false;
                 return;
             }
             if (state == PlayModeStateChange.EnteredEditMode && IsPending)
             {
+                if (ReadPendingLaunchPhase() != PendingLaunchPhase.AwaitingEditMode)
+                    return;
+                WritePendingLaunchPhase(PendingLaunchPhase.ReadyToPlay);
                 ResetPendingDeadline();
                 EditorApplication.delayCall += StartPendingPlayMode;
                 return;
@@ -1061,8 +1086,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorPrefs.SetString(PendingOperationKey, operation);
             EditorPrefs.SetString(PendingTracePathKey, tracePath ?? string.Empty);
             EditorPrefs.SetInt(PendingVariantKey, variantIndex);
+            WritePendingLaunchPhase(
+                EditorApplication.isPlayingOrWillChangePlaymode
+                    ? PendingLaunchPhase.AwaitingEditMode
+                    : PendingLaunchPhase.ReadyToPlay);
             ResetPendingDeadline();
         }
+
+        static PendingLaunchPhase ReadPendingLaunchPhase()
+        {
+            var phase = (PendingLaunchPhase)EditorPrefs.GetInt(
+                PendingLaunchPhaseKey,
+                0);
+            if (phase < PendingLaunchPhase.AwaitingEditMode ||
+                phase > PendingLaunchPhase.Running)
+            {
+                throw new InvalidOperationException(
+                    "Canonical Fixed input pending launch phase is invalid.");
+            }
+            return phase;
+        }
+
+        static void WritePendingLaunchPhase(PendingLaunchPhase phase) =>
+            EditorPrefs.SetInt(PendingLaunchPhaseKey, (int)phase);
 
         static void ResetPendingDeadline() => EditorPrefs.SetString(
             PendingDeadlineKey,
@@ -1082,6 +1128,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorPrefs.DeleteKey(PendingTracePathKey);
             EditorPrefs.DeleteKey(PendingVariantKey);
             EditorPrefs.DeleteKey(PendingDeadlineKey);
+            EditorPrefs.DeleteKey(PendingLaunchPhaseKey);
             s_PendingReplayDocument = null;
         }
 

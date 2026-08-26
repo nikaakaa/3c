@@ -16,7 +16,9 @@ using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
-    public sealed class FixedCharacterRegistration : IFixedLocalSimulationActorRegistration
+    public sealed class FixedCharacterRegistration :
+        IFixedLocalSimulationActorRegistration,
+        ISimulationActorStartGate
     {
         readonly IUnityFixedCharacterControlSourceRuntime m_ControlSource;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
@@ -130,6 +132,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public IFixedCharacterControlSourceRuntime FixedControlSource => m_ControlSource;
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
         public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
+        public bool IsSimulationStartReady =>
+            FixedCharacterInputTraceModule.CanAdvanceSimulation(ActorId);
+        public string SimulationStartWaitReason =>
+            IsSimulationStartReady
+                ? string.Empty
+                : "Canonical Fixed input trace start state is not released.";
         StableHash ISimulationActorRegistration.DiagnosticsConfigurationHash => StableHash.Compute(
             Program.Manifest.ProgramId.Value,
             Program.Manifest.SourceRevision.Value,

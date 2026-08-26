@@ -401,7 +401,9 @@ namespace ThirdPersonGameplay.Tick
                 DroppedLocalLogicTicks,
                 (ulong)m_DriveCommands.Count,
                 m_LastDriveCommandSequence,
-                m_LastPresentationDeltaSeconds);
+                m_LastPresentationDeltaSeconds,
+                m_PresentationScheduleDriveActive,
+                m_ActivePresentationScheduleFrameIndex);
         }
 
         void ProcessDriveCommands()

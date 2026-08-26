@@ -372,7 +372,8 @@ namespace ThirdPersonSimulation.Fixed
         public static bool CanAdvanceSimulation(ActorId actorId) =>
             actorId != s_ActorId ||
             s_Mode != FixedCharacterInputTraceMode.PreparingRecording &&
-            s_Mode != FixedCharacterInputTraceMode.PreparingReplay;
+            s_Mode != FixedCharacterInputTraceMode.PreparingReplay &&
+            s_Mode != FixedCharacterInputTraceMode.Completed;
 
         public static void ObservePublishedBody(
             ActorId actorId,

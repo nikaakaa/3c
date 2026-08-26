@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new CharacterFootDiagnosisContext(facts));
             Assert.That(document.diagnosticId, Is.EqualTo("swing-path-jitter"));
             Assert.That(document.targets[0].matchedEventCount, Is.EqualTo(1));
-            Assert.That(document.schema, Is.EqualTo("character-foot-diagnosis-file/3"));
+            Assert.That(document.schema, Is.EqualTo("character-foot-diagnosis-file/2"));
             CharacterFootDiagnosisOccurrenceProfile occurrence =
                 document.summary.primaryResult.occurrence;
             Assert.That(occurrence.available, Is.True);

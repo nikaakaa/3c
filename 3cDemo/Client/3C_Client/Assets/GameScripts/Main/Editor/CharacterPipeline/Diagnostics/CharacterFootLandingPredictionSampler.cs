@@ -86,13 +86,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "GroundPathFirstInvalidSegmentBottomX,GroundPathFirstInvalidSegmentBottomY,GroundPathFirstInvalidSegmentBottomZ," +
             "GroundPathFirstInvalidSegmentTopX,GroundPathFirstInvalidSegmentTopY,GroundPathFirstInvalidSegmentTopZ," +
             "GroundPathFirstInvalidSegmentVerticalDistance,GroundPathMaximumReachableVerticalEdge,GroundEnvelopeVertexCount," +
-            "CurrentFloorState,CurrentFloorRejectReason,CurrentFloorQueryPurpose," +
-            "CurrentFloorQueryOriginX,CurrentFloorQueryOriginY,CurrentFloorQueryOriginZ," +
-            "CurrentFloorQueryDirectionX,CurrentFloorQueryDirectionY,CurrentFloorQueryDirectionZ," +
-            "CurrentFloorQueryMaxDistance,CurrentFloorQueryRadius,CurrentFloorQueryLayerMask,CurrentFloorQueryMinimumNormalDot," +
-            "CurrentFloorAccepted,CurrentFloorSurfaceIdentity," +
-            "CurrentFloorPointX,CurrentFloorPointY,CurrentFloorPointZ," +
-            "CurrentFloorNormalX,CurrentFloorNormalY,CurrentFloorNormalZ,CurrentFloorDistance," +
             "FootMotionState,FootMotionRejectReason,FootMotionLandingEventIdentity,FootMotionGroundPathInputIdentity," +
             "FootMotionDistance,FootMotionProgress," +
             "FootMotionOriginalSoleX,FootMotionOriginalSoleY,FootMotionOriginalSoleZ," +
@@ -123,12 +116,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionResidualOutputCorrectionX,FootMotionResidualOutputCorrectionY,FootMotionResidualOutputCorrectionZ," +
             "FootMotionLandingUpdateDistance,FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
             "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
-            "FootMotionConstraintStateBefore,FootMotionLockResponseBefore,FootMotionOutputStagesAvailable,FootMotionReleasingCompletedToSwing,FootMotionSafetyFloorAvailable," +
+            "FootMotionConstraintStateBefore,FootMotionLockResponseBefore,FootMotionOutputStagesAvailable,FootMotionReleasingCompletedToSwing,FootMotionEnvelopeAvailable," +
             "FootMotionCorrectionBeforeSafetyFloorX,FootMotionCorrectionBeforeSafetyFloorY,FootMotionCorrectionBeforeSafetyFloorZ," +
-            "FootMotionSafetyFloorMinimumCorrectionX,FootMotionSafetyFloorMinimumCorrectionY,FootMotionSafetyFloorMinimumCorrectionZ," +
+            "FootMotionGroundEnvelopeSafetyCorrectionX,FootMotionGroundEnvelopeSafetyCorrectionY,FootMotionGroundEnvelopeSafetyCorrectionZ," +
             "FootMotionSafetyFloorOutputCorrectionX,FootMotionSafetyFloorOutputCorrectionY,FootMotionSafetyFloorOutputCorrectionZ," +
             "FootMotionFinalEffectiveCorrectionX,FootMotionFinalEffectiveCorrectionY,FootMotionFinalEffectiveCorrectionZ," +
-            "FootMotionSafetyFloorClamped,FootMotionSafetyFloorClampMeters,FootMotionSafetyFloorClearanceBeforeMeters,FootMotionSafetyFloorClearanceAfterMeters," +
+            "FootMotionSafetyFloorClamped,FootMotionSafetyFloorClampMeters,FootMotionEnvelopeClearanceBeforeMeters,FootMotionEnvelopeClearanceAfterMeters," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -1756,24 +1749,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, ground.FirstInvalidSegmentVerticalDistance);
             Add(row, ground.MaximumReachableVerticalEdge);
             Add(row, ground.EnvelopeVertexCount);
-            CharacterFootCurrentGroundFloorDiagnostics currentFloor =
-                foot.CurrentGroundFloor;
-            CharacterFootPlacementQueryRequest currentFloorQuery =
-                currentFloor.Query;
-            Add(row, currentFloor.State.ToString());
-            Add(row, currentFloor.RejectReason.ToString());
-            Add(row, currentFloorQuery.Purpose.ToString());
-            Add(row, currentFloorQuery.Origin);
-            Add(row, currentFloorQuery.Direction);
-            Add(row, currentFloorQuery.MaximumDistance);
-            Add(row, currentFloorQuery.Radius);
-            Add(row, currentFloorQuery.LayerMask);
-            Add(row, currentFloorQuery.MinimumGroundNormalDot);
-            Add(row, currentFloor.Accepted);
-            Add(row, currentFloor.SurfaceIdentity);
-            Add(row, currentFloor.Point);
-            Add(row, currentFloor.Normal);
-            Add(row, currentFloor.Distance);
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
             CharacterFullBodyIkGoal footGoal = foot.Goal;
             Add(row, motion.State.ToString());
@@ -1836,15 +1811,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.LockResponseBefore.ToString());
             Add(row, motion.OutputStagesAvailable);
             Add(row, motion.ReleasingCompletedToSwing);
-            Add(row, motion.SafetyFloorAvailable);
+            Add(row, motion.EnvelopeAvailable);
             Add(row, motion.CorrectionBeforeSafetyFloor);
-            Add(row, motion.SafetyFloorMinimumCorrection);
+            Add(row, motion.GroundEnvelopeSafetyCorrection);
             Add(row, motion.SafetyFloorOutputCorrection);
             Add(row, motion.FinalEffectiveCorrection);
             Add(row, motion.SafetyFloorClamped);
             Add(row, motion.SafetyFloorClampMeters);
-            Add(row, motion.SafetyFloorClearanceBeforeMeters);
-            Add(row, motion.SafetyFloorClearanceAfterMeters);
+            Add(row, motion.EnvelopeClearanceBeforeMeters);
+            Add(row, motion.EnvelopeClearanceAfterMeters);
             Add(row, footGoal.IsValid);
             Add(
                 row,

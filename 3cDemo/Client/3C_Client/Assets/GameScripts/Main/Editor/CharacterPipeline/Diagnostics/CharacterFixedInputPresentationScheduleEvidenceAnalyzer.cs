@@ -56,7 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             VerticalEndpointEvidence representative = default;
             while (reader.Read())
             {
-                if (!reader.Boolean("FootMotionSafetyFloorAvailable"))
+                if (!reader.Boolean("FootMotionEnvelopeAvailable"))
                     continue;
                 accepted++;
                 Vector3 up = reader.Vector("GroundPathComponentUp");

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation;
@@ -58,6 +59,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool s_ReplayWaitingForSampling;
         static bool s_ReplayFinalizing;
         static TraceDocument s_PendingReplayDocument;
+        static TraceDocument s_ActiveReplayDocument;
+        static FixedCharacterInputReplayEvidence s_LastReplayEvidence;
+        static string s_LastReplayProofPath = string.Empty;
+        static string s_LastReplayComparison = string.Empty;
         static string s_LastTracePath = string.Empty;
         static string s_LastTraceId = string.Empty;
         static string s_LastStatus = string.Empty;
@@ -91,6 +96,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static string LastTraceId => s_LastTraceId;
         public static string LastStatus => s_LastStatus;
         public static string LastFailure => s_LastFailure;
+        public static string LastReplayProofPath => s_LastReplayProofPath;
+        public static string LastReplayComparison => s_LastReplayComparison;
         public static string TraceDirectory => ResolveTraceDirectory();
 
         public static void StartRecording()
@@ -162,6 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ClearPending();
             s_ReplayWaitingForSampling = false;
             s_PendingReplayDocument = null;
+            s_ActiveReplayDocument = null;
+            s_LastReplayEvidence = null;
             if (s_ReplayOwnsSampling &&
                 (CharacterFootLandingPredictionSampler.IsCapturing ||
                  CharacterFootLandingPredictionSampler.IsStartPending))
@@ -205,6 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireAvailable();
             TraceDocument document = ReadDocument(path, true);
             FixedCharacterInputTrace trace = ToRuntimeTrace(document);
+            s_ActiveReplayDocument = document;
             FixedCharacterInputTraceModule.PrepareReplay(trace);
             s_PendingReplayDocument = document;
             s_LastFailure = string.Empty;
@@ -243,6 +253,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void BeginReplay(TraceDocument document)
         {
+            s_ActiveReplayDocument ??= document;
             FixedCharacterInputTrace trace = ToRuntimeTrace(document);
             if (!s_ReplayWaitingForSampling)
             {
@@ -337,6 +348,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(status.Message);
             if (status.Mode != FixedCharacterInputTraceMode.Completed)
                 return;
+            s_LastReplayEvidence =
+                FixedCharacterInputTraceModule.CaptureReplayEvidence();
             if (s_ReplayOwnsSampling &&
                 (CharacterFootLandingPredictionSampler.IsCapturing ||
                  CharacterFootLandingPredictionSampler.IsStartPending))
@@ -373,12 +386,305 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void PublishReplayCompletion()
         {
+            PublishReplayProof();
             s_LastStatus =
                 $"Replay completed. Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
                 $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
                 $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}.";
             Debug.Log(s_LastStatus);
         }
+
+        static void PublishReplayProof()
+        {
+            TraceDocument trace = s_ActiveReplayDocument ??
+                throw new InvalidOperationException(
+                    "Fixed input replay completion has no active Trace document.");
+            FixedCharacterInputReplayEvidence evidence = s_LastReplayEvidence ??
+                throw new InvalidOperationException(
+                    "Fixed input replay completion has no runtime evidence.");
+            if (!string.Equals(
+                    trace.trace_id,
+                    evidence.TraceId,
+                    StringComparison.Ordinal) ||
+                trace.frame_count != evidence.Frames.Count)
+            {
+                throw new InvalidDataException(
+                    "Fixed input replay evidence does not match the active Trace.");
+            }
+            ReplayFootSampleDocument sample = ReadReplayFootSample();
+            var document = new ReplayProofDocument
+            {
+                schema = "character-fixed-input-replay-proof/1",
+                run_id = Guid.NewGuid().ToString("N"),
+                created_utc = DateTime.UtcNow.ToString(
+                    "O",
+                    CultureInfo.InvariantCulture),
+                trace_id = trace.trace_id,
+                trace_content_hash = trace.content_hash,
+                start_body_hash = evidence.StartBodyHash.ToString(),
+                replay_start_tick = evidence.ReplayStartTick,
+                frame_count = evidence.Frames.Count,
+                input_sequence_hash = evidence.InputSequenceHash.ToString(),
+                body_trajectory_hash = evidence.BodyTrajectoryHash.ToString(),
+                foot_sample = sample,
+                frames = BuildReplayProofFrames(evidence)
+            };
+            string directory = ResolveReplayProofDirectory(trace.trace_id);
+            Directory.CreateDirectory(directory);
+            string baselinePath = FindLatestReplayProofPath(directory);
+            if (!string.IsNullOrEmpty(baselinePath))
+            {
+                ReplayProofDocument baseline = ReadReplayProof(baselinePath);
+                CompareReplayProofs(baseline, document);
+                document.comparison = new ReplayComparisonDocument
+                {
+                    baseline_available = true,
+                    matched = true,
+                    baseline_path = baselinePath,
+                    compared_frame_count = document.frame_count
+                };
+                s_LastReplayComparison =
+                    $"matched:{document.frame_count}:{baselinePath}";
+            }
+            else
+            {
+                document.comparison = new ReplayComparisonDocument
+                {
+                    baseline_available = false,
+                    matched = true,
+                    baseline_path = string.Empty,
+                    compared_frame_count = 0
+                };
+                s_LastReplayComparison =
+                    $"baseline-created:{document.frame_count}";
+            }
+            document.proof_hash = ComputeReplayProofHash(document);
+            string path = Path.Combine(
+                directory,
+                $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-{document.run_id}.json");
+            string partPath = path + ".part";
+            try
+            {
+                File.WriteAllText(
+                    partPath,
+                    JsonConvert.SerializeObject(document, Formatting.Indented),
+                    new UTF8Encoding(false));
+                File.Move(partPath, path);
+            }
+            catch
+            {
+                if (File.Exists(partPath))
+                    File.Delete(partPath);
+                throw;
+            }
+            s_LastReplayProofPath = path;
+            s_ActiveReplayDocument = null;
+            s_LastReplayEvidence = null;
+        }
+
+        static ReplayFootSampleDocument ReadReplayFootSample()
+        {
+            string factsPath =
+                CharacterFootLandingPredictionSampler.LastSavedFactsPath;
+            string samplesPath =
+                CharacterFootLandingPredictionSampler.LastSavedPath;
+            if (string.IsNullOrWhiteSpace(factsPath) ||
+                string.IsNullOrWhiteSpace(samplesPath) ||
+                !File.Exists(factsPath) ||
+                !File.Exists(samplesPath))
+            {
+                throw new InvalidDataException(
+                    "Fixed input replay Foot sample artifacts are unavailable.");
+            }
+            JObject facts = JObject.Parse(
+                File.ReadAllText(factsPath, Encoding.UTF8));
+            JObject sample = facts["sample"] as JObject ??
+                throw new InvalidDataException(
+                    "Fixed input replay Foot facts sample is unavailable.");
+            int frameCount = sample.Value<int?>("frameCount") ?? 0;
+            if (frameCount <= 0)
+                throw new InvalidDataException(
+                    "Fixed input replay Foot sample frame count is invalid.");
+            return new ReplayFootSampleDocument
+            {
+                sample_identity =
+                    sample.Value<string>("identity") ?? string.Empty,
+                samples_path = samplesPath,
+                facts_path = factsPath,
+                samples_sha256 =
+                    sample.Value<string>("sha256") ?? string.Empty,
+                sampling_relative_frame_count = frameCount
+            };
+        }
+
+        static ReplayProofFrameDocument[] BuildReplayProofFrames(
+            FixedCharacterInputReplayEvidence evidence)
+        {
+            var frames = new ReplayProofFrameDocument[evidence.Frames.Count];
+            for (int i = 0; i < frames.Length; i++)
+            {
+                FixedCharacterInputReplayFrameEvidence source =
+                    evidence.Frames[i];
+                FixedWorldBodyState body = source.Body;
+                frames[i] = new ReplayProofFrameDocument
+                {
+                    relative_frame = source.RelativeFrame,
+                    recorded_tick = source.RecordedTick,
+                    replay_tick = source.ReplayTick,
+                    input_hash = source.InputHash.ToString(),
+                    body_hash = source.BodyHash.ToString(),
+                    body_position_x_raw = body.Position.X.Raw,
+                    body_position_y_raw = body.Position.Y.Raw,
+                    body_position_z_raw = body.Position.Z.Raw,
+                    body_yaw_raw = body.Yaw.Degrees.Raw,
+                    body_velocity_x_raw = body.Velocity.X.Raw,
+                    body_velocity_y_raw = body.Velocity.Y.Raw,
+                    body_velocity_z_raw = body.Velocity.Z.Raw,
+                    body_vertical_velocity_raw =
+                        body.VerticalVelocity.Raw,
+                    body_grounded = body.Grounded,
+                    body_collision = (byte)body.Collision
+                };
+            }
+            return frames;
+        }
+
+        static void CompareReplayProofs(
+            ReplayProofDocument baseline,
+            ReplayProofDocument current)
+        {
+            if (!string.Equals(
+                    baseline.trace_id,
+                    current.trace_id,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    baseline.trace_content_hash,
+                    current.trace_content_hash,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    baseline.start_body_hash,
+                    current.start_body_hash,
+                    StringComparison.Ordinal) ||
+                baseline.frame_count != current.frame_count ||
+                !string.Equals(
+                    baseline.input_sequence_hash,
+                    current.input_sequence_hash,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    baseline.body_trajectory_hash,
+                    current.body_trajectory_hash,
+                    StringComparison.Ordinal) ||
+                baseline.foot_sample.sampling_relative_frame_count !=
+                current.foot_sample.sampling_relative_frame_count)
+            {
+                throw new InvalidDataException(
+                    "Fixed input replay aggregate proof does not match its baseline.");
+            }
+            for (int i = 0; i < current.frames.Length; i++)
+            {
+                ReplayProofFrameDocument left = baseline.frames[i];
+                ReplayProofFrameDocument right = current.frames[i];
+                if (left.relative_frame != right.relative_frame ||
+                    left.recorded_tick != right.recorded_tick ||
+                    !string.Equals(
+                        left.input_hash,
+                        right.input_hash,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(
+                        left.body_hash,
+                        right.body_hash,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException(
+                        $"Fixed input replay proof diverged at relative frame {i}.");
+                }
+            }
+        }
+
+        static ReplayProofDocument ReadReplayProof(string path)
+        {
+            ReplayProofDocument document =
+                JsonConvert.DeserializeObject<ReplayProofDocument>(
+                    File.ReadAllText(path, Encoding.UTF8));
+            if (document == null ||
+                document.schema !=
+                "character-fixed-input-replay-proof/1" ||
+                document.frame_count <= 0 ||
+                document.frames == null ||
+                document.frames.Length != document.frame_count ||
+                document.foot_sample == null)
+            {
+                throw new InvalidDataException(
+                    "Fixed input replay proof document is incomplete.");
+            }
+            return document;
+        }
+
+        static string ComputeReplayProofHash(
+            ReplayProofDocument document)
+        {
+            using IncrementalHash hash =
+                IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            AppendHash(hash, document.schema);
+            AppendHash(hash, document.run_id);
+            AppendHash(hash, document.created_utc);
+            AppendHash(hash, document.trace_id);
+            AppendHash(hash, document.trace_content_hash);
+            AppendHash(hash, document.start_body_hash);
+            AppendHash(
+                hash,
+                document.replay_start_tick.ToString(
+                    CultureInfo.InvariantCulture));
+            AppendHash(
+                hash,
+                document.frame_count.ToString(
+                    CultureInfo.InvariantCulture));
+            AppendHash(hash, document.input_sequence_hash);
+            AppendHash(hash, document.body_trajectory_hash);
+            AppendHash(
+                hash,
+                document.foot_sample.sampling_relative_frame_count.ToString(
+                    CultureInfo.InvariantCulture));
+            AppendHash(hash, document.foot_sample.samples_sha256);
+            for (int i = 0; i < document.frames.Length; i++)
+            {
+                ReplayProofFrameDocument frame = document.frames[i];
+                AppendHash(
+                    hash,
+                    frame.relative_frame.ToString(
+                        CultureInfo.InvariantCulture));
+                AppendHash(
+                    hash,
+                    frame.recorded_tick.ToString(
+                        CultureInfo.InvariantCulture));
+                AppendHash(hash, frame.input_hash);
+                AppendHash(hash, frame.body_hash);
+            }
+            byte[] bytes = hash.GetHashAndReset();
+            var builder = new StringBuilder(bytes.Length * 2);
+            for (int i = 0; i < bytes.Length; i++)
+                builder.Append(bytes[i].ToString(
+                    "x2",
+                    CultureInfo.InvariantCulture));
+            return builder.ToString();
+        }
+
+        static string FindLatestReplayProofPath(string directory) =>
+            Directory.EnumerateFiles(
+                    directory,
+                    "*.json",
+                    SearchOption.TopDirectoryOnly)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault() ?? string.Empty;
+
+        static string ResolveReplayProofDirectory(string traceId) =>
+            Path.Combine(
+                Path.GetFullPath(Path.Combine(
+                    Application.dataPath,
+                    "..",
+                    "Temp",
+                    "CharacterInputReplayProofs")),
+                traceId);
 
         static void StartPendingPlayMode()
         {
@@ -447,6 +753,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ClearPending();
             s_ReplayWaitingForSampling = false;
             s_PendingReplayDocument = null;
+            s_ActiveReplayDocument = null;
+            s_LastReplayEvidence = null;
             if (s_ReplayOwnsSampling &&
                 (CharacterFootLandingPredictionSampler.IsCapturing ||
                  CharacterFootLandingPredictionSampler.IsStartPending))
@@ -803,6 +1111,64 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "..",
             "Temp",
             "CharacterInputTraces"));
+
+        [Serializable]
+        sealed class ReplayProofDocument
+        {
+            public string schema;
+            public string run_id;
+            public string created_utc;
+            public string trace_id;
+            public string trace_content_hash;
+            public string start_body_hash;
+            public ulong replay_start_tick;
+            public int frame_count;
+            public string input_sequence_hash;
+            public string body_trajectory_hash;
+            public ReplayFootSampleDocument foot_sample;
+            public ReplayProofFrameDocument[] frames;
+            public ReplayComparisonDocument comparison;
+            public string proof_hash;
+        }
+
+        [Serializable]
+        sealed class ReplayFootSampleDocument
+        {
+            public string sample_identity;
+            public string samples_path;
+            public string facts_path;
+            public string samples_sha256;
+            public int sampling_relative_frame_count;
+        }
+
+        [Serializable]
+        sealed class ReplayProofFrameDocument
+        {
+            public int relative_frame;
+            public ulong recorded_tick;
+            public ulong replay_tick;
+            public string input_hash;
+            public string body_hash;
+            public long body_position_x_raw;
+            public long body_position_y_raw;
+            public long body_position_z_raw;
+            public long body_yaw_raw;
+            public long body_velocity_x_raw;
+            public long body_velocity_y_raw;
+            public long body_velocity_z_raw;
+            public long body_vertical_velocity_raw;
+            public bool body_grounded;
+            public byte body_collision;
+        }
+
+        [Serializable]
+        sealed class ReplayComparisonDocument
+        {
+            public bool baseline_available;
+            public bool matched;
+            public string baseline_path;
+            public int compared_frame_count;
+        }
 
         [Serializable]
         sealed class PoseRecord

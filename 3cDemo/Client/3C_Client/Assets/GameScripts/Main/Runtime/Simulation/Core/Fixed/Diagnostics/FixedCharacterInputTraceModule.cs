@@ -137,8 +137,103 @@ namespace ThirdPersonSimulation.Fixed
         public string Message { get; }
     }
 
+    public readonly struct FixedCharacterInputReplayFrameEvidence
+    {
+        public FixedCharacterInputReplayFrameEvidence(
+            int relativeFrame,
+            ulong recordedTick,
+            ulong replayTick,
+            StableHash inputHash,
+            StableHash bodyHash,
+            WorldBodyState body)
+        {
+            if (relativeFrame < 0 || recordedTick == 0 || replayTick == 0 ||
+                !inputHash.IsValid || !bodyHash.IsValid ||
+                !body.ActorId.IsValid)
+            {
+                throw new ArgumentException(
+                    "Fixed input replay frame evidence is invalid.");
+            }
+            RelativeFrame = relativeFrame;
+            RecordedTick = recordedTick;
+            ReplayTick = replayTick;
+            InputHash = inputHash;
+            BodyHash = bodyHash;
+            Body = body;
+        }
+
+        public int RelativeFrame { get; }
+        public ulong RecordedTick { get; }
+        public ulong ReplayTick { get; }
+        public StableHash InputHash { get; }
+        public StableHash BodyHash { get; }
+        public WorldBodyState Body { get; }
+    }
+
+    public sealed class FixedCharacterInputReplayEvidence
+    {
+        readonly ReadOnlyCollection<FixedCharacterInputReplayFrameEvidence>
+            m_Frames;
+
+        public FixedCharacterInputReplayEvidence(
+            string traceId,
+            StableHash startBodyHash,
+            ulong replayStartTick,
+            IEnumerable<FixedCharacterInputReplayFrameEvidence> frames)
+        {
+            TraceId = string.IsNullOrWhiteSpace(traceId)
+                ? throw new ArgumentException(
+                    "Fixed input replay evidence TraceId is invalid.",
+                    nameof(traceId))
+                : traceId.Trim();
+            if (!startBodyHash.IsValid || replayStartTick == 0)
+                throw new ArgumentException(
+                    "Fixed input replay evidence identity is invalid.");
+            var values = new List<FixedCharacterInputReplayFrameEvidence>(
+                frames ?? throw new ArgumentNullException(nameof(frames)));
+            if (values.Count == 0)
+                throw new ArgumentException(
+                    "Fixed input replay evidence requires frames.",
+                    nameof(frames));
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (values[i].RelativeFrame != i ||
+                    i > 0 && values[i - 1].ReplayTick + 1 !=
+                    values[i].ReplayTick)
+                {
+                    throw new ArgumentException(
+                        "Fixed input replay evidence frame continuity is invalid.",
+                        nameof(frames));
+                }
+            }
+            StartBodyHash = startBodyHash;
+            ReplayStartTick = replayStartTick;
+            m_Frames = values.AsReadOnly();
+            InputSequenceHash = StableHash.Compute(
+                values.ConvertAll(value => value.InputHash.ToString()).ToArray());
+            BodyTrajectoryHash = StableHash.Compute(
+                values.ConvertAll(value => value.BodyHash.ToString()).ToArray());
+        }
+
+        public string TraceId { get; }
+        public StableHash StartBodyHash { get; }
+        public ulong ReplayStartTick { get; }
+        public StableHash InputSequenceHash { get; }
+        public StableHash BodyTrajectoryHash { get; }
+        public IReadOnlyList<FixedCharacterInputReplayFrameEvidence> Frames =>
+            m_Frames;
+    }
+
     public static class FixedCharacterInputTraceModule
     {
+        sealed class ReplayFrameBuilder
+        {
+            internal ulong ReplayTick;
+            internal StableHash InputHash;
+            internal StableHash BodyHash;
+            internal WorldBodyState Body;
+        }
+
         static readonly List<FixedCharacterInputTraceFrame> s_RecordingFrames =
             new List<FixedCharacterInputTraceFrame>();
 
@@ -151,6 +246,9 @@ namespace ThirdPersonSimulation.Fixed
         static bool s_HasStartBody;
         static ulong s_ReplayStartTick;
         static int s_ReplayIndex;
+        static int s_ReplayBodyCount;
+        static ReplayFrameBuilder[] s_ReplayEvidence =
+            Array.Empty<ReplayFrameBuilder>();
         static string s_TraceId = string.Empty;
         static string s_Message = string.Empty;
 
@@ -229,6 +327,9 @@ namespace ThirdPersonSimulation.Fixed
             s_TickRate = trace.TickRate;
             s_TraceId = trace.TraceId;
             s_StartBody = trace.StartBody;
+            s_ReplayEvidence = new ReplayFrameBuilder[trace.Frames.Count];
+            for (int i = 0; i < s_ReplayEvidence.Length; i++)
+                s_ReplayEvidence[i] = new ReplayFrameBuilder();
             s_Mode = FixedCharacterInputTraceMode.PreparingReplay;
             s_Message = "Waiting for the canonical Fixed replay start body.";
         }
@@ -272,6 +373,83 @@ namespace ThirdPersonSimulation.Fixed
             actorId != s_ActorId ||
             s_Mode != FixedCharacterInputTraceMode.PreparingRecording &&
             s_Mode != FixedCharacterInputTraceMode.PreparingReplay;
+
+        public static void ObservePublishedBody(
+            ActorId actorId,
+            SimulationTick tick,
+            WorldBodyState body)
+        {
+            if (actorId != s_ActorId ||
+                s_Mode != FixedCharacterInputTraceMode.Replaying)
+            {
+                return;
+            }
+            try
+            {
+                if (body.ActorId != actorId ||
+                    s_ReplayBodyCount >= s_ReplayIndex ||
+                    s_ReplayBodyCount >= s_ReplayEvidence.Length)
+                {
+                    throw new InvalidOperationException(
+                        "Fixed character input replay published Body without a matching input frame.");
+                }
+                ReplayFrameBuilder builder =
+                    s_ReplayEvidence[s_ReplayBodyCount];
+                if (builder.ReplayTick != tick.Value ||
+                    !builder.InputHash.IsValid)
+                {
+                    throw new InvalidOperationException(
+                        "Fixed character input replay Body Tick does not match its input frame.");
+                }
+                builder.Body = body;
+                builder.BodyHash =
+                    FixedCharacterInputTrace.ComputeBodyHash(body);
+                s_ReplayBodyCount++;
+                if (s_ReplayIndex == s_Replay.Frames.Count &&
+                    s_ReplayBodyCount == s_Replay.Frames.Count)
+                {
+                    s_Mode = FixedCharacterInputTraceMode.Completed;
+                    s_Message =
+                        $"Replayed and observed all {s_ReplayBodyCount} canonical Fixed input frames.";
+                }
+            }
+            catch (Exception exception)
+            {
+                s_Mode = FixedCharacterInputTraceMode.Faulted;
+                s_Message = exception.Message;
+                throw;
+            }
+        }
+
+        public static FixedCharacterInputReplayEvidence CaptureReplayEvidence()
+        {
+            if (s_Mode != FixedCharacterInputTraceMode.Completed ||
+                s_Replay == null || s_ReplayStartTick == 0 ||
+                s_ReplayIndex != s_Replay.Frames.Count ||
+                s_ReplayBodyCount != s_Replay.Frames.Count)
+            {
+                throw new InvalidOperationException(
+                    "Fixed character input replay evidence is incomplete.");
+            }
+            var frames = new FixedCharacterInputReplayFrameEvidence[
+                s_Replay.Frames.Count];
+            for (int i = 0; i < frames.Length; i++)
+            {
+                ReplayFrameBuilder builder = s_ReplayEvidence[i];
+                frames[i] = new FixedCharacterInputReplayFrameEvidence(
+                    i,
+                    s_Replay.Frames[i].Tick.Value,
+                    builder.ReplayTick,
+                    builder.InputHash,
+                    builder.BodyHash,
+                    builder.Body);
+            }
+            return new FixedCharacterInputReplayEvidence(
+                s_Replay.TraceId,
+                s_Replay.StartBodyHash,
+                s_ReplayStartTick,
+                frames);
+        }
 
         public static void Stop()
         {
@@ -358,11 +536,17 @@ namespace ThirdPersonSimulation.Fixed
                     "Fixed character input replay Tick continuity changed.");
             FixedCharacterInputTraceFrame frame = s_Replay.Frames[s_ReplayIndex];
             CharacterSimulationInput result = Remap(frame, context);
+            ReplayFrameBuilder builder = s_ReplayEvidence[s_ReplayIndex];
+            if (builder.ReplayTick != 0 || builder.InputHash.IsValid)
+                throw new InvalidOperationException(
+                    "Fixed character input replay frame was resolved more than once.");
+            builder.ReplayTick = context.SimulationTick.Value;
+            builder.InputHash = ComputeInputHash(frame.Input);
             s_ReplayIndex++;
             if (s_ReplayIndex == s_Replay.Frames.Count)
             {
-                s_Mode = FixedCharacterInputTraceMode.Completed;
-                s_Message = $"Replayed all {s_ReplayIndex} canonical Fixed input frames.";
+                s_Message =
+                    $"Replayed all {s_ReplayIndex} canonical Fixed inputs; waiting for final Body publication.";
             }
             else
             {
@@ -457,6 +641,66 @@ namespace ThirdPersonSimulation.Fixed
             left.Grounded == right.Grounded &&
             left.Collision == right.Collision;
 
+        static StableHash ComputeInputHash(CharacterSimulationInput input)
+        {
+            var values = new List<string>(
+                5 + input.Values.Count * 15 + input.Requests.Count * 5)
+            {
+                input.NumericProfile.ToString(),
+                ((byte)input.TickSource.Kind).ToString(
+                    CultureInfo.InvariantCulture),
+                input.TickSource.ClockId,
+                input.TickSource.SourceTick.ToString(
+                    CultureInfo.InvariantCulture),
+                input.Sequence.ToString(CultureInfo.InvariantCulture)
+            };
+            for (int i = 0; i < input.Values.Count; i++)
+            {
+                SimulationInputValue value = input.Values[i];
+                values.Add(value.InputId);
+                values.Add(((byte)value.Kind).ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.Boolean ? "1" : "0");
+                values.Add(value.Scalar.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.Vector2.X.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.Vector2.Y.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.Vector3.X.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.Vector3.Y.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.Vector3.Z.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.Yaw.Degrees.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.ActionTargetSnapshot.TargetId);
+                values.Add(value.ActionTargetSnapshot.Position.X.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.ActionTargetSnapshot.Position.Y.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.ActionTargetSnapshot.Position.Z.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(value.ActionTargetSnapshot.Yaw.Degrees.Raw.ToString(
+                    CultureInfo.InvariantCulture));
+            }
+            for (int i = 0; i < input.Requests.Count; i++)
+            {
+                SimulationInputRequest request = input.Requests[i];
+                values.Add(request.RequestId);
+                values.Add(request.Sequence.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(request.SourceTick.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(request.ExpireSimulationTick.ToString(
+                    CultureInfo.InvariantCulture));
+                values.Add(request.Priority.ToString(
+                    CultureInfo.InvariantCulture));
+            }
+            return StableHash.Compute(values.ToArray());
+        }
+
         static void RequireIdle()
         {
             if (s_Mode != FixedCharacterInputTraceMode.Idle)
@@ -475,6 +719,8 @@ namespace ThirdPersonSimulation.Fixed
             s_HasStartBody = false;
             s_ReplayStartTick = 0;
             s_ReplayIndex = 0;
+            s_ReplayBodyCount = 0;
+            s_ReplayEvidence = Array.Empty<ReplayFrameBuilder>();
             s_TraceId = string.Empty;
             s_Message = string.Empty;
             s_RecordingFrames.Clear();

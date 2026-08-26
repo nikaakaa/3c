@@ -192,6 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new ConcurrentQueue<CapturedFrame>(),
                     MaximumQueuedFrameCount);
             readonly Thread m_WriterThread;
+            readonly string m_PartPath;
             Exception m_Failure;
             int m_AcceptedFrameCount;
             int m_WrittenFrameCount;
@@ -202,17 +203,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 SampleIdentity = Guid.NewGuid();
                 StartedUtc = DateTime.UtcNow;
                 Program = program;
-                string directory = ResolveSaveDirectory();
-                Directory.CreateDirectory(directory);
-                Path = System.IO.Path.Combine(
-                    directory,
-                    $"foot-landing-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{SampleIdentity:N}.csv");
+                string root = ResolveSaveDirectory();
+                DirectoryPath = System.IO.Path.Combine(
+                    root,
+                    $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-{SampleIdentity:N}");
+                Directory.CreateDirectory(DirectoryPath);
+                Path = System.IO.Path.Combine(DirectoryPath, "samples.csv");
+                m_PartPath = Path + ".part";
                 FileStream stream = null;
                 StreamWriter writer = null;
                 try
                 {
                     stream = new FileStream(
-                        Path,
+                        m_PartPath,
                         FileMode.CreateNew,
                         FileAccess.Write,
                         FileShare.Read,
@@ -243,6 +246,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Guid SampleIdentity { get; }
             internal DateTime StartedUtc { get; }
             internal SamplingProgramIdentity Program { get; }
+            internal string DirectoryPath { get; }
             internal string Path { get; }
             internal int FrameCount => Volatile.Read(ref m_AcceptedFrameCount);
             internal int WrittenFrameCount => Volatile.Read(ref m_WrittenFrameCount);
@@ -372,6 +376,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         "Foot Landing CSV background writer did not persist every captured frame.");
                 }
+                if (File.Exists(Path))
+                    throw new IOException("Foot Landing sealed samples.csv already exists.");
+                File.Move(m_PartPath, Path);
             }
         }
 
@@ -528,10 +535,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string s_LastStartFailure = string.Empty;
         static string s_StartWaitReason = string.Empty;
         static string s_LastSavedPath = string.Empty;
+        static string s_LastSavedDirectory = string.Empty;
+        static string s_LastSavedFactsPath = string.Empty;
+        static string s_LastSavedDiagnosisPath = string.Empty;
+        static string s_LastDiagnosticSummary = string.Empty;
         static string s_LastSavedSampleIdentity = string.Empty;
         static SamplingSession s_Session;
         static int s_DroppedPendingFrameCount;
         static int s_LastSavedFrameCount;
+        static int s_LastFactEventCount;
+        static int s_LastDiagnosisTargetCount;
+        static int s_LastDiagnosisMatchCount;
         static int s_TargetHostInstanceId;
         static int s_TargetRootInstanceId;
         static CharacterRootHierarchyBinding s_TargetRootHierarchy;
@@ -540,6 +554,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static bool IsStartPending => s_StartPending;
         public static string LastStartFailure => s_LastStartFailure;
         public static string LastSavedPath => s_LastSavedPath;
+        public static string LastSavedDirectory => s_LastSavedDirectory;
+        public static string LastSavedFactsPath => s_LastSavedFactsPath;
+        public static string LastSavedDiagnosisPath => s_LastSavedDiagnosisPath;
+        public static string LastDiagnosticSummary => s_LastDiagnosticSummary;
         public static string CurrentSampleIdentity =>
             s_Session?.SampleIdentity.ToString("N") ?? string.Empty;
         public static string LastSavedSampleIdentity => s_LastSavedSampleIdentity;
@@ -547,12 +565,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static int PendingFrameCount => s_PendingFrames.Count;
         public static int DroppedPendingFrameCount => s_DroppedPendingFrameCount;
         public static int LastSavedFrameCount => s_LastSavedFrameCount;
+        public static int LastFactEventCount => s_LastFactEventCount;
+        public static int LastDiagnosisTargetCount => s_LastDiagnosisTargetCount;
+        public static int LastDiagnosisMatchCount => s_LastDiagnosisMatchCount;
 
         static CharacterFootLandingPredictionSampler()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
             s_LastSavedPath = FindLatestSavedPath();
+            if (!string.IsNullOrEmpty(s_LastSavedPath))
+            {
+                s_LastSavedDirectory = System.IO.Path.GetDirectoryName(
+                    s_LastSavedPath) ?? string.Empty;
+                string factsPath = System.IO.Path.Combine(
+                    s_LastSavedDirectory,
+                    "facts.json");
+                s_LastSavedFactsPath = File.Exists(factsPath)
+                    ? factsPath
+                    : string.Empty;
+                string diagnosisPath = System.IO.Path.Combine(
+                    s_LastSavedDirectory,
+                    "diagnosis.json");
+                s_LastSavedDiagnosisPath = File.Exists(diagnosisPath)
+                    ? diagnosisPath
+                    : string.Empty;
+            }
         }
 
         public static void StartSampling()
@@ -569,6 +607,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_PendingFrames.Clear();
             s_DroppedPendingFrameCount = 0;
             s_LastSavedFrameCount = 0;
+            s_LastFactEventCount = 0;
+            s_LastDiagnosisTargetCount = 0;
+            s_LastDiagnosisMatchCount = 0;
+            s_LastDiagnosticSummary = string.Empty;
             s_LastStartFailure = string.Empty;
             s_StartWaitReason = string.Empty;
             s_StartPending = true;
@@ -624,6 +666,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ConfigureTargets();
                 s_Session = new SamplingSession(in program);
                 s_LastSavedPath = s_Session.Path;
+                s_LastSavedDirectory = s_Session.DirectoryPath;
+                s_LastSavedFactsPath = System.IO.Path.Combine(
+                    s_Session.DirectoryPath,
+                    "facts.json");
+                s_LastSavedDiagnosisPath = System.IO.Path.Combine(
+                    s_Session.DirectoryPath,
+                    "diagnosis.json");
                 s_LastSavedSampleIdentity = s_Session.SampleIdentity.ToString("N");
                 CharacterFootLandingPredictionDebugRegistry.Published += Capture;
                 AnimationPresentationRuntimeTargetRegistry.TargetRegistered += ConfigureTarget;
@@ -661,6 +710,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool CanStop() => s_Capturing || s_StartPending;
 
         public static void StopAndSaveSampling() => StopAndSave();
+
+        public static void AnalyzeLastSavedSamples()
+        {
+            if (s_Capturing || s_StartPending)
+                throw new InvalidOperationException(
+                    "Foot Landing samples cannot be analyzed while capture is active.");
+            if (string.IsNullOrEmpty(s_LastSavedPath) ||
+                !File.Exists(s_LastSavedPath))
+            {
+                throw new FileNotFoundException(
+                    "Foot Landing sealed samples.csv is unavailable.",
+                    s_LastSavedPath);
+            }
+            ApplyAnalysis(
+                CharacterFootMotionDiagnosticAnalyzer.Analyze(
+                    s_LastSavedPath));
+        }
 
         static void Capture(in CharacterFootLandingPredictionDiagnostics diagnostics)
         {
@@ -1051,7 +1117,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Debug.Log(
                     $"Foot Landing sampling saved {s_LastSavedFrameCount} frames " +
                     $"with {s_DroppedPendingFrameCount} dropped pending frames. " +
-                    $"Sample={s_LastSavedSampleIdentity}, Path={s_LastSavedPath}");
+                    $"Sample={s_LastSavedSampleIdentity}, " +
+                    $"Samples={s_LastSavedPath}, Facts={s_LastSavedFactsPath}, " +
+                    $"Diagnosis={s_LastSavedDiagnosisPath}, " +
+                    $"Summary={s_LastDiagnosticSummary}");
             }
             catch (Exception exception)
             {
@@ -1074,15 +1143,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (session == null)
                 return;
             s_LastSavedPath = session.Path;
+            s_LastSavedDirectory = session.DirectoryPath;
             s_LastSavedSampleIdentity = session.SampleIdentity.ToString("N");
             try
             {
                 session.Dispose();
+                ApplyAnalysis(
+                    CharacterFootMotionDiagnosticAnalyzer.Analyze(
+                        session.Path));
             }
             finally
             {
                 s_LastSavedFrameCount = session.WrittenFrameCount;
             }
+        }
+
+        static void ApplyAnalysis(
+            CharacterFootMotionDiagnosticAnalysis analysis)
+        {
+            s_LastSavedPath = analysis.SamplesPath;
+            s_LastSavedDirectory = System.IO.Path.GetDirectoryName(
+                analysis.SamplesPath) ?? string.Empty;
+            s_LastSavedFactsPath = analysis.FactsPath;
+            s_LastSavedDiagnosisPath = analysis.DiagnosisPath;
+            s_LastDiagnosticSummary = analysis.Summary;
+            s_LastFactEventCount = analysis.EventCount;
+            s_LastDiagnosisTargetCount = analysis.DiagnosisTargetCount;
+            s_LastDiagnosisMatchCount = analysis.DiagnosisMatchCount;
         }
 
         static void FailActiveSampling(Exception exception)
@@ -1140,7 +1227,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return string.Empty;
             string latestPath = string.Empty;
             DateTime latestWriteTime = DateTime.MinValue;
-            foreach (string path in Directory.EnumerateFiles(directory, "foot-landing-*.csv"))
+            foreach (string path in Directory.EnumerateFiles(
+                         directory,
+                         "samples.csv",
+                         SearchOption.AllDirectories))
             {
                 DateTime writeTime = File.GetLastWriteTimeUtc(path);
                 if (writeTime <= latestWriteTime)
@@ -1155,7 +1245,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Application.dataPath,
             "..",
             "Temp",
-            "FootLandingSamples"));
+            "FootLandingDiagnostics"));
 
         static void WriteRows(
             SamplingSession session,

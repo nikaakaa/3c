@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static GameplayLabFootIkStairStraightPlan s_StraightPlan;
         static GameplayLabFootIkStairStraightState s_StraightState;
         static double s_StopTime;
-        static string s_LastReport = string.Empty;
+        static string s_LastDiagnosticSummary = string.Empty;
         static bool s_HasCompletedRun;
         static Keyboard s_RouteKeyboard;
         static bool s_RouteKeyboardReleasePending;
@@ -79,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static double SampleSecondsValue => s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
             ? StraightSampleSeconds
             : StressSampleSeconds;
-        public static string LastReport => s_LastReport;
+        public static string LastDiagnosticSummary => s_LastDiagnosticSummary;
 
         public static void ArmPending() =>
             ArmPending(GameplayLabFootIkAutomaticRouteMode.StairAdStress);
@@ -93,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 (float)EditorApplication.timeSinceStartup + PendingTimeoutSeconds);
             EditorPrefs.SetInt(PendingModeKey, (int)mode);
             s_Mode = mode;
-            s_LastReport = $"Starting Gameplay Lab for {ModeLabel(mode)}...";
+            s_LastDiagnosticSummary = $"Starting Gameplay Lab for {ModeLabel(mode)}...";
         }
 
         public static void ClearPending()
@@ -173,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (CharacterFootLandingPredictionSampler.IsStartPending)
             {
                 s_WaitingForSampling = true;
-                s_LastReport = "Waiting for Gameplay Lab player...";
+                s_LastDiagnosticSummary = "Waiting for Gameplay Lab player...";
                 EditorApplication.update -= StartAfterSampling;
                 EditorApplication.update += StartAfterSampling;
                 return;
@@ -188,7 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Active = true;
             s_WaitingForSampling = false;
             ClearPending();
-            s_LastReport = s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
+            s_LastDiagnosticSummary = s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
                 ? "Auto walking straight up and down stairs..."
                 : "Auto walking stairs with A/D stress input...";
             EditorApplication.update -= StartAfterSampling;
@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_WaitingForSampling = false;
             s_OwnsSampling = false;
             ClearPending();
-            s_LastReport = string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastStartFailure)
+            s_LastDiagnosticSummary = string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastStartFailure)
                 ? "Foot Landing sampling start was canceled."
                 : CharacterFootLandingPredictionSampler.LastStartFailure;
         }
@@ -249,16 +249,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (!completedCapture ||
                     string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastSavedPath))
                 {
-                    s_LastReport = "Foot Landing sampling stopped before recording started.";
+                    s_LastDiagnosticSummary = "Foot Landing sampling stopped before recording started.";
                     return;
                 }
-                CharacterFootLandingStep1Report report =
-                    CharacterFootLandingStep1Evaluator.Evaluate(
-                        CharacterFootLandingPredictionSampler.LastSavedPath);
-                s_LastReport = report.Summary;
+                if (string.IsNullOrEmpty(
+                        CharacterFootLandingPredictionSampler.LastSavedFactsPath))
+                {
+                    s_LastDiagnosticSummary =
+                        "Foot Landing samples were sealed but facts.json was not published.";
+                    return;
+                }
+                if (string.IsNullOrEmpty(
+                        CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath))
+                {
+                    s_LastDiagnosticSummary =
+                        "Foot Landing facts were published but diagnosis.json was not published.";
+                    return;
+                }
+                s_LastDiagnosticSummary =
+                    CharacterFootLandingPredictionSampler.LastDiagnosticSummary;
                 s_HasCompletedRun = true;
                 EditorPrefs.SetBool(CompletedKey, true);
-                Debug.Log($"Foot Landing {ModeLabel(s_Mode)} {report.Summary}");
+                Debug.Log(
+                    $"Foot Landing {ModeLabel(s_Mode)} " +
+                    $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
+                    $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
+                    $"Diagnosis={CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath}, " +
+                    $"Summary={s_LastDiagnosticSummary}");
             }
         }
 
@@ -330,7 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return;
                 EditorApplication.update -= RestartAfterEditMode;
                 ClearPending();
-                s_LastReport = exception.Message;
+                s_LastDiagnosticSummary = exception.Message;
                 Debug.LogException(exception);
             }
         }
@@ -350,7 +367,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     EditorApplication.update -= StartAfterPlayMode;
                     ClearPending();
-                    s_LastReport = "Gameplay Lab PlayMode start timed out.";
+                    s_LastDiagnosticSummary = "Gameplay Lab PlayMode start timed out.";
                 }
                 return;
             }
@@ -370,7 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return;
                 EditorApplication.update -= StartAfterPlayMode;
                 ClearPending();
-                s_LastReport = exception.Message;
+                s_LastDiagnosticSummary = exception.Message;
                 Debug.LogException(exception);
             }
         }

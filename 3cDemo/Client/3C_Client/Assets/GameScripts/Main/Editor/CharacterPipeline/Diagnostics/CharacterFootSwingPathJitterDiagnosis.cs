@@ -21,8 +21,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public CharacterFootDiagnosisDocument Build(CharacterFootDiagnosisContext context)
         {
-            List<JObject> events = ResolveEligibleEvents(
-                context.Events("PathChange"));
+            List<JObject> allPathChanges =
+                context.Events("PathChange");
+            List<JObject> events =
+                ResolveEligibleEvents(allPathChanges);
+            List<JObject> phaseEvents =
+                ResolvePhaseAdvanceEvents(allPathChanges);
             CharacterFootDiagnosisTarget target = context.Target(
                 "path-change-correction-jump",
                 "无Anchor Swing的Ground Path变化附近是否出现修正跳变",
@@ -44,7 +48,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "semanticPathChangeCount",
                 "correctionStepMaximumMeters",
                 "correctionExcursionMeters",
-                "correctionJerkMetersPerSecondCubed");
+                "correctionJerkMetersPerSecondCubed",
+                "ActualReconstructionError",
+                "PhaseAdvanceDelta",
+                "PathRevisionDelta",
+                "ObservedSwingTargetDelta",
+                "PathRevisionContribution",
+                "PhaseContribution");
             target.occurrence = context.Occurrence(
                 "UniqueUnanchoredSwingPathJump",
                 "correctionStepMaximumMeters",
@@ -52,8 +62,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 events,
                 CorrectionStepMeters,
                 s_OccurrenceThresholds);
-            CharacterFootPathStageDiagnosisProjection.Apply(target, events);
-            return context.Document(DiagnosticId, target);
+            CharacterFootPathStageDiagnosisProjection.Apply(
+                target,
+                events);
+            CharacterFootDiagnosisTarget phaseTarget = context.Target(
+                "swing-phase-advance",
+                "Ground Path变化窗口中的Swing Target跳变是否已由Landing Phase推进解释",
+                new[] { "PathChange" },
+                new[] { "swingPhaseAdvance" },
+                phaseEvents,
+                value => new List<string>
+                {
+                    "swingPhaseAdvance"
+                },
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "PhaseAdvanceDelta"),
+                "ActualReconstructionError",
+                "PhaseAdvanceDelta",
+                "PathRevisionDelta",
+                "ObservedSwingTargetDelta",
+                "PathRevisionContribution",
+                "PhaseContribution");
+            CharacterFootPathStageDiagnosisProjection.Apply(
+                phaseTarget,
+                phaseEvents);
+            return context.Document(
+                DiagnosticId,
+                target,
+                phaseTarget);
         }
 
         static List<JObject> ResolveEligibleEvents(List<JObject> events) =>
@@ -64,13 +101,44 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "unanchoredSwingEligible") &&
                     !CharacterFootDiagnosisContext.Evidence(
                         value,
-                        "anchorAvailable"))
+                        "anchorAvailable") &&
+                    !CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "swingPhaseAdvance"))
                 .GroupBy(
                     value => (
                         side: value.Value<string>("side") ?? string.Empty,
                         peakFrame: value.Value<int?>("peakFrame") ?? 0))
                 .Select(MergePeakGroup)
                 .OrderBy(value => value.Value<int?>("peakFrame") ?? 0)
+                .ThenBy(
+                    value => value.Value<string>("side"),
+                    StringComparer.Ordinal)
+                .ToList();
+
+        static List<JObject> ResolvePhaseAdvanceEvents(
+            List<JObject> events) =>
+            events
+                .Where(value =>
+                    CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "unanchoredSwingEligible") &&
+                    !CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "anchorAvailable") &&
+                    CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "swingPhaseAdvance"))
+                .GroupBy(
+                    value => (
+                        side: value.Value<string>("side") ??
+                              string.Empty,
+                        peakFrame:
+                            value.Value<int?>("peakFrame") ?? 0))
+                .Select(MergePeakGroup)
+                .OrderBy(
+                    value =>
+                        value.Value<int?>("peakFrame") ?? 0)
                 .ThenBy(
                     value => value.Value<string>("side"),
                     StringComparer.Ordinal)

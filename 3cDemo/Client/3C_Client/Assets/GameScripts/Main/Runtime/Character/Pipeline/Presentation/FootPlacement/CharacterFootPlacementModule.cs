@@ -527,9 +527,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     currentSegmentRemainingSeconds,
                     in footStepObservation);
                 var leftDiagnostics =
-                    new CharacterFootLandingPredictionFootDiagnostics(in left);
+                    new CharacterFootLandingPredictionFootDiagnostics(
+                        in left,
+                        pose.Left);
                 var rightDiagnostics =
-                    new CharacterFootLandingPredictionFootDiagnostics(in right);
+                    new CharacterFootLandingPredictionFootDiagnostics(
+                        in right,
+                        pose.Right);
                 var primarySupportDiagnostics =
                     new CharacterFootPrimarySupportDiagnostics(in primarySupport);
                 var strideDiagnostics =

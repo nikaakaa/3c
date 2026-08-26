@@ -51,13 +51,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootPlacementSoleContactPose ResolveSoleContacts(
             Vector3 anklePosition,
-            Quaternion ankleRotation)
-        {
-            Quaternion rotationDelta = (ankleRotation * Quaternion.Inverse(AnkleRotation)).normalized;
-            return new CharacterFootPlacementSoleContactPose(
-                anklePosition + rotationDelta * (HeelPosition - AnklePosition),
-                anklePosition + rotationDelta * (ToePosition - AnklePosition));
-        }
+            Quaternion ankleRotation) =>
+            CharacterFootPlacementSoleContactPose.Resolve(
+                AnklePosition,
+                AnkleRotation,
+                HeelPosition,
+                ToePosition,
+                anklePosition,
+                ankleRotation);
     }
 
     public readonly struct CharacterFootPlacementSoleContactPose
@@ -72,6 +73,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public Vector3 HeelPosition { get; }
         public Vector3 ToePosition { get; }
+
+        public static CharacterFootPlacementSoleContactPose Resolve(
+            Vector3 sourceAnklePosition,
+            Quaternion sourceAnkleRotation,
+            Vector3 sourceHeelPosition,
+            Vector3 sourceToePosition,
+            Vector3 finalAnklePosition,
+            Quaternion finalAnkleRotation)
+        {
+            Quaternion rotationDelta =
+                (finalAnkleRotation * Quaternion.Inverse(sourceAnkleRotation)).normalized;
+            return new CharacterFootPlacementSoleContactPose(
+                finalAnklePosition +
+                rotationDelta * (sourceHeelPosition - sourceAnklePosition),
+                finalAnklePosition +
+                rotationDelta * (sourceToePosition - sourceAnklePosition));
+        }
     }
 
     public readonly struct CharacterFootPlacementAnimatedPose

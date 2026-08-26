@@ -88,6 +88,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionDistance,FootMotionProgress," +
             "FootMotionOriginalSoleX,FootMotionOriginalSoleY,FootMotionOriginalSoleZ," +
             "FootMotionOriginalAnkleX,FootMotionOriginalAnkleY,FootMotionOriginalAnkleZ," +
+            "FootMotionSourceAnkleRotationX,FootMotionSourceAnkleRotationY,FootMotionSourceAnkleRotationZ,FootMotionSourceAnkleRotationW," +
+            "FootMotionSourceHeelX,FootMotionSourceHeelY,FootMotionSourceHeelZ," +
+            "FootMotionSourceToeX,FootMotionSourceToeY,FootMotionSourceToeZ," +
             "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ," +
             "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionVerticalCorrection," +
             "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight,FootMotionPlantConfidence," +
@@ -96,6 +99,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
             "FootMotionContactOwnership,FootMotionSupportWeight," +
             "FootMotionSupportContactAnchorX,FootMotionSupportContactAnchorY,FootMotionSupportContactAnchorZ," +
+            "FootMotionContactPlaneAvailable,FootMotionContactSurfaceIdentity," +
+            "FootMotionContactPlaneNormalX,FootMotionContactPlaneNormalY,FootMotionContactPlaneNormalZ," +
+            "FootContactPlanePenetrationAvailability," +
             "FootMotionDesiredCorrectionX,FootMotionDesiredCorrectionY,FootMotionDesiredCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -134,7 +140,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FinalIkPelvisAvailable,FinalIkPelvisTargetPositionX,FinalIkPelvisTargetPositionY,FinalIkPelvisTargetPositionZ," +
             "FinalIkPelvisSolvedPositionX,FinalIkPelvisSolvedPositionY,FinalIkPelvisSolvedPositionZ,FinalIkPelvisPositionResidual,FinalIkPelvisRotationResidualDegrees," +
             "FinalPhysicalWriteAvailable,FinalPhysicalWriteCompletionIdentity," +
-            "FinalPhysicalAnkleComponentPositionX,FinalPhysicalAnkleComponentPositionY,FinalPhysicalAnkleComponentPositionZ,FinalPhysicalAnkleGoalResidual," +
+            "FinalPhysicalAnkleComponentPositionX,FinalPhysicalAnkleComponentPositionY,FinalPhysicalAnkleComponentPositionZ," +
+            "FinalPhysicalAnkleComponentRotationX,FinalPhysicalAnkleComponentRotationY,FinalPhysicalAnkleComponentRotationZ,FinalPhysicalAnkleComponentRotationW," +
+            "FinalPhysicalAnkleWorldPositionX,FinalPhysicalAnkleWorldPositionY,FinalPhysicalAnkleWorldPositionZ," +
+            "FinalPhysicalAnkleWorldRotationX,FinalPhysicalAnkleWorldRotationY,FinalPhysicalAnkleWorldRotationZ,FinalPhysicalAnkleWorldRotationW," +
+            "FinalPhysicalHeelWorldX,FinalPhysicalHeelWorldY,FinalPhysicalHeelWorldZ," +
+            "FinalPhysicalToeWorldX,FinalPhysicalToeWorldY,FinalPhysicalToeWorldZ,FinalPhysicalAnkleGoalResidual," +
             "GroundContactIndex,GroundContactSegmentIndex,GroundContactSurfaceIdentity,GroundContactCandidateIdentity," +
             "GroundContactPositionX,GroundContactPositionY,GroundContactPositionZ," +
             "GroundContactNormalX,GroundContactNormalY,GroundContactNormalZ,GroundContactQueryDistance," +
@@ -392,6 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool physicalWriteAvailable,
                 ulong physicalWriteCompletionIdentity,
                 Vector3 physicalAnkleComponentPosition,
+                Quaternion physicalAnkleComponentRotation,
                 Vector3 physicalPelvisComponentPosition)
             {
                 Solver = solver;
@@ -401,6 +413,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PhysicalWriteAvailable = physicalWriteAvailable;
                 PhysicalWriteCompletionIdentity = physicalWriteCompletionIdentity;
                 PhysicalAnkleComponentPosition = physicalAnkleComponentPosition;
+                PhysicalAnkleComponentRotation = physicalAnkleComponentRotation;
                 PhysicalPelvisComponentPosition = physicalPelvisComponentPosition;
             }
 
@@ -414,6 +427,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool PhysicalWriteAvailable { get; }
             internal ulong PhysicalWriteCompletionIdentity { get; }
             internal Vector3 PhysicalAnkleComponentPosition { get; }
+            internal Quaternion PhysicalAnkleComponentRotation { get; }
             internal Vector3 PhysicalPelvisComponentPosition { get; }
         }
 
@@ -443,6 +457,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PoseRootLocalRotation = binding.PoseRoot.localRotation;
                 PoseRootWorldPosition = binding.PoseRoot.position;
                 PoseRootWorldRotation = binding.PoseRoot.rotation;
+                PoseRootLossyScale = binding.PoseRoot.lossyScale;
             }
 
             internal Vector3 LogicRootPosition { get; }
@@ -455,6 +470,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Quaternion PoseRootLocalRotation { get; }
             internal Vector3 PoseRootWorldPosition { get; }
             internal Quaternion PoseRootWorldRotation { get; }
+            internal Vector3 PoseRootLossyScale { get; }
         }
 
         readonly struct FootStepObservationCapture
@@ -829,6 +845,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.PhysicalWriteAvailable,
                         placement.PhysicalWriteCompletionIdentity,
                         placement.LeftPhysicalAnkleComponentPosition,
+                        placement.LeftPhysicalAnkleComponentRotation,
                         placement.PhysicalPelvisComponentPosition),
                     new FootIkCapture(
                         placement.Solver,
@@ -838,6 +855,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.PhysicalWriteAvailable,
                         placement.PhysicalWriteCompletionIdentity,
                         placement.RightPhysicalAnkleComponentPosition,
+                        placement.RightPhysicalAnkleComponentRotation,
                         placement.PhysicalPelvisComponentPosition),
                     CaptureFootStepObservation(debugView.PosePlan),
                     placement.PhysicalPelvisComponentPosition,
@@ -1481,6 +1499,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.Progress);
             Add(row, motion.OriginalSole);
             Add(row, motion.OriginalAnkle);
+            Add(row, foot.SourceAnkleRotation);
+            Add(row, foot.SourceHeelPosition);
+            Add(row, foot.SourceToePosition);
             Add(row, motion.BaselineSample);
             Add(row, motion.EnvelopeSample);
             Add(row, motion.VerticalCorrection);
@@ -1497,6 +1518,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.ContactOwnership);
             Add(row, motion.SupportWeight);
             Add(row, motion.SupportContactAnchor);
+            Add(row, motion.ContactPlaneAvailable);
+            Add(row, motion.ContactSurfaceIdentity);
+            Add(row, motion.ContactPlaneNormal);
+            Add(
+                row,
+                ResolvePenetrationAvailability(in frame, in motion, in ik)
+                    .ToString());
             Add(row, motion.DesiredCorrection);
             Add(row, foot.Goal.ComponentPosition);
             Add(row, foot.Goal.ComponentRotation);
@@ -1609,6 +1637,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, ik.PhysicalWriteAvailable);
             Add(row, ik.PhysicalWriteCompletionIdentity);
             Add(row, ik.PhysicalAnkleComponentPosition);
+            Add(row, ik.PhysicalAnkleComponentRotation);
+            Vector3 finalAnkleWorldPosition = default;
+            Quaternion finalAnkleWorldRotation = Quaternion.identity;
+            CharacterFootPlacementSoleContactPose finalContacts = default;
+            if (ik.PhysicalWriteAvailable)
+            {
+                finalAnkleWorldPosition = TransformComponentPoint(
+                    roots,
+                    ik.PhysicalAnkleComponentPosition);
+                finalAnkleWorldRotation =
+                    (roots.PoseRootWorldRotation *
+                     ik.PhysicalAnkleComponentRotation).normalized;
+                finalContacts = CharacterFootPlacementSoleContactPose.Resolve(
+                    foot.SourceAnklePosition,
+                    foot.SourceAnkleRotation,
+                    foot.SourceHeelPosition,
+                    foot.SourceToePosition,
+                    finalAnkleWorldPosition,
+                    finalAnkleWorldRotation);
+            }
+            Add(row, finalAnkleWorldPosition);
+            Add(row, finalAnkleWorldRotation);
+            Add(row, finalContacts.HeelPosition);
+            Add(row, finalContacts.ToePosition);
             Add(
                 row,
                 ik.PhysicalWriteAvailable && legPose.IsAvailable &&
@@ -1646,6 +1698,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return originalComponentPosition +
                    (goal.ComponentPosition - originalComponentPosition) *
                    goal.PositionWeight;
+        }
+
+        static Vector3 TransformComponentPoint(
+            in RootHierarchyCapture roots,
+            Vector3 componentPoint) =>
+            roots.PoseRootWorldPosition +
+            roots.PoseRootWorldRotation *
+            Vector3.Scale(componentPoint, roots.PoseRootLossyScale);
+
+        static CharacterFootContactPlanePenetrationAvailability
+            ResolvePenetrationAvailability(
+                in CharacterFootLandingPredictionDiagnostics frame,
+                in CharacterFootSwingMotionDiagnostics motion,
+                in FootIkCapture ik)
+        {
+            if (!ik.PhysicalWriteAvailable ||
+                ik.PhysicalWriteCompletionIdentity != frame.CompletionIdentity)
+            {
+                return CharacterFootContactPlanePenetrationAvailability
+                    .FinalPhysicalPoseUnavailable;
+            }
+            if (motion.ConstraintState != CharacterFootConstraintState.Landing &&
+                motion.ConstraintState != CharacterFootConstraintState.Locked)
+            {
+                return CharacterFootContactPlanePenetrationAvailability
+                    .ContactLifecycleUnavailable;
+            }
+            if (!motion.ContactPlaneAvailable)
+            {
+                return CharacterFootContactPlanePenetrationAvailability
+                    .ContactPlaneUnavailable;
+            }
+            if (motion.LandingEventIdentity == 0)
+            {
+                return CharacterFootContactPlanePenetrationAvailability
+                    .EventLineageMismatch;
+            }
+            if (motion.ContactSurfaceIdentity == 0)
+            {
+                return CharacterFootContactPlanePenetrationAvailability
+                    .SurfaceLineageMismatch;
+            }
+            Vector3 normal = motion.ContactPlaneNormal;
+            if (!float.IsFinite(normal.x) ||
+                !float.IsFinite(normal.y) ||
+                !float.IsFinite(normal.z) ||
+                normal.sqrMagnitude <= 0.000001f)
+            {
+                return CharacterFootContactPlanePenetrationAvailability
+                    .InvalidContactNormal;
+            }
+            return CharacterFootContactPlanePenetrationAvailability.Available;
         }
 
         static void Add(StringBuilder row, string value)

@@ -47,9 +47,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/2";
+        const string Schema = "character-foot-motion-facts/4";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 2;
+        const int AnalyzerVersion = 4;
         const float PositionNoiseFloor = 0.001f;
         const float TimeEpsilon = 0.000001f;
 
@@ -95,6 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"releaseEvents={document.coverage.releaseEventCount} " +
                 $"pathChanges={document.coverage.pathChangeCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
+                $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
                 $"diagnosisTargets={report.TargetCount} " +
                 $"diagnosisMatches={report.MatchCount}";
             return new CharacterFootMotionDiagnosticAnalysis(
@@ -117,6 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             AnalyzeLandingEvents(frames, events);
             AnalyzeLockedEvents(frames, events);
+            AnalyzeContactPlanePenetration(frames, events);
             AnalyzeReleaseEvents(frames, events);
             AnalyzePathChanges(frames, events);
         }
@@ -268,6 +270,214 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 index++;
             }
         }
+
+        static void AnalyzeContactPlanePenetration(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            int index = 0;
+            while (index < frames.Count)
+            {
+                if (!frames[index].PenetrationAvailable)
+                {
+                    index++;
+                    continue;
+                }
+                int start = index;
+                ulong eventIdentity = frames[index].FootMotionEventIdentity;
+                int surfaceIdentity = frames[index].ContactSurfaceIdentity;
+                string constraintState = frames[index].ConstraintState;
+                while (index + 1 < frames.Count &&
+                       Continuous(frames[index], frames[index + 1]) &&
+                       frames[index + 1].PenetrationAvailable &&
+                       frames[index + 1].FootMotionEventIdentity == eventIdentity &&
+                       frames[index + 1].ContactSurfaceIdentity == surfaceIdentity &&
+                       frames[index + 1].ConstraintState == constraintState)
+                {
+                    index++;
+                }
+                int end = index;
+                List<FootFrame> window = frames.GetRange(
+                    start,
+                    end - start + 1);
+                var samples = new List<CharacterFootContactPlanePenetrationSample>(
+                    window.Count);
+                var finalDepths = new List<double>(window.Count);
+                double duration = 0d;
+                double coefficientTime = 0d;
+                double depthTime = 0d;
+                int penetratingFrames = 0;
+                int sourcePenetratingFrames = 0;
+                int introducedFrames = 0;
+                int amplifiedFrames = 0;
+                int partiallyResolvedFrames = 0;
+                int resolvedFrames = 0;
+                int baselineResidualFrames = 0;
+                int heelOnlyFrames = 0;
+                int toeOnlyFrames = 0;
+                int bothFrames = 0;
+                int peakFrame = window[0].Frame;
+                double peakDepth = -1d;
+                for (int i = 0; i < window.Count; i++)
+                {
+                    FootFrame frame = window[i];
+                    CharacterFootContactPlanePenetrationSample sample =
+                        EvaluatePenetration(frame);
+                    samples.Add(sample);
+                    finalDepths.Add(sample.Final.MaximumDepth);
+                    double dt = DeltaSeconds(frame);
+                    duration += dt;
+                    coefficientTime += sample.Final.LengthCoefficient * dt;
+                    depthTime += sample.Final.MeanDepth * dt;
+                    bool heelPenetrating = sample.Final.HeelDepth >
+                                           CharacterFootContactPlanePenetration
+                                               .GeometryEpsilonMeters;
+                    bool toePenetrating = sample.Final.ToeDepth >
+                                          CharacterFootContactPlanePenetration
+                                              .GeometryEpsilonMeters;
+                    if (heelPenetrating || toePenetrating)
+                        penetratingFrames++;
+                    if (sample.Source.MaximumDepth >
+                        CharacterFootContactPlanePenetration.GeometryEpsilonMeters)
+                    {
+                        sourcePenetratingFrames++;
+                    }
+                    if (sample.IntroducedMaximumDepth >
+                        CharacterFootContactPlanePenetration.GeometryEpsilonMeters)
+                    {
+                        introducedFrames++;
+                    }
+                    amplifiedFrames += ResponsibilityPresent(
+                        sample,
+                        CharacterFootContactPlanePenetrationResponsibility
+                            .Amplified)
+                        ? 1
+                        : 0;
+                    partiallyResolvedFrames += ResponsibilityPresent(
+                        sample,
+                        CharacterFootContactPlanePenetrationResponsibility
+                            .PartiallyResolved)
+                        ? 1
+                        : 0;
+                    resolvedFrames += ResponsibilityPresent(
+                        sample,
+                        CharacterFootContactPlanePenetrationResponsibility
+                            .Resolved)
+                        ? 1
+                        : 0;
+                    baselineResidualFrames += ResponsibilityPresent(
+                        sample,
+                        CharacterFootContactPlanePenetrationResponsibility
+                            .BaselineResidual)
+                        ? 1
+                        : 0;
+                    if (heelPenetrating && toePenetrating)
+                        bothFrames++;
+                    else if (heelPenetrating)
+                        heelOnlyFrames++;
+                    else if (toePenetrating)
+                        toeOnlyFrames++;
+                    if (sample.Final.MaximumDepth <= peakDepth)
+                        continue;
+                    peakDepth = sample.Final.MaximumDepth;
+                    peakFrame = frame.Frame;
+                }
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["availableFrameCount"] = window.Count,
+                    ["sourcePenetratingFrameCount"] = sourcePenetratingFrames,
+                    ["finalPenetratingFrameCount"] = penetratingFrames,
+                    ["finalPenetratingFrameRatio"] =
+                        window.Count > 0 ? (double)penetratingFrames / window.Count : 0d,
+                    ["sourceHeelDepthMaximumMeters"] = samples.Max(value => value.Source.HeelDepth),
+                    ["sourceToeDepthMaximumMeters"] = samples.Max(value => value.Source.ToeDepth),
+                    ["sourceDepthMaximumMeters"] = samples.Max(value => value.Source.MaximumDepth),
+                    ["sourceLengthCoefficientMaximum"] = samples.Max(value => value.Source.LengthCoefficient),
+                    ["finalHeelDepthMaximumMeters"] = samples.Max(value => value.Final.HeelDepth),
+                    ["finalToeDepthMaximumMeters"] = samples.Max(value => value.Final.ToeDepth),
+                    ["finalDepthMaximumMeters"] = samples.Max(value => value.Final.MaximumDepth),
+                    ["finalDepthMedianMeters"] = Percentile(finalDepths, 0.5d),
+                    ["finalDepthP90Meters"] = Percentile(finalDepths, 0.9d),
+                    ["finalDepthP99Meters"] = Percentile(finalDepths, 0.99d),
+                    ["finalMeanDepthMaximumMeters"] = samples.Max(value => value.Final.MeanDepth),
+                    ["finalLengthCoefficientMaximum"] = samples.Max(value => value.Final.LengthCoefficient),
+                    ["finalLengthCoefficientDurationMean"] =
+                        duration > 0d ? coefficientTime / duration : 0d,
+                    ["finalDepthTimeIntegralMeterSeconds"] = depthTime,
+                    ["introducedDepthMaximumMeters"] = samples.Max(value => value.IntroducedMaximumDepth),
+                    ["resolvedDepthMaximumMeters"] = samples.Max(value => value.ResolvedMaximumDepth),
+                    ["introducedFrameCount"] = introducedFrames,
+                    ["amplifiedFrameCount"] = amplifiedFrames,
+                    ["partiallyResolvedFrameCount"] = partiallyResolvedFrames,
+                    ["resolvedFrameCount"] = resolvedFrames,
+                    ["baselineResidualFrameCount"] = baselineResidualFrames,
+                    ["heelOnlyFrameCount"] = heelOnlyFrames,
+                    ["toeOnlyFrameCount"] = toeOnlyFrames,
+                    ["bothFrameCount"] = bothFrames,
+                    ["contactSurfaceIdentity"] = surfaceIdentity
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["sourcePenetrated"] = sourcePenetratingFrames > 0,
+                    ["finalPenetrated"] = penetratingFrames > 0,
+                    ["introduced"] = introducedFrames > 0,
+                    ["amplified"] = amplifiedFrames > 0,
+                    ["partiallyResolved"] = partiallyResolvedFrames > 0,
+                    ["resolved"] = resolvedFrames > 0,
+                    ["baselineResidual"] = baselineResidualFrames > 0,
+                    ["heelResidual"] = samples.Any(value =>
+                        value.Final.HeelDepth >
+                        CharacterFootContactPlanePenetration.GeometryEpsilonMeters),
+                    ["toeResidual"] = samples.Any(value =>
+                        value.Final.ToeDepth >
+                        CharacterFootContactPlanePenetration.GeometryEpsilonMeters)
+                };
+                events.Add(new EventFact(
+                    "ContactPlanePenetration",
+                    window[0].Side,
+                    window[0].Frame,
+                    window[^1].Frame,
+                    peakFrame,
+                    eventIdentity,
+                    window[0].SourceIdentity,
+                    window[0].SourceCycle,
+                    duration,
+                    metrics,
+                    evidence));
+                index++;
+            }
+        }
+
+        static CharacterFootContactPlanePenetrationSample EvaluatePenetration(
+            FootFrame frame)
+        {
+            Vector3 normal = frame.ContactNormal.normalized;
+            double sourceHeelClearance = Vector3.Dot(
+                frame.SourceHeel - frame.Anchor,
+                normal);
+            double sourceToeClearance = Vector3.Dot(
+                frame.SourceToe - frame.Anchor,
+                normal);
+            double finalHeelClearance = Vector3.Dot(
+                frame.FinalHeel - frame.Anchor,
+                normal);
+            double finalToeClearance = Vector3.Dot(
+                frame.FinalToe - frame.Anchor,
+                normal);
+            return CharacterFootContactPlanePenetration.Evaluate(
+                sourceHeelClearance,
+                sourceToeClearance,
+                finalHeelClearance,
+                finalToeClearance);
+        }
+
+        static bool ResponsibilityPresent(
+            CharacterFootContactPlanePenetrationSample sample,
+            CharacterFootContactPlanePenetrationResponsibility responsibility) =>
+            sample.HeelResponsibility == responsibility ||
+            sample.ToeResponsibility == responsibility;
 
         static void AnalyzeReleaseEvents(
             List<FootFrame> frames,
@@ -514,7 +724,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     id = AnalyzerId,
                     version = AnalyzerVersion,
-                    segmentationPositionEpsilonMeters = PositionNoiseFloor
+                    segmentationPositionEpsilonMeters = PositionNoiseFloor,
+                    penetrationGeometryEpsilonMeters =
+                        CharacterFootContactPlanePenetration.GeometryEpsilonMeters
                 },
                 coverage = new CoverageFact
                 {
@@ -523,11 +735,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     releaseEventCount = events.Count(value => value.kind == "Release"),
                     pathChangeCount = events.Count(value => value.kind == "PathChange"),
                     supportChangeCount = events.Count(value => value.kind == "SupportChange"),
+                    contactPlanePenetrationEventCount = events.Count(
+                        value => value.kind == "ContactPlanePenetration"),
                     leftFootFrameCount = capture.Left.Count,
                     rightFootFrameCount = capture.Right.Count,
                     frameGapCount = capture.FrameGapCount,
                     bodyResetCount = capture.BodyResetCount,
                     sourceChangeCount = capture.SourceChangeCount,
+                    contactPlaneAvailableFootRowCount = capture.FootRows.Count(
+                        value => value.PenetrationAvailable),
+                    contactPlaneUnavailableFootRowCount = capture.FootRows.Count(
+                        value => !value.PenetrationAvailable),
+                    contactPlanePenetrationAvailability =
+                        BuildPenetrationAvailabilityCounts(capture.FootRows),
                     groundPathRejectedFootRowCount = capture.FootRows.Count(value => value.GroundPathState != "Accepted")
                 },
                 events = events
@@ -642,6 +862,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CorrectedSole = Vector("FootMotionCorrectedSole"),
                 CorrectedAnkle = Vector("FootMotionCorrectedAnkle"),
                 Anchor = Vector("FootMotionSupportContactAnchor"),
+                ContactPlaneAvailable = Int("FootMotionContactPlaneAvailable") != 0,
+                ContactSurfaceIdentity = Int("FootMotionContactSurfaceIdentity"),
+                ContactNormal = Vector("FootMotionContactPlaneNormal"),
+                PenetrationAvailability = Cell("FootContactPlanePenetrationAvailability"),
+                SourceHeel = Vector("FootMotionSourceHeel"),
+                SourceToe = Vector("FootMotionSourceToe"),
+                FinalHeel = Vector("FinalPhysicalHeelWorld"),
+                FinalToe = Vector("FinalPhysicalToeWorld"),
                 HasAnchor = Ulong("FootMotionLandingEventIdentity") != 0 &&
                             Cell("FootMotionConstraintState") != "Swing",
                 TargetExtensionRatio = Float("FinalIkLegTargetExtensionRatio"),
@@ -679,6 +907,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionCorrectedSoleX", "FootMotionCorrectedSoleY", "FootMotionCorrectedSoleZ",
                 "FootMotionCorrectedAnkleX", "FootMotionCorrectedAnkleY", "FootMotionCorrectedAnkleZ",
                 "FootMotionSupportContactAnchorX", "FootMotionSupportContactAnchorY", "FootMotionSupportContactAnchorZ",
+                "FootMotionContactPlaneAvailable", "FootMotionContactSurfaceIdentity",
+                "FootMotionContactPlaneNormalX", "FootMotionContactPlaneNormalY", "FootMotionContactPlaneNormalZ",
+                "FootContactPlanePenetrationAvailability",
+                "FootMotionSourceHeelX", "FootMotionSourceHeelY", "FootMotionSourceHeelZ",
+                "FootMotionSourceToeX", "FootMotionSourceToeY", "FootMotionSourceToeZ",
+                "FinalPhysicalHeelWorldX", "FinalPhysicalHeelWorldY", "FinalPhysicalHeelWorldZ",
+                "FinalPhysicalToeWorldX", "FinalPhysicalToeWorldY", "FinalPhysicalToeWorldZ",
                 "FinalIkLegTargetExtensionRatio", "FinalIkLegSolvedExtensionRatio",
                 "FinalIkLegSolvedBendDegrees", "FinalIkLegTargetCompressionReserve",
                 "FinalIkLegEffectiveBendDirectionPreviousDot",
@@ -962,6 +1197,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return count;
         }
 
+        static SortedDictionary<string, int> BuildPenetrationAvailabilityCounts(
+            IEnumerable<FootFrame> frames)
+        {
+            var result = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            foreach (FootFrame frame in frames)
+            {
+                string key = string.IsNullOrEmpty(frame.PenetrationAvailability)
+                    ? "Unspecified"
+                    : frame.PenetrationAvailability;
+                result.TryGetValue(key, out int count);
+                result[key] = count + 1;
+            }
+            return result;
+        }
+
+        static double Percentile(List<double> values, double percentile)
+        {
+            if (values.Count == 0)
+                return 0d;
+            values.Sort();
+            double position = (values.Count - 1) * percentile;
+            int lower = (int)Math.Floor(position);
+            int upper = (int)Math.Ceiling(position);
+            if (lower == upper)
+                return values[lower];
+            double t = position - lower;
+            return values[lower] + (values[upper] - values[lower]) * t;
+        }
+
         static float ParseFloat(string value) =>
             float.TryParse(
                 value,
@@ -1076,7 +1340,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 CorrectedSole;
             internal Vector3 CorrectedAnkle;
             internal Vector3 Anchor;
+            internal bool ContactPlaneAvailable;
+            internal int ContactSurfaceIdentity;
+            internal Vector3 ContactNormal;
+            internal string PenetrationAvailability;
+            internal Vector3 SourceHeel;
+            internal Vector3 SourceToe;
+            internal Vector3 FinalHeel;
+            internal Vector3 FinalToe;
             internal bool HasAnchor;
+            internal bool PenetrationAvailable =>
+                ContactPlaneAvailable &&
+                (ConstraintState == "Landing" || ConstraintState == "Locked") &&
+                PenetrationAvailability ==
+                CharacterFootContactPlanePenetrationAvailability.Available.ToString();
             internal float TargetExtensionRatio;
             internal float SolvedExtensionRatio;
             internal float SolvedBendDegrees;
@@ -1122,6 +1399,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string id;
             public int version;
             public double segmentationPositionEpsilonMeters;
+            public double penetrationGeometryEpsilonMeters;
         }
 
         [Serializable]
@@ -1132,11 +1410,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int releaseEventCount;
             public int pathChangeCount;
             public int supportChangeCount;
+            public int contactPlanePenetrationEventCount;
             public int leftFootFrameCount;
             public int rightFootFrameCount;
             public int frameGapCount;
             public int bodyResetCount;
             public int sourceChangeCount;
+            public int contactPlaneAvailableFootRowCount;
+            public int contactPlaneUnavailableFootRowCount;
+            public SortedDictionary<string, int>
+                contactPlanePenetrationAvailability;
             public int groundPathRejectedFootRowCount;
         }
 

@@ -29,9 +29,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosisReporter
     {
-        const string Schema = "character-foot-motion-diagnosis/1";
+        const string Schema = "character-foot-motion-diagnosis/3";
         const string ReporterId = "character-foot-motion-diagnosis-reporter";
-        const int ReporterVersion = 1;
+        const int ReporterVersion = 3;
+        const int RepresentativeEventLimit = 8;
         const double LandingExtensionDeltaThreshold = 0.02d;
         const double LandingBendDropThresholdDegrees = 5d;
         const double LockedSinkThresholdMeters = 0.005d;
@@ -67,7 +68,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 BuildLandingExtension(events),
                 BuildLockedMotion(events),
                 BuildPathChangeJitter(events),
-                BuildLockTransition(events)
+                BuildLockTransition(events),
+                BuildSourceContactPlanePenetration(events),
+                BuildIntroducedContactPlanePenetration(events),
+                BuildAmplifiedContactPlanePenetration(events),
+                BuildUnresolvedToeContactPlanePenetration(events),
+                BuildFinalHeelContactPlanePenetration(events)
             };
             var document = new DiagnosisDocument
             {
@@ -82,8 +88,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 reporter = new ReporterFact
                 {
                     id = ReporterId,
-                    version = ReporterVersion
+                    version = ReporterVersion,
+                    representativeEventLimit = RepresentativeEventLimit
                 },
+                penetrationCoverage = BuildPenetrationCoverage(facts),
                 targets = targets,
                 summary = new DiagnosisSummary
                 {
@@ -136,6 +144,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 },
                 eligible,
                 matched,
+                value => Math.Max(
+                    Math.Max(
+                        Metric(value, "targetExtensionRatioDelta") /
+                        LandingExtensionDeltaThreshold,
+                        Metric(value, "solvedBendDropDegrees") /
+                        LandingBendDropThresholdDegrees),
+                    Evidence(value, "bendDirectionReversed") ? 1d : 0d),
                 "targetExtensionRatioDelta",
                 "solvedBendDropDegrees",
                 "solvedExtensionRatioPeak",
@@ -174,6 +189,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 },
                 eligible,
                 matched,
+                value => Math.Max(
+                    Metric(value, "soleDownwardExcursionMeters") /
+                    LockedSinkThresholdMeters,
+                    Metric(value, "correctedSoleAnchorDistanceChangeMeters") /
+                    LockedDriftThresholdMeters),
                 "soleDownwardExcursionMeters",
                 "correctedSoleAnchorDistanceChangeMeters",
                 "visibleSoleStepMaximumMeters",
@@ -202,6 +222,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new[] { "correctionStepMaximumMeters>0.02" },
                 eligible,
                 matched,
+                value => Metric(value, "correctionStepMaximumMeters") /
+                         PathCorrectionStepThresholdMeters,
                 "nextLandingEndpointDeltaMeters",
                 "correctionStepMaximumMeters",
                 "correctionExcursionMeters",
@@ -243,9 +265,130 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 },
                 eligible,
                 matched,
+                value => value.eventKind == "Landing"
+                    ? Metric(value, "correctionStepMaximumMeters") /
+                      LockAcquireCorrectionStepThresholdMeters
+                    : Math.Max(
+                        Metric(value, "correctionExcursionMeters") /
+                        ReleaseExcursionThresholdMeters,
+                        Metric(value, "velocityDirectionReversalCount")),
                 "correctionStepMaximumMeters",
                 "correctionExcursionMeters",
                 "velocityDirectionReversalCount");
+        }
+
+        static DiagnosisTarget BuildSourceContactPlanePenetration(JArray events)
+        {
+            List<JObject> eligible = Events(events, "ContactPlanePenetration");
+            List<DiagnosisEvidence> matched = Match(
+                eligible,
+                value => Metric(value, "sourceDepthMaximumMeters") >
+                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters
+                    ? new List<string> { "sourceDepthMaximumMeters>0.00001" }
+                    : new List<string>());
+            return Target(
+                "source-contact-plane-penetration",
+                "Foot Placement处理前的Heel-Toe接触线是否已进入正式接触平面",
+                new[] { "ContactPlanePenetration" },
+                new[] { "sourceDepthMaximumMeters>0.00001" },
+                eligible,
+                matched,
+                value => Metric(value, "sourceDepthMaximumMeters"),
+                "sourceHeelDepthMaximumMeters",
+                "sourceToeDepthMaximumMeters",
+                "sourceDepthMaximumMeters",
+                "sourceLengthCoefficientMaximum");
+        }
+
+        static DiagnosisTarget BuildIntroducedContactPlanePenetration(JArray events)
+        {
+            List<JObject> eligible = Events(events, "ContactPlanePenetration");
+            List<DiagnosisEvidence> matched = Match(
+                eligible,
+                value => Metric(value, "introducedDepthMaximumMeters") >
+                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters
+                    ? new List<string> { "introducedDepthMaximumMeters>0.00001" }
+                    : new List<string>());
+            return Target(
+                "foot-placement-introduced-contact-plane-penetration",
+                "当前Foot Placement与最终IK是否新增接触平面侵入",
+                new[] { "ContactPlanePenetration" },
+                new[] { "introducedDepthMaximumMeters>0.00001" },
+                eligible,
+                matched,
+                value => Metric(value, "introducedDepthMaximumMeters"),
+                "introducedDepthMaximumMeters",
+                "sourceDepthMaximumMeters",
+                "finalDepthMaximumMeters",
+                "introducedFrameCount");
+        }
+
+        static DiagnosisTarget BuildAmplifiedContactPlanePenetration(JArray events)
+        {
+            List<JObject> eligible = Events(events, "ContactPlanePenetration");
+            List<DiagnosisEvidence> matched = Match(
+                eligible,
+                value => Metric(value, "amplifiedFrameCount") > 0d
+                    ? new List<string> { "amplifiedFrameCount>0" }
+                    : new List<string>());
+            return Target(
+                "foot-placement-amplified-contact-plane-penetration",
+                "当前Foot Placement与最终IK是否加重动画源已有侵入",
+                new[] { "ContactPlanePenetration" },
+                new[] { "amplifiedFrameCount>0" },
+                eligible,
+                matched,
+                value => Metric(value, "introducedDepthMaximumMeters"),
+                "amplifiedFrameCount",
+                "introducedDepthMaximumMeters",
+                "sourceDepthMaximumMeters",
+                "finalDepthMaximumMeters");
+        }
+
+        static DiagnosisTarget BuildUnresolvedToeContactPlanePenetration(JArray events)
+        {
+            List<JObject> eligible = Events(events, "ContactPlanePenetration");
+            List<DiagnosisEvidence> matched = Match(
+                eligible,
+                value => Metric(value, "finalToeDepthMaximumMeters") >
+                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters
+                    ? new List<string> { "finalToeDepthMaximumMeters>0.00001" }
+                    : new List<string>());
+            return Target(
+                "unresolved-toe-contact-plane-penetration",
+                "最终Toe接触探针是否仍进入接触平面，仅记录视觉残留不自动归责",
+                new[] { "ContactPlanePenetration" },
+                new[] { "finalToeDepthMaximumMeters>0.00001" },
+                eligible,
+                matched,
+                value => Metric(value, "finalToeDepthMaximumMeters"),
+                "sourceToeDepthMaximumMeters",
+                "finalToeDepthMaximumMeters",
+                "introducedDepthMaximumMeters",
+                "baselineResidualFrameCount");
+        }
+
+        static DiagnosisTarget BuildFinalHeelContactPlanePenetration(JArray events)
+        {
+            List<JObject> eligible = Events(events, "ContactPlanePenetration");
+            List<DiagnosisEvidence> matched = Match(
+                eligible,
+                value => Metric(value, "finalHeelDepthMaximumMeters") >
+                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters
+                    ? new List<string> { "finalHeelDepthMaximumMeters>0.00001" }
+                    : new List<string>());
+            return Target(
+                "final-heel-contact-plane-penetration",
+                "最终Heel接触探针是否进入正式接触平面",
+                new[] { "ContactPlanePenetration" },
+                new[] { "finalHeelDepthMaximumMeters>0.00001" },
+                eligible,
+                matched,
+                value => Metric(value, "finalHeelDepthMaximumMeters"),
+                "sourceHeelDepthMaximumMeters",
+                "finalHeelDepthMaximumMeters",
+                "finalLengthCoefficientMaximum",
+                "finalDepthTimeIntegralMeterSeconds");
         }
 
         static DiagnosisTarget Target(
@@ -255,6 +398,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IEnumerable<string> rules,
             List<JObject> eligible,
             List<DiagnosisEvidence> matched,
+            Func<DiagnosisEvidence, double> rank,
             params string[] metricNames)
         {
             var measurements = new SortedDictionary<string, DistributionFact>(
@@ -280,7 +424,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? (double)matched.Count / eligible.Count
                     : 0d,
                 measurements = measurements,
-                matchedEvents = matched
+                representativeEventCount = Math.Min(
+                    RepresentativeEventLimit,
+                    matched.Count),
+                representativeEvents = matched
+                    .OrderByDescending(rank)
+                    .ThenBy(value => value.startFrame)
+                    .Take(RepresentativeEventLimit)
+                    .OrderBy(value => value.startFrame)
+                    .ThenBy(value => value.side, StringComparer.Ordinal)
+                    .ToList()
             };
         }
 
@@ -333,6 +486,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool Evidence(JObject value, string name) =>
             value["evidence"]?[name]?.Value<bool?>() ?? false;
 
+        static double Metric(DiagnosisEvidence value, string name) =>
+            value.metrics.TryGetValue(name, out double result) ? result : 0d;
+
+        static bool Evidence(DiagnosisEvidence value, string name) =>
+            value.evidence.TryGetValue(name, out bool result) && result;
+
         static SortedDictionary<string, double> ReadDoubleMap(JObject value)
         {
             var result = new SortedDictionary<string, double>(StringComparer.Ordinal);
@@ -350,6 +509,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return result;
             foreach (JProperty property in value.Properties())
                 result[property.Name] = property.Value.Value<bool>();
+            return result;
+        }
+
+        static PenetrationCoverageFact BuildPenetrationCoverage(JObject facts)
+        {
+            JObject coverage = facts["coverage"] as JObject;
+            return new PenetrationCoverageFact
+            {
+                availableFootRowCount =
+                    coverage?.Value<int?>("contactPlaneAvailableFootRowCount") ?? 0,
+                unavailableFootRowCount =
+                    coverage?.Value<int?>("contactPlaneUnavailableFootRowCount") ?? 0,
+                availabilityReasons = ReadIntMap(
+                    coverage?["contactPlanePenetrationAvailability"] as JObject)
+            };
+        }
+
+        static SortedDictionary<string, int> ReadIntMap(JObject value)
+        {
+            var result = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            if (value == null)
+                return result;
+            foreach (JProperty property in value.Properties())
+                result[property.Name] = property.Value.Value<int>();
             return result;
         }
 
@@ -415,6 +598,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string schema;
             public FactsReference facts;
             public ReporterFact reporter;
+            public PenetrationCoverageFact penetrationCoverage;
             public List<DiagnosisTarget> targets;
             public DiagnosisSummary summary;
         }
@@ -433,6 +617,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             public string id;
             public int version;
+            public int representativeEventLimit;
+        }
+
+        [Serializable]
+        sealed class PenetrationCoverageFact
+        {
+            public int availableFootRowCount;
+            public int unavailableFootRowCount;
+            public SortedDictionary<string, int> availabilityReasons;
         }
 
         [Serializable]
@@ -454,7 +647,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int matchedEventCount;
             public double matchedEventRate;
             public SortedDictionary<string, DistributionFact> measurements;
-            public List<DiagnosisEvidence> matchedEvents;
+            public int representativeEventCount;
+            public List<DiagnosisEvidence> representativeEvents;
         }
 
         [Serializable]

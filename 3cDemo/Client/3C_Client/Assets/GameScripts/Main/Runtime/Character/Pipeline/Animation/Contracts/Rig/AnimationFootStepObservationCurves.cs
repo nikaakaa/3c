@@ -136,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationCurve m_LockMode;
         [SerializeField] AnimationCurve m_LockWeight;
         [SerializeField] AnimationCurve m_Support;
+        [SerializeField] AnimationFootStepLandingEventTable m_LandingEvents;
 
         public AnimationFootStepObservationCurveSet(
             AnimationCurve timeToLandingSeconds,
@@ -148,7 +149,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve contact,
             AnimationCurve lockMode,
             AnimationCurve lockWeight,
-            AnimationCurve support)
+            AnimationCurve support,
+            AnimationFootStepLandingEventTable landingEvents)
         {
             m_TimeToLandingSeconds = AnimationPredictedFootStepCurveSet.Copy(timeToLandingSeconds);
             m_Distance = AnimationPredictedFootStepCurveSet.Copy(distance);
@@ -161,6 +163,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LockMode = AnimationPredictedFootStepCurveSet.Copy(lockMode);
             m_LockWeight = AnimationPredictedFootStepCurveSet.Copy(lockWeight);
             m_Support = AnimationPredictedFootStepCurveSet.Copy(support);
+            m_LandingEvents = landingEvents ??
+                throw new ArgumentNullException(nameof(landingEvents));
             RequireValid();
         }
 
@@ -175,6 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationCurve LockMode => m_LockMode;
         public AnimationCurve LockWeight => m_LockWeight;
         public AnimationCurve Support => m_Support;
+        public AnimationFootStepLandingEventTable LandingEvents => m_LandingEvents;
 
         public AnimationFootStepObservationSample Sample(float normalizedTime)
         {
@@ -247,6 +252,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 nameof(m_Support),
                 true,
                 false);
+            if (m_LandingEvents == null)
+                throw new InvalidOperationException(
+                    "Foot Step Landing Event table is missing.");
+            m_LandingEvents.RequireValid();
         }
 
         static void RequireLockModeCurve(AnimationCurve curve)

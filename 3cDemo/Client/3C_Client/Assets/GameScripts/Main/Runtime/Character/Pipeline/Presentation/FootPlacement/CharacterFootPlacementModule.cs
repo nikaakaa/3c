@@ -525,6 +525,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in primarySupport,
                 in pelvisFrame,
                 ref bank.PelvisSpring);
+            if (facts.Grounded &&
+                !leftAction.IsOccupied &&
+                !rightAction.IsOccupied)
+            {
+                bool leftLandingReach = IsLandingReachCandidate(
+                    in leftSelectedStep,
+                    in leftFootMotion,
+                    in leftResolved);
+                bool rightLandingReach = IsLandingReachCandidate(
+                    in rightSelectedStep,
+                    in rightFootMotion,
+                    in rightResolved);
+                if (leftLandingReach || rightLandingReach)
+                {
+                    strideHips = CharacterFootStrideHipsBuilder.ApplyLandingReach(
+                        in strideHips,
+                        leftLandingReach,
+                        pose.Left.HipPosition,
+                        leftResolved.FinalAnkle,
+                        m_Rig.LeftLegLength,
+                        rightLandingReach,
+                        pose.Right.HipPosition,
+                        rightResolved.FinalAnkle,
+                        m_Rig.RightLegLength,
+                        componentUp,
+                        footPlacementWeight,
+                        m_Settings.FootMotion,
+                        ref bank.PelvisSpring);
+                }
+            }
             pelvisGoal = CreatePelvisGoal(in strideHips, m_Rig.PoseRoot);
             bank.StrideHips = strideHips;
             if (!strideHips.ProducesPelvisGoal)
@@ -1299,6 +1329,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool grounded,
             in CharacterFootActionOccupancy action) =>
             !grounded || action.IsOccupied;
+
+        static bool IsLandingReachCandidate(
+            in AnimationBiomechanicalStepHeader step,
+            in CharacterFootSwingMotionResult motion,
+            in CharacterResolvedFootResult resolved) =>
+            step.IsAuthoritative &&
+            step.HasConsistentLandingEventIdentity &&
+            step.IsSwing &&
+            motion.Accepted &&
+            motion.LandingEventIdentity == step.LandingEventIdentity &&
+            resolved.GoalWeight > CharacterPoseConstraintMath.Epsilon;
 
         CharacterFootStrideHipsResult ReleaseStride(
             CharacterFootStrideRejectReason reason,

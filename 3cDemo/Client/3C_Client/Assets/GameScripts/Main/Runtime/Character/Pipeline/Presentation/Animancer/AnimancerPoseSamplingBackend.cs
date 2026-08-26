@@ -673,6 +673,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 RequireKey(sourceId, playerNodeId)) >= 0;
         }
 
+        internal ClipSamplePlan RequireDominantClipSample(
+            AnimationPoseSourceId sourceId,
+            PoseNodeId playerNodeId,
+            ulong completionIdentity)
+        {
+            RequireAvailable();
+            RequireFramePhase(SourceFramePhase.EvaluateBarrier);
+            if (completionIdentity == 0)
+                throw new ArgumentOutOfRangeException(nameof(completionIdentity));
+            var key = RequireKey(sourceId, playerNodeId);
+            int mutationIndex = FindFrameMutation(key);
+            if (mutationIndex < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Animation pose source '{key}' has no sample in the current Evaluate Barrier.");
+            }
+            SourceFrameMutation mutation = m_FrameMutations[mutationIndex];
+            if (mutation.Capture.CompletionIdentity != completionIdentity)
+            {
+                throw new InvalidOperationException(
+                    $"Animation pose source '{key}' sample does not belong to Completion #{completionIdentity}.");
+            }
+            int clipOffset = checked(mutationIndex * m_ClipCapacity);
+            int selectedIndex = -1;
+            float selectedWeight = -1f;
+            for (int i = 0; i < mutation.ClipCount; i++)
+            {
+                float weight = m_PendingNormalizedClipWeights[clipOffset + i];
+                if (weight <= selectedWeight)
+                    continue;
+                selectedIndex = i;
+                selectedWeight = weight;
+            }
+            if (selectedIndex < 0)
+                throw new InvalidOperationException($"Animation pose source '{key}' has no dominant Clip sample.");
+            ClipSamplePlan sample = m_PendingClipPlans[clipOffset + selectedIndex];
+            if (!sample.IsValid)
+                throw new InvalidOperationException($"Animation pose source '{key}' dominant Clip sample is invalid.");
+            return sample;
+        }
+
         internal void ExecuteDeferredReleases()
         {
             RequireAvailable();

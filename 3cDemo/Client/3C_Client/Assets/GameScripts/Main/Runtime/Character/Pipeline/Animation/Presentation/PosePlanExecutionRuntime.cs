@@ -2757,9 +2757,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in inputBinding,
                     m_PhysicalSources,
                     m_FootPlacementContributions);
+            AnimationFootStepObservationFrame footStepObservation =
+                ResolveFootStepObservationFrame(
+                    completionIdentity,
+                    m_FootPlacementContributions,
+                    contributionCount);
             var input = new CharacterFootPlacementPoseInput(
                 m_Projection.PosePlan.PlanHash,
                 in inputBinding,
+                in footStepObservation,
                 m_FootPlacementContributions,
                 contributionCount);
             if ((uint)operation.ParameterIndex >=
@@ -2784,6 +2790,120 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 operation.Index,
                 descriptor.ContributionGoalWorkspaceOffset,
                 in planningFrame);
+        }
+
+        AnimationFootStepObservationFrame ResolveFootStepObservationFrame(
+            ulong completionIdentity,
+            AnimationPoseSourceContribution[] contributions,
+            int contributionCount)
+        {
+            AnimationPoseSourceContribution contribution =
+                RequireFootStepObservationContribution(
+                    contributions,
+                    contributionCount);
+            ClipSamplePlan clipSample = m_SourceBackend.RequireDominantClipSample(
+                contribution.SourceId,
+                contribution.NodeId,
+                completionIdentity);
+            AnimationFootStepObservationCurvePair curves;
+            string sourceIdentity;
+            switch (contribution.SourceId.SourceKind)
+            {
+                case AnimationPoseSourceKind.Timeline:
+                    if ((uint)contribution.SourceOwnerIndex >=
+                        (uint)m_Projection.Producers.Count)
+                    {
+                        throw new InvalidOperationException(
+                            $"Timeline Foot Step source '{contribution.SourceId}' has no exact producer.");
+                    }
+                    CharacterPresentationAnimationBinding animation =
+                        m_Projection.Producers[contribution.SourceOwnerIndex]?.Animation ??
+                        throw new InvalidOperationException(
+                            $"Timeline Foot Step source '{contribution.SourceId}' has no animation binding.");
+                    if ((uint)clipSample.ClipBindingIndex >=
+                        (uint)animation.Clips.Count)
+                    {
+                        throw new InvalidOperationException(
+                            $"Timeline Foot Step source '{contribution.SourceId}' Clip binding is outside its producer catalog.");
+                    }
+                    CharacterPresentationAnimationClipBinding binding =
+                        animation.Clips[clipSample.ClipBindingIndex] ??
+                        throw new InvalidOperationException(
+                            $"Timeline Foot Step source '{contribution.SourceId}' Clip binding is missing.");
+                    binding.RequireSampleable(clipSample.ClipBindingIndex);
+                    if (!ReferenceEquals(binding.Clip, clipSample.Clip))
+                    {
+                        throw new InvalidOperationException(
+                            $"Timeline Foot Step source '{contribution.SourceId}' Clip sample does not match its compiled binding.");
+                    }
+                    curves = binding.FootStepObservation;
+                    sourceIdentity = binding.ClipIdentity;
+                    break;
+                case AnimationPoseSourceKind.Clip:
+                    if (!m_Projection.TryGetPoseSource(
+                            contribution.SourceId.PresentationPoseSourceIndex,
+                            out CharacterPresentationPoseSourcePlan source) ||
+                        clipSample.ClipBindingIndex != 0 ||
+                        !ReferenceEquals(source.Clip, clipSample.Clip))
+                    {
+                        throw new InvalidOperationException(
+                            $"Clip Foot Step source '{contribution.SourceId}' does not match its compiled source plan.");
+                    }
+                    source.RequireValid();
+                    curves = source.FootStepObservation;
+                    sourceIdentity = source.ClipIdentity;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Foot Step source kind '{contribution.SourceId.SourceKind}' has no formal observation contract.");
+            }
+            curves.RequireValid();
+            int cycle = checked((int)Math.Floor(
+                clipSample.ContinuousClipTime / clipSample.Clip.length));
+            return new AnimationFootStepObservationFrame(
+                completionIdentity,
+                contribution.NodeId,
+                contribution.SourceId,
+                contribution.ContributionContinuityIdentity,
+                sourceIdentity,
+                clipSample.ClipBindingIndex,
+                cycle,
+                contribution.Weight,
+                clipSample.NormalizedTime,
+                curves.Left.Sample(clipSample.NormalizedTime),
+                curves.Right.Sample(clipSample.NormalizedTime));
+        }
+
+        static AnimationPoseSourceContribution
+            RequireFootStepObservationContribution(
+                AnimationPoseSourceContribution[] contributions,
+                int contributionCount)
+        {
+            if (contributions == null || contributionCount <= 0 ||
+                contributionCount > contributions.Length)
+            {
+                throw new ArgumentException(
+                    "Foot Step observation contribution input is invalid.");
+            }
+            AnimationPoseSourceContribution selected = default;
+            float selectedWeight = -1f;
+            for (int i = 0; i < contributionCount; i++)
+            {
+                AnimationPoseSourceContribution candidate = contributions[i];
+                if (candidate.Kind != AnimationPoseContributionKind.Live ||
+                    candidate.Weight <= selectedWeight)
+                {
+                    continue;
+                }
+                selected = candidate;
+                selectedWeight = candidate.Weight;
+            }
+            if (!selected.SourceId.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Foot Placement has no Live Foot Step observation source.");
+            }
+            return selected;
         }
 
         private bool TryCopyCompletedPlayerPose(

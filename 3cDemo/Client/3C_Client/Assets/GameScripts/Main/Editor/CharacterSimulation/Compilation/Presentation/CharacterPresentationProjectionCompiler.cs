@@ -1183,7 +1183,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     clip.EaseInCurve,
                     clip.EaseOutCurve,
                     NormalizeRegisteredCurve(footWeight, clipIdentity.SourceDurationSeconds),
-                    features));
+                    features,
+                    CompileFootStepObservation(
+                        sourceClip,
+                        clipIdentity.SourceDurationSeconds)));
             }
             if (clips.Count == 0)
             {

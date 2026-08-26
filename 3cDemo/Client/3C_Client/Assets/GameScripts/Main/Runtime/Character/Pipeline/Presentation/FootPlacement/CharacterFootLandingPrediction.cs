@@ -342,6 +342,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
     }
 
+    public readonly struct CharacterFootStepObservationInputDiagnostics
+    {
+        internal CharacterFootStepObservationInputDiagnostics(
+            in AnimationFootStepObservationFrame frame)
+        {
+            if (!frame.IsValid)
+                throw new ArgumentException("Foot Step observation input diagnostics is invalid.");
+            CompletionIdentity = frame.CompletionIdentity;
+            SourceId = frame.SourceId.ToString();
+            SourceIdentity = frame.SourceIdentity;
+            ContributionContinuityIdentity = frame.ContributionContinuityIdentity;
+            ClipBindingIndex = frame.ClipBindingIndex;
+            Cycle = frame.Cycle;
+            SourceWeight = frame.SourceWeight;
+            NormalizedTime = frame.NormalizedTime;
+            Left = frame.Left;
+            Right = frame.Right;
+            m_IsSpecified = 1;
+        }
+
+        readonly byte m_IsSpecified;
+        public ulong CompletionIdentity { get; }
+        public string SourceId { get; }
+        public string SourceIdentity { get; }
+        public ulong ContributionContinuityIdentity { get; }
+        public int ClipBindingIndex { get; }
+        public int Cycle { get; }
+        public float SourceWeight { get; }
+        public float NormalizedTime { get; }
+        public AnimationFootStepObservationSample Left { get; }
+        public AnimationFootStepObservationSample Right { get; }
+        public bool IsValid => m_IsSpecified != 0;
+    }
+
     public readonly struct CharacterFootLandingPredictionInputDiagnostics
     {
         internal CharacterFootLandingPredictionInputDiagnostics(
@@ -352,7 +386,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootActionOccupancy leftAction,
             in CharacterFootActionOccupancy rightAction,
             in ThirdPersonSimulation.CommittedLocomotionPlanarMotionTimeline timeline,
-            float currentSegmentRemainingSeconds)
+            float currentSegmentRemainingSeconds,
+            in AnimationFootStepObservationFrame footStepObservation)
         {
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Grounded = grounded;
@@ -399,6 +434,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TimelineMaximumBodyYawVelocityDegreesPerSecond =
                 timeline.MaximumBodyYawVelocityDegreesPerSecond;
             CurrentSegmentRemainingSeconds = currentSegmentRemainingSeconds;
+            FootStepObservation =
+                new CharacterFootStepObservationInputDiagnostics(in footStepObservation);
         }
 
         public float PresentationDeltaSeconds { get; }
@@ -441,6 +478,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float TimelineBodyYawVelocityDegreesPerSecond { get; }
         public float TimelineMaximumBodyYawVelocityDegreesPerSecond { get; }
         public float CurrentSegmentRemainingSeconds { get; }
+        public CharacterFootStepObservationInputDiagnostics FootStepObservation { get; }
     }
 
     public readonly struct CharacterFootLandingPredictionDiagnostics

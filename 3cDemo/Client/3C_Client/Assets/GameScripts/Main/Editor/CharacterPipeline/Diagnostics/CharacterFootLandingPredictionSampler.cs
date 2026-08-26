@@ -33,6 +33,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
             "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
             "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
+            "InputFormalStepObservationAvailable,InputFormalStepSourceId,InputFormalStepSourceIdentity,InputFormalStepSourceWeight,InputFormalStepSourceNormalizedTime," +
+            "InputFormalStepClipBindingIndex,InputFormalStepSourceCycle,InputFormalStepContributionContinuityIdentity,InputFormalStepCompletionIdentity,InputFormalStepTimeSeconds,InputFormalStepDistance," +
+            "InputFormalFootHeight,InputFormalToeHeight,InputFormalToeSpeed,InputFormalPositionError,InputFormalRotationError," +
+            "InputFormalContact,InputFormalLockMode,InputFormalLockWeight,InputFormalSupport," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
             "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
@@ -1234,6 +1238,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, hasObservedStep ? observedStep.LockMode.ToString() : string.Empty);
             Add(row, hasObservedStep ? observedStep.LockWeight : 0f);
             Add(row, hasObservedStep ? observedStep.Support : 0f);
+            CharacterFootStepObservationInputDiagnostics inputObservation =
+                input.FootStepObservation;
+            AnimationFootStepObservationSample inputObservedStep =
+                foot.Side == CharacterFootSide.Left
+                    ? inputObservation.Left
+                    : inputObservation.Right;
+            bool hasInputObservedStep = inputObservation.IsValid && inputObservedStep.IsValid;
+            Add(row, hasInputObservedStep);
+            Add(row, hasInputObservedStep ? inputObservation.SourceId : string.Empty);
+            Add(row, hasInputObservedStep ? inputObservation.SourceIdentity : string.Empty);
+            Add(row, hasInputObservedStep ? inputObservation.SourceWeight : 0f);
+            Add(row, hasInputObservedStep ? inputObservation.NormalizedTime : 0f);
+            Add(row, hasInputObservedStep ? inputObservation.ClipBindingIndex : -1);
+            Add(row, hasInputObservedStep ? inputObservation.Cycle : 0);
+            Add(row, hasInputObservedStep
+                ? inputObservation.ContributionContinuityIdentity
+                : 0UL);
+            Add(row, hasInputObservedStep ? inputObservation.CompletionIdentity : 0UL);
+            Add(row, hasInputObservedStep ? inputObservedStep.TimeToLandingSeconds : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.Distance : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.FootHeight : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.ToeHeight : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.ToeSpeed : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.PositionError : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.RotationError : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.Contact : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.LockMode.ToString() : string.Empty);
+            Add(row, hasInputObservedStep ? inputObservedStep.LockWeight : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.Support : 0f);
             Add(row, foot.RootLocalLanding);
             Add(row, input.PresentationDeltaSeconds);
             Add(row, input.PreviousBodyTick);

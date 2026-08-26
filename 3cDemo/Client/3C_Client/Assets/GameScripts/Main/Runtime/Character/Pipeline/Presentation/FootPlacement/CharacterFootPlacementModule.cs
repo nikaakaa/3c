@@ -514,6 +514,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bank.CompletionIdentity = frame.Pose.CompletionIdentity;
             if (bank.RecordDiagnostics)
             {
+                AnimationFootStepObservationFrame footStepObservation =
+                    frame.Pose.FootStepObservation;
                 var inputDiagnostics = new CharacterFootLandingPredictionInputDiagnostics(
                     frame.PresentationDeltaSeconds,
                     frame.Body,
@@ -522,7 +524,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in leftAction,
                     in rightAction,
                     in timeline,
-                    currentSegmentRemainingSeconds);
+                    currentSegmentRemainingSeconds,
+                    in footStepObservation);
                 var leftDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(in left);
                 var rightDiagnostics =

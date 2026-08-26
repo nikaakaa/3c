@@ -6,6 +6,7 @@ using ThirdPersonCamera;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -291,7 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     actorId,
                     program,
                     presentationContract,
-                    projection.ProjectionRevision,
+                    new AnimationPresentationProgramIdentity(projection),
                     Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                     initialBody,
                     controlSource,

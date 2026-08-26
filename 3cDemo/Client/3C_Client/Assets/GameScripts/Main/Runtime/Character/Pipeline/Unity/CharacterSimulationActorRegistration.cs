@@ -73,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline
 				diagnosticsTarget.CharacterRuntimeId,
 				ownerInstanceId,
 				ownerName,
-				projection.ProjectionRevision,
+				new AnimationPresentationProgramIdentity(projection),
 				animationSnapshotProvider);
 			VisualRoot = visualRoot ? visualRoot : throw new ArgumentNullException(nameof(visualRoot));
 			ProgramIdentity = new SimulationActorBinding(actorId, program, worldBodyBinding.BindingId);

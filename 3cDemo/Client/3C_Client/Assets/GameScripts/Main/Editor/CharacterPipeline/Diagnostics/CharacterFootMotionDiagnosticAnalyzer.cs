@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/12";
+        const string Schema = "character-foot-motion-facts/10";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 12;
+        const int AnalyzerVersion = 10;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 608;
         const float PositionNoiseFloor = 0.001f;
@@ -1348,7 +1348,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 path.GroundEnvelopeVertices.Count < 2 ||
                 !float.IsFinite(currentState.SwingProgress) ||
                 !float.IsFinite(
-                    currentState.FormalFootHeight) ||
+                    currentState.LandingConstraintWeight) ||
                 currentState.ComponentUp.sqrMagnitude <=
                 PositionNoiseFloor * PositionNoiseFloor)
             {
@@ -1376,19 +1376,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return false;
             }
-            float desiredSoleHeightAlongUp =
-                Vector3.Dot(envelopeSample, up) +
-                currentState.FormalFootHeight;
-            float originalSoleHeightAlongUp =
-                Vector3.Dot(currentState.OriginalSole, up);
-            float verticalCorrection =
-                desiredSoleHeightAlongUp -
-                originalSoleHeightAlongUp;
-            if (!float.IsFinite(desiredSoleHeightAlongUp) ||
-                !float.IsFinite(verticalCorrection))
+            float envelopeFloorLift = Vector3.Dot(
+                envelopeSample - baselineSample,
+                up);
+            float baselineHeightError = Vector3.Dot(
+                baselineSample - currentState.OriginalSole,
+                up);
+            if (!float.IsFinite(envelopeFloorLift) ||
+                !float.IsFinite(baselineHeightError))
             {
                 return false;
             }
+            float verticalCorrection =
+                Mathf.Max(0f, envelopeFloorLift) +
+                currentState.LandingConstraintWeight *
+                baselineHeightError;
             target = up * verticalCorrection;
             return FiniteVector(target);
         }
@@ -1931,9 +1933,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 currentFloors = capture.FootRows
                     .Select(CurrentFloorFact.From)
                     .ToList(),
-                swingMotions = capture.FootRows
-                    .Select(SwingMotionFact.From)
-                    .ToList(),
                 events = events
             };
         }
@@ -2231,12 +2230,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 SourceIdentity = Cell("InputFormalStepSourceIdentity"),
                 SourceCycle = Int("InputFormalStepSourceCycle"),
                 ContributionContinuityIdentity = Ulong("InputFormalStepContributionContinuityIdentity"),
-                FormalObservationAvailable =
-                    Int("InputFormalStepObservationAvailable") != 0,
-                FormalObservationCompletionIdentity =
-                    Ulong("InputFormalStepCompletionIdentity"),
-                FormalObservedFootHeight =
-                    Float("InputFormalFootHeight"),
                 FormalNormalizedTime = Float("InputFormalStepSourceNormalizedTime"),
                 FormalStepTime = Float("InputFormalStepTimeSeconds"),
                 FormalLockMode = Cell("InputFormalLockMode"),
@@ -2286,10 +2279,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootMotionGroundPathInputIdentity =
                     Ulong("FootMotionGroundPathInputIdentity"),
                 FootMotionState = Cell("FootMotionState"),
-                FootMotionRejectReason =
-                    Cell("FootMotionRejectReason"),
-                LandingPredictionError =
-                    Float("FootMotionLandingPredictionError"),
                 ConstraintState = Cell("FootMotionConstraintState"),
                 LockResponse = Cell("FootMotionLockResponse"),
                 OriginalSole = Vector("FootMotionOriginalSole"),
@@ -2299,10 +2288,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("FootMotionBaselineSample"),
                 SwingEnvelopeSample =
                     Vector("FootMotionEnvelopeSample"),
-                FormalFootHeight =
-                    Float("FootMotionFormalFootHeight"),
-                DesiredSoleHeightAlongUp =
-                    Float("FootMotionDesiredSoleHeightAlongUp"),
+                LandingConstraintWeight =
+                    Float("FootMotionLandingConstraintWeight"),
                 SwingDesiredCorrection =
                     Vector("FootMotionDesiredCorrection"),
                 CorrectedSole = Vector("FootMotionCorrectedSole"),
@@ -2408,14 +2395,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return frame;
         }
 
-        static bool FormalTargetApplicable(FootFrame frame) =>
-            frame.FootMotionState == "Accepted" &&
-            (frame.ConstraintState == "Swing" ||
-             frame.ConstraintState == "UnlockedSupport") &&
-            frame.OutputStagesAvailable &&
-            (frame.PathContinuityEvaluated ||
-             frame.SafetyFloorAvailable);
-
         static void RequireValidFrame(FootFrame frame)
         {
             if (frame.Frame <= 0 || frame.CompletionIdentity == 0)
@@ -2429,9 +2408,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootSwingMotionState>(
                 frame.FootMotionState,
                 "FootMotionState");
-            RequireEnum<CharacterFootSwingMotionRejectReason>(
-                frame.FootMotionRejectReason,
-                "FootMotionRejectReason");
             RequireEnum<CharacterFootCurrentGroundFloorState>(
                 frame.CurrentFloorState,
                 "CurrentFloorState");
@@ -2472,34 +2448,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.LockResponseBefore,
                 "FootMotionLockResponseBefore");
             RequireRevisionReason(frame.PathRevisionReason);
-            bool formalLineageValid =
-                frame.FormalObservationAvailable &&
-                frame.FormalObservationCompletionIdentity ==
-                frame.CompletionIdentity &&
-                frame.ContributionContinuityIdentity != 0 &&
-                frame.SourceCycle >= 0;
-            if (FormalTargetApplicable(frame))
-            {
-                Vector3 up = frame.ComponentUp.normalized;
-                float reconstructedDesiredSoleHeight =
-                    Vector3.Dot(
-                        frame.SwingEnvelopeSample,
-                        up) +
-                    frame.FormalFootHeight;
-                if (!formalLineageValid ||
-                    Mathf.Abs(
-                        frame.FormalFootHeight -
-                        frame.FormalObservedFootHeight) >
-                    TimeEpsilon ||
-                    Mathf.Abs(
-                        frame.DesiredSoleHeightAlongUp -
-                        reconstructedDesiredSoleHeight) >
-                    PositionNoiseFloor)
-                {
-                    throw new InvalidDataException(
-                        "Accepted Foot Motion Formal Foot Height lineage or target is invalid.");
-                }
-            }
         }
 
         static void RequireEnum<T>(string value, string field)
@@ -2549,9 +2497,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PresentationDeltaSeconds", "BodyResetSequence", "Grounded",
                 "InputFormalStepSourceIdentity", "InputFormalStepSourceCycle",
                 "InputFormalStepContributionContinuityIdentity",
-                "InputFormalStepObservationAvailable",
-                "InputFormalStepCompletionIdentity",
-                "InputFormalFootHeight",
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
                 "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
                 "State", "RawLandingAvailable",
@@ -2580,9 +2525,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "CurrentFloorNormalY", "CurrentFloorNormalZ",
                 "CurrentFloorDistance",
                 "FootMotionLandingEventIdentity", "FootMotionGroundPathInputIdentity",
-                "FootMotionState", "FootMotionRejectReason",
-                "FootMotionLandingPredictionError",
-                "FootMotionConstraintState",
+                "FootMotionState", "FootMotionConstraintState",
                 "FootMotionLockResponse",
                 "FootMotionOriginalSoleX", "FootMotionOriginalSoleY", "FootMotionOriginalSoleZ",
                 "FootMotionOriginalAnkleX", "FootMotionOriginalAnkleY", "FootMotionOriginalAnkleZ",
@@ -2591,8 +2534,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionBaselineSampleZ",
                 "FootMotionEnvelopeSampleX", "FootMotionEnvelopeSampleY",
                 "FootMotionEnvelopeSampleZ",
-                "FootMotionFormalFootHeight",
-                "FootMotionDesiredSoleHeightAlongUp",
+                "FootMotionLandingConstraintWeight",
                 "FootMotionDesiredCorrectionX",
                 "FootMotionDesiredCorrectionY",
                 "FootMotionDesiredCorrectionZ",
@@ -3119,9 +3061,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string SourceIdentity;
             internal int SourceCycle;
             internal ulong ContributionContinuityIdentity;
-            internal bool FormalObservationAvailable;
-            internal ulong FormalObservationCompletionIdentity;
-            internal float FormalObservedFootHeight;
             internal float FormalNormalizedTime;
             internal float FormalStepTime;
             internal string FormalLockMode;
@@ -3160,8 +3099,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong FootMotionEventIdentity;
             internal ulong FootMotionGroundPathInputIdentity;
             internal string FootMotionState;
-            internal string FootMotionRejectReason;
-            internal float LandingPredictionError;
             internal string ConstraintState;
             internal string LockResponse;
             internal Vector3 OriginalSole;
@@ -3169,8 +3106,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float SwingProgress;
             internal Vector3 SwingBaselineSample;
             internal Vector3 SwingEnvelopeSample;
-            internal float FormalFootHeight;
-            internal float DesiredSoleHeightAlongUp;
+            internal float LandingConstraintWeight;
             internal Vector3 SwingDesiredCorrection;
             internal Vector3 CorrectedSole;
             internal Vector3 CorrectedAnkle;
@@ -3252,78 +3188,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public AnalyzerFact analyzer;
             public CoverageFact coverage;
             public List<CurrentFloorFact> currentFloors;
-            public List<SwingMotionFact> swingMotions;
             public List<EventFact> events;
-        }
-
-        [Serializable]
-        sealed class SwingMotionFact
-        {
-            public int frame;
-            public string side;
-            public string state;
-            public string rejectReason;
-            public bool formalObservationAvailable;
-            public string formalObservationCompletionIdentity;
-            public string completionIdentity;
-            public string contributionContinuityIdentity;
-            public int sourceCycle;
-            public bool formalObservationLineageValid;
-            public bool formalTargetApplicable;
-            public bool formalHeightMismatchOutsideApplicable;
-            public bool formalFootHeightRejected;
-            public float observedFormalFootHeight;
-            public float formalFootHeight;
-            public float desiredSoleHeightAlongUp;
-            public float verticalCorrection;
-            public float landingPredictionError;
-
-            internal static SwingMotionFact From(FootFrame frame) =>
-                new SwingMotionFact
-                {
-                    frame = frame.Frame,
-                    side = frame.Side,
-                    state = frame.FootMotionState,
-                    rejectReason = frame.FootMotionRejectReason,
-                    formalObservationAvailable =
-                        frame.FormalObservationAvailable,
-                    formalObservationCompletionIdentity =
-                        frame.FormalObservationCompletionIdentity
-                            .ToString(CultureInfo.InvariantCulture),
-                    completionIdentity = frame.CompletionIdentity
-                        .ToString(CultureInfo.InvariantCulture),
-                    contributionContinuityIdentity =
-                        frame.ContributionContinuityIdentity
-                            .ToString(CultureInfo.InvariantCulture),
-                    sourceCycle = frame.SourceCycle,
-                    formalObservationLineageValid =
-                        frame.FormalObservationAvailable &&
-                        frame.FormalObservationCompletionIdentity ==
-                        frame.CompletionIdentity &&
-                        frame.ContributionContinuityIdentity != 0 &&
-                        frame.SourceCycle >= 0,
-                    formalTargetApplicable =
-                        FormalTargetApplicable(frame),
-                    formalHeightMismatchOutsideApplicable =
-                        frame.FootMotionState == "Accepted" &&
-                        !FormalTargetApplicable(frame) &&
-                        Mathf.Abs(
-                            frame.FormalFootHeight -
-                            frame.FormalObservedFootHeight) >
-                        TimeEpsilon,
-                    formalFootHeightRejected =
-                        frame.FootMotionRejectReason ==
-                        "FormalFootHeightUnavailable",
-                    observedFormalFootHeight =
-                        frame.FormalObservedFootHeight,
-                    formalFootHeight = frame.FormalFootHeight,
-                    desiredSoleHeightAlongUp =
-                        frame.DesiredSoleHeightAlongUp,
-                    verticalCorrection =
-                        frame.SwingDesiredCorrection.magnitude,
-                    landingPredictionError =
-                        frame.LandingPredictionError
-                };
         }
 
         [Serializable]

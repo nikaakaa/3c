@@ -718,7 +718,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 LastLanding => Page.HasInput ? Page.Input.LastLanding : default;
         internal Vector3 NextSwingLanding =>
             Page.HasInput ? Page.Input.NextSwingLanding : default;
-        internal float QueryRadius => Page.HasInput ? Page.Input.Query.Radius : 0f;
         internal int ContactCount => Page.Contacts.Count;
         internal int EnvelopeVertexCount => Page.Envelope.Count;
         internal bool Accepted => State == CharacterFootGroundPathState.Accepted;

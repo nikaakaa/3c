@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/11";
+        const string Schema = "character-foot-motion-facts/12";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 11;
+        const int AnalyzerVersion = 12;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 608;
         const float PositionNoiseFloor = 0.001f;
@@ -2408,6 +2408,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return frame;
         }
 
+        static bool FormalTargetApplicable(FootFrame frame) =>
+            frame.FootMotionState == "Accepted" &&
+            (frame.ConstraintState == "Swing" ||
+             frame.ConstraintState == "UnlockedSupport") &&
+            frame.OutputStagesAvailable &&
+            (frame.PathContinuityEvaluated ||
+             frame.SafetyFloorAvailable);
+
         static void RequireValidFrame(FootFrame frame)
         {
             if (frame.Frame <= 0 || frame.CompletionIdentity == 0)
@@ -2470,7 +2478,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.CompletionIdentity &&
                 frame.ContributionContinuityIdentity != 0 &&
                 frame.SourceCycle >= 0;
-            if (frame.FootMotionState == "Accepted")
+            if (FormalTargetApplicable(frame))
             {
                 Vector3 up = frame.ComponentUp.normalized;
                 float reconstructedDesiredSoleHeight =
@@ -3261,6 +3269,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string contributionContinuityIdentity;
             public int sourceCycle;
             public bool formalObservationLineageValid;
+            public bool formalTargetApplicable;
+            public bool formalHeightMismatchOutsideApplicable;
             public bool formalFootHeightRejected;
             public float observedFormalFootHeight;
             public float formalFootHeight;
@@ -3292,6 +3302,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.CompletionIdentity &&
                         frame.ContributionContinuityIdentity != 0 &&
                         frame.SourceCycle >= 0,
+                    formalTargetApplicable =
+                        FormalTargetApplicable(frame),
+                    formalHeightMismatchOutsideApplicable =
+                        frame.FootMotionState == "Accepted" &&
+                        !FormalTargetApplicable(frame) &&
+                        Mathf.Abs(
+                            frame.FormalFootHeight -
+                            frame.FormalObservedFootHeight) >
+                        TimeEpsilon,
                     formalFootHeightRejected =
                         frame.FootMotionRejectReason ==
                         "FormalFootHeightUnavailable",

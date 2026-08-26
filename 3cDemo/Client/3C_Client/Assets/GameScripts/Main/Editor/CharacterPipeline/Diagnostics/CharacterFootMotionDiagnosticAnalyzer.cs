@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/8";
+        const string Schema = "character-foot-motion-facts/9";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
         const int AnalyzerVersion = 8;
         const string GeometryFileName = "ground-path-geometry.csv";
@@ -929,21 +929,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "SwingTargetOrCapturedResidualUnavailable",
                     previous.PathCurrentTargetCorrection,
                     current.PathCurrentTargetCorrection,
-                    previous.SwingResidualBeforeDecay,
-                    current.SwingResidualBeforeDecay,
+                    previous.SwingResidualBeforeSchedule,
+                    current.SwingResidualBeforeSchedule,
                     previous.Frame,
                     current.Frame,
                     missing,
                     current.PathResidualRebuilt),
                 Stage(
-                    CharacterFootPathStageNames.CapturedResidualToDecayedResidual,
+                    CharacterFootPathStageNames.CapturedResidualToScheduledResidual,
                     previous.PathContinuityEvaluated &&
                     current.PathContinuityEvaluated,
-                    "ResidualDecayFactsUnavailable",
-                    previous.SwingResidualBeforeDecay,
-                    current.SwingResidualBeforeDecay,
-                    previous.SwingResidualAfterDecay,
-                    current.SwingResidualAfterDecay,
+                    "ResidualScheduleFactsUnavailable",
+                    previous.SwingResidualBeforeSchedule,
+                    current.SwingResidualBeforeSchedule,
+                    previous.SwingResidualAfterSchedule,
+                    current.SwingResidualAfterSchedule,
                     previous.Frame,
                     current.Frame,
                     missing,
@@ -1074,9 +1074,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     residualBeforeRevision = StageVector(
                         current.SwingResidualBeforeRevision),
                     capturedResidualPrevious = StageVector(
-                        previous.SwingResidualBeforeDecay),
+                        previous.SwingResidualBeforeSchedule),
                     capturedResidual = StageVector(
-                        current.SwingResidualBeforeDecay),
+                        current.SwingResidualBeforeSchedule),
                     groundEnvelopeSafetyCorrectionAvailable =
                         previous.EnvelopeAvailable && current.EnvelopeAvailable,
                     groundEnvelopeSafetyCorrectionPrevious = StageVector(
@@ -1264,16 +1264,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     reasonSwingTarget == swingTargetChanged;
                 double residualBeforeRevision =
                     current.SwingResidualBeforeRevision.magnitude;
-                double residualBeforeDecay =
-                    current.SwingResidualBeforeDecay.magnitude;
-                double residualAfterDecay =
-                    current.SwingResidualAfterDecay.magnitude;
+                double residualBeforeSchedule =
+                    current.SwingResidualBeforeSchedule.magnitude;
+                double residualAfterSchedule =
+                    current.SwingResidualAfterSchedule.magnitude;
                 bool residualGrewWithoutRevision =
                     current.PathContinuityEvaluated &&
                     !current.PathResidualRebuilt &&
-                    residualAfterDecay > residualBeforeDecay + PositionNoiseFloor;
+                    residualAfterSchedule > residualBeforeSchedule + PositionNoiseFloor;
+                bool deadlineUnavailable =
+                    current.ResidualDeadlineOutcome == "Unavailable";
                 bool deadlineReached = current.PathContinuityEvaluated &&
-                    current.ResidualTimeToLandingSeconds > 0f &&
+                    current.ResidualDeadlineOutcome != "NotEvaluated" &&
                     current.ResidualTimeToLandingSeconds <=
                     DeltaSeconds(current) + TimeEpsilon;
                 bool identityOnlyInputChange = inputIdentityChanged &&
@@ -1286,6 +1288,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 current.ReleasingCompletedToSwing ||
                                 current.SafetyFloorClamped ||
                                 deadlineReached ||
+                                deadlineUnavailable ||
                                 residualGrewWithoutRevision;
                 if (!relevant)
                     continue;
@@ -1297,13 +1300,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
-                    ["appliedHalfLifeSeconds"] =
-                        current.ResidualAppliedHalfLifeSeconds,
+                    ["appliedStepMeters"] =
+                        current.ResidualAppliedStepMeters,
+                    ["baseStepMeters"] = current.ResidualBaseStepMeters,
                     ["baseHalfLifeSeconds"] =
                         current.ResidualBaseHalfLifeSeconds,
                     ["correctionStepMeters"] = correctionStep,
-                    ["deadlineHalfLifeSeconds"] =
-                        current.ResidualDeadlineHalfLifeSeconds,
+                    ["deadlineRequiredStepMeters"] =
+                        current.ResidualDeadlineRequiredStepMeters,
                     ["envelopeClearanceAfterMeters"] =
                         current.EnvelopeClearanceAfterMeters,
                     ["envelopeClearanceBeforeMeters"] =
@@ -1312,9 +1316,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PathLandingPointDelta,
                     ["landingUpdateDistanceMeters"] =
                         current.LandingUpdateDistance,
-                    ["residualAfterDecayMeters"] = residualAfterDecay,
-                    ["residualBeforeDecayMeters"] = residualBeforeDecay,
+                    ["residualAfterScheduleMeters"] = residualAfterSchedule,
+                    ["residualBeforeScheduleMeters"] = residualBeforeSchedule,
                     ["residualBeforeRevisionMeters"] = residualBeforeRevision,
+                    ["residualRemainingDistanceMeters"] =
+                        current.ResidualRemainingDistanceMeters,
                     ["safetyFloorClampMeters"] =
                         current.SafetyFloorClampMeters,
                     ["swingTargetDeltaMeters"] = current.PathTargetDelta,
@@ -1324,8 +1330,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
                 {
-                    ["deadlineHalfLifeAvailable"] =
-                        current.ResidualDeadlineHalfLifeAvailable,
+                    ["deadlineScheduled"] =
+                        current.ResidualDeadlineOutcome == "Scheduled",
+                    ["deadlineUnavailable"] =
+                        deadlineUnavailable,
+                    ["deadlineWithinTolerance"] =
+                        current.ResidualDeadlineOutcome == "WithinTolerance",
                     ["deadlineReached"] = deadlineReached,
                     ["envelopeAvailable"] = current.EnvelopeAvailable,
                     ["expectedLandingEventRevision"] = eventChanged,
@@ -1840,10 +1850,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PathTargetDelta = Float("FootMotionPathTargetDeltaMeters"),
                 SwingResidualBeforeRevision =
                     Vector("FootMotionSwingResidualBeforeRevision"),
-                SwingResidualBeforeDecay =
-                    Vector("FootMotionSwingResidualBeforeDecay"),
-                SwingResidualAfterDecay =
-                    Vector("FootMotionSwingResidualAfterDecay"),
+                SwingResidualBeforeSchedule =
+                    Vector("FootMotionSwingResidualBeforeSchedule"),
+                SwingResidualAfterSchedule =
+                    Vector("FootMotionSwingResidualAfterSchedule"),
                 ResidualOutputCorrection =
                     Vector("FootMotionResidualOutputCorrection"),
                 LandingUpdateDistance = Float("FootMotionLandingUpdateDistance"),
@@ -1851,12 +1861,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionResidualTimeToLandingSeconds"),
                 ResidualBaseHalfLifeSeconds =
                     Float("FootMotionResidualBaseHalfLifeSeconds"),
-                ResidualDeadlineHalfLifeAvailable =
-                    Int("FootMotionResidualDeadlineHalfLifeAvailable") != 0,
-                ResidualDeadlineHalfLifeSeconds =
-                    Float("FootMotionResidualDeadlineHalfLifeSeconds"),
-                ResidualAppliedHalfLifeSeconds =
-                    Float("FootMotionResidualAppliedHalfLifeSeconds"),
+                ResidualDeadlineOutcome =
+                    Cell("FootMotionResidualDeadlineOutcome"),
+                ResidualDeadlineRequiredStepMeters =
+                    Float("FootMotionResidualDeadlineRequiredStepMeters"),
+                ResidualBaseStepMeters =
+                    Float("FootMotionResidualBaseStepMeters"),
+                ResidualAppliedStepMeters =
+                    Float("FootMotionResidualAppliedStepMeters"),
+                ResidualRemainingDistanceMeters =
+                    Float("FootMotionResidualRemainingDistanceMeters"),
                 ConstraintStateBefore = Cell("FootMotionConstraintStateBefore"),
                 LockResponseBefore = Cell("FootMotionLockResponseBefore"),
                 OutputStagesAvailable =
@@ -1940,6 +1954,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootLockResponse>(
                 frame.LockResponseBefore,
                 "FootMotionLockResponseBefore");
+            RequireEnum<CharacterFootResidualDeadlineOutcome>(
+                frame.ResidualDeadlineOutcome,
+                "FootMotionResidualDeadlineOutcome");
             RequireRevisionReason(frame.PathRevisionReason);
         }
 
@@ -2024,21 +2041,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionSwingResidualBeforeRevisionX",
                 "FootMotionSwingResidualBeforeRevisionY",
                 "FootMotionSwingResidualBeforeRevisionZ",
-                "FootMotionSwingResidualBeforeDecayX",
-                "FootMotionSwingResidualBeforeDecayY",
-                "FootMotionSwingResidualBeforeDecayZ",
-                "FootMotionSwingResidualAfterDecayX",
-                "FootMotionSwingResidualAfterDecayY",
-                "FootMotionSwingResidualAfterDecayZ",
+                "FootMotionSwingResidualBeforeScheduleX",
+                "FootMotionSwingResidualBeforeScheduleY",
+                "FootMotionSwingResidualBeforeScheduleZ",
+                "FootMotionSwingResidualAfterScheduleX",
+                "FootMotionSwingResidualAfterScheduleY",
+                "FootMotionSwingResidualAfterScheduleZ",
                 "FootMotionResidualOutputCorrectionX",
                 "FootMotionResidualOutputCorrectionY",
                 "FootMotionResidualOutputCorrectionZ",
                 "FootMotionLandingUpdateDistance",
                 "FootMotionResidualTimeToLandingSeconds",
                 "FootMotionResidualBaseHalfLifeSeconds",
-                "FootMotionResidualDeadlineHalfLifeAvailable",
-                "FootMotionResidualDeadlineHalfLifeSeconds",
-                "FootMotionResidualAppliedHalfLifeSeconds",
+                "FootMotionResidualDeadlineOutcome",
+                "FootMotionResidualDeadlineRequiredStepMeters",
+                "FootMotionResidualBaseStepMeters",
+                "FootMotionResidualAppliedStepMeters",
+                "FootMotionResidualRemainingDistanceMeters",
                 "FootMotionConstraintStateBefore", "FootMotionLockResponseBefore",
                 "FootMotionOutputStagesAvailable",
                 "FootMotionReleasingCompletedToSwing",
@@ -2568,15 +2587,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float PathLandingPointDelta;
             internal float PathTargetDelta;
             internal Vector3 SwingResidualBeforeRevision;
-            internal Vector3 SwingResidualBeforeDecay;
-            internal Vector3 SwingResidualAfterDecay;
+            internal Vector3 SwingResidualBeforeSchedule;
+            internal Vector3 SwingResidualAfterSchedule;
             internal Vector3 ResidualOutputCorrection;
             internal float LandingUpdateDistance;
             internal float ResidualTimeToLandingSeconds;
             internal float ResidualBaseHalfLifeSeconds;
-            internal bool ResidualDeadlineHalfLifeAvailable;
-            internal float ResidualDeadlineHalfLifeSeconds;
-            internal float ResidualAppliedHalfLifeSeconds;
+            internal string ResidualDeadlineOutcome;
+            internal float ResidualDeadlineRequiredStepMeters;
+            internal float ResidualBaseStepMeters;
+            internal float ResidualAppliedStepMeters;
+            internal float ResidualRemainingDistanceMeters;
             internal string ConstraintStateBefore;
             internal string LockResponseBefore;
             internal bool OutputStagesAvailable;

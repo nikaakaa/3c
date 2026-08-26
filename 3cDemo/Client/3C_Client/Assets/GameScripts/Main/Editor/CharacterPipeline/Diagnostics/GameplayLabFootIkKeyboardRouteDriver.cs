@@ -33,6 +33,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static bool s_Active;
         static bool s_WaitingForSampling;
+        static bool s_WaitingForFinalization;
+        static bool s_FinalizingCompletedCapture;
         static bool s_OwnsSampling;
         static GameplayLabFootIkAutomaticRouteMode s_Mode =
             GameplayLabFootIkAutomaticRouteMode.StairAdStress;
@@ -52,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AssemblyReloadEvents.beforeAssemblyReload += ReleaseRouteKeyboard;
             EditorApplication.update -= StartAfterPlayMode;
             EditorApplication.update -= StartAfterSampling;
+            EditorApplication.update -= CompleteAfterFinalization;
             if (IsPending)
             {
                 s_Mode = ReadPendingMode();
@@ -67,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             get
             {
                 if (!s_Active && !s_WaitingForSampling && !IsPending)
-                    return "Idle";
+                    return s_WaitingForFinalization ? "Finalizing" : "Idle";
                 return s_Mode == GameplayLabFootIkAutomaticRouteMode.StairStraight
                     ? s_StraightState.Phase.ToString()
                     : s_State.Phase.ToString();
@@ -115,8 +118,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static void Start(GameplayLabFootIkAutomaticRouteMode mode)
         {
             RequireMode(mode);
-            if (s_Active || s_WaitingForSampling)
+            if (s_Active || s_WaitingForSampling || s_WaitingForFinalization)
                 return;
+            if (CharacterFootLandingPredictionSampler.IsFinalizing)
+                throw new InvalidOperationException(
+                    "Foot Landing sampling is finalizing the previous run.");
             if (!EditorApplication.isPlaying)
             {
                 if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -228,7 +234,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static void Stop()
         {
-            if (!s_Active && !s_WaitingForSampling)
+            if (!s_Active && !s_WaitingForSampling && !s_WaitingForFinalization)
+                return;
+            if (s_WaitingForFinalization)
                 return;
             bool completedCapture = s_Active;
             EditorApplication.update -= Tick;
@@ -246,39 +254,80 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     CharacterFootLandingPredictionSampler.StopAndSaveSampling();
                 }
-                if (!completedCapture ||
-                    string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastSavedPath))
+                if (CharacterFootLandingPredictionSampler.IsFinalizing)
                 {
-                    s_LastDiagnosticSummary = "Foot Landing sampling stopped before recording started.";
+                    s_WaitingForFinalization = true;
+                    s_FinalizingCompletedCapture = completedCapture;
+                    s_LastDiagnosticSummary = "Foot Landing finalizing capture package.";
+                    EditorApplication.update -= CompleteAfterFinalization;
+                    EditorApplication.update += CompleteAfterFinalization;
                     return;
                 }
-                if (string.IsNullOrEmpty(
-                        CharacterFootLandingPredictionSampler.LastSavedFactsPath))
-                {
-                    s_LastDiagnosticSummary =
-                        "Foot Landing samples were sealed but facts.json was not published.";
-                    return;
-                }
-                if (string.IsNullOrEmpty(
-                        CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory) ||
-                    !System.IO.Directory.Exists(
-                        CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory))
-                {
-                    s_LastDiagnosticSummary =
-                        "Foot Landing facts were published but diagnoses/ was not published.";
-                    return;
-                }
+                CompleteSamplingResult(completedCapture);
+            }
+        }
+
+        static void CompleteAfterFinalization()
+        {
+            if (!s_WaitingForFinalization)
+            {
+                EditorApplication.update -= CompleteAfterFinalization;
+                return;
+            }
+            if (CharacterFootLandingPredictionSampler.IsFinalizing)
+                return;
+            EditorApplication.update -= CompleteAfterFinalization;
+            s_WaitingForFinalization = false;
+            CompleteSamplingResult(s_FinalizingCompletedCapture);
+            s_FinalizingCompletedCapture = false;
+        }
+
+        static void CompleteSamplingResult(bool completedCapture)
+        {
+            if (!completedCapture ||
+                string.IsNullOrEmpty(
+                    CharacterFootLandingPredictionSampler.LastSavedPath))
+            {
+                s_LastDiagnosticSummary =
+                    "Foot Landing sampling stopped before recording started.";
+                return;
+            }
+            if (!string.IsNullOrEmpty(
+                    CharacterFootLandingPredictionSampler.LastFinalizationFailure) &&
+                string.IsNullOrEmpty(
+                    CharacterFootLandingPredictionSampler.LastSavedFactsPath))
+            {
                 s_LastDiagnosticSummary =
                     CharacterFootLandingPredictionSampler.LastDiagnosticSummary;
-                s_HasCompletedRun = true;
-                EditorPrefs.SetBool(CompletedKey, true);
-                Debug.Log(
-                    $"Foot Landing {ModeLabel(s_Mode)} " +
-                    $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
-                    $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
-                    $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}, " +
-                    $"Summary={s_LastDiagnosticSummary}");
+                return;
             }
+            if (string.IsNullOrEmpty(
+                    CharacterFootLandingPredictionSampler.LastSavedFactsPath))
+            {
+                s_LastDiagnosticSummary =
+                    "Foot Landing samples were sealed but facts.json was not published.";
+                return;
+            }
+            if (string.IsNullOrEmpty(
+                    CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory) ||
+                !System.IO.Directory.Exists(
+                    CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory))
+            {
+                s_LastDiagnosticSummary =
+                    "Foot Landing facts were published but diagnoses/ was not published.";
+                return;
+            }
+            s_LastDiagnosticSummary =
+                CharacterFootLandingPredictionSampler.LastDiagnosticSummary;
+            s_HasCompletedRun = true;
+            EditorPrefs.SetBool(CompletedKey, true);
+            Debug.Log(
+                $"Foot Landing {ModeLabel(s_Mode)} " +
+                $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
+                $"Geometry={CharacterFootLandingPredictionSampler.LastSavedGeometryPath}, " +
+                $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
+                $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}, " +
+                $"Summary={s_LastDiagnosticSummary}");
         }
 
         static void RestartAfterCompletedRun(GameplayLabFootIkAutomaticRouteMode mode)

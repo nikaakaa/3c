@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -26,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "Tools/3C/Diagnostics/Foot Landing Sampling/Start";
         const string StopMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Stop and Save";
+        const string GeometryFileName = "ground-path-geometry.csv";
         const string Header =
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
@@ -62,12 +64,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FutureBodyTranslationAvailable,FutureBodyRelativeTranslationX,FutureBodyRelativeTranslationY,FutureBodyRelativeTranslationZ," +
             "FutureBodyTranslationVelocityX,FutureBodyTranslationVelocityY,FutureBodyTranslationVelocityZ," +
             "CurrentAnimatedSoleX,CurrentAnimatedSoleY,CurrentAnimatedSoleZ," +
-            "RawLandingCandidateX,RawLandingCandidateY,RawLandingCandidateZ," +
+            "RawLandingAvailable,RawLandingCandidateX,RawLandingCandidateY,RawLandingCandidateZ," +
             "QueryShape,QueryPurpose,QueryFootIndex,QueryOriginX,QueryOriginY,QueryOriginZ," +
             "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot,QueryPreferredSurfaceIdentity," +
             "Accepted,SurfaceIdentity,LandingPointX,LandingPointY,LandingPointZ," +
             "LandingNormalX,LandingNormalY,LandingNormalZ,QueryDistance," +
-            "GroundPathState,GroundPathRejectReason,GroundPathInputIdentity,GroundPathQueryExecuted," +
+            "GroundPathState,GroundPathRejectReason,GroundPathInputIdentity,GroundPathQueryExecuted,GroundPathTargetAvailable," +
             "GroundPathLastLandingEventIdentity,GroundPathNextSwingLandingEventIdentity,GroundPathTrajectoryGeneration,GroundPathAuthorityTick," +
             "GroundPathLastFutureBodyTranslationSourceIdentity,GroundPathNextSwingFutureBodyTranslationSourceIdentity," +
             "GroundPathLastLandingX,GroundPathLastLandingY,GroundPathLastLandingZ," +
@@ -103,6 +105,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionContactPlaneNormalX,FootMotionContactPlaneNormalY,FootMotionContactPlaneNormalZ," +
             "FootContactPlanePenetrationAvailability," +
             "FootMotionDesiredCorrectionX,FootMotionDesiredCorrectionY,FootMotionDesiredCorrectionZ," +
+            "FootMotionPathContinuityEvaluated,FootMotionPathRevisionReason,FootMotionPathResidualRebuilt," +
+            "FootMotionPathAvailableBefore,FootMotionPathAvailableAfter,FootMotionPathPreviousLandingEventIdentity,FootMotionPathCurrentLandingEventIdentity," +
+            "FootMotionPathPreviousTargetCorrectionX,FootMotionPathPreviousTargetCorrectionY,FootMotionPathPreviousTargetCorrectionZ," +
+            "FootMotionPathCurrentTargetCorrectionX,FootMotionPathCurrentTargetCorrectionY,FootMotionPathCurrentTargetCorrectionZ," +
+            "FootMotionPathLandingPointDeltaMeters,FootMotionPathTargetDeltaMeters," +
+            "FootMotionSwingResidualBeforeRevisionX,FootMotionSwingResidualBeforeRevisionY,FootMotionSwingResidualBeforeRevisionZ," +
+            "FootMotionSwingResidualBeforeDecayX,FootMotionSwingResidualBeforeDecayY,FootMotionSwingResidualBeforeDecayZ," +
+            "FootMotionSwingResidualAfterDecayX,FootMotionSwingResidualAfterDecayY,FootMotionSwingResidualAfterDecayZ," +
+            "FootMotionResidualOutputCorrectionX,FootMotionResidualOutputCorrectionY,FootMotionResidualOutputCorrectionZ," +
+            "FootMotionLandingUpdateDistance,FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
+            "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
+            "FootMotionConstraintStateBefore,FootMotionLockResponseBefore,FootMotionOutputStagesAvailable,FootMotionReleasingCompletedToSwing,FootMotionEnvelopeAvailable," +
+            "FootMotionCorrectionBeforeSafetyFloorX,FootMotionCorrectionBeforeSafetyFloorY,FootMotionCorrectionBeforeSafetyFloorZ," +
+            "FootMotionGroundEnvelopeSafetyCorrectionX,FootMotionGroundEnvelopeSafetyCorrectionY,FootMotionGroundEnvelopeSafetyCorrectionZ," +
+            "FootMotionSafetyFloorOutputCorrectionX,FootMotionSafetyFloorOutputCorrectionY,FootMotionSafetyFloorOutputCorrectionZ," +
+            "FootMotionFinalEffectiveCorrectionX,FootMotionFinalEffectiveCorrectionY,FootMotionFinalEffectiveCorrectionZ," +
+            "FootMotionSafetyFloorClamped,FootMotionSafetyFloorClampMeters,FootMotionEnvelopeClearanceBeforeMeters,FootMotionEnvelopeClearanceAfterMeters," +
+            "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
             "StrideStartX,StrideStartY,StrideStartZ,StrideEndX,StrideEndY,StrideEndZ," +
@@ -145,7 +165,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FinalPhysicalAnkleWorldPositionX,FinalPhysicalAnkleWorldPositionY,FinalPhysicalAnkleWorldPositionZ," +
             "FinalPhysicalAnkleWorldRotationX,FinalPhysicalAnkleWorldRotationY,FinalPhysicalAnkleWorldRotationZ,FinalPhysicalAnkleWorldRotationW," +
             "FinalPhysicalHeelWorldX,FinalPhysicalHeelWorldY,FinalPhysicalHeelWorldZ," +
-            "FinalPhysicalToeWorldX,FinalPhysicalToeWorldY,FinalPhysicalToeWorldZ,FinalPhysicalAnkleGoalResidual," +
+            "FinalPhysicalToeWorldX,FinalPhysicalToeWorldY,FinalPhysicalToeWorldZ,FinalPhysicalAnkleGoalResidual";
+        const string GeometryHeader =
+            "SampleIdentity,FrameSequence,CompletionIdentity,Side,GroundPathInputIdentity," +
             "GroundContactIndex,GroundContactSegmentIndex,GroundContactSurfaceIdentity,GroundContactCandidateIdentity," +
             "GroundContactPositionX,GroundContactPositionY,GroundContactPositionZ," +
             "GroundContactNormalX,GroundContactNormalY,GroundContactNormalZ,GroundContactQueryDistance," +
@@ -195,15 +217,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         sealed class SamplingSession : IDisposable
         {
-            readonly FileStream m_Stream;
-            readonly StreamWriter m_Writer;
-            readonly StringBuilder m_Row = new StringBuilder(2048);
+            readonly FileStream m_SamplesStream;
+            readonly StreamWriter m_SamplesWriter;
+            readonly StringBuilder m_SamplesRow = new StringBuilder(4096);
+            readonly FileStream m_GeometryStream;
+            readonly StreamWriter m_GeometryWriter;
+            readonly StringBuilder m_GeometryRow = new StringBuilder(512);
             readonly BlockingCollection<CapturedFrame> m_Queue =
                 new BlockingCollection<CapturedFrame>(
                     new ConcurrentQueue<CapturedFrame>(),
                     MaximumQueuedFrameCount);
             readonly Thread m_WriterThread;
-            readonly string m_PartPath;
+            readonly string m_SamplesPartPath;
+            readonly string m_GeometryPartPath;
             Exception m_Failure;
             int m_AcceptedFrameCount;
             int m_WrittenFrameCount;
@@ -220,36 +246,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-{SampleIdentity:N}");
                 Directory.CreateDirectory(DirectoryPath);
                 Path = System.IO.Path.Combine(DirectoryPath, "samples.csv");
-                m_PartPath = Path + ".part";
-                FileStream stream = null;
-                StreamWriter writer = null;
+                GeometryPath = System.IO.Path.Combine(
+                    DirectoryPath,
+                    GeometryFileName);
+                m_SamplesPartPath = Path + ".part";
+                m_GeometryPartPath = GeometryPath + ".part";
+                FileStream samplesStream = null;
+                StreamWriter samplesWriter = null;
+                FileStream geometryStream = null;
+                StreamWriter geometryWriter = null;
                 try
                 {
-                    stream = new FileStream(
-                        m_PartPath,
+                    samplesStream = new FileStream(
+                        m_SamplesPartPath,
                         FileMode.CreateNew,
                         FileAccess.Write,
                         FileShare.Read,
                         65536,
                         FileOptions.SequentialScan);
-                    writer = new StreamWriter(stream, new UTF8Encoding(false));
-                    writer.WriteLine(Header);
-                    writer.Flush();
-                    stream.Flush(true);
+                    samplesWriter = new StreamWriter(
+                        samplesStream,
+                        new UTF8Encoding(false));
+                    geometryStream = new FileStream(
+                        m_GeometryPartPath,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.Read,
+                        65536,
+                        FileOptions.SequentialScan);
+                    geometryWriter = new StreamWriter(
+                        geometryStream,
+                        new UTF8Encoding(false));
+                    samplesWriter.WriteLine(Header);
+                    geometryWriter.WriteLine(GeometryHeader);
+                    samplesWriter.Flush();
+                    geometryWriter.Flush();
                 }
                 catch
                 {
-                    writer?.Dispose();
-                    stream?.Dispose();
+                    geometryWriter?.Dispose();
+                    geometryStream?.Dispose();
+                    samplesWriter?.Dispose();
+                    samplesStream?.Dispose();
                     throw;
                 }
-                m_Stream = stream;
-                m_Writer = writer;
+                m_SamplesStream = samplesStream;
+                m_SamplesWriter = samplesWriter;
+                m_GeometryStream = geometryStream;
+                m_GeometryWriter = geometryWriter;
                 m_WriterThread = new Thread(WriteLoop)
                 {
                     IsBackground = true,
                     Name = $"Foot Landing CSV {SampleIdentity:N}",
-                    Priority = System.Threading.ThreadPriority.BelowNormal
+                    Priority = System.Threading.ThreadPriority.Normal
                 };
                 m_WriterThread.Start();
             }
@@ -259,6 +308,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal SamplingProgramIdentity Program { get; }
             internal string DirectoryPath { get; }
             internal string Path { get; }
+            internal string GeometryPath { get; }
             internal int FrameCount => Volatile.Read(ref m_AcceptedFrameCount);
             internal int WrittenFrameCount => Volatile.Read(ref m_WrittenFrameCount);
 
@@ -303,7 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         long now = DateTime.UtcNow.Ticks;
                         if (now < nextFlushTicks)
                             continue;
-                        FlushToDisk();
+                        FlushBuffered();
                         nextFlushTicks = now + flushIntervalTicks;
                     }
                     FlushToDisk();
@@ -316,7 +366,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     try
                     {
-                        m_Writer.Dispose();
+                        m_GeometryWriter.Dispose();
+                        m_SamplesWriter.Dispose();
                     }
                     catch (Exception exception)
                     {
@@ -334,10 +385,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RootHierarchyCapture roots = captured.Roots;
                 CharacterFootLandingPredictionFootDiagnostics leftFoot = frame.Left;
                 CharacterFootLandingPredictionFootDiagnostics rightFoot = frame.Right;
-                WriteRows(
+                WriteSampleRow(
                     this,
-                    m_Writer,
-                    m_Row,
+                    m_SamplesWriter,
+                    m_SamplesRow,
                     in frame,
                     in leftFoot,
                     in left,
@@ -345,10 +396,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     in roots,
                     captured.TargetRuntimeInstanceId,
                     captured.TargetHostInstanceId);
-                WriteRows(
+                WriteSampleRow(
                     this,
-                    m_Writer,
-                    m_Row,
+                    m_SamplesWriter,
+                    m_SamplesRow,
                     in frame,
                     in rightFoot,
                     in right,
@@ -356,12 +407,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     in roots,
                     captured.TargetRuntimeInstanceId,
                     captured.TargetHostInstanceId);
+                WriteGeometryRows(
+                    this,
+                    m_GeometryWriter,
+                    m_GeometryRow,
+                    in frame,
+                    in leftFoot);
+                WriteGeometryRows(
+                    this,
+                    m_GeometryWriter,
+                    m_GeometryRow,
+                    in frame,
+                    in rightFoot);
+            }
+
+            void FlushBuffered()
+            {
+                m_SamplesWriter.Flush();
+                m_GeometryWriter.Flush();
             }
 
             void FlushToDisk()
             {
-                m_Writer.Flush();
-                m_Stream.Flush(true);
+                FlushBuffered();
+                m_SamplesStream.Flush(true);
+                m_GeometryStream.Flush(true);
             }
 
             public void Dispose()
@@ -369,11 +439,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (Interlocked.Exchange(ref m_Disposed, 1) != 0)
                     return;
                 m_Queue.CompleteAdding();
-                if (!m_WriterThread.Join(TimeSpan.FromSeconds(30)))
-                {
-                    throw new TimeoutException(
-                        "Foot Landing CSV background writer did not stop within 30 seconds.");
-                }
+                m_WriterThread.Join();
                 m_Queue.Dispose();
                 Exception failure = Volatile.Read(ref m_Failure);
                 if (failure != null)
@@ -387,9 +453,85 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         "Foot Landing CSV background writer did not persist every captured frame.");
                 }
-                if (File.Exists(Path))
-                    throw new IOException("Foot Landing sealed samples.csv already exists.");
-                File.Move(m_PartPath, Path);
+                if (File.Exists(Path) || File.Exists(GeometryPath))
+                    throw new IOException("Foot Landing sealed capture package already exists.");
+                File.Move(m_GeometryPartPath, GeometryPath);
+                File.Move(m_SamplesPartPath, Path);
+            }
+        }
+
+        sealed class FinalizationJob
+        {
+            readonly SamplingSession m_Session;
+            readonly Thread m_Thread;
+            CharacterFootMotionDiagnosticAnalysis m_Analysis;
+            Exception m_Failure;
+            int m_Completed;
+
+            internal FinalizationJob(
+                SamplingSession session,
+                Exception captureFailure,
+                int droppedPendingFrameCount)
+            {
+                m_Session = session ?? throw new ArgumentNullException(nameof(session));
+                CaptureFailure = captureFailure;
+                DroppedPendingFrameCount = droppedPendingFrameCount;
+                m_Thread = new Thread(Run)
+                {
+                    IsBackground = true,
+                    Name = $"Foot Landing Finalizer {session.SampleIdentity:N}",
+                    Priority = System.Threading.ThreadPriority.BelowNormal
+                };
+            }
+
+            internal Guid SampleIdentity => m_Session.SampleIdentity;
+            internal string SamplesPath => m_Session.Path;
+            internal string GeometryPath => m_Session.GeometryPath;
+            internal string DirectoryPath => m_Session.DirectoryPath;
+            internal int AcceptedFrameCount => m_Session.FrameCount;
+            internal int WrittenFrameCount => m_Session.WrittenFrameCount;
+            internal int DroppedPendingFrameCount { get; }
+            internal Exception CaptureFailure { get; }
+            internal bool IsCompleted => Volatile.Read(ref m_Completed) != 0;
+            internal Exception Failure => m_Failure;
+            internal CharacterFootMotionDiagnosticAnalysis Analysis => m_Analysis;
+
+            internal void Start() => m_Thread.Start();
+
+            internal void Wait() => m_Thread.Join();
+
+            void Run()
+            {
+                try
+                {
+                    m_Session.Dispose();
+                    if (m_Session.WrittenFrameCount == 0)
+                    {
+                        if (File.Exists(m_Session.Path))
+                            File.Delete(m_Session.Path);
+                        if (File.Exists(m_Session.GeometryPath))
+                            File.Delete(m_Session.GeometryPath);
+                        if (Directory.Exists(m_Session.DirectoryPath) &&
+                            !Directory.EnumerateFileSystemEntries(
+                                m_Session.DirectoryPath).Any())
+                        {
+                            Directory.Delete(m_Session.DirectoryPath);
+                        }
+                    }
+                    else
+                    {
+                        m_Analysis = CharacterFootMotionDiagnosticAnalyzer.Analyze(
+                            m_Session.Path);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    m_Failure = exception;
+                }
+                finally
+                {
+                    Volatile.Write(ref m_Completed, 1);
+                }
             }
         }
 
@@ -551,12 +693,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string s_LastStartFailure = string.Empty;
         static string s_StartWaitReason = string.Empty;
         static string s_LastSavedPath = string.Empty;
+        static string s_LastSavedGeometryPath = string.Empty;
         static string s_LastSavedDirectory = string.Empty;
         static string s_LastSavedFactsPath = string.Empty;
         static string s_LastSavedDiagnosisDirectory = string.Empty;
         static string s_LastDiagnosticSummary = string.Empty;
         static string s_LastSavedSampleIdentity = string.Empty;
+        static string s_LastFinalizationFailure = string.Empty;
         static SamplingSession s_Session;
+        static FinalizationJob s_Finalization;
         static int s_DroppedPendingFrameCount;
         static int s_LastSavedFrameCount;
         static int s_LastFactEventCount;
@@ -568,17 +713,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static bool IsCapturing => s_Capturing;
         public static bool IsStartPending => s_StartPending;
+        public static bool IsFinalizing => s_Finalization != null;
         public static string LastStartFailure => s_LastStartFailure;
         public static string LastSavedPath => s_LastSavedPath;
+        public static string LastSavedGeometryPath => s_LastSavedGeometryPath;
         public static string LastSavedDirectory => s_LastSavedDirectory;
         public static string LastSavedFactsPath => s_LastSavedFactsPath;
         public static string LastSavedDiagnosisDirectory =>
             s_LastSavedDiagnosisDirectory;
         public static string LastDiagnosticSummary => s_LastDiagnosticSummary;
+        public static string LastFinalizationFailure => s_LastFinalizationFailure;
         public static string CurrentSampleIdentity =>
-            s_Session?.SampleIdentity.ToString("N") ?? string.Empty;
+            s_Session?.SampleIdentity.ToString("N") ??
+            s_Finalization?.SampleIdentity.ToString("N") ??
+            string.Empty;
         public static string LastSavedSampleIdentity => s_LastSavedSampleIdentity;
-        public static int CapturedFrameCount => s_Session?.FrameCount ?? 0;
+        public static int CapturedFrameCount =>
+            s_Session?.FrameCount ??
+            s_Finalization?.AcceptedFrameCount ??
+            0;
         public static int PendingFrameCount => s_PendingFrames.Count;
         public static int DroppedPendingFrameCount => s_DroppedPendingFrameCount;
         public static int LastSavedFrameCount => s_LastSavedFrameCount;
@@ -589,12 +742,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterFootLandingPredictionSampler()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            EditorApplication.quitting += OnEditorQuitting;
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
             s_LastSavedPath = FindLatestSavedPath();
             if (!string.IsNullOrEmpty(s_LastSavedPath))
             {
                 s_LastSavedDirectory = System.IO.Path.GetDirectoryName(
                     s_LastSavedPath) ?? string.Empty;
+                string geometryPath = System.IO.Path.Combine(
+                    s_LastSavedDirectory,
+                    GeometryFileName);
+                s_LastSavedGeometryPath = File.Exists(geometryPath)
+                    ? geometryPath
+                    : string.Empty;
                 string factsPath = System.IO.Path.Combine(
                     s_LastSavedDirectory,
                     "facts.json");
@@ -622,6 +782,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (s_StartPending)
                 throw new InvalidOperationException(
                     "Foot Landing sampling is already waiting for the Gameplay Lab player.");
+            if (s_Finalization != null)
+                throw new InvalidOperationException(
+                    "Foot Landing sampling is still finalizing the previous capture.");
             s_PendingFrames.Clear();
             s_DroppedPendingFrameCount = 0;
             s_LastSavedFrameCount = 0;
@@ -629,6 +792,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastDiagnosisTargetCount = 0;
             s_LastDiagnosisMatchCount = 0;
             s_LastDiagnosticSummary = string.Empty;
+            s_LastFinalizationFailure = string.Empty;
             s_LastStartFailure = string.Empty;
             s_StartWaitReason = string.Empty;
             s_StartPending = true;
@@ -684,13 +848,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ConfigureTargets();
                 s_Session = new SamplingSession(in program);
                 s_LastSavedPath = s_Session.Path;
+                s_LastSavedGeometryPath = s_Session.GeometryPath;
                 s_LastSavedDirectory = s_Session.DirectoryPath;
-                s_LastSavedFactsPath = System.IO.Path.Combine(
-                    s_Session.DirectoryPath,
-                    "facts.json");
-                s_LastSavedDiagnosisDirectory = System.IO.Path.Combine(
-                    s_Session.DirectoryPath,
-                    "diagnoses");
+                s_LastSavedFactsPath = string.Empty;
+                s_LastSavedDiagnosisDirectory = string.Empty;
                 s_LastSavedSampleIdentity = s_Session.SampleIdentity.ToString("N");
                 CharacterFootLandingPredictionDebugRegistry.Published += Capture;
                 AnimationPresentationRuntimeTargetRegistry.TargetRegistered += ConfigureTarget;
@@ -719,7 +880,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         [MenuItem(StartMenu, true)]
         static bool CanStart() =>
-            EditorApplication.isPlaying && !s_Capturing && !s_StartPending;
+            EditorApplication.isPlaying && !s_Capturing && !s_StartPending &&
+            s_Finalization == null;
 
         [MenuItem(StopMenu)]
         static void Stop() => StopAndSave();
@@ -728,23 +890,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool CanStop() => s_Capturing || s_StartPending;
 
         public static void StopAndSaveSampling() => StopAndSave();
-
-        public static void AnalyzeLastSavedSamples()
-        {
-            if (s_Capturing || s_StartPending)
-                throw new InvalidOperationException(
-                    "Foot Landing samples cannot be analyzed while capture is active.");
-            if (string.IsNullOrEmpty(s_LastSavedPath) ||
-                !File.Exists(s_LastSavedPath))
-            {
-                throw new FileNotFoundException(
-                    "Foot Landing sealed samples.csv is unavailable.",
-                    s_LastSavedPath);
-            }
-            ApplyAnalysis(
-                CharacterFootMotionDiagnosticAnalyzer.Analyze(
-                    s_LastSavedPath));
-        }
 
         static void Capture(in CharacterFootLandingPredictionDiagnostics diagnostics)
         {
@@ -1081,7 +1226,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 StopAndSave();
         }
 
-        static void OnBeforeAssemblyReload() => StopAndSave();
+        static void OnBeforeAssemblyReload()
+        {
+            StopAndSave();
+            WaitForFinalization();
+        }
+
+        static void OnEditorQuitting()
+        {
+            StopAndSave();
+            WaitForFinalization();
+        }
 
         static void CancelSamplingStart()
         {
@@ -1089,7 +1244,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DetachCapture();
             try
             {
-                CompleteCurrentSession();
+                BeginFinalization(null);
             }
             catch (Exception exception)
             {
@@ -1114,6 +1269,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static string StopAndSave()
         {
+            if (s_Finalization != null)
+                return s_LastSavedPath;
             if (s_StartPending)
             {
                 CancelSamplingStart();
@@ -1133,14 +1290,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             try
             {
                 DetachCapture();
-                CompleteCurrentSession();
-                Debug.Log(
-                    $"Foot Landing sampling saved {s_LastSavedFrameCount} frames " +
-                    $"with {s_DroppedPendingFrameCount} dropped pending frames. " +
-                    $"Sample={s_LastSavedSampleIdentity}, " +
-                    $"Samples={s_LastSavedPath}, Facts={s_LastSavedFactsPath}, " +
-                    $"Diagnoses={s_LastSavedDiagnosisDirectory}, " +
-                    $"Summary={s_LastDiagnosticSummary}");
+                BeginFinalization(failure);
+                failure = null;
             }
             catch (Exception exception)
             {
@@ -1156,32 +1307,118 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return s_LastSavedPath;
         }
 
-        static void CompleteCurrentSession()
+        static void BeginFinalization(Exception captureFailure)
         {
             SamplingSession session = s_Session;
             s_Session = null;
             if (session == null)
                 return;
+            if (s_Finalization != null)
+                throw new InvalidOperationException(
+                    "Foot Landing finalization is already active.");
             s_LastSavedPath = session.Path;
+            s_LastSavedGeometryPath = session.GeometryPath;
             s_LastSavedDirectory = session.DirectoryPath;
             s_LastSavedSampleIdentity = session.SampleIdentity.ToString("N");
-            try
+            s_LastSavedFactsPath = string.Empty;
+            s_LastSavedDiagnosisDirectory = string.Empty;
+            s_LastDiagnosticSummary = "Foot Landing finalizing capture package.";
+            s_LastFinalizationFailure = string.Empty;
+            var job = new FinalizationJob(
+                session,
+                captureFailure,
+                s_DroppedPendingFrameCount);
+            s_Finalization = job;
+            EditorApplication.update -= PollFinalization;
+            EditorApplication.update += PollFinalization;
+            job.Start();
+            Debug.Log(
+                $"Foot Landing sampling stopped and finalization started. " +
+                $"Sample={s_LastSavedSampleIdentity}, " +
+                $"AcceptedFrames={job.AcceptedFrameCount}, " +
+                $"Samples={job.SamplesPath}, Geometry={job.GeometryPath}");
+        }
+
+        static void PollFinalization()
+        {
+            FinalizationJob job = s_Finalization;
+            if (job == null)
             {
-                session.Dispose();
-                ApplyAnalysis(
-                    CharacterFootMotionDiagnosticAnalyzer.Analyze(
-                        session.Path));
+                EditorApplication.update -= PollFinalization;
+                return;
             }
-            finally
+            if (!job.IsCompleted)
+                return;
+            CompleteFinalization(job);
+        }
+
+        static void WaitForFinalization()
+        {
+            FinalizationJob job = s_Finalization;
+            if (job == null)
+                return;
+            job.Wait();
+            CompleteFinalization(job);
+        }
+
+        static void CompleteFinalization(FinalizationJob job)
+        {
+            if (!ReferenceEquals(s_Finalization, job))
+                return;
+            EditorApplication.update -= PollFinalization;
+            s_Finalization = null;
+            s_LastSavedFrameCount = job.WrittenFrameCount;
+            if (job.Failure != null)
             {
-                s_LastSavedFrameCount = session.WrittenFrameCount;
+                s_LastFinalizationFailure = job.Failure.Message;
+                s_LastDiagnosticSummary =
+                    $"Foot Landing finalization failed: {job.Failure.Message}";
+                s_LastSavedFactsPath = string.Empty;
+                s_LastSavedDiagnosisDirectory = string.Empty;
+                Debug.LogError(s_LastDiagnosticSummary);
+                Debug.LogException(job.Failure);
+                return;
             }
+            if (job.WrittenFrameCount == 0)
+            {
+                s_LastSavedPath = string.Empty;
+                s_LastSavedGeometryPath = string.Empty;
+                s_LastSavedDirectory = string.Empty;
+                s_LastSavedFactsPath = string.Empty;
+                s_LastSavedDiagnosisDirectory = string.Empty;
+                s_LastSavedSampleIdentity = string.Empty;
+                s_LastDiagnosticSummary =
+                    "Foot Landing sampling canceled before any Foot rows were captured.";
+                s_LastFactEventCount = 0;
+                s_LastDiagnosisTargetCount = 0;
+                s_LastDiagnosisMatchCount = 0;
+                Debug.Log(s_LastDiagnosticSummary);
+                return;
+            }
+            ApplyAnalysis(job.Analysis);
+            if (job.CaptureFailure != null)
+            {
+                s_LastFinalizationFailure = job.CaptureFailure.Message;
+                Debug.LogError(
+                    $"Foot Landing capture stopped early; the sealed partial package was analyzed. " +
+                    $"Reason={job.CaptureFailure.Message}");
+                Debug.LogException(job.CaptureFailure);
+            }
+            Debug.Log(
+                $"Foot Landing sampling finalized {s_LastSavedFrameCount} frames " +
+                $"with {job.DroppedPendingFrameCount} dropped pending frames. " +
+                $"Sample={s_LastSavedSampleIdentity}, " +
+                $"Samples={s_LastSavedPath}, Geometry={s_LastSavedGeometryPath}, " +
+                $"Facts={s_LastSavedFactsPath}, " +
+                $"Diagnoses={s_LastSavedDiagnosisDirectory}, " +
+                $"Summary={s_LastDiagnosticSummary}");
         }
 
         static void ApplyAnalysis(
             CharacterFootMotionDiagnosticAnalysis analysis)
         {
             s_LastSavedPath = analysis.SamplesPath;
+            s_LastSavedGeometryPath = analysis.GeometryPath;
             s_LastSavedDirectory = System.IO.Path.GetDirectoryName(
                 analysis.SamplesPath) ?? string.Empty;
             s_LastSavedFactsPath = analysis.FactsPath;
@@ -1198,11 +1435,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             try
             {
                 DetachCapture();
-                CompleteCurrentSession();
+                BeginFinalization(exception);
             }
-            catch (Exception closeException)
+            catch (Exception finalizationException)
             {
-                Debug.LogException(closeException);
+                Debug.LogException(finalizationException);
             }
             finally
             {
@@ -1210,9 +1447,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ResetTargetBinding();
             }
             Debug.LogError(
-                $"Foot Landing sampling stopped after a persistent write failure. " +
-                $"The completed portion remains at {path}");
-            Debug.LogException(exception);
+                $"Foot Landing sampling stopped early and is finalizing its completed portion. " +
+                $"Samples={path}, Reason={exception.Message}");
         }
 
         static void FailSamplingStart(string message)
@@ -1267,7 +1503,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "Temp",
             "FootLandingDiagnostics"));
 
-        static void WriteRows(
+        static void WriteSampleRow(
             SamplingSession session,
             StreamWriter writer,
             StringBuilder row,
@@ -1278,32 +1514,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in RootHierarchyCapture roots,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId)
-        {
-            int rowCount = Math.Max(
-                1,
-                Math.Max(
-                    foot.GroundPath.ContactCount,
-                    foot.GroundPath.EnvelopeVertexCount));
-            for (int contactIndex = 0; contactIndex < rowCount; contactIndex++)
-                WriteRow(
-                    session, writer, row, in frame, in foot, in ik,
-                    in footStepObservation,
-                    in roots,
-                    targetRuntimeInstanceId, targetHostInstanceId, contactIndex);
-        }
-
-        static void WriteRow(
-            SamplingSession session,
-            StreamWriter writer,
-            StringBuilder row,
-            in CharacterFootLandingPredictionDiagnostics frame,
-            in CharacterFootLandingPredictionFootDiagnostics foot,
-            in FootIkCapture ik,
-            in FootStepObservationCapture footStepObservation,
-            in RootHierarchyCapture roots,
-            Guid targetRuntimeInstanceId,
-            int targetHostInstanceId,
-            int groundContactIndex)
         {
             row.Clear();
             CharacterFootLandingPredictionInputDiagnostics input = frame.Input;
@@ -1436,6 +1646,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.FutureBodyRelativeTranslation);
             Add(row, foot.FutureBodyTranslationVelocity);
             Add(row, foot.CurrentAnimatedSole);
+            Add(row, foot.RawLandingAvailable);
             Add(row, foot.RawLandingCandidate);
             Add(row, query.Shape.ToString());
             Add(row, query.Purpose.ToString());
@@ -1458,6 +1669,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, ground.RejectReason.ToString());
             Add(row, ground.InputIdentity);
             Add(row, ground.QueryExecuted);
+            Add(row, ground.NextSwingLandingEventIdentity != 0);
             Add(row, ground.LastLandingEventIdentity);
             Add(row, ground.NextSwingLandingEventIdentity);
             Add(row, ground.TrajectoryGeneration);
@@ -1528,6 +1740,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ResolvePenetrationAvailability(in frame, in motion, in ik)
                     .ToString());
             Add(row, motion.DesiredCorrection);
+            Add(row, motion.PathContinuityEvaluated);
+            Add(row, motion.PathRevisionReason);
+            Add(row, motion.PathResidualRebuilt);
+            Add(row, motion.PathAvailableBefore);
+            Add(row, motion.PathAvailableAfter);
+            Add(row, motion.PathPreviousLandingEventIdentity);
+            Add(row, motion.PathCurrentLandingEventIdentity);
+            Add(row, motion.PathPreviousTargetCorrection);
+            Add(row, motion.PathCurrentTargetCorrection);
+            Add(row, motion.PathLandingPointDelta);
+            Add(row, motion.PathTargetDelta);
+            Add(row, motion.SwingResidualBeforeRevision);
+            Add(row, motion.SwingResidualBeforeDecay);
+            Add(row, motion.SwingResidualAfterDecay);
+            Add(row, motion.ResidualOutputCorrection);
+            Add(row, motion.LandingUpdateDistance);
+            Add(row, motion.ResidualTimeToLandingSeconds);
+            Add(row, motion.ResidualBaseHalfLifeSeconds);
+            Add(row, motion.ResidualDeadlineHalfLifeAvailable);
+            Add(row, motion.ResidualDeadlineHalfLifeSeconds);
+            Add(row, motion.ResidualAppliedHalfLifeSeconds);
+            Add(row, motion.ConstraintStateBefore.ToString());
+            Add(row, motion.LockResponseBefore.ToString());
+            Add(row, motion.OutputStagesAvailable);
+            Add(row, motion.ReleasingCompletedToSwing);
+            Add(row, motion.EnvelopeAvailable);
+            Add(row, motion.CorrectionBeforeSafetyFloor);
+            Add(row, motion.GroundEnvelopeSafetyCorrection);
+            Add(row, motion.SafetyFloorOutputCorrection);
+            Add(row, motion.FinalEffectiveCorrection);
+            Add(row, motion.SafetyFloorClamped);
+            Add(row, motion.SafetyFloorClampMeters);
+            Add(row, motion.EnvelopeClearanceBeforeMeters);
+            Add(row, motion.EnvelopeClearanceAfterMeters);
+            Add(row, footGoal.IsValid);
+            Add(
+                row,
+                footGoal.IsValid
+                    ? footGoal.ComponentPosition - motion.OriginalAnkle
+                    : default);
             Add(row, foot.Goal.ComponentPosition);
             Add(row, foot.Goal.ComponentRotation);
             Add(row, foot.Goal.PositionWeight);
@@ -1673,24 +1925,47 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             legPose.OriginalAnkle,
                             in footGoal))
                     : 0f);
-            bool hasContact = groundContactIndex < ground.ContactCount;
-            CharacterFootGroundContact contact = hasContact
-                ? ground.ContactAt(groundContactIndex)
-                : default;
-            Add(row, hasContact ? groundContactIndex : -1);
-            Add(row, hasContact ? contact.SegmentIndex : -1);
-            Add(row, contact.SurfaceIdentity);
-            Add(row, contact.CandidateIdentity);
-            Add(row, contact.Position);
-            Add(row, contact.Normal);
-            Add(row, contact.QueryDistance);
-            bool hasEnvelopeVertex = groundContactIndex < ground.EnvelopeVertexCount;
-            CharacterFootGroundEnvelopeVertex envelopeVertex = hasEnvelopeVertex
-                ? ground.EnvelopeVertexAt(groundContactIndex)
-                : default;
-            Add(row, hasEnvelopeVertex ? groundContactIndex : -1);
-            Add(row, envelopeVertex.Position);
             writer.WriteLine(row);
+        }
+
+        static void WriteGeometryRows(
+            SamplingSession session,
+            StreamWriter writer,
+            StringBuilder row,
+            in CharacterFootLandingPredictionDiagnostics frame,
+            in CharacterFootLandingPredictionFootDiagnostics foot)
+        {
+            CharacterFootGroundPathDiagnostics ground = foot.GroundPath;
+            int rowCount = Math.Max(
+                ground.ContactCount,
+                ground.EnvelopeVertexCount);
+            for (int index = 0; index < rowCount; index++)
+            {
+                row.Clear();
+                Add(row, session.SampleIdentity.ToString("N"));
+                Add(row, frame.FrameSequence);
+                Add(row, frame.CompletionIdentity);
+                Add(row, foot.Side.ToString());
+                Add(row, ground.InputIdentity);
+                bool hasContact = index < ground.ContactCount;
+                CharacterFootGroundContact contact = hasContact
+                    ? ground.ContactAt(index)
+                    : default;
+                Add(row, hasContact ? index : -1);
+                Add(row, hasContact ? contact.SegmentIndex : -1);
+                Add(row, contact.SurfaceIdentity);
+                Add(row, contact.CandidateIdentity);
+                Add(row, contact.Position);
+                Add(row, contact.Normal);
+                Add(row, contact.QueryDistance);
+                bool hasEnvelopeVertex = index < ground.EnvelopeVertexCount;
+                CharacterFootGroundEnvelopeVertex envelopeVertex = hasEnvelopeVertex
+                    ? ground.EnvelopeVertexAt(index)
+                    : default;
+                Add(row, hasEnvelopeVertex ? index : -1);
+                Add(row, envelopeVertex.Position);
+                writer.WriteLine(row);
+            }
         }
 
         static Vector3 ResolveWeightedAnkleComponentPosition(
@@ -1757,7 +2032,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void Add(StringBuilder row, string value)
         {
             Separate(row);
-            row.Append(value);
+            value ??= string.Empty;
+            if (value.IndexOf('\r') >= 0 || value.IndexOf('\n') >= 0)
+                throw new InvalidOperationException(
+                    "Foot Landing CSV string contains a line break.");
+            bool quote = value.IndexOf(',') >= 0 ||
+                         value.IndexOf('"') >= 0;
+            if (!quote)
+            {
+                row.Append(value);
+                return;
+            }
+            row.Append('"');
+            for (int i = 0; i < value.Length; i++)
+            {
+                char character = value[i];
+                if (character == '"')
+                    row.Append('"');
+                row.Append(character);
+            }
+            row.Append('"');
         }
 
         static void Add(StringBuilder row, bool value) => Add(row, value ? 1 : 0);

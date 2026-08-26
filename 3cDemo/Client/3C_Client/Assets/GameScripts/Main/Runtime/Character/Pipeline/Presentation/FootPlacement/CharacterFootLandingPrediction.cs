@@ -348,6 +348,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SourceToePosition { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
+        public bool RawLandingAvailable =>
+            RejectReason == CharacterFootLandingPredictionRejectReason.None ||
+            RejectReason ==
+            CharacterFootLandingPredictionRejectReason.GroundQueryMissed ||
+            RejectReason ==
+            CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded;
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
     }
 
@@ -492,6 +498,43 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootLandingPredictionDiagnostics
     {
+        sealed class Frame
+        {
+            internal Frame(
+                ulong frameSequence,
+                ulong completionIdentity,
+                int rootInstanceId,
+                CharacterFootLandingPredictionInputDiagnostics input,
+                in CharacterFootPrimarySupportDiagnostics primarySupport,
+                CharacterFullBodyIkGoal pelvisGoal,
+                in CharacterFootStrideHipsDiagnostics strideHips,
+                CharacterFootLandingPredictionFootDiagnostics left,
+                CharacterFootLandingPredictionFootDiagnostics right)
+            {
+                FrameSequence = frameSequence;
+                CompletionIdentity = completionIdentity;
+                RootInstanceId = rootInstanceId;
+                Input = input;
+                PrimarySupport = primarySupport;
+                PelvisGoal = pelvisGoal;
+                StrideHips = strideHips;
+                Left = left;
+                Right = right;
+            }
+
+            internal ulong FrameSequence { get; }
+            internal ulong CompletionIdentity { get; }
+            internal int RootInstanceId { get; }
+            internal CharacterFootLandingPredictionInputDiagnostics Input { get; }
+            internal CharacterFootPrimarySupportDiagnostics PrimarySupport { get; }
+            internal CharacterFullBodyIkGoal PelvisGoal { get; }
+            internal CharacterFootStrideHipsDiagnostics StrideHips { get; }
+            internal CharacterFootLandingPredictionFootDiagnostics Left { get; }
+            internal CharacterFootLandingPredictionFootDiagnostics Right { get; }
+        }
+
+        readonly Frame m_Frame;
+
         internal CharacterFootLandingPredictionDiagnostics(
             ulong frameSequence,
             ulong completionIdentity,
@@ -503,29 +546,41 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingPredictionFootDiagnostics left,
             CharacterFootLandingPredictionFootDiagnostics right)
         {
-            FrameSequence = frameSequence;
-            CompletionIdentity = completionIdentity;
-            RootInstanceId = rootInstanceId;
-            Input = input;
-            PrimarySupport = primarySupport;
-            PelvisGoal = pelvisGoal;
-            StrideHips = strideHips;
-            Left = left;
-            Right = right;
+            m_Frame = new Frame(
+                frameSequence,
+                completionIdentity,
+                rootInstanceId,
+                input,
+                in primarySupport,
+                pelvisGoal,
+                in strideHips,
+                left,
+                right);
         }
 
-        public ulong FrameSequence { get; }
-        public ulong CompletionIdentity { get; }
-        public int RootInstanceId { get; }
-        public CharacterFootLandingPredictionInputDiagnostics Input { get; }
-        public CharacterFootPrimarySupportDiagnostics PrimarySupport { get; }
-        public CharacterFullBodyIkGoal PelvisGoal { get; }
-        public CharacterFootStrideHipsDiagnostics StrideHips { get; }
-        public CharacterFootLandingPredictionFootDiagnostics Left { get; }
-        public CharacterFootLandingPredictionFootDiagnostics Right { get; }
+        public ulong FrameSequence => m_Frame?.FrameSequence ?? 0;
+        public ulong CompletionIdentity => m_Frame?.CompletionIdentity ?? 0;
+        public int RootInstanceId => m_Frame?.RootInstanceId ?? 0;
+        public CharacterFootLandingPredictionInputDiagnostics Input =>
+            m_Frame == null ? default : m_Frame.Input;
+        public CharacterFootPrimarySupportDiagnostics PrimarySupport =>
+            m_Frame == null ? default : m_Frame.PrimarySupport;
+        public CharacterFullBodyIkGoal PelvisGoal =>
+            m_Frame == null ? default : m_Frame.PelvisGoal;
+        public CharacterFootStrideHipsDiagnostics StrideHips =>
+            m_Frame == null ? default : m_Frame.StrideHips;
+        public CharacterFootLandingPredictionFootDiagnostics Left =>
+            m_Frame == null ? default : m_Frame.Left;
+        public CharacterFootLandingPredictionFootDiagnostics Right =>
+            m_Frame == null ? default : m_Frame.Right;
         public bool IsCompleted =>
-            FrameSequence != 0 && CompletionIdentity != 0 && RootInstanceId != 0 &&
-            PelvisGoal.IsValid && Left.Goal.IsValid && Right.Goal.IsValid;
+            m_Frame != null &&
+            m_Frame.FrameSequence != 0 &&
+            m_Frame.CompletionIdentity != 0 &&
+            m_Frame.RootInstanceId != 0 &&
+            m_Frame.PelvisGoal.IsValid &&
+            m_Frame.Left.Goal.IsValid &&
+            m_Frame.Right.Goal.IsValid;
     }
 
     internal delegate void CharacterFootLandingPredictionPublishedHandler(

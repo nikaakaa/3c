@@ -187,6 +187,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         UnselectedSwing = 15
     }
 
+    internal readonly struct CharacterFootSwingPathReference
+    {
+        internal CharacterFootSwingPathReference(
+            ulong landingEventIdentity,
+            Vector3 landingPoint)
+        {
+            if (landingEventIdentity == 0 ||
+                !float.IsFinite(landingPoint.x) ||
+                !float.IsFinite(landingPoint.y) ||
+                !float.IsFinite(landingPoint.z))
+            {
+                throw new ArgumentException(
+                    "Swing Path reference is invalid.");
+            }
+            LandingEventIdentity = landingEventIdentity;
+            LandingPoint = landingPoint;
+            IsAvailable = true;
+        }
+
+        internal bool IsAvailable { get; }
+        internal ulong LandingEventIdentity { get; }
+        internal Vector3 LandingPoint { get; }
+    }
+
     internal readonly struct CharacterFootSwingMotionResult
     {
         internal CharacterFootSwingMotionResult(
@@ -194,6 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSwingMotionRejectReason rejectReason,
             ulong landingEventIdentity,
             ulong groundPathInputIdentity,
+            CharacterFootSwingPathReference swingPathReference,
             Vector3 originalSole,
             Vector3 originalAnkle,
             float distance,
@@ -217,12 +242,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 desiredCorrection = default,
             bool contactPlaneAvailable = false,
             int contactSurfaceIdentity = 0,
-            Vector3 contactPlaneNormal = default)
+            Vector3 contactPlaneNormal = default,
+            CharacterFootPathContinuityFact pathContinuity = default)
         {
             State = state;
             RejectReason = rejectReason;
             LandingEventIdentity = landingEventIdentity;
             GroundPathInputIdentity = groundPathInputIdentity;
+            SwingPathReference = swingPathReference;
             OriginalSole = originalSole;
             OriginalAnkle = originalAnkle;
             Distance = distance;
@@ -247,12 +274,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneAvailable = contactPlaneAvailable;
             ContactSurfaceIdentity = contactSurfaceIdentity;
             ContactPlaneNormal = contactPlaneNormal;
+            PathContinuity = pathContinuity;
         }
 
         public CharacterFootSwingMotionState State { get; }
         public CharacterFootSwingMotionRejectReason RejectReason { get; }
         public ulong LandingEventIdentity { get; }
         public ulong GroundPathInputIdentity { get; }
+        internal CharacterFootSwingPathReference SwingPathReference { get; }
         public Vector3 OriginalSole { get; }
         public Vector3 OriginalAnkle { get; }
         public float Distance { get; }
@@ -277,6 +306,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ContactPlaneAvailable { get; }
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
+        internal CharacterFootPathContinuityFact PathContinuity { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
 
         internal CharacterFootSwingMotionResult WithPlantConfidence(
@@ -286,6 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RejectReason,
                 LandingEventIdentity,
                 GroundPathInputIdentity,
+                SwingPathReference,
                 OriginalSole,
                 OriginalAnkle,
                 Distance,
@@ -309,7 +340,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 DesiredCorrection,
                 ContactPlaneAvailable,
                 ContactSurfaceIdentity,
-                ContactPlaneNormal);
+                ContactPlaneNormal,
+                PathContinuity);
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics
@@ -345,6 +377,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneAvailable = result.ContactPlaneAvailable;
             ContactSurfaceIdentity = result.ContactSurfaceIdentity;
             ContactPlaneNormal = result.ContactPlaneNormal;
+            CharacterFootPathContinuityFact path = result.PathContinuity;
+            PathContinuityEvaluated = path.Evaluated;
+            PathRevisionReason = path.RevisionReason.ToString();
+            PathResidualRebuilt = path.ResidualRebuilt;
+            PathAvailableBefore = path.PathAvailableBefore;
+            PathAvailableAfter = path.PathAvailableAfter;
+            PathPreviousLandingEventIdentity = path.PreviousLandingEventIdentity;
+            PathCurrentLandingEventIdentity = path.CurrentLandingEventIdentity;
+            PathPreviousTargetCorrection = path.PreviousTargetCorrection;
+            PathCurrentTargetCorrection = path.CurrentTargetCorrection;
+            PathLandingPointDelta = path.LandingPointDelta;
+            PathTargetDelta = path.TargetDelta;
+            SwingResidualBeforeRevision = path.ResidualBeforeRevision;
+            SwingResidualBeforeDecay = path.ResidualBeforeDecay;
+            SwingResidualAfterDecay = path.ResidualAfterDecay;
+            ResidualOutputCorrection = path.ResidualOutputCorrection;
+            LandingUpdateDistance = path.LandingUpdateDistance;
+            ResidualTimeToLandingSeconds = path.TimeToLandingSeconds;
+            ResidualBaseHalfLifeSeconds = path.BaseHalfLifeSeconds;
+            ResidualDeadlineHalfLifeAvailable = path.DeadlineHalfLifeAvailable;
+            ResidualDeadlineHalfLifeSeconds = path.DeadlineHalfLifeSeconds;
+            ResidualAppliedHalfLifeSeconds = path.AppliedHalfLifeSeconds;
+            ConstraintStateBefore = path.StateBefore;
+            LockResponseBefore = path.LockResponseBefore;
+            OutputStagesAvailable = path.OutputStagesAvailable;
+            ReleasingCompletedToSwing = path.ReleasingCompletedToSwing;
+            EnvelopeAvailable = path.EnvelopeAvailable;
+            CorrectionBeforeSafetyFloor = path.CorrectionBeforeSafetyFloor;
+            GroundEnvelopeSafetyCorrection =
+                path.GroundEnvelopeSafetyCorrection;
+            SafetyFloorOutputCorrection = path.SafetyFloorOutputCorrection;
+            FinalEffectiveCorrection = path.FinalEffectiveCorrection;
+            SafetyFloorClamped = path.SafetyFloorClamped;
+            SafetyFloorClampMeters = path.SafetyFloorClampMeters;
+            EnvelopeClearanceBeforeMeters = path.EnvelopeClearanceBeforeMeters;
+            EnvelopeClearanceAfterMeters = path.EnvelopeClearanceAfterMeters;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -375,6 +443,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ContactPlaneAvailable { get; }
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
+        public bool PathContinuityEvaluated { get; }
+        public string PathRevisionReason { get; }
+        public bool PathResidualRebuilt { get; }
+        public bool PathAvailableBefore { get; }
+        public bool PathAvailableAfter { get; }
+        public ulong PathPreviousLandingEventIdentity { get; }
+        public ulong PathCurrentLandingEventIdentity { get; }
+        public Vector3 PathPreviousTargetCorrection { get; }
+        public Vector3 PathCurrentTargetCorrection { get; }
+        public float PathLandingPointDelta { get; }
+        public float PathTargetDelta { get; }
+        public Vector3 SwingResidualBeforeRevision { get; }
+        public Vector3 SwingResidualBeforeDecay { get; }
+        public Vector3 SwingResidualAfterDecay { get; }
+        public Vector3 ResidualOutputCorrection { get; }
+        public float LandingUpdateDistance { get; }
+        public float ResidualTimeToLandingSeconds { get; }
+        public float ResidualBaseHalfLifeSeconds { get; }
+        public bool ResidualDeadlineHalfLifeAvailable { get; }
+        public float ResidualDeadlineHalfLifeSeconds { get; }
+        public float ResidualAppliedHalfLifeSeconds { get; }
+        public CharacterFootConstraintState ConstraintStateBefore { get; }
+        public CharacterFootLockResponse LockResponseBefore { get; }
+        public bool OutputStagesAvailable { get; }
+        public bool ReleasingCompletedToSwing { get; }
+        public bool EnvelopeAvailable { get; }
+        public Vector3 CorrectionBeforeSafetyFloor { get; }
+        public Vector3 GroundEnvelopeSafetyCorrection { get; }
+        public Vector3 SafetyFloorOutputCorrection { get; }
+        public Vector3 FinalEffectiveCorrection { get; }
+        public bool SafetyFloorClamped { get; }
+        public float SafetyFloorClampMeters { get; }
+        public float EnvelopeClearanceBeforeMeters { get; }
+        public float EnvelopeClearanceAfterMeters { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 
@@ -580,6 +682,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSwingMotionRejectReason.None,
                 landingEventIdentity,
                 groundPath.InputIdentity,
+                new CharacterFootSwingPathReference(
+                    landingEventIdentity,
+                    groundPath.NextSwingLanding),
                 originalSole,
                 originalAnkle,
                 distance,
@@ -605,6 +710,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSwingMotionRejectReason.UnselectedSwing,
                 motion.LandingEventIdentity,
                 motion.GroundPathInputIdentity,
+                default,
                 motion.OriginalSole,
                 motion.OriginalAnkle,
                 motion.Distance,
@@ -736,6 +842,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 reason,
                 landingEventIdentity,
                 groundPathInputIdentity,
+                default,
                 originalSole,
                 originalAnkle,
                 distance,

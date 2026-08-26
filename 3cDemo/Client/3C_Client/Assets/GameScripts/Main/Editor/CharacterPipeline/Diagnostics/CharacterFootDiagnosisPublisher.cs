@@ -16,26 +16,105 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string directory,
             int diagnosticCount,
             int targetCount,
-            int matchCount)
+            int matchCount,
+            CharacterFootDiagnosisPrimaryResult primaryResult)
         {
             Directory = directory ?? string.Empty;
             DiagnosticCount = diagnosticCount;
             TargetCount = targetCount;
             MatchCount = matchCount;
+            PrimaryResult = primaryResult;
         }
 
         internal string Directory { get; }
         internal int DiagnosticCount { get; }
         internal int TargetCount { get; }
         internal int MatchCount { get; }
+        internal CharacterFootDiagnosisPrimaryResult PrimaryResult { get; }
+
+        internal string FormatPrimarySummary()
+        {
+            if (PrimaryResult?.occurrence == null)
+                return string.Empty;
+            CharacterFootDiagnosisOccurrenceProfile occurrence =
+                PrimaryResult.occurrence;
+            if (!occurrence.available)
+            {
+                return $"{occurrence.metric}=unavailable " +
+                       $"eligible{occurrence.sampleUnit}=0 ";
+            }
+            CharacterFootDiagnosisOccurrenceRate primary =
+                occurrence.primaryRate ?? throw new InvalidOperationException(
+                    "Foot diagnosis primary occurrence rate is unavailable.");
+            CharacterFootDiagnosisDistribution amplitude =
+                PrimaryResult.amplitudeDistribution ??
+                throw new InvalidOperationException(
+                    "Foot diagnosis amplitude distribution is unavailable.");
+            if (!amplitude.available ||
+                !amplitude.median.HasValue ||
+                !amplitude.p90.HasValue ||
+                !amplitude.p99.HasValue ||
+                !amplitude.maximum.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "Foot diagnosis amplitude distribution is incomplete.");
+            }
+            string thresholdLabel = string.Equals(
+                    occurrence.thresholdUnit,
+                    "Meters",
+                    StringComparison.Ordinal)
+                ? string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0:0.##}cm",
+                    primary.threshold * 100d)
+                : string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0:0.####}{1}",
+                    primary.threshold,
+                    occurrence.thresholdUnit);
+            string occurrenceSummary = string.Format(
+                CultureInfo.InvariantCulture,
+                "{0}>{1}={2}/{3}={4:0.0}% " +
+                "amplitudeMedian={5:0.####}m amplitudeP90={6:0.####}m " +
+                "amplitudeP99={7:0.####}m amplitudeMax={8:0.####}m ",
+                occurrence.metric,
+                thresholdLabel,
+                primary.matchedEventCount,
+                primary.eligibleEventCount,
+                primary.matchedEventRate * 100d,
+                amplitude.median.Value,
+                amplitude.p90.Value,
+                amplitude.p99.Value,
+                amplitude.maximum.Value);
+            CharacterFootPathStageAnalysisCoverage stages =
+                PrimaryResult.pathStageAnalysis;
+            if (stages == null)
+                return occurrenceSummary;
+            if (stages.availableEventCount == 0)
+            {
+                return occurrenceSummary +
+                       $"stageAnalysis=unavailable " +
+                       $"stageEvents=0/{stages.eligibleEventCount} ";
+            }
+            string firstStages = string.Join(
+                "|",
+                stages.firstAmplificationStageCounts.Select(
+                    value => $"{value.Key}:{value.Value}"));
+            return occurrenceSummary +
+                   $"stageEvents={stages.availableEventCount}/" +
+                   $"{stages.eligibleEventCount} " +
+                   $"firstAmplificationStages={firstStages} ";
+        }
     }
 
     internal static class CharacterFootDiagnosisPublisher
     {
+        const string FactsSchema = "character-foot-motion-facts/8";
         static readonly ICharacterFootDiagnosis[] s_Diagnoses =
         {
             new CharacterFootLandingLegExtensionDiagnosis(),
             new CharacterFootLandingStateConsistencyDiagnosis(),
+            new CharacterFootLandingPathContinuityDiagnosis(),
             new CharacterFootLockedSoleMotionDiagnosis(),
             new CharacterFootSwingPathJitterDiagnosis(),
             new CharacterFootLockTransitionFlybackDiagnosis(),
@@ -48,6 +127,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new FileNotFoundException("Foot Motion facts file is unavailable.", factsPath);
             string fullFactsPath = Path.GetFullPath(factsPath);
             JObject facts = JObject.Parse(File.ReadAllText(fullFactsPath, Encoding.UTF8));
+            string factsSchema = facts.Value<string>("schema") ?? string.Empty;
+            if (factsSchema != FactsSchema)
+            {
+                throw new InvalidDataException(
+                    $"Foot diagnosis facts schema '{factsSchema}' is invalid; " +
+                    $"expected '{FactsSchema}'.");
+            }
             var context = new CharacterFootDiagnosisContext(facts);
             string parent = Path.GetDirectoryName(fullFactsPath) ?? string.Empty;
             string directory = Path.Combine(parent, "diagnoses");
@@ -57,6 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Directory.CreateDirectory(staging);
             int targetCount = 0;
             int matchCount = 0;
+            CharacterFootDiagnosisPrimaryResult primaryResult = null;
             try
             {
                 string factsHash = ComputeSha256(fullFactsPath);
@@ -67,6 +154,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     document.facts.sha256 = factsHash;
                     targetCount += document.summary.targetCount;
                     matchCount += document.summary.matchedEventCount;
+                    if (document.summary.primaryResult != null)
+                    {
+                        if (primaryResult != null)
+                        {
+                            throw new InvalidOperationException(
+                                "Foot diagnosis publication has multiple primary occurrence results.");
+                        }
+                        primaryResult = document.summary.primaryResult;
+                    }
                     PublishFile(
                         Path.Combine(staging, diagnosis.FileName),
                         document);
@@ -85,7 +181,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 directory,
                 s_Diagnoses.Length,
                 targetCount,
-                matchCount);
+                matchCount,
+                primaryResult);
         }
 
         static void PublishFile(

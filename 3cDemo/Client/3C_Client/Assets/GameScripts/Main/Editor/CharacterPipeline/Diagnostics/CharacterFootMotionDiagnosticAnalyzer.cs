@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -14,6 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         internal CharacterFootMotionDiagnosticAnalysis(
             string samplesPath,
+            string geometryPath,
             string factsPath,
             string diagnosisDirectory,
             int frameCount,
@@ -24,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string summary)
         {
             SamplesPath = samplesPath ?? string.Empty;
+            GeometryPath = geometryPath ?? string.Empty;
             FactsPath = factsPath ?? string.Empty;
             DiagnosisDirectory = diagnosisDirectory ?? string.Empty;
             FrameCount = frameCount;
@@ -35,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         internal string SamplesPath { get; }
+        internal string GeometryPath { get; }
         internal string FactsPath { get; }
         internal string DiagnosisDirectory { get; }
         internal int FrameCount { get; }
@@ -47,9 +51,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/4";
+        const string Schema = "character-foot-motion-facts/8";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 4;
+        const int AnalyzerVersion = 8;
+        const string GeometryFileName = "ground-path-geometry.csv";
+        const int HeaderColumnCapacity = 576;
         const float PositionNoiseFloor = 0.001f;
         const float TimeEpsilon = 0.000001f;
 
@@ -72,7 +78,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     "Foot Motion diagnostic input must be a sealed samples.csv file.");
             }
-            CsvCapture capture = ReadCapture(fullSamplesPath);
+            string geometryPath = Path.Combine(
+                Path.GetDirectoryName(fullSamplesPath) ?? string.Empty,
+                GeometryFileName);
+            if (!File.Exists(geometryPath))
+            {
+                throw new FileNotFoundException(
+                    "Foot Motion ground path geometry file is unavailable.",
+                    geometryPath);
+            }
+            CsvCapture capture = ReadCapture(fullSamplesPath, geometryPath);
             var events = new List<EventFact>(256);
             AnalyzeSide(capture.Left, events);
             AnalyzeSide(capture.Right, events);
@@ -80,6 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             events.Sort(EventFact.Compare);
             FactsDocument document = BuildDocument(
                 fullSamplesPath,
+                geometryPath,
                 capture,
                 events);
             string factsPath = Path.Combine(
@@ -88,14 +104,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PublishFacts(factsPath, document);
             CharacterFootDiagnosisPublication publication =
                 CharacterFootDiagnosisPublisher.Publish(factsPath);
+            string primarySummary = publication.FormatPrimarySummary();
             string summary =
+                primarySummary +
                 $"frames={capture.UniqueFrameCount} footRows={capture.FootRows.Count} " +
+                $"geometryRows={capture.GeometryRowCount} " +
                 $"landingEvents={document.coverage.landingEventCount} " +
                 $"landingStateBoundaries={document.coverage.landingStateBoundaryCount} " +
                 $"landingStateSpans={document.coverage.landingStateSpanCount} " +
                 $"lockedEvents={document.coverage.lockedEventCount} " +
                 $"releaseEvents={document.coverage.releaseEventCount} " +
                 $"pathChanges={document.coverage.pathChangeCount} " +
+                $"pathContinuityEvents={document.coverage.pathContinuityEventCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
                 $"diagnosisFiles={publication.DiagnosticCount} " +
@@ -103,6 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"diagnosisMatches={publication.MatchCount}";
             return new CharacterFootMotionDiagnosticAnalysis(
                 fullSamplesPath,
+                geometryPath,
                 factsPath,
                 publication.Directory,
                 capture.UniqueFrameCount,
@@ -125,6 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeContactPlanePenetration(frames, events);
             AnalyzeReleaseEvents(frames, events);
             AnalyzePathChanges(frames, events);
+            AnalyzePathContinuity(frames, events);
         }
 
         static void AnalyzeLandingEvents(
@@ -770,9 +792,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 List<FootFrame> window = frames.GetRange(
                     windowStart,
                     windowEnd - windowStart + 1);
-                double correctionStep = MaximumCorrectionStep(window, true);
+                bool unanchoredSwingEligible = HasUnanchoredSwingPair(window);
+                double correctionStep = MaximumCorrectionStep(
+                    window,
+                    true,
+                    true);
                 double correctionExcursion = MaximumUnanchoredCorrectionRange(window);
                 double jerk = MaximumCorrectionJerk(window, true);
+                int peakFrame = PeakCorrectionFrame(window, true, true);
+                CharacterFootPathStageAnalysis pathStageAnalysis =
+                    unanchoredSwingEligible
+                        ? AnalyzePathStages(window, peakFrame)
+                        : CharacterFootPathStageAnalysis.Unavailable(
+                            "UnanchoredSwingPairUnavailable",
+                            beforeChange.Frame,
+                            afterChange.Frame,
+                            afterChange.Side,
+                            ResolveEventIdentity(afterChange).ToString(
+                                CultureInfo.InvariantCulture),
+                            afterChange.SourceIdentity);
                 var metrics = new SortedDictionary<string, double>(StringComparer.Ordinal)
                 {
                     ["correctionExcursionMeters"] = correctionExcursion,
@@ -787,15 +825,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["groundPathAcceptedBefore"] = beforeChange.GroundPathState == "Accepted",
                     ["pathEventChanged"] = eventChanged,
                     ["pathInputChanged"] = inputChanged,
+                    ["pathStageAnalysisAvailable"] =
+                        pathStageAnalysis.available,
                     ["pathStateChanged"] = stateChanged,
-                    ["sourceChanged"] = beforeChange.SourceIdentity != afterChange.SourceIdentity
+                    ["sourceChanged"] = beforeChange.SourceIdentity != afterChange.SourceIdentity,
+                    ["unanchoredSwingEligible"] = unanchoredSwingEligible
                 };
                 EventFact fact = new EventFact(
                     "PathChange",
                     afterChange.Side,
                     beforeChange.Frame,
                     afterChange.Frame,
-                    PeakCorrectionFrame(window, true),
+                    peakFrame,
                     afterChange.NextLandingEventIdentity,
                     afterChange.SourceIdentity,
                     afterChange.SourceCycle,
@@ -803,10 +844,549 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         changeStart,
                         changeEnd - changeStart + 1)),
                     metrics,
-                    evidence);
+                    evidence,
+                    pathStageAnalysis);
                 events.Add(fact);
                 i = changeEnd + 1;
             }
+        }
+
+        static CharacterFootPathStageAnalysis AnalyzePathStages(
+            List<FootFrame> window,
+            int peakFrame)
+        {
+            for (int i = 1; i < window.Count; i++)
+            {
+                FootFrame previous = window[i - 1];
+                FootFrame current = window[i];
+                if (current.Frame != peakFrame ||
+                    !Continuous(previous, current) ||
+                    previous.HasAnchor ||
+                    current.HasAnchor ||
+                    previous.ConstraintState != "Swing" ||
+                    current.ConstraintState != "Swing")
+                {
+                    continue;
+                }
+                return BuildPathStageAnalysis(previous, current);
+            }
+            FootFrame first = window.Count > 0 ? window[0] : null;
+            FootFrame last = window.Count > 0 ? window[^1] : null;
+            return CharacterFootPathStageAnalysis.Unavailable(
+                "PeakCorrectionPairUnavailable",
+                first?.Frame ?? 0,
+                last?.Frame ?? 0,
+                last?.Side ?? string.Empty,
+                ResolveEventIdentity(last).ToString(CultureInfo.InvariantCulture),
+                last?.SourceIdentity ?? string.Empty);
+        }
+
+        static CharacterFootPathStageAnalysis BuildPathStageAnalysis(
+            FootFrame previous,
+            FootFrame current)
+        {
+            var missing = new List<string>();
+            var stages = new List<CharacterFootPathStageDelta>(
+                CharacterFootPathStageNames.All.Length)
+            {
+                Stage(
+                    CharacterFootPathStageNames.RawLandingToPathTarget,
+                    previous.RawLandingAvailable && current.RawLandingAvailable &&
+                    previous.GroundPathTargetAvailable &&
+                    current.GroundPathTargetAvailable,
+                    "RawLandingOrPathTargetUnavailable",
+                    previous.RawLanding,
+                    current.RawLanding,
+                    previous.NextLanding,
+                    current.NextLanding,
+                    previous.Frame,
+                    current.Frame,
+                    missing,
+                    previous.RawLandingAvailable || current.RawLandingAvailable ||
+                    previous.GroundPathTargetAvailable ||
+                    current.GroundPathTargetAvailable),
+                Stage(
+                    CharacterFootPathStageNames.PathTargetToSwingTarget,
+                    previous.GroundPathTargetAvailable &&
+                    current.GroundPathTargetAvailable &&
+                    previous.PathContinuityEvaluated &&
+                    current.PathContinuityEvaluated &&
+                    previous.PathAvailableAfter && current.PathAvailableAfter,
+                    "PathTargetOrSwingTargetUnavailable",
+                    previous.NextLanding,
+                    current.NextLanding,
+                    previous.PathCurrentTargetCorrection,
+                    current.PathCurrentTargetCorrection,
+                    previous.Frame,
+                    current.Frame,
+                    missing,
+                    previous.PathAvailableAfter || current.PathAvailableAfter),
+                Stage(
+                    CharacterFootPathStageNames.SwingTargetToCapturedResidual,
+                    previous.PathContinuityEvaluated &&
+                    current.PathContinuityEvaluated &&
+                    previous.PathAvailableAfter && current.PathAvailableAfter,
+                    "SwingTargetOrCapturedResidualUnavailable",
+                    previous.PathCurrentTargetCorrection,
+                    current.PathCurrentTargetCorrection,
+                    previous.SwingResidualBeforeDecay,
+                    current.SwingResidualBeforeDecay,
+                    previous.Frame,
+                    current.Frame,
+                    missing,
+                    current.PathResidualRebuilt),
+                Stage(
+                    CharacterFootPathStageNames.CapturedResidualToDecayedResidual,
+                    previous.PathContinuityEvaluated &&
+                    current.PathContinuityEvaluated,
+                    "ResidualDecayFactsUnavailable",
+                    previous.SwingResidualBeforeDecay,
+                    current.SwingResidualBeforeDecay,
+                    previous.SwingResidualAfterDecay,
+                    current.SwingResidualAfterDecay,
+                    previous.Frame,
+                    current.Frame,
+                    missing,
+                    previous.PathContinuityEvaluated ||
+                    current.PathContinuityEvaluated),
+                Stage(
+                    CharacterFootPathStageNames.ResidualOutputToStateOutput,
+                    previous.PathContinuityEvaluated &&
+                    current.PathContinuityEvaluated &&
+                    previous.OutputStagesAvailable &&
+                    current.OutputStagesAvailable,
+                    "ResidualOrStateOutputUnavailable",
+                    previous.ResidualOutputCorrection,
+                    current.ResidualOutputCorrection,
+                    previous.CorrectionBeforeSafetyFloor,
+                    current.CorrectionBeforeSafetyFloor,
+                    previous.Frame,
+                    current.Frame,
+                    missing,
+                    previous.OutputStagesAvailable ||
+                    current.OutputStagesAvailable),
+                Stage(
+                    CharacterFootPathStageNames.StateOutputToSafetyFloorOutput,
+                    previous.OutputStagesAvailable &&
+                    current.OutputStagesAvailable &&
+                    previous.EnvelopeAvailable && current.EnvelopeAvailable,
+                    "StateOutputOrGroundEnvelopeUnavailable",
+                    previous.CorrectionBeforeSafetyFloor,
+                    current.CorrectionBeforeSafetyFloor,
+                    previous.SafetyFloorOutputCorrection,
+                    current.SafetyFloorOutputCorrection,
+                    previous.Frame,
+                    current.Frame,
+                    missing,
+                    previous.EnvelopeAvailable || current.EnvelopeAvailable ||
+                    previous.SafetyFloorClamped || current.SafetyFloorClamped),
+                Stage(
+                    CharacterFootPathStageNames.FinalCorrectionToEncodedGoal,
+                    previous.OutputStagesAvailable &&
+                    current.OutputStagesAvailable &&
+                    previous.EncodedGoalAvailable && current.EncodedGoalAvailable,
+                    "FinalCorrectionOrEncodedGoalUnavailable",
+                    previous.FinalEffectiveCorrection,
+                    current.FinalEffectiveCorrection,
+                    previous.EncodedGoalCorrection,
+                    current.EncodedGoalCorrection,
+                    previous.Frame,
+                    current.Frame,
+                    missing,
+                    previous.EncodedGoalAvailable || current.EncodedGoalAvailable),
+                Stage(
+                    CharacterFootPathStageNames.EncodedGoalToSolvedFoot,
+                    previous.EncodedGoalAvailable && current.EncodedGoalAvailable &&
+                    previous.FinalIkEffectorAvailable &&
+                    current.FinalIkEffectorAvailable,
+                    "EncodedGoalOrSolvedFootUnavailable",
+                    previous.EncodedGoalPosition,
+                    current.EncodedGoalPosition,
+                    previous.FinalIkSolvedPosition,
+                    current.FinalIkSolvedPosition,
+                    previous.Frame,
+                    current.Frame,
+                    missing,
+                    previous.FinalIkEffectorAvailable ||
+                    current.FinalIkEffectorAvailable)
+            };
+            var stateEvidence = new CharacterFootPathStageStateEvidence
+            {
+                previousState = previous.ConstraintState,
+                stateBefore = current.ConstraintStateBefore,
+                stateAfter = current.ConstraintState,
+                previousLockResponse = previous.LockResponse,
+                lockResponseBefore = current.LockResponseBefore,
+                lockResponseAfter = current.LockResponse,
+                revisionReason = current.PathRevisionReason,
+                residualRebuilt = current.PathResidualRebuilt,
+                safetyFloorClamped = current.SafetyFloorClamped
+            };
+            bool available = missing.Count == 0;
+            CharacterFootPathFirstAmplification first = available
+                ? ResolveFirstAmplification(stages, stateEvidence)
+                : new CharacterFootPathFirstAmplification
+                {
+                    available = false,
+                    unavailableReason = "RequiredStageUnavailable",
+                    previousFrame = previous.Frame,
+                    frame = current.Frame,
+                    stateEvidence = stateEvidence
+                };
+            var analysis = new CharacterFootPathStageAnalysis
+            {
+                available = available,
+                unavailableReason = available
+                    ? string.Empty
+                    : "RequiredStageUnavailable",
+                amplificationNoiseFloorMeters = PositionNoiseFloor,
+                lineage = new CharacterFootPathStageLineage
+                {
+                    previousFrame = previous.Frame,
+                    frame = current.Frame,
+                    previousCompletionIdentity =
+                        previous.CompletionIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    completionIdentity = current.CompletionIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                    side = current.Side,
+                    previousEventIdentity = ResolveEventIdentity(previous).ToString(
+                        CultureInfo.InvariantCulture),
+                    eventIdentity = ResolveEventIdentity(current).ToString(
+                        CultureInfo.InvariantCulture),
+                    previousSourceIdentity = previous.SourceIdentity,
+                    sourceIdentity = current.SourceIdentity,
+                    previousSourceCycle = previous.SourceCycle,
+                    sourceCycle = current.SourceCycle,
+                    previousPathInputIdentity =
+                        previous.FootMotionGroundPathInputIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    pathInputIdentity =
+                        current.FootMotionGroundPathInputIdentity.ToString(
+                            CultureInfo.InvariantCulture)
+                },
+                stateEvidence = stateEvidence,
+                stageFacts = new CharacterFootPathStageFacts
+                {
+                    residualCaptureAvailable = current.PathResidualRebuilt,
+                    residualBeforeRevisionPrevious = StageVector(
+                        previous.SwingResidualBeforeRevision),
+                    residualBeforeRevision = StageVector(
+                        current.SwingResidualBeforeRevision),
+                    capturedResidualPrevious = StageVector(
+                        previous.SwingResidualBeforeDecay),
+                    capturedResidual = StageVector(
+                        current.SwingResidualBeforeDecay),
+                    groundEnvelopeSafetyCorrectionAvailable =
+                        previous.EnvelopeAvailable && current.EnvelopeAvailable,
+                    groundEnvelopeSafetyCorrectionPrevious = StageVector(
+                        previous.GroundEnvelopeSafetyCorrection),
+                    groundEnvelopeSafetyCorrection = StageVector(
+                        current.GroundEnvelopeSafetyCorrection),
+                    physicalFootAvailable =
+                        previous.FinalPhysicalWriteAvailable &&
+                        current.FinalPhysicalWriteAvailable,
+                    physicalFootPrevious = StageVector(
+                        previous.FinalPhysicalAnkleComponentPosition),
+                    physicalFoot = StageVector(
+                        current.FinalPhysicalAnkleComponentPosition)
+                },
+                missingStages = missing,
+                stages = stages,
+                firstAmplificationStage = first
+            };
+            analysis.RequireValid();
+            return analysis;
+        }
+
+        static CharacterFootPathStageDelta Stage(
+            string name,
+            bool available,
+            string unavailableReason,
+            Vector3 inputBefore,
+            Vector3 inputAfter,
+            Vector3 outputBefore,
+            Vector3 outputAfter,
+            int previousFrame,
+            int frame,
+            List<string> missing,
+            bool applicable)
+        {
+            if (!applicable)
+            {
+                return new CharacterFootPathStageDelta
+                {
+                    stage = name,
+                    applicable = false,
+                    available = false,
+                    unavailableReason = "NotApplicable",
+                    previousFrame = previousFrame,
+                    frame = frame
+                };
+            }
+            if (!available)
+            {
+                missing.Add(name);
+                return new CharacterFootPathStageDelta
+                {
+                    stage = name,
+                    applicable = true,
+                    available = false,
+                    unavailableReason = unavailableReason,
+                    previousFrame = previousFrame,
+                    frame = frame
+                };
+            }
+            double inputDelta = Vector3.Distance(inputBefore, inputAfter);
+            double outputDelta = Vector3.Distance(outputBefore, outputAfter);
+            double amplification = outputDelta - inputDelta;
+            bool ratioAvailable = inputDelta > PositionNoiseFloor;
+            return new CharacterFootPathStageDelta
+            {
+                stage = name,
+                applicable = true,
+                available = true,
+                previousFrame = previousFrame,
+                frame = frame,
+                inputBefore = StageVector(inputBefore),
+                inputAfter = StageVector(inputAfter),
+                outputBefore = StageVector(outputBefore),
+                outputAfter = StageVector(outputAfter),
+                inputDeltaMeters = inputDelta,
+                outputDeltaMeters = outputDelta,
+                amplificationMeters = amplification,
+                amplificationRatioAvailable = ratioAvailable,
+                amplificationRatio = ratioAvailable
+                    ? outputDelta / inputDelta
+                    : null
+            };
+        }
+
+        static CharacterFootPathStageVector3 StageVector(Vector3 value) =>
+            new CharacterFootPathStageVector3
+            {
+                x = value.x,
+                y = value.y,
+                z = value.z
+            };
+
+        static CharacterFootPathFirstAmplification ResolveFirstAmplification(
+            List<CharacterFootPathStageDelta> stages,
+            CharacterFootPathStageStateEvidence stateEvidence)
+        {
+            for (int i = 0; i < stages.Count; i++)
+            {
+                CharacterFootPathStageDelta stage = stages[i];
+                if (!stage.applicable ||
+                    !stage.available ||
+                    stage.amplificationMeters <= PositionNoiseFloor)
+                    continue;
+                return new CharacterFootPathFirstAmplification
+                {
+                    available = true,
+                    stage = stage.stage,
+                    previousFrame = stage.previousFrame,
+                    frame = stage.frame,
+                    inputDeltaMeters = stage.inputDeltaMeters,
+                    outputDeltaMeters = stage.outputDeltaMeters,
+                    amplificationMeters = stage.amplificationMeters,
+                    amplificationRatioAvailable =
+                        stage.amplificationRatioAvailable,
+                    amplificationRatio = stage.amplificationRatio,
+                    stateEvidence = stateEvidence
+                };
+            }
+            CharacterFootPathStageDelta last = stages[^1];
+            return new CharacterFootPathFirstAmplification
+            {
+                available = false,
+                unavailableReason = "NoAmplificationAboveNoiseFloor",
+                previousFrame = last.previousFrame,
+                frame = last.frame,
+                stateEvidence = stateEvidence
+            };
+        }
+
+        static ulong ResolveEventIdentity(FootFrame frame)
+        {
+            if (frame == null)
+                return 0;
+            if (frame.PathCurrentLandingEventIdentity != 0)
+                return frame.PathCurrentLandingEventIdentity;
+            if (frame.FootMotionEventIdentity != 0)
+                return frame.FootMotionEventIdentity;
+            return frame.NextLandingEventIdentity;
+        }
+
+        static void AnalyzePathContinuity(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame current = frames[i];
+                FootFrame previous = i > 0 ? frames[i - 1] : null;
+                bool continuous = previous != null && Continuous(previous, current);
+                bool inputIdentityChanged = continuous &&
+                    previous.FootMotionGroundPathInputIdentity !=
+                    current.FootMotionGroundPathInputIdentity;
+                bool availabilityChanged =
+                    current.PathAvailableBefore != current.PathAvailableAfter;
+                bool comparablePath = current.PathAvailableBefore &&
+                                      current.PathAvailableAfter;
+                bool eventChanged = comparablePath &&
+                    current.PathPreviousLandingEventIdentity !=
+                    current.PathCurrentLandingEventIdentity;
+                bool landingPointChanged = comparablePath &&
+                    current.PathLandingPointDelta > current.LandingUpdateDistance;
+                bool swingTargetChanged = comparablePath &&
+                    current.PathTargetDelta > current.LandingUpdateDistance;
+                bool revisionExpected = availabilityChanged || eventChanged ||
+                                        landingPointChanged || swingTargetChanged;
+                bool reasonAvailability = HasRevisionReason(
+                    current.PathRevisionReason,
+                    "PathAvailabilityChanged");
+                bool reasonEvent = HasRevisionReason(
+                    current.PathRevisionReason,
+                    "LandingEventChanged");
+                bool reasonLandingPoint = HasRevisionReason(
+                    current.PathRevisionReason,
+                    "LandingPointChanged");
+                bool reasonSwingTarget = HasRevisionReason(
+                    current.PathRevisionReason,
+                    "SwingTargetChanged");
+                bool reasonAvailable = reasonAvailability || reasonEvent ||
+                                       reasonLandingPoint || reasonSwingTarget;
+                bool reasonMatchesExpected =
+                    reasonAvailability == availabilityChanged &&
+                    reasonEvent == eventChanged &&
+                    reasonLandingPoint == landingPointChanged &&
+                    reasonSwingTarget == swingTargetChanged;
+                double residualBeforeRevision =
+                    current.SwingResidualBeforeRevision.magnitude;
+                double residualBeforeDecay =
+                    current.SwingResidualBeforeDecay.magnitude;
+                double residualAfterDecay =
+                    current.SwingResidualAfterDecay.magnitude;
+                bool residualGrewWithoutRevision =
+                    current.PathContinuityEvaluated &&
+                    !current.PathResidualRebuilt &&
+                    residualAfterDecay > residualBeforeDecay + PositionNoiseFloor;
+                bool deadlineReached = current.PathContinuityEvaluated &&
+                    current.ResidualTimeToLandingSeconds > 0f &&
+                    current.ResidualTimeToLandingSeconds <=
+                    DeltaSeconds(current) + TimeEpsilon;
+                bool identityOnlyInputChange = inputIdentityChanged &&
+                    current.PathContinuityEvaluated &&
+                    !revisionExpected;
+                bool relevant = inputIdentityChanged ||
+                                current.PathResidualRebuilt ||
+                                revisionExpected ||
+                                reasonAvailable ||
+                                current.ReleasingCompletedToSwing ||
+                                current.SafetyFloorClamped ||
+                                deadlineReached ||
+                                residualGrewWithoutRevision;
+                if (!relevant)
+                    continue;
+                double correctionStep = continuous
+                    ? Vector3.Distance(
+                        previous.EffectiveCorrection,
+                        current.EffectiveCorrection)
+                    : 0d;
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["appliedHalfLifeSeconds"] =
+                        current.ResidualAppliedHalfLifeSeconds,
+                    ["baseHalfLifeSeconds"] =
+                        current.ResidualBaseHalfLifeSeconds,
+                    ["correctionStepMeters"] = correctionStep,
+                    ["deadlineHalfLifeSeconds"] =
+                        current.ResidualDeadlineHalfLifeSeconds,
+                    ["envelopeClearanceAfterMeters"] =
+                        current.EnvelopeClearanceAfterMeters,
+                    ["envelopeClearanceBeforeMeters"] =
+                        current.EnvelopeClearanceBeforeMeters,
+                    ["landingPointDeltaMeters"] =
+                        current.PathLandingPointDelta,
+                    ["landingUpdateDistanceMeters"] =
+                        current.LandingUpdateDistance,
+                    ["residualAfterDecayMeters"] = residualAfterDecay,
+                    ["residualBeforeDecayMeters"] = residualBeforeDecay,
+                    ["residualBeforeRevisionMeters"] = residualBeforeRevision,
+                    ["safetyFloorClampMeters"] =
+                        current.SafetyFloorClampMeters,
+                    ["swingTargetDeltaMeters"] = current.PathTargetDelta,
+                    ["timeToLandingSeconds"] =
+                        current.ResidualTimeToLandingSeconds
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["deadlineHalfLifeAvailable"] =
+                        current.ResidualDeadlineHalfLifeAvailable,
+                    ["deadlineReached"] = deadlineReached,
+                    ["envelopeAvailable"] = current.EnvelopeAvailable,
+                    ["expectedLandingEventRevision"] = eventChanged,
+                    ["expectedLandingPointRevision"] = landingPointChanged,
+                    ["expectedPathAvailabilityRevision"] = availabilityChanged,
+                    ["expectedSwingTargetRevision"] = swingTargetChanged,
+                    ["identityOnlyInputChange"] = identityOnlyInputChange,
+                    ["pathContinuityEvaluated"] =
+                        current.PathContinuityEvaluated,
+                    ["pathInputIdentityChanged"] = inputIdentityChanged,
+                    ["pathResidualRebuilt"] = current.PathResidualRebuilt,
+                    ["pathRevisionExpected"] = revisionExpected,
+                    ["pathRevisionReasonMatchesExpected"] =
+                        reasonMatchesExpected,
+                    ["reasonLandingEventChanged"] = reasonEvent,
+                    ["reasonLandingPointChanged"] = reasonLandingPoint,
+                    ["reasonPathAvailabilityChanged"] = reasonAvailability,
+                    ["reasonSwingTargetChanged"] = reasonSwingTarget,
+                    ["releasingCompletedToSwing"] =
+                        current.ReleasingCompletedToSwing,
+                    ["residualGrewWithoutRevision"] =
+                        residualGrewWithoutRevision,
+                    ["safetyFloorClamped"] = current.SafetyFloorClamped,
+                    ["stateAfterSwing"] =
+                        current.ConstraintState == "Swing",
+                    ["stateBeforeReleasing"] =
+                        current.ConstraintStateBefore == "Releasing"
+                };
+                events.Add(new EventFact(
+                    "PathContinuity",
+                    current.Side,
+                    continuous ? previous.Frame : current.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.PathCurrentLandingEventIdentity != 0
+                        ? current.PathCurrentLandingEventIdentity
+                        : current.FootMotionEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence));
+            }
+        }
+
+        static bool HasRevisionReason(string value, string reason)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            string[] values = value.Split(',');
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (string.Equals(
+                        values[i].Trim(),
+                        reason,
+                        StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         static bool SemanticPathChanged(
@@ -875,6 +1455,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static FactsDocument BuildDocument(
             string samplesPath,
+            string geometryPath,
             CsvCapture capture,
             List<EventFact> events)
         {
@@ -886,6 +1467,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     identity = capture.SampleIdentity,
                     file = Path.GetFileName(samplesPath),
                     sha256 = ComputeSha256(samplesPath),
+                    geometryFile = Path.GetFileName(geometryPath),
+                    geometrySha256 = ComputeSha256(geometryPath),
                     programIdentity = capture.ProgramIdentity,
                     projectionRevision = capture.ProjectionRevision,
                     poseGraphId = capture.PoseGraphId,
@@ -893,7 +1476,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     posePlanHash = capture.PosePlanHash,
                     frameCount = capture.UniqueFrameCount,
                     footRowCount = capture.FootRows.Count,
-                    expandedRowCount = capture.RawRowCount - capture.FootRows.Count
+                    geometryRowCount = capture.GeometryRowCount
                 },
                 analyzer = new AnalyzerFact
                 {
@@ -913,6 +1496,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     lockedEventCount = events.Count(value => value.kind == "Locked"),
                     releaseEventCount = events.Count(value => value.kind == "Release"),
                     pathChangeCount = events.Count(value => value.kind == "PathChange"),
+                    pathContinuityEventCount = events.Count(
+                        value => value.kind == "PathContinuity"),
                     supportChangeCount = events.Count(value => value.kind == "SupportChange"),
                     contactPlanePenetrationEventCount = events.Count(
                         value => value.kind == "ContactPlanePenetration"),
@@ -933,13 +1518,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
         }
 
-        static CsvCapture ReadCapture(string samplesPath)
+        static CsvCapture ReadCapture(
+            string samplesPath,
+            string geometryPath)
         {
             using var reader = new StreamReader(samplesPath, Encoding.UTF8, true, 65536);
             string header = reader.ReadLine();
             if (string.IsNullOrWhiteSpace(header))
                 throw new InvalidDataException("Foot Motion samples CSV is empty.");
-            string[] names = header.Split(',');
+            string[] names = ParseCsvLine(header);
             var indices = new Dictionary<string, int>(StringComparer.Ordinal);
             for (int i = 0; i < names.Length; i++)
                 indices[names[i]] = i;
@@ -952,11 +1539,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (line.Length == 0)
                     continue;
                 rawRows++;
-                string[] cells = line.Split(',');
+                string[] cells = ParseCsvLine(line);
+                if (cells.Length != names.Length)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion samples CSV row {rawRows + 1} has " +
+                        $"{cells.Length} columns; expected {names.Length}.");
+                }
                 FootFrame frame = ParseFrame(indices, cells);
                 var key = (frame.Frame, frame.Side);
-                if (!unique.ContainsKey(key))
-                    unique.Add(key, frame);
+                if (!unique.TryAdd(key, frame))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion samples CSV has duplicate Foot row " +
+                        $"Frame={frame.Frame} Side={frame.Side}.");
+                }
             }
             if (unique.Count == 0)
                 throw new InvalidDataException("Foot Motion samples CSV has no Foot rows.");
@@ -966,7 +1563,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .ToList();
             List<FootFrame> left = footRows.Where(value => value.Side == "Left").OrderBy(value => value.Frame).ToList();
             List<FootFrame> right = footRows.Where(value => value.Side == "Right").OrderBy(value => value.Frame).ToList();
+            if (left.Count != right.Count ||
+                !left.Select(value => value.Frame).SequenceEqual(
+                    right.Select(value => value.Frame)))
+            {
+                throw new InvalidDataException(
+                    "Foot Motion samples CSV does not contain one Left and one Right Foot row per frame.");
+            }
             FootFrame first = footRows[0];
+            int geometryRowCount = ReadGeometry(
+                geometryPath,
+                first.SampleIdentity,
+                unique);
             int frameGapCount = CountTransitions(left, (previous, current) => current.Frame != previous.Frame + 1) +
                                 CountTransitions(right, (previous, current) => current.Frame != previous.Frame + 1);
             int bodyResetCount = CountTransitions(left, (previous, current) => current.BodyResetSequence != previous.BodyResetSequence);
@@ -979,7 +1587,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 first.PoseGraphId,
                 first.PoseGraphRevision,
                 first.PosePlanHash,
-                rawRows,
+                geometryRowCount,
                 footRows.Select(value => value.Frame).Distinct().Count(),
                 frameGapCount,
                 bodyResetCount,
@@ -987,6 +1595,164 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 footRows,
                 left,
                 right);
+        }
+
+        static int ReadGeometry(
+            string geometryPath,
+            string sampleIdentity,
+            Dictionary<(int frame, string side), FootFrame> footRows)
+        {
+            using var reader = new StreamReader(
+                geometryPath,
+                Encoding.UTF8,
+                true,
+                65536);
+            string header = reader.ReadLine();
+            if (string.IsNullOrWhiteSpace(header))
+                throw new InvalidDataException(
+                    "Foot Motion ground path geometry CSV is empty.");
+            string[] names = ParseCsvLine(header);
+            var indices = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < names.Length; i++)
+            {
+                if (!indices.TryAdd(names[i], i))
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV has duplicate column '{names[i]}'.");
+            }
+            string[] required =
+            {
+                "SampleIdentity", "FrameSequence", "CompletionIdentity",
+                "Side", "GroundPathInputIdentity", "GroundContactIndex",
+                "GroundContactSegmentIndex", "GroundContactSurfaceIdentity",
+                "GroundContactCandidateIdentity", "GroundContactPositionX",
+                "GroundContactPositionY", "GroundContactPositionZ",
+                "GroundContactNormalX", "GroundContactNormalY",
+                "GroundContactNormalZ", "GroundContactQueryDistance",
+                "GroundEnvelopeVertexIndex", "GroundEnvelopeVertexX",
+                "GroundEnvelopeVertexY", "GroundEnvelopeVertexZ"
+            };
+            for (int i = 0; i < required.Length; i++)
+            {
+                if (!indices.ContainsKey(required[i]))
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV is missing '{required[i]}'.");
+            }
+            var contacts = new HashSet<(int frame, string side, int index)>();
+            var envelope = new HashSet<(int frame, string side, int index)>();
+            int rowCount = 0;
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                if (line.Length == 0)
+                    continue;
+                rowCount++;
+                string[] cells = ParseCsvLine(line);
+                if (cells.Length != names.Length)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV row {rowCount + 1} has " +
+                        $"{cells.Length} columns; expected {names.Length}.");
+                }
+                string Cell(string name) => cells[indices[name]];
+                if (!string.Equals(
+                        Cell("SampleIdentity"),
+                        sampleIdentity,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV row {rowCount + 1} has mismatched Sample identity.");
+                }
+                int frame = ParseInt(
+                    Cell("FrameSequence"),
+                    "FrameSequence");
+                string side = Cell("Side");
+                if (!footRows.TryGetValue((frame, side), out FootFrame foot))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV row {rowCount + 1} has no Foot row.");
+                }
+                if (ParseUlong(
+                        Cell("CompletionIdentity"),
+                        "CompletionIdentity") !=
+                        foot.CompletionIdentity ||
+                    ParseUlong(
+                        Cell("GroundPathInputIdentity"),
+                        "GroundPathInputIdentity") !=
+                        foot.GroundPathInputIdentity)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV row {rowCount + 1} has mismatched lineage.");
+                }
+                int contactIndex = ParseInt(
+                    Cell("GroundContactIndex"),
+                    "GroundContactIndex");
+                int envelopeIndex = ParseInt(
+                    Cell("GroundEnvelopeVertexIndex"),
+                    "GroundEnvelopeVertexIndex");
+                if (contactIndex < 0 && envelopeIndex < 0)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV row {rowCount + 1} has no geometry payload.");
+                }
+                if (contactIndex >= 0 &&
+                    !contacts.Add((frame, side, contactIndex)))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV has duplicate Contact index " +
+                        $"Frame={frame} Side={side} Index={contactIndex}.");
+                }
+                if (envelopeIndex >= 0 &&
+                    !envelope.Add((frame, side, envelopeIndex)))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion geometry CSV has duplicate Envelope index " +
+                        $"Frame={frame} Side={side} Index={envelopeIndex}.");
+                }
+            }
+            return rowCount;
+        }
+
+        static string[] ParseCsvLine(string line)
+        {
+            var cells = new List<string>(HeaderColumnCapacity);
+            var cell = new StringBuilder();
+            bool quoted = false;
+            for (int i = 0; i < line.Length; i++)
+            {
+                char character = line[i];
+                if (quoted)
+                {
+                    if (character != '"')
+                    {
+                        cell.Append(character);
+                        continue;
+                    }
+                    if (i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        cell.Append('"');
+                        i++;
+                        continue;
+                    }
+                    quoted = false;
+                    continue;
+                }
+                if (character == '"' && cell.Length == 0)
+                {
+                    quoted = true;
+                    continue;
+                }
+                if (character == ',')
+                {
+                    cells.Add(cell.ToString());
+                    cell.Clear();
+                    continue;
+                }
+                cell.Append(character);
+            }
+            if (quoted)
+                throw new InvalidDataException("Foot Motion samples CSV has an unterminated quoted field.");
+            cells.Add(cell.ToString());
+            return cells.ToArray();
         }
 
         static FootFrame ParseFrame(
@@ -997,14 +1763,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 indices.TryGetValue(name, out int index) && index < cells.Length
                     ? cells[index]
                     : string.Empty;
-            float Float(string name) => ParseFloat(Cell(name));
-            int Int(string name) => ParseInt(Cell(name));
-            ulong Ulong(string name) => ParseUlong(Cell(name));
+            float Float(string name) => ParseFloat(Cell(name), name);
+            int Int(string name) => ParseInt(Cell(name), name);
+            ulong Ulong(string name) => ParseUlong(Cell(name), name);
             Vector3 Vector(string prefix) => new Vector3(
                 Float(prefix + "X"),
                 Float(prefix + "Y"),
                 Float(prefix + "Z"));
-            return new FootFrame
+            var frame = new FootFrame
             {
                 SampleIdentity = Cell("SampleIdentity"),
                 ProgramIdentity = Cell("ProgramIdentity"),
@@ -1026,16 +1792,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FormalLockMode = Cell("InputFormalLockMode"),
                 FormalLockWeight = Float("InputFormalLockWeight"),
                 FormalSupport = Float("InputFormalSupport"),
+                LandingPredictionState = Cell("State"),
+                RawLandingAvailable = Int("RawLandingAvailable") != 0,
+                RawLanding = Vector("RawLandingCandidate"),
                 GroundPathState = Cell("GroundPathState"),
                 GroundPathRejectReason = Cell("GroundPathRejectReason"),
                 GroundPathInputIdentity = Ulong("GroundPathInputIdentity"),
+                GroundPathTargetAvailable =
+                    Int("GroundPathTargetAvailable") != 0,
                 LastLandingEventIdentity = Ulong("GroundPathLastLandingEventIdentity"),
                 NextLandingEventIdentity = Ulong("GroundPathNextSwingLandingEventIdentity"),
                 NextLanding = Vector("GroundPathNextSwingLanding"),
                 ComponentUp = Vector("GroundPathComponentUp"),
                 FootMotionEventIdentity = Ulong("FootMotionLandingEventIdentity"),
+                FootMotionGroundPathInputIdentity =
+                    Ulong("FootMotionGroundPathInputIdentity"),
                 FootMotionState = Cell("FootMotionState"),
                 ConstraintState = Cell("FootMotionConstraintState"),
+                LockResponse = Cell("FootMotionLockResponse"),
                 OriginalSole = Vector("FootMotionOriginalSole"),
                 OriginalAnkle = Vector("FootMotionOriginalAnkle"),
                 CorrectedSole = Vector("FootMotionCorrectedSole"),
@@ -1044,6 +1818,81 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ContactPlaneAvailable = Int("FootMotionContactPlaneAvailable") != 0,
                 ContactSurfaceIdentity = Int("FootMotionContactSurfaceIdentity"),
                 ContactNormal = Vector("FootMotionContactPlaneNormal"),
+                PathContinuityEvaluated =
+                    Int("FootMotionPathContinuityEvaluated") != 0,
+                PathRevisionReason = Cell("FootMotionPathRevisionReason"),
+                PathResidualRebuilt =
+                    Int("FootMotionPathResidualRebuilt") != 0,
+                PathAvailableBefore =
+                    Int("FootMotionPathAvailableBefore") != 0,
+                PathAvailableAfter =
+                    Int("FootMotionPathAvailableAfter") != 0,
+                PathPreviousLandingEventIdentity =
+                    Ulong("FootMotionPathPreviousLandingEventIdentity"),
+                PathCurrentLandingEventIdentity =
+                    Ulong("FootMotionPathCurrentLandingEventIdentity"),
+                PathPreviousTargetCorrection =
+                    Vector("FootMotionPathPreviousTargetCorrection"),
+                PathCurrentTargetCorrection =
+                    Vector("FootMotionPathCurrentTargetCorrection"),
+                PathLandingPointDelta =
+                    Float("FootMotionPathLandingPointDeltaMeters"),
+                PathTargetDelta = Float("FootMotionPathTargetDeltaMeters"),
+                SwingResidualBeforeRevision =
+                    Vector("FootMotionSwingResidualBeforeRevision"),
+                SwingResidualBeforeDecay =
+                    Vector("FootMotionSwingResidualBeforeDecay"),
+                SwingResidualAfterDecay =
+                    Vector("FootMotionSwingResidualAfterDecay"),
+                ResidualOutputCorrection =
+                    Vector("FootMotionResidualOutputCorrection"),
+                LandingUpdateDistance = Float("FootMotionLandingUpdateDistance"),
+                ResidualTimeToLandingSeconds =
+                    Float("FootMotionResidualTimeToLandingSeconds"),
+                ResidualBaseHalfLifeSeconds =
+                    Float("FootMotionResidualBaseHalfLifeSeconds"),
+                ResidualDeadlineHalfLifeAvailable =
+                    Int("FootMotionResidualDeadlineHalfLifeAvailable") != 0,
+                ResidualDeadlineHalfLifeSeconds =
+                    Float("FootMotionResidualDeadlineHalfLifeSeconds"),
+                ResidualAppliedHalfLifeSeconds =
+                    Float("FootMotionResidualAppliedHalfLifeSeconds"),
+                ConstraintStateBefore = Cell("FootMotionConstraintStateBefore"),
+                LockResponseBefore = Cell("FootMotionLockResponseBefore"),
+                OutputStagesAvailable =
+                    Int("FootMotionOutputStagesAvailable") != 0,
+                ReleasingCompletedToSwing =
+                    Int("FootMotionReleasingCompletedToSwing") != 0,
+                EnvelopeAvailable = Int("FootMotionEnvelopeAvailable") != 0,
+                CorrectionBeforeSafetyFloor =
+                    Vector("FootMotionCorrectionBeforeSafetyFloor"),
+                GroundEnvelopeSafetyCorrection =
+                    Vector("FootMotionGroundEnvelopeSafetyCorrection"),
+                SafetyFloorOutputCorrection =
+                    Vector("FootMotionSafetyFloorOutputCorrection"),
+                FinalEffectiveCorrection =
+                    Vector("FootMotionFinalEffectiveCorrection"),
+                SafetyFloorClamped =
+                    Int("FootMotionSafetyFloorClamped") != 0,
+                SafetyFloorClampMeters =
+                    Float("FootMotionSafetyFloorClampMeters"),
+                EnvelopeClearanceBeforeMeters =
+                    Float("FootMotionEnvelopeClearanceBeforeMeters"),
+                EnvelopeClearanceAfterMeters =
+                    Float("FootMotionEnvelopeClearanceAfterMeters"),
+                EncodedGoalAvailable =
+                    Int("FootMotionEncodedGoalAvailable") != 0,
+                EncodedGoalPosition = Vector("FinalGoalPosition"),
+                EncodedGoalCorrection =
+                    Vector("FootMotionEncodedGoalCorrection"),
+                FinalIkEffectorAvailable =
+                    Int("FinalIkEffectorAvailable") != 0,
+                FinalIkTargetPosition = Vector("FinalIkTargetPosition"),
+                FinalIkSolvedPosition = Vector("FinalIkSolvedPosition"),
+                FinalPhysicalWriteAvailable =
+                    Int("FinalPhysicalWriteAvailable") != 0,
+                FinalPhysicalAnkleComponentPosition =
+                    Vector("FinalPhysicalAnkleComponentPosition"),
                 PenetrationAvailability = Cell("FootContactPlanePenetrationAvailability"),
                 SourceHeel = Vector("FootMotionSourceHeel"),
                 SourceToe = Vector("FootMotionSourceToe"),
@@ -1062,6 +1911,73 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FinalPelvisGoal = Vector("FinalPelvisGoal"),
                 PhysicalPelvis = Vector("FinalPhysicalPelvisComponentPosition")
             };
+            RequireValidFrame(frame);
+            return frame;
+        }
+
+        static void RequireValidFrame(FootFrame frame)
+        {
+            if (frame.Frame <= 0 || frame.CompletionIdentity == 0)
+                throw new InvalidDataException("Foot Motion Foot row lineage is invalid.");
+            if (frame.Side != "Left" && frame.Side != "Right")
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row Side '{frame.Side}' is invalid.");
+            RequireEnum<CharacterFootLandingPredictionState>(
+                frame.LandingPredictionState,
+                "State");
+            RequireEnum<CharacterFootSwingMotionState>(
+                frame.FootMotionState,
+                "FootMotionState");
+            RequireEnum<CharacterFootConstraintState>(
+                frame.ConstraintState,
+                "FootMotionConstraintState");
+            RequireEnum<CharacterFootConstraintState>(
+                frame.ConstraintStateBefore,
+                "FootMotionConstraintStateBefore");
+            RequireEnum<CharacterFootLockResponse>(
+                frame.LockResponse,
+                "FootMotionLockResponse");
+            RequireEnum<CharacterFootLockResponse>(
+                frame.LockResponseBefore,
+                "FootMotionLockResponseBefore");
+            RequireRevisionReason(frame.PathRevisionReason);
+        }
+
+        static void RequireEnum<T>(string value, string field)
+            where T : struct, Enum
+        {
+            if (!Enum.TryParse(value, false, out T parsed) ||
+                !Enum.IsDefined(typeof(T), parsed))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+        }
+
+        static void RequireRevisionReason(string value)
+        {
+            string[] values = value.Split(',');
+            bool none = false;
+            for (int i = 0; i < values.Length; i++)
+            {
+                string reason = values[i].Trim();
+                bool valid = reason == "None" ||
+                             reason == "PathAvailabilityChanged" ||
+                             reason == "LandingEventChanged" ||
+                             reason == "LandingPointChanged" ||
+                             reason == "SwingTargetChanged";
+                if (!valid)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Foot row PathRevisionReason '{value}' is invalid.");
+                }
+                none |= reason == "None";
+            }
+            if (none && values.Length != 1)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row PathRevisionReason '{value}' is invalid.");
+            }
         }
 
         static void RequireColumns(Dictionary<string, int> indices)
@@ -1076,11 +1992,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "InputFormalStepContributionContinuityIdentity",
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
                 "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
+                "State", "RawLandingAvailable",
+                "RawLandingCandidateX", "RawLandingCandidateY", "RawLandingCandidateZ",
                 "GroundPathState", "GroundPathRejectReason", "GroundPathInputIdentity",
+                "GroundPathTargetAvailable",
                 "GroundPathLastLandingEventIdentity", "GroundPathNextSwingLandingEventIdentity",
                 "GroundPathNextSwingLandingX", "GroundPathNextSwingLandingY", "GroundPathNextSwingLandingZ",
                 "GroundPathComponentUpX", "GroundPathComponentUpY", "GroundPathComponentUpZ",
-                "FootMotionLandingEventIdentity", "FootMotionState", "FootMotionConstraintState",
+                "FootMotionLandingEventIdentity", "FootMotionGroundPathInputIdentity",
+                "FootMotionState", "FootMotionConstraintState",
+                "FootMotionLockResponse",
                 "FootMotionOriginalSoleX", "FootMotionOriginalSoleY", "FootMotionOriginalSoleZ",
                 "FootMotionOriginalAnkleX", "FootMotionOriginalAnkleY", "FootMotionOriginalAnkleZ",
                 "FootMotionCorrectedSoleX", "FootMotionCorrectedSoleY", "FootMotionCorrectedSoleZ",
@@ -1089,6 +2010,67 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionContactPlaneAvailable", "FootMotionContactSurfaceIdentity",
                 "FootMotionContactPlaneNormalX", "FootMotionContactPlaneNormalY", "FootMotionContactPlaneNormalZ",
                 "FootContactPlanePenetrationAvailability",
+                "FootMotionPathContinuityEvaluated", "FootMotionPathRevisionReason",
+                "FootMotionPathResidualRebuilt", "FootMotionPathAvailableBefore",
+                "FootMotionPathAvailableAfter", "FootMotionPathPreviousLandingEventIdentity",
+                "FootMotionPathCurrentLandingEventIdentity",
+                "FootMotionPathPreviousTargetCorrectionX",
+                "FootMotionPathPreviousTargetCorrectionY",
+                "FootMotionPathPreviousTargetCorrectionZ",
+                "FootMotionPathCurrentTargetCorrectionX",
+                "FootMotionPathCurrentTargetCorrectionY",
+                "FootMotionPathCurrentTargetCorrectionZ",
+                "FootMotionPathLandingPointDeltaMeters", "FootMotionPathTargetDeltaMeters",
+                "FootMotionSwingResidualBeforeRevisionX",
+                "FootMotionSwingResidualBeforeRevisionY",
+                "FootMotionSwingResidualBeforeRevisionZ",
+                "FootMotionSwingResidualBeforeDecayX",
+                "FootMotionSwingResidualBeforeDecayY",
+                "FootMotionSwingResidualBeforeDecayZ",
+                "FootMotionSwingResidualAfterDecayX",
+                "FootMotionSwingResidualAfterDecayY",
+                "FootMotionSwingResidualAfterDecayZ",
+                "FootMotionResidualOutputCorrectionX",
+                "FootMotionResidualOutputCorrectionY",
+                "FootMotionResidualOutputCorrectionZ",
+                "FootMotionLandingUpdateDistance",
+                "FootMotionResidualTimeToLandingSeconds",
+                "FootMotionResidualBaseHalfLifeSeconds",
+                "FootMotionResidualDeadlineHalfLifeAvailable",
+                "FootMotionResidualDeadlineHalfLifeSeconds",
+                "FootMotionResidualAppliedHalfLifeSeconds",
+                "FootMotionConstraintStateBefore", "FootMotionLockResponseBefore",
+                "FootMotionOutputStagesAvailable",
+                "FootMotionReleasingCompletedToSwing",
+                "FootMotionEnvelopeAvailable",
+                "FootMotionCorrectionBeforeSafetyFloorX",
+                "FootMotionCorrectionBeforeSafetyFloorY",
+                "FootMotionCorrectionBeforeSafetyFloorZ",
+                "FootMotionGroundEnvelopeSafetyCorrectionX",
+                "FootMotionGroundEnvelopeSafetyCorrectionY",
+                "FootMotionGroundEnvelopeSafetyCorrectionZ",
+                "FootMotionSafetyFloorOutputCorrectionX",
+                "FootMotionSafetyFloorOutputCorrectionY",
+                "FootMotionSafetyFloorOutputCorrectionZ",
+                "FootMotionFinalEffectiveCorrectionX",
+                "FootMotionFinalEffectiveCorrectionY",
+                "FootMotionFinalEffectiveCorrectionZ",
+                "FootMotionSafetyFloorClamped", "FootMotionSafetyFloorClampMeters",
+                "FootMotionEnvelopeClearanceBeforeMeters",
+                "FootMotionEnvelopeClearanceAfterMeters",
+                "FootMotionEncodedGoalAvailable",
+                "FootMotionEncodedGoalCorrectionX",
+                "FootMotionEncodedGoalCorrectionY",
+                "FootMotionEncodedGoalCorrectionZ",
+                "FinalGoalPositionX", "FinalGoalPositionY", "FinalGoalPositionZ",
+                "FinalIkEffectorAvailable",
+                "FinalIkTargetPositionX", "FinalIkTargetPositionY",
+                "FinalIkTargetPositionZ", "FinalIkSolvedPositionX",
+                "FinalIkSolvedPositionY", "FinalIkSolvedPositionZ",
+                "FinalPhysicalWriteAvailable",
+                "FinalPhysicalAnkleComponentPositionX",
+                "FinalPhysicalAnkleComponentPositionY",
+                "FinalPhysicalAnkleComponentPositionZ",
                 "FootMotionSourceHeelX", "FootMotionSourceHeelY", "FootMotionSourceHeelZ",
                 "FootMotionSourceToeX", "FootMotionSourceToeY", "FootMotionSourceToeZ",
                 "FinalPhysicalHeelWorldX", "FinalPhysicalHeelWorldY", "FinalPhysicalHeelWorldZ",
@@ -1181,13 +2163,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static double MaximumCorrectionStep(
             IReadOnlyList<FootFrame> frames,
-            bool unanchoredOnly = false)
+            bool unanchoredOnly = false,
+            bool swingOnly = false)
         {
             double maximum = 0d;
             for (int i = 1; i < frames.Count; i++)
             {
                 if (unanchoredOnly &&
                     (frames[i - 1].HasAnchor || frames[i].HasAnchor))
+                {
+                    continue;
+                }
+                if (swingOnly &&
+                    (frames[i - 1].ConstraintState != "Swing" ||
+                     frames[i].ConstraintState != "Swing"))
                 {
                     continue;
                 }
@@ -1202,7 +2191,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static int PeakCorrectionFrame(
             IReadOnlyList<FootFrame> frames,
-            bool unanchoredOnly = false)
+            bool unanchoredOnly = false,
+            bool swingOnly = false)
         {
             double maximum = -1d;
             int frame = frames.Count > 0 ? frames[0].Frame : 0;
@@ -1210,6 +2200,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 if (unanchoredOnly &&
                     (frames[i - 1].HasAnchor || frames[i].HasAnchor))
+                {
+                    continue;
+                }
+                if (swingOnly &&
+                    (frames[i - 1].ConstraintState != "Swing" ||
+                     frames[i].ConstraintState != "Swing"))
                 {
                     continue;
                 }
@@ -1222,6 +2218,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame = frames[i].Frame;
             }
             return frame;
+        }
+
+        static bool HasUnanchoredSwingPair(IReadOnlyList<FootFrame> frames)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                if (Continuous(frames[i - 1], frames[i]) &&
+                    !frames[i - 1].HasAnchor &&
+                    !frames[i].HasAnchor &&
+                    frames[i - 1].ConstraintState == "Swing" &&
+                    frames[i].ConstraintState == "Swing")
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         static int PeakDistanceFrame(IReadOnlyList<FootFrame> frames)
@@ -1405,32 +2417,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return values[lower] + (values[upper] - values[lower]) * t;
         }
 
-        static float ParseFloat(string value) =>
-            float.TryParse(
-                value,
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out float result)
-                ? result
-                : 0f;
+        static float ParseFloat(string value, string field)
+        {
+            if (!float.TryParse(
+                    value,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out float result) ||
+                !float.IsFinite(result))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+            return result;
+        }
 
-        static int ParseInt(string value) =>
-            int.TryParse(
-                value,
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out int result)
-                ? result
-                : 0;
+        static int ParseInt(string value, string field)
+        {
+            if (!int.TryParse(
+                    value,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out int result))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+            return result;
+        }
 
-        static ulong ParseUlong(string value) =>
-            ulong.TryParse(
-                value,
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out ulong result)
-                ? result
-                : 0;
+        static ulong ParseUlong(string value, string field)
+        {
+            if (!ulong.TryParse(
+                    value,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out ulong result))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+            return result;
+        }
 
         sealed class CsvCapture
         {
@@ -1441,7 +2469,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 string poseGraphId,
                 string poseGraphRevision,
                 string posePlanHash,
-                int rawRowCount,
+                int geometryRowCount,
                 int uniqueFrameCount,
                 int frameGapCount,
                 int bodyResetCount,
@@ -1456,7 +2484,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PoseGraphId = poseGraphId;
                 PoseGraphRevision = poseGraphRevision;
                 PosePlanHash = posePlanHash;
-                RawRowCount = rawRowCount;
+                GeometryRowCount = geometryRowCount;
                 UniqueFrameCount = uniqueFrameCount;
                 FrameGapCount = frameGapCount;
                 BodyResetCount = bodyResetCount;
@@ -1472,7 +2500,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string PoseGraphId { get; }
             internal string PoseGraphRevision { get; }
             internal string PosePlanHash { get; }
-            internal int RawRowCount { get; }
+            internal int GeometryRowCount { get; }
             internal int UniqueFrameCount { get; }
             internal int FrameGapCount { get; }
             internal int BodyResetCount { get; }
@@ -1504,16 +2532,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string FormalLockMode;
             internal float FormalLockWeight;
             internal float FormalSupport;
+            internal string LandingPredictionState;
+            internal bool RawLandingAvailable;
+            internal Vector3 RawLanding;
             internal string GroundPathState;
             internal string GroundPathRejectReason;
             internal ulong GroundPathInputIdentity;
+            internal bool GroundPathTargetAvailable;
             internal ulong LastLandingEventIdentity;
             internal ulong NextLandingEventIdentity;
             internal Vector3 NextLanding;
             internal Vector3 ComponentUp;
             internal ulong FootMotionEventIdentity;
+            internal ulong FootMotionGroundPathInputIdentity;
             internal string FootMotionState;
             internal string ConstraintState;
+            internal string LockResponse;
             internal Vector3 OriginalSole;
             internal Vector3 OriginalAnkle;
             internal Vector3 CorrectedSole;
@@ -1522,6 +2556,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool ContactPlaneAvailable;
             internal int ContactSurfaceIdentity;
             internal Vector3 ContactNormal;
+            internal bool PathContinuityEvaluated;
+            internal string PathRevisionReason;
+            internal bool PathResidualRebuilt;
+            internal bool PathAvailableBefore;
+            internal bool PathAvailableAfter;
+            internal ulong PathPreviousLandingEventIdentity;
+            internal ulong PathCurrentLandingEventIdentity;
+            internal Vector3 PathPreviousTargetCorrection;
+            internal Vector3 PathCurrentTargetCorrection;
+            internal float PathLandingPointDelta;
+            internal float PathTargetDelta;
+            internal Vector3 SwingResidualBeforeRevision;
+            internal Vector3 SwingResidualBeforeDecay;
+            internal Vector3 SwingResidualAfterDecay;
+            internal Vector3 ResidualOutputCorrection;
+            internal float LandingUpdateDistance;
+            internal float ResidualTimeToLandingSeconds;
+            internal float ResidualBaseHalfLifeSeconds;
+            internal bool ResidualDeadlineHalfLifeAvailable;
+            internal float ResidualDeadlineHalfLifeSeconds;
+            internal float ResidualAppliedHalfLifeSeconds;
+            internal string ConstraintStateBefore;
+            internal string LockResponseBefore;
+            internal bool OutputStagesAvailable;
+            internal bool ReleasingCompletedToSwing;
+            internal bool EnvelopeAvailable;
+            internal Vector3 CorrectionBeforeSafetyFloor;
+            internal Vector3 GroundEnvelopeSafetyCorrection;
+            internal Vector3 SafetyFloorOutputCorrection;
+            internal Vector3 FinalEffectiveCorrection;
+            internal bool SafetyFloorClamped;
+            internal float SafetyFloorClampMeters;
+            internal float EnvelopeClearanceBeforeMeters;
+            internal float EnvelopeClearanceAfterMeters;
+            internal bool EncodedGoalAvailable;
+            internal Vector3 EncodedGoalPosition;
+            internal Vector3 EncodedGoalCorrection;
+            internal bool FinalIkEffectorAvailable;
+            internal Vector3 FinalIkTargetPosition;
+            internal Vector3 FinalIkSolvedPosition;
+            internal bool FinalPhysicalWriteAvailable;
+            internal Vector3 FinalPhysicalAnkleComponentPosition;
             internal string PenetrationAvailability;
             internal Vector3 SourceHeel;
             internal Vector3 SourceToe;
@@ -1562,6 +2638,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string identity;
             public string file;
             public string sha256;
+            public string geometryFile;
+            public string geometrySha256;
             public string programIdentity;
             public string projectionRevision;
             public string poseGraphId;
@@ -1569,7 +2647,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string posePlanHash;
             public int frameCount;
             public int footRowCount;
-            public int expandedRowCount;
+            public int geometryRowCount;
         }
 
         [Serializable]
@@ -1590,6 +2668,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int lockedEventCount;
             public int releaseEventCount;
             public int pathChangeCount;
+            public int pathContinuityEventCount;
             public int supportChangeCount;
             public int contactPlanePenetrationEventCount;
             public int leftFootFrameCount;
@@ -1618,7 +2697,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int sourceCycle,
                 double durationSeconds,
                 SortedDictionary<string, double> metrics,
-                SortedDictionary<string, bool> evidence)
+                SortedDictionary<string, bool> evidence,
+                CharacterFootPathStageAnalysis pathStageAnalysis = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -1631,6 +2711,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 this.durationSeconds = durationSeconds;
                 this.metrics = metrics;
                 this.evidence = evidence;
+                this.pathStageAnalysis = pathStageAnalysis;
             }
 
             public string kind;
@@ -1644,6 +2725,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public double durationSeconds;
             public SortedDictionary<string, double> metrics;
             public SortedDictionary<string, bool> evidence;
+            public CharacterFootPathStageAnalysis pathStageAnalysis;
 
             internal static int Compare(EventFact left, EventFact right)
             {

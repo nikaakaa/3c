@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     [McpForUnityTool(
         "character.foot_landing_stair_ad",
-        Description = "Start, inspect, or stop the formal Gameplay Lab stair foot landing sampler. Each run publishes samples.csv, facts.json, and one JSON per diagnosis under diagnoses/ without a global pass/fail result.",
+        Description = "Start, inspect, or stop the formal Gameplay Lab stair foot landing sampler. Each run publishes samples.csv, ground-path-geometry.csv, facts.json, and one JSON per diagnosis under diagnoses/ without a global pass/fail result.",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: start, start_straight, status, stop, or analyze_latest. Defaults to status.", Required = false)]
+            [ToolParameter("Action: start, start_straight, status, or stop. Defaults to status.", Required = false)]
             public string action { get; set; }
         }
 
@@ -46,9 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         GameplayLabFootIkKeyboardRouteDriver.ClearPending();
                         GameplayLabFootIkKeyboardRouteDriver.Stop();
                         return Success("Foot landing stair AD automation stopped.");
-                    case "analyze_latest":
-                        CharacterFootLandingPredictionSampler.AnalyzeLastSavedSamples();
-                        return Success("Latest sealed Foot Landing samples were analyzed.");
                     default:
                         return new ErrorResponse("invalid_action", new { action });
                 }
@@ -82,6 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ? new { x = playerPosition.x, y = playerPosition.y, z = playerPosition.z }
                         : null,
                     sampling = CharacterFootLandingPredictionSampler.IsCapturing,
+                    finalizing = CharacterFootLandingPredictionSampler.IsFinalizing,
                     runtime_target_count = AnimationPresentationRuntimeTargetRegistry.Targets.Count,
                     captured_frame_count = CharacterFootLandingPredictionSampler.CapturedFrameCount,
                     pending_frame_count = CharacterFootLandingPredictionSampler.PendingFrameCount,
@@ -89,12 +87,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     last_saved_frame_count = CharacterFootLandingPredictionSampler.LastSavedFrameCount,
                     sample_directory = CharacterFootLandingPredictionSampler.LastSavedDirectory,
                     samples_path = CharacterFootLandingPredictionSampler.LastSavedPath,
+                    geometry_path = CharacterFootLandingPredictionSampler.LastSavedGeometryPath,
                     facts_path = CharacterFootLandingPredictionSampler.LastSavedFactsPath,
                     diagnoses_directory = CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory,
                     fact_event_count = CharacterFootLandingPredictionSampler.LastFactEventCount,
                     diagnosis_target_count = CharacterFootLandingPredictionSampler.LastDiagnosisTargetCount,
                     diagnosis_match_count = CharacterFootLandingPredictionSampler.LastDiagnosisMatchCount,
                     diagnostic_summary = CharacterFootLandingPredictionSampler.LastDiagnosticSummary,
+                    finalization_failure = CharacterFootLandingPredictionSampler.LastFinalizationFailure,
                     automation_status = GameplayLabFootIkKeyboardRouteDriver.LastDiagnosticSummary
                 }
             };

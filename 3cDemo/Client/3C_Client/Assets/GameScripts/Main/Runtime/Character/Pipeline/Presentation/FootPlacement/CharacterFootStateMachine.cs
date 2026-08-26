@@ -12,6 +12,228 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Accepted = 2
     }
 
+    [Flags]
+    internal enum CharacterFootPathRevisionReason : byte
+    {
+        None = 0,
+        PathAvailabilityChanged = 1,
+        LandingEventChanged = 2,
+        LandingPointChanged = 4,
+        SwingTargetChanged = 8
+    }
+
+    internal readonly struct CharacterFootPathContinuityFact
+    {
+        internal CharacterFootPathContinuityFact(
+            bool evaluated,
+            CharacterFootPathRevisionReason revisionReason,
+            bool residualRebuilt,
+            bool pathAvailableBefore,
+            bool pathAvailableAfter,
+            ulong previousLandingEventIdentity,
+            ulong currentLandingEventIdentity,
+            Vector3 previousTargetCorrection,
+            Vector3 currentTargetCorrection,
+            float landingPointDelta,
+            float targetDelta,
+            Vector3 residualBeforeRevision,
+            Vector3 residualBeforeDecay,
+            Vector3 residualAfterDecay,
+            float landingUpdateDistance,
+            float timeToLandingSeconds,
+            float baseHalfLifeSeconds,
+            bool deadlineHalfLifeAvailable,
+            float deadlineHalfLifeSeconds,
+            float appliedHalfLifeSeconds)
+        {
+            Evaluated = evaluated;
+            RevisionReason = revisionReason;
+            ResidualRebuilt = residualRebuilt;
+            PathAvailableBefore = pathAvailableBefore;
+            PathAvailableAfter = pathAvailableAfter;
+            PreviousLandingEventIdentity = previousLandingEventIdentity;
+            CurrentLandingEventIdentity = currentLandingEventIdentity;
+            PreviousTargetCorrection = previousTargetCorrection;
+            CurrentTargetCorrection = currentTargetCorrection;
+            LandingPointDelta = landingPointDelta;
+            TargetDelta = targetDelta;
+            ResidualBeforeRevision = residualBeforeRevision;
+            ResidualBeforeDecay = residualBeforeDecay;
+            ResidualAfterDecay = residualAfterDecay;
+            ResidualOutputCorrection =
+                currentTargetCorrection + residualAfterDecay;
+            LandingUpdateDistance = landingUpdateDistance;
+            TimeToLandingSeconds = timeToLandingSeconds;
+            BaseHalfLifeSeconds = baseHalfLifeSeconds;
+            DeadlineHalfLifeAvailable = deadlineHalfLifeAvailable;
+            DeadlineHalfLifeSeconds = deadlineHalfLifeSeconds;
+            AppliedHalfLifeSeconds = appliedHalfLifeSeconds;
+            StateBefore = default;
+            StateAfter = default;
+            LockResponseBefore = default;
+            LockResponseAfter = default;
+            OutputStagesAvailable = false;
+            ReleasingCompletedToSwing = false;
+            EnvelopeAvailable = false;
+            CorrectionBeforeSafetyFloor = default;
+            GroundEnvelopeSafetyCorrection = default;
+            SafetyFloorOutputCorrection = default;
+            FinalEffectiveCorrection = default;
+            SafetyFloorClamped = false;
+            SafetyFloorClampMeters = 0f;
+            EnvelopeClearanceBeforeMeters = 0f;
+            EnvelopeClearanceAfterMeters = 0f;
+        }
+
+        CharacterFootPathContinuityFact(
+            in CharacterFootPathContinuityFact source,
+            CharacterFootConstraintState stateBefore,
+            CharacterFootConstraintState stateAfter,
+            CharacterFootLockResponse lockResponseBefore,
+            CharacterFootLockResponse lockResponseAfter,
+            bool envelopeAvailable,
+            Vector3 correctionBeforeSafetyFloor,
+            Vector3 groundEnvelopeSafetyCorrection,
+            Vector3 safetyFloorOutputCorrection,
+            Vector3 finalEffectiveCorrection,
+            bool safetyFloorClamped,
+            float safetyFloorClampMeters,
+            float envelopeClearanceBeforeMeters,
+            float envelopeClearanceAfterMeters)
+        {
+            Evaluated = source.Evaluated;
+            RevisionReason = source.RevisionReason;
+            ResidualRebuilt = source.ResidualRebuilt;
+            PathAvailableBefore = source.PathAvailableBefore;
+            PathAvailableAfter = source.PathAvailableAfter;
+            PreviousLandingEventIdentity = source.PreviousLandingEventIdentity;
+            CurrentLandingEventIdentity = source.CurrentLandingEventIdentity;
+            PreviousTargetCorrection = source.PreviousTargetCorrection;
+            CurrentTargetCorrection = source.CurrentTargetCorrection;
+            LandingPointDelta = source.LandingPointDelta;
+            TargetDelta = source.TargetDelta;
+            ResidualBeforeRevision = source.ResidualBeforeRevision;
+            ResidualBeforeDecay = source.ResidualBeforeDecay;
+            ResidualAfterDecay = source.ResidualAfterDecay;
+            ResidualOutputCorrection = source.ResidualOutputCorrection;
+            LandingUpdateDistance = source.LandingUpdateDistance;
+            TimeToLandingSeconds = source.TimeToLandingSeconds;
+            BaseHalfLifeSeconds = source.BaseHalfLifeSeconds;
+            DeadlineHalfLifeAvailable = source.DeadlineHalfLifeAvailable;
+            DeadlineHalfLifeSeconds = source.DeadlineHalfLifeSeconds;
+            AppliedHalfLifeSeconds = source.AppliedHalfLifeSeconds;
+            StateBefore = stateBefore;
+            StateAfter = stateAfter;
+            LockResponseBefore = lockResponseBefore;
+            LockResponseAfter = lockResponseAfter;
+            OutputStagesAvailable = true;
+            ReleasingCompletedToSwing =
+                stateBefore == CharacterFootConstraintState.Releasing &&
+                stateAfter == CharacterFootConstraintState.Swing;
+            EnvelopeAvailable = envelopeAvailable;
+            CorrectionBeforeSafetyFloor = correctionBeforeSafetyFloor;
+            GroundEnvelopeSafetyCorrection = groundEnvelopeSafetyCorrection;
+            SafetyFloorOutputCorrection = safetyFloorOutputCorrection;
+            FinalEffectiveCorrection = finalEffectiveCorrection;
+            SafetyFloorClamped = safetyFloorClamped;
+            SafetyFloorClampMeters = safetyFloorClampMeters;
+            EnvelopeClearanceBeforeMeters = envelopeClearanceBeforeMeters;
+            EnvelopeClearanceAfterMeters = envelopeClearanceAfterMeters;
+        }
+
+        internal bool Evaluated { get; }
+        internal CharacterFootPathRevisionReason RevisionReason { get; }
+        internal bool ResidualRebuilt { get; }
+        internal bool PathAvailableBefore { get; }
+        internal bool PathAvailableAfter { get; }
+        internal ulong PreviousLandingEventIdentity { get; }
+        internal ulong CurrentLandingEventIdentity { get; }
+        internal Vector3 PreviousTargetCorrection { get; }
+        internal Vector3 CurrentTargetCorrection { get; }
+        internal float LandingPointDelta { get; }
+        internal float TargetDelta { get; }
+        internal Vector3 ResidualBeforeRevision { get; }
+        internal Vector3 ResidualBeforeDecay { get; }
+        internal Vector3 ResidualAfterDecay { get; }
+        internal Vector3 ResidualOutputCorrection { get; }
+        internal float LandingUpdateDistance { get; }
+        internal float TimeToLandingSeconds { get; }
+        internal float BaseHalfLifeSeconds { get; }
+        internal bool DeadlineHalfLifeAvailable { get; }
+        internal float DeadlineHalfLifeSeconds { get; }
+        internal float AppliedHalfLifeSeconds { get; }
+        internal CharacterFootConstraintState StateBefore { get; }
+        internal CharacterFootConstraintState StateAfter { get; }
+        internal CharacterFootLockResponse LockResponseBefore { get; }
+        internal CharacterFootLockResponse LockResponseAfter { get; }
+        internal bool OutputStagesAvailable { get; }
+        internal bool ReleasingCompletedToSwing { get; }
+        internal bool EnvelopeAvailable { get; }
+        internal Vector3 CorrectionBeforeSafetyFloor { get; }
+        internal Vector3 GroundEnvelopeSafetyCorrection { get; }
+        internal Vector3 SafetyFloorOutputCorrection { get; }
+        internal Vector3 FinalEffectiveCorrection { get; }
+        internal bool SafetyFloorClamped { get; }
+        internal float SafetyFloorClampMeters { get; }
+        internal float EnvelopeClearanceBeforeMeters { get; }
+        internal float EnvelopeClearanceAfterMeters { get; }
+
+        internal CharacterFootPathContinuityFact Complete(
+            CharacterFootConstraintState stateBefore,
+            CharacterFootConstraintState stateAfter,
+            CharacterFootLockResponse lockResponseBefore,
+            CharacterFootLockResponse lockResponseAfter,
+            bool envelopeAvailable,
+            Vector3 correctionBeforeSafetyFloor,
+            Vector3 groundEnvelopeSafetyCorrection,
+            Vector3 safetyFloorOutputCorrection,
+            Vector3 finalEffectiveCorrection,
+            bool safetyFloorClamped,
+            float safetyFloorClampMeters,
+            float envelopeClearanceBeforeMeters,
+            float envelopeClearanceAfterMeters) =>
+            new CharacterFootPathContinuityFact(
+                in this,
+                stateBefore,
+                stateAfter,
+                lockResponseBefore,
+                lockResponseAfter,
+                envelopeAvailable,
+                correctionBeforeSafetyFloor,
+                groundEnvelopeSafetyCorrection,
+                safetyFloorOutputCorrection,
+                finalEffectiveCorrection,
+                safetyFloorClamped,
+                safetyFloorClampMeters,
+                envelopeClearanceBeforeMeters,
+                envelopeClearanceAfterMeters);
+
+        internal static CharacterFootPathContinuityFact CreateUnevaluated(
+            float timeToLandingSeconds,
+            CharacterFootMotionSettings settings) =>
+            new CharacterFootPathContinuityFact(
+                false,
+                CharacterFootPathRevisionReason.None,
+                false,
+                false,
+                false,
+                0,
+                0,
+                default,
+                default,
+                0f,
+                0f,
+                default,
+                default,
+                default,
+                settings.LandingUpdateDistance,
+                timeToLandingSeconds,
+                settings.EffectiveCorrectionHalfLifeSeconds,
+                false,
+                0f,
+                settings.EffectiveCorrectionHalfLifeSeconds);
+    }
+
     internal readonly struct CharacterFootLandingFact
     {
         CharacterFootLandingFact(
@@ -139,12 +361,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantCycleConsumed;
         internal bool HasContact;
         internal ulong SwingLandingEventIdentity;
-        internal ulong SwingGroundPathInputIdentity;
         internal ulong ContactEventIdentity;
         internal int ContactSurfaceIdentity;
         internal CharacterFootConstraintState ConstraintState;
         internal CharacterFootLockResponse LockResponse;
         internal Vector3 SwingLandingPoint;
+        internal Vector3 SwingTargetCorrection;
         internal Vector3 SwingResidual;
         internal Vector3 ContactAnchor;
         internal Vector3 ContactNormal;
@@ -231,8 +453,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CharacterFootSwingMotionResult swingMotion,
-            bool hasLanding,
-            in CharacterFootGroundPathLanding landing,
+            bool hasContactLanding,
+            in CharacterFootGroundPathLanding contactLanding,
             bool hardOwnershipLoss,
             float footPlacementWeight,
             Vector3 componentUp,
@@ -245,8 +467,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
             SwingMotion = swingMotion;
-            HasLanding = hasLanding;
-            Landing = landing;
+            HasContactLanding = hasContactLanding;
+            ContactLanding = contactLanding;
             HardOwnershipLoss = hardOwnershipLoss;
             FootPlacementWeight = footPlacementWeight;
             ComponentUp = componentUp;
@@ -260,8 +482,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
-        internal bool HasLanding { get; }
-        internal CharacterFootGroundPathLanding Landing { get; }
+        internal bool HasContactLanding { get; }
+        internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool HardOwnershipLoss { get; }
         internal float FootPlacementWeight { get; }
         internal Vector3 ComponentUp { get; }
@@ -344,6 +566,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Resolve(
                 ref context,
                 evaluation.Side,
+                selectedStep.IsValid ? selectedStep.TimeToLandingSeconds : 0f,
                 in frame,
                 out result);
         }
@@ -447,6 +670,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static CharacterResolvedFootResult Resolve(
             ref CharacterFootStateContext context,
             CharacterFootSide side,
+            float timeToLandingSeconds,
             in CharacterFootStateFrame frame,
             out CharacterFootSwingMotionResult result)
         {
@@ -454,6 +678,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSwingMotionResult swing = frame.SwingMotion;
             float plantConfidence = swing.PlantConfidence;
             Vector3 swingCorrection = ResolveSwingCorrection(frame.AnimatedFoot, in swing);
+            CharacterFootConstraintState stateBefore = context.ConstraintState;
+            CharacterFootLockResponse lockResponseBefore = context.LockResponse;
             if (frame.HardOwnershipLoss)
             {
                 context.ClearConstraint(
@@ -466,6 +692,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in frame,
                     in suppressed,
                     default,
+                    default,
                     out result);
             }
             if (!context.HasOutput)
@@ -475,11 +702,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             bool preserveOutput = false;
             Vector3 desiredCorrection = swingCorrection;
+            CharacterFootPathContinuityFact continuityFact =
+                CharacterFootPathContinuityFact.CreateUnevaluated(
+                    timeToLandingSeconds,
+                    frame.Settings);
             switch (context.ConstraintState)
             {
                 case CharacterFootConstraintState.Swing:
                 case CharacterFootConstraintState.UnlockedSupport:
-                    ResolveSwingOutput(ref context, in frame, in swing, swingCorrection);
+                    ResolveSwingOutput(
+                        ref context,
+                        in frame,
+                        in swing,
+                        swingCorrection,
+                        timeToLandingSeconds,
+                        out continuityFact);
                     preserveOutput = true;
                     ResolveUnconstrained(ref context, in frame, ref desiredCorrection);
                     break;
@@ -519,14 +756,55 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             frame.DeltaSeconds,
                             frame.Settings.EffectiveCorrectionHalfLifeSeconds);
             }
-            ResolveGroundFloor(ref context, in frame, in swing);
             ResolveOutputState(ref context, in frame, swingCorrection);
+            Vector3 correctionBeforeSafetyFloor = context.EffectiveCorrection;
+            bool floorResolved = ResolveGroundFloor(
+                ref context,
+                in frame,
+                in swing,
+                out bool envelopeAvailable,
+                out Vector3 groundFloorCorrection);
+            Vector3 up = frame.ComponentUp.normalized;
+            float safetyFloorClampMeters = envelopeAvailable
+                ? Mathf.Max(
+                    0f,
+                    Vector3.Dot(
+                        context.EffectiveCorrection - correctionBeforeSafetyFloor,
+                        up))
+                : 0f;
+            float envelopeClearanceBeforeMeters = envelopeAvailable
+                ? Vector3.Dot(
+                    ResolveOriginalSole(frame.AnimatedFoot) +
+                    correctionBeforeSafetyFloor - swing.EnvelopeSample,
+                    up)
+                : 0f;
+            float envelopeClearanceAfterMeters = envelopeAvailable
+                ? Vector3.Dot(
+                    ResolveOriginalSole(frame.AnimatedFoot) +
+                    context.EffectiveCorrection - swing.EnvelopeSample,
+                    up)
+                : 0f;
+            continuityFact = continuityFact.Complete(
+                stateBefore,
+                context.ConstraintState,
+                lockResponseBefore,
+                context.LockResponse,
+                floorResolved && envelopeAvailable,
+                correctionBeforeSafetyFloor,
+                envelopeAvailable ? groundFloorCorrection : default,
+                context.EffectiveCorrection,
+                context.EffectiveCorrection,
+                safetyFloorClampMeters > 0f,
+                safetyFloorClampMeters,
+                envelopeClearanceBeforeMeters,
+                envelopeClearanceAfterMeters);
             return BuildOutput(
                 ref context,
                 side,
                 in frame,
                 in swing,
                 desiredCorrection,
+                in continuityFact,
                 out result);
         }
 
@@ -534,31 +812,90 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootStateContext context,
             in CharacterFootStateFrame frame,
             in CharacterFootSwingMotionResult swing,
-            Vector3 swingCorrection)
+            Vector3 swingCorrection,
+            float timeToLandingSeconds,
+            out CharacterFootPathContinuityFact continuityFact)
         {
-            bool hasPath = swing.Accepted && frame.HasLanding &&
-                           frame.Landing.LandingEventIdentity == swing.LandingEventIdentity;
-            bool revised = hasPath != context.HasSwingPath ||
-                           hasPath &&
-                           (context.SwingLandingEventIdentity != swing.LandingEventIdentity ||
-                            context.SwingGroundPathInputIdentity != swing.GroundPathInputIdentity ||
-                            Vector3.Distance(context.SwingLandingPoint, frame.Landing.Point) >
-                            frame.Settings.LandingUpdateDistance);
+            bool pathAvailableBefore = context.HasSwingPath;
+            ulong previousLandingEventIdentity = context.SwingLandingEventIdentity;
+            Vector3 previousLandingPoint = context.SwingLandingPoint;
+            Vector3 previousTargetCorrection = context.SwingTargetCorrection;
+            Vector3 residualBeforeRevision = context.SwingResidual;
+            CharacterFootSwingPathReference swingPath =
+                swing.SwingPathReference;
+            bool hasPath = swing.Accepted &&
+                           swingPath.IsAvailable &&
+                           swingPath.LandingEventIdentity ==
+                           swing.LandingEventIdentity;
+            bool comparablePath = pathAvailableBefore && hasPath;
+            float landingPointDelta = comparablePath
+                ? Vector3.Distance(
+                    previousLandingPoint,
+                    swingPath.LandingPoint)
+                : 0f;
+            float targetDelta = comparablePath
+                ? Vector3.Distance(previousTargetCorrection, swingCorrection)
+                : 0f;
+            CharacterFootPathRevisionReason revisionReason =
+                CharacterFootPathRevisionReason.None;
+            if (hasPath != pathAvailableBefore)
+            {
+                revisionReason |=
+                    CharacterFootPathRevisionReason.PathAvailabilityChanged;
+            }
+            if (comparablePath &&
+                previousLandingEventIdentity != swing.LandingEventIdentity)
+                revisionReason |= CharacterFootPathRevisionReason.LandingEventChanged;
+            if (comparablePath &&
+                landingPointDelta > frame.Settings.LandingUpdateDistance)
+                revisionReason |= CharacterFootPathRevisionReason.LandingPointChanged;
+            if (comparablePath &&
+                targetDelta > frame.Settings.LandingUpdateDistance)
+                revisionReason |= CharacterFootPathRevisionReason.SwingTargetChanged;
+            bool revised = revisionReason != CharacterFootPathRevisionReason.None;
             if (revised)
                 context.SwingResidual = context.EffectiveCorrection - swingCorrection;
+            Vector3 residualBeforeDecay = context.SwingResidual;
             context.HasSwingPath = hasPath;
             context.SwingLandingEventIdentity = hasPath ? swing.LandingEventIdentity : 0;
-            context.SwingGroundPathInputIdentity = hasPath
-                ? swing.GroundPathInputIdentity
-                : 0;
-            context.SwingLandingPoint = hasPath ? frame.Landing.Point : default;
+            context.SwingLandingPoint = hasPath
+                ? swingPath.LandingPoint
+                : default;
+            context.SwingTargetCorrection = hasPath ? swingCorrection : default;
+            float halfLifeSeconds = ResolveSwingResidualHalfLife(
+                context.SwingResidual,
+                timeToLandingSeconds,
+                frame.Settings,
+                out bool deadlineHalfLifeAvailable,
+                out float deadlineHalfLifeSeconds);
             context.SwingResidual = Advance(
                 context.SwingResidual,
                 default,
                 frame.DeltaSeconds,
-                frame.Settings.EffectiveCorrectionHalfLifeSeconds);
+                halfLifeSeconds);
             context.EffectiveCorrection = swingCorrection + context.SwingResidual;
             context.SwingResidual = context.EffectiveCorrection - swingCorrection;
+            continuityFact = new CharacterFootPathContinuityFact(
+                true,
+                revisionReason,
+                revised,
+                pathAvailableBefore,
+                hasPath,
+                previousLandingEventIdentity,
+                hasPath ? swing.LandingEventIdentity : 0,
+                previousTargetCorrection,
+                hasPath ? swingCorrection : default,
+                landingPointDelta,
+                targetDelta,
+                residualBeforeRevision,
+                residualBeforeDecay,
+                context.SwingResidual,
+                frame.Settings.LandingUpdateDistance,
+                timeToLandingSeconds,
+                frame.Settings.EffectiveCorrectionHalfLifeSeconds,
+                deadlineHalfLifeAvailable,
+                deadlineHalfLifeSeconds,
+                halfLifeSeconds);
         }
 
         static void ResolveUnconstrained(
@@ -586,7 +923,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             Vector3 contactCorrection = ResolveContactCorrection(
                 frame.AnimatedFoot,
-                frame.Landing.Point);
+                frame.ContactLanding.Point);
             float horizontalError = ResolveHorizontalError(contactCorrection, frame.ComponentUp);
             if (horizontalError > frame.Settings.LockDistance)
             {
@@ -594,10 +931,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             }
             context.HasContact = true;
-            context.ContactEventIdentity = frame.Landing.LandingEventIdentity;
-            context.ContactSurfaceIdentity = frame.Landing.SurfaceIdentity;
-            context.ContactAnchor = frame.Landing.Point;
-            context.ContactNormal = frame.Landing.Normal;
+            context.ContactEventIdentity =
+                frame.ContactLanding.LandingEventIdentity;
+            context.ContactSurfaceIdentity = frame.ContactLanding.SurfaceIdentity;
+            context.ContactAnchor = frame.ContactLanding.Point;
+            context.ContactNormal = frame.ContactLanding.Normal;
             context.ConstraintState = CharacterFootConstraintState.Landing;
             context.LockResponse = CharacterFootLockResponse.None;
             context.EffectiveCorrection = RaiseToFloor(
@@ -737,6 +1075,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame,
             in CharacterFootSwingMotionResult swing,
             Vector3 desiredCorrection,
+            in CharacterFootPathContinuityFact continuityFact,
             out CharacterFootSwingMotionResult result)
         {
             bool hasContact = context.HasContact;
@@ -775,6 +1114,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rejectReason,
                 landingEventIdentity,
                 swing.GroundPathInputIdentity,
+                swing.SwingPathReference,
                 originalSole,
                 originalAnkle,
                 swing.Distance,
@@ -798,7 +1138,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 desiredCorrection,
                 hasContact,
                 hasContact ? context.ContactSurfaceIdentity : 0,
-                hasContact ? context.ContactNormal : default);
+                hasContact ? context.ContactNormal : default,
+                continuityFact);
             var contactReference = hasContact
                 ? new CharacterFootContactReference(
                     context.ContactEventIdentity,
@@ -860,16 +1201,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 _ => CharacterFootSupportEligibility.None
             };
 
-        static void ResolveGroundFloor(
+        static bool ResolveGroundFloor(
             ref CharacterFootStateContext context,
             in CharacterFootStateFrame frame,
-            in CharacterFootSwingMotionResult swing)
+            in CharacterFootSwingMotionResult swing,
+            out bool envelopeAvailable,
+            out Vector3 floorCorrection)
         {
-            Vector3 floorCorrection;
+            envelopeAvailable = false;
+            floorCorrection = default;
             switch (context.ConstraintState)
             {
                 case CharacterFootConstraintState.Swing when swing.Accepted:
                 case CharacterFootConstraintState.UnlockedSupport when swing.Accepted:
+                    envelopeAvailable = true;
                     floorCorrection = ResolveSwingGroundFloor(
                         frame.AnimatedFoot,
                         in swing,
@@ -882,12 +1227,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         context.ContactAnchor);
                     break;
                 default:
-                    return;
+                    return false;
             }
             context.EffectiveCorrection = RaiseToFloor(
                 context.EffectiveCorrection,
                 floorCorrection,
                 frame.ComponentUp);
+            return true;
         }
 
         static Vector3 ResolveSwingGroundFloor(
@@ -920,7 +1266,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plantConfidence);
 
         static bool CanAcquire(in CharacterFootStateFrame frame) =>
-            frame.HasLanding && frame.Landing.LandingEventIdentity != 0;
+            frame.HasContactLanding &&
+            frame.ContactLanding.LandingEventIdentity != 0;
 
         static Vector3 ResolveSwingCorrection(
             CharacterFootPlacementAnimatedFootPose foot,
@@ -971,6 +1318,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Vector3.LerpUnclamped(current, target, alpha);
         }
 
+        static float ResolveSwingResidualHalfLife(
+            Vector3 residual,
+            float timeToLandingSeconds,
+            CharacterFootMotionSettings settings,
+            out bool deadlineHalfLifeAvailable,
+            out float deadlineHalfLifeSeconds)
+        {
+            deadlineHalfLifeAvailable = false;
+            deadlineHalfLifeSeconds = 0f;
+            float halfLifeSeconds = settings.EffectiveCorrectionHalfLifeSeconds;
+            float residualDistance = residual.magnitude;
+            if (!float.IsFinite(residualDistance) ||
+                residualDistance <= settings.LandingUpdateDistance ||
+                !float.IsFinite(timeToLandingSeconds) ||
+                timeToLandingSeconds <= 0f)
+            {
+                return halfLifeSeconds;
+            }
+            float halfLifeCount = Mathf.Log(
+                residualDistance / settings.LandingUpdateDistance,
+                2f);
+            if (!float.IsFinite(halfLifeCount) || halfLifeCount <= 0f)
+                return halfLifeSeconds;
+            float candidate = timeToLandingSeconds / halfLifeCount;
+            if (!float.IsFinite(candidate) || candidate <= 0f)
+                return halfLifeSeconds;
+            deadlineHalfLifeAvailable = true;
+            deadlineHalfLifeSeconds = candidate;
+            return Mathf.Min(halfLifeSeconds, candidate);
+        }
+
         static void RequireValid(in CharacterFootStateFrame frame)
         {
             if (frame.FrameSequence == 0 ||
@@ -986,7 +1364,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.DeltaSeconds < 0f ||
                 !float.IsFinite(frame.SwingMotion.PlantConfidence) ||
                 frame.SwingMotion.PlantConfidence < 0f ||
-                frame.SwingMotion.PlantConfidence > 1f)
+                frame.SwingMotion.PlantConfidence > 1f ||
+                frame.SwingMotion.Accepted !=
+                frame.SwingMotion.SwingPathReference.IsAvailable ||
+                (frame.SwingMotion.Accepted &&
+                 frame.SwingMotion.SwingPathReference.LandingEventIdentity !=
+                 frame.SwingMotion.LandingEventIdentity) ||
+                (frame.HasContactLanding &&
+                 frame.ContactLanding.LandingEventIdentity == 0))
                 throw new InvalidOperationException("Foot state frame is invalid.");
         }
 

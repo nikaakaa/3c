@@ -250,7 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 CharacterFootLandingPredictionSampler.StopAndSaveSampling();
             }
-            s_ReplayOwnsSampling = false;
+            ClearReplayOwnership();
             FixedCharacterInputTraceModule.Stop();
             EditorApplication.isPaused = false;
             s_LastStatus = "Canonical Fixed input trace operation stopped.";
@@ -1109,7 +1109,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     CharacterFootLandingPredictionSampler.StopAndSaveSampling();
                 }
-                s_ReplayOwnsSampling = false;
+                ClearReplayOwnership();
                 FixedCharacterInputTraceModule.Stop();
             }
         }
@@ -1124,10 +1124,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 CharacterFootLandingPredictionSampler.StopAndSaveSampling();
             }
-            s_ReplayOwnsSampling = false;
-            s_ReplayFinalizing = false;
             StopPresentationScheduleRun();
             AbandonReplayTickDrive();
+            ClearReplayOwnership();
             FixedCharacterInputTraceModule.Stop();
         }
 
@@ -1150,10 +1149,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 CharacterFootLandingPredictionSampler.StopAndSaveSampling();
             }
-            s_ReplayOwnsSampling = false;
+            ClearReplayOwnership();
             FixedCharacterInputTraceModule.Stop();
             EditorApplication.isPaused = false;
             Debug.LogException(exception);
+        }
+
+        static void ClearReplayOwnership()
+        {
+            s_ReplayOwnsSampling = false;
+            s_ReplayWaitingForSampling = false;
+            s_ReplayFinalizing = false;
+            s_ActiveReplayOperation = StandardReplayOperation;
+            s_PendingReplayDocument = null;
+            s_ActiveReplayDocument = null;
+            s_LastReplayEvidence = null;
+            s_LastPresentationScheduleFrames = null;
+            s_ActivePresentationSchedule = null;
         }
 
         static void RequireAvailable()

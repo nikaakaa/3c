@@ -1135,6 +1135,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 0f,
                 0f,
+                0f,
                 originalSole,
                 originalAnkle,
                 0f,

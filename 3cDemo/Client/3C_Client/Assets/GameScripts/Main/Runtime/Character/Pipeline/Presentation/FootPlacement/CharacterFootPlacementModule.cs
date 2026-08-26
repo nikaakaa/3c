@@ -355,6 +355,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             left = left.WithGroundPath(in leftGroundPath);
             right = right.WithGroundPath(in rightGroundPath);
 
+            AnimationFootStepObservationFrame formalFootFrame =
+                frame.Pose.FootStepObservation;
+            bool formalFrameAvailable = formalFootFrame.IsValid &&
+                formalFootFrame.CompletionIdentity == frame.Pose.CompletionIdentity;
+            bool leftFormalFootHeightAvailable = formalFrameAvailable &&
+                leftSelectedStep.IsValid &&
+                formalFootFrame.ContributionContinuityIdentity ==
+                leftSelectedStep.ContributionContinuityIdentity &&
+                formalFootFrame.Cycle == leftSelectedStep.SourceSampleCycle;
+            bool rightFormalFootHeightAvailable = formalFrameAvailable &&
+                rightSelectedStep.IsValid &&
+                formalFootFrame.ContributionContinuityIdentity ==
+                rightSelectedStep.ContributionContinuityIdentity &&
+                formalFootFrame.Cycle == rightSelectedStep.SourceSampleCycle;
+            float leftFormalFootHeight = leftFormalFootHeightAvailable
+                ? formalFootFrame.Left.FootHeight
+                : 0f;
+            float rightFormalFootHeight = rightFormalFootHeightAvailable
+                ? formalFootFrame.Right.FootHeight
+                : 0f;
             float footPlacementWeight = frame.FootPlacementWeight;
             CharacterFootSwingMotionResult leftSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
@@ -363,8 +383,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     footPlacementWeight,
                     componentUp,
                     in leftGroundPath,
-                    leftLanding.NextSwingPredictionError,
-                    leftSelectedStep.ConstraintWeight)
+                    leftFormalFootHeightAvailable,
+                    leftFormalFootHeight,
+                    leftLanding.NextSwingPredictionError)
                 .WithPlantConfidence(
                     frame.Pose.LeftFootSteps.Kinematics.PlantConfidence);
             CharacterFootSwingMotionResult rightSwingMotion =
@@ -374,8 +395,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     footPlacementWeight,
                     componentUp,
                     in rightGroundPath,
-                    rightLanding.NextSwingPredictionError,
-                    rightSelectedStep.ConstraintWeight)
+                    rightFormalFootHeightAvailable,
+                    rightFormalFootHeight,
+                    rightLanding.NextSwingPredictionError)
                 .WithPlantConfidence(
                     frame.Pose.RightFootSteps.Kinematics.PlantConfidence);
             CharacterFootLandingPredictionSettings landingSettings =

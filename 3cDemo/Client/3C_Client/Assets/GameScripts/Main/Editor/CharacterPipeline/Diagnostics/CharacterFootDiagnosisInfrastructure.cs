@@ -180,7 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 value => value.occurrence != null);
             return new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/3",
+                schema = "character-foot-diagnosis-file/2",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {

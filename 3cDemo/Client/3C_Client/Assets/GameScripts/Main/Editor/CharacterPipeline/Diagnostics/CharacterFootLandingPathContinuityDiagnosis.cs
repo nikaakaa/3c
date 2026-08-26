@@ -101,22 +101,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "releasing-to-swing-envelope-violation",
                     "Releasing完成进入Swing的同帧脚底是否仍低于真实Envelope",
                     new[] { "PathContinuity" },
-                    new[] { "safetyFloorClearanceAfterMeters<-0.0001" },
+                    new[] { "envelopeClearanceAfterMeters<-0.0001" },
                     releasingToSwing,
                     value => CharacterFootDiagnosisContext.Metric(
                                  value,
-                                 "safetyFloorClearanceAfterMeters") <
+                                 "envelopeClearanceAfterMeters") <
                              -ClearanceToleranceMeters
                         ? new List<string>
                         {
-                            "safetyFloorClearanceAfterMeters<-0.0001"
+                            "envelopeClearanceAfterMeters<-0.0001"
                         }
                         : new List<string>(),
                     value => -CharacterFootDiagnosisContext.Metric(
                         value,
-                        "safetyFloorClearanceAfterMeters"),
-                    "safetyFloorClearanceBeforeMeters",
-                    "safetyFloorClearanceAfterMeters",
+                        "envelopeClearanceAfterMeters"),
+                    "envelopeClearanceBeforeMeters",
+                    "envelopeClearanceAfterMeters",
                     "safetyFloorClampMeters",
                     "correctionStepMeters"),
                 context.Target(
@@ -178,8 +178,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "safetyFloorClampMeters"),
                     "safetyFloorClampMeters",
                     "landingUpdateDistanceMeters",
-                    "safetyFloorClearanceBeforeMeters",
-                    "safetyFloorClearanceAfterMeters",
+                    "envelopeClearanceBeforeMeters",
+                    "envelopeClearanceAfterMeters",
                     "residualBeforeDecayMeters",
                     "residualAfterDecayMeters",
                     "correctionStepMeters"),

@@ -465,7 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     reader,
                     reader.Producers[i],
                     profile,
-                    footAnalysisCompilation,
+                    footAnalysis,
                     timelines,
                     timelineCallSites,
                     errors);
@@ -511,7 +511,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationPoseSourcePlan[] poseSources = CompilePoseSources(
                 sourceCatalog,
                 profile.RigDefinition,
-                footAnalysisCompilation,
+                footAnalysis,
                 errors);
             AnimationClipPhasePlan[] clipPhasePlans = Array.Empty<AnimationClipPhasePlan>();
             AnimationSourcePhasePlan[] sourcePhasePlans = Array.Empty<AnimationSourcePhasePlan>();
@@ -703,11 +703,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static CharacterPresentationPoseSourcePlan[] CompilePoseSources(
             PoseSourceCompilationCatalog sourceCatalog,
             CharacterAnimationRigDefinition rig,
-            CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
+            AnimationFootAnalysisProjectionBuildData footAnalysis,
             List<string> errors)
         {
-            AnimationFootAnalysisProjectionBuildData footAnalysis =
-                footAnalysisCompilation?.BuildData;
             var result = new List<CharacterPresentationPoseSourcePlan>();
             var sourceIndices = new HashSet<PresentationPoseSourceIndex>();
             for (int i = 0; i < sourceCatalog.Entries.Count; i++)
@@ -727,10 +725,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         {
                             throw new InvalidOperationException("Foot Analysis artifact binding is missing.");
                         }
-                        AnimationFootAnalysisArtifact directArtifact =
-                            footAnalysisCompilation.RequireArtifact(
-                                AnimationFootAnalysisProjectionBuildData
-                                    .PoseSourceBindingKey(bindingIdentity));
                         CharacterAnimationClipContentIdentity clipIdentity =
                             CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(directClip.Clip);
                         CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(directClip.Clip);
@@ -751,8 +745,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             NormalizeRegisteredCurve(secondsCurve, clipIdentity.SourceDurationSeconds),
                             CompileFootStepObservation(
                                 directClip.Clip,
-                                clipIdentity.SourceDurationSeconds,
-                                directArtifact.MotionData),
+                                clipIdentity.SourceDurationSeconds),
                             directFeatures));
                         continue;
                     }
@@ -785,8 +778,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static AnimationFootStepObservationCurvePair CompileFootStepObservation(
             UnityEngine.AnimationClip clip,
-            float sourceDurationSeconds,
-            AnimationFootMotionDataDescriptor motionData) =>
+            float sourceDurationSeconds) =>
             new AnimationFootStepObservationCurvePair(
                 new AnimationFootStepObservationCurveSet(
                     NormalizeRegisteredCurve(
@@ -843,10 +835,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                             clip,
                             CharacterAnimationClipRegisteredCurveChannels.LeftSupport),
-                        sourceDurationSeconds),
-                    CompileLandingEvents(
-                        motionData,
-                        motionData?.Left,
                         sourceDurationSeconds)),
                 new AnimationFootStepObservationCurveSet(
                     NormalizeRegisteredCurve(
@@ -903,60 +891,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                             clip,
                             CharacterAnimationClipRegisteredCurveChannels.RightSupport),
-                        sourceDurationSeconds),
-                    CompileLandingEvents(
-                        motionData,
-                        motionData?.Right,
                         sourceDurationSeconds)));
-
-        static AnimationFootStepLandingEventTable CompileLandingEvents(
-            AnimationFootMotionDataDescriptor motionData,
-            AnimationFootMotionFootPage foot,
-            float sourceDurationSeconds)
-        {
-            if (motionData == null || foot == null ||
-                !float.IsFinite(sourceDurationSeconds) ||
-                sourceDurationSeconds <= 0f ||
-                Mathf.Abs(
-                    motionData.Raw.DurationSeconds -
-                    sourceDurationSeconds) > 0.0001f)
-            {
-                throw new InvalidOperationException(
-                    "Foot Step Landing Event source timing is invalid.");
-            }
-            var result = new List<AnimationFootStepLandingEvent>();
-            for (int i = 0; i < foot.Events.Count; i++)
-            {
-                AnimationFootMotionEvent footEvent = foot.Events[i];
-                if (footEvent.Kind != AnimationFootMotionEventKind.Landing)
-                    continue;
-                if ((uint)footEvent.SampleIndex >=
-                    (uint)motionData.Raw.RootSamples.Count ||
-                    (uint)footEvent.SampleIndex >=
-                    (uint)foot.Samples.Count)
-                {
-                    throw new InvalidOperationException(
-                        "Foot Step Landing Event sample is outside its artifact.");
-                }
-                float normalizedTime =
-                    motionData.Raw.RootSamples[footEvent.SampleIndex].TimeSeconds /
-                    sourceDurationSeconds;
-                AnimationFootMotionStepEvidence step =
-                    foot.Samples[footEvent.SampleIndex].Step;
-                if (!step.Available || step.LandingOrdinal != footEvent.Ordinal)
-                {
-                    throw new InvalidOperationException(
-                        "Foot Step Landing Event has no matching Step evidence.");
-                }
-                result.Add(new AnimationFootStepLandingEvent(
-                    normalizedTime,
-                    footEvent.Ordinal,
-                    footEvent.CycleOffset,
-                    step.Distance,
-                    footEvent.RootLocalSolePosition));
-            }
-            return new AnimationFootStepLandingEventTable(result.ToArray());
-        }
 
         static void ValidateClipPlayers(
             CharacterPresentationPosePlan posePlan,
@@ -1101,13 +1036,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationSemanticReader reader,
             ProgramProducer producer,
             CharacterAnimationPresentationProfile profile,
-            CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
+            AnimationFootAnalysisProjectionBuildData footAnalysis,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<AnimationTimelineCallSite>> timelineCallSites,
             List<string> errors)
         {
-            AnimationFootAnalysisProjectionBuildData footAnalysis =
-                footAnalysisCompilation?.BuildData;
             CharacterPresentationProducerKind? kind = reader.ResolveKind(producer, errors);
             ProgramSourceMapEntry source = reader.ResolveSource(producer, errors);
             if (!kind.HasValue || source == null)
@@ -1231,12 +1164,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 AnimationCurve footWeight = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                     sourceClip,
                     CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight);
-                AnimationFootAnalysisArtifact artifact =
-                    footAnalysisCompilation.RequireArtifact(
-                        AnimationFootAnalysisProjectionBuildData.BindingKey(
-                            producerId.TimelineAuthoringId,
-                            producerId.TrackAuthoringId,
-                            clip.AuthoringId));
                 clips.Add(new CharacterPresentationAnimationClipBinding(
                     clip.AuthoringId,
                     $"{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}",
@@ -1259,8 +1186,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     features,
                     CompileFootStepObservation(
                         sourceClip,
-                        clipIdentity.SourceDurationSeconds,
-                        artifact.MotionData)));
+                        clipIdentity.SourceDurationSeconds)));
             }
             if (clips.Count == 0)
             {

@@ -38,10 +38,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootDiagnosisContext.Evidence(
                     value,
                     "deadlineReached"));
-            List<JObject> unavailableDeadlines = events.FindAll(value =>
-                CharacterFootDiagnosisContext.Evidence(
-                    value,
-                    "deadlineUnavailable"));
             List<JObject> safetyFloorClamps = events.FindAll(value =>
                 CharacterFootDiagnosisContext.Evidence(
                     value,
@@ -76,7 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "landingPointDeltaMeters",
                     "swingTargetDeltaMeters",
                     "residualBeforeRevisionMeters",
-                    "residualAfterScheduleMeters"),
+                    "residualAfterDecayMeters"),
                 context.Target(
                     "path-revision-contract-mismatch",
                     "Path可用性、Event、Landing Point和Swing Target是否与Residual重建原因一致",
@@ -99,8 +95,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "swingTargetDeltaMeters",
                     "landingUpdateDistanceMeters",
                     "residualBeforeRevisionMeters",
-                    "residualBeforeScheduleMeters",
-                    "residualAfterScheduleMeters"),
+                    "residualBeforeDecayMeters",
+                    "residualAfterDecayMeters"),
                 context.Target(
                     "releasing-to-swing-envelope-violation",
                     "Releasing完成进入Swing的同帧脚底是否仍低于真实Envelope",
@@ -129,58 +125,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new[] { "PathContinuity" },
                     new[]
                     {
-                        "residualAfterScheduleMeters>landingUpdateDistanceMeters"
+                        "residualAfterDecayMeters>landingUpdateDistanceMeters"
                     },
                     deadlines,
                     value => CharacterFootDiagnosisContext.Metric(
                                  value,
-                                 "residualAfterScheduleMeters") >
+                                 "residualAfterDecayMeters") >
                              CharacterFootDiagnosisContext.Metric(
                                  value,
                                  "landingUpdateDistanceMeters") +
                              ClearanceToleranceMeters
                         ? new List<string>
                         {
-                            "residualAfterScheduleMeters>landingUpdateDistanceMeters"
+                            "residualAfterDecayMeters>landingUpdateDistanceMeters"
                         }
                         : new List<string>(),
                     value => CharacterFootDiagnosisContext.Metric(
                                  value,
-                                 "residualAfterScheduleMeters") -
+                                 "residualAfterDecayMeters") -
                              CharacterFootDiagnosisContext.Metric(
                                  value,
                                  "landingUpdateDistanceMeters"),
                     "timeToLandingSeconds",
                     "landingUpdateDistanceMeters",
-                    "residualBeforeScheduleMeters",
-                    "residualAfterScheduleMeters",
+                    "residualBeforeDecayMeters",
+                    "residualAfterDecayMeters",
                     "baseHalfLifeSeconds",
-                    "deadlineRequiredStepMeters",
-                    "baseStepMeters",
-                    "appliedStepMeters",
-                    "residualRemainingDistanceMeters"),
-                context.Target(
-                    "residual-deadline-unavailable",
-                    "正式Step Time要求的本帧偿还量是否超过基础响应允许量",
-                    new[] { "PathContinuity" },
-                    new[] { "deadlineUnavailable=true" },
-                    unavailableDeadlines,
-                    value => CharacterFootDiagnosisContext.Evidence(
-                                 value,
-                                 "deadlineUnavailable")
-                        ? new List<string> { "deadlineUnavailable=true" }
-                        : new List<string>(),
-                    value => CharacterFootDiagnosisContext.Metric(
-                                 value,
-                                 "deadlineRequiredStepMeters") -
-                             CharacterFootDiagnosisContext.Metric(
-                                 value,
-                                 "baseStepMeters"),
-                    "timeToLandingSeconds",
-                    "deadlineRequiredStepMeters",
-                    "baseStepMeters",
-                    "appliedStepMeters",
-                    "residualRemainingDistanceMeters"),
+                    "deadlineHalfLifeSeconds",
+                    "appliedHalfLifeSeconds"),
                 context.Target(
                     "large-safety-floor-clamp",
                     "真实Envelope安全Floor是否在单帧产生超过LandingUpdateDistance的硬抬升",
@@ -208,8 +180,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "landingUpdateDistanceMeters",
                     "envelopeClearanceBeforeMeters",
                     "envelopeClearanceAfterMeters",
-                    "residualBeforeScheduleMeters",
-                    "residualAfterScheduleMeters",
+                    "residualBeforeDecayMeters",
+                    "residualAfterDecayMeters",
                     "correctionStepMeters"),
                 context.Target(
                     "residual-growth-without-revision",
@@ -227,13 +199,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         : new List<string>(),
                     value => CharacterFootDiagnosisContext.Metric(
                                  value,
-                                 "residualAfterScheduleMeters") -
+                                 "residualAfterDecayMeters") -
                              CharacterFootDiagnosisContext.Metric(
                                  value,
-                                 "residualBeforeScheduleMeters"),
-                    "residualBeforeScheduleMeters",
-                    "residualAfterScheduleMeters",
-                    "appliedStepMeters"));
+                                 "residualBeforeDecayMeters"),
+                    "residualBeforeDecayMeters",
+                    "residualAfterDecayMeters",
+                    "appliedHalfLifeSeconds"));
         }
 
         static List<string> RevisionContractRules(JObject value)

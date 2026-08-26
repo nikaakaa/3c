@@ -21,9 +21,3 @@ Foot Placement MUST只消费这一份Frame。缺失完整Curve、Event table、C
 - **WHEN** 选中Source缺少任一必需Foot Motion Curve、稳定Event table或匹配Registered Curve Hash
 - **THEN** Projection Build或Runtime准备 MUST拒绝该Source
 - **AND** MUST不回退旧Foot Analysis Feature、PlantConfidence、默认值或另一Source
-
-#### Scenario: Swing Residual消费Formal Step Time
-
-- **WHEN** Foot Placement为某侧Swing Residual计算Landing截止计划
-- **THEN** Runtime MUST只读取同Completion与Pose Contribution的Foot Motion Frame对应侧Step Time
-- **AND** Step Distance、Foot Height、Contact、Lock与Support在各自消费者迁移前 MUST不影响该截止计划

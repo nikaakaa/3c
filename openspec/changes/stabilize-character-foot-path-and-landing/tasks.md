@@ -25,12 +25,11 @@
 
 ## 4. 单独接入Step Time与Step Distance
 
-- [x] 4.1 让唯一Swing Residual只读取同Pose Contribution的Formal Step Time，删除对旧Step Header TimeToLanding的截止读取
-- [x] 4.2 用Formal Step Time计算均匀Required Step，以基础HalfLife的Base Step限制最大响应，并发布Scheduled、WithinTolerance或Unavailable typed结果
-- [ ] 4.3 用正式Step Time替换Landing Prediction时域、Current/Incoming选择和Future Body Translation请求时长
-- [ ] 4.4 用正式Step Distance与Event table校验RootLocalLanding的同脚相邻事件和水平步长，不改变世界速度或地形查询数学
-- [ ] 4.5 删除旧隐藏Step Time/Distance/Event消费者及其Projection字段，不保留双读或fallback
-- [ ] 4.6 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
+- [ ] 4.1 用正式Step Time替换Landing Prediction时域、Current/Incoming选择和Future Body Translation请求时长
+- [ ] 4.2 在Path瞬时Correction链连续后，用正式Step Time、LandingUpdateDistance和基础HalfLife计算唯一Swing Residual的Landing截止收敛
+- [ ] 4.3 用正式Step Distance与Event table校验RootLocalLanding的同脚相邻事件和水平步长，不改变世界速度或地形查询数学
+- [ ] 4.4 删除旧隐藏Step Time/Distance/Event消费者及其Projection字段，不保留双读或fallback
+- [ ] 4.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
 
 ## 5. 单独接入Foot Height
 

@@ -13,8 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "PathTargetToSwingTarget";
         internal const string SwingTargetToCapturedResidual =
             "SwingTargetToCapturedResidual";
-        internal const string CapturedResidualToScheduledResidual =
-            "CapturedResidualToScheduledResidual";
+        internal const string CapturedResidualToDecayedResidual =
+            "CapturedResidualToDecayedResidual";
         internal const string ResidualOutputToStateOutput =
             "ResidualOutputToStateOutput";
         internal const string StateOutputToSafetyFloorOutput =
@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RawLandingToPathTarget,
             PathTargetToSwingTarget,
             SwingTargetToCapturedResidual,
-            CapturedResidualToScheduledResidual,
+            CapturedResidualToDecayedResidual,
             ResidualOutputToStateOutput,
             StateOutputToSafetyFloorOutput,
             FinalCorrectionToEncodedGoal,

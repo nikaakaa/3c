@@ -22,14 +22,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         SwingTargetChanged = 8
     }
 
-    public enum CharacterFootResidualDeadlineOutcome : byte
-    {
-        NotEvaluated = 0,
-        WithinTolerance = 1,
-        Scheduled = 2,
-        Unavailable = 3
-    }
-
     internal readonly struct CharacterFootPathContinuityFact
     {
         internal CharacterFootPathContinuityFact(
@@ -45,16 +37,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float landingPointDelta,
             float targetDelta,
             Vector3 residualBeforeRevision,
-            Vector3 residualBeforeSchedule,
-            Vector3 residualAfterSchedule,
+            Vector3 residualBeforeDecay,
+            Vector3 residualAfterDecay,
             float landingUpdateDistance,
             float timeToLandingSeconds,
             float baseHalfLifeSeconds,
-            CharacterFootResidualDeadlineOutcome deadlineOutcome,
-            float deadlineRequiredStepMeters,
-            float baseStepMeters,
-            float appliedStepMeters,
-            float remainingDistanceMeters)
+            bool deadlineHalfLifeAvailable,
+            float deadlineHalfLifeSeconds,
+            float appliedHalfLifeSeconds)
         {
             Evaluated = evaluated;
             RevisionReason = revisionReason;
@@ -68,18 +58,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingPointDelta = landingPointDelta;
             TargetDelta = targetDelta;
             ResidualBeforeRevision = residualBeforeRevision;
-            ResidualBeforeSchedule = residualBeforeSchedule;
-            ResidualAfterSchedule = residualAfterSchedule;
+            ResidualBeforeDecay = residualBeforeDecay;
+            ResidualAfterDecay = residualAfterDecay;
             ResidualOutputCorrection =
-                currentTargetCorrection + residualAfterSchedule;
+                currentTargetCorrection + residualAfterDecay;
             LandingUpdateDistance = landingUpdateDistance;
             TimeToLandingSeconds = timeToLandingSeconds;
             BaseHalfLifeSeconds = baseHalfLifeSeconds;
-            DeadlineOutcome = deadlineOutcome;
-            DeadlineRequiredStepMeters = deadlineRequiredStepMeters;
-            BaseStepMeters = baseStepMeters;
-            AppliedStepMeters = appliedStepMeters;
-            RemainingDistanceMeters = remainingDistanceMeters;
+            DeadlineHalfLifeAvailable = deadlineHalfLifeAvailable;
+            DeadlineHalfLifeSeconds = deadlineHalfLifeSeconds;
+            AppliedHalfLifeSeconds = appliedHalfLifeSeconds;
             StateBefore = default;
             StateAfter = default;
             LockResponseBefore = default;
@@ -125,17 +113,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingPointDelta = source.LandingPointDelta;
             TargetDelta = source.TargetDelta;
             ResidualBeforeRevision = source.ResidualBeforeRevision;
-            ResidualBeforeSchedule = source.ResidualBeforeSchedule;
-            ResidualAfterSchedule = source.ResidualAfterSchedule;
+            ResidualBeforeDecay = source.ResidualBeforeDecay;
+            ResidualAfterDecay = source.ResidualAfterDecay;
             ResidualOutputCorrection = source.ResidualOutputCorrection;
             LandingUpdateDistance = source.LandingUpdateDistance;
             TimeToLandingSeconds = source.TimeToLandingSeconds;
             BaseHalfLifeSeconds = source.BaseHalfLifeSeconds;
-            DeadlineOutcome = source.DeadlineOutcome;
-            DeadlineRequiredStepMeters = source.DeadlineRequiredStepMeters;
-            BaseStepMeters = source.BaseStepMeters;
-            AppliedStepMeters = source.AppliedStepMeters;
-            RemainingDistanceMeters = source.RemainingDistanceMeters;
+            DeadlineHalfLifeAvailable = source.DeadlineHalfLifeAvailable;
+            DeadlineHalfLifeSeconds = source.DeadlineHalfLifeSeconds;
+            AppliedHalfLifeSeconds = source.AppliedHalfLifeSeconds;
             StateBefore = stateBefore;
             StateAfter = stateAfter;
             LockResponseBefore = lockResponseBefore;
@@ -167,17 +153,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float LandingPointDelta { get; }
         internal float TargetDelta { get; }
         internal Vector3 ResidualBeforeRevision { get; }
-        internal Vector3 ResidualBeforeSchedule { get; }
-        internal Vector3 ResidualAfterSchedule { get; }
+        internal Vector3 ResidualBeforeDecay { get; }
+        internal Vector3 ResidualAfterDecay { get; }
         internal Vector3 ResidualOutputCorrection { get; }
         internal float LandingUpdateDistance { get; }
         internal float TimeToLandingSeconds { get; }
         internal float BaseHalfLifeSeconds { get; }
-        internal CharacterFootResidualDeadlineOutcome DeadlineOutcome { get; }
-        internal float DeadlineRequiredStepMeters { get; }
-        internal float BaseStepMeters { get; }
-        internal float AppliedStepMeters { get; }
-        internal float RemainingDistanceMeters { get; }
+        internal bool DeadlineHalfLifeAvailable { get; }
+        internal float DeadlineHalfLifeSeconds { get; }
+        internal float AppliedHalfLifeSeconds { get; }
         internal CharacterFootConstraintState StateBefore { get; }
         internal CharacterFootConstraintState StateAfter { get; }
         internal CharacterFootLockResponse LockResponseBefore { get; }
@@ -245,11 +229,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.LandingUpdateDistance,
                 timeToLandingSeconds,
                 settings.EffectiveCorrectionHalfLifeSeconds,
-                CharacterFootResidualDeadlineOutcome.NotEvaluated,
+                false,
                 0f,
-                0f,
-                0f,
-                0f);
+                settings.EffectiveCorrectionHalfLifeSeconds);
     }
 
     internal readonly struct CharacterFootLandingFact
@@ -471,7 +453,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CharacterFootSwingMotionResult swingMotion,
-            float formalStepTimeSeconds,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
             bool hardOwnershipLoss,
@@ -486,7 +467,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
             SwingMotion = swingMotion;
-            FormalStepTimeSeconds = formalStepTimeSeconds;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
             HardOwnershipLoss = hardOwnershipLoss;
@@ -502,7 +482,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
-        internal float FormalStepTimeSeconds { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool HardOwnershipLoss { get; }
@@ -587,7 +566,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Resolve(
                 ref context,
                 evaluation.Side,
-                frame.FormalStepTimeSeconds,
+                selectedStep.IsValid ? selectedStep.TimeToLandingSeconds : 0f,
                 in frame,
                 out result);
         }
@@ -876,23 +855,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool revised = revisionReason != CharacterFootPathRevisionReason.None;
             if (revised)
                 context.SwingResidual = context.EffectiveCorrection - swingCorrection;
-            Vector3 residualBeforeSchedule = context.SwingResidual;
+            Vector3 residualBeforeDecay = context.SwingResidual;
             context.HasSwingPath = hasPath;
             context.SwingLandingEventIdentity = hasPath ? swing.LandingEventIdentity : 0;
             context.SwingLandingPoint = hasPath
                 ? swingPath.LandingPoint
                 : default;
             context.SwingTargetCorrection = hasPath ? swingCorrection : default;
-            context.SwingResidual = ScheduleSwingResidual(
+            float halfLifeSeconds = ResolveSwingResidualHalfLife(
                 context.SwingResidual,
                 timeToLandingSeconds,
-                frame.DeltaSeconds,
                 frame.Settings,
-                out CharacterFootResidualDeadlineOutcome deadlineOutcome,
-                out float deadlineRequiredStepMeters,
-                out float baseStepMeters,
-                out float appliedStepMeters,
-                out float remainingDistanceMeters);
+                out bool deadlineHalfLifeAvailable,
+                out float deadlineHalfLifeSeconds);
+            context.SwingResidual = Advance(
+                context.SwingResidual,
+                default,
+                frame.DeltaSeconds,
+                halfLifeSeconds);
             context.EffectiveCorrection = swingCorrection + context.SwingResidual;
             context.SwingResidual = context.EffectiveCorrection - swingCorrection;
             continuityFact = new CharacterFootPathContinuityFact(
@@ -908,16 +888,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 landingPointDelta,
                 targetDelta,
                 residualBeforeRevision,
-                residualBeforeSchedule,
+                residualBeforeDecay,
                 context.SwingResidual,
                 frame.Settings.LandingUpdateDistance,
                 timeToLandingSeconds,
                 frame.Settings.EffectiveCorrectionHalfLifeSeconds,
-                deadlineOutcome,
-                deadlineRequiredStepMeters,
-                baseStepMeters,
-                appliedStepMeters,
-                remainingDistanceMeters);
+                deadlineHalfLifeAvailable,
+                deadlineHalfLifeSeconds,
+                halfLifeSeconds);
         }
 
         static void ResolveUnconstrained(
@@ -1340,70 +1318,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Vector3.LerpUnclamped(current, target, alpha);
         }
 
-        static Vector3 ScheduleSwingResidual(
+        static float ResolveSwingResidualHalfLife(
             Vector3 residual,
             float timeToLandingSeconds,
-            float deltaSeconds,
             CharacterFootMotionSettings settings,
-            out CharacterFootResidualDeadlineOutcome deadlineOutcome,
-            out float deadlineRequiredStepMeters,
-            out float baseStepMeters,
-            out float appliedStepMeters,
-            out float remainingDistanceMeters)
+            out bool deadlineHalfLifeAvailable,
+            out float deadlineHalfLifeSeconds)
         {
+            deadlineHalfLifeAvailable = false;
+            deadlineHalfLifeSeconds = 0f;
+            float halfLifeSeconds = settings.EffectiveCorrectionHalfLifeSeconds;
             float residualDistance = residual.magnitude;
-            if (!float.IsFinite(residualDistance))
-                throw new InvalidOperationException("Swing Residual distance is invalid.");
-            Vector3 baseResidual = Advance(
-                residual,
-                default,
-                deltaSeconds,
-                settings.EffectiveCorrectionHalfLifeSeconds);
-            baseStepMeters = Mathf.Max(
-                0f,
-                residualDistance - baseResidual.magnitude);
-            deadlineRequiredStepMeters = 0f;
-            if (residualDistance <= settings.LandingUpdateDistance)
-            {
-                deadlineOutcome =
-                    CharacterFootResidualDeadlineOutcome.WithinTolerance;
-                appliedStepMeters = 0f;
-                remainingDistanceMeters = residualDistance;
-                return residual;
-            }
-            if (!float.IsFinite(timeToLandingSeconds) ||
+            if (!float.IsFinite(residualDistance) ||
+                residualDistance <= settings.LandingUpdateDistance ||
+                !float.IsFinite(timeToLandingSeconds) ||
                 timeToLandingSeconds <= 0f)
             {
-                deadlineOutcome =
-                    CharacterFootResidualDeadlineOutcome.Unavailable;
-                appliedStepMeters = baseStepMeters;
-                remainingDistanceMeters = baseResidual.magnitude;
-                return baseResidual;
+                return halfLifeSeconds;
             }
-            float scheduleFraction = Mathf.Clamp01(
-                deltaSeconds / timeToLandingSeconds);
-            deadlineRequiredStepMeters =
-                (residualDistance - settings.LandingUpdateDistance) *
-                scheduleFraction;
-            if (deadlineRequiredStepMeters <= baseStepMeters + GeometryEpsilon)
-            {
-                Vector3 scheduled = Vector3.MoveTowards(
-                    residual,
-                    default,
-                    deadlineRequiredStepMeters);
-                deadlineOutcome =
-                    CharacterFootResidualDeadlineOutcome.Scheduled;
-                appliedStepMeters = Mathf.Max(
-                    0f,
-                    residualDistance - scheduled.magnitude);
-                remainingDistanceMeters = scheduled.magnitude;
-                return scheduled;
-            }
-            deadlineOutcome =
-                CharacterFootResidualDeadlineOutcome.Unavailable;
-            appliedStepMeters = baseStepMeters;
-            remainingDistanceMeters = baseResidual.magnitude;
-            return baseResidual;
+            float halfLifeCount = Mathf.Log(
+                residualDistance / settings.LandingUpdateDistance,
+                2f);
+            if (!float.IsFinite(halfLifeCount) || halfLifeCount <= 0f)
+                return halfLifeSeconds;
+            float candidate = timeToLandingSeconds / halfLifeCount;
+            if (!float.IsFinite(candidate) || candidate <= 0f)
+                return halfLifeSeconds;
+            deadlineHalfLifeAvailable = true;
+            deadlineHalfLifeSeconds = candidate;
+            return Mathf.Min(halfLifeSeconds, candidate);
         }
 
         static void RequireValid(in CharacterFootStateFrame frame)
@@ -1419,8 +1362,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.FootPlacementWeight > 1f ||
                 !float.IsFinite(frame.DeltaSeconds) ||
                 frame.DeltaSeconds < 0f ||
-                !float.IsFinite(frame.FormalStepTimeSeconds) ||
-                frame.FormalStepTimeSeconds < 0f ||
                 !float.IsFinite(frame.SwingMotion.PlantConfidence) ||
                 frame.SwingMotion.PlantConfidence < 0f ||
                 frame.SwingMotion.PlantConfidence > 1f ||

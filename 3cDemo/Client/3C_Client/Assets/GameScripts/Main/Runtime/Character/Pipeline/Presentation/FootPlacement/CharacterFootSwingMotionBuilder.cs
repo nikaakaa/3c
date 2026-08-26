@@ -390,18 +390,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathLandingPointDelta = path.LandingPointDelta;
             PathTargetDelta = path.TargetDelta;
             SwingResidualBeforeRevision = path.ResidualBeforeRevision;
-            SwingResidualBeforeSchedule = path.ResidualBeforeSchedule;
-            SwingResidualAfterSchedule = path.ResidualAfterSchedule;
+            SwingResidualBeforeDecay = path.ResidualBeforeDecay;
+            SwingResidualAfterDecay = path.ResidualAfterDecay;
             ResidualOutputCorrection = path.ResidualOutputCorrection;
             LandingUpdateDistance = path.LandingUpdateDistance;
             ResidualTimeToLandingSeconds = path.TimeToLandingSeconds;
             ResidualBaseHalfLifeSeconds = path.BaseHalfLifeSeconds;
-            ResidualDeadlineOutcome = path.DeadlineOutcome;
-            ResidualDeadlineRequiredStepMeters =
-                path.DeadlineRequiredStepMeters;
-            ResidualBaseStepMeters = path.BaseStepMeters;
-            ResidualAppliedStepMeters = path.AppliedStepMeters;
-            ResidualRemainingDistanceMeters = path.RemainingDistanceMeters;
+            ResidualDeadlineHalfLifeAvailable = path.DeadlineHalfLifeAvailable;
+            ResidualDeadlineHalfLifeSeconds = path.DeadlineHalfLifeSeconds;
+            ResidualAppliedHalfLifeSeconds = path.AppliedHalfLifeSeconds;
             ConstraintStateBefore = path.StateBefore;
             LockResponseBefore = path.LockResponseBefore;
             OutputStagesAvailable = path.OutputStagesAvailable;
@@ -458,17 +455,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float PathLandingPointDelta { get; }
         public float PathTargetDelta { get; }
         public Vector3 SwingResidualBeforeRevision { get; }
-        public Vector3 SwingResidualBeforeSchedule { get; }
-        public Vector3 SwingResidualAfterSchedule { get; }
+        public Vector3 SwingResidualBeforeDecay { get; }
+        public Vector3 SwingResidualAfterDecay { get; }
         public Vector3 ResidualOutputCorrection { get; }
         public float LandingUpdateDistance { get; }
         public float ResidualTimeToLandingSeconds { get; }
         public float ResidualBaseHalfLifeSeconds { get; }
-        public CharacterFootResidualDeadlineOutcome ResidualDeadlineOutcome { get; }
-        public float ResidualDeadlineRequiredStepMeters { get; }
-        public float ResidualBaseStepMeters { get; }
-        public float ResidualAppliedStepMeters { get; }
-        public float ResidualRemainingDistanceMeters { get; }
+        public bool ResidualDeadlineHalfLifeAvailable { get; }
+        public float ResidualDeadlineHalfLifeSeconds { get; }
+        public float ResidualAppliedHalfLifeSeconds { get; }
         public CharacterFootConstraintState ConstraintStateBefore { get; }
         public CharacterFootLockResponse LockResponseBefore { get; }
         public bool OutputStagesAvailable { get; }

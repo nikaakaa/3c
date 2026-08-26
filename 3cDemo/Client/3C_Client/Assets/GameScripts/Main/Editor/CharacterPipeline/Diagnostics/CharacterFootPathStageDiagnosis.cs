@@ -240,6 +240,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     }
 
     [Serializable]
+    internal sealed class CharacterFootSwingTargetCounterfactual
+    {
+        public bool available;
+        public string unavailableReason;
+        public string classification;
+        public CharacterFootPathStageVector3 phaseOnlyTarget;
+        public CharacterFootPathStageVector3 pathRevisedTarget;
+        public CharacterFootPathStageVector3 actualSwingTarget;
+        public double? actualReconstructionError;
+        public double? phaseAdvanceDelta;
+        public double? pathRevisionDelta;
+        public double? observedSwingTargetDelta;
+        public double? pathRevisionContribution;
+        public double? phaseContribution;
+
+        internal void RequireValid()
+        {
+            phaseOnlyTarget?.RequireValid();
+            pathRevisedTarget?.RequireValid();
+            actualSwingTarget?.RequireValid();
+            RequireFinite(actualReconstructionError);
+            RequireFinite(phaseAdvanceDelta);
+            RequireFinite(pathRevisionDelta);
+            RequireFinite(observedSwingTargetDelta);
+            RequireFinite(pathRevisionContribution);
+            RequireFinite(phaseContribution);
+            if (available &&
+                (string.IsNullOrWhiteSpace(classification) ||
+                 phaseOnlyTarget == null ||
+                 pathRevisedTarget == null ||
+                 actualSwingTarget == null ||
+                 !actualReconstructionError.HasValue ||
+                 !phaseAdvanceDelta.HasValue ||
+                 !pathRevisionDelta.HasValue ||
+                 !observedSwingTargetDelta.HasValue ||
+                 !pathRevisionContribution.HasValue ||
+                 !phaseContribution.HasValue))
+            {
+                throw new InvalidOperationException(
+                    "Swing target counterfactual is incomplete.");
+            }
+        }
+
+        static void RequireFinite(double? value)
+        {
+            if (value.HasValue && !double.IsFinite(value.Value))
+                throw new InvalidOperationException(
+                    "Swing target counterfactual contains a non-finite value.");
+        }
+    }
+
+    [Serializable]
     internal sealed class CharacterFootPathStageAnalysis
     {
         public bool available;
@@ -251,6 +303,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public List<string> missingStages;
         public List<CharacterFootPathStageDelta> stages;
         public CharacterFootPathFirstAmplification firstAmplificationStage;
+        public CharacterFootSwingTargetCounterfactual swingTargetCounterfactual;
 
         internal void RequireValid()
         {
@@ -265,6 +318,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < stages.Count; i++)
                 stages[i].RequireValid();
             stageFacts?.RequireValid();
+            swingTargetCounterfactual?.RequireValid();
             stateEvidence?.RequireValid(available);
             if (available && missingStages.Count > 0)
                 throw new InvalidOperationException(

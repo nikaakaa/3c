@@ -135,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal bool HasOutput;
         internal bool HasSwingPath;
+        internal bool LandingBoundaryConsumed;
         internal bool HasContact;
         internal ulong SwingLandingEventIdentity;
         internal ulong ContactEventIdentity;
@@ -194,6 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 nextSwingReferencePoint = NextSwingReferencePoint;
             float nextSwingPredictionError = NextSwingPredictionError;
             float nextSwingConstraintWeight = NextSwingConstraintWeight;
+            bool landingBoundaryConsumed = LandingBoundaryConsumed;
             ulong trackedEventIdentity = TrackedEventIdentity;
             CharacterFootLandingTrackingState landingTrackingState = LandingTrackingState;
             this = default;
@@ -203,6 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingReferencePoint = nextSwingReferencePoint;
             NextSwingPredictionError = nextSwingPredictionError;
             NextSwingConstraintWeight = nextSwingConstraintWeight;
+            LandingBoundaryConsumed = landingBoundaryConsumed;
             TrackedEventIdentity = trackedEventIdentity;
             LandingTrackingState = landingTrackingState;
             ConstraintState = CharacterFootConstraintState.Swing;
@@ -349,13 +352,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootStateContext context,
             AnimationFootStepObservationSample observation)
         {
+            if (observation.IsValid &&
+                observation.LockMode == AnimationFootStepObservationLockMode.Unlocked)
+            {
+                context.LandingBoundaryConsumed = false;
+            }
             bool landingBoundary = observation.IsValid &&
-                                   observation.LockMode ==
-                                   AnimationFootStepObservationLockMode.Sliding &&
-                                   observation.TimeToLandingSeconds <= GeometryEpsilon &&
+                                   IsLandingBoundary(observation) &&
+                                   !context.LandingBoundaryConsumed &&
                                    context.ConstraintState == CharacterFootConstraintState.Swing;
             if (!landingBoundary)
                 return;
+            context.LandingBoundaryConsumed = true;
             if (context.NextSwingLanding.HasValue)
             {
                 context.LastLanding = context.LandingTrackingState ==
@@ -461,7 +469,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (context.ConstraintState)
             {
                 case CharacterFootConstraintState.Swing:
-                    if (!IsLandingBoundary(in frame) || !CanAcquire(in frame))
+                    if (!IsLandingBoundary(frame.FootStepObservation) ||
+                        !CanAcquire(in context, in frame))
                         ResolveSwingOutput(ref context, in frame, in swing, swingCorrection);
                     ResolveSwingLifecycle(
                         ref context,
@@ -536,21 +545,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             AnimationFootStepObservationSample observation =
                 frame.FootStepObservation;
-            bool landingBoundary = observation.LockMode ==
-                                   AnimationFootStepObservationLockMode.Sliding &&
-                                   observation.TimeToLandingSeconds <= GeometryEpsilon;
-            if (!landingBoundary || !CanAcquire(in frame))
+            bool landingBoundary = IsLandingBoundary(observation);
+            if (!landingBoundary || !CanAcquire(in context, in frame))
                 return;
+            desiredCorrection = ResolveContactTargetCorrection(
+                frame.AnimatedFoot,
+                frame.Landing.Point,
+                frame.ComponentUp,
+                frame.FootStepObservation.FootHeight);
+            if (!CanAcquireContactTarget(
+                    context.EffectiveCorrection,
+                    desiredCorrection,
+                    frame.ComponentUp,
+                    frame.Settings))
+            {
+                return;
+            }
             context.HasContact = true;
             context.ContactEventIdentity = frame.Landing.LandingEventIdentity;
             context.ContactAnchor = frame.Landing.Point;
             context.ConstraintState = CharacterFootConstraintState.Landing;
             context.LockResponse = CharacterFootLockResponse.None;
-            desiredCorrection = ResolveContactTargetCorrection(
-                frame.AnimatedFoot,
-                context.ContactAnchor,
-                frame.ComponentUp,
-                frame.FootStepObservation.FootHeight);
             Vector3 up = frame.ComponentUp.normalized;
             context.AcquireHeightResidual =
                 Vector3.Dot(context.EffectiveCorrection - desiredCorrection, up);
@@ -572,7 +587,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (observation.LockMode ==
                 AnimationFootStepObservationLockMode.Unlocked)
             {
-                ClearToSwing(ref context, swingCorrection);
+                BeginRelease(
+                    ref context,
+                    in frame,
+                    swingCorrection,
+                    ref desiredCorrection);
+                context.ClearContact();
+                return;
+            }
+            if (observation.LockMode ==
+                    AnimationFootStepObservationLockMode.Sliding &&
+                context.LockResponse != CharacterFootLockResponse.None)
+            {
+                BeginRelease(
+                    ref context,
+                    in frame,
+                    swingCorrection,
+                    ref desiredCorrection);
                 return;
             }
             RefreshContactAnchor(ref context, in frame);
@@ -581,6 +612,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.ContactAnchor,
                 frame.ComponentUp,
                 observation.FootHeight);
+            if (!CanAcquireContactTarget(
+                    context.EffectiveCorrection,
+                    desiredCorrection,
+                    frame.ComponentUp,
+                    frame.Settings))
+            {
+                BeginRelease(
+                    ref context,
+                    in frame,
+                    swingCorrection,
+                    ref desiredCorrection);
+                context.ClearContact();
+                return;
+            }
             if (observation.LockMode ==
                 AnimationFootStepObservationLockMode.Sliding)
             {
@@ -598,21 +643,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                           context.AcquireHeightResidual);
                 return;
             }
-            float horizontalError = ResolveHorizontalError(
-                desiredCorrection,
-                frame.ComponentUp);
-            if (horizontalError > frame.Settings.SlideDistance)
-            {
-                ClearToSwing(ref context, swingCorrection);
-                return;
-            }
-            context.ConstraintState = CharacterFootConstraintState.Locked;
             ResolveLockedCorrection(
                 ref context,
                 in frame,
                 swingCorrection,
                 ref desiredCorrection,
-                true);
+                context.LockResponse == CharacterFootLockResponse.None);
+            if (context.LockResponse != CharacterFootLockResponse.FullAnchor ||
+                Vector3.Distance(
+                    context.EffectiveCorrection,
+                    desiredCorrection) > frame.Settings.AnchorClosureDistance)
+            {
+                return;
+            }
+            context.ConstraintState = CharacterFootConstraintState.Locked;
         }
 
         static void ResolveLockedLifecycle(
@@ -630,17 +674,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (mode == AnimationFootStepObservationLockMode.Sliding)
             {
-                context.ConstraintState = CharacterFootConstraintState.Releasing;
-                context.LockResponse = CharacterFootLockResponse.None;
-                context.AcquireHorizontalResidual = default;
-                context.AcquireHeightResidual = 0f;
-                CharacterFootSwingMotionResult swing = frame.SwingMotion;
-                ResolveSwingOutput(
+                BeginRelease(
                     ref context,
                     in frame,
-                    in swing,
-                    swingCorrection);
-                desiredCorrection = context.SwingTargetCorrection;
+                    swingCorrection,
+                    ref desiredCorrection);
                 return;
             }
             ResolveLockedCorrection(
@@ -672,6 +710,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        static void BeginRelease(
+            ref CharacterFootStateContext context,
+            in CharacterFootStateFrame frame,
+            Vector3 swingCorrection,
+            ref Vector3 desiredCorrection)
+        {
+            context.ConstraintState = CharacterFootConstraintState.Releasing;
+            context.LockResponse = CharacterFootLockResponse.None;
+            context.AcquireHorizontalResidual = default;
+            context.AcquireHeightResidual = 0f;
+            context.SwingResidual = context.EffectiveCorrection - swingCorrection;
+            CharacterFootSwingMotionResult swing = frame.SwingMotion;
+            ResolveSwingOutput(
+                ref context,
+                in frame,
+                in swing,
+                swingCorrection);
+            desiredCorrection = context.SwingTargetCorrection;
+        }
+
         static void ResolveLockedCorrection(
             ref CharacterFootStateContext context,
             in CharacterFootStateFrame frame,
@@ -688,7 +746,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 fullCorrection,
                 frame.ComponentUp);
             Vector3 constrainedCorrection;
-            if (horizontalError > frame.Settings.LockDistance)
+            if (context.ConstraintState == CharacterFootConstraintState.Locked)
+            {
+                context.LockResponse = CharacterFootLockResponse.FullAnchor;
+                constrainedCorrection = fullCorrection;
+            }
+            else if (horizontalError > frame.Settings.LockDistance)
             {
                 context.LockResponse = CharacterFootLockResponse.Sliding;
                 constrainedCorrection = ResolveSlidingCorrection(
@@ -703,10 +766,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 constrainedCorrection = fullCorrection;
             }
             Vector3 up = frame.ComponentUp.normalized;
-            Vector3 desiredHorizontal = Vector3.LerpUnclamped(
-                Vector3.ProjectOnPlane(swingCorrection, up),
-                Vector3.ProjectOnPlane(constrainedCorrection, up),
-                frame.FootStepObservation.LockWeight);
+            Vector3 desiredHorizontal = Vector3.ProjectOnPlane(
+                constrainedCorrection,
+                up);
             desiredCorrection = desiredHorizontal +
                                 up * Vector3.Dot(fullCorrection, up);
             if (preserveContinuity)
@@ -876,13 +938,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 _ => CharacterFootSupportEligibility.None
             };
 
-        static bool CanAcquire(in CharacterFootStateFrame frame) =>
-            frame.HasLanding && frame.Landing.LandingEventIdentity != 0;
+        static bool CanAcquire(
+            in CharacterFootStateContext context,
+            in CharacterFootStateFrame frame) =>
+            context.PromotedLanding.HasValue &&
+            frame.HasLanding &&
+            frame.Landing.LandingEventIdentity != 0 &&
+            frame.Landing.LandingEventIdentity ==
+            context.PromotedLanding.LandingEventIdentity;
 
-        static bool IsLandingBoundary(in CharacterFootStateFrame frame) =>
-            frame.FootStepObservation.LockMode ==
-            AnimationFootStepObservationLockMode.Sliding &&
-            frame.FootStepObservation.TimeToLandingSeconds <= GeometryEpsilon;
+        static bool CanAcquireContactTarget(
+            Vector3 currentCorrection,
+            Vector3 targetCorrection,
+            Vector3 componentUp,
+            in CharacterFootMotionSettings settings)
+        {
+            Vector3 up = componentUp.normalized;
+            Vector3 remaining = targetCorrection - currentCorrection;
+            return Vector3.ProjectOnPlane(remaining, up).magnitude <=
+                   settings.SlideDistance &&
+                   Mathf.Abs(Vector3.Dot(remaining, up)) <= settings.LockDistance;
+        }
+
+        static bool IsLandingBoundary(
+            AnimationFootStepObservationSample observation) =>
+            observation.LockMode != AnimationFootStepObservationLockMode.Unlocked;
 
         static Vector3 ResolveSwingCorrection(
             CharacterFootPlacementAnimatedFootPose foot,

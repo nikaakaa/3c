@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public static class MotionMatchingProjectionPayloadCodec
     {
-        const int SchemaVersion = 21;
+        const int SchemaVersion = 22;
 
         public static byte[] Encode(MotionMatchingProjectionPayload payload, out AnimationClip[] clips)
         {
@@ -612,6 +612,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             WriteVector3(writer, value.SoleLocalVelocity);
             writer.Write(value.SoleHeight);
             writer.Write(value.PlantConfidence);
+            writer.Write(value.Contact);
             AnimationPredictedFootStepSample predicted = value.PredictedStep;
             writer.Write(predicted.IsValid);
             if (!predicted.IsValid)
@@ -649,6 +650,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             Vector3 velocity = ReadVector3(reader);
             float soleHeight = reader.ReadSingle();
             float plantConfidence = reader.ReadSingle();
+            float contact = reader.ReadSingle();
             AnimationPredictedFootStepSample predicted = reader.ReadBoolean()
                 ? new AnimationPredictedFootStepSample(
                 reader.ReadInt32(),
@@ -678,7 +680,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 soleHeight,
                 plantConfidence,
                 predicted,
-                default);
+                default,
+                contact);
         }
         static FixedList512Bytes<Vector3> ReadVector3Route(BinaryReader reader)
         {

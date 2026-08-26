@@ -556,12 +556,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Vector3 leftVelocity = Vector3.zero;
             float leftHeight = 0f;
             float leftPlant = 0f;
+            float leftContact = 0f;
             AnimationPredictedFootStepSample leftPredictedStep = default;
             AnimationPredictedFootStepSample leftIncomingPredictedStep = default;
             float rightWeight = 0f;
             Vector3 rightVelocity = Vector3.zero;
             float rightHeight = 0f;
             float rightPlant = 0f;
+            float rightContact = 0f;
             AnimationPredictedFootStepSample rightPredictedStep = default;
             AnimationPredictedFootStepSample rightIncomingPredictedStep = default;
             bool leftValid = true;
@@ -635,7 +637,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                             ref leftWeight,
                             ref leftVelocity,
                             ref leftHeight,
-                            ref leftPlant))
+                            ref leftPlant,
+                            ref leftContact))
                     {
                         return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
                     }
@@ -650,7 +653,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                             ref rightWeight,
                             ref rightVelocity,
                             ref rightHeight,
-                            ref rightPlant))
+                            ref rightPlant,
+                            ref rightContact))
                     {
                         return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
                     }
@@ -666,6 +670,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                      leftVelocity,
                      leftHeight,
                      leftPlant,
+                     leftContact,
                      leftPredictedStep,
                      leftIncomingPredictedStep,
                      out leftResult) ||
@@ -674,6 +679,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                      rightVelocity,
                      rightHeight,
                      rightPlant,
+                     rightContact,
                      rightPredictedStep,
                      rightIncomingPredictedStep,
                      out rightResult)))

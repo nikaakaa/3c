@@ -83,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionOriginalAnkleX,FootMotionOriginalAnkleY,FootMotionOriginalAnkleZ," +
             "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ," +
             "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionVerticalCorrection," +
-            "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight,FootMotionPlantConfidence," +
+            "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight,FootMotionContact," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
@@ -1283,7 +1283,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.VerticalCorrection);
             Add(row, motion.LandingPredictionError);
             Add(row, motion.LandingConstraintWeight);
-            Add(row, motion.PlantConfidence);
+            Add(row, motion.Contact);
             Add(row, motion.CorrectedSole);
             Add(row, motion.CorrectedAnkle);
             Add(row, motion.PositionWeight);

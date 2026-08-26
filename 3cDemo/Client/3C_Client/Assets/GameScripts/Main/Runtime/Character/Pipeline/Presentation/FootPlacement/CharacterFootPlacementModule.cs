@@ -365,8 +365,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in leftGroundPath,
                     leftLanding.NextSwingPredictionError,
                     leftSelectedStep.ConstraintWeight)
-                .WithPlantConfidence(
-                    frame.Pose.LeftFootSteps.Kinematics.PlantConfidence);
+                .WithContact(
+                    frame.Pose.LeftFootSteps.Kinematics.Contact);
             CharacterFootSwingMotionResult rightSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
                     pose.Right,
@@ -376,8 +376,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in rightGroundPath,
                     rightLanding.NextSwingPredictionError,
                     rightSelectedStep.ConstraintWeight)
-                .WithPlantConfidence(
-                    frame.Pose.RightFootSteps.Kinematics.PlantConfidence);
+                .WithContact(
+                    frame.Pose.RightFootSteps.Kinematics.Contact);
             bool hasSelectedSwing = CharacterFootStrideHipsBuilder.TrySelectSwing(
                 in leftSelectedStep,
                 in rightSelectedStep,

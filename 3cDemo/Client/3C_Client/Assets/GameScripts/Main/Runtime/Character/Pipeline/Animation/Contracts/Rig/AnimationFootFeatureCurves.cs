@@ -43,6 +43,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         public const float GroundedMinimumConfidence = 0.5f;
         public const float LockedMinimumConfidence = 0.75f;
+        public const float ContactMinimum = 0.5f;
+        public const float ContactComplete = 0.75f;
 
         public static void RequirePhaseOrder(
             float releasePhase,
@@ -330,7 +332,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 out Quaternion opposingRootLocalSoleRotation,
                 out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> biomechanicalRoute);
             if (HasFormalStepEvent)
+            {
                 landingPhase = 1f;
+                opposingRootLocalSoleRotation = Quaternion.identity;
+            }
             float scaledBiomechanicalIndex = Mathf.Clamp01(eventPhase) * (biomechanicalRoute.Length - 1);
             int firstBiomechanicalIndex = Mathf.Min(
                 biomechanicalRoute.Length - 1,
@@ -503,6 +508,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationCurve m_SoleLocalVelocityZ;
         [SerializeField] AnimationCurve m_SoleHeight;
         [SerializeField] AnimationCurve m_PlantConfidence;
+        [SerializeField] AnimationCurve m_FormalContact;
         [SerializeField] AnimationPredictedFootStepCurveSet m_PredictedStep;
         [SerializeField] AnimationPredictedFootStepCurveSet m_IncomingPredictedStep;
 
@@ -513,13 +519,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve soleHeight,
             AnimationCurve plantConfidence,
             AnimationPredictedFootStepCurveSet predictedStep,
-            AnimationPredictedFootStepCurveSet incomingPredictedStep)
+            AnimationPredictedFootStepCurveSet incomingPredictedStep,
+            AnimationCurve formalContact = null)
         {
             m_SoleLocalVelocityX = Copy(soleLocalVelocityX);
             m_SoleLocalVelocityY = Copy(soleLocalVelocityY);
             m_SoleLocalVelocityZ = Copy(soleLocalVelocityZ);
             m_SoleHeight = Copy(soleHeight);
             m_PlantConfidence = Copy(plantConfidence);
+            m_FormalContact = Copy(formalContact);
             m_PredictedStep = predictedStep ?? throw new ArgumentNullException(nameof(predictedStep));
             m_IncomingPredictedStep = incomingPredictedStep ??
                 throw new ArgumentNullException(nameof(incomingPredictedStep));
@@ -531,9 +539,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationCurve SoleLocalVelocityZ => m_SoleLocalVelocityZ;
         public AnimationCurve SoleHeight => m_SoleHeight;
         public AnimationCurve PlantConfidence => m_PlantConfidence;
+        public AnimationCurve FormalContact => m_FormalContact;
         public AnimationPredictedFootStepCurveSet PredictedStep => m_PredictedStep;
         public AnimationPredictedFootStepCurveSet IncomingPredictedStep => m_IncomingPredictedStep;
+        public bool HasFormalContact => m_FormalContact != null && m_FormalContact.length > 0;
         public bool HasFormalStepEvents =>
+            HasFormalContact &&
             m_PredictedStep != null && m_PredictedStep.HasFormalStepEvent &&
             m_IncomingPredictedStep != null && m_IncomingPredictedStep.HasFormalStepEvent;
 
@@ -554,7 +565,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SoleHeight.Evaluate(time),
                 m_PlantConfidence.Evaluate(time),
                 m_PredictedStep.SamplePrepared(time),
-                m_IncomingPredictedStep.SamplePrepared(time));
+                m_IncomingPredictedStep.SamplePrepared(time),
+                HasFormalContact
+                    ? m_FormalContact.Evaluate(time)
+                    : m_PlantConfidence.Evaluate(time));
         }
 
         public void RequireValid()
@@ -564,6 +578,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireCurve(m_SoleLocalVelocityZ, nameof(m_SoleLocalVelocityZ), false, false);
             RequireCurve(m_SoleHeight, nameof(m_SoleHeight), false, false);
             RequireCurve(m_PlantConfidence, nameof(m_PlantConfidence), true, false);
+            if (m_FormalContact != null)
+                RequireCurve(m_FormalContact, nameof(m_FormalContact), true, false);
             if (m_PredictedStep == null || m_IncomingPredictedStep == null)
                 throw new InvalidOperationException("Foot Analysis current or incoming step curves are missing.");
             m_PredictedStep.RequireValid();
@@ -1253,11 +1269,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float soleHeight,
             float plantConfidence,
             AnimationPredictedFootStepSample predictedStep,
-            AnimationPredictedFootStepSample incomingPredictedStep)
+            AnimationPredictedFootStepSample incomingPredictedStep,
+            float contact = float.NaN)
         {
             SoleLocalVelocity = RequireFinite(soleLocalVelocity, nameof(soleLocalVelocity));
             SoleHeight = RequireFinite(soleHeight, nameof(soleHeight));
             PlantConfidence = RequireNormalized(plantConfidence, nameof(plantConfidence));
+            Contact = float.IsNaN(contact)
+                ? PlantConfidence
+                : RequireNormalized(contact, nameof(contact));
             PredictedStep = predictedStep;
             IncomingPredictedStep = incomingPredictedStep;
             m_IsSpecified = 1;
@@ -1267,6 +1287,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector3 SoleLocalVelocity { get; }
         public float SoleHeight { get; }
         public float PlantConfidence { get; }
+        public float Contact { get; }
         public readonly AnimationPredictedFootStepSample PredictedStep;
         public readonly AnimationPredictedFootStepSample IncomingPredictedStep;
         public bool IsValid => m_IsSpecified != 0;
@@ -1279,7 +1300,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 SoleHeight,
                 PlantConfidence,
                 predictedStep,
-                incomingPredictedStep);
+                incomingPredictedStep,
+                Contact);
 
         public AnimationFootFeatureSample BindPredictionSource(
             ulong sourceIdentity,
@@ -1293,7 +1315,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     sourceCycle),
                 IncomingPredictedStep.BindSource(
                     sourceIdentity,
-                    sourceCycle));
+                    sourceCycle),
+                Contact);
 
         public AnimationFootFeatureSample BindPredictionContribution(
             ulong contributionContinuityIdentity,
@@ -1303,7 +1326,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 SoleHeight,
                 PlantConfidence,
                 PredictedStep.BindContribution(contributionContinuityIdentity, side),
-                IncomingPredictedStep.BindContribution(contributionContinuityIdentity, side));
+                IncomingPredictedStep.BindContribution(contributionContinuityIdentity, side),
+                Contact);
 
         static float RequireNormalized(float value, string field)
         {
@@ -1348,6 +1372,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Vector3 m_Velocity;
         float m_Height;
         float m_PlantConfidence;
+        float m_Contact;
         AnimationPredictedFootStepSample m_PredictedStep;
         AnimationPredictedFootStepSample m_IncomingPredictedStep;
         float m_PredictionPairScore;
@@ -1366,6 +1391,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Velocity += sample.SoleLocalVelocity * visualTimeScale * weight;
             m_Height += sample.SoleHeight * weight;
             m_PlantConfidence += sample.PlantConfidence * weight;
+            m_Contact += sample.Contact * weight;
             AnimationPredictedFootStepSample candidate =
                 sample.PredictedStep.ApplyTimeScale(visualTimeScale);
             AnimationPredictedFootStepSample incomingCandidate =
@@ -1404,7 +1430,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Height / m_Weight,
                 m_PlantConfidence / m_Weight,
                 m_PredictedStep,
-                m_IncomingPredictedStep);
+                m_IncomingPredictedStep,
+                m_Contact / m_Weight);
         }
     }
 

@@ -51,11 +51,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/8";
+        const string Schema = "character-foot-motion-facts/9";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 8;
+        const int AnalyzerVersion = 9;
         const string GeometryFileName = "ground-path-geometry.csv";
-        const int HeaderColumnCapacity = 576;
+        const int HeaderColumnCapacity = 608;
         const float PositionNoiseFloor = 0.001f;
         const float TimeEpsilon = 0.000001f;
 
@@ -118,6 +118,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"pathContinuityEvents={document.coverage.pathContinuityEventCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
+                $"safetyFloorEvents={document.coverage.safetyFloorEventCount} " +
+                $"currentFloorAccepted={document.coverage.currentFloorAcceptedEventCount} " +
+                $"safetyFloorClampWithoutInput={document.coverage.safetyFloorClampWithoutInputEventCount} " +
                 $"diagnosisFiles={publication.DiagnosticCount} " +
                 $"diagnosisTargets={publication.TargetCount} " +
                 $"diagnosisMatches={publication.MatchCount}";
@@ -144,9 +147,131 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeLandingStateConsistency(frames, events);
             AnalyzeLockedEvents(frames, events);
             AnalyzeContactPlanePenetration(frames, events);
+            AnalyzeSafetyFloor(frames, events);
             AnalyzeReleaseEvents(frames, events);
             AnalyzePathChanges(frames, events);
             AnalyzePathContinuity(frames, events);
+        }
+
+        static void AnalyzeSafetyFloor(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame current = frames[i];
+                bool eligible =
+                    current.CurrentFloorState == "Accepted" ||
+                    current.CurrentFloorState == "Rejected" &&
+                    current.FootMotionState == "Accepted" &&
+                    current.ConstraintState == "Swing";
+                if (!eligible)
+                    continue;
+                bool purposeValid =
+                    current.CurrentFloorQueryPurpose ==
+                    "CurrentSwingFloor";
+                bool availabilityMatches =
+                    current.SafetyFloorAvailable ==
+                    current.CurrentFloorAccepted;
+                bool clearanceNonNegative =
+                    !current.CurrentFloorAccepted ||
+                    current.SafetyFloorClearanceAfterMeters >=
+                    -PositionNoiseFloor;
+                bool clampHasInput =
+                    !current.SafetyFloorClamped ||
+                    current.CurrentFloorAccepted;
+                bool largeClampWithoutInput =
+                    current.SafetyFloorClampMeters > 0.1f &&
+                    !current.CurrentFloorAccepted;
+                Vector3 up = current.ComponentUp.normalized;
+                Vector3 expectedMinimumCorrection =
+                    current.CurrentFloorAccepted
+                        ? up * Vector3.Dot(
+                            current.CurrentFloorPoint -
+                            current.OriginalSole,
+                            up)
+                        : default;
+                bool minimumCorrectionMatchesCurrentFloor =
+                    !current.CurrentFloorAccepted ||
+                    Vector3.Distance(
+                        expectedMinimumCorrection,
+                        current.SafetyFloorMinimumCorrection) <=
+                    PositionNoiseFloor;
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["clampMeters"] =
+                        current.SafetyFloorClampMeters,
+                    ["clearanceBeforeMeters"] =
+                        current.SafetyFloorClearanceBeforeMeters,
+                    ["clearanceAfterMeters"] =
+                        current.SafetyFloorClearanceAfterMeters,
+                    ["currentFloorDistanceMeters"] =
+                        current.CurrentFloorDistance,
+                    ["currentFloorSurfaceIdentity"] =
+                        current.CurrentFloorSurfaceIdentity,
+                    ["minimumCorrectionMeters"] =
+                        current.SafetyFloorMinimumCorrection.magnitude,
+                    ["minimumCorrectionSourceErrorMeters"] =
+                        Vector3.Distance(
+                            expectedMinimumCorrection,
+                            current.SafetyFloorMinimumCorrection),
+                    ["currentFloorPointHeight"] =
+                        Vector3.Dot(current.CurrentFloorPoint, up),
+                    ["swingEnvelopeSampleHeight"] =
+                        Vector3.Dot(current.SwingEnvelopeSample, up),
+                    ["currentFloorVsSwingEnvelopeHeightDeltaMeters"] =
+                        Vector3.Dot(
+                            current.CurrentFloorPoint -
+                            current.SwingEnvelopeSample,
+                            up),
+                    ["queryMaximumDistanceMeters"] =
+                        current.CurrentFloorQueryMaxDistance,
+                    ["queryRadiusMeters"] =
+                        current.CurrentFloorQueryRadius,
+                    ["queryMinimumNormalDot"] =
+                        current.CurrentFloorQueryMinimumNormalDot
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["availabilityMatchesCurrentFloor"] =
+                        availabilityMatches,
+                    ["clearanceAfterNonNegative"] =
+                        clearanceNonNegative,
+                    ["clampHasCurrentFloorInput"] =
+                        clampHasInput,
+                    ["currentFloorAccepted"] =
+                        current.CurrentFloorAccepted,
+                    ["currentFloorSurfaceAvailable"] =
+                        current.CurrentFloorSurfaceIdentity != 0,
+                    ["largeClampWithoutCurrentFloorInput"] =
+                        largeClampWithoutInput,
+                    ["minimumCorrectionMatchesCurrentFloor"] =
+                        minimumCorrectionMatchesCurrentFloor,
+                    ["queryDirectionValid"] =
+                        current.CurrentFloorQueryDirection.sqrMagnitude >
+                        0.999f,
+                    ["queryPurposeCurrentSwingFloor"] =
+                        purposeValid,
+                    ["safetyFloorAvailable"] =
+                        current.SafetyFloorAvailable,
+                    ["safetyFloorClamped"] =
+                        current.SafetyFloorClamped
+                };
+                events.Add(new EventFact(
+                    "SafetyFloor",
+                    current.Side,
+                    current.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.FootMotionEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence));
+            }
         }
 
         static void AnalyzeLandingEvents(
@@ -969,7 +1094,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootPathStageNames.StateOutputToSafetyFloorOutput,
                     previous.OutputStagesAvailable &&
                     current.OutputStagesAvailable &&
-                    previous.EnvelopeAvailable && current.EnvelopeAvailable,
+                    previous.SafetyFloorAvailable && current.SafetyFloorAvailable,
                     "StateOutputOrGroundEnvelopeUnavailable",
                     previous.CorrectionBeforeSafetyFloor,
                     current.CorrectionBeforeSafetyFloor,
@@ -978,7 +1103,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.Frame,
                     current.Frame,
                     missing,
-                    previous.EnvelopeAvailable || current.EnvelopeAvailable ||
+                    previous.SafetyFloorAvailable || current.SafetyFloorAvailable ||
                     previous.SafetyFloorClamped || current.SafetyFloorClamped),
                 Stage(
                     CharacterFootPathStageNames.FinalCorrectionToEncodedGoal,
@@ -1078,11 +1203,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     capturedResidual = StageVector(
                         current.SwingResidualBeforeDecay),
                     groundEnvelopeSafetyCorrectionAvailable =
-                        previous.EnvelopeAvailable && current.EnvelopeAvailable,
+                        previous.SafetyFloorAvailable && current.SafetyFloorAvailable,
                     groundEnvelopeSafetyCorrectionPrevious = StageVector(
-                        previous.GroundEnvelopeSafetyCorrection),
+                        previous.SafetyFloorMinimumCorrection),
                     groundEnvelopeSafetyCorrection = StageVector(
-                        current.GroundEnvelopeSafetyCorrection),
+                        current.SafetyFloorMinimumCorrection),
                     physicalFootAvailable =
                         previous.FinalPhysicalWriteAvailable &&
                         current.FinalPhysicalWriteAvailable,
@@ -1304,10 +1429,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["correctionStepMeters"] = correctionStep,
                     ["deadlineHalfLifeSeconds"] =
                         current.ResidualDeadlineHalfLifeSeconds,
-                    ["envelopeClearanceAfterMeters"] =
-                        current.EnvelopeClearanceAfterMeters,
-                    ["envelopeClearanceBeforeMeters"] =
-                        current.EnvelopeClearanceBeforeMeters,
+                    ["safetyFloorClearanceAfterMeters"] =
+                        current.SafetyFloorClearanceAfterMeters,
+                    ["safetyFloorClearanceBeforeMeters"] =
+                        current.SafetyFloorClearanceBeforeMeters,
                     ["landingPointDeltaMeters"] =
                         current.PathLandingPointDelta,
                     ["landingUpdateDistanceMeters"] =
@@ -1327,7 +1452,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["deadlineHalfLifeAvailable"] =
                         current.ResidualDeadlineHalfLifeAvailable,
                     ["deadlineReached"] = deadlineReached,
-                    ["envelopeAvailable"] = current.EnvelopeAvailable,
+                    ["safetyFloorAvailable"] = current.SafetyFloorAvailable,
                     ["expectedLandingEventRevision"] = eventChanged,
                     ["expectedLandingPointRevision"] = landingPointChanged,
                     ["expectedPathAvailabilityRevision"] = availabilityChanged,
@@ -1501,6 +1626,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     supportChangeCount = events.Count(value => value.kind == "SupportChange"),
                     contactPlanePenetrationEventCount = events.Count(
                         value => value.kind == "ContactPlanePenetration"),
+                    safetyFloorEventCount = events.Count(
+                        value => value.kind == "SafetyFloor"),
+                    currentFloorAcceptedEventCount = events.Count(
+                        value => value.kind == "SafetyFloor" &&
+                                 value.evidence["currentFloorAccepted"]),
+                    safetyFloorClampWithoutInputEventCount = events.Count(
+                        value => value.kind == "SafetyFloor" &&
+                                 !value.evidence["clampHasCurrentFloorInput"]),
                     leftFootFrameCount = capture.Left.Count,
                     rightFootFrameCount = capture.Right.Count,
                     frameGapCount = capture.FrameGapCount,
@@ -1514,6 +1647,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         BuildPenetrationAvailabilityCounts(capture.FootRows),
                     groundPathRejectedFootRowCount = capture.FootRows.Count(value => value.GroundPathState != "Accepted")
                 },
+                currentFloors = capture.FootRows
+                    .Select(CurrentFloorFact.From)
+                    .ToList(),
                 events = events
             };
         }
@@ -1804,6 +1940,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 NextLandingEventIdentity = Ulong("GroundPathNextSwingLandingEventIdentity"),
                 NextLanding = Vector("GroundPathNextSwingLanding"),
                 ComponentUp = Vector("GroundPathComponentUp"),
+                CurrentFloorState = Cell("CurrentFloorState"),
+                CurrentFloorRejectReason =
+                    Cell("CurrentFloorRejectReason"),
+                CurrentFloorQueryPurpose =
+                    Cell("CurrentFloorQueryPurpose"),
+                CurrentFloorQueryOrigin =
+                    Vector("CurrentFloorQueryOrigin"),
+                CurrentFloorQueryDirection =
+                    Vector("CurrentFloorQueryDirection"),
+                CurrentFloorQueryMaxDistance =
+                    Float("CurrentFloorQueryMaxDistance"),
+                CurrentFloorQueryRadius =
+                    Float("CurrentFloorQueryRadius"),
+                CurrentFloorQueryLayerMask =
+                    Int("CurrentFloorQueryLayerMask"),
+                CurrentFloorQueryMinimumNormalDot =
+                    Float("CurrentFloorQueryMinimumNormalDot"),
+                CurrentFloorAccepted =
+                    Int("CurrentFloorAccepted") != 0,
+                CurrentFloorSurfaceIdentity =
+                    Int("CurrentFloorSurfaceIdentity"),
+                CurrentFloorPoint = Vector("CurrentFloorPoint"),
+                CurrentFloorNormal = Vector("CurrentFloorNormal"),
+                CurrentFloorDistance =
+                    Float("CurrentFloorDistance"),
                 FootMotionEventIdentity = Ulong("FootMotionLandingEventIdentity"),
                 FootMotionGroundPathInputIdentity =
                     Ulong("FootMotionGroundPathInputIdentity"),
@@ -1812,6 +1973,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 LockResponse = Cell("FootMotionLockResponse"),
                 OriginalSole = Vector("FootMotionOriginalSole"),
                 OriginalAnkle = Vector("FootMotionOriginalAnkle"),
+                SwingEnvelopeSample =
+                    Vector("FootMotionEnvelopeSample"),
                 CorrectedSole = Vector("FootMotionCorrectedSole"),
                 CorrectedAnkle = Vector("FootMotionCorrectedAnkle"),
                 Anchor = Vector("FootMotionSupportContactAnchor"),
@@ -1863,11 +2026,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionOutputStagesAvailable") != 0,
                 ReleasingCompletedToSwing =
                     Int("FootMotionReleasingCompletedToSwing") != 0,
-                EnvelopeAvailable = Int("FootMotionEnvelopeAvailable") != 0,
+                SafetyFloorAvailable = Int("FootMotionSafetyFloorAvailable") != 0,
                 CorrectionBeforeSafetyFloor =
                     Vector("FootMotionCorrectionBeforeSafetyFloor"),
-                GroundEnvelopeSafetyCorrection =
-                    Vector("FootMotionGroundEnvelopeSafetyCorrection"),
+                SafetyFloorMinimumCorrection =
+                    Vector("FootMotionSafetyFloorMinimumCorrection"),
                 SafetyFloorOutputCorrection =
                     Vector("FootMotionSafetyFloorOutputCorrection"),
                 FinalEffectiveCorrection =
@@ -1876,10 +2039,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionSafetyFloorClamped") != 0,
                 SafetyFloorClampMeters =
                     Float("FootMotionSafetyFloorClampMeters"),
-                EnvelopeClearanceBeforeMeters =
-                    Float("FootMotionEnvelopeClearanceBeforeMeters"),
-                EnvelopeClearanceAfterMeters =
-                    Float("FootMotionEnvelopeClearanceAfterMeters"),
+                SafetyFloorClearanceBeforeMeters =
+                    Float("FootMotionSafetyFloorClearanceBeforeMeters"),
+                SafetyFloorClearanceAfterMeters =
+                    Float("FootMotionSafetyFloorClearanceAfterMeters"),
                 EncodedGoalAvailable =
                     Int("FootMotionEncodedGoalAvailable") != 0,
                 EncodedGoalPosition = Vector("FinalGoalPosition"),
@@ -1928,6 +2091,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootSwingMotionState>(
                 frame.FootMotionState,
                 "FootMotionState");
+            RequireEnum<CharacterFootCurrentGroundFloorState>(
+                frame.CurrentFloorState,
+                "CurrentFloorState");
+            RequireEnum<CharacterFootCurrentGroundFloorRejectReason>(
+                frame.CurrentFloorRejectReason,
+                "CurrentFloorRejectReason");
+            bool swingUnavailable =
+                frame.CurrentFloorRejectReason == "SwingUnavailable";
+            if (!swingUnavailable)
+            {
+                RequireEnum<CharacterFootPlacementQueryPurpose>(
+                    frame.CurrentFloorQueryPurpose,
+                    "CurrentFloorQueryPurpose");
+            }
+            if (frame.CurrentFloorAccepted !=
+                    (frame.CurrentFloorState == "Accepted") ||
+                frame.CurrentFloorAccepted &&
+                (frame.CurrentFloorRejectReason != "None" ||
+                 frame.CurrentFloorSurfaceIdentity == 0) ||
+                (swingUnavailable
+                    ? frame.CurrentFloorQueryPurpose != "0"
+                    : frame.CurrentFloorQueryPurpose !=
+                      "CurrentSwingFloor"))
+            {
+                throw new InvalidDataException(
+                    "Foot Motion Current Floor typed facts are inconsistent.");
+            }
             RequireEnum<CharacterFootConstraintState>(
                 frame.ConstraintState,
                 "FootMotionConstraintState");
@@ -1999,11 +2189,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "GroundPathLastLandingEventIdentity", "GroundPathNextSwingLandingEventIdentity",
                 "GroundPathNextSwingLandingX", "GroundPathNextSwingLandingY", "GroundPathNextSwingLandingZ",
                 "GroundPathComponentUpX", "GroundPathComponentUpY", "GroundPathComponentUpZ",
+                "CurrentFloorState", "CurrentFloorRejectReason",
+                "CurrentFloorQueryPurpose",
+                "CurrentFloorQueryOriginX", "CurrentFloorQueryOriginY",
+                "CurrentFloorQueryOriginZ",
+                "CurrentFloorQueryDirectionX",
+                "CurrentFloorQueryDirectionY",
+                "CurrentFloorQueryDirectionZ",
+                "CurrentFloorQueryMaxDistance", "CurrentFloorQueryRadius",
+                "CurrentFloorQueryLayerMask",
+                "CurrentFloorQueryMinimumNormalDot",
+                "CurrentFloorAccepted", "CurrentFloorSurfaceIdentity",
+                "CurrentFloorPointX", "CurrentFloorPointY",
+                "CurrentFloorPointZ", "CurrentFloorNormalX",
+                "CurrentFloorNormalY", "CurrentFloorNormalZ",
+                "CurrentFloorDistance",
                 "FootMotionLandingEventIdentity", "FootMotionGroundPathInputIdentity",
                 "FootMotionState", "FootMotionConstraintState",
                 "FootMotionLockResponse",
                 "FootMotionOriginalSoleX", "FootMotionOriginalSoleY", "FootMotionOriginalSoleZ",
                 "FootMotionOriginalAnkleX", "FootMotionOriginalAnkleY", "FootMotionOriginalAnkleZ",
+                "FootMotionEnvelopeSampleX", "FootMotionEnvelopeSampleY",
+                "FootMotionEnvelopeSampleZ",
                 "FootMotionCorrectedSoleX", "FootMotionCorrectedSoleY", "FootMotionCorrectedSoleZ",
                 "FootMotionCorrectedAnkleX", "FootMotionCorrectedAnkleY", "FootMotionCorrectedAnkleZ",
                 "FootMotionSupportContactAnchorX", "FootMotionSupportContactAnchorY", "FootMotionSupportContactAnchorZ",
@@ -2042,13 +2249,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionConstraintStateBefore", "FootMotionLockResponseBefore",
                 "FootMotionOutputStagesAvailable",
                 "FootMotionReleasingCompletedToSwing",
-                "FootMotionEnvelopeAvailable",
+                "FootMotionSafetyFloorAvailable",
                 "FootMotionCorrectionBeforeSafetyFloorX",
                 "FootMotionCorrectionBeforeSafetyFloorY",
                 "FootMotionCorrectionBeforeSafetyFloorZ",
-                "FootMotionGroundEnvelopeSafetyCorrectionX",
-                "FootMotionGroundEnvelopeSafetyCorrectionY",
-                "FootMotionGroundEnvelopeSafetyCorrectionZ",
+                "FootMotionSafetyFloorMinimumCorrectionX",
+                "FootMotionSafetyFloorMinimumCorrectionY",
+                "FootMotionSafetyFloorMinimumCorrectionZ",
                 "FootMotionSafetyFloorOutputCorrectionX",
                 "FootMotionSafetyFloorOutputCorrectionY",
                 "FootMotionSafetyFloorOutputCorrectionZ",
@@ -2056,8 +2263,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionFinalEffectiveCorrectionY",
                 "FootMotionFinalEffectiveCorrectionZ",
                 "FootMotionSafetyFloorClamped", "FootMotionSafetyFloorClampMeters",
-                "FootMotionEnvelopeClearanceBeforeMeters",
-                "FootMotionEnvelopeClearanceAfterMeters",
+                "FootMotionSafetyFloorClearanceBeforeMeters",
+                "FootMotionSafetyFloorClearanceAfterMeters",
                 "FootMotionEncodedGoalAvailable",
                 "FootMotionEncodedGoalCorrectionX",
                 "FootMotionEncodedGoalCorrectionY",
@@ -2543,6 +2750,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong NextLandingEventIdentity;
             internal Vector3 NextLanding;
             internal Vector3 ComponentUp;
+            internal string CurrentFloorState;
+            internal string CurrentFloorRejectReason;
+            internal string CurrentFloorQueryPurpose;
+            internal Vector3 CurrentFloorQueryOrigin;
+            internal Vector3 CurrentFloorQueryDirection;
+            internal float CurrentFloorQueryMaxDistance;
+            internal float CurrentFloorQueryRadius;
+            internal int CurrentFloorQueryLayerMask;
+            internal float CurrentFloorQueryMinimumNormalDot;
+            internal bool CurrentFloorAccepted;
+            internal int CurrentFloorSurfaceIdentity;
+            internal Vector3 CurrentFloorPoint;
+            internal Vector3 CurrentFloorNormal;
+            internal float CurrentFloorDistance;
             internal ulong FootMotionEventIdentity;
             internal ulong FootMotionGroundPathInputIdentity;
             internal string FootMotionState;
@@ -2550,6 +2771,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string LockResponse;
             internal Vector3 OriginalSole;
             internal Vector3 OriginalAnkle;
+            internal Vector3 SwingEnvelopeSample;
             internal Vector3 CorrectedSole;
             internal Vector3 CorrectedAnkle;
             internal Vector3 Anchor;
@@ -2581,15 +2803,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string LockResponseBefore;
             internal bool OutputStagesAvailable;
             internal bool ReleasingCompletedToSwing;
-            internal bool EnvelopeAvailable;
+            internal bool SafetyFloorAvailable;
             internal Vector3 CorrectionBeforeSafetyFloor;
-            internal Vector3 GroundEnvelopeSafetyCorrection;
+            internal Vector3 SafetyFloorMinimumCorrection;
             internal Vector3 SafetyFloorOutputCorrection;
             internal Vector3 FinalEffectiveCorrection;
             internal bool SafetyFloorClamped;
             internal float SafetyFloorClampMeters;
-            internal float EnvelopeClearanceBeforeMeters;
-            internal float EnvelopeClearanceAfterMeters;
+            internal float SafetyFloorClearanceBeforeMeters;
+            internal float SafetyFloorClearanceAfterMeters;
             internal bool EncodedGoalAvailable;
             internal Vector3 EncodedGoalPosition;
             internal Vector3 EncodedGoalCorrection;
@@ -2629,7 +2851,102 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public SampleFact sample;
             public AnalyzerFact analyzer;
             public CoverageFact coverage;
+            public List<CurrentFloorFact> currentFloors;
             public List<EventFact> events;
+        }
+
+        [Serializable]
+        sealed class CurrentFloorFact
+        {
+            public int frame;
+            public string side;
+            public string state;
+            public string rejectReason;
+            public string queryPurpose;
+            public ScalarVector3Fact queryOrigin;
+            public ScalarVector3Fact queryDirection;
+            public float queryMaximumDistance;
+            public float queryRadius;
+            public int queryLayerMask;
+            public float queryMinimumNormalDot;
+            public bool accepted;
+            public int surfaceIdentity;
+            public ScalarVector3Fact point;
+            public ScalarVector3Fact normal;
+            public float distance;
+            public ScalarVector3Fact swingPathEnvelopeSample;
+            public bool safetyFloorAvailable;
+            public ScalarVector3Fact correctionBeforeSafetyFloor;
+            public ScalarVector3Fact safetyFloorMinimumCorrection;
+            public ScalarVector3Fact safetyFloorOutputCorrection;
+            public bool safetyFloorClamped;
+            public float safetyFloorClampMeters;
+            public float safetyFloorClearanceBeforeMeters;
+            public float safetyFloorClearanceAfterMeters;
+
+            internal static CurrentFloorFact From(FootFrame frame) =>
+                new CurrentFloorFact
+                {
+                    frame = frame.Frame,
+                    side = frame.Side,
+                    state = frame.CurrentFloorState,
+                    rejectReason = frame.CurrentFloorRejectReason,
+                    queryPurpose = frame.CurrentFloorQueryPurpose,
+                    queryOrigin = ScalarVector3Fact.From(
+                        frame.CurrentFloorQueryOrigin),
+                    queryDirection = ScalarVector3Fact.From(
+                        frame.CurrentFloorQueryDirection),
+                    queryMaximumDistance =
+                        frame.CurrentFloorQueryMaxDistance,
+                    queryRadius = frame.CurrentFloorQueryRadius,
+                    queryLayerMask = frame.CurrentFloorQueryLayerMask,
+                    queryMinimumNormalDot =
+                        frame.CurrentFloorQueryMinimumNormalDot,
+                    accepted = frame.CurrentFloorAccepted,
+                    surfaceIdentity =
+                        frame.CurrentFloorSurfaceIdentity,
+                    point = ScalarVector3Fact.From(
+                        frame.CurrentFloorPoint),
+                    normal = ScalarVector3Fact.From(
+                        frame.CurrentFloorNormal),
+                    distance = frame.CurrentFloorDistance,
+                    swingPathEnvelopeSample =
+                        ScalarVector3Fact.From(
+                            frame.SwingEnvelopeSample),
+                    safetyFloorAvailable = frame.SafetyFloorAvailable,
+                    correctionBeforeSafetyFloor =
+                        ScalarVector3Fact.From(
+                            frame.CorrectionBeforeSafetyFloor),
+                    safetyFloorMinimumCorrection =
+                        ScalarVector3Fact.From(
+                            frame.SafetyFloorMinimumCorrection),
+                    safetyFloorOutputCorrection =
+                        ScalarVector3Fact.From(
+                            frame.SafetyFloorOutputCorrection),
+                    safetyFloorClamped = frame.SafetyFloorClamped,
+                    safetyFloorClampMeters =
+                        frame.SafetyFloorClampMeters,
+                    safetyFloorClearanceBeforeMeters =
+                        frame.SafetyFloorClearanceBeforeMeters,
+                    safetyFloorClearanceAfterMeters =
+                        frame.SafetyFloorClearanceAfterMeters
+                };
+        }
+
+        [Serializable]
+        sealed class ScalarVector3Fact
+        {
+            public float x;
+            public float y;
+            public float z;
+
+            internal static ScalarVector3Fact From(Vector3 value) =>
+                new ScalarVector3Fact
+                {
+                    x = value.x,
+                    y = value.y,
+                    z = value.z
+                };
         }
 
         [Serializable]
@@ -2671,6 +2988,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int pathContinuityEventCount;
             public int supportChangeCount;
             public int contactPlanePenetrationEventCount;
+            public int safetyFloorEventCount;
+            public int currentFloorAcceptedEventCount;
+            public int safetyFloorClampWithoutInputEventCount;
             public int leftFootFrameCount;
             public int rightFootFrameCount;
             public int frameGapCount;

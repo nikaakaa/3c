@@ -175,7 +175,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterFootMotionAuthoringSettings
     {
         [SerializeField] float m_LandingUpdateDistance = 0.005f;
-        [SerializeField] float m_AnchorClosureDistance = 0.01f;
         [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
@@ -184,7 +183,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(
                 m_LandingUpdateDistance,
-                m_AnchorClosureDistance,
                 m_EffectiveCorrectionHalfLifeSeconds,
                 m_LockDistance,
                 m_SlideDistance,
@@ -195,14 +193,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootMotionSettings(
             float landingUpdateDistance,
-            float anchorClosureDistance,
             float effectiveCorrectionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
             float pelvisSpringFrequency)
         {
             LandingUpdateDistance = landingUpdateDistance;
-            AnchorClosureDistance = anchorClosureDistance;
             EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
@@ -211,7 +207,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal float LandingUpdateDistance { get; }
-        internal float AnchorClosureDistance { get; }
         internal float EffectiveCorrectionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
@@ -220,12 +215,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void RequireValid()
         {
             if (!float.IsFinite(LandingUpdateDistance) || LandingUpdateDistance <= 0f ||
-                !float.IsFinite(AnchorClosureDistance) ||
-                AnchorClosureDistance < LandingUpdateDistance ||
                 !float.IsFinite(EffectiveCorrectionHalfLifeSeconds) ||
                 EffectiveCorrectionHalfLifeSeconds <= 0f ||
                 !float.IsFinite(LockDistance) ||
-                LockDistance <= AnchorClosureDistance ||
+                LockDistance <= LandingUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f)

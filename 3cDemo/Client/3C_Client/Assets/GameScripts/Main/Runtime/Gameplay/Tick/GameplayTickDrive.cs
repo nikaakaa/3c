@@ -336,7 +336,9 @@ namespace ThirdPersonGameplay.Tick
             int droppedLocalLogicTicks,
             ulong pendingCommandCount,
             ulong lastCommandSequence,
-            float presentationDeltaSeconds)
+            float presentationDeltaSeconds,
+            bool presentationScheduleDriveActive,
+            int activePresentationScheduleFrameIndex)
         {
             Policy = policy;
             RenderFrame = renderFrame;
@@ -346,6 +348,9 @@ namespace ThirdPersonGameplay.Tick
             PendingCommandCount = pendingCommandCount;
             LastCommandSequence = lastCommandSequence;
             PresentationDeltaSeconds = presentationDeltaSeconds;
+            PresentationScheduleDriveActive = presentationScheduleDriveActive;
+            ActivePresentationScheduleFrameIndex =
+                activePresentationScheduleFrameIndex;
         }
 
         public GameplayTickDrivePolicy Policy { get; }
@@ -360,5 +365,7 @@ namespace ThirdPersonGameplay.Tick
         public ulong PendingCommandCount { get; }
         public ulong LastCommandSequence { get; }
         public float PresentationDeltaSeconds { get; }
+        public bool PresentationScheduleDriveActive { get; }
+        public int ActivePresentationScheduleFrameIndex { get; }
     }
 }

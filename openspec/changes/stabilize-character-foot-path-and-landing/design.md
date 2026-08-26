@@ -38,7 +38,7 @@ Accepted Swing Motion必须携带与同一Ground Path Event匹配的typed Swing 
 
 Path诊断必须先在同Frame、Side与Event lineage下记录`Raw Landing/Path Target -> Swing Target -> Captured Residual -> State Output -> Safety Floor Output -> Encoded Goal`。任一后继阶段的单帧Correction变化明显大于直接输入变化时，必须先修复第一个产生不连续或放大的阶段；不得通过更短HalfLife、Goal低通或Step Time截止把该跳变摊到后续帧。
 
-在上述Correction链已经连续后，普通目标继续使用唯一`SwingResidual`。基础半衰期仍来自Profile；当Residual大于`LandingUpdateDistance`时，State Machine按剩余Step Time计算保证在Landing前收敛到容差所需的半衰期，并取它与基础半衰期的较小值。没有有效Step Time时不得猜测截止时间，只能发布明确输入不可用。Step Time只解决Landing前仍有Residual欠账，不负责改变Raw Target、重选State Output或修正同帧放大。
+在上述Correction链已经连续后，普通目标继续使用唯一`SwingResidual`，并且只读取同Pose Contribution的Formal Step Time作为截止时域。State Machine每帧按`(ResidualDistance - LandingUpdateDistance) * DeltaTime / FormalStepTime`计算均匀`Required Step`；Profile基础HalfLife在同一帧产生的`Base Step`是允许的最大响应。`Required Step <= Base Step`时只执行Required Step并发布`Scheduled`；超过Base Step或Formal Step Time已经耗尽时只执行Base Step并发布`Unavailable`；Residual已在容差内时保持当前值并发布`WithinTolerance`。系统不得缩短HalfLife、在截止帧归零、增加全局低通或把欠账交给Solver后处理。Step Time不负责改变Raw Target、重选State Output或平滑真实Envelope Safety Floor。
 
 Swing的硬Floor只等于`GroundEnvelopeSample - AnimatedSole`沿Component Up所需的最低安全Correction。Foot Height、Landing目标和Residual属于连续目标，不得作为硬Floor。若真实Envelope在当前帧上升到输出之上，系统允许立即抬升并必须诊断为Safety Floor Clamp；不得为了平滑把脚留在Envelope下方。
 
@@ -92,7 +92,7 @@ FeasiblePelvisInterval = SupportReachInterval ∩ LandingReachInterval
 ```text
 Path Revision原因与前后目标
 Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output与Encoded Goal的逐阶段Correction
-Residual基础/截止半衰期与剩余距离
+Residual Formal Step Time、Deadline Outcome、Required/Base/Applied Step与剩余距离
 Safety Floor Clamp及Envelope clearance
 Formal Step/Foot Height/Contact/Lock/Support输入
 Support与Landing Reach区间及交集

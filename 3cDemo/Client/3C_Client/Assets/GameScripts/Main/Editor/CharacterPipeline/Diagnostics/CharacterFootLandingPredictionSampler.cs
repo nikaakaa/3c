@@ -111,11 +111,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPathCurrentTargetCorrectionX,FootMotionPathCurrentTargetCorrectionY,FootMotionPathCurrentTargetCorrectionZ," +
             "FootMotionPathLandingPointDeltaMeters,FootMotionPathTargetDeltaMeters," +
             "FootMotionSwingResidualBeforeRevisionX,FootMotionSwingResidualBeforeRevisionY,FootMotionSwingResidualBeforeRevisionZ," +
-            "FootMotionSwingResidualBeforeDecayX,FootMotionSwingResidualBeforeDecayY,FootMotionSwingResidualBeforeDecayZ," +
-            "FootMotionSwingResidualAfterDecayX,FootMotionSwingResidualAfterDecayY,FootMotionSwingResidualAfterDecayZ," +
+            "FootMotionSwingResidualBeforeScheduleX,FootMotionSwingResidualBeforeScheduleY,FootMotionSwingResidualBeforeScheduleZ," +
+            "FootMotionSwingResidualAfterScheduleX,FootMotionSwingResidualAfterScheduleY,FootMotionSwingResidualAfterScheduleZ," +
             "FootMotionResidualOutputCorrectionX,FootMotionResidualOutputCorrectionY,FootMotionResidualOutputCorrectionZ," +
             "FootMotionLandingUpdateDistance,FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
-            "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
+            "FootMotionResidualDeadlineOutcome,FootMotionResidualDeadlineRequiredStepMeters,FootMotionResidualBaseStepMeters,FootMotionResidualAppliedStepMeters,FootMotionResidualRemainingDistanceMeters," +
             "FootMotionConstraintStateBefore,FootMotionLockResponseBefore,FootMotionOutputStagesAvailable,FootMotionReleasingCompletedToSwing,FootMotionEnvelopeAvailable," +
             "FootMotionCorrectionBeforeSafetyFloorX,FootMotionCorrectionBeforeSafetyFloorY,FootMotionCorrectionBeforeSafetyFloorZ," +
             "FootMotionGroundEnvelopeSafetyCorrectionX,FootMotionGroundEnvelopeSafetyCorrectionY,FootMotionGroundEnvelopeSafetyCorrectionZ," +
@@ -1752,15 +1752,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PathLandingPointDelta);
             Add(row, motion.PathTargetDelta);
             Add(row, motion.SwingResidualBeforeRevision);
-            Add(row, motion.SwingResidualBeforeDecay);
-            Add(row, motion.SwingResidualAfterDecay);
+            Add(row, motion.SwingResidualBeforeSchedule);
+            Add(row, motion.SwingResidualAfterSchedule);
             Add(row, motion.ResidualOutputCorrection);
             Add(row, motion.LandingUpdateDistance);
             Add(row, motion.ResidualTimeToLandingSeconds);
             Add(row, motion.ResidualBaseHalfLifeSeconds);
-            Add(row, motion.ResidualDeadlineHalfLifeAvailable);
-            Add(row, motion.ResidualDeadlineHalfLifeSeconds);
-            Add(row, motion.ResidualAppliedHalfLifeSeconds);
+            Add(row, motion.ResidualDeadlineOutcome.ToString());
+            Add(row, motion.ResidualDeadlineRequiredStepMeters);
+            Add(row, motion.ResidualBaseStepMeters);
+            Add(row, motion.ResidualAppliedStepMeters);
+            Add(row, motion.ResidualRemainingDistanceMeters);
             Add(row, motion.ConstraintStateBefore.ToString());
             Add(row, motion.LockResponseBefore.ToString());
             Add(row, motion.OutputStagesAvailable);

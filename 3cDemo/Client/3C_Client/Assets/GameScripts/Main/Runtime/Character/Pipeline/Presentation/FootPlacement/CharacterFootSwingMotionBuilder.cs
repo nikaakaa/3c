@@ -403,16 +403,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockResponseBefore = path.LockResponseBefore;
             OutputStagesAvailable = path.OutputStagesAvailable;
             ReleasingCompletedToSwing = path.ReleasingCompletedToSwing;
-            EnvelopeAvailable = path.EnvelopeAvailable;
+            SafetyFloorAvailable = path.SafetyFloorAvailable;
             CorrectionBeforeSafetyFloor = path.CorrectionBeforeSafetyFloor;
-            GroundEnvelopeSafetyCorrection =
-                path.GroundEnvelopeSafetyCorrection;
+            SafetyFloorMinimumCorrection =
+                path.SafetyFloorMinimumCorrection;
             SafetyFloorOutputCorrection = path.SafetyFloorOutputCorrection;
             FinalEffectiveCorrection = path.FinalEffectiveCorrection;
             SafetyFloorClamped = path.SafetyFloorClamped;
             SafetyFloorClampMeters = path.SafetyFloorClampMeters;
-            EnvelopeClearanceBeforeMeters = path.EnvelopeClearanceBeforeMeters;
-            EnvelopeClearanceAfterMeters = path.EnvelopeClearanceAfterMeters;
+            SafetyFloorClearanceBeforeMeters =
+                path.SafetyFloorClearanceBeforeMeters;
+            SafetyFloorClearanceAfterMeters =
+                path.SafetyFloorClearanceAfterMeters;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -468,15 +470,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootLockResponse LockResponseBefore { get; }
         public bool OutputStagesAvailable { get; }
         public bool ReleasingCompletedToSwing { get; }
-        public bool EnvelopeAvailable { get; }
+        public bool SafetyFloorAvailable { get; }
         public Vector3 CorrectionBeforeSafetyFloor { get; }
-        public Vector3 GroundEnvelopeSafetyCorrection { get; }
+        public Vector3 SafetyFloorMinimumCorrection { get; }
         public Vector3 SafetyFloorOutputCorrection { get; }
         public Vector3 FinalEffectiveCorrection { get; }
         public bool SafetyFloorClamped { get; }
         public float SafetyFloorClampMeters { get; }
-        public float EnvelopeClearanceBeforeMeters { get; }
-        public float EnvelopeClearanceAfterMeters { get; }
+        public float SafetyFloorClearanceBeforeMeters { get; }
+        public float SafetyFloorClearanceAfterMeters { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 

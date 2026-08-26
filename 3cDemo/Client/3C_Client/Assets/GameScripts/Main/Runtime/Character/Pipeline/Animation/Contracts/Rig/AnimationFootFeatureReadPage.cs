@@ -12,7 +12,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SoleLocalVelocity = source.SoleLocalVelocity;
             SoleHeight = source.SoleHeight;
             PlantConfidence = source.PlantConfidence;
-            Contact = source.Contact;
             m_IsSpecified = source.IsValid ? (byte)1 : (byte)0;
         }
 
@@ -20,7 +19,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector3 SoleLocalVelocity { get; }
         public float SoleHeight { get; }
         public float PlantConfidence { get; }
-        public float Contact { get; }
         public bool IsValid => m_IsSpecified != 0;
     }
 
@@ -97,7 +95,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SourceLandingCycleOffset = source.SourceLandingCycleOffset;
             Confidence = source.Confidence;
             TimeToLandingSeconds = source.TimeToLandingSeconds;
-            StepDistance = source.StepDistance;
             EventPhase = source.EventPhase;
             ReleasePhase = source.ReleasePhase;
             LiftOffPhase = source.LiftOffPhase;
@@ -128,7 +125,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int SourceLandingCycleOffset { get; }
         public float Confidence { get; }
         public float TimeToLandingSeconds { get; }
-        public float StepDistance { get; }
         public float EventPhase { get; }
         public float ReleasePhase { get; }
         public float LiftOffPhase { get; }

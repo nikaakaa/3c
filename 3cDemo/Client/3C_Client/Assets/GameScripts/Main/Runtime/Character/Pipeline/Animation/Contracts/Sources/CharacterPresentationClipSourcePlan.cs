@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPresentationPoseSourcePlan
     {
-        public const string CurrentSchemaVersion = "character-presentation-clip-source-plan/v2";
+        public const string CurrentSchemaVersion = "character-presentation-clip-source-plan/v1";
 
         [SerializeField] string m_SchemaVersion = CurrentSchemaVersion;
         [SerializeField] int m_SourceIndex = -1;
@@ -135,8 +135,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_FootPlacementWeightCurve == null || m_FootPlacementWeightCurve.length == 0 ||
                 string.IsNullOrWhiteSpace(FootAnalysisIdentity) ||
                 m_LeftFootFeatures == null || m_RightFootFeatures == null ||
-                !m_LeftFootFeatures.HasFormalStepEvents ||
-                !m_RightFootFeatures.HasFormalStepEvents ||
                 string.IsNullOrWhiteSpace(ContentRevision))
             {
                 throw new InvalidOperationException($"Compiled Presentation Clip source '{DisplayName}' is invalid.");

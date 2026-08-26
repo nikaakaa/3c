@@ -587,9 +587,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !float.IsFinite(m_EaseOutTime) || m_EaseOutTime < 0f ||
                 !Enum.IsDefined(typeof(ExtraPolationMode), m_Extrapolation) ||
                 !HasKeys(m_WeightCurve) || !HasKeys(m_EaseInCurve) || !HasKeys(m_EaseOutCurve) ||
-                !HasKeys(m_FootPlacementWeightCurve) || !HasFootAnalysis ||
-                !m_LeftFootFeatures.HasFormalStepEvents ||
-                !m_RightFootFeatures.HasFormalStepEvents)
+                !HasKeys(m_FootPlacementWeightCurve) || !HasFootAnalysis)
             {
                 throw new InvalidOperationException($"Presentation Projection animation clip binding #{clipBindingIndex} is not sampleable.");
             }

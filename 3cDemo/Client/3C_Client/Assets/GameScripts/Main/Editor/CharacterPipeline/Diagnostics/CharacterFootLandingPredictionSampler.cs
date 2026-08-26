@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string Header =
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
-            "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds,StepDistance," +
+            "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
             "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
@@ -83,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionOriginalAnkleX,FootMotionOriginalAnkleY,FootMotionOriginalAnkleZ," +
             "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ," +
             "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionVerticalCorrection," +
-            "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight,FootMotionContact," +
+            "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight,FootMotionPlantConfidence," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
@@ -1153,7 +1153,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.TrajectoryGeneration);
             Add(row, foot.LandingConfidence);
             Add(row, foot.TimeToLandingSeconds);
-            Add(row, foot.StepDistance);
             Add(row, foot.RootLocalLanding);
             Add(row, input.PresentationDeltaSeconds);
             Add(row, input.PreviousBodyTick);
@@ -1283,7 +1282,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.VerticalCorrection);
             Add(row, motion.LandingPredictionError);
             Add(row, motion.LandingConstraintWeight);
-            Add(row, motion.Contact);
+            Add(row, motion.PlantConfidence);
             Add(row, motion.CorrectedSole);
             Add(row, motion.CorrectedAnkle);
             Add(row, motion.PositionWeight);

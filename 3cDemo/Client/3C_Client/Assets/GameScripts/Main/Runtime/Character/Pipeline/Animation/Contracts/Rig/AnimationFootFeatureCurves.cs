@@ -43,8 +43,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         public const float GroundedMinimumConfidence = 0.5f;
         public const float LockedMinimumConfidence = 0.75f;
-        public const float ContactMinimum = 0.5f;
-        public const float ContactComplete = 0.75f;
 
         public static void RequirePhaseOrder(
             float releasePhase,
@@ -142,12 +140,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         [SerializeField] AnimationCurve m_Confidence;
         [SerializeField] AnimationCurve m_TimeToLandingSeconds;
-        [SerializeField] AnimationCurve m_StepDistance;
-        [SerializeField] AnimationCurve m_RootLocalLandingX;
-        [SerializeField] AnimationCurve m_RootLocalLandingY;
-        [SerializeField] AnimationCurve m_RootLocalLandingZ;
-        [SerializeField] AnimationCurve m_CurrentConstraintWeight;
-        [SerializeField] AnimationCurve m_CurrentSupportWeight;
         [SerializeField] AnimationCurve m_EventPhase;
         [SerializeField] AnimationCurve m_ReleasePhase;
         [SerializeField] AnimationCurve m_LiftOffPhase;
@@ -203,22 +195,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve[] authoredFootPlanarRouteX,
             AnimationCurve[] authoredFootPlanarRouteZ,
             AnimationCurve[] animationClearanceHeight,
-            AnimationFootBiomechanicalStepCurveSet biomechanicalStep,
-            AnimationCurve stepDistance = null,
-            AnimationCurve rootLocalLandingX = null,
-            AnimationCurve rootLocalLandingY = null,
-            AnimationCurve rootLocalLandingZ = null,
-            AnimationCurve currentConstraintWeight = null,
-            AnimationCurve currentSupportWeight = null)
+            AnimationFootBiomechanicalStepCurveSet biomechanicalStep)
         {
             m_Confidence = Copy(confidence);
             m_TimeToLandingSeconds = Copy(timeToLandingSeconds);
-            m_StepDistance = Copy(stepDistance);
-            m_RootLocalLandingX = Copy(rootLocalLandingX);
-            m_RootLocalLandingY = Copy(rootLocalLandingY);
-            m_RootLocalLandingZ = Copy(rootLocalLandingZ);
-            m_CurrentConstraintWeight = Copy(currentConstraintWeight);
-            m_CurrentSupportWeight = Copy(currentSupportWeight);
             m_EventPhase = Copy(eventPhase);
             m_ReleasePhase = Copy(releasePhase);
             m_LiftOffPhase = Copy(liftOffPhase);
@@ -251,12 +231,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public AnimationCurve Confidence => m_Confidence;
         public AnimationCurve TimeToLandingSeconds => m_TimeToLandingSeconds;
-        public AnimationCurve StepDistance => m_StepDistance;
-        public AnimationCurve RootLocalLandingX => m_RootLocalLandingX;
-        public AnimationCurve RootLocalLandingY => m_RootLocalLandingY;
-        public AnimationCurve RootLocalLandingZ => m_RootLocalLandingZ;
-        public AnimationCurve CurrentConstraintWeight => m_CurrentConstraintWeight;
-        public AnimationCurve CurrentSupportWeight => m_CurrentSupportWeight;
         public AnimationCurve EventPhase => m_EventPhase;
         public AnimationCurve ReleasePhase => m_ReleasePhase;
         public AnimationCurve LiftOffPhase => m_LiftOffPhase;
@@ -283,13 +257,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationCurve GetAuthoredFootPlanarRouteZ(int index) => GetRouteCurve(m_AuthoredFootPlanarRouteZ, index);
         public AnimationCurve GetAnimationClearanceHeight(int index) => GetRouteCurve(m_AnimationClearanceHeight, index);
         public AnimationFootBiomechanicalStepCurveSet BiomechanicalStep => m_BiomechanicalStep;
-        public bool HasFormalStepEvent =>
-            m_StepDistance != null &&
-            m_RootLocalLandingX != null &&
-            m_RootLocalLandingY != null &&
-            m_RootLocalLandingZ != null &&
-            m_CurrentConstraintWeight != null &&
-            m_CurrentSupportWeight != null;
 
         public AnimationPredictedFootStepSample Sample(float normalizedTime)
         {
@@ -331,11 +298,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 out float landingPhase,
                 out Quaternion opposingRootLocalSoleRotation,
                 out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> biomechanicalRoute);
-            if (HasFormalStepEvent)
-            {
-                landingPhase = 1f;
-                opposingRootLocalSoleRotation = Quaternion.identity;
-            }
             float scaledBiomechanicalIndex = Mathf.Clamp01(eventPhase) * (biomechanicalRoute.Length - 1);
             int firstBiomechanicalIndex = Mathf.Min(
                 biomechanicalRoute.Length - 1,
@@ -348,18 +310,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     biomechanicalRoute[firstBiomechanicalIndex],
                     biomechanicalRoute[secondBiomechanicalIndex],
                     scaledBiomechanicalIndex - firstBiomechanicalIndex);
-            Vector3 rootLocalLanding = HasFormalStepEvent
-                ? new Vector3(
-                    m_RootLocalLandingX.Evaluate(time),
-                    m_RootLocalLandingY.Evaluate(time),
-                    m_RootLocalLandingZ.Evaluate(time))
-                : rootLocalFootRoute[rootLocalFootRoute.Length - 1];
-            float currentConstraintWeight = HasFormalStepEvent
-                ? m_CurrentConstraintWeight.Evaluate(time)
-                : biomechanicalSample.ConstraintWeight;
-            float currentSupportWeight = HasFormalStepEvent
-                ? m_CurrentSupportWeight.Evaluate(time)
-                : biomechanicalSample.SupportWeight;
             return new AnimationPredictedFootStepSample(
                 Mathf.Max(0, Mathf.RoundToInt(m_EventOrdinal.Evaluate(time))),
                 Mathf.Max(0, Mathf.RoundToInt(m_SourceLandingCycleOffset.Evaluate(time))),
@@ -384,36 +334,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 animationClearanceHeights,
                 landingPhase,
                 opposingRootLocalSoleRotation,
-                biomechanicalSample,
-                HasFormalStepEvent ? m_StepDistance.Evaluate(time) : 0f,
-                rootLocalLanding,
-                currentConstraintWeight,
-                currentSupportWeight,
-                HasFormalStepEvent);
+                biomechanicalSample);
         }
 
         public void RequireValid()
         {
             RequireCurve(m_Confidence, nameof(m_Confidence), true, false);
             RequireCurve(m_TimeToLandingSeconds, nameof(m_TimeToLandingSeconds), false, true);
-            if (HasFormalStepEvent)
-            {
-                RequireCurve(m_StepDistance, nameof(m_StepDistance), false, true);
-                RequireCurve(m_RootLocalLandingX, nameof(m_RootLocalLandingX), false, false);
-                RequireCurve(m_RootLocalLandingY, nameof(m_RootLocalLandingY), false, false);
-                RequireCurve(m_RootLocalLandingZ, nameof(m_RootLocalLandingZ), false, false);
-                RequireCurve(m_CurrentConstraintWeight, nameof(m_CurrentConstraintWeight), true, false);
-                RequireCurve(m_CurrentSupportWeight, nameof(m_CurrentSupportWeight), true, false);
-            }
-            else if (m_StepDistance != null ||
-                     m_RootLocalLandingX != null ||
-                     m_RootLocalLandingY != null ||
-                     m_RootLocalLandingZ != null ||
-                     m_CurrentConstraintWeight != null ||
-                     m_CurrentSupportWeight != null)
-            {
-                throw new InvalidOperationException("Foot Analysis formal Step Event curves are partial.");
-            }
             RequireCurve(m_EventPhase, nameof(m_EventPhase), true, false);
             RequireCurve(m_ReleasePhase, nameof(m_ReleasePhase), true, false);
             RequireCurve(m_LiftOffPhase, nameof(m_LiftOffPhase), true, false);
@@ -508,7 +435,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationCurve m_SoleLocalVelocityZ;
         [SerializeField] AnimationCurve m_SoleHeight;
         [SerializeField] AnimationCurve m_PlantConfidence;
-        [SerializeField] AnimationCurve m_FormalContact;
         [SerializeField] AnimationPredictedFootStepCurveSet m_PredictedStep;
         [SerializeField] AnimationPredictedFootStepCurveSet m_IncomingPredictedStep;
 
@@ -519,15 +445,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve soleHeight,
             AnimationCurve plantConfidence,
             AnimationPredictedFootStepCurveSet predictedStep,
-            AnimationPredictedFootStepCurveSet incomingPredictedStep,
-            AnimationCurve formalContact = null)
+            AnimationPredictedFootStepCurveSet incomingPredictedStep)
         {
             m_SoleLocalVelocityX = Copy(soleLocalVelocityX);
             m_SoleLocalVelocityY = Copy(soleLocalVelocityY);
             m_SoleLocalVelocityZ = Copy(soleLocalVelocityZ);
             m_SoleHeight = Copy(soleHeight);
             m_PlantConfidence = Copy(plantConfidence);
-            m_FormalContact = Copy(formalContact);
             m_PredictedStep = predictedStep ?? throw new ArgumentNullException(nameof(predictedStep));
             m_IncomingPredictedStep = incomingPredictedStep ??
                 throw new ArgumentNullException(nameof(incomingPredictedStep));
@@ -539,14 +463,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationCurve SoleLocalVelocityZ => m_SoleLocalVelocityZ;
         public AnimationCurve SoleHeight => m_SoleHeight;
         public AnimationCurve PlantConfidence => m_PlantConfidence;
-        public AnimationCurve FormalContact => m_FormalContact;
         public AnimationPredictedFootStepCurveSet PredictedStep => m_PredictedStep;
         public AnimationPredictedFootStepCurveSet IncomingPredictedStep => m_IncomingPredictedStep;
-        public bool HasFormalContact => m_FormalContact != null && m_FormalContact.length > 0;
-        public bool HasFormalStepEvents =>
-            HasFormalContact &&
-            m_PredictedStep != null && m_PredictedStep.HasFormalStepEvent &&
-            m_IncomingPredictedStep != null && m_IncomingPredictedStep.HasFormalStepEvent;
 
         public AnimationFootFeatureSample Sample(float normalizedTime)
         {
@@ -565,10 +483,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SoleHeight.Evaluate(time),
                 m_PlantConfidence.Evaluate(time),
                 m_PredictedStep.SamplePrepared(time),
-                m_IncomingPredictedStep.SamplePrepared(time),
-                HasFormalContact
-                    ? m_FormalContact.Evaluate(time)
-                    : m_PlantConfidence.Evaluate(time));
+                m_IncomingPredictedStep.SamplePrepared(time));
         }
 
         public void RequireValid()
@@ -578,8 +493,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireCurve(m_SoleLocalVelocityZ, nameof(m_SoleLocalVelocityZ), false, false);
             RequireCurve(m_SoleHeight, nameof(m_SoleHeight), false, false);
             RequireCurve(m_PlantConfidence, nameof(m_PlantConfidence), true, false);
-            if (m_FormalContact != null)
-                RequireCurve(m_FormalContact, nameof(m_FormalContact), true, false);
             if (m_PredictedStep == null || m_IncomingPredictedStep == null)
                 throw new InvalidOperationException("Foot Analysis current or incoming step curves are missing.");
             m_PredictedStep.RequireValid();
@@ -616,12 +529,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FixedList128Bytes<float> animationClearanceHeights,
             float landingPhase,
             Quaternion opposingRootLocalSoleRotation,
-            AnimationFootBiomechanicalRouteSample biomechanicalSample,
-            float stepDistance = 0f,
-            Vector3 rootLocalLanding = default,
-            float currentConstraintWeight = float.NaN,
-            float currentSupportWeight = float.NaN,
-            bool hasFormalStepEvent = false)
+            AnimationFootBiomechanicalRouteSample biomechanicalSample)
             : this(
                 eventOrdinal,
                 sourceLandingCycleOffset,
@@ -644,16 +552,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 landingPhase,
                 opposingRootLocalSoleRotation,
                 biomechanicalSample,
-                stepDistance,
-                !hasFormalStepEvent && rootLocalFootRoute.Length > 0
-                    ? rootLocalFootRoute[rootLocalFootRoute.Length - 1]
-                    : rootLocalLanding,
-                !hasFormalStepEvent && float.IsNaN(currentConstraintWeight)
-                    ? biomechanicalSample.ConstraintWeight
-                    : currentConstraintWeight,
-                !hasFormalStepEvent && float.IsNaN(currentSupportWeight)
-                    ? biomechanicalSample.SupportWeight
-                    : currentSupportWeight,
                 0,
                 0,
                 0,
@@ -685,10 +583,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float landingPhase,
             Quaternion opposingRootLocalSoleRotation,
             AnimationFootBiomechanicalRouteSample biomechanicalSample,
-            float stepDistance,
-            Vector3 rootLocalLanding,
-            float currentConstraintWeight,
-            float currentSupportWeight,
             ulong sourceSampleIdentity,
             int sourceSampleCycle,
             ulong contributionContinuityIdentity,
@@ -706,14 +600,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SourceLandingCycleOffset = sourceLandingCycleOffset;
             Confidence = RequireNormalized(confidence, nameof(confidence));
             TimeToLandingSeconds = RequireNonNegative(timeToLandingSeconds, nameof(timeToLandingSeconds));
-            StepDistance = RequireNonNegative(stepDistance, nameof(stepDistance));
-            RootLocalLanding = RequireFinite(rootLocalLanding, nameof(rootLocalLanding));
-            CurrentConstraintWeight = RequireNormalized(
-                currentConstraintWeight,
-                nameof(currentConstraintWeight));
-            CurrentSupportWeight = RequireNormalized(
-                currentSupportWeight,
-                nameof(currentSupportWeight));
             EventPhase = RequireNormalized(eventPhase, nameof(eventPhase));
             ReleasePhase = RequireNormalized(releasePhase, nameof(releasePhase));
             LiftOffPhase = RequireNormalized(liftOffPhase, nameof(liftOffPhase));
@@ -777,7 +663,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int SourceLandingCycleOffset { get; }
         public float Confidence { get; }
         public float TimeToLandingSeconds { get; }
-        public float StepDistance { get; }
         public float EventPhase { get; }
         public float ReleasePhase { get; }
         public float LiftOffPhase { get; }
@@ -790,9 +675,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector3 OpposingRootLocalLanding { get; }
         public Quaternion OpposingRootLocalSoleRotation { get; }
         public readonly AnimationBiomechanicalRoutePage Route;
-        public Vector3 RootLocalLanding { get; }
-        public float CurrentConstraintWeight { get; }
-        public float CurrentSupportWeight { get; }
+        public Vector3 RootLocalLanding => Route.RootLocalLanding;
         public ulong SourceSampleIdentity { get; }
         public int SourceSampleCycle { get; }
         public ulong ContributionContinuityIdentity { get; }
@@ -869,6 +752,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             EvaluateIndices(Route.AnimationClearance.Length, eventPhase, out int first, out int second, out float t);
             return Mathf.Lerp(Route.AnimationClearance[first], Route.AnimationClearance[second], t);
         }
+
+        public float CurrentConstraintWeight => Route.CurrentSample.IsValid
+            ? Route.CurrentSample.ConstraintWeight
+            : throw new InvalidOperationException("Predicted biomechanical Foot sample is unavailable.");
+
+        public float CurrentSupportWeight => Route.CurrentSample.IsValid
+            ? Route.CurrentSample.SupportWeight
+            : throw new InvalidOperationException("Predicted biomechanical Foot sample is unavailable.");
 
         public float EvaluateConstraintWeight(float eventPhase)
         {
@@ -955,10 +846,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
                 Route.CurrentSample,
-                StepDistance,
-                RootLocalLanding,
-                CurrentConstraintWeight,
-                CurrentSupportWeight,
                 sourceSampleIdentity,
                 sourceLandingCycle,
                 0,
@@ -1008,10 +895,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
                 Route.CurrentSample,
-                StepDistance,
-                RootLocalLanding,
-                CurrentConstraintWeight,
-                CurrentSupportWeight,
                 markerEpochIdentity,
                 landingMarkerOrdinal,
                 0,
@@ -1071,10 +954,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
                 Route.CurrentSample,
-                StepDistance,
-                RootLocalLanding,
-                CurrentConstraintWeight,
-                CurrentSupportWeight,
                 SourceSampleIdentity,
                 SourceSampleCycle,
                 contributionContinuityIdentity,
@@ -1111,10 +990,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 LandingPhase,
                 OpposingRootLocalSoleRotation,
                 Route.CurrentSample,
-                StepDistance,
-                RootLocalLanding,
-                CurrentConstraintWeight,
-                CurrentSupportWeight,
                 SourceSampleIdentity,
                 SourceSampleCycle,
                 ContributionContinuityIdentity,
@@ -1269,15 +1144,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float soleHeight,
             float plantConfidence,
             AnimationPredictedFootStepSample predictedStep,
-            AnimationPredictedFootStepSample incomingPredictedStep,
-            float contact = float.NaN)
+            AnimationPredictedFootStepSample incomingPredictedStep)
         {
             SoleLocalVelocity = RequireFinite(soleLocalVelocity, nameof(soleLocalVelocity));
             SoleHeight = RequireFinite(soleHeight, nameof(soleHeight));
             PlantConfidence = RequireNormalized(plantConfidence, nameof(plantConfidence));
-            Contact = float.IsNaN(contact)
-                ? PlantConfidence
-                : RequireNormalized(contact, nameof(contact));
             PredictedStep = predictedStep;
             IncomingPredictedStep = incomingPredictedStep;
             m_IsSpecified = 1;
@@ -1287,7 +1158,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector3 SoleLocalVelocity { get; }
         public float SoleHeight { get; }
         public float PlantConfidence { get; }
-        public float Contact { get; }
         public readonly AnimationPredictedFootStepSample PredictedStep;
         public readonly AnimationPredictedFootStepSample IncomingPredictedStep;
         public bool IsValid => m_IsSpecified != 0;
@@ -1300,8 +1170,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 SoleHeight,
                 PlantConfidence,
                 predictedStep,
-                incomingPredictedStep,
-                Contact);
+                incomingPredictedStep);
 
         public AnimationFootFeatureSample BindPredictionSource(
             ulong sourceIdentity,
@@ -1315,8 +1184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     sourceCycle),
                 IncomingPredictedStep.BindSource(
                     sourceIdentity,
-                    sourceCycle),
-                Contact);
+                    sourceCycle));
 
         public AnimationFootFeatureSample BindPredictionContribution(
             ulong contributionContinuityIdentity,
@@ -1326,8 +1194,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 SoleHeight,
                 PlantConfidence,
                 PredictedStep.BindContribution(contributionContinuityIdentity, side),
-                IncomingPredictedStep.BindContribution(contributionContinuityIdentity, side),
-                Contact);
+                IncomingPredictedStep.BindContribution(contributionContinuityIdentity, side));
 
         static float RequireNormalized(float value, string field)
         {
@@ -1372,7 +1239,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Vector3 m_Velocity;
         float m_Height;
         float m_PlantConfidence;
-        float m_Contact;
         AnimationPredictedFootStepSample m_PredictedStep;
         AnimationPredictedFootStepSample m_IncomingPredictedStep;
         float m_PredictionPairScore;
@@ -1391,7 +1257,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Velocity += sample.SoleLocalVelocity * visualTimeScale * weight;
             m_Height += sample.SoleHeight * weight;
             m_PlantConfidence += sample.PlantConfidence * weight;
-            m_Contact += sample.Contact * weight;
             AnimationPredictedFootStepSample candidate =
                 sample.PredictedStep.ApplyTimeScale(visualTimeScale);
             AnimationPredictedFootStepSample incomingCandidate =
@@ -1430,8 +1295,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Height / m_Weight,
                 m_PlantConfidence / m_Weight,
                 m_PredictedStep,
-                m_IncomingPredictedStep,
-                m_Contact / m_Weight);
+                m_IncomingPredictedStep);
         }
     }
 

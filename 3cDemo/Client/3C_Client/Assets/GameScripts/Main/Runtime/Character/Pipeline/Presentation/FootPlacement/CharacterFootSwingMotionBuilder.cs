@@ -214,7 +214,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float supportWeight = 0f,
             Vector3 supportContactAnchor = default,
             float plantConfidence = 0f,
-            Vector3 desiredCorrection = default)
+            Vector3 desiredCorrection = default,
+            bool contactPlaneAvailable = false,
+            int contactSurfaceIdentity = 0,
+            Vector3 contactPlaneNormal = default)
         {
             State = state;
             RejectReason = rejectReason;
@@ -241,6 +244,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SupportContactAnchor = supportContactAnchor;
             PlantConfidence = plantConfidence;
             DesiredCorrection = desiredCorrection;
+            ContactPlaneAvailable = contactPlaneAvailable;
+            ContactSurfaceIdentity = contactSurfaceIdentity;
+            ContactPlaneNormal = contactPlaneNormal;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -268,6 +274,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SupportContactAnchor { get; }
         public float PlantConfidence { get; }
         public Vector3 DesiredCorrection { get; }
+        public bool ContactPlaneAvailable { get; }
+        public int ContactSurfaceIdentity { get; }
+        public Vector3 ContactPlaneNormal { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
 
         internal CharacterFootSwingMotionResult WithPlantConfidence(
@@ -297,7 +306,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 SupportWeight,
                 SupportContactAnchor,
                 plantConfidence,
-                DesiredCorrection);
+                DesiredCorrection,
+                ContactPlaneAvailable,
+                ContactSurfaceIdentity,
+                ContactPlaneNormal);
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics
@@ -330,6 +342,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SupportContactAnchor = result.SupportContactAnchor;
             PlantConfidence = result.PlantConfidence;
             DesiredCorrection = result.DesiredCorrection;
+            ContactPlaneAvailable = result.ContactPlaneAvailable;
+            ContactSurfaceIdentity = result.ContactSurfaceIdentity;
+            ContactPlaneNormal = result.ContactPlaneNormal;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -357,6 +372,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SupportContactAnchor { get; }
         public float PlantConfidence { get; }
         public Vector3 DesiredCorrection { get; }
+        public bool ContactPlaneAvailable { get; }
+        public int ContactSurfaceIdentity { get; }
+        public Vector3 ContactPlaneNormal { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 

@@ -12,29 +12,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal AnimationPhysicalBoneWriteDiagnostics(
             ulong completionIdentity,
             Vector3 leftAnkleComponentPosition,
+            Quaternion leftAnkleComponentRotation,
             Vector3 rightAnkleComponentPosition,
+            Quaternion rightAnkleComponentRotation,
             Vector3 pelvisComponentPosition)
         {
             CompletionIdentity = completionIdentity;
             LeftAnkleComponentPosition = leftAnkleComponentPosition;
+            LeftAnkleComponentRotation = leftAnkleComponentRotation;
             RightAnkleComponentPosition = rightAnkleComponentPosition;
+            RightAnkleComponentRotation = rightAnkleComponentRotation;
             PelvisComponentPosition = pelvisComponentPosition;
         }
 
         internal ulong CompletionIdentity { get; }
         internal Vector3 LeftAnkleComponentPosition { get; }
+        internal Quaternion LeftAnkleComponentRotation { get; }
         internal Vector3 RightAnkleComponentPosition { get; }
+        internal Quaternion RightAnkleComponentRotation { get; }
         internal Vector3 PelvisComponentPosition { get; }
         internal bool IsAvailable =>
             CompletionIdentity != 0 &&
             IsFinite(LeftAnkleComponentPosition) &&
+            IsFinite(LeftAnkleComponentRotation) &&
             IsFinite(RightAnkleComponentPosition) &&
+            IsFinite(RightAnkleComponentRotation) &&
             IsFinite(PelvisComponentPosition);
 
         static bool IsFinite(Vector3 value) =>
             float.IsFinite(value.x) &&
             float.IsFinite(value.y) &&
             float.IsFinite(value.z);
+
+        static bool IsFinite(Quaternion value) =>
+            float.IsFinite(value.x) &&
+            float.IsFinite(value.y) &&
+            float.IsFinite(value.z) &&
+            float.IsFinite(value.w) &&
+            Quaternion.Dot(value, value) > 0.000001f;
     }
 
     public readonly struct AnimationPoseBoneSnapshot
@@ -907,6 +922,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
         }
 
+        public Quaternion LeftPhysicalAnkleComponentRotation
+        {
+            get
+            {
+                if (m_Page == null)
+                    return Quaternion.identity;
+                RequireValid();
+                return m_Page.PhysicalWrite.LeftAnkleComponentRotation;
+            }
+        }
+
         public Vector3 RightPhysicalAnkleComponentPosition
         {
             get
@@ -915,6 +941,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     return default;
                 RequireValid();
                 return m_Page.PhysicalWrite.RightAnkleComponentPosition;
+            }
+        }
+
+        public Quaternion RightPhysicalAnkleComponentRotation
+        {
+            get
+            {
+                if (m_Page == null)
+                    return Quaternion.identity;
+                RequireValid();
+                return m_Page.PhysicalWrite.RightAnkleComponentRotation;
             }
         }
 

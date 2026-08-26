@@ -118,13 +118,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 m_Diagnostics = new AnimationPhysicalBoneWriteDiagnostics(
                     pending.CompletionIdentity,
                     CaptureComponentPosition(m_LeftAnkleBoneIndex),
+                    CaptureComponentRotation(m_LeftAnkleBoneIndex),
                     CaptureComponentPosition(m_RightAnkleBoneIndex),
+                    CaptureComponentRotation(m_RightAnkleBoneIndex),
                     CaptureComponentPosition(m_PelvisBoneIndex));
             }
         }
 
         Vector3 CaptureComponentPosition(int boneIndex) =>
             m_ComponentRoot.InverseTransformPoint(m_Bones[boneIndex].position);
+
+        Quaternion CaptureComponentRotation(int boneIndex) =>
+            (Quaternion.Inverse(m_ComponentRoot.rotation) *
+             m_Bones[boneIndex].rotation).normalized;
 
         AnimationLocalBonePose ResolvePose(
             in AnimationFinalPoseNativeReadBinding pending,

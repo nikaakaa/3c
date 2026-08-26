@@ -287,7 +287,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterFootLandingPredictionFootDiagnostics
     {
         internal CharacterFootLandingPredictionFootDiagnostics(
-            in CharacterFootLandingPredictionResult result)
+            in CharacterFootLandingPredictionResult result,
+            CharacterFootPlacementAnimatedFootPose sourcePose)
         {
             Side = result.Side;
             State = result.State;
@@ -310,6 +311,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingNormal = result.LandingNormal;
             QueryDistance = result.QueryDistance;
             Goal = result.Goal;
+            SourceAnklePosition = sourcePose.AnklePosition;
+            SourceAnkleRotation = sourcePose.AnkleRotation;
+            SourceHeelPosition = sourcePose.HeelPosition;
+            SourceToePosition = sourcePose.ToePosition;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
             CharacterFootSwingMotionResult footMotion = result.FootMotion;
             GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
@@ -337,6 +342,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 LandingNormal { get; }
         public float QueryDistance { get; }
         public CharacterFullBodyIkGoal Goal { get; }
+        public Vector3 SourceAnklePosition { get; }
+        public Quaternion SourceAnkleRotation { get; }
+        public Vector3 SourceHeelPosition { get; }
+        public Vector3 SourceToePosition { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;

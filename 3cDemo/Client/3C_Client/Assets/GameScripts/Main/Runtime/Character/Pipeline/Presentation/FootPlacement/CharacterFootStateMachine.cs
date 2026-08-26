@@ -139,12 +139,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantCycleConsumed;
         internal bool HasContact;
         internal ulong SwingLandingEventIdentity;
+        internal ulong SwingGroundPathInputIdentity;
         internal ulong ContactEventIdentity;
+        internal int ContactSurfaceIdentity;
         internal CharacterFootConstraintState ConstraintState;
         internal CharacterFootLockResponse LockResponse;
         internal Vector3 SwingLandingPoint;
         internal Vector3 SwingResidual;
         internal Vector3 ContactAnchor;
+        internal Vector3 ContactNormal;
         internal Vector3 EffectiveCorrection;
         internal Vector3 AcquireResidual;
         internal Vector3 ReleaseTargetCorrection;
@@ -516,7 +519,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             frame.DeltaSeconds,
                             frame.Settings.EffectiveCorrectionHalfLifeSeconds);
             }
-            ResolveGroundFloor(ref context, in frame, in swing, swingCorrection);
+            ResolveGroundFloor(ref context, in frame, in swing);
             ResolveOutputState(ref context, in frame, swingCorrection);
             return BuildOutput(
                 ref context,
@@ -538,12 +541,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool revised = hasPath != context.HasSwingPath ||
                            hasPath &&
                            (context.SwingLandingEventIdentity != swing.LandingEventIdentity ||
+                            context.SwingGroundPathInputIdentity != swing.GroundPathInputIdentity ||
                             Vector3.Distance(context.SwingLandingPoint, frame.Landing.Point) >
                             frame.Settings.LandingUpdateDistance);
             if (revised)
                 context.SwingResidual = context.EffectiveCorrection - swingCorrection;
             context.HasSwingPath = hasPath;
             context.SwingLandingEventIdentity = hasPath ? swing.LandingEventIdentity : 0;
+            context.SwingGroundPathInputIdentity = hasPath
+                ? swing.GroundPathInputIdentity
+                : 0;
             context.SwingLandingPoint = hasPath ? frame.Landing.Point : default;
             context.SwingResidual = Advance(
                 context.SwingResidual,
@@ -551,13 +558,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.DeltaSeconds,
                 frame.Settings.EffectiveCorrectionHalfLifeSeconds);
             context.EffectiveCorrection = swingCorrection + context.SwingResidual;
-            if (swing.Accepted)
-            {
-                context.EffectiveCorrection = RaiseToFloor(
-                    context.EffectiveCorrection,
-                    swingCorrection,
-                    frame.ComponentUp);
-            }
             context.SwingResidual = context.EffectiveCorrection - swingCorrection;
         }
 
@@ -595,7 +595,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             context.HasContact = true;
             context.ContactEventIdentity = frame.Landing.LandingEventIdentity;
+            context.ContactSurfaceIdentity = frame.Landing.SurfaceIdentity;
             context.ContactAnchor = frame.Landing.Point;
+            context.ContactNormal = frame.Landing.Normal;
             context.ConstraintState = CharacterFootConstraintState.Landing;
             context.LockResponse = CharacterFootLockResponse.None;
             context.EffectiveCorrection = RaiseToFloor(
@@ -793,7 +795,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportWeight,
                 hasContact ? context.ContactAnchor : default,
                 swing.PlantConfidence,
-                desiredCorrection);
+                desiredCorrection,
+                hasContact,
+                hasContact ? context.ContactSurfaceIdentity : 0,
+                hasContact ? context.ContactNormal : default);
             var contactReference = hasContact
                 ? new CharacterFootContactReference(
                     context.ContactEventIdentity,
@@ -858,15 +863,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static void ResolveGroundFloor(
             ref CharacterFootStateContext context,
             in CharacterFootStateFrame frame,
-            in CharacterFootSwingMotionResult swing,
-            Vector3 swingCorrection)
+            in CharacterFootSwingMotionResult swing)
         {
             Vector3 floorCorrection;
             switch (context.ConstraintState)
             {
                 case CharacterFootConstraintState.Swing when swing.Accepted:
                 case CharacterFootConstraintState.UnlockedSupport when swing.Accepted:
-                    floorCorrection = swingCorrection;
+                    floorCorrection = ResolveSwingGroundFloor(
+                        frame.AnimatedFoot,
+                        in swing,
+                        frame.ComponentUp);
                     break;
                 case CharacterFootConstraintState.Landing:
                 case CharacterFootConstraintState.Locked:
@@ -881,6 +888,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.EffectiveCorrection,
                 floorCorrection,
                 frame.ComponentUp);
+        }
+
+        static Vector3 ResolveSwingGroundFloor(
+            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootSwingMotionResult swing,
+            Vector3 componentUp)
+        {
+            Vector3 up = componentUp.normalized;
+            return up * Vector3.Dot(
+                swing.EnvelopeSample - ResolveOriginalSole(foot),
+                up);
         }
 
         static Vector3 RaiseToFloor(

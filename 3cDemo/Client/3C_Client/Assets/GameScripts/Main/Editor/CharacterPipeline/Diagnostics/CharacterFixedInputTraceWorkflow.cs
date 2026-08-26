@@ -1428,7 +1428,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new ActorId(PlayerActorId));
                 return;
             }
-            if (!string.Equals(operation, "replay", StringComparison.Ordinal))
+            if (operation != StandardReplayOperation &&
+                operation != ScheduleCaptureOperation &&
+                operation != ScheduleReplayOperation)
             {
                 throw new InvalidOperationException(
                     $"Canonical Fixed input pending operation '{operation}' is invalid.");

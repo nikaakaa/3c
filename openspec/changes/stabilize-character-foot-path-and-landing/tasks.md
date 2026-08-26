@@ -18,7 +18,7 @@
 - [x] 3.3 在同Frame、Side与Event lineage下补齐Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output和Encoded Goal逐阶段事实
 - [x] 3.4 用最新代表事件定位Correction首次不连续或放大的正式阶段，区分Target换代、Residual Capture、State所有权、Safety Floor与Goal编码责任
 - [x] 3.5 拆分Accepted Swing Path Landing与Promoted Contact Landing所有权，消除Event交接帧错误的Path不可用，不用更短HalfLife、Step Time截止、Goal低通或Solver后处理掩盖同帧跳变
-- [ ] 3.6 把Swing硬Floor收敛为真实Envelope相对Animated Sole的最低安全Correction，区分普通目标追踪与Safety Floor Clamp
+- [x] 3.6 把Swing硬Floor收敛为CurrentSwingFloor真实地面点相对Animated Sole的最低安全Correction，未来Path Envelope只服务连续Swing目标，并区分普通目标追踪与Safety Floor Clamp
 - [x] 3.7 扩展正式诊断事实，记录Revision原因、逐阶段Correction、Envelope clearance和Releasing到Swing转换结果
 - [x] 3.8 把采样包迁移为每Frame/Side唯一主行与独立Ground Path几何表，删除每个Contact/Envelope重复整套阶段列的旧展开行
 - [x] 3.9 让停止、队列失败和自动路线统一进入后台Finalizing，排空Writer、封存双表并运行唯一Analyzer/Publisher后再发布结果

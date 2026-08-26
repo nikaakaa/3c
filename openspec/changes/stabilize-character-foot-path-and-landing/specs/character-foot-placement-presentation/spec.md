@@ -24,7 +24,7 @@ SphereCast MUST继续从Raw Landing上方沿Component Down使用Profile半径和
 
 每只脚 MUST继续只有一个固定typed `CharacterFootStateContext`、一个`CharacterFootStateMachine`、一个Effective Correction Owner和一个Anchor Owner。State Machine MUST使用正式Foot Motion Frame、不可变Ground Observation和上一Committed Context生成Swing、Landing、Locked、Releasing或UnlockedSupport；不得恢复旧Lifecycle对象、第二状态机或Goal后处理器。
 
-Swing MUST使用Last Landing、Next Landing、Runtime Ground Envelope和正式Foot Height生成目标。Accepted Swing Motion MUST携带同Ground Path Event的typed Swing Path Landing Reference；Promoted Landing与按当前Step解析的Landing MUST只属于Contact/Anchor，不得门控Swing Path可用性或提供Swing Residual的Landing Point。Path Revision MUST由Event、可用性、Landing端点或实际Swing目标的有效变化触发，并通过唯一Swing Residual保持连续；Ground Path identity单独变化 MUST不每帧重置Residual。Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output与Encoded Goal之间 MUST保持同Frame可对账，后继阶段 MUST不把小幅输入变化无依据放大为更大的Correction跳变。Residual大于LandingUpdateDistance时 MUST按正式Step Time计算Landing截止收敛，但Step Time MUST只决定已经连续的Residual衰减，不得用于掩盖同帧不连续，也不得平滑穿过真实Envelope最低安全高度。
+Swing MUST使用Last Landing、Next Landing、Runtime Ground Envelope和正式Foot Height生成连续目标。Accepted Swing Motion MUST携带同Ground Path Event的typed Swing Path Landing Reference；Promoted Landing与按当前Step解析的Landing MUST只属于Contact/Anchor，不得门控Swing Path可用性或提供Swing Residual的Landing Point。Path Revision MUST由Event、可用性、Landing端点或实际Swing目标的有效变化触发，并通过唯一Swing Residual保持连续；Ground Path identity单独变化 MUST不每帧重置Residual。Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output与Encoded Goal之间 MUST保持同Frame可对账，后继阶段 MUST不把小幅输入变化无依据放大为更大的Correction跳变。Residual大于LandingUpdateDistance时 MUST按正式Step Time计算Landing截止收敛，但Step Time MUST只决定已经连续的Residual衰减，不得用于掩盖同帧不连续。Swing硬Floor MUST只消费当前Animated Sole的正式CurrentSwingFloor查询，不得消费未来Path Envelope，也不得平滑穿过CurrentSwingFloor真实Surface Point的最低安全高度。
 
 Landing Anchor MUST在同Event正式Lock Mode首次进入Sliding或Locked且Accepted Landing合法时建立。Acquire Residual MUST保存当前Output到Anchor的连续差，并由正式Lock Weight消退。正式Locked Mode与完成Lock Weight进入Locked FullAnchor；已锁脚返回Sliding Mode时保持同一Anchor和顶层Locked生命周期，只切换内部Sliding Response。正式Contact退出或Mode回到Unlocked时进入Releasing。
 
@@ -34,7 +34,7 @@ Releasing完成并回到Swing的同一帧 MUST先更新State，再执行新Swing
 
 - **WHEN** 同一Swing Event的Landing或Envelope目标发生正式Revision
 - **THEN** State Machine MUST从上一Effective Correction连续接管新目标，并按Step Time在LandingUpdateDistance内收敛
-- **AND** 只有真实Envelope高于连续输出时 MAY立即向上Clamp并发布Safety Floor事实
+- **AND** 只有CurrentSwingFloor真实Surface Point高于连续输出时 MAY立即向上Clamp并发布Safety Floor事实
 
 #### Scenario: 旧Contact Event与新Swing Event同帧交接
 
@@ -98,14 +98,14 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、Path Revision原因、Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output、Encoded Goal、Residual基础与截止HalfLife、Safety Floor Clamp、Envelope clearance、Support与Landing Reach区间、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、Path Revision原因、Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output、Encoded Goal、Residual基础与截止HalfLife、CurrentSwingFloor查询、Safety Floor Clamp与clearance、Support与Landing Reach区间、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 
 #### Scenario: Path Revision产生Safety Floor Clamp
 
-- **WHEN** 新Ground Envelope最低安全高度高于连续Swing输出
-- **THEN** 诊断 MUST记录Revision原因、Clamp前后Correction、Envelope clearance和对应Surface lineage
+- **WHEN** CurrentSwingFloor真实Surface Point的最低安全Correction高于连续Swing输出
+- **THEN** 诊断 MUST记录CurrentFloor Query、Clamp前后Correction、Safety Floor clearance和对应Surface lineage
 - **AND** MUST区分普通目标跟随与真实地面安全抬升
 
 #### Scenario: Correction在Path后继阶段被放大

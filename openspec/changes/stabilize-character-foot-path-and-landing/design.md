@@ -40,7 +40,7 @@ Path诊断必须先在同Frame、Side与Event lineage下记录`Raw Landing/Path 
 
 在上述Correction链已经连续后，普通目标继续使用唯一`SwingResidual`。基础半衰期仍来自Profile；当Residual大于`LandingUpdateDistance`时，State Machine按剩余Step Time计算保证在Landing前收敛到容差所需的半衰期，并取它与基础半衰期的较小值。没有有效Step Time时不得猜测截止时间，只能发布明确输入不可用。Step Time只解决Landing前仍有Residual欠账，不负责改变Raw Target、重选State Output或修正同帧放大。
 
-Swing的硬Floor只等于`GroundEnvelopeSample - AnimatedSole`沿Component Up所需的最低安全Correction。Foot Height、Landing目标和Residual属于连续目标，不得作为硬Floor。若真实Envelope在当前帧上升到输出之上，系统允许立即抬升并必须诊断为Safety Floor Clamp；不得为了平滑把脚留在Envelope下方。
+Swing的未来Ground Path Envelope只服务连续轨迹目标，不得作为当前脚硬Floor。硬Floor只等于正式`CurrentSwingFloor`查询命中的真实Surface Point相对`AnimatedSole`沿Component Up所需的最低安全Correction；查询必须复用唯一Foot World Query和正式Sphere、Layer、坡度与Cast配置。Query Miss、Capacity或Invalid时发布typed unavailable，不得回读未来Envelope补全。Foot Height、Landing目标和Residual属于连续目标，不得作为硬Floor。若CurrentSwingFloor在当前帧高于输出，系统允许立即抬升并必须诊断为Safety Floor Clamp；不得为了平滑把脚留在真实地面下方。
 
 `Releasing -> Swing`完成必须先更新顶层State，再按新State执行Ground Floor和最终输出分类，避免同一帧发布Swing却跳过Swing Envelope保护。
 
@@ -93,7 +93,7 @@ FeasiblePelvisInterval = SupportReachInterval ∩ LandingReachInterval
 Path Revision原因与前后目标
 Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output与Encoded Goal的逐阶段Correction
 Residual基础/截止半衰期与剩余距离
-Safety Floor Clamp及Envelope clearance
+Safety Floor Clamp、CurrentSwingFloor查询事实及Safety Floor clearance
 Formal Step/Foot Height/Contact/Lock/Support输入
 Support与Landing Reach区间及交集
 Foot Goal夹紧量与LandingReachUnavailable
@@ -111,6 +111,7 @@ Diagnostics不得创建Anchor、选择Support、改变Reach、Clamp Goal或执�
 - 恢复旧Goal Transition或在FBBIK之后加全局平滑。
 - Path identity每帧变化就无条件重置Residual。
 - 把完整Swing目标当作Ground Floor，或为了连续性允许脚穿过真实Envelope。
+- 把当前脚水平投影到一维Ground Path上包络并取同距离最高点；该做法无法区分竖直边两侧的真实Surface。
 - 直接给膝盖设置最小角度而不处理Foot Goal与Pelvis可达。
 - 只降低Foot Goal Weight掩盖超长目标。
 - 在Support和Foot Height未迁移前单独延长Landing或接入Lock Weight。

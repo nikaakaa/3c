@@ -13,6 +13,7 @@ using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
 using UnityEditor;
 using UnityEngine;
+using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
@@ -52,7 +53,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const float PositionTolerance = 0.1f;
         const float YawTolerance = 2f;
 
-        static PoseRecord s_RecordingStartPose;
         static int s_RecordingVariantIndex;
         static bool s_ReplayOwnsSampling;
         static bool s_ReplayWaitingForSampling;
@@ -71,8 +71,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.update += Tick;
             s_LastTracePath = FindLatestTracePath();
             s_LastTraceId = TraceIdFromPath(s_LastTracePath);
-            if (IsPending && EditorApplication.isPlaying)
-                ResetPendingDeadline();
+            if (IsPending)
+            {
+                EnsurePendingTracePreparation();
+                if (EditorApplication.isPlaying)
+                    ResetPendingDeadline();
+            }
         }
 
         public static bool IsRecording =>
@@ -92,6 +96,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static void StartRecording()
         {
             RequireAvailable();
+            FixedCharacterInputTraceModule.PrepareRecording(
+                new ActorId(PlayerActorId));
             s_LastFailure = string.Empty;
             IGameplayLabLauncherOperations operations = RequireLauncher();
             GameplayLabLauncherState state = operations.ReadState();
@@ -111,7 +117,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!IsRecording)
                 throw new InvalidOperationException("Canonical Fixed input recording is not active.");
             FixedCharacterInputTrace trace = FixedCharacterInputTraceModule.StopRecording();
-            TraceDocument document = CreateDocument(trace, s_RecordingStartPose, s_RecordingVariantIndex);
+            TraceDocument document = CreateDocument(
+                trace,
+                s_RecordingVariantIndex);
             string path = SaveDocument(document);
             s_LastTracePath = path;
             s_LastTraceId = trace.TraceId;
@@ -196,6 +204,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             RequireAvailable();
             TraceDocument document = ReadDocument(path, true);
+            FixedCharacterInputTrace trace = ToRuntimeTrace(document);
+            FixedCharacterInputTraceModule.PrepareReplay(trace);
             s_PendingReplayDocument = document;
             s_LastFailure = string.Empty;
             s_LastTracePath = path;
@@ -212,13 +222,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void BeginRecording()
         {
-            if (!TryResolvePlayerPose(out PoseRecord pose))
-                throw new InvalidOperationException("Gameplay Lab Fixed player is not ready for input recording.");
-            s_RecordingStartPose = pose;
+            if (!TryResolvePlayerStartState(
+                    out FixedCharacterHost host,
+                    out FixedWorldBodyState initialBody,
+                    out PoseRecord pose))
+            {
+                return;
+            }
+            RequirePoseMatchesBody(pose, initialBody);
             s_RecordingVariantIndex = EditorPrefs.GetInt(PendingVariantKey, -1);
             if (s_RecordingVariantIndex < 0)
                 throw new InvalidOperationException("Canonical Fixed input recording has no Gameplay Lab variant identity.");
-            FixedCharacterInputTraceModule.StartRecording(new ActorId(PlayerActorId));
+            if (host.SessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
+                return;
+            FixedCharacterInputTraceModule.StartRecording();
             ClearPending();
             EditorApplication.isPaused = false;
             s_LastStatus = "Recording canonical character input per Fixed simulation Tick. Camera input remains live.";
@@ -226,11 +243,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void BeginReplay(TraceDocument document)
         {
+            FixedCharacterInputTrace trace = ToRuntimeTrace(document);
             if (!s_ReplayWaitingForSampling)
             {
-                if (!TryResolvePlayerPose(out PoseRecord current))
+                if (!TryResolvePlayerStartState(
+                        out FixedCharacterHost host,
+                        out FixedWorldBodyState initialBody,
+                        out PoseRecord current) ||
+                    host.SessionHost.LifecycleState !=
+                    SimulationSessionLifecycleState.Active)
+                {
                     return;
-                float positionError = Vector3.Distance(current.Position, document.start_pose.Position);
+                }
+                RequireBodyEquals(
+                    initialBody,
+                    trace.StartBody,
+                    "Replay Session InitialBody does not match the trace canonical start body.");
+                float positionError = Vector3.Distance(
+                    current.Position,
+                    document.start_pose.Position);
                 float yawError = Mathf.Abs(Mathf.DeltaAngle(current.yaw_degrees, document.start_pose.yaw_degrees));
                 if (positionError > PositionTolerance || yawError > YawTolerance)
                 {
@@ -241,11 +272,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootLandingPredictionSampler.StartSampling();
                 s_ReplayOwnsSampling = true;
                 s_ReplayWaitingForSampling = true;
-                FixedCharacterInputTrace trace = ToRuntimeTrace(document);
-                FixedCharacterInputTraceModule.StartReplay(trace);
                 EditorApplication.isPaused = false;
                 s_LastStatus =
-                    $"Replaying {trace.Frames.Count} canonical Fixed input frames while Foot Landing sampling starts.";
+                    $"Canonical start body restored. Waiting for Foot Landing sampling before replaying {trace.Frames.Count} Fixed input frames.";
             }
             if (CharacterFootLandingPredictionSampler.IsStartPending)
                 return;
@@ -254,6 +283,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastStartFailure)
                         ? "Foot Landing sampling did not start."
                         : CharacterFootLandingPredictionSampler.LastStartFailure);
+            FixedCharacterInputTraceModule.StartReplay();
             s_ReplayWaitingForSampling = false;
             ClearPending();
             FixedCharacterInputTraceStatus status = FixedCharacterInputTraceModule.Status;
@@ -285,11 +315,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 StartPendingPlayMode();
                 return;
             }
+            EnsurePendingTracePreparation();
             string operation = PendingOperation;
             if (string.Equals(operation, "record", StringComparison.Ordinal))
             {
-                if (TryResolvePlayerPose(out _))
-                    BeginRecording();
+                BeginRecording();
                 return;
             }
             if (!string.Equals(operation, "replay", StringComparison.Ordinal))
@@ -354,6 +384,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!IsPending || EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
+            EnsurePendingTracePreparation();
             IGameplayLabLauncherOperations operations = RequireLauncher();
             int variantIndex = EditorPrefs.GetInt(PendingVariantKey, -1);
             ResetPendingDeadline();
@@ -445,7 +476,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             GameplayLabLauncherRegistry.Operations ??
             throw new InvalidOperationException("Gameplay Lab launcher operations are not registered.");
 
-        static bool TryResolvePlayerPose(out PoseRecord pose)
+        static bool TryResolvePlayerStartState(
+            out FixedCharacterHost selectedHost,
+            out FixedWorldBodyState initialBody,
+            out PoseRecord pose)
         {
             FixedCharacterHost[] hosts = UnityEngine.Object.FindObjectsByType<FixedCharacterHost>(
                 FindObjectsInactive.Exclude,
@@ -453,12 +487,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < hosts.Length; i++)
             {
                 FixedCharacterHost host = hosts[i];
-                if (host == null || host.RootHierarchy == null || host.RootHierarchy.LogicRoot == null ||
-                    !string.Equals(host.ActorId.Value, PlayerActorId, StringComparison.Ordinal))
+                if (host == null || host.RootHierarchy == null ||
+                    host.RootHierarchy.LogicRoot == null ||
+                    !string.Equals(
+                        host.ActorId.Value,
+                        PlayerActorId,
+                        StringComparison.Ordinal) ||
+                    !host.TryGetInitialBody(out initialBody))
                 {
                     continue;
                 }
                 Transform root = host.RootHierarchy.LogicRoot;
+                selectedHost = host;
                 pose = new PoseRecord
                 {
                     x = root.position.x,
@@ -468,13 +508,56 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 };
                 return true;
             }
+            selectedHost = null;
+            initialBody = default;
             pose = null;
             return false;
         }
 
+        static PoseRecord PoseFromBody(FixedWorldBodyState body) => new PoseRecord
+        {
+            x = body.Position.X.ToSingle(),
+            y = body.Position.Y.ToSingle(),
+            z = body.Position.Z.ToSingle(),
+            yaw_degrees = body.Yaw.Degrees.ToSingle()
+        };
+
+        static void RequirePoseMatchesBody(PoseRecord pose, FixedWorldBodyState body)
+        {
+            PoseRecord expected = PoseFromBody(body);
+            float positionError = Vector3.Distance(
+                pose.Position,
+                expected.Position);
+            float yawError = Mathf.Abs(Mathf.DeltaAngle(
+                pose.yaw_degrees,
+                expected.yaw_degrees));
+            if (positionError > PositionTolerance || yawError > YawTolerance)
+            {
+                throw new InvalidOperationException(
+                    $"Gameplay Lab LogicRoot does not match its formal InitialBody. " +
+                    $"PositionError={positionError:0.###}, YawError={yawError:0.###}.");
+            }
+        }
+
+        static void RequireBodyEquals(
+            FixedWorldBodyState actual,
+            FixedWorldBodyState expected,
+            string message)
+        {
+            if (actual.ActorId != expected.ActorId ||
+                actual.Position != expected.Position ||
+                actual.Yaw != expected.Yaw ||
+                actual.Velocity != expected.Velocity ||
+                actual.VerticalVelocity != expected.VerticalVelocity ||
+                actual.Grounded != expected.Grounded ||
+                actual.Collision != expected.Collision)
+            {
+                throw new InvalidOperationException(message);
+            }
+        }
+
         static TraceDocument CreateDocument(
             FixedCharacterInputTrace trace,
-            PoseRecord startPose,
             int launcherVariantIndex)
         {
             var document = new TraceDocument
@@ -488,7 +571,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 first_tick = trace.Frames[0].Tick.Value,
                 frame_count = trace.Frames.Count,
                 launcher_variant_index = launcherVariantIndex,
-                start_pose = startPose,
+                start_pose = PoseFromBody(trace.StartBody),
                 frames = new TraceFrameDocument[trace.Frames.Count]
             };
             for (int i = 0; i < trace.Frames.Count; i++)
@@ -532,8 +615,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 actorId,
                 new ProgramHash(new StableHash(document.program_hash)),
                 document.tick_rate,
+                BuildStartBody(document, actorId),
                 frames);
         }
+
+        static FixedWorldBodyState BuildStartBody(
+            TraceDocument document,
+            ActorId actorId) =>
+            new FixedWorldBodyState(
+                actorId,
+                new FixedVector3(
+                    FixedScalar.FromSingle(document.start_pose.x),
+                    FixedScalar.FromSingle(document.start_pose.y),
+                    FixedScalar.FromSingle(document.start_pose.z)),
+                new FixedYaw(FixedScalar.FromSingle(
+                    document.start_pose.yaw_degrees)),
+                FixedVector3.Zero,
+                FixedScalar.Zero,
+                true,
+                ThirdPersonSimulation.Fixed.WorldCollisionSummary.Below);
 
         static string SaveDocument(TraceDocument document)
         {
@@ -619,6 +719,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
             hash.AppendData(bytes);
             hash.AppendData(new byte[] { 0x1f });
+        }
+
+        static void EnsurePendingTracePreparation()
+        {
+            if (!IsPending ||
+                FixedCharacterInputTraceModule.Status.Mode !=
+                FixedCharacterInputTraceMode.Idle)
+            {
+                return;
+            }
+            string operation = PendingOperation;
+            if (string.Equals(operation, "record", StringComparison.Ordinal))
+            {
+                FixedCharacterInputTraceModule.PrepareRecording(
+                    new ActorId(PlayerActorId));
+                return;
+            }
+            if (!string.Equals(operation, "replay", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Canonical Fixed input pending operation '{operation}' is invalid.");
+            }
+            s_PendingReplayDocument ??= ReadDocument(
+                EditorPrefs.GetString(PendingTracePathKey, string.Empty),
+                true);
+            FixedCharacterInputTraceModule.PrepareReplay(
+                ToRuntimeTrace(s_PendingReplayDocument));
         }
 
         static void ArmPending(string operation, string tracePath, int variantIndex)

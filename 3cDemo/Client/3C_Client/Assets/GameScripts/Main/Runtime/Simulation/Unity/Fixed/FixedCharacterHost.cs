@@ -56,6 +56,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public Vector3 VisualPosition => m_RootHierarchy
             ? m_RootHierarchy.VisualRoot.position
             : throw new InvalidOperationException("Fixed Character Host requires a Root Hierarchy Binding.");
+        public bool TryGetInitialBody(out FixedWorldBodyState body)
+        {
+            if (m_Registration == null)
+            {
+                body = default;
+                return false;
+            }
+            body = m_Registration.InitialBody;
+            return true;
+        }
 
 #if UNITY_EDITOR
         public void SetProfileAuthoring(
@@ -178,7 +188,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 {
                     throw new InvalidOperationException($"Fixed Character Host '{name}' World-Aware binding must match its Root Hierarchy.");
                 }
-                FixedWorldBodyState initialBody = BuildInitialBody(actorId, rootHierarchy.LogicRoot);
+                FixedWorldBodyState initialBody =
+                    FixedCharacterInputTraceModule.ResolveInitialBody(
+                        BuildInitialBody(actorId, rootHierarchy.LogicRoot));
                 CharacterPresentationBodyState presentationBody = FixedUnityPresentationBoundary.Convert(initialBody);
                 CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(
                     program.Manifest.ProgramId.Value,

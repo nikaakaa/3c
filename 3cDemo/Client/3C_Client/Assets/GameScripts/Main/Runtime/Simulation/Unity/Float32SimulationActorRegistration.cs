@@ -14,6 +14,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         void CaptureRenderFrame(ulong renderFrame);
     }
 
+    public interface ISimulationActorStartGate
+    {
+        bool IsSimulationStartReady { get; }
+        string SimulationStartWaitReason { get; }
+    }
+
     public interface IFloat32SimulationActorRegistration :
         ISimulationActorRegistration,
         IFloat32PublishedActorResultObserver

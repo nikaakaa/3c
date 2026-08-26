@@ -177,6 +177,8 @@ namespace ThirdPersonCharacter.Pipeline
                 }
                 using (LogicMarker.Auto())
                 {
+                    if (!ActorStartGatesReady())
+                        return;
                     m_OutputLifecycle.BeginLogicTick();
                     m_Runtime.LogicTick(BuildRuntimeContext(context, m_LaunchPlan.Descriptor.SourceClockId));
                 }
@@ -367,6 +369,19 @@ namespace ThirdPersonCharacter.Pipeline
         {
             for (int i = 0; i < m_Registrations.Count; i++)
                 m_Registrations[i].CaptureRenderFrame(renderFrame);
+        }
+
+        bool ActorStartGatesReady()
+        {
+            for (int i = 0; i < m_Registrations.Count; i++)
+            {
+                if (m_Registrations[i] is ISimulationActorStartGate gate &&
+                    !gate.IsSimulationStartReady)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         void DeactivateActorPorts()

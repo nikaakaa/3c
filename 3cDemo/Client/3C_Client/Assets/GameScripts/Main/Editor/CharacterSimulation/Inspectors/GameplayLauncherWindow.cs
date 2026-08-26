@@ -346,6 +346,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     GameplayLabFootIkKeyboardRouteDriver.LastDiagnosticSummary,
                     MessageType.Info);
             }
+            DrawFixedInputTrace();
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField(
                 "Foot IK Visual Validation",
@@ -390,6 +391,72 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 EditorGUILayout.LabelField("Last Diagnoses");
                 EditorGUILayout.SelectableLabel(
                     diagnosisDirectory,
+                    EditorStyles.textField,
+                    GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            }
+        }
+
+        static void DrawFixedInputTrace()
+        {
+            bool recording = CharacterFixedInputTraceWorkflow.IsRecording;
+            bool replaying = CharacterFixedInputTraceWorkflow.IsReplaying;
+            bool pending = CharacterFixedInputTraceWorkflow.IsPending;
+            bool sampling = CharacterFootLandingPredictionSampler.IsCapturing ||
+                            CharacterFootLandingPredictionSampler.IsStartPending ||
+                            CharacterFootLandingPredictionSampler.IsFinalizing;
+            string state = recording
+                ? "Recording"
+                : replaying
+                    ? "Replaying"
+                    : pending
+                        ? $"Starting {CharacterFixedInputTraceWorkflow.PendingOperation}"
+                        : "Idle";
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField("Fixed Input Trace", state);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(
+                           EditorApplication.isCompiling || recording || replaying || pending || sampling))
+                {
+                    if (GUILayout.Button("Record Input"))
+                        ExecuteSampling(CharacterFixedInputTraceWorkflow.StartRecording);
+                }
+                using (new EditorGUI.DisabledScope(!recording))
+                {
+                    if (GUILayout.Button("Stop and Save Input"))
+                        ExecuteSampling(() => CharacterFixedInputTraceWorkflow.StopAndSaveRecording());
+                }
+                using (new EditorGUI.DisabledScope(
+                           EditorApplication.isCompiling || recording || replaying || pending || sampling ||
+                           string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastTracePath) ||
+                           !File.Exists(CharacterFixedInputTraceWorkflow.LastTracePath)))
+                {
+                    if (GUILayout.Button("Replay Last + Sample"))
+                        ExecuteSampling(CharacterFixedInputTraceWorkflow.ReplayLast);
+                }
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(!replaying && !pending))
+                {
+                    if (GUILayout.Button("Stop Replay"))
+                        ExecuteSampling(CharacterFixedInputTraceWorkflow.Stop);
+                }
+                if (GUILayout.Button("Reveal Input Traces"))
+                    ExecuteSampling(CharacterFixedInputTraceWorkflow.RevealTraceDirectory);
+            }
+            EditorGUILayout.HelpBox(
+                "Replay owns canonical character input only. Camera controls remain live for observation.",
+                MessageType.None);
+            if (!string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastFailure))
+                EditorGUILayout.HelpBox(CharacterFixedInputTraceWorkflow.LastFailure, MessageType.Error);
+            else if (!string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastStatus))
+                EditorGUILayout.HelpBox(CharacterFixedInputTraceWorkflow.LastStatus, MessageType.Info);
+            if (!string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastTracePath))
+            {
+                EditorGUILayout.LabelField("Last Input Trace");
+                EditorGUILayout.SelectableLabel(
+                    CharacterFixedInputTraceWorkflow.LastTracePath,
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }

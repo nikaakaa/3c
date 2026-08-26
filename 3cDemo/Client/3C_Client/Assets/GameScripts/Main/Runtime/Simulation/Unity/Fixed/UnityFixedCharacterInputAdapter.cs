@@ -203,13 +203,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
             if (emittedCount != 0)
                 m_PendingRequests.RemoveRange(0, emittedCount);
-            return new FixedCharacterSimulationInput(
+            var liveInput = new FixedCharacterSimulationInput(
                 FixedSimulationNumericProfile.Value,
                 context.Source,
                 SourceIdentity,
                 context.InputSequence,
                 m_InputValues,
                 m_InputRequests);
+            return FixedCharacterInputTraceModule.Resolve(context, m_Program.ProgramHash, liveInput);
         }
 
         public byte[] CaptureState()

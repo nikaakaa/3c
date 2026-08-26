@@ -21,9 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         FutureBodyTranslationUnavailable = 5,
         FutureBodyTranslationRangeInvalid = 6,
         GroundQueryMissed = 7,
-        GroundQueryCapacityExceeded = 8,
-        FormalStepTimeUnavailable = 9,
-        FormalStepTimeAmbiguous = 10
+        GroundQueryCapacityExceeded = 8
     }
 
     public enum CharacterFootLandingStepSource : byte

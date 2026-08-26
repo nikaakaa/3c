@@ -19,9 +19,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 int cycleOffset,
                 float timeToLanding,
                 float distance,
-                float phase,
-                float liftOffPhase,
-                float duration,
                 Vector3 rootLocalLanding)
             {
                 Available = available;
@@ -29,9 +26,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CycleOffset = cycleOffset;
                 TimeToLanding = timeToLanding;
                 Distance = distance;
-                Phase = phase;
-                LiftOffPhase = liftOffPhase;
-                Duration = duration;
                 RootLocalLanding = rootLocalLanding;
             }
 
@@ -40,9 +34,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             internal int CycleOffset { get; }
             internal float TimeToLanding { get; }
             internal float Distance { get; }
-            internal float Phase { get; }
-            internal float LiftOffPhase { get; }
-            internal float Duration { get; }
             internal Vector3 RootLocalLanding { get; }
             internal long Token => Available
                 ? ((long)CycleOffset << 32) | (uint)Ordinal
@@ -96,18 +87,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string distanceChannel = left
                 ? CharacterAnimationClipRegisteredCurveChannels.LeftStepDistance
                 : CharacterAnimationClipRegisteredCurveChannels.RightStepDistance;
+            string contactChannel = left
+                ? CharacterAnimationClipRegisteredCurveChannels.LeftContact
+                : CharacterAnimationClipRegisteredCurveChannels.RightContact;
             AnimationCurve formalTime = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                 clip,
                 timeChannel);
             AnimationCurve formalDistance = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                 clip,
                 distanceChannel);
+            AnimationCurve formalContact = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                clip,
+                contactChannel);
             StepFrame[] current = BuildCurrentFrames(
                 motion,
                 formalTime,
                 formalDistance,
+                formalContact,
                 duration,
-                sampleRate,
                 loop,
                 left ? "Left" : "Right",
                 clip.name);
@@ -123,28 +120,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 legacy.SoleHeight,
                 legacy.PlantConfidence,
                 BuildStepCurves(legacy.PredictedStep, current),
-                BuildStepCurves(legacy.IncomingPredictedStep, incoming));
+                BuildStepCurves(legacy.IncomingPredictedStep, incoming),
+                NormalizeSeconds(formalContact, duration));
         }
 
         static StepFrame[] BuildCurrentFrames(
             AnimationFootMotionFootPage page,
             AnimationCurve formalTime,
             AnimationCurve formalDistance,
+            AnimationCurve formalContact,
             float duration,
-            float sampleRate,
             bool loop,
             string side,
             string clipName)
         {
             IReadOnlyList<AnimationFootMotionDerivedSample> samples = page.Samples;
             int intervals = samples.Count - 1;
-            float sampleStep = duration / intervals;
             AnimationFootMotionEvent[] landings = page.Events
                 .Where(value => value.Kind == AnimationFootMotionEventKind.Landing)
-                .OrderBy(value => value.SampleIndex)
-                .ToArray();
-            AnimationFootMotionEvent[] liftOffs = page.Events
-                .Where(value => value.Kind == AnimationFootMotionEventKind.LiftOff)
                 .OrderBy(value => value.SampleIndex)
                 .ToArray();
             var byOrdinal = landings.ToDictionary(value => value.Ordinal);
@@ -154,8 +147,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 AnimationFootMotionStepEvidence step = samples[i].Step;
                 float time = formalTime.Evaluate(samples[i].TimeSeconds);
                 float distance = formalDistance.Evaluate(samples[i].TimeSeconds);
+                float contact = formalContact.Evaluate(samples[i].TimeSeconds);
                 RequireMatch(clipName, side, i, "Step Time", step.TimeSeconds, time);
                 RequireMatch(clipName, side, i, "Step Distance", step.Distance, distance);
+                RequireMatch(clipName, side, i, "Contact", samples[i].Filter.Contact, contact);
                 if (!step.Available || !byOrdinal.TryGetValue(step.LandingOrdinal, out AnimationFootMotionEvent landing))
                 {
                     result[i] = default;
@@ -167,27 +162,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     continue;
                 }
                 int target = ResolveLandingAbsolute(landing.SampleIndex, i, intervals, loop);
-                int previous = ResolvePreviousLanding(target, intervals, landings, loop);
-                if (previous > target)
-                    throw new InvalidOperationException(
-                        $"Foot Step Event '{clipName}' {side} sample {i} has no previous Landing.");
-                float phase = Mathf.Clamp01(step.PathProgress);
-                float liftOffPhase = ResolveLiftOffPhase(
-                    previous,
-                    target,
-                    intervals,
-                    liftOffs,
-                    samples,
-                    loop);
                 result[i] = new StepFrame(
                     true,
                     landing.Ordinal,
                     loop ? Mathf.Max(0, target / intervals) : 0,
                     time,
                     distance,
-                    phase,
-                    liftOffPhase,
-                    (target - previous) * sampleStep,
                     landing.RootLocalSolePosition);
             }
             return result;
@@ -203,10 +183,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             float sampleStep = 1f / sampleRate;
             AnimationFootMotionEvent[] landings = page.Events
                 .Where(value => value.Kind == AnimationFootMotionEventKind.Landing)
-                .OrderBy(value => value.SampleIndex)
-                .ToArray();
-            AnimationFootMotionEvent[] liftOffs = page.Events
-                .Where(value => value.Kind == AnimationFootMotionEventKind.LiftOff)
                 .OrderBy(value => value.SampleIndex)
                 .ToArray();
             var result = new StepFrame[current.Count];
@@ -235,22 +211,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 float distance = evidence.Available && evidence.LandingOrdinal == nextLanding.Ordinal
                     ? evidence.Distance
                     : 0f;
-                float liftOffPhase = ResolveLiftOffPhase(
-                    ownedTarget,
-                    nextTarget,
-                    intervals,
-                    liftOffs,
-                    page.Samples,
-                    loop);
                 result[i] = new StepFrame(
                     true,
                     nextLanding.Ordinal,
                     loop ? Mathf.Max(0, nextTarget / intervals) : 0,
                     (nextTarget - i) * sampleStep,
                     distance,
-                    0f,
-                    liftOffPhase,
-                    (nextTarget - ownedTarget) * sampleStep,
                     nextLanding.RootLocalSolePosition);
             }
             return result;
@@ -264,11 +230,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             float[] confidence = new float[count];
             float[] time = new float[count];
             float[] distance = new float[count];
-            float[] phase = new float[count];
-            float[] release = new float[count];
-            float[] liftOff = new float[count];
-            float[] approach = new float[count];
-            float[] duration = new float[count];
             float[] ordinal = new float[count];
             float[] cycle = new float[count];
             float[] rootX = new float[count];
@@ -285,11 +246,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 confidence[i] = frame.Available ? 1f : 0f;
                 time[i] = frame.TimeToLanding;
                 distance[i] = frame.Distance;
-                phase[i] = frame.Phase;
-                release[i] = frame.LiftOffPhase;
-                liftOff[i] = frame.LiftOffPhase;
-                approach[i] = 1f;
-                duration[i] = frame.Duration;
                 ordinal[i] = frame.Ordinal;
                 cycle[i] = frame.CycleOffset;
                 rootX[i] = frame.RootLocalLanding.x;
@@ -306,11 +262,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return new AnimationPredictedFootStepCurveSet(
                 Curve(confidence, tokens, true),
                 Curve(time, tokens, false),
-                Curve(phase, tokens, false),
-                Curve(release, tokens, true),
-                Curve(liftOff, tokens, true),
-                Curve(approach, tokens, true),
-                Curve(duration, tokens, true),
+                legacy.EventPhase,
+                legacy.ReleasePhase,
+                legacy.LiftOffPhase,
+                legacy.ApproachContactPhase,
+                legacy.ActionStepDurationSeconds,
                 Curve(ordinal, tokens, true),
                 Curve(cycle, tokens, true),
                 zero,
@@ -398,25 +354,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return result;
         }
 
-        static int ResolvePreviousLanding(
-            int target,
-            int intervals,
-            IReadOnlyList<AnimationFootMotionEvent> landings,
-            bool loop)
-        {
-            int previous = int.MinValue;
-            for (int cycle = loop ? -1 : 0; cycle <= (loop ? 1 : 0); cycle++)
-            {
-                for (int i = 0; i < landings.Count; i++)
-                {
-                    int candidate = landings[i].SampleIndex + cycle * intervals;
-                    if (candidate < target && candidate > previous)
-                        previous = candidate;
-                }
-            }
-            return previous == int.MinValue && !loop ? 0 : previous;
-        }
-
         static bool TryResolveNextLanding(
             int currentTarget,
             int intervals,
@@ -441,36 +378,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return nextTarget != int.MaxValue;
         }
 
-        static float ResolveLiftOffPhase(
-            int previousLanding,
-            int targetLanding,
-            int intervals,
-            IReadOnlyList<AnimationFootMotionEvent> liftOffs,
-            IReadOnlyList<AnimationFootMotionDerivedSample> samples,
-            bool loop)
-        {
-            int liftOff = int.MaxValue;
-            for (int cycle = loop ? -1 : 0; cycle <= (loop ? 2 : 0); cycle++)
-            {
-                for (int i = 0; i < liftOffs.Count; i++)
-                {
-                    int candidate = liftOffs[i].SampleIndex + cycle * intervals;
-                    if (candidate <= previousLanding || candidate >= targetLanding || candidate >= liftOff)
-                        continue;
-                    liftOff = candidate;
-                }
-            }
-            if (liftOff == int.MaxValue)
-                return 0f;
-            int index = loop ? Mod(liftOff, intervals) : Mathf.Clamp(liftOff, 0, intervals);
-            AnimationFootMotionStepEvidence evidence = samples[index].Step;
-            return evidence.Available
-                ? Mathf.Clamp01(evidence.PathProgress)
-                : Mathf.InverseLerp(previousLanding, targetLanding, liftOff);
-        }
-
         static int Mod(int value, int modulus) =>
             ((value % modulus) + modulus) % modulus;
+
+        static AnimationCurve NormalizeSeconds(AnimationCurve source, float duration)
+        {
+            Keyframe[] keys = source.keys;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                Keyframe key = keys[i];
+                key.time /= duration;
+                key.inTangent *= duration;
+                key.outTangent *= duration;
+                keys[i] = key;
+            }
+            return new AnimationCurve(keys)
+            {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
+        }
 
         static void RequireMatch(
             string clip,

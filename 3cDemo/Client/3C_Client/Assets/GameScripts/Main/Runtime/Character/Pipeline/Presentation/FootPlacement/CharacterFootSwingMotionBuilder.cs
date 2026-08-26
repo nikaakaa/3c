@@ -213,7 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float contactOwnership = 0f,
             float supportWeight = 0f,
             Vector3 supportContactAnchor = default,
-            float plantConfidence = 0f,
+            float contact = 0f,
             Vector3 desiredCorrection = default)
         {
             State = state;
@@ -239,7 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactOwnership = contactOwnership;
             SupportWeight = supportWeight;
             SupportContactAnchor = supportContactAnchor;
-            PlantConfidence = plantConfidence;
+            Contact = contact;
             DesiredCorrection = desiredCorrection;
         }
 
@@ -266,12 +266,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ContactOwnership { get; }
         public float SupportWeight { get; }
         public Vector3 SupportContactAnchor { get; }
-        public float PlantConfidence { get; }
+        public float Contact { get; }
         public Vector3 DesiredCorrection { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
 
-        internal CharacterFootSwingMotionResult WithPlantConfidence(
-            float plantConfidence) =>
+        internal CharacterFootSwingMotionResult WithContact(
+            float contact) =>
             new CharacterFootSwingMotionResult(
                 State,
                 RejectReason,
@@ -296,7 +296,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ContactOwnership,
                 SupportWeight,
                 SupportContactAnchor,
-                plantConfidence,
+                contact,
                 DesiredCorrection);
     }
 
@@ -328,7 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactOwnership = result.ContactOwnership;
             SupportWeight = result.SupportWeight;
             SupportContactAnchor = result.SupportContactAnchor;
-            PlantConfidence = result.PlantConfidence;
+            Contact = result.Contact;
             DesiredCorrection = result.DesiredCorrection;
         }
 
@@ -355,7 +355,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ContactOwnership { get; }
         public float SupportWeight { get; }
         public Vector3 SupportContactAnchor { get; }
-        public float PlantConfidence { get; }
+        public float Contact { get; }
         public Vector3 DesiredCorrection { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
@@ -600,7 +600,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.OriginalAnkle,
                 0f,
                 0f,
-                plantConfidence: motion.PlantConfidence);
+                contact: motion.Contact);
         }
 
         static bool TryResolveSwingPhaseWeight(

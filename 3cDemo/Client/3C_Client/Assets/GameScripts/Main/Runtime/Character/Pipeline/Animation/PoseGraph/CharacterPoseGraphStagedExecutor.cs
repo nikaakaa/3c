@@ -3818,13 +3818,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 t);
             float height = Mathf.LerpUnclamped(baseValue.SoleHeight, overlayValue.SoleHeight, t);
             float plant = Mathf.LerpUnclamped(baseValue.PlantConfidence, overlayValue.PlantConfidence, t);
+            float contact = Mathf.LerpUnclamped(baseValue.Contact, overlayValue.Contact, t);
             AnimationPredictedFootStepSample predicted = overlayPredictionAuthoritative
                 ? overlayValue.PredictedStep
                 : baseValue.PredictedStep;
             AnimationPredictedFootStepSample incomingPredicted = overlayPredictionAuthoritative
                 ? overlayValue.IncomingPredictedStep
                 : baseValue.IncomingPredictedStep;
-            if (!IsFinite(velocity) || !float.IsFinite(height) || !IsWeight(plant))
+            if (!IsFinite(velocity) || !float.IsFinite(height) || !IsWeight(plant) ||
+                !IsWeight(contact))
             {
                 return false;
             }
@@ -3833,7 +3835,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 height,
                 plant,
                 predicted,
-                incomingPredicted);
+                incomingPredicted,
+                contact);
             return result.IsValid;
         }
 
@@ -3884,6 +3887,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IsFinite(sample.SoleLocalVelocity) &&
             float.IsFinite(sample.SoleHeight) &&
             IsWeight(sample.PlantConfidence) &&
+            IsWeight(sample.Contact) &&
             (!sample.PredictedStep.IsValid ||
              IsWeight(sample.PredictedStep.Confidence) &&
              float.IsFinite(sample.PredictedStep.TimeToLandingSeconds) &&

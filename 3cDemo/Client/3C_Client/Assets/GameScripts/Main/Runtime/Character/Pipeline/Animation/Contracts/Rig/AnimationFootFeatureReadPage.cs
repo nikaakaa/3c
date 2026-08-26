@@ -12,6 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SoleLocalVelocity = source.SoleLocalVelocity;
             SoleHeight = source.SoleHeight;
             PlantConfidence = source.PlantConfidence;
+            Contact = source.Contact;
             m_IsSpecified = source.IsValid ? (byte)1 : (byte)0;
         }
 
@@ -19,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector3 SoleLocalVelocity { get; }
         public float SoleHeight { get; }
         public float PlantConfidence { get; }
+        public float Contact { get; }
         public bool IsValid => m_IsSpecified != 0;
     }
 

@@ -449,12 +449,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             RequireValid(in frame);
             CharacterFootSwingMotionResult swing = frame.SwingMotion;
-            float plantConfidence = swing.PlantConfidence;
+            float contact = swing.Contact;
             Vector3 swingCorrection = ResolveSwingCorrection(frame.AnimatedFoot, in swing);
             if (frame.HardOwnershipLoss)
             {
                 context.ClearConstraint(
-                    plantConfidence >= AnimationFootConstraintFacts.GroundedMinimumConfidence);
+                    contact >= AnimationFootConstraintFacts.ContactMinimum);
                 CharacterFootSwingMotionResult suppressed =
                     CharacterFootSwingMotionBuilder.SuppressUnselected(in swing);
                 return BuildOutput(
@@ -566,8 +566,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame,
             ref Vector3 desiredCorrection)
         {
-            float plantConfidence = frame.SwingMotion.PlantConfidence;
-            if (plantConfidence < AnimationFootConstraintFacts.GroundedMinimumConfidence)
+            float contact = frame.SwingMotion.Contact;
+            if (contact < AnimationFootConstraintFacts.ContactMinimum)
             {
                 context.PlantCycleConsumed = false;
                 context.ConstraintState = CharacterFootConstraintState.Swing;
@@ -619,8 +619,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.AnimatedFoot,
                 context.ContactAnchor);
             float horizontalError = ResolveHorizontalError(contactCorrection, frame.ComponentUp);
-            if (frame.SwingMotion.PlantConfidence <
-                    AnimationFootConstraintFacts.GroundedMinimumConfidence ||
+            if (frame.SwingMotion.Contact <
+                    AnimationFootConstraintFacts.ContactMinimum ||
                 horizontalError > frame.Settings.SlideDistance)
             {
                 BeginRelease(ref context, swingCorrection);
@@ -630,7 +630,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             context.ContactProgress = Mathf.Max(
                 context.ContactProgress,
-                ResolvePlantOwnership(frame.SwingMotion.PlantConfidence));
+                ResolveContactOwnership(frame.SwingMotion.Contact));
             desiredCorrection = contactCorrection;
             context.EffectiveCorrection = contactCorrection +
                                           context.AcquireResidual *
@@ -655,8 +655,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.AnimatedFoot,
                 context.ContactAnchor);
             float horizontalError = ResolveHorizontalError(fullCorrection, frame.ComponentUp);
-            if (frame.SwingMotion.PlantConfidence <
-                    AnimationFootConstraintFacts.LockedMinimumConfidence ||
+            if (frame.SwingMotion.Contact <
+                    AnimationFootConstraintFacts.ContactComplete ||
                 horizontalError > frame.Settings.SlideDistance)
             {
                 BeginRelease(ref context, swingCorrection);
@@ -691,8 +691,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (context.ConstraintState != CharacterFootConstraintState.Releasing)
                 return;
-            if (frame.SwingMotion.PlantConfidence >=
-                    AnimationFootConstraintFacts.GroundedMinimumConfidence ||
+            if (frame.SwingMotion.Contact >=
+                    AnimationFootConstraintFacts.ContactMinimum ||
                 Vector3.Distance(context.EffectiveCorrection, swingCorrection) >
                 frame.Settings.LandingUpdateDistance)
                 return;
@@ -792,7 +792,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 contactOwnership,
                 supportWeight,
                 hasContact ? context.ContactAnchor : default,
-                swing.PlantConfidence,
+                swing.Contact,
                 desiredCorrection);
             var contactReference = hasContact
                 ? new CharacterFootContactReference(
@@ -895,11 +895,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : outputCorrection;
         }
 
-        static float ResolvePlantOwnership(float plantConfidence) =>
+        static float ResolveContactOwnership(float contact) =>
             Mathf.InverseLerp(
-                AnimationFootConstraintFacts.GroundedMinimumConfidence,
-                AnimationFootConstraintFacts.LockedMinimumConfidence,
-                plantConfidence);
+                AnimationFootConstraintFacts.ContactMinimum,
+                AnimationFootConstraintFacts.ContactComplete,
+                contact);
 
         static bool CanAcquire(in CharacterFootStateFrame frame) =>
             frame.HasLanding && frame.Landing.LandingEventIdentity != 0;
@@ -966,9 +966,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.FootPlacementWeight > 1f ||
                 !float.IsFinite(frame.DeltaSeconds) ||
                 frame.DeltaSeconds < 0f ||
-                !float.IsFinite(frame.SwingMotion.PlantConfidence) ||
-                frame.SwingMotion.PlantConfidence < 0f ||
-                frame.SwingMotion.PlantConfidence > 1f)
+                !float.IsFinite(frame.SwingMotion.Contact) ||
+                frame.SwingMotion.Contact < 0f ||
+                frame.SwingMotion.Contact > 1f)
                 throw new InvalidOperationException("Foot state frame is invalid.");
         }
 

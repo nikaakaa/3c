@@ -537,18 +537,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in rightSelectedStep,
                     in rightFootMotion,
                     in rightResolved);
-                if (leftLandingReach && rightLandingReach)
-                {
-                    if (leftSelectedStep.TimeToLandingSeconds <=
-                        rightSelectedStep.TimeToLandingSeconds)
-                    {
-                        rightLandingReach = false;
-                    }
-                    else
-                    {
-                        leftLandingReach = false;
-                    }
-                }
                 if (leftLandingReach || rightLandingReach)
                 {
                     strideHips = CharacterFootStrideHipsBuilder.ApplyLandingReach(

@@ -477,6 +477,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_ActiveReplayOperation == ScheduleReplayOperation;
             if (scheduled)
             {
+                if (status.Mode != FixedCharacterInputTraceMode.Replaying &&
+                    status.Mode != FixedCharacterInputTraceMode.Completed)
+                {
+                    return;
+                }
                 CharacterFixedInputPresentationScheduleRun scheduleRun =
                     s_PresentationScheduleRun ??
                     throw new InvalidOperationException(

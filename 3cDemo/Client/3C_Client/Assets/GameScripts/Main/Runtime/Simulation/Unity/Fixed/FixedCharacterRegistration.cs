@@ -223,6 +223,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 ActorId,
                 result.Tick,
                 sample.FinalBody);
+            if (FixedCharacterInputTraceModule.Status.Mode ==
+                FixedCharacterInputTraceMode.Completed)
+            {
+                GameplayTickSystem.RequestCurrentFrameLogicStop();
+            }
             m_PendingBodySamples[sample.Tick.Value] = sample;
             if (m_PresentationRuntime.AcceptsTrajectoryIntent)
                 m_PendingTrajectoryResults[sample.Tick.Value] = result;

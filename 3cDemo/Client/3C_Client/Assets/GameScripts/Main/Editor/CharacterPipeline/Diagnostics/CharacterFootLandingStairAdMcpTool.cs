@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     [McpForUnityTool(
         "character.foot_landing_stair_ad",
-        Description = "Start, inspect, or stop the formal Gameplay Lab stair foot landing sampler. Each run publishes samples.csv, facts.json, and a targeted diagnosis.json without a global pass/fail result.",
+        Description = "Start, inspect, or stop the formal Gameplay Lab stair foot landing sampler. Each run publishes samples.csv, facts.json, and one JSON per diagnosis under diagnoses/ without a global pass/fail result.",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -90,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     sample_directory = CharacterFootLandingPredictionSampler.LastSavedDirectory,
                     samples_path = CharacterFootLandingPredictionSampler.LastSavedPath,
                     facts_path = CharacterFootLandingPredictionSampler.LastSavedFactsPath,
-                    diagnosis_path = CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath,
+                    diagnoses_directory = CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory,
                     fact_event_count = CharacterFootLandingPredictionSampler.LastFactEventCount,
                     diagnosis_target_count = CharacterFootLandingPredictionSampler.LastDiagnosisTargetCount,
                     diagnosis_match_count = CharacterFootLandingPredictionSampler.LastDiagnosisMatchCount,

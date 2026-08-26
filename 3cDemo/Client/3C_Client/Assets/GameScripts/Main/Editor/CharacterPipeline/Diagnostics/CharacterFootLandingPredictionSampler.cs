@@ -553,7 +553,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string s_LastSavedPath = string.Empty;
         static string s_LastSavedDirectory = string.Empty;
         static string s_LastSavedFactsPath = string.Empty;
-        static string s_LastSavedDiagnosisPath = string.Empty;
+        static string s_LastSavedDiagnosisDirectory = string.Empty;
         static string s_LastDiagnosticSummary = string.Empty;
         static string s_LastSavedSampleIdentity = string.Empty;
         static SamplingSession s_Session;
@@ -572,7 +572,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static string LastSavedPath => s_LastSavedPath;
         public static string LastSavedDirectory => s_LastSavedDirectory;
         public static string LastSavedFactsPath => s_LastSavedFactsPath;
-        public static string LastSavedDiagnosisPath => s_LastSavedDiagnosisPath;
+        public static string LastSavedDiagnosisDirectory =>
+            s_LastSavedDiagnosisDirectory;
         public static string LastDiagnosticSummary => s_LastDiagnosticSummary;
         public static string CurrentSampleIdentity =>
             s_Session?.SampleIdentity.ToString("N") ?? string.Empty;
@@ -600,11 +601,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastSavedFactsPath = File.Exists(factsPath)
                     ? factsPath
                     : string.Empty;
-                string diagnosisPath = System.IO.Path.Combine(
+                string diagnosisDirectory = System.IO.Path.Combine(
                     s_LastSavedDirectory,
-                    "diagnosis.json");
-                s_LastSavedDiagnosisPath = File.Exists(diagnosisPath)
-                    ? diagnosisPath
+                    "diagnoses");
+                s_LastSavedDiagnosisDirectory = Directory.Exists(
+                    diagnosisDirectory)
+                    ? diagnosisDirectory
                     : string.Empty;
             }
         }
@@ -686,9 +688,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastSavedFactsPath = System.IO.Path.Combine(
                     s_Session.DirectoryPath,
                     "facts.json");
-                s_LastSavedDiagnosisPath = System.IO.Path.Combine(
+                s_LastSavedDiagnosisDirectory = System.IO.Path.Combine(
                     s_Session.DirectoryPath,
-                    "diagnosis.json");
+                    "diagnoses");
                 s_LastSavedSampleIdentity = s_Session.SampleIdentity.ToString("N");
                 CharacterFootLandingPredictionDebugRegistry.Published += Capture;
                 AnimationPresentationRuntimeTargetRegistry.TargetRegistered += ConfigureTarget;
@@ -1137,7 +1139,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"with {s_DroppedPendingFrameCount} dropped pending frames. " +
                     $"Sample={s_LastSavedSampleIdentity}, " +
                     $"Samples={s_LastSavedPath}, Facts={s_LastSavedFactsPath}, " +
-                    $"Diagnosis={s_LastSavedDiagnosisPath}, " +
+                    $"Diagnoses={s_LastSavedDiagnosisDirectory}, " +
                     $"Summary={s_LastDiagnosticSummary}");
             }
             catch (Exception exception)
@@ -1183,7 +1185,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastSavedDirectory = System.IO.Path.GetDirectoryName(
                 analysis.SamplesPath) ?? string.Empty;
             s_LastSavedFactsPath = analysis.FactsPath;
-            s_LastSavedDiagnosisPath = analysis.DiagnosisPath;
+            s_LastSavedDiagnosisDirectory = analysis.DiagnosisDirectory;
             s_LastDiagnosticSummary = analysis.Summary;
             s_LastFactEventCount = analysis.EventCount;
             s_LastDiagnosisTargetCount = analysis.DiagnosisTargetCount;

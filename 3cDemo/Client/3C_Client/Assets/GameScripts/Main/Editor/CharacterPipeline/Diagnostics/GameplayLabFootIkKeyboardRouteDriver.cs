@@ -260,10 +260,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return;
                 }
                 if (string.IsNullOrEmpty(
-                        CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath))
+                        CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory) ||
+                    !System.IO.Directory.Exists(
+                        CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory))
                 {
                     s_LastDiagnosticSummary =
-                        "Foot Landing facts were published but diagnosis.json was not published.";
+                        "Foot Landing facts were published but diagnoses/ was not published.";
                     return;
                 }
                 s_LastDiagnosticSummary =
@@ -274,7 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Foot Landing {ModeLabel(s_Mode)} " +
                     $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
                     $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
-                    $"Diagnosis={CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath}, " +
+                    $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}, " +
                     $"Summary={s_LastDiagnosticSummary}");
             }
         }

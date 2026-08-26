@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -47,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         [Test]
-        public void SealedSamplesPublishFactsAndTargetedDiagnosis()
+        public void SealedSamplesPublishSixDeterministicDiagnosisFiles()
         {
             string directory = Path.Combine(
                 Path.GetTempPath(),
@@ -88,38 +89,39 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .ContactLifecycleUnavailable.ToString());
                 File.WriteAllLines(
                     samplesPath,
-                    new[]
-                    {
-                        csvHeader,
-                        string.Join(",", row)
-                    });
+                    new[] { csvHeader, string.Join(",", row) });
                 CharacterFootMotionDiagnosticAnalysis result =
                     CharacterFootMotionDiagnosticAnalyzer.Analyze(samplesPath);
                 Assert.That(File.Exists(result.FactsPath), Is.True);
-                Assert.That(File.Exists(result.DiagnosisPath), Is.True);
-                JObject facts = JObject.Parse(File.ReadAllText(result.FactsPath));
-                JObject diagnosis = JObject.Parse(File.ReadAllText(result.DiagnosisPath));
+                string penetrationPath = Path.Combine(
+                    result.DiagnosisDirectory,
+                    "contact-plane-penetration.json");
+                JObject penetration = JObject.Parse(File.ReadAllText(penetrationPath));
                 Assert.That(
-                    facts.Value<string>("schema"),
-                    Is.EqualTo("character-foot-motion-facts/4"));
-                Assert.That(
-                    diagnosis.Value<string>("schema"),
-                    Is.EqualTo("character-foot-motion-diagnosis/3"));
-                Assert.That(
-                    diagnosis["penetrationCoverage"]?
-                        .Value<int>("availableFootRowCount"),
+                    penetration["coverage"]?.Value<int>("availableFootRowCount"),
                     Is.EqualTo(0));
                 Assert.That(
-                    diagnosis["penetrationCoverage"]?["availabilityReasons"]?
+                    penetration["coverage"]?["unavailableReasons"]?
                         .Value<int>("ContactLifecycleUnavailable"),
                     Is.EqualTo(1));
                 string firstFacts = File.ReadAllText(result.FactsPath);
-                string firstDiagnosis = File.ReadAllText(result.DiagnosisPath);
+                var firstDiagnoses = Directory
+                    .GetFiles(result.DiagnosisDirectory, "*.json")
+                    .ToDictionary(
+                        Path.GetFileName,
+                        File.ReadAllText,
+                        StringComparer.Ordinal);
+                Assert.That(firstDiagnoses.Count, Is.EqualTo(6));
                 CharacterFootMotionDiagnosticAnalyzer.Analyze(samplesPath);
                 Assert.That(File.ReadAllText(result.FactsPath), Is.EqualTo(firstFacts));
-                Assert.That(
-                    File.ReadAllText(result.DiagnosisPath),
-                    Is.EqualTo(firstDiagnosis));
+                foreach (KeyValuePair<string, string> entry in firstDiagnoses)
+                {
+                    Assert.That(
+                        File.ReadAllText(Path.Combine(
+                            result.DiagnosisDirectory,
+                            entry.Key)),
+                        Is.EqualTo(entry.Value));
+                }
             }
             finally
             {

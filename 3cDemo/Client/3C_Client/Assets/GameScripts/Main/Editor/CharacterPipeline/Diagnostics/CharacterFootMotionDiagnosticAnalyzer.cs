@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterFootMotionDiagnosticAnalysis(
             string samplesPath,
             string factsPath,
-            string diagnosisPath,
+            string diagnosisDirectory,
             int frameCount,
             int footRowCount,
             int eventCount,
@@ -25,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             SamplesPath = samplesPath ?? string.Empty;
             FactsPath = factsPath ?? string.Empty;
-            DiagnosisPath = diagnosisPath ?? string.Empty;
+            DiagnosisDirectory = diagnosisDirectory ?? string.Empty;
             FrameCount = frameCount;
             FootRowCount = footRowCount;
             EventCount = eventCount;
@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal string SamplesPath { get; }
         internal string FactsPath { get; }
-        internal string DiagnosisPath { get; }
+        internal string DiagnosisDirectory { get; }
         internal int FrameCount { get; }
         internal int FootRowCount { get; }
         internal int EventCount { get; }
@@ -86,27 +86,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Path.GetDirectoryName(fullSamplesPath) ?? string.Empty,
                 "facts.json");
             PublishFacts(factsPath, document);
-            CharacterFootMotionDiagnosisReport report =
-                CharacterFootMotionDiagnosisReporter.Create(factsPath);
+            CharacterFootDiagnosisPublication publication =
+                CharacterFootDiagnosisPublisher.Publish(factsPath);
             string summary =
                 $"frames={capture.UniqueFrameCount} footRows={capture.FootRows.Count} " +
                 $"landingEvents={document.coverage.landingEventCount} " +
+                $"landingStateBoundaries={document.coverage.landingStateBoundaryCount} " +
+                $"landingStateSpans={document.coverage.landingStateSpanCount} " +
                 $"lockedEvents={document.coverage.lockedEventCount} " +
                 $"releaseEvents={document.coverage.releaseEventCount} " +
                 $"pathChanges={document.coverage.pathChangeCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
-                $"diagnosisTargets={report.TargetCount} " +
-                $"diagnosisMatches={report.MatchCount}";
+                $"diagnosisFiles={publication.DiagnosticCount} " +
+                $"diagnosisTargets={publication.TargetCount} " +
+                $"diagnosisMatches={publication.MatchCount}";
             return new CharacterFootMotionDiagnosticAnalysis(
                 fullSamplesPath,
                 factsPath,
-                report.Path,
+                publication.Directory,
                 capture.UniqueFrameCount,
                 capture.FootRows.Count,
                 events.Count,
-                report.TargetCount,
-                report.MatchCount,
+                publication.TargetCount,
+                publication.MatchCount,
                 summary);
         }
 
@@ -117,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (frames.Count == 0)
                 return;
             AnalyzeLandingEvents(frames, events);
+            AnalyzeLandingStateConsistency(frames, events);
             AnalyzeLockedEvents(frames, events);
             AnalyzeContactPlanePenetration(frames, events);
             AnalyzeReleaseEvents(frames, events);
@@ -191,6 +195,177 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 i = Math.Max(i, end - 1);
             }
         }
+
+        static void AnalyzeLandingStateConsistency(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(previous, current) ||
+                    !FormalLandingBoundary(previous, current))
+                {
+                    continue;
+                }
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["formalStepTimeSeconds"] = current.FormalStepTime,
+                    ["correctionStepMeters"] = Vector3.Distance(
+                        previous.EffectiveCorrection,
+                        current.EffectiveCorrection),
+                    ["finalSoleStepMeters"] = Vector3.Distance(
+                        FinalSole(previous),
+                        FinalSole(current))
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["runtimeLandingAtBoundary"] =
+                        current.ConstraintState == "Landing",
+                    ["runtimeLockedAtBoundary"] =
+                        current.ConstraintState == "Locked",
+                    ["runtimeSwingAtBoundary"] =
+                        current.ConstraintState == "Swing",
+                    ["runtimeUnlockedSupportAtBoundary"] =
+                        current.ConstraintState == "UnlockedSupport",
+                    ["runtimeReleasingAtBoundary"] =
+                        current.ConstraintState == "Releasing",
+                    ["contactPlaneAvailable"] = current.ContactPlaneAvailable
+                };
+                events.Add(new EventFact(
+                    "LandingStateBoundary",
+                    current.Side,
+                    previous.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.FootMotionEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence));
+            }
+
+            int index = 0;
+            while (index < frames.Count)
+            {
+                if (frames[index].ConstraintState != "Landing")
+                {
+                    index++;
+                    continue;
+                }
+                int start = index;
+                ulong eventIdentity = frames[index].FootMotionEventIdentity;
+                while (index + 1 < frames.Count &&
+                       Continuous(frames[index], frames[index + 1]) &&
+                       frames[index + 1].ConstraintState == "Landing" &&
+                       frames[index + 1].FootMotionEventIdentity == eventIdentity)
+                {
+                    index++;
+                }
+                int end = index;
+                List<FootFrame> window = frames.GetRange(start, end - start + 1);
+                bool hasEntry = start > 0 &&
+                                Continuous(frames[start - 1], frames[start]);
+                bool hasExit = end + 1 < frames.Count &&
+                               Continuous(frames[end], frames[end + 1]);
+                FootFrame entryPrevious = hasEntry ? frames[start - 1] : null;
+                FootFrame exitNext = hasExit ? frames[end + 1] : null;
+                double correctedEntryDistance = Vector3.Distance(
+                    window[0].CorrectedSole,
+                    window[0].Anchor);
+                double correctedExitDistance = Vector3.Distance(
+                    window[^1].CorrectedSole,
+                    window[^1].Anchor);
+                double finalEntryDistance = Vector3.Distance(
+                    FinalSole(window[0]),
+                    window[0].Anchor);
+                double finalExitDistance = Vector3.Distance(
+                    FinalSole(window[^1]),
+                    window[^1].Anchor);
+                double entryStep = hasEntry
+                    ? Vector3.Distance(
+                        entryPrevious.EffectiveCorrection,
+                        window[0].EffectiveCorrection)
+                    : 0d;
+                double exitStep = hasExit
+                    ? Vector3.Distance(
+                        window[^1].EffectiveCorrection,
+                        exitNext.EffectiveCorrection)
+                    : 0d;
+                int peakFrame = entryStep >= exitStep
+                    ? window[0].Frame
+                    : hasExit
+                        ? exitNext.Frame
+                        : window[^1].Frame;
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["frameCount"] = window.Count,
+                    ["correctedSoleAnchorDistanceEntryMeters"] =
+                        correctedEntryDistance,
+                    ["correctedSoleAnchorDistanceExitMeters"] =
+                        correctedExitDistance,
+                    ["correctedSoleAnchorClosureMeters"] =
+                        correctedEntryDistance - correctedExitDistance,
+                    ["finalSoleAnchorDistanceEntryMeters"] = finalEntryDistance,
+                    ["finalSoleAnchorDistanceExitMeters"] = finalExitDistance,
+                    ["finalSoleAnchorClosureMeters"] =
+                        finalEntryDistance - finalExitDistance,
+                    ["entryCorrectionStepMeters"] = entryStep,
+                    ["exitCorrectionStepMeters"] = exitStep,
+                    ["formalUnlockedFrameCount"] = window.Count(
+                        value => value.FormalLockMode == "Unlocked")
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["entryFollowedFormalBoundary"] = hasEntry &&
+                        FormalLandingBoundary(entryPrevious, window[0]),
+                    ["contactPlaneAvailableThroughout"] = window.All(
+                        value => value.ContactPlaneAvailable),
+                    ["closedTowardAnchor"] = correctedExitDistance +
+                        CharacterFootContactPlanePenetration.GeometryEpsilonMeters <
+                        correctedEntryDistance,
+                    ["hasContinuousExit"] = hasExit,
+                    ["exitedToLocked"] = hasExit &&
+                        exitNext.ConstraintState == "Locked",
+                    ["exitedToReleasing"] = hasExit &&
+                        exitNext.ConstraintState == "Releasing",
+                    ["exitedToSwing"] = hasExit &&
+                        exitNext.ConstraintState == "Swing",
+                    ["exitedToUnlockedSupport"] = hasExit &&
+                        exitNext.ConstraintState == "UnlockedSupport",
+                    ["formalUnlockedWithinLanding"] = window.Any(
+                        value => value.FormalLockMode == "Unlocked")
+                };
+                events.Add(new EventFact(
+                    "LandingStateSpan",
+                    window[0].Side,
+                    window[0].Frame,
+                    window[^1].Frame,
+                    peakFrame,
+                    eventIdentity,
+                    window[0].SourceIdentity,
+                    window[0].SourceCycle,
+                    Duration(window),
+                    metrics,
+                    evidence));
+                index++;
+            }
+        }
+
+        static bool FormalLandingBoundary(
+            FootFrame previous,
+            FootFrame current) =>
+            previous.FormalLockMode == "Unlocked" &&
+            current.FormalLockMode != "Unlocked";
+
+        static Vector3 FinalSole(FootFrame frame) =>
+            (frame.FinalHeel + frame.FinalToe) * 0.5f;
 
         static void AnalyzeLockedEvents(
             List<FootFrame> frames,
@@ -731,6 +906,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 coverage = new CoverageFact
                 {
                     landingEventCount = events.Count(value => value.kind == "Landing"),
+                    landingStateBoundaryCount = events.Count(
+                        value => value.kind == "LandingStateBoundary"),
+                    landingStateSpanCount = events.Count(
+                        value => value.kind == "LandingStateSpan"),
                     lockedEventCount = events.Count(value => value.kind == "Locked"),
                     releaseEventCount = events.Count(value => value.kind == "Release"),
                     pathChangeCount = events.Count(value => value.kind == "PathChange"),
@@ -1406,6 +1585,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         sealed class CoverageFact
         {
             public int landingEventCount;
+            public int landingStateBoundaryCount;
+            public int landingStateSpanCount;
             public int lockedEventCount;
             public int releaseEventCount;
             public int pathChangeCount;

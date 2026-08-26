@@ -250,7 +250,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
             string samplesPath = CharacterFootLandingPredictionSampler.LastSavedPath;
             string factsPath = CharacterFootLandingPredictionSampler.LastSavedFactsPath;
-            string diagnosisPath = CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath;
+            string diagnosisDirectory =
+                CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory;
             string sampleDirectory = CharacterFootLandingPredictionSampler.LastSavedDirectory;
             EditorGUILayout.LabelField(
                 "Foot Landing Sampling",
@@ -307,9 +308,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         StartStairSample(GameplayLabFootIkAutomaticRouteMode.StairAdStress);
                 }
                 using (new EditorGUI.DisabledScope(
-                           string.IsNullOrEmpty(diagnosisPath) || !File.Exists(diagnosisPath)))
+                           string.IsNullOrEmpty(diagnosisDirectory) ||
+                           !Directory.Exists(diagnosisDirectory)))
                 {
-                    if (GUILayout.Button("Show Last Diagnosis"))
+                    if (GUILayout.Button("Show Last Diagnoses"))
                         ShowLastDiagnostics();
                 }
             }
@@ -383,11 +385,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
-            if (!string.IsNullOrEmpty(diagnosisPath))
+            if (!string.IsNullOrEmpty(diagnosisDirectory))
             {
-                EditorGUILayout.LabelField("Last Diagnosis");
+                EditorGUILayout.LabelField("Last Diagnoses");
                 EditorGUILayout.SelectableLabel(
-                    diagnosisPath,
+                    diagnosisDirectory,
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
@@ -670,7 +672,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 $"Foot Landing Diagnostics " +
                 $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
                 $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
-                $"Diagnosis={CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath}, " +
+                $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}, " +
                 $"Summary={m_DiagnosticSummary}");
             Repaint();
         }

@@ -81,19 +81,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new[] { "SafetyFloor" },
                 new[]
                 {
-                    "currentFloorAccepted&&!minimumCorrectionMatchesCurrentFloor"
+                    "safetyFloorAvailable&&!minimumCorrectionMatchesCurrentFloor"
                 },
                 events.FindAll(value =>
                     CharacterFootDiagnosisContext.Evidence(
                         value,
-                        "currentFloorAccepted")),
+                        "safetyFloorAvailable")),
                 value => CharacterFootDiagnosisContext.Evidence(
                              value,
                              "minimumCorrectionMatchesCurrentFloor")
                     ? new List<string>()
                     : new List<string>
                     {
-                        "currentFloorAccepted&&!minimumCorrectionMatchesCurrentFloor"
+                        "safetyFloorAvailable&&!minimumCorrectionMatchesCurrentFloor"
                     },
                 value => value.metrics[
                     "minimumCorrectionSourceErrorMeters"],
@@ -108,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new[]
                 {
                     "queryPurpose!=CurrentSwingFloor",
-                    "availability!=currentFloorAccepted"
+                    "safetyFloorAvailable&&!currentFloorAccepted"
                 },
                 events,
                 MatchContract,
@@ -136,9 +136,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (!CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "availabilityMatchesCurrentFloor"))
+                    "safetyFloorAvailabilityHasCurrentFloorInput"))
             {
-                result.Add("availability!=currentFloorAccepted");
+                result.Add("safetyFloorAvailable&&!currentFloorAccepted");
             }
             return result;
         }

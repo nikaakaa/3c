@@ -525,6 +525,51 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in primarySupport,
                 in pelvisFrame,
                 ref bank.PelvisSpring);
+            if (facts.Grounded &&
+                !leftAction.IsOccupied &&
+                !rightAction.IsOccupied &&
+                hasSelectedSwing)
+            {
+                AnimationBiomechanicalStepHeader landingStep =
+                    selectedSwingSide == CharacterFootSide.Left
+                        ? leftSelectedStep
+                        : rightSelectedStep;
+                CharacterFootSwingMotionResult landingMotion =
+                    selectedSwingSide == CharacterFootSide.Left
+                        ? leftFootMotion
+                        : rightFootMotion;
+                CharacterResolvedFootResult landingResolved =
+                    selectedSwingSide == CharacterFootSide.Left
+                        ? leftResolved
+                        : rightResolved;
+                if (landingStep.IsAuthoritative &&
+                    landingStep.HasConsistentLandingEventIdentity &&
+                    landingStep.IsSwing &&
+                    landingMotion.Accepted &&
+                    landingMotion.LandingEventIdentity ==
+                    landingStep.LandingEventIdentity &&
+                    landingResolved.GoalWeight >
+                    CharacterPoseConstraintMath.Epsilon)
+                {
+                    Vector3 landingHip = selectedSwingSide ==
+                        CharacterFootSide.Left
+                            ? pose.Left.HipPosition
+                            : pose.Right.HipPosition;
+                    float landingLegLength = selectedSwingSide ==
+                        CharacterFootSide.Left
+                            ? m_Rig.LeftLegLength
+                            : m_Rig.RightLegLength;
+                    strideHips = CharacterFootStrideHipsBuilder.ApplyLandingReach(
+                        in strideHips,
+                        landingHip,
+                        landingResolved.FinalAnkle,
+                        landingLegLength,
+                        componentUp,
+                        footPlacementWeight,
+                        m_Settings.FootMotion,
+                        ref bank.PelvisSpring);
+                }
+            }
             pelvisGoal = CreatePelvisGoal(in strideHips, m_Rig.PoseRoot);
             bank.StrideHips = strideHips;
             if (!strideHips.ProducesPelvisGoal)

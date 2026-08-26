@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/9";
+        const string Schema = "character-foot-motion-facts/10";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 9;
+        const int AnalyzerVersion = 10;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 608;
         const float PositionNoiseFloor = 0.001f;
@@ -120,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
                 $"safetyFloorEvents={document.coverage.safetyFloorEventCount} " +
                 $"currentFloorAccepted={document.coverage.currentFloorAcceptedEventCount} " +
+                $"currentFloorAcceptedButNotConsumed={document.coverage.currentFloorAcceptedButNotConsumedEventCount} " +
                 $"safetyFloorClampWithoutInput={document.coverage.safetyFloorClampWithoutInputEventCount} " +
                 $"diagnosisFiles={publication.DiagnosticCount} " +
                 $"diagnosisTargets={publication.TargetCount} " +
@@ -170,9 +171,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool purposeValid =
                     current.CurrentFloorQueryPurpose ==
                     "CurrentSwingFloor";
-                bool availabilityMatches =
-                    current.SafetyFloorAvailable ==
+                bool availabilityHasInput =
+                    !current.SafetyFloorAvailable ||
                     current.CurrentFloorAccepted;
+                bool currentFloorAcceptedButNotConsumed =
+                    current.CurrentFloorAccepted &&
+                    !current.SafetyFloorAvailable;
                 bool clearanceNonNegative =
                     !current.CurrentFloorAccepted ||
                     current.SafetyFloorClearanceAfterMeters >=
@@ -192,7 +196,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             up)
                         : default;
                 bool minimumCorrectionMatchesCurrentFloor =
-                    !current.CurrentFloorAccepted ||
+                    !current.SafetyFloorAvailable ||
+                    current.CurrentFloorAccepted &&
                     Vector3.Distance(
                         expectedMinimumCorrection,
                         current.SafetyFloorMinimumCorrection) <=
@@ -235,8 +240,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
                 {
-                    ["availabilityMatchesCurrentFloor"] =
-                        availabilityMatches,
+                    ["safetyFloorAvailabilityHasCurrentFloorInput"] =
+                        availabilityHasInput,
+                    ["currentFloorAcceptedButNotConsumed"] =
+                        currentFloorAcceptedButNotConsumed,
                     ["clearanceAfterNonNegative"] =
                         clearanceNonNegative,
                     ["clampHasCurrentFloorInput"] =
@@ -1631,6 +1638,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     currentFloorAcceptedEventCount = events.Count(
                         value => value.kind == "SafetyFloor" &&
                                  value.evidence["currentFloorAccepted"]),
+                    currentFloorAcceptedButNotConsumedEventCount =
+                        events.Count(
+                            value => value.kind == "SafetyFloor" &&
+                                     value.evidence[
+                                         "currentFloorAcceptedButNotConsumed"]),
                     safetyFloorClampWithoutInputEventCount = events.Count(
                         value => value.kind == "SafetyFloor" &&
                                  !value.evidence["clampHasCurrentFloorInput"]),
@@ -2990,6 +3002,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int contactPlanePenetrationEventCount;
             public int safetyFloorEventCount;
             public int currentFloorAcceptedEventCount;
+            public int currentFloorAcceptedButNotConsumedEventCount;
             public int safetyFloorClampWithoutInputEventCount;
             public int leftFootFrameCount;
             public int rightFootFrameCount;

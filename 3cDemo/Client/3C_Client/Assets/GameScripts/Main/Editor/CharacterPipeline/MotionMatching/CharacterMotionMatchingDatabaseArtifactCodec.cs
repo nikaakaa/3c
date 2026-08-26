@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     public static class CharacterMotionMatchingDatabaseArtifactCodec
     {
         const int Magic = 0x42444d4d;
-        const int FormatVersion = 17;
+        const int FormatVersion = 16;
 
         enum SectionId
         {
@@ -504,7 +504,6 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             WriteVector3(writer, value.SoleLocalVelocity);
             writer.Write(value.SoleHeight);
             writer.Write(value.PlantConfidence);
-            writer.Write(value.Contact);
             AnimationPredictedFootStepSample predicted = value.PredictedStep;
             writer.Write(predicted.IsValid);
             if (!predicted.IsValid)
@@ -542,7 +541,6 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             Vector3 velocity = ReadVector3(reader);
             float soleHeight = reader.ReadSingle();
             float plantConfidence = reader.ReadSingle();
-            float contact = reader.ReadSingle();
             AnimationPredictedFootStepSample predicted = reader.ReadBoolean()
                 ? new AnimationPredictedFootStepSample(
                 reader.ReadInt32(),
@@ -572,8 +570,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 soleHeight,
                 plantConfidence,
                 predicted,
-                default,
-                contact);
+                default);
         }
         static FixedList512Bytes<Vector3> ReadVector3Route(BinaryReader reader)
         {

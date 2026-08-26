@@ -82,8 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             ref float totalWeight,
             ref Vector3 velocity,
             ref float height,
-            ref float plantConfidence,
-            ref float contact)
+            ref float plantConfidence)
         {
             if (!IsValidFoot(sample) || !float.IsFinite(weight) || weight <= 0f ||
                 !float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
@@ -94,10 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             velocity += sample.SoleLocalVelocity * visualTimeScale * weight;
             height += sample.SoleHeight * weight;
             plantConfidence += sample.PlantConfidence * weight;
-            contact += sample.Contact * weight;
             return float.IsFinite(totalWeight) && AnimationPoseMath.IsFinite(velocity) &&
-                   float.IsFinite(height) && float.IsFinite(plantConfidence) &&
-                   float.IsFinite(contact);
+                   float.IsFinite(height) && float.IsFinite(plantConfidence);
         }
 
         internal static bool TryResolveAuthoritativePrediction(
@@ -130,18 +127,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Vector3 velocity,
             float height,
             float plantConfidence,
-            float contact,
             AnimationPredictedFootStepSample predictedStep,
             AnimationPredictedFootStepSample incomingPredictedStep,
             out AnimationFootFeatureSample sample)
         {
             float inverseWeight = 1f / weight;
             float resolvedPlant = plantConfidence * inverseWeight;
-            float resolvedContact = contact * inverseWeight;
             Vector3 resolvedVelocity = velocity * inverseWeight;
             float resolvedHeight = height * inverseWeight;
             if (!AnimationPoseMath.IsFinite(resolvedVelocity) || !float.IsFinite(resolvedHeight) ||
-                !IsNormalized(resolvedPlant) || !IsNormalized(resolvedContact))
+                !IsNormalized(resolvedPlant))
             {
                 sample = default;
                 return false;
@@ -151,15 +146,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 resolvedHeight,
                 resolvedPlant,
                 predictedStep,
-                incomingPredictedStep,
-                resolvedContact);
+                incomingPredictedStep);
             return true;
         }
 
         internal static bool IsValidFoot(AnimationFootFeatureSample sample) =>
             sample.IsValid && AnimationPoseMath.IsFinite(sample.SoleLocalVelocity) &&
             float.IsFinite(sample.SoleHeight) && IsNormalized(sample.PlantConfidence) &&
-            IsNormalized(sample.Contact) &&
             IsValidPrediction(sample.PredictedStep) &&
             IsValidPrediction(sample.IncomingPredictedStep);
 

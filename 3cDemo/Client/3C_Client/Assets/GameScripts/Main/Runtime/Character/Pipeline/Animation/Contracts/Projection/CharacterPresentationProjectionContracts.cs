@@ -508,6 +508,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationCurve m_FootPlacementWeightCurve;
         [SerializeField] AnimationFootFeatureCurveSet m_LeftFootFeatures;
         [SerializeField] AnimationFootFeatureCurveSet m_RightFootFeatures;
+        [SerializeField] AnimationFootStepObservationCurvePair m_FootStepObservation;
 
         public string ClipAuthoringId => m_ClipAuthoringId;
         public UnityEngine.AnimationClip Clip => m_Clip;
@@ -518,6 +519,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationFootFeatureCurveSet LeftFootFeatures => m_LeftFootFeatures;
         public AnimationFootFeatureCurveSet RightFootFeatures => m_RightFootFeatures;
         public bool HasFootAnalysis => m_LeftFootFeatures != null && m_RightFootFeatures != null;
+        public AnimationFootStepObservationCurvePair FootStepObservation => m_FootStepObservation;
         public string ClipIdentity => m_ClipIdentity ?? string.Empty;
         public string FullClipDependencyHash => m_FullClipDependencyHash ?? string.Empty;
         public string AnalysisInputHash => m_AnalysisInputHash ?? string.Empty;
@@ -543,7 +545,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve easeInCurve,
             AnimationCurve easeOutCurve,
             AnimationCurve footPlacementWeightCurve,
-            AnimationFootFeaturePair footFeatures)
+            AnimationFootFeaturePair footFeatures,
+            AnimationFootStepObservationCurvePair footStepObservation)
         {
             m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
             m_ClipIdentity = clipIdentity ?? string.Empty;
@@ -563,6 +566,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_EaseInCurve = CopyCurve(easeInCurve);
             m_EaseOutCurve = CopyCurve(easeOutCurve);
             m_FootPlacementWeightCurve = CopyCurve(footPlacementWeightCurve);
+            m_FootStepObservation = footStepObservation ??
+                throw new ArgumentNullException(nameof(footStepObservation));
             if (footFeatures.IsValid)
             {
                 m_LeftFootFeatures = footFeatures.Left;
@@ -587,10 +592,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !float.IsFinite(m_EaseOutTime) || m_EaseOutTime < 0f ||
                 !Enum.IsDefined(typeof(ExtraPolationMode), m_Extrapolation) ||
                 !HasKeys(m_WeightCurve) || !HasKeys(m_EaseInCurve) || !HasKeys(m_EaseOutCurve) ||
-                !HasKeys(m_FootPlacementWeightCurve) || !HasFootAnalysis)
+                !HasKeys(m_FootPlacementWeightCurve) || !HasFootAnalysis ||
+                m_FootStepObservation == null)
             {
                 throw new InvalidOperationException($"Presentation Projection animation clip binding #{clipBindingIndex} is not sampleable.");
             }
+            m_FootStepObservation.RequireValid();
         }
 
         internal int WriteSample(

@@ -43,6 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPlacementPoseInput(
             string posePlanHash,
             in AnimationPoseValueNativeReadBinding binding,
+            in AnimationFootStepObservationFrame footStepObservation,
             AnimationPoseSourceContribution[] contributions,
             int contributionCount)
         {
@@ -55,6 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationPoseNativeInvalidReason.None ||
                 binding.ContinuityIdentity[0] == 0 ||
                 binding.HasFootFeatures[0] != 1 ||
+                !footStepObservation.IsValid ||
+                footStepObservation.CompletionIdentity != binding.CompletionIdentity ||
                 contributions == null || contributionCount <= 0 ||
                 contributionCount != nativeContributionCount ||
                 contributionCount > contributions.Length)
@@ -76,8 +79,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in right,
                 CharacterFootSide.Right);
             ContinuityIdentity = binding.ContinuityIdentity[0];
+            FootStepObservation = footStepObservation;
             Contributions = contributions;
             ContributionCount = contributionCount;
+            bool hasObservationContribution = false;
+            for (int i = 0; i < contributionCount; i++)
+            {
+                AnimationPoseSourceContribution contribution = contributions[i];
+                if (contribution.Kind != AnimationPoseContributionKind.Live ||
+                    !contribution.NodeId.Equals(footStepObservation.NodeId) ||
+                    !contribution.SourceId.Equals(footStepObservation.SourceId) ||
+                    contribution.ContributionContinuityIdentity !=
+                    footStepObservation.ContributionContinuityIdentity)
+                {
+                    continue;
+                }
+                hasObservationContribution = true;
+                break;
+            }
+            if (!hasObservationContribution)
+            {
+                throw new ArgumentException(
+                    "Foot Placement formal Foot Step input does not belong to its Pose contribution frame.");
+            }
         }
 
         internal string PosePlanHash { get; }
@@ -86,6 +110,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
         internal AnimationBiomechanicalStepReadPage RightFootSteps { get; }
         internal ulong ContinuityIdentity { get; }
+        internal AnimationFootStepObservationFrame FootStepObservation { get; }
         internal AnimationPoseSourceContribution[] Contributions { get; }
         internal int ContributionCount { get; }
     }

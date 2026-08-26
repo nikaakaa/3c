@@ -69,6 +69,59 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float.IsFinite(value) && value >= 0f && value <= 1f;
     }
 
+    internal readonly struct AnimationFootStepObservationFrame
+    {
+        internal AnimationFootStepObservationFrame(
+            ulong completionIdentity,
+            PoseNodeId nodeId,
+            AnimationPoseSourceId sourceId,
+            ulong contributionContinuityIdentity,
+            string sourceIdentity,
+            int clipBindingIndex,
+            int cycle,
+            float sourceWeight,
+            float normalizedTime,
+            AnimationFootStepObservationSample left,
+            AnimationFootStepObservationSample right)
+        {
+            if (completionIdentity == 0 || !nodeId.IsValid || !sourceId.IsValid ||
+                contributionContinuityIdentity == 0 || clipBindingIndex < 0 ||
+                string.IsNullOrWhiteSpace(sourceIdentity) ||
+                !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f ||
+                !float.IsFinite(normalizedTime) || normalizedTime < 0f || normalizedTime > 1f ||
+                !left.IsValid || !right.IsValid)
+            {
+                throw new ArgumentException("Foot Step observation frame is invalid.");
+            }
+            CompletionIdentity = completionIdentity;
+            NodeId = nodeId;
+            SourceId = sourceId;
+            ContributionContinuityIdentity = contributionContinuityIdentity;
+            SourceIdentity = sourceIdentity.Trim();
+            ClipBindingIndex = clipBindingIndex;
+            Cycle = cycle;
+            SourceWeight = sourceWeight;
+            NormalizedTime = normalizedTime;
+            Left = left;
+            Right = right;
+            m_IsSpecified = 1;
+        }
+
+        readonly byte m_IsSpecified;
+        internal ulong CompletionIdentity { get; }
+        internal PoseNodeId NodeId { get; }
+        internal AnimationPoseSourceId SourceId { get; }
+        internal ulong ContributionContinuityIdentity { get; }
+        internal string SourceIdentity { get; }
+        internal int ClipBindingIndex { get; }
+        internal int Cycle { get; }
+        internal float SourceWeight { get; }
+        internal float NormalizedTime { get; }
+        internal AnimationFootStepObservationSample Left { get; }
+        internal AnimationFootStepObservationSample Right { get; }
+        internal bool IsValid => m_IsSpecified != 0;
+    }
+
     [Serializable]
     public sealed class AnimationFootStepObservationCurveSet
     {

@@ -10,8 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Swing = 0,
         Landing = 1,
         Locked = 2,
-        Releasing = 3,
-        UnlockedSupport = 4
+        Releasing = 3
     }
 
     public enum CharacterFootLockResponse : byte

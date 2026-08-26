@@ -219,6 +219,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (result == null || result.ActorId != ActorId)
                 throw new ArgumentException("Fixed published result targets another Actor.", nameof(result));
             FixedCharacterBodySample sample = result.BodySample;
+            FixedCharacterInputTraceModule.ObservePublishedBody(
+                ActorId,
+                result.Tick,
+                sample.FinalBody);
             m_PendingBodySamples[sample.Tick.Value] = sample;
             if (m_PresentationRuntime.AcceptsTrajectoryIntent)
                 m_PendingTrajectoryResults[sample.Tick.Value] = result;

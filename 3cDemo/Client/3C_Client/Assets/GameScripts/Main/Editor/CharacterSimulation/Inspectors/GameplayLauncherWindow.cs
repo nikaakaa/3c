@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         string[] m_LabVariantLabels = Array.Empty<string>();
         int m_LabVariantIndex;
         Vector2 m_Scroll;
-        string m_Step1Report = string.Empty;
+        string m_DiagnosticSummary = string.Empty;
         double m_AutoSampleStopTime;
         bool m_LastSamplingCapturing;
         bool m_LastSamplingStarting;
@@ -82,16 +82,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
             bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
-            string savedPath = CharacterFootLandingPredictionSampler.LastSavedPath;
+            string samplesPath = CharacterFootLandingPredictionSampler.LastSavedPath;
             if (capturing == m_LastSamplingCapturing &&
                 starting == m_LastSamplingStarting &&
-                string.Equals(savedPath, m_LastSamplingSavedPath, StringComparison.Ordinal))
+                string.Equals(samplesPath, m_LastSamplingSavedPath, StringComparison.Ordinal))
             {
                 return;
             }
             m_LastSamplingCapturing = capturing;
             m_LastSamplingStarting = starting;
-            m_LastSamplingSavedPath = savedPath;
+            m_LastSamplingSavedPath = samplesPath;
             Repaint();
         }
 
@@ -248,7 +248,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
             bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
-            string savedPath = CharacterFootLandingPredictionSampler.LastSavedPath;
+            string samplesPath = CharacterFootLandingPredictionSampler.LastSavedPath;
+            string factsPath = CharacterFootLandingPredictionSampler.LastSavedFactsPath;
+            string diagnosisPath = CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath;
+            string sampleDirectory = CharacterFootLandingPredictionSampler.LastSavedDirectory;
             EditorGUILayout.LabelField(
                 "Foot Landing Sampling",
                 capturing ? "Recording" : starting ? "Starting" : "Idle");
@@ -267,14 +270,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            EditorApplication.isCompiling ||
                            !capturing && !starting))
                 {
-                    if (GUILayout.Button("Stop and Save CSV"))
+                    if (GUILayout.Button("Stop and Save"))
                         StopManualSample();
                 }
                 using (new EditorGUI.DisabledScope(
-                           string.IsNullOrEmpty(savedPath) || !File.Exists(savedPath)))
+                           string.IsNullOrEmpty(sampleDirectory) ||
+                           !Directory.Exists(sampleDirectory)))
                 {
-                    if (GUILayout.Button("Reveal CSV"))
-                        EditorUtility.RevealInFinder(savedPath);
+                    if (GUILayout.Button("Reveal Sample Folder"))
+                        EditorUtility.RevealInFinder(sampleDirectory);
                 }
             }
             using (new EditorGUILayout.HorizontalScope())
@@ -286,7 +290,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            starting ||
                            m_AutoSampleStopTime > 0d))
                 {
-                    if (GUILayout.Button("Auto Sample 8s then Score"))
+                    if (GUILayout.Button("Auto Sample 8s"))
                         StartAutoSample();
                 }
                 using (new EditorGUI.DisabledScope(
@@ -303,10 +307,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         StartStairSample(GameplayLabFootIkAutomaticRouteMode.StairAdStress);
                 }
                 using (new EditorGUI.DisabledScope(
-                           string.IsNullOrEmpty(savedPath) || !File.Exists(savedPath)))
+                           string.IsNullOrEmpty(diagnosisPath) || !File.Exists(diagnosisPath)))
                 {
-                    if (GUILayout.Button("Score Last CSV"))
-                        ScoreLastCsv();
+                    if (GUILayout.Button("Show Last Diagnosis"))
+                        ShowLastDiagnostics();
                 }
             }
             using (new EditorGUI.DisabledScope(
@@ -334,8 +338,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     $"Starting Gameplay Lab for {GameplayLabFootIkKeyboardRouteDriver.Mode} sample...",
                     MessageType.Info);
             }
-            if (!string.IsNullOrEmpty(GameplayLabFootIkKeyboardRouteDriver.LastReport))
-                EditorGUILayout.HelpBox(GameplayLabFootIkKeyboardRouteDriver.LastReport, MessageType.Info);
+            if (!string.IsNullOrEmpty(GameplayLabFootIkKeyboardRouteDriver.LastDiagnosticSummary))
+            {
+                EditorGUILayout.HelpBox(
+                    GameplayLabFootIkKeyboardRouteDriver.LastDiagnosticSummary,
+                    MessageType.Info);
+            }
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField(
                 "Foot IK Visual Validation",
@@ -357,13 +365,29 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 EditorGUILayout.HelpBox(
                     "Game/Scene View shows accepted landings, Ground Path, original/corrected soles, pelvis/foot goals, FBBIK and final physical bones.",
                     MessageType.Info);
-            if (!string.IsNullOrEmpty(m_Step1Report))
-                EditorGUILayout.HelpBox(m_Step1Report, MessageType.Info);
-            if (!string.IsNullOrEmpty(savedPath))
+            if (!string.IsNullOrEmpty(m_DiagnosticSummary))
+                EditorGUILayout.HelpBox(m_DiagnosticSummary, MessageType.Info);
+            if (!string.IsNullOrEmpty(samplesPath))
             {
-                EditorGUILayout.LabelField("Last CSV");
+                EditorGUILayout.LabelField("Last Samples");
                 EditorGUILayout.SelectableLabel(
-                    savedPath,
+                    samplesPath,
+                    EditorStyles.textField,
+                    GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            }
+            if (!string.IsNullOrEmpty(factsPath))
+            {
+                EditorGUILayout.LabelField("Last Facts");
+                EditorGUILayout.SelectableLabel(
+                    factsPath,
+                    EditorStyles.textField,
+                    GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            }
+            if (!string.IsNullOrEmpty(diagnosisPath))
+            {
+                EditorGUILayout.LabelField("Last Diagnosis");
+                EditorGUILayout.SelectableLabel(
+                    diagnosisPath,
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
@@ -566,7 +590,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterFootLandingPredictionSampler.StartSampling();
                 m_AutoSampleStopTime = -1d;
-                m_Step1Report = "Waiting for Gameplay Lab player...";
+                m_DiagnosticSummary = "Waiting for Gameplay Lab player...";
                 EditorApplication.update -= TickAutoSample;
                 EditorApplication.update += TickAutoSample;
             }
@@ -617,12 +641,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 {
                     EditorApplication.update -= TickAutoSample;
                     m_AutoSampleStopTime = 0d;
-                    m_Step1Report = CharacterFootLandingPredictionSampler.LastStartFailure;
+                    m_DiagnosticSummary = CharacterFootLandingPredictionSampler.LastStartFailure;
                     Repaint();
                     return;
                 }
                 m_AutoSampleStopTime = EditorApplication.timeSinceStartup + 8d;
-                m_Step1Report = "Auto sampling 8s... walk the stairs now.";
+                m_DiagnosticSummary = "Auto sampling 8s... walk the stairs now.";
                 Repaint();
                 return;
             }
@@ -634,23 +658,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             m_AutoSampleStopTime = 0d;
             GameplayLabFootIkKeyboardRouteDriver.Stop();
             ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
-            ScoreLastCsv();
+            ShowLastDiagnostics();
             Repaint();
         }
 
-        void ScoreLastCsv()
+        void ShowLastDiagnostics()
         {
-            CharacterFootLandingStep1Report report =
-                CharacterFootLandingStep1Evaluator.Evaluate(
-                    CharacterFootLandingPredictionSampler.LastSavedPath);
-            m_Step1Report = report.Summary;
-            Debug.Log("Foot Landing Step1 " + report.Summary);
+            m_DiagnosticSummary =
+                CharacterFootLandingPredictionSampler.LastDiagnosticSummary;
+            Debug.Log(
+                $"Foot Landing Diagnostics " +
+                $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
+                $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
+                $"Diagnosis={CharacterFootLandingPredictionSampler.LastSavedDiagnosisPath}, " +
+                $"Summary={m_DiagnosticSummary}");
             Repaint();
         }
 
         void StartManualSample()
         {
-            m_Step1Report = string.Empty;
+            m_DiagnosticSummary = string.Empty;
             ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
             Repaint();
         }
@@ -659,7 +686,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
             if (!string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastSavedPath))
-                ScoreLastCsv();
+                ShowLastDiagnostics();
         }
 
         void CaptureSamplingUiState()

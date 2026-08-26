@@ -134,18 +134,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingPredictionResult current,
             CharacterFootLandingPredictionResult incoming,
             CharacterFootLandingPredictionResult selected,
-            AnimationBiomechanicalStepHeader selectedStep)
+            AnimationBiomechanicalStepHeader selectedStep,
+            CharacterFootLandingStepSource selectedSource)
         {
             Current = current;
             Incoming = incoming;
             Selected = selected;
             SelectedStep = selectedStep;
+            SelectedSource = selectedSource;
         }
 
         internal CharacterFootLandingPredictionResult Current { get; }
         internal CharacterFootLandingPredictionResult Incoming { get; }
         internal CharacterFootLandingPredictionResult Selected { get; }
         internal AnimationBiomechanicalStepHeader SelectedStep { get; }
+        internal CharacterFootLandingStepSource SelectedSource { get; }
     }
 
     readonly struct CharacterFootActionOccupancy
@@ -555,11 +558,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var leftDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in left,
-                        pose.Left);
+                        pose.Left,
+                        new CharacterFootStepCandidateSelectionDiagnostics(
+                            frame.Pose.LeftFootSteps.CurrentStep,
+                            frame.Pose.LeftFootSteps.IncomingStep,
+                            leftLanding.LastLandingEventIdentity,
+                            leftPair.SelectedSource,
+                            leftSelectedStep.IsValid
+                                ? leftSelectedStep.LandingEventIdentity
+                                : 0,
+                            m_Settings.LandingPrediction
+                                .MaximumPredictionTimeSeconds));
                 var rightDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
-                        pose.Right);
+                        pose.Right,
+                        new CharacterFootStepCandidateSelectionDiagnostics(
+                            frame.Pose.RightFootSteps.CurrentStep,
+                            frame.Pose.RightFootSteps.IncomingStep,
+                            rightLanding.LastLandingEventIdentity,
+                            rightPair.SelectedSource,
+                            rightSelectedStep.IsValid
+                                ? rightSelectedStep.LandingEventIdentity
+                                : 0,
+                            m_Settings.LandingPrediction
+                                .MaximumPredictionTimeSeconds));
                 var primarySupportDiagnostics =
                     new CharacterFootPrimarySupportDiagnostics(in primarySupport);
                 var strideDiagnostics =
@@ -847,8 +870,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationBiomechanicalStepHeader selectedStep = selectCurrent
                 ? steps.CurrentStep
                 : selectIncoming ? steps.IncomingStep : default;
+            CharacterFootLandingStepSource selectedSource = selectCurrent
+                ? CharacterFootLandingStepSource.Current
+                : selectIncoming
+                    ? CharacterFootLandingStepSource.Incoming
+                    : CharacterFootLandingStepSource.None;
             return new CharacterFootLandingPredictionPair(
-                current, incoming, selected, selectedStep);
+                current,
+                incoming,
+                selected,
+                selectedStep,
+                selectedSource);
         }
 
         static bool IsNextSwingHeader(

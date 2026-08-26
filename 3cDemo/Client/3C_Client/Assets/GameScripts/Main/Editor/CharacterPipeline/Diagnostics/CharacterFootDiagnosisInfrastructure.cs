@@ -36,6 +36,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .ToList();
         }
 
+        internal List<JObject> StepTimeCandidateSelections() =>
+            (m_Facts["stepTimeCandidateSelections"] as JArray ??
+             new JArray())
+            .OfType<JObject>()
+            .OrderBy(value => value.Value<int?>("frame") ?? 0)
+            .ThenBy(
+                value => value.Value<string>("side"),
+                StringComparer.Ordinal)
+            .ToList();
+
         internal CharacterFootDiagnosisTarget Target(
             string id,
             string question,
@@ -332,6 +342,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootDiagnosisCoverage coverage;
         public List<CharacterFootDiagnosisTarget> targets;
         public CharacterFootDiagnosisSummary summary;
+        public CharacterFootStepTimeCandidateSelectionReport
+            stepTimeCandidateSelection;
     }
 
     [Serializable]

@@ -10,7 +10,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public enum CharacterFootPlacementQueryPurpose : byte
     {
-        FutureLanding = 1
+        FutureLanding = 1,
+        CurrentSwingFloor = 2
     }
 
     public readonly struct CharacterFootPlacementQueryRequest
@@ -92,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (count <= 0)
             {
                 return new CharacterFootLandingQueryResult(
-                    IsLandingRequestValid(in request)
+                    IsGroundRequestValid(in request)
                         ? CharacterFootLandingQueryRejectReason.NoHit
                         : CharacterFootLandingQueryRejectReason.InvalidRequest,
                     default);
@@ -125,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out bool capacityExceeded)
         {
             capacityExceeded = false;
-            if (!IsLandingRequestValid(in request))
+            if (!IsGroundRequestValid(in request))
                 return 0;
             int count = m_PhysicsScene.SphereCast(
                 request.Origin,
@@ -297,9 +298,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static bool IsInitialOverlap(in RaycastHit hit) =>
             hit.distance <= 0.000001f;
 
-        static bool IsLandingRequestValid(in CharacterFootPlacementQueryRequest request) =>
+        static bool IsGroundRequestValid(in CharacterFootPlacementQueryRequest request) =>
             request.Shape == CharacterFootPlacementQueryShape.Sphere &&
-            request.Purpose == CharacterFootPlacementQueryPurpose.FutureLanding &&
+            (request.Purpose == CharacterFootPlacementQueryPurpose.FutureLanding ||
+             request.Purpose == CharacterFootPlacementQueryPurpose.CurrentSwingFloor) &&
             request.FootIndex >= 0 && request.FootIndex < 2 &&
             request.LayerMask != 0 &&
             IsFinite(request.Origin) &&

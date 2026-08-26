@@ -74,15 +74,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockResponseAfter = default;
             OutputStagesAvailable = false;
             ReleasingCompletedToSwing = false;
-            EnvelopeAvailable = false;
+            SafetyFloorAvailable = false;
             CorrectionBeforeSafetyFloor = default;
-            GroundEnvelopeSafetyCorrection = default;
+            SafetyFloorMinimumCorrection = default;
             SafetyFloorOutputCorrection = default;
             FinalEffectiveCorrection = default;
             SafetyFloorClamped = false;
             SafetyFloorClampMeters = 0f;
-            EnvelopeClearanceBeforeMeters = 0f;
-            EnvelopeClearanceAfterMeters = 0f;
+            SafetyFloorClearanceBeforeMeters = 0f;
+            SafetyFloorClearanceAfterMeters = 0f;
         }
 
         CharacterFootPathContinuityFact(
@@ -91,15 +91,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootConstraintState stateAfter,
             CharacterFootLockResponse lockResponseBefore,
             CharacterFootLockResponse lockResponseAfter,
-            bool envelopeAvailable,
+            bool safetyFloorAvailable,
             Vector3 correctionBeforeSafetyFloor,
-            Vector3 groundEnvelopeSafetyCorrection,
+            Vector3 safetyFloorMinimumCorrection,
             Vector3 safetyFloorOutputCorrection,
             Vector3 finalEffectiveCorrection,
             bool safetyFloorClamped,
             float safetyFloorClampMeters,
-            float envelopeClearanceBeforeMeters,
-            float envelopeClearanceAfterMeters)
+            float safetyFloorClearanceBeforeMeters,
+            float safetyFloorClearanceAfterMeters)
         {
             Evaluated = source.Evaluated;
             RevisionReason = source.RevisionReason;
@@ -130,15 +130,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ReleasingCompletedToSwing =
                 stateBefore == CharacterFootConstraintState.Releasing &&
                 stateAfter == CharacterFootConstraintState.Swing;
-            EnvelopeAvailable = envelopeAvailable;
+            SafetyFloorAvailable = safetyFloorAvailable;
             CorrectionBeforeSafetyFloor = correctionBeforeSafetyFloor;
-            GroundEnvelopeSafetyCorrection = groundEnvelopeSafetyCorrection;
+            SafetyFloorMinimumCorrection = safetyFloorMinimumCorrection;
             SafetyFloorOutputCorrection = safetyFloorOutputCorrection;
             FinalEffectiveCorrection = finalEffectiveCorrection;
             SafetyFloorClamped = safetyFloorClamped;
             SafetyFloorClampMeters = safetyFloorClampMeters;
-            EnvelopeClearanceBeforeMeters = envelopeClearanceBeforeMeters;
-            EnvelopeClearanceAfterMeters = envelopeClearanceAfterMeters;
+            SafetyFloorClearanceBeforeMeters = safetyFloorClearanceBeforeMeters;
+            SafetyFloorClearanceAfterMeters = safetyFloorClearanceAfterMeters;
         }
 
         internal bool Evaluated { get; }
@@ -168,45 +168,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockResponse LockResponseAfter { get; }
         internal bool OutputStagesAvailable { get; }
         internal bool ReleasingCompletedToSwing { get; }
-        internal bool EnvelopeAvailable { get; }
+        internal bool SafetyFloorAvailable { get; }
         internal Vector3 CorrectionBeforeSafetyFloor { get; }
-        internal Vector3 GroundEnvelopeSafetyCorrection { get; }
+        internal Vector3 SafetyFloorMinimumCorrection { get; }
         internal Vector3 SafetyFloorOutputCorrection { get; }
         internal Vector3 FinalEffectiveCorrection { get; }
         internal bool SafetyFloorClamped { get; }
         internal float SafetyFloorClampMeters { get; }
-        internal float EnvelopeClearanceBeforeMeters { get; }
-        internal float EnvelopeClearanceAfterMeters { get; }
+        internal float SafetyFloorClearanceBeforeMeters { get; }
+        internal float SafetyFloorClearanceAfterMeters { get; }
 
         internal CharacterFootPathContinuityFact Complete(
             CharacterFootConstraintState stateBefore,
             CharacterFootConstraintState stateAfter,
             CharacterFootLockResponse lockResponseBefore,
             CharacterFootLockResponse lockResponseAfter,
-            bool envelopeAvailable,
+            bool safetyFloorAvailable,
             Vector3 correctionBeforeSafetyFloor,
-            Vector3 groundEnvelopeSafetyCorrection,
+            Vector3 safetyFloorMinimumCorrection,
             Vector3 safetyFloorOutputCorrection,
             Vector3 finalEffectiveCorrection,
             bool safetyFloorClamped,
             float safetyFloorClampMeters,
-            float envelopeClearanceBeforeMeters,
-            float envelopeClearanceAfterMeters) =>
+            float safetyFloorClearanceBeforeMeters,
+            float safetyFloorClearanceAfterMeters) =>
             new CharacterFootPathContinuityFact(
                 in this,
                 stateBefore,
                 stateAfter,
                 lockResponseBefore,
                 lockResponseAfter,
-                envelopeAvailable,
+                safetyFloorAvailable,
                 correctionBeforeSafetyFloor,
-                groundEnvelopeSafetyCorrection,
+                safetyFloorMinimumCorrection,
                 safetyFloorOutputCorrection,
                 finalEffectiveCorrection,
                 safetyFloorClamped,
                 safetyFloorClampMeters,
-                envelopeClearanceBeforeMeters,
-                envelopeClearanceAfterMeters);
+                safetyFloorClearanceBeforeMeters,
+                safetyFloorClearanceAfterMeters);
 
         internal static CharacterFootPathContinuityFact CreateUnevaluated(
             float timeToLandingSeconds,
@@ -453,6 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CharacterFootSwingMotionResult swingMotion,
+            in CharacterFootCurrentGroundFloorResult currentGroundFloor,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
             bool hardOwnershipLoss,
@@ -467,6 +468,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
             SwingMotion = swingMotion;
+            CurrentGroundFloor = currentGroundFloor;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
             HardOwnershipLoss = hardOwnershipLoss;
@@ -482,6 +484,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
+        internal CharacterFootCurrentGroundFloorResult CurrentGroundFloor { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool HardOwnershipLoss { get; }
@@ -556,6 +559,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingPredictionResult landingPrediction =
                 evaluation.LandingPrediction;
             CharacterFootStateFrame frame = evaluation.Frame;
+            if (frame.CurrentGroundFloor.Side != evaluation.Side)
+                throw new InvalidOperationException(
+                    "Current Ground Floor side does not match the evaluation.");
             context.BeginFrame();
             PromoteLanded(ref context, in currentStep);
             CaptureNextSwing(
@@ -762,26 +768,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref context,
                 in frame,
                 in swing,
-                out bool envelopeAvailable,
-                out Vector3 groundFloorCorrection);
+                out bool safetyFloorAvailable,
+                out Vector3 safetyFloorMinimumCorrection);
             Vector3 up = frame.ComponentUp.normalized;
-            float safetyFloorClampMeters = envelopeAvailable
+            float safetyFloorClampMeters = safetyFloorAvailable
                 ? Mathf.Max(
                     0f,
                     Vector3.Dot(
                         context.EffectiveCorrection - correctionBeforeSafetyFloor,
                         up))
                 : 0f;
-            float envelopeClearanceBeforeMeters = envelopeAvailable
+            float safetyFloorClearanceBeforeMeters = safetyFloorAvailable
                 ? Vector3.Dot(
-                    ResolveOriginalSole(frame.AnimatedFoot) +
-                    correctionBeforeSafetyFloor - swing.EnvelopeSample,
+                    correctionBeforeSafetyFloor -
+                    safetyFloorMinimumCorrection,
                     up)
                 : 0f;
-            float envelopeClearanceAfterMeters = envelopeAvailable
+            float safetyFloorClearanceAfterMeters = safetyFloorAvailable
                 ? Vector3.Dot(
-                    ResolveOriginalSole(frame.AnimatedFoot) +
-                    context.EffectiveCorrection - swing.EnvelopeSample,
+                    context.EffectiveCorrection -
+                    safetyFloorMinimumCorrection,
                     up)
                 : 0f;
             continuityFact = continuityFact.Complete(
@@ -789,15 +795,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.ConstraintState,
                 lockResponseBefore,
                 context.LockResponse,
-                floorResolved && envelopeAvailable,
+                floorResolved && safetyFloorAvailable,
                 correctionBeforeSafetyFloor,
-                envelopeAvailable ? groundFloorCorrection : default,
+                safetyFloorAvailable
+                    ? safetyFloorMinimumCorrection
+                    : default,
                 context.EffectiveCorrection,
                 context.EffectiveCorrection,
                 safetyFloorClampMeters > 0f,
                 safetyFloorClampMeters,
-                envelopeClearanceBeforeMeters,
-                envelopeClearanceAfterMeters);
+                safetyFloorClearanceBeforeMeters,
+                safetyFloorClearanceAfterMeters);
             return BuildOutput(
                 ref context,
                 side,
@@ -1205,20 +1213,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootStateContext context,
             in CharacterFootStateFrame frame,
             in CharacterFootSwingMotionResult swing,
-            out bool envelopeAvailable,
+            out bool safetyFloorAvailable,
             out Vector3 floorCorrection)
         {
-            envelopeAvailable = false;
+            safetyFloorAvailable = false;
             floorCorrection = default;
             switch (context.ConstraintState)
             {
                 case CharacterFootConstraintState.Swing when swing.Accepted:
                 case CharacterFootConstraintState.UnlockedSupport when swing.Accepted:
-                    envelopeAvailable = true;
-                    floorCorrection = ResolveSwingGroundFloor(
-                        frame.AnimatedFoot,
-                        in swing,
-                        frame.ComponentUp);
+                    CharacterFootCurrentGroundFloorResult currentGroundFloor =
+                        frame.CurrentGroundFloor;
+                    if (!currentGroundFloor.Accepted)
+                        return false;
+                    safetyFloorAvailable = true;
+                    Vector3 up = frame.ComponentUp.normalized;
+                    floorCorrection = up * Vector3.Dot(
+                        currentGroundFloor.Point -
+                        ResolveOriginalSole(frame.AnimatedFoot),
+                        up);
                     break;
                 case CharacterFootConstraintState.Landing:
                 case CharacterFootConstraintState.Locked:
@@ -1234,17 +1247,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 floorCorrection,
                 frame.ComponentUp);
             return true;
-        }
-
-        static Vector3 ResolveSwingGroundFloor(
-            CharacterFootPlacementAnimatedFootPose foot,
-            in CharacterFootSwingMotionResult swing,
-            Vector3 componentUp)
-        {
-            Vector3 up = componentUp.normalized;
-            return up * Vector3.Dot(
-                swing.EnvelopeSample - ResolveOriginalSole(foot),
-                up);
         }
 
         static Vector3 RaiseToFloor(
@@ -1370,6 +1372,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (frame.SwingMotion.Accepted &&
                  frame.SwingMotion.SwingPathReference.LandingEventIdentity !=
                  frame.SwingMotion.LandingEventIdentity) ||
+                frame.CurrentGroundFloor.State !=
+                    CharacterFootCurrentGroundFloorState.Rejected &&
+                frame.CurrentGroundFloor.State !=
+                    CharacterFootCurrentGroundFloorState.Accepted ||
+                (frame.SwingMotion.Accepted &&
+                 frame.CurrentGroundFloor.RejectReason ==
+                 CharacterFootCurrentGroundFloorRejectReason.SwingUnavailable) ||
+                (!frame.SwingMotion.Accepted &&
+                 frame.CurrentGroundFloor.RejectReason !=
+                 CharacterFootCurrentGroundFloorRejectReason.SwingUnavailable) ||
+                (frame.CurrentGroundFloor.Accepted &&
+                 frame.CurrentGroundFloor.RejectReason !=
+                 CharacterFootCurrentGroundFloorRejectReason.None) ||
+                (frame.CurrentGroundFloor.State ==
+                     CharacterFootCurrentGroundFloorState.Rejected &&
+                 frame.CurrentGroundFloor.RejectReason ==
+                 CharacterFootCurrentGroundFloorRejectReason.None) ||
+                (frame.CurrentGroundFloor.Accepted &&
+                 (frame.CurrentGroundFloor.Query.Purpose !=
+                      CharacterFootPlacementQueryPurpose.CurrentSwingFloor ||
+                  frame.CurrentGroundFloor.SurfaceIdentity == 0 ||
+                  !Finite(frame.CurrentGroundFloor.Point) ||
+                  !Finite(frame.CurrentGroundFloor.Normal) ||
+                  frame.CurrentGroundFloor.Normal.sqrMagnitude <= GeometryEpsilon ||
+                  !float.IsFinite(frame.CurrentGroundFloor.Distance) ||
+                  frame.CurrentGroundFloor.Distance < 0f)) ||
                 (frame.HasContactLanding &&
                  frame.ContactLanding.LandingEventIdentity == 0))
                 throw new InvalidOperationException("Foot state frame is invalid.");

@@ -176,6 +176,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly struct SamplingProgramIdentity
         {
             internal SamplingProgramIdentity(
+                AnimationPresentationProgramIdentity identity)
+                : this(
+                    identity.ProjectionRevision,
+                    identity.PoseGraphId,
+                    identity.PoseGraphRevision,
+                    identity.PosePlanHash)
+            {
+            }
+
+            internal SamplingProgramIdentity(
                 string projectionRevision,
                 string poseGraphId,
                 string poseGraphRevision,
@@ -1052,6 +1062,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!s_Capturing || target == null ||
                 target.HostInstanceId != s_TargetHostInstanceId)
                 return;
+            var targetProgram = new SamplingProgramIdentity(target.ProgramIdentity);
+            if (s_Session != null && !s_Session.Program.Matches(in targetProgram))
+            {
+                throw new InvalidOperationException(
+                    "Gameplay Lab player compiled Animation Presentation Program changed during sampling.");
+            }
             if (!s_ConfiguredTargets.Contains(target.RuntimeInstanceId))
             {
                 target.SetDiagnosticsInterest(
@@ -1155,17 +1171,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < targets.Count; i++)
             {
                 AnimationPresentationRuntimeTarget target = targets[i];
-                if (target.HostInstanceId != s_TargetHostInstanceId ||
-                    !target.TryGetDebugView(out AnimationPresentationDebugView debugView))
-                {
+                if (target.HostInstanceId != s_TargetHostInstanceId)
                     continue;
-                }
-                AnimationPresentationRuntimeSnapshot snapshot = debugView.PosePlan;
-                var candidate = new SamplingProgramIdentity(
-                    snapshot.ProjectionRevision,
-                    snapshot.PoseGraphId,
-                    snapshot.PoseGraphRevision,
-                    snapshot.PosePlanHash);
+                var candidate = new SamplingProgramIdentity(target.ProgramIdentity);
                 if (found && !identity.Matches(in candidate))
                 {
                     throw new InvalidOperationException(

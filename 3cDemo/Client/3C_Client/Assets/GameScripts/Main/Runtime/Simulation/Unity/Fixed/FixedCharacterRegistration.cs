@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ActorId actorId,
             FixedCharacterSimulationProgram program,
             CharacterPresentationSemanticContract presentationContract,
-            string projectionRevision,
+            AnimationPresentationProgramIdentity presentationProgramIdentity,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
             IUnityFixedCharacterControlSourceRuntime controlSource,
@@ -99,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 diagnosticsTarget.CharacterRuntimeId,
                 ownerInstanceId,
                 ownerName,
-                projectionRevision,
+                presentationProgramIdentity,
                 animationSnapshotProvider);
             m_PresentationTarget = new FixedPresentationFrameTarget(presentationRuntime);
             ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId);

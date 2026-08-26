@@ -5,6 +5,63 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
+    public readonly struct AnimationPresentationProgramIdentity : IEquatable<AnimationPresentationProgramIdentity>
+    {
+        public AnimationPresentationProgramIdentity(
+            string projectionRevision,
+            string poseGraphId,
+            string poseGraphRevision,
+            string posePlanHash)
+        {
+            if (string.IsNullOrWhiteSpace(projectionRevision) ||
+                string.IsNullOrWhiteSpace(poseGraphId) ||
+                string.IsNullOrWhiteSpace(poseGraphRevision) ||
+                string.IsNullOrWhiteSpace(posePlanHash))
+            {
+                throw new ArgumentException("Animation Presentation Program identity is incomplete.");
+            }
+            ProjectionRevision = projectionRevision.Trim();
+            PoseGraphId = poseGraphId.Trim();
+            PoseGraphRevision = poseGraphRevision.Trim();
+            PosePlanHash = posePlanHash.Trim();
+        }
+
+        public AnimationPresentationProgramIdentity(CharacterPresentationProjection projection)
+            : this(
+                projection?.ProjectionRevision,
+                projection?.PosePlan?.PoseGraphId,
+                projection?.PosePlan?.ContentRevision,
+                projection?.PosePlan?.PlanHash)
+        {
+            projection.RequirePosePayload();
+        }
+
+        public string ProjectionRevision { get; }
+        public string PoseGraphId { get; }
+        public string PoseGraphRevision { get; }
+        public string PosePlanHash { get; }
+        public bool IsValid =>
+            !string.IsNullOrWhiteSpace(ProjectionRevision) &&
+            !string.IsNullOrWhiteSpace(PoseGraphId) &&
+            !string.IsNullOrWhiteSpace(PoseGraphRevision) &&
+            !string.IsNullOrWhiteSpace(PosePlanHash);
+
+        public bool Equals(AnimationPresentationProgramIdentity other) =>
+            string.Equals(ProjectionRevision, other.ProjectionRevision, StringComparison.Ordinal) &&
+            string.Equals(PoseGraphId, other.PoseGraphId, StringComparison.Ordinal) &&
+            string.Equals(PoseGraphRevision, other.PoseGraphRevision, StringComparison.Ordinal) &&
+            string.Equals(PosePlanHash, other.PosePlanHash, StringComparison.Ordinal);
+
+        public override bool Equals(object obj) =>
+            obj is AnimationPresentationProgramIdentity other && Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            ProjectionRevision,
+            PoseGraphId,
+            PoseGraphRevision,
+            PosePlanHash);
+    }
+
     [Flags]
     public enum AnimationPresentationDiagnosticsInterest : byte
     {
@@ -42,25 +99,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Guid runtimeInstanceId,
             int hostInstanceId,
             string displayName,
-            string projectionRevision,
+            AnimationPresentationProgramIdentity programIdentity,
             IAnimationPresentationRuntimeSnapshotProvider provider)
         {
             if (runtimeInstanceId == Guid.Empty || hostInstanceId == 0 ||
-                string.IsNullOrWhiteSpace(displayName) || string.IsNullOrWhiteSpace(projectionRevision))
+                string.IsNullOrWhiteSpace(displayName) || !programIdentity.IsValid)
             {
                 throw new ArgumentException("Animation Presentation runtime target identity is incomplete.");
             }
             RuntimeInstanceId = runtimeInstanceId;
             HostInstanceId = hostInstanceId;
             DisplayName = displayName.Trim();
-            ProjectionRevision = projectionRevision.Trim();
+            ProgramIdentity = programIdentity;
             m_Provider = provider ?? throw new ArgumentNullException(nameof(provider));
         }
 
         public Guid RuntimeInstanceId { get; }
         public int HostInstanceId { get; }
         public string DisplayName { get; }
-        public string ProjectionRevision { get; }
+        public AnimationPresentationProgramIdentity ProgramIdentity { get; }
+        public string ProjectionRevision => ProgramIdentity.ProjectionRevision;
         public bool MotionMatchingRuntimeEnabled => m_Provider.MotionMatchingRuntimeEnabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Provider.DiagnosticsInterest;
@@ -74,13 +132,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             {
                 return false;
             }
-            if (!string.Equals(
-                    debugView.PosePlan.ProjectionRevision,
-                    ProjectionRevision,
-                    StringComparison.Ordinal))
+            AnimationPresentationRuntimeSnapshot snapshot = debugView.PosePlan;
+            var liveIdentity = new AnimationPresentationProgramIdentity(
+                snapshot.ProjectionRevision,
+                snapshot.PoseGraphId,
+                snapshot.PoseGraphRevision,
+                snapshot.PosePlanHash);
+            if (!ProgramIdentity.Equals(liveIdentity))
             {
                 throw new InvalidOperationException(
-                    "Animation Presentation Debug View Projection revision changed after target binding.");
+                    "Animation Presentation live Program identity changed after target binding.");
             }
             return true;
         }

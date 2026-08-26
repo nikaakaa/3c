@@ -5,6 +5,7 @@ using BTSMTL.Diagnostics;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -251,7 +252,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     actorId,
                     program,
                     presentationContract,
-                    projection.ProjectionRevision,
+                    new AnimationPresentationProgramIdentity(projection),
                     Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                     initialBody,
                     input,

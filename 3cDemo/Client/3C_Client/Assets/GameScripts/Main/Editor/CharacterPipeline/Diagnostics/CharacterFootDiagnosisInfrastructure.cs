@@ -46,6 +46,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 StringComparer.Ordinal)
             .ToList();
 
+        internal List<JObject> LandingReaches() =>
+            (m_Facts["landingReaches"] as JArray ?? new JArray())
+            .OfType<JObject>()
+            .OrderBy(value => value.Value<int?>("frame") ?? 0)
+            .ThenBy(
+                value => value.Value<string>("side"),
+                StringComparer.Ordinal)
+            .ToList();
+
         internal CharacterFootDiagnosisTarget Target(
             string id,
             string question,
@@ -344,6 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootDiagnosisSummary summary;
         public CharacterFootStepTimeCandidateSelectionReport
             stepTimeCandidateSelection;
+        public CharacterFootLandingReachReport landingReach;
     }
 
     [Serializable]

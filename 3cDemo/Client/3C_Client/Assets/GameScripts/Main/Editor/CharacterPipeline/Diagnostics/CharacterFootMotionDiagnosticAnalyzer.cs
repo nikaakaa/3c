@@ -51,13 +51,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/11";
+        const string Schema = "character-foot-motion-facts/12";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 11;
+        const int AnalyzerVersion = 12;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 640;
         const float PositionNoiseFloor = 0.001f;
         const float TimeEpsilon = 0.000001f;
+        const double LandingReachCompressionReserveMeters = 0.02d;
 
         internal static CharacterFootMotionDiagnosticAnalysis Analyze(
             string samplesPath)
@@ -430,12 +431,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 double targetExtensionDelta =
                     targetExtensionPeak - previous.TargetExtensionRatio;
                 double bendDrop = previous.SolvedBendDegrees - bendMinimum;
+                int peakFrame = PeakCorrectionFrame(window);
+                FootFrame peak = window.First(
+                    frame => frame.Frame == peakFrame);
+                LandingReachFact landingReach =
+                    LandingReachFact.From(peak);
                 var fact = new EventFact(
                     "Landing",
                     current.Side,
                     current.Frame,
                     frames[end].Frame,
-                    PeakCorrectionFrame(window),
+                    peakFrame,
                     current.FootMotionEventIdentity,
                     current.SourceIdentity,
                     current.SourceCycle,
@@ -450,13 +456,69 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["solvedExtensionRatioPeak"] = solvedExtensionPeak,
                         ["targetExtensionRatioBaseline"] = previous.TargetExtensionRatio,
                         ["targetExtensionRatioDelta"] = targetExtensionDelta,
-                        ["targetExtensionRatioPeak"] = targetExtensionPeak
+                        ["targetExtensionRatioPeak"] = targetExtensionPeak,
+                        ["landingReachCandidateCompressionReserveMeters"] =
+                            landingReach.candidateCompressionReserveMeters,
+                        ["landingReachLegLengthMeters"] =
+                            landingReach.legLengthMeters,
+                        ["landingReachUsableLegLengthMeters"] =
+                            landingReach.landingUsableLegLengthMeters,
+                        ["landingReachMinimumAlongUpMeters"] =
+                            landingReach.landingReachMinimumAlongUpMeters,
+                        ["landingReachMaximumAlongUpMeters"] =
+                            landingReach.landingReachMaximumAlongUpMeters,
+                        ["landingReachStrideSpringOutputMeters"] =
+                            landingReach.strideSpringOutputMeters,
+                        ["landingReachMinimumCorrectionMeters"] =
+                            landingReach.minimumCorrectionMeters,
+                        ["landingReachSignedCorrectionAlongUpMeters"] =
+                            landingReach.signedCorrectionAlongUpMeters,
+                        ["landingReachSupportMinimumAlongUpMeters"] =
+                            landingReach.supportReachMinimumAlongUpMeters,
+                        ["landingReachSupportMaximumAlongUpMeters"] =
+                            landingReach.supportReachMaximumAlongUpMeters,
+                        ["landingReachIntersectionMinimumAlongUpMeters"] =
+                            landingReach.intersectionMinimumAlongUpMeters,
+                        ["landingReachIntersectionMaximumAlongUpMeters"] =
+                            landingReach.intersectionMaximumAlongUpMeters,
+                        ["landingReachSupportConflictGapMeters"] =
+                            landingReach.supportConflictGapMeters,
+                        ["landingReachActualTargetCompressionReserveMeters"] =
+                            landingReach.actualTargetCompressionReserveMeters
                     },
                     new SortedDictionary<string, bool>(StringComparer.Ordinal)
                     {
                         ["bendDirectionReversed"] = bendDirectionMinimum < 0d,
                         ["contactAnchorAvailable"] = window.Any(frame => frame.HasAnchor),
-                        ["grounded"] = current.Grounded
+                        ["grounded"] = current.Grounded,
+                        ["landingReachAvailable"] =
+                            landingReach.landingReachAvailable,
+                        ["landingReachCurrentOutputWithinInterval"] =
+                            landingReach.currentOutputWithinLandingReach,
+                        ["landingReachCorrectionUp"] =
+                            landingReach.correctionDirection == "Up",
+                        ["landingReachCorrectionDown"] =
+                            landingReach.correctionDirection == "Down",
+                        ["landingReachCorrectionNone"] =
+                            landingReach.correctionDirection == "None",
+                        ["landingReachPrimarySupportAvailable"] =
+                            landingReach.primarySupportAvailable,
+                        ["landingReachSupportReachAvailable"] =
+                            landingReach.supportReachAvailable,
+                        ["landingReachSupportIntersectionExists"] =
+                            landingReach.supportIntersectionExists,
+                        ["landingReachNoSupportLandingOnly"] =
+                            landingReach.classification ==
+                            "NoSupportLandingOnly",
+                        ["landingReachSupportIntersection"] =
+                            landingReach.classification ==
+                            "SupportIntersection",
+                        ["landingReachSupportConflict"] =
+                            landingReach.classification ==
+                            "SupportConflict",
+                        ["landingReachUnavailable"] =
+                            landingReach.classification ==
+                            "LandingReachUnavailable"
                     });
                 events.Add(fact);
                 i = Math.Max(i, end - 1);
@@ -2000,6 +2062,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     id = AnalyzerId,
                     version = AnalyzerVersion,
                     segmentationPositionEpsilonMeters = PositionNoiseFloor,
+                    landingReachCandidateCompressionReserveMeters =
+                        LandingReachCompressionReserveMeters,
                     penetrationGeometryEpsilonMeters =
                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters
                 },
@@ -2055,6 +2119,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 },
                 currentFloors = capture.FootRows
                     .Select(CurrentFloorFact.From)
+                    .ToList(),
+                landingReaches = capture.FootRows
+                    .Select(LandingReachFact.From)
                     .ToList(),
                 stepTimeCandidateSelections =
                     stepTimeCandidateSelections
@@ -2554,8 +2621,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 SolvedBendDegrees = Float("FinalIkLegSolvedBendDegrees"),
                 TargetCompressionReserve = Float("FinalIkLegTargetCompressionReserve"),
                 BendDirectionPreviousDot = Float("FinalIkLegEffectiveBendDirectionPreviousDot"),
+                FinalIkLegAvailable = Int("FinalIkLegAvailable") != 0,
+                FinalIkLegOriginalHip = Vector("FinalIkLegOriginalHip"),
+                FinalIkLegOriginalKnee = Vector("FinalIkLegOriginalKnee"),
+                FinalIkLegOriginalAnkle = Vector("FinalIkLegOriginalAnkle"),
+                FinalIkLegTargetAnkle = Vector("FinalIkLegTargetAnkle"),
+                PrimarySupportAvailable =
+                    Int("PrimarySupportHasValue") != 0,
                 PrimarySupportSide = Cell("PrimarySupportSide"),
                 PrimarySupportEventIdentity = Ulong("PrimarySupportLandingEventIdentity"),
+                StrideState = Cell("StrideState"),
+                StrideSupportSide = Cell("StrideSupportSide"),
+                StrideSupportReachAvailable =
+                    Int("StrideSupportReachAvailable") != 0,
+                StrideSupportReachMinimumAlongUp =
+                    Float("StrideSupportReachMinimumAlongUp"),
+                StrideSupportReachMaximumAlongUp =
+                    Float("StrideSupportReachMaximumAlongUp"),
+                StrideSpringOutput = Float("StrideSpringOutput"),
                 PelvisWeight = Float("PelvisPositionWeight"),
                 FinalPelvisGoal = Vector("FinalPelvisGoal"),
                 PhysicalPelvis = Vector("FinalPhysicalPelvisComponentPosition")
@@ -2823,10 +2906,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionSourceToeX", "FootMotionSourceToeY", "FootMotionSourceToeZ",
                 "FinalPhysicalHeelWorldX", "FinalPhysicalHeelWorldY", "FinalPhysicalHeelWorldZ",
                 "FinalPhysicalToeWorldX", "FinalPhysicalToeWorldY", "FinalPhysicalToeWorldZ",
+                "FinalIkLegAvailable",
+                "FinalIkLegOriginalHipX", "FinalIkLegOriginalHipY",
+                "FinalIkLegOriginalHipZ",
+                "FinalIkLegOriginalKneeX", "FinalIkLegOriginalKneeY",
+                "FinalIkLegOriginalKneeZ",
+                "FinalIkLegOriginalAnkleX", "FinalIkLegOriginalAnkleY",
+                "FinalIkLegOriginalAnkleZ",
+                "FinalIkLegTargetAnkleX", "FinalIkLegTargetAnkleY",
+                "FinalIkLegTargetAnkleZ",
                 "FinalIkLegTargetExtensionRatio", "FinalIkLegSolvedExtensionRatio",
                 "FinalIkLegSolvedBendDegrees", "FinalIkLegTargetCompressionReserve",
                 "FinalIkLegEffectiveBendDirectionPreviousDot",
-                "PrimarySupportSide", "PrimarySupportLandingEventIdentity",
+                "PrimarySupportHasValue", "PrimarySupportSide",
+                "PrimarySupportLandingEventIdentity",
+                "StrideState", "StrideSupportSide",
+                "StrideSupportReachAvailable",
+                "StrideSupportReachMinimumAlongUp",
+                "StrideSupportReachMaximumAlongUp",
+                "StrideSpringOutput",
                 "PelvisPositionWeight", "FinalPelvisGoalX", "FinalPelvisGoalY", "FinalPelvisGoalZ",
                 "FinalPhysicalPelvisComponentPositionX", "FinalPhysicalPelvisComponentPositionY",
                 "FinalPhysicalPelvisComponentPositionZ"
@@ -3394,12 +3492,225 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float SolvedBendDegrees;
             internal float TargetCompressionReserve;
             internal float BendDirectionPreviousDot;
+            internal bool FinalIkLegAvailable;
+            internal Vector3 FinalIkLegOriginalHip;
+            internal Vector3 FinalIkLegOriginalKnee;
+            internal Vector3 FinalIkLegOriginalAnkle;
+            internal Vector3 FinalIkLegTargetAnkle;
+            internal bool PrimarySupportAvailable;
             internal string PrimarySupportSide;
             internal ulong PrimarySupportEventIdentity;
+            internal string StrideState;
+            internal string StrideSupportSide;
+            internal bool StrideSupportReachAvailable;
+            internal float StrideSupportReachMinimumAlongUp;
+            internal float StrideSupportReachMaximumAlongUp;
+            internal float StrideSpringOutput;
             internal float PelvisWeight;
             internal Vector3 FinalPelvisGoal;
             internal Vector3 PhysicalPelvis;
             internal Vector3 EffectiveCorrection => CorrectedAnkle - OriginalAnkle;
+        }
+
+        [Serializable]
+        sealed class LandingReachFact
+        {
+            public int frame;
+            public string side;
+            public string availability;
+            public string classification;
+            public double candidateCompressionReserveMeters;
+            public bool finalIkLegAvailable;
+            public ScalarVector3Fact componentUp;
+            public ScalarVector3Fact originalHip;
+            public ScalarVector3Fact originalKnee;
+            public ScalarVector3Fact originalAnkle;
+            public ScalarVector3Fact targetAnkle;
+            public ScalarVector3Fact baselineHipBeforePelvisOutput;
+            public double appliedPelvisGoalAlongUpMeters;
+            public double upperLegLengthMeters;
+            public double lowerLegLengthMeters;
+            public double legLengthMeters;
+            public double landingUsableLegLengthMeters;
+            public double hipTargetHorizontalDistanceMeters;
+            public double hipTargetVerticalAlongUpMeters;
+            public bool landingReachAvailable;
+            public double landingReachMinimumAlongUpMeters;
+            public double landingReachMaximumAlongUpMeters;
+            public double strideSpringOutputMeters;
+            public bool currentOutputWithinLandingReach;
+            public double minimumCorrectionMeters;
+            public double signedCorrectionAlongUpMeters;
+            public string correctionDirection;
+            public double actualTargetCompressionReserveMeters;
+            public bool primarySupportAvailable;
+            public string primarySupportSide;
+            public string primarySupportLandingEventIdentity;
+            public string strideState;
+            public string strideSupportSide;
+            public bool supportReachAvailable;
+            public double supportReachMinimumAlongUpMeters;
+            public double supportReachMaximumAlongUpMeters;
+            public bool supportIntersectionExists;
+            public double intersectionMinimumAlongUpMeters;
+            public double intersectionMaximumAlongUpMeters;
+            public double supportConflictGapMeters;
+
+            internal static LandingReachFact From(FootFrame frame)
+            {
+                var result = new LandingReachFact
+                {
+                    frame = frame.Frame,
+                    side = frame.Side,
+                    availability = "None",
+                    classification = "LandingReachUnavailable",
+                    candidateCompressionReserveMeters =
+                        LandingReachCompressionReserveMeters,
+                    finalIkLegAvailable = frame.FinalIkLegAvailable,
+                    componentUp = ScalarVector3Fact.From(frame.ComponentUp),
+                    originalHip = ScalarVector3Fact.From(
+                        frame.FinalIkLegOriginalHip),
+                    originalKnee = ScalarVector3Fact.From(
+                        frame.FinalIkLegOriginalKnee),
+                    originalAnkle = ScalarVector3Fact.From(
+                        frame.FinalIkLegOriginalAnkle),
+                    targetAnkle = ScalarVector3Fact.From(
+                        frame.FinalIkLegTargetAnkle),
+                    baselineHipBeforePelvisOutput =
+                        ScalarVector3Fact.From(
+                            frame.FinalIkLegOriginalHip),
+                    strideSpringOutputMeters = frame.StrideSpringOutput,
+                    actualTargetCompressionReserveMeters =
+                        frame.TargetCompressionReserve,
+                    primarySupportAvailable =
+                        frame.PrimarySupportAvailable,
+                    primarySupportSide = frame.PrimarySupportSide,
+                    primarySupportLandingEventIdentity =
+                        frame.PrimarySupportEventIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    strideState = frame.StrideState,
+                    strideSupportSide = frame.StrideSupportSide,
+                    supportReachAvailable =
+                        frame.StrideSupportReachAvailable,
+                    supportReachMinimumAlongUpMeters =
+                        frame.StrideSupportReachMinimumAlongUp,
+                    supportReachMaximumAlongUpMeters =
+                        frame.StrideSupportReachMaximumAlongUp,
+                    correctionDirection = "Unavailable"
+                };
+                if (!frame.FinalIkLegAvailable)
+                {
+                    result.availability = "FinalIkLegUnavailable";
+                    return result;
+                }
+                if (frame.ComponentUp.sqrMagnitude <=
+                    TimeEpsilon * TimeEpsilon)
+                {
+                    result.availability = "ComponentUpUnavailable";
+                    return result;
+                }
+                Vector3 up = frame.ComponentUp.normalized;
+                double upperLength = Vector3.Distance(
+                    frame.FinalIkLegOriginalHip,
+                    frame.FinalIkLegOriginalKnee);
+                double lowerLength = Vector3.Distance(
+                    frame.FinalIkLegOriginalKnee,
+                    frame.FinalIkLegOriginalAnkle);
+                double legLength = upperLength + lowerLength;
+                double usableLegLength = legLength -
+                    LandingReachCompressionReserveMeters;
+                result.upperLegLengthMeters = upperLength;
+                result.lowerLegLengthMeters = lowerLength;
+                result.legLengthMeters = legLength;
+                result.landingUsableLegLengthMeters = usableLegLength;
+                if (!double.IsFinite(usableLegLength) ||
+                    usableLegLength <= TimeEpsilon)
+                {
+                    result.availability = "UsableLegLengthUnavailable";
+                    return result;
+                }
+                double appliedPelvisAlongUp = Vector3.Dot(
+                    frame.FinalPelvisGoal,
+                    up) * frame.PelvisWeight;
+                Vector3 baselineHip = frame.FinalIkLegOriginalHip -
+                    up * (float)appliedPelvisAlongUp;
+                result.appliedPelvisGoalAlongUpMeters =
+                    appliedPelvisAlongUp;
+                result.baselineHipBeforePelvisOutput =
+                    ScalarVector3Fact.From(baselineHip);
+                Vector3 hipFromTarget =
+                    baselineHip - frame.FinalIkLegTargetAnkle;
+                double vertical = Vector3.Dot(hipFromTarget, up);
+                Vector3 horizontal = Vector3.ProjectOnPlane(
+                    hipFromTarget,
+                    up);
+                double horizontalSquare = horizontal.sqrMagnitude;
+                result.hipTargetHorizontalDistanceMeters =
+                    Math.Sqrt(horizontalSquare);
+                result.hipTargetVerticalAlongUpMeters = vertical;
+                double usableSquare = usableLegLength * usableLegLength;
+                if (!double.IsFinite(horizontalSquare) ||
+                    horizontalSquare >= usableSquare)
+                {
+                    result.availability = "HorizontalTargetUnreachable";
+                    return result;
+                }
+                double verticalReach = Math.Sqrt(
+                    usableSquare - horizontalSquare);
+                double minimum = -vertical - verticalReach;
+                double maximum = -vertical + verticalReach;
+                if (!double.IsFinite(minimum) ||
+                    !double.IsFinite(maximum) ||
+                    minimum > maximum)
+                {
+                    result.availability = "LandingIntervalUnavailable";
+                    return result;
+                }
+                result.availability = "Available";
+                result.landingReachAvailable = true;
+                result.landingReachMinimumAlongUpMeters = minimum;
+                result.landingReachMaximumAlongUpMeters = maximum;
+                double output = frame.StrideSpringOutput;
+                double signedCorrection = output < minimum
+                    ? minimum - output
+                    : output > maximum
+                        ? maximum - output
+                        : 0d;
+                result.currentOutputWithinLandingReach =
+                    signedCorrection == 0d;
+                result.signedCorrectionAlongUpMeters = signedCorrection;
+                result.minimumCorrectionMeters =
+                    Math.Abs(signedCorrection);
+                result.correctionDirection = signedCorrection > 0d
+                    ? "Up"
+                    : signedCorrection < 0d
+                        ? "Down"
+                        : "None";
+                if (!frame.StrideSupportReachAvailable)
+                {
+                    result.classification = "NoSupportLandingOnly";
+                    return result;
+                }
+                double intersectionMinimum = Math.Max(
+                    minimum,
+                    frame.StrideSupportReachMinimumAlongUp);
+                double intersectionMaximum = Math.Min(
+                    maximum,
+                    frame.StrideSupportReachMaximumAlongUp);
+                result.intersectionMinimumAlongUpMeters =
+                    intersectionMinimum;
+                result.intersectionMaximumAlongUpMeters =
+                    intersectionMaximum;
+                result.supportIntersectionExists =
+                    intersectionMinimum <= intersectionMaximum;
+                result.supportConflictGapMeters = Math.Max(
+                    0d,
+                    intersectionMinimum - intersectionMaximum);
+                result.classification = result.supportIntersectionExists
+                    ? "SupportIntersection"
+                    : "SupportConflict";
+                return result;
+            }
         }
 
         sealed class StepCandidateFrame
@@ -3658,6 +3969,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public AnalyzerFact analyzer;
             public CoverageFact coverage;
             public List<CurrentFloorFact> currentFloors;
+            public List<LandingReachFact> landingReaches;
             public List<StepTimeCandidateSelectionFact>
                 stepTimeCandidateSelections;
             public List<EventFact> events;
@@ -3781,6 +4093,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string id;
             public int version;
             public double segmentationPositionEpsilonMeters;
+            public double landingReachCandidateCompressionReserveMeters;
             public double penetrationGeometryEpsilonMeters;
         }
 

@@ -373,6 +373,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public bool Available { get; }
     }
 
+    public readonly struct AnimationFootStepObservationRuntimeSnapshot
+    {
+        internal AnimationFootStepObservationRuntimeSnapshot(
+            PoseNodeId nodeId,
+            PresentationPoseSourceIndex sourceIndex,
+            AnimationPoseSourceId sourceId,
+            string sourceIdentity,
+            float sourceWeight,
+            float normalizedTime,
+            AnimationFootStepObservationSample left,
+            AnimationFootStepObservationSample right)
+        {
+            if (!nodeId.IsValid || !sourceIndex.IsValid || !sourceId.IsValid ||
+                string.IsNullOrWhiteSpace(sourceIdentity) ||
+                !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f ||
+                !float.IsFinite(normalizedTime) || normalizedTime < 0f || normalizedTime > 1f ||
+                !left.IsValid || !right.IsValid)
+            {
+                throw new ArgumentException("Foot Step observation runtime snapshot is invalid.");
+            }
+            NodeId = nodeId;
+            SourceIndex = sourceIndex;
+            SourceId = sourceId;
+            SourceIdentity = sourceIdentity.Trim();
+            SourceWeight = sourceWeight;
+            NormalizedTime = normalizedTime;
+            Left = left;
+            Right = right;
+            m_IsSpecified = 1;
+        }
+
+        readonly byte m_IsSpecified;
+        public PoseNodeId NodeId { get; }
+        public PresentationPoseSourceIndex SourceIndex { get; }
+        public AnimationPoseSourceId SourceId { get; }
+        public string SourceIdentity { get; }
+        public float SourceWeight { get; }
+        public float NormalizedTime { get; }
+        public AnimationFootStepObservationSample Left { get; }
+        public AnimationFootStepObservationSample Right { get; }
+        public bool IsValid => m_IsSpecified != 0;
+    }
+
     public readonly struct AnimationBlendSpaceSampleRuntimeSnapshot
     {
         internal AnimationBlendSpaceSampleRuntimeSnapshot(
@@ -997,6 +1040,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             AnimationBiomechanicalStepReadPage leftFootSteps,
             AnimationBiomechanicalStepReadPage rightFootSteps,
             bool hasFootFeatures,
+            AnimationFootStepObservationRuntimeSnapshot footStepObservation,
             AnimationFootPlacementRuntimeSnapshot footPlacement,
             int physicalBoneCount,
             int virtualBoneCount,
@@ -1074,6 +1118,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             LeftFootSteps = leftFootSteps;
             RightFootSteps = rightFootSteps;
             HasFootFeatures = hasFootFeatures;
+            FootStepObservation = footStepObservation;
             m_FootPlacement = footPlacement;
             PhysicalBoneCount = physicalBoneCount;
             VirtualBoneCount = virtualBoneCount;
@@ -1153,6 +1198,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
         public AnimationBiomechanicalStepReadPage RightFootSteps { get; }
         public bool HasFootFeatures { get; }
+        public AnimationFootStepObservationRuntimeSnapshot FootStepObservation { get; }
         public AnimationFootPlacementRuntimeSnapshot FootPlacement => m_FootPlacement;
         public int PhysicalBoneCount { get; }
         public int VirtualBoneCount { get; }

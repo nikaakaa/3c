@@ -51,11 +51,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/10";
+        const string Schema = "character-foot-motion-facts/11";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 10;
+        const int AnalyzerVersion = 11;
         const string GeometryFileName = "ground-path-geometry.csv";
-        const int HeaderColumnCapacity = 608;
+        const int HeaderColumnCapacity = 640;
         const float PositionNoiseFloor = 0.001f;
         const float TimeEpsilon = 0.000001f;
 
@@ -89,14 +89,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             CsvCapture capture = ReadCapture(fullSamplesPath, geometryPath);
             var events = new List<EventFact>(256);
-            AnalyzeSide(capture.Left, events);
-            AnalyzeSide(capture.Right, events);
+            var stepTimeCandidateSelections =
+                new List<StepTimeCandidateSelectionFact>(
+                    capture.FootRows.Count);
+            AnalyzeSide(
+                capture.Left,
+                events,
+                stepTimeCandidateSelections);
+            AnalyzeSide(
+                capture.Right,
+                events,
+                stepTimeCandidateSelections);
             AnalyzeSupportChanges(capture, events);
             events.Sort(EventFact.Compare);
             FactsDocument document = BuildDocument(
                 fullSamplesPath,
                 geometryPath,
                 capture,
+                stepTimeCandidateSelections,
                 events);
             string factsPath = Path.Combine(
                 Path.GetDirectoryName(fullSamplesPath) ?? string.Empty,
@@ -122,6 +132,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"currentFloorAccepted={document.coverage.currentFloorAcceptedEventCount} " +
                 $"currentFloorAcceptedButNotConsumed={document.coverage.currentFloorAcceptedButNotConsumedEventCount} " +
                 $"safetyFloorClampWithoutInput={document.coverage.safetyFloorClampWithoutInputEventCount} " +
+                $"stepTimeCandidateSelections={document.coverage.stepTimeCandidateSelectionCount} " +
+                $"stepTimeRepresentativeEvents={document.coverage.stepTimeCandidateRepresentativeEventCount} " +
                 $"diagnosisFiles={publication.DiagnosticCount} " +
                 $"diagnosisTargets={publication.TargetCount} " +
                 $"diagnosisMatches={publication.MatchCount}";
@@ -140,10 +152,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void AnalyzeSide(
             List<FootFrame> frames,
-            List<EventFact> events)
+            List<EventFact> events,
+            List<StepTimeCandidateSelectionFact> stepTimeCandidateSelections)
         {
             if (frames.Count == 0)
                 return;
+            AnalyzeStepTimeCandidateSelections(
+                frames,
+                events,
+                stepTimeCandidateSelections);
             AnalyzeLandingEvents(frames, events);
             AnalyzeLandingStateConsistency(frames, events);
             AnalyzeLockedEvents(frames, events);
@@ -152,6 +169,102 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeReleaseEvents(frames, events);
             AnalyzePathChanges(frames, events);
             AnalyzePathContinuity(frames, events);
+        }
+
+        static void AnalyzeStepTimeCandidateSelections(
+            List<FootFrame> frames,
+            List<EventFact> events,
+            List<StepTimeCandidateSelectionFact> facts)
+        {
+            FootFrame previous = null;
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame current = frames[i];
+                StepTimeCandidateSelectionFact fact =
+                    StepTimeCandidateSelectionFact.From(
+                        previous,
+                        current);
+                facts.Add(fact);
+                bool representative = fact.normalizedTimeWrapped ||
+                                      fact.selectedSourceChanged ||
+                                      fact.selectedLandingEventChanged ||
+                                      fact.formalToSelectedTimeDeltaAboveOneMillisecond;
+                if (representative)
+                {
+                    var metrics = new SortedDictionary<string, double>(
+                        StringComparer.Ordinal)
+                    {
+                        ["formalTimeSeconds"] = fact.formalTimeSeconds,
+                        ["currentOldTimeSeconds"] =
+                            fact.current.timeToLandingSeconds,
+                        ["incomingOldTimeSeconds"] =
+                            fact.incoming.timeToLandingSeconds,
+                        ["maximumPredictionTimeSeconds"] =
+                            fact.maximumPredictionTimeSeconds
+                    };
+                    if (fact.formalToCurrentAbsoluteDeltaSeconds.HasValue)
+                    {
+                        metrics["formalToCurrentAbsoluteDeltaSeconds"] =
+                            fact.formalToCurrentAbsoluteDeltaSeconds.Value;
+                    }
+                    if (fact.formalToIncomingAbsoluteDeltaSeconds.HasValue)
+                    {
+                        metrics["formalToIncomingAbsoluteDeltaSeconds"] =
+                            fact.formalToIncomingAbsoluteDeltaSeconds.Value;
+                    }
+                    if (fact.selectedOldTimeSeconds.HasValue)
+                        metrics["selectedOldTimeSeconds"] =
+                            fact.selectedOldTimeSeconds.Value;
+                    if (fact.formalToSelectedAbsoluteDeltaSeconds.HasValue)
+                    {
+                        metrics["formalToSelectedAbsoluteDeltaSeconds"] =
+                            fact.formalToSelectedAbsoluteDeltaSeconds.Value;
+                    }
+                    var evidence = new SortedDictionary<string, bool>(
+                        StringComparer.Ordinal)
+                    {
+                        ["formalObservationAvailable"] =
+                            fact.formalObservationAvailable,
+                        ["normalizedTimeWrapped"] =
+                            fact.normalizedTimeWrapped,
+                        ["selectedSourceChanged"] =
+                            fact.selectedSourceChanged,
+                        ["selectedLandingEventChanged"] =
+                            fact.selectedLandingEventChanged,
+                        ["formalToSelectedTimeDeltaAboveOneMillisecond"] =
+                            fact.formalToSelectedTimeDeltaAboveOneMillisecond,
+                        ["currentTimeConditionEligible"] =
+                            fact.current.timeConditionEligible,
+                        ["currentOtherConditionsEligible"] =
+                            fact.current.otherConditionsEligible,
+                        ["currentEligible"] = fact.current.eligible,
+                        ["incomingTimeConditionEligible"] =
+                            fact.incoming.timeConditionEligible,
+                        ["incomingOtherConditionsEligible"] =
+                            fact.incoming.otherConditionsEligible,
+                        ["incomingEligible"] = fact.incoming.eligible,
+                        ["formalCloserToCurrent"] =
+                            fact.formalCloserCandidate == "Current",
+                        ["formalCloserToIncoming"] =
+                            fact.formalCloserCandidate == "Incoming",
+                        ["closerCandidateLandingEventDiffersFromLastLanding"] =
+                            fact.closerCandidateLandingEventDiffersFromLastLanding
+                    };
+                    events.Add(new EventFact(
+                        "StepTimeCandidateSelection",
+                        current.Side,
+                        current.Frame,
+                        current.Frame,
+                        current.Frame,
+                        current.SelectedLandingEventIdentity,
+                        current.SourceIdentity,
+                        current.SourceCycle,
+                        current.DeltaSeconds,
+                        metrics,
+                        evidence));
+                }
+                previous = current;
+            }
         }
 
         static void AnalyzeSafetyFloor(
@@ -1860,6 +1973,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string samplesPath,
             string geometryPath,
             CsvCapture capture,
+            List<StepTimeCandidateSelectionFact> stepTimeCandidateSelections,
             List<EventFact> events)
         {
             return new FactsDocument
@@ -1917,6 +2031,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     safetyFloorClampWithoutInputEventCount = events.Count(
                         value => value.kind == "SafetyFloor" &&
                                  !value.evidence["clampHasCurrentFloorInput"]),
+                    stepTimeCandidateSelectionCount =
+                        stepTimeCandidateSelections.Count,
+                    stepTimeCandidateRepresentativeEventCount = events.Count(
+                        value => value.kind ==
+                                 "StepTimeCandidateSelection"),
+                    normalizedTimeWrapCount = events.Count(
+                        value => value.kind ==
+                                     "StepTimeCandidateSelection" &&
+                                 value.evidence["normalizedTimeWrapped"]),
                     leftFootFrameCount = capture.Left.Count,
                     rightFootFrameCount = capture.Right.Count,
                     frameGapCount = capture.FrameGapCount,
@@ -1933,6 +2056,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 currentFloors = capture.FootRows
                     .Select(CurrentFloorFact.From)
                     .ToList(),
+                stepTimeCandidateSelections =
+                    stepTimeCandidateSelections
+                        .OrderBy(value => value.frame)
+                        .ThenBy(
+                            value => value.side,
+                            StringComparer.Ordinal)
+                        .ToList(),
                 events = events
             };
         }
@@ -2213,6 +2343,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Float(prefix + "X"),
                 Float(prefix + "Y"),
                 Float(prefix + "Z"));
+            StepCandidateFrame Candidate(string prefix) =>
+                new StepCandidateFrame
+                {
+                    IsValid = Int(prefix + "IsValid") != 0,
+                    IsAuthoritative =
+                        Int(prefix + "IsAuthoritative") != 0,
+                    HasConsistentLandingEventIdentity =
+                        Int(prefix +
+                            "HasConsistentLandingEventIdentity") != 0,
+                    IsPreSwing = Int(prefix + "IsPreSwing") != 0,
+                    IsSwing = Int(prefix + "IsSwing") != 0,
+                    EventOrdinal = Int(prefix + "EventOrdinal"),
+                    SourceLandingCycleOffset =
+                        Int(prefix + "SourceLandingCycleOffset"),
+                    SourceSampleCycle =
+                        Int(prefix + "SourceSampleCycle"),
+                    ContributionContinuityIdentity =
+                        Ulong(prefix +
+                              "ContributionContinuityIdentity"),
+                    LandingEventIdentity =
+                        Ulong(prefix + "LandingEventIdentity"),
+                    TimeToLandingSeconds =
+                        Float(prefix + "TimeToLandingSeconds"),
+                    RootLocalLanding =
+                        Vector(prefix + "RootLocalLanding")
+                };
             var frame = new FootFrame
             {
                 SampleIdentity = Cell("SampleIdentity"),
@@ -2227,9 +2383,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 DeltaSeconds = Float("PresentationDeltaSeconds"),
                 BodyResetSequence = Ulong("BodyResetSequence"),
                 Grounded = Int("Grounded") != 0,
+                StepSelectionMaximumPredictionTimeSeconds =
+                    Float("StepSelectionMaximumPredictionTimeSeconds"),
+                StepSelectionLastLandingEventIdentity =
+                    Ulong("StepSelectionLastLandingEventIdentity"),
+                SelectedStepSource = Cell("SelectedStepSource"),
+                SelectedLandingEventIdentity =
+                    Ulong("SelectedLandingEventIdentity"),
+                CurrentStep = Candidate("CurrentStep"),
+                IncomingStep = Candidate("IncomingStep"),
+                FormalObservationAvailable =
+                    Int("InputFormalStepObservationAvailable") != 0,
                 SourceIdentity = Cell("InputFormalStepSourceIdentity"),
                 SourceCycle = Int("InputFormalStepSourceCycle"),
                 ContributionContinuityIdentity = Ulong("InputFormalStepContributionContinuityIdentity"),
+                FormalObservationCompletionIdentity =
+                    Ulong("InputFormalStepCompletionIdentity"),
                 FormalNormalizedTime = Float("InputFormalStepSourceNormalizedTime"),
                 FormalStepTime = Float("InputFormalStepTimeSeconds"),
                 FormalLockMode = Cell("InputFormalLockMode"),
@@ -2402,6 +2571,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (frame.Side != "Left" && frame.Side != "Right")
                 throw new InvalidDataException(
                     $"Foot Motion Foot row Side '{frame.Side}' is invalid.");
+            RequireEnum<CharacterFootLandingStepSource>(
+                frame.SelectedStepSource,
+                "SelectedStepSource");
+            bool selectedStepConsistent = frame.SelectedStepSource == "None"
+                ? frame.SelectedLandingEventIdentity == 0
+                : frame.SelectedStepSource == "Current"
+                    ? frame.SelectedLandingEventIdentity ==
+                      frame.CurrentStep.LandingEventIdentity
+                    : frame.SelectedLandingEventIdentity ==
+                      frame.IncomingStep.LandingEventIdentity;
+            if (!selectedStepConsistent ||
+                frame.StepSelectionMaximumPredictionTimeSeconds <= 0f)
+            {
+                throw new InvalidDataException(
+                    "Foot Motion Step candidate selection facts are inconsistent.");
+            }
             RequireEnum<CharacterFootLandingPredictionState>(
                 frame.LandingPredictionState,
                 "State");
@@ -2498,7 +2683,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "InputFormalStepSourceIdentity", "InputFormalStepSourceCycle",
                 "InputFormalStepContributionContinuityIdentity",
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
+                "InputFormalStepObservationAvailable",
+                "InputFormalStepCompletionIdentity",
                 "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
+                "StepSelectionMaximumPredictionTimeSeconds",
+                "StepSelectionLastLandingEventIdentity",
+                "SelectedStepSource", "SelectedLandingEventIdentity",
+                "CurrentStepIsValid", "CurrentStepIsAuthoritative",
+                "CurrentStepHasConsistentLandingEventIdentity",
+                "CurrentStepIsPreSwing", "CurrentStepIsSwing",
+                "CurrentStepEventOrdinal",
+                "CurrentStepSourceLandingCycleOffset",
+                "CurrentStepSourceSampleCycle",
+                "CurrentStepContributionContinuityIdentity",
+                "CurrentStepLandingEventIdentity",
+                "CurrentStepTimeToLandingSeconds",
+                "CurrentStepRootLocalLandingX",
+                "CurrentStepRootLocalLandingY",
+                "CurrentStepRootLocalLandingZ",
+                "IncomingStepIsValid", "IncomingStepIsAuthoritative",
+                "IncomingStepHasConsistentLandingEventIdentity",
+                "IncomingStepIsPreSwing", "IncomingStepIsSwing",
+                "IncomingStepEventOrdinal",
+                "IncomingStepSourceLandingCycleOffset",
+                "IncomingStepSourceSampleCycle",
+                "IncomingStepContributionContinuityIdentity",
+                "IncomingStepLandingEventIdentity",
+                "IncomingStepTimeToLandingSeconds",
+                "IncomingStepRootLocalLandingX",
+                "IncomingStepRootLocalLandingY",
+                "IncomingStepRootLocalLandingZ",
                 "State", "RawLandingAvailable",
                 "RawLandingCandidateX", "RawLandingCandidateY", "RawLandingCandidateZ",
                 "GroundPathState", "GroundPathRejectReason", "GroundPathInputIdentity",
@@ -3058,9 +3272,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float DeltaSeconds;
             internal ulong BodyResetSequence;
             internal bool Grounded;
+            internal float StepSelectionMaximumPredictionTimeSeconds;
+            internal ulong StepSelectionLastLandingEventIdentity;
+            internal string SelectedStepSource;
+            internal ulong SelectedLandingEventIdentity;
+            internal StepCandidateFrame CurrentStep;
+            internal StepCandidateFrame IncomingStep;
+            internal bool FormalObservationAvailable;
             internal string SourceIdentity;
             internal int SourceCycle;
             internal ulong ContributionContinuityIdentity;
+            internal ulong FormalObservationCompletionIdentity;
             internal float FormalNormalizedTime;
             internal float FormalStepTime;
             internal string FormalLockMode;
@@ -3180,6 +3402,254 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 EffectiveCorrection => CorrectedAnkle - OriginalAnkle;
         }
 
+        sealed class StepCandidateFrame
+        {
+            internal bool IsValid;
+            internal bool IsAuthoritative;
+            internal bool HasConsistentLandingEventIdentity;
+            internal bool IsPreSwing;
+            internal bool IsSwing;
+            internal int EventOrdinal;
+            internal int SourceLandingCycleOffset;
+            internal int SourceSampleCycle;
+            internal ulong ContributionContinuityIdentity;
+            internal ulong LandingEventIdentity;
+            internal float TimeToLandingSeconds;
+            internal Vector3 RootLocalLanding;
+        }
+
+        [Serializable]
+        sealed class StepTimeCandidateSelectionFact
+        {
+            public int frame;
+            public ulong completionIdentity;
+            public string side;
+            public bool formalObservationAvailable;
+            public string formalSourceIdentity;
+            public int formalSourceCycle;
+            public string formalContributionContinuityIdentity;
+            public string formalCompletionIdentity;
+            public double formalNormalizedTime;
+            public double formalTimeSeconds;
+            public double maximumPredictionTimeSeconds;
+            public string lastLandingEventIdentity;
+            public string selectedSource;
+            public string selectedLandingEventIdentity;
+            public StepTimeCandidateFact current;
+            public StepTimeCandidateFact incoming;
+            public double? selectedOldTimeSeconds;
+            public double? formalToCurrentAbsoluteDeltaSeconds;
+            public double? formalToIncomingAbsoluteDeltaSeconds;
+            public double? formalToSelectedAbsoluteDeltaSeconds;
+            public string formalCloserCandidate;
+            public bool closerCandidateAvailable;
+            public string closerCandidateLandingEventIdentity;
+            public int closerCandidateSourceSampleCycle;
+            public int closerCandidateSourceLandingCycleOffset;
+            public bool closerCandidateLandingEventDiffersFromLastLanding;
+            public bool normalizedTimeWrapped;
+            public bool selectedSourceChanged;
+            public bool selectedLandingEventChanged;
+            public bool formalToSelectedTimeDeltaAboveOneMillisecond;
+
+            internal static StepTimeCandidateSelectionFact From(
+                FootFrame previous,
+                FootFrame frame)
+            {
+                StepTimeCandidateFact current =
+                    StepTimeCandidateFact.From(
+                        frame.CurrentStep,
+                        frame.StepSelectionLastLandingEventIdentity,
+                        frame.StepSelectionMaximumPredictionTimeSeconds);
+                StepTimeCandidateFact incoming =
+                    StepTimeCandidateFact.From(
+                        frame.IncomingStep,
+                        frame.StepSelectionLastLandingEventIdentity,
+                        frame.StepSelectionMaximumPredictionTimeSeconds);
+                double? currentDelta = frame.FormalObservationAvailable
+                    ? Math.Abs(
+                        frame.FormalStepTime -
+                        frame.CurrentStep.TimeToLandingSeconds)
+                    : null;
+                double? incomingDelta = frame.FormalObservationAvailable
+                    ? Math.Abs(
+                        frame.FormalStepTime -
+                        frame.IncomingStep.TimeToLandingSeconds)
+                    : null;
+                double? selectedOldTime =
+                    frame.SelectedStepSource == "Current"
+                        ? frame.CurrentStep.TimeToLandingSeconds
+                        : frame.SelectedStepSource == "Incoming"
+                            ? frame.IncomingStep.TimeToLandingSeconds
+                            : null;
+                double? selectedDelta = frame.FormalObservationAvailable &&
+                                        selectedOldTime.HasValue
+                    ? Math.Abs(frame.FormalStepTime - selectedOldTime.Value)
+                    : null;
+                string closer = "Unavailable";
+                StepCandidateFrame closerFrame = null;
+                if (currentDelta.HasValue && incomingDelta.HasValue)
+                {
+                    if (Math.Abs(
+                            currentDelta.Value -
+                            incomingDelta.Value) <= TimeEpsilon)
+                    {
+                        closer = "Equal";
+                    }
+                    else if (currentDelta.Value < incomingDelta.Value)
+                    {
+                        closer = "Current";
+                        closerFrame = frame.CurrentStep;
+                    }
+                    else
+                    {
+                        closer = "Incoming";
+                        closerFrame = frame.IncomingStep;
+                    }
+                }
+                bool sameFormalSource = previous != null &&
+                                        previous.FormalObservationAvailable &&
+                                        frame.FormalObservationAvailable &&
+                                        previous.SourceIdentity ==
+                                        frame.SourceIdentity;
+                return new StepTimeCandidateSelectionFact
+                {
+                    frame = frame.Frame,
+                    completionIdentity = frame.CompletionIdentity,
+                    side = frame.Side,
+                    formalObservationAvailable =
+                        frame.FormalObservationAvailable,
+                    formalSourceIdentity = frame.SourceIdentity,
+                    formalSourceCycle = frame.SourceCycle,
+                    formalContributionContinuityIdentity =
+                        frame.ContributionContinuityIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    formalCompletionIdentity =
+                        frame.FormalObservationCompletionIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    formalNormalizedTime = frame.FormalNormalizedTime,
+                    formalTimeSeconds = frame.FormalStepTime,
+                    maximumPredictionTimeSeconds =
+                        frame.StepSelectionMaximumPredictionTimeSeconds,
+                    lastLandingEventIdentity =
+                        frame.StepSelectionLastLandingEventIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    selectedSource = frame.SelectedStepSource,
+                    selectedLandingEventIdentity =
+                        frame.SelectedLandingEventIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    current = current,
+                    incoming = incoming,
+                    selectedOldTimeSeconds = selectedOldTime,
+                    formalToCurrentAbsoluteDeltaSeconds = currentDelta,
+                    formalToIncomingAbsoluteDeltaSeconds = incomingDelta,
+                    formalToSelectedAbsoluteDeltaSeconds = selectedDelta,
+                    formalCloserCandidate = closer,
+                    closerCandidateAvailable = closerFrame != null,
+                    closerCandidateLandingEventIdentity = closerFrame == null
+                        ? "0"
+                        : closerFrame.LandingEventIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    closerCandidateSourceSampleCycle =
+                        closerFrame?.SourceSampleCycle ?? 0,
+                    closerCandidateSourceLandingCycleOffset =
+                        closerFrame?.SourceLandingCycleOffset ?? 0,
+                    closerCandidateLandingEventDiffersFromLastLanding =
+                        closerFrame != null &&
+                        closerFrame.LandingEventIdentity !=
+                        frame.StepSelectionLastLandingEventIdentity,
+                    normalizedTimeWrapped = sameFormalSource &&
+                        frame.FormalNormalizedTime + TimeEpsilon <
+                        previous.FormalNormalizedTime,
+                    selectedSourceChanged = previous != null &&
+                        frame.SelectedStepSource != previous.SelectedStepSource,
+                    selectedLandingEventChanged = previous != null &&
+                        frame.SelectedLandingEventIdentity !=
+                        previous.SelectedLandingEventIdentity,
+                    formalToSelectedTimeDeltaAboveOneMillisecond =
+                        selectedDelta.HasValue &&
+                        selectedDelta.Value > 0.001d
+                };
+            }
+        }
+
+        [Serializable]
+        sealed class StepTimeCandidateFact
+        {
+            public bool isValid;
+            public bool isAuthoritative;
+            public bool hasConsistentLandingEventIdentity;
+            public bool isPreSwing;
+            public bool isSwing;
+            public int eventOrdinal;
+            public int sourceLandingCycleOffset;
+            public int sourceSampleCycle;
+            public string contributionContinuityIdentity;
+            public string landingEventIdentity;
+            public double timeToLandingSeconds;
+            public ScalarVector3Fact rootLocalLanding;
+            public bool positiveTime;
+            public bool withinMaximumPredictionTime;
+            public bool timeConditionEligible;
+            public bool landingEventDiffersFromLastLanding;
+            public bool otherConditionsEligible;
+            public bool eligible;
+
+            internal static StepTimeCandidateFact From(
+                StepCandidateFrame source,
+                ulong lastLandingEventIdentity,
+                float maximumPredictionTimeSeconds)
+            {
+                bool positiveTime =
+                    source.TimeToLandingSeconds > TimeEpsilon;
+                bool withinMaximumPredictionTime =
+                    source.TimeToLandingSeconds <=
+                    maximumPredictionTimeSeconds;
+                bool timeConditionEligible =
+                    positiveTime && withinMaximumPredictionTime;
+                bool landingEventDiffersFromLastLanding =
+                    source.LandingEventIdentity !=
+                    lastLandingEventIdentity;
+                bool otherConditionsEligible =
+                    source.IsAuthoritative &&
+                    source.HasConsistentLandingEventIdentity &&
+                    (source.IsPreSwing || source.IsSwing) &&
+                    landingEventDiffersFromLastLanding;
+                return new StepTimeCandidateFact
+                {
+                    isValid = source.IsValid,
+                    isAuthoritative = source.IsAuthoritative,
+                    hasConsistentLandingEventIdentity =
+                        source.HasConsistentLandingEventIdentity,
+                    isPreSwing = source.IsPreSwing,
+                    isSwing = source.IsSwing,
+                    eventOrdinal = source.EventOrdinal,
+                    sourceLandingCycleOffset =
+                        source.SourceLandingCycleOffset,
+                    sourceSampleCycle = source.SourceSampleCycle,
+                    contributionContinuityIdentity =
+                        source.ContributionContinuityIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    landingEventIdentity =
+                        source.LandingEventIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    timeToLandingSeconds =
+                        source.TimeToLandingSeconds,
+                    rootLocalLanding = ScalarVector3Fact.From(
+                        source.RootLocalLanding),
+                    positiveTime = positiveTime,
+                    withinMaximumPredictionTime =
+                        withinMaximumPredictionTime,
+                    timeConditionEligible = timeConditionEligible,
+                    landingEventDiffersFromLastLanding =
+                        landingEventDiffersFromLastLanding,
+                    otherConditionsEligible = otherConditionsEligible,
+                    eligible = timeConditionEligible &&
+                               otherConditionsEligible
+                };
+            }
+        }
+
         [Serializable]
         sealed class FactsDocument
         {
@@ -3188,6 +3658,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public AnalyzerFact analyzer;
             public CoverageFact coverage;
             public List<CurrentFloorFact> currentFloors;
+            public List<StepTimeCandidateSelectionFact>
+                stepTimeCandidateSelections;
             public List<EventFact> events;
         }
 
@@ -3328,6 +3800,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int currentFloorAcceptedEventCount;
             public int currentFloorAcceptedButNotConsumedEventCount;
             public int safetyFloorClampWithoutInputEventCount;
+            public int stepTimeCandidateSelectionCount;
+            public int stepTimeCandidateRepresentativeEventCount;
+            public int normalizedTimeWrapCount;
             public int leftFootFrameCount;
             public int rightFootFrameCount;
             public int frameGapCount;

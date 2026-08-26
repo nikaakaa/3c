@@ -32,6 +32,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
+            "StepSelectionMaximumPredictionTimeSeconds,StepSelectionLastLandingEventIdentity,SelectedStepSource,SelectedLandingEventIdentity," +
+            "CurrentStepIsValid,CurrentStepIsAuthoritative,CurrentStepHasConsistentLandingEventIdentity,CurrentStepIsPreSwing,CurrentStepIsSwing," +
+            "CurrentStepEventOrdinal,CurrentStepSourceLandingCycleOffset,CurrentStepSourceSampleCycle,CurrentStepContributionContinuityIdentity,CurrentStepLandingEventIdentity,CurrentStepTimeToLandingSeconds," +
+            "CurrentStepRootLocalLandingX,CurrentStepRootLocalLandingY,CurrentStepRootLocalLandingZ," +
+            "IncomingStepIsValid,IncomingStepIsAuthoritative,IncomingStepHasConsistentLandingEventIdentity,IncomingStepIsPreSwing,IncomingStepIsSwing," +
+            "IncomingStepEventOrdinal,IncomingStepSourceLandingCycleOffset,IncomingStepSourceSampleCycle,IncomingStepContributionContinuityIdentity,IncomingStepLandingEventIdentity,IncomingStepTimeToLandingSeconds," +
+            "IncomingStepRootLocalLandingX,IncomingStepRootLocalLandingY,IncomingStepRootLocalLandingZ," +
             "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
             "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
             "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
@@ -1591,6 +1598,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.TrajectoryGeneration);
             Add(row, foot.LandingConfidence);
             Add(row, foot.TimeToLandingSeconds);
+            CharacterFootStepCandidateSelectionDiagnostics stepSelection =
+                foot.StepCandidateSelection;
+            Add(row, stepSelection.MaximumPredictionTimeSeconds);
+            Add(row, stepSelection.LastLandingEventIdentity);
+            Add(row, stepSelection.SelectedSource.ToString());
+            Add(row, stepSelection.SelectedLandingEventIdentity);
+            AddStepCandidate(row, stepSelection.Current);
+            AddStepCandidate(row, stepSelection.Incoming);
             AnimationFootStepObservationSample observedStep =
                 foot.Side == CharacterFootSide.Left
                     ? footStepObservation.Left
@@ -2158,6 +2173,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, value.y);
             Add(row, value.z);
             Add(row, value.w);
+        }
+
+        static void AddStepCandidate(
+            StringBuilder row,
+            in CharacterFootStepCandidateDiagnostics candidate)
+        {
+            Add(row, candidate.IsValid);
+            Add(row, candidate.IsAuthoritative);
+            Add(row, candidate.HasConsistentLandingEventIdentity);
+            Add(row, candidate.IsPreSwing);
+            Add(row, candidate.IsSwing);
+            Add(row, candidate.EventOrdinal);
+            Add(row, candidate.SourceLandingCycleOffset);
+            Add(row, candidate.SourceSampleCycle);
+            Add(row, candidate.ContributionContinuityIdentity);
+            Add(row, candidate.LandingEventIdentity);
+            Add(row, candidate.TimeToLandingSeconds);
+            Add(row, candidate.RootLocalLanding);
         }
 
         static void Separate(StringBuilder row)

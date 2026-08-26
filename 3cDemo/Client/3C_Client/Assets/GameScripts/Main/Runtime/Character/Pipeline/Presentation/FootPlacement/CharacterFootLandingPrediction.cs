@@ -329,7 +329,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootLandingPredictionFootDiagnostics(
             in CharacterFootLandingPredictionResult result,
-            CharacterFootPlacementAnimatedFootPose sourcePose)
+            CharacterFootPlacementAnimatedFootPose sourcePose,
+            in CharacterFootStepCandidateSelectionDiagnostics stepCandidateSelection)
         {
             Side = result.Side;
             State = result.State;
@@ -356,6 +357,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceAnkleRotation = sourcePose.AnkleRotation;
             SourceHeelPosition = sourcePose.HeelPosition;
             SourceToePosition = sourcePose.ToePosition;
+            StepCandidateSelection = stepCandidateSelection;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
             CharacterFootCurrentGroundFloorResult currentGroundFloor =
                 result.CurrentGroundFloor;
@@ -392,6 +394,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Quaternion SourceAnkleRotation { get; }
         public Vector3 SourceHeelPosition { get; }
         public Vector3 SourceToePosition { get; }
+        public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootCurrentGroundFloorDiagnostics CurrentGroundFloor { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
@@ -402,6 +405,67 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason ==
             CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded;
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
+    }
+
+    public readonly struct CharacterFootStepCandidateDiagnostics
+    {
+        internal CharacterFootStepCandidateDiagnostics(
+            in AnimationBiomechanicalStepHeader step)
+        {
+            IsValid = step.IsValid;
+            IsAuthoritative = step.IsAuthoritative;
+            HasConsistentLandingEventIdentity =
+                step.HasConsistentLandingEventIdentity;
+            IsPreSwing = step.IsPreSwing;
+            IsSwing = step.IsSwing;
+            EventOrdinal = step.EventOrdinal;
+            SourceLandingCycleOffset = step.SourceLandingCycleOffset;
+            SourceSampleCycle = step.SourceSampleCycle;
+            ContributionContinuityIdentity =
+                step.ContributionContinuityIdentity;
+            LandingEventIdentity = step.LandingEventIdentity;
+            TimeToLandingSeconds = step.TimeToLandingSeconds;
+            RootLocalLanding = step.RootLocalLanding;
+        }
+
+        public bool IsValid { get; }
+        public bool IsAuthoritative { get; }
+        public bool HasConsistentLandingEventIdentity { get; }
+        public bool IsPreSwing { get; }
+        public bool IsSwing { get; }
+        public int EventOrdinal { get; }
+        public int SourceLandingCycleOffset { get; }
+        public int SourceSampleCycle { get; }
+        public ulong ContributionContinuityIdentity { get; }
+        public ulong LandingEventIdentity { get; }
+        public float TimeToLandingSeconds { get; }
+        public Vector3 RootLocalLanding { get; }
+    }
+
+    public readonly struct CharacterFootStepCandidateSelectionDiagnostics
+    {
+        internal CharacterFootStepCandidateSelectionDiagnostics(
+            in AnimationBiomechanicalStepHeader current,
+            in AnimationBiomechanicalStepHeader incoming,
+            ulong lastLandingEventIdentity,
+            CharacterFootLandingStepSource selectedSource,
+            ulong selectedLandingEventIdentity,
+            float maximumPredictionTimeSeconds)
+        {
+            Current = new CharacterFootStepCandidateDiagnostics(in current);
+            Incoming = new CharacterFootStepCandidateDiagnostics(in incoming);
+            LastLandingEventIdentity = lastLandingEventIdentity;
+            SelectedSource = selectedSource;
+            SelectedLandingEventIdentity = selectedLandingEventIdentity;
+            MaximumPredictionTimeSeconds = maximumPredictionTimeSeconds;
+        }
+
+        public CharacterFootStepCandidateDiagnostics Current { get; }
+        public CharacterFootStepCandidateDiagnostics Incoming { get; }
+        public ulong LastLandingEventIdentity { get; }
+        public CharacterFootLandingStepSource SelectedSource { get; }
+        public ulong SelectedLandingEventIdentity { get; }
+        public float MaximumPredictionTimeSeconds { get; }
     }
 
     public readonly struct CharacterFootStepObservationInputDiagnostics

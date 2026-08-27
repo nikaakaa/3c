@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -244,6 +245,125 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             return result;
         }
+    }
+
+    internal sealed class CharacterFootSwingCurrentFloorCatchupDiagnosis :
+        ICharacterFootDiagnosis
+    {
+        const double PrimaryThresholdMeters = 0.01d;
+        static readonly double[] s_Thresholds =
+        {
+            0.01d,
+            0.02d,
+            0.05d,
+            0.10d
+        };
+
+        public string DiagnosticId => "swing-current-floor-catchup";
+        public string FileName => "swing-current-floor-catchup.json";
+
+        public CharacterFootDiagnosisDocument Build(
+            CharacterFootDiagnosisContext context)
+        {
+            List<JObject> events = context.Events(
+                "SwingCurrentFloorCatchup");
+            CharacterFootDiagnosisTarget target = context.Target(
+                "swing-current-floor-catchup",
+                "同一Landing Event的无Anchor Swing中，CurrentSwingFloor从Builder目标或Residual滞后处补齐了多少高度",
+                new[] { "SwingCurrentFloorCatchup" },
+                new[] { "currentFloorCatchupMeters>0.01" },
+                events,
+                value => CharacterFootDiagnosisContext.Metric(
+                             value,
+                             "CurrentFloorCatchup") >
+                         PrimaryThresholdMeters
+                    ? new List<string>
+                    {
+                        "currentFloorCatchupMeters>0.01"
+                    }
+                    : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "CurrentFloorCatchup"),
+                "BuilderSwingTargetAlongUp",
+                "StateOutputBeforeFloorAlongUp",
+                "CurrentSwingFloorMinimumAlongUp",
+                "CurrentFloorAboveBuilderTarget",
+                "ResidualLagBelowCurrentFloor",
+                "CurrentFloorCatchup",
+                "SafetyFloorClamp",
+                "FinalOutputAlongUp",
+                "PhysicalAnkleStep",
+                "PhysicalSoleStep");
+            target.occurrence = context.Occurrence(
+                "ContinuousAcceptedUnanchoredSwingPairWithCurrentFloor",
+                "CurrentFloorCatchup",
+                "Meters",
+                events,
+                PrimaryThresholdMeters,
+                s_Thresholds);
+            target.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["Classification"] = events
+                        .GroupBy(
+                            value => value["swingCurrentFloorCatchup"]?
+                                ["classification"]?.Value<string>() ??
+                                "Unspecified",
+                            StringComparer.Ordinal)
+                        .OrderBy(
+                            value => value.Key,
+                            StringComparer.Ordinal)
+                        .Select(value =>
+                            new CharacterFootDiagnosisCategoryCount
+                            {
+                                value = value.Key,
+                                count = value.Count()
+                            })
+                        .ToList()
+                };
+            return context.Document(DiagnosticId, target);
+        }
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootSwingCurrentFloorCatchupAnalysis
+    {
+        public int previousFrame;
+        public int frame;
+        public string side;
+        public string landingEventIdentity;
+        public string sourceIdentity;
+        public int sourceCycle;
+        public CharacterFootVectorFact componentUp;
+        public CharacterFootVectorFact builderSwingTarget;
+        public double builderSwingTargetAlongUpMeters;
+        public CharacterFootVectorFact stateOutputBeforeFloor;
+        public double stateOutputBeforeFloorAlongUpMeters;
+        public CharacterFootVectorFact currentSwingFloorMinimum;
+        public double currentSwingFloorMinimumAlongUpMeters;
+        public double safetyFloorClampMeters;
+        public CharacterFootVectorFact finalOutput;
+        public double finalOutputAlongUpMeters;
+        public double currentFloorAboveBuilderTargetMeters;
+        public double residualLagBelowCurrentFloorMeters;
+        public double currentFloorCatchupMeters;
+        public int currentFloorSurfaceIdentity;
+        public CharacterFootVectorFact currentFloorPoint;
+        public bool physicalAnkleAvailable;
+        public CharacterFootVectorFact previousPhysicalAnkle;
+        public CharacterFootVectorFact physicalAnkle;
+        public double physicalAnkleStepMeters;
+        public double physicalAnkleAlongUpDeltaMeters;
+        public bool physicalSoleAvailable;
+        public CharacterFootVectorFact previousPhysicalSole;
+        public CharacterFootVectorFact physicalSole;
+        public double physicalSoleStepMeters;
+        public double physicalSoleAlongUpDeltaMeters;
+        public string classification;
     }
 
     [Serializable]

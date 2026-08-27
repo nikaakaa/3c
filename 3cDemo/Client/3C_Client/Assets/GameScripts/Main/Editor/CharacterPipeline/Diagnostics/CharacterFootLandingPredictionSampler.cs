@@ -15,6 +15,14 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
+    internal enum CharacterFootSwingPathHorizontalProgressState
+    {
+        Unavailable = 0,
+        Available = 1,
+        InvalidComponentUp = 2,
+        DegenerateAxis = 3
+    }
+
     [InitializeOnLoad]
     public static class CharacterFootLandingPredictionSampler
     {
@@ -110,8 +118,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSourceAnkleRotationX,FootMotionSourceAnkleRotationY,FootMotionSourceAnkleRotationZ,FootMotionSourceAnkleRotationW," +
             "FootMotionSourceHeelX,FootMotionSourceHeelY,FootMotionSourceHeelZ," +
             "FootMotionSourceToeX,FootMotionSourceToeY,FootMotionSourceToeZ," +
-            "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ," +
-            "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionEnvelopeSampleAlongUp,FootMotionFormalFootHeight,FootMotionFormalTargetSoleHeight,FootMotionVerticalCorrection," +
+            "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ,FootMotionBaselineSampleAlongUp," +
+            "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionEnvelopeSampleAlongUp," +
+            "FootMotionFormalFootHeight,FootMotionUnweightedFormalTargetHeight,FootMotionLandingConstraintWeight," +
+            "FootMotionWeightedFormalCorrection,FootMotionEnvelopeMinimumCorrection,FootMotionBuilderSelectedCorrection," +
+            "FootMotionBuilderSwingTargetAvailable,FootMotionBuilderSwingTargetCorrectionX,FootMotionBuilderSwingTargetCorrectionY,FootMotionBuilderSwingTargetCorrectionZ," +
+            "FootMotionSwingPathHorizontalProgressState,FootMotionActualFootHorizontalProgressMeters,FootMotionBaselineHorizontalProgressMeters," +
+            "FootMotionEnvelopeHorizontalProgressMeters,FootMotionActualMinusEnvelopeProgressMeters," +
             "FootMotionLandingPredictionError,FootMotionPlantConfidence," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
@@ -1815,22 +1828,104 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.SourceHeelPosition);
             Add(row, foot.SourceToePosition);
             Add(row, motion.BaselineSample);
-            Add(row, motion.EnvelopeSample);
             Vector3 motionUp = ground.ComponentUp.sqrMagnitude > 0.000001f
                 ? ground.ComponentUp.normalized
                 : default;
+            float originalSoleAlongUp = Vector3.Dot(
+                motion.OriginalSole,
+                motionUp);
+            float baselineSampleAlongUp = Vector3.Dot(
+                motion.BaselineSample,
+                motionUp);
+            Add(row, baselineSampleAlongUp);
+            Add(row, motion.EnvelopeSample);
             float envelopeSampleAlongUp = Vector3.Dot(
                 motion.EnvelopeSample,
                 motionUp);
             float motionFormalFootHeight = hasInputObservedStep
                 ? inputObservedStep.FootHeight
                 : 0f;
+            float unweightedFormalTargetHeight =
+                baselineSampleAlongUp + motionFormalFootHeight;
+            float weightedFormalCorrection =
+                motion.LandingConstraintWeight *
+                (unweightedFormalTargetHeight - originalSoleAlongUp);
+            float envelopeMinimumCorrection =
+                envelopeSampleAlongUp - originalSoleAlongUp;
+            float builderSelectedCorrection = Mathf.Max(
+                0f,
+                Mathf.Max(
+                    envelopeMinimumCorrection,
+                    weightedFormalCorrection));
+            bool builderSwingTargetAvailable =
+                motion.PathContinuityEvaluated &&
+                motion.PathAvailableAfter &&
+                motion.PathCurrentLandingEventIdentity ==
+                motion.LandingEventIdentity;
+            Vector3 builderSwingTargetCorrection =
+                builderSwingTargetAvailable
+                    ? motion.PathCurrentTargetCorrection
+                    : default;
             Add(row, envelopeSampleAlongUp);
             Add(row, motionFormalFootHeight);
+            Add(row, unweightedFormalTargetHeight);
+            Add(row, motion.LandingConstraintWeight);
+            Add(row, weightedFormalCorrection);
+            Add(row, envelopeMinimumCorrection);
+            Add(row, builderSelectedCorrection);
+            Add(row, builderSwingTargetAvailable);
+            Add(row, builderSwingTargetCorrection);
+            CharacterFootSwingPathHorizontalProgressState horizontalProgressState =
+                CharacterFootSwingPathHorizontalProgressState.Unavailable;
+            float actualFootHorizontalProgress = 0f;
+            float baselineHorizontalProgress = 0f;
+            float envelopeHorizontalProgress = 0f;
+            if (ground.Accepted &&
+                motion.State == CharacterFootSwingMotionState.Accepted &&
+                motion.ConstraintState == CharacterFootConstraintState.Swing)
+            {
+                if (motionUp.sqrMagnitude <= 0.000001f)
+                {
+                    horizontalProgressState =
+                        CharacterFootSwingPathHorizontalProgressState.InvalidComponentUp;
+                }
+                else
+                {
+                    Vector3 horizontalAxis = Vector3.ProjectOnPlane(
+                        ground.NextSwingLanding - ground.LastLanding,
+                        motionUp);
+                    if (!float.IsFinite(horizontalAxis.x) ||
+                        !float.IsFinite(horizontalAxis.y) ||
+                        !float.IsFinite(horizontalAxis.z) ||
+                        horizontalAxis.sqrMagnitude <= 0.00000001f)
+                    {
+                        horizontalProgressState =
+                            CharacterFootSwingPathHorizontalProgressState.DegenerateAxis;
+                    }
+                    else
+                    {
+                        horizontalProgressState =
+                            CharacterFootSwingPathHorizontalProgressState.Available;
+                        Vector3 horizontalDirection = horizontalAxis.normalized;
+                        actualFootHorizontalProgress = Vector3.Dot(
+                            motion.OriginalSole - ground.LastLanding,
+                            horizontalDirection);
+                        baselineHorizontalProgress = Vector3.Dot(
+                            motion.BaselineSample - ground.LastLanding,
+                            horizontalDirection);
+                        envelopeHorizontalProgress = Vector3.Dot(
+                            motion.EnvelopeSample - ground.LastLanding,
+                            horizontalDirection);
+                    }
+                }
+            }
+            Add(row, horizontalProgressState.ToString());
+            Add(row, actualFootHorizontalProgress);
+            Add(row, baselineHorizontalProgress);
+            Add(row, envelopeHorizontalProgress);
             Add(
                 row,
-                envelopeSampleAlongUp + motionFormalFootHeight);
-            Add(row, motion.VerticalCorrection);
+                actualFootHorizontalProgress - envelopeHorizontalProgress);
             Add(row, motion.LandingPredictionError);
             Add(row, motion.PlantConfidence);
             Add(row, motion.CorrectedSole);

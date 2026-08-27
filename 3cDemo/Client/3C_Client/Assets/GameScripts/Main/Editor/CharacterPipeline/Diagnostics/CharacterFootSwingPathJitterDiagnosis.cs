@@ -179,9 +179,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "AnimatedSoleAlongUpDelta",
                     "AnimatedSoleAlongUpStep",
                     "FormalFootHeightDelta",
-                    "FormalTargetSoleHeightDelta",
+                    "UnweightedFormalTargetHeightDelta",
+                    "LandingConstraintWeightDelta",
                     "EnvelopeConstraintDelta",
                     "FormalHeightConstraintDelta",
+                    "BuilderSelectedCorrectionDelta",
+                    "BuilderSelectedCorrectionStep",
+                    "ActualFootHorizontalProgressDelta",
+                    "BaselineHorizontalProgressDelta",
+                    "EnvelopeHorizontalProgressDelta",
+                    "ActualMinusEnvelopeProgressDelta",
                     "DesiredCorrectionAlongUpDelta",
                     "DesiredCorrectionAlongUpStep",
                     "FinalCorrectionAlongUpDelta",
@@ -828,14 +835,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool formalFootHeightAvailable;
         public double previousFormalFootHeightMeters;
         public double formalFootHeightMeters;
-        public double previousFormalTargetSoleHeightMeters;
-        public double formalTargetSoleHeightMeters;
+        public double previousUnweightedFormalTargetHeightMeters;
+        public double unweightedFormalTargetHeightMeters;
+        public double previousLandingConstraintWeight;
+        public double landingConstraintWeight;
         public double previousEnvelopeConstraintMeters;
         public double envelopeConstraintMeters;
         public double envelopeConstraintDeltaMeters;
         public double previousFormalHeightConstraintMeters;
         public double formalHeightConstraintMeters;
         public double formalHeightConstraintDeltaMeters;
+        public double previousBuilderSelectedCorrectionMeters;
+        public double builderSelectedCorrectionMeters;
+        public double builderSelectedCorrectionDeltaMeters;
+        public CharacterFootVectorFact previousBuilderSwingTarget;
+        public CharacterFootVectorFact builderSwingTarget;
+        public string previousHorizontalProgressState;
+        public string horizontalProgressState;
+        public double previousActualFootHorizontalProgressMeters;
+        public double actualFootHorizontalProgressMeters;
+        public double previousBaselineHorizontalProgressMeters;
+        public double baselineHorizontalProgressMeters;
+        public double previousEnvelopeHorizontalProgressMeters;
+        public double envelopeHorizontalProgressMeters;
+        public double previousActualMinusEnvelopeProgressMeters;
+        public double actualMinusEnvelopeProgressMeters;
         public double desiredCorrectionAlongUpDeltaMeters;
         public double finalCorrectionAlongUpDeltaMeters;
         public bool physicalAnkleAvailable;
@@ -848,6 +872,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double safetyFloorOutputAlongUpDeltaMeters;
         public bool pathResidualRebuilt;
         public string pathRevisionReason;
+        public bool visiblePhysicalResponse;
         public bool causalChainMatched;
         public string classification;
     }

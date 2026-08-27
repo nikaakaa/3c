@@ -316,7 +316,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     sameGroundPathSwingEnvelopeStep =
                         value["sameGroundPathSwingEnvelopeStep"]?
                             .ToObject<
-                                CharacterFootSameGroundPathSwingEnvelopeStepAnalysis>()
+                                CharacterFootSameGroundPathSwingEnvelopeStepAnalysis>(),
+                    swingCurrentFloorCatchup =
+                        value["swingCurrentFloorCatchup"]?
+                            .ToObject<
+                                CharacterFootSwingCurrentFloorCatchupAnalysis>()
                 });
             }
             return result;
@@ -504,6 +508,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             lateApproachLandingRevision;
         public CharacterFootSameGroundPathSwingEnvelopeStepAnalysis
             sameGroundPathSwingEnvelopeStep;
+        public CharacterFootSwingCurrentFloorCatchupAnalysis
+            swingCurrentFloorCatchup;
     }
 
     [Serializable]

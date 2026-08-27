@@ -64,39 +64,45 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 - **THEN** Runtime MUST把该Accepted Landing晋级为新的LastLanding
 - **AND** MUST只为新的PreSwing或Swing Event建立新的NextSwingLanding
 
-### Requirement: Foot Placement必须通过统一状态机生成双脚修正
+### Requirement: Foot Lifecycle必须生成唯一权威结果
 
-每只脚 MUST继续只有一个固定typed `CharacterFootStateContext`、一个`CharacterFootStateMachine`、一个Effective Correction Owner和一个Anchor Owner。State Machine MUST使用正式Foot Motion Frame、不可变Ground Observation和上一Committed Context生成Swing、Landing、Locked、Releasing或UnlockedSupport；不得恢复旧Lifecycle对象、第二状态机或Goal后处理器。
+每只脚 MUST在同一根事务内按固定顺序执行`不可变输入与Observation -> Pre-Interpolation Transition -> State Target -> Interpolation -> Post-Interpolation Transition -> Hard Constraint -> Resolved Foot`。这些阶段 MUST每帧各执行一次，并只发布一份离散State、一份Effective Correction和一个Resolved Foot。
 
-Swing MUST使用Last Landing、Next Landing、Runtime Ground Envelope和正式Foot Height生成连续目标。Accepted Swing Motion MUST携带同Ground Path Event的typed Swing Path Landing Reference；Promoted Landing与按当前Step解析的Landing MUST只属于Contact/Anchor，不得门控Swing Path可用性或提供Swing Residual的Landing Point。Path Revision MUST由Event、可用性、Landing端点或实际Swing目标的有效变化触发，并通过唯一Swing Residual保持连续；Ground Path identity单独变化 MUST不每帧重置Residual。Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output与Encoded Goal之间 MUST保持同Frame可对账，后继阶段 MUST不把小幅输入变化无依据放大为更大的Correction跳变。Residual大于LandingUpdateDistance时 MUST按正式Step Time计算Landing截止收敛，但Step Time MUST只决定已经连续的Residual衰减，不得用于掩盖同帧不连续。Swing硬Floor MUST只消费当前Animated Sole的正式CurrentSwingFloor查询，不得消费未来Path Envelope，也不得平滑穿过CurrentSwingFloor真实Surface Point的最低安全高度。
+唯一typed `CharacterFootTransitionResolver` MUST只读取正式Foot Motion Frame、不可变Ground Observation、上一Committed离散State和当前阶段事实，并发布不可变Transition Decision。唯一Transition Runtime MUST应用Decision中的State与Anchor命令；Resolver和Runtime MUST不推进Residual、计算State Target、查询世界或写Goal。Pre与Post阶段允许的Transition边、优先级和输入集合 MUST固定且可编译校验。
 
-Landing Anchor MUST在同Event正式Lock Mode首次进入Sliding或Locked且Accepted Landing合法时建立。Acquire Residual MUST保存当前Output到Anchor的连续差，并由正式Lock Weight消退。正式Locked Mode与完成Lock Weight进入Locked FullAnchor；已锁脚返回Sliding Mode时保持同一Anchor和顶层Locked生命周期，只切换内部Sliding Response。正式Contact退出或Mode回到Unlocked时进入Releasing。
+纯`CharacterFootStateTargetResolver` MUST按Transition后的离散State生成Correction Target、Contact Reference、Goal与Ownership目标及typed Interpolation Policy Request。Swing与UnlockedSupport的Target MUST复用同帧已经完成的CurrentSwingFloor事实作为连续最低下界；Releasing MUST只回到原始Swing Target。Resolver MUST不保存跨帧时间状态、不推进Residual、不改写State、不得执行World Query，也不得执行Hard Constraint。
 
-Releasing完成并回到Swing的同一帧 MUST先更新State，再执行新Swing Ground Floor与最终输出分类。迁移完成后State Machine MUST不读取旧PlantConfidence、PlantCycleConsumed或旧Constraint Weight决定Landing、Lock与Release。
+唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。Residual大于`LandingUpdateDistance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
+
+CurrentSwingFloor和Reach MUST在Interpolation之后作为Hard Constraint执行。CurrentSwingFloor Hard Constraint MUST复用State Target消费的同一查询结果，不得再次查询；Floor下降 MUST通过Swing唯一Interpolation连续释放，Floor上升 MAY立即Clamp真实地面安全高度。Hard Constraint MAY限制已知不可达Goal，但 MUST不反向修改State、Transition Decision、Target或Interpolation历史。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
+
+Swing Target MUST使用Last Landing、Next Landing、Runtime Ground Envelope、正式Foot Height与CurrentSwingFloor连续下界。Accepted Swing Motion MUST携带同Ground Path Event的typed Swing Path Landing Reference；Promoted Contact Landing MUST只服务Contact与Anchor。Residual Revision MUST只由Event、可用性、Landing端点、原始Swing Target或连续State Target的有效变化触发，Ground Path identity单独变化 MUST不重置Residual。Diagnostics MUST分别发布原始Builder Swing Target、连续State Target与`ContinuousTargetChanged`原因，不得用连续目标覆盖Builder事实。
+
+Landing Anchor MUST在同Event正式Lock Mode首次进入Sliding或Locked且Accepted Landing合法时由唯一Transition Runtime建立。正式Lock Weight MUST通过Interpolation Policy Request渐进接管Anchor。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing；Releasing完成进入Swing的同一帧 MUST先应用Post-Interpolation Transition，再按新State执行CurrentSwingFloor和最终输出分类，不得重跑State Target或Interpolation。迁移完成后全部阶段 MUST不读取旧PlantConfidence、PlantCycleConsumed或旧Constraint Weight决定Landing、Lock与Release。
 
 #### Scenario: 同Event Path换代
 
-- **WHEN** 同一Swing Event的Landing或Envelope目标发生正式Revision
-- **THEN** State Machine MUST从上一Effective Correction连续接管新目标，并按Step Time在LandingUpdateDistance内收敛
-- **AND** 只有CurrentSwingFloor真实Surface Point高于连续输出时 MAY立即向上Clamp并发布Safety Floor事实
+- **WHEN** 同一Swing Event的Landing或Envelope Target发生正式Revision
+- **THEN** State Target Resolver MUST发布新Target，Interpolation Runtime MUST从上一Effective Correction连续接管并按Step Time在LandingUpdateDistance内收敛
+- **AND** 只有CurrentSwingFloor真实Surface Point高于连续输出时 Hard Constraint MAY立即向上Clamp并发布Safety Floor事实
 
 #### Scenario: 旧Contact Event与新Swing Event同帧交接
 
 - **WHEN** 旧Event的Landing在当前帧成为Promoted Contact Landing，且下一Event已经具有Accepted Swing Motion与匹配Ground Path
-- **THEN** State Machine MUST让旧Landing只服务Contact/Anchor，并让新Swing Path Landing继续服务Swing目标与Residual
+- **THEN** Transition与State Target MUST让旧Landing只服务Contact与Anchor，并让新Swing Path Landing继续服务Swing Target与Interpolation
 - **AND** MUST不因两者Event不同把Swing Path发布为一帧不可用
 
 #### Scenario: 正式Lock渐进接管
 
 - **WHEN** 同Event Lock Mode从Unlocked进入Sliding且Lock Weight从0连续增加
-- **THEN** 唯一State Machine MUST建立一次Anchor并在现有Landing状态中按Weight消退Acquire Residual
-- **AND** MUST不新增固定Duration、第二Landing状态或第二Anchor
+- **THEN** Transition Runtime MUST建立一次Anchor，State Target MUST发布Anchor目标，Interpolation Runtime MUST按Weight连续接管
+- **AND** MUST不新增固定Duration、第二Landing状态、第二Anchor或状态私有Residual
 
 #### Scenario: Releasing完成进入Swing
 
-- **WHEN** Releasing满足完成条件且当前帧具有合法Swing Envelope
-- **THEN** State Machine MUST在同帧切换Swing并执行该Envelope最低安全Correction
-- **AND** 发布为Swing的Corrected Sole MUST不因旧Releasing执行顺序留在Envelope下方
+- **WHEN** Post-Interpolation Transition判定Releasing完成且当前帧具有合法Swing Envelope
+- **THEN** Transition Runtime MUST在同帧应用Swing，随后按新State执行CurrentSwingFloor和最终输出分类
+- **AND** 发布为Swing的Corrected Sole MUST不因旧Releasing顺序留在真实地面安全高度下方
 
 ### Requirement: Resolved Foot必须形成紧凑下游合同
 
@@ -122,7 +128,7 @@ Contact Reference MUST只属于脚锁；Pelvis Reach Reference MUST只属于Supp
 
 Primary Support MUST只读取Resolved Pair中的Support Eligibility、Support Intent Weight、Support Event lineage、Support Horizontal Error和Pelvis Reach Reference。Selector MUST不读取Foot State、Lock Mode、Contact Ownership或Context；正式Support为0时不得按相对大小生成支撑。
 
-Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request，并使用Foot Motion Profile的米制最小Landing腿压缩余量计算沿Component Up的可行交集。交集存在时，Pelvis Target与Spring Output MUST限制在交集内；Support换代、坡度变化和目标跨越仍必须保持现有显式Handoff与Velocity Reset事实。
+Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request，并使用Foot Motion Profile中必须显式序列化的米制最小Landing腿压缩余量计算沿Component Up的可行交集。该配置缺失、非有限或越界时 MUST发布typed invalid，不得使用代码默认值或旧配置补全。交集存在时，Pelvis Target与Spring Output MUST限制在交集内；Support换代、坡度变化和目标跨越仍必须保持现有显式Handoff与Velocity Reset事实。
 
 交集不存在时，系统 MUST优先保持Primary Support腿安全，把Landing Foot Goal夹紧到保留最小压缩余量的最大可达点，发布`LandingReachUnavailable`并禁止该脚进入Full Lock。FBBIK MUST不接收已知超出可达区间的Landing目标后仅靠膝盖完全伸直夹紧。
 
@@ -142,7 +148,7 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、Path Revision原因、Raw Landing/Path Target、Swing Target、Captured Residual、State Output、Safety Floor Output、Encoded Goal、Residual基础与截止HalfLife、CurrentSwingFloor查询、Safety Floor Clamp与clearance、Support与Landing Reach区间、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Hard Constraint前后Correction、Encoded Goal、Residual基础与截止HalfLife、CurrentSwingFloor查询、Safety Floor Clamp与clearance、Support与Landing Reach区间、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 
@@ -154,7 +160,7 @@ Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、S
 
 #### Scenario: Correction在Path后继阶段被放大
 
-- **WHEN** Raw Landing、Path Target或Swing Target只有小幅单帧变化，但后继State Output、Safety Floor Output或Encoded Goal产生明显更大的Correction变化
+- **WHEN** Raw Landing、Path Target或State Target只有小幅单帧变化，但后继Interpolation Output、Hard Constraint Output或Encoded Goal产生明显更大的Correction变化
 - **THEN** 诊断 MUST定位第一个产生不连续或放大的阶段并记录其直接输入、输出和所有权状态
 - **AND** Runtime MUST不把该现象归类为Step Time截止欠账或通过缩短Residual HalfLife隐藏
 

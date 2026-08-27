@@ -583,7 +583,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     groundPath.InputIdentity,
                     originalSole,
                     originalAnkle);
-            if (!TryResolveSwingPhaseWeight(in step, out float trajectoryProgress))
+            if (!TryResolveSwingTrajectoryProgress(in step, out float trajectoryProgress))
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.InvalidSwingPhase,
                     landingEventIdentity,
@@ -739,22 +739,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plantConfidence: motion.PlantConfidence);
         }
 
-        static bool TryResolveSwingPhaseWeight(
+        static bool TryResolveSwingTrajectoryProgress(
             in AnimationBiomechanicalStepHeader step,
-            out float weight)
+            out float progress)
         {
-            weight = 0f;
+            progress = 0f;
             if (!float.IsFinite(step.EventPhase) ||
                 !float.IsFinite(step.LiftOffPhase) ||
                 !float.IsFinite(step.LandingPhase) ||
                 step.LandingPhase <= step.LiftOffPhase)
                 return false;
-            float phase = Mathf.InverseLerp(
+            progress = Mathf.InverseLerp(
                 step.LiftOffPhase,
                 step.LandingPhase,
                 step.EventPhase);
-            weight = Mathf.SmoothStep(0f, 1f, phase);
-            return float.IsFinite(weight);
+            return float.IsFinite(progress);
         }
 
         static bool TrySampleEnvelope(

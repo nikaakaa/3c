@@ -372,6 +372,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 ContactNormal;
         internal Vector3 EffectiveCorrection;
         internal Vector3 AcquireResidual;
+        internal float AcquireStartResidual;
         internal Vector3 ReleaseTargetCorrection;
         internal Vector3 ReleaseResidual;
         internal float ContactProgress;
@@ -716,15 +717,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterFootConstraintState.Swing:
                 case CharacterFootConstraintState.UnlockedSupport:
-                    ResolveSwingOutput(
-                        ref context,
-                        in frame,
-                        in swing,
-                        swingCorrection,
-                        timeToLandingSeconds,
-                        out continuityFact);
-                    preserveOutput = true;
                     ResolveUnconstrained(ref context, in frame, ref desiredCorrection);
+                    if (context.ConstraintState != CharacterFootConstraintState.Landing)
+                    {
+                        ResolveSwingOutput(
+                            ref context,
+                            in frame,
+                            in swing,
+                            swingCorrection,
+                            timeToLandingSeconds,
+                            out continuityFact);
+                    }
+                    preserveOutput = true;
                     break;
                 case CharacterFootConstraintState.Landing:
                     ResolveLandingIntent(
@@ -951,6 +955,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 contactCorrection,
                 frame.ComponentUp);
             context.AcquireResidual = context.EffectiveCorrection - contactCorrection;
+            context.AcquireStartResidual = context.AcquireResidual.magnitude;
             context.ContactProgress = 0f;
             context.ReleaseStartResidual = 0f;
             desiredCorrection = contactCorrection;
@@ -976,19 +981,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 preserveOutput = true;
                 return;
             }
-            context.ContactProgress = Mathf.Max(
-                context.ContactProgress,
-                ResolvePlantOwnership(frame.SwingMotion.PlantConfidence));
             desiredCorrection = contactCorrection;
-            context.EffectiveCorrection = contactCorrection +
-                                          context.AcquireResidual *
-                                          (1f - context.ContactProgress);
+            context.AcquireResidual = Advance(
+                context.AcquireResidual,
+                default,
+                frame.DeltaSeconds,
+                frame.Settings.EffectiveCorrectionHalfLifeSeconds);
+            float remainingResidual = context.AcquireResidual.magnitude;
+            context.ContactProgress = context.AcquireStartResidual > GeometryEpsilon
+                ? Mathf.Clamp01(
+                    1f - remainingResidual / context.AcquireStartResidual)
+                : 1f;
+            context.EffectiveCorrection = contactCorrection + context.AcquireResidual;
             preserveOutput = true;
-            if (context.ContactProgress >= 1f - GeometryEpsilon)
+            if (remainingResidual <= frame.Settings.LandingUpdateDistance &&
+                frame.SwingMotion.PlantConfidence >=
+                AnimationFootConstraintFacts.LockedMinimumConfidence)
             {
                 context.ConstraintState = CharacterFootConstraintState.Locked;
                 context.LockResponse = CharacterFootLockResponse.FullAnchor;
                 context.EffectiveCorrection = contactCorrection;
+                context.AcquireResidual = default;
+                context.AcquireStartResidual = 0f;
+                context.ContactProgress = 1f;
             }
         }
 
@@ -1260,12 +1275,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? outputCorrection + up * missing
                 : outputCorrection;
         }
-
-        static float ResolvePlantOwnership(float plantConfidence) =>
-            Mathf.InverseLerp(
-                AnimationFootConstraintFacts.GroundedMinimumConfidence,
-                AnimationFootConstraintFacts.LockedMinimumConfidence,
-                plantConfidence);
 
         static bool CanAcquire(in CharacterFootStateFrame frame) =>
             frame.HasContactLanding &&

@@ -51,11 +51,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/14";
+        const string Schema = "character-foot-motion-facts/15";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 14;
+        const int AnalyzerVersion = 15;
         const string GeometryFileName = "ground-path-geometry.csv";
-        const int HeaderColumnCapacity = 640;
+        const int HeaderColumnCapacity = 672;
         const float PositionNoiseFloor = 0.001f;
         const float TimeEpsilon = 0.000001f;
         const double LandingReachCompressionReserveMeters = 0.02d;
@@ -131,6 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"pathContinuityEvents={document.coverage.pathContinuityEventCount} " +
                 $"stablePathSwingPhaseJumps={document.coverage.stablePathSwingPhaseJumpCount} " +
                 $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
+                $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
                 $"safetyFloorEvents={document.coverage.safetyFloorEventCount} " +
@@ -173,6 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeContactPlanePenetration(frames, events);
             AnalyzeSafetyFloor(frames, events);
             AnalyzeReleaseEvents(frames, events);
+            AnalyzeLateApproachLandingRevisions(frames, events);
             AnalyzeStablePathSwingPhaseJumps(frames, events);
             AnalyzePathChanges(frames, events);
             AnalyzePathContinuity(frames, events);
@@ -273,6 +275,238 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 previous = current;
             }
         }
+
+        static void AnalyzeLateApproachLandingRevisions(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                bool previousConsumedAvailable =
+                    ConsumedNextSwingLandingAvailable(previous);
+                bool currentConsumedAvailable =
+                    ConsumedNextSwingLandingAvailable(current);
+                if (!Continuous(previous, current) ||
+                    previous.SelectedLandingEventIdentity == 0 ||
+                    previous.SelectedLandingEventIdentity !=
+                    current.SelectedLandingEventIdentity ||
+                    !previous.SelectedStepInApproachContactToLanding ||
+                    !current.SelectedStepInApproachContactToLanding ||
+                    !previousConsumedAvailable ||
+                    !currentConsumedAvailable ||
+                    previous.NextLandingEventIdentity !=
+                    previous.SelectedLandingEventIdentity ||
+                    current.NextLandingEventIdentity !=
+                    current.SelectedLandingEventIdentity)
+                {
+                    continue;
+                }
+                double consumedPointDelta = Vector3.Distance(
+                    previous.NextLanding,
+                    current.NextLanding);
+                bool consumedSurfaceChanged =
+                    previous.NextLandingSurfaceIdentity !=
+                    current.NextLandingSurfaceIdentity;
+                bool pointExceededUpdateDistance =
+                    consumedPointDelta > current.LandingUpdateDistance;
+                double observedPointDelta =
+                    previous.ObservedLandingAccepted &&
+                    current.ObservedLandingAccepted
+                        ? Vector3.Distance(
+                            previous.ObservedLandingPoint,
+                            current.ObservedLandingPoint)
+                        : 0d;
+                double correctionStep = Vector3.Distance(
+                    previous.FinalEffectiveCorrection,
+                    current.FinalEffectiveCorrection);
+                bool componentUpAvailable =
+                    current.ComponentUp.sqrMagnitude >
+                    TimeEpsilon * TimeEpsilon;
+                Vector3 up = componentUpAvailable
+                    ? current.ComponentUp.normalized
+                    : default;
+                bool physicalAvailable =
+                    previous.FinalPhysicalWriteAvailable &&
+                    current.FinalPhysicalWriteAvailable;
+                Vector3 physicalAnkleDelta = physicalAvailable
+                    ? FinalPhysicalAnkleWorld(current) -
+                      FinalPhysicalAnkleWorld(previous)
+                    : default;
+                Vector3 physicalSoleDelta = physicalAvailable
+                    ? FinalSole(current) - FinalSole(previous)
+                    : default;
+                double physicalAnkleAlongUpStep =
+                    physicalAvailable && componentUpAvailable
+                        ? Math.Abs(Vector3.Dot(
+                            physicalAnkleDelta,
+                            up))
+                        : 0d;
+                double physicalSoleAlongUpStep =
+                    physicalAvailable && componentUpAvailable
+                        ? Math.Abs(Vector3.Dot(
+                            physicalSoleDelta,
+                            up))
+                        : 0d;
+                var detail =
+                    new CharacterFootLateApproachLandingRevisionAnalysis
+                    {
+                        previousFrame = previous.Frame,
+                        frame = current.Frame,
+                        side = current.Side,
+                        landingEventIdentity =
+                            current.SelectedLandingEventIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        previousSourceIdentity = previous.SourceIdentity,
+                        sourceIdentity = current.SourceIdentity,
+                        previousSourceCycle = previous.SourceCycle,
+                        sourceCycle = current.SourceCycle,
+                        previousContributionContinuityIdentity =
+                            previous.ContributionContinuityIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        contributionContinuityIdentity =
+                            current.ContributionContinuityIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        previousSelectedEventPhase =
+                            previous.SelectedStepEventPhase,
+                        selectedEventPhase =
+                            current.SelectedStepEventPhase,
+                        previousSelectedApproachContactPhase =
+                            previous.SelectedStepApproachContactPhase,
+                        selectedApproachContactPhase =
+                            current.SelectedStepApproachContactPhase,
+                        previousSelectedLandingPhase =
+                            previous.SelectedStepLandingPhase,
+                        selectedLandingPhase =
+                            current.SelectedStepLandingPhase,
+                        previousCurrentEventPhase =
+                            previous.CurrentStep.EventPhase,
+                        currentEventPhase =
+                            current.CurrentStep.EventPhase,
+                        previousCurrentApproachContactPhase =
+                            previous.CurrentStep.ApproachContactPhase,
+                        currentApproachContactPhase =
+                            current.CurrentStep.ApproachContactPhase,
+                        previousSelectedInApproachContactToLanding =
+                            previous.SelectedStepInApproachContactToLanding,
+                        selectedInApproachContactToLanding =
+                            current.SelectedStepInApproachContactToLanding,
+                        previousCurrentAtOrAfterApproachContact =
+                            previous.CurrentStep.AtOrAfterApproachContact,
+                        currentAtOrAfterApproachContact =
+                            current.CurrentStep.AtOrAfterApproachContact,
+                        previousObservedAvailable =
+                            previous.ObservedLandingAccepted,
+                        observedAvailable =
+                            current.ObservedLandingAccepted,
+                        previousObservedEventIdentity =
+                            previous.ObservedLandingEventIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        observedEventIdentity =
+                            current.ObservedLandingEventIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        previousObservedSurfaceIdentity =
+                            previous.ObservedLandingSurfaceIdentity,
+                        observedSurfaceIdentity =
+                            current.ObservedLandingSurfaceIdentity,
+                        previousObservedPoint =
+                            CharacterFootVectorFact.From(
+                                previous.ObservedLandingPoint),
+                        observedPoint = CharacterFootVectorFact.From(
+                            current.ObservedLandingPoint),
+                        observedLandingPointDeltaMeters =
+                            observedPointDelta,
+                        previousConsumedEventIdentity =
+                            previous.NextLandingEventIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        consumedEventIdentity =
+                            current.NextLandingEventIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        previousConsumedSurfaceIdentity =
+                            previous.NextLandingSurfaceIdentity,
+                        consumedSurfaceIdentity =
+                            current.NextLandingSurfaceIdentity,
+                        previousConsumedPoint =
+                            CharacterFootVectorFact.From(
+                                previous.NextLanding),
+                        consumedPoint = CharacterFootVectorFact.From(
+                            current.NextLanding),
+                        landingPointDeltaMeters = consumedPointDelta,
+                        landingUpdateDistanceMeters =
+                            current.LandingUpdateDistance,
+                        correctionStepMeters = correctionStep,
+                        physicalAnkleAvailable = physicalAvailable,
+                        physicalAnkleAlongUpStepMeters =
+                            physicalAnkleAlongUpStep,
+                        physicalSoleAvailable = physicalAvailable,
+                        physicalSoleAlongUpStepMeters =
+                            physicalSoleAlongUpStep,
+                        consumedSurfaceChanged =
+                            consumedSurfaceChanged,
+                        consumedPointExceededLandingUpdateDistance =
+                            pointExceededUpdateDistance
+                    };
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["LandingPointDelta"] = consumedPointDelta,
+                    ["ObservedLandingPointDelta"] = observedPointDelta,
+                    ["LandingUpdateDistance"] =
+                        current.LandingUpdateDistance,
+                    ["CorrectionStep"] = correctionStep,
+                    ["PhysicalAnkleAlongUpStep"] =
+                        physicalAnkleAlongUpStep,
+                    ["PhysicalSoleAlongUpStep"] =
+                        physicalSoleAlongUpStep,
+                    ["SelectedEventPhase"] =
+                        current.SelectedStepEventPhase,
+                    ["SelectedApproachContactPhase"] =
+                        current.SelectedStepApproachContactPhase,
+                    ["CurrentEventPhase"] =
+                        current.CurrentStep.EventPhase,
+                    ["CurrentApproachContactPhase"] =
+                        current.CurrentStep.ApproachContactPhase
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["sameLandingEvent"] = true,
+                    ["bothInApproachContactToLanding"] = true,
+                    ["consumedLandingAvailable"] = true,
+                    ["consumedSurfaceChanged"] =
+                        consumedSurfaceChanged,
+                    ["consumedPointExceededLandingUpdateDistance"] =
+                        pointExceededUpdateDistance,
+                    ["observedLandingAvailable"] =
+                        previous.ObservedLandingAccepted &&
+                        current.ObservedLandingAccepted,
+                    ["physicalAnkleAvailable"] = physicalAvailable,
+                    ["physicalSoleAvailable"] = physicalAvailable,
+                    ["componentUpAvailable"] = componentUpAvailable,
+                    ["sourceChanged"] = previous.SourceIdentity !=
+                                        current.SourceIdentity
+                };
+                events.Add(new EventFact(
+                    "LateApproachLandingRevision",
+                    current.Side,
+                    previous.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.SelectedLandingEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence,
+                    lateApproachLandingRevision: detail));
+            }
+        }
+
+        static bool ConsumedNextSwingLandingAvailable(
+            FootFrame frame) =>
+            frame.NextLandingEventIdentity != 0 &&
+            frame.NextLandingSurfaceIdentity != 0;
 
         static void AnalyzeSafetyFloor(
             List<FootFrame> frames,
@@ -2345,6 +2579,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingToLandingFloorHandoffCount = events.Count(
                         value => value.kind ==
                                  "SwingToLandingFloorHandoff"),
+                    lateApproachLandingRevisionCount = events.Count(
+                        value => value.kind ==
+                                 "LateApproachLandingRevision"),
                     supportChangeCount = events.Count(value => value.kind == "SupportChange"),
                     contactPlanePenetrationEventCount = events.Count(
                         value => value.kind == "ContactPlanePenetration"),
@@ -2704,6 +2941,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Ulong(prefix + "LandingEventIdentity"),
                     TimeToLandingSeconds =
                         Float(prefix + "TimeToLandingSeconds"),
+                    EventPhase = Float(prefix + "EventPhase"),
+                    ApproachContactPhase =
+                        Float(prefix + "ApproachContactPhase"),
+                    LandingPhase = Float(prefix + "LandingPhase"),
+                    AtOrAfterApproachContact =
+                        Int(prefix + "AtOrAfterApproachContact") != 0,
+                    InApproachContactToLanding =
+                        Int(prefix + "InApproachContactToLanding") != 0,
                     RootLocalLanding =
                         Vector(prefix + "RootLocalLanding")
                 };
@@ -2735,6 +2980,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 SelectedStepSource = Cell("SelectedStepSource"),
                 SelectedLandingEventIdentity =
                     Ulong("SelectedLandingEventIdentity"),
+                SelectedStepEventPhase =
+                    Float("SelectedStepEventPhase"),
+                SelectedStepApproachContactPhase =
+                    Float("SelectedStepApproachContactPhase"),
+                SelectedStepLandingPhase =
+                    Float("SelectedStepLandingPhase"),
+                SelectedStepAtOrAfterApproachContact =
+                    Int("SelectedStepAtOrAfterApproachContact") != 0,
+                SelectedStepInApproachContactToLanding =
+                    Int("SelectedStepInApproachContactToLanding") != 0,
                 CurrentStep = Candidate("CurrentStep"),
                 IncomingStep = Candidate("IncomingStep"),
                 FormalObservationAvailable =
@@ -2750,6 +3005,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FormalLockWeight = Float("InputFormalLockWeight"),
                 FormalSupport = Float("InputFormalSupport"),
                 LandingPredictionState = Cell("State"),
+                ObservedLandingEventIdentity = Ulong("LandingEventIdentity"),
+                ObservedLandingAccepted = Int("Accepted") != 0,
+                ObservedLandingSurfaceIdentity = Int("SurfaceIdentity"),
+                ObservedLandingPoint = Vector("LandingPoint"),
                 RawLandingAvailable = Int("RawLandingAvailable") != 0,
                 CurrentAnimatedSole = Vector("CurrentAnimatedSole"),
                 RawLanding = Vector("RawLandingCandidate"),
@@ -2760,6 +3019,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("GroundPathTargetAvailable") != 0,
                 LastLandingEventIdentity = Ulong("GroundPathLastLandingEventIdentity"),
                 NextLandingEventIdentity = Ulong("GroundPathNextSwingLandingEventIdentity"),
+                NextLandingSurfaceIdentity =
+                    Int("GroundPathNextSwingLandingSurfaceIdentity"),
                 LastLanding = Vector("GroundPathLastLanding"),
                 NextLanding = Vector("GroundPathNextSwingLanding"),
                 GroundEnvelopeVertexCount =
@@ -2950,6 +3211,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(
                     "Foot Motion Step candidate selection facts are inconsistent.");
             }
+            RequireStepPhase(frame.CurrentStep, "CurrentStep");
+            RequireStepPhase(frame.IncomingStep, "IncomingStep");
+            StepCandidateFrame selected = frame.SelectedStepSource ==
+                                          "Current"
+                ? frame.CurrentStep
+                : frame.SelectedStepSource == "Incoming"
+                    ? frame.IncomingStep
+                    : null;
+            if (selected == null
+                    ? frame.SelectedStepEventPhase != 0f ||
+                      frame.SelectedStepApproachContactPhase != 0f ||
+                      frame.SelectedStepLandingPhase != 0f ||
+                      frame.SelectedStepAtOrAfterApproachContact ||
+                      frame.SelectedStepInApproachContactToLanding
+                    : Math.Abs(
+                          frame.SelectedStepEventPhase -
+                          selected.EventPhase) > TimeEpsilon ||
+                      Math.Abs(
+                          frame.SelectedStepApproachContactPhase -
+                          selected.ApproachContactPhase) > TimeEpsilon ||
+                      Math.Abs(
+                          frame.SelectedStepLandingPhase -
+                          selected.LandingPhase) > TimeEpsilon ||
+                      frame.SelectedStepAtOrAfterApproachContact !=
+                      selected.AtOrAfterApproachContact ||
+                      frame.SelectedStepInApproachContactToLanding !=
+                      selected.InApproachContactToLanding)
+            {
+                throw new InvalidDataException(
+                    "Foot Motion selected Step Phase facts are inconsistent.");
+            }
             RequireEnum<CharacterFootLandingPredictionState>(
                 frame.LandingPredictionState,
                 "State");
@@ -2996,6 +3288,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.LockResponseBefore,
                 "FootMotionLockResponseBefore");
             RequireRevisionReason(frame.PathRevisionReason);
+        }
+
+        static void RequireStepPhase(
+            StepCandidateFrame step,
+            string field)
+        {
+            bool atOrAfter = step.IsValid &&
+                             step.EventPhase >=
+                             step.ApproachContactPhase;
+            bool inRange = atOrAfter &&
+                           step.IsSwing &&
+                           step.EventPhase <= step.LandingPhase;
+            if (step.AtOrAfterApproachContact != atOrAfter ||
+                step.InApproachContactToLanding != inRange)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion {field} Phase facts are inconsistent.");
+            }
         }
 
         static void RequireEnum<T>(string value, string field)
@@ -3059,6 +3369,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "StepSelectionMaximumPredictionTimeSeconds",
                 "StepSelectionLastLandingEventIdentity",
                 "SelectedStepSource", "SelectedLandingEventIdentity",
+                "SelectedStepEventPhase",
+                "SelectedStepApproachContactPhase",
+                "SelectedStepLandingPhase",
+                "SelectedStepAtOrAfterApproachContact",
+                "SelectedStepInApproachContactToLanding",
                 "CurrentStepIsValid", "CurrentStepIsAuthoritative",
                 "CurrentStepHasConsistentLandingEventIdentity",
                 "CurrentStepIsPreSwing", "CurrentStepIsSwing",
@@ -3068,6 +3383,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "CurrentStepContributionContinuityIdentity",
                 "CurrentStepLandingEventIdentity",
                 "CurrentStepTimeToLandingSeconds",
+                "CurrentStepEventPhase",
+                "CurrentStepApproachContactPhase",
+                "CurrentStepLandingPhase",
+                "CurrentStepAtOrAfterApproachContact",
+                "CurrentStepInApproachContactToLanding",
                 "CurrentStepRootLocalLandingX",
                 "CurrentStepRootLocalLandingY",
                 "CurrentStepRootLocalLandingZ",
@@ -3080,16 +3400,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "IncomingStepContributionContinuityIdentity",
                 "IncomingStepLandingEventIdentity",
                 "IncomingStepTimeToLandingSeconds",
+                "IncomingStepEventPhase",
+                "IncomingStepApproachContactPhase",
+                "IncomingStepLandingPhase",
+                "IncomingStepAtOrAfterApproachContact",
+                "IncomingStepInApproachContactToLanding",
                 "IncomingStepRootLocalLandingX",
                 "IncomingStepRootLocalLandingY",
                 "IncomingStepRootLocalLandingZ",
-                "State", "RawLandingAvailable",
+                "State", "LandingEventIdentity", "Accepted",
+                "SurfaceIdentity", "LandingPointX", "LandingPointY",
+                "LandingPointZ", "RawLandingAvailable",
                 "CurrentAnimatedSoleX", "CurrentAnimatedSoleY",
                 "CurrentAnimatedSoleZ",
                 "RawLandingCandidateX", "RawLandingCandidateY", "RawLandingCandidateZ",
                 "GroundPathState", "GroundPathRejectReason", "GroundPathInputIdentity",
                 "GroundPathTargetAvailable",
                 "GroundPathLastLandingEventIdentity", "GroundPathNextSwingLandingEventIdentity",
+                "GroundPathNextSwingLandingSurfaceIdentity",
                 "GroundPathLastLandingX", "GroundPathLastLandingY",
                 "GroundPathLastLandingZ",
                 "GroundPathNextSwingLandingX", "GroundPathNextSwingLandingY", "GroundPathNextSwingLandingZ",
@@ -3670,6 +3998,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong StepSelectionLastLandingEventIdentity;
             internal string SelectedStepSource;
             internal ulong SelectedLandingEventIdentity;
+            internal float SelectedStepEventPhase;
+            internal float SelectedStepApproachContactPhase;
+            internal float SelectedStepLandingPhase;
+            internal bool SelectedStepAtOrAfterApproachContact;
+            internal bool SelectedStepInApproachContactToLanding;
             internal StepCandidateFrame CurrentStep;
             internal StepCandidateFrame IncomingStep;
             internal bool FormalObservationAvailable;
@@ -3683,6 +4016,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float FormalLockWeight;
             internal float FormalSupport;
             internal string LandingPredictionState;
+            internal ulong ObservedLandingEventIdentity;
+            internal bool ObservedLandingAccepted;
+            internal int ObservedLandingSurfaceIdentity;
+            internal Vector3 ObservedLandingPoint;
             internal Vector3 CurrentAnimatedSole;
             internal bool RawLandingAvailable;
             internal Vector3 RawLanding;
@@ -3692,6 +4029,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool GroundPathTargetAvailable;
             internal ulong LastLandingEventIdentity;
             internal ulong NextLandingEventIdentity;
+            internal int NextLandingSurfaceIdentity;
             internal Vector3 LastLanding;
             internal Vector3 NextLanding;
             internal int GroundEnvelopeVertexCount;
@@ -4676,6 +5014,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong ContributionContinuityIdentity;
             internal ulong LandingEventIdentity;
             internal float TimeToLandingSeconds;
+            internal float EventPhase;
+            internal float ApproachContactPhase;
+            internal float LandingPhase;
+            internal bool AtOrAfterApproachContact;
+            internal bool InApproachContactToLanding;
             internal Vector3 RootLocalLanding;
         }
 
@@ -4696,6 +5039,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string lastLandingEventIdentity;
             public string selectedSource;
             public string selectedLandingEventIdentity;
+            public double selectedEventPhase;
+            public double selectedApproachContactPhase;
+            public double selectedLandingPhase;
+            public bool selectedAtOrAfterApproachContact;
+            public bool selectedInApproachContactToLanding;
             public StepTimeCandidateFact current;
             public StepTimeCandidateFact incoming;
             public double? selectedOldTimeSeconds;
@@ -4799,6 +5147,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     selectedLandingEventIdentity =
                         frame.SelectedLandingEventIdentity.ToString(
                             CultureInfo.InvariantCulture),
+                    selectedEventPhase = frame.SelectedStepEventPhase,
+                    selectedApproachContactPhase =
+                        frame.SelectedStepApproachContactPhase,
+                    selectedLandingPhase =
+                        frame.SelectedStepLandingPhase,
+                    selectedAtOrAfterApproachContact =
+                        frame.SelectedStepAtOrAfterApproachContact,
+                    selectedInApproachContactToLanding =
+                        frame.SelectedStepInApproachContactToLanding,
                     current = current,
                     incoming = incoming,
                     selectedOldTimeSeconds = selectedOldTime,
@@ -4848,6 +5205,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string contributionContinuityIdentity;
             public string landingEventIdentity;
             public double timeToLandingSeconds;
+            public double eventPhase;
+            public double approachContactPhase;
+            public double landingPhase;
+            public bool atOrAfterApproachContact;
+            public bool inApproachContactToLanding;
             public ScalarVector3Fact rootLocalLanding;
             public bool positiveTime;
             public bool withinMaximumPredictionTime;
@@ -4896,6 +5258,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             CultureInfo.InvariantCulture),
                     timeToLandingSeconds =
                         source.TimeToLandingSeconds,
+                    eventPhase = source.EventPhase,
+                    approachContactPhase =
+                        source.ApproachContactPhase,
+                    landingPhase = source.LandingPhase,
+                    atOrAfterApproachContact =
+                        source.AtOrAfterApproachContact,
+                    inApproachContactToLanding =
+                        source.InApproachContactToLanding,
                     rootLocalLanding = ScalarVector3Fact.From(
                         source.RootLocalLanding),
                     positiveTime = positiveTime,
@@ -5059,6 +5429,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int pathContinuityEventCount;
             public int stablePathSwingPhaseJumpCount;
             public int swingToLandingFloorHandoffCount;
+            public int lateApproachLandingRevisionCount;
             public int supportChangeCount;
             public int contactPlanePenetrationEventCount;
             public int safetyFloorEventCount;
@@ -5099,7 +5470,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootStablePathSwingPhaseJumpAnalysis
                     stablePathSwingPhaseJump = null,
                 CharacterFootSwingToLandingFloorHandoffAnalysis
-                    swingToLandingFloorHandoff = null)
+                    swingToLandingFloorHandoff = null,
+                CharacterFootLateApproachLandingRevisionAnalysis
+                    lateApproachLandingRevision = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -5117,6 +5490,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     stablePathSwingPhaseJump;
                 this.swingToLandingFloorHandoff =
                     swingToLandingFloorHandoff;
+                this.lateApproachLandingRevision =
+                    lateApproachLandingRevision;
             }
 
             public string kind;
@@ -5135,6 +5510,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 stablePathSwingPhaseJump;
             public CharacterFootSwingToLandingFloorHandoffAnalysis
                 swingToLandingFloorHandoff;
+            public CharacterFootLateApproachLandingRevisionAnalysis
+                lateApproachLandingRevision;
 
             internal static int Compare(EventFact left, EventFact right)
             {

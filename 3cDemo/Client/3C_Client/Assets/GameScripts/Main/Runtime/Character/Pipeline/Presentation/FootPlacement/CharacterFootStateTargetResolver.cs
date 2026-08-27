@@ -15,11 +15,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveSwingCorrection(
                     frame.AnimatedFoot,
                     frame.SwingMotion);
+            Vector3 swingTarget = ResolveSwingTarget(
+                swingCorrection,
+                in frame);
             if (transition.SuppressOutput)
             {
                 return new CharacterFootStateTarget(
                     default,
-                    swingCorrection,
+                    swingTarget,
                     CharacterFootInterpolationPolicy.Suppressed,
                     transition.StateChanged,
                     false,
@@ -32,8 +35,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootConstraintState.Swing:
                 case CharacterFootConstraintState.UnlockedSupport:
                     return Target(
-                        swingCorrection,
-                        swingCorrection,
+                        swingTarget,
+                        swingTarget,
                         CharacterFootInterpolationPolicy.SwingResidual,
                         transition,
                         0f,
@@ -43,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterFootConstraintMath.ResolveContactCorrection(
                             frame.AnimatedFoot,
                             context.Contact.Anchor),
-                        swingCorrection,
+                        swingTarget,
                         CharacterFootInterpolationPolicy.AcquireByWeight,
                         transition,
                         ResolvePlantOwnership(
@@ -53,13 +56,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return ResolveLockedTarget(
                         in context,
                         in transition,
-                        swingCorrection,
+                        swingTarget,
                         timeToLandingSeconds,
                         in frame);
                 case CharacterFootConstraintState.Releasing:
                     return Target(
-                        swingCorrection,
-                        swingCorrection,
+                        swingTarget,
+                        swingTarget,
                         CharacterFootInterpolationPolicy.ReleaseResidual,
                         transition,
                         0f,
@@ -115,6 +118,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 transition,
                 1f,
                 timeToLandingSeconds);
+        }
+
+        static Vector3 ResolveSwingTarget(
+            Vector3 swingCorrection,
+            in CharacterFootStateFrame frame)
+        {
+            if (!frame.CurrentGroundFloor.Accepted)
+                return swingCorrection;
+            Vector3 minimum =
+                CharacterFootConstraintMath.ResolvePointMinimumCorrection(
+                    frame.AnimatedFoot,
+                    frame.CurrentGroundFloor.Point,
+                    frame.ComponentUp);
+            return CharacterFootConstraintMath.RaiseToMinimum(
+                swingCorrection,
+                minimum,
+                frame.ComponentUp);
         }
 
         static CharacterFootStateTarget Target(

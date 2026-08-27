@@ -22,6 +22,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 contactAnchor) =>
             contactAnchor - ResolveOriginalSole(foot);
 
+        internal static Vector3 ResolvePointMinimumCorrection(
+            CharacterFootPlacementAnimatedFootPose foot,
+            Vector3 point,
+            Vector3 componentUp)
+        {
+            Vector3 up = componentUp.normalized;
+            return up * Vector3.Dot(
+                point - ResolveOriginalSole(foot),
+                up);
+        }
+
         internal static Vector3 ResolveSlidingCorrection(
             Vector3 fullCorrection,
             Vector3 componentUp,

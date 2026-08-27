@@ -60,7 +60,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             default,
                             correction);
                     }
-                    Vector3 minimum = ResolveCurrentGroundMinimum(
+                    Vector3 minimum =
+                        CharacterFootConstraintMath.ResolvePointMinimumCorrection(
                         frame.AnimatedFoot,
                         frame.CurrentGroundFloor.Point,
                         frame.ComponentUp);
@@ -126,16 +127,5 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     minimum,
                     componentUp));
 
-        static Vector3 ResolveCurrentGroundMinimum(
-            CharacterFootPlacementAnimatedFootPose foot,
-            Vector3 point,
-            Vector3 componentUp)
-        {
-            Vector3 up = componentUp.normalized;
-            return up * Vector3.Dot(
-                point -
-                CharacterFootConstraintMath.ResolveOriginalSole(foot),
-                up);
-        }
     }
 }

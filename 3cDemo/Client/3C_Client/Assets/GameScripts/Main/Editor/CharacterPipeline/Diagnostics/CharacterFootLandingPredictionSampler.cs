@@ -111,8 +111,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSourceHeelX,FootMotionSourceHeelY,FootMotionSourceHeelZ," +
             "FootMotionSourceToeX,FootMotionSourceToeY,FootMotionSourceToeZ," +
             "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ," +
-            "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionVerticalCorrection," +
-            "FootMotionLandingPredictionError,FootMotionLandingConstraintWeight,FootMotionPlantConfidence," +
+            "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionEnvelopeSampleAlongUp,FootMotionFormalFootHeight,FootMotionFormalTargetSoleHeight,FootMotionVerticalCorrection," +
+            "FootMotionLandingPredictionError,FootMotionPlantConfidence," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
@@ -1816,9 +1816,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.SourceToePosition);
             Add(row, motion.BaselineSample);
             Add(row, motion.EnvelopeSample);
+            Vector3 motionUp = ground.ComponentUp.sqrMagnitude > 0.000001f
+                ? ground.ComponentUp.normalized
+                : default;
+            float envelopeSampleAlongUp = Vector3.Dot(
+                motion.EnvelopeSample,
+                motionUp);
+            float motionFormalFootHeight = hasInputObservedStep
+                ? inputObservedStep.FootHeight
+                : 0f;
+            Add(row, envelopeSampleAlongUp);
+            Add(row, motionFormalFootHeight);
+            Add(
+                row,
+                envelopeSampleAlongUp + motionFormalFootHeight);
             Add(row, motion.VerticalCorrection);
             Add(row, motion.LandingPredictionError);
-            Add(row, motion.LandingConstraintWeight);
             Add(row, motion.PlantConfidence);
             Add(row, motion.CorrectedSole);
             Add(row, motion.CorrectedAnkle);

@@ -36,6 +36,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ResolvePhaseAdvanceEvents(allPathChanges);
             List<JObject> stablePhaseEvents =
                 context.Events("StablePathSwingPhaseJump");
+            List<JObject> sameGroundPathEnvelopeSteps =
+                context.Events("SameGroundPathSwingEnvelopeStep");
             CharacterFootDiagnosisTarget target = context.Target(
                 "path-change-correction-jump",
                 "无Anchor Swing的Ground Path变化附近是否出现修正跳变",
@@ -142,11 +144,88 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ApplyStablePathFrameStatistics(
                 stablePhaseTarget,
                 stablePhaseEvents);
+            CharacterFootDiagnosisTarget sameGroundPathTarget =
+                context.Target(
+                    "same-ground-path-swing-envelope-step-jump",
+                    "同一GroundPath内普通Swing跨Envelope台阶段时高度约束是否驱动Correction与物理脚同向跳变",
+                    new[] { "SameGroundPathSwingEnvelopeStep" },
+                    new[] { "causalChainMatched=true" },
+                    sameGroundPathEnvelopeSteps,
+                    value => CharacterFootDiagnosisContext.Evidence(
+                                 value,
+                                 "causalChainMatched")
+                        ? new List<string>
+                        {
+                            "causalChainMatched=true"
+                        }
+                        : new List<string>(),
+                    value => Math.Max(
+                        CharacterFootDiagnosisContext.Metric(
+                            value,
+                            "EnvelopeSampleAlongUpStep"),
+                        Math.Max(
+                            CharacterFootDiagnosisContext.Metric(
+                                value,
+                                "FinalCorrectionAlongUpStep"),
+                            Math.Max(
+                                CharacterFootDiagnosisContext.Metric(
+                                    value,
+                                    "PhysicalAnkleAlongUpStep"),
+                                CharacterFootDiagnosisContext.Metric(
+                                    value,
+                                    "PhysicalSoleAlongUpStep")))),
+                    "EnvelopeSampleAlongUpDelta",
+                    "EnvelopeSampleAlongUpStep",
+                    "AnimatedSoleAlongUpDelta",
+                    "AnimatedSoleAlongUpStep",
+                    "FormalFootHeightDelta",
+                    "FormalTargetSoleHeightDelta",
+                    "EnvelopeConstraintDelta",
+                    "FormalHeightConstraintDelta",
+                    "DesiredCorrectionAlongUpDelta",
+                    "DesiredCorrectionAlongUpStep",
+                    "FinalCorrectionAlongUpDelta",
+                    "FinalCorrectionAlongUpStep",
+                    "PhysicalAnkleAlongUpDelta",
+                    "PhysicalAnkleAlongUpStep",
+                    "PhysicalSoleAlongUpDelta",
+                    "PhysicalSoleAlongUpStep",
+                    "SafetyFloorClamp",
+                    "SafetyFloorClampDelta",
+                    "SafetyFloorOutputAlongUpDelta",
+                    "ProgressDelta",
+                    "PresentationDeltaSeconds",
+                    "BodyTickSpan");
+            sameGroundPathTarget.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["Classification"] = sameGroundPathEnvelopeSteps
+                        .GroupBy(
+                            value => value[
+                                    "sameGroundPathSwingEnvelopeStep"]?
+                                ["classification"]?.Value<string>() ??
+                                "Unspecified",
+                            StringComparer.Ordinal)
+                        .OrderBy(
+                            value => value.Key,
+                            StringComparer.Ordinal)
+                        .Select(value =>
+                            new CharacterFootDiagnosisCategoryCount
+                            {
+                                value = value.Key,
+                                count = value.Count()
+                            })
+                        .ToList()
+                };
             return context.Document(
                 DiagnosticId,
                 target,
                 phaseTarget,
-                stablePhaseTarget);
+                stablePhaseTarget,
+                sameGroundPathTarget);
         }
 
         static void ApplyStablePathFrameStatistics(
@@ -715,5 +794,61 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal UnityEngine.Vector3 finalPhysicalAnkleDeltaVector;
         [Newtonsoft.Json.JsonIgnore]
         internal UnityEngine.Vector3 finalPhysicalSoleDeltaVector;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootSameGroundPathSwingEnvelopeStepAnalysis
+    {
+        public int previousFrame;
+        public int frame;
+        public string side;
+        public string landingEventIdentity;
+        public string formalSourceIdentity;
+        public int formalSourceCycle;
+        public string previousContributionContinuityIdentity;
+        public string contributionContinuityIdentity;
+        public string groundPathInputIdentity;
+        public string footMotionGroundPathInputIdentity;
+        public double presentationDeltaSeconds;
+        public ulong bodyTickSpan;
+        public double previousProgress;
+        public double progress;
+        public double progressDelta;
+        public CharacterFootVectorFact componentUp;
+        public CharacterFootVectorFact previousEnvelopeSample;
+        public CharacterFootVectorFact envelopeSample;
+        public double previousEnvelopeSampleAlongUpMeters;
+        public double envelopeSampleAlongUpMeters;
+        public double envelopeSampleAlongUpDeltaMeters;
+        public CharacterFootVectorFact previousAnimatedSole;
+        public CharacterFootVectorFact animatedSole;
+        public double previousAnimatedSoleAlongUpMeters;
+        public double animatedSoleAlongUpMeters;
+        public double animatedSoleAlongUpDeltaMeters;
+        public bool formalFootHeightAvailable;
+        public double previousFormalFootHeightMeters;
+        public double formalFootHeightMeters;
+        public double previousFormalTargetSoleHeightMeters;
+        public double formalTargetSoleHeightMeters;
+        public double previousEnvelopeConstraintMeters;
+        public double envelopeConstraintMeters;
+        public double envelopeConstraintDeltaMeters;
+        public double previousFormalHeightConstraintMeters;
+        public double formalHeightConstraintMeters;
+        public double formalHeightConstraintDeltaMeters;
+        public double desiredCorrectionAlongUpDeltaMeters;
+        public double finalCorrectionAlongUpDeltaMeters;
+        public bool physicalAnkleAvailable;
+        public double physicalAnkleAlongUpDeltaMeters;
+        public bool physicalSoleAvailable;
+        public double physicalSoleAlongUpDeltaMeters;
+        public double previousSafetyFloorClampMeters;
+        public double safetyFloorClampMeters;
+        public double safetyFloorClampDeltaMeters;
+        public double safetyFloorOutputAlongUpDeltaMeters;
+        public bool pathResidualRebuilt;
+        public string pathRevisionReason;
+        public bool causalChainMatched;
+        public string classification;
     }
 }

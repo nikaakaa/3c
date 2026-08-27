@@ -65,8 +65,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in frame);
                 case CharacterFootConstraintState.Releasing:
                     return Target(
-                        swingTarget,
-                        swingTarget,
+                        swingCorrection,
+                        swingCorrection,
                         swingCorrection,
                         CharacterFootInterpolationPolicy.ReleaseResidual,
                         transition,

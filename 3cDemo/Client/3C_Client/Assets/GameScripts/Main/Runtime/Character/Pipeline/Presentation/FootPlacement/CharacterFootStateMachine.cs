@@ -22,21 +22,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         SwingTargetChanged = 8
     }
 
-    [Flags]
-    internal enum CharacterFootResidualRebaseReason : byte
-    {
-        None = 0,
-        PathAvailabilityChanged = 1,
-        LandingEventChanged = 2,
-        PhaseAlignedTargetChanged = 4
-    }
-
     internal readonly struct CharacterFootPathContinuityFact
     {
         internal CharacterFootPathContinuityFact(
             bool evaluated,
             CharacterFootPathRevisionReason revisionReason,
-            CharacterFootResidualRebaseReason residualRebaseReason,
             bool residualRebuilt,
             bool pathAvailableBefore,
             bool pathAvailableAfter,
@@ -46,7 +36,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 currentTargetCorrection,
             float landingPointDelta,
             float targetDelta,
-            float phaseAlignedTargetDelta,
             Vector3 residualBeforeRevision,
             Vector3 residualBeforeDecay,
             Vector3 residualAfterDecay,
@@ -59,7 +48,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Evaluated = evaluated;
             RevisionReason = revisionReason;
-            ResidualRebaseReason = residualRebaseReason;
             ResidualRebuilt = residualRebuilt;
             PathAvailableBefore = pathAvailableBefore;
             PathAvailableAfter = pathAvailableAfter;
@@ -69,7 +57,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentTargetCorrection = currentTargetCorrection;
             LandingPointDelta = landingPointDelta;
             TargetDelta = targetDelta;
-            PhaseAlignedTargetDelta = phaseAlignedTargetDelta;
             ResidualBeforeRevision = residualBeforeRevision;
             ResidualBeforeDecay = residualBeforeDecay;
             ResidualAfterDecay = residualAfterDecay;
@@ -116,7 +103,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Evaluated = source.Evaluated;
             RevisionReason = source.RevisionReason;
-            ResidualRebaseReason = source.ResidualRebaseReason;
             ResidualRebuilt = source.ResidualRebuilt;
             PathAvailableBefore = source.PathAvailableBefore;
             PathAvailableAfter = source.PathAvailableAfter;
@@ -126,7 +112,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentTargetCorrection = source.CurrentTargetCorrection;
             LandingPointDelta = source.LandingPointDelta;
             TargetDelta = source.TargetDelta;
-            PhaseAlignedTargetDelta = source.PhaseAlignedTargetDelta;
             ResidualBeforeRevision = source.ResidualBeforeRevision;
             ResidualBeforeDecay = source.ResidualBeforeDecay;
             ResidualAfterDecay = source.ResidualAfterDecay;
@@ -158,7 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal bool Evaluated { get; }
         internal CharacterFootPathRevisionReason RevisionReason { get; }
-        internal CharacterFootResidualRebaseReason ResidualRebaseReason { get; }
         internal bool ResidualRebuilt { get; }
         internal bool PathAvailableBefore { get; }
         internal bool PathAvailableAfter { get; }
@@ -168,7 +152,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 CurrentTargetCorrection { get; }
         internal float LandingPointDelta { get; }
         internal float TargetDelta { get; }
-        internal float PhaseAlignedTargetDelta { get; }
         internal Vector3 ResidualBeforeRevision { get; }
         internal Vector3 ResidualBeforeDecay { get; }
         internal Vector3 ResidualAfterDecay { get; }
@@ -231,7 +214,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootPathContinuityFact(
                 false,
                 CharacterFootPathRevisionReason.None,
-                CharacterFootResidualRebaseReason.None,
                 false,
                 false,
                 false,
@@ -239,7 +221,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0,
                 default,
                 default,
-                0f,
                 0f,
                 0f,
                 default,
@@ -472,7 +453,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CharacterFootSwingMotionResult swingMotion,
-            in CharacterFootSwingPathRevisionSample previousPathAtCurrentPhase,
             in CharacterFootCurrentGroundFloorResult currentGroundFloor,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
@@ -488,7 +468,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
             SwingMotion = swingMotion;
-            PreviousPathAtCurrentPhase = previousPathAtCurrentPhase;
             CurrentGroundFloor = currentGroundFloor;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
@@ -505,7 +484,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
-        internal CharacterFootSwingPathRevisionSample PreviousPathAtCurrentPhase { get; }
         internal CharacterFootCurrentGroundFloorResult CurrentGroundFloor { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
@@ -866,24 +844,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float targetDelta = comparablePath
                 ? Vector3.Distance(previousTargetCorrection, swingCorrection)
                 : 0f;
-            CharacterFootSwingPathRevisionSample previousPathAtCurrentPhase =
-                frame.PreviousPathAtCurrentPhase;
-            bool eventChanged = comparablePath &&
-                previousLandingEventIdentity != swing.LandingEventIdentity;
-            float phaseAlignedTargetDelta = 0f;
-            if (comparablePath && !eventChanged)
-            {
-                if (!previousPathAtCurrentPhase.IsAvailable ||
-                    previousPathAtCurrentPhase.LandingEventIdentity !=
-                    previousLandingEventIdentity)
-                {
-                    throw new InvalidOperationException(
-                        "Previous Swing Path cannot be sampled at the current phase.");
-                }
-                phaseAlignedTargetDelta = Vector3.Distance(
-                    previousPathAtCurrentPhase.TargetCorrection,
-                    swingCorrection);
-            }
             CharacterFootPathRevisionReason revisionReason =
                 CharacterFootPathRevisionReason.None;
             if (hasPath != pathAvailableBefore)
@@ -891,7 +851,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 revisionReason |=
                     CharacterFootPathRevisionReason.PathAvailabilityChanged;
             }
-            if (eventChanged)
+            if (comparablePath &&
+                previousLandingEventIdentity != swing.LandingEventIdentity)
                 revisionReason |= CharacterFootPathRevisionReason.LandingEventChanged;
             if (comparablePath &&
                 landingPointDelta > frame.Settings.LandingUpdateDistance)
@@ -899,26 +860,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (comparablePath &&
                 targetDelta > frame.Settings.LandingUpdateDistance)
                 revisionReason |= CharacterFootPathRevisionReason.SwingTargetChanged;
-            CharacterFootResidualRebaseReason residualRebaseReason =
-                CharacterFootResidualRebaseReason.None;
-            if (hasPath != pathAvailableBefore)
-            {
-                residualRebaseReason |=
-                    CharacterFootResidualRebaseReason.PathAvailabilityChanged;
-            }
-            if (eventChanged)
-            {
-                residualRebaseReason |=
-                    CharacterFootResidualRebaseReason.LandingEventChanged;
-            }
-            if (comparablePath && !eventChanged &&
-                phaseAlignedTargetDelta > frame.Settings.LandingUpdateDistance)
-            {
-                residualRebaseReason |=
-                    CharacterFootResidualRebaseReason.PhaseAlignedTargetChanged;
-            }
-            bool revised = residualRebaseReason !=
-                CharacterFootResidualRebaseReason.None;
+            bool revised = revisionReason != CharacterFootPathRevisionReason.None;
             if (revised)
                 context.SwingResidual = context.EffectiveCorrection - swingCorrection;
             Vector3 residualBeforeDecay = context.SwingResidual;
@@ -944,7 +886,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             continuityFact = new CharacterFootPathContinuityFact(
                 true,
                 revisionReason,
-                residualRebaseReason,
                 revised,
                 pathAvailableBefore,
                 hasPath,
@@ -954,7 +895,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasPath ? swingCorrection : default,
                 landingPointDelta,
                 targetDelta,
-                phaseAlignedTargetDelta,
                 residualBeforeRevision,
                 residualBeforeDecay,
                 context.SwingResidual,

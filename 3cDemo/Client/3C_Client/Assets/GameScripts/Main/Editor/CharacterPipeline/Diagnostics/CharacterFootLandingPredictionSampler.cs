@@ -119,11 +119,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionContactPlaneNormalX,FootMotionContactPlaneNormalY,FootMotionContactPlaneNormalZ," +
             "FootContactPlanePenetrationAvailability," +
             "FootMotionDesiredCorrectionX,FootMotionDesiredCorrectionY,FootMotionDesiredCorrectionZ," +
-            "FootMotionPathContinuityEvaluated,FootMotionPathRevisionReason,FootMotionPathResidualRebaseReason,FootMotionPathResidualRebuilt," +
+            "FootMotionPathContinuityEvaluated,FootMotionPathRevisionReason,FootMotionPathResidualRebuilt," +
             "FootMotionPathAvailableBefore,FootMotionPathAvailableAfter,FootMotionPathPreviousLandingEventIdentity,FootMotionPathCurrentLandingEventIdentity," +
             "FootMotionPathPreviousTargetCorrectionX,FootMotionPathPreviousTargetCorrectionY,FootMotionPathPreviousTargetCorrectionZ," +
             "FootMotionPathCurrentTargetCorrectionX,FootMotionPathCurrentTargetCorrectionY,FootMotionPathCurrentTargetCorrectionZ," +
-            "FootMotionPathLandingPointDeltaMeters,FootMotionPathTargetDeltaMeters,FootMotionPathPhaseAlignedTargetDeltaMeters," +
+            "FootMotionPathLandingPointDeltaMeters,FootMotionPathTargetDeltaMeters," +
             "FootMotionSwingResidualBeforeRevisionX,FootMotionSwingResidualBeforeRevisionY,FootMotionSwingResidualBeforeRevisionZ," +
             "FootMotionSwingResidualBeforeDecayX,FootMotionSwingResidualBeforeDecayY,FootMotionSwingResidualBeforeDecayZ," +
             "FootMotionSwingResidualAfterDecayX,FootMotionSwingResidualAfterDecayY,FootMotionSwingResidualAfterDecayZ," +
@@ -1828,7 +1828,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.DesiredCorrection);
             Add(row, motion.PathContinuityEvaluated);
             Add(row, motion.PathRevisionReason);
-            Add(row, motion.PathResidualRebaseReason);
             Add(row, motion.PathResidualRebuilt);
             Add(row, motion.PathAvailableBefore);
             Add(row, motion.PathAvailableAfter);
@@ -1838,7 +1837,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PathCurrentTargetCorrection);
             Add(row, motion.PathLandingPointDelta);
             Add(row, motion.PathTargetDelta);
-            Add(row, motion.PathPhaseAlignedTargetDelta);
             Add(row, motion.SwingResidualBeforeRevision);
             Add(row, motion.SwingResidualBeforeDecay);
             Add(row, motion.SwingResidualAfterDecay);

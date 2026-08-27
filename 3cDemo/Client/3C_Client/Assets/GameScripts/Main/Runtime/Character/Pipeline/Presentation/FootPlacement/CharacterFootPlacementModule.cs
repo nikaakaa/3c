@@ -1056,9 +1056,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 preferredSurfaceIdentity,
                 in settings,
                 m_WorldQuery,
-                out CharacterFootPlacementQueryRequest query,
-                out CharacterFootLandingSupport support,
-                out CharacterFootLandingQueryRejectReason queryRejectReason);
+                 out CharacterFootPlacementQueryRequest query,
+                 out CharacterFootLandingSupport support,
+                 out CharacterFootLandingQueryRejectReason queryRejectReason,
+                 out CharacterFootLandingQuerySelectionDiagnostics querySelection);
             return new CharacterFootLandingPredictionResult(
                 side,
                 accepted
@@ -1082,6 +1083,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rawLanding,
                 query,
                 support,
+                querySelection,
                 goal);
         }
 
@@ -1207,6 +1209,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentSole,
                 rawLanding,
                 query,
+                default,
                 default,
                 goal);
 

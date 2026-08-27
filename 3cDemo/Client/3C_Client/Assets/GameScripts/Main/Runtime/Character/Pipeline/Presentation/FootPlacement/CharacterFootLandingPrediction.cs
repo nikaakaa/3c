@@ -68,18 +68,81 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CapacityExceeded = 3
     }
 
+    public enum CharacterFootLandingQueryCandidateSelectionState : byte
+    {
+        NotExecuted = 0,
+        InvalidRequest = 1,
+        NoCandidate = 2,
+        CapacityExceeded = 3,
+        Selected = 4
+    }
+
+    public readonly struct CharacterFootLandingQueryCandidateDiagnostics
+    {
+        internal CharacterFootLandingQueryCandidateDiagnostics(
+            int surfaceIdentity,
+            Vector3 point,
+            float distance)
+        {
+            SurfaceIdentity = surfaceIdentity;
+            Point = point;
+            Distance = distance;
+        }
+
+        public int SurfaceIdentity { get; }
+        public Vector3 Point { get; }
+        public float Distance { get; }
+        public bool IsAvailable => SurfaceIdentity != 0;
+    }
+
+    public readonly struct CharacterFootLandingQuerySelectionDiagnostics
+    {
+        internal CharacterFootLandingQuerySelectionDiagnostics(
+            CharacterFootLandingQueryCandidateSelectionState state,
+            int validCandidateCount,
+            CharacterFootLandingQueryCandidateDiagnostics nearest,
+            bool preferredMatched,
+            int preferredCanonicalRank,
+            CharacterFootLandingQueryCandidateDiagnostics preferred,
+            CharacterFootLandingQueryCandidateDiagnostics selected,
+            bool preferredOverrodeNearest)
+        {
+            State = state;
+            ValidCandidateCount = validCandidateCount;
+            Nearest = nearest;
+            PreferredMatched = preferredMatched;
+            PreferredCanonicalRank = preferredCanonicalRank;
+            Preferred = preferred;
+            Selected = selected;
+            PreferredOverrodeNearest = preferredOverrodeNearest;
+        }
+
+        public CharacterFootLandingQueryCandidateSelectionState State { get; }
+        public int ValidCandidateCount { get; }
+        public CharacterFootLandingQueryCandidateDiagnostics Nearest { get; }
+        public bool PreferredMatched { get; }
+        public int PreferredCanonicalRank { get; }
+        public CharacterFootLandingQueryCandidateDiagnostics Preferred { get; }
+        public CharacterFootLandingQueryCandidateDiagnostics Selected { get; }
+        public bool PreferredOverrodeNearest { get; }
+    }
+
     internal readonly struct CharacterFootLandingQueryResult
     {
         internal CharacterFootLandingQueryResult(
             CharacterFootLandingQueryRejectReason rejectReason,
-            CharacterFootLandingSupport support)
+            CharacterFootLandingSupport support,
+            CharacterFootLandingQuerySelectionDiagnostics selectionDiagnostics)
         {
             RejectReason = rejectReason;
             Support = support;
+            SelectionDiagnostics = selectionDiagnostics;
         }
 
         internal CharacterFootLandingQueryRejectReason RejectReason { get; }
         internal CharacterFootLandingSupport Support { get; }
+        internal CharacterFootLandingQuerySelectionDiagnostics
+            SelectionDiagnostics { get; }
         internal bool Accepted => RejectReason == CharacterFootLandingQueryRejectReason.None;
     }
 
@@ -108,6 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 rawLandingCandidate,
             CharacterFootPlacementQueryRequest query,
             CharacterFootLandingSupport support,
+            CharacterFootLandingQuerySelectionDiagnostics querySelection,
             CharacterFullBodyIkGoal goal)
         {
             Side = side;
@@ -140,6 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingPoint = support.Point;
             LandingNormal = support.Normal;
             QueryDistance = support.Distance;
+            QuerySelection = querySelection;
             Goal = goal;
             GroundPath = default;
             CurrentGroundFloor = default;
@@ -170,6 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingPoint = source.LandingPoint;
             LandingNormal = source.LandingNormal;
             QueryDistance = source.QueryDistance;
+            QuerySelection = source.QuerySelection;
             Goal = source.Goal;
             GroundPath = groundPath;
             CurrentGroundFloor = source.CurrentGroundFloor;
@@ -203,6 +269,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingPoint = source.LandingPoint;
             LandingNormal = source.LandingNormal;
             QueryDistance = source.QueryDistance;
+            QuerySelection = source.QuerySelection;
             Goal = goal;
             GroundPath = source.GroundPath;
             CurrentGroundFloor = source.CurrentGroundFloor;
@@ -234,6 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingPoint = source.LandingPoint;
             LandingNormal = source.LandingNormal;
             QueryDistance = source.QueryDistance;
+            QuerySelection = source.QuerySelection;
             Goal = goal;
             GroundPath = source.GroundPath;
             CurrentGroundFloor = source.CurrentGroundFloor;
@@ -264,6 +332,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingPoint = source.LandingPoint;
             LandingNormal = source.LandingNormal;
             QueryDistance = source.QueryDistance;
+            QuerySelection = source.QuerySelection;
             Goal = source.Goal;
             GroundPath = source.GroundPath;
             CurrentGroundFloor = currentGroundFloor;
@@ -289,6 +358,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 LandingPoint { get; }
         public Vector3 LandingNormal { get; }
         public float QueryDistance { get; }
+        public CharacterFootLandingQuerySelectionDiagnostics QuerySelection
+        {
+            get;
+        }
         public CharacterFullBodyIkGoal Goal { get; }
         internal CharacterFootGroundPathResult GroundPath { get; }
         internal CharacterFootCurrentGroundFloorResult CurrentGroundFloor { get; }
@@ -348,6 +421,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentAnimatedSole = result.CurrentAnimatedSole;
             RawLandingCandidate = result.RawLandingCandidate;
             Query = result.Query;
+            QuerySelection = result.QuerySelection;
             SurfaceIdentity = result.SurfaceIdentity;
             LandingPoint = result.LandingPoint;
             LandingNormal = result.LandingNormal;
@@ -385,6 +459,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 CurrentAnimatedSole { get; }
         public Vector3 RawLandingCandidate { get; }
         public CharacterFootPlacementQueryRequest Query { get; }
+        public CharacterFootLandingQuerySelectionDiagnostics QuerySelection
+        {
+            get;
+        }
         public int SurfaceIdentity { get; }
         public Vector3 LandingPoint { get; }
         public Vector3 LandingNormal { get; }
@@ -935,7 +1013,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ICharacterFootLandingWorldQuery world,
             out CharacterFootPlacementQueryRequest query,
             out CharacterFootLandingSupport support,
-            out CharacterFootLandingQueryRejectReason queryRejectReason)
+            out CharacterFootLandingQueryRejectReason queryRejectReason,
+            out CharacterFootLandingQuerySelectionDiagnostics querySelection)
         {
             query = BuildQuery(
                 side,
@@ -946,6 +1025,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingQueryResult result = world.Query(in query);
             support = result.Support;
             queryRejectReason = result.RejectReason;
+            querySelection = result.SelectionDiagnostics;
             return result.Accepted;
         }
 

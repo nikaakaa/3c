@@ -137,6 +137,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "RawLandingAvailable,RawLandingCandidateX,RawLandingCandidateY,RawLandingCandidateZ," +
             "QueryShape,QueryPurpose,QueryFootIndex,QueryOriginX,QueryOriginY,QueryOriginZ," +
             "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot,QueryPreferredSurfaceIdentity," +
+            "QueryCandidateSelectionState,QueryValidCandidateCount," +
+            "QueryNearestCandidateAvailable,QueryNearestSurfaceIdentity,QueryNearestPointX,QueryNearestPointY,QueryNearestPointZ,QueryNearestDistance," +
+            "QueryPreferredCandidateMatched,QueryPreferredCanonicalRank,QueryPreferredMatchedSurfaceIdentity," +
+            "QueryPreferredPointX,QueryPreferredPointY,QueryPreferredPointZ,QueryPreferredDistance," +
+            "QuerySelectedCandidateAvailable,QuerySelectedSurfaceIdentity,QuerySelectedPointX,QuerySelectedPointY,QuerySelectedPointZ,QuerySelectedDistance," +
+            "QueryPreferredOverrodeNearest,QueryPreferredMinusNearestDistance,QueryPreferredMinusNearestHeightAlongUp," +
             "Accepted,SurfaceIdentity,LandingPointX,LandingPointY,LandingPointZ," +
             "LandingNormalX,LandingNormalY,LandingNormalZ,QueryDistance," +
             "GroundPathState,GroundPathRejectReason,GroundPathInputIdentity,GroundPathQueryExecuted,GroundPathTargetAvailable," +
@@ -1812,6 +1818,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, query.LayerMask);
             Add(row, query.MinimumGroundNormalDot);
             Add(row, query.PreferredSurfaceIdentity);
+            CharacterFootLandingQuerySelectionDiagnostics querySelection =
+                foot.QuerySelection;
+            CharacterFootLandingQueryCandidateDiagnostics nearestCandidate =
+                querySelection.Nearest;
+            CharacterFootLandingQueryCandidateDiagnostics preferredCandidate =
+                querySelection.Preferred;
+            CharacterFootLandingQueryCandidateDiagnostics selectedCandidate =
+                querySelection.Selected;
+            Vector3 querySupportUp = query.Direction.sqrMagnitude > 0.000001f
+                ? -query.Direction.normalized
+                : default;
+            bool preferredAndNearestAvailable =
+                querySelection.PreferredMatched &&
+                nearestCandidate.IsAvailable;
+            Add(row, querySelection.State.ToString());
+            Add(row, querySelection.ValidCandidateCount);
+            Add(row, nearestCandidate.IsAvailable);
+            Add(row, nearestCandidate.SurfaceIdentity);
+            Add(row, nearestCandidate.Point);
+            Add(row, nearestCandidate.Distance);
+            Add(row, querySelection.PreferredMatched);
+            Add(row, querySelection.PreferredCanonicalRank);
+            Add(row, preferredCandidate.SurfaceIdentity);
+            Add(row, preferredCandidate.Point);
+            Add(row, preferredCandidate.Distance);
+            Add(row, selectedCandidate.IsAvailable);
+            Add(row, selectedCandidate.SurfaceIdentity);
+            Add(row, selectedCandidate.Point);
+            Add(row, selectedCandidate.Distance);
+            Add(row, querySelection.PreferredOverrodeNearest);
+            Add(
+                row,
+                preferredAndNearestAvailable
+                    ? preferredCandidate.Distance - nearestCandidate.Distance
+                    : 0f);
+            Add(
+                row,
+                preferredAndNearestAvailable
+                    ? Vector3.Dot(
+                        preferredCandidate.Point - nearestCandidate.Point,
+                        querySupportUp)
+                    : 0f);
             Add(row, foot.Accepted);
             Add(row, foot.SurfaceIdentity);
             Add(row, foot.LandingPoint);

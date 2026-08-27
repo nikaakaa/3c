@@ -83,22 +83,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootLandingQueryResult Query(
             in CharacterFootPlacementQueryRequest request)
         {
+            bool requestValid = IsGroundRequestValid(in request);
             int count = QueryAll(in request, out bool capacityExceeded);
             if (capacityExceeded)
             {
                 return new CharacterFootLandingQueryResult(
                     CharacterFootLandingQueryRejectReason.CapacityExceeded,
-                    default);
+                    default,
+                    new CharacterFootLandingQuerySelectionDiagnostics(
+                        CharacterFootLandingQueryCandidateSelectionState
+                            .CapacityExceeded,
+                        0,
+                        default,
+                        false,
+                        0,
+                        default,
+                        default,
+                        false));
             }
             if (count <= 0)
             {
                 return new CharacterFootLandingQueryResult(
-                    IsGroundRequestValid(in request)
+                    requestValid
                         ? CharacterFootLandingQueryRejectReason.NoHit
                         : CharacterFootLandingQueryRejectReason.InvalidRequest,
-                    default);
+                    default,
+                    new CharacterFootLandingQuerySelectionDiagnostics(
+                        requestValid
+                            ? CharacterFootLandingQueryCandidateSelectionState
+                                .NoCandidate
+                            : CharacterFootLandingQueryCandidateSelectionState
+                                .InvalidRequest,
+                        0,
+                        default,
+                        false,
+                        0,
+                        default,
+                        default,
+                        false));
             }
-            RaycastHit hit = m_LandingHits[0];
+            int selectedIndex = 0;
+            bool preferredMatched = false;
+            int preferredCanonicalRank = 0;
+            CharacterFootLandingQueryCandidateDiagnostics preferred = default;
             if (request.PreferredSurfaceIdentity != 0)
             {
                 for (int i = 0; i < count; i++)
@@ -107,18 +134,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (candidate.collider &&
                         candidate.collider.GetInstanceID() == request.PreferredSurfaceIdentity)
                     {
-                        hit = candidate;
+                        selectedIndex = i;
+                        preferredMatched = true;
+                        preferredCanonicalRank = i + 1;
+                        preferred = CandidateDiagnostics(in candidate);
                         break;
                     }
                 }
             }
+            RaycastHit hit = m_LandingHits[selectedIndex];
+            CharacterFootLandingQueryCandidateDiagnostics nearest =
+                CandidateDiagnostics(in m_LandingHits[0]);
+            CharacterFootLandingQueryCandidateDiagnostics selected =
+                CandidateDiagnostics(in hit);
             return new CharacterFootLandingQueryResult(
                 CharacterFootLandingQueryRejectReason.None,
                 new CharacterFootLandingSupport(
                     hit.collider.GetInstanceID(),
                     hit.point,
                     hit.normal,
-                    hit.distance));
+                    hit.distance),
+                new CharacterFootLandingQuerySelectionDiagnostics(
+                    CharacterFootLandingQueryCandidateSelectionState.Selected,
+                    count,
+                    nearest,
+                    preferredMatched,
+                    preferredCanonicalRank,
+                    preferred,
+                    selected,
+                    preferredMatched && selectedIndex > 0));
         }
 
         internal int QueryAll(
@@ -294,6 +338,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int y = left.point.y.CompareTo(right.point.y);
             return y != 0 ? y : left.point.z.CompareTo(right.point.z);
         }
+
+        static CharacterFootLandingQueryCandidateDiagnostics
+            CandidateDiagnostics(in RaycastHit hit) =>
+            new CharacterFootLandingQueryCandidateDiagnostics(
+                hit.collider.GetInstanceID(),
+                hit.point,
+                hit.distance);
 
         static bool IsInitialOverlap(in RaycastHit hit) =>
             hit.distance <= 0.000001f;

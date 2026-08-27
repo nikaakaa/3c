@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/18";
+        const string Schema = "character-foot-motion-facts/19";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 18;
+        const int AnalyzerVersion = 19;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 672;
         const float PositionNoiseFloor = 0.001f;
@@ -143,6 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"safetyFloorClampWithoutInput={document.coverage.safetyFloorClampWithoutInputEventCount} " +
                 $"stepTimeCandidateSelections={document.coverage.stepTimeCandidateSelectionCount} " +
                 $"stepTimeRepresentativeEvents={document.coverage.stepTimeCandidateRepresentativeEventCount} " +
+                $"futureLandingCandidateSelections={document.coverage.futureLandingCandidateSelectionCount} " +
                 $"diagnosisFiles={publication.DiagnosticCount} " +
                 $"diagnosisTargets={publication.TargetCount} " +
                 $"diagnosisMatches={publication.MatchCount}";
@@ -170,6 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frames,
                 events,
                 stepTimeCandidateSelections);
+            AnalyzeFutureLandingCandidateSelections(frames, events);
             AnalyzeLandingEvents(frames, events);
             AnalyzeLandingStateConsistency(frames, events);
             AnalyzeSwingToLandingFloorHandoffs(frames, events);
@@ -184,6 +186,165 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeStablePathSwingPhaseJumps(frames, events);
             AnalyzePathChanges(frames, events);
             AnalyzePathContinuity(frames, events);
+        }
+
+        static void AnalyzeFutureLandingCandidateSelections(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame current = frames[i];
+                if (current.FutureLandingCandidateSelectionState !=
+                    "Selected")
+                {
+                    continue;
+                }
+                bool currentFloorAvailable = current.CurrentFloorAccepted;
+                bool currentFloorCatchupAvailable =
+                    currentFloorAvailable &&
+                    current.OutputStagesAvailable &&
+                    current.SafetyFloorAvailable;
+                double currentFloorCatchupMeters =
+                    currentFloorCatchupAvailable
+                        ? current.SafetyFloorClampMeters
+                        : 0d;
+                bool currentFloorMatchesNearest = currentFloorAvailable &&
+                    current.CurrentFloorSurfaceIdentity ==
+                    current.FutureLandingNearestSurfaceIdentity;
+                bool currentFloorMatchesPreferred = currentFloorAvailable &&
+                    current.FutureLandingPreferredMatched &&
+                    current.CurrentFloorSurfaceIdentity ==
+                    current.FutureLandingPreferredMatchedSurfaceIdentity;
+                bool currentFloorMatchesSelected = currentFloorAvailable &&
+                    current.CurrentFloorSurfaceIdentity ==
+                    current.FutureLandingSelectedSurfaceIdentity;
+                var detail =
+                    new CharacterFootFutureLandingCandidateSelectionAnalysis
+                    {
+                        frame = current.Frame,
+                        side = current.Side,
+                        landingEventIdentity =
+                            current.ObservedLandingEventIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        sourceIdentity = current.SourceIdentity,
+                        sourceCycle = current.SourceCycle,
+                        selectionState =
+                            current.FutureLandingCandidateSelectionState,
+                        validCandidateCount =
+                            current.FutureLandingValidCandidateCount,
+                        preferredSurfaceIdentity =
+                            current.FutureLandingPreferredSurfaceIdentity,
+                        nearest = new CharacterFootLandingQueryCandidateFact
+                        {
+                            available =
+                                current.FutureLandingNearestAvailable,
+                            surfaceIdentity =
+                                current.FutureLandingNearestSurfaceIdentity,
+                            point = CharacterFootVectorFact.From(
+                                current.FutureLandingNearestPoint),
+                            distanceMeters =
+                                current.FutureLandingNearestDistance
+                        },
+                        preferredMatched =
+                            current.FutureLandingPreferredMatched,
+                        preferredCanonicalRank =
+                            current.FutureLandingPreferredCanonicalRank,
+                        preferred =
+                            new CharacterFootLandingQueryCandidateFact
+                            {
+                                available =
+                                    current.FutureLandingPreferredMatched,
+                                surfaceIdentity = current
+                                    .FutureLandingPreferredMatchedSurfaceIdentity,
+                                point = CharacterFootVectorFact.From(
+                                    current.FutureLandingPreferredPoint),
+                                distanceMeters = current
+                                    .FutureLandingPreferredDistance
+                            },
+                        selected = new CharacterFootLandingQueryCandidateFact
+                        {
+                            available =
+                                current.FutureLandingSelectedAvailable,
+                            surfaceIdentity =
+                                current.FutureLandingSelectedSurfaceIdentity,
+                            point = CharacterFootVectorFact.From(
+                                current.FutureLandingSelectedPoint),
+                            distanceMeters =
+                                current.FutureLandingSelectedDistance
+                        },
+                        preferredOverrodeNearest =
+                            current.FutureLandingPreferredOverrodeNearest,
+                        preferredMinusNearestDistanceMeters =
+                            current.FutureLandingPreferredMinusNearestDistance,
+                        preferredMinusNearestHeightAlongUpMeters = current
+                            .FutureLandingPreferredMinusNearestHeightAlongUp,
+                        currentFloorAvailable = currentFloorAvailable,
+                        currentFloorSurfaceIdentity =
+                            current.CurrentFloorSurfaceIdentity,
+                        currentFloorPoint = CharacterFootVectorFact.From(
+                            current.CurrentFloorPoint),
+                        currentFloorMatchesNearest =
+                            currentFloorMatchesNearest,
+                        currentFloorMatchesPreferred =
+                            currentFloorMatchesPreferred,
+                        currentFloorMatchesSelected =
+                            currentFloorMatchesSelected,
+                        currentFloorCatchupAvailable =
+                            currentFloorCatchupAvailable,
+                        currentFloorCatchupMeters =
+                            currentFloorCatchupMeters
+                    };
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["ValidCandidateCount"] =
+                        current.FutureLandingValidCandidateCount,
+                    ["PreferredCanonicalRank"] =
+                        current.FutureLandingPreferredCanonicalRank,
+                    ["PreferredMinusNearestDistance"] = current
+                        .FutureLandingPreferredMinusNearestDistance,
+                    ["PreferredMinusNearestHeightAlongUp"] = current
+                        .FutureLandingPreferredMinusNearestHeightAlongUp
+                };
+                if (currentFloorCatchupAvailable)
+                {
+                    metrics["CurrentFloorCatchup"] =
+                        currentFloorCatchupMeters;
+                }
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["preferredRequested"] =
+                        current.FutureLandingPreferredSurfaceIdentity != 0,
+                    ["preferredMatched"] =
+                        current.FutureLandingPreferredMatched,
+                    ["preferredOverrodeNearest"] =
+                        current.FutureLandingPreferredOverrodeNearest,
+                    ["currentFloorAvailable"] = currentFloorAvailable,
+                    ["currentFloorCatchupAvailable"] =
+                        currentFloorCatchupAvailable,
+                    ["currentFloorMatchesNearest"] =
+                        currentFloorMatchesNearest,
+                    ["currentFloorMatchesPreferred"] =
+                        currentFloorMatchesPreferred,
+                    ["currentFloorMatchesSelected"] =
+                        currentFloorMatchesSelected
+                };
+                events.Add(new EventFact(
+                    "FutureLandingCandidateSelection",
+                    current.Side,
+                    current.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.ObservedLandingEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence,
+                    futureLandingCandidateSelection: detail));
+            }
         }
 
         static void AnalyzeStepTimeCandidateSelections(
@@ -626,6 +787,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.SafetyFloorOutputCorrection -
                     previous.SafetyFloorOutputCorrection,
                     up);
+                double previousSafetyFloorAddedCorrection = Vector3.Dot(
+                    previous.SafetyFloorOutputCorrection -
+                    previous.CorrectionBeforeSafetyFloor,
+                    up);
+                double safetyFloorAddedCorrection = Vector3.Dot(
+                    current.SafetyFloorOutputCorrection -
+                    current.CorrectionBeforeSafetyFloor,
+                    up);
+                double safetyFloorAddedCorrectionDelta =
+                    safetyFloorAddedCorrection -
+                    previousSafetyFloorAddedCorrection;
                 double safetyFloorClampDelta =
                     current.SafetyFloorClampMeters -
                     previous.SafetyFloorClampMeters;
@@ -657,18 +829,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     correctionResponded &&
                     physicalResponded;
                 bool safetyFloorIntroduced =
-                    (Math.Abs(safetyFloorOutputDelta) >=
-                         significantStepMeters ||
-                      Math.Abs(safetyFloorClampDelta) >=
-                          significantStepMeters) &&
+                    Math.Abs(safetyFloorAddedCorrectionDelta) >=
+                    significantStepMeters &&
                     visiblePhysicalResponse &&
                     ((Math.Abs(physicalAnkleDelta) >= 0.02d &&
                       SameDirection(
-                          safetyFloorOutputDelta,
+                          safetyFloorAddedCorrectionDelta,
                           physicalAnkleDelta)) ||
                      (Math.Abs(physicalSoleDelta) >= 0.02d &&
                       SameDirection(
-                          safetyFloorOutputDelta,
+                          safetyFloorAddedCorrectionDelta,
                           physicalSoleDelta)));
                 bool animationSourceJump =
                     Math.Abs(animatedSoleDelta) >=
@@ -822,6 +992,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             safetyFloorClampDelta,
                         safetyFloorOutputAlongUpDeltaMeters =
                             safetyFloorOutputDelta,
+                        safetyFloorAddedCorrectionDeltaMeters =
+                            safetyFloorAddedCorrectionDelta,
                         pathResidualRebuilt =
                             current.PathResidualRebuilt,
                         pathRevisionReason =
@@ -890,6 +1062,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         safetyFloorClampDelta,
                     ["SafetyFloorOutputAlongUpDelta"] =
                         safetyFloorOutputDelta,
+                    ["SafetyFloorAddedCorrectionDelta"] =
+                        safetyFloorAddedCorrectionDelta,
                     ["ProgressDelta"] = current.SwingProgress -
                                         previous.SwingProgress,
                     ["PresentationDeltaSeconds"] =
@@ -3549,6 +3723,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => value.kind ==
                                      "StepTimeCandidateSelection" &&
                                  value.evidence["normalizedTimeWrapped"]),
+                    futureLandingCandidateSelectionCount = events.Count(
+                        value => value.kind ==
+                                 "FutureLandingCandidateSelection"),
                     leftFootFrameCount = capture.Left.Count,
                     rightFootFrameCount = capture.Right.Count,
                     frameGapCount = capture.FrameGapCount,
@@ -3952,6 +4129,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ObservedLandingAccepted = Int("Accepted") != 0,
                 ObservedLandingSurfaceIdentity = Int("SurfaceIdentity"),
                 ObservedLandingPoint = Vector("LandingPoint"),
+                ObservedLandingQueryDistance = Float("QueryDistance"),
+                FutureLandingPreferredSurfaceIdentity =
+                    Int("QueryPreferredSurfaceIdentity"),
+                FutureLandingQueryDirection = Vector("QueryDirection"),
+                FutureLandingCandidateSelectionState =
+                    Cell("QueryCandidateSelectionState"),
+                FutureLandingValidCandidateCount =
+                    Int("QueryValidCandidateCount"),
+                FutureLandingNearestAvailable =
+                    Int("QueryNearestCandidateAvailable") != 0,
+                FutureLandingNearestSurfaceIdentity =
+                    Int("QueryNearestSurfaceIdentity"),
+                FutureLandingNearestPoint = Vector("QueryNearestPoint"),
+                FutureLandingNearestDistance =
+                    Float("QueryNearestDistance"),
+                FutureLandingPreferredMatched =
+                    Int("QueryPreferredCandidateMatched") != 0,
+                FutureLandingPreferredCanonicalRank =
+                    Int("QueryPreferredCanonicalRank"),
+                FutureLandingPreferredMatchedSurfaceIdentity =
+                    Int("QueryPreferredMatchedSurfaceIdentity"),
+                FutureLandingPreferredPoint = Vector("QueryPreferredPoint"),
+                FutureLandingPreferredDistance =
+                    Float("QueryPreferredDistance"),
+                FutureLandingSelectedAvailable =
+                    Int("QuerySelectedCandidateAvailable") != 0,
+                FutureLandingSelectedSurfaceIdentity =
+                    Int("QuerySelectedSurfaceIdentity"),
+                FutureLandingSelectedPoint = Vector("QuerySelectedPoint"),
+                FutureLandingSelectedDistance =
+                    Float("QuerySelectedDistance"),
+                FutureLandingPreferredOverrodeNearest =
+                    Int("QueryPreferredOverrodeNearest") != 0,
+                FutureLandingPreferredMinusNearestDistance =
+                    Float("QueryPreferredMinusNearestDistance"),
+                FutureLandingPreferredMinusNearestHeightAlongUp =
+                    Float("QueryPreferredMinusNearestHeightAlongUp"),
                 RawLandingAvailable = Int("RawLandingAvailable") != 0,
                 CurrentAnimatedSole = Vector("CurrentAnimatedSole"),
                 RawLanding = Vector("RawLandingCandidate"),
@@ -4259,6 +4473,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootLandingPredictionState>(
                 frame.LandingPredictionState,
                 "State");
+            RequireEnum<CharacterFootLandingQueryCandidateSelectionState>(
+                frame.FutureLandingCandidateSelectionState,
+                "QueryCandidateSelectionState");
+            RequireFutureLandingCandidateSelection(frame);
             RequireEnum<CharacterFootSwingMotionState>(
                 frame.FootMotionState,
                 "FootMotionState");
@@ -4393,6 +4611,120 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             RequireRevisionReason(frame.PathRevisionReason);
+        }
+
+        static void RequireFutureLandingCandidateSelection(FootFrame frame)
+        {
+            bool selected = frame.FutureLandingCandidateSelectionState ==
+                            "Selected";
+            if (!selected)
+            {
+                if (frame.FutureLandingValidCandidateCount != 0 ||
+                    frame.FutureLandingNearestAvailable ||
+                    frame.FutureLandingPreferredMatched ||
+                    frame.FutureLandingPreferredCanonicalRank != 0 ||
+                    frame.FutureLandingSelectedAvailable ||
+                    frame.FutureLandingPreferredOverrodeNearest)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion unavailable FutureLanding candidates are inconsistent " +
+                        $"Frame={frame.Frame} Side={frame.Side}.");
+                }
+                return;
+            }
+            if (frame.FutureLandingValidCandidateCount <= 0 ||
+                frame.FutureLandingQueryDirection.sqrMagnitude <=
+                TimeEpsilon * TimeEpsilon ||
+                !frame.FutureLandingNearestAvailable ||
+                frame.FutureLandingNearestSurfaceIdentity == 0 ||
+                !frame.FutureLandingSelectedAvailable ||
+                frame.FutureLandingSelectedSurfaceIdentity == 0 ||
+                !frame.ObservedLandingAccepted ||
+                frame.FutureLandingSelectedSurfaceIdentity !=
+                frame.ObservedLandingSurfaceIdentity ||
+                Vector3.Distance(
+                    frame.FutureLandingSelectedPoint,
+                    frame.ObservedLandingPoint) > PositionNoiseFloor ||
+                Math.Abs(
+                    frame.FutureLandingSelectedDistance -
+                    frame.ObservedLandingQueryDistance) > PositionNoiseFloor)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion selected FutureLanding candidate is inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
+            if (frame.FutureLandingPreferredMatched)
+            {
+                if (frame.FutureLandingPreferredSurfaceIdentity == 0 ||
+                    frame.FutureLandingPreferredCanonicalRank <= 0 ||
+                    frame.FutureLandingPreferredCanonicalRank >
+                    frame.FutureLandingValidCandidateCount ||
+                    frame.FutureLandingPreferredMatchedSurfaceIdentity !=
+                    frame.FutureLandingPreferredSurfaceIdentity ||
+                    frame.FutureLandingSelectedSurfaceIdentity !=
+                    frame.FutureLandingPreferredMatchedSurfaceIdentity ||
+                    Vector3.Distance(
+                        frame.FutureLandingSelectedPoint,
+                        frame.FutureLandingPreferredPoint) >
+                    PositionNoiseFloor ||
+                    Math.Abs(
+                        frame.FutureLandingSelectedDistance -
+                        frame.FutureLandingPreferredDistance) >
+                    PositionNoiseFloor ||
+                    frame.FutureLandingPreferredDistance +
+                    PositionNoiseFloor <
+                    frame.FutureLandingNearestDistance)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion preferred FutureLanding candidate is inconsistent " +
+                        $"Frame={frame.Frame} Side={frame.Side}.");
+                }
+            }
+            else if (frame.FutureLandingPreferredCanonicalRank != 0 ||
+                     frame.FutureLandingPreferredMatchedSurfaceIdentity != 0 ||
+                     frame.FutureLandingSelectedSurfaceIdentity !=
+                     frame.FutureLandingNearestSurfaceIdentity ||
+                     Vector3.Distance(
+                         frame.FutureLandingSelectedPoint,
+                         frame.FutureLandingNearestPoint) > PositionNoiseFloor ||
+                     Math.Abs(
+                         frame.FutureLandingSelectedDistance -
+                         frame.FutureLandingNearestDistance) >
+                     PositionNoiseFloor)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion nearest FutureLanding fallback is inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
+            bool overrodeNearest = frame.FutureLandingPreferredMatched &&
+                                   frame.FutureLandingPreferredCanonicalRank > 1;
+            float expectedDistanceDelta = frame.FutureLandingPreferredMatched
+                ? frame.FutureLandingPreferredDistance -
+                  frame.FutureLandingNearestDistance
+                : 0f;
+            Vector3 up = frame.FutureLandingQueryDirection.sqrMagnitude >
+                         TimeEpsilon * TimeEpsilon
+                ? -frame.FutureLandingQueryDirection.normalized
+                : default;
+            float expectedHeightDelta = frame.FutureLandingPreferredMatched
+                ? Vector3.Dot(
+                    frame.FutureLandingPreferredPoint -
+                    frame.FutureLandingNearestPoint,
+                    up)
+                : 0f;
+            if (frame.FutureLandingPreferredOverrodeNearest !=
+                    overrodeNearest ||
+                Math.Abs(
+                    frame.FutureLandingPreferredMinusNearestDistance -
+                    expectedDistanceDelta) > PositionNoiseFloor ||
+                Math.Abs(
+                    frame.FutureLandingPreferredMinusNearestHeightAlongUp -
+                    expectedHeightDelta) > PositionNoiseFloor)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion FutureLanding preference delta is inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
         }
 
         static void RequireActualFootEnvelopeFacts(FootFrame frame)
@@ -4868,7 +5200,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "IncomingStepRootLocalLandingZ",
                 "State", "LandingEventIdentity", "Accepted",
                 "SurfaceIdentity", "LandingPointX", "LandingPointY",
-                "LandingPointZ", "RawLandingAvailable",
+                "LandingPointZ", "QueryDistance",
+                "QueryPreferredSurfaceIdentity",
+                "QueryDirectionX", "QueryDirectionY", "QueryDirectionZ",
+                "QueryCandidateSelectionState", "QueryValidCandidateCount",
+                "QueryNearestCandidateAvailable", "QueryNearestSurfaceIdentity",
+                "QueryNearestPointX", "QueryNearestPointY", "QueryNearestPointZ",
+                "QueryNearestDistance", "QueryPreferredCandidateMatched",
+                "QueryPreferredCanonicalRank", "QueryPreferredMatchedSurfaceIdentity",
+                "QueryPreferredPointX", "QueryPreferredPointY", "QueryPreferredPointZ",
+                "QueryPreferredDistance", "QuerySelectedCandidateAvailable",
+                "QuerySelectedSurfaceIdentity", "QuerySelectedPointX",
+                "QuerySelectedPointY", "QuerySelectedPointZ",
+                "QuerySelectedDistance", "QueryPreferredOverrodeNearest",
+                "QueryPreferredMinusNearestDistance",
+                "QueryPreferredMinusNearestHeightAlongUp",
+                "RawLandingAvailable",
                 "CurrentAnimatedSoleX", "CurrentAnimatedSoleY",
                 "CurrentAnimatedSoleZ",
                 "RawLandingCandidateX", "RawLandingCandidateY", "RawLandingCandidateZ",
@@ -5515,6 +5862,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool ObservedLandingAccepted;
             internal int ObservedLandingSurfaceIdentity;
             internal Vector3 ObservedLandingPoint;
+            internal float ObservedLandingQueryDistance;
+            internal int FutureLandingPreferredSurfaceIdentity;
+            internal Vector3 FutureLandingQueryDirection;
+            internal string FutureLandingCandidateSelectionState;
+            internal int FutureLandingValidCandidateCount;
+            internal bool FutureLandingNearestAvailable;
+            internal int FutureLandingNearestSurfaceIdentity;
+            internal Vector3 FutureLandingNearestPoint;
+            internal float FutureLandingNearestDistance;
+            internal bool FutureLandingPreferredMatched;
+            internal int FutureLandingPreferredCanonicalRank;
+            internal int FutureLandingPreferredMatchedSurfaceIdentity;
+            internal Vector3 FutureLandingPreferredPoint;
+            internal float FutureLandingPreferredDistance;
+            internal bool FutureLandingSelectedAvailable;
+            internal int FutureLandingSelectedSurfaceIdentity;
+            internal Vector3 FutureLandingSelectedPoint;
+            internal float FutureLandingSelectedDistance;
+            internal bool FutureLandingPreferredOverrodeNearest;
+            internal float FutureLandingPreferredMinusNearestDistance;
+            internal float FutureLandingPreferredMinusNearestHeightAlongUp;
             internal Vector3 CurrentAnimatedSole;
             internal bool RawLandingAvailable;
             internal Vector3 RawLanding;
@@ -6975,6 +7343,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int stepTimeCandidateSelectionCount;
             public int stepTimeCandidateRepresentativeEventCount;
             public int normalizedTimeWrapCount;
+            public int futureLandingCandidateSelectionCount;
             public int leftFootFrameCount;
             public int rightFootFrameCount;
             public int frameGapCount;
@@ -7014,7 +7383,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootSwingCurrentFloorCatchupAnalysis
                     swingCurrentFloorCatchup = null,
                 CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
-                    swingActualFootEnvelopeCounterfactual = null)
+                    swingActualFootEnvelopeCounterfactual = null,
+                CharacterFootFutureLandingCandidateSelectionAnalysis
+                    futureLandingCandidateSelection = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -7040,6 +7411,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingCurrentFloorCatchup;
                 this.swingActualFootEnvelopeCounterfactual =
                     swingActualFootEnvelopeCounterfactual;
+                this.futureLandingCandidateSelection =
+                    futureLandingCandidateSelection;
             }
 
             public string kind;
@@ -7066,6 +7439,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 swingCurrentFloorCatchup;
             public CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
                 swingActualFootEnvelopeCounterfactual;
+            public CharacterFootFutureLandingCandidateSelectionAnalysis
+                futureLandingCandidateSelection;
 
             internal static int Compare(EventFact left, EventFact right)
             {

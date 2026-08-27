@@ -341,7 +341,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingActualFootEnvelopeCounterfactual =
                         value["swingActualFootEnvelopeCounterfactual"]?
                             .ToObject<
-                                CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis>()
+                                CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis>(),
+                    futureLandingCandidateSelection =
+                        value["futureLandingCandidateSelection"]?
+                            .ToObject<
+                                CharacterFootFutureLandingCandidateSelectionAnalysis>()
                 });
             }
             return result;
@@ -533,6 +537,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             swingCurrentFloorCatchup;
         public CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
             swingActualFootEnvelopeCounterfactual;
+        public CharacterFootFutureLandingCandidateSelectionAnalysis
+            futureLandingCandidateSelection;
     }
 
     [Serializable]

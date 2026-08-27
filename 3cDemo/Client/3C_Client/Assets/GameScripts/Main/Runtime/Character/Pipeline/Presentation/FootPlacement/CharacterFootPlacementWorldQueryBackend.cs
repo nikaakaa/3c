@@ -134,6 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (candidate.collider &&
                         candidate.collider.GetInstanceID() == request.PreferredSurfaceIdentity)
                     {
+                        selectedIndex = i;
                         preferredMatched = true;
                         preferredCanonicalRank = i + 1;
                         preferred = CandidateDiagnostics(in candidate);

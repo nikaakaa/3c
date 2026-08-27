@@ -171,11 +171,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lockResponseBefore,
                 lockResponseAfter,
                 available,
-                available
+                hardConstraint.Resolved
                     ? hardConstraint.Owner
                     : CharacterFootSafetyFloorOwner.None,
-                available ? hardConstraint.SurfaceIdentity : 0,
-                available ? hardConstraint.PathIdentity : 0,
+                hardConstraint.Resolved ? hardConstraint.SurfaceIdentity : 0,
+                hardConstraint.Resolved ? hardConstraint.PathIdentity : 0,
                 hardConstraint.InputCorrection,
                 available ? hardConstraint.MinimumCorrection : default,
                 hardConstraint.OutputCorrection,

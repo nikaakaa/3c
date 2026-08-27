@@ -83,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             context.Contact.Anchor);
                     return Result(
                         true,
-                        true,
+                        false,
                         CharacterFootSafetyFloorOwner.ContactAnchor,
                         context.Contact.SurfaceIdentity,
                         0,

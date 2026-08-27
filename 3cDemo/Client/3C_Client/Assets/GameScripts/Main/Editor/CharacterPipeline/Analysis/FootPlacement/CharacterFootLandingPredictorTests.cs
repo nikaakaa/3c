@@ -42,13 +42,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 55f,
                 2f);
             Vector3 raw = new Vector3(1f, 2f, 3f);
+            var key = new CharacterFootLandingObservationKey(
+                CharacterFootSide.Right,
+                1UL,
+                raw,
+                Vector3.up,
+                "test-profile",
+                1UL);
 
             CharacterFootPlacementQueryRequest query =
                 CharacterFootLandingPredictor.BuildQuery(
-                    CharacterFootSide.Right,
-                    raw,
-                    Vector3.up,
-                    0,
+                    in key,
                     in settings);
 
             Assert.That(query.FootIndex, Is.EqualTo(1));
@@ -70,31 +74,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 55f,
                 2f);
             var world = new MissingWorldQuery();
+            var pool = new CharacterFootLandingObservationPagePool();
 
-            bool accepted = CharacterFootLandingPredictor.TryResolve(
+            CharacterFootLandingObservationResult observation =
+                CharacterFootLandingPredictor.ResolveObservation(
                 CharacterFootSide.Left,
+                1UL,
                 Vector3.zero,
                 Vector3.up,
-                0,
+                "test-profile",
                 in settings,
                 world,
-                 out CharacterFootPlacementQueryRequest query,
-                 out CharacterFootLandingSupport support,
-                 out CharacterFootLandingQueryRejectReason queryRejectReason,
-                 out CharacterFootLandingQuerySelectionDiagnostics querySelection);
+                pool,
+                null,
+                out CharacterFootLandingObservationPage pending);
+            CharacterFootLandingQueryResult result = pending.Result;
 
-            Assert.That(accepted, Is.False);
-            Assert.That(query.Purpose, Is.EqualTo(CharacterFootPlacementQueryPurpose.FutureLanding));
-            Assert.That(support.SurfaceIdentity, Is.EqualTo(0));
-            Assert.That(queryRejectReason, Is.EqualTo(CharacterFootLandingQueryRejectReason.NoHit));
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(pending.Query.Purpose, Is.EqualTo(CharacterFootPlacementQueryPurpose.FutureLanding));
+            Assert.That(result.Support.SurfaceIdentity, Is.EqualTo(0));
+            Assert.That(result.RejectReason, Is.EqualTo(CharacterFootLandingQueryRejectReason.NoHit));
             Assert.That(
-                querySelection.State,
+                result.SelectionDiagnostics.State,
                 Is.EqualTo(
                     CharacterFootLandingQueryCandidateSelectionState.NotExecuted));
+            Assert.That(observation.QueryExecutedThisFrame, Is.True);
         }
 
         sealed class MissingWorldQuery : ICharacterFootLandingWorldQuery
         {
+            public ulong WorldRevision => 1UL;
+
             public CharacterFootLandingQueryResult Query(
                 in CharacterFootPlacementQueryRequest request) =>
                 new CharacterFootLandingQueryResult(

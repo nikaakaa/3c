@@ -6,7 +6,9 @@
 
 Raw Landing MUST继续按`VisiblePosition + FutureBodyTranslation + VisibleRotation * RootLocalLanding`从本帧输入重新投影。Step Distance MUST不替代committed Body世界速度、Future Body Translation或世界地形；RootLocalLanding MUST只乘本帧Visible Rotation，不外推Future Body Yaw。
 
-SphereCast MUST继续从Raw Landing上方沿Component Down使用Profile半径和有限距离查询，并过滤自身Collider、初始重叠、非法点、非法法线与超坡度命中。容量溢出或没有合法命中 MUST发布typed拒绝，不得沿用旧Landing、默认Surface或另一Event结果。
+Runtime MUST从Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`量化的Component Up、Profile Revision与非零World Revision构造canonical Landing Observation Key。SphereCast MUST从Key反量化后的canonical Raw Landing上方沿Component Down使用Profile半径和有限距离查询，并过滤自身Collider、初始重叠、非法点、非法法线与超坡度命中。相同Key MUST复用根事务已提交的不可变Accepted或Rejected Observation且不得执行SphereCast；新Key MUST恰好查询一次，并在固定容量合法候选中按距离与稳定identity选择canonical最近候选。容量溢出或没有合法命中 MUST发布typed拒绝，不得沿用另一Key、旧Landing、默认Surface或另一Event结果。
+
+上一Committed Surface、Frame、Authority Tick、Trajectory Generation、Future Translation Source、Foot State、Residual与查询输出 MUST不进入Observation Key或候选选择。Pending Observation MUST随Foot根事务提交或丢弃；Reset、Retarget与World Query Backend重建 MUST清空Observation Page。当前静态FootPlacementSurface在Backend生命周期内使用固定非零World Revision；移动平台不属于本change。
 
 #### Scenario: 正式Step预测命中
 
@@ -14,11 +16,53 @@ SphereCast MUST继续从Raw Landing上方沿Component Down使用Profile半径和
 - **THEN** Runtime MUST发布唯一Accepted Landing、Surface、点、法线、查询距离及完整Event lineage
 - **AND** Step Time变化 MUST只改变该Event预测时域，不得重建另一套Landing生命周期
 
+#### Scenario: 相同Landing Observation Key
+
+- **WHEN** 当前Foot帧生成的canonical Observation Key与上一Committed Page相同
+- **THEN** Runtime MUST复用相同Observation identity、Surface、点、法线与Reject结果
+- **AND** MUST不执行FutureLanding SphereCast或读取上一Surface重新选择候选
+
+#### Scenario: 新Landing Observation Key
+
+- **WHEN** canonical Raw Landing、Component Up、Event、Profile Revision或World Revision产生新Key
+- **THEN** Runtime MUST执行一次FutureLanding SphereCast并提交canonical最近合法候选或typed拒绝
+- **AND** Pending Foot事务失败时 MUST丢弃该Observation，不得污染上一Committed Page
+
 #### Scenario: Step Event与RootLocalLanding不一致
 
 - **WHEN** 正式Step Distance、Event table与RootLocalLanding水平位移不满足编译容差或lineage不匹配
 - **THEN** Projection Build或当前Foot帧 MUST发布typed invalid
 - **AND** MUST不读取旧隐藏Step Event或重新编号继续预测
+
+### Requirement: Ground Path必须使用上一已提交落点与下一事件落点
+
+每只脚 MUST按Landing Event identity缓存Accepted Landing。PreSwing或Swing阶段的每个有效表现帧 MUST重新投影Raw Landing并构造canonical Landing Observation Key；只有新Key MUST执行一次正式Landing SphereCast，相同Key MUST复用Committed Observation。新Observation与同一事件NextSwingLanding的距离小于正式Foot Motion Profile死区时 MUST保留原落点并复用Ground Path；达到死区时 MUST提交新的NextSwingLanding。该事件实际落地后最新NextSwingLanding MUST晋级为LastLanding，之后才为新的Swing事件建立下一落点。
+
+Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没有LastLanding时 MUST发布`CurrentLandingUnavailable`；不得用Animated Sole、Transform、固定高度或默认地面补起点。
+
+#### Scenario: 同一Landing Observation Key持续多个表现帧
+
+- **WHEN** PreSwing或Swing连续帧产生相同canonical Observation Key
+- **THEN** Runtime MUST复用Committed Observation、NextSwingLanding与Committed Ground Path
+- **AND** MUST不执行新的Landing SphereCast或Capsule Ground Detection
+
+#### Scenario: 新Observation超过更新死区
+
+- **WHEN** 新Key产生的Accepted Observation与同Event NextSwingLanding距离达到正式更新死区
+- **THEN** Runtime MUST提交新的NextSwingLanding并重建同一Foot事务中的Ground Path
+- **AND** Ground Path重建 MUST消费该新Observation，不得执行第二次Landing查询
+
+#### Scenario: 新Observation低于更新死区
+
+- **WHEN** 新Key产生的Accepted Observation与同Event NextSwingLanding距离小于正式更新死区
+- **THEN** Runtime MUST提交新的Observation Page但保留NextSwingLanding与Committed Ground Path
+- **AND** MUST不因毫米级预测误差执行Capsule Ground Detection
+
+#### Scenario: 下一Swing Event完成
+
+- **WHEN** NextSwingLanding对应的事件成为已完成Swing Event
+- **THEN** Runtime MUST把该Accepted Landing晋级为新的LastLanding
+- **AND** MUST只为新的PreSwing或Swing Event建立新的NextSwingLanding
 
 ### Requirement: Foot Placement必须通过统一状态机生成双脚修正
 

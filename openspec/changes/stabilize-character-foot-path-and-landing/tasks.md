@@ -22,6 +22,9 @@
 - [x] 3.7 扩展正式诊断事实，记录Revision原因、逐阶段Correction、Envelope clearance和Releasing到Swing转换结果
 - [x] 3.8 把采样包迁移为每Frame/Side唯一主行与独立Ground Path几何表，删除每个Contact/Envelope重复整套阶段列的旧展开行
 - [x] 3.9 让停止、队列失败和自动路线统一进入后台Finalizing，排空Writer、封存双表并运行唯一Analyzer/Publisher后再发布结果
+- [x] 3.10 为每脚建立根事务所有的Landing Observation Key、Committed/Pending Page与双页Pool，相同Key复用已提交Accepted或Rejected结果
+- [x] 3.11 让新Observation Key只执行一次canonical SphereCast并删除PreferredSurfaceIdentity选择行为，保持5毫米Acceptance死区不变
+- [x] 3.12 把Observation identity、World revision、cache state、query executed与canonical Raw Landing接入唯一facts/diagnosis链并删除Preferred旧口径
 
 ## 4. 单独接入Step Time与Step Distance
 

@@ -32,6 +32,12 @@ Path逐阶段归因
 
 ## Decision 3: 先定位Path同帧放大，再分离连续目标与Envelope安全
 
+FutureLanding世界事实固定拆成`Raw Landing -> canonical Landing Observation -> Acceptance`。Raw Landing仍从每帧不可变Frame Input重新投影；Observation Key由Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`量化的Component Up、Profile Revision与World Revision组成。SphereCast必须使用Key反量化后的canonical几何，相同Key复用同一Committed Observation Page且不得查询，新Key恰好查询一次并只选择canonical最近合法Surface。Accepted与Rejected查询结果都属于不可变Observation；Pending根事务失败时不得提交新Page。
+
+上一Committed Surface、Frame、Authority Tick、Trajectory Generation、Future Translation Source、Foot State、Residual与查询输出不得进入Observation Key。上一Surface不得传入World Query或改变候选选择；历史只在Observation之后通过`LandingUpdateDistance`决定是否替换NextSwingLanding。1毫米Key量化定义世界查询输入是否相同，5毫米死区定义新Observation是否改变正式Landing与Ground Path，两者不得合并。
+
+当前FootPlacementSurface在World Query Backend生命周期内视为静态，Backend发布固定非零World Revision；Reset、Retarget或Backend重建必须清空每脚Observation Page。移动平台和运行时Surface变更不在本change范围。
+
 Ground Path Input identity只表示查询输入lineage，不单独触发Residual重置。State Machine只有在Event、Path可用性、Landing端点或实际Swing目标变化超过现有`LandingUpdateDistance`时捕获`PreviousOutput - NewTarget`。
 
 Accepted Swing Motion必须携带与同一Ground Path Event匹配的typed Swing Path Landing Reference。Promoted Landing与按当前Step解析的Landing只属于Contact/Anchor准入，不得门控Swing Path可用性或提供Swing Residual的Landing Point。同帧旧Event完成并Promote、下一Swing Event已经Accepted时，State Machine必须同时保留旧Contact Landing和新Swing Path Landing，不得把Path发布为一帧不可用。

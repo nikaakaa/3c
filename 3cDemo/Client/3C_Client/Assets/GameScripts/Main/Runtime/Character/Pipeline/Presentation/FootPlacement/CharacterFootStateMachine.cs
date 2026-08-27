@@ -22,6 +22,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         SwingTargetChanged = 8
     }
 
+    public enum CharacterFootSafetyFloorOwner : byte
+    {
+        None = 0,
+        GroundPathEnvelope = 1,
+        CurrentGroundFloor = 2,
+        ContactAnchor = 3
+    }
+
     internal readonly struct CharacterFootPathContinuityFact
     {
         internal CharacterFootPathContinuityFact(
@@ -75,6 +83,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OutputStagesAvailable = false;
             ReleasingCompletedToSwing = false;
             SafetyFloorAvailable = false;
+            SafetyFloorOwner = CharacterFootSafetyFloorOwner.None;
+            SafetyFloorOwnerSurfaceIdentity = 0;
+            SafetyFloorOwnerPathIdentity = 0;
             CorrectionBeforeSafetyFloor = default;
             SafetyFloorMinimumCorrection = default;
             SafetyFloorOutputCorrection = default;
@@ -92,6 +103,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLockResponse lockResponseBefore,
             CharacterFootLockResponse lockResponseAfter,
             bool safetyFloorAvailable,
+            CharacterFootSafetyFloorOwner safetyFloorOwner,
+            int safetyFloorOwnerSurfaceIdentity,
+            ulong safetyFloorOwnerPathIdentity,
             Vector3 correctionBeforeSafetyFloor,
             Vector3 safetyFloorMinimumCorrection,
             Vector3 safetyFloorOutputCorrection,
@@ -131,6 +145,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 stateBefore == CharacterFootConstraintState.Releasing &&
                 stateAfter == CharacterFootConstraintState.Swing;
             SafetyFloorAvailable = safetyFloorAvailable;
+            SafetyFloorOwner = safetyFloorOwner;
+            SafetyFloorOwnerSurfaceIdentity =
+                safetyFloorOwnerSurfaceIdentity;
+            SafetyFloorOwnerPathIdentity = safetyFloorOwnerPathIdentity;
             CorrectionBeforeSafetyFloor = correctionBeforeSafetyFloor;
             SafetyFloorMinimumCorrection = safetyFloorMinimumCorrection;
             SafetyFloorOutputCorrection = safetyFloorOutputCorrection;
@@ -169,6 +187,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool OutputStagesAvailable { get; }
         internal bool ReleasingCompletedToSwing { get; }
         internal bool SafetyFloorAvailable { get; }
+        internal CharacterFootSafetyFloorOwner SafetyFloorOwner { get; }
+        internal int SafetyFloorOwnerSurfaceIdentity { get; }
+        internal ulong SafetyFloorOwnerPathIdentity { get; }
         internal Vector3 CorrectionBeforeSafetyFloor { get; }
         internal Vector3 SafetyFloorMinimumCorrection { get; }
         internal Vector3 SafetyFloorOutputCorrection { get; }
@@ -184,6 +205,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLockResponse lockResponseBefore,
             CharacterFootLockResponse lockResponseAfter,
             bool safetyFloorAvailable,
+            CharacterFootSafetyFloorOwner safetyFloorOwner,
+            int safetyFloorOwnerSurfaceIdentity,
+            ulong safetyFloorOwnerPathIdentity,
             Vector3 correctionBeforeSafetyFloor,
             Vector3 safetyFloorMinimumCorrection,
             Vector3 safetyFloorOutputCorrection,
@@ -199,6 +223,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lockResponseBefore,
                 lockResponseAfter,
                 safetyFloorAvailable,
+                safetyFloorOwner,
+                safetyFloorOwnerSurfaceIdentity,
+                safetyFloorOwnerPathIdentity,
                 correctionBeforeSafetyFloor,
                 safetyFloorMinimumCorrection,
                 safetyFloorOutputCorrection,
@@ -769,7 +796,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in frame,
                 in swing,
                 out bool safetyFloorAvailable,
-                out Vector3 safetyFloorMinimumCorrection);
+                out Vector3 safetyFloorMinimumCorrection,
+                out CharacterFootSafetyFloorOwner safetyFloorOwner,
+                out int safetyFloorOwnerSurfaceIdentity,
+                out ulong safetyFloorOwnerPathIdentity);
             Vector3 up = frame.ComponentUp.normalized;
             float safetyFloorClampMeters = safetyFloorAvailable
                 ? Mathf.Max(
@@ -796,6 +826,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lockResponseBefore,
                 context.LockResponse,
                 floorResolved && safetyFloorAvailable,
+                floorResolved
+                    ? safetyFloorOwner
+                    : CharacterFootSafetyFloorOwner.None,
+                floorResolved ? safetyFloorOwnerSurfaceIdentity : 0,
+                floorResolved ? safetyFloorOwnerPathIdentity : 0,
                 correctionBeforeSafetyFloor,
                 safetyFloorAvailable
                     ? safetyFloorMinimumCorrection
@@ -1214,15 +1249,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame,
             in CharacterFootSwingMotionResult swing,
             out bool safetyFloorAvailable,
-            out Vector3 floorCorrection)
+            out Vector3 floorCorrection,
+            out CharacterFootSafetyFloorOwner owner,
+            out int ownerSurfaceIdentity,
+            out ulong ownerPathIdentity)
         {
             safetyFloorAvailable = false;
             floorCorrection = default;
+            owner = CharacterFootSafetyFloorOwner.None;
+            ownerSurfaceIdentity = 0;
+            ownerPathIdentity = 0;
             switch (context.ConstraintState)
             {
                 case CharacterFootConstraintState.Swing when swing.Accepted:
                 case CharacterFootConstraintState.UnlockedSupport when swing.Accepted:
                     safetyFloorAvailable = true;
+                    owner = CharacterFootSafetyFloorOwner.GroundPathEnvelope;
+                    ownerPathIdentity = swing.GroundPathInputIdentity;
                     floorCorrection = ResolveSwingGroundFloor(
                         frame.AnimatedFoot,
                         in swing,
@@ -1230,6 +1273,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     break;
                 case CharacterFootConstraintState.Landing:
                 case CharacterFootConstraintState.Locked:
+                    owner = CharacterFootSafetyFloorOwner.ContactAnchor;
+                    ownerSurfaceIdentity = context.ContactSurfaceIdentity;
                     floorCorrection = ResolveContactCorrection(
                         frame.AnimatedFoot,
                         context.ContactAnchor);

@@ -212,9 +212,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             JObject sample = m_Facts["sample"] as JObject;
             var list = targets.ToList();
-            CharacterFootDiagnosisTarget primaryTarget = list.FirstOrDefault(
-                value => value.useAsPrimaryOccurrence &&
-                         value.occurrence != null);
             return new CharacterFootDiagnosisDocument
             {
                 schema = "character-foot-diagnosis-file/3",
@@ -231,7 +228,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 targets = list,
                 summary = new CharacterFootDiagnosisSummary
                 {
-                    primaryResult = BuildPrimaryResult(primaryTarget),
                     targetCount = list.Count,
                     targetWithMatchesCount = list.Count(
                         value => value.matchedEventCount > 0),
@@ -251,28 +247,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             })
                         .ToList()
                 }
-            };
-        }
-
-        static CharacterFootDiagnosisPrimaryResult BuildPrimaryResult(
-            CharacterFootDiagnosisTarget target)
-        {
-            if (target?.occurrence == null)
-                return null;
-            if (!target.measurements.TryGetValue(
-                    target.occurrence.metric,
-                    out CharacterFootDiagnosisDistribution distribution))
-            {
-                throw new InvalidOperationException(
-                    "Foot diagnosis primary occurrence distribution is unavailable.");
-            }
-            return new CharacterFootDiagnosisPrimaryResult
-            {
-                kind = "OccurrenceRateWithAmplitudeDistribution",
-                targetId = target.id,
-                occurrence = target.occurrence,
-                pathStageAnalysis = target.pathStageAnalysis,
-                amplitudeDistribution = distribution
             };
         }
 
@@ -318,10 +292,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     matchedRules = rules,
                     metrics = ReadDoubleMap(value["metrics"] as JObject),
                     evidence = ReadBoolMap(value["evidence"] as JObject),
-                    stablePathSwingPhaseJump =
-                        value["stablePathSwingPhaseJump"]?
-                            .ToObject<
-                                CharacterFootStablePathSwingPhaseJumpAnalysis>(),
                     swingToLandingFloorHandoff =
                         value["swingToLandingFloorHandoff"]?
                             .ToObject<
@@ -330,10 +300,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value["lateApproachLandingRevision"]?
                             .ToObject<
                                 CharacterFootLateApproachLandingRevisionAnalysis>(),
-                    sameGroundPathSwingEnvelopeStep =
-                        value["sameGroundPathSwingEnvelopeStep"]?
-                            .ToObject<
-                                CharacterFootSameGroundPathSwingEnvelopeStepAnalysis>(),
                     swingCurrentFloorCatchup =
                         value["swingCurrentFloorCatchup"]?
                             .ToObject<
@@ -345,7 +311,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     futureLandingCandidateSelection =
                         value["futureLandingCandidateSelection"]?
                             .ToObject<
-                                CharacterFootFutureLandingCandidateSelectionAnalysis>()
+                                CharacterFootFutureLandingCandidateSelectionAnalysis>(),
+                    visibleOutputJump =
+                        value["visibleOutputJump"]?
+                            .ToObject<CharacterFootVisibleOutputJumpAnalysis>()
                 });
             }
             return result;
@@ -436,7 +405,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [Serializable]
     internal sealed class CharacterFootDiagnosisSummary
     {
-        public CharacterFootDiagnosisPrimaryResult primaryResult;
         public int targetCount;
         public int targetWithMatchesCount;
         public int matchedEventCount;
@@ -467,24 +435,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootDiagnosisOccurrenceProfile occurrence;
         public List<CharacterFootDiagnosisOccurrenceProfile>
             supplementalOccurrences;
-        [Newtonsoft.Json.JsonIgnore]
-        internal bool useAsPrimaryOccurrence;
         public CharacterFootPathStageAnalysisCoverage pathStageAnalysis;
         public SortedDictionary<string, CharacterFootDiagnosisDistribution> measurements;
         public SortedDictionary<string, List<CharacterFootDiagnosisCategoryCount>>
             categoricalMeasurements;
         public int representativeEventCount;
         public List<CharacterFootDiagnosisEvidence> representativeEvents;
-    }
-
-    [Serializable]
-    internal sealed class CharacterFootDiagnosisPrimaryResult
-    {
-        public string kind;
-        public string targetId;
-        public CharacterFootDiagnosisOccurrenceProfile occurrence;
-        public CharacterFootPathStageAnalysisCoverage pathStageAnalysis;
-        public CharacterFootDiagnosisDistribution amplitudeDistribution;
     }
 
     [Serializable]
@@ -525,20 +481,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public SortedDictionary<string, double> metrics;
         public SortedDictionary<string, bool> evidence;
         public CharacterFootPathStageAnalysis pathStageAnalysis;
-        public CharacterFootStablePathSwingPhaseJumpAnalysis
-            stablePathSwingPhaseJump;
         public CharacterFootSwingToLandingFloorHandoffAnalysis
             swingToLandingFloorHandoff;
         public CharacterFootLateApproachLandingRevisionAnalysis
             lateApproachLandingRevision;
-        public CharacterFootSameGroundPathSwingEnvelopeStepAnalysis
-            sameGroundPathSwingEnvelopeStep;
         public CharacterFootSwingCurrentFloorCatchupAnalysis
             swingCurrentFloorCatchup;
         public CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
             swingActualFootEnvelopeCounterfactual;
         public CharacterFootFutureLandingCandidateSelectionAnalysis
             futureLandingCandidateSelection;
+        public CharacterFootVisibleOutputJumpAnalysis visibleOutputJump;
     }
 
     [Serializable]

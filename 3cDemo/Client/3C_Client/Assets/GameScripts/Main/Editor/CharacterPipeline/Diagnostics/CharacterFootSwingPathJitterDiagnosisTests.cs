@@ -6,72 +6,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public sealed class CharacterFootSwingPathJitterDiagnosisTests
     {
         [Test]
-        public void UnanchoredCorrectionStepMatchesSwingPathDiagnosis()
-        {
-            var facts = new JObject
-            {
-                ["events"] = new JArray(Event(10, 12, false))
-            };
-            CharacterFootDiagnosisDocument document =
-                new CharacterFootSwingPathJitterDiagnosis().Build(
-                    new CharacterFootDiagnosisContext(facts));
-            Assert.That(document.diagnosticId, Is.EqualTo("swing-path-jitter"));
-            Assert.That(document.targets[0].matchedEventCount, Is.EqualTo(1));
-            Assert.That(document.schema, Is.EqualTo("character-foot-diagnosis-file/3"));
-            CharacterFootDiagnosisOccurrenceProfile occurrence =
-                document.summary.primaryResult.occurrence;
-            Assert.That(occurrence.available, Is.True);
-            Assert.That(occurrence.eligibleEventCount, Is.EqualTo(1));
-            Assert.That(occurrence.rates.Count, Is.EqualTo(4));
-            Assert.That(occurrence.rates[0].threshold, Is.EqualTo(0.01d));
-            Assert.That(occurrence.rates[0].matchedEventCount, Is.EqualTo(1));
-            Assert.That(occurrence.rates[0].matchedEventRate, Is.EqualTo(1d));
-            Assert.That(occurrence.rates[1].threshold, Is.EqualTo(0.02d));
-            Assert.That(occurrence.rates[1].matchedEventCount, Is.EqualTo(1));
-            Assert.That(occurrence.rates[2].matchedEventCount, Is.EqualTo(0));
-            Assert.That(occurrence.rates[3].matchedEventCount, Is.EqualTo(0));
-            Assert.That(
-                document.summary.primaryResult.amplitudeDistribution.p90,
-                Is.EqualTo(0.03d));
-            CharacterFootPathStageAnalysisCoverage stageCoverage =
-                document.summary.primaryResult.pathStageAnalysis;
-            Assert.That(stageCoverage.available, Is.False);
-            Assert.That(stageCoverage.eligibleEventCount, Is.EqualTo(1));
-            Assert.That(stageCoverage.availableEventCount, Is.EqualTo(0));
-            Assert.That(stageCoverage.unavailableEventCount, Is.EqualTo(1));
-            Assert.That(
-                stageCoverage.missingStageCounts[
-                    CharacterFootPathStageNames.RawLandingToPathTarget],
-                Is.EqualTo(1));
-            Assert.That(
-                document.targets[0].representativeEvents[0]
-                    .pathStageAnalysis.available,
-                Is.False);
-        }
-
-        [Test]
-        public void OverlappingPeakIsCountedOnceAndAnchoredEventIsExcluded()
+        public void VisibleOutputOffsetStepDrivesOccurrence()
         {
             var facts = new JObject
             {
                 ["events"] = new JArray(
-                    Event(10, 12, false),
-                    Event(11, 12, false),
-                    Event(20, 22, true))
+                    Event("StableSwingOutputJump", 10, 0.03d))
             };
             CharacterFootDiagnosisDocument document =
                 new CharacterFootSwingPathJitterDiagnosis().Build(
                     new CharacterFootDiagnosisContext(facts));
             CharacterFootDiagnosisTarget target = document.targets[0];
+            Assert.That(target.id, Is.EqualTo(
+                "stable-swing-output-jump"));
             Assert.That(target.eligibleEventCount, Is.EqualTo(1));
             Assert.That(target.matchedEventCount, Is.EqualTo(1));
+            Assert.That(target.occurrence.rates.Count, Is.EqualTo(4));
             Assert.That(
-                target.measurements["semanticPathChangeCount"].maximum,
-                Is.EqualTo(2d));
+                target.occurrence.rates[1].matchedEventCount,
+                Is.EqualTo(1));
+            Assert.That(
+                target.measurements["ObservedSwingTargetDelta"].maximum,
+                Is.EqualTo(0.2d));
         }
 
         [Test]
-        public void NoPathChangeEventsPublishesUnavailableOccurrence()
+        public void OutputCategoriesRemainIndependent()
+        {
+            var facts = new JObject
+            {
+                ["events"] = new JArray(
+                    Event("StableSwingOutputJump", 10, 0.015d),
+                    Event("PathRevisionOutputJump", 11, 0.08d),
+                    Event("SwingToLandingOutputJump", 12, 0.025d))
+            };
+            CharacterFootDiagnosisDocument document =
+                new CharacterFootSwingPathJitterDiagnosis().Build(
+                    new CharacterFootDiagnosisContext(facts));
+            Assert.That(document.targets.Count, Is.EqualTo(3));
+            Assert.That(document.targets[0].eligibleEventCount, Is.EqualTo(1));
+            Assert.That(document.targets[1].eligibleEventCount, Is.EqualTo(1));
+            Assert.That(document.targets[2].eligibleEventCount, Is.EqualTo(1));
+            Assert.That(document.targets[0].matchedEventCount, Is.EqualTo(0));
+            Assert.That(document.targets[1].matchedEventCount, Is.EqualTo(1));
+            Assert.That(document.targets[2].matchedEventCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void EmptyCategoryPublishesUnavailableOccurrence()
         {
             var facts = new JObject
             {
@@ -80,44 +62,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisDocument document =
                 new CharacterFootSwingPathJitterDiagnosis().Build(
                     new CharacterFootDiagnosisContext(facts));
-            CharacterFootDiagnosisTarget target = document.targets[0];
-            CharacterFootDiagnosisOccurrenceProfile occurrence =
-                document.summary.primaryResult.occurrence;
-            Assert.That(target.eligibleEventCount, Is.EqualTo(0));
-            Assert.That(target.matchedEventRateAvailable, Is.False);
-            Assert.That(target.matchedEventRate, Is.Null);
-            Assert.That(occurrence.available, Is.False);
-            Assert.That(occurrence.eligibleEventCount, Is.EqualTo(0));
-            Assert.That(occurrence.configuredThresholds.Count, Is.EqualTo(4));
-            Assert.That(occurrence.rates, Is.Empty);
-            Assert.That(
-                document.summary.primaryResult.amplitudeDistribution.available,
-                Is.False);
-            Assert.That(
-                document.summary.primaryResult.pathStageAnalysis
-                    .eligibleEventCount,
-                Is.EqualTo(0));
+            foreach (CharacterFootDiagnosisTarget target in document.targets)
+            {
+                Assert.That(target.eligibleEventCount, Is.EqualTo(0));
+                Assert.That(target.matchedEventRateAvailable, Is.False);
+                Assert.That(target.matchedEventRate, Is.Null);
+                Assert.That(target.occurrence.available, Is.False);
+                Assert.That(target.occurrence.rates, Is.Empty);
+            }
         }
 
-        static JObject Event(int startFrame, int peakFrame, bool anchored) =>
+        static JObject Event(string kind, int frame, double outputStep) =>
             new JObject
             {
-                ["kind"] = "PathChange",
+                ["kind"] = kind,
                 ["side"] = "Left",
-                ["startFrame"] = startFrame,
-                ["endFrame"] = startFrame + 1,
-                ["peakFrame"] = peakFrame,
+                ["startFrame"] = frame - 1,
+                ["endFrame"] = frame,
+                ["peakFrame"] = frame,
                 ["metrics"] = new JObject
                 {
-                    ["correctionStepMaximumMeters"] = 0.03d,
-                    ["nextLandingEndpointDeltaMeters"] = 0.03d,
-                    ["correctionExcursionMeters"] = 0.03d,
-                    ["correctionJerkMetersPerSecondCubed"] = 10d
+                    ["FootPlacementOutputOffsetStep"] = outputStep,
+                    ["FootPlacementOutputOffsetSpeed"] = outputStep / 0.02d,
+                    ["FootPlacementOutputOffsetAcceleration"] = 0d,
+                    ["FootPlacementOutputOffsetJerk"] = 0d,
+                    ["ObservedSwingTargetDelta"] = 0.2d
                 },
                 ["evidence"] = new JObject
                 {
-                    ["unanchoredSwingEligible"] = true,
-                    ["anchorAvailable"] = anchored
+                    ["accelerationAvailable"] = false,
+                    ["jerkAvailable"] = false
+                },
+                ["visibleOutputJump"] = new JObject
+                {
+                    ["primaryProbe"] = "Ankle",
+                    ["safetyFloorOwner"] = "GroundPathEnvelope",
+                    ["pathRevisionReason"] = "None"
                 }
             };
     }

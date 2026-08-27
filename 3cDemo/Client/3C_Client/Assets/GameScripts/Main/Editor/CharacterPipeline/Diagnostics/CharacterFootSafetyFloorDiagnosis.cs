@@ -325,7 +325,115 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             })
                         .ToList()
                 };
-            return context.Document(DiagnosticId, target);
+            List<JObject> counterfactualEvents = context.Events(
+                "SwingActualFootEnvelopeCounterfactual");
+            List<JObject> currentFloorCounterfactualEvents =
+                counterfactualEvents.FindAll(value =>
+                    CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "currentFloorComparisonAvailable"));
+            List<JObject> unambiguousCounterfactualEvents =
+                counterfactualEvents.FindAll(value =>
+                    CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "actualEnvelopeCurrentFloorComparisonAvailable") &&
+                    !CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "ambiguousEnvelopeAtActualFootDistance"));
+            Func<JObject, List<string>> matchCounterfactual = value =>
+                CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "currentFloorCatchupAbove1cm")
+                    ? new List<string>
+                    {
+                        "currentFloorCatchupMeters>0.01"
+                    }
+                    : new List<string>();
+            CharacterFootDiagnosisTarget counterfactual = context.Target(
+                "swing-actual-foot-envelope-counterfactual",
+                "真实脚水平距离处的GroundPath Envelope候选是否唯一，以及非歧义候选能否在CurrentSwingFloor硬Clamp前覆盖地面",
+                new[] { "SwingActualFootEnvelopeCounterfactual" },
+                new[] { "currentFloorCatchupMeters>0.01" },
+                counterfactualEvents,
+                matchCounterfactual,
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "CurrentFloorCatchup"),
+                "ActualFootHorizontalDistance",
+                "BaselineHorizontalDistance",
+                "PhaseEnvelopeHorizontalDistance",
+                "ActualMinusPhaseEnvelopeHorizontalDistance",
+                "ActualFootClosestPathParameter",
+                "ActualFootDistanceAlongAxis",
+                "ActualFootCrossTrackDistance",
+                "GroundPathCorridorRadius",
+                "ActualEnvelopeCandidateCount",
+                "ActualEnvelopeHeightSpan",
+                "PhaseSampleHeightAlongUp",
+                "BuilderSwingTargetAlongUp",
+                "StateOutputBeforeFloorAlongUp",
+                "CurrentSwingFloorMinimumAlongUp",
+                "FinalOutputAlongUp",
+                "CurrentFloorCatchup",
+                "ActualProgressEnvelopeMinimumCorrection",
+                "ActualProgressEnvelopeAdvanceAboveBuilderTarget",
+                "ActualProgressEnvelopeRemainingBelowCurrentFloor",
+                "ActualEnvelopeCoversCurrentFloor");
+            counterfactual.occurrence = context.Occurrence(
+                "ContinuousAcceptedUnanchoredSwingPairWithCurrentFloor",
+                "CurrentFloorCatchup",
+                "Meters",
+                currentFloorCounterfactualEvents,
+                PrimaryThresholdMeters,
+                s_Thresholds);
+            counterfactual.supplementalOccurrences =
+                new List<CharacterFootDiagnosisOccurrenceProfile>
+                {
+                    context.Occurrence(
+                        "UnambiguousActualFootEnvelopePairWithCurrentFloor",
+                        "ActualEnvelopeCoversCurrentFloor",
+                        "Boolean",
+                        unambiguousCounterfactualEvents,
+                        0.5d,
+                        0.5d)
+                };
+            counterfactual.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["CounterfactualState"] = counterfactualEvents
+                        .GroupBy(
+                            value => value[
+                                    "swingActualFootEnvelopeCounterfactual"]?
+                                ["counterfactualState"]?.Value<string>() ??
+                                "Unspecified",
+                            StringComparer.Ordinal)
+                        .OrderBy(
+                            value => value.Key,
+                            StringComparer.Ordinal)
+                        .Select(value =>
+                            new CharacterFootDiagnosisCategoryCount
+                            {
+                                value = value.Key,
+                                count = value.Count()
+                            })
+                        .ToList()
+                };
+            counterfactual.representativeEvents = context.Representatives(
+                counterfactualEvents,
+                matchCounterfactual,
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "CurrentFloorCatchup"),
+                16);
+            counterfactual.representativeEventCount =
+                counterfactual.representativeEvents.Count;
+            return context.Document(
+                DiagnosticId,
+                target,
+                counterfactual);
         }
     }
 
@@ -364,6 +472,56 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double physicalSoleStepMeters;
         public double physicalSoleAlongUpDeltaMeters;
         public string classification;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
+    {
+        public int previousFrame;
+        public int frame;
+        public string side;
+        public string landingEventIdentity;
+        public string sourceIdentity;
+        public int sourceCycle;
+        public string groundPathInputIdentity;
+        public CharacterFootVectorFact componentUp;
+        public double actualFootHorizontalDistanceMeters;
+        public double baselineHorizontalDistanceMeters;
+        public double phaseEnvelopeHorizontalDistanceMeters;
+        public double actualMinusPhaseEnvelopeHorizontalDistanceMeters;
+        public string actualFootAxisRegion;
+        public double actualFootClosestPathParameter;
+        public double actualFootDistanceAlongAxisMeters;
+        public double actualFootCrossTrackDistanceMeters;
+        public double groundPathCorridorRadiusMeters;
+        public bool actualFootWithinGroundPathCorridor;
+        public string intersectionState;
+        public string counterfactualState;
+        public int candidateCount;
+        public double minimumCandidateHeightAlongUpMeters;
+        public double maximumCandidateHeightAlongUpMeters;
+        public double candidateHeightSpanMeters;
+        public bool hasVerticalEdge;
+        public bool hasMultipleHeights;
+        public bool ambiguousEnvelopeAtActualFootDistance;
+        public double phaseSampleHeightAlongUpMeters;
+        public bool builderSwingTargetAvailable;
+        public CharacterFootVectorFact builderSwingTarget;
+        public double builderSwingTargetAlongUpMeters;
+        public bool stateOutputBeforeFloorAvailable;
+        public CharacterFootVectorFact stateOutputBeforeFloor;
+        public double stateOutputBeforeFloorAlongUpMeters;
+        public bool currentFloorComparisonAvailable;
+        public CharacterFootVectorFact currentSwingFloorMinimum;
+        public double currentSwingFloorMinimumAlongUpMeters;
+        public CharacterFootVectorFact finalOutput;
+        public double finalOutputAlongUpMeters;
+        public bool actualProgressEnvelopeCorrectionAvailable;
+        public double actualProgressEnvelopeMinimumCorrectionMeters;
+        public double actualProgressEnvelopeAdvanceAboveBuilderTargetMeters;
+        public double actualProgressEnvelopeRemainingBelowCurrentFloorMeters;
+        public bool actualProgressEnvelopeCoversCurrentFloor;
+        public double currentFloorCatchupMeters;
     }
 
     [Serializable]

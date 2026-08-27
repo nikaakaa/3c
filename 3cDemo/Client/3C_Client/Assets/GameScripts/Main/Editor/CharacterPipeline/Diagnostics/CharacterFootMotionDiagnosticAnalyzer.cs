@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/17";
+        const string Schema = "character-foot-motion-facts/18";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 17;
+        const int AnalyzerVersion = 18;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 672;
         const float PositionNoiseFloor = 0.001f;
@@ -134,6 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
                 $"sameGroundPathSwingEnvelopeSteps={document.coverage.sameGroundPathSwingEnvelopeStepCount} " +
                 $"swingCurrentFloorCatchups={document.coverage.swingCurrentFloorCatchupCount} " +
+                $"swingActualFootEnvelopeCounterfactuals={document.coverage.swingActualFootEnvelopeCounterfactualCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
                 $"safetyFloorEvents={document.coverage.safetyFloorEventCount} " +
@@ -179,6 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeLateApproachLandingRevisions(frames, events);
             AnalyzeSameGroundPathSwingEnvelopeSteps(frames, events);
             AnalyzeSwingCurrentFloorCatchups(frames, events);
+            AnalyzeSwingActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeStablePathSwingPhaseJumps(frames, events);
             AnalyzePathChanges(frames, events);
             AnalyzePathContinuity(frames, events);
@@ -782,26 +784,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 previous.BuilderSwingTargetCorrection),
                         builderSwingTarget = CharacterFootVectorFact.From(
                             current.BuilderSwingTargetCorrection),
-                        previousHorizontalProgressState =
-                            previous.SwingPathHorizontalProgressState,
-                        horizontalProgressState =
-                            current.SwingPathHorizontalProgressState,
-                        previousActualFootHorizontalProgressMeters =
-                            previous.ActualFootHorizontalProgress,
-                        actualFootHorizontalProgressMeters =
-                            current.ActualFootHorizontalProgress,
-                        previousBaselineHorizontalProgressMeters =
-                            previous.BaselineHorizontalProgress,
-                        baselineHorizontalProgressMeters =
-                            current.BaselineHorizontalProgress,
-                        previousEnvelopeHorizontalProgressMeters =
-                            previous.EnvelopeHorizontalProgress,
-                        envelopeHorizontalProgressMeters =
-                            current.EnvelopeHorizontalProgress,
-                        previousActualMinusEnvelopeProgressMeters =
-                            previous.ActualMinusEnvelopeProgress,
-                        actualMinusEnvelopeProgressMeters =
-                            current.ActualMinusEnvelopeProgress,
+                        previousHorizontalAxisState =
+                            previous.SwingPathHorizontalAxisState,
+                        horizontalAxisState =
+                            current.SwingPathHorizontalAxisState,
+                        previousActualFootHorizontalDistanceMeters =
+                            previous.ActualFootHorizontalDistance,
+                        actualFootHorizontalDistanceMeters =
+                            current.ActualFootHorizontalDistance,
+                        previousBaselineHorizontalDistanceMeters =
+                            previous.BaselineHorizontalDistance,
+                        baselineHorizontalDistanceMeters =
+                            current.BaselineHorizontalDistance,
+                        previousEnvelopeHorizontalDistanceMeters =
+                            previous.EnvelopeHorizontalDistance,
+                        envelopeHorizontalDistanceMeters =
+                            current.EnvelopeHorizontalDistance,
+                        previousActualMinusEnvelopeHorizontalDistanceMeters =
+                            previous.ActualMinusEnvelopeHorizontalDistance,
+                        actualMinusEnvelopeHorizontalDistanceMeters =
+                            current.ActualMinusEnvelopeHorizontalDistance,
                         desiredCorrectionAlongUpDeltaMeters =
                             desiredCorrectionDelta,
                         finalCorrectionAlongUpDeltaMeters =
@@ -854,18 +856,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         builderSelectedCorrectionDelta,
                     ["BuilderSelectedCorrectionStep"] =
                         Math.Abs(builderSelectedCorrectionDelta),
-                    ["ActualFootHorizontalProgressDelta"] =
-                        current.ActualFootHorizontalProgress -
-                        previous.ActualFootHorizontalProgress,
-                    ["BaselineHorizontalProgressDelta"] =
-                        current.BaselineHorizontalProgress -
-                        previous.BaselineHorizontalProgress,
-                    ["EnvelopeHorizontalProgressDelta"] =
-                        current.EnvelopeHorizontalProgress -
-                        previous.EnvelopeHorizontalProgress,
-                    ["ActualMinusEnvelopeProgressDelta"] =
-                        current.ActualMinusEnvelopeProgress -
-                        previous.ActualMinusEnvelopeProgress,
+                    ["ActualFootHorizontalDistanceDelta"] =
+                        current.ActualFootHorizontalDistance -
+                        previous.ActualFootHorizontalDistance,
+                    ["BaselineHorizontalDistanceDelta"] =
+                        current.BaselineHorizontalDistance -
+                        previous.BaselineHorizontalDistance,
+                    ["EnvelopeHorizontalDistanceDelta"] =
+                        current.EnvelopeHorizontalDistance -
+                        previous.EnvelopeHorizontalDistance,
+                    ["ActualMinusEnvelopeHorizontalDistanceDelta"] =
+                        current.ActualMinusEnvelopeHorizontalDistance -
+                        previous.ActualMinusEnvelopeHorizontalDistance,
                     ["DesiredCorrectionAlongUpDelta"] =
                         desiredCorrectionDelta,
                     ["DesiredCorrectionAlongUpStep"] =
@@ -1142,6 +1144,281 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     metrics,
                     evidence,
                     swingCurrentFloorCatchup: detail));
+            }
+        }
+
+        static void AnalyzeSwingActualFootEnvelopeCounterfactuals(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(previous, current) ||
+                    previous.ConstraintState != "Swing" ||
+                    current.ConstraintState != "Swing" ||
+                    previous.FootMotionState != "Accepted" ||
+                    current.FootMotionState != "Accepted" ||
+                    previous.HasAnchor || current.HasAnchor ||
+                    current.FootMotionEventIdentity == 0 ||
+                    previous.FootMotionEventIdentity !=
+                    current.FootMotionEventIdentity ||
+                    previous.SourceIdentity != current.SourceIdentity ||
+                    previous.SourceCycle != current.SourceCycle ||
+                    previous.GroundPathState != "Accepted" ||
+                    current.GroundPathState != "Accepted" ||
+                    previous.GroundPathInputIdentity == 0 ||
+                    current.GroundPathInputIdentity == 0 ||
+                    current.ComponentUp.sqrMagnitude <=
+                    TimeEpsilon * TimeEpsilon)
+                {
+                    continue;
+                }
+                Vector3 up = current.ComponentUp.normalized;
+                bool currentFloorComparisonAvailable =
+                    current.OutputStagesAvailable &&
+                    current.SafetyFloorAvailable &&
+                    current.CurrentFloorAccepted;
+                double builderTargetAlongUp =
+                    current.BuilderSwingTargetAvailable
+                        ? Vector3.Dot(
+                            current.BuilderSwingTargetCorrection,
+                            up)
+                        : 0d;
+                double stateOutputBeforeFloorAlongUp =
+                    current.OutputStagesAvailable
+                        ? Vector3.Dot(
+                            current.CorrectionBeforeSafetyFloor,
+                            up)
+                        : 0d;
+                double currentFloorMinimumAlongUp =
+                    currentFloorComparisonAvailable
+                        ? Vector3.Dot(
+                            current.SafetyFloorMinimumCorrection,
+                            up)
+                        : 0d;
+                double finalOutputAlongUp =
+                    current.OutputStagesAvailable
+                        ? Vector3.Dot(
+                            current.FinalEffectiveCorrection,
+                            up)
+                        : 0d;
+                double currentFloorCatchupMeters =
+                    currentFloorComparisonAvailable
+                        ? Math.Max(
+                            0d,
+                            currentFloorMinimumAlongUp -
+                            stateOutputBeforeFloorAlongUp)
+                        : 0d;
+                var detail =
+                    new CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
+                    {
+                        previousFrame = previous.Frame,
+                        frame = current.Frame,
+                        side = current.Side,
+                        landingEventIdentity =
+                            current.FootMotionEventIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        sourceIdentity = current.SourceIdentity,
+                        sourceCycle = current.SourceCycle,
+                        groundPathInputIdentity =
+                            current.GroundPathInputIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        componentUp = CharacterFootVectorFact.From(up),
+                        actualFootHorizontalDistanceMeters =
+                            current.ActualFootHorizontalDistance,
+                        baselineHorizontalDistanceMeters =
+                            current.BaselineHorizontalDistance,
+                        phaseEnvelopeHorizontalDistanceMeters =
+                            current.EnvelopeHorizontalDistance,
+                        actualMinusPhaseEnvelopeHorizontalDistanceMeters =
+                            current.ActualMinusEnvelopeHorizontalDistance,
+                        actualFootAxisRegion =
+                            current.ActualFootAxisRegion,
+                        actualFootClosestPathParameter =
+                            current.ActualFootClosestPathParameter,
+                        actualFootDistanceAlongAxisMeters =
+                            current.ActualFootDistanceAlongAxis,
+                        actualFootCrossTrackDistanceMeters =
+                            current.ActualFootCrossTrackDistance,
+                        groundPathCorridorRadiusMeters =
+                            current.ActualFootGroundPathCorridorRadius,
+                        actualFootWithinGroundPathCorridor =
+                            current.ActualFootWithinGroundPathCorridor,
+                        intersectionState =
+                            current.ActualEnvelopeIntersectionState,
+                        counterfactualState =
+                            current.ActualEnvelopeCounterfactualState,
+                        candidateCount =
+                            current.ActualEnvelopeCandidateCount,
+                        minimumCandidateHeightAlongUpMeters =
+                            current.ActualEnvelopeMinimumHeightAlongUp,
+                        maximumCandidateHeightAlongUpMeters =
+                            current.ActualEnvelopeMaximumHeightAlongUp,
+                        candidateHeightSpanMeters =
+                            current.ActualEnvelopeHeightSpan,
+                        hasVerticalEdge =
+                            current.ActualEnvelopeHasVerticalEdge,
+                        hasMultipleHeights =
+                            current.ActualEnvelopeHasMultipleHeights,
+                        ambiguousEnvelopeAtActualFootDistance =
+                            current.ActualEnvelopeAmbiguous,
+                        phaseSampleHeightAlongUpMeters =
+                            current.SwingEnvelopeSampleAlongUp,
+                        builderSwingTargetAvailable =
+                            current.BuilderSwingTargetAvailable,
+                        builderSwingTarget = CharacterFootVectorFact.From(
+                            current.BuilderSwingTargetCorrection),
+                        builderSwingTargetAlongUpMeters =
+                            builderTargetAlongUp,
+                        stateOutputBeforeFloorAvailable =
+                            current.OutputStagesAvailable,
+                        stateOutputBeforeFloor =
+                            CharacterFootVectorFact.From(
+                                current.CorrectionBeforeSafetyFloor),
+                        stateOutputBeforeFloorAlongUpMeters =
+                            stateOutputBeforeFloorAlongUp,
+                        currentFloorComparisonAvailable =
+                            currentFloorComparisonAvailable,
+                        currentSwingFloorMinimum =
+                            CharacterFootVectorFact.From(
+                                current.SafetyFloorMinimumCorrection),
+                        currentSwingFloorMinimumAlongUpMeters =
+                            currentFloorMinimumAlongUp,
+                        finalOutput = CharacterFootVectorFact.From(
+                            current.FinalEffectiveCorrection),
+                        finalOutputAlongUpMeters = finalOutputAlongUp,
+                        actualProgressEnvelopeCorrectionAvailable =
+                            current.ActualProgressEnvelopeCorrectionAvailable,
+                        actualProgressEnvelopeMinimumCorrectionMeters =
+                            current.ActualProgressEnvelopeMinimumCorrection,
+                        actualProgressEnvelopeAdvanceAboveBuilderTargetMeters =
+                            current
+                                .ActualProgressEnvelopeAdvanceAboveBuilderTarget,
+                        actualProgressEnvelopeRemainingBelowCurrentFloorMeters =
+                            current
+                                .ActualProgressEnvelopeRemainingBelowCurrentFloor,
+                        actualProgressEnvelopeCoversCurrentFloor =
+                            current.ActualProgressEnvelopeCoversCurrentFloor,
+                        currentFloorCatchupMeters =
+                            currentFloorCatchupMeters
+                    };
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["ActualFootHorizontalDistance"] =
+                        current.ActualFootHorizontalDistance,
+                    ["BaselineHorizontalDistance"] =
+                        current.BaselineHorizontalDistance,
+                    ["PhaseEnvelopeHorizontalDistance"] =
+                        current.EnvelopeHorizontalDistance,
+                    ["ActualMinusPhaseEnvelopeHorizontalDistance"] =
+                        current.ActualMinusEnvelopeHorizontalDistance,
+                    ["ActualFootClosestPathParameter"] =
+                        current.ActualFootClosestPathParameter,
+                    ["ActualFootDistanceAlongAxis"] =
+                        current.ActualFootDistanceAlongAxis,
+                    ["ActualFootCrossTrackDistance"] =
+                        current.ActualFootCrossTrackDistance,
+                    ["GroundPathCorridorRadius"] =
+                        current.ActualFootGroundPathCorridorRadius,
+                    ["ActualEnvelopeCandidateCount"] =
+                        current.ActualEnvelopeCandidateCount,
+                    ["ActualEnvelopeHeightSpan"] =
+                        current.ActualEnvelopeHeightSpan,
+                    ["PhaseSampleHeightAlongUp"] =
+                        current.SwingEnvelopeSampleAlongUp,
+                    ["BuilderSwingTargetAlongUp"] =
+                        builderTargetAlongUp,
+                    ["StateOutputBeforeFloorAlongUp"] =
+                        stateOutputBeforeFloorAlongUp,
+                    ["FinalOutputAlongUp"] = finalOutputAlongUp
+                };
+                if (current.ActualProgressEnvelopeCorrectionAvailable)
+                {
+                    metrics["ActualProgressEnvelopeMinimumCorrection"] =
+                        current.ActualProgressEnvelopeMinimumCorrection;
+                    metrics[
+                            "ActualProgressEnvelopeAdvanceAboveBuilderTarget"] =
+                        current
+                            .ActualProgressEnvelopeAdvanceAboveBuilderTarget;
+                }
+                if (currentFloorComparisonAvailable)
+                {
+                    metrics["CurrentSwingFloorMinimumAlongUp"] =
+                        currentFloorMinimumAlongUp;
+                    metrics["CurrentFloorCatchup"] =
+                        currentFloorCatchupMeters;
+                }
+                if (current
+                    .ActualProgressEnvelopeCurrentFloorComparisonAvailable)
+                {
+                    metrics[
+                            "ActualProgressEnvelopeRemainingBelowCurrentFloor"] =
+                        current
+                            .ActualProgressEnvelopeRemainingBelowCurrentFloor;
+                    metrics["ActualEnvelopeCoversCurrentFloor"] =
+                        current.ActualProgressEnvelopeCoversCurrentFloor
+                            ? 1d
+                            : 0d;
+                }
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["continuousAcceptedUnanchoredSwingPair"] = true,
+                    ["sameLandingEvent"] = true,
+                    ["sameFormalSourceCycle"] = true,
+                    ["groundPathAvailable"] = true,
+                    ["actualFootWithinGroundPathCorridor"] =
+                        current.ActualFootWithinGroundPathCorridor,
+                    ["outsideGroundPathCorridor"] =
+                        current.ActualEnvelopeCounterfactualState ==
+                        "OutsideGroundPathCorridor",
+                    ["noIntersection"] =
+                        current.ActualEnvelopeCounterfactualState ==
+                        "NoIntersection",
+                    ["uniqueInCorridor"] =
+                        current.ActualEnvelopeCounterfactualState ==
+                        "UniqueInCorridor",
+                    ["ambiguousInCorridor"] =
+                        current.ActualEnvelopeCounterfactualState ==
+                        "AmbiguousInCorridor",
+                    ["uniqueActualEnvelopeCandidate"] =
+                        current.ActualEnvelopeIntersectionState == "Unique",
+                    ["ambiguousEnvelopeAtActualFootDistance"] =
+                        current.ActualEnvelopeAmbiguous,
+                    ["actualProgressEnvelopeCorrectionAvailable"] =
+                        current.ActualProgressEnvelopeCorrectionAvailable,
+                    ["currentFloorComparisonAvailable"] =
+                        currentFloorComparisonAvailable,
+                    ["actualEnvelopeCurrentFloorComparisonAvailable"] =
+                        current
+                            .ActualProgressEnvelopeCurrentFloorComparisonAvailable,
+                    ["actualEnvelopeCoversCurrentFloor"] =
+                        current.ActualProgressEnvelopeCoversCurrentFloor,
+                    ["currentFloorCatchupAbove1cm"] =
+                        currentFloorComparisonAvailable &&
+                        currentFloorCatchupMeters > 0.01d,
+                    ["ambiguousProducedNoCorrectionConclusion"] =
+                        !current.ActualEnvelopeAmbiguous ||
+                        (!current.ActualProgressEnvelopeCorrectionAvailable &&
+                         !current
+                             .ActualProgressEnvelopeCurrentFloorComparisonAvailable)
+                };
+                events.Add(new EventFact(
+                    "SwingActualFootEnvelopeCounterfactual",
+                    current.Side,
+                    previous.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.FootMotionEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence,
+                    swingActualFootEnvelopeCounterfactual: detail));
             }
         }
 
@@ -3244,6 +3521,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingCurrentFloorCatchupCount = events.Count(
                         value => value.kind ==
                                  "SwingCurrentFloorCatchup"),
+                    swingActualFootEnvelopeCounterfactualCount = events.Count(
+                        value => value.kind ==
+                                 "SwingActualFootEnvelopeCounterfactual"),
                     supportChangeCount = events.Count(value => value.kind == "SupportChange"),
                     contactPlanePenetrationEventCount = events.Count(
                         value => value.kind == "ContactPlanePenetration"),
@@ -3688,6 +3968,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 GroundEnvelopeVertexCount =
                     Int("GroundEnvelopeVertexCount"),
                 ComponentUp = Vector("GroundPathComponentUp"),
+                GroundPathRadius = Float("GroundPathRadius"),
                 CurrentFloorState = Cell("CurrentFloorState"),
                 CurrentFloorRejectReason =
                     Cell("CurrentFloorRejectReason"),
@@ -3746,16 +4027,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionBuilderSwingTargetAvailable") != 0,
                 BuilderSwingTargetCorrection =
                     Vector("FootMotionBuilderSwingTargetCorrection"),
-                SwingPathHorizontalProgressState =
-                    Cell("FootMotionSwingPathHorizontalProgressState"),
-                ActualFootHorizontalProgress =
-                    Float("FootMotionActualFootHorizontalProgressMeters"),
-                BaselineHorizontalProgress =
-                    Float("FootMotionBaselineHorizontalProgressMeters"),
-                EnvelopeHorizontalProgress =
-                    Float("FootMotionEnvelopeHorizontalProgressMeters"),
-                ActualMinusEnvelopeProgress =
-                    Float("FootMotionActualMinusEnvelopeProgressMeters"),
+                SwingPathHorizontalAxisState =
+                    Cell("FootMotionSwingPathHorizontalAxisState"),
+                ActualFootHorizontalDistance =
+                    Float("FootMotionActualFootHorizontalDistanceMeters"),
+                BaselineHorizontalDistance =
+                    Float("FootMotionBaselineHorizontalDistanceMeters"),
+                EnvelopeHorizontalDistance =
+                    Float("FootMotionEnvelopeHorizontalDistanceMeters"),
+                ActualMinusEnvelopeHorizontalDistance =
+                    Float("FootMotionActualMinusEnvelopeHorizontalDistanceMeters"),
+                ActualFootAxisRegion =
+                    Cell("FootMotionActualFootAxisRegion"),
+                ActualFootClosestPathParameter =
+                    Float("FootMotionActualFootClosestPathParameter"),
+                ActualFootDistanceAlongAxis =
+                    Float("FootMotionActualFootDistanceAlongAxisMeters"),
+                ActualFootCrossTrackDistance =
+                    Float("FootMotionActualFootCrossTrackDistanceMeters"),
+                ActualFootGroundPathCorridorRadius =
+                    Float("FootMotionActualFootGroundPathCorridorRadiusMeters"),
+                ActualFootWithinGroundPathCorridor =
+                    Int("FootMotionActualFootWithinGroundPathCorridor") != 0,
+                ActualEnvelopeIntersectionState =
+                    Cell("FootMotionActualEnvelopeIntersectionState"),
+                ActualEnvelopeCandidateCount =
+                    Int("FootMotionActualEnvelopeCandidateCount"),
+                ActualEnvelopeMinimumHeightAlongUp =
+                    Float("FootMotionActualEnvelopeMinimumHeightAlongUp"),
+                ActualEnvelopeMaximumHeightAlongUp =
+                    Float("FootMotionActualEnvelopeMaximumHeightAlongUp"),
+                ActualEnvelopeHeightSpan =
+                    Float("FootMotionActualEnvelopeHeightSpan"),
+                ActualEnvelopeHasVerticalEdge =
+                    Int("FootMotionActualEnvelopeHasVerticalEdge") != 0,
+                ActualEnvelopeHasMultipleHeights =
+                    Int("FootMotionActualEnvelopeHasMultipleHeights") != 0,
+                ActualEnvelopeAmbiguous =
+                    Int("FootMotionActualEnvelopeAmbiguous") != 0,
+                ActualEnvelopeCounterfactualState =
+                    Cell("FootMotionActualEnvelopeCounterfactualState"),
+                ActualProgressEnvelopeCorrectionAvailable =
+                    Int("FootMotionActualProgressEnvelopeCorrectionAvailable") != 0,
+                ActualProgressEnvelopeMinimumCorrection =
+                    Float("FootMotionActualProgressEnvelopeMinimumCorrection"),
+                ActualProgressEnvelopeAdvanceAboveBuilderTarget =
+                    Float("FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget"),
+                ActualProgressEnvelopeCurrentFloorComparisonAvailable =
+                    Int("FootMotionActualProgressEnvelopeCurrentFloorComparisonAvailable") != 0,
+                ActualProgressEnvelopeRemainingBelowCurrentFloor =
+                    Float("FootMotionActualProgressEnvelopeRemainingBelowCurrentFloor"),
+                ActualProgressEnvelopeCoversCurrentFloor =
+                    Int("FootMotionActualProgressEnvelopeCoversCurrentFloor") != 0,
                 SwingDesiredCorrection =
                     Vector("FootMotionDesiredCorrection"),
                 CorrectedSole = Vector("FootMotionCorrectedSole"),
@@ -3977,9 +4300,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootLockResponse>(
                 frame.LockResponseBefore,
                 "FootMotionLockResponseBefore");
-            RequireEnum<CharacterFootSwingPathHorizontalProgressState>(
-                frame.SwingPathHorizontalProgressState,
-                "FootMotionSwingPathHorizontalProgressState");
+            RequireEnum<CharacterFootSwingPathHorizontalAxisState>(
+                frame.SwingPathHorizontalAxisState,
+                "FootMotionSwingPathHorizontalAxisState");
+            RequireEnum<CharacterFootActualEnvelopeIntersectionState>(
+                frame.ActualEnvelopeIntersectionState,
+                "FootMotionActualEnvelopeIntersectionState");
+            RequireEnum<CharacterFootActualFootAxisRegion>(
+                frame.ActualFootAxisRegion,
+                "FootMotionActualFootAxisRegion");
+            RequireEnum<CharacterFootActualEnvelopeCounterfactualState>(
+                frame.ActualEnvelopeCounterfactualState,
+                "FootMotionActualEnvelopeCounterfactualState");
             if (frame.FootMotionState == "Accepted" &&
                 frame.ComponentUp.sqrMagnitude >
                 TimeEpsilon * TimeEpsilon)
@@ -4059,37 +4391,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "Foot Motion unavailable Builder Swing target is nonzero.");
                 }
             }
-            RequireSwingPathHorizontalProgress(frame);
+            RequireActualFootEnvelopeFacts(frame);
             RequireRevisionReason(frame.PathRevisionReason);
         }
 
-        static void RequireSwingPathHorizontalProgress(FootFrame frame)
+        static void RequireActualFootEnvelopeFacts(FootFrame frame)
         {
             bool accepted = frame.GroundPathState == "Accepted" &&
                             frame.FootMotionState == "Accepted" &&
-                            frame.ConstraintState == "Swing";
+                            frame.ConstraintState == "Swing" &&
+                            frame.GroundEnvelopeVertices.Count >= 2;
             float valueMagnitude = Math.Max(
-                Math.Abs(frame.ActualFootHorizontalProgress),
+                Math.Abs(frame.ActualFootHorizontalDistance),
                 Math.Max(
-                    Math.Abs(frame.BaselineHorizontalProgress),
+                    Math.Abs(frame.BaselineHorizontalDistance),
                     Math.Max(
-                        Math.Abs(frame.EnvelopeHorizontalProgress),
-                        Math.Abs(frame.ActualMinusEnvelopeProgress))));
-            if (frame.SwingPathHorizontalProgressState == "Unavailable")
+                        Math.Abs(frame.EnvelopeHorizontalDistance),
+                        Math.Abs(
+                            frame.ActualMinusEnvelopeHorizontalDistance))));
+            float finiteSegmentMagnitude = Math.Max(
+                Math.Abs(frame.ActualFootClosestPathParameter),
+                Math.Max(
+                    Math.Abs(frame.ActualFootDistanceAlongAxis),
+                    Math.Max(
+                        Math.Abs(frame.ActualFootCrossTrackDistance),
+                        Math.Abs(
+                            frame.ActualFootGroundPathCorridorRadius))));
+            if (frame.SwingPathHorizontalAxisState == "Unavailable")
             {
-                if (accepted || valueMagnitude > PositionNoiseFloor)
+                if (accepted ||
+                    frame.ActualEnvelopeIntersectionState != "Unavailable" ||
+                    frame.ActualFootAxisRegion != "Unavailable" ||
+                    frame.ActualEnvelopeCounterfactualState != "Unavailable" ||
+                    valueMagnitude > PositionNoiseFloor ||
+                    finiteSegmentMagnitude > PositionNoiseFloor ||
+                    frame.ActualFootWithinGroundPathCorridor)
                     throw new InvalidDataException(
-                        "Foot Motion unavailable Swing Path progress facts are inconsistent.");
+                        "Foot Motion unavailable Swing Path axis facts are inconsistent.");
                 return;
             }
-            if (frame.SwingPathHorizontalProgressState == "InvalidComponentUp")
+            if (frame.SwingPathHorizontalAxisState == "InvalidComponentUp")
             {
                 if (!accepted ||
+                    frame.ActualEnvelopeIntersectionState !=
+                    "InvalidComponentUp" ||
+                    frame.ActualFootAxisRegion != "Unavailable" ||
+                    frame.ActualEnvelopeCounterfactualState != "Unavailable" ||
                     frame.ComponentUp.sqrMagnitude > 0.000001f ||
-                    valueMagnitude > PositionNoiseFloor)
+                    valueMagnitude > PositionNoiseFloor ||
+                    finiteSegmentMagnitude > PositionNoiseFloor ||
+                    frame.ActualFootWithinGroundPathCorridor)
                 {
                     throw new InvalidDataException(
-                        "Foot Motion invalid-up Swing Path progress facts are inconsistent.");
+                        "Foot Motion invalid-up Swing Path axis facts are inconsistent.");
                 }
                 return;
             }
@@ -4097,14 +4451,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Vector3 horizontalAxis = Vector3.ProjectOnPlane(
                 frame.NextLanding - frame.LastLanding,
                 up);
-            if (frame.SwingPathHorizontalProgressState == "DegenerateAxis")
+            if (frame.SwingPathHorizontalAxisState == "DegenerateAxis")
             {
                 if (!accepted ||
+                    frame.ActualEnvelopeIntersectionState !=
+                    "DegenerateAxis" ||
+                    frame.ActualFootAxisRegion != "Unavailable" ||
+                    frame.ActualEnvelopeCounterfactualState != "Unavailable" ||
                     horizontalAxis.sqrMagnitude > 0.00000001f ||
-                    valueMagnitude > PositionNoiseFloor)
+                    valueMagnitude > PositionNoiseFloor ||
+                    finiteSegmentMagnitude > PositionNoiseFloor ||
+                    frame.ActualFootWithinGroundPathCorridor)
                 {
                     throw new InvalidDataException(
-                        "Foot Motion degenerate Swing Path progress facts are inconsistent.");
+                        "Foot Motion degenerate Swing Path axis facts are inconsistent.");
                 }
                 return;
             }
@@ -4112,7 +4472,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 horizontalAxis.sqrMagnitude <= 0.00000001f)
             {
                 throw new InvalidDataException(
-                    "Foot Motion available Swing Path progress lacks a valid axis.");
+                    "Foot Motion available Swing Path axis lacks a valid input.");
             }
             Vector3 direction = horizontalAxis.normalized;
             float expectedActual = Vector3.Dot(
@@ -4125,22 +4485,262 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.SwingEnvelopeSample - frame.LastLanding,
                 direction);
             if (Math.Abs(
-                    frame.ActualFootHorizontalProgress - expectedActual) >
+                    frame.ActualFootHorizontalDistance - expectedActual) >
                 PositionNoiseFloor ||
                 Math.Abs(
-                    frame.BaselineHorizontalProgress - expectedBaseline) >
+                    frame.BaselineHorizontalDistance - expectedBaseline) >
                 PositionNoiseFloor ||
                 Math.Abs(
-                    frame.EnvelopeHorizontalProgress - expectedEnvelope) >
+                    frame.EnvelopeHorizontalDistance - expectedEnvelope) >
                 PositionNoiseFloor ||
                 Math.Abs(
-                    frame.ActualMinusEnvelopeProgress -
+                    frame.ActualMinusEnvelopeHorizontalDistance -
                     (expectedActual - expectedEnvelope)) >
                 PositionNoiseFloor)
             {
                 throw new InvalidDataException(
-                    "Foot Motion Swing Path progress facts are inconsistent.");
+                    "Foot Motion Swing Path distance facts are inconsistent.");
             }
+            float pathLength = horizontalAxis.magnitude;
+            float closestPathParameter = Mathf.Clamp01(
+                expectedActual / pathLength);
+            float distanceAlongAxis = closestPathParameter * pathLength;
+            Vector3 actualHorizontalOffset = Vector3.ProjectOnPlane(
+                frame.OriginalSole - frame.LastLanding,
+                up);
+            float crossTrackDistance = Vector3.Distance(
+                actualHorizontalOffset,
+                horizontalAxis * closestPathParameter);
+            string axisRegion = expectedActual < -PositionNoiseFloor
+                ? "BeforePathStart"
+                : expectedActual > pathLength + PositionNoiseFloor
+                    ? "AfterPathEnd"
+                    : "WithinPathSegment";
+            bool withinGroundPathCorridor = frame.GroundPathRadius > 0f &&
+                crossTrackDistance <=
+                frame.GroundPathRadius + PositionNoiseFloor;
+            if (frame.ActualFootAxisRegion != axisRegion ||
+                Math.Abs(
+                    frame.ActualFootClosestPathParameter -
+                    closestPathParameter) > PositionNoiseFloor ||
+                Math.Abs(
+                    frame.ActualFootDistanceAlongAxis -
+                    distanceAlongAxis) > PositionNoiseFloor ||
+                Math.Abs(
+                    frame.ActualFootCrossTrackDistance -
+                    crossTrackDistance) > PositionNoiseFloor ||
+                Math.Abs(
+                    frame.ActualFootGroundPathCorridorRadius -
+                    frame.GroundPathRadius) > PositionNoiseFloor ||
+                frame.ActualFootWithinGroundPathCorridor !=
+                    withinGroundPathCorridor)
+            {
+                throw new InvalidDataException(
+                    "Foot Motion finite Ground Path corridor facts are inconsistent.");
+            }
+            var heights = new List<float>(
+                frame.GroundEnvelopeVertices.Count * 2);
+            bool hasVerticalEdge = false;
+            List<Vector3> vertices = frame.GroundEnvelopeVertices.Values
+                .ToList();
+            for (int i = 1; i < vertices.Count; i++)
+            {
+                Vector3 previous = vertices[i - 1];
+                Vector3 current = vertices[i];
+                float previousDistance = Vector3.Dot(
+                    previous - frame.LastLanding,
+                    direction);
+                float currentDistance = Vector3.Dot(
+                    current - frame.LastLanding,
+                    direction);
+                float minimumDistance = Mathf.Min(
+                    previousDistance,
+                    currentDistance);
+                float maximumDistance = Mathf.Max(
+                    previousDistance,
+                    currentDistance);
+                if (expectedActual < minimumDistance - PositionNoiseFloor ||
+                    expectedActual > maximumDistance + PositionNoiseFloor)
+                {
+                    continue;
+                }
+                float previousHeight = Vector3.Dot(previous, up);
+                float currentHeight = Vector3.Dot(current, up);
+                float distanceDelta = currentDistance - previousDistance;
+                if (Mathf.Abs(distanceDelta) <= PositionNoiseFloor)
+                {
+                    if (Mathf.Abs(expectedActual - previousDistance) >
+                        PositionNoiseFloor)
+                    {
+                        continue;
+                    }
+                    AddUniqueActualEnvelopeHeight(heights, previousHeight);
+                    AddUniqueActualEnvelopeHeight(heights, currentHeight);
+                    if (Mathf.Abs(currentHeight - previousHeight) >
+                        PositionNoiseFloor)
+                    {
+                        hasVerticalEdge = true;
+                    }
+                    continue;
+                }
+                float interpolation = Mathf.Clamp01(
+                    (expectedActual - previousDistance) / distanceDelta);
+                AddUniqueActualEnvelopeHeight(
+                    heights,
+                    Mathf.Lerp(previousHeight, currentHeight, interpolation));
+            }
+            if (heights.Count == 0)
+            {
+                string emptyCounterfactualState =
+                    withinGroundPathCorridor
+                        ? "NoIntersection"
+                        : "OutsideGroundPathCorridor";
+                if (frame.ActualEnvelopeIntersectionState !=
+                        "NoIntersection" ||
+                    frame.ActualEnvelopeCounterfactualState !=
+                    emptyCounterfactualState ||
+                    frame.ActualEnvelopeCandidateCount != 0 ||
+                    Math.Abs(
+                        frame.ActualEnvelopeMinimumHeightAlongUp) >
+                    PositionNoiseFloor ||
+                    Math.Abs(
+                        frame.ActualEnvelopeMaximumHeightAlongUp) >
+                    PositionNoiseFloor ||
+                    Math.Abs(frame.ActualEnvelopeHeightSpan) >
+                    PositionNoiseFloor ||
+                    frame.ActualEnvelopeHasVerticalEdge ||
+                    frame.ActualEnvelopeHasMultipleHeights ||
+                    frame.ActualEnvelopeAmbiguous ||
+                    frame.ActualProgressEnvelopeCorrectionAvailable ||
+                    frame.ActualProgressEnvelopeCurrentFloorComparisonAvailable ||
+                    frame.ActualProgressEnvelopeCoversCurrentFloor)
+                {
+                    throw new InvalidDataException(
+                        "Foot Motion empty Actual Envelope intersection facts are inconsistent.");
+                }
+                return;
+            }
+            float minimumHeight = heights.Min();
+            float maximumHeight = heights.Max();
+            float heightSpan = maximumHeight - minimumHeight;
+            bool hasMultipleHeights = heights.Count > 1 &&
+                                      heightSpan > PositionNoiseFloor;
+            bool ambiguous = hasVerticalEdge || hasMultipleHeights;
+            string expectedState = ambiguous
+                ? "AmbiguousEnvelopeAtActualFootDistance"
+                : "Unique";
+            string expectedCounterfactualState =
+                !withinGroundPathCorridor
+                    ? "OutsideGroundPathCorridor"
+                    : ambiguous
+                        ? "AmbiguousInCorridor"
+                        : "UniqueInCorridor";
+            if (frame.ActualEnvelopeIntersectionState != expectedState ||
+                frame.ActualEnvelopeCounterfactualState !=
+                expectedCounterfactualState ||
+                frame.ActualEnvelopeCandidateCount != heights.Count ||
+                Math.Abs(
+                    frame.ActualEnvelopeMinimumHeightAlongUp -
+                    minimumHeight) > PositionNoiseFloor ||
+                Math.Abs(
+                    frame.ActualEnvelopeMaximumHeightAlongUp -
+                    maximumHeight) > PositionNoiseFloor ||
+                Math.Abs(
+                    frame.ActualEnvelopeHeightSpan - heightSpan) >
+                PositionNoiseFloor ||
+                frame.ActualEnvelopeHasVerticalEdge != hasVerticalEdge ||
+                frame.ActualEnvelopeHasMultipleHeights !=
+                hasMultipleHeights ||
+                frame.ActualEnvelopeAmbiguous != ambiguous)
+            {
+                throw new InvalidDataException(
+                    "Foot Motion Actual Envelope candidate facts are inconsistent.");
+            }
+            if (ambiguous)
+            {
+                if (frame.ActualProgressEnvelopeCorrectionAvailable ||
+                    frame.ActualProgressEnvelopeCurrentFloorComparisonAvailable ||
+                    frame.ActualProgressEnvelopeCoversCurrentFloor ||
+                    Math.Abs(
+                        frame.ActualProgressEnvelopeMinimumCorrection) >
+                    PositionNoiseFloor ||
+                    Math.Abs(
+                        frame.ActualProgressEnvelopeAdvanceAboveBuilderTarget) >
+                    PositionNoiseFloor ||
+                    Math.Abs(
+                        frame.ActualProgressEnvelopeRemainingBelowCurrentFloor) >
+                    PositionNoiseFloor)
+                {
+                    throw new InvalidDataException(
+                        "Foot Motion ambiguous Actual Envelope produced a correction conclusion.");
+                }
+                return;
+            }
+            bool correctionAvailable =
+                expectedCounterfactualState == "UniqueInCorridor" &&
+                frame.BuilderSwingTargetAvailable;
+            float originalSoleAlongUp = Vector3.Dot(frame.OriginalSole, up);
+            float minimumCorrection = correctionAvailable
+                ? minimumHeight - originalSoleAlongUp
+                : 0f;
+            float builderTargetAlongUp = correctionAvailable
+                ? Vector3.Dot(frame.BuilderSwingTargetCorrection, up)
+                : 0f;
+            float advanceAboveBuilder = correctionAvailable
+                ? Mathf.Max(
+                    0f,
+                    minimumCorrection - builderTargetAlongUp)
+                : 0f;
+            bool currentFloorComparisonAvailable = correctionAvailable &&
+                frame.OutputStagesAvailable &&
+                frame.SafetyFloorAvailable;
+            float remainingBelowCurrentFloor = 0f;
+            bool coversCurrentFloor = false;
+            if (currentFloorComparisonAvailable)
+            {
+                float counterfactualBuilderTarget = Mathf.Max(
+                    builderTargetAlongUp,
+                    minimumCorrection);
+                remainingBelowCurrentFloor = Mathf.Max(
+                    0f,
+                    Vector3.Dot(frame.SafetyFloorMinimumCorrection, up) -
+                    counterfactualBuilderTarget);
+                coversCurrentFloor = remainingBelowCurrentFloor <=
+                                     PositionNoiseFloor;
+            }
+            if (frame.ActualProgressEnvelopeCorrectionAvailable !=
+                    correctionAvailable ||
+                Math.Abs(
+                    frame.ActualProgressEnvelopeMinimumCorrection -
+                    minimumCorrection) > PositionNoiseFloor ||
+                Math.Abs(
+                    frame.ActualProgressEnvelopeAdvanceAboveBuilderTarget -
+                    advanceAboveBuilder) > PositionNoiseFloor ||
+                frame.ActualProgressEnvelopeCurrentFloorComparisonAvailable !=
+                    currentFloorComparisonAvailable ||
+                Math.Abs(
+                    frame.ActualProgressEnvelopeRemainingBelowCurrentFloor -
+                    remainingBelowCurrentFloor) > PositionNoiseFloor ||
+                frame.ActualProgressEnvelopeCoversCurrentFloor !=
+                    coversCurrentFloor)
+            {
+                throw new InvalidDataException(
+                    "Foot Motion Actual Envelope counterfactual facts are inconsistent.");
+            }
+        }
+
+        static void AddUniqueActualEnvelopeHeight(
+            List<float> heights,
+            float value)
+        {
+            if (!float.IsFinite(value))
+                return;
+            for (int i = 0; i < heights.Count; i++)
+            {
+                if (Mathf.Abs(heights[i] - value) <= PositionNoiseFloor)
+                    return;
+            }
+            heights.Add(value);
         }
 
         static void RequireStepPhase(
@@ -4276,6 +4876,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "GroundPathNextSwingLandingX", "GroundPathNextSwingLandingY", "GroundPathNextSwingLandingZ",
                 "GroundEnvelopeVertexCount",
                 "GroundPathComponentUpX", "GroundPathComponentUpY", "GroundPathComponentUpZ",
+                "GroundPathRadius",
                 "CurrentFloorState", "CurrentFloorRejectReason",
                 "CurrentFloorQueryPurpose",
                 "CurrentFloorQueryOriginX", "CurrentFloorQueryOriginY",
@@ -4312,11 +4913,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionBuilderSwingTargetCorrectionX",
                 "FootMotionBuilderSwingTargetCorrectionY",
                 "FootMotionBuilderSwingTargetCorrectionZ",
-                "FootMotionSwingPathHorizontalProgressState",
-                "FootMotionActualFootHorizontalProgressMeters",
-                "FootMotionBaselineHorizontalProgressMeters",
-                "FootMotionEnvelopeHorizontalProgressMeters",
-                "FootMotionActualMinusEnvelopeProgressMeters",
+                "FootMotionSwingPathHorizontalAxisState",
+                "FootMotionActualFootHorizontalDistanceMeters",
+                "FootMotionBaselineHorizontalDistanceMeters",
+                "FootMotionEnvelopeHorizontalDistanceMeters",
+                "FootMotionActualMinusEnvelopeHorizontalDistanceMeters",
+                "FootMotionActualFootAxisRegion",
+                "FootMotionActualFootClosestPathParameter",
+                "FootMotionActualFootDistanceAlongAxisMeters",
+                "FootMotionActualFootCrossTrackDistanceMeters",
+                "FootMotionActualFootGroundPathCorridorRadiusMeters",
+                "FootMotionActualFootWithinGroundPathCorridor",
+                "FootMotionActualEnvelopeIntersectionState",
+                "FootMotionActualEnvelopeCandidateCount",
+                "FootMotionActualEnvelopeMinimumHeightAlongUp",
+                "FootMotionActualEnvelopeMaximumHeightAlongUp",
+                "FootMotionActualEnvelopeHeightSpan",
+                "FootMotionActualEnvelopeHasVerticalEdge",
+                "FootMotionActualEnvelopeHasMultipleHeights",
+                "FootMotionActualEnvelopeAmbiguous",
+                "FootMotionActualEnvelopeCounterfactualState",
+                "FootMotionActualProgressEnvelopeCorrectionAvailable",
+                "FootMotionActualProgressEnvelopeMinimumCorrection",
+                "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget",
+                "FootMotionActualProgressEnvelopeCurrentFloorComparisonAvailable",
+                "FootMotionActualProgressEnvelopeRemainingBelowCurrentFloor",
+                "FootMotionActualProgressEnvelopeCoversCurrentFloor",
                 "FootMotionDesiredCorrectionX",
                 "FootMotionDesiredCorrectionY",
                 "FootMotionDesiredCorrectionZ",
@@ -4902,6 +5524,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 NextLanding;
             internal int GroundEnvelopeVertexCount;
             internal Vector3 ComponentUp;
+            internal float GroundPathRadius;
             internal readonly SortedDictionary<int, Vector3>
                 GroundEnvelopeVertices =
                     new SortedDictionary<int, Vector3>();
@@ -4939,11 +5562,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float SwingBuilderSelectedCorrection;
             internal bool BuilderSwingTargetAvailable;
             internal Vector3 BuilderSwingTargetCorrection;
-            internal string SwingPathHorizontalProgressState;
-            internal float ActualFootHorizontalProgress;
-            internal float BaselineHorizontalProgress;
-            internal float EnvelopeHorizontalProgress;
-            internal float ActualMinusEnvelopeProgress;
+            internal string SwingPathHorizontalAxisState;
+            internal float ActualFootHorizontalDistance;
+            internal float BaselineHorizontalDistance;
+            internal float EnvelopeHorizontalDistance;
+            internal float ActualMinusEnvelopeHorizontalDistance;
+            internal string ActualFootAxisRegion;
+            internal float ActualFootClosestPathParameter;
+            internal float ActualFootDistanceAlongAxis;
+            internal float ActualFootCrossTrackDistance;
+            internal float ActualFootGroundPathCorridorRadius;
+            internal bool ActualFootWithinGroundPathCorridor;
+            internal string ActualEnvelopeIntersectionState;
+            internal int ActualEnvelopeCandidateCount;
+            internal float ActualEnvelopeMinimumHeightAlongUp;
+            internal float ActualEnvelopeMaximumHeightAlongUp;
+            internal float ActualEnvelopeHeightSpan;
+            internal bool ActualEnvelopeHasVerticalEdge;
+            internal bool ActualEnvelopeHasMultipleHeights;
+            internal bool ActualEnvelopeAmbiguous;
+            internal string ActualEnvelopeCounterfactualState;
+            internal bool ActualProgressEnvelopeCorrectionAvailable;
+            internal float ActualProgressEnvelopeMinimumCorrection;
+            internal float ActualProgressEnvelopeAdvanceAboveBuilderTarget;
+            internal bool ActualProgressEnvelopeCurrentFloorComparisonAvailable;
+            internal float ActualProgressEnvelopeRemainingBelowCurrentFloor;
+            internal bool ActualProgressEnvelopeCoversCurrentFloor;
             internal Vector3 SwingDesiredCorrection;
             internal Vector3 CorrectedSole;
             internal Vector3 CorrectedAnkle;
@@ -6316,6 +6960,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int lateApproachLandingRevisionCount;
             public int sameGroundPathSwingEnvelopeStepCount;
             public int swingCurrentFloorCatchupCount;
+            public int swingActualFootEnvelopeCounterfactualCount;
             public int supportChangeCount;
             public int contactPlanePenetrationEventCount;
             public int safetyFloorEventCount;
@@ -6362,7 +7007,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootSameGroundPathSwingEnvelopeStepAnalysis
                     sameGroundPathSwingEnvelopeStep = null,
                 CharacterFootSwingCurrentFloorCatchupAnalysis
-                    swingCurrentFloorCatchup = null)
+                    swingCurrentFloorCatchup = null,
+                CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
+                    swingActualFootEnvelopeCounterfactual = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -6386,6 +7033,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     sameGroundPathSwingEnvelopeStep;
                 this.swingCurrentFloorCatchup =
                     swingCurrentFloorCatchup;
+                this.swingActualFootEnvelopeCounterfactual =
+                    swingActualFootEnvelopeCounterfactual;
             }
 
             public string kind;
@@ -6410,6 +7059,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 sameGroundPathSwingEnvelopeStep;
             public CharacterFootSwingCurrentFloorCatchupAnalysis
                 swingCurrentFloorCatchup;
+            public CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
+                swingActualFootEnvelopeCounterfactual;
 
             internal static int Compare(EventFact left, EventFact right)
             {

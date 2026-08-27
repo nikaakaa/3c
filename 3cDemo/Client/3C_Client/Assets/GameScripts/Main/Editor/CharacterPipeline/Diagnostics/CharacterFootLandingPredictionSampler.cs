@@ -15,12 +15,62 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    internal enum CharacterFootSwingPathHorizontalProgressState
+    internal enum CharacterFootSwingPathHorizontalAxisState
     {
         Unavailable = 0,
         Available = 1,
         InvalidComponentUp = 2,
         DegenerateAxis = 3
+    }
+
+    internal enum CharacterFootActualEnvelopeIntersectionState
+    {
+        Unavailable = 0,
+        InvalidComponentUp = 1,
+        DegenerateAxis = 2,
+        NoIntersection = 3,
+        Unique = 4,
+        AmbiguousEnvelopeAtActualFootDistance = 5
+    }
+
+    internal enum CharacterFootActualFootAxisRegion
+    {
+        Unavailable = 0,
+        BeforePathStart = 1,
+        WithinPathSegment = 2,
+        AfterPathEnd = 3
+    }
+
+    internal enum CharacterFootActualEnvelopeCounterfactualState
+    {
+        Unavailable = 0,
+        UniqueInCorridor = 1,
+        AmbiguousInCorridor = 2,
+        OutsideGroundPathCorridor = 3,
+        NoIntersection = 4
+    }
+
+    internal sealed class CharacterFootActualEnvelopeIntersectionFact
+    {
+        internal CharacterFootActualEnvelopeIntersectionState State;
+        internal float ActualFootHorizontalDistance;
+        internal float BaselineHorizontalDistance;
+        internal float EnvelopeHorizontalDistance;
+        internal CharacterFootActualFootAxisRegion AxisRegion;
+        internal float ClosestPathParameter;
+        internal float DistanceAlongAxis;
+        internal float CrossTrackDistance;
+        internal float CorridorRadius;
+        internal bool WithinGroundPathCorridor;
+        internal int CandidateCount;
+        internal float MinimumHeightAlongUp;
+        internal float MaximumHeightAlongUp;
+        internal float HeightSpan;
+        internal bool HasVerticalEdge;
+        internal bool HasMultipleHeights;
+        internal bool Ambiguous;
+        internal CharacterFootActualEnvelopeCounterfactualState
+            CounterfactualState;
     }
 
     [InitializeOnLoad]
@@ -30,6 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const int MaximumQueuedFrameCount = 256;
         const double SamplingStartTimeoutSeconds = 30d;
         const double SamplingFlushIntervalSeconds = 0.5d;
+        const float ActualEnvelopeHorizontalEpsilonMeters = 0.001f;
+        const float ActualEnvelopeHeightEpsilonMeters = 0.001f;
         const string GameplayLabPlayerActorId = "gameplay-lab-player";
         const string StartMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Start";
@@ -123,8 +175,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionFormalFootHeight,FootMotionUnweightedFormalTargetHeight,FootMotionLandingConstraintWeight," +
             "FootMotionWeightedFormalCorrection,FootMotionEnvelopeMinimumCorrection,FootMotionBuilderSelectedCorrection," +
             "FootMotionBuilderSwingTargetAvailable,FootMotionBuilderSwingTargetCorrectionX,FootMotionBuilderSwingTargetCorrectionY,FootMotionBuilderSwingTargetCorrectionZ," +
-            "FootMotionSwingPathHorizontalProgressState,FootMotionActualFootHorizontalProgressMeters,FootMotionBaselineHorizontalProgressMeters," +
-            "FootMotionEnvelopeHorizontalProgressMeters,FootMotionActualMinusEnvelopeProgressMeters," +
+            "FootMotionSwingPathHorizontalAxisState,FootMotionActualFootHorizontalDistanceMeters,FootMotionBaselineHorizontalDistanceMeters," +
+            "FootMotionEnvelopeHorizontalDistanceMeters,FootMotionActualMinusEnvelopeHorizontalDistanceMeters," +
+            "FootMotionActualFootAxisRegion,FootMotionActualFootClosestPathParameter,FootMotionActualFootDistanceAlongAxisMeters," +
+            "FootMotionActualFootCrossTrackDistanceMeters,FootMotionActualFootGroundPathCorridorRadiusMeters,FootMotionActualFootWithinGroundPathCorridor," +
+            "FootMotionActualEnvelopeIntersectionState,FootMotionActualEnvelopeCandidateCount," +
+            "FootMotionActualEnvelopeMinimumHeightAlongUp,FootMotionActualEnvelopeMaximumHeightAlongUp,FootMotionActualEnvelopeHeightSpan," +
+            "FootMotionActualEnvelopeHasVerticalEdge,FootMotionActualEnvelopeHasMultipleHeights,FootMotionActualEnvelopeAmbiguous," +
+            "FootMotionActualEnvelopeCounterfactualState," +
+            "FootMotionActualProgressEnvelopeCorrectionAvailable,FootMotionActualProgressEnvelopeMinimumCorrection," +
+            "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget,FootMotionActualProgressEnvelopeCurrentFloorComparisonAvailable," +
+            "FootMotionActualProgressEnvelopeRemainingBelowCurrentFloor,FootMotionActualProgressEnvelopeCoversCurrentFloor," +
             "FootMotionLandingPredictionError,FootMotionPlantConfidence," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
@@ -1875,57 +1936,93 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, builderSelectedCorrection);
             Add(row, builderSwingTargetAvailable);
             Add(row, builderSwingTargetCorrection);
-            CharacterFootSwingPathHorizontalProgressState horizontalProgressState =
-                CharacterFootSwingPathHorizontalProgressState.Unavailable;
-            float actualFootHorizontalProgress = 0f;
-            float baselineHorizontalProgress = 0f;
-            float envelopeHorizontalProgress = 0f;
-            if (ground.Accepted &&
-                motion.State == CharacterFootSwingMotionState.Accepted &&
-                motion.ConstraintState == CharacterFootConstraintState.Swing)
-            {
-                if (motionUp.sqrMagnitude <= 0.000001f)
+            CharacterFootActualEnvelopeIntersectionFact actualEnvelope =
+                ResolveActualFootEnvelopeIntersection(
+                    in ground,
+                    in motion,
+                    motionUp);
+            CharacterFootSwingPathHorizontalAxisState horizontalAxisState =
+                actualEnvelope.State switch
                 {
-                    horizontalProgressState =
-                        CharacterFootSwingPathHorizontalProgressState.InvalidComponentUp;
-                }
-                else
-                {
-                    Vector3 horizontalAxis = Vector3.ProjectOnPlane(
-                        ground.NextSwingLanding - ground.LastLanding,
-                        motionUp);
-                    if (!float.IsFinite(horizontalAxis.x) ||
-                        !float.IsFinite(horizontalAxis.y) ||
-                        !float.IsFinite(horizontalAxis.z) ||
-                        horizontalAxis.sqrMagnitude <= 0.00000001f)
-                    {
-                        horizontalProgressState =
-                            CharacterFootSwingPathHorizontalProgressState.DegenerateAxis;
-                    }
-                    else
-                    {
-                        horizontalProgressState =
-                            CharacterFootSwingPathHorizontalProgressState.Available;
-                        Vector3 horizontalDirection = horizontalAxis.normalized;
-                        actualFootHorizontalProgress = Vector3.Dot(
-                            motion.OriginalSole - ground.LastLanding,
-                            horizontalDirection);
-                        baselineHorizontalProgress = Vector3.Dot(
-                            motion.BaselineSample - ground.LastLanding,
-                            horizontalDirection);
-                        envelopeHorizontalProgress = Vector3.Dot(
-                            motion.EnvelopeSample - ground.LastLanding,
-                            horizontalDirection);
-                    }
-                }
-            }
-            Add(row, horizontalProgressState.ToString());
-            Add(row, actualFootHorizontalProgress);
-            Add(row, baselineHorizontalProgress);
-            Add(row, envelopeHorizontalProgress);
+                    CharacterFootActualEnvelopeIntersectionState.Unavailable =>
+                        CharacterFootSwingPathHorizontalAxisState.Unavailable,
+                    CharacterFootActualEnvelopeIntersectionState.InvalidComponentUp =>
+                        CharacterFootSwingPathHorizontalAxisState.InvalidComponentUp,
+                    CharacterFootActualEnvelopeIntersectionState.DegenerateAxis =>
+                        CharacterFootSwingPathHorizontalAxisState.DegenerateAxis,
+                    _ => CharacterFootSwingPathHorizontalAxisState.Available
+                };
+            Add(row, horizontalAxisState.ToString());
+            Add(row, actualEnvelope.ActualFootHorizontalDistance);
+            Add(row, actualEnvelope.BaselineHorizontalDistance);
+            Add(row, actualEnvelope.EnvelopeHorizontalDistance);
             Add(
                 row,
-                actualFootHorizontalProgress - envelopeHorizontalProgress);
+                actualEnvelope.ActualFootHorizontalDistance -
+                actualEnvelope.EnvelopeHorizontalDistance);
+            Add(row, actualEnvelope.AxisRegion.ToString());
+            Add(row, actualEnvelope.ClosestPathParameter);
+            Add(row, actualEnvelope.DistanceAlongAxis);
+            Add(row, actualEnvelope.CrossTrackDistance);
+            Add(row, actualEnvelope.CorridorRadius);
+            Add(row, actualEnvelope.WithinGroundPathCorridor);
+            Add(row, actualEnvelope.State.ToString());
+            Add(row, actualEnvelope.CandidateCount);
+            Add(row, actualEnvelope.MinimumHeightAlongUp);
+            Add(row, actualEnvelope.MaximumHeightAlongUp);
+            Add(row, actualEnvelope.HeightSpan);
+            Add(row, actualEnvelope.HasVerticalEdge);
+            Add(row, actualEnvelope.HasMultipleHeights);
+            Add(row, actualEnvelope.Ambiguous);
+            Add(row, actualEnvelope.CounterfactualState.ToString());
+            bool actualEnvelopeCorrectionAvailable =
+                actualEnvelope.CounterfactualState ==
+                CharacterFootActualEnvelopeCounterfactualState
+                    .UniqueInCorridor &&
+                builderSwingTargetAvailable;
+            float actualEnvelopeMinimumCorrection =
+                actualEnvelopeCorrectionAvailable
+                    ? actualEnvelope.MinimumHeightAlongUp -
+                      originalSoleAlongUp
+                    : 0f;
+            float builderSwingTargetAlongUp =
+                builderSwingTargetAvailable
+                    ? Vector3.Dot(builderSwingTargetCorrection, motionUp)
+                    : 0f;
+            float actualEnvelopeAdvanceAboveBuilderTarget =
+                actualEnvelopeCorrectionAvailable
+                    ? Mathf.Max(
+                        0f,
+                        actualEnvelopeMinimumCorrection -
+                        builderSwingTargetAlongUp)
+                    : 0f;
+            bool actualEnvelopeCurrentFloorComparisonAvailable =
+                actualEnvelopeCorrectionAvailable &&
+                motion.OutputStagesAvailable &&
+                motion.SafetyFloorAvailable;
+            float actualEnvelopeRemainingBelowCurrentFloor = 0f;
+            bool actualEnvelopeCoversCurrentFloor = false;
+            if (actualEnvelopeCurrentFloorComparisonAvailable)
+            {
+                float counterfactualBuilderTarget = Mathf.Max(
+                    builderSwingTargetAlongUp,
+                    actualEnvelopeMinimumCorrection);
+                float currentFloorMinimum = Vector3.Dot(
+                    motion.SafetyFloorMinimumCorrection,
+                    motionUp);
+                actualEnvelopeRemainingBelowCurrentFloor = Mathf.Max(
+                    0f,
+                    currentFloorMinimum - counterfactualBuilderTarget);
+                actualEnvelopeCoversCurrentFloor =
+                    actualEnvelopeRemainingBelowCurrentFloor <=
+                    ActualEnvelopeHeightEpsilonMeters;
+            }
+            Add(row, actualEnvelopeCorrectionAvailable);
+            Add(row, actualEnvelopeMinimumCorrection);
+            Add(row, actualEnvelopeAdvanceAboveBuilderTarget);
+            Add(row, actualEnvelopeCurrentFloorComparisonAvailable);
+            Add(row, actualEnvelopeRemainingBelowCurrentFloor);
+            Add(row, actualEnvelopeCoversCurrentFloor);
             Add(row, motion.LandingPredictionError);
             Add(row, motion.PlantConfidence);
             Add(row, motion.CorrectedSole);
@@ -2132,6 +2229,192 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             in footGoal))
                     : 0f);
             writer.WriteLine(row);
+        }
+
+        static CharacterFootActualEnvelopeIntersectionFact
+            ResolveActualFootEnvelopeIntersection(
+                in CharacterFootGroundPathDiagnostics ground,
+                in CharacterFootSwingMotionDiagnostics motion,
+                Vector3 up)
+        {
+            var result = new CharacterFootActualEnvelopeIntersectionFact
+            {
+                State = CharacterFootActualEnvelopeIntersectionState.Unavailable
+            };
+            if (!ground.Accepted ||
+                motion.State != CharacterFootSwingMotionState.Accepted ||
+                motion.ConstraintState != CharacterFootConstraintState.Swing ||
+                ground.EnvelopeVertexCount < 2)
+            {
+                return result;
+            }
+            if (!float.IsFinite(up.x) ||
+                !float.IsFinite(up.y) ||
+                !float.IsFinite(up.z) ||
+                up.sqrMagnitude <= 0.000001f)
+            {
+                result.State =
+                    CharacterFootActualEnvelopeIntersectionState.InvalidComponentUp;
+                return result;
+            }
+            Vector3 horizontalAxis = Vector3.ProjectOnPlane(
+                ground.NextSwingLanding - ground.LastLanding,
+                up);
+            if (!float.IsFinite(horizontalAxis.x) ||
+                !float.IsFinite(horizontalAxis.y) ||
+                !float.IsFinite(horizontalAxis.z) ||
+                horizontalAxis.sqrMagnitude <= 0.00000001f)
+            {
+                result.State =
+                    CharacterFootActualEnvelopeIntersectionState.DegenerateAxis;
+                return result;
+            }
+            Vector3 direction = horizontalAxis.normalized;
+            float pathLength = horizontalAxis.magnitude;
+            Vector3 actualHorizontalOffset = Vector3.ProjectOnPlane(
+                motion.OriginalSole - ground.LastLanding,
+                up);
+            result.ActualFootHorizontalDistance = Vector3.Dot(
+                actualHorizontalOffset,
+                direction);
+            result.BaselineHorizontalDistance = Vector3.Dot(
+                motion.BaselineSample - ground.LastLanding,
+                direction);
+            result.EnvelopeHorizontalDistance = Vector3.Dot(
+                motion.EnvelopeSample - ground.LastLanding,
+                direction);
+            float rawPathParameter =
+                result.ActualFootHorizontalDistance / pathLength;
+            result.AxisRegion = result.ActualFootHorizontalDistance <
+                                -ActualEnvelopeHorizontalEpsilonMeters
+                ? CharacterFootActualFootAxisRegion.BeforePathStart
+                : result.ActualFootHorizontalDistance >
+                  pathLength + ActualEnvelopeHorizontalEpsilonMeters
+                    ? CharacterFootActualFootAxisRegion.AfterPathEnd
+                    : CharacterFootActualFootAxisRegion.WithinPathSegment;
+            result.ClosestPathParameter = Mathf.Clamp01(rawPathParameter);
+            result.DistanceAlongAxis =
+                result.ClosestPathParameter * pathLength;
+            Vector3 closestHorizontalOffset =
+                horizontalAxis * result.ClosestPathParameter;
+            result.CrossTrackDistance = Vector3.Distance(
+                actualHorizontalOffset,
+                closestHorizontalOffset);
+            result.CorridorRadius = ground.Query.Radius;
+            result.WithinGroundPathCorridor =
+                float.IsFinite(result.CorridorRadius) &&
+                result.CorridorRadius > 0f &&
+                result.CrossTrackDistance <=
+                result.CorridorRadius + ActualEnvelopeHorizontalEpsilonMeters;
+            var heights = new List<float>(ground.EnvelopeVertexCount * 2);
+            for (int i = 1; i < ground.EnvelopeVertexCount; i++)
+            {
+                CharacterFootGroundEnvelopeVertex previous =
+                    ground.EnvelopeVertexAt(i - 1);
+                CharacterFootGroundEnvelopeVertex current =
+                    ground.EnvelopeVertexAt(i);
+                float previousDistance = Vector3.Dot(
+                    previous.Position - ground.LastLanding,
+                    direction);
+                float currentDistance = Vector3.Dot(
+                    current.Position - ground.LastLanding,
+                    direction);
+                float minimumDistance = Mathf.Min(
+                    previousDistance,
+                    currentDistance);
+                float maximumDistance = Mathf.Max(
+                    previousDistance,
+                    currentDistance);
+                if (result.ActualFootHorizontalDistance <
+                        minimumDistance - ActualEnvelopeHorizontalEpsilonMeters ||
+                    result.ActualFootHorizontalDistance >
+                        maximumDistance + ActualEnvelopeHorizontalEpsilonMeters)
+                {
+                    continue;
+                }
+                float previousHeight = Vector3.Dot(previous.Position, up);
+                float currentHeight = Vector3.Dot(current.Position, up);
+                float distanceDelta = currentDistance - previousDistance;
+                if (Mathf.Abs(distanceDelta) <=
+                    ActualEnvelopeHorizontalEpsilonMeters)
+                {
+                    if (Mathf.Abs(
+                            result.ActualFootHorizontalDistance -
+                            previousDistance) >
+                        ActualEnvelopeHorizontalEpsilonMeters)
+                    {
+                        continue;
+                    }
+                    AddUniqueEnvelopeHeight(heights, previousHeight);
+                    AddUniqueEnvelopeHeight(heights, currentHeight);
+                    if (Mathf.Abs(currentHeight - previousHeight) >
+                        ActualEnvelopeHeightEpsilonMeters)
+                    {
+                        result.HasVerticalEdge = true;
+                    }
+                    continue;
+                }
+                float interpolation =
+                    (result.ActualFootHorizontalDistance -
+                     previousDistance) / distanceDelta;
+                AddUniqueEnvelopeHeight(
+                    heights,
+                    Mathf.Lerp(
+                        previousHeight,
+                        currentHeight,
+                        Mathf.Clamp01(interpolation)));
+            }
+            if (heights.Count == 0)
+            {
+                result.State =
+                    CharacterFootActualEnvelopeIntersectionState.NoIntersection;
+                result.CounterfactualState =
+                    result.WithinGroundPathCorridor
+                        ? CharacterFootActualEnvelopeCounterfactualState
+                            .NoIntersection
+                        : CharacterFootActualEnvelopeCounterfactualState
+                            .OutsideGroundPathCorridor;
+                return result;
+            }
+            result.CandidateCount = heights.Count;
+            result.MinimumHeightAlongUp = heights.Min();
+            result.MaximumHeightAlongUp = heights.Max();
+            result.HeightSpan = result.MaximumHeightAlongUp -
+                                result.MinimumHeightAlongUp;
+            result.HasMultipleHeights = heights.Count > 1 &&
+                result.HeightSpan > ActualEnvelopeHeightEpsilonMeters;
+            result.Ambiguous = result.HasVerticalEdge ||
+                               result.HasMultipleHeights;
+            result.State = result.Ambiguous
+                ? CharacterFootActualEnvelopeIntersectionState
+                    .AmbiguousEnvelopeAtActualFootDistance
+                : CharacterFootActualEnvelopeIntersectionState.Unique;
+            result.CounterfactualState = !result.WithinGroundPathCorridor
+                ? CharacterFootActualEnvelopeCounterfactualState
+                    .OutsideGroundPathCorridor
+                : result.Ambiguous
+                    ? CharacterFootActualEnvelopeCounterfactualState
+                        .AmbiguousInCorridor
+                    : CharacterFootActualEnvelopeCounterfactualState
+                        .UniqueInCorridor;
+            return result;
+        }
+
+        static void AddUniqueEnvelopeHeight(
+            List<float> heights,
+            float value)
+        {
+            if (!float.IsFinite(value))
+                return;
+            for (int i = 0; i < heights.Count; i++)
+            {
+                if (Mathf.Abs(heights[i] - value) <=
+                    ActualEnvelopeHeightEpsilonMeters)
+                {
+                    return;
+                }
+            }
+            heights.Add(value);
         }
 
         static void WriteGeometryRows(

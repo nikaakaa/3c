@@ -326,6 +326,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previousConstraintState = previous.ConstraintState,
                     constraintStateBefore = current.ConstraintStateBefore,
                     constraintState = current.ConstraintState,
+                    preTransitionReason = current.PreTransitionReason,
+                    preTransitionSource = current.PreTransitionSource,
+                    preTransitionTarget = current.PreTransitionTarget,
+                    preTransitionAnchorCommand =
+                        current.PreTransitionAnchorCommand,
+                    postTransitionReason = current.PostTransitionReason,
+                    postTransitionSource = current.PostTransitionSource,
+                    postTransitionTarget = current.PostTransitionTarget,
+                    postTransitionAnchorCommand =
+                        current.PostTransitionAnchorCommand,
+                    stateTargetCorrection = CharacterFootVectorFact.From(
+                        current.StateTargetCorrection),
+                    interpolationPolicy = current.InterpolationPolicy,
+                    interpolationOutputCorrection =
+                        CharacterFootVectorFact.From(
+                            current.InterpolationOutputCorrection),
+                    interpolationCompleted = current.InterpolationCompleted,
                     presentationDeltaSeconds = current.DeltaSeconds,
                     bodyTickSpan = current.CurrentBodyTick >=
                                    previous.CurrentBodyTick
@@ -4189,6 +4206,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionResidualDeadlineHalfLifeSeconds"),
                 ResidualAppliedHalfLifeSeconds =
                     Float("FootMotionResidualAppliedHalfLifeSeconds"),
+                PreTransitionReason = Cell("FootMotionPreTransitionReason"),
+                PreTransitionSource = Cell("FootMotionPreTransitionSource"),
+                PreTransitionTarget = Cell("FootMotionPreTransitionTarget"),
+                PreTransitionAnchorCommand =
+                    Cell("FootMotionPreTransitionAnchorCommand"),
+                PostTransitionReason = Cell("FootMotionPostTransitionReason"),
+                PostTransitionSource = Cell("FootMotionPostTransitionSource"),
+                PostTransitionTarget = Cell("FootMotionPostTransitionTarget"),
+                PostTransitionAnchorCommand =
+                    Cell("FootMotionPostTransitionAnchorCommand"),
+                StateTargetCorrection =
+                    Vector("FootMotionStateTargetCorrection"),
+                InterpolationPolicy = Cell("FootMotionInterpolationPolicy"),
+                InterpolationOutputCorrection =
+                    Vector("FootMotionInterpolationOutputCorrection"),
+                InterpolationCompleted =
+                    Int("FootMotionInterpolationCompleted") != 0,
                 ConstraintStateBefore = Cell("FootMotionConstraintStateBefore"),
                 LockResponseBefore = Cell("FootMotionLockResponseBefore"),
                 OutputStagesAvailable =
@@ -5753,6 +5787,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool ResidualDeadlineHalfLifeAvailable;
             internal float ResidualDeadlineHalfLifeSeconds;
             internal float ResidualAppliedHalfLifeSeconds;
+            internal string PreTransitionReason;
+            internal string PreTransitionSource;
+            internal string PreTransitionTarget;
+            internal string PreTransitionAnchorCommand;
+            internal string PostTransitionReason;
+            internal string PostTransitionSource;
+            internal string PostTransitionTarget;
+            internal string PostTransitionAnchorCommand;
+            internal Vector3 StateTargetCorrection;
+            internal string InterpolationPolicy;
+            internal Vector3 InterpolationOutputCorrection;
+            internal bool InterpolationCompleted;
             internal string ConstraintStateBefore;
             internal string LockResponseBefore;
             internal bool OutputStagesAvailable;

@@ -98,14 +98,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in context,
                         in frame,
                         context.Interpolation.EffectiveCorrection);
-            context.Interpolation.EffectiveCorrection =
-                hardConstraint.OutputCorrection;
             CharacterFootPathContinuityFact continuityFact =
                 interpolation.ContinuityFact;
             if (!preTransition.SuppressOutput)
             {
                 continuityFact = CompleteContinuity(
                     in continuityFact,
+                    in preTransition,
+                    in postTransition,
+                    in target,
+                    in interpolation,
                     stateBefore,
                     context.Discrete.State,
                     lockResponseBefore,
@@ -126,6 +128,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static CharacterFootPathContinuityFact CompleteContinuity(
             in CharacterFootPathContinuityFact fact,
+            in CharacterFootTransitionDecision preTransition,
+            in CharacterFootTransitionDecision postTransition,
+            in CharacterFootStateTarget target,
+            in CharacterFootInterpolationResult interpolation,
             CharacterFootConstraintState stateBefore,
             CharacterFootConstraintState stateAfter,
             CharacterFootLockResponse lockResponseBefore,
@@ -156,6 +162,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     up)
                 : 0f;
             return fact.Complete(
+                in preTransition,
+                in postTransition,
+                in target,
+                in interpolation,
                 stateBefore,
                 stateAfter,
                 lockResponseBefore,

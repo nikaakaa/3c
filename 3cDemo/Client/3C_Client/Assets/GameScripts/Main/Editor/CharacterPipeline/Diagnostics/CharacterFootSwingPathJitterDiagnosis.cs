@@ -242,6 +242,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string previousConstraintState;
         public string constraintStateBefore;
         public string constraintState;
+        public string preTransitionReason;
+        public string preTransitionSource;
+        public string preTransitionTarget;
+        public string preTransitionAnchorCommand;
+        public string postTransitionReason;
+        public string postTransitionSource;
+        public string postTransitionTarget;
+        public string postTransitionAnchorCommand;
+        public CharacterFootVectorFact stateTargetCorrection;
+        public string interpolationPolicy;
+        public CharacterFootVectorFact interpolationOutputCorrection;
+        public bool interpolationCompleted;
         public double presentationDeltaSeconds;
         public ulong bodyTickSpan;
         public string primaryProbe;

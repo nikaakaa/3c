@@ -211,6 +211,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionResidualOutputCorrectionX,FootMotionResidualOutputCorrectionY,FootMotionResidualOutputCorrectionZ," +
             "FootMotionLandingUpdateDistance,FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
             "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
+            "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
+            "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
+            "FootMotionStateTargetCorrectionX,FootMotionStateTargetCorrectionY,FootMotionStateTargetCorrectionZ,FootMotionInterpolationPolicy," +
+            "FootMotionInterpolationOutputCorrectionX,FootMotionInterpolationOutputCorrectionY,FootMotionInterpolationOutputCorrectionZ,FootMotionInterpolationCompleted," +
             "FootMotionConstraintStateBefore,FootMotionLockResponseBefore,FootMotionOutputStagesAvailable,FootMotionReleasingCompletedToSwing,FootMotionSafetyFloorAvailable," +
             "FootMotionSafetyFloorOwner,FootMotionSafetyFloorOwnerSurfaceIdentity,FootMotionSafetyFloorOwnerPathIdentity," +
             "FootMotionCorrectionBeforeSafetyFloorX,FootMotionCorrectionBeforeSafetyFloorY,FootMotionCorrectionBeforeSafetyFloorZ," +
@@ -2087,6 +2091,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.ResidualDeadlineHalfLifeAvailable);
             Add(row, motion.ResidualDeadlineHalfLifeSeconds);
             Add(row, motion.ResidualAppliedHalfLifeSeconds);
+            Add(row, motion.PreTransitionReason);
+            Add(row, motion.PreTransitionSource.ToString());
+            Add(row, motion.PreTransitionTarget.ToString());
+            Add(row, motion.PreTransitionAnchorCommand);
+            Add(row, motion.PostTransitionReason);
+            Add(row, motion.PostTransitionSource.ToString());
+            Add(row, motion.PostTransitionTarget.ToString());
+            Add(row, motion.PostTransitionAnchorCommand);
+            Add(row, motion.StateTargetCorrection);
+            Add(row, motion.InterpolationPolicy);
+            Add(row, motion.InterpolationOutputCorrection);
+            Add(row, motion.InterpolationCompleted);
             Add(row, motion.ConstraintStateBefore.ToString());
             Add(row, motion.LockResponseBefore.ToString());
             Add(row, motion.OutputStagesAvailable);

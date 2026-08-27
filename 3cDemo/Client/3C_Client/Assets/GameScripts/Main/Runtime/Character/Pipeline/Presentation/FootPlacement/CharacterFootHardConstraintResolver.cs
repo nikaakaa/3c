@@ -48,16 +48,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootConstraintState.UnlockedSupport
                     when swing.Accepted:
                 {
-                    Vector3 minimum = ResolveSwingEnvelopeMinimum(
+                    if (!frame.CurrentGroundFloor.Accepted)
+                    {
+                        return new CharacterFootHardConstraintResult(
+                            false,
+                            false,
+                            CharacterFootSafetyFloorOwner.None,
+                            0,
+                            0,
+                            correction,
+                            default,
+                            correction);
+                    }
+                    Vector3 minimum = ResolveCurrentGroundMinimum(
                         frame.AnimatedFoot,
-                        in swing,
+                        frame.CurrentGroundFloor.Point,
                         frame.ComponentUp);
                     return Result(
                         true,
                         true,
-                        CharacterFootSafetyFloorOwner.GroundPathEnvelope,
+                        CharacterFootSafetyFloorOwner.CurrentGroundFloor,
+                        frame.CurrentGroundFloor.SurfaceIdentity,
                         0,
-                        swing.GroundPathInputIdentity,
                         correction,
                         minimum,
                         frame.ComponentUp);
@@ -71,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             context.Contact.Anchor);
                     return Result(
                         true,
-                        false,
+                        true,
                         CharacterFootSafetyFloorOwner.ContactAnchor,
                         context.Contact.SurfaceIdentity,
                         0,
@@ -114,14 +126,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     minimum,
                     componentUp));
 
-        static Vector3 ResolveSwingEnvelopeMinimum(
+        static Vector3 ResolveCurrentGroundMinimum(
             CharacterFootPlacementAnimatedFootPose foot,
-            in CharacterFootSwingMotionResult swing,
+            Vector3 point,
             Vector3 componentUp)
         {
             Vector3 up = componentUp.normalized;
             return up * Vector3.Dot(
-                swing.EnvelopeSample -
+                point -
                 CharacterFootConstraintMath.ResolveOriginalSole(foot),
                 up);
         }

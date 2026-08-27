@@ -116,6 +116,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DeadlineHalfLifeAvailable = deadlineHalfLifeAvailable;
             DeadlineHalfLifeSeconds = deadlineHalfLifeSeconds;
             AppliedHalfLifeSeconds = appliedHalfLifeSeconds;
+            PreTransitionReason = CharacterFootTransitionReason.None;
+            PreTransitionSource = default;
+            PreTransitionTarget = default;
+            PreTransitionAnchorCommand = CharacterFootAnchorCommand.None;
+            PostTransitionReason = CharacterFootTransitionReason.None;
+            PostTransitionSource = default;
+            PostTransitionTarget = default;
+            PostTransitionAnchorCommand = CharacterFootAnchorCommand.None;
+            StateTargetCorrection = default;
+            InterpolationPolicy = CharacterFootInterpolationPolicy.Suppressed;
+            InterpolationOutputCorrection = default;
+            InterpolationCompleted = false;
             StateBefore = default;
             StateAfter = default;
             LockResponseBefore = default;
@@ -138,6 +150,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterFootPathContinuityFact(
             in CharacterFootPathContinuityFact source,
+            in CharacterFootTransitionDecision preTransition,
+            in CharacterFootTransitionDecision postTransition,
+            in CharacterFootStateTarget stateTarget,
+            in CharacterFootInterpolationResult interpolation,
             CharacterFootConstraintState stateBefore,
             CharacterFootConstraintState stateAfter,
             CharacterFootLockResponse lockResponseBefore,
@@ -176,6 +192,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DeadlineHalfLifeAvailable = source.DeadlineHalfLifeAvailable;
             DeadlineHalfLifeSeconds = source.DeadlineHalfLifeSeconds;
             AppliedHalfLifeSeconds = source.AppliedHalfLifeSeconds;
+            PreTransitionReason = preTransition.Reason;
+            PreTransitionSource = preTransition.SourceState;
+            PreTransitionTarget = preTransition.TargetState;
+            PreTransitionAnchorCommand = preTransition.AnchorCommand;
+            PostTransitionReason = postTransition.Reason;
+            PostTransitionSource = postTransition.SourceState;
+            PostTransitionTarget = postTransition.TargetState;
+            PostTransitionAnchorCommand = postTransition.AnchorCommand;
+            StateTargetCorrection = stateTarget.Correction;
+            InterpolationPolicy = stateTarget.InterpolationPolicy;
+            InterpolationOutputCorrection = interpolation.Correction;
+            InterpolationCompleted = interpolation.Completed;
             StateBefore = stateBefore;
             StateAfter = stateAfter;
             LockResponseBefore = lockResponseBefore;
@@ -219,6 +247,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool DeadlineHalfLifeAvailable { get; }
         internal float DeadlineHalfLifeSeconds { get; }
         internal float AppliedHalfLifeSeconds { get; }
+        internal CharacterFootTransitionReason PreTransitionReason { get; }
+        internal CharacterFootConstraintState PreTransitionSource { get; }
+        internal CharacterFootConstraintState PreTransitionTarget { get; }
+        internal CharacterFootAnchorCommand PreTransitionAnchorCommand { get; }
+        internal CharacterFootTransitionReason PostTransitionReason { get; }
+        internal CharacterFootConstraintState PostTransitionSource { get; }
+        internal CharacterFootConstraintState PostTransitionTarget { get; }
+        internal CharacterFootAnchorCommand PostTransitionAnchorCommand { get; }
+        internal Vector3 StateTargetCorrection { get; }
+        internal CharacterFootInterpolationPolicy InterpolationPolicy { get; }
+        internal Vector3 InterpolationOutputCorrection { get; }
+        internal bool InterpolationCompleted { get; }
         internal CharacterFootConstraintState StateBefore { get; }
         internal CharacterFootConstraintState StateAfter { get; }
         internal CharacterFootLockResponse LockResponseBefore { get; }
@@ -239,6 +279,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SafetyFloorClearanceAfterMeters { get; }
 
         internal CharacterFootPathContinuityFact Complete(
+            in CharacterFootTransitionDecision preTransition,
+            in CharacterFootTransitionDecision postTransition,
+            in CharacterFootStateTarget stateTarget,
+            in CharacterFootInterpolationResult interpolation,
             CharacterFootConstraintState stateBefore,
             CharacterFootConstraintState stateAfter,
             CharacterFootLockResponse lockResponseBefore,
@@ -257,6 +301,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float safetyFloorClearanceAfterMeters) =>
             new CharacterFootPathContinuityFact(
                 in this,
+                in preTransition,
+                in postTransition,
+                in stateTarget,
+                in interpolation,
                 stateBefore,
                 stateAfter,
                 lockResponseBefore,

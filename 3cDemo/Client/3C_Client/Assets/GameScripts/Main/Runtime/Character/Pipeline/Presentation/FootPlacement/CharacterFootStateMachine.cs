@@ -371,6 +371,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 ContactAnchor;
         internal Vector3 ContactNormal;
         internal Vector3 EffectiveCorrection;
+        internal Vector3 LastOutputSole;
         internal Vector3 AcquireResidual;
         internal Vector3 ReleaseTargetCorrection;
         internal Vector3 ReleaseResidual;
@@ -705,6 +706,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 context.HasOutput = true;
                 context.EffectiveCorrection = swingCorrection;
+                context.LastOutputSole = ResolveOriginalSole(frame.AnimatedFoot) +
+                                         swingCorrection;
             }
             bool preserveOutput = false;
             Vector3 desiredCorrection = swingCorrection;
@@ -862,7 +865,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 revisionReason |= CharacterFootPathRevisionReason.SwingTargetChanged;
             bool revised = revisionReason != CharacterFootPathRevisionReason.None;
             if (revised)
-                context.SwingResidual = context.EffectiveCorrection - swingCorrection;
+                context.SwingResidual = context.LastOutputSole -
+                                        swing.CorrectedSole;
             Vector3 residualBeforeDecay = context.SwingResidual;
             context.HasSwingPath = hasPath;
             context.SwingLandingEventIdentity = hasPath ? swing.LandingEventIdentity : 0;
@@ -1090,6 +1094,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 outputCorrection = context.EffectiveCorrection;
             Vector3 originalSole = ResolveOriginalSole(frame.AnimatedFoot);
             Vector3 originalAnkle = frame.AnimatedFoot.AnklePosition;
+            Vector3 correctedSole = originalSole + outputCorrection;
+            context.LastOutputSole = correctedSole;
             float horizontalError = hasContact
                 ? Vector3.ProjectOnPlane(
                     context.ContactAnchor - originalSole,
@@ -1132,7 +1138,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3.Dot(outputCorrection, frame.ComponentUp.normalized),
                 swing.LandingPredictionError,
                 swing.LandingConstraintWeight,
-                originalSole + outputCorrection,
+                correctedSole,
                 originalAnkle + outputCorrection,
                 positionWeight,
                 0f,
@@ -1165,7 +1171,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.RigId,
                 frame.RigRevision,
                 side,
-                originalSole + outputCorrection,
+                correctedSole,
                 originalAnkle + outputCorrection,
                 outputCorrection,
                 positionWeight,

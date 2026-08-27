@@ -185,10 +185,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "FormalHeightConstraintDelta",
                     "BuilderSelectedCorrectionDelta",
                     "BuilderSelectedCorrectionStep",
-                    "ActualFootHorizontalProgressDelta",
-                    "BaselineHorizontalProgressDelta",
-                    "EnvelopeHorizontalProgressDelta",
-                    "ActualMinusEnvelopeProgressDelta",
+                    "ActualFootHorizontalDistanceDelta",
+                    "BaselineHorizontalDistanceDelta",
+                    "EnvelopeHorizontalDistanceDelta",
+                    "ActualMinusEnvelopeHorizontalDistanceDelta",
                     "DesiredCorrectionAlongUpDelta",
                     "DesiredCorrectionAlongUpStep",
                     "FinalCorrectionAlongUpDelta",
@@ -850,16 +850,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double builderSelectedCorrectionDeltaMeters;
         public CharacterFootVectorFact previousBuilderSwingTarget;
         public CharacterFootVectorFact builderSwingTarget;
-        public string previousHorizontalProgressState;
-        public string horizontalProgressState;
-        public double previousActualFootHorizontalProgressMeters;
-        public double actualFootHorizontalProgressMeters;
-        public double previousBaselineHorizontalProgressMeters;
-        public double baselineHorizontalProgressMeters;
-        public double previousEnvelopeHorizontalProgressMeters;
-        public double envelopeHorizontalProgressMeters;
-        public double previousActualMinusEnvelopeProgressMeters;
-        public double actualMinusEnvelopeProgressMeters;
+        public string previousHorizontalAxisState;
+        public string horizontalAxisState;
+        public double previousActualFootHorizontalDistanceMeters;
+        public double actualFootHorizontalDistanceMeters;
+        public double previousBaselineHorizontalDistanceMeters;
+        public double baselineHorizontalDistanceMeters;
+        public double previousEnvelopeHorizontalDistanceMeters;
+        public double envelopeHorizontalDistanceMeters;
+        public double previousActualMinusEnvelopeHorizontalDistanceMeters;
+        public double actualMinusEnvelopeHorizontalDistanceMeters;
         public double desiredCorrectionAlongUpDeltaMeters;
         public double finalCorrectionAlongUpDeltaMeters;
         public bool physicalAnkleAvailable;

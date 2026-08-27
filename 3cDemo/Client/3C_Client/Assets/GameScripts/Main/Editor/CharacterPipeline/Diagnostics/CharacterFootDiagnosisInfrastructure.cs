@@ -106,6 +106,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
         }
 
+        internal List<CharacterFootDiagnosisEvidence> Representatives(
+            List<JObject> eligible,
+            Func<JObject, List<string>> matchRules,
+            Func<CharacterFootDiagnosisEvidence, double> rank,
+            int limit)
+        {
+            if (limit <= 0)
+                throw new ArgumentOutOfRangeException(nameof(limit));
+            return Match(eligible, matchRules)
+                .OrderByDescending(rank)
+                .ThenBy(value => value.startFrame)
+                .Take(limit)
+                .OrderBy(value => value.startFrame)
+                .ThenBy(value => value.side, StringComparer.Ordinal)
+                .ToList();
+        }
+
         internal CharacterFootDiagnosisOccurrenceProfile Occurrence(
             string sampleUnit,
             string metricName,
@@ -320,7 +337,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingCurrentFloorCatchup =
                         value["swingCurrentFloorCatchup"]?
                             .ToObject<
-                                CharacterFootSwingCurrentFloorCatchupAnalysis>()
+                                CharacterFootSwingCurrentFloorCatchupAnalysis>(),
+                    swingActualFootEnvelopeCounterfactual =
+                        value["swingActualFootEnvelopeCounterfactual"]?
+                            .ToObject<
+                                CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis>()
                 });
             }
             return result;
@@ -510,6 +531,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             sameGroundPathSwingEnvelopeStep;
         public CharacterFootSwingCurrentFloorCatchupAnalysis
             swingCurrentFloorCatchup;
+        public CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
+            swingActualFootEnvelopeCounterfactual;
     }
 
     [Serializable]

@@ -1222,16 +1222,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterFootConstraintState.Swing when swing.Accepted:
                 case CharacterFootConstraintState.UnlockedSupport when swing.Accepted:
-                    CharacterFootCurrentGroundFloorResult currentGroundFloor =
-                        frame.CurrentGroundFloor;
-                    if (!currentGroundFloor.Accepted)
-                        return false;
                     safetyFloorAvailable = true;
-                    Vector3 up = frame.ComponentUp.normalized;
-                    floorCorrection = up * Vector3.Dot(
-                        currentGroundFloor.Point -
-                        ResolveOriginalSole(frame.AnimatedFoot),
-                        up);
+                    floorCorrection = ResolveSwingGroundFloor(
+                        frame.AnimatedFoot,
+                        in swing,
+                        frame.ComponentUp);
                     break;
                 case CharacterFootConstraintState.Landing:
                 case CharacterFootConstraintState.Locked:
@@ -1247,6 +1242,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 floorCorrection,
                 frame.ComponentUp);
             return true;
+        }
+
+        static Vector3 ResolveSwingGroundFloor(
+            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootSwingMotionResult swing,
+            Vector3 componentUp)
+        {
+            Vector3 up = componentUp.normalized;
+            return up * Vector3.Dot(
+                swing.EnvelopeSample - ResolveOriginalSole(foot),
+                up);
         }
 
         static Vector3 RaiseToFloor(

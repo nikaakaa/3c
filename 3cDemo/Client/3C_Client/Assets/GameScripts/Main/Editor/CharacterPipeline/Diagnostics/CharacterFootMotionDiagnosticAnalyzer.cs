@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/12";
+        const string Schema = "character-foot-motion-facts/13";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 12;
+        const int AnalyzerVersion = 13;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 640;
         const float PositionNoiseFloor = 0.001f;
@@ -127,6 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"releaseEvents={document.coverage.releaseEventCount} " +
                 $"pathChanges={document.coverage.pathChangeCount} " +
                 $"pathContinuityEvents={document.coverage.pathContinuityEventCount} " +
+                $"stablePathSwingPhaseJumps={document.coverage.stablePathSwingPhaseJumpCount} " +
+                $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
                 $"safetyFloorEvents={document.coverage.safetyFloorEventCount} " +
@@ -164,10 +166,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 stepTimeCandidateSelections);
             AnalyzeLandingEvents(frames, events);
             AnalyzeLandingStateConsistency(frames, events);
+            AnalyzeSwingToLandingFloorHandoffs(frames, events);
             AnalyzeLockedEvents(frames, events);
             AnalyzeContactPlanePenetration(frames, events);
             AnalyzeSafetyFloor(frames, events);
             AnalyzeReleaseEvents(frames, events);
+            AnalyzeStablePathSwingPhaseJumps(frames, events);
             AnalyzePathChanges(frames, events);
             AnalyzePathContinuity(frames, events);
         }
@@ -693,8 +697,262 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             previous.FormalLockMode == "Unlocked" &&
             current.FormalLockMode != "Unlocked";
 
+        static void AnalyzeSwingToLandingFloorHandoffs(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(previous, current) ||
+                    previous.ConstraintState != "Swing" ||
+                    current.ConstraintState != "Landing")
+                {
+                    continue;
+                }
+                bool upAvailable =
+                    previous.ComponentUp.sqrMagnitude >
+                    TimeEpsilon * TimeEpsilon;
+                Vector3 up = upAvailable
+                    ? previous.ComponentUp.normalized
+                    : default;
+                Vector3 correctionDelta =
+                    current.FinalEffectiveCorrection -
+                    previous.FinalEffectiveCorrection;
+                double correctionStep = correctionDelta.magnitude;
+                double correctionAlongUp = upAvailable
+                    ? Vector3.Dot(correctionDelta, up)
+                    : 0d;
+                bool physicalAvailable =
+                    previous.FinalPhysicalWriteAvailable &&
+                    current.FinalPhysicalWriteAvailable;
+                Vector3 physicalAnkleDelta = physicalAvailable
+                    ? FinalPhysicalAnkleWorld(current) -
+                      FinalPhysicalAnkleWorld(previous)
+                    : default;
+                Vector3 physicalSoleDelta = physicalAvailable
+                    ? FinalSole(current) - FinalSole(previous)
+                    : default;
+                double previousResidualAfterDecay =
+                    previous.SwingResidualAfterDecay.magnitude;
+                bool previousSafetyFloorOwned =
+                    previous.SafetyFloorAvailable &&
+                    previous.SafetyFloorClamped &&
+                    previous.SafetyFloorClampMeters > PositionNoiseFloor;
+                bool residualWithinDeadline =
+                    previous.LandingUpdateDistance > 0f &&
+                    previousResidualAfterDecay <=
+                    previous.LandingUpdateDistance + TimeEpsilon;
+                Vector3 previousFloorCompensation =
+                    previous.SafetyFloorOutputCorrection -
+                    previous.CorrectionBeforeSafetyFloor;
+                double previousFloorCompensationAlongUp = upAvailable
+                    ? Vector3.Dot(previousFloorCompensation, up)
+                    : 0d;
+                bool floorCompensationDroppedAtLanding =
+                    previousSafetyFloorOwned &&
+                    !current.SafetyFloorAvailable &&
+                    upAvailable &&
+                    correctionAlongUp <=
+                    -previousFloorCompensationAlongUp +
+                    PositionNoiseFloor;
+                double stepHeight = upAvailable &&
+                                    previous.GroundPathTargetAvailable
+                    ? Vector3.Dot(
+                        previous.NextLanding - previous.LastLanding,
+                        up)
+                    : 0d;
+                string stepDirection = stepHeight > PositionNoiseFloor
+                    ? "Up"
+                    : stepHeight < -PositionNoiseFloor
+                        ? "Down"
+                        : "Flat";
+                var detail =
+                    new CharacterFootSwingToLandingFloorHandoffAnalysis
+                    {
+                        previousFrame = previous.Frame,
+                        frame = current.Frame,
+                        side = current.Side,
+                        eventIdentity = ResolveEventIdentity(current)
+                            .ToString(CultureInfo.InvariantCulture),
+                        previousSourceIdentity = previous.SourceIdentity,
+                        sourceIdentity = current.SourceIdentity,
+                        previousSourceCycle = previous.SourceCycle,
+                        sourceCycle = current.SourceCycle,
+                        previousContributionContinuityIdentity =
+                            previous.ContributionContinuityIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        contributionContinuityIdentity =
+                            current.ContributionContinuityIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        stateBefore = previous.ConstraintState,
+                        stateAfter = current.ConstraintState,
+                        entryCorrectionStepMeters = correctionStep,
+                        entryCorrectionAlongUpMeters = correctionAlongUp,
+                        entryPhysicalAnkleAvailable = physicalAvailable,
+                        entryPhysicalAnkleStepMeters =
+                            physicalAnkleDelta.magnitude,
+                        entryPhysicalAnkleAlongUpMeters = upAvailable &&
+                            physicalAvailable
+                            ? Vector3.Dot(physicalAnkleDelta, up)
+                            : 0d,
+                        entryPhysicalSoleAvailable = physicalAvailable,
+                        entryPhysicalSoleStepMeters =
+                            physicalSoleDelta.magnitude,
+                        entryPhysicalSoleAlongUpMeters = upAvailable &&
+                            physicalAvailable
+                            ? Vector3.Dot(physicalSoleDelta, up)
+                            : 0d,
+                        previousSafetyFloorClampMeters =
+                            previous.SafetyFloorClampMeters,
+                        previousSafetyFloorClearanceBeforeMeters =
+                            previous.SafetyFloorClearanceBeforeMeters,
+                        previousSafetyFloorClearanceAfterMeters =
+                            previous.SafetyFloorClearanceAfterMeters,
+                        previousResidualAfterDecayMeters =
+                            previousResidualAfterDecay,
+                        landingUpdateDistanceMeters =
+                            previous.LandingUpdateDistance,
+                        previousFinalEffectiveCorrection =
+                            CharacterFootVectorFact.From(
+                                previous.FinalEffectiveCorrection),
+                        finalEffectiveCorrection =
+                            CharacterFootVectorFact.From(
+                                current.FinalEffectiveCorrection),
+                        previousSafetyFloorMinimumCorrection =
+                            CharacterFootVectorFact.From(
+                                previous.SafetyFloorMinimumCorrection),
+                        previousSafetyFloorOutputCorrection =
+                            CharacterFootVectorFact.From(
+                                previous.SafetyFloorOutputCorrection),
+                        previousSafetyFloorCompensationMeters =
+                            previousFloorCompensation.magnitude,
+                        previousSafetyFloorCompensationAlongUpMeters =
+                            previousFloorCompensationAlongUp,
+                        currentSafetyFloorAvailable =
+                            current.SafetyFloorAvailable,
+                        currentFloorState = current.CurrentFloorState,
+                        currentFloorAccepted = current.CurrentFloorAccepted,
+                        currentFloorSurfaceIdentity =
+                            current.CurrentFloorSurfaceIdentity,
+                        currentContactOwnership =
+                            current.ContactOwnership,
+                        currentContactPlaneAvailable =
+                            current.ContactPlaneAvailable,
+                        currentContactSurfaceIdentity =
+                            current.ContactSurfaceIdentity,
+                        stepHeightMeters = stepHeight,
+                        stepDirection = stepDirection,
+                        previousFormalFootHeightMeters =
+                            previous.FormalFootHeight,
+                        formalFootHeightMeters = current.FormalFootHeight,
+                        previousFormalFootHeightAvailable =
+                            previous.FormalOutputObservationAvailable,
+                        formalFootHeightAvailable =
+                            current.FormalOutputObservationAvailable,
+                        previousProgress = previous.SwingProgress,
+                        progress = current.SwingProgress,
+                        previousTimeToLandingSeconds =
+                            previous.TimeToLandingSeconds,
+                        timeToLandingSeconds = current.TimeToLandingSeconds,
+                        previousSafetyFloorOwned =
+                            previousSafetyFloorOwned,
+                        residualWithinDeadline = residualWithinDeadline,
+                        floorCompensationDroppedAtLanding =
+                            floorCompensationDroppedAtLanding
+                    };
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["entryCorrectionStepMeters"] = correctionStep,
+                    ["entryCorrectionAlongUpMeters"] =
+                        correctionAlongUp,
+                    ["entryPhysicalAnkleStepMeters"] =
+                        physicalAnkleDelta.magnitude,
+                    ["entryPhysicalAnkleAlongUpMeters"] =
+                        detail.entryPhysicalAnkleAlongUpMeters,
+                    ["entryPhysicalSoleStepMeters"] =
+                        physicalSoleDelta.magnitude,
+                    ["entryPhysicalSoleAlongUpMeters"] =
+                        detail.entryPhysicalSoleAlongUpMeters,
+                    ["previousSafetyFloorClampMeters"] =
+                        previous.SafetyFloorClampMeters,
+                    ["previousClearanceBeforeMeters"] =
+                        previous.SafetyFloorClearanceBeforeMeters,
+                    ["previousClearanceAfterMeters"] =
+                        previous.SafetyFloorClearanceAfterMeters,
+                    ["previousResidualAfterDecayMeters"] =
+                        previousResidualAfterDecay,
+                    ["landingUpdateDistanceMeters"] =
+                        previous.LandingUpdateDistance,
+                    ["previousSafetyFloorCompensationMeters"] =
+                        previousFloorCompensation.magnitude,
+                    ["stepHeightMeters"] = stepHeight,
+                    ["previousFormalFootHeightMeters"] =
+                        previous.FormalFootHeight,
+                    ["formalFootHeightMeters"] =
+                        current.FormalFootHeight,
+                    ["previousProgress"] = previous.SwingProgress,
+                    ["progress"] = current.SwingProgress,
+                    ["previousTimeToLandingSeconds"] =
+                        previous.TimeToLandingSeconds,
+                    ["timeToLandingSeconds"] =
+                        current.TimeToLandingSeconds
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["stateBeforeSwing"] = true,
+                    ["stateAfterLanding"] = true,
+                    ["componentUpAvailable"] = upAvailable,
+                    ["previousSafetyFloorOwned"] =
+                        previousSafetyFloorOwned,
+                    ["residualWithinDeadline"] =
+                        residualWithinDeadline,
+                    ["floorCompensationDroppedAtLanding"] =
+                        floorCompensationDroppedAtLanding,
+                    ["upStep"] = stepDirection == "Up",
+                    ["downStep"] = stepDirection == "Down",
+                    ["flatStep"] = stepDirection == "Flat",
+                    ["entryPhysicalAnkleAvailable"] =
+                        physicalAvailable,
+                    ["entryPhysicalSoleAvailable"] =
+                        physicalAvailable,
+                    ["currentSafetyFloorAvailable"] =
+                        current.SafetyFloorAvailable,
+                    ["currentFloorAccepted"] =
+                        current.CurrentFloorAccepted,
+                    ["currentContactPlaneAvailable"] =
+                        current.ContactPlaneAvailable,
+                    ["previousFormalFootHeightAvailable"] =
+                        previous.FormalOutputObservationAvailable,
+                    ["formalFootHeightAvailable"] =
+                        current.FormalOutputObservationAvailable
+                };
+                events.Add(new EventFact(
+                    "SwingToLandingFloorHandoff",
+                    current.Side,
+                    previous.Frame,
+                    current.Frame,
+                    current.Frame,
+                    ResolveEventIdentity(current),
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence,
+                    swingToLandingFloorHandoff: detail));
+            }
+        }
+
         static Vector3 FinalSole(FootFrame frame) =>
             (frame.FinalHeel + frame.FinalToe) * 0.5f;
+
+        static Vector3 FinalPhysicalAnkleWorld(FootFrame frame) =>
+            frame.PoseRootWorldPosition +
+            frame.PoseRootWorldRotation *
+            frame.FinalPhysicalAnkleComponentPosition;
 
         static void AnalyzeLockedEvents(
             List<FootFrame> frames,
@@ -2079,6 +2337,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     pathChangeCount = events.Count(value => value.kind == "PathChange"),
                     pathContinuityEventCount = events.Count(
                         value => value.kind == "PathContinuity"),
+                    stablePathSwingPhaseJumpCount = events.Count(
+                        value => value.kind ==
+                                 "StablePathSwingPhaseJump"),
+                    swingToLandingFloorHandoffCount = events.Count(
+                        value => value.kind ==
+                                 "SwingToLandingFloorHandoff"),
                     supportChangeCount = events.Count(value => value.kind == "SupportChange"),
                     contactPlanePenetrationEventCount = events.Count(
                         value => value.kind == "ContactPlanePenetration"),
@@ -2410,6 +2674,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Float(prefix + "X"),
                 Float(prefix + "Y"),
                 Float(prefix + "Z"));
+            Quaternion Rotation(string prefix) => new Quaternion(
+                Float(prefix + "X"),
+                Float(prefix + "Y"),
+                Float(prefix + "Z"),
+                Float(prefix + "W"));
             StepCandidateFrame Candidate(string prefix) =>
                 new StepCandidateFrame
                 {
@@ -2450,6 +2719,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 DeltaSeconds = Float("PresentationDeltaSeconds"),
                 BodyResetSequence = Ulong("BodyResetSequence"),
                 Grounded = Int("Grounded") != 0,
+                TimeToLandingSeconds = Float("TimeToLandingSeconds"),
+                FormalOutputObservationAvailable =
+                    Int("FormalStepObservationAvailable") != 0,
+                FormalFootHeight = Float("FormalFootHeight"),
+                PoseRootWorldPosition = Vector("PoseRootWorldPosition"),
+                PoseRootWorldRotation = Rotation("PoseRootWorldRotation"),
                 StepSelectionMaximumPredictionTimeSeconds =
                     Float("StepSelectionMaximumPredictionTimeSeconds"),
                 StepSelectionLastLandingEventIdentity =
@@ -2532,6 +2807,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CorrectedAnkle = Vector("FootMotionCorrectedAnkle"),
                 Anchor = Vector("FootMotionSupportContactAnchor"),
                 ContactPlaneAvailable = Int("FootMotionContactPlaneAvailable") != 0,
+                ContactOwnership = Float("FootMotionContactOwnership"),
                 ContactSurfaceIdentity = Int("FootMotionContactSurfaceIdentity"),
                 ContactNormal = Vector("FootMotionContactPlaneNormal"),
                 PathContinuityEvaluated =
@@ -2763,6 +3039,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PoseGraphId", "PoseGraphRevision", "PosePlanHash",
                 "FrameSequence", "CompletionIdentity", "Side",
                 "PresentationDeltaSeconds", "BodyResetSequence", "Grounded",
+                "TimeToLandingSeconds", "FormalStepObservationAvailable",
+                "FormalFootHeight",
+                "PoseRootWorldPositionX", "PoseRootWorldPositionY",
+                "PoseRootWorldPositionZ", "PoseRootWorldRotationX",
+                "PoseRootWorldRotationY", "PoseRootWorldRotationZ",
+                "PoseRootWorldRotationW",
                 "InputFormalStepSourceIdentity", "InputFormalStepSourceCycle",
                 "InputFormalStepContributionContinuityIdentity",
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
@@ -2838,6 +3120,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionCorrectedSoleX", "FootMotionCorrectedSoleY", "FootMotionCorrectedSoleZ",
                 "FootMotionCorrectedAnkleX", "FootMotionCorrectedAnkleY", "FootMotionCorrectedAnkleZ",
                 "FootMotionSupportContactAnchorX", "FootMotionSupportContactAnchorY", "FootMotionSupportContactAnchorZ",
+                "FootMotionContactOwnership",
                 "FootMotionContactPlaneAvailable", "FootMotionContactSurfaceIdentity",
                 "FootMotionContactPlaneNormalX", "FootMotionContactPlaneNormalY", "FootMotionContactPlaneNormalZ",
                 "FootContactPlanePenetrationAvailability",
@@ -3370,6 +3653,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float DeltaSeconds;
             internal ulong BodyResetSequence;
             internal bool Grounded;
+            internal float TimeToLandingSeconds;
+            internal bool FormalOutputObservationAvailable;
+            internal float FormalFootHeight;
+            internal Vector3 PoseRootWorldPosition;
+            internal Quaternion PoseRootWorldRotation;
             internal float StepSelectionMaximumPredictionTimeSeconds;
             internal ulong StepSelectionLastLandingEventIdentity;
             internal string SelectedStepSource;
@@ -3432,6 +3720,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 CorrectedAnkle;
             internal Vector3 Anchor;
             internal bool ContactPlaneAvailable;
+            internal float ContactOwnership;
             internal int ContactSurfaceIdentity;
             internal Vector3 ContactNormal;
             internal bool PathContinuityEvaluated;
@@ -3510,6 +3799,196 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 FinalPelvisGoal;
             internal Vector3 PhysicalPelvis;
             internal Vector3 EffectiveCorrection => CorrectedAnkle - OriginalAnkle;
+        }
+
+        static void AnalyzeStablePathSwingPhaseJumps(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(previous, current) ||
+                    previous.HasAnchor ||
+                    current.HasAnchor ||
+                    previous.FootMotionState != "Accepted" ||
+                    current.FootMotionState != "Accepted" ||
+                    previous.ConstraintState != "Swing" ||
+                    current.ConstraintState != "Swing")
+                {
+                    continue;
+                }
+                CharacterFootSwingTargetCounterfactual counterfactual =
+                    AnalyzeSwingTargetCounterfactual(previous, current);
+                bool semanticPathStable =
+                    previous.GroundPathTargetAvailable &&
+                    current.GroundPathTargetAvailable &&
+                    previous.GroundPathState == current.GroundPathState &&
+                    previous.NextLandingEventIdentity ==
+                    current.NextLandingEventIdentity &&
+                    Vector3.Distance(
+                        previous.NextLanding,
+                        current.NextLanding) <= PositionNoiseFloor;
+                bool frozenPathStable =
+                    counterfactual.available &&
+                    counterfactual.pathRevisionDelta.HasValue &&
+                    counterfactual.pathRevisionDelta.Value <=
+                    PositionNoiseFloor;
+                if (!semanticPathStable || !frozenPathStable)
+                    continue;
+                bool sourceChanged = previous.SourceIdentity !=
+                                     current.SourceIdentity;
+                bool physicalAnkleAvailable =
+                    previous.FinalPhysicalWriteAvailable &&
+                    current.FinalPhysicalWriteAvailable;
+                bool physicalSoleAvailable = physicalAnkleAvailable;
+                double physicalAnkleDelta = physicalAnkleAvailable
+                    ? Vector3.Distance(
+                        FinalPhysicalAnkleWorld(previous),
+                        FinalPhysicalAnkleWorld(current))
+                    : 0d;
+                double physicalSoleDelta = physicalSoleAvailable
+                    ? Vector3.Distance(
+                        FinalSole(previous),
+                        FinalSole(current))
+                    : 0d;
+                double pathRevisionDelta =
+                    counterfactual.pathRevisionDelta ?? 0d;
+                double phaseAdvanceDelta =
+                    counterfactual.phaseAdvanceDelta ?? 0d;
+                double observedSwingTargetDelta =
+                    counterfactual.observedSwingTargetDelta ?? 0d;
+                double actualReconstructionError =
+                    counterfactual.actualReconstructionError ?? 0d;
+                double pathRevisionContribution =
+                    counterfactual.pathRevisionContribution ?? 0d;
+                double phaseContribution =
+                    counterfactual.phaseContribution ?? 0d;
+                double progressDelta =
+                    current.SwingProgress - previous.SwingProgress;
+                double envelopeSampleDelta = Vector3.Distance(
+                    previous.SwingEnvelopeSample,
+                    current.SwingEnvelopeSample);
+                double desiredCorrectionDelta = Vector3.Distance(
+                    previous.SwingDesiredCorrection,
+                    current.SwingDesiredCorrection);
+                double finalCorrectionDelta = Vector3.Distance(
+                    previous.FinalEffectiveCorrection,
+                    current.FinalEffectiveCorrection);
+                var detail =
+                    new CharacterFootStablePathSwingPhaseJumpAnalysis
+                    {
+                        previousFrame = previous.Frame,
+                        frame = current.Frame,
+                        side = current.Side,
+                        previousEventIdentity = ResolveEventIdentity(previous)
+                            .ToString(CultureInfo.InvariantCulture),
+                        eventIdentity = ResolveEventIdentity(current)
+                            .ToString(CultureInfo.InvariantCulture),
+                        previousSourceIdentity = previous.SourceIdentity,
+                        sourceIdentity = current.SourceIdentity,
+                        previousSourceCycle = previous.SourceCycle,
+                        sourceCycle = current.SourceCycle,
+                        previousContributionContinuityIdentity =
+                            previous.ContributionContinuityIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        contributionContinuityIdentity =
+                            current.ContributionContinuityIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        previousRawPathInputIdentity =
+                            previous.GroundPathInputIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        rawPathInputIdentity =
+                            current.GroundPathInputIdentity.ToString(
+                                CultureInfo.InvariantCulture),
+                        semanticPathStable = semanticPathStable,
+                        frozenPathCounterfactualAvailable =
+                            counterfactual.available,
+                        frozenPathRevisionWithinNoise = frozenPathStable,
+                        pathRevisionDeltaMeters = pathRevisionDelta,
+                        phaseAdvanceDeltaMeters = phaseAdvanceDelta,
+                        observedSwingTargetDeltaMeters =
+                            observedSwingTargetDelta,
+                        actualReconstructionErrorMeters =
+                            actualReconstructionError,
+                        pathRevisionContribution =
+                            pathRevisionContribution,
+                        phaseContribution = phaseContribution,
+                        progressDelta = progressDelta,
+                        envelopeSampleDeltaMeters = envelopeSampleDelta,
+                        desiredCorrectionDeltaMeters =
+                            desiredCorrectionDelta,
+                        finalCorrectionDeltaMeters = finalCorrectionDelta,
+                        finalPhysicalAnkleAvailable =
+                            physicalAnkleAvailable,
+                        finalPhysicalAnkleDeltaMeters =
+                            physicalAnkleDelta,
+                        finalPhysicalSoleAvailable =
+                            physicalSoleAvailable,
+                        finalPhysicalSoleDeltaMeters = physicalSoleDelta,
+                        sourceChanged = sourceChanged,
+                        pathResidualRebuilt =
+                            current.PathResidualRebuilt,
+                        pathRevisionReason = current.PathRevisionReason
+                    };
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["previousFrame"] = previous.Frame,
+                    ["frame"] = current.Frame,
+                    ["PathRevisionDelta"] = pathRevisionDelta,
+                    ["PhaseAdvanceDelta"] = phaseAdvanceDelta,
+                    ["ObservedSwingTargetDelta"] =
+                        observedSwingTargetDelta,
+                    ["ActualReconstructionError"] =
+                        actualReconstructionError,
+                    ["PathRevisionContribution"] =
+                        pathRevisionContribution,
+                    ["PhaseContribution"] = phaseContribution,
+                    ["ProgressDelta"] = progressDelta,
+                    ["EnvelopeSampleDelta"] = envelopeSampleDelta,
+                    ["DesiredCorrectionDelta"] = desiredCorrectionDelta,
+                    ["FinalCorrectionDelta"] = finalCorrectionDelta,
+                    ["FinalPhysicalAnkleDelta"] = physicalAnkleDelta,
+                    ["FinalPhysicalSoleDelta"] = physicalSoleDelta
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["acceptedSwingPair"] = true,
+                    ["unanchored"] = true,
+                    ["semanticPathStable"] = semanticPathStable,
+                    ["frozenPathCounterfactualAvailable"] =
+                        counterfactual.available,
+                    ["frozenPathRevisionWithinNoise"] = frozenPathStable,
+                    ["rawPathInputIdentityChanged"] =
+                        previous.GroundPathInputIdentity !=
+                        current.GroundPathInputIdentity,
+                    ["sourceChanged"] = sourceChanged,
+                    ["sameSourcePhaseAdvance"] = !sourceChanged,
+                    ["sourceSwitchPhaseAdvance"] = sourceChanged,
+                    ["pathResidualRebuilt"] =
+                        current.PathResidualRebuilt,
+                    ["finalPhysicalAnkleAvailable"] =
+                        physicalAnkleAvailable,
+                    ["finalPhysicalSoleAvailable"] =
+                        physicalSoleAvailable
+                };
+                events.Add(new EventFact(
+                    "StablePathSwingPhaseJump",
+                    current.Side,
+                    previous.Frame,
+                    current.Frame,
+                    current.Frame,
+                    ResolveEventIdentity(current),
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence,
+                    stablePathSwingPhaseJump: detail));
+            }
         }
 
         [Serializable]
@@ -4107,6 +4586,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int releaseEventCount;
             public int pathChangeCount;
             public int pathContinuityEventCount;
+            public int stablePathSwingPhaseJumpCount;
+            public int swingToLandingFloorHandoffCount;
             public int supportChangeCount;
             public int contactPlanePenetrationEventCount;
             public int safetyFloorEventCount;
@@ -4143,7 +4624,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 double durationSeconds,
                 SortedDictionary<string, double> metrics,
                 SortedDictionary<string, bool> evidence,
-                CharacterFootPathStageAnalysis pathStageAnalysis = null)
+                CharacterFootPathStageAnalysis pathStageAnalysis = null,
+                CharacterFootStablePathSwingPhaseJumpAnalysis
+                    stablePathSwingPhaseJump = null,
+                CharacterFootSwingToLandingFloorHandoffAnalysis
+                    swingToLandingFloorHandoff = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -4157,6 +4642,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 this.metrics = metrics;
                 this.evidence = evidence;
                 this.pathStageAnalysis = pathStageAnalysis;
+                this.stablePathSwingPhaseJump =
+                    stablePathSwingPhaseJump;
+                this.swingToLandingFloorHandoff =
+                    swingToLandingFloorHandoff;
             }
 
             public string kind;
@@ -4171,6 +4660,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public SortedDictionary<string, double> metrics;
             public SortedDictionary<string, bool> evidence;
             public CharacterFootPathStageAnalysis pathStageAnalysis;
+            public CharacterFootStablePathSwingPhaseJumpAnalysis
+                stablePathSwingPhaseJump;
+            public CharacterFootSwingToLandingFloorHandoffAnalysis
+                swingToLandingFloorHandoff;
 
             internal static int Compare(EventFact left, EventFact right)
             {

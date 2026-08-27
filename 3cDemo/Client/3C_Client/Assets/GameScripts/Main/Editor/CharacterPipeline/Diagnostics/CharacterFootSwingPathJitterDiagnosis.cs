@@ -27,6 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ResolveEligibleEvents(allPathChanges);
             List<JObject> phaseEvents =
                 ResolvePhaseAdvanceEvents(allPathChanges);
+            List<JObject> stablePhaseEvents =
+                context.Events("StablePathSwingPhaseJump");
             CharacterFootDiagnosisTarget target = context.Target(
                 "path-change-correction-jump",
                 "无Anchor Swing的Ground Path变化附近是否出现修正跳变",
@@ -62,6 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 events,
                 CorrectionStepMeters,
                 s_OccurrenceThresholds);
+            target.useAsPrimaryOccurrence = true;
             CharacterFootPathStageDiagnosisProjection.Apply(
                 target,
                 events);
@@ -87,10 +90,56 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootPathStageDiagnosisProjection.Apply(
                 phaseTarget,
                 phaseEvents);
+            CharacterFootDiagnosisTarget stablePhaseTarget = context.Target(
+                "stable-path-swing-phase-jump",
+                "稳定Ground Path下连续Accepted Swing帧是否出现Phase推进跳变",
+                new[] { "StablePathSwingPhaseJump" },
+                new[] { "ObservedSwingTargetDelta>0.02" },
+                stablePhaseEvents,
+                value => CharacterFootDiagnosisContext.Metric(
+                             value,
+                             "ObservedSwingTargetDelta") >
+                         CorrectionStepMeters
+                    ? new List<string>
+                    {
+                        "ObservedSwingTargetDelta>0.02"
+                    }
+                    : new List<string>(),
+                value => Math.Max(
+                    CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "ObservedSwingTargetDelta"),
+                    Math.Max(
+                        CharacterFootDiagnosisContext.Metric(
+                            value,
+                            "FinalPhysicalAnkleDelta"),
+                        CharacterFootDiagnosisContext.Metric(
+                            value,
+                            "FinalPhysicalSoleDelta"))),
+                "PathRevisionDelta",
+                "PhaseAdvanceDelta",
+                "ObservedSwingTargetDelta",
+                "ActualReconstructionError",
+                "PathRevisionContribution",
+                "PhaseContribution",
+                "ProgressDelta",
+                "EnvelopeSampleDelta",
+                "DesiredCorrectionDelta",
+                "FinalCorrectionDelta",
+                "FinalPhysicalAnkleDelta",
+                "FinalPhysicalSoleDelta");
+            stablePhaseTarget.occurrence = context.Occurrence(
+                "StablePathUnanchoredAcceptedSwingPair",
+                "ObservedSwingTargetDelta",
+                "Meters",
+                stablePhaseEvents,
+                CorrectionStepMeters,
+                s_OccurrenceThresholds);
             return context.Document(
                 DiagnosticId,
                 target,
-                phaseTarget);
+                phaseTarget,
+                stablePhaseTarget);
         }
 
         static List<JObject> ResolveEligibleEvents(List<JObject> events) =>
@@ -175,5 +224,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             merged["metrics"] = metrics;
             return merged;
         }
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootStablePathSwingPhaseJumpAnalysis
+    {
+        public int previousFrame;
+        public int frame;
+        public string side;
+        public string previousEventIdentity;
+        public string eventIdentity;
+        public string previousSourceIdentity;
+        public string sourceIdentity;
+        public int previousSourceCycle;
+        public int sourceCycle;
+        public string previousContributionContinuityIdentity;
+        public string contributionContinuityIdentity;
+        public string previousRawPathInputIdentity;
+        public string rawPathInputIdentity;
+        public bool semanticPathStable;
+        public bool frozenPathCounterfactualAvailable;
+        public bool frozenPathRevisionWithinNoise;
+        public double pathRevisionDeltaMeters;
+        public double phaseAdvanceDeltaMeters;
+        public double observedSwingTargetDeltaMeters;
+        public double actualReconstructionErrorMeters;
+        public double pathRevisionContribution;
+        public double phaseContribution;
+        public double progressDelta;
+        public double envelopeSampleDeltaMeters;
+        public double desiredCorrectionDeltaMeters;
+        public double finalCorrectionDeltaMeters;
+        public bool finalPhysicalAnkleAvailable;
+        public double finalPhysicalAnkleDeltaMeters;
+        public bool finalPhysicalSoleAvailable;
+        public double finalPhysicalSoleDeltaMeters;
+        public bool sourceChanged;
+        public bool pathResidualRebuilt;
+        public string pathRevisionReason;
     }
 }

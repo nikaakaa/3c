@@ -144,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastStatus = "Restarting Gameplay Lab before canonical Fixed input recording.";
                 return;
             }
-            operations.Play(state.SelectedVariantIndex);
+            StartPendingPlayMode();
             s_LastStatus = "Starting Gameplay Lab before canonical Fixed input recording.";
         }
 

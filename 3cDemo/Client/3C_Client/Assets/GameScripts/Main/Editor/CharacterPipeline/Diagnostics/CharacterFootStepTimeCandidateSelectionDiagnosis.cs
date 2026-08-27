@@ -227,6 +227,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string lastLandingEventIdentity;
         public string selectedSource;
         public string selectedLandingEventIdentity;
+        public double selectedEventPhase;
+        public double selectedApproachContactPhase;
+        public double selectedLandingPhase;
+        public bool selectedAtOrAfterApproachContact;
+        public bool selectedInApproachContactToLanding;
         public CharacterFootStepTimeCandidateObservation current;
         public CharacterFootStepTimeCandidateObservation incoming;
         public double? selectedOldTimeSeconds;
@@ -275,6 +280,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 selectedLandingEventIdentity =
                     value.Value<string>("selectedLandingEventIdentity") ??
                     "0",
+                selectedEventPhase =
+                    value.Value<double>("selectedEventPhase"),
+                selectedApproachContactPhase =
+                    value.Value<double>("selectedApproachContactPhase"),
+                selectedLandingPhase =
+                    value.Value<double>("selectedLandingPhase"),
+                selectedAtOrAfterApproachContact =
+                    value.Value<bool>("selectedAtOrAfterApproachContact"),
+                selectedInApproachContactToLanding =
+                    value.Value<bool>(
+                        "selectedInApproachContactToLanding"),
                 current = CharacterFootStepTimeCandidateObservation.From(
                     value["current"] as JObject),
                 incoming = CharacterFootStepTimeCandidateObservation.From(
@@ -333,6 +349,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string contributionContinuityIdentity;
         public string landingEventIdentity;
         public double timeToLandingSeconds;
+        public double eventPhase;
+        public double approachContactPhase;
+        public double landingPhase;
+        public bool atOrAfterApproachContact;
+        public bool inApproachContactToLanding;
         public CharacterFootStepTimeCandidateVector3 rootLocalLanding;
         public bool positiveTime;
         public bool withinMaximumPredictionTime;
@@ -365,6 +386,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value.Value<string>("landingEventIdentity") ?? "0",
                 timeToLandingSeconds =
                     value.Value<double>("timeToLandingSeconds"),
+                eventPhase = value.Value<double>("eventPhase"),
+                approachContactPhase =
+                    value.Value<double>("approachContactPhase"),
+                landingPhase = value.Value<double>("landingPhase"),
+                atOrAfterApproachContact =
+                    value.Value<bool>("atOrAfterApproachContact"),
+                inApproachContactToLanding =
+                    value.Value<bool>("inApproachContactToLanding"),
                 rootLocalLanding =
                     CharacterFootStepTimeCandidateVector3.From(
                         value["rootLocalLanding"] as JObject),

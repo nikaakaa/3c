@@ -45,6 +45,62 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !CharacterFootDiagnosisContext.Evidence(
                     value,
                     "pathResidualRebuilt"));
+            List<JObject> lateApproach =
+                context.Events("LateApproachLandingRevision");
+            CharacterFootDiagnosisTarget lateApproachTarget =
+                context.Target(
+                    "late-approach-landing-revision",
+                    "同一Landing Event进入Approach Contact后Consumed NextSwingLanding是否仍跨Surface或超阈值换点",
+                    new[] { "LateApproachLandingRevision" },
+                    new[]
+                    {
+                        "consumedSurfaceChanged=true",
+                        "LandingPointDelta>LandingUpdateDistance"
+                    },
+                    lateApproach,
+                    value =>
+                    {
+                        var rules = new List<string>(2);
+                        if (CharacterFootDiagnosisContext.Evidence(
+                                value,
+                                "consumedSurfaceChanged"))
+                        {
+                            rules.Add("consumedSurfaceChanged=true");
+                        }
+                        if (CharacterFootDiagnosisContext.Evidence(
+                                value,
+                                "consumedPointExceededLandingUpdateDistance"))
+                        {
+                            rules.Add(
+                                "LandingPointDelta>LandingUpdateDistance");
+                        }
+                        return rules;
+                    },
+                    value => Math.Max(
+                        CharacterFootDiagnosisContext.Metric(
+                            value,
+                            "LandingPointDelta"),
+                        Math.Max(
+                            CharacterFootDiagnosisContext.Metric(
+                                value,
+                                "CorrectionStep"),
+                            Math.Max(
+                                CharacterFootDiagnosisContext.Metric(
+                                    value,
+                                    "PhysicalAnkleAlongUpStep"),
+                                CharacterFootDiagnosisContext.Metric(
+                                    value,
+                                    "PhysicalSoleAlongUpStep")))),
+                    "LandingPointDelta",
+                    "ObservedLandingPointDelta",
+                    "LandingUpdateDistance",
+                    "CorrectionStep",
+                    "PhysicalAnkleAlongUpStep",
+                    "PhysicalSoleAlongUpStep",
+                    "SelectedEventPhase",
+                    "SelectedApproachContactPhase",
+                    "CurrentEventPhase",
+                    "CurrentApproachContactPhase");
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -171,7 +227,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                  "residualBeforeDecayMeters"),
                     "residualBeforeDecayMeters",
                     "residualAfterDecayMeters",
-                    "appliedHalfLifeSeconds"));
+                    "appliedHalfLifeSeconds"),
+                lateApproachTarget);
         }
 
         static List<string> RevisionContractRules(JObject value)
@@ -194,4 +251,57 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return rules;
         }
     }
+    [Serializable]
+    internal sealed class CharacterFootLateApproachLandingRevisionAnalysis
+    {
+        public int previousFrame;
+        public int frame;
+        public string side;
+        public string landingEventIdentity;
+        public string previousSourceIdentity;
+        public string sourceIdentity;
+        public int previousSourceCycle;
+        public int sourceCycle;
+        public string previousContributionContinuityIdentity;
+        public string contributionContinuityIdentity;
+        public double previousSelectedEventPhase;
+        public double selectedEventPhase;
+        public double previousSelectedApproachContactPhase;
+        public double selectedApproachContactPhase;
+        public double previousSelectedLandingPhase;
+        public double selectedLandingPhase;
+        public double previousCurrentEventPhase;
+        public double currentEventPhase;
+        public double previousCurrentApproachContactPhase;
+        public double currentApproachContactPhase;
+        public bool previousSelectedInApproachContactToLanding;
+        public bool selectedInApproachContactToLanding;
+        public bool previousCurrentAtOrAfterApproachContact;
+        public bool currentAtOrAfterApproachContact;
+        public bool previousObservedAvailable;
+        public bool observedAvailable;
+        public string previousObservedEventIdentity;
+        public string observedEventIdentity;
+        public int previousObservedSurfaceIdentity;
+        public int observedSurfaceIdentity;
+        public CharacterFootVectorFact previousObservedPoint;
+        public CharacterFootVectorFact observedPoint;
+        public double observedLandingPointDeltaMeters;
+        public string previousConsumedEventIdentity;
+        public string consumedEventIdentity;
+        public int previousConsumedSurfaceIdentity;
+        public int consumedSurfaceIdentity;
+        public CharacterFootVectorFact previousConsumedPoint;
+        public CharacterFootVectorFact consumedPoint;
+        public double landingPointDeltaMeters;
+        public double landingUpdateDistanceMeters;
+        public double correctionStepMeters;
+        public bool physicalAnkleAvailable;
+        public double physicalAnkleAlongUpStepMeters;
+        public bool physicalSoleAvailable;
+        public double physicalSoleAlongUpStepMeters;
+        public bool consumedSurfaceChanged;
+        public bool consumedPointExceededLandingUpdateDistance;
+    }
+
 }

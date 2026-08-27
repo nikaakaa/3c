@@ -425,6 +425,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 step.ContributionContinuityIdentity;
             LandingEventIdentity = step.LandingEventIdentity;
             TimeToLandingSeconds = step.TimeToLandingSeconds;
+            EventPhase = step.EventPhase;
+            ApproachContactPhase = step.ApproachContactPhase;
+            LandingPhase = step.LandingPhase;
             RootLocalLanding = step.RootLocalLanding;
         }
 
@@ -439,6 +442,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong ContributionContinuityIdentity { get; }
         public ulong LandingEventIdentity { get; }
         public float TimeToLandingSeconds { get; }
+        public float EventPhase { get; }
+        public float ApproachContactPhase { get; }
+        public float LandingPhase { get; }
+        public bool AtOrAfterApproachContact =>
+            IsValid && EventPhase >= ApproachContactPhase;
+        public bool InApproachContactToLanding =>
+            AtOrAfterApproachContact &&
+            IsSwing &&
+            EventPhase <= LandingPhase;
         public Vector3 RootLocalLanding { get; }
     }
 

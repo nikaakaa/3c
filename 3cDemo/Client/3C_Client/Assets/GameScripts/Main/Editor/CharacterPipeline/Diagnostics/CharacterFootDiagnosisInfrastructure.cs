@@ -218,7 +218,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     targetCount = list.Count,
                     targetWithMatchesCount = list.Count(
                         value => value.matchedEventCount > 0),
-                    matchedEventCount = list.Sum(value => value.matchedEventCount)
+                    matchedEventCount = list.Sum(value => value.matchedEventCount),
+                    targetResults = list.Select(value =>
+                            new CharacterFootDiagnosisTargetResult
+                            {
+                                id = value.id,
+                                eligibleEventCount =
+                                    value.eligibleEventCount,
+                                matchedEventCount =
+                                    value.matchedEventCount,
+                                matchedEventRateAvailable =
+                                    value.matchedEventRateAvailable,
+                                matchedEventRate =
+                                    value.matchedEventRate
+                            })
+                        .ToList()
                 }
             };
         }
@@ -294,7 +308,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingToLandingFloorHandoff =
                         value["swingToLandingFloorHandoff"]?
                             .ToObject<
-                                CharacterFootSwingToLandingFloorHandoffAnalysis>()
+                                CharacterFootSwingToLandingFloorHandoffAnalysis>(),
+                    lateApproachLandingRevision =
+                        value["lateApproachLandingRevision"]?
+                            .ToObject<
+                                CharacterFootLateApproachLandingRevisionAnalysis>()
                 });
             }
             return result;
@@ -389,6 +407,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int targetCount;
         public int targetWithMatchesCount;
         public int matchedEventCount;
+        public List<CharacterFootDiagnosisTargetResult> targetResults;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootDiagnosisTargetResult
+    {
+        public string id;
+        public int eligibleEventCount;
+        public int matchedEventCount;
+        public bool matchedEventRateAvailable;
+        public double? matchedEventRate;
     }
 
     [Serializable]
@@ -467,6 +496,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             stablePathSwingPhaseJump;
         public CharacterFootSwingToLandingFloorHandoffAnalysis
             swingToLandingFloorHandoff;
+        public CharacterFootLateApproachLandingRevisionAnalysis
+            lateApproachLandingRevision;
     }
 
     [Serializable]

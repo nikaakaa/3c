@@ -32,5 +32,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Assert.That(document.diagnosticId, Is.EqualTo("landing-state-consistency"));
             Assert.That(document.targets[0].matchedEventCount, Is.EqualTo(1));
         }
+
+        [Test]
+        public void ReversedReleaseExcursionMatchesReleaseFlyback()
+        {
+            var facts = new JObject
+            {
+                ["events"] = new JArray(new JObject
+                {
+                    ["kind"] = "Release",
+                    ["metrics"] = new JObject
+                    {
+                        ["correctionStepMaximumMeters"] = 0.005d,
+                        ["correctionExcursionMeters"] = 0.02d,
+                        ["velocityDirectionReversalCount"] = 1d
+                    },
+                    ["evidence"] = new JObject()
+                })
+            };
+            CharacterFootDiagnosisDocument document =
+                new CharacterFootLandingStateConsistencyDiagnosis().Build(
+                    new CharacterFootDiagnosisContext(facts));
+            CharacterFootDiagnosisTarget release =
+                document.targets[^1];
+            Assert.That(
+                release.id,
+                Is.EqualTo("release-flyback"));
+            Assert.That(
+                release.matchedEventCount,
+                Is.EqualTo(1));
+        }
     }
 }

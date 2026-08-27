@@ -18,7 +18,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         None = 0,
         FullAnchor = 1,
-        Sliding = 2
+        Sliding = 2,
+        Acquiring = 3
     }
 
     public enum CharacterFootSupportEligibility : byte

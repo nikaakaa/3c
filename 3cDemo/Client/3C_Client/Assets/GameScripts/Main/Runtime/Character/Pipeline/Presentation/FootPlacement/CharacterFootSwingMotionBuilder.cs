@@ -211,37 +211,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 LandingPoint { get; }
     }
 
-    internal readonly struct CharacterFootSwingPathRevisionSample
-    {
-        internal CharacterFootSwingPathRevisionSample(
-            ulong landingEventIdentity,
-            Vector3 landingPoint,
-            Vector3 targetCorrection)
-        {
-            if (landingEventIdentity == 0 ||
-                !Finite(landingPoint) ||
-                !Finite(targetCorrection))
-            {
-                throw new ArgumentException(
-                    "Swing Path revision sample is invalid.");
-            }
-            LandingEventIdentity = landingEventIdentity;
-            LandingPoint = landingPoint;
-            TargetCorrection = targetCorrection;
-            IsAvailable = true;
-        }
-
-        internal bool IsAvailable { get; }
-        internal ulong LandingEventIdentity { get; }
-        internal Vector3 LandingPoint { get; }
-        internal Vector3 TargetCorrection { get; }
-
-        static bool Finite(Vector3 value) =>
-            float.IsFinite(value.x) &&
-            float.IsFinite(value.y) &&
-            float.IsFinite(value.z);
-    }
-
     internal readonly struct CharacterFootSwingMotionResult
     {
         internal CharacterFootSwingMotionResult(
@@ -411,7 +380,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPathContinuityFact path = result.PathContinuity;
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
-            PathResidualRebaseReason = path.ResidualRebaseReason.ToString();
             PathResidualRebuilt = path.ResidualRebuilt;
             PathAvailableBefore = path.PathAvailableBefore;
             PathAvailableAfter = path.PathAvailableAfter;
@@ -421,7 +389,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathCurrentTargetCorrection = path.CurrentTargetCorrection;
             PathLandingPointDelta = path.LandingPointDelta;
             PathTargetDelta = path.TargetDelta;
-            PathPhaseAlignedTargetDelta = path.PhaseAlignedTargetDelta;
             SwingResidualBeforeRevision = path.ResidualBeforeRevision;
             SwingResidualBeforeDecay = path.ResidualBeforeDecay;
             SwingResidualAfterDecay = path.ResidualAfterDecay;
@@ -480,7 +447,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 ContactPlaneNormal { get; }
         public bool PathContinuityEvaluated { get; }
         public string PathRevisionReason { get; }
-        public string PathResidualRebaseReason { get; }
         public bool PathResidualRebuilt { get; }
         public bool PathAvailableBefore { get; }
         public bool PathAvailableAfter { get; }
@@ -490,7 +456,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PathCurrentTargetCorrection { get; }
         public float PathLandingPointDelta { get; }
         public float PathTargetDelta { get; }
-        public float PathPhaseAlignedTargetDelta { get; }
         public Vector3 SwingResidualBeforeRevision { get; }
         public Vector3 SwingResidualBeforeDecay { get; }
         public Vector3 SwingResidualAfterDecay { get; }
@@ -564,31 +529,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in groundPath,
                 landingPredictionError,
                 landingConstraintWeight);
-        }
-
-        internal static CharacterFootSwingPathRevisionSample BuildRevisionSample(
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in AnimationBiomechanicalStepHeader step,
-            float footPlacementWeight,
-            Vector3 componentUp,
-            in CharacterFootGroundPathResult groundPath,
-            float landingPredictionError,
-            float landingConstraintWeight)
-        {
-            CharacterFootSwingMotionResult motion = Build(
-                animatedFoot,
-                in step,
-                footPlacementWeight,
-                componentUp,
-                in groundPath,
-                landingPredictionError,
-                landingConstraintWeight);
-            if (!motion.Accepted || !motion.SwingPathReference.IsAvailable)
-                return default;
-            return new CharacterFootSwingPathRevisionSample(
-                motion.SwingPathReference.LandingEventIdentity,
-                motion.SwingPathReference.LandingPoint,
-                motion.CorrectedAnkle - animatedFoot.AnklePosition);
         }
 
         internal static CharacterFootSwingMotionResult BuildForSwing(

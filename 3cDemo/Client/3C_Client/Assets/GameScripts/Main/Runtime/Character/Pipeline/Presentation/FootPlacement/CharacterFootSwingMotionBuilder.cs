@@ -400,6 +400,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualDeadlineHalfLifeAvailable = path.DeadlineHalfLifeAvailable;
             ResidualDeadlineHalfLifeSeconds = path.DeadlineHalfLifeSeconds;
             ResidualAppliedHalfLifeSeconds = path.AppliedHalfLifeSeconds;
+            PreTransitionReason = path.PreTransitionReason.ToString();
+            PreTransitionSource = path.PreTransitionSource;
+            PreTransitionTarget = path.PreTransitionTarget;
+            PreTransitionAnchorCommand =
+                path.PreTransitionAnchorCommand.ToString();
+            PostTransitionReason = path.PostTransitionReason.ToString();
+            PostTransitionSource = path.PostTransitionSource;
+            PostTransitionTarget = path.PostTransitionTarget;
+            PostTransitionAnchorCommand =
+                path.PostTransitionAnchorCommand.ToString();
+            StateTargetCorrection = path.StateTargetCorrection;
+            InterpolationPolicy = path.InterpolationPolicy.ToString();
+            InterpolationOutputCorrection =
+                path.InterpolationOutputCorrection;
+            InterpolationCompleted = path.InterpolationCompleted;
             ConstraintStateBefore = path.StateBefore;
             LockResponseBefore = path.LockResponseBefore;
             OutputStagesAvailable = path.OutputStagesAvailable;
@@ -472,6 +487,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ResidualDeadlineHalfLifeAvailable { get; }
         public float ResidualDeadlineHalfLifeSeconds { get; }
         public float ResidualAppliedHalfLifeSeconds { get; }
+        public string PreTransitionReason { get; }
+        public CharacterFootConstraintState PreTransitionSource { get; }
+        public CharacterFootConstraintState PreTransitionTarget { get; }
+        public string PreTransitionAnchorCommand { get; }
+        public string PostTransitionReason { get; }
+        public CharacterFootConstraintState PostTransitionSource { get; }
+        public CharacterFootConstraintState PostTransitionTarget { get; }
+        public string PostTransitionAnchorCommand { get; }
+        public Vector3 StateTargetCorrection { get; }
+        public string InterpolationPolicy { get; }
+        public Vector3 InterpolationOutputCorrection { get; }
+        public bool InterpolationCompleted { get; }
         public CharacterFootConstraintState ConstraintStateBefore { get; }
         public CharacterFootLockResponse LockResponseBefore { get; }
         public bool OutputStagesAvailable { get; }

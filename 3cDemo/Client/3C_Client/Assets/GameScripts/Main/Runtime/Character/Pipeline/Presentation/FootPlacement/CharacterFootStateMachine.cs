@@ -716,15 +716,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterFootConstraintState.Swing:
                 case CharacterFootConstraintState.UnlockedSupport:
-                    ResolveSwingOutput(
-                        ref context,
-                        in frame,
-                        in swing,
-                        swingCorrection,
-                        timeToLandingSeconds,
-                        out continuityFact);
-                    preserveOutput = true;
                     ResolveUnconstrained(ref context, in frame, ref desiredCorrection);
+                    if (context.ConstraintState != CharacterFootConstraintState.Landing)
+                    {
+                        ResolveSwingOutput(
+                            ref context,
+                            in frame,
+                            in swing,
+                            swingCorrection,
+                            timeToLandingSeconds,
+                            out continuityFact);
+                    }
+                    preserveOutput = true;
                     break;
                 case CharacterFootConstraintState.Landing:
                     ResolveLandingIntent(

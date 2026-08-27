@@ -1,0 +1,2306 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "landing-leg-extension",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "b126b8ec9ee7400bd375d60b9347d496bca91852d967af58e2d0a004ab765d6a",
+    "schema": "character-foot-motion-facts/21",
+    "sampleIdentity": "0cc823b960954394b1bd36f4370e6114"
+  },
+  "targets": [
+    {
+      "id": "landing-leg-extension",
+      "question": "Landing阶段是否出现腿继续伸直或弯曲方向反转",
+      "eventKinds": [
+        "Landing"
+      ],
+      "rules": [
+        "targetExtensionRatioDelta>0.02",
+        "solvedBendDropDegrees>5",
+        "bendDirectionReversed=true"
+      ],
+      "eligibleEventCount": 25,
+      "matchedEventCount": 5,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.2,
+      "measurements": {
+        "landingReachLegLengthMeters": {
+          "available": true,
+          "count": 25,
+          "median": 0.69543448090553284,
+          "p90": 0.69543454051017761,
+          "p99": 0.69543454051017761,
+          "maximum": 0.69543454051017761
+        },
+        "landingReachMaximumAlongUpMeters": {
+          "available": true,
+          "count": 25,
+          "median": 0.083490577427167034,
+          "p90": 0.24107180216430718,
+          "p99": 0.27133213582402954,
+          "maximum": 0.27679903977689335
+        },
+        "landingReachMinimumAlongUpMeters": {
+          "available": true,
+          "count": 25,
+          "median": -1.1843334731160156,
+          "p90": -1.0780447995383757,
+          "p99": -0.25256886404413714,
+          "maximum": 0.0
+        },
+        "landingReachMinimumCorrectionMeters": {
+          "available": true,
+          "count": 25,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.00928824359341755,
+          "maximum": 0.012144469035570871
+        },
+        "landingReachSignedCorrectionAlongUpMeters": {
+          "available": true,
+          "count": 25,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "landingReachUsableLegLengthMeters": {
+          "available": true,
+          "count": 25,
+          "median": 0.67543448090553282,
+          "p90": 0.67543454051017759,
+          "p99": 0.67543454051017759,
+          "maximum": 0.67543454051017759
+        },
+        "solvedBendDegreesMinimum": {
+          "available": true,
+          "count": 25,
+          "median": 45.980743408203125,
+          "p90": 81.56571197509767,
+          "p99": 91.405034484863265,
+          "maximum": 92.853797912597656
+        },
+        "solvedBendDropDegrees": {
+          "available": true,
+          "count": 25,
+          "median": 0.0,
+          "p90": 18.59739990234376,
+          "p99": 25.991368408203122,
+          "maximum": 26.17449951171875
+        },
+        "solvedExtensionRatioPeak": {
+          "available": true,
+          "count": 25,
+          "median": 0.92073154449462891,
+          "p90": 0.99698998928070071,
+          "p99": 0.99911130189895625,
+          "maximum": 0.99935287237167358
+        },
+        "targetExtensionRatioDelta": {
+          "available": true,
+          "count": 25,
+          "median": 0.0,
+          "p90": 0.096948873996734658,
+          "p99": 0.14158262968063351,
+          "maximum": 0.14599055051803589
+        }
+      },
+      "representativeEventCount": 5,
+      "representativeEvents": [
+        {
+          "eventKind": "Landing",
+          "side": "Left",
+          "startFrame": 260,
+          "endFrame": 261,
+          "peakFrame": 261,
+          "eventIdentity": "8039192541171922016",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 10,
+          "matchedRules": [
+            "targetExtensionRatioDelta>0.02",
+            "solvedBendDropDegrees>5"
+          ],
+          "metrics": {
+            "bendDirectionPreviousDotMinimum": 0.92460638284683228,
+            "compressionReserveMinimumMeters": 0.094841241836547852,
+            "correctionStepMaximumMeters": 0.18680785596370697,
+            "landingReachActualTargetCompressionReserveMeters": 0.15518391132354736,
+            "landingReachCandidateCompressionReserveMeters": 0.02,
+            "landingReachIntersectionMaximumAlongUpMeters": 0.066997766494750977,
+            "landingReachIntersectionMinimumAlongUpMeters": -1.0980122089385986,
+            "landingReachLegLengthMeters": 0.69543445110321045,
+            "landingReachMaximumAlongUpMeters": 0.1510380569837374,
+            "landingReachMinimumAlongUpMeters": -1.1820523802182956,
+            "landingReachMinimumCorrectionMeters": 0.0,
+            "landingReachSignedCorrectionAlongUpMeters": 0.0,
+            "landingReachStrideSpringOutputMeters": 0.013587801717221737,
+            "landingReachSupportConflictGapMeters": 0.0,
+            "landingReachSupportMaximumAlongUpMeters": 0.066997766494750977,
+            "landingReachSupportMinimumAlongUpMeters": -1.0980122089385986,
+            "landingReachUsableLegLengthMeters": 0.67543445110321043,
+            "solvedBendDegreesMinimum": 60.613372802734375,
+            "solvedBendDropDegrees": 21.434661865234375,
+            "solvedExtensionRatioPeak": 0.86362320184707642,
+            "targetExtensionRatioBaseline": 0.754988968372345,
+            "targetExtensionRatioDelta": 0.10863405466079712,
+            "targetExtensionRatioPeak": 0.86362302303314209
+          },
+          "evidence": {
+            "bendDirectionReversed": false,
+            "contactAnchorAvailable": true,
+            "grounded": true,
+            "landingReachAvailable": true,
+            "landingReachCorrectionDown": false,
+            "landingReachCorrectionNone": true,
+            "landingReachCorrectionUp": false,
+            "landingReachCurrentOutputWithinInterval": true,
+            "landingReachNoSupportLandingOnly": false,
+            "landingReachPrimarySupportAvailable": true,
+            "landingReachSupportConflict": false,
+            "landingReachSupportIntersection": true,
+            "landingReachSupportIntersectionExists": true,
+            "landingReachSupportReachAvailable": true,
+            "landingReachUnavailable": false
+          }
+        },
+        {
+          "eventKind": "Landing",
+          "side": "Right",
+          "startFrame": 269,
+          "endFrame": 270,
+          "peakFrame": 270,
+          "eventIdentity": "8661447952854151634",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 10,
+          "matchedRules": [
+            "targetExtensionRatioDelta>0.02",
+            "solvedBendDropDegrees>5"
+          ],
+          "metrics": {
+            "bendDirectionPreviousDotMinimum": 0.73468846082687378,
+            "compressionReserveMinimumMeters": 0.13223332166671753,
+            "correctionStepMaximumMeters": 0.15485453605651855,
+            "landingReachActualTargetCompressionReserveMeters": 0.13223332166671753,
+            "landingReachCandidateCompressionReserveMeters": 0.02,
+            "landingReachIntersectionMaximumAlongUpMeters": 0.0,
+            "landingReachIntersectionMinimumAlongUpMeters": 0.0,
+            "landingReachLegLengthMeters": 0.69543448090553284,
+            "landingReachMaximumAlongUpMeters": 0.11469001016058289,
+            "landingReachMinimumAlongUpMeters": -1.2121041460935054,
+            "landingReachMinimumCorrectionMeters": 0.0,
+            "landingReachSignedCorrectionAlongUpMeters": 0.0,
+            "landingReachStrideSpringOutputMeters": 0.0025979622732847929,
+            "landingReachSupportConflictGapMeters": 0.0,
+            "landingReachSupportMaximumAlongUpMeters": 0.0,
+            "landingReachSupportMinimumAlongUpMeters": 0.0,
+            "landingReachUsableLegLengthMeters": 0.67543448090553282,
+            "solvedBendDegreesMinimum": 71.917221069335938,
+            "solvedBendDropDegrees": 14.341506958007813,
+            "solvedExtensionRatioPeak": 0.80985516309738159,
+            "targetExtensionRatioBaseline": 0.730434000492096,
+            "targetExtensionRatioDelta": 0.079421103000640869,
+            "targetExtensionRatioPeak": 0.80985510349273682
+          },
+          "evidence": {
+            "bendDirectionReversed": false,
+            "contactAnchorAvailable": true,
+            "grounded": true,
+            "landingReachAvailable": true,
+            "landingReachCorrectionDown": false,
+            "landingReachCorrectionNone": true,
+            "landingReachCorrectionUp": false,
+            "landingReachCurrentOutputWithinInterval": true,
+            "landingReachNoSupportLandingOnly": true,
+            "landingReachPrimarySupportAvailable": false,
+            "landingReachSupportConflict": false,
+            "landingReachSupportIntersection": false,
+            "landingReachSupportIntersectionExists": false,
+            "landingReachSupportReachAvailable": false,
+            "landingReachUnavailable": false
+          }
+        },
+        {
+          "eventKind": "Landing",
+          "side": "Right",
+          "startFrame": 304,
+          "endFrame": 305,
+          "peakFrame": 304,
+          "eventIdentity": "4916451974527316740",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "targetExtensionRatioDelta>0.02",
+            "solvedBendDropDegrees>5"
+          ],
+          "metrics": {
+            "bendDirectionPreviousDotMinimum": 0.95587551593780518,
+            "compressionReserveMinimumMeters": 0.11471182107925415,
+            "correctionStepMaximumMeters": 0.14532637596130371,
+            "landingReachActualTargetCompressionReserveMeters": 0.11471182107925415,
+            "landingReachCandidateCompressionReserveMeters": 0.02,
+            "landingReachIntersectionMaximumAlongUpMeters": 0.0,
+            "landingReachIntersectionMinimumAlongUpMeters": 0.0,
+            "landingReachLegLengthMeters": 0.69543448090553284,
+            "landingReachMaximumAlongUpMeters": 0.11866928684751121,
+            "landingReachMinimumAlongUpMeters": -1.0757683669332656,
+            "landingReachMinimumCorrectionMeters": 0.0,
+            "landingReachSignedCorrectionAlongUpMeters": 0.0,
+            "landingReachStrideSpringOutputMeters": 0.0089926095679402351,
+            "landingReachSupportConflictGapMeters": 0.0,
+            "landingReachSupportMaximumAlongUpMeters": 0.0,
+            "landingReachSupportMinimumAlongUpMeters": 0.0,
+            "landingReachUsableLegLengthMeters": 0.67543448090553282,
+            "solvedBendDegreesMinimum": 66.831367492675781,
+            "solvedBendDropDegrees": 26.17449951171875,
+            "solvedExtensionRatioPeak": 0.83505004644393921,
+            "targetExtensionRatioBaseline": 0.6890595555305481,
+            "targetExtensionRatioDelta": 0.14599055051803589,
+            "targetExtensionRatioPeak": 0.835050106048584
+          },
+          "evidence": {
+            "bendDirectionReversed": false,
+            "contactAnchorAvailable": true,
+            "grounded": true,
+            "landingReachAvailable": true,
+            "landingReachCorrectionDown": false,
+            "landingReachCorrectionNone": true,
+            "landingReachCorrectionUp": false,
+            "landingReachCurrentOutputWithinInterval": true,
+            "landingReachNoSupportLandingOnly": true,
+            "landingReachPrimarySupportAvailable": false,
+            "landingReachSupportConflict": false,
+            "landingReachSupportIntersection": false,
+            "landingReachSupportIntersectionExists": false,
+            "landingReachSupportReachAvailable": false,
+            "landingReachUnavailable": false
+          }
+        },
+        {
+          "eventKind": "Landing",
+          "side": "Right",
+          "startFrame": 341,
+          "endFrame": 342,
+          "peakFrame": 341,
+          "eventIdentity": "6164786899333936934",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 14,
+          "matchedRules": [
+            "targetExtensionRatioDelta>0.02",
+            "solvedBendDropDegrees>5"
+          ],
+          "metrics": {
+            "bendDirectionPreviousDotMinimum": 0.95666044950485229,
+            "compressionReserveMinimumMeters": 0.086808621883392334,
+            "correctionStepMaximumMeters": 0.15099382400512695,
+            "landingReachActualTargetCompressionReserveMeters": 0.086808621883392334,
+            "landingReachCandidateCompressionReserveMeters": 0.02,
+            "landingReachIntersectionMaximumAlongUpMeters": 0.0,
+            "landingReachIntersectionMinimumAlongUpMeters": 0.0,
+            "landingReachLegLengthMeters": 0.69543442130088806,
+            "landingReachMaximumAlongUpMeters": 0.073271793912232819,
+            "landingReachMinimumAlongUpMeters": -1.1707954831822525,
+            "landingReachMinimumCorrectionMeters": 0.0,
+            "landingReachSignedCorrectionAlongUpMeters": 0.0,
+            "landingReachStrideSpringOutputMeters": -0.0042387600988149643,
+            "landingReachSupportConflictGapMeters": 0.0,
+            "landingReachSupportMaximumAlongUpMeters": 0.0,
+            "landingReachSupportMinimumAlongUpMeters": 0.0,
+            "landingReachUsableLegLengthMeters": 0.675434421300888,
+            "solvedBendDegreesMinimum": 57.930557250976563,
+            "solvedBendDropDegrees": 25.411453247070313,
+            "solvedExtensionRatioPeak": 0.87517368793487549,
+            "targetExtensionRatioBaseline": 0.747549295425415,
+            "targetExtensionRatioDelta": 0.12762421369552612,
+            "targetExtensionRatioPeak": 0.87517350912094116
+          },
+          "evidence": {
+            "bendDirectionReversed": false,
+            "contactAnchorAvailable": true,
+            "grounded": true,
+            "landingReachAvailable": true,
+            "landingReachCorrectionDown": false,
+            "landingReachCorrectionNone": true,
+            "landingReachCorrectionUp": false,
+            "landingReachCurrentOutputWithinInterval": true,
+            "landingReachNoSupportLandingOnly": true,
+            "landingReachPrimarySupportAvailable": false,
+            "landingReachSupportConflict": false,
+            "landingReachSupportIntersection": false,
+            "landingReachSupportIntersectionExists": false,
+            "landingReachSupportReachAvailable": false,
+            "landingReachUnavailable": false
+          }
+        },
+        {
+          "eventKind": "Landing",
+          "side": "Left",
+          "startFrame": 437,
+          "endFrame": 438,
+          "peakFrame": 437,
+          "eventIdentity": "7760978713479863382",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 20,
+          "matchedRules": [
+            "targetExtensionRatioDelta>0.02",
+            "solvedBendDropDegrees>5"
+          ],
+          "metrics": {
+            "bendDirectionPreviousDotMinimum": 0.80451327562332153,
+            "compressionReserveMinimumMeters": 0.0427783727645874,
+            "correctionStepMaximumMeters": 0.012316465377807617,
+            "landingReachActualTargetCompressionReserveMeters": 0.0427783727645874,
+            "landingReachCandidateCompressionReserveMeters": 0.02,
+            "landingReachIntersectionMaximumAlongUpMeters": 0.0,
+            "landingReachIntersectionMinimumAlongUpMeters": 0.0,
+            "landingReachLegLengthMeters": 0.69543448090553284,
+            "landingReachMaximumAlongUpMeters": 0.025021530087926291,
+            "landingReachMinimumAlongUpMeters": -1.2090298899969838,
+            "landingReachMinimumCorrectionMeters": 0.0,
+            "landingReachSignedCorrectionAlongUpMeters": 0.0,
+            "landingReachStrideSpringOutputMeters": -0.00026831746799871325,
+            "landingReachSupportConflictGapMeters": 0.0,
+            "landingReachSupportMaximumAlongUpMeters": 0.0,
+            "landingReachSupportMinimumAlongUpMeters": 0.0,
+            "landingReachUsableLegLengthMeters": 0.67543448090553282,
+            "solvedBendDegreesMinimum": 40.443038940429688,
+            "solvedBendDropDegrees": 11.497177124023438,
+            "solvedExtensionRatioPeak": 0.93848681449890137,
+            "targetExtensionRatioBaseline": 0.89922970533370972,
+            "targetExtensionRatioDelta": 0.03925710916519165,
+            "targetExtensionRatioPeak": 0.93848681449890137
+          },
+          "evidence": {
+            "bendDirectionReversed": false,
+            "contactAnchorAvailable": true,
+            "grounded": true,
+            "landingReachAvailable": true,
+            "landingReachCorrectionDown": false,
+            "landingReachCorrectionNone": true,
+            "landingReachCorrectionUp": false,
+            "landingReachCurrentOutputWithinInterval": true,
+            "landingReachNoSupportLandingOnly": true,
+            "landingReachPrimarySupportAvailable": false,
+            "landingReachSupportConflict": false,
+            "landingReachSupportIntersection": false,
+            "landingReachSupportIntersectionExists": false,
+            "landingReachSupportReachAvailable": false,
+            "landingReachUnavailable": false
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "targetCount": 1,
+    "targetWithMatchesCount": 1,
+    "matchedEventCount": 5,
+    "targetResults": [
+      {
+        "id": "landing-leg-extension",
+        "eligibleEventCount": 25,
+        "matchedEventCount": 5,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.2
+      }
+    ]
+  },
+  "landingReach": {
+    "candidateCompressionReserveMeters": 0.02,
+    "factCount": 1010,
+    "availableFactCount": 843,
+    "availabilityCounts": {
+      "Available": 843,
+      "ComponentUpUnavailable": 167
+    },
+    "classificationCounts": {
+      "LandingReachUnavailable": 167,
+      "NoSupportLandingOnly": 543,
+      "SupportIntersection": 300
+    },
+    "minimumCorrectionDistributionMeters": {
+      "available": true,
+      "count": 843,
+      "median": 0.0,
+      "p90": 0.0,
+      "p99": 0.019847059874429807,
+      "maximum": 0.033701142447282839
+    },
+    "representativeEvents": [
+      {
+        "startFrame": 68,
+        "endFrame": 69,
+        "peakFrame": 68,
+        "side": "Left",
+        "eventIdentity": "5184066498218621888",
+        "sourceIdentity": "90d528fc935ce2e43b4b301c8c2b98db:7400000",
+        "sourceCycle": 0,
+        "landingReach": {
+          "frame": 68,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.06901071,
+            "y": 0.6787087,
+            "z": 0.0235379841
+          },
+          "originalKnee": {
+            "x": -0.020167999,
+            "y": 0.437396884,
+            "z": 0.24684833
+          },
+          "originalAnkle": {
+            "x": -0.0113299843,
+            "y": 0.07588419,
+            "z": 0.278945744
+          },
+          "targetAnkle": {
+            "x": -0.0113299843,
+            "y": 0.07588419,
+            "z": 0.278945744
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.06901071,
+            "y": 0.6787087,
+            "z": 0.0235379841
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239209651947021,
+          "lowerLegLengthMeters": 0.36304238438606262,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.26183999512726908,
+          "hipTargetVerticalAlongUpMeters": 0.60282444953918457,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2254411494018516,
+          "landingReachMaximumAlongUpMeters": 0.019792250323482419,
+          "strideSpringOutputMeters": -6.398216646630317E-05,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.038199722766876221,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 83,
+        "endFrame": 84,
+        "peakFrame": 84,
+        "side": "Left",
+        "eventIdentity": "1797539907371385266",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 0,
+        "landingReach": {
+          "frame": 84,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "SupportIntersection",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.07104665,
+            "y": 0.625747263,
+            "z": 0.0204198733
+          },
+          "originalKnee": {
+            "x": -0.00420220941,
+            "y": 0.36534673,
+            "z": 0.2158882
+          },
+          "originalAnkle": {
+            "x": 0.0128933042,
+            "y": 0.040666312,
+            "z": 0.0543636978
+          },
+          "targetAnkle": {
+            "x": 0.137820989,
+            "y": 0.07192077,
+            "z": 0.0333785452
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.07104665,
+            "y": 0.667018056,
+            "z": 0.0204198733
+          },
+          "appliedPelvisGoalAlongUpMeters": -0.041270792484283447,
+          "upperLegLengthMeters": 0.33239206671714783,
+          "lowerLegLengthMeters": 0.363042414188385,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.20926924924375925,
+          "hipTargetVerticalAlongUpMeters": 0.59509730339050293,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2372951851349696,
+          "landingReachMaximumAlongUpMeters": 0.047100578353963751,
+          "strideSpringOutputMeters": -0.041270792484283447,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.10338932275772095,
+          "primarySupportAvailable": true,
+          "primarySupportSide": "Left",
+          "primarySupportLandingEventIdentity": "1797539907371385266",
+          "strideState": "Accepted",
+          "strideSupportSide": "Left",
+          "supportReachAvailable": true,
+          "supportReachMinimumAlongUpMeters": -1.1489238739013672,
+          "supportReachMaximumAlongUpMeters": -0.041270792484283447,
+          "supportIntersectionExists": true,
+          "intersectionMinimumAlongUpMeters": -1.1489238739013672,
+          "intersectionMaximumAlongUpMeters": -0.041270792484283447,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 125,
+        "endFrame": 126,
+        "peakFrame": 126,
+        "side": "Right",
+        "eventIdentity": "3668125845813722234",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 2,
+        "landingReach": {
+          "frame": 126,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07268802,
+            "y": 0.675402462,
+            "z": 0.00543466629
+          },
+          "originalKnee": {
+            "x": 0.020814959,
+            "y": 0.4150213,
+            "z": 0.205422908
+          },
+          "originalAnkle": {
+            "x": -0.0122848339,
+            "y": 0.07771483,
+            "z": 0.07531297
+          },
+          "targetAnkle": {
+            "x": -0.0122863567,
+            "y": 0.26035738,
+            "z": 0.07531332
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07268802,
+            "y": 0.675402462,
+            "z": 0.00543466629
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239203691482544,
+          "lowerLegLengthMeters": 0.36304247379302979,
+          "legLengthMeters": 0.69543451070785522,
+          "landingUsableLegLengthMeters": 0.67543451070785521,
+          "hipTargetHorizontalDistanceMeters": 0.11001668604363624,
+          "hipTargetVerticalAlongUpMeters": 0.41504508256912231,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.0814594484460411,
+          "landingReachMaximumAlongUpMeters": 0.25136928330779651,
+          "strideSpringOutputMeters": 0.0013708188198506832,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.26605579257011414,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 134,
+        "endFrame": 135,
+        "peakFrame": 135,
+        "side": "Left",
+        "eventIdentity": "3668124746302094023",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 3,
+        "landingReach": {
+          "frame": 135,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "SupportIntersection",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.071066536,
+            "y": 0.6883682,
+            "z": 0.0203295872
+          },
+          "originalKnee": {
+            "x": -0.00403927267,
+            "y": 0.42717433,
+            "z": 0.214673549
+          },
+          "originalAnkle": {
+            "x": 0.0133172926,
+            "y": 0.103340864,
+            "z": 0.0514851958
+          },
+          "targetAnkle": {
+            "x": 0.0005903258,
+            "y": 0.221942425,
+            "z": 0.056915
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.071066536,
+            "y": 0.6669423,
+            "z": 0.0203295872
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.021425886079669,
+          "upperLegLengthMeters": 0.33239203691482544,
+          "lowerLegLengthMeters": 0.363042414188385,
+          "legLengthMeters": 0.69543445110321045,
+          "landingUsableLegLengthMeters": 0.67543445110321043,
+          "hipTargetHorizontalDistanceMeters": 0.080456187253665448,
+          "hipTargetVerticalAlongUpMeters": 0.44499987363815308,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1156253277253794,
+          "landingReachMaximumAlongUpMeters": 0.2256255804490731,
+          "strideSpringOutputMeters": 0.021425886079669,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.22212037444114685,
+          "primarySupportAvailable": true,
+          "primarySupportSide": "Left",
+          "primarySupportLandingEventIdentity": "3668124746302094023",
+          "strideState": "Accepted",
+          "strideSupportSide": "Left",
+          "supportReachAvailable": true,
+          "supportReachMinimumAlongUpMeters": -1.0314086675643921,
+          "supportReachMaximumAlongUpMeters": 0.14140880107879639,
+          "supportIntersectionExists": true,
+          "intersectionMinimumAlongUpMeters": -1.0314086675643921,
+          "intersectionMaximumAlongUpMeters": 0.14140880107879639,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 143,
+        "endFrame": 144,
+        "peakFrame": 144,
+        "side": "Right",
+        "eventIdentity": "17747621828049093971",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 3,
+        "landingReach": {
+          "frame": 144,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07306748,
+            "y": 0.676106751,
+            "z": 0.009974187
+          },
+          "originalKnee": {
+            "x": 0.0217658989,
+            "y": 0.434390575,
+            "z": 0.232293487
+          },
+          "originalAnkle": {
+            "x": -0.00318849087,
+            "y": 0.08046764,
+            "z": 0.155379951
+          },
+          "targetAnkle": {
+            "x": -0.00318891415,
+            "y": 0.196051836,
+            "z": 0.155379549
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07306748,
+            "y": 0.676106751,
+            "z": 0.009974187
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239197731018066,
+          "lowerLegLengthMeters": 0.36304250359535217,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.1641881779270821,
+          "hipTargetVerticalAlongUpMeters": 0.48005491495132446,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1352296856996427,
+          "landingReachMaximumAlongUpMeters": 0.17511985579699385,
+          "strideSpringOutputMeters": 0.0014274031855165958,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.18807810544967651,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 152,
+        "endFrame": 153,
+        "peakFrame": 153,
+        "side": "Left",
+        "eventIdentity": "17747622927560722182",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 4,
+        "landingReach": {
+          "frame": 153,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.07055732,
+            "y": 0.668485463,
+            "z": 0.0220314339
+          },
+          "originalKnee": {
+            "x": -0.00705172867,
+            "y": 0.422957242,
+            "z": 0.236897469
+          },
+          "originalAnkle": {
+            "x": 0.00600118376,
+            "y": 0.0825175941,
+            "z": 0.111477196
+          },
+          "targetAnkle": {
+            "x": 0.00600073673,
+            "y": 0.149245977,
+            "z": 0.111477226
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.07055732,
+            "y": 0.668485463,
+            "z": 0.0220314339
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239206671714783,
+          "lowerLegLengthMeters": 0.36304238438606262,
+          "legLengthMeters": 0.69543445110321045,
+          "landingUsableLegLengthMeters": 0.67543445110321043,
+          "hipTargetHorizontalDistanceMeters": 0.11773565755523964,
+          "hipTargetVerticalAlongUpMeters": 0.51923948526382446,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1843334731160156,
+          "landingReachMaximumAlongUpMeters": 0.14585450258836663,
+          "strideSpringOutputMeters": 0.00019946855900343508,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.16301417350769043,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 161,
+        "endFrame": 162,
+        "peakFrame": 161,
+        "side": "Right",
+        "eventIdentity": "18369873941196438956",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 4,
+        "landingReach": {
+          "frame": 161,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07245084,
+            "y": 0.6937861,
+            "z": 0.0147875631
+          },
+          "originalKnee": {
+            "x": 0.0345814452,
+            "y": 0.4288231,
+            "z": 0.211878881
+          },
+          "originalAnkle": {
+            "x": 0.0148480125,
+            "y": 0.08455032,
+            "z": 0.325398445
+          },
+          "targetAnkle": {
+            "x": 0.0148480125,
+            "y": 0.08455032,
+            "z": 0.325398445
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07245084,
+            "y": 0.6937861,
+            "z": 0.0147875631
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239200711250305,
+          "lowerLegLengthMeters": 0.36304250359535217,
+          "legLengthMeters": 0.69543451070785522,
+          "landingUsableLegLengthMeters": 0.67543451070785521,
+          "hipTargetHorizontalDistanceMeters": 0.31590696666491708,
+          "hipTargetVerticalAlongUpMeters": 0.60923576354980469,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2062404257323798,
+          "landingReachMaximumAlongUpMeters": -0.012231101367229491,
+          "strideSpringOutputMeters": -8.6632331658620387E-05,
+          "currentOutputWithinLandingReach": false,
+          "minimumCorrectionMeters": 0.012144469035570871,
+          "signedCorrectionAlongUpMeters": -0.012144469035570871,
+          "correctionDirection": "Down",
+          "actualTargetCompressionReserveMeters": 0.0091652870178222656,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 196,
+        "endFrame": 197,
+        "peakFrame": 196,
+        "side": "Right",
+        "eventIdentity": "1171464792293507534",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 6,
+        "landingReach": {
+          "frame": 196,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07236335,
+            "y": 0.6706242,
+            "z": 0.0150516806
+          },
+          "originalKnee": {
+            "x": 0.0304861851,
+            "y": 0.414942443,
+            "z": 0.223276556
+          },
+          "originalAnkle": {
+            "x": 0.0137862712,
+            "y": 0.0602283776,
+            "z": 0.2987675
+          },
+          "targetAnkle": {
+            "x": 0.0137862712,
+            "y": 0.0602283776,
+            "z": 0.2987675
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07236335,
+            "y": 0.6887434,
+            "z": 0.0150516806
+          },
+          "appliedPelvisGoalAlongUpMeters": -0.018119201064109802,
+          "upperLegLengthMeters": 0.33239200711250305,
+          "lowerLegLengthMeters": 0.36304247379302979,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.28969974127772075,
+          "hipTargetVerticalAlongUpMeters": 0.62851500511169434,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2386672794660134,
+          "landingReachMaximumAlongUpMeters": -0.018362730757375267,
+          "strideSpringOutputMeters": -0.018119201064109802,
+          "currentOutputWithinLandingReach": false,
+          "minimumCorrectionMeters": 0.00024352969326546514,
+          "signedCorrectionAlongUpMeters": -0.00024352969326546514,
+          "correctionDirection": "Down",
+          "actualTargetCompressionReserveMeters": 0.019779980182647705,
+          "primarySupportAvailable": true,
+          "primarySupportSide": "Left",
+          "primarySupportLandingEventIdentity": "549209380611277916",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 214,
+        "endFrame": 215,
+        "peakFrame": 215,
+        "side": "Right",
+        "eventIdentity": "6790860914900186455",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 7,
+        "landingReach": {
+          "frame": 215,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07270782,
+            "y": 0.675501,
+            "z": 0.00576061
+          },
+          "originalKnee": {
+            "x": 0.0208051018,
+            "y": 0.416562617,
+            "z": 0.2076058
+          },
+          "originalAnkle": {
+            "x": -0.01169299,
+            "y": 0.07782915,
+            "z": 0.0811014
+          },
+          "targetAnkle": {
+            "x": -0.0116922753,
+            "y": 0.09309968,
+            "z": 0.08110251
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07270782,
+            "y": 0.675501,
+            "z": 0.00576061
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239200711250305,
+          "lowerLegLengthMeters": 0.36304247379302979,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.11313610397159717,
+          "hipTargetVerticalAlongUpMeters": 0.58240127563476563,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2482931286966983,
+          "landingReachMaximumAlongUpMeters": 0.083490577427167034,
+          "strideSpringOutputMeters": 0.00024163722991943359,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.10214614868164063,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 223,
+        "endFrame": 224,
+        "peakFrame": 224,
+        "side": "Left",
+        "eventIdentity": "6790862014411814666",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 8,
+        "landingReach": {
+          "frame": 224,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.07051461,
+            "y": 0.668570042,
+            "z": 0.0221242681
+          },
+          "originalKnee": {
+            "x": -0.007111773,
+            "y": 0.423957616,
+            "z": 0.2380625
+          },
+          "originalAnkle": {
+            "x": 0.005937212,
+            "y": 0.08252671,
+            "z": 0.115365982
+          },
+          "targetAnkle": {
+            "x": 0.00593757629,
+            "y": 0.280784428,
+            "z": 0.115365885
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.07051461,
+            "y": 0.668570042,
+            "z": 0.0221242681
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239206671714783,
+          "lowerLegLengthMeters": 0.36304238438606262,
+          "legLengthMeters": 0.69543445110321045,
+          "landingUsableLegLengthMeters": 0.67543445110321043,
+          "hipTargetHorizontalDistanceMeters": 0.12057751165522952,
+          "hipTargetVerticalAlongUpMeters": 0.38778561353683472,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.0523702668505628,
+          "landingReachMaximumAlongUpMeters": 0.27679903977689335,
+          "strideSpringOutputMeters": -0.001265175174921751,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.28933519124984741,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 232,
+        "endFrame": 233,
+        "peakFrame": 232,
+        "side": "Right",
+        "eventIdentity": "7413113028047531440",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 8,
+        "landingReach": {
+          "frame": 232,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07240148,
+            "y": 0.6987639,
+            "z": 0.0149395643
+          },
+          "originalKnee": {
+            "x": 0.03205075,
+            "y": 0.439338177,
+            "z": 0.218788952
+          },
+          "originalAnkle": {
+            "x": 0.0141151194,
+            "y": 0.088496685,
+            "z": 0.310377121
+          },
+          "targetAnkle": {
+            "x": 0.0141146872,
+            "y": 0.176683366,
+            "z": 0.310378164
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07240148,
+            "y": 0.6906946,
+            "z": 0.0149395643
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0080693438649177551,
+          "upperLegLengthMeters": 0.33239203691482544,
+          "lowerLegLengthMeters": 0.36304247379302979,
+          "legLengthMeters": 0.69543451070785522,
+          "landingUsableLegLengthMeters": 0.67543451070785521,
+          "hipTargetHorizontalDistanceMeters": 0.30113337081400193,
+          "hipTargetVerticalAlongUpMeters": 0.5140112042427063,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1186023646456325,
+          "landingReachMaximumAlongUpMeters": 0.090579956160219743,
+          "strideSpringOutputMeters": 0.0080693438649177551,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.092732787132263184,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 260,
+        "endFrame": 261,
+        "peakFrame": 261,
+        "side": "Left",
+        "eventIdentity": "8039192541171922016",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 10,
+        "landingReach": {
+          "frame": 261,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "SupportIntersection",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.07097174,
+            "y": 0.680887461,
+            "z": 0.0207452122
+          },
+          "originalKnee": {
+            "x": -0.00483133644,
+            "y": 0.423369884,
+            "z": 0.220231146
+          },
+          "originalAnkle": {
+            "x": 0.0112705994,
+            "y": 0.0956291854,
+            "z": 0.0649039447
+          },
+          "targetAnkle": {
+            "x": -0.17486161,
+            "y": 0.151792526,
+            "z": 0.0544507727
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.07097174,
+            "y": 0.6672997,
+            "z": 0.0207452122
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.013587801717221737,
+          "upperLegLengthMeters": 0.33239206671714783,
+          "lowerLegLengthMeters": 0.36304238438606262,
+          "legLengthMeters": 0.69543445110321045,
+          "landingUsableLegLengthMeters": 0.67543445110321043,
+          "hipTargetHorizontalDistanceMeters": 0.10922073657148776,
+          "hipTargetVerticalAlongUpMeters": 0.515507161617279,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1820523802182956,
+          "landingReachMaximumAlongUpMeters": 0.1510380569837374,
+          "strideSpringOutputMeters": 0.013587801717221737,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.15518391132354736,
+          "primarySupportAvailable": true,
+          "primarySupportSide": "Left",
+          "primarySupportLandingEventIdentity": "8039192541171922016",
+          "strideState": "Accepted",
+          "strideSupportSide": "Left",
+          "supportReachAvailable": true,
+          "supportReachMinimumAlongUpMeters": -1.0980122089385986,
+          "supportReachMaximumAlongUpMeters": 0.066997766494750977,
+          "supportIntersectionExists": true,
+          "intersectionMinimumAlongUpMeters": -1.0980122089385986,
+          "intersectionMaximumAlongUpMeters": 0.066997766494750977,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 269,
+        "endFrame": 270,
+        "peakFrame": 270,
+        "side": "Right",
+        "eventIdentity": "8661447952854151634",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 10,
+        "landingReach": {
+          "frame": 270,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07353085,
+            "y": 0.671041548,
+            "z": -0.00212102
+          },
+          "originalKnee": {
+            "x": 0.0236216225,
+            "y": 0.369594634,
+            "z": 0.128734916
+          },
+          "originalAnkle": {
+            "x": -0.022154469,
+            "y": 0.0801355243,
+            "z": -0.08554949
+          },
+          "targetAnkle": {
+            "x": -0.0221555009,
+            "y": 0.12233448,
+            "z": -0.08554869
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07353085,
+            "y": 0.671041548,
+            "z": -0.00212102
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239200711250305,
+          "lowerLegLengthMeters": 0.36304247379302979,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.12694902413420595,
+          "hipTargetVerticalAlongUpMeters": 0.54870706796646118,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2121041460935054,
+          "landingReachMaximumAlongUpMeters": 0.11469001016058289,
+          "strideSpringOutputMeters": 0.0025979622732847929,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.13223332166671753,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 277,
+        "endFrame": 278,
+        "peakFrame": 277,
+        "side": "Left",
+        "eventIdentity": "8661446853342523423",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 11,
+        "landingReach": {
+          "frame": 277,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.0691155642,
+            "y": 0.66232115,
+            "z": 0.0235667732
+          },
+          "originalKnee": {
+            "x": -0.0169419274,
+            "y": 0.430455148,
+            "z": 0.255947
+          },
+          "originalAnkle": {
+            "x": -0.0101419762,
+            "y": 0.0679422,
+            "z": 0.237563863
+          },
+          "targetAnkle": {
+            "x": -0.0101420293,
+            "y": 0.118159771,
+            "z": 0.237562969
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.0691155642,
+            "y": 0.6751179,
+            "z": 0.0235667732
+          },
+          "appliedPelvisGoalAlongUpMeters": -0.012796736322343349,
+          "upperLegLengthMeters": 0.33239209651947021,
+          "lowerLegLengthMeters": 0.3630424439907074,
+          "legLengthMeters": 0.69543454051017761,
+          "landingUsableLegLengthMeters": 0.67543454051017759,
+          "hipTargetHorizontalDistanceMeters": 0.2219735437149721,
+          "hipTargetVerticalAlongUpMeters": 0.55695813894271851,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1948762876144836,
+          "landingReachMaximumAlongUpMeters": 0.080960009729046489,
+          "strideSpringOutputMeters": -0.012796736322343349,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.10774087905883789,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 286,
+        "endFrame": 287,
+        "peakFrame": 286,
+        "side": "Right",
+        "eventIdentity": "4294199861379971755",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 11,
+        "landingReach": {
+          "frame": 286,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07229435,
+            "y": 0.685724,
+            "z": 0.0152465785
+          },
+          "originalKnee": {
+            "x": 0.02795089,
+            "y": 0.436262637,
+            "z": 0.230391
+          },
+          "originalAnkle": {
+            "x": 0.0124441078,
+            "y": 0.07719809,
+            "z": 0.2816943
+          },
+          "targetAnkle": {
+            "x": 0.0124438889,
+            "y": 0.15033555,
+            "z": 0.281692624
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07229435,
+            "y": 0.685724,
+            "z": 0.0152465785
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239200711250305,
+          "lowerLegLengthMeters": 0.36304247379302979,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.2730852992318123,
+          "hipTargetVerticalAlongUpMeters": 0.53538846969604492,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.153155543389357,
+          "landingReachMaximumAlongUpMeters": 0.082378603997267152,
+          "strideSpringOutputMeters": -0.00020146365568507463,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.0944216251373291,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 304,
+        "endFrame": 305,
+        "peakFrame": 304,
+        "side": "Right",
+        "eventIdentity": "4916451974527316740",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 12,
+        "landingReach": {
+          "frame": 304,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.0724493042,
+            "y": 0.7026675,
+            "z": 0.01479243
+          },
+          "originalKnee": {
+            "x": 0.0344869,
+            "y": 0.437895864,
+            "z": 0.212122813
+          },
+          "originalAnkle": {
+            "x": 0.014800651,
+            "y": 0.0934037,
+            "z": 0.32498318
+          },
+          "targetAnkle": {
+            "x": 0.0148010636,
+            "y": 0.215125322,
+            "z": 0.324982852
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.0724493042,
+            "y": 0.693674862,
+            "z": 0.01479243
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0089926095679402351,
+          "upperLegLengthMeters": 0.33239197731018066,
+          "lowerLegLengthMeters": 0.36304250359535217,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.31550183962030215,
+          "hipTargetVerticalAlongUpMeters": 0.4785495400428772,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.0757683669332656,
+          "landingReachMaximumAlongUpMeters": 0.11866928684751121,
+          "strideSpringOutputMeters": 0.0089926095679402351,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.11471182107925415,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 313,
+        "endFrame": 314,
+        "peakFrame": 314,
+        "side": "Left",
+        "eventIdentity": "4916455273062201373",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 13,
+        "landingReach": {
+          "frame": 314,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "SupportIntersection",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.07105801,
+            "y": 0.6881009,
+            "z": 0.0203684326
+          },
+          "originalKnee": {
+            "x": -0.004108563,
+            "y": 0.427247971,
+            "z": 0.2151966
+          },
+          "originalAnkle": {
+            "x": 0.0131367575,
+            "y": 0.103050172,
+            "z": 0.05272138
+          },
+          "targetAnkle": {
+            "x": -0.0588993579,
+            "y": 0.246071339,
+            "z": 0.0436476246
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.07105801,
+            "y": 0.6669748,
+            "z": 0.0203684326
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.021126093342900276,
+          "upperLegLengthMeters": 0.33239206671714783,
+          "lowerLegLengthMeters": 0.3630424439907074,
+          "legLengthMeters": 0.69543451070785522,
+          "landingUsableLegLengthMeters": 0.67543451070785521,
+          "hipTargetHorizontalDistanceMeters": 0.026263162042868281,
+          "hipTargetVerticalAlongUpMeters": 0.42090344429016113,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.09582716188695,
+          "landingReachMaximumAlongUpMeters": 0.25402027330662758,
+          "strideSpringOutputMeters": 0.021126093342900276,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.252625435590744,
+          "primarySupportAvailable": true,
+          "primarySupportSide": "Left",
+          "primarySupportLandingEventIdentity": "4916455273062201373",
+          "strideState": "Accepted",
+          "strideSupportSide": "Left",
+          "supportReachAvailable": true,
+          "supportReachMinimumAlongUpMeters": -1.0122829675674438,
+          "supportReachMaximumAlongUpMeters": 0.17047607898712158,
+          "supportIntersectionExists": true,
+          "intersectionMinimumAlongUpMeters": -1.0122829675674438,
+          "intersectionMaximumAlongUpMeters": 0.17047607898712158,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 341,
+        "endFrame": 342,
+        "peakFrame": 341,
+        "side": "Right",
+        "eventIdentity": "6164786899333936934",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 14,
+        "landingReach": {
+          "frame": 341,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07221478,
+            "y": 0.6827493,
+            "z": 0.0154615026
+          },
+          "originalKnee": {
+            "x": 0.0251316242,
+            "y": 0.439991117,
+            "z": 0.237578779
+          },
+          "originalAnkle": {
+            "x": 0.009161681,
+            "y": 0.0788452,
+            "z": 0.271021456
+          },
+          "targetAnkle": {
+            "x": 0.009161254,
+            "y": 0.133987427,
+            "z": 0.271019846
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07221478,
+            "y": 0.6827493,
+            "z": 0.0154615026
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239197731018066,
+          "lowerLegLengthMeters": 0.3630424439907074,
+          "legLengthMeters": 0.69543442130088806,
+          "landingUsableLegLengthMeters": 0.675434421300888,
+          "hipTargetHorizontalDistanceMeters": 0.26322197855373686,
+          "hipTargetVerticalAlongUpMeters": 0.54876184463500977,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1707954831822525,
+          "landingReachMaximumAlongUpMeters": 0.073271793912232819,
+          "strideSpringOutputMeters": -0.0042387600988149643,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.086808621883392334,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 350,
+        "endFrame": 351,
+        "peakFrame": 351,
+        "side": "Left",
+        "eventIdentity": "6164785799822308723",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 15,
+        "landingReach": {
+          "frame": 351,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.07096842,
+            "y": 0.6673119,
+            "z": 0.020759007
+          },
+          "originalKnee": {
+            "x": -0.0048590377,
+            "y": 0.409917444,
+            "z": 0.220414057
+          },
+          "originalAnkle": {
+            "x": 0.011199696,
+            "y": 0.08204648,
+            "z": 0.06535743
+          },
+          "targetAnkle": {
+            "x": 0.01120043,
+            "y": 0.1500752,
+            "z": 0.0653561652
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.07096842,
+            "y": 0.6673119,
+            "z": 0.020759007
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239209651947021,
+          "lowerLegLengthMeters": 0.3630424439907074,
+          "legLengthMeters": 0.69543454051017761,
+          "landingUsableLegLengthMeters": 0.67543454051017759,
+          "hipTargetHorizontalDistanceMeters": 0.093491316578275863,
+          "hipTargetVerticalAlongUpMeters": 0.51723670959472656,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1861695853293965,
+          "landingReachMaximumAlongUpMeters": 0.1516961661399433,
+          "strideSpringOutputMeters": -2.1507712517632172E-05,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.16981643438339233,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 358,
+        "endFrame": 359,
+        "peakFrame": 358,
+        "side": "Right",
+        "eventIdentity": "10257638667488449871",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 15,
+        "landingReach": {
+          "frame": 358,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.0722392946,
+            "y": 0.670580149,
+            "z": 0.0153962569
+          },
+          "originalKnee": {
+            "x": 0.0260034949,
+            "y": 0.425793,
+            "z": 0.2354552
+          },
+          "originalAnkle": {
+            "x": 0.0103827184,
+            "y": 0.0650532246,
+            "z": 0.2731737
+          },
+          "targetAnkle": {
+            "x": 0.0103841107,
+            "y": 0.08170867,
+            "z": 0.273172528
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.0722392946,
+            "y": 0.6836212,
+            "z": 0.0153962569
+          },
+          "appliedPelvisGoalAlongUpMeters": -0.013041079044342041,
+          "upperLegLengthMeters": 0.33239200711250305,
+          "lowerLegLengthMeters": 0.36304253339767456,
+          "legLengthMeters": 0.69543454051017761,
+          "landingUsableLegLengthMeters": 0.67543454051017759,
+          "hipTargetHorizontalDistanceMeters": 0.26509369277998451,
+          "hipTargetVerticalAlongUpMeters": 0.60191255807876587,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2231509604352735,
+          "landingReachMaximumAlongUpMeters": 0.019325844277741644,
+          "strideSpringOutputMeters": -0.013041079044342041,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.049644887447357178,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 386,
+        "endFrame": 387,
+        "peakFrame": 386,
+        "side": "Left",
+        "eventIdentity": "10879894079170679489",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 17,
+        "landingReach": {
+          "frame": 386,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.0690169856,
+            "y": 0.67789,
+            "z": 0.0235544965
+          },
+          "originalKnee": {
+            "x": -0.01947644,
+            "y": 0.4390157,
+            "z": 0.249318331
+          },
+          "originalAnkle": {
+            "x": -0.011369383,
+            "y": 0.076669395,
+            "z": 0.270276666
+          },
+          "targetAnkle": {
+            "x": -0.0113687925,
+            "y": 0.0988512039,
+            "z": 0.270278066
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.0690169856,
+            "y": 0.67789,
+            "z": 0.0235544965
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239209651947021,
+          "lowerLegLengthMeters": 0.3630424439907074,
+          "legLengthMeters": 0.69543454051017761,
+          "landingUsableLegLengthMeters": 0.67543454051017759,
+          "hipTargetHorizontalDistanceMeters": 0.25336896830560451,
+          "hipTargetVerticalAlongUpMeters": 0.57903879880905151,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2051505974632124,
+          "landingReachMaximumAlongUpMeters": 0.047072999845109265,
+          "strideSpringOutputMeters": 0.0031959591433405876,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.0633888840675354,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 423,
+        "endFrame": 424,
+        "peakFrame": 424,
+        "side": "Left",
+        "eventIdentity": "12128224605930786839",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 19,
+        "landingReach": {
+          "frame": 424,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "SupportIntersection",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.0711360052,
+            "y": 0.6790058,
+            "z": 0.0200059228
+          },
+          "originalKnee": {
+            "x": -0.00351715833,
+            "y": 0.4149856,
+            "z": 0.210283428
+          },
+          "originalAnkle": {
+            "x": 0.0146870408,
+            "y": 0.0941908658,
+            "z": 0.0412889272
+          },
+          "targetAnkle": {
+            "x": 0.00370243238,
+            "y": 0.182297945,
+            "z": 0.04616949
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.0711360052,
+            "y": 0.6666806,
+            "z": 0.0200059228
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.012325208634138107,
+          "upperLegLengthMeters": 0.33239209651947021,
+          "lowerLegLengthMeters": 0.363042414188385,
+          "legLengthMeters": 0.69543451070785522,
+          "landingUsableLegLengthMeters": 0.67543451070785521,
+          "hipTargetHorizontalDistanceMeters": 0.079280033813082851,
+          "hipTargetVerticalAlongUpMeters": 0.48438262939453125,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.1551482028207145,
+          "landingReachMaximumAlongUpMeters": 0.1863829440316519,
+          "strideSpringOutputMeters": 0.012325208634138107,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.19243943691253662,
+          "primarySupportAvailable": true,
+          "primarySupportSide": "Left",
+          "primarySupportLandingEventIdentity": "12128224605930786839",
+          "strideState": "Accepted",
+          "strideSupportSide": "Left",
+          "supportReachAvailable": true,
+          "supportReachMinimumAlongUpMeters": -1.0705068111419678,
+          "supportReachMaximumAlongUpMeters": 0.10174155235290527,
+          "supportIntersectionExists": true,
+          "intersectionMinimumAlongUpMeters": -1.0705068111419678,
+          "intersectionMaximumAlongUpMeters": 0.10174155235290527,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 432,
+        "endFrame": 433,
+        "peakFrame": 432,
+        "side": "Right",
+        "eventIdentity": "7760977613968235171",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 19,
+        "landingReach": {
+          "frame": 432,
+          "side": "Right",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": 0.07230778,
+            "y": 0.670390964,
+            "z": 0.015209334
+          },
+          "originalKnee": {
+            "x": 0.02843009,
+            "y": 0.4197573,
+            "z": 0.229083061
+          },
+          "originalAnkle": {
+            "x": 0.0128072249,
+            "y": 0.06131035,
+            "z": 0.28450498
+          },
+          "targetAnkle": {
+            "x": 0.01280668,
+            "y": 0.0789036751,
+            "z": 0.2845055
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": 0.07230778,
+            "y": 0.686273038,
+            "z": 0.015209334
+          },
+          "appliedPelvisGoalAlongUpMeters": -0.015882058069109917,
+          "upperLegLengthMeters": 0.33239200711250305,
+          "lowerLegLengthMeters": 0.36304253339767456,
+          "legLengthMeters": 0.69543454051017761,
+          "landingUsableLegLengthMeters": 0.67543454051017759,
+          "hipTargetHorizontalDistanceMeters": 0.275791215041162,
+          "hipTargetVerticalAlongUpMeters": 0.60736936330795288,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2239332482544474,
+          "landingReachMaximumAlongUpMeters": 0.00919452163854173,
+          "strideSpringOutputMeters": -0.015882058069109917,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.042810618877410889,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 437,
+        "endFrame": 438,
+        "peakFrame": 437,
+        "side": "Left",
+        "eventIdentity": "7760978713479863382",
+        "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+        "sourceCycle": 20,
+        "landingReach": {
+          "frame": 437,
+          "side": "Left",
+          "availability": "Available",
+          "classification": "NoSupportLandingOnly",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.069016315,
+            "y": 0.6800586,
+            "z": 0.0235038139
+          },
+          "originalKnee": {
+            "x": -0.0214030258,
+            "y": 0.434703439,
+            "z": 0.2426346
+          },
+          "originalAnkle": {
+            "x": -0.01130307,
+            "y": 0.07519269,
+            "z": 0.292130172
+          },
+          "targetAnkle": {
+            "x": -0.0113039864,
+            "y": 0.08805442,
+            "z": 0.2921305
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.069016315,
+            "y": 0.6800586,
+            "z": 0.0235038139
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.33239206671714783,
+          "lowerLegLengthMeters": 0.363042414188385,
+          "legLengthMeters": 0.69543448090553284,
+          "landingUsableLegLengthMeters": 0.67543448090553282,
+          "hipTargetHorizontalDistanceMeters": 0.27475627589325546,
+          "hipTargetVerticalAlongUpMeters": 0.59200417995452881,
+          "landingReachAvailable": true,
+          "landingReachMinimumAlongUpMeters": -1.2090298899969838,
+          "landingReachMaximumAlongUpMeters": 0.025021530087926291,
+          "strideSpringOutputMeters": -0.00026831746799871325,
+          "currentOutputWithinLandingReach": true,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "None",
+          "actualTargetCompressionReserveMeters": 0.0427783727645874,
+          "primarySupportAvailable": false,
+          "primarySupportSide": "0",
+          "primarySupportLandingEventIdentity": "0",
+          "strideState": "Releasing",
+          "strideSupportSide": "0",
+          "supportReachAvailable": false,
+          "supportReachMinimumAlongUpMeters": 0.0,
+          "supportReachMaximumAlongUpMeters": 0.0,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      },
+      {
+        "startFrame": 492,
+        "endFrame": 493,
+        "peakFrame": 493,
+        "side": "Left",
+        "eventIdentity": "13306023436822781327",
+        "sourceIdentity": "90d528fc935ce2e43b4b301c8c2b98db:7400000",
+        "sourceCycle": 0,
+        "landingReach": {
+          "frame": 493,
+          "side": "Left",
+          "availability": "ComponentUpUnavailable",
+          "classification": "LandingReachUnavailable",
+          "candidateCompressionReserveMeters": 0.02,
+          "finalIkLegAvailable": true,
+          "componentUp": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "originalHip": {
+            "x": -0.07084861,
+            "y": 0.682256341,
+            "z": 0.0212156475
+          },
+          "originalKnee": {
+            "x": -0.00590419769,
+            "y": 0.4289874,
+            "z": 0.226451054
+          },
+          "originalAnkle": {
+            "x": 0.0086696595,
+            "y": 0.09669548,
+            "z": 0.08095364
+          },
+          "targetAnkle": {
+            "x": 0.006718519,
+            "y": 0.178477168,
+            "z": 0.116952024
+          },
+          "baselineHipBeforePelvisOutput": {
+            "x": -0.07084861,
+            "y": 0.682256341,
+            "z": 0.0212156475
+          },
+          "appliedPelvisGoalAlongUpMeters": 0.0,
+          "upperLegLengthMeters": 0.0,
+          "lowerLegLengthMeters": 0.0,
+          "legLengthMeters": 0.0,
+          "landingUsableLegLengthMeters": 0.0,
+          "hipTargetHorizontalDistanceMeters": 0.0,
+          "hipTargetVerticalAlongUpMeters": 0.0,
+          "landingReachAvailable": false,
+          "landingReachMinimumAlongUpMeters": 0.0,
+          "landingReachMaximumAlongUpMeters": 0.0,
+          "strideSpringOutputMeters": 0.014530286192893982,
+          "currentOutputWithinLandingReach": false,
+          "minimumCorrectionMeters": 0.0,
+          "signedCorrectionAlongUpMeters": 0.0,
+          "correctionDirection": "Unavailable",
+          "actualTargetCompressionReserveMeters": 0.17680603265762329,
+          "primarySupportAvailable": true,
+          "primarySupportSide": "Left",
+          "primarySupportLandingEventIdentity": "13306023436822781327",
+          "strideState": "Accepted",
+          "strideSupportSide": "Left",
+          "supportReachAvailable": true,
+          "supportReachMinimumAlongUpMeters": -1.070274829864502,
+          "supportReachMaximumAlongUpMeters": 0.091777145862579346,
+          "supportIntersectionExists": false,
+          "intersectionMinimumAlongUpMeters": 0.0,
+          "intersectionMaximumAlongUpMeters": 0.0,
+          "supportConflictGapMeters": 0.0
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,235 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "swing-current-floor-catchup",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "b126b8ec9ee7400bd375d60b9347d496bca91852d967af58e2d0a004ab765d6a",
+    "schema": "character-foot-motion-facts/21",
+    "sampleIdentity": "0cc823b960954394b1bd36f4370e6114"
+  },
+  "targets": [
+    {
+      "id": "swing-current-floor-catchup",
+      "question": "同一Landing Event的无Anchor Swing中，CurrentSwingFloor从Builder目标或Residual滞后处补齐了多少高度",
+      "eventKinds": [
+        "SwingCurrentFloorCatchup"
+      ],
+      "rules": [
+        "currentFloorCatchupMeters>0.01"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "occurrence": {
+        "available": false,
+        "sampleUnit": "ContinuousAcceptedUnanchoredSwingPairWithCurrentFloor",
+        "metric": "CurrentFloorCatchup",
+        "comparison": "GreaterThan",
+        "thresholdUnit": "Meters",
+        "eligibleEventCount": 0,
+        "configuredThresholds": [
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "rates": []
+      },
+      "measurements": {
+        "BuilderSwingTargetAlongUp": {
+          "available": false,
+          "count": 0
+        },
+        "CurrentFloorAboveBuilderTarget": {
+          "available": false,
+          "count": 0
+        },
+        "CurrentFloorCatchup": {
+          "available": false,
+          "count": 0
+        },
+        "CurrentSwingFloorMinimumAlongUp": {
+          "available": false,
+          "count": 0
+        },
+        "FinalOutputAlongUp": {
+          "available": false,
+          "count": 0
+        },
+        "PhysicalAnkleStep": {
+          "available": false,
+          "count": 0
+        },
+        "PhysicalSoleStep": {
+          "available": false,
+          "count": 0
+        },
+        "ResidualLagBelowCurrentFloor": {
+          "available": false,
+          "count": 0
+        },
+        "SafetyFloorClamp": {
+          "available": false,
+          "count": 0
+        },
+        "StateOutputBeforeFloorAlongUp": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "categoricalMeasurements": {
+        "Classification": []
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "swing-actual-foot-envelope-counterfactual",
+      "question": "真实脚水平距离处的GroundPath Envelope候选是否唯一，以及非歧义候选能否在CurrentSwingFloor硬Clamp前覆盖地面",
+      "eventKinds": [
+        "SwingActualFootEnvelopeCounterfactual"
+      ],
+      "rules": [
+        "currentFloorCatchupMeters>0.01"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "occurrence": {
+        "available": false,
+        "sampleUnit": "ContinuousAcceptedUnanchoredSwingPairWithCurrentFloor",
+        "metric": "CurrentFloorCatchup",
+        "comparison": "GreaterThan",
+        "thresholdUnit": "Meters",
+        "eligibleEventCount": 0,
+        "configuredThresholds": [
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "rates": []
+      },
+      "supplementalOccurrences": [
+        {
+          "available": false,
+          "sampleUnit": "UnambiguousActualFootEnvelopePairWithCurrentFloor",
+          "metric": "ActualEnvelopeCoversCurrentFloor",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Boolean",
+          "eligibleEventCount": 0,
+          "configuredThresholds": [
+            0.5
+          ],
+          "rates": []
+        }
+      ],
+      "measurements": {
+        "ActualEnvelopeCandidateCount": {
+          "available": false,
+          "count": 0
+        },
+        "ActualEnvelopeCoversCurrentFloor": {
+          "available": false,
+          "count": 0
+        },
+        "ActualEnvelopeHeightSpan": {
+          "available": false,
+          "count": 0
+        },
+        "ActualFootClosestPathParameter": {
+          "available": false,
+          "count": 0
+        },
+        "ActualFootCrossTrackDistance": {
+          "available": false,
+          "count": 0
+        },
+        "ActualFootDistanceAlongAxis": {
+          "available": false,
+          "count": 0
+        },
+        "ActualFootHorizontalDistance": {
+          "available": false,
+          "count": 0
+        },
+        "ActualMinusPhaseEnvelopeHorizontalDistance": {
+          "available": false,
+          "count": 0
+        },
+        "ActualProgressEnvelopeAdvanceAboveBuilderTarget": {
+          "available": false,
+          "count": 0
+        },
+        "ActualProgressEnvelopeMinimumCorrection": {
+          "available": false,
+          "count": 0
+        },
+        "ActualProgressEnvelopeRemainingBelowCurrentFloor": {
+          "available": false,
+          "count": 0
+        },
+        "BaselineHorizontalDistance": {
+          "available": false,
+          "count": 0
+        },
+        "BuilderSwingTargetAlongUp": {
+          "available": false,
+          "count": 0
+        },
+        "CurrentFloorCatchup": {
+          "available": false,
+          "count": 0
+        },
+        "CurrentSwingFloorMinimumAlongUp": {
+          "available": false,
+          "count": 0
+        },
+        "FinalOutputAlongUp": {
+          "available": false,
+          "count": 0
+        },
+        "GroundPathCorridorRadius": {
+          "available": false,
+          "count": 0
+        },
+        "PhaseEnvelopeHorizontalDistance": {
+          "available": false,
+          "count": 0
+        },
+        "PhaseSampleHeightAlongUp": {
+          "available": false,
+          "count": 0
+        },
+        "StateOutputBeforeFloorAlongUp": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "categoricalMeasurements": {
+        "CounterfactualState": []
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    }
+  ],
+  "summary": {
+    "targetCount": 2,
+    "targetWithMatchesCount": 0,
+    "matchedEventCount": 0,
+    "targetResults": [
+      {
+        "id": "swing-current-floor-catchup",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      },
+      {
+        "id": "swing-actual-foot-envelope-counterfactual",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      }
+    ]
+  }
+}

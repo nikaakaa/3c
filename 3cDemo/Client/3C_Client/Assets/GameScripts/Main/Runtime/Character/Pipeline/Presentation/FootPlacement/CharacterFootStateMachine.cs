@@ -352,6 +352,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 NextSwingReferencePoint;
         internal float NextSwingPredictionError;
         internal float NextSwingConstraintWeight;
+        internal bool NextSwingLandingFrozen;
         internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
         internal CharacterFootLandingTrackingState LandingTrackingState;
@@ -411,6 +412,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingReferencePoint = default;
             NextSwingPredictionError = 0f;
             NextSwingConstraintWeight = 0f;
+            NextSwingLandingFrozen = false;
             LandingTrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;
@@ -424,6 +426,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 nextSwingReferencePoint = NextSwingReferencePoint;
             float nextSwingPredictionError = NextSwingPredictionError;
             float nextSwingConstraintWeight = NextSwingConstraintWeight;
+            bool nextSwingLandingFrozen = NextSwingLandingFrozen;
             ulong observedCurrentEventIdentity = ObservedCurrentEventIdentity;
             ulong trackedEventIdentity = TrackedEventIdentity;
             CharacterFootLandingTrackingState landingTrackingState = LandingTrackingState;
@@ -434,6 +437,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingReferencePoint = nextSwingReferencePoint;
             NextSwingPredictionError = nextSwingPredictionError;
             NextSwingConstraintWeight = nextSwingConstraintWeight;
+            NextSwingLandingFrozen = nextSwingLandingFrozen;
             ObservedCurrentEventIdentity = observedCurrentEventIdentity;
             TrackedEventIdentity = trackedEventIdentity;
             LandingTrackingState = landingTrackingState;
@@ -644,6 +648,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             context.TrackedEventIdentity = step.LandingEventIdentity;
             if (!context.NextSwingLanding.HasValue)
                 context.LandingTrackingState = CharacterFootLandingTrackingState.Tracking;
+            if (step.IsSwing && context.NextSwingLandingFrozen &&
+                context.NextSwingLanding.HasValue)
+            {
+                if (diagnostics.Accepted &&
+                    diagnostics.LandingEventIdentity == step.LandingEventIdentity)
+                {
+                    context.NextSwingPredictionError = Vector3.Distance(
+                        context.NextSwingReferencePoint,
+                        diagnostics.LandingPoint);
+                }
+                context.NextSwingConstraintWeight = 1f;
+                context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
+                return;
+            }
             if (!diagnostics.Accepted || diagnostics.LandingEventIdentity != step.LandingEventIdentity)
             {
                 context.InvalidateCurrentLanding();
@@ -659,10 +677,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (Vector3.Distance(landingPoint, context.NextSwingLanding.WorldPoint) <
                     settings.LandingUpdateDistance)
                 {
+                    if (step.IsSwing)
+                    {
+                        context.NextSwingReferencePoint =
+                            context.NextSwingLanding.WorldPoint;
+                        context.NextSwingPredictionError = Vector3.Distance(
+                            context.NextSwingReferencePoint,
+                            landingPoint);
+                        context.NextSwingLandingFrozen = true;
+                    }
                     context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
                     return;
                 }
                 context.NextSwingLanding = CharacterFootLandingFact.Create(in step, in diagnostics);
+                if (step.IsSwing)
+                {
+                    context.NextSwingReferencePoint = landingPoint;
+                    context.NextSwingPredictionError = 0f;
+                    context.NextSwingLandingFrozen = true;
+                }
                 context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
                 return;
             }
@@ -670,6 +703,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             context.NextSwingReferencePoint = diagnostics.LandingPoint;
             context.NextSwingPredictionError = 0f;
             context.NextSwingConstraintWeight = 1f;
+            context.NextSwingLandingFrozen = step.IsSwing;
             context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
         }
 

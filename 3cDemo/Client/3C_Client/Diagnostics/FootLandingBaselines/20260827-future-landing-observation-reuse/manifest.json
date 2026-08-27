@@ -1,0 +1,33 @@
+{
+  "schema": "character-foot-landing-baseline/1",
+  "id": "20260827-future-landing-observation-reuse",
+  "purpose": "FutureLanding不可变Observation与canonical nearest接入后的正式对照基线",
+  "implementationCommit": "50d1e09",
+  "samplerCommit": "a19b4b4",
+  "captureMode": "fixed-input-presentation-schedule",
+  "trace": {
+    "id": "43357ff3cd384e5cba75d2c31175b116",
+    "frameCount": 1044,
+    "file": "CharacterInputTraces/20260827-183705-081-43357ff3cd384e5cba75d2c31175b116.json"
+  },
+  "presentationSchedule": {
+    "file": "CharacterInputPresentationSchedules/43357ff3cd384e5cba75d2c31175b116/20260827-234217-230-7b9a61f4cd5d47f5b7785b5b43b6d798.json"
+  },
+  "sample": {
+    "identity": "0cc823b960954394b1bd36f4370e6114",
+    "factsSchema": "character-foot-motion-facts/21",
+    "presentationFrameCount": 505,
+    "directory": "FootLandingDiagnostics/20260827-234246-281-0cc823b960954394b1bd36f4370e6114"
+  },
+  "comparisonContract": {
+    "fixedInput": "必须使用同一trace",
+    "presentationSchedule": "必须使用同一schedule",
+    "programIdentity": "586221c2d5dea374fbdc5703d15e9dfe89441489bfb71005597501d124771242|26c48264b8efc376ee9742fb3eed78f35b51a8e628eeee27222018eb84a5d7f6",
+    "primaryDiagnoses": [
+      "landing-observation-reuse",
+      "swing-path-jitter",
+      "landing-leg-extension",
+      "landing-path-continuity"
+    ]
+  }
+}

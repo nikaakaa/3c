@@ -3793,6 +3793,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Foot Motion Envelope geometry count mismatch " +
                         $"Frame={foot.Frame} Side={foot.Side}.");
                 }
+                RequireActualFootEnvelopeFacts(foot);
             }
             return rowCount;
         }
@@ -4391,7 +4392,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "Foot Motion unavailable Builder Swing target is nonzero.");
                 }
             }
-            RequireActualFootEnvelopeFacts(frame);
             RequireRevisionReason(frame.PathRevisionReason);
         }
 
@@ -4472,7 +4472,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 horizontalAxis.sqrMagnitude <= 0.00000001f)
             {
                 throw new InvalidDataException(
-                    "Foot Motion available Swing Path axis lacks a valid input.");
+                    $"Foot Motion available Swing Path axis lacks a valid input " +
+                    $"Frame={frame.Frame} Side={frame.Side} " +
+                    $"GroundPathState={frame.GroundPathState} " +
+                    $"FootMotionState={frame.FootMotionState} " +
+                    $"ConstraintState={frame.ConstraintState} " +
+                    $"EnvelopeVertices={frame.GroundEnvelopeVertices.Count}.");
             }
             Vector3 direction = horizontalAxis.normalized;
             float expectedActual = Vector3.Dot(

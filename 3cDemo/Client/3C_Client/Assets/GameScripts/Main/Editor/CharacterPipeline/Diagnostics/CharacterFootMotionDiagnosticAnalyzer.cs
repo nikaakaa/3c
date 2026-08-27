@@ -4653,6 +4653,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Foot Motion selected FutureLanding candidate is inconsistent " +
                     $"Frame={frame.Frame} Side={frame.Side}.");
             }
+            bool selectedMatchesNearest =
+                frame.FutureLandingSelectedSurfaceIdentity ==
+                frame.FutureLandingNearestSurfaceIdentity &&
+                Vector3.Distance(
+                    frame.FutureLandingSelectedPoint,
+                    frame.FutureLandingNearestPoint) <= PositionNoiseFloor &&
+                Math.Abs(
+                    frame.FutureLandingSelectedDistance -
+                    frame.FutureLandingNearestDistance) <= PositionNoiseFloor;
+            bool selectedMatchesPreferred =
+                frame.FutureLandingPreferredMatched &&
+                frame.FutureLandingSelectedSurfaceIdentity ==
+                frame.FutureLandingPreferredMatchedSurfaceIdentity &&
+                Vector3.Distance(
+                    frame.FutureLandingSelectedPoint,
+                    frame.FutureLandingPreferredPoint) <= PositionNoiseFloor &&
+                Math.Abs(
+                    frame.FutureLandingSelectedDistance -
+                    frame.FutureLandingPreferredDistance) <= PositionNoiseFloor;
             if (frame.FutureLandingPreferredMatched)
             {
                 if (frame.FutureLandingPreferredSurfaceIdentity == 0 ||
@@ -4661,19 +4680,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.FutureLandingValidCandidateCount ||
                     frame.FutureLandingPreferredMatchedSurfaceIdentity !=
                     frame.FutureLandingPreferredSurfaceIdentity ||
-                    frame.FutureLandingSelectedSurfaceIdentity !=
-                    frame.FutureLandingPreferredMatchedSurfaceIdentity ||
-                    Vector3.Distance(
-                        frame.FutureLandingSelectedPoint,
-                        frame.FutureLandingPreferredPoint) >
-                    PositionNoiseFloor ||
-                    Math.Abs(
-                        frame.FutureLandingSelectedDistance -
-                        frame.FutureLandingPreferredDistance) >
-                    PositionNoiseFloor ||
                     frame.FutureLandingPreferredDistance +
                     PositionNoiseFloor <
-                    frame.FutureLandingNearestDistance)
+                    frame.FutureLandingNearestDistance ||
+                    !selectedMatchesNearest && !selectedMatchesPreferred)
                 {
                     throw new InvalidDataException(
                         $"Foot Motion preferred FutureLanding candidate is inconsistent " +
@@ -4682,22 +4692,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             else if (frame.FutureLandingPreferredCanonicalRank != 0 ||
                      frame.FutureLandingPreferredMatchedSurfaceIdentity != 0 ||
-                     frame.FutureLandingSelectedSurfaceIdentity !=
-                     frame.FutureLandingNearestSurfaceIdentity ||
-                     Vector3.Distance(
-                         frame.FutureLandingSelectedPoint,
-                         frame.FutureLandingNearestPoint) > PositionNoiseFloor ||
-                     Math.Abs(
-                         frame.FutureLandingSelectedDistance -
-                         frame.FutureLandingNearestDistance) >
-                     PositionNoiseFloor)
+                     !selectedMatchesNearest)
             {
                 throw new InvalidDataException(
                     $"Foot Motion nearest FutureLanding fallback is inconsistent " +
                     $"Frame={frame.Frame} Side={frame.Side}.");
             }
             bool overrodeNearest = frame.FutureLandingPreferredMatched &&
-                                   frame.FutureLandingPreferredCanonicalRank > 1;
+                                   frame.FutureLandingPreferredCanonicalRank > 1 &&
+                                   selectedMatchesPreferred;
             float expectedDistanceDelta = frame.FutureLandingPreferredMatched
                 ? frame.FutureLandingPreferredDistance -
                   frame.FutureLandingNearestDistance

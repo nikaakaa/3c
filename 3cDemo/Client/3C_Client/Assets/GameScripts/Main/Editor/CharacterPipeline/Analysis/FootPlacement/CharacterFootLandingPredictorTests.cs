@@ -78,14 +78,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0,
                 in settings,
                 world,
-                out CharacterFootPlacementQueryRequest query,
-                out CharacterFootLandingSupport support,
-                out CharacterFootLandingQueryRejectReason queryRejectReason);
+                 out CharacterFootPlacementQueryRequest query,
+                 out CharacterFootLandingSupport support,
+                 out CharacterFootLandingQueryRejectReason queryRejectReason,
+                 out CharacterFootLandingQuerySelectionDiagnostics querySelection);
 
             Assert.That(accepted, Is.False);
             Assert.That(query.Purpose, Is.EqualTo(CharacterFootPlacementQueryPurpose.FutureLanding));
             Assert.That(support.SurfaceIdentity, Is.EqualTo(0));
             Assert.That(queryRejectReason, Is.EqualTo(CharacterFootLandingQueryRejectReason.NoHit));
+            Assert.That(
+                querySelection.State,
+                Is.EqualTo(
+                    CharacterFootLandingQueryCandidateSelectionState.NotExecuted));
         }
 
         sealed class MissingWorldQuery : ICharacterFootLandingWorldQuery
@@ -94,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 in CharacterFootPlacementQueryRequest request) =>
                 new CharacterFootLandingQueryResult(
                     CharacterFootLandingQueryRejectReason.NoHit,
+                    default,
                     default);
         }
     }

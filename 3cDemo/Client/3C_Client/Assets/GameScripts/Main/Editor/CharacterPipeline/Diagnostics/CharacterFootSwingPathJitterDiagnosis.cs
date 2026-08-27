@@ -200,6 +200,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "SafetyFloorClamp",
                     "SafetyFloorClampDelta",
                     "SafetyFloorOutputAlongUpDelta",
+                    "SafetyFloorAddedCorrectionDelta",
                     "ProgressDelta",
                     "PresentationDeltaSeconds",
                     "BodyTickSpan");
@@ -870,6 +871,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double safetyFloorClampMeters;
         public double safetyFloorClampDeltaMeters;
         public double safetyFloorOutputAlongUpDeltaMeters;
+        public double safetyFloorAddedCorrectionDeltaMeters;
         public bool pathResidualRebuilt;
         public string pathRevisionReason;
         public bool visiblePhysicalResponse;

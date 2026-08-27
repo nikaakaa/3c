@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_RootTreeAsset: {fileID: 11400000, guid: ea4ccf43cafa4fe42aff8dfc08208d52, type: 2}
   m_SimulationTickRate: 60
-  m_SimulationProgram: {fileID: 11400000, guid: 5740a6cfbfb0fe542ad6a6cb66fe1a80,
-    type: 2}
+  m_SimulationProgram: {fileID: 0}
   m_PresentationProjection: {fileID: 11400000, guid: f365735adcfd49c4e96070df6bcd3bc4,
     type: 2}
   m_InputProfile: {fileID: 11400000, guid: be650df85b1e49ab9d1cefc91c6cc809, type: 2}

@@ -381,6 +381,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rightSelectedStep.ConstraintWeight)
                 .WithPlantConfidence(
                     frame.Pose.RightFootSteps.Kinematics.PlantConfidence);
+            CharacterFootSwingPathRevisionSample leftPreviousPathAtCurrentPhase =
+                BuildPreviousPathRevisionSample(
+                    committedBank?.LeftGroundPath,
+                    pose.Left,
+                    in leftSelectedStep,
+                    footPlacementWeight,
+                    componentUp,
+                    leftLanding.NextSwingPredictionError,
+                    leftSelectedStep.ConstraintWeight);
+            CharacterFootSwingPathRevisionSample rightPreviousPathAtCurrentPhase =
+                BuildPreviousPathRevisionSample(
+                    committedBank?.RightGroundPath,
+                    pose.Right,
+                    in rightSelectedStep,
+                    footPlacementWeight,
+                    componentUp,
+                    rightLanding.NextSwingPredictionError,
+                    rightSelectedStep.ConstraintWeight);
             CharacterFootLandingPredictionSettings landingSettings =
                 m_Settings.LandingPrediction;
             CharacterFootCurrentGroundFloorResult leftCurrentGroundFloor =
@@ -419,6 +437,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Left,
                 in leftSwingMotion,
+                in leftPreviousPathAtCurrentPhase,
                 in leftCurrentGroundFloor,
                 hasLeftContactLanding,
                 in leftContactLanding,
@@ -434,6 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Right,
                 in rightSwingMotion,
+                in rightPreviousPathAtCurrentPhase,
                 in rightCurrentGroundFloor,
                 hasRightContactLanding,
                 in rightContactLanding,
@@ -815,6 +835,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     result.RejectReason, true, result.SegmentCount,
                     in input, default);
             return new CharacterFootGroundPathResult(pendingPage, true);
+        }
+
+        static CharacterFootSwingPathRevisionSample BuildPreviousPathRevisionSample(
+            CharacterFootGroundPathPage committedPage,
+            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in AnimationBiomechanicalStepHeader step,
+            float footPlacementWeight,
+            Vector3 componentUp,
+            float landingPredictionError,
+            float landingConstraintWeight)
+        {
+            if (committedPage == null)
+                return default;
+            var path = new CharacterFootGroundPathResult(
+                committedPage,
+                false);
+            return CharacterFootSwingMotionBuilder.BuildRevisionSample(
+                animatedFoot,
+                in step,
+                footPlacementWeight,
+                componentUp,
+                in path,
+                landingPredictionError,
+                landingConstraintWeight);
         }
 
         CharacterFootLandingPredictionPair PredictFootPair(

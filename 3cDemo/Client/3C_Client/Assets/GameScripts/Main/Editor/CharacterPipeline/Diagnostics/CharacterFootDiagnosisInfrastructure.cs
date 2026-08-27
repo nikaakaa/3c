@@ -196,7 +196,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             JObject sample = m_Facts["sample"] as JObject;
             var list = targets.ToList();
             CharacterFootDiagnosisTarget primaryTarget = list.FirstOrDefault(
-                value => value.occurrence != null);
+                value => value.useAsPrimaryOccurrence &&
+                         value.occurrence != null);
             return new CharacterFootDiagnosisDocument
             {
                 schema = "character-foot-diagnosis-file/3",
@@ -285,7 +286,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     sourceCycle = value.Value<int?>("sourceCycle") ?? 0,
                     matchedRules = rules,
                     metrics = ReadDoubleMap(value["metrics"] as JObject),
-                    evidence = ReadBoolMap(value["evidence"] as JObject)
+                    evidence = ReadBoolMap(value["evidence"] as JObject),
+                    stablePathSwingPhaseJump =
+                        value["stablePathSwingPhaseJump"]?
+                            .ToObject<
+                                CharacterFootStablePathSwingPhaseJumpAnalysis>(),
+                    swingToLandingFloorHandoff =
+                        value["swingToLandingFloorHandoff"]?
+                            .ToObject<
+                                CharacterFootSwingToLandingFloorHandoffAnalysis>()
                 });
             }
             return result;
@@ -394,6 +403,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool matchedEventRateAvailable;
         public double? matchedEventRate;
         public CharacterFootDiagnosisOccurrenceProfile occurrence;
+        [Newtonsoft.Json.JsonIgnore]
+        internal bool useAsPrimaryOccurrence;
         public CharacterFootPathStageAnalysisCoverage pathStageAnalysis;
         public SortedDictionary<string, CharacterFootDiagnosisDistribution> measurements;
         public int representativeEventCount;
@@ -448,6 +459,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public SortedDictionary<string, double> metrics;
         public SortedDictionary<string, bool> evidence;
         public CharacterFootPathStageAnalysis pathStageAnalysis;
+        public CharacterFootStablePathSwingPhaseJumpAnalysis
+            stablePathSwingPhaseJump;
+        public CharacterFootSwingToLandingFloorHandoffAnalysis
+            swingToLandingFloorHandoff;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootVectorFact
+    {
+        public double x;
+        public double y;
+        public double z;
+
+        internal static CharacterFootVectorFact From(
+            UnityEngine.Vector3 value) =>
+            new CharacterFootVectorFact
+            {
+                x = value.x,
+                y = value.y,
+                z = value.z
+            };
     }
 
     [Serializable]

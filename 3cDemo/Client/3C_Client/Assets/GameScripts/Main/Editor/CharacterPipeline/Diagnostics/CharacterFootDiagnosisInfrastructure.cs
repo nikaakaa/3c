@@ -312,7 +312,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     lateApproachLandingRevision =
                         value["lateApproachLandingRevision"]?
                             .ToObject<
-                                CharacterFootLateApproachLandingRevisionAnalysis>()
+                                CharacterFootLateApproachLandingRevisionAnalysis>(),
+                    sameGroundPathSwingEnvelopeStep =
+                        value["sameGroundPathSwingEnvelopeStep"]?
+                            .ToObject<
+                                CharacterFootSameGroundPathSwingEnvelopeStepAnalysis>()
                 });
             }
             return result;
@@ -498,6 +502,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             swingToLandingFloorHandoff;
         public CharacterFootLateApproachLandingRevisionAnalysis
             lateApproachLandingRevision;
+        public CharacterFootSameGroundPathSwingEnvelopeStepAnalysis
+            sameGroundPathSwingEnvelopeStep;
     }
 
     [Serializable]

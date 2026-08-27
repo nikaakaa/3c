@@ -100,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     new CharacterFootStateTarget(
                         target.SwingCorrection,
                         target.SwingCorrection,
+                        target.RawSwingCorrection,
                         CharacterFootInterpolationPolicy.SwingResidual,
                         false,
                         false,
@@ -187,6 +188,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.SwingLandingEventIdentity;
             Vector3 previousLandingPoint = state.SwingLandingPoint;
             Vector3 previousTargetCorrection =
+                state.PreviousRawSwingCorrection;
+            Vector3 previousContinuousTarget =
                 state.PreviousTargetCorrection;
             Vector3 residualBeforeRevision = state.Residual;
             CharacterFootSwingMotionResult swing = frame.SwingMotion;
@@ -205,6 +208,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float targetDelta = comparablePath
                 ? Vector3.Distance(
                     previousTargetCorrection,
+                    target.RawSwingCorrection)
+                : 0f;
+            float continuousTargetDelta = comparablePath
+                ? Vector3.Distance(
+                    previousContinuousTarget,
                     target.Correction)
                 : 0f;
             CharacterFootPathRevisionReason revisionReason =
@@ -232,6 +240,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 revisionReason |=
                     CharacterFootPathRevisionReason.SwingTargetChanged;
             }
+            if (comparablePath &&
+                continuousTargetDelta > frame.Settings.LandingUpdateDistance)
+            {
+                revisionReason |=
+                    CharacterFootPathRevisionReason.ContinuousTargetChanged;
+            }
             bool revised = revisionReason !=
                            CharacterFootPathRevisionReason.None;
             if (revised)
@@ -249,6 +263,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : default;
             state.PreviousTargetCorrection = hasPath
                 ? target.Correction
+                : default;
+            state.PreviousRawSwingCorrection = hasPath
+                ? target.RawSwingCorrection
                 : default;
             float halfLifeSeconds = ResolveSwingResidualHalfLife(
                 state.Residual,
@@ -276,7 +293,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 previousLandingEventIdentity,
                 hasPath ? swing.LandingEventIdentity : 0,
                 previousTargetCorrection,
-                hasPath ? target.Correction : default,
+                hasPath ? target.RawSwingCorrection : default,
                 landingPointDelta,
                 targetDelta,
                 residualBeforeRevision,

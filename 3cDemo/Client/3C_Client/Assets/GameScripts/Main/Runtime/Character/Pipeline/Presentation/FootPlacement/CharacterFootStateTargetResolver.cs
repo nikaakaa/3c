@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return new CharacterFootStateTarget(
                     default,
                     swingTarget,
+                    swingCorrection,
                     CharacterFootInterpolationPolicy.Suppressed,
                     transition.StateChanged,
                     false,
@@ -37,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return Target(
                         swingTarget,
                         swingTarget,
+                        swingCorrection,
                         CharacterFootInterpolationPolicy.SwingResidual,
                         transition,
                         0f,
@@ -47,6 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             frame.AnimatedFoot,
                             context.Contact.Anchor),
                         swingTarget,
+                        swingCorrection,
                         CharacterFootInterpolationPolicy.AcquireByWeight,
                         transition,
                         ResolvePlantOwnership(
@@ -57,12 +60,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in context,
                         in transition,
                         swingTarget,
+                        swingCorrection,
                         timeToLandingSeconds,
                         in frame);
                 case CharacterFootConstraintState.Releasing:
                     return Target(
                         swingTarget,
                         swingTarget,
+                        swingCorrection,
                         CharacterFootInterpolationPolicy.ReleaseResidual,
                         transition,
                         0f,
@@ -77,6 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
+            Vector3 rawSwingCorrection,
             float timeToLandingSeconds,
             in CharacterFootStateFrame frame)
         {
@@ -90,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return Target(
                     fullCorrection,
                     swingCorrection,
+                    rawSwingCorrection,
                     CharacterFootInterpolationPolicy.Direct,
                     transition,
                     1f,
@@ -114,6 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Target(
                 correction,
                 swingCorrection,
+                rawSwingCorrection,
                 CharacterFootInterpolationPolicy.HalfLife,
                 transition,
                 1f,
@@ -140,6 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static CharacterFootStateTarget Target(
             Vector3 correction,
             Vector3 swingCorrection,
+            Vector3 rawSwingCorrection,
             CharacterFootInterpolationPolicy policy,
             in CharacterFootTransitionDecision transition,
             float progress,
@@ -147,6 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootStateTarget(
                 correction,
                 swingCorrection,
+                rawSwingCorrection,
                 policy,
                 transition.StateChanged,
                 transition.Reason ==

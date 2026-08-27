@@ -54,6 +54,7 @@ namespace ThirdPersonGameplay.Tick
         float m_LastScaledDeltaSeconds;
         float m_LastUnscaledDeltaSeconds;
         float m_LastPresentationDeltaSeconds;
+        float m_ScriptedPresentationFrameAccumulator;
         GameplayTickDrivePolicy m_SavedScheduleDrivePolicy;
         GameplayScriptedPresentationFrame m_ScriptedPresentationFrame;
         float m_SavedScheduleAccumulatorSeconds;
@@ -66,6 +67,7 @@ namespace ThirdPersonGameplay.Tick
         ulong m_LastDriveCommandSequence;
         bool m_PresentationScheduleDriveActive;
         bool m_HasScriptedPresentationFrame;
+        bool m_PresentationFrameAdvanced;
         bool m_FrameLogicActive;
         bool m_StopCurrentFrameLogicTicks;
         bool m_Disposed;
@@ -283,15 +285,19 @@ namespace ThirdPersonGameplay.Tick
             if (m_Disposed)
                 return;
 
+            m_PresentationFrameAdvanced = false;
+            ProcessDriveCommands();
+            bool scripted = m_DrivePolicy.Mode ==
+                GameplayTickDriveMode.ScriptedPresentationFrame;
+            if (scripted && !AdmitScriptedPresentationFrame())
+                return;
+            m_PresentationFrameAdvanced = true;
             RenderFrame++;
             m_LastScaledDeltaSeconds = Math.Max(0f, scaledDeltaSeconds);
             m_LastUnscaledDeltaSeconds = Math.Max(0f, unscaledDeltaSeconds);
             m_FrameStartLocalLogicTick = LocalLogicTick;
             m_StopCurrentFrameLogicTicks = false;
             float fixedDeltaSeconds = m_Settings.FixedDeltaSeconds;
-            ProcessDriveCommands();
-            bool scripted = m_DrivePolicy.Mode ==
-                GameplayTickDriveMode.ScriptedPresentationFrame;
             if (scripted)
                 PrepareScriptedPresentationFrame();
             int advancedLogicTicks = 0;
@@ -347,7 +353,7 @@ namespace ThirdPersonGameplay.Tick
 
         public void FrameLateUpdate()
         {
-            if (m_Disposed)
+            if (m_Disposed || !m_PresentationFrameAdvanced)
                 return;
 
             using (PresentationMarker.Auto())
@@ -415,7 +421,8 @@ namespace ThirdPersonGameplay.Tick
                 if (m_PresentationScheduleDriveActive &&
                     command.Kind != GameplayTickDriveCommandKind.ScriptedPresentationFrame &&
                     command.Kind != GameplayTickDriveCommandKind.EndPresentationSchedule &&
-                    command.Kind != GameplayTickDriveCommandKind.CancelPresentationSchedule)
+                    command.Kind != GameplayTickDriveCommandKind.CancelPresentationSchedule &&
+                    command.Kind != GameplayTickDriveCommandKind.SetRatePlayback)
                 {
                     throw new InvalidOperationException(
                         "Presentation Schedule drive owns the Gameplay Tick System.");
@@ -447,9 +454,7 @@ namespace ThirdPersonGameplay.Tick
                         m_AccumulatorSeconds = 0f;
                         break;
                     case GameplayTickDriveCommandKind.SetRatePlayback:
-                        m_DrivePolicy = m_DrivePolicy.WithRatePlayback(
-                            command.RateMultiplier);
-                        m_AccumulatorSeconds = 0f;
+                        SetRatePlayback(command.RateMultiplier);
                         break;
                     case GameplayTickDriveCommandKind.SetPresentationClock:
                         m_DrivePolicy = m_DrivePolicy.WithPresentationClock(
@@ -604,6 +609,42 @@ namespace ThirdPersonGameplay.Tick
                 0);
             if (mode == GameplayTickDriveMode.ScriptedPresentationFrame)
                 m_AccumulatorSeconds = 0f;
+            m_ScriptedPresentationFrameAccumulator = 0f;
+        }
+
+        void SetRatePlayback(float rateMultiplier)
+        {
+            if (!m_PresentationScheduleDriveActive)
+            {
+                m_DrivePolicy = m_DrivePolicy.WithRatePlayback(rateMultiplier);
+                m_AccumulatorSeconds = 0f;
+                return;
+            }
+            if (m_DrivePolicy.Mode != GameplayTickDriveMode.ScriptedPresentationFrame)
+                throw new InvalidOperationException(
+                    "Playback rate is only available for scripted Presentation Schedule replay.");
+            if (rateMultiplier > 1f)
+                throw new InvalidOperationException(
+                    "Scripted Presentation Schedule replay rate cannot exceed 1x.");
+            m_DrivePolicy = m_DrivePolicy.WithRateMultiplier(rateMultiplier);
+            m_ScriptedPresentationFrameAccumulator = 0f;
+        }
+
+        bool AdmitScriptedPresentationFrame()
+        {
+            float rateMultiplier = m_DrivePolicy.RateMultiplier;
+            if (rateMultiplier >= 1f)
+            {
+                m_ScriptedPresentationFrameAccumulator = 0f;
+                return true;
+            }
+            m_ScriptedPresentationFrameAccumulator += rateMultiplier;
+            if (m_ScriptedPresentationFrameAccumulator + float.Epsilon < 1f)
+                return false;
+            m_ScriptedPresentationFrameAccumulator = Math.Max(
+                0f,
+                m_ScriptedPresentationFrameAccumulator - 1f);
+            return true;
         }
 
         void QueueScriptedPresentationFrame(
@@ -653,6 +694,7 @@ namespace ThirdPersonGameplay.Tick
             m_PresentationScheduleBaseLocalLogicTick = 0;
             m_SavedScheduleDrivePolicy = default;
             m_SavedScheduleAccumulatorSeconds = 0f;
+            m_ScriptedPresentationFrameAccumulator = 0f;
         }
 
         void PrepareScriptedPresentationFrame()

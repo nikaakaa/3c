@@ -22,8 +22,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterFootPlacementBank
     {
-        internal CharacterFootStateContext LeftFoot;
-        internal CharacterFootStateContext RightFoot;
+        internal CharacterFootLifecycleContext LeftFoot;
+        internal CharacterFootLifecycleContext RightFoot;
         internal CharacterFootPelvisSpringState PelvisSpring;
         internal CharacterFootPrimarySupportFacts PrimarySupport;
         internal CharacterResolvedFootPair ResolvedFeet;
@@ -270,11 +270,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Pose.RightFootSteps.CurrentStep;
 
             CharacterFootLandingSnapshot leftLanding =
-                CharacterFootStateMachine.ProjectLandingBeforePrediction(
+                CharacterFootLandingRuntime.ProjectBeforePrediction(
                     in bank.LeftFoot,
                     in leftCurrentStep);
             CharacterFootLandingSnapshot rightLanding =
-                CharacterFootStateMachine.ProjectLandingBeforePrediction(
+                CharacterFootLandingRuntime.ProjectBeforePrediction(
                     in bank.RightFoot,
                     in rightCurrentStep);
             CharacterFootLandingPredictionPair leftPair = PredictFootPair(
@@ -311,13 +311,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationBiomechanicalStepHeader leftSelectedStep = leftPair.SelectedStep;
             CharacterFootLandingPredictionResult right = rightPair.Selected;
             AnimationBiomechanicalStepHeader rightSelectedStep = rightPair.SelectedStep;
-            leftLanding = CharacterFootStateMachine.ProjectLandingAfterPrediction(
+            leftLanding = CharacterFootLandingRuntime.ProjectAfterPrediction(
                 in bank.LeftFoot,
                 in leftCurrentStep,
                 in leftSelectedStep,
                 in left,
                 m_Settings.FootMotion);
-            rightLanding = CharacterFootStateMachine.ProjectLandingAfterPrediction(
+            rightLanding = CharacterFootLandingRuntime.ProjectAfterPrediction(
                 in bank.RightFoot,
                 in rightCurrentStep,
                 in rightSelectedStep,
@@ -483,12 +483,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in right,
                 in rightConstraintFrame);
             CharacterResolvedFootResult leftResolved =
-                CharacterFootStateMachine.Evaluate(
+                CharacterFootLifecycle.Evaluate(
                     ref bank.LeftFoot,
                     in leftEvaluation,
                     out CharacterFootSwingMotionResult leftFootMotion);
             CharacterResolvedFootResult rightResolved =
-                CharacterFootStateMachine.Evaluate(
+                CharacterFootLifecycle.Evaluate(
                     ref bank.RightFoot,
                     in rightEvaluation,
                     out CharacterFootSwingMotionResult rightFootMotion);

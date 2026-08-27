@@ -1,0 +1,129 @@
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Pipeline.Presentation
+{
+    internal readonly struct CharacterFootHardConstraintResult
+    {
+        internal CharacterFootHardConstraintResult(
+            bool resolved,
+            bool available,
+            CharacterFootSafetyFloorOwner owner,
+            int surfaceIdentity,
+            ulong pathIdentity,
+            Vector3 inputCorrection,
+            Vector3 minimumCorrection,
+            Vector3 outputCorrection)
+        {
+            Resolved = resolved;
+            Available = available;
+            Owner = owner;
+            SurfaceIdentity = surfaceIdentity;
+            PathIdentity = pathIdentity;
+            InputCorrection = inputCorrection;
+            MinimumCorrection = minimumCorrection;
+            OutputCorrection = outputCorrection;
+        }
+
+        internal bool Resolved { get; }
+        internal bool Available { get; }
+        internal CharacterFootSafetyFloorOwner Owner { get; }
+        internal int SurfaceIdentity { get; }
+        internal ulong PathIdentity { get; }
+        internal Vector3 InputCorrection { get; }
+        internal Vector3 MinimumCorrection { get; }
+        internal Vector3 OutputCorrection { get; }
+    }
+
+    internal static class CharacterFootHardConstraintResolver
+    {
+        internal static CharacterFootHardConstraintResult Resolve(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateFrame frame,
+            Vector3 correction)
+        {
+            CharacterFootSwingMotionResult swing = frame.SwingMotion;
+            switch (context.Discrete.State)
+            {
+                case CharacterFootConstraintState.Swing when swing.Accepted:
+                case CharacterFootConstraintState.UnlockedSupport
+                    when swing.Accepted:
+                {
+                    Vector3 minimum = ResolveSwingEnvelopeMinimum(
+                        frame.AnimatedFoot,
+                        in swing,
+                        frame.ComponentUp);
+                    return Result(
+                        true,
+                        true,
+                        CharacterFootSafetyFloorOwner.GroundPathEnvelope,
+                        0,
+                        swing.GroundPathInputIdentity,
+                        correction,
+                        minimum,
+                        frame.ComponentUp);
+                }
+                case CharacterFootConstraintState.Landing:
+                case CharacterFootConstraintState.Locked:
+                {
+                    Vector3 minimum =
+                        CharacterFootConstraintMath.ResolveContactCorrection(
+                            frame.AnimatedFoot,
+                            context.Contact.Anchor);
+                    return Result(
+                        true,
+                        false,
+                        CharacterFootSafetyFloorOwner.ContactAnchor,
+                        context.Contact.SurfaceIdentity,
+                        0,
+                        correction,
+                        minimum,
+                        frame.ComponentUp);
+                }
+                default:
+                    return new CharacterFootHardConstraintResult(
+                        false,
+                        false,
+                        CharacterFootSafetyFloorOwner.None,
+                        0,
+                        0,
+                        correction,
+                        default,
+                        correction);
+            }
+        }
+
+        static CharacterFootHardConstraintResult Result(
+            bool resolved,
+            bool available,
+            CharacterFootSafetyFloorOwner owner,
+            int surfaceIdentity,
+            ulong pathIdentity,
+            Vector3 correction,
+            Vector3 minimum,
+            Vector3 componentUp) =>
+            new CharacterFootHardConstraintResult(
+                resolved,
+                available,
+                owner,
+                surfaceIdentity,
+                pathIdentity,
+                correction,
+                minimum,
+                CharacterFootConstraintMath.RaiseToMinimum(
+                    correction,
+                    minimum,
+                    componentUp));
+
+        static Vector3 ResolveSwingEnvelopeMinimum(
+            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootSwingMotionResult swing,
+            Vector3 componentUp)
+        {
+            Vector3 up = componentUp.normalized;
+            return up * Vector3.Dot(
+                swing.EnvelopeSample -
+                CharacterFootConstraintMath.ResolveOriginalSole(foot),
+                up);
+        }
+    }
+}

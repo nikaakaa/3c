@@ -118,7 +118,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             new CharacterFootLockedSoleMotionDiagnosis(),
             new CharacterFootSwingPathJitterDiagnosis(),
             new CharacterFootSafetyFloorDiagnosis(),
-            new CharacterFootLockTransitionFlybackDiagnosis(),
             new CharacterFootContactPlanePenetrationDiagnosis(),
             new CharacterFootStepTimeCandidateSelectionDiagnosis()
         };

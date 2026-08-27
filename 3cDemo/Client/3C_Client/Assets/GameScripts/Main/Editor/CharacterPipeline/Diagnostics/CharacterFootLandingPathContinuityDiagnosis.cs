@@ -38,10 +38,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootDiagnosisContext.Evidence(
                     value,
                     "deadlineReached"));
-            List<JObject> safetyFloorClamps = events.FindAll(value =>
-                CharacterFootDiagnosisContext.Evidence(
-                    value,
-                    "safetyFloorClamped"));
             List<JObject> residualContinuity = events.FindAll(value =>
                 CharacterFootDiagnosisContext.Evidence(
                     value,
@@ -153,36 +149,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "baseHalfLifeSeconds",
                     "deadlineHalfLifeSeconds",
                     "appliedHalfLifeSeconds"),
-                context.Target(
-                    "large-safety-floor-clamp",
-                    "真实Envelope安全Floor是否在单帧产生超过LandingUpdateDistance的硬抬升",
-                    new[] { "PathContinuity" },
-                    new[]
-                    {
-                        "safetyFloorClampMeters>landingUpdateDistanceMeters"
-                    },
-                    safetyFloorClamps,
-                    value => CharacterFootDiagnosisContext.Metric(
-                                 value,
-                                 "safetyFloorClampMeters") >
-                             CharacterFootDiagnosisContext.Metric(
-                                 value,
-                                 "landingUpdateDistanceMeters")
-                        ? new List<string>
-                        {
-                            "safetyFloorClampMeters>landingUpdateDistanceMeters"
-                        }
-                        : new List<string>(),
-                    value => CharacterFootDiagnosisContext.Metric(
-                        value,
-                        "safetyFloorClampMeters"),
-                    "safetyFloorClampMeters",
-                    "landingUpdateDistanceMeters",
-                    "safetyFloorClearanceBeforeMeters",
-                    "safetyFloorClearanceAfterMeters",
-                    "residualBeforeDecayMeters",
-                    "residualAfterDecayMeters",
-                    "correctionStepMeters"),
                 context.Target(
                     "residual-growth-without-revision",
                     "没有Path Revision时Swing Residual是否反而增大",

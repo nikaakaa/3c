@@ -7,14 +7,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterFootLandingStateConsistencyDiagnosis : ICharacterFootDiagnosis
     {
         const double ExitJumpMeters = 0.01d;
-        static readonly double[] s_HandoffOccurrenceThresholds =
-        {
-            0.01d,
-            0.02d,
-            0.05d,
-            0.10d
-        };
-
         public string DiagnosticId => "landing-state-consistency";
         public string FileName => "landing-state-consistency.json";
 
@@ -22,59 +14,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             List<JObject> boundaries = context.Events("LandingStateBoundary");
             List<JObject> spans = context.Events("LandingStateSpan");
-            List<JObject> handoffs =
-                context.Events("SwingToLandingFloorHandoff");
-            CharacterFootDiagnosisTarget handoffTarget = context.Target(
-                "swing-to-landing-floor-handoff-jump",
-                "Swing进入Landing时Safety Floor补偿交接是否产生Correction或物理脚跳变",
-                new[] { "SwingToLandingFloorHandoff" },
-                new[] { "entryCorrectionStepMeters>0.01" },
-                handoffs,
-                value => CharacterFootDiagnosisContext.Metric(
-                             value,
-                             "entryCorrectionStepMeters") > ExitJumpMeters
-                    ? new List<string>
-                    {
-                        "entryCorrectionStepMeters>0.01"
-                    }
-                    : new List<string>(),
+            List<JObject> releases = context.Events("Release");
+            CharacterFootDiagnosisTarget releaseTarget = context.Target(
+                "release-flyback",
+                "Releasing阶段是否出现Correction突跳后反向回拉",
+                new[] { "Release" },
+                new[]
+                {
+                    "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+                },
+                releases,
+                value =>
+                    CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "velocityDirectionReversalCount") > 0d &&
+                    CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "correctionExcursionMeters") > ExitJumpMeters
+                        ? new List<string>
+                        {
+                            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+                        }
+                        : new List<string>(),
                 value => Math.Max(
                     CharacterFootDiagnosisContext.Metric(
                         value,
-                        "entryCorrectionStepMeters"),
-                    Math.Max(
-                        CharacterFootDiagnosisContext.Metric(
-                            value,
-                            "entryPhysicalAnkleStepMeters"),
-                        CharacterFootDiagnosisContext.Metric(
-                            value,
-                            "entryPhysicalSoleStepMeters"))),
-                "entryCorrectionStepMeters",
-                "entryCorrectionAlongUpMeters",
-                "entryPhysicalAnkleStepMeters",
-                "entryPhysicalAnkleAlongUpMeters",
-                "entryPhysicalSoleStepMeters",
-                "entryPhysicalSoleAlongUpMeters",
-                "previousSafetyFloorClampMeters",
-                "previousClearanceBeforeMeters",
-                "previousClearanceAfterMeters",
-                "previousResidualAfterDecayMeters",
-                "landingUpdateDistanceMeters",
-                "previousSafetyFloorCompensationMeters",
-                "stepHeightMeters",
-                "previousFormalFootHeightMeters",
-                "formalFootHeightMeters",
-                "previousProgress",
-                "progress",
-                "previousTimeToLandingSeconds",
-                "timeToLandingSeconds");
-            handoffTarget.occurrence = context.Occurrence(
-                "ContinuousSwingToLandingBoundary",
-                "entryCorrectionStepMeters",
-                "Meters",
-                handoffs,
-                ExitJumpMeters,
-                s_HandoffOccurrenceThresholds);
+                        "correctionExcursionMeters") / ExitJumpMeters,
+                    CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "velocityDirectionReversalCount")),
+                "correctionStepMaximumMeters",
+                "correctionExcursionMeters",
+                "velocityDirectionReversalCount");
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -211,63 +182,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "formalUnlockedFrameCount"),
                     "formalUnlockedFrameCount",
                     "frameCount"),
-                handoffTarget);
+                releaseTarget);
         }
     }
 
-    [Serializable]
-    internal sealed class CharacterFootSwingToLandingFloorHandoffAnalysis
-    {
-        public int previousFrame;
-        public int frame;
-        public string side;
-        public string eventIdentity;
-        public string previousSourceIdentity;
-        public string sourceIdentity;
-        public int previousSourceCycle;
-        public int sourceCycle;
-        public string previousContributionContinuityIdentity;
-        public string contributionContinuityIdentity;
-        public string stateBefore;
-        public string stateAfter;
-        public double entryCorrectionStepMeters;
-        public double entryCorrectionAlongUpMeters;
-        public bool entryPhysicalAnkleAvailable;
-        public double entryPhysicalAnkleStepMeters;
-        public double entryPhysicalAnkleAlongUpMeters;
-        public bool entryPhysicalSoleAvailable;
-        public double entryPhysicalSoleStepMeters;
-        public double entryPhysicalSoleAlongUpMeters;
-        public double previousSafetyFloorClampMeters;
-        public double previousSafetyFloorClearanceBeforeMeters;
-        public double previousSafetyFloorClearanceAfterMeters;
-        public double previousResidualAfterDecayMeters;
-        public double landingUpdateDistanceMeters;
-        public CharacterFootVectorFact previousFinalEffectiveCorrection;
-        public CharacterFootVectorFact finalEffectiveCorrection;
-        public CharacterFootVectorFact previousSafetyFloorMinimumCorrection;
-        public CharacterFootVectorFact previousSafetyFloorOutputCorrection;
-        public double previousSafetyFloorCompensationMeters;
-        public double previousSafetyFloorCompensationAlongUpMeters;
-        public bool currentSafetyFloorAvailable;
-        public string currentFloorState;
-        public bool currentFloorAccepted;
-        public int currentFloorSurfaceIdentity;
-        public double currentContactOwnership;
-        public bool currentContactPlaneAvailable;
-        public int currentContactSurfaceIdentity;
-        public double stepHeightMeters;
-        public string stepDirection;
-        public double previousFormalFootHeightMeters;
-        public double formalFootHeightMeters;
-        public bool previousFormalFootHeightAvailable;
-        public bool formalFootHeightAvailable;
-        public double previousProgress;
-        public double progress;
-        public double previousTimeToLandingSeconds;
-        public double timeToLandingSeconds;
-        public bool previousSafetyFloorOwned;
-        public bool residualWithinDeadline;
-        public bool floorCompensationDroppedAtLanding;
-    }
+
 }

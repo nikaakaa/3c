@@ -115,15 +115,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in hardConstraint,
                     frame.ComponentUp);
             }
+            Vector3 desiredCorrection = ResolveDiagnosticDesiredCorrection(
+                in context,
+                in target,
+                in frame);
             return BuildOutput(
                 in context,
                 side,
                 in frame,
                 in outputSwing,
-                target.Correction,
+                desiredCorrection,
                 hardConstraint.OutputCorrection,
                 in continuityFact,
                 out result);
+        }
+
+        static Vector3 ResolveDiagnosticDesiredCorrection(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateTarget target,
+            in CharacterFootStateFrame frame)
+        {
+            switch (context.Discrete.State)
+            {
+                case CharacterFootConstraintState.Swing:
+                case CharacterFootConstraintState.UnlockedSupport:
+                case CharacterFootConstraintState.Releasing:
+                    return CharacterFootConstraintMath.ResolveSwingCorrection(
+                        frame.AnimatedFoot,
+                        frame.SwingMotion);
+                default:
+                    return target.Correction;
+            }
         }
 
         static CharacterFootPathContinuityFact CompleteContinuity(

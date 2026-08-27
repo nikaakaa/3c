@@ -100,31 +100,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingQuerySelectionDiagnostics(
             CharacterFootLandingQueryCandidateSelectionState state,
             int validCandidateCount,
-            CharacterFootLandingQueryCandidateDiagnostics nearest,
-            bool preferredMatched,
-            int preferredCanonicalRank,
-            CharacterFootLandingQueryCandidateDiagnostics preferred,
-            CharacterFootLandingQueryCandidateDiagnostics selected,
-            bool preferredOverrodeNearest)
+            CharacterFootLandingQueryCandidateDiagnostics selected)
         {
             State = state;
             ValidCandidateCount = validCandidateCount;
-            Nearest = nearest;
-            PreferredMatched = preferredMatched;
-            PreferredCanonicalRank = preferredCanonicalRank;
-            Preferred = preferred;
             Selected = selected;
-            PreferredOverrodeNearest = preferredOverrodeNearest;
         }
 
         public CharacterFootLandingQueryCandidateSelectionState State { get; }
         public int ValidCandidateCount { get; }
-        public CharacterFootLandingQueryCandidateDiagnostics Nearest { get; }
-        public bool PreferredMatched { get; }
-        public int PreferredCanonicalRank { get; }
-        public CharacterFootLandingQueryCandidateDiagnostics Preferred { get; }
         public CharacterFootLandingQueryCandidateDiagnostics Selected { get; }
-        public bool PreferredOverrodeNearest { get; }
     }
 
     internal readonly struct CharacterFootLandingQueryResult
@@ -148,8 +133,243 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal interface ICharacterFootLandingWorldQuery
     {
+        ulong WorldRevision { get; }
+
         CharacterFootLandingQueryResult Query(
             in CharacterFootPlacementQueryRequest request);
+    }
+
+    public enum CharacterFootLandingObservationCacheState : byte
+    {
+        Unavailable = 0,
+        Queried = 1,
+        Reused = 2
+    }
+
+    internal readonly struct CharacterFootLandingObservationKey :
+        IEquatable<CharacterFootLandingObservationKey>
+    {
+        const float PositionScale = 1000f;
+        const float DirectionScale = 10000f;
+
+        internal CharacterFootLandingObservationKey(
+            CharacterFootSide side,
+            ulong landingEventIdentity,
+            Vector3 rawLanding,
+            Vector3 componentUp,
+            string profileRevision,
+            ulong worldRevision)
+        {
+            if ((side != CharacterFootSide.Left && side != CharacterFootSide.Right) ||
+                landingEventIdentity == 0 || !Finite(rawLanding) ||
+                !Finite(componentUp) || componentUp.sqrMagnitude <= 0.000001f ||
+                string.IsNullOrWhiteSpace(profileRevision) || worldRevision == 0)
+            {
+                throw new ArgumentException("Foot Landing observation key is invalid.");
+            }
+            Vector3 up = componentUp.normalized;
+            Side = side;
+            LandingEventIdentity = landingEventIdentity;
+            RawLandingX = Quantize(rawLanding.x, PositionScale);
+            RawLandingY = Quantize(rawLanding.y, PositionScale);
+            RawLandingZ = Quantize(rawLanding.z, PositionScale);
+            ComponentUpX = Quantize(up.x, DirectionScale);
+            ComponentUpY = Quantize(up.y, DirectionScale);
+            ComponentUpZ = Quantize(up.z, DirectionScale);
+            ProfileRevision = profileRevision;
+            WorldRevision = worldRevision;
+            Identity = 0;
+            Identity = ComputeIdentity(in this);
+        }
+
+        internal CharacterFootSide Side { get; }
+        internal ulong LandingEventIdentity { get; }
+        internal int RawLandingX { get; }
+        internal int RawLandingY { get; }
+        internal int RawLandingZ { get; }
+        internal int ComponentUpX { get; }
+        internal int ComponentUpY { get; }
+        internal int ComponentUpZ { get; }
+        internal string ProfileRevision { get; }
+        internal ulong WorldRevision { get; }
+        internal ulong Identity { get; }
+        internal Vector3 CanonicalRawLanding => new Vector3(
+            RawLandingX / PositionScale,
+            RawLandingY / PositionScale,
+            RawLandingZ / PositionScale);
+        internal Vector3 CanonicalComponentUp => new Vector3(
+                ComponentUpX / DirectionScale,
+                ComponentUpY / DirectionScale,
+                ComponentUpZ / DirectionScale)
+            .normalized;
+
+        public bool Equals(CharacterFootLandingObservationKey other) =>
+            Side == other.Side &&
+            LandingEventIdentity == other.LandingEventIdentity &&
+            RawLandingX == other.RawLandingX &&
+            RawLandingY == other.RawLandingY &&
+            RawLandingZ == other.RawLandingZ &&
+            ComponentUpX == other.ComponentUpX &&
+            ComponentUpY == other.ComponentUpY &&
+            ComponentUpZ == other.ComponentUpZ &&
+            WorldRevision == other.WorldRevision &&
+            string.Equals(ProfileRevision, other.ProfileRevision, StringComparison.Ordinal);
+
+        public override bool Equals(object obj) =>
+            obj is CharacterFootLandingObservationKey other && Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            (int)Side,
+            LandingEventIdentity,
+            RawLandingX,
+            RawLandingY,
+            RawLandingZ,
+            ComponentUpX,
+            ComponentUpY,
+            ComponentUpZ);
+
+        static int Quantize(float value, float scale) =>
+            Mathf.RoundToInt(value * scale);
+
+        static ulong ComputeIdentity(in CharacterFootLandingObservationKey key)
+        {
+            ulong hash = 14695981039346656037UL;
+            Add(ref hash, (ulong)key.Side);
+            Add(ref hash, key.LandingEventIdentity);
+            Add(ref hash, unchecked((ulong)(uint)key.RawLandingX));
+            Add(ref hash, unchecked((ulong)(uint)key.RawLandingY));
+            Add(ref hash, unchecked((ulong)(uint)key.RawLandingZ));
+            Add(ref hash, unchecked((ulong)(uint)key.ComponentUpX));
+            Add(ref hash, unchecked((ulong)(uint)key.ComponentUpY));
+            Add(ref hash, unchecked((ulong)(uint)key.ComponentUpZ));
+            Add(ref hash, key.ProfileRevision);
+            Add(ref hash, key.WorldRevision);
+            return hash != 0 ? hash : 1UL;
+        }
+
+        static void Add(ref ulong hash, ulong value)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                hash ^= (byte)value;
+                hash *= 1099511628211UL;
+                value >>= 8;
+            }
+        }
+
+        static void Add(ref ulong hash, string value)
+        {
+            for (int i = 0; i < value.Length; i++)
+            {
+                hash ^= value[i];
+                hash *= 1099511628211UL;
+            }
+        }
+
+        static bool Finite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) &&
+            float.IsFinite(value.z);
+    }
+
+    internal sealed class CharacterFootLandingObservationPage
+    {
+        internal bool HasValue { get; private set; }
+        internal CharacterFootLandingObservationKey Key { get; private set; }
+        internal CharacterFootPlacementQueryRequest Query { get; private set; }
+        internal CharacterFootLandingQueryResult Result { get; private set; }
+
+        internal void Set(
+            in CharacterFootLandingObservationKey key,
+            in CharacterFootPlacementQueryRequest query,
+            in CharacterFootLandingQueryResult result)
+        {
+            HasValue = true;
+            Key = key;
+            Query = query;
+            Result = result;
+        }
+
+        internal void Clear()
+        {
+            HasValue = false;
+            Key = default;
+            Query = default;
+            Result = default;
+        }
+    }
+
+    internal sealed class CharacterFootLandingObservationPagePool
+    {
+        readonly CharacterFootLandingObservationPage m_First = new();
+        readonly CharacterFootLandingObservationPage m_Second = new();
+
+        internal CharacterFootLandingObservationPage AcquireWritable(
+            CharacterFootLandingObservationPage committed)
+        {
+            CharacterFootLandingObservationPage pending =
+                ReferenceEquals(committed, m_First) ? m_Second : m_First;
+            pending.Clear();
+            return pending;
+        }
+
+        internal static CharacterFootLandingObservationPage ReuseCommitted(
+            CharacterFootLandingObservationPage committed)
+        {
+            if (committed == null || !committed.HasValue)
+                throw new InvalidOperationException("Landing Observation committed page is unavailable.");
+            return committed;
+        }
+
+        internal static void Discard(
+            CharacterFootLandingObservationPage pending,
+            CharacterFootLandingObservationPage committed)
+        {
+            if (pending != null && !ReferenceEquals(pending, committed))
+                pending.Clear();
+        }
+
+        internal void Reset()
+        {
+            m_First.Clear();
+            m_Second.Clear();
+        }
+    }
+
+    internal readonly struct CharacterFootLandingObservationResult
+    {
+        internal CharacterFootLandingObservationResult(
+            CharacterFootLandingObservationPage page,
+            CharacterFootLandingObservationCacheState cacheState)
+        {
+            Page = page ?? throw new ArgumentNullException(nameof(page));
+            CacheState = cacheState;
+        }
+
+        internal CharacterFootLandingObservationPage Page { get; }
+        internal CharacterFootLandingObservationCacheState CacheState { get; }
+        internal bool QueryExecutedThisFrame =>
+            CacheState == CharacterFootLandingObservationCacheState.Queried;
+    }
+
+    public readonly struct CharacterFootLandingObservationDiagnostics
+    {
+        internal CharacterFootLandingObservationDiagnostics(
+            in CharacterFootLandingObservationResult result)
+        {
+            CharacterFootLandingObservationPage page = result.Page;
+            Identity = page.Key.Identity;
+            WorldRevision = page.Key.WorldRevision;
+            CacheState = result.CacheState;
+            QueryExecutedThisFrame = result.QueryExecutedThisFrame;
+            CanonicalRawLanding = page.Key.CanonicalRawLanding;
+        }
+
+        public ulong Identity { get; }
+        public ulong WorldRevision { get; }
+        public CharacterFootLandingObservationCacheState CacheState { get; }
+        public bool QueryExecutedThisFrame { get; }
+        public Vector3 CanonicalRawLanding { get; }
+        public bool IsAvailable => Identity != 0;
     }
 
     internal readonly struct CharacterFootLandingPredictionResult
@@ -169,6 +389,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in ThirdPersonSimulation.CharacterFutureBodyTranslationSample futureBodyTranslation,
             Vector3 currentAnimatedSole,
             Vector3 rawLandingCandidate,
+            CharacterFootLandingObservationDiagnostics observation,
             CharacterFootPlacementQueryRequest query,
             CharacterFootLandingSupport support,
             CharacterFootLandingQuerySelectionDiagnostics querySelection,
@@ -199,6 +420,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : default;
             CurrentAnimatedSole = currentAnimatedSole;
             RawLandingCandidate = rawLandingCandidate;
+            Observation = observation;
             Query = query;
             SurfaceIdentity = support.SurfaceIdentity;
             LandingPoint = support.Point;
@@ -230,6 +452,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
             CurrentAnimatedSole = source.CurrentAnimatedSole;
             RawLandingCandidate = source.RawLandingCandidate;
+            Observation = source.Observation;
             Query = source.Query;
             SurfaceIdentity = source.SurfaceIdentity;
             LandingPoint = source.LandingPoint;
@@ -264,6 +487,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
             CurrentAnimatedSole = currentAnimatedSole;
             RawLandingCandidate = source.RawLandingCandidate;
+            Observation = source.Observation;
             Query = source.Query;
             SurfaceIdentity = source.SurfaceIdentity;
             LandingPoint = source.LandingPoint;
@@ -296,6 +520,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
             CurrentAnimatedSole = source.CurrentAnimatedSole;
             RawLandingCandidate = source.RawLandingCandidate;
+            Observation = source.Observation;
             Query = source.Query;
             SurfaceIdentity = source.SurfaceIdentity;
             LandingPoint = source.LandingPoint;
@@ -327,6 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
             CurrentAnimatedSole = source.CurrentAnimatedSole;
             RawLandingCandidate = source.RawLandingCandidate;
+            Observation = source.Observation;
             Query = source.Query;
             SurfaceIdentity = source.SurfaceIdentity;
             LandingPoint = source.LandingPoint;
@@ -353,6 +579,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 FutureBodyTranslationVelocity { get; }
         public Vector3 CurrentAnimatedSole { get; }
         public Vector3 RawLandingCandidate { get; }
+        public CharacterFootLandingObservationDiagnostics Observation { get; }
         public CharacterFootPlacementQueryRequest Query { get; }
         public int SurfaceIdentity { get; }
         public Vector3 LandingPoint { get; }
@@ -420,6 +647,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FutureBodyTranslationVelocity = result.FutureBodyTranslationVelocity;
             CurrentAnimatedSole = result.CurrentAnimatedSole;
             RawLandingCandidate = result.RawLandingCandidate;
+            Observation = result.Observation;
             Query = result.Query;
             QuerySelection = result.QuerySelection;
             SurfaceIdentity = result.SurfaceIdentity;
@@ -458,6 +686,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 FutureBodyTranslationVelocity { get; }
         public Vector3 CurrentAnimatedSole { get; }
         public Vector3 RawLandingCandidate { get; }
+        public CharacterFootLandingObservationDiagnostics Observation { get; }
         public CharacterFootPlacementQueryRequest Query { get; }
         public CharacterFootLandingQuerySelectionDiagnostics QuerySelection
         {
@@ -959,8 +1188,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.CastAbove + settings.CastBelow,
                 settings.SphereRadius,
                 settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot,
-                0);
+                settings.MinimumGroundNormalDot);
         }
     }
 
@@ -984,49 +1212,63 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static CharacterFootPlacementQueryRequest BuildQuery(
-            CharacterFootSide side,
-            Vector3 rawLandingCandidate,
-            Vector3 componentUp,
-            int preferredSurfaceIdentity,
+            in CharacterFootLandingObservationKey key,
             in CharacterFootLandingPredictionSettings settings)
         {
-            Vector3 up = componentUp.normalized;
+            Vector3 up = key.CanonicalComponentUp;
             return new CharacterFootPlacementQueryRequest(
                 CharacterFootPlacementQueryShape.Sphere,
                 CharacterFootPlacementQueryPurpose.FutureLanding,
-                side == CharacterFootSide.Left ? 0 : 1,
-                rawLandingCandidate + up * settings.CastAbove,
+                key.Side == CharacterFootSide.Left ? 0 : 1,
+                key.CanonicalRawLanding + up * settings.CastAbove,
                 -up,
                 settings.CastAbove + settings.CastBelow,
                 settings.SphereRadius,
                 settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot,
-                preferredSurfaceIdentity);
+                settings.MinimumGroundNormalDot);
         }
 
-        internal static bool TryResolve(
+        internal static CharacterFootLandingObservationResult ResolveObservation(
             CharacterFootSide side,
+            ulong landingEventIdentity,
             Vector3 rawLandingCandidate,
             Vector3 componentUp,
-            int preferredSurfaceIdentity,
+            string profileRevision,
             in CharacterFootLandingPredictionSettings settings,
             ICharacterFootLandingWorldQuery world,
-            out CharacterFootPlacementQueryRequest query,
-            out CharacterFootLandingSupport support,
-            out CharacterFootLandingQueryRejectReason queryRejectReason,
-            out CharacterFootLandingQuerySelectionDiagnostics querySelection)
+            CharacterFootLandingObservationPagePool pool,
+            CharacterFootLandingObservationPage committedPage,
+            out CharacterFootLandingObservationPage pendingPage)
         {
-            query = BuildQuery(
+            if (world == null)
+                throw new ArgumentNullException(nameof(world));
+            if (pool == null)
+                throw new ArgumentNullException(nameof(pool));
+            var key = new CharacterFootLandingObservationKey(
                 side,
+                landingEventIdentity,
                 rawLandingCandidate,
                 componentUp,
-                preferredSurfaceIdentity,
+                profileRevision,
+                world.WorldRevision);
+            if (committedPage != null && committedPage.HasValue &&
+                committedPage.Key.Equals(key))
+            {
+                pendingPage = CharacterFootLandingObservationPagePool
+                    .ReuseCommitted(committedPage);
+                return new CharacterFootLandingObservationResult(
+                    pendingPage,
+                    CharacterFootLandingObservationCacheState.Reused);
+            }
+            pendingPage = pool.AcquireWritable(committedPage);
+            CharacterFootPlacementQueryRequest query = BuildQuery(
+                in key,
                 in settings);
             CharacterFootLandingQueryResult result = world.Query(in query);
-            support = result.Support;
-            queryRejectReason = result.RejectReason;
-            querySelection = result.SelectionDiagnostics;
-            return result.Accepted;
+            pendingPage.Set(in key, in query, in result);
+            return new CharacterFootLandingObservationResult(
+                pendingPage,
+                CharacterFootLandingObservationCacheState.Queried);
         }
 
         static bool Finite(Vector3 value) =>

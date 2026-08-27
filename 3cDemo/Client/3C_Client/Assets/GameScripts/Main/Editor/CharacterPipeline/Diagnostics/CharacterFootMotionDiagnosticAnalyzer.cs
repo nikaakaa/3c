@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/20";
+        const string Schema = "character-foot-motion-facts/21";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 20;
+        const int AnalyzerVersion = 21;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 672;
         const float PositionNoiseFloor = 0.001f;
@@ -141,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"safetyFloorClampWithoutInput={document.coverage.safetyFloorClampWithoutInputEventCount} " +
                 $"stepTimeCandidateSelections={document.coverage.stepTimeCandidateSelectionCount} " +
                 $"stepTimeRepresentativeEvents={document.coverage.stepTimeCandidateRepresentativeEventCount} " +
-                $"futureLandingCandidateSelections={document.coverage.futureLandingCandidateSelectionCount} " +
+                $"landingObservations={document.coverage.landingObservationCount} " +
                 $"diagnosisFiles={publication.DiagnosticCount} " +
                 $"diagnosisTargets={publication.TargetCount} " +
                 $"diagnosisMatches={publication.MatchCount}";
@@ -169,7 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frames,
                 events,
                 stepTimeCandidateSelections);
-            AnalyzeFutureLandingCandidateSelections(frames, events);
+            AnalyzeLandingObservations(frames, events);
             AnalyzeLandingEvents(frames, events);
             AnalyzeLandingStateConsistency(frames, events);
             AnalyzeSwingToLandingFloorHandoffs(frames, events);
@@ -625,158 +625,96 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value.JerkMetersPerSecondCubed
             };
 
-        static void AnalyzeFutureLandingCandidateSelections(
+        static void AnalyzeLandingObservations(
             List<FootFrame> frames,
             List<EventFact> events)
         {
+            var firstByIdentity = new Dictionary<ulong, FootFrame>();
             for (int i = 0; i < frames.Count; i++)
             {
                 FootFrame current = frames[i];
-                if (current.FutureLandingCandidateSelectionState !=
-                    "Selected")
-                {
+                if (current.LandingObservationIdentity == 0)
                     continue;
-                }
-                bool currentFloorAvailable = current.CurrentFloorAccepted;
-                bool currentFloorCatchupAvailable =
-                    currentFloorAvailable &&
-                    current.OutputStagesAvailable &&
-                    current.SafetyFloorAvailable &&
-                    current.SafetyFloorOwner == "CurrentGroundFloor";
-                double currentFloorCatchupMeters =
-                    currentFloorCatchupAvailable
-                        ? current.SafetyFloorClampMeters
-                        : 0d;
-                bool currentFloorMatchesNearest = currentFloorAvailable &&
-                    current.CurrentFloorSurfaceIdentity ==
-                    current.FutureLandingNearestSurfaceIdentity;
-                bool currentFloorMatchesPreferred = currentFloorAvailable &&
-                    current.FutureLandingPreferredMatched &&
-                    current.CurrentFloorSurfaceIdentity ==
-                    current.FutureLandingPreferredMatchedSurfaceIdentity;
-                bool currentFloorMatchesSelected = currentFloorAvailable &&
-                    current.CurrentFloorSurfaceIdentity ==
-                    current.FutureLandingSelectedSurfaceIdentity;
-                var detail =
-                    new CharacterFootFutureLandingCandidateSelectionAnalysis
+                firstByIdentity.TryGetValue(
+                    current.LandingObservationIdentity,
+                    out FootFrame previous);
+                bool identitySeenBefore = previous != null;
+                bool resultMatchesPrevious = identitySeenBefore &&
+                    previous.ObservedLandingAccepted ==
+                    current.ObservedLandingAccepted &&
+                    previous.ObservedLandingSurfaceIdentity ==
+                    current.ObservedLandingSurfaceIdentity &&
+                    Vector3.Distance(
+                        previous.ObservedLandingPoint,
+                        current.ObservedLandingPoint) <= PositionNoiseFloor &&
+                    Math.Abs(
+                        previous.ObservedLandingQueryDistance -
+                        current.ObservedLandingQueryDistance) <= PositionNoiseFloor;
+                bool queried = current.LandingObservationCacheState ==
+                               "Queried";
+                bool reused = current.LandingObservationCacheState ==
+                              "Reused";
+                bool duplicateQuery = identitySeenBefore &&
+                                      current.LandingObservationQueryExecuted;
+                bool cacheStateConsistent =
+                    (queried && current.LandingObservationQueryExecuted ||
+                     reused && !current.LandingObservationQueryExecuted) &&
+                    !duplicateQuery;
+                var detail = new CharacterFootLandingObservationAnalysis
+                {
+                    previousFrame = previous?.Frame ?? 0,
+                    frame = current.Frame,
+                    side = current.Side,
+                    landingEventIdentity = current.ObservedLandingEventIdentity
+                        .ToString(CultureInfo.InvariantCulture),
+                    sourceIdentity = current.SourceIdentity,
+                    sourceCycle = current.SourceCycle,
+                    observationIdentity = current.LandingObservationIdentity
+                        .ToString(CultureInfo.InvariantCulture),
+                    worldRevision = current.LandingObservationWorldRevision
+                        .ToString(CultureInfo.InvariantCulture),
+                    cacheState = current.LandingObservationCacheState,
+                    queryExecutedThisFrame =
+                        current.LandingObservationQueryExecuted,
+                    canonicalRawLanding = CharacterFootVectorFact.From(
+                        current.LandingObservationCanonicalRaw),
+                    selectionState =
+                        current.FutureLandingCandidateSelectionState,
+                    validCandidateCount =
+                        current.FutureLandingValidCandidateCount,
+                    selected = new CharacterFootLandingQueryCandidateFact
                     {
-                        frame = current.Frame,
-                        side = current.Side,
-                        landingEventIdentity =
-                            current.ObservedLandingEventIdentity.ToString(
-                                CultureInfo.InvariantCulture),
-                        sourceIdentity = current.SourceIdentity,
-                        sourceCycle = current.SourceCycle,
-                        selectionState =
-                            current.FutureLandingCandidateSelectionState,
-                        validCandidateCount =
-                            current.FutureLandingValidCandidateCount,
-                        preferredSurfaceIdentity =
-                            current.FutureLandingPreferredSurfaceIdentity,
-                        nearest = new CharacterFootLandingQueryCandidateFact
-                        {
-                            available =
-                                current.FutureLandingNearestAvailable,
-                            surfaceIdentity =
-                                current.FutureLandingNearestSurfaceIdentity,
-                            point = CharacterFootVectorFact.From(
-                                current.FutureLandingNearestPoint),
-                            distanceMeters =
-                                current.FutureLandingNearestDistance
-                        },
-                        preferredMatched =
-                            current.FutureLandingPreferredMatched,
-                        preferredCanonicalRank =
-                            current.FutureLandingPreferredCanonicalRank,
-                        preferred =
-                            new CharacterFootLandingQueryCandidateFact
-                            {
-                                available =
-                                    current.FutureLandingPreferredMatched,
-                                surfaceIdentity = current
-                                    .FutureLandingPreferredMatchedSurfaceIdentity,
-                                point = CharacterFootVectorFact.From(
-                                    current.FutureLandingPreferredPoint),
-                                distanceMeters = current
-                                    .FutureLandingPreferredDistance
-                            },
-                        selected = new CharacterFootLandingQueryCandidateFact
-                        {
-                            available =
-                                current.FutureLandingSelectedAvailable,
-                            surfaceIdentity =
-                                current.FutureLandingSelectedSurfaceIdentity,
-                            point = CharacterFootVectorFact.From(
-                                current.FutureLandingSelectedPoint),
-                            distanceMeters =
-                                current.FutureLandingSelectedDistance
-                        },
-                        preferredOverrodeNearest =
-                            current.FutureLandingPreferredOverrodeNearest,
-                        preferredMinusNearestDistanceMeters =
-                            current.FutureLandingPreferredMinusNearestDistance,
-                        preferredMinusNearestHeightAlongUpMeters = current
-                            .FutureLandingPreferredMinusNearestHeightAlongUp,
-                        currentFloorAvailable = currentFloorAvailable,
-                        currentFloorSurfaceIdentity =
-                            current.CurrentFloorSurfaceIdentity,
-                        currentFloorPoint = CharacterFootVectorFact.From(
-                            current.CurrentFloorPoint),
-                        currentFloorMatchesNearest =
-                            currentFloorMatchesNearest,
-                        currentFloorMatchesPreferred =
-                            currentFloorMatchesPreferred,
-                        currentFloorMatchesSelected =
-                            currentFloorMatchesSelected,
-                        currentFloorCatchupAvailable =
-                            currentFloorCatchupAvailable,
-                        currentFloorCatchupMeters =
-                            currentFloorCatchupMeters,
-                        safetyFloorOwner = current.SafetyFloorOwner,
-                        safetyFloorOwnerSurfaceIdentity =
-                            current.SafetyFloorOwnerSurfaceIdentity,
-                        safetyFloorOwnerPathIdentity =
-                            current.SafetyFloorOwnerPathIdentity.ToString(
-                                CultureInfo.InvariantCulture)
-                    };
+                        available = current.FutureLandingSelectedAvailable,
+                        surfaceIdentity =
+                            current.FutureLandingSelectedSurfaceIdentity,
+                        point = CharacterFootVectorFact.From(
+                            current.FutureLandingSelectedPoint),
+                        distanceMeters =
+                            current.FutureLandingSelectedDistance
+                    },
+                    identitySeenBefore = identitySeenBefore,
+                    resultMatchesPrevious = resultMatchesPrevious,
+                    cacheStateConsistent = cacheStateConsistent
+                };
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
                     ["ValidCandidateCount"] =
-                        current.FutureLandingValidCandidateCount,
-                    ["PreferredCanonicalRank"] =
-                        current.FutureLandingPreferredCanonicalRank,
-                    ["PreferredMinusNearestDistance"] = current
-                        .FutureLandingPreferredMinusNearestDistance,
-                    ["PreferredMinusNearestHeightAlongUp"] = current
-                        .FutureLandingPreferredMinusNearestHeightAlongUp
+                        current.FutureLandingValidCandidateCount
                 };
-                if (currentFloorCatchupAvailable)
-                {
-                    metrics["CurrentFloorCatchup"] =
-                        currentFloorCatchupMeters;
-                }
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
                 {
-                    ["preferredRequested"] =
-                        current.FutureLandingPreferredSurfaceIdentity != 0,
-                    ["preferredMatched"] =
-                        current.FutureLandingPreferredMatched,
-                    ["preferredOverrodeNearest"] =
-                        current.FutureLandingPreferredOverrodeNearest,
-                    ["currentFloorAvailable"] = currentFloorAvailable,
-                    ["currentFloorCatchupAvailable"] =
-                        currentFloorCatchupAvailable,
-                    ["currentFloorMatchesNearest"] =
-                        currentFloorMatchesNearest,
-                    ["currentFloorMatchesPreferred"] =
-                        currentFloorMatchesPreferred,
-                    ["currentFloorMatchesSelected"] =
-                        currentFloorMatchesSelected
+                    ["queried"] = queried,
+                    ["reused"] = reused,
+                    ["queryExecutedThisFrame"] =
+                        current.LandingObservationQueryExecuted,
+                    ["identitySeenBefore"] = identitySeenBefore,
+                    ["resultMatchesPrevious"] = resultMatchesPrevious,
+                    ["cacheStateConsistent"] = cacheStateConsistent
                 };
                 events.Add(new EventFact(
-                    "FutureLandingCandidateSelection",
+                    "LandingObservation",
                     current.Side,
                     current.Frame,
                     current.Frame,
@@ -787,7 +725,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     DeltaSeconds(current),
                     metrics,
                     evidence,
-                    futureLandingCandidateSelection: detail));
+                    landingObservation: detail));
+                if (!identitySeenBefore)
+                    firstByIdentity.Add(
+                        current.LandingObservationIdentity,
+                        current);
             }
         }
 
@@ -3643,9 +3585,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => value.kind ==
                                      "StepTimeCandidateSelection" &&
                                  value.evidence["normalizedTimeWrapped"]),
-                    futureLandingCandidateSelectionCount = events.Count(
-                        value => value.kind ==
-                                 "FutureLandingCandidateSelection"),
+                    landingObservationCount = events.Count(
+                        value => value.kind == "LandingObservation"),
                     leftFootFrameCount = capture.Left.Count,
                     rightFootFrameCount = capture.Right.Count,
                     frameGapCount = capture.FrameGapCount,
@@ -4050,29 +3991,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ObservedLandingSurfaceIdentity = Int("SurfaceIdentity"),
                 ObservedLandingPoint = Vector("LandingPoint"),
                 ObservedLandingQueryDistance = Float("QueryDistance"),
-                FutureLandingPreferredSurfaceIdentity =
-                    Int("QueryPreferredSurfaceIdentity"),
+                LandingObservationIdentity =
+                    Ulong("LandingObservationIdentity"),
+                LandingObservationWorldRevision =
+                    Ulong("LandingObservationWorldRevision"),
+                LandingObservationCacheState =
+                    Cell("LandingObservationCacheState"),
+                LandingObservationQueryExecuted =
+                    Int("LandingObservationQueryExecuted") != 0,
+                LandingObservationCanonicalRaw =
+                    Vector("LandingObservationCanonicalRaw"),
                 FutureLandingQueryDirection = Vector("QueryDirection"),
                 FutureLandingCandidateSelectionState =
                     Cell("QueryCandidateSelectionState"),
                 FutureLandingValidCandidateCount =
                     Int("QueryValidCandidateCount"),
-                FutureLandingNearestAvailable =
-                    Int("QueryNearestCandidateAvailable") != 0,
-                FutureLandingNearestSurfaceIdentity =
-                    Int("QueryNearestSurfaceIdentity"),
-                FutureLandingNearestPoint = Vector("QueryNearestPoint"),
-                FutureLandingNearestDistance =
-                    Float("QueryNearestDistance"),
-                FutureLandingPreferredMatched =
-                    Int("QueryPreferredCandidateMatched") != 0,
-                FutureLandingPreferredCanonicalRank =
-                    Int("QueryPreferredCanonicalRank"),
-                FutureLandingPreferredMatchedSurfaceIdentity =
-                    Int("QueryPreferredMatchedSurfaceIdentity"),
-                FutureLandingPreferredPoint = Vector("QueryPreferredPoint"),
-                FutureLandingPreferredDistance =
-                    Float("QueryPreferredDistance"),
                 FutureLandingSelectedAvailable =
                     Int("QuerySelectedCandidateAvailable") != 0,
                 FutureLandingSelectedSurfaceIdentity =
@@ -4080,12 +4013,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FutureLandingSelectedPoint = Vector("QuerySelectedPoint"),
                 FutureLandingSelectedDistance =
                     Float("QuerySelectedDistance"),
-                FutureLandingPreferredOverrodeNearest =
-                    Int("QueryPreferredOverrodeNearest") != 0,
-                FutureLandingPreferredMinusNearestDistance =
-                    Float("QueryPreferredMinusNearestDistance"),
-                FutureLandingPreferredMinusNearestHeightAlongUp =
-                    Float("QueryPreferredMinusNearestHeightAlongUp"),
                 RawLandingAvailable = Int("RawLandingAvailable") != 0,
                 CurrentAnimatedSole = Vector("CurrentAnimatedSole"),
                 RawLanding = Vector("RawLandingCandidate"),
@@ -4401,7 +4328,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootLandingQueryCandidateSelectionState>(
                 frame.FutureLandingCandidateSelectionState,
                 "QueryCandidateSelectionState");
-            RequireFutureLandingCandidateSelection(frame);
+            RequireLandingObservation(frame);
             RequireEnum<CharacterFootSwingMotionState>(
                 frame.FootMotionState,
                 "FootMotionState");
@@ -4565,18 +4492,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireRevisionReason(frame.PathRevisionReason);
         }
 
-        static void RequireFutureLandingCandidateSelection(FootFrame frame)
+        static void RequireLandingObservation(FootFrame frame)
         {
+            bool observationAvailable =
+                frame.LandingObservationIdentity != 0;
+            if (!observationAvailable)
+            {
+                if (frame.LandingObservationWorldRevision != 0 ||
+                    frame.LandingObservationCacheState != "Unavailable" ||
+                    frame.LandingObservationQueryExecuted ||
+                    frame.FutureLandingValidCandidateCount != 0 ||
+                    frame.FutureLandingSelectedAvailable)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion unavailable Landing Observation is inconsistent " +
+                        $"Frame={frame.Frame} Side={frame.Side}.");
+                }
+                return;
+            }
+            bool queried = frame.LandingObservationCacheState == "Queried";
+            bool reused = frame.LandingObservationCacheState == "Reused";
+            if (frame.LandingObservationWorldRevision == 0 ||
+                !queried && !reused ||
+                queried != frame.LandingObservationQueryExecuted ||
+                frame.FutureLandingQueryDirection.sqrMagnitude <=
+                TimeEpsilon * TimeEpsilon)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Landing Observation cache facts are inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
             bool selected = frame.FutureLandingCandidateSelectionState ==
                             "Selected";
             if (!selected)
             {
                 if (frame.FutureLandingValidCandidateCount != 0 ||
-                    frame.FutureLandingNearestAvailable ||
-                    frame.FutureLandingPreferredMatched ||
-                    frame.FutureLandingPreferredCanonicalRank != 0 ||
                     frame.FutureLandingSelectedAvailable ||
-                    frame.FutureLandingPreferredOverrodeNearest)
+                    frame.ObservedLandingAccepted)
                 {
                     throw new InvalidDataException(
                         $"Foot Motion unavailable FutureLanding candidates are inconsistent " +
@@ -4585,10 +4537,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             if (frame.FutureLandingValidCandidateCount <= 0 ||
-                frame.FutureLandingQueryDirection.sqrMagnitude <=
-                TimeEpsilon * TimeEpsilon ||
-                !frame.FutureLandingNearestAvailable ||
-                frame.FutureLandingNearestSurfaceIdentity == 0 ||
                 !frame.FutureLandingSelectedAvailable ||
                 frame.FutureLandingSelectedSurfaceIdentity == 0 ||
                 !frame.ObservedLandingAccepted ||
@@ -4603,81 +4551,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 throw new InvalidDataException(
                     $"Foot Motion selected FutureLanding candidate is inconsistent " +
-                    $"Frame={frame.Frame} Side={frame.Side}.");
-            }
-            bool selectedMatchesNearest =
-                frame.FutureLandingSelectedSurfaceIdentity ==
-                frame.FutureLandingNearestSurfaceIdentity &&
-                Vector3.Distance(
-                    frame.FutureLandingSelectedPoint,
-                    frame.FutureLandingNearestPoint) <= PositionNoiseFloor &&
-                Math.Abs(
-                    frame.FutureLandingSelectedDistance -
-                    frame.FutureLandingNearestDistance) <= PositionNoiseFloor;
-            bool selectedMatchesPreferred =
-                frame.FutureLandingPreferredMatched &&
-                frame.FutureLandingSelectedSurfaceIdentity ==
-                frame.FutureLandingPreferredMatchedSurfaceIdentity &&
-                Vector3.Distance(
-                    frame.FutureLandingSelectedPoint,
-                    frame.FutureLandingPreferredPoint) <= PositionNoiseFloor &&
-                Math.Abs(
-                    frame.FutureLandingSelectedDistance -
-                    frame.FutureLandingPreferredDistance) <= PositionNoiseFloor;
-            if (frame.FutureLandingPreferredMatched)
-            {
-                if (frame.FutureLandingPreferredSurfaceIdentity == 0 ||
-                    frame.FutureLandingPreferredCanonicalRank <= 0 ||
-                    frame.FutureLandingPreferredCanonicalRank >
-                    frame.FutureLandingValidCandidateCount ||
-                    frame.FutureLandingPreferredMatchedSurfaceIdentity !=
-                    frame.FutureLandingPreferredSurfaceIdentity ||
-                    frame.FutureLandingPreferredDistance +
-                    PositionNoiseFloor <
-                    frame.FutureLandingNearestDistance ||
-                    !selectedMatchesNearest && !selectedMatchesPreferred)
-                {
-                    throw new InvalidDataException(
-                        $"Foot Motion preferred FutureLanding candidate is inconsistent " +
-                        $"Frame={frame.Frame} Side={frame.Side}.");
-                }
-            }
-            else if (frame.FutureLandingPreferredCanonicalRank != 0 ||
-                     frame.FutureLandingPreferredMatchedSurfaceIdentity != 0 ||
-                     !selectedMatchesNearest)
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion nearest FutureLanding fallback is inconsistent " +
-                    $"Frame={frame.Frame} Side={frame.Side}.");
-            }
-            bool overrodeNearest = frame.FutureLandingPreferredMatched &&
-                                   frame.FutureLandingPreferredCanonicalRank > 1 &&
-                                   selectedMatchesPreferred;
-            float expectedDistanceDelta = frame.FutureLandingPreferredMatched
-                ? frame.FutureLandingPreferredDistance -
-                  frame.FutureLandingNearestDistance
-                : 0f;
-            Vector3 up = frame.FutureLandingQueryDirection.sqrMagnitude >
-                         TimeEpsilon * TimeEpsilon
-                ? -frame.FutureLandingQueryDirection.normalized
-                : default;
-            float expectedHeightDelta = frame.FutureLandingPreferredMatched
-                ? Vector3.Dot(
-                    frame.FutureLandingPreferredPoint -
-                    frame.FutureLandingNearestPoint,
-                    up)
-                : 0f;
-            if (frame.FutureLandingPreferredOverrodeNearest !=
-                    overrodeNearest ||
-                Math.Abs(
-                    frame.FutureLandingPreferredMinusNearestDistance -
-                    expectedDistanceDelta) > PositionNoiseFloor ||
-                Math.Abs(
-                    frame.FutureLandingPreferredMinusNearestHeightAlongUp -
-                    expectedHeightDelta) > PositionNoiseFloor)
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion FutureLanding preference delta is inconsistent " +
                     $"Frame={frame.Frame} Side={frame.Side}.");
             }
         }
@@ -5157,20 +5030,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "State", "LandingEventIdentity", "Accepted",
                 "SurfaceIdentity", "LandingPointX", "LandingPointY",
                 "LandingPointZ", "QueryDistance",
-                "QueryPreferredSurfaceIdentity",
+                "LandingObservationIdentity",
+                "LandingObservationWorldRevision",
+                "LandingObservationCacheState",
+                "LandingObservationQueryExecuted",
+                "LandingObservationCanonicalRawX",
+                "LandingObservationCanonicalRawY",
+                "LandingObservationCanonicalRawZ",
                 "QueryDirectionX", "QueryDirectionY", "QueryDirectionZ",
                 "QueryCandidateSelectionState", "QueryValidCandidateCount",
-                "QueryNearestCandidateAvailable", "QueryNearestSurfaceIdentity",
-                "QueryNearestPointX", "QueryNearestPointY", "QueryNearestPointZ",
-                "QueryNearestDistance", "QueryPreferredCandidateMatched",
-                "QueryPreferredCanonicalRank", "QueryPreferredMatchedSurfaceIdentity",
-                "QueryPreferredPointX", "QueryPreferredPointY", "QueryPreferredPointZ",
-                "QueryPreferredDistance", "QuerySelectedCandidateAvailable",
+                "QuerySelectedCandidateAvailable",
                 "QuerySelectedSurfaceIdentity", "QuerySelectedPointX",
                 "QuerySelectedPointY", "QuerySelectedPointZ",
-                "QuerySelectedDistance", "QueryPreferredOverrodeNearest",
-                "QueryPreferredMinusNearestDistance",
-                "QueryPreferredMinusNearestHeightAlongUp",
+                "QuerySelectedDistance",
                 "RawLandingAvailable",
                 "CurrentAnimatedSoleX", "CurrentAnimatedSoleY",
                 "CurrentAnimatedSoleZ",
@@ -5762,26 +5634,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal int ObservedLandingSurfaceIdentity;
             internal Vector3 ObservedLandingPoint;
             internal float ObservedLandingQueryDistance;
-            internal int FutureLandingPreferredSurfaceIdentity;
+            internal ulong LandingObservationIdentity;
+            internal ulong LandingObservationWorldRevision;
+            internal string LandingObservationCacheState;
+            internal bool LandingObservationQueryExecuted;
+            internal Vector3 LandingObservationCanonicalRaw;
             internal Vector3 FutureLandingQueryDirection;
             internal string FutureLandingCandidateSelectionState;
             internal int FutureLandingValidCandidateCount;
-            internal bool FutureLandingNearestAvailable;
-            internal int FutureLandingNearestSurfaceIdentity;
-            internal Vector3 FutureLandingNearestPoint;
-            internal float FutureLandingNearestDistance;
-            internal bool FutureLandingPreferredMatched;
-            internal int FutureLandingPreferredCanonicalRank;
-            internal int FutureLandingPreferredMatchedSurfaceIdentity;
-            internal Vector3 FutureLandingPreferredPoint;
-            internal float FutureLandingPreferredDistance;
             internal bool FutureLandingSelectedAvailable;
             internal int FutureLandingSelectedSurfaceIdentity;
             internal Vector3 FutureLandingSelectedPoint;
             internal float FutureLandingSelectedDistance;
-            internal bool FutureLandingPreferredOverrodeNearest;
-            internal float FutureLandingPreferredMinusNearestDistance;
-            internal float FutureLandingPreferredMinusNearestHeightAlongUp;
             internal Vector3 CurrentAnimatedSole;
             internal bool RawLandingAvailable;
             internal Vector3 RawLanding;
@@ -6609,7 +6473,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int stepTimeCandidateSelectionCount;
             public int stepTimeCandidateRepresentativeEventCount;
             public int normalizedTimeWrapCount;
-            public int futureLandingCandidateSelectionCount;
+            public int landingObservationCount;
             public int leftFootFrameCount;
             public int rightFootFrameCount;
             public int frameGapCount;
@@ -6646,8 +6510,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingCurrentFloorCatchup = null,
                 CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
                     swingActualFootEnvelopeCounterfactual = null,
-                CharacterFootFutureLandingCandidateSelectionAnalysis
-                    futureLandingCandidateSelection = null,
+                CharacterFootLandingObservationAnalysis
+                    landingObservation = null,
                 CharacterFootVisibleOutputJumpAnalysis
                     visibleOutputJump = null)
             {
@@ -6671,8 +6535,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingCurrentFloorCatchup;
                 this.swingActualFootEnvelopeCounterfactual =
                     swingActualFootEnvelopeCounterfactual;
-                this.futureLandingCandidateSelection =
-                    futureLandingCandidateSelection;
+                this.landingObservation = landingObservation;
                 this.visibleOutputJump = visibleOutputJump;
             }
 
@@ -6696,8 +6559,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 swingCurrentFloorCatchup;
             public CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
                 swingActualFootEnvelopeCounterfactual;
-            public CharacterFootFutureLandingCandidateSelectionAnalysis
-                futureLandingCandidateSelection;
+            public CharacterFootLandingObservationAnalysis landingObservation;
             public CharacterFootVisibleOutputJumpAnalysis visibleOutputJump;
 
             internal static int Compare(EventFact left, EventFact right)

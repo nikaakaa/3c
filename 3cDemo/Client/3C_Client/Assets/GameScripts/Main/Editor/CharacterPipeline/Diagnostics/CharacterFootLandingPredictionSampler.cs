@@ -135,14 +135,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FutureBodyTranslationVelocityX,FutureBodyTranslationVelocityY,FutureBodyTranslationVelocityZ," +
             "CurrentAnimatedSoleX,CurrentAnimatedSoleY,CurrentAnimatedSoleZ," +
             "RawLandingAvailable,RawLandingCandidateX,RawLandingCandidateY,RawLandingCandidateZ," +
+            "LandingObservationIdentity,LandingObservationWorldRevision,LandingObservationCacheState,LandingObservationQueryExecuted," +
+            "LandingObservationCanonicalRawX,LandingObservationCanonicalRawY,LandingObservationCanonicalRawZ," +
             "QueryShape,QueryPurpose,QueryFootIndex,QueryOriginX,QueryOriginY,QueryOriginZ," +
-            "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot,QueryPreferredSurfaceIdentity," +
+            "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot," +
             "QueryCandidateSelectionState,QueryValidCandidateCount," +
-            "QueryNearestCandidateAvailable,QueryNearestSurfaceIdentity,QueryNearestPointX,QueryNearestPointY,QueryNearestPointZ,QueryNearestDistance," +
-            "QueryPreferredCandidateMatched,QueryPreferredCanonicalRank,QueryPreferredMatchedSurfaceIdentity," +
-            "QueryPreferredPointX,QueryPreferredPointY,QueryPreferredPointZ,QueryPreferredDistance," +
             "QuerySelectedCandidateAvailable,QuerySelectedSurfaceIdentity,QuerySelectedPointX,QuerySelectedPointY,QuerySelectedPointZ,QuerySelectedDistance," +
-            "QueryPreferredOverrodeNearest,QueryPreferredMinusNearestDistance,QueryPreferredMinusNearestHeightAlongUp," +
             "Accepted,SurfaceIdentity,LandingPointX,LandingPointY,LandingPointZ," +
             "LandingNormalX,LandingNormalY,LandingNormalZ,QueryDistance," +
             "GroundPathState,GroundPathRejectReason,GroundPathInputIdentity,GroundPathQueryExecuted,GroundPathTargetAvailable," +
@@ -1809,6 +1807,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.CurrentAnimatedSole);
             Add(row, foot.RawLandingAvailable);
             Add(row, foot.RawLandingCandidate);
+            CharacterFootLandingObservationDiagnostics observation =
+                foot.Observation;
+            Add(row, observation.Identity);
+            Add(row, observation.WorldRevision);
+            Add(row, observation.CacheState.ToString());
+            Add(row, observation.QueryExecutedThisFrame);
+            Add(row, observation.CanonicalRawLanding);
             Add(row, query.Shape.ToString());
             Add(row, query.Purpose.ToString());
             Add(row, query.FootIndex);
@@ -1818,49 +1823,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, query.Radius);
             Add(row, query.LayerMask);
             Add(row, query.MinimumGroundNormalDot);
-            Add(row, query.PreferredSurfaceIdentity);
             CharacterFootLandingQuerySelectionDiagnostics querySelection =
                 foot.QuerySelection;
-            CharacterFootLandingQueryCandidateDiagnostics nearestCandidate =
-                querySelection.Nearest;
-            CharacterFootLandingQueryCandidateDiagnostics preferredCandidate =
-                querySelection.Preferred;
             CharacterFootLandingQueryCandidateDiagnostics selectedCandidate =
                 querySelection.Selected;
-            Vector3 querySupportUp = query.Direction.sqrMagnitude > 0.000001f
-                ? -query.Direction.normalized
-                : default;
-            bool preferredAndNearestAvailable =
-                querySelection.PreferredMatched &&
-                nearestCandidate.IsAvailable;
             Add(row, querySelection.State.ToString());
             Add(row, querySelection.ValidCandidateCount);
-            Add(row, nearestCandidate.IsAvailable);
-            Add(row, nearestCandidate.SurfaceIdentity);
-            Add(row, nearestCandidate.Point);
-            Add(row, nearestCandidate.Distance);
-            Add(row, querySelection.PreferredMatched);
-            Add(row, querySelection.PreferredCanonicalRank);
-            Add(row, preferredCandidate.SurfaceIdentity);
-            Add(row, preferredCandidate.Point);
-            Add(row, preferredCandidate.Distance);
             Add(row, selectedCandidate.IsAvailable);
             Add(row, selectedCandidate.SurfaceIdentity);
             Add(row, selectedCandidate.Point);
             Add(row, selectedCandidate.Distance);
-            Add(row, querySelection.PreferredOverrodeNearest);
-            Add(
-                row,
-                preferredAndNearestAvailable
-                    ? preferredCandidate.Distance - nearestCandidate.Distance
-                    : 0f);
-            Add(
-                row,
-                preferredAndNearestAvailable
-                    ? Vector3.Dot(
-                        preferredCandidate.Point - nearestCandidate.Point,
-                        querySupportUp)
-                    : 0f);
             Add(row, foot.Accepted);
             Add(row, foot.SurfaceIdentity);
             Add(row, foot.LandingPoint);

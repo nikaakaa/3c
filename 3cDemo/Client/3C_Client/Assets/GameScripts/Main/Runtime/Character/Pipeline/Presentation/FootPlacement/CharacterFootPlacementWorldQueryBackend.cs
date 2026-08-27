@@ -25,8 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumDistance,
             float radius,
             int layerMask,
-            float minimumGroundNormalDot,
-            int preferredSurfaceIdentity)
+            float minimumGroundNormalDot)
         {
             Shape = shape;
             Purpose = purpose;
@@ -37,7 +36,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Radius = radius;
             LayerMask = layerMask;
             MinimumGroundNormalDot = minimumGroundNormalDot;
-            PreferredSurfaceIdentity = preferredSurfaceIdentity;
         }
 
         public CharacterFootPlacementQueryShape Shape { get; }
@@ -49,7 +47,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float Radius { get; }
         public int LayerMask { get; }
         public float MinimumGroundNormalDot { get; }
-        public int PreferredSurfaceIdentity { get; }
     }
 
     internal sealed class CharacterFootPlacementWorldQueryBackend :
@@ -79,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;
+        public ulong WorldRevision => 1UL;
 
         public CharacterFootLandingQueryResult Query(
             in CharacterFootPlacementQueryRequest request)
@@ -94,12 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterFootLandingQueryCandidateSelectionState
                             .CapacityExceeded,
                         0,
-                        default,
-                        false,
-                        0,
-                        default,
-                        default,
-                        false));
+                        default));
             }
             if (count <= 0)
             {
@@ -115,36 +108,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             : CharacterFootLandingQueryCandidateSelectionState
                                 .InvalidRequest,
                         0,
-                        default,
-                        false,
-                        0,
-                        default,
-                        default,
-                        false));
+                        default));
             }
-            int selectedIndex = 0;
-            bool preferredMatched = false;
-            int preferredCanonicalRank = 0;
-            CharacterFootLandingQueryCandidateDiagnostics preferred = default;
-            if (request.PreferredSurfaceIdentity != 0)
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    RaycastHit candidate = m_LandingHits[i];
-                    if (candidate.collider &&
-                        candidate.collider.GetInstanceID() == request.PreferredSurfaceIdentity)
-                    {
-                        selectedIndex = i;
-                        preferredMatched = true;
-                        preferredCanonicalRank = i + 1;
-                        preferred = CandidateDiagnostics(in candidate);
-                        break;
-                    }
-                }
-            }
-            RaycastHit hit = m_LandingHits[selectedIndex];
-            CharacterFootLandingQueryCandidateDiagnostics nearest =
-                CandidateDiagnostics(in m_LandingHits[0]);
+            RaycastHit hit = m_LandingHits[0];
             CharacterFootLandingQueryCandidateDiagnostics selected =
                 CandidateDiagnostics(in hit);
             return new CharacterFootLandingQueryResult(
@@ -157,12 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new CharacterFootLandingQuerySelectionDiagnostics(
                     CharacterFootLandingQueryCandidateSelectionState.Selected,
                     count,
-                    nearest,
-                    preferredMatched,
-                    preferredCanonicalRank,
-                    preferred,
-                    selected,
-                    preferredMatched && selectedIndex > 0));
+                    selected));
         }
 
         internal int QueryAll(

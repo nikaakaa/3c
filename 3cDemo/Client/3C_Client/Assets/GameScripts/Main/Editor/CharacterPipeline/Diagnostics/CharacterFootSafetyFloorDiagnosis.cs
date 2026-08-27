@@ -5,77 +5,69 @@ using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    internal sealed class CharacterFootFutureLandingCandidateSelectionDiagnosis :
+    internal sealed class CharacterFootLandingObservationReuseDiagnosis :
         ICharacterFootDiagnosis
     {
-        const double PrimaryThresholdMeters = 0.01d;
-        static readonly double[] s_Thresholds =
-        {
-            0.01d,
-            0.02d,
-            0.05d,
-            0.10d
-        };
-
-        public string DiagnosticId => "future-landing-candidate-selection";
-        public string FileName => "future-landing-candidate-selection.json";
+        public string DiagnosticId => "landing-observation-reuse";
+        public string FileName => "landing-observation-reuse.json";
 
         public CharacterFootDiagnosisDocument Build(
             CharacterFootDiagnosisContext context)
         {
-            List<JObject> events = context.Events(
-                "FutureLandingCandidateSelection");
-            List<JObject> currentFloorEvents = events.FindAll(value =>
-                CharacterFootDiagnosisContext.Evidence(
-                    value,
-                    "currentFloorCatchupAvailable"));
-            List<JObject> preferredOverrides = currentFloorEvents.FindAll(
-                value => CharacterFootDiagnosisContext.Evidence(
-                    value,
-                    "preferredOverrodeNearest"));
+            List<JObject> events = context.Events("LandingObservation");
             Func<JObject, List<string>> match = value =>
-                CharacterFootDiagnosisContext.Evidence(
-                    value,
-                    "preferredOverrodeNearest") &&
-                CharacterFootDiagnosisContext.Metric(
-                    value,
-                    "CurrentFloorCatchup") > PrimaryThresholdMeters
-                    ? new List<string>
-                    {
-                        "preferredOverrodeNearest&&currentFloorCatchupMeters>0.01"
-                    }
-                    : new List<string>();
+            {
+                var rules = new List<string>();
+                if (!CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "cacheStateConsistent"))
+                    rules.Add("cacheStateConsistent=false");
+                if (CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "identitySeenBefore") &&
+                    !CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "resultMatchesPrevious"))
+                    rules.Add("sameKeyResultChanged=true");
+                return rules;
+            };
             CharacterFootDiagnosisTarget target = context.Target(
-                "future-landing-preferred-overrode-nearest",
-                "FutureLanding preferred surface是否覆盖canonical nearest，并伴随CurrentSwingFloor补齐",
-                new[] { "FutureLandingCandidateSelection" },
+                "landing-observation-reuse-contract",
+                "FutureLanding是否只在新canonical Key查询，并让相同Observation identity保持不可变结果",
+                new[] { "LandingObservation" },
                 new[]
                 {
-                    "preferredOverrodeNearest&&currentFloorCatchupMeters>0.01"
+                    "cacheStateConsistent=false",
+                    "sameKeyResultChanged=true"
                 },
-                currentFloorEvents,
+                events,
                 match,
-                value => CharacterFootDiagnosisContext.Metric(
-                    value,
-                    "CurrentFloorCatchup"),
-                "ValidCandidateCount",
-                "PreferredCanonicalRank",
-                "PreferredMinusNearestDistance",
-                "PreferredMinusNearestHeightAlongUp",
-                "CurrentFloorCatchup");
-            target.occurrence = context.Occurrence(
-                "PreferredOverrodeNearestWithCurrentFloor",
-                "CurrentFloorCatchup",
-                "Meters",
-                preferredOverrides,
-                PrimaryThresholdMeters,
-                s_Thresholds);
+                _ => 0d,
+                "ValidCandidateCount");
+            target.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["CacheState"] = events
+                        .GroupBy(
+                            value => value["landingObservation"]?
+                                         ["cacheState"]?.Value<string>() ??
+                                     "Unavailable",
+                            StringComparer.Ordinal)
+                        .OrderBy(value => value.Key, StringComparer.Ordinal)
+                        .Select(value => new CharacterFootDiagnosisCategoryCount
+                        {
+                            value = value.Key,
+                            count = value.Count()
+                        })
+                        .ToList()
+                };
             target.representativeEvents = context.Representatives(
-                currentFloorEvents,
+                events,
                 match,
-                value => CharacterFootDiagnosisContext.Metric(
-                    value,
-                    "CurrentFloorCatchup"),
+                _ => 0d,
                 16);
             target.representativeEventCount =
                 target.representativeEvents.Count;
@@ -528,35 +520,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     }
 
     [Serializable]
-    internal sealed class CharacterFootFutureLandingCandidateSelectionAnalysis
+    internal sealed class CharacterFootLandingObservationAnalysis
     {
+        public int previousFrame;
         public int frame;
         public string side;
         public string landingEventIdentity;
         public string sourceIdentity;
         public int sourceCycle;
+        public string observationIdentity;
+        public string worldRevision;
+        public string cacheState;
+        public bool queryExecutedThisFrame;
+        public CharacterFootVectorFact canonicalRawLanding;
         public string selectionState;
         public int validCandidateCount;
-        public int preferredSurfaceIdentity;
-        public CharacterFootLandingQueryCandidateFact nearest;
-        public bool preferredMatched;
-        public int preferredCanonicalRank;
-        public CharacterFootLandingQueryCandidateFact preferred;
         public CharacterFootLandingQueryCandidateFact selected;
-        public bool preferredOverrodeNearest;
-        public double preferredMinusNearestDistanceMeters;
-        public double preferredMinusNearestHeightAlongUpMeters;
-        public bool currentFloorAvailable;
-        public int currentFloorSurfaceIdentity;
-        public CharacterFootVectorFact currentFloorPoint;
-        public bool currentFloorMatchesNearest;
-        public bool currentFloorMatchesPreferred;
-        public bool currentFloorMatchesSelected;
-        public bool currentFloorCatchupAvailable;
-        public double currentFloorCatchupMeters;
-        public string safetyFloorOwner;
-        public int safetyFloorOwnerSurfaceIdentity;
-        public string safetyFloorOwnerPathIdentity;
+        public bool identitySeenBefore;
+        public bool resultMatchesPrevious;
+        public bool cacheStateConsistent;
     }
 
     [Serializable]

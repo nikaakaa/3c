@@ -214,6 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionLandingUpdateDistance,FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
             "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
             "FootMotionConstraintStateBefore,FootMotionLockResponseBefore,FootMotionOutputStagesAvailable,FootMotionReleasingCompletedToSwing,FootMotionSafetyFloorAvailable," +
+            "FootMotionSafetyFloorOwner,FootMotionSafetyFloorOwnerSurfaceIdentity,FootMotionSafetyFloorOwnerPathIdentity," +
             "FootMotionCorrectionBeforeSafetyFloorX,FootMotionCorrectionBeforeSafetyFloorY,FootMotionCorrectionBeforeSafetyFloorZ," +
             "FootMotionSafetyFloorMinimumCorrectionX,FootMotionSafetyFloorMinimumCorrectionY,FootMotionSafetyFloorMinimumCorrectionZ," +
             "FootMotionSafetyFloorOutputCorrectionX,FootMotionSafetyFloorOutputCorrectionY,FootMotionSafetyFloorOutputCorrectionZ," +
@@ -2047,7 +2048,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool actualEnvelopeCurrentFloorComparisonAvailable =
                 actualEnvelopeCorrectionAvailable &&
                 motion.OutputStagesAvailable &&
-                motion.SafetyFloorAvailable;
+                motion.SafetyFloorAvailable &&
+                motion.SafetyFloorOwner ==
+                CharacterFootSafetyFloorOwner.CurrentGroundFloor;
             float actualEnvelopeRemainingBelowCurrentFloor = 0f;
             bool actualEnvelopeCoversCurrentFloor = false;
             if (actualEnvelopeCurrentFloorComparisonAvailable)
@@ -2117,6 +2120,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.OutputStagesAvailable);
             Add(row, motion.ReleasingCompletedToSwing);
             Add(row, motion.SafetyFloorAvailable);
+            Add(row, motion.SafetyFloorOwner.ToString());
+            Add(row, motion.SafetyFloorOwnerSurfaceIdentity);
+            Add(row, motion.SafetyFloorOwnerPathIdentity);
             Add(row, motion.CorrectionBeforeSafetyFloor);
             Add(row, motion.SafetyFloorMinimumCorrection);
             Add(row, motion.SafetyFloorOutputCorrection);

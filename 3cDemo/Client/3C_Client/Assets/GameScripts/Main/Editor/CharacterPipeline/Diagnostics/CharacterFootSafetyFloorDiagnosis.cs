@@ -95,8 +95,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             0.10d
         };
 
-        public string DiagnosticId => "safety-floor-current-ground";
-        public string FileName => "safety-floor-current-ground.json";
+        public string DiagnosticId => "safety-floor-ownership";
+        public string FileName => "safety-floor-ownership.json";
 
         public CharacterFootDiagnosisDocument Build(
             CharacterFootDiagnosisContext context)
@@ -111,21 +111,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value,
                     "safetyFloorClamped"));
             CharacterFootDiagnosisTarget clearance = context.Target(
-                "accepted-current-floor-negative-clearance",
-                "CurrentFloor Accepted后Safety Floor是否仍低于真实地面",
+                "consumed-floor-negative-clearance",
+                "实际Floor所有者被消费后输出是否仍低于其最低修正",
                 new[] { "SafetyFloor" },
-                new[] { "currentFloorAccepted&&clearanceAfterMeters<0" },
+                new[] { "floorOwnerConsumed&&clearanceAfterMeters<0" },
                 events.FindAll(value =>
                     CharacterFootDiagnosisContext.Evidence(
                         value,
-                        "currentFloorAccepted")),
+                        "safetyFloorOwnerConsumed")),
                 value => CharacterFootDiagnosisContext.Evidence(
                              value,
                              "clearanceAfterNonNegative")
                     ? new List<string>()
                     : new List<string>
                     {
-                        "currentFloorAccepted&&clearanceAfterMeters<0"
+                        "floorOwnerConsumed&&clearanceAfterMeters<0"
                     },
                 value => Math.Abs(value.metrics["clearanceAfterMeters"]),
                 "clearanceBeforeMeters",
@@ -133,38 +133,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "clampMeters",
                 "currentFloorDistanceMeters");
             CharacterFootDiagnosisTarget missingInput = context.Target(
-                "clamp-without-current-floor-input",
-                "Safety Floor Clamp是否缺少真实CurrentFloor输入",
+                "clamp-without-floor-owner-input",
+                "Safety Floor Clamp是否缺少其实际所有者输入",
                 new[] { "SafetyFloor" },
-                new[] { "safetyFloorClamped&&!currentFloorAccepted" },
+                new[] { "safetyFloorClamped&&!floorOwnerInputAvailable" },
                 events,
                 value => CharacterFootDiagnosisContext.Evidence(
                              value,
-                             "clampHasCurrentFloorInput")
+                             "clampHasOwnerInput")
                     ? new List<string>()
                     : new List<string>
                     {
-                        "safetyFloorClamped&&!currentFloorAccepted"
+                        "safetyFloorClamped&&!floorOwnerInputAvailable"
                     },
                 value => value.metrics["clampMeters"],
                 "clampMeters",
                 "minimumCorrectionMeters",
                 "currentFloorDistanceMeters");
             CharacterFootDiagnosisTarget largeClamp = context.Target(
-                "large-clamp-without-current-floor-input",
-                "大于10cm的Safety Floor Clamp是否缺少真实CurrentFloor输入",
+                "large-clamp-without-floor-owner-input",
+                "大于10cm的Safety Floor Clamp是否缺少其实际所有者输入",
                 new[] { "SafetyFloor" },
                 new[]
                 {
-                    "clampMeters>0.1&&!currentFloorAccepted"
+                    "clampMeters>0.1&&!floorOwnerInputAvailable"
                 },
                 events,
                 value => CharacterFootDiagnosisContext.Evidence(
                              value,
-                             "largeClampWithoutCurrentFloorInput")
+                             "largeClampWithoutOwnerInput")
                     ? new List<string>
                     {
-                        "clampMeters>0.1&&!currentFloorAccepted"
+                        "clampMeters>0.1&&!floorOwnerInputAvailable"
                     }
                     : new List<string>(),
                 value => value.metrics["clampMeters"],
@@ -172,28 +172,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "currentFloorDistanceMeters",
                 "currentFloorSurfaceIdentity");
             CharacterFootDiagnosisTarget source = context.Target(
-                "minimum-correction-source",
-                "Safety Floor最小修正是否直接来自CurrentFloor Point",
+                "minimum-correction-owner-source",
+                "Safety Floor最小修正是否直接来自实际消费的Floor所有者",
                 new[] { "SafetyFloor" },
                 new[]
                 {
-                    "safetyFloorAvailable&&!minimumCorrectionMatchesCurrentFloor"
+                    "floorOwnerConsumed&&!minimumCorrectionMatchesOwner"
                 },
                 events.FindAll(value =>
                     CharacterFootDiagnosisContext.Evidence(
                         value,
-                        "safetyFloorAvailable")),
+                        "safetyFloorOwnerConsumed")),
                 value => CharacterFootDiagnosisContext.Evidence(
                              value,
-                             "minimumCorrectionMatchesCurrentFloor")
+                             "minimumCorrectionMatchesOwner")
                     ? new List<string>()
                     : new List<string>
                     {
-                        "safetyFloorAvailable&&!minimumCorrectionMatchesCurrentFloor"
+                        "floorOwnerConsumed&&!minimumCorrectionMatchesOwner"
                     },
                 value => value.metrics[
-                    "minimumCorrectionSourceErrorMeters"],
-                "minimumCorrectionSourceErrorMeters",
+                    "minimumCorrectionOwnerSourceErrorMeters"],
+                "minimumCorrectionOwnerSourceErrorMeters",
                 "currentFloorVsSwingEnvelopeHeightDeltaMeters",
                 "currentFloorPointHeight",
                 "swingEnvelopeSampleHeight");
@@ -204,7 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new[]
                 {
                     "queryPurpose!=CurrentSwingFloor",
-                    "safetyFloorAvailable&&!currentFloorAccepted"
+                    "ownerCurrentGroundFloor&&!currentFloorAccepted"
                 },
                 events,
                 MatchContract,
@@ -215,7 +215,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisTarget largePathClamp =
                 context.Target(
                     "large-safety-floor-clamp",
-                    "真实CurrentFloor Safety Floor是否在单帧产生超过LandingUpdateDistance的硬抬升",
+                    "实际消费的Safety Floor是否在单帧产生超过LandingUpdateDistance的硬抬升",
                     new[] { "PathContinuity" },
                     new[]
                     {
@@ -315,11 +315,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 result.Add("queryPurpose!=CurrentSwingFloor");
             }
-            if (!CharacterFootDiagnosisContext.Evidence(
+            if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "safetyFloorAvailabilityHasCurrentFloorInput"))
+                    "safetyFloorOwnerCurrentGroundFloor") &&
+                !CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "currentFloorAccepted"))
             {
-                result.Add("safetyFloorAvailable&&!currentFloorAccepted");
+                result.Add("ownerCurrentGroundFloor&&!currentFloorAccepted");
             }
             return result;
         }
@@ -551,6 +554,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool currentFloorMatchesSelected;
         public bool currentFloorCatchupAvailable;
         public double currentFloorCatchupMeters;
+        public string safetyFloorOwner;
+        public int safetyFloorOwnerSurfaceIdentity;
+        public string safetyFloorOwnerPathIdentity;
     }
 
     [Serializable]
@@ -575,6 +581,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double currentFloorAboveBuilderTargetMeters;
         public double residualLagBelowCurrentFloorMeters;
         public double currentFloorCatchupMeters;
+        public string safetyFloorOwner;
+        public int safetyFloorOwnerSurfaceIdentity;
+        public string safetyFloorOwnerPathIdentity;
         public int currentFloorSurfaceIdentity;
         public CharacterFootVectorFact currentFloorPoint;
         public bool physicalAnkleAvailable;
@@ -628,6 +637,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact stateOutputBeforeFloor;
         public double stateOutputBeforeFloorAlongUpMeters;
         public bool currentFloorComparisonAvailable;
+        public string safetyFloorOwner;
+        public int safetyFloorOwnerSurfaceIdentity;
+        public string safetyFloorOwnerPathIdentity;
         public CharacterFootVectorFact currentSwingFloorMinimum;
         public double currentSwingFloorMinimumAlongUpMeters;
         public CharacterFootVectorFact finalOutput;
@@ -674,6 +686,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact previousSafetyFloorOutputCorrection;
         public double previousSafetyFloorCompensationMeters;
         public double previousSafetyFloorCompensationAlongUpMeters;
+        public string previousSafetyFloorOwner;
+        public int previousSafetyFloorOwnerSurfaceIdentity;
+        public string previousSafetyFloorOwnerPathIdentity;
+        public string safetyFloorOwner;
+        public int safetyFloorOwnerSurfaceIdentity;
+        public string safetyFloorOwnerPathIdentity;
         public bool currentSafetyFloorAvailable;
         public string currentFloorState;
         public bool currentFloorAccepted;

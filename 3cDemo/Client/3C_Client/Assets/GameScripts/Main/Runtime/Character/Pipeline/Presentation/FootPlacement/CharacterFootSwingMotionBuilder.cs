@@ -405,6 +405,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OutputStagesAvailable = path.OutputStagesAvailable;
             ReleasingCompletedToSwing = path.ReleasingCompletedToSwing;
             SafetyFloorAvailable = path.SafetyFloorAvailable;
+            SafetyFloorOwner = path.SafetyFloorOwner;
+            SafetyFloorOwnerSurfaceIdentity =
+                path.SafetyFloorOwnerSurfaceIdentity;
+            SafetyFloorOwnerPathIdentity =
+                path.SafetyFloorOwnerPathIdentity;
             CorrectionBeforeSafetyFloor = path.CorrectionBeforeSafetyFloor;
             SafetyFloorMinimumCorrection =
                 path.SafetyFloorMinimumCorrection;
@@ -472,6 +477,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool OutputStagesAvailable { get; }
         public bool ReleasingCompletedToSwing { get; }
         public bool SafetyFloorAvailable { get; }
+        public CharacterFootSafetyFloorOwner SafetyFloorOwner { get; }
+        public int SafetyFloorOwnerSurfaceIdentity { get; }
+        public ulong SafetyFloorOwnerPathIdentity { get; }
         public Vector3 CorrectionBeforeSafetyFloor { get; }
         public Vector3 SafetyFloorMinimumCorrection { get; }
         public Vector3 SafetyFloorOutputCorrection { get; }

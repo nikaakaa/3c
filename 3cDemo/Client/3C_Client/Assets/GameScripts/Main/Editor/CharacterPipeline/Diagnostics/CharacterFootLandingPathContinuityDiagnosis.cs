@@ -26,10 +26,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "pathRevisionExpected") ||
                 CharacterFootDiagnosisContext.Evidence(
                     value,
+                    "residualRebaseExpected") ||
+                CharacterFootDiagnosisContext.Evidence(
+                    value,
                     "pathResidualRebuilt") ||
                 !CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "pathRevisionReasonMatchesExpected"));
+                    "pathRevisionReasonMatchesExpected") ||
+                !CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "residualRebaseReasonMatchesExpected") ||
+                !CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "residualRebuiltMatchesExpected"));
             List<JObject> releasingToSwing = events.FindAll(value =>
                 CharacterFootDiagnosisContext.Evidence(
                     value,
@@ -75,12 +84,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "residualAfterDecayMeters"),
                 context.Target(
                     "path-revision-contract-mismatch",
-                    "Path可用性、Event、Landing Point和Swing Target是否与Residual重建原因一致",
+                    "观察到的Path变化与Phase对齐后的Residual重建原因是否分别一致",
                     new[] { "PathContinuity" },
                     new[]
                     {
-                        "pathRevisionExpected!=pathResidualRebuilt",
-                        "pathRevisionReasonMatchesExpected=false"
+                        "residualRebaseExpected!=pathResidualRebuilt",
+                        "pathRevisionReasonMatchesExpected=false",
+                        "residualRebaseReasonMatchesExpected=false"
                     },
                     revisions,
                     RevisionContractRules,
@@ -93,6 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             "swingTargetDeltaMeters")),
                     "landingPointDeltaMeters",
                     "swingTargetDeltaMeters",
+                    "phaseAlignedTargetDeltaMeters",
                     "landingUpdateDistanceMeters",
                     "residualBeforeRevisionMeters",
                     "residualBeforeDecayMeters",
@@ -213,17 +224,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var rules = new List<string>(2);
             bool expected = CharacterFootDiagnosisContext.Evidence(
                 value,
-                "pathRevisionExpected");
+                "residualRebaseExpected");
             bool rebuilt = CharacterFootDiagnosisContext.Evidence(
                 value,
                 "pathResidualRebuilt");
             if (expected != rebuilt)
-                rules.Add("pathRevisionExpected!=pathResidualRebuilt");
+                rules.Add("residualRebaseExpected!=pathResidualRebuilt");
             if (!CharacterFootDiagnosisContext.Evidence(
                     value,
                     "pathRevisionReasonMatchesExpected"))
             {
                 rules.Add("pathRevisionReasonMatchesExpected=false");
+            }
+            if (!CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "residualRebaseReasonMatchesExpected"))
+            {
+                rules.Add("residualRebaseReasonMatchesExpected=false");
             }
             return rules;
         }

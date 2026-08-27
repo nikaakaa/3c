@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/14";
+        const string Schema = "character-foot-motion-facts/15";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 14;
+        const int AnalyzerVersion = 15;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 640;
         const float PositionNoiseFloor = 0.001f;
@@ -2080,7 +2080,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool swingTargetChanged = comparablePath &&
                     current.PathTargetDelta > current.LandingUpdateDistance;
                 bool revisionExpected = availabilityChanged || eventChanged ||
-                                        landingPointChanged || swingTargetChanged;
+                                         landingPointChanged || swingTargetChanged;
+                bool phaseAlignedTargetChanged = comparablePath &&
+                    !eventChanged &&
+                    current.PathPhaseAlignedTargetDelta >
+                    current.LandingUpdateDistance;
+                bool residualRebaseExpected = availabilityChanged ||
+                    eventChanged || phaseAlignedTargetChanged;
                 bool reasonAvailability = HasRevisionReason(
                     current.PathRevisionReason,
                     "PathAvailabilityChanged");
@@ -2095,11 +2101,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "SwingTargetChanged");
                 bool reasonAvailable = reasonAvailability || reasonEvent ||
                                        reasonLandingPoint || reasonSwingTarget;
+                bool rebaseAvailability = HasRevisionReason(
+                    current.PathResidualRebaseReason,
+                    "PathAvailabilityChanged");
+                bool rebaseEvent = HasRevisionReason(
+                    current.PathResidualRebaseReason,
+                    "LandingEventChanged");
+                bool rebasePhaseAlignedTarget = HasRevisionReason(
+                    current.PathResidualRebaseReason,
+                    "PhaseAlignedTargetChanged");
+                bool rebaseReasonAvailable = rebaseAvailability ||
+                    rebaseEvent || rebasePhaseAlignedTarget;
                 bool reasonMatchesExpected =
                     reasonAvailability == availabilityChanged &&
                     reasonEvent == eventChanged &&
                     reasonLandingPoint == landingPointChanged &&
                     reasonSwingTarget == swingTargetChanged;
+                bool rebaseReasonMatchesExpected =
+                    rebaseAvailability == availabilityChanged &&
+                    rebaseEvent == eventChanged &&
+                    rebasePhaseAlignedTarget == phaseAlignedTargetChanged;
+                bool residualRebuiltMatchesExpected =
+                    current.PathResidualRebuilt == residualRebaseExpected;
                 double residualBeforeRevision =
                     current.SwingResidualBeforeRevision.magnitude;
                 double residualBeforeDecay =
@@ -2118,9 +2141,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.PathContinuityEvaluated &&
                     !revisionExpected;
                 bool relevant = inputIdentityChanged ||
-                                current.PathResidualRebuilt ||
-                                revisionExpected ||
-                                reasonAvailable ||
+                                 current.PathResidualRebuilt ||
+                                 revisionExpected ||
+                                 reasonAvailable ||
+                                 residualRebaseExpected ||
+                                 rebaseReasonAvailable ||
                                 current.ReleasingCompletedToSwing ||
                                 current.SafetyFloorClamped ||
                                 deadlineReached ||
@@ -2156,6 +2181,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["safetyFloorClampMeters"] =
                         current.SafetyFloorClampMeters,
                     ["swingTargetDeltaMeters"] = current.PathTargetDelta,
+                    ["phaseAlignedTargetDeltaMeters"] =
+                        current.PathPhaseAlignedTargetDelta,
                     ["timeToLandingSeconds"] =
                         current.ResidualTimeToLandingSeconds
                 };
@@ -2175,6 +2202,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PathContinuityEvaluated,
                     ["pathInputIdentityChanged"] = inputIdentityChanged,
                     ["pathResidualRebuilt"] = current.PathResidualRebuilt,
+                    ["residualRebaseExpected"] = residualRebaseExpected,
+                    ["residualRebaseReasonMatchesExpected"] =
+                        rebaseReasonMatchesExpected,
+                    ["residualRebuiltMatchesExpected"] =
+                        residualRebuiltMatchesExpected,
                     ["pathRevisionExpected"] = revisionExpected,
                     ["pathRevisionReasonMatchesExpected"] =
                         reasonMatchesExpected,
@@ -2182,6 +2214,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["reasonLandingPointChanged"] = reasonLandingPoint,
                     ["reasonPathAvailabilityChanged"] = reasonAvailability,
                     ["reasonSwingTargetChanged"] = reasonSwingTarget,
+                    ["rebaseReasonLandingEventChanged"] = rebaseEvent,
+                    ["rebaseReasonPathAvailabilityChanged"] =
+                        rebaseAvailability,
+                    ["rebaseReasonPhaseAlignedTargetChanged"] =
+                        rebasePhaseAlignedTarget,
                     ["releasingCompletedToSwing"] =
                         current.ReleasingCompletedToSwing,
                     ["residualGrewWithoutRevision"] =
@@ -2817,6 +2854,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PathContinuityEvaluated =
                     Int("FootMotionPathContinuityEvaluated") != 0,
                 PathRevisionReason = Cell("FootMotionPathRevisionReason"),
+                PathResidualRebaseReason =
+                    Cell("FootMotionPathResidualRebaseReason"),
                 PathResidualRebuilt =
                     Int("FootMotionPathResidualRebuilt") != 0,
                 PathAvailableBefore =
@@ -2834,6 +2873,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PathLandingPointDelta =
                     Float("FootMotionPathLandingPointDeltaMeters"),
                 PathTargetDelta = Float("FootMotionPathTargetDeltaMeters"),
+                PathPhaseAlignedTargetDelta =
+                    Float("FootMotionPathPhaseAlignedTargetDeltaMeters"),
                 SwingResidualBeforeRevision =
                     Vector("FootMotionSwingResidualBeforeRevision"),
                 SwingResidualBeforeDecay =
@@ -2996,6 +3037,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.LockResponseBefore,
                 "FootMotionLockResponseBefore");
             RequireRevisionReason(frame.PathRevisionReason);
+            RequireResidualRebaseReason(frame.PathResidualRebaseReason);
         }
 
         static void RequireEnum<T>(string value, string field)
@@ -3032,6 +3074,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 throw new InvalidDataException(
                     $"Foot Motion Foot row PathRevisionReason '{value}' is invalid.");
+            }
+        }
+
+        static void RequireResidualRebaseReason(string value)
+        {
+            string[] values = value.Split(',');
+            bool none = false;
+            for (int i = 0; i < values.Length; i++)
+            {
+                string reason = values[i].Trim();
+                bool valid = reason == "None" ||
+                             reason == "PathAvailabilityChanged" ||
+                             reason == "LandingEventChanged" ||
+                             reason == "PhaseAlignedTargetChanged";
+                if (!valid)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Foot row PathResidualRebaseReason '{value}' is invalid.");
+                }
+                none |= reason == "None";
+            }
+            if (none && values.Length != 1)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row PathResidualRebaseReason '{value}' is invalid.");
             }
         }
 
@@ -3132,6 +3199,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionContactPlaneNormalX", "FootMotionContactPlaneNormalY", "FootMotionContactPlaneNormalZ",
                 "FootContactPlanePenetrationAvailability",
                 "FootMotionPathContinuityEvaluated", "FootMotionPathRevisionReason",
+                "FootMotionPathResidualRebaseReason",
                 "FootMotionPathResidualRebuilt", "FootMotionPathAvailableBefore",
                 "FootMotionPathAvailableAfter", "FootMotionPathPreviousLandingEventIdentity",
                 "FootMotionPathCurrentLandingEventIdentity",
@@ -3142,6 +3210,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPathCurrentTargetCorrectionY",
                 "FootMotionPathCurrentTargetCorrectionZ",
                 "FootMotionPathLandingPointDeltaMeters", "FootMotionPathTargetDeltaMeters",
+                "FootMotionPathPhaseAlignedTargetDeltaMeters",
                 "FootMotionSwingResidualBeforeRevisionX",
                 "FootMotionSwingResidualBeforeRevisionY",
                 "FootMotionSwingResidualBeforeRevisionZ",
@@ -3734,6 +3803,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 ContactNormal;
             internal bool PathContinuityEvaluated;
             internal string PathRevisionReason;
+            internal string PathResidualRebaseReason;
             internal bool PathResidualRebuilt;
             internal bool PathAvailableBefore;
             internal bool PathAvailableAfter;
@@ -3743,6 +3813,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 PathCurrentTargetCorrection;
             internal float PathLandingPointDelta;
             internal float PathTargetDelta;
+            internal float PathPhaseAlignedTargetDelta;
             internal Vector3 SwingResidualBeforeRevision;
             internal Vector3 SwingResidualBeforeDecay;
             internal Vector3 SwingResidualAfterDecay;
@@ -4157,6 +4228,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 landingPointDeltaMeters =
                     current.PathLandingPointDelta,
                 targetDeltaMeters = current.PathTargetDelta,
+                phaseAlignedTargetDeltaMeters =
+                    current.PathPhaseAlignedTargetDelta,
                 frozenPathCounterfactualAvailable =
                     counterfactual.available,
                 pathRevisionDeltaMeters =
@@ -4225,6 +4298,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 pathResidualRebuilt =
                     current.PathResidualRebuilt,
                 pathRevisionReason = current.PathRevisionReason,
+                residualRebaseReason =
+                    current.PathResidualRebaseReason,
                 observedSwingTargetDeltaVector =
                     observedSwingTargetDelta,
                 desiredCorrectionDeltaVector =

@@ -641,6 +641,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string endpointRevisionClass;
         public double landingPointDeltaMeters;
         public double targetDeltaMeters;
+        public double phaseAlignedTargetDeltaMeters;
         public bool frozenPathCounterfactualAvailable;
         public double pathRevisionDeltaMeters;
         public double phaseAdvanceDeltaMeters;
@@ -698,6 +699,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double safetyFloorClampMeters;
         public bool pathResidualRebuilt;
         public string pathRevisionReason;
+        public string residualRebaseReason;
         public bool lowPresentationSampling;
         public bool largePerFrameDisplacement;
         public bool speedAnomaly;

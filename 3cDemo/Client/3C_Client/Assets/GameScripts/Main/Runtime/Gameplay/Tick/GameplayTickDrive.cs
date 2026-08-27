@@ -28,7 +28,8 @@ namespace ThirdPersonGameplay.Tick
         BeginLivePresentationScheduleCapture = 5,
         BeginScriptedPresentationSchedule = 6,
         ScriptedPresentationFrame = 7,
-        EndPresentationSchedule = 8
+        EndPresentationSchedule = 8,
+        CancelPresentationSchedule = 9
     }
 
     public readonly struct GameplayTickDrivePolicy
@@ -308,6 +309,15 @@ namespace ThirdPersonGameplay.Tick
         public static GameplayTickDriveCommand EndPresentationSchedule() =>
             new GameplayTickDriveCommand(
                 GameplayTickDriveCommandKind.EndPresentationSchedule,
+                0,
+                1f,
+                GameplayPresentationDebugClockMode.LivePresentation,
+                default,
+                0);
+
+        public static GameplayTickDriveCommand CancelPresentationSchedule() =>
+            new GameplayTickDriveCommand(
+                GameplayTickDriveCommandKind.CancelPresentationSchedule,
                 0,
                 1f,
                 GameplayPresentationDebugClockMode.LivePresentation,

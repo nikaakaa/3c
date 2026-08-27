@@ -474,7 +474,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly Action m_FormalWindowComplete;
         readonly bool m_Capturing;
         bool m_Registered;
-        bool m_EndQueued;
+        bool m_TerminationQueued;
         bool m_FormalWindowClosed;
         bool m_Disposed;
 
@@ -570,13 +570,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 Failure = exception.Message;
                 CloseFormalWindow();
-                QueueEnd();
+                QueueCancel();
             }
         }
 
         internal void Stop()
         {
-            QueueEnd();
+            QueueCancel();
         }
 
         public void Dispose()
@@ -587,10 +587,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CloseFormalWindow();
             if (m_Registered)
                 GameplayTickSystem.UnregisterPresentationScheduleTarget(this);
-            if (!m_EndQueued && GameplayTickSystem.IsInitialized &&
+            if (!m_TerminationQueued && GameplayTickSystem.IsInitialized &&
                 GameplayTickSystem.Current.DriveStatus.PresentationScheduleDriveActive)
             {
-                Enqueue(GameplayTickDriveCommand.EndPresentationSchedule());
+                QueueCancel();
             }
         }
 
@@ -614,10 +614,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void QueueEnd()
         {
-            if (m_EndQueued || !GameplayTickSystem.IsInitialized)
+            if (m_TerminationQueued || !GameplayTickSystem.IsInitialized)
                 return;
             Enqueue(GameplayTickDriveCommand.EndPresentationSchedule());
-            m_EndQueued = true;
+            m_TerminationQueued = true;
+        }
+
+        void QueueCancel()
+        {
+            if (m_TerminationQueued || !GameplayTickSystem.IsInitialized)
+                return;
+            Enqueue(GameplayTickDriveCommand.CancelPresentationSchedule());
+            m_TerminationQueued = true;
         }
 
         void Register()

@@ -414,7 +414,8 @@ namespace ThirdPersonGameplay.Tick
                 m_LastDriveCommandSequence = command.Sequence;
                 if (m_PresentationScheduleDriveActive &&
                     command.Kind != GameplayTickDriveCommandKind.ScriptedPresentationFrame &&
-                    command.Kind != GameplayTickDriveCommandKind.EndPresentationSchedule)
+                    command.Kind != GameplayTickDriveCommandKind.EndPresentationSchedule &&
+                    command.Kind != GameplayTickDriveCommandKind.CancelPresentationSchedule)
                 {
                     throw new InvalidOperationException(
                         "Presentation Schedule drive owns the Gameplay Tick System.");
@@ -468,6 +469,9 @@ namespace ThirdPersonGameplay.Tick
                         break;
                     case GameplayTickDriveCommandKind.EndPresentationSchedule:
                         EndPresentationScheduleDrive();
+                        break;
+                    case GameplayTickDriveCommandKind.CancelPresentationSchedule:
+                        CancelPresentationScheduleDrive();
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -626,12 +630,29 @@ namespace ThirdPersonGameplay.Tick
             if (m_HasScriptedPresentationFrame)
                 throw new InvalidOperationException(
                     "Presentation Schedule cannot end with an unconsumed scripted frame.");
+            RestorePresentationScheduleDrive();
+        }
+
+        void CancelPresentationScheduleDrive()
+        {
+            if (!m_PresentationScheduleDriveActive)
+                return;
+            RestorePresentationScheduleDrive();
+        }
+
+        void RestorePresentationScheduleDrive()
+        {
             m_DrivePolicy = m_SavedScheduleDrivePolicy;
             m_AccumulatorSeconds = m_SavedScheduleAccumulatorSeconds;
             m_PresentationScheduleDriveActive = false;
+            m_HasScriptedPresentationFrame = false;
+            m_ScriptedPresentationFrame = default;
             m_ActivePresentationScheduleFrameIndex = -1;
             m_ActivePresentationScheduleFrameMode = default;
             m_NextPresentationScheduleFrameIndex = 0;
+            m_PresentationScheduleBaseLocalLogicTick = 0;
+            m_SavedScheduleDrivePolicy = default;
+            m_SavedScheduleAccumulatorSeconds = 0f;
         }
 
         void PrepareScriptedPresentationFrame()

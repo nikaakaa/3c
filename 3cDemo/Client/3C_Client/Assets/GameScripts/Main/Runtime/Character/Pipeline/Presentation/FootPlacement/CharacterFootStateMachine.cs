@@ -662,14 +662,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
                     return;
                 }
-                if (step.IsSwing &&
-                    step.TimeToLandingSeconds <=
-                    settings.LandingRevisionDeadlineSeconds)
-                {
-                    context.LandingTrackingState =
-                        CharacterFootLandingTrackingState.Accepted;
-                    return;
-                }
                 context.NextSwingLanding = CharacterFootLandingFact.Create(in step, in diagnostics);
                 context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
                 return;

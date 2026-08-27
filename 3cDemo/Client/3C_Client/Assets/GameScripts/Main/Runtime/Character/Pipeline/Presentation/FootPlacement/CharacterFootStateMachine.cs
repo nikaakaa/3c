@@ -348,6 +348,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootLandingFact LastLanding;
         internal CharacterFootLandingFact NextSwingLanding;
+        internal CharacterFootLandingFact LatestObservedLanding;
         internal CharacterFootLandingFact PromotedLanding;
         internal Vector3 NextSwingReferencePoint;
         internal float NextSwingPredictionError;
@@ -408,6 +409,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void ClearNextSwingLanding()
         {
             NextSwingLanding = default;
+            LatestObservedLanding = default;
             NextSwingReferencePoint = default;
             NextSwingPredictionError = 0f;
             NextSwingConstraintWeight = 0f;
@@ -420,6 +422,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             CharacterFootLandingFact lastLanding = LastLanding;
             CharacterFootLandingFact nextSwingLanding = NextSwingLanding;
+            CharacterFootLandingFact latestObservedLanding = LatestObservedLanding;
             CharacterFootLandingFact promotedLanding = PromotedLanding;
             Vector3 nextSwingReferencePoint = NextSwingReferencePoint;
             float nextSwingPredictionError = NextSwingPredictionError;
@@ -430,6 +433,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             this = default;
             LastLanding = lastLanding;
             NextSwingLanding = nextSwingLanding;
+            LatestObservedLanding = latestObservedLanding;
             PromotedLanding = promotedLanding;
             NextSwingReferencePoint = nextSwingReferencePoint;
             NextSwingPredictionError = nextSwingPredictionError;
@@ -596,9 +600,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                            currentEventIdentity != acceptedEventIdentity;
                 if (completedInPlace || advancedToNextEvent)
                 {
+                    CharacterFootLandingFact completedLanding =
+                        context.LatestObservedLanding.HasValue &&
+                        context.LatestObservedLanding.LandingEventIdentity ==
+                        acceptedEventIdentity
+                            ? context.LatestObservedLanding
+                            : context.NextSwingLanding;
                     context.LastLanding = context.LandingTrackingState ==
                                           CharacterFootLandingTrackingState.Accepted
-                        ? context.NextSwingLanding
+                        ? completedLanding
                         : default;
                     context.PromotedLanding = context.LastLanding;
                     context.TrackedEventIdentity = 0;
@@ -649,6 +659,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.InvalidateCurrentLanding();
                 return;
             }
+            CharacterFootLandingFact observedLanding =
+                CharacterFootLandingFact.Create(in step, in diagnostics);
+            context.LatestObservedLanding = observedLanding;
             if (context.NextSwingLanding.HasValue)
             {
                 Vector3 landingPoint = diagnostics.LandingPoint;
@@ -662,11 +675,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
                     return;
                 }
-                context.NextSwingLanding = CharacterFootLandingFact.Create(in step, in diagnostics);
+                if (step.IsSwing &&
+                    step.TimeToLandingSeconds <=
+                    settings.LandingRevisionDeadlineSeconds)
+                {
+                    context.LandingTrackingState =
+                        CharacterFootLandingTrackingState.Accepted;
+                    return;
+                }
+                context.NextSwingLanding = observedLanding;
                 context.LandingTrackingState = CharacterFootLandingTrackingState.Accepted;
                 return;
             }
-            context.NextSwingLanding = CharacterFootLandingFact.Create(in step, in diagnostics);
+            context.NextSwingLanding = observedLanding;
             context.NextSwingReferencePoint = diagnostics.LandingPoint;
             context.NextSwingPredictionError = 0f;
             context.NextSwingConstraintWeight = 1f;

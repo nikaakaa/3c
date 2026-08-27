@@ -175,7 +175,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterFootMotionAuthoringSettings
     {
         [SerializeField] float m_LandingUpdateDistance = 0.005f;
-        [SerializeField] float m_LandingRevisionDeadlineSeconds = 0.05f;
         [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
@@ -185,7 +184,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(
                 m_LandingUpdateDistance,
-                m_LandingRevisionDeadlineSeconds,
                 m_EffectiveCorrectionHalfLifeSeconds,
                 m_LockDistance,
                 m_SlideDistance,
@@ -197,7 +195,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootMotionSettings(
             float landingUpdateDistance,
-            float landingRevisionDeadlineSeconds,
             float effectiveCorrectionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
@@ -205,7 +202,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float minimumLandingLegCompressionReserve)
         {
             LandingUpdateDistance = landingUpdateDistance;
-            LandingRevisionDeadlineSeconds = landingRevisionDeadlineSeconds;
             EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
@@ -216,7 +212,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal float LandingUpdateDistance { get; }
-        internal float LandingRevisionDeadlineSeconds { get; }
         internal float EffectiveCorrectionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
@@ -226,8 +221,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void RequireValid()
         {
             if (!float.IsFinite(LandingUpdateDistance) || LandingUpdateDistance <= 0f ||
-                !float.IsFinite(LandingRevisionDeadlineSeconds) ||
-                LandingRevisionDeadlineSeconds <= 0f ||
                 !float.IsFinite(EffectiveCorrectionHalfLifeSeconds) ||
                 EffectiveCorrectionHalfLifeSeconds <= 0f ||
                 !float.IsFinite(LockDistance) ||
@@ -249,7 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v25-landing-revision-deadline";
+        public const string SchemaVersion = "character-foot-placement-profile/v24-live-landing-goal-transition";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

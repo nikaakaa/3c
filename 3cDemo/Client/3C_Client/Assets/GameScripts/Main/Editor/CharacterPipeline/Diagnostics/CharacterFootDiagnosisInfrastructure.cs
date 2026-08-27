@@ -403,10 +403,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool matchedEventRateAvailable;
         public double? matchedEventRate;
         public CharacterFootDiagnosisOccurrenceProfile occurrence;
+        public List<CharacterFootDiagnosisOccurrenceProfile>
+            supplementalOccurrences;
         [Newtonsoft.Json.JsonIgnore]
         internal bool useAsPrimaryOccurrence;
         public CharacterFootPathStageAnalysisCoverage pathStageAnalysis;
         public SortedDictionary<string, CharacterFootDiagnosisDistribution> measurements;
+        public SortedDictionary<string, List<CharacterFootDiagnosisCategoryCount>>
+            categoricalMeasurements;
         public int representativeEventCount;
         public List<CharacterFootDiagnosisEvidence> representativeEvents;
     }
@@ -463,6 +467,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             stablePathSwingPhaseJump;
         public CharacterFootSwingToLandingFloorHandoffAnalysis
             swingToLandingFloorHandoff;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootDiagnosisCategoryCount
+    {
+        public string value;
+        public int count;
     }
 
     [Serializable]

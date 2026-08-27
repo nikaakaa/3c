@@ -75,6 +75,15 @@ namespace ThirdPersonGameplay.Tick
                 0);
         }
 
+        public GameplayTickDrivePolicy WithRateMultiplier(float rateMultiplier)
+        {
+            return new GameplayTickDrivePolicy(
+                Mode,
+                PresentationClockMode,
+                rateMultiplier,
+                QueuedManualTicks);
+        }
+
         public GameplayTickDrivePolicy WithPresentationClock(GameplayPresentationDebugClockMode mode)
         {
             return new GameplayTickDrivePolicy(

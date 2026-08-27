@@ -57,6 +57,17 @@ namespace ThirdPersonGameplay.Tick
         static void ToggleSlowPlayback()
         {
             GameplayTickDriveStatusSnapshot status = GameplayTickSystem.Current.DriveStatus;
+            if (status.PresentationScheduleDriveActive)
+            {
+                float scheduleRate = Mathf.Approximately(
+                    status.RateMultiplier,
+                    SlowPlaybackRate)
+                    ? 1f
+                    : SlowPlaybackRate;
+                GameplayTickSystem.EnqueueDriveCommand(
+                    GameplayTickDriveCommand.SetRatePlayback(scheduleRate));
+                return;
+            }
             bool slowPlaybackActive = status.Mode == GameplayTickDriveMode.RatePlayback &&
                 Mathf.Approximately(status.RateMultiplier, SlowPlaybackRate);
             if (slowPlaybackActive)

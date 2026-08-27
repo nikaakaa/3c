@@ -994,16 +994,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 1f;
             context.EffectiveCorrection = contactCorrection + context.AcquireResidual;
             preserveOutput = true;
-            if (remainingResidual <= frame.Settings.LandingUpdateDistance &&
-                frame.SwingMotion.PlantConfidence >=
+            if (frame.SwingMotion.PlantConfidence >=
                 AnimationFootConstraintFacts.LockedMinimumConfidence)
             {
                 context.ConstraintState = CharacterFootConstraintState.Locked;
-                context.LockResponse = CharacterFootLockResponse.FullAnchor;
-                context.EffectiveCorrection = contactCorrection;
-                context.AcquireResidual = default;
-                context.AcquireStartResidual = 0f;
-                context.ContactProgress = 1f;
+                if (remainingResidual <= frame.Settings.LandingUpdateDistance)
+                {
+                    context.LockResponse = CharacterFootLockResponse.FullAnchor;
+                    context.EffectiveCorrection = contactCorrection;
+                    context.AcquireResidual = default;
+                    context.AcquireStartResidual = 0f;
+                    context.ContactProgress = 1f;
+                }
+                else
+                {
+                    context.LockResponse = CharacterFootLockResponse.Acquiring;
+                }
             }
         }
 
@@ -1025,6 +1031,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 BeginRelease(ref context, swingCorrection);
                 desiredCorrection = swingCorrection;
                 preserveOutput = true;
+                return;
+            }
+            if (context.LockResponse == CharacterFootLockResponse.Acquiring)
+            {
+                desiredCorrection = fullCorrection;
+                context.AcquireResidual = Advance(
+                    context.AcquireResidual,
+                    default,
+                    frame.DeltaSeconds,
+                    frame.Settings.EffectiveCorrectionHalfLifeSeconds);
+                float remainingResidual = context.AcquireResidual.magnitude;
+                context.ContactProgress = context.AcquireStartResidual >
+                                          GeometryEpsilon
+                    ? Mathf.Clamp01(
+                        1f - remainingResidual / context.AcquireStartResidual)
+                    : 1f;
+                context.EffectiveCorrection = fullCorrection +
+                                              context.AcquireResidual;
+                preserveOutput = true;
+                if (remainingResidual <= frame.Settings.LandingUpdateDistance)
+                {
+                    context.LockResponse = CharacterFootLockResponse.FullAnchor;
+                    context.EffectiveCorrection = fullCorrection;
+                    context.AcquireResidual = default;
+                    context.AcquireStartResidual = 0f;
+                    context.ContactProgress = 1f;
+                }
                 return;
             }
             if (horizontalError > frame.Settings.LockDistance)
@@ -1115,6 +1148,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ResolveSupportEligibility(context.ConstraintState);
             float supportWeight = context.ConstraintState switch
             {
+                CharacterFootConstraintState.Locked when
+                    context.LockResponse == CharacterFootLockResponse.Acquiring =>
+                    contactOwnership,
                 CharacterFootConstraintState.Locked => 1f,
                 CharacterFootConstraintState.Releasing => contactOwnership,
                 _ => 0f
@@ -1201,7 +1237,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootConstraintState.Landing:
                     return context.ContactProgress;
                 case CharacterFootConstraintState.Locked:
-                    return 1f;
+                    return context.LockResponse == CharacterFootLockResponse.Acquiring
+                        ? context.ContactProgress
+                        : 1f;
                 case CharacterFootConstraintState.Releasing:
                     if (context.ReleaseStartResidual <= GeometryEpsilon)
                         return 0f;

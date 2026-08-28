@@ -170,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public const string AlgorithmVersion = "animation-foot-analysis/v81";
 
         [SerializeField] string m_AnalysisSourceId = string.Empty;
-        [SerializeField, Min(1)] int m_AnalysisVersion = 2;
+        [SerializeField, Min(1)] int m_AnalysisVersion = 1;
         [SerializeField] string m_SamplingRigAssetGuid = string.Empty;
         [SerializeField] CharacterAnimationRigDefinition m_RigDefinition;
         [SerializeField] CharacterFootPlacementRigCalibration m_RigCalibration;

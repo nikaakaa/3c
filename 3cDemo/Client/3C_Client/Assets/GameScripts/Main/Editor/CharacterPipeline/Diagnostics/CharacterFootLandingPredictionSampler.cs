@@ -1702,8 +1702,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stepSelection.SelectedSource.ToString());
             Add(row, stepSelection.SelectedLandingEventIdentity);
             CharacterFootStepCandidateDiagnostics selectedStep =
-                stepSelection.SelectedSource !=
-                CharacterFootLandingStepSource.None
+                stepSelection.SelectedSource ==
+                CharacterFootLandingStepSource.FormalNextLanding
                     ? stepSelection.Current
                     : default;
             AddStepPhase(row, in selectedStep);

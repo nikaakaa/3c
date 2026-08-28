@@ -202,7 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 double pathNoiseFloor = Math.Max(
                     PositionNoiseFloor,
-                    current.LandingUpdateDistance);
+                    current.SwingRevisionDistance);
                 bool pathAvailabilityChanged =
                     previous.PathAvailableAfter != current.PathAvailableAfter ||
                     RevisionReasonIncludes(
@@ -666,6 +666,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     (queried && current.LandingObservationQueryExecuted ||
                      reused && !current.LandingObservationQueryExecuted) &&
                     !duplicateQuery;
+                bool expectedQuery =
+                    !current.LandingObservationHasPreviousQueryInput ||
+                    current.LandingObservationRevisionLineageChanged ||
+                    current.LandingObservationPredictionInputMovement >
+                    current.PredictionInputUpdateDistance ||
+                    current.LandingObservationComponentUpDeltaDegrees >
+                    current.PredictionInputUpAngleDegrees;
+                bool predictionGateConsistent =
+                    current.LandingObservationQueryExecuted == expectedQuery;
                 var detail = new CharacterFootLandingObservationAnalysis
                 {
                     previousFrame = previous?.Frame ?? 0,
@@ -706,7 +715,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     StringComparer.Ordinal)
                 {
                     ["ValidCandidateCount"] =
-                        current.FutureLandingValidCandidateCount
+                        current.FutureLandingValidCandidateCount,
+                    ["PredictionInputMovementMeters"] =
+                        current.LandingObservationPredictionInputMovement,
+                    ["PredictionInputUpdateDistanceMeters"] =
+                        current.PredictionInputUpdateDistance,
+                    ["ComponentUpDeltaDegrees"] =
+                        current.LandingObservationComponentUpDeltaDegrees,
+                    ["ComponentUpThresholdDegrees"] =
+                        current.PredictionInputUpAngleDegrees
                 };
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
@@ -717,7 +734,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.LandingObservationQueryExecuted,
                     ["identitySeenBefore"] = identitySeenBefore,
                     ["resultMatchesPrevious"] = resultMatchesPrevious,
-                    ["cacheStateConsistent"] = cacheStateConsistent
+                    ["cacheStateConsistent"] = cacheStateConsistent,
+                    ["predictionGateConsistent"] = predictionGateConsistent,
+                    ["revisionLineageChanged"] =
+                        current.LandingObservationRevisionLineageChanged
                 };
                 events.Add(new EventFact(
                     "LandingObservation",
@@ -812,9 +832,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             fact.incoming.otherConditionsEligible,
                         ["incomingEligible"] = fact.incoming.eligible,
                         ["formalCloserToCurrent"] =
-                            fact.formalCloserCandidate == "Current",
+                            fact.formalCloserCandidate == "Contact",
                         ["formalCloserToIncoming"] =
-                            fact.formalCloserCandidate == "Incoming",
+                            fact.formalCloserCandidate == "Prediction",
                         ["closerCandidateLandingEventDiffersFromLastLanding"] =
                             fact.closerCandidateLandingEventDiffersFromLastLanding
                     };
@@ -869,7 +889,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.NextLandingSurfaceIdentity !=
                     current.NextLandingSurfaceIdentity;
                 bool pointExceededUpdateDistance =
-                    consumedPointDelta > current.LandingUpdateDistance;
+                    consumedPointDelta > current.SwingRevisionDistance;
                 double observedPointDelta =
                     previous.ObservedLandingAccepted &&
                     current.ObservedLandingAccepted
@@ -940,21 +960,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         selectedLandingPhase =
                             current.SelectedStepLandingPhase,
                         previousCurrentEventPhase =
-                            previous.CurrentStep.EventPhase,
+                            previous.ContactStep.EventPhase,
                         currentEventPhase =
-                            current.CurrentStep.EventPhase,
+                            current.ContactStep.EventPhase,
                         previousCurrentApproachContactPhase =
-                            previous.CurrentStep.ApproachContactPhase,
+                            previous.ContactStep.ApproachContactPhase,
                         currentApproachContactPhase =
-                            current.CurrentStep.ApproachContactPhase,
+                            current.ContactStep.ApproachContactPhase,
                         previousSelectedInApproachContactToLanding =
                             previous.SelectedStepInApproachContactToLanding,
                         selectedInApproachContactToLanding =
                             current.SelectedStepInApproachContactToLanding,
                         previousCurrentAtOrAfterApproachContact =
-                            previous.CurrentStep.AtOrAfterApproachContact,
+                            previous.ContactStep.AtOrAfterApproachContact,
                         currentAtOrAfterApproachContact =
-                            current.CurrentStep.AtOrAfterApproachContact,
+                            current.ContactStep.AtOrAfterApproachContact,
                         previousObservedAvailable =
                             previous.ObservedLandingAccepted,
                         observedAvailable =
@@ -993,7 +1013,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             current.NextLanding),
                         landingPointDeltaMeters = consumedPointDelta,
                         landingUpdateDistanceMeters =
-                            current.LandingUpdateDistance,
+                            current.SwingRevisionDistance,
                         correctionStepMeters = correctionStep,
                         physicalAnkleAvailable = physicalAvailable,
                         physicalAnkleAlongUpStepMeters =
@@ -1003,7 +1023,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             physicalSoleAlongUpStep,
                         consumedSurfaceChanged =
                             consumedSurfaceChanged,
-                        consumedPointExceededLandingUpdateDistance =
+                        consumedPointExceededSwingRevisionDistance =
                             pointExceededUpdateDistance
                     };
                 var metrics = new SortedDictionary<string, double>(
@@ -1011,8 +1031,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     ["LandingPointDelta"] = consumedPointDelta,
                     ["ObservedLandingPointDelta"] = observedPointDelta,
-                    ["LandingUpdateDistance"] =
-                        current.LandingUpdateDistance,
+                    ["SwingRevisionDistance"] =
+                        current.SwingRevisionDistance,
                     ["CorrectionStep"] = correctionStep,
                     ["PhysicalAnkleAlongUpStep"] =
                         physicalAnkleAlongUpStep,
@@ -1023,9 +1043,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["SelectedApproachContactPhase"] =
                         current.SelectedStepApproachContactPhase,
                     ["CurrentEventPhase"] =
-                        current.CurrentStep.EventPhase,
+                        current.ContactStep.EventPhase,
                     ["CurrentApproachContactPhase"] =
-                        current.CurrentStep.ApproachContactPhase
+                        current.ContactStep.ApproachContactPhase
                 };
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
@@ -1035,7 +1055,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["consumedLandingAvailable"] = true,
                     ["consumedSurfaceChanged"] =
                         consumedSurfaceChanged,
-                    ["consumedPointExceededLandingUpdateDistance"] =
+                    ["consumedPointExceededSwingRevisionDistance"] =
                         pointExceededUpdateDistance,
                     ["observedLandingAvailable"] =
                         previous.ObservedLandingAccepted &&
@@ -1409,9 +1429,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.SafetyFloorClamped &&
                     previous.SafetyFloorClampMeters > PositionNoiseFloor;
                 bool residualWithinDeadline =
-                    previous.LandingUpdateDistance > 0f &&
+                    previous.SwingRevisionDistance > 0f &&
                     previousResidualAfterDecay <=
-                    previous.LandingUpdateDistance + TimeEpsilon;
+                    previous.SwingRevisionDistance + TimeEpsilon;
                 Vector3 previousFloorCompensation =
                     previous.SafetyFloorOutputCorrection -
                     previous.CorrectionBeforeSafetyFloor;
@@ -1482,7 +1502,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         previousResidualAfterDecayMeters =
                             previousResidualAfterDecay,
                         landingUpdateDistanceMeters =
-                            previous.LandingUpdateDistance,
+                            previous.SwingRevisionDistance,
                         previousFinalEffectiveCorrection =
                             CharacterFootVectorFact.From(
                                 previous.FinalEffectiveCorrection),
@@ -1563,7 +1583,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["previousResidualAfterDecayMeters"] =
                         previousResidualAfterDecay,
                     ["landingUpdateDistanceMeters"] =
-                        previous.LandingUpdateDistance,
+                        previous.SwingRevisionDistance,
                     ["previousSafetyFloorCompensationMeters"] =
                         previousFloorCompensation.magnitude,
                     ["stepHeightMeters"] = stepHeight,
@@ -1683,6 +1703,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["soleDownwardExcursionMeters"] = sink,
                     ["supportEntry"] = window[0].FormalSupport,
                     ["supportExit"] = window[^1].FormalSupport,
+                    ["rotationWeightMinimum"] =
+                        window.Min(frame => frame.RotationWeight),
+                    ["contactNormalRotationErrorMaximumDegrees"] =
+                        window.Max(frame => frame.ContactNormalRotationErrorDegrees),
                     ["visibleSoleStepMaximumMeters"] = visibleStep
                 };
                 var evidence = new SortedDictionary<string, bool>(StringComparer.Ordinal)
@@ -1690,7 +1714,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["anchorStable"] = anchorDisplacement <= PositionNoiseFloor,
                     ["groundedThroughout"] = window.All(frame => frame.Grounded),
                     ["lockWeightDecreased"] = window[^1].FormalLockWeight < window[0].FormalLockWeight,
-                    ["supportStayedPositive"] = window.All(frame => frame.FormalSupport > 0f)
+                    ["supportStayedPositive"] = window.All(frame => frame.FormalSupport > 0f),
+                    ["formalSupportMatchesRuntime"] = window.All(frame =>
+                        Math.Abs(frame.FormalSupport - frame.RuntimeSupport) <=
+                        TimeEpsilon),
+                    ["rotationWeightPositive"] = window.All(frame =>
+                        frame.RotationWeight > TimeEpsilon),
+                    ["contactNormalAligned"] = window.All(frame =>
+                        !frame.ContactPlaneAvailable ||
+                        frame.ContactNormalRotationErrorDegrees <= 1f),
+                    ["reachUnavailableHasNoFullAnchor"] = window.All(frame =>
+                        !frame.LandingReachUnavailable ||
+                        frame.LockResponse != "FullAnchor")
                 };
                 EventFact fact = new EventFact(
                     "Locked",
@@ -2320,8 +2355,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !currentState.FormalOutputObservationAvailable ||
                 !float.IsFinite(
                     currentState.SwingFormalFootHeight) ||
-                !float.IsFinite(
-                    currentState.SwingLandingConstraintWeight) ||
                 currentState.ComponentUp.sqrMagnitude <=
                 PositionNoiseFloor * PositionNoiseFloor)
             {
@@ -2345,25 +2378,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return false;
             }
-            Vector3 baselineSample = Vector3.Lerp(
-                path.LastLanding,
-                path.NextLanding,
-                progress);
             float originalSoleHeight = Vector3.Dot(
                 currentState.OriginalSole,
                 up);
             float envelopeMinimumCorrection = Vector3.Dot(
                 envelopeSample,
                 up) - originalSoleHeight;
-            float unweightedFormalTargetHeight = Vector3.Dot(
-                baselineSample,
+            float formalTargetHeight = Vector3.Dot(
+                envelopeSample,
                 up) + currentState.SwingFormalFootHeight;
-            float weightedFormalCorrection =
-                currentState.SwingLandingConstraintWeight *
-                (unweightedFormalTargetHeight - originalSoleHeight);
+            float formalCorrection =
+                formalTargetHeight - originalSoleHeight;
             if (!float.IsFinite(envelopeMinimumCorrection) ||
-                !float.IsFinite(unweightedFormalTargetHeight) ||
-                !float.IsFinite(weightedFormalCorrection) ||
+                !float.IsFinite(formalTargetHeight) ||
+                !float.IsFinite(formalCorrection) ||
                 !float.IsFinite(originalSoleHeight))
             {
                 return false;
@@ -2372,7 +2400,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0f,
                 Mathf.Max(
                     envelopeMinimumCorrection,
-                    weightedFormalCorrection));
+                    formalCorrection));
             target = up * verticalCorrection;
             return FiniteVector(target);
         }
@@ -2623,9 +2651,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.PathPreviousLandingEventIdentity !=
                     current.PathCurrentLandingEventIdentity;
                 bool landingPointChanged = comparablePath &&
-                    current.PathLandingPointDelta > current.LandingUpdateDistance;
+                    current.PathLandingPointDelta > current.SwingRevisionDistance;
                 bool swingTargetChanged = comparablePath &&
-                    current.PathTargetDelta > current.LandingUpdateDistance;
+                    current.PathTargetDelta > current.SwingRevisionDistance;
                 bool revisionExpected = availabilityChanged || eventChanged ||
                                         landingPointChanged || swingTargetChanged;
                 bool reasonAvailability = HasRevisionReason(
@@ -2696,7 +2724,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["landingPointDeltaMeters"] =
                         current.PathLandingPointDelta,
                     ["landingUpdateDistanceMeters"] =
-                        current.LandingUpdateDistance,
+                        current.SwingRevisionDistance,
                     ["residualAfterDecayMeters"] = residualAfterDecay,
                     ["residualBeforeDecayMeters"] = residualBeforeDecay,
                     ["residualBeforeRevisionMeters"] = residualBeforeRevision,
@@ -3259,6 +3287,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PoseGraphId = Cell("PoseGraphId"),
                 PoseGraphRevision = Cell("PoseGraphRevision"),
                 PosePlanHash = Cell("PosePlanHash"),
+                FootProfileId = Cell("FootProfileId"),
+                FootProfileRevision = Cell("FootProfileRevision"),
+                PredictionInputUpdateDistance =
+                    Float("PredictionInputUpdateDistance"),
+                PredictionInputUpAngleDegrees =
+                    Float("PredictionInputUpAngleDegrees"),
                 Frame = Int("FrameSequence"),
                 CompletionIdentity = Ulong("CompletionIdentity"),
                 Side = Cell("Side"),
@@ -3289,8 +3323,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("SelectedStepAtOrAfterApproachContact") != 0,
                 SelectedStepInApproachContactToLanding =
                     Int("SelectedStepInApproachContactToLanding") != 0,
-                CurrentStep = Candidate("CurrentStep"),
-                IncomingStep = Candidate("IncomingStep"),
+                ContactStep = Candidate("ContactStep"),
+                PredictionStep = Candidate("PredictionStep"),
                 FormalObservationAvailable =
                     Int("InputFormalStepObservationAvailable") != 0,
                 SourceIdentity = Cell("InputFormalStepSourceIdentity"),
@@ -3300,6 +3334,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Ulong("InputFormalStepCompletionIdentity"),
                 FormalNormalizedTime = Float("InputFormalStepSourceNormalizedTime"),
                 FormalStepTime = Float("InputFormalStepTimeSeconds"),
+                FormalContact = Float("InputFormalContact"),
                 FormalLockMode = Cell("InputFormalLockMode"),
                 FormalLockWeight = Float("InputFormalLockWeight"),
                 FormalSupport = Float("InputFormalSupport"),
@@ -3319,6 +3354,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("LandingObservationQueryExecuted") != 0,
                 LandingObservationCanonicalRaw =
                     Vector("LandingObservationCanonicalRaw"),
+                LandingObservationHasPreviousQueryInput =
+                    Int("LandingObservationHasPreviousQueryInput") != 0,
+                LandingObservationPredictionInputMovement =
+                    Float("LandingObservationPredictionInputMovement"),
+                LandingObservationComponentUpDeltaDegrees =
+                    Float("LandingObservationComponentUpDeltaDegrees"),
+                LandingObservationRevisionLineageChanged =
+                    Int("LandingObservationRevisionLineageChanged") != 0,
                 FutureLandingQueryDirection = Vector("QueryDirection"),
                 FutureLandingCandidateSelectionState =
                     Cell("QueryCandidateSelectionState"),
@@ -3368,12 +3411,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionEnvelopeSampleAlongUp"),
                 SwingFormalFootHeight =
                     Float("FootMotionFormalFootHeight"),
-                SwingUnweightedFormalTargetHeight =
-                    Float("FootMotionUnweightedFormalTargetHeight"),
-                SwingLandingConstraintWeight =
-                    Float("FootMotionLandingConstraintWeight"),
-                SwingWeightedFormalCorrection =
-                    Float("FootMotionWeightedFormalCorrection"),
+                SwingFormalTargetHeight =
+                    Float("FootMotionFormalTargetHeight"),
+                SwingFormalCorrection =
+                    Float("FootMotionFormalCorrection"),
                 SwingEnvelopeMinimumCorrection =
                     Float("FootMotionEnvelopeMinimumCorrection"),
                 SwingBuilderSelectedCorrection =
@@ -3432,6 +3473,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("FootMotionDesiredCorrection"),
                 CorrectedSole = Vector("FootMotionCorrectedSole"),
                 CorrectedAnkle = Vector("FootMotionCorrectedAnkle"),
+                PositionWeight = Float("FootMotionPositionWeight"),
+                RotationWeight = Float("FootMotionRotationWeight"),
+                LandingReachUnavailable =
+                    Int("FootMotionLandingReachUnavailable") != 0,
+                ContactNormalRotationErrorDegrees =
+                    Float("FootMotionContactNormalRotationErrorDegrees"),
+                RuntimeSupport = Float("FootMotionSupportWeight"),
                 Anchor = Vector("FootMotionSupportContactAnchor"),
                 ContactPlaneAvailable = Int("FootMotionContactPlaneAvailable") != 0,
                 ContactOwnership = Float("FootMotionContactOwnership"),
@@ -3465,7 +3513,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("FootMotionSwingResidualAfterDecay"),
                 ResidualOutputCorrection =
                     Vector("FootMotionResidualOutputCorrection"),
-                LandingUpdateDistance = Float("FootMotionLandingUpdateDistance"),
+                SwingRevisionDistance = Float("FootMotionSwingRevisionDistance"),
                 ResidualTimeToLandingSeconds =
                     Float("FootMotionResidualTimeToLandingSeconds"),
                 ResidualBaseHalfLifeSeconds =
@@ -3524,6 +3572,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EncodedGoalAvailable =
                     Int("FootMotionEncodedGoalAvailable") != 0,
                 EncodedGoalPosition = Vector("FinalGoalPosition"),
+                FinalGoalPositionWeight = Float("FinalGoalPositionWeight"),
+                FinalGoalRotationWeight = Float("FinalGoalRotationWeight"),
                 EncodedGoalCorrection =
                     Vector("FootMotionEncodedGoalCorrection"),
                 FinalIkEffectorAvailable =
@@ -3579,30 +3629,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (frame.Side != "Left" && frame.Side != "Right")
                 throw new InvalidDataException(
                     $"Foot Motion Foot row Side '{frame.Side}' is invalid.");
+            if (string.IsNullOrWhiteSpace(frame.FootProfileId) ||
+                string.IsNullOrWhiteSpace(frame.FootProfileRevision) ||
+                frame.PredictionInputUpdateDistance <= 0f ||
+                frame.PredictionInputUpAngleDegrees <= 0f)
+            {
+                throw new InvalidDataException(
+                    "Foot Motion Profile identity or thresholds are invalid.");
+            }
             RequireEnum<CharacterFootLandingStepSource>(
                 frame.SelectedStepSource,
                 "SelectedStepSource");
             bool selectedStepConsistent = frame.SelectedStepSource == "None"
                 ? frame.SelectedLandingEventIdentity == 0
-                : frame.SelectedStepSource == "Current"
-                    ? frame.SelectedLandingEventIdentity ==
-                      frame.CurrentStep.LandingEventIdentity
-                    : frame.SelectedLandingEventIdentity ==
-                      frame.IncomingStep.LandingEventIdentity;
+                : frame.SelectedStepSource == "Formal" &&
+                  frame.SelectedLandingEventIdentity ==
+                  frame.PredictionStep.LandingEventIdentity;
             if (!selectedStepConsistent ||
                 frame.StepSelectionMaximumPredictionTimeSeconds <= 0f)
             {
                 throw new InvalidDataException(
                     "Foot Motion Step candidate selection facts are inconsistent.");
             }
-            RequireStepPhase(frame.CurrentStep, "CurrentStep");
-            RequireStepPhase(frame.IncomingStep, "IncomingStep");
-            StepCandidateFrame selected = frame.SelectedStepSource ==
-                                          "Current"
-                ? frame.CurrentStep
-                : frame.SelectedStepSource == "Incoming"
-                    ? frame.IncomingStep
-                    : null;
+            RequireStepPhase(frame.ContactStep, "ContactStep");
+            RequireStepPhase(frame.PredictionStep, "PredictionStep");
+            StepCandidateFrame selected = frame.SelectedStepSource == "Formal"
+                ? frame.PredictionStep
+                : null;
             if (selected == null
                     ? frame.SelectedStepEventPhase != 0f ||
                       frame.SelectedStepApproachContactPhase != 0f ||
@@ -3648,6 +3701,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootLockResponse>(
                 frame.LockResponseBefore,
                 "FootMotionLockResponseBefore");
+            if (Math.Abs(frame.FormalSupport - frame.RuntimeSupport) >
+                TimeEpsilon)
+            {
+                throw new InvalidDataException(
+                    "Formal Support and Runtime Support are inconsistent.");
+            }
+            if (frame.LandingReachUnavailable &&
+                (frame.LockResponse == "FullAnchor" ||
+                 frame.FinalIkLegAvailable &&
+                 frame.TargetExtensionRatio > 1f + TimeEpsilon))
+            {
+                throw new InvalidDataException(
+                    "LandingReachUnavailable published an unsafe Foot goal.");
+            }
+            if (frame.ConstraintState == "Locked" &&
+                (frame.RotationWeight <= TimeEpsilon ||
+                 frame.ContactPlaneAvailable &&
+                 frame.ContactNormalRotationErrorDegrees > 1f))
+            {
+                throw new InvalidDataException(
+                    "Locked Foot rotation is not aligned to Contact Normal.");
+            }
             RequireEnum<CharacterFootSafetyFloorOwner>(
                 frame.SafetyFloorOwner,
                 "FootMotionSafetyFloorOwner");
@@ -3697,19 +3772,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 float envelopeAlongUp = Vector3.Dot(
                     frame.SwingEnvelopeSample,
                     up);
-                float expectedUnweightedFormalTargetHeight =
-                    baselineAlongUp + frame.SwingFormalFootHeight;
-                float expectedWeightedFormalCorrection =
-                    frame.SwingLandingConstraintWeight *
-                    (expectedUnweightedFormalTargetHeight -
-                     originalSoleAlongUp);
+                float expectedFormalTargetHeight =
+                    envelopeAlongUp + frame.SwingFormalFootHeight;
+                float expectedFormalCorrection =
+                    expectedFormalTargetHeight - originalSoleAlongUp;
                 float expectedEnvelopeMinimumCorrection =
                     envelopeAlongUp - originalSoleAlongUp;
                 float expectedBuilderSelectedCorrection = Mathf.Max(
                     0f,
                     Mathf.Max(
                         expectedEnvelopeMinimumCorrection,
-                        expectedWeightedFormalCorrection));
+                        expectedFormalCorrection));
                 if (Math.Abs(
                         baselineAlongUp -
                         frame.SwingBaselineSampleAlongUp) >
@@ -3719,14 +3792,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.SwingEnvelopeSampleAlongUp) >
                     PositionNoiseFloor ||
                     Math.Abs(
-                        frame.SwingUnweightedFormalTargetHeight -
-                        expectedUnweightedFormalTargetHeight) >
+                        frame.SwingFormalTargetHeight -
+                        expectedFormalTargetHeight) >
                     PositionNoiseFloor ||
-                    frame.SwingLandingConstraintWeight < 0f ||
-                    frame.SwingLandingConstraintWeight > 1f ||
                     Math.Abs(
-                        frame.SwingWeightedFormalCorrection -
-                        expectedWeightedFormalCorrection) >
+                        frame.SwingFormalCorrection -
+                        expectedFormalCorrection) >
                     PositionNoiseFloor ||
                     Math.Abs(
                         frame.SwingEnvelopeMinimumCorrection -
@@ -3785,9 +3856,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             bool queried = frame.LandingObservationCacheState == "Queried";
             bool reused = frame.LandingObservationCacheState == "Reused";
+            bool expectedQuery =
+                !frame.LandingObservationHasPreviousQueryInput ||
+                frame.LandingObservationRevisionLineageChanged ||
+                frame.LandingObservationPredictionInputMovement >
+                frame.PredictionInputUpdateDistance ||
+                frame.LandingObservationComponentUpDeltaDegrees >
+                frame.PredictionInputUpAngleDegrees;
             if (frame.LandingObservationWorldRevision == 0 ||
                 !queried && !reused ||
                 queried != frame.LandingObservationQueryExecuted ||
+                frame.LandingObservationQueryExecuted != expectedQuery ||
                 frame.FutureLandingQueryDirection.sqrMagnitude <=
                 TimeEpsilon * TimeEpsilon)
             {
@@ -4211,6 +4290,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 "SampleIdentity", "ProgramIdentity", "ProjectionRevision",
                 "PoseGraphId", "PoseGraphRevision", "PosePlanHash",
+                "FootProfileId", "FootProfileRevision",
+                "PredictionInputUpdateDistance",
+                "PredictionInputUpAngleDegrees",
                 "FrameSequence", "CompletionIdentity", "Side",
                 "PresentationDeltaSeconds", "BodyResetSequence", "Grounded",
                 "CurrentBodyTick",
@@ -4225,7 +4307,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
                 "InputFormalStepObservationAvailable",
                 "InputFormalStepCompletionIdentity",
-                "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
+                "InputFormalContact", "InputFormalLockMode",
+                "InputFormalLockWeight", "InputFormalSupport",
                 "StepSelectionMaximumPredictionTimeSeconds",
                 "StepSelectionLastLandingEventIdentity",
                 "SelectedStepSource", "SelectedLandingEventIdentity",
@@ -4234,40 +4317,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "SelectedStepLandingPhase",
                 "SelectedStepAtOrAfterApproachContact",
                 "SelectedStepInApproachContactToLanding",
-                "CurrentStepIsValid", "CurrentStepIsAuthoritative",
-                "CurrentStepHasConsistentLandingEventIdentity",
-                "CurrentStepIsPreSwing", "CurrentStepIsSwing",
-                "CurrentStepEventOrdinal",
-                "CurrentStepSourceLandingCycleOffset",
-                "CurrentStepSourceSampleCycle",
-                "CurrentStepContributionContinuityIdentity",
-                "CurrentStepLandingEventIdentity",
-                "CurrentStepTimeToLandingSeconds",
-                "CurrentStepEventPhase",
-                "CurrentStepApproachContactPhase",
-                "CurrentStepLandingPhase",
-                "CurrentStepAtOrAfterApproachContact",
-                "CurrentStepInApproachContactToLanding",
-                "CurrentStepRootLocalLandingX",
-                "CurrentStepRootLocalLandingY",
-                "CurrentStepRootLocalLandingZ",
-                "IncomingStepIsValid", "IncomingStepIsAuthoritative",
-                "IncomingStepHasConsistentLandingEventIdentity",
-                "IncomingStepIsPreSwing", "IncomingStepIsSwing",
-                "IncomingStepEventOrdinal",
-                "IncomingStepSourceLandingCycleOffset",
-                "IncomingStepSourceSampleCycle",
-                "IncomingStepContributionContinuityIdentity",
-                "IncomingStepLandingEventIdentity",
-                "IncomingStepTimeToLandingSeconds",
-                "IncomingStepEventPhase",
-                "IncomingStepApproachContactPhase",
-                "IncomingStepLandingPhase",
-                "IncomingStepAtOrAfterApproachContact",
-                "IncomingStepInApproachContactToLanding",
-                "IncomingStepRootLocalLandingX",
-                "IncomingStepRootLocalLandingY",
-                "IncomingStepRootLocalLandingZ",
+                "ContactStepIsValid", "ContactStepIsAuthoritative",
+                "ContactStepHasConsistentLandingEventIdentity",
+                "ContactStepIsPreSwing", "ContactStepIsSwing",
+                "ContactStepEventOrdinal",
+                "ContactStepSourceLandingCycleOffset",
+                "ContactStepSourceSampleCycle",
+                "ContactStepContributionContinuityIdentity",
+                "ContactStepLandingEventIdentity",
+                "ContactStepTimeToLandingSeconds",
+                "ContactStepEventPhase",
+                "ContactStepApproachContactPhase",
+                "ContactStepLandingPhase",
+                "ContactStepAtOrAfterApproachContact",
+                "ContactStepInApproachContactToLanding",
+                "ContactStepRootLocalLandingX",
+                "ContactStepRootLocalLandingY",
+                "ContactStepRootLocalLandingZ",
+                "PredictionStepIsValid", "PredictionStepIsAuthoritative",
+                "PredictionStepHasConsistentLandingEventIdentity",
+                "PredictionStepIsPreSwing", "PredictionStepIsSwing",
+                "PredictionStepEventOrdinal",
+                "PredictionStepSourceLandingCycleOffset",
+                "PredictionStepSourceSampleCycle",
+                "PredictionStepContributionContinuityIdentity",
+                "PredictionStepLandingEventIdentity",
+                "PredictionStepTimeToLandingSeconds",
+                "PredictionStepEventPhase",
+                "PredictionStepApproachContactPhase",
+                "PredictionStepLandingPhase",
+                "PredictionStepAtOrAfterApproachContact",
+                "PredictionStepInApproachContactToLanding",
+                "PredictionStepRootLocalLandingX",
+                "PredictionStepRootLocalLandingY",
+                "PredictionStepRootLocalLandingZ",
                 "State", "LandingEventIdentity", "Accepted",
                 "SurfaceIdentity", "LandingPointX", "LandingPointY",
                 "LandingPointZ", "QueryDistance",
@@ -4278,6 +4361,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "LandingObservationCanonicalRawX",
                 "LandingObservationCanonicalRawY",
                 "LandingObservationCanonicalRawZ",
+                "LandingObservationHasPreviousQueryInput",
+                "LandingObservationPredictionInputMovement",
+                "LandingObservationComponentUpDeltaDegrees",
+                "LandingObservationRevisionLineageChanged",
                 "QueryDirectionX", "QueryDirectionY", "QueryDirectionZ",
                 "QueryCandidateSelectionState", "QueryValidCandidateCount",
                 "QuerySelectedCandidateAvailable",
@@ -4310,9 +4397,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionEnvelopeSampleZ",
                 "FootMotionEnvelopeSampleAlongUp",
                 "FootMotionFormalFootHeight",
-                "FootMotionUnweightedFormalTargetHeight",
-                "FootMotionLandingConstraintWeight",
-                "FootMotionWeightedFormalCorrection",
+                "FootMotionFormalTargetHeight",
+                "FootMotionFormalCorrection",
                 "FootMotionEnvelopeMinimumCorrection",
                 "FootMotionBuilderSelectedCorrection",
                 "FootMotionBuilderSwingTargetAvailable",
@@ -4347,6 +4433,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionDesiredCorrectionZ",
                 "FootMotionCorrectedSoleX", "FootMotionCorrectedSoleY", "FootMotionCorrectedSoleZ",
                 "FootMotionCorrectedAnkleX", "FootMotionCorrectedAnkleY", "FootMotionCorrectedAnkleZ",
+                "FootMotionPositionWeight", "FootMotionRotationWeight",
+                "FootMotionLandingReachUnavailable",
+                "FootMotionContactNormalRotationErrorDegrees",
+                "FootMotionSupportWeight",
                 "FootMotionSupportContactAnchorX", "FootMotionSupportContactAnchorY", "FootMotionSupportContactAnchorZ",
                 "FootMotionContactOwnership",
                 "FootMotionContactPlaneAvailable", "FootMotionContactSurfaceIdentity",
@@ -4375,7 +4465,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionResidualOutputCorrectionX",
                 "FootMotionResidualOutputCorrectionY",
                 "FootMotionResidualOutputCorrectionZ",
-                "FootMotionLandingUpdateDistance",
+                "FootMotionSwingRevisionDistance",
                 "FootMotionResidualTimeToLandingSeconds",
                 "FootMotionResidualBaseHalfLifeSeconds",
                 "FootMotionResidualDeadlineHalfLifeAvailable",
@@ -4408,6 +4498,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionEncodedGoalCorrectionY",
                 "FootMotionEncodedGoalCorrectionZ",
                 "FinalGoalPositionX", "FinalGoalPositionY", "FinalGoalPositionZ",
+                "FinalGoalPositionWeight", "FinalGoalRotationWeight",
                 "FinalIkEffectorAvailable",
                 "FinalIkTargetPositionX", "FinalIkTargetPositionY",
                 "FinalIkTargetPositionZ", "FinalIkSolvedPositionX",
@@ -4818,6 +4909,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string PoseGraphId;
             internal string PoseGraphRevision;
             internal string PosePlanHash;
+            internal string FootProfileId;
+            internal string FootProfileRevision;
+            internal float PredictionInputUpdateDistance;
+            internal float PredictionInputUpAngleDegrees;
             internal int Frame;
             internal ulong CompletionIdentity;
             internal string Side;
@@ -4839,8 +4934,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float SelectedStepLandingPhase;
             internal bool SelectedStepAtOrAfterApproachContact;
             internal bool SelectedStepInApproachContactToLanding;
-            internal StepCandidateFrame CurrentStep;
-            internal StepCandidateFrame IncomingStep;
+            internal StepCandidateFrame ContactStep;
+            internal StepCandidateFrame PredictionStep;
             internal bool FormalObservationAvailable;
             internal string SourceIdentity;
             internal int SourceCycle;
@@ -4848,6 +4943,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong FormalObservationCompletionIdentity;
             internal float FormalNormalizedTime;
             internal float FormalStepTime;
+            internal float FormalContact;
             internal string FormalLockMode;
             internal float FormalLockWeight;
             internal float FormalSupport;
@@ -4862,6 +4958,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string LandingObservationCacheState;
             internal bool LandingObservationQueryExecuted;
             internal Vector3 LandingObservationCanonicalRaw;
+            internal bool LandingObservationHasPreviousQueryInput;
+            internal float LandingObservationPredictionInputMovement;
+            internal float LandingObservationComponentUpDeltaDegrees;
+            internal bool LandingObservationRevisionLineageChanged;
             internal Vector3 FutureLandingQueryDirection;
             internal string FutureLandingCandidateSelectionState;
             internal int FutureLandingValidCandidateCount;
@@ -4900,9 +5000,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 SwingEnvelopeSample;
             internal float SwingEnvelopeSampleAlongUp;
             internal float SwingFormalFootHeight;
-            internal float SwingUnweightedFormalTargetHeight;
-            internal float SwingLandingConstraintWeight;
-            internal float SwingWeightedFormalCorrection;
+            internal float SwingFormalTargetHeight;
+            internal float SwingFormalCorrection;
             internal float SwingEnvelopeMinimumCorrection;
             internal float SwingBuilderSelectedCorrection;
             internal bool BuilderSwingTargetAvailable;
@@ -4933,6 +5032,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 SwingDesiredCorrection;
             internal Vector3 CorrectedSole;
             internal Vector3 CorrectedAnkle;
+            internal float PositionWeight;
+            internal float RotationWeight;
+            internal bool LandingReachUnavailable;
+            internal float ContactNormalRotationErrorDegrees;
+            internal float RuntimeSupport;
             internal Vector3 Anchor;
             internal bool ContactPlaneAvailable;
             internal float ContactOwnership;
@@ -4953,7 +5057,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 SwingResidualBeforeDecay;
             internal Vector3 SwingResidualAfterDecay;
             internal Vector3 ResidualOutputCorrection;
-            internal float LandingUpdateDistance;
+            internal float SwingRevisionDistance;
             internal float ResidualTimeToLandingSeconds;
             internal float ResidualBaseHalfLifeSeconds;
             internal bool ResidualDeadlineHalfLifeAvailable;
@@ -4990,6 +5094,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool EncodedGoalAvailable;
             internal Vector3 EncodedGoalPosition;
             internal Vector3 EncodedGoalCorrection;
+            internal float FinalGoalPositionWeight;
+            internal float FinalGoalRotationWeight;
             internal bool FinalIkEffectorAvailable;
             internal Vector3 FinalIkTargetPosition;
             internal Vector3 FinalIkSolvedPosition;
@@ -5307,30 +5413,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 StepTimeCandidateFact current =
                     StepTimeCandidateFact.From(
-                        frame.CurrentStep,
+                        frame.ContactStep,
                         frame.StepSelectionLastLandingEventIdentity,
                         frame.StepSelectionMaximumPredictionTimeSeconds);
                 StepTimeCandidateFact incoming =
                     StepTimeCandidateFact.From(
-                        frame.IncomingStep,
+                        frame.PredictionStep,
                         frame.StepSelectionLastLandingEventIdentity,
                         frame.StepSelectionMaximumPredictionTimeSeconds);
                 double? currentDelta = frame.FormalObservationAvailable
                     ? Math.Abs(
                         frame.FormalStepTime -
-                        frame.CurrentStep.TimeToLandingSeconds)
+                        frame.ContactStep.TimeToLandingSeconds)
                     : null;
                 double? incomingDelta = frame.FormalObservationAvailable
                     ? Math.Abs(
                         frame.FormalStepTime -
-                        frame.IncomingStep.TimeToLandingSeconds)
+                        frame.PredictionStep.TimeToLandingSeconds)
                     : null;
                 double? selectedOldTime =
-                    frame.SelectedStepSource == "Current"
-                        ? frame.CurrentStep.TimeToLandingSeconds
-                        : frame.SelectedStepSource == "Incoming"
-                            ? frame.IncomingStep.TimeToLandingSeconds
-                            : null;
+                    frame.SelectedStepSource == "Formal"
+                        ? frame.PredictionStep.TimeToLandingSeconds
+                        : null;
                 double? selectedDelta = frame.FormalObservationAvailable &&
                                         selectedOldTime.HasValue
                     ? Math.Abs(frame.FormalStepTime - selectedOldTime.Value)
@@ -5347,13 +5451,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     }
                     else if (currentDelta.Value < incomingDelta.Value)
                     {
-                        closer = "Current";
-                        closerFrame = frame.CurrentStep;
+                        closer = "Contact";
+                        closerFrame = frame.ContactStep;
                     }
                     else
                     {
-                        closer = "Incoming";
-                        closerFrame = frame.IncomingStep;
+                        closer = "Prediction";
+                        closerFrame = frame.PredictionStep;
                     }
                 }
                 bool sameFormalSource = previous != null &&

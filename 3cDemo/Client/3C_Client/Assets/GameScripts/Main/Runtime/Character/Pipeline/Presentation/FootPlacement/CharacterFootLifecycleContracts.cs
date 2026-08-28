@@ -603,20 +603,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
-            in AnimationFootMotionStep currentStep,
+            in AnimationFootMotionStep contactStep,
             in AnimationFootMotionStep selectedStep,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootStateFrame frame)
         {
             Side = side;
-            CurrentStep = currentStep;
+            ContactStep = contactStep;
             SelectedStep = selectedStep;
             LandingPrediction = landingPrediction;
             Frame = frame;
         }
 
         internal CharacterFootSide Side { get; }
-        internal AnimationFootMotionStep CurrentStep { get; }
+        internal AnimationFootMotionStep ContactStep { get; }
         internal AnimationFootMotionStep SelectedStep { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }

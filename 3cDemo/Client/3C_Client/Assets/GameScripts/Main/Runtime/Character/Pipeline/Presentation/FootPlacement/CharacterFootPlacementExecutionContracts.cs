@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPlacementPoseInput(
             string posePlanHash,
             in AnimationPoseValueNativeReadBinding binding,
-            in AnimationFootMotionRuntimeFrame footStepObservation,
+            in AnimationFootStepObservationFrame footStepObservation,
             AnimationPoseSourceContribution[] contributions,
             int contributionCount)
         {
@@ -55,6 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 binding.InvalidReason[0] !=
                 AnimationPoseNativeInvalidReason.None ||
                 binding.ContinuityIdentity[0] == 0 ||
+                binding.HasFootFeatures[0] != 1 ||
                 !footStepObservation.IsValid ||
                 footStepObservation.CompletionIdentity != binding.CompletionIdentity ||
                 contributions == null || contributionCount <= 0 ||
@@ -67,8 +68,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PosePlanHash = posePlanHash;
             CompletionIdentity = binding.CompletionIdentity;
             DenseComponentPoses = binding.DensePoses;
+            AnimationFootFeatureSample left = binding.LeftFootFeatures[0];
+            AnimationFootFeatureSample right = binding.RightFootFeatures[0];
+            if (!left.IsValid || !right.IsValid)
+                throw new ArgumentException("Foot Placement feature input is invalid.");
+            LeftFootSteps = new AnimationBiomechanicalStepReadPage(
+                in left,
+                CharacterFootSide.Left);
+            RightFootSteps = new AnimationBiomechanicalStepReadPage(
+                in right,
+                CharacterFootSide.Right);
             ContinuityIdentity = binding.ContinuityIdentity[0];
-            FootMotion = footStepObservation;
+            FootStepObservation = footStepObservation;
             Contributions = contributions;
             ContributionCount = contributionCount;
             bool hasObservationContribution = false;
@@ -96,8 +107,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal string PosePlanHash { get; }
         internal ulong CompletionIdentity { get; }
         internal NativeSlice<AnimationLocalBonePose> DenseComponentPoses { get; }
+        internal AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
+        internal AnimationBiomechanicalStepReadPage RightFootSteps { get; }
         internal ulong ContinuityIdentity { get; }
-        internal AnimationFootMotionRuntimeFrame FootMotion { get; }
+        internal AnimationFootStepObservationFrame FootStepObservation { get; }
         internal AnimationPoseSourceContribution[] Contributions { get; }
         internal int ContributionCount { get; }
     }

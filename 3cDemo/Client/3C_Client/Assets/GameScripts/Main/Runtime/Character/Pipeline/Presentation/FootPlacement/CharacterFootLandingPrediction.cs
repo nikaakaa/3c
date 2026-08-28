@@ -21,8 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         FutureBodyTranslationUnavailable = 5,
         FutureBodyTranslationRangeInvalid = 6,
         GroundQueryMissed = 7,
-        GroundQueryCapacityExceeded = 8,
-        LandingCommitted = 9
+        GroundQueryCapacityExceeded = 8
     }
 
     public enum CharacterFootLandingStepSource : byte
@@ -652,8 +651,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingPredictionFootDiagnostics(
             in CharacterFootLandingPredictionResult result,
             CharacterFootPlacementAnimatedFootPose sourcePose,
-            in CharacterFootStepCandidateSelectionDiagnostics stepCandidateSelection,
-            CharacterFootLandingSnapshot landing)
+            in CharacterFootStepCandidateSelectionDiagnostics stepCandidateSelection)
         {
             Side = result.Side;
             State = result.State;
@@ -683,11 +681,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceHeelPosition = sourcePose.HeelPosition;
             SourceToePosition = sourcePose.ToePosition;
             StepCandidateSelection = stepCandidateSelection;
-            LandingTrackingState = landing.State.ToString();
-            LandingTrackingEventIdentity = landing.EventIdentity;
-            LandingCommitted = landing.IsCommitted;
-            LandingCommitAttempted = landing.CommitAttempted;
-            LandingCommitUnavailable = landing.CommitUnavailable;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
             CharacterFootSwingMotionResult footMotion = result.FootMotion;
             GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
@@ -725,11 +718,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SourceHeelPosition { get; }
         public Vector3 SourceToePosition { get; }
         public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
-        public string LandingTrackingState { get; }
-        public ulong LandingTrackingEventIdentity { get; }
-        public bool LandingCommitted { get; }
-        public bool LandingCommitAttempted { get; }
-        public bool LandingCommitUnavailable { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
         public bool RawLandingAvailable =>
@@ -737,9 +725,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason ==
             CharacterFootLandingPredictionRejectReason.GroundQueryMissed ||
             RejectReason ==
-            CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded ||
-            RejectReason ==
-            CharacterFootLandingPredictionRejectReason.LandingCommitted;
+            CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded;
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
     }
 

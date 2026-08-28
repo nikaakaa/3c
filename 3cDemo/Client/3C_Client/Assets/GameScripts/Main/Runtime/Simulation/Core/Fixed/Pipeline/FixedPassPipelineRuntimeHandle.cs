@@ -41,8 +41,6 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationSessionLifecycleState LifecycleState => m_Lifecycle.State;
         public SimulationSessionFailure Failure => m_Lifecycle.Failure;
         public SimulationSessionDiagnosticsSnapshot Diagnostics => BuildDiagnostics();
-        public string PredictionSourceIdentity =>
-            m_FutureBodyTranslationSource?.PredictionSourceIdentity ?? string.Empty;
 
         public bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,

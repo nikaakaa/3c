@@ -6,7 +6,7 @@
 
 Raw Landing MUST继续按`VisiblePosition + FutureBodyTranslation + VisibleRotation * RootLocalLanding`从本帧输入重新投影。Step Distance MUST不替代committed Body世界速度、Future Body Translation或世界地形；RootLocalLanding MUST只乘本帧Visible Rotation，不外推Future Body Yaw。
 
-Runtime MUST从Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`量化的Component Up、Profile Revision与非零World Revision构造canonical Landing Observation Key。SphereCast MUST从Key反量化后的canonical Raw Landing上方沿Component Down使用Profile半径和有限距离查询，并过滤自身Collider、初始重叠、非法点、非法法线与超坡度命中。相同Key MUST复用根事务已提交的不可变Accepted或Rejected Observation且不得执行SphereCast；新Key MUST恰好查询一次，并在固定容量合法候选中按距离与稳定identity选择canonical最近候选。容量溢出或没有合法命中 MUST发布typed拒绝，不得沿用另一Key、旧Landing、默认Surface或另一Event结果。
+Runtime MUST先把新Raw Landing与Committed Observation实际查询使用的输入快照比较。同Source/Cycle/Event/Profile/World Revision下，累计位移不超过5厘米且Component Up夹角不超过1度时 MUST复用根事务已提交的不可变Accepted或Rejected Observation，不得建立新Key或执行SphereCast。超过连续阈值，或Source/Cycle、Event、Profile Revision、World Revision变化时，Runtime MUST从Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`量化的Component Up、Profile Revision与非零World Revision构造canonical Landing Observation Key。SphereCast MUST从Key反量化后的canonical Raw Landing上方沿Component Down使用Profile半径和有限距离查询，并过滤自身Collider、初始重叠、非法点、非法法线与超坡度命中。新Key MUST恰好查询一次，并在固定容量合法候选中按距离与稳定identity选择canonical最近候选。容量溢出或没有合法命中 MUST发布typed拒绝，不得沿用另一Key、旧Landing、默认Surface或另一Event结果。
 
 上一Committed Surface、Frame、Authority Tick、Trajectory Generation、Future Translation Source、Foot State、Residual与查询输出 MUST不进入Observation Key或候选选择。Pending Observation MUST随Foot根事务提交或丢弃；Reset、Retarget与World Query Backend重建 MUST清空Observation Page。当前静态FootPlacementSurface在Backend生命周期内使用固定非零World Revision；移动平台不属于本change。
 
@@ -28,6 +28,12 @@ Runtime MUST从Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`
 - **THEN** Runtime MUST执行一次FutureLanding SphereCast并提交canonical最近合法候选或typed拒绝
 - **AND** Pending Foot事务失败时 MUST丢弃该Observation，不得污染上一Committed Page
 
+#### Scenario: 预测输入变化低于查询阈值
+
+- **WHEN** 同Source、Cycle、Event、Profile和World Revision的新Raw Landing相对上次实际查询输入累计位移不超过5厘米且Component Up变化不超过1度
+- **THEN** Runtime MUST复用Committed Observation与查询结果
+- **AND** MUST不执行SphereCast、替换NextSwingLanding或重建Ground Path
+
 #### Scenario: Step Event与RootLocalLanding不一致
 
 - **WHEN** 正式Step Distance、Event table与RootLocalLanding水平位移不满足编译容差或lineage不匹配
@@ -36,7 +42,7 @@ Runtime MUST从Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`
 
 ### Requirement: Ground Path必须使用上一已提交落点与下一事件落点
 
-每只脚 MUST按Landing Event identity缓存Accepted Landing。PreSwing或Swing阶段的每个有效表现帧 MUST重新投影Raw Landing并构造canonical Landing Observation Key；只有新Key MUST执行一次正式Landing SphereCast，相同Key MUST复用Committed Observation。新Observation与同一事件NextSwingLanding的距离小于正式Foot Motion Profile死区时 MUST保留原落点并复用Ground Path；达到死区时 MUST提交新的NextSwingLanding。该事件实际落地后最新NextSwingLanding MUST晋级为LastLanding，之后才为新的Swing事件建立下一落点。
+每只脚 MUST按Landing Event identity缓存Accepted Landing。PreSwing或Swing阶段的每个有效表现帧 MUST重新投影Raw Landing并先执行正式Prediction Input Gate；只有超过5厘米累计位移、超过1度Component Up变化或离散lineage变化时 MUST构造新canonical Landing Observation Key并执行一次正式Landing SphereCast。新Observation与同Surface、同Event NextSwingLanding的距离小于2厘米时 MUST保留原落点并复用Ground Path；Surface变化、Event变化或距离达到2厘米时 MUST提交新的NextSwingLanding。该事件实际落地后最新NextSwingLanding MUST晋级为LastLanding，之后才为新的Swing事件建立下一落点。
 
 Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没有LastLanding时 MUST发布`CurrentLandingUnavailable`；不得用Animated Sole、Transform、固定高度或默认地面补起点。
 
@@ -72,13 +78,13 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 
 纯`CharacterFootStateTargetResolver` MUST按Transition后的离散State生成Correction Target、Contact Reference、Goal与Ownership目标及typed Interpolation Policy Request。Swing与UnlockedSupport的Target MUST只使用正式Ground Path、Envelope与Foot Height；Releasing MUST只回到原始Swing Target。Resolver MUST不保存跨帧时间状态、不推进Residual、不改写State、不得执行World Query，也不得执行Hard Constraint。
 
-唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。Residual大于`LandingUpdateDistance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
+唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Position/Rotation Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。Residual大于5毫米`ResidualLandingTolerance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Release MUST只使用独立5毫米`ReleaseCompletionDistance`判断完成。Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
 
 Ground Path Envelope和Reach MUST在Interpolation之后作为Hard Constraint执行。Swing Hard Constraint MUST复用本帧Accepted Swing Motion已经采样的同一Envelope Point与Path identity，不得执行Raycast、SphereCast或读取另一Surface；只有连续输出低于Envelope时 MAY立即Clamp。Hard Constraint MUST不修改State Target、不触发Residual Revision，也不得写回Interpolation历史；它 MAY限制已知不可达Goal，但 MUST不反向修改State、Transition Decision或Target。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
 
 Swing Target MUST只使用Last Landing、Next Landing、Runtime Ground Envelope与正式Foot Height。Accepted Swing Motion MUST携带同Ground Path Event的typed Swing Path Landing Reference；Promoted Contact Landing MUST只服务Contact与Anchor。Residual Revision MUST只由Event、可用性、Landing端点或正式Swing Target的有效变化触发，Ground Path identity单独变化 MUST不重置Residual。Diagnostics MUST分别发布原始Builder Swing Target与State Target，不得用State Target覆盖Builder事实。
 
-Landing Anchor MUST在同Event正式Lock Mode首次进入Sliding或Locked且Accepted Landing合法时由唯一Transition Runtime建立。正式Lock Weight MUST通过Interpolation Policy Request渐进接管Anchor。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing；Releasing完成进入Swing的同一帧 MUST先应用Post-Interpolation Transition，再按新State执行Ground Path Envelope Hard Constraint和最终输出分类，不得重跑State Target或Interpolation。迁移完成后全部阶段 MUST不读取旧PlantConfidence、PlantCycleConsumed或旧Constraint Weight决定Landing、Lock与Release。
+Landing Anchor MUST在同Event正式Lock Mode首次进入Sliding或Locked且Accepted Landing合法时由唯一Transition Runtime建立，并同时保存Contact Point与Normal。正式Lock Weight MUST通过Interpolation Policy Request渐进接管Anchor位置与旋转。旋转目标 MUST保留动画脚踝Yaw并把Pitch/Roll对齐Contact Normal；正式Rotation Weight MUST由Foot Placement Weight与Lock Weight共同决定。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing；Releasing必须通过同一Interpolation连续回到动画位置与旋转。Releasing完成进入Swing的同一帧 MUST先应用Post-Interpolation Transition，再按新State执行Ground Path Envelope Hard Constraint和最终输出分类，不得重跑State Target或Interpolation。迁移完成后全部阶段 MUST不读取旧PlantConfidence、PlantCycleConsumed或旧Constraint Weight决定Landing、Lock与Release。
 
 #### Scenario: 同Event Path换代
 
@@ -97,6 +103,12 @@ Landing Anchor MUST在同Event正式Lock Mode首次进入Sliding或Locked且Acce
 - **WHEN** 同Event Lock Mode从Unlocked进入Sliding且Lock Weight从0连续增加
 - **THEN** Transition Runtime MUST建立一次Anchor，State Target MUST发布Anchor目标，Interpolation Runtime MUST按Weight连续接管
 - **AND** MUST不新增固定Duration、第二Landing状态、第二Anchor或状态私有Residual
+
+#### Scenario: 正式Lock接管脚掌旋转
+
+- **WHEN** 同Event具有合法Contact Normal、Sliding或Locked Mode和非零Lock Weight
+- **THEN** Foot Goal MUST保留动画Yaw并按Lock Weight把Pitch/Roll连续对齐Contact Normal
+- **AND** FBBIK之外 MUST不存在第二旋转目标、图外骨骼修正或固定旋转权重
 
 #### Scenario: Releasing完成进入Swing
 
@@ -148,7 +160,7 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Hard Constraint前后Correction、Encoded Goal、Residual基础与截止HalfLife、Ground Path Envelope Clamp与clearance、Support与Landing Reach区间、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Foot Profile、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、Prediction Input Snapshot与阈值判定、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Position/Rotation Policy、Residual、Output与Completion、Hard Constraint前后Correction、Encoded Position/Rotation Goal、Residual基础与截止HalfLife、Ground Path Envelope Clamp与clearance、Support与Landing Reach区间、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 

@@ -657,7 +657,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             leftFormal.ContactStep,
                             leftFormal.PredictionStep,
                             leftLanding.LastLandingEventIdentity,
-                            CharacterFootLandingStepSource.Formal,
+                            leftSelectedStep.IsValid
+                                ? CharacterFootLandingStepSource.Formal
+                                : CharacterFootLandingStepSource.None,
                             leftSelectedStep.IsValid
                                 ? leftSelectedStep.LandingEventIdentity
                                 : 0,
@@ -671,7 +673,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             rightFormal.ContactStep,
                             rightFormal.PredictionStep,
                             rightLanding.LastLandingEventIdentity,
-                            CharacterFootLandingStepSource.Formal,
+                            rightSelectedStep.IsValid
+                                ? CharacterFootLandingStepSource.Formal
+                                : CharacterFootLandingStepSource.None,
                             rightSelectedStep.IsValid
                                 ? rightSelectedStep.LandingEventIdentity
                                 : 0,

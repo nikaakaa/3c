@@ -105,10 +105,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
             "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
             "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
+            "FormalEventPhase,FormalEventTimeToLandingSeconds,FormalInApproachContactToLanding," +
+            "FormalCurrentContactEventAvailable,FormalCurrentContactEventOrdinal,FormalCurrentContactEventCycle,FormalCurrentContactEventDistance,FormalCurrentContactRootLocalLandingX,FormalCurrentContactRootLocalLandingY,FormalCurrentContactRootLocalLandingZ," +
+            "FormalNextLandingEventAvailable,FormalNextLandingEventOrdinal,FormalNextLandingEventCycle,FormalNextLandingEventDistance,FormalNextRootLocalLandingX,FormalNextRootLocalLandingY,FormalNextRootLocalLandingZ," +
             "InputFormalStepObservationAvailable,InputFormalStepSourceId,InputFormalStepSourceIdentity,InputFormalStepSourceWeight,InputFormalStepSourceNormalizedTime," +
             "InputFormalStepClipBindingIndex,InputFormalStepSourceCycle,InputFormalStepContributionContinuityIdentity,InputFormalStepCompletionIdentity,InputFormalStepTimeSeconds,InputFormalStepDistance," +
             "InputFormalFootHeight,InputFormalToeHeight,InputFormalToeSpeed,InputFormalPositionError,InputFormalRotationError," +
             "InputFormalContact,InputFormalLockMode,InputFormalLockWeight,InputFormalSupport," +
+            "InputFormalEventPhase,InputFormalEventTimeToLandingSeconds,InputFormalInApproachContactToLanding," +
+            "InputFormalCurrentContactEventAvailable,InputFormalCurrentContactEventOrdinal,InputFormalCurrentContactEventCycle,InputFormalCurrentContactEventDistance,InputFormalCurrentContactRootLocalLandingX,InputFormalCurrentContactRootLocalLandingY,InputFormalCurrentContactRootLocalLandingZ," +
+            "InputFormalNextLandingEventAvailable,InputFormalNextLandingEventOrdinal,InputFormalNextLandingEventCycle,InputFormalNextLandingEventDistance,InputFormalNextRootLocalLandingX,InputFormalNextRootLocalLandingY,InputFormalNextRootLocalLandingZ," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
             "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
@@ -1720,6 +1726,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, hasObservedStep ? observedStep.LockMode.ToString() : string.Empty);
             Add(row, hasObservedStep ? observedStep.LockWeight : 0f);
             Add(row, hasObservedStep ? observedStep.Support : 0f);
+            AddFormalEventFrame(row, hasObservedStep, observedStep.Events);
             CharacterFootStepObservationInputDiagnostics inputObservation =
                 input.FootStepObservation;
             AnimationFootStepObservationSample inputObservedStep =
@@ -1749,6 +1756,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, hasInputObservedStep ? inputObservedStep.LockMode.ToString() : string.Empty);
             Add(row, hasInputObservedStep ? inputObservedStep.LockWeight : 0f);
             Add(row, hasInputObservedStep ? inputObservedStep.Support : 0f);
+            AddFormalEventFrame(row, hasInputObservedStep, inputObservedStep.Events);
             Add(row, foot.RootLocalLanding);
             Add(row, input.PresentationDeltaSeconds);
             Add(row, input.PreviousBodyTick);
@@ -2585,6 +2593,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, value.y);
             Add(row, value.z);
             Add(row, value.w);
+        }
+
+        static void AddFormalEventFrame(
+            StringBuilder row,
+            bool available,
+            AnimationFootMotionEventFrame events)
+        {
+            bool valid = available && events.IsValid;
+            AnimationFootMotionEventOccurrence current = valid
+                ? events.CurrentContact
+                : default;
+            AnimationFootMotionEventOccurrence next = valid
+                ? events.NextLanding
+                : default;
+            Add(row, valid ? events.Phase.ToString() : string.Empty);
+            Add(row, valid ? events.TimeToLandingSeconds : 0f);
+            Add(row, valid && events.InApproachContactToLanding);
+            Add(row, current.IsValid);
+            Add(row, current.IsValid ? current.Ordinal : 0);
+            Add(row, current.IsValid ? current.LandingCycle : 0);
+            Add(row, current.IsValid ? current.Distance : 0f);
+            Add(row, current.IsValid ? current.RootLocalLanding : Vector3.zero);
+            Add(row, next.IsValid);
+            Add(row, next.IsValid ? next.Ordinal : 0);
+            Add(row, next.IsValid ? next.LandingCycle : 0);
+            Add(row, next.IsValid ? next.Distance : 0f);
+            Add(row, next.IsValid ? next.RootLocalLanding : Vector3.zero);
         }
 
         static void AddStepCandidate(

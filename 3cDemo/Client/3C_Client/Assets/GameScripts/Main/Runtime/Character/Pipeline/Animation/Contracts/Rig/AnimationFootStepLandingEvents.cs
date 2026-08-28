@@ -3,6 +3,94 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    public enum AnimationFootMotionEventPhase : byte
+    {
+        Unavailable = 0,
+        PreSwing = 1,
+        Swing = 2,
+        ApproachContact = 3,
+        Contact = 4
+    }
+
+    public readonly struct AnimationFootMotionEventOccurrence
+    {
+        internal AnimationFootMotionEventOccurrence(
+            int ordinal,
+            int landingCycle,
+            float normalizedTime,
+            float distance,
+            Vector3 rootLocalLanding)
+        {
+            if (ordinal <= 0 ||
+                !float.IsFinite(normalizedTime) ||
+                normalizedTime < 0f ||
+                normalizedTime > 1f ||
+                !float.IsFinite(distance) ||
+                distance < 0f ||
+                !Finite(rootLocalLanding))
+            {
+                throw new ArgumentOutOfRangeException(nameof(ordinal));
+            }
+            Ordinal = ordinal;
+            LandingCycle = landingCycle;
+            NormalizedTime = normalizedTime;
+            Distance = distance;
+            RootLocalLanding = rootLocalLanding;
+            m_IsSpecified = 1;
+        }
+
+        readonly byte m_IsSpecified;
+        public int Ordinal { get; }
+        public int LandingCycle { get; }
+        public float NormalizedTime { get; }
+        public float Distance { get; }
+        public Vector3 RootLocalLanding { get; }
+        public bool IsValid => m_IsSpecified != 0;
+
+        static bool Finite(Vector3 value) =>
+            float.IsFinite(value.x) &&
+            float.IsFinite(value.y) &&
+            float.IsFinite(value.z);
+    }
+
+    public readonly struct AnimationFootMotionEventFrame
+    {
+        internal AnimationFootMotionEventFrame(
+            AnimationFootMotionEventOccurrence currentContact,
+            AnimationFootMotionEventOccurrence nextLanding,
+            AnimationFootMotionEventPhase phase,
+            float timeToLandingSeconds)
+        {
+            if (!Enum.IsDefined(typeof(AnimationFootMotionEventPhase), phase) ||
+                !float.IsFinite(timeToLandingSeconds) ||
+                timeToLandingSeconds < 0f ||
+                phase == AnimationFootMotionEventPhase.Unavailable &&
+                (currentContact.IsValid || nextLanding.IsValid) ||
+                phase == AnimationFootMotionEventPhase.Contact &&
+                !currentContact.IsValid ||
+                phase >= AnimationFootMotionEventPhase.PreSwing &&
+                phase <= AnimationFootMotionEventPhase.ApproachContact &&
+                !nextLanding.IsValid)
+            {
+                throw new ArgumentException("Foot Motion Event frame is invalid.");
+            }
+            CurrentContact = currentContact;
+            NextLanding = nextLanding;
+            Phase = phase;
+            TimeToLandingSeconds = timeToLandingSeconds;
+            m_IsSpecified = 1;
+        }
+
+        readonly byte m_IsSpecified;
+        public AnimationFootMotionEventOccurrence CurrentContact { get; }
+        public AnimationFootMotionEventOccurrence NextLanding { get; }
+        public AnimationFootMotionEventPhase Phase { get; }
+        public float TimeToLandingSeconds { get; }
+        public bool IsValid => m_IsSpecified != 0;
+        public bool InApproachContactToLanding =>
+            IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
+    }
+
     [Serializable]
     public struct AnimationFootStepLandingEvent
     {
@@ -11,19 +99,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] int m_CycleOffset;
         [SerializeField] float m_Distance;
         [SerializeField] Vector3 m_RootLocalLanding;
+        [SerializeField] byte m_HasSwingBoundaries;
+        [SerializeField] float m_PreSwingLeadSeconds;
+        [SerializeField] float m_SwingLeadSeconds;
+        [SerializeField] float m_ApproachContactLeadSeconds;
 
         public AnimationFootStepLandingEvent(
             float normalizedTime,
             int ordinal,
             int cycleOffset,
             float distance,
-            Vector3 rootLocalLanding)
+            Vector3 rootLocalLanding,
+            bool hasSwingBoundaries,
+            float preSwingLeadSeconds,
+            float swingLeadSeconds,
+            float approachContactLeadSeconds)
         {
             m_NormalizedTime = normalizedTime;
             m_Ordinal = ordinal;
             m_CycleOffset = cycleOffset;
             m_Distance = distance;
             m_RootLocalLanding = rootLocalLanding;
+            m_HasSwingBoundaries = hasSwingBoundaries ? (byte)1 : (byte)0;
+            m_PreSwingLeadSeconds = preSwingLeadSeconds;
+            m_SwingLeadSeconds = swingLeadSeconds;
+            m_ApproachContactLeadSeconds = approachContactLeadSeconds;
             RequireValid();
         }
 
@@ -32,6 +132,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int CycleOffset => m_CycleOffset;
         public float Distance => m_Distance;
         public Vector3 RootLocalLanding => m_RootLocalLanding;
+        public bool HasSwingBoundaries => m_HasSwingBoundaries != 0;
+        public float PreSwingLeadSeconds => m_PreSwingLeadSeconds;
+        public float SwingLeadSeconds => m_SwingLeadSeconds;
+        public float ApproachContactLeadSeconds => m_ApproachContactLeadSeconds;
 
         public void RequireValid()
         {
@@ -42,7 +146,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_CycleOffset < 0 ||
                 !float.IsFinite(m_Distance) ||
                 m_Distance < 0f ||
-                !Finite(m_RootLocalLanding))
+                !Finite(m_RootLocalLanding) ||
+                !float.IsFinite(m_PreSwingLeadSeconds) ||
+                !float.IsFinite(m_SwingLeadSeconds) ||
+                !float.IsFinite(m_ApproachContactLeadSeconds) ||
+                m_PreSwingLeadSeconds < 0f ||
+                m_SwingLeadSeconds < 0f ||
+                m_SwingLeadSeconds > m_PreSwingLeadSeconds ||
+                m_ApproachContactLeadSeconds < 0f ||
+                m_ApproachContactLeadSeconds > m_SwingLeadSeconds ||
+                !HasSwingBoundaries &&
+                (m_PreSwingLeadSeconds != 0f ||
+                 m_SwingLeadSeconds != 0f ||
+                 m_ApproachContactLeadSeconds != 0f) ||
+                HasSwingBoundaries && m_SwingLeadSeconds <= 0f)
             {
                 throw new InvalidOperationException(
                     "Foot Step Landing Event is invalid.");
@@ -73,6 +190,120 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int Count => m_Events?.Length ?? 0;
         public AnimationFootStepLandingEvent EventAt(int index) => m_Events[index];
 
+        internal AnimationFootMotionEventFrame Resolve(
+            float normalizedTime,
+            int sourceCycle,
+            float sourceDurationSeconds,
+            bool looping)
+        {
+            RequireValid();
+            if (!float.IsFinite(normalizedTime) ||
+                normalizedTime < 0f ||
+                normalizedTime > 1f ||
+                !float.IsFinite(sourceDurationSeconds) ||
+                sourceDurationSeconds <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(normalizedTime));
+            }
+            if (m_Events.Length == 0)
+            {
+                return new AnimationFootMotionEventFrame(
+                    default,
+                    default,
+                    AnimationFootMotionEventPhase.Unavailable,
+                    0f);
+            }
+
+            const float boundaryTolerance = 0.000001f;
+            int previousIndex = -1;
+            int nextIndex = -1;
+            for (int i = 0; i < m_Events.Length; i++)
+            {
+                if (m_Events[i].NormalizedTime <= normalizedTime + boundaryTolerance)
+                {
+                    previousIndex = i;
+                    continue;
+                }
+                if (m_Events[i].HasSwingBoundaries)
+                {
+                    nextIndex = i;
+                    break;
+                }
+            }
+
+            int previousCycle = sourceCycle;
+            int nextCycle = sourceCycle;
+            if (previousIndex < 0 && looping)
+            {
+                previousIndex = m_Events.Length - 1;
+                previousCycle = checked(sourceCycle - 1);
+            }
+            if (nextIndex < 0 && looping)
+            {
+                for (int i = 0; i < m_Events.Length; i++)
+                {
+                    if (!m_Events[i].HasSwingBoundaries)
+                        continue;
+                    nextIndex = i;
+                    nextCycle = checked(sourceCycle + 1);
+                    break;
+                }
+            }
+
+            AnimationFootMotionEventOccurrence currentContact =
+                previousIndex >= 0
+                    ? Occurrence(m_Events[previousIndex], previousCycle)
+                    : default;
+            if (nextIndex < 0)
+            {
+                return currentContact.IsValid
+                    ? new AnimationFootMotionEventFrame(
+                        currentContact,
+                        default,
+                        AnimationFootMotionEventPhase.Contact,
+                        0f)
+                    : new AnimationFootMotionEventFrame(
+                        default,
+                        default,
+                        AnimationFootMotionEventPhase.Unavailable,
+                        0f);
+            }
+
+            AnimationFootStepLandingEvent nextEvent = m_Events[nextIndex];
+            AnimationFootMotionEventOccurrence nextLanding =
+                Occurrence(nextEvent, nextCycle);
+            double sourceTime = sourceCycle + normalizedTime;
+            double landingTime = nextLanding.LandingCycle + nextEvent.NormalizedTime;
+            float timeToLandingSeconds = (float)(
+                (landingTime - sourceTime) * sourceDurationSeconds);
+            if (!float.IsFinite(timeToLandingSeconds) || timeToLandingSeconds < -0.0001f)
+                throw new InvalidOperationException("Foot Motion Event time is invalid.");
+            timeToLandingSeconds = Mathf.Max(0f, timeToLandingSeconds);
+            AnimationFootMotionEventPhase phase =
+                timeToLandingSeconds <= nextEvent.ApproachContactLeadSeconds + 0.0001f
+                    ? AnimationFootMotionEventPhase.ApproachContact
+                    : timeToLandingSeconds <= nextEvent.SwingLeadSeconds + 0.0001f
+                        ? AnimationFootMotionEventPhase.Swing
+                        : timeToLandingSeconds <= nextEvent.PreSwingLeadSeconds + 0.0001f
+                            ? AnimationFootMotionEventPhase.PreSwing
+                            : currentContact.IsValid
+                                ? AnimationFootMotionEventPhase.Contact
+                                : AnimationFootMotionEventPhase.Unavailable;
+            if (phase == AnimationFootMotionEventPhase.Unavailable)
+            {
+                return new AnimationFootMotionEventFrame(
+                    default,
+                    default,
+                    AnimationFootMotionEventPhase.Unavailable,
+                    0f);
+            }
+            return new AnimationFootMotionEventFrame(
+                currentContact,
+                nextLanding,
+                phase,
+                timeToLandingSeconds);
+        }
+
         public void RequireValid()
         {
             if (m_Events == null)
@@ -88,7 +319,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         "Foot Step Landing Event table is unordered.");
                 }
+                for (int previous = 0; previous < i; previous++)
+                {
+                    if (m_Events[i].Ordinal == m_Events[previous].Ordinal)
+                        throw new InvalidOperationException("Foot Step Landing Event ordinal is duplicated.");
+                }
             }
         }
+
+        static AnimationFootMotionEventOccurrence Occurrence(
+            AnimationFootStepLandingEvent value,
+            int sourceCycle) =>
+            new AnimationFootMotionEventOccurrence(
+                value.Ordinal,
+                checked(sourceCycle + value.CycleOffset),
+                value.NormalizedTime,
+                value.Distance,
+                value.RootLocalLanding);
     }
 }

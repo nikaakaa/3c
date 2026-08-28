@@ -19,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public Quaternion[] ToeRotations;
         public Vector3[] SolePositions;
         public Quaternion[] SoleRotations;
+        public Vector3[] TargetRootLocalSolePositions;
     }
 
     internal sealed class CharacterFootMotionDataInput
@@ -658,7 +659,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     i,
                     ordinal,
                     0,
-                    RootLocal(input, i, foot.SolePositions[i]),
+                    foot.TargetRootLocalSolePositions[i],
                     foot.SolePositions[i],
                     foot.SoleRotations[i]));
             }
@@ -1386,8 +1387,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 foot.AnklePositions?.Length != count || foot.AnkleRotations?.Length != count ||
                 foot.HeelPositions?.Length != count || foot.ToePositions?.Length != count ||
                 foot.ToeRotations?.Length != count || foot.SolePositions?.Length != count ||
-                foot.SoleRotations?.Length != count)
+                foot.SoleRotations?.Length != count ||
+                foot.TargetRootLocalSolePositions?.Length != count)
                 throw new ArgumentException("Foot Motion foot input is invalid.");
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 value = foot.TargetRootLocalSolePositions[i];
+                if (!float.IsFinite(value.x) ||
+                    !float.IsFinite(value.y) ||
+                    !float.IsFinite(value.z))
+                {
+                    throw new ArgumentException(
+                        "Foot Motion target Root-local sole input is invalid.");
+                }
+            }
         }
     }
 }

@@ -526,7 +526,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 samplingContext,
                 source,
                 in motionReference,
-                sourceDuration);
+                sourceDuration,
+                left.SolePositions,
+                right.SolePositions);
             return new AnimationFootAnalysisBuildResult(
                 features,
                 new AnimationFootPhaseValidationDescriptor(
@@ -547,7 +549,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             SamplingContext samplingContext,
             CharacterFootPlacementAnalysisSource source,
             in CharacterFootMotionReference motionReference,
-            float sourceDuration)
+            float sourceDuration,
+            Vector3[] targetLeftRootLocalSolePositions,
+            Vector3[] targetRightRootLocalSolePositions)
         {
             AnimationClip motionClip = motionReference.MotionReference;
             AnimationClip samplingClip = CreateMotionSamplingClip(motionClip);
@@ -559,8 +563,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 float step = sourceDuration / intervals;
                 var rootPositions = new Vector3[sampleCount];
                 var rootRotations = new Quaternion[sampleCount];
-                CharacterFootMotionSampleInput left = CreateMotionFootInput(sampleCount, samplingContext.LeftLegLength);
-                CharacterFootMotionSampleInput right = CreateMotionFootInput(sampleCount, samplingContext.RightLegLength);
+                CharacterFootMotionSampleInput left = CreateMotionFootInput(
+                    sampleCount,
+                    samplingContext.LeftLegLength,
+                    targetLeftRootLocalSolePositions);
+                CharacterFootMotionSampleInput right = CreateMotionFootInput(
+                    sampleCount,
+                    samplingContext.RightLegLength,
+                    targetRightRootLocalSolePositions);
                 for (int i = 0; i < sampleCount; i++)
                 {
                     CharacterFootPlacementAnimatedPose pose = samplingContext.Sample(i * step, (ulong)i + 1UL);
@@ -605,8 +615,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return clone;
         }
 
-        static CharacterFootMotionSampleInput CreateMotionFootInput(int sampleCount, float legLength) =>
-            new CharacterFootMotionSampleInput
+        static CharacterFootMotionSampleInput CreateMotionFootInput(
+            int sampleCount,
+            float legLength,
+            Vector3[] targetRootLocalSolePositions)
+        {
+            if (targetRootLocalSolePositions == null ||
+                targetRootLocalSolePositions.Length != sampleCount)
+            {
+                throw new InvalidOperationException(
+                    "Foot Motion target Root-local sole samples do not match the Motion Reference.");
+            }
+            return new CharacterFootMotionSampleInput
             {
                 RigLegLength = legLength,
                 HipPositions = new Vector3[sampleCount],
@@ -619,8 +639,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ToePositions = new Vector3[sampleCount],
                 ToeRotations = new Quaternion[sampleCount],
                 SolePositions = new Vector3[sampleCount],
-                SoleRotations = new Quaternion[sampleCount]
+                SoleRotations = new Quaternion[sampleCount],
+                TargetRootLocalSolePositions =
+                    (Vector3[])targetRootLocalSolePositions.Clone()
             };
+        }
 
         static void CaptureMotionFoot(
             SamplingContext samplingContext,

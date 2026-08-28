@@ -145,7 +145,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                   snapshot.LastLandingEventIdentity;
             if (!validCandidate)
             {
-                context.InvalidateCurrent();
+                if (!next.IsBound ||
+                    context.TrackedEventIdentity != next.Identity)
+                {
+                    context.TrackedEventIdentity = 0;
+                    context.ClearNextSwing();
+                }
+                else
+                {
+                    context.RetainTracking();
+                }
                 return;
             }
             if (context.NextSwingLanding.HasValue &&
@@ -159,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!diagnostics.Accepted ||
                 diagnostics.LandingEventIdentity != next.Identity)
             {
-                context.InvalidateCurrent();
+                context.RetainTracking();
                 return;
             }
             if (context.NextSwingLanding.HasValue)
@@ -199,8 +208,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootMotionEventFrame events = formalFootMotion.Events;
             if (!events.InApproachContactToLanding)
                 return;
-            context.CommitAttempted = true;
             AnimationFootMotionEventOccurrence next = events.NextLanding;
+            if (context.TrackingState ==
+                    CharacterFootLandingTrackingState.Committed &&
+                next.IsBound &&
+                context.TrackedEventIdentity == next.Identity &&
+                context.NextSwingLanding.HasValue &&
+                context.NextSwingLanding.LandingEventIdentity == next.Identity)
+            {
+                return;
+            }
+            context.CommitAttempted = true;
             bool canCommit = next.IsBound &&
                              context.TrackedEventIdentity == next.Identity &&
                              context.NextSwingLanding.HasValue &&

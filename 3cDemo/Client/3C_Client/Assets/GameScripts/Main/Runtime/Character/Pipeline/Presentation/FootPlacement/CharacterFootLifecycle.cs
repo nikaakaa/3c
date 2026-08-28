@@ -5,45 +5,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootLifecycle
     {
-        internal static void ApplyLandingReach(
-            ref CharacterFootLifecycleContext context,
-            ulong landingEventIdentity,
-            bool unavailable)
-        {
-            if (landingEventIdentity == 0)
-                throw new System.ArgumentOutOfRangeException(nameof(landingEventIdentity));
-            context.Discrete.LandingReachEventIdentity = landingEventIdentity;
-            context.Discrete.LandingReachUnavailable = unavailable;
-            if (unavailable &&
-                context.Contact.EventIdentity == landingEventIdentity &&
-                context.Discrete.LockResponse == CharacterFootLockResponse.FullAnchor)
-            {
-                context.Discrete.LockResponse = CharacterFootLockResponse.Sliding;
-            }
-        }
-
         internal static CharacterResolvedFootResult Evaluate(
             ref CharacterFootLifecycleContext context,
             in CharacterFootStateEvaluation evaluation,
             out CharacterFootSwingMotionResult result)
         {
             CharacterFootStateFrame frame = evaluation.Frame;
-            var contactStep = evaluation.ContactStep;
+            var currentStep = evaluation.CurrentStep;
             var selectedStep = evaluation.SelectedStep;
             var landingPrediction = evaluation.LandingPrediction;
-            ulong reachEventIdentity =
-                context.Discrete.LandingReachEventIdentity;
-            if (reachEventIdentity != 0 &&
-                contactStep.LandingEventIdentity != reachEventIdentity &&
-                selectedStep.LandingEventIdentity != reachEventIdentity)
-            {
-                context.Discrete.LandingReachEventIdentity = 0;
-                context.Discrete.LandingReachUnavailable = false;
-            }
             CharacterFootMotionSettings settings = frame.Settings;
             CharacterFootLandingRuntime.Evaluate(
                 ref context.Landing,
-                in contactStep,
+                in currentStep,
                 in selectedStep,
                 in landingPrediction,
                 in settings);
@@ -90,7 +64,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootTransitionDecision postTransition =
                 CharacterFootTransitionResolver.ResolvePostInterpolation(
                     in context,
-                    in frame,
                     interpolation.Completed);
             CharacterFootTransitionRuntime.Apply(
                 ref context,
@@ -148,7 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in outputSwing,
                 desiredCorrection,
                 hardConstraint.OutputCorrection,
-                in interpolation,
                 in continuityFact,
                 out result);
         }
@@ -238,7 +210,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult swing,
             Vector3 desiredCorrection,
             Vector3 outputCorrection,
-            in CharacterFootInterpolationResult interpolation,
             in CharacterFootPathContinuityFact continuityFact,
             out CharacterFootSwingMotionResult result)
         {
@@ -253,45 +224,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.ComponentUp.normalized).magnitude
                 : 0f;
             float contactOwnership = ResolveContactOwnership(in context);
-            float supportIntent = frame.FormalMotion.Observation.Support;
-            ulong reachEventIdentity = 0;
-            Vector3 reachPoint = default;
-            if (hasContact)
-            {
-                reachEventIdentity = context.Contact.EventIdentity;
-                reachPoint = context.Contact.Anchor;
-            }
-            else if (frame.HasContactLanding)
-            {
-                reachEventIdentity = frame.ContactLanding.LandingEventIdentity;
-                reachPoint = frame.ContactLanding.Point;
-            }
-            else if (swing.SwingPathReference.IsAvailable)
-            {
-                reachEventIdentity = swing.SwingPathReference.LandingEventIdentity;
-                reachPoint = swing.SwingPathReference.LandingPoint;
-            }
-            var pelvisReachReference =
-                supportIntent > CharacterFootConstraintMath.GeometryEpsilon &&
-                reachEventIdentity != 0
-                    ? new CharacterFootPelvisReachReference(
-                        reachEventIdentity,
-                        reachPoint)
-                    : default;
             CharacterFootSupportEligibility supportEligibility =
-                pelvisReachReference.IsAvailable
-                    ? CharacterFootSupportEligibility.AcquireAndRetain
-                    : CharacterFootSupportEligibility.None;
+                ResolveSupportEligibility(context.Discrete.State);
+            float supportWeight = context.Discrete.State switch
+            {
+                CharacterFootConstraintState.Locked => 1f,
+                CharacterFootConstraintState.Releasing => contactOwnership,
+                _ => 0f
+            };
             float positionWeight = outputCorrection.sqrMagnitude >
                                    CharacterFootConstraintMath.GeometryEpsilon *
                                    CharacterFootConstraintMath.GeometryEpsilon
-                ? frame.FootPlacementWeight * ResolveGoalWeight(
-                    context.Discrete.State,
-                    frame.FormalMotion.Observation.LockWeight,
-                    contactOwnership)
+                ? frame.FootPlacementWeight
                 : 0f;
-            float rotationWeight = frame.FootPlacementWeight *
-                                   interpolation.RotationProgress;
             CharacterFootSwingMotionState outputState = hasContact
                 ? CharacterFootSwingMotionState.Accepted
                 : swing.State;
@@ -317,28 +262,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     outputCorrection,
                     frame.ComponentUp.normalized),
                 swing.LandingPredictionError,
+                swing.LandingConstraintWeight,
                 originalSole + outputCorrection,
                 originalAnkle + outputCorrection,
                 positionWeight,
-                rotationWeight,
+                0f,
                 context.Discrete.State,
                 context.Discrete.LockResponse,
                 horizontalError,
                 contactOwnership,
-                supportIntent,
-                pelvisReachReference.IsAvailable ? pelvisReachReference.Point : default,
+                supportWeight,
+                hasContact ? context.Contact.Anchor : default,
+                swing.PlantConfidence,
                 desiredCorrection,
                 hasContact,
                 hasContact ? context.Contact.SurfaceIdentity : 0,
                 hasContact ? context.Contact.Normal : default,
-                continuityFact,
-                false,
-                interpolation.Rotation);
+                continuityFact);
             var contactReference = hasContact
                 ? new CharacterFootContactReference(
                     context.Contact.EventIdentity,
                     context.Contact.Anchor)
                 : default;
+            var pelvisReachReference =
+                hasContact &&
+                supportEligibility != CharacterFootSupportEligibility.None
+                    ? new CharacterFootPelvisReachReference(
+                        context.Contact.EventIdentity,
+                        context.Contact.Anchor)
+                    : default;
             return new CharacterResolvedFootResult(
                 frame.FrameSequence,
                 frame.CompletionIdentity,
@@ -347,19 +299,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 side,
                 originalSole + outputCorrection,
                 originalAnkle + outputCorrection,
-                interpolation.Rotation,
                 outputCorrection,
                 positionWeight,
-                rotationWeight,
                 in contactReference,
                 contactOwnership,
                 supportEligibility,
-                supportIntent,
-                supportIntent,
+                supportWeight,
+                supportWeight,
                 horizontalError,
-                pelvisReachReference.IsAvailable
-                    ? pelvisReachReference.EventIdentity
-                    : 0,
+                hasContact ? context.Contact.EventIdentity : 0,
                 in pelvisReachReference);
         }
 
@@ -386,16 +334,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static float ResolveGoalWeight(
-            CharacterFootConstraintState state,
-            float lockWeight,
-            float contactOwnership) =>
+        static CharacterFootSupportEligibility ResolveSupportEligibility(
+            CharacterFootConstraintState state) =>
             state switch
             {
-                CharacterFootConstraintState.Landing => lockWeight,
-                CharacterFootConstraintState.Locked => lockWeight,
-                CharacterFootConstraintState.Releasing => contactOwnership,
-                _ => 1f
+                CharacterFootConstraintState.Locked =>
+                    CharacterFootSupportEligibility.AcquireAndRetain,
+                CharacterFootConstraintState.Releasing =>
+                    CharacterFootSupportEligibility.RetainOnly,
+                _ => CharacterFootSupportEligibility.None
             };
 
         static void RequireValid(in CharacterFootStateFrame frame)
@@ -412,12 +359,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.FootPlacementWeight > 1f ||
                 !float.IsFinite(frame.DeltaSeconds) ||
                 frame.DeltaSeconds < 0f ||
-                !frame.FormalMotion.IsValid ||
-                frame.FormalMotion.Observation.LockMode ==
-                    ThirdPersonCharacter.Pipeline.Animation
-                        .AnimationFootStepObservationLockMode.Unlocked &&
-                frame.FormalMotion.Observation.LockWeight >
-                    CharacterFootConstraintMath.GeometryEpsilon ||
+                !float.IsFinite(frame.SwingMotion.PlantConfidence) ||
+                frame.SwingMotion.PlantConfidence < 0f ||
+                frame.SwingMotion.PlantConfidence > 1f ||
                 frame.SwingMotion.Accepted !=
                 frame.SwingMotion.SwingPathReference.IsAvailable ||
                 frame.SwingMotion.Accepted &&

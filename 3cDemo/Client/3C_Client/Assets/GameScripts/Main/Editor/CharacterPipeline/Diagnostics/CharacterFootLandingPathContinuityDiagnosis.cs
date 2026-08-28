@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new[]
                     {
                         "consumedSurfaceChanged=true",
-                        "LandingPointDelta>SwingRevisionDistance"
+                        "LandingPointDelta>LandingUpdateDistance"
                     },
                     lateApproach,
                     value =>
@@ -69,10 +69,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         }
                         if (CharacterFootDiagnosisContext.Evidence(
                                 value,
-                                "consumedPointExceededSwingRevisionDistance"))
+                                "consumedPointExceededLandingUpdateDistance"))
                         {
                             rules.Add(
-                                "LandingPointDelta>SwingRevisionDistance");
+                                "LandingPointDelta>LandingUpdateDistance");
                         }
                         return rules;
                     },
@@ -93,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                     "PhysicalSoleAlongUpStep")))),
                     "LandingPointDelta",
                     "ObservedLandingPointDelta",
-                    "SwingRevisionDistance",
+                    "LandingUpdateDistance",
                     "CorrectionStep",
                     "PhysicalAnkleAlongUpStep",
                     "PhysicalSoleAlongUpStep",
@@ -173,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "correctionStepMeters"),
                 context.Target(
                     "residual-deadline-miss",
-                    "到达Landing截止帧时Swing Residual是否仍超过SwingRevisionDistance",
+                    "到达Landing截止帧时Swing Residual是否仍超过LandingUpdateDistance",
                     new[] { "PathContinuity" },
                     new[]
                     {
@@ -301,7 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool physicalSoleAvailable;
         public double physicalSoleAlongUpStepMeters;
         public bool consumedSurfaceChanged;
-        public bool consumedPointExceededSwingRevisionDistance;
+        public bool consumedPointExceededLandingUpdateDistance;
     }
 
 }

@@ -847,7 +847,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CompileLandingEvents(
                         motionData,
                         motionData?.Left,
-                        motionData?.Raw.Left,
                         sourceDurationSeconds)),
                 new AnimationFootStepObservationCurveSet(
                     NormalizeRegisteredCurve(
@@ -908,16 +907,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CompileLandingEvents(
                         motionData,
                         motionData?.Right,
-                        motionData?.Raw.Right,
                         sourceDurationSeconds)));
 
         static AnimationFootStepLandingEventTable CompileLandingEvents(
             AnimationFootMotionDataDescriptor motionData,
             AnimationFootMotionFootPage foot,
-            AnimationFootMotionRawFootPage rawFoot,
             float sourceDurationSeconds)
         {
-            if (motionData == null || foot == null || rawFoot == null ||
+            if (motionData == null || foot == null ||
                 !float.IsFinite(sourceDurationSeconds) ||
                 sourceDurationSeconds <= 0f ||
                 Mathf.Abs(
@@ -928,13 +925,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     "Foot Step Landing Event source timing is invalid.");
             }
             var result = new List<AnimationFootStepLandingEvent>();
-            int highestOrdinal = 0;
             for (int i = 0; i < foot.Events.Count; i++)
             {
                 AnimationFootMotionEvent footEvent = foot.Events[i];
                 if (footEvent.Kind != AnimationFootMotionEventKind.Landing)
                     continue;
-                highestOrdinal = Mathf.Max(highestOrdinal, footEvent.Ordinal);
                 if ((uint)footEvent.SampleIndex >=
                     (uint)motionData.Raw.RootSamples.Count ||
                     (uint)footEvent.SampleIndex >=
@@ -959,25 +954,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     footEvent.CycleOffset,
                     step.Distance,
                     footEvent.RootLocalSolePosition));
-            }
-            AnimationFootMotionDerivedSample firstSample = foot.Samples[0];
-            bool beginsInContact = firstSample.Filter.Contact > 0.0001f ||
-                                   firstSample.Constraint.LockMode !=
-                                   AnimationFootLockMode.Unlocked ||
-                                   firstSample.Constraint.LockWeight > 0.0001f ||
-                                   firstSample.Constraint.Support > 0.0001f;
-            bool hasBoundaryLanding = result.Count > 0 &&
-                                      result[0].NormalizedTime <= 0.0001f;
-            if (beginsInContact && !hasBoundaryLanding)
-            {
-                result.Insert(
-                    0,
-                    new AnimationFootStepLandingEvent(
-                        0f,
-                        highestOrdinal + 1,
-                        0,
-                        0f,
-                        rawFoot.Samples[0].Sole.RootLocalPosition));
             }
             return new AnimationFootStepLandingEventTable(result.ToArray());
         }

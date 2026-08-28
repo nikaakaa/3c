@@ -69,80 +69,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float.IsFinite(value) && value >= 0f && value <= 1f;
     }
 
-    internal readonly struct AnimationFootMotionRuntimeSample
+    internal readonly struct AnimationFootStepObservationFrame
     {
-        internal AnimationFootMotionRuntimeSample(
-            AnimationFootStepObservationSample observation,
-            AnimationFootMotionLandingEventReference contactEvent,
-            AnimationFootMotionLandingEventReference previousLandingEvent,
-            AnimationFootMotionLandingEventReference nextLandingEvent,
-            int frameSourceCycle,
-            float frameNormalizedTime,
-            float sourceDurationSeconds,
-            ulong contributionContinuityIdentity)
-        {
-            if (!observation.IsValid ||
-                observation.TimeToLandingSeconds > 0.000001f &&
-                !nextLandingEvent.IsValid ||
-                (observation.Contact > 0.0001f ||
-                 observation.LockMode != AnimationFootStepObservationLockMode.Unlocked ||
-                 observation.LockWeight > 0.0001f ||
-                 observation.Support > 0.0001f) &&
-                !contactEvent.IsValid)
-            {
-                throw new ArgumentException(
-                    $"Foot Motion Runtime sample is invalid. " +
-                    $"Time={observation.TimeToLandingSeconds:R}, " +
-                    $"Distance={observation.Distance:R}, " +
-                    $"NextValid={nextLandingEvent.IsValid}, " +
-                    $"NextDistance={(nextLandingEvent.IsValid ? nextLandingEvent.Distance : 0f):R}, " +
-                    $"Contact={observation.Contact:R}, " +
-                    $"LockMode={observation.LockMode}, " +
-                    $"LockWeight={observation.LockWeight:R}, " +
-                    $"Support={observation.Support:R}, " +
-                    $"ContactEventValid={contactEvent.IsValid}.");
-            }
-            Observation = observation;
-            ContactEvent = contactEvent;
-            PreviousLandingEvent = previousLandingEvent;
-            NextLandingEvent = nextLandingEvent;
-            PredictionStep = nextLandingEvent.IsValid
-                ? new AnimationFootMotionStep(
-                    observation,
-                    previousLandingEvent,
-                    nextLandingEvent,
-                    frameSourceCycle,
-                    frameNormalizedTime,
-                    sourceDurationSeconds,
-                    contributionContinuityIdentity)
-                : default;
-            ContactStep = contactEvent.IsValid &&
-                          (observation.Contact > 0.0001f ||
-                           observation.LockMode !=
-                           AnimationFootStepObservationLockMode.Unlocked ||
-                           observation.LockWeight > 0.0001f ||
-                           observation.Support > 0.0001f)
-                ? new AnimationFootMotionStep(
-                    contactEvent,
-                    frameSourceCycle,
-                    contributionContinuityIdentity)
-                : default;
-            m_IsSpecified = 1;
-        }
-
-        readonly byte m_IsSpecified;
-        internal AnimationFootStepObservationSample Observation { get; }
-        internal AnimationFootMotionLandingEventReference ContactEvent { get; }
-        internal AnimationFootMotionLandingEventReference PreviousLandingEvent { get; }
-        internal AnimationFootMotionLandingEventReference NextLandingEvent { get; }
-        internal AnimationFootMotionStep PredictionStep { get; }
-        internal AnimationFootMotionStep ContactStep { get; }
-        internal bool IsValid => m_IsSpecified != 0;
-    }
-
-    internal readonly struct AnimationFootMotionRuntimeFrame
-    {
-        internal AnimationFootMotionRuntimeFrame(
+        internal AnimationFootStepObservationFrame(
             ulong completionIdentity,
             PoseNodeId nodeId,
             AnimationPoseSourceId sourceId,
@@ -152,24 +81,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int cycle,
             float sourceWeight,
             float normalizedTime,
-            float sourceDurationSeconds,
-            AnimationFootStepObservationCurvePair curves)
+            AnimationFootStepObservationSample left,
+            AnimationFootStepObservationSample right)
         {
             if (completionIdentity == 0 || !nodeId.IsValid || !sourceId.IsValid ||
                 contributionContinuityIdentity == 0 || clipBindingIndex < 0 ||
                 string.IsNullOrWhiteSpace(sourceIdentity) ||
                 !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f ||
                 !float.IsFinite(normalizedTime) || normalizedTime < 0f || normalizedTime > 1f ||
-                !float.IsFinite(sourceDurationSeconds) || sourceDurationSeconds <= 0f ||
-                curves == null)
+                !left.IsValid || !right.IsValid)
             {
-                throw new ArgumentException("Foot Motion Runtime frame is invalid.");
+                throw new ArgumentException("Foot Step observation frame is invalid.");
             }
-            curves.RequireValid();
-            AnimationFootStepObservationSample leftObservation =
-                curves.Left.Sample(normalizedTime);
-            AnimationFootStepObservationSample rightObservation =
-                curves.Right.Sample(normalizedTime);
             CompletionIdentity = completionIdentity;
             NodeId = nodeId;
             SourceId = sourceId;
@@ -179,63 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Cycle = cycle;
             SourceWeight = sourceWeight;
             NormalizedTime = normalizedTime;
-            SourceDurationSeconds = sourceDurationSeconds;
-            Left = new AnimationFootMotionRuntimeSample(
-                leftObservation,
-                curves.Left.LandingEvents.ResolveContact(
-                    sourceIdentity,
-                    contributionContinuityIdentity,
-                    cycle,
-                    normalizedTime,
-                    sourceDurationSeconds,
-                    AnimationFootMotionSide.Left),
-                curves.Left.LandingEvents.ResolvePrevious(
-                    sourceIdentity,
-                    contributionContinuityIdentity,
-                    cycle,
-                    normalizedTime,
-                    sourceDurationSeconds,
-                    AnimationFootMotionSide.Left),
-                curves.Left.LandingEvents.ResolveNext(
-                    sourceIdentity,
-                    contributionContinuityIdentity,
-                    cycle,
-                    normalizedTime,
-                    sourceDurationSeconds,
-                    leftObservation.TimeToLandingSeconds,
-                    AnimationFootMotionSide.Left),
-                cycle,
-                normalizedTime,
-                sourceDurationSeconds,
-                contributionContinuityIdentity);
-            Right = new AnimationFootMotionRuntimeSample(
-                rightObservation,
-                curves.Right.LandingEvents.ResolveContact(
-                    sourceIdentity,
-                    contributionContinuityIdentity,
-                    cycle,
-                    normalizedTime,
-                    sourceDurationSeconds,
-                    AnimationFootMotionSide.Right),
-                curves.Right.LandingEvents.ResolvePrevious(
-                    sourceIdentity,
-                    contributionContinuityIdentity,
-                    cycle,
-                    normalizedTime,
-                    sourceDurationSeconds,
-                    AnimationFootMotionSide.Right),
-                curves.Right.LandingEvents.ResolveNext(
-                    sourceIdentity,
-                    contributionContinuityIdentity,
-                    cycle,
-                    normalizedTime,
-                    sourceDurationSeconds,
-                    rightObservation.TimeToLandingSeconds,
-                    AnimationFootMotionSide.Right),
-                cycle,
-                normalizedTime,
-                sourceDurationSeconds,
-                contributionContinuityIdentity);
+            Left = left;
+            Right = right;
             m_IsSpecified = 1;
         }
 
@@ -249,9 +117,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int Cycle { get; }
         internal float SourceWeight { get; }
         internal float NormalizedTime { get; }
-        internal float SourceDurationSeconds { get; }
-        internal AnimationFootMotionRuntimeSample Left { get; }
-        internal AnimationFootMotionRuntimeSample Right { get; }
+        internal AnimationFootStepObservationSample Left { get; }
+        internal AnimationFootStepObservationSample Right { get; }
         internal bool IsValid => m_IsSpecified != 0;
     }
 

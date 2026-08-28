@@ -90,19 +90,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string GeometryFileName = "ground-path-geometry.csv";
         const string Header =
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
-            "FootProfileId,FootProfileRevision,PredictionInputUpdateDistance,PredictionInputUpAngleDegrees,LandingPointAcceptanceDistance,SwingRevisionDistance,ResidualLandingTolerance,ReleaseCompletionDistance," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
             "StepSelectionMaximumPredictionTimeSeconds,StepSelectionLastLandingEventIdentity,SelectedStepSource,SelectedLandingEventIdentity," +
             "SelectedStepEventPhase,SelectedStepApproachContactPhase,SelectedStepLandingPhase,SelectedStepAtOrAfterApproachContact,SelectedStepInApproachContactToLanding," +
-            "ContactStepIsValid,ContactStepIsAuthoritative,ContactStepHasConsistentLandingEventIdentity,ContactStepIsPreSwing,ContactStepIsSwing," +
-            "ContactStepEventOrdinal,ContactStepSourceLandingCycleOffset,ContactStepSourceSampleCycle,ContactStepContributionContinuityIdentity,ContactStepLandingEventIdentity,ContactStepTimeToLandingSeconds," +
-            "ContactStepEventPhase,ContactStepApproachContactPhase,ContactStepLandingPhase,ContactStepAtOrAfterApproachContact,ContactStepInApproachContactToLanding," +
-            "ContactStepRootLocalLandingX,ContactStepRootLocalLandingY,ContactStepRootLocalLandingZ," +
-            "PredictionStepIsValid,PredictionStepIsAuthoritative,PredictionStepHasConsistentLandingEventIdentity,PredictionStepIsPreSwing,PredictionStepIsSwing," +
-            "PredictionStepEventOrdinal,PredictionStepSourceLandingCycleOffset,PredictionStepSourceSampleCycle,PredictionStepContributionContinuityIdentity,PredictionStepLandingEventIdentity,PredictionStepTimeToLandingSeconds," +
-            "PredictionStepEventPhase,PredictionStepApproachContactPhase,PredictionStepLandingPhase,PredictionStepAtOrAfterApproachContact,PredictionStepInApproachContactToLanding," +
-            "PredictionStepRootLocalLandingX,PredictionStepRootLocalLandingY,PredictionStepRootLocalLandingZ," +
+            "CurrentStepIsValid,CurrentStepIsAuthoritative,CurrentStepHasConsistentLandingEventIdentity,CurrentStepIsPreSwing,CurrentStepIsSwing," +
+            "CurrentStepEventOrdinal,CurrentStepSourceLandingCycleOffset,CurrentStepSourceSampleCycle,CurrentStepContributionContinuityIdentity,CurrentStepLandingEventIdentity,CurrentStepTimeToLandingSeconds," +
+            "CurrentStepEventPhase,CurrentStepApproachContactPhase,CurrentStepLandingPhase,CurrentStepAtOrAfterApproachContact,CurrentStepInApproachContactToLanding," +
+            "CurrentStepRootLocalLandingX,CurrentStepRootLocalLandingY,CurrentStepRootLocalLandingZ," +
+            "IncomingStepIsValid,IncomingStepIsAuthoritative,IncomingStepHasConsistentLandingEventIdentity,IncomingStepIsPreSwing,IncomingStepIsSwing," +
+            "IncomingStepEventOrdinal,IncomingStepSourceLandingCycleOffset,IncomingStepSourceSampleCycle,IncomingStepContributionContinuityIdentity,IncomingStepLandingEventIdentity,IncomingStepTimeToLandingSeconds," +
+            "IncomingStepEventPhase,IncomingStepApproachContactPhase,IncomingStepLandingPhase,IncomingStepAtOrAfterApproachContact,IncomingStepInApproachContactToLanding," +
+            "IncomingStepRootLocalLandingX,IncomingStepRootLocalLandingY,IncomingStepRootLocalLandingZ," +
             "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
             "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
             "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
@@ -138,7 +137,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "RawLandingAvailable,RawLandingCandidateX,RawLandingCandidateY,RawLandingCandidateZ," +
             "LandingObservationIdentity,LandingObservationWorldRevision,LandingObservationCacheState,LandingObservationQueryExecuted," +
             "LandingObservationCanonicalRawX,LandingObservationCanonicalRawY,LandingObservationCanonicalRawZ," +
-            "LandingObservationHasPreviousQueryInput,LandingObservationPredictionInputMovement,LandingObservationComponentUpDeltaDegrees,LandingObservationRevisionLineageChanged," +
             "QueryShape,QueryPurpose,QueryFootIndex,QueryOriginX,QueryOriginY,QueryOriginZ," +
             "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot," +
             "QueryCandidateSelectionState,QueryValidCandidateCount," +
@@ -171,8 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSourceToeX,FootMotionSourceToeY,FootMotionSourceToeZ," +
             "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ,FootMotionBaselineSampleAlongUp," +
             "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionEnvelopeSampleAlongUp," +
-            "FootMotionFormalFootHeight,FootMotionFormalTargetHeight,FootMotionFormalCorrection," +
-            "FootMotionEnvelopeMinimumCorrection,FootMotionBuilderSelectedCorrection," +
+            "FootMotionFormalFootHeight,FootMotionUnweightedFormalTargetHeight,FootMotionLandingConstraintWeight," +
+            "FootMotionWeightedFormalCorrection,FootMotionEnvelopeMinimumCorrection,FootMotionBuilderSelectedCorrection," +
             "FootMotionBuilderSwingTargetAvailable,FootMotionBuilderSwingTargetCorrectionX,FootMotionBuilderSwingTargetCorrectionY,FootMotionBuilderSwingTargetCorrectionZ," +
             "FootMotionSwingPathHorizontalAxisState,FootMotionActualFootHorizontalDistanceMeters,FootMotionBaselineHorizontalDistanceMeters," +
             "FootMotionEnvelopeHorizontalDistanceMeters,FootMotionActualMinusEnvelopeHorizontalDistanceMeters," +
@@ -184,11 +182,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionActualEnvelopeCounterfactualState," +
             "FootMotionActualProgressEnvelopeCorrectionAvailable,FootMotionActualProgressEnvelopeMinimumCorrection," +
             "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget," +
-            "FootMotionLandingPredictionError," +
+            "FootMotionLandingPredictionError,FootMotionPlantConfidence," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
-            "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ," +
-            "FootMotionCorrectedAnkleRotationX,FootMotionCorrectedAnkleRotationY,FootMotionCorrectedAnkleRotationZ,FootMotionCorrectedAnkleRotationW," +
-            "FootMotionPositionWeight,FootMotionRotationWeight,FootMotionLandingReachUnavailable,FootMotionContactNormalRotationErrorDegrees," +
+            "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
             "FootMotionContactOwnership,FootMotionSupportWeight," +
             "FootMotionSupportContactAnchorX,FootMotionSupportContactAnchorY,FootMotionSupportContactAnchorZ," +
@@ -205,7 +201,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSwingResidualBeforeDecayX,FootMotionSwingResidualBeforeDecayY,FootMotionSwingResidualBeforeDecayZ," +
             "FootMotionSwingResidualAfterDecayX,FootMotionSwingResidualAfterDecayY,FootMotionSwingResidualAfterDecayZ," +
             "FootMotionResidualOutputCorrectionX,FootMotionResidualOutputCorrectionY,FootMotionResidualOutputCorrectionZ," +
-            "FootMotionSwingRevisionDistance,FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
+            "FootMotionLandingUpdateDistance,FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
             "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
             "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
             "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
@@ -1667,14 +1663,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, session.Program.PoseGraphId);
             Add(row, session.Program.PoseGraphRevision);
             Add(row, session.Program.PosePlanHash);
-            Add(row, frame.ProfileId);
-            Add(row, frame.ProfileRevision);
-            Add(row, frame.PredictionInputUpdateDistance);
-            Add(row, frame.PredictionInputUpAngleDegrees);
-            Add(row, frame.LandingPointAcceptanceDistance);
-            Add(row, frame.SwingRevisionDistance);
-            Add(row, frame.ResidualLandingTolerance);
-            Add(row, frame.ReleaseCompletionDistance);
             Add(row, frame.FrameSequence);
             Add(row, frame.CompletionIdentity);
             Add(row, targetRuntimeInstanceId.ToString("N"));
@@ -1696,12 +1684,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stepSelection.SelectedLandingEventIdentity);
             CharacterFootStepCandidateDiagnostics selectedStep =
                 stepSelection.SelectedSource ==
-                CharacterFootLandingStepSource.Formal
-                    ? stepSelection.Prediction
-                    : default;
+                CharacterFootLandingStepSource.Current
+                    ? stepSelection.Current
+                    : stepSelection.SelectedSource ==
+                      CharacterFootLandingStepSource.Incoming
+                        ? stepSelection.Incoming
+                        : default;
             AddStepPhase(row, in selectedStep);
-            AddStepCandidate(row, stepSelection.Contact);
-            AddStepCandidate(row, stepSelection.Prediction);
+            AddStepCandidate(row, stepSelection.Current);
+            AddStepCandidate(row, stepSelection.Incoming);
             AnimationFootStepObservationSample observedStep =
                 foot.Side == CharacterFootSide.Left
                     ? footStepObservation.Left
@@ -1722,8 +1713,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, hasObservedStep ? observedStep.LockMode.ToString() : string.Empty);
             Add(row, hasObservedStep ? observedStep.LockWeight : 0f);
             Add(row, hasObservedStep ? observedStep.Support : 0f);
-            CharacterFootMotionInputDiagnostics inputObservation =
-                input.FootMotion;
+            CharacterFootStepObservationInputDiagnostics inputObservation =
+                input.FootStepObservation;
             AnimationFootStepObservationSample inputObservedStep =
                 foot.Side == CharacterFootSide.Left
                     ? inputObservation.Left
@@ -1819,10 +1810,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, observation.CacheState.ToString());
             Add(row, observation.QueryExecutedThisFrame);
             Add(row, observation.CanonicalRawLanding);
-            Add(row, observation.HasPreviousQueryInput);
-            Add(row, observation.PredictionInputMovement);
-            Add(row, observation.ComponentUpDeltaDegrees);
-            Add(row, observation.RevisionLineageChanged);
             Add(row, query.Shape.ToString());
             Add(row, query.Purpose.ToString());
             Add(row, query.FootIndex);
@@ -1918,17 +1905,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             float motionFormalFootHeight = hasInputObservedStep
                 ? inputObservedStep.FootHeight
                 : 0f;
-            float formalTargetHeight =
-                envelopeSampleAlongUp + motionFormalFootHeight;
-            float formalCorrection =
-                formalTargetHeight - originalSoleAlongUp;
+            float unweightedFormalTargetHeight =
+                baselineSampleAlongUp + motionFormalFootHeight;
+            float weightedFormalCorrection =
+                motion.LandingConstraintWeight *
+                (unweightedFormalTargetHeight - originalSoleAlongUp);
             float envelopeMinimumCorrection =
                 envelopeSampleAlongUp - originalSoleAlongUp;
             float builderSelectedCorrection = Mathf.Max(
                 0f,
                 Mathf.Max(
                     envelopeMinimumCorrection,
-                    formalCorrection));
+                    weightedFormalCorrection));
             bool builderSwingTargetAvailable =
                 motion.PathContinuityEvaluated &&
                 motion.PathAvailableAfter &&
@@ -1940,8 +1928,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     : default;
             Add(row, envelopeSampleAlongUp);
             Add(row, motionFormalFootHeight);
-            Add(row, formalTargetHeight);
-            Add(row, formalCorrection);
+            Add(row, unweightedFormalTargetHeight);
+            Add(row, motion.LandingConstraintWeight);
+            Add(row, weightedFormalCorrection);
             Add(row, envelopeMinimumCorrection);
             Add(row, builderSelectedCorrection);
             Add(row, builderSwingTargetAvailable);
@@ -2010,23 +1999,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, actualEnvelopeMinimumCorrection);
             Add(row, actualEnvelopeAdvanceAboveBuilderTarget);
             Add(row, motion.LandingPredictionError);
+            Add(row, motion.PlantConfidence);
             Add(row, motion.CorrectedSole);
             Add(row, motion.CorrectedAnkle);
-            Add(row, motion.CorrectedAnkleRotation);
             Add(row, motion.PositionWeight);
             Add(row, motion.RotationWeight);
-            Add(row, motion.LandingReachUnavailable);
-            Quaternion correctedSoleRotation =
-                motion.CorrectedAnkleRotation *
-                foot.SourceSoleFrameLocalRotation;
-            float contactNormalRotationError =
-                motion.ContactPlaneAvailable &&
-                motion.CorrectedAnkleRotation != default
-                    ? Vector3.Angle(
-                        correctedSoleRotation * Vector3.up,
-                        motion.ContactPlaneNormal)
-                    : 0f;
-            Add(row, contactNormalRotationError);
             Add(row, motion.ConstraintState.ToString());
             Add(row, motion.LockResponse.ToString());
             Add(row, motion.SupportHorizontalError);
@@ -2056,7 +2033,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SwingResidualBeforeDecay);
             Add(row, motion.SwingResidualAfterDecay);
             Add(row, motion.ResidualOutputCorrection);
-            Add(row, motion.SwingRevisionDistance);
+            Add(row, motion.LandingUpdateDistance);
             Add(row, motion.ResidualTimeToLandingSeconds);
             Add(row, motion.ResidualBaseHalfLifeSeconds);
             Add(row, motion.ResidualDeadlineHalfLifeAvailable);

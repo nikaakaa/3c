@@ -37,88 +37,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Descending = 2
     }
 
-    public enum CharacterFootLandingReachState : byte
-    {
-        None = 0,
-        Available = 1,
-        LandingReachUnavailable = 2
-    }
-
-    internal readonly struct CharacterFootLandingReachRequest
-    {
-        internal CharacterFootLandingReachRequest(
-            CharacterFootSide side,
-            ulong landingEventIdentity,
-            Vector3 hip,
-            Vector3 targetAnkle,
-            float legLength,
-            float minimumCompressionReserve)
-        {
-            if ((side != CharacterFootSide.Left && side != CharacterFootSide.Right) ||
-                landingEventIdentity == 0 || !Finite(hip) || !Finite(targetAnkle) ||
-                !float.IsFinite(legLength) || legLength <= 0f ||
-                !float.IsFinite(minimumCompressionReserve) ||
-                minimumCompressionReserve <= 0f ||
-                minimumCompressionReserve >= legLength)
-            {
-                throw new ArgumentException("Landing Reach request is invalid.");
-            }
-            Side = side;
-            LandingEventIdentity = landingEventIdentity;
-            Hip = hip;
-            TargetAnkle = targetAnkle;
-            LegLength = legLength;
-            MinimumCompressionReserve = minimumCompressionReserve;
-            m_IsSpecified = 1;
-        }
-
-        readonly byte m_IsSpecified;
-        internal CharacterFootSide Side { get; }
-        internal ulong LandingEventIdentity { get; }
-        internal Vector3 Hip { get; }
-        internal Vector3 TargetAnkle { get; }
-        internal float LegLength { get; }
-        internal float MinimumCompressionReserve { get; }
-        internal bool IsAvailable => m_IsSpecified != 0;
-
-        static bool Finite(Vector3 value) =>
-            float.IsFinite(value.x) &&
-            float.IsFinite(value.y) &&
-            float.IsFinite(value.z);
-    }
-
-    internal readonly struct CharacterFootLandingReachResult
-    {
-        internal CharacterFootLandingReachResult(
-            CharacterFootLandingReachState state,
-            in CharacterFootStrideHipsResult hips,
-            in CharacterFootLandingReachRequest leftRequest,
-            Vector3 leftResolvedAnkle,
-            bool leftUnavailable,
-            in CharacterFootLandingReachRequest rightRequest,
-            Vector3 rightResolvedAnkle,
-            bool rightUnavailable)
-        {
-            State = state;
-            Hips = hips;
-            LeftRequest = leftRequest;
-            LeftResolvedAnkle = leftResolvedAnkle;
-            LeftUnavailable = leftUnavailable;
-            RightRequest = rightRequest;
-            RightResolvedAnkle = rightResolvedAnkle;
-            RightUnavailable = rightUnavailable;
-        }
-
-        internal CharacterFootLandingReachState State { get; }
-        internal CharacterFootStrideHipsResult Hips { get; }
-        internal CharacterFootLandingReachRequest LeftRequest { get; }
-        internal Vector3 LeftResolvedAnkle { get; }
-        internal bool LeftUnavailable { get; }
-        internal CharacterFootLandingReachRequest RightRequest { get; }
-        internal Vector3 RightResolvedAnkle { get; }
-        internal bool RightUnavailable { get; }
-    }
-
     [Flags]
     public enum CharacterFootPelvisSpringHandoffReason : byte
     {
@@ -568,8 +486,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static CharacterFootStrideIntentResult ResolveIntent(
-            in AnimationFootMotionStep leftSwingStep,
-            in AnimationFootMotionStep rightSwingStep,
+            in AnimationBiomechanicalStepHeader leftSwingStep,
+            in AnimationBiomechanicalStepHeader rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
             bool hasLeftNextSwingLanding,
@@ -678,8 +596,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static bool TrySelectSwing(
-            in AnimationFootMotionStep leftStep,
-            in AnimationFootMotionStep rightStep,
+            in AnimationBiomechanicalStepHeader leftStep,
+            in AnimationBiomechanicalStepHeader rightStep,
             in CharacterFootSwingMotionResult leftMotion,
             in CharacterFootSwingMotionResult rightMotion,
             out CharacterFootSide swingSide)
@@ -714,8 +632,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static bool TryResolveStride(
-            in AnimationFootMotionStep leftSwingStep,
-            in AnimationFootMotionStep rightSwingStep,
+            in AnimationBiomechanicalStepHeader leftSwingStep,
+            in AnimationBiomechanicalStepHeader rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
             bool hasPrimarySupport,
@@ -1071,204 +989,129 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 positionWeight);
         }
 
-        internal static CharacterFootLandingReachResult ResolveLandingReach(
+        internal static CharacterFootStrideHipsResult ApplyLandingReach(
             in CharacterFootStrideHipsResult source,
-            in CharacterFootLandingReachRequest supportRequest,
-            in CharacterFootLandingReachRequest leftRequest,
-            in CharacterFootLandingReachRequest rightRequest,
+            bool leftAvailable,
+            Vector3 leftHip,
+            Vector3 leftTargetAnkle,
+            float leftLegLength,
+            bool rightAvailable,
+            Vector3 rightHip,
+            Vector3 rightTargetAnkle,
+            float rightLegLength,
             Vector3 componentUp,
             float footPlacementWeight,
+            in CharacterFootMotionSettings settings,
             ref CharacterFootPelvisSpringState spring)
         {
             if (!Finite(componentUp) ||
                 componentUp.sqrMagnitude <= GeometryEpsilon ||
-                !leftRequest.IsAvailable && !rightRequest.IsAvailable ||
+                !leftAvailable && !rightAvailable ||
                 !float.IsFinite(footPlacementWeight) ||
                 footPlacementWeight < 0f ||
                 footPlacementWeight > 1f)
             {
-                throw new ArgumentException("Landing Reach input is invalid.");
+                return source;
             }
             Vector3 up = componentUp.normalized;
             float minimum = float.NegativeInfinity;
             float maximum = float.PositiveInfinity;
-            bool supportIntervalAvailable = source.SupportReachAvailable;
-            float supportMinimum = source.SupportReachMinimumAlongUp;
-            float supportMaximum = source.SupportReachMaximumAlongUp;
-            if (!supportIntervalAvailable && supportRequest.IsAvailable)
+            if (leftAvailable)
             {
-                supportIntervalAvailable = TryResolveSupportReachInterval(
-                    supportRequest.Hip,
-                    supportRequest.TargetAnkle,
-                    up,
-                    supportRequest.LegLength,
-                    supportRequest.MinimumCompressionReserve,
-                    out _,
-                    out supportMinimum,
-                    out supportMaximum);
-            }
-            bool commonIntervalAvailable = true;
-            if (leftRequest.IsAvailable)
-            {
-                commonIntervalAvailable = TryResolveSupportReachInterval(
-                        leftRequest.Hip,
-                        leftRequest.TargetAnkle,
+                if (!Finite(leftHip) ||
+                    !Finite(leftTargetAnkle) ||
+                    !float.IsFinite(leftLegLength) ||
+                    leftLegLength <= EndpointTolerance ||
+                    !TryResolveSupportReachInterval(
+                        leftHip,
+                        leftTargetAnkle,
                         up,
-                        leftRequest.LegLength,
-                        leftRequest.MinimumCompressionReserve,
+                        leftLegLength,
+                        settings.MinimumLandingLegCompressionReserve,
                         out _,
                         out float leftMinimum,
-                        out float leftMaximum);
-                if (commonIntervalAvailable)
+                        out float leftMaximum))
                 {
-                    minimum = Mathf.Max(minimum, leftMinimum);
-                    maximum = Mathf.Min(maximum, leftMaximum);
+                    return source;
                 }
+                minimum = Mathf.Max(minimum, leftMinimum);
+                maximum = Mathf.Min(maximum, leftMaximum);
             }
-            if (rightRequest.IsAvailable)
+            if (rightAvailable)
             {
-                bool rightIntervalAvailable = TryResolveSupportReachInterval(
-                        rightRequest.Hip,
-                        rightRequest.TargetAnkle,
+                if (!Finite(rightHip) ||
+                    !Finite(rightTargetAnkle) ||
+                    !float.IsFinite(rightLegLength) ||
+                    rightLegLength <= EndpointTolerance ||
+                    !TryResolveSupportReachInterval(
+                        rightHip,
+                        rightTargetAnkle,
                         up,
-                        rightRequest.LegLength,
-                        rightRequest.MinimumCompressionReserve,
+                        rightLegLength,
+                        settings.MinimumLandingLegCompressionReserve,
                         out _,
                         out float rightMinimum,
-                        out float rightMaximum);
-                commonIntervalAvailable &= rightIntervalAvailable;
-                if (rightIntervalAvailable)
+                        out float rightMaximum))
                 {
-                    minimum = Mathf.Max(minimum, rightMinimum);
-                    maximum = Mathf.Min(maximum, rightMaximum);
+                    return source;
                 }
+                minimum = Mathf.Max(minimum, rightMinimum);
+                maximum = Mathf.Min(maximum, rightMaximum);
             }
-            if (supportRequest.IsAvailable && !supportIntervalAvailable)
-                commonIntervalAvailable = false;
-            if (supportIntervalAvailable)
+            if (minimum > maximum)
+                return source;
+            if (source.SupportReachAvailable)
             {
-                minimum = Mathf.Max(minimum, supportMinimum);
-                maximum = Mathf.Min(maximum, supportMaximum);
+                minimum = Mathf.Max(
+                    minimum,
+                    source.SupportReachMinimumAlongUp);
+                maximum = Mathf.Min(
+                    maximum,
+                    source.SupportReachMaximumAlongUp);
+                if (minimum > maximum)
+                    return source;
             }
-            commonIntervalAvailable &= minimum <= maximum;
             float sourceTarget = source.ProducesPelvisGoal
                 ? source.SpringTarget
                 : 0f;
             float sourceOutput = source.ProducesPelvisGoal
                 ? source.SpringOutput
                 : 0f;
-            if (commonIntervalAvailable)
+            float target = Mathf.Clamp(sourceTarget, minimum, maximum);
+            float output = Mathf.Clamp(sourceOutput, minimum, maximum);
+            bool targetClamped =
+                Mathf.Abs(target - sourceTarget) > GeometryEpsilon;
+            bool outputClamped =
+                Mathf.Abs(output - sourceOutput) > GeometryEpsilon;
+            if (!source.ProducesPelvisGoal && !targetClamped && !outputClamped)
+                return source;
+            float velocity = source.ProducesPelvisGoal
+                ? source.SpringVelocity
+                : 0f;
+            if (outputClamped &&
+                (output <= minimum && velocity < 0f ||
+                 output >= maximum && velocity > 0f))
             {
-                float target = Mathf.Clamp(sourceTarget, minimum, maximum);
-                float output = Mathf.Clamp(sourceOutput, minimum, maximum);
-                bool targetClamped =
-                    Mathf.Abs(target - sourceTarget) > GeometryEpsilon;
-                bool outputClamped =
-                    Mathf.Abs(output - sourceOutput) > GeometryEpsilon;
-                float velocity = source.ProducesPelvisGoal
-                    ? source.SpringVelocity
-                    : 0f;
-                if (outputClamped &&
-                    (output <= minimum && velocity < 0f ||
-                     output >= maximum && velocity > 0f))
-                {
-                    velocity = 0f;
-                }
-                CharacterFootStrideHipsResult hips = source;
-                if (source.ProducesPelvisGoal || targetClamped || outputClamped)
-                {
-                    spring.HasValue = true;
-                    spring.TargetAlongUp = target;
-                    spring.OutputAlongUp = output;
-                    spring.VelocityAlongUp = velocity;
-                    CharacterFootStrideState state = source.ProducesPelvisGoal
-                        ? source.State
-                        : CharacterFootStrideState.LandingReach;
-                    Vector3 pelvisDelta = up * output;
-                    float positionWeight = Mathf.Abs(output) > EndpointTolerance
-                        ? footPlacementWeight
-                        : 0f;
-                    hips = source.WithLandingReachOutput(
-                        state,
-                        target,
-                        output,
-                        velocity,
-                        pelvisDelta,
-                        positionWeight);
-                }
-                return new CharacterFootLandingReachResult(
-                    CharacterFootLandingReachState.Available,
-                    in hips,
-                    in leftRequest,
-                    leftRequest.IsAvailable ? leftRequest.TargetAnkle : default,
-                    false,
-                    in rightRequest,
-                    rightRequest.IsAvailable ? rightRequest.TargetAnkle : default,
-                    false);
+                velocity = 0f;
             }
-            float safePelvisOutput = source.ProducesPelvisGoal
-                ? source.SpringOutput
-                : supportIntervalAvailable
-                    ? Mathf.Clamp(0f, supportMinimum, supportMaximum)
-                    : 0f;
-            CharacterFootStrideHipsResult safeHips = source;
-            if (!source.ProducesPelvisGoal &&
-                Mathf.Abs(safePelvisOutput) > EndpointTolerance)
-            {
-                spring.HasValue = true;
-                spring.TargetAlongUp = safePelvisOutput;
-                spring.OutputAlongUp = safePelvisOutput;
-                spring.VelocityAlongUp = 0f;
-                safeHips = source.WithLandingReachOutput(
-                    CharacterFootStrideState.LandingReach,
-                    safePelvisOutput,
-                    safePelvisOutput,
-                    0f,
-                    up * safePelvisOutput,
-                    footPlacementWeight);
-            }
-            Vector3 leftResolvedAnkle = leftRequest.IsAvailable
-                ? ClampLandingAnkle(
-                    in leftRequest,
-                    up,
-                    safePelvisOutput,
-                    out _)
-                : default;
-            Vector3 rightResolvedAnkle = rightRequest.IsAvailable
-                ? ClampLandingAnkle(
-                    in rightRequest,
-                    up,
-                    safePelvisOutput,
-                    out _)
-                : default;
-            return new CharacterFootLandingReachResult(
-                CharacterFootLandingReachState.LandingReachUnavailable,
-                in safeHips,
-                in leftRequest,
-                leftResolvedAnkle,
-                leftRequest.IsAvailable,
-                in rightRequest,
-                rightResolvedAnkle,
-                rightRequest.IsAvailable);
-        }
-
-        static Vector3 ClampLandingAnkle(
-            in CharacterFootLandingReachRequest request,
-            Vector3 up,
-            float pelvisOutput,
-            out bool unavailable)
-        {
-            Vector3 movedHip = request.Hip + up * pelvisOutput;
-            Vector3 hipToTarget = request.TargetAnkle - movedHip;
-            float distance = hipToTarget.magnitude;
-            float usableLength = request.LegLength -
-                                 request.MinimumCompressionReserve;
-            unavailable = distance > usableLength + GeometryEpsilon;
-            if (!unavailable)
-                return request.TargetAnkle;
-            if (distance <= GeometryEpsilon)
-                return movedHip;
-            return movedHip + hipToTarget * (usableLength / distance);
+            spring.HasValue = true;
+            spring.TargetAlongUp = target;
+            spring.OutputAlongUp = output;
+            spring.VelocityAlongUp = velocity;
+            CharacterFootStrideState state = source.ProducesPelvisGoal
+                ? source.State
+                : CharacterFootStrideState.LandingReach;
+            Vector3 pelvisDelta = up * output;
+            float positionWeight = Mathf.Abs(output) > EndpointTolerance
+                ? footPlacementWeight
+                : 0f;
+            return source.WithLandingReachOutput(
+                state,
+                target,
+                output,
+                velocity,
+                pelvisDelta,
+                positionWeight);
         }
 
         internal static CharacterFootStrideHipsResult BuildPelvisRelease(
@@ -1427,7 +1270,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    minimumAlongUp <= maximumAlongUp;
         }
 
-        static bool IsAuthoritativeSwing(in AnimationFootMotionStep step) =>
+        static bool IsAuthoritativeSwing(in AnimationBiomechanicalStepHeader step) =>
             step.IsValid &&
             step.IsAuthoritative &&
             step.IsSwing &&
@@ -1436,7 +1279,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static bool IsRetainablePrimarySupport(
             in CharacterResolvedFootResult motion) =>
             motion.Outcome == CharacterFootResolvedOutcome.Ready &&
-            motion.PelvisReachReference.IsAvailable &&
+            motion.ContactReference.IsAvailable &&
             motion.SupportEventIdentity != 0 &&
             motion.SupportWeight > GeometryEpsilon &&
             motion.SupportEligibility != CharacterFootSupportEligibility.None;
@@ -1464,6 +1307,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 default,
                 default,
+                0f,
                 0f,
                 0f,
                 originalSole,

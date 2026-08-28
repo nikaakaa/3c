@@ -35,13 +35,7 @@ MonoBehaviour:
     m_CastBelow: 0.85
     m_MaximumReachableVerticalEdge: 0.3
   m_FootMotion:
-    m_ConfigurationVersion: 2
-    m_PredictionInputUpdateDistance: 0.05
-    m_PredictionInputUpAngleDegrees: 1
-    m_LandingPointAcceptanceDistance: 0.02
-    m_SwingRevisionDistance: 0.02
-    m_ResidualLandingTolerance: 0.005
-    m_ReleaseCompletionDistance: 0.005
+    m_LandingUpdateDistance: 0.02
     m_EffectiveCorrectionHalfLifeSeconds: 0.03
     m_LockDistance: 0.08
     m_SlideDistance: 0.2

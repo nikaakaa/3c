@@ -1,12 +1,9 @@
 using ThirdPersonCharacter.Pipeline.Animation;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootTransitionResolver
     {
-        const float WeightEpsilon = 0.0001f;
-
         internal static CharacterFootTransitionDecision ResolvePreInterpolation(
             in CharacterFootLifecycleContext context,
             in CharacterFootStateFrame frame)
@@ -15,11 +12,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootConstraintState sourceState = discrete.State;
             if (frame.HardOwnershipLoss)
             {
+                bool consumed = frame.SwingMotion.PlantConfidence >=
+                                AnimationFootConstraintFacts
+                                    .GroundedMinimumConfidence;
                 return Decision(
                     CharacterFootTransitionReason.OwnershipLost,
                     sourceState,
-                    CharacterFootConstraintState.Swing,
+                    consumed
+                        ? CharacterFootConstraintState.UnlockedSupport
+                        : CharacterFootConstraintState.Swing,
                     CharacterFootLockResponse.None,
+                    consumed,
                     CharacterFootAnchorCommand.Release,
                     true,
                     true);
@@ -35,7 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootConstraintState.Locked:
                     return ResolveLocked(in context, in frame);
                 case CharacterFootConstraintState.Releasing:
-                    return ResolveReleasing(in context, in frame);
+                    return NoChange(in discrete);
                 default:
                     throw new System.InvalidOperationException(
                         "Foot constraint state is invalid.");
@@ -44,7 +47,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootTransitionDecision ResolvePostInterpolation(
             in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame,
             bool interpolationCompleted)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
@@ -52,15 +54,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return NoChange(in discrete, CharacterFootTransitionPhase.PostInterpolation);
             if (discrete.State == CharacterFootConstraintState.Landing)
             {
-                CharacterFootLockResponse response = ResolveResponse(
-                    frame.FormalMotion.Observation.LockMode,
-                    frame.FormalMotion.ContactStep.LandingEventIdentity,
-                    in discrete);
                 return Decision(
                     CharacterFootTransitionReason.LandingCompleted,
                     discrete.State,
                     CharacterFootConstraintState.Locked,
-                    response,
+                    CharacterFootLockResponse.FullAnchor,
+                    discrete.PlantCycleConsumed,
                     CharacterFootAnchorCommand.Retain,
                     false,
                     false,
@@ -73,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     discrete.State,
                     CharacterFootConstraintState.Swing,
                     CharacterFootLockResponse.None,
+                    false,
                     CharacterFootAnchorCommand.Release,
                     false,
                     true,
@@ -86,19 +86,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            AnimationFootStepObservationSample formal =
-                frame.FormalMotion.Observation;
-            if (!RequestsContact(in formal))
+            float plantConfidence = frame.SwingMotion.PlantConfidence;
+            if (plantConfidence <
+                AnimationFootConstraintFacts.GroundedMinimumConfidence)
             {
-                CharacterFootConstraintState target =
-                    formal.Support > WeightEpsilon
-                        ? CharacterFootConstraintState.UnlockedSupport
-                        : CharacterFootConstraintState.Swing;
                 return Decision(
                     CharacterFootTransitionReason.SwingStarted,
                     discrete.State,
-                    target,
+                    CharacterFootConstraintState.Swing,
                     CharacterFootLockResponse.None,
+                    false,
+                    CharacterFootAnchorCommand.Release,
+                    false,
+                    false);
+            }
+            if (discrete.PlantCycleConsumed)
+            {
+                return Decision(
+                    CharacterFootTransitionReason.PlantCycleConsumed,
+                    discrete.State,
+                    CharacterFootConstraintState.UnlockedSupport,
+                    CharacterFootLockResponse.None,
+                    true,
                     CharacterFootAnchorCommand.Release,
                     false,
                     false);
@@ -110,6 +119,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     discrete.State,
                     CharacterFootConstraintState.UnlockedSupport,
                     CharacterFootLockResponse.None,
+                    true,
+                    CharacterFootAnchorCommand.Release,
+                    false,
+                    false);
+            }
+            var correction = CharacterFootConstraintMath.ResolveContactCorrection(
+                frame.AnimatedFoot,
+                frame.ContactLanding.Point);
+            float horizontalError =
+                CharacterFootConstraintMath.ResolveHorizontalError(
+                    correction,
+                    frame.ComponentUp);
+            if (horizontalError > frame.Settings.LockDistance)
+            {
+                return Decision(
+                    CharacterFootTransitionReason.ContactOutOfLockRange,
+                    discrete.State,
+                    CharacterFootConstraintState.UnlockedSupport,
+                    CharacterFootLockResponse.None,
+                    true,
                     CharacterFootAnchorCommand.Release,
                     false,
                     false);
@@ -119,6 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 discrete.State,
                 CharacterFootConstraintState.Landing,
                 CharacterFootLockResponse.None,
+                true,
                 CharacterFootAnchorCommand.Create,
                 false,
                 false);
@@ -129,24 +159,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            AnimationFootStepObservationSample formal =
-                frame.FormalMotion.Observation;
-            float horizontalError = ResolveHorizontalError(in context, in frame);
-            if (!RequestsContact(in formal) ||
-                horizontalError > frame.Settings.SlideDistance)
+            var correction = CharacterFootConstraintMath.ResolveContactCorrection(
+                frame.AnimatedFoot,
+                context.Contact.Anchor);
+            float horizontalError =
+                CharacterFootConstraintMath.ResolveHorizontalError(
+                    correction,
+                    frame.ComponentUp);
+            if (frame.SwingMotion.PlantConfidence >=
+                    AnimationFootConstraintFacts.GroundedMinimumConfidence &&
+                horizontalError <= frame.Settings.SlideDistance)
             {
-                return Decision(
-                    horizontalError > frame.Settings.SlideDistance
-                        ? CharacterFootTransitionReason.ContactOutOfSlideRange
-                        : CharacterFootTransitionReason.ContactReleased,
-                    discrete.State,
-                    CharacterFootConstraintState.Releasing,
-                    CharacterFootLockResponse.None,
-                    CharacterFootAnchorCommand.Retain,
-                    false,
-                    false);
+                return NoChange(in discrete);
             }
-            return NoChange(in discrete);
+            return Decision(
+                horizontalError > frame.Settings.SlideDistance
+                    ? CharacterFootTransitionReason.ContactOutOfSlideRange
+                    : CharacterFootTransitionReason.ContactReleased,
+                discrete.State,
+                CharacterFootConstraintState.Releasing,
+                CharacterFootLockResponse.None,
+                discrete.PlantCycleConsumed,
+                CharacterFootAnchorCommand.Retain,
+                false,
+                false);
         }
 
         static CharacterFootTransitionDecision ResolveLocked(
@@ -154,10 +190,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            float horizontalError = ResolveHorizontalError(in context, in frame);
-            AnimationFootStepObservationSample formal =
-                frame.FormalMotion.Observation;
-            if (!RequestsContact(in formal) ||
+            var fullCorrection = CharacterFootConstraintMath.ResolveContactCorrection(
+                frame.AnimatedFoot,
+                context.Contact.Anchor);
+            float horizontalError =
+                CharacterFootConstraintMath.ResolveHorizontalError(
+                    fullCorrection,
+                    frame.ComponentUp);
+            if (frame.SwingMotion.PlantConfidence <
+                    AnimationFootConstraintFacts.LockedMinimumConfidence ||
                 horizontalError > frame.Settings.SlideDistance)
             {
                 return Decision(
@@ -167,14 +208,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     discrete.State,
                     CharacterFootConstraintState.Releasing,
                     CharacterFootLockResponse.None,
+                    discrete.PlantCycleConsumed,
                     CharacterFootAnchorCommand.Retain,
                     false,
                     false);
             }
-            CharacterFootLockResponse response = ResolveResponse(
-                formal.LockMode,
-                frame.FormalMotion.ContactStep.LandingEventIdentity,
-                in discrete);
+            CharacterFootLockResponse response =
+                horizontalError > frame.Settings.LockDistance
+                    ? CharacterFootLockResponse.Sliding
+                    : CharacterFootLockResponse.FullAnchor;
             return Decision(
                 response != discrete.LockResponse
                     ? CharacterFootTransitionReason.LockResponseChanged
@@ -182,69 +224,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 discrete.State,
                 discrete.State,
                 response,
+                discrete.PlantCycleConsumed,
                 CharacterFootAnchorCommand.Retain,
                 false,
                 false);
         }
-
-        static CharacterFootTransitionDecision ResolveReleasing(
-            in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame)
-        {
-            CharacterFootDiscreteStateContext discrete = context.Discrete;
-            ulong contactEventIdentity =
-                frame.FormalMotion.ContactStep.LandingEventIdentity;
-            if (!RequestsContact(frame.FormalMotion.Observation) ||
-                contactEventIdentity == 0 ||
-                contactEventIdentity == context.Contact.EventIdentity ||
-                !CanAcquire(in frame))
-            {
-                return NoChange(in discrete);
-            }
-            return Decision(
-                CharacterFootTransitionReason.ContactAcquired,
-                discrete.State,
-                CharacterFootConstraintState.Landing,
-                CharacterFootLockResponse.None,
-                CharacterFootAnchorCommand.Create,
-                false,
-                false);
-        }
-
-        static float ResolveHorizontalError(
-            in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame)
-        {
-            var correction = CharacterFootConstraintMath.ResolveContactCorrection(
-                frame.AnimatedFoot,
-                context.Contact.Anchor);
-            return CharacterFootConstraintMath.ResolveHorizontalError(
-                correction,
-                frame.ComponentUp);
-        }
-
-        static bool RequestsContact(
-            in AnimationFootStepObservationSample formal) =>
-            formal.Contact > WeightEpsilon &&
-            formal.LockMode != AnimationFootStepObservationLockMode.Unlocked;
-
-        static CharacterFootLockResponse ResolveResponse(
-            AnimationFootStepObservationLockMode mode,
-            ulong contactEventIdentity,
-            in CharacterFootDiscreteStateContext discrete) =>
-            mode == AnimationFootStepObservationLockMode.Locked &&
-            discrete.LandingReachUnavailable &&
-            discrete.LandingReachEventIdentity == contactEventIdentity
-                ? CharacterFootLockResponse.Sliding
-                : mode switch
-            {
-                AnimationFootStepObservationLockMode.Locked =>
-                    CharacterFootLockResponse.FullAnchor,
-                AnimationFootStepObservationLockMode.Sliding =>
-                    CharacterFootLockResponse.Sliding,
-                _ => throw new System.InvalidOperationException(
-                    "Formal Foot Lock Mode cannot own an Anchor.")
-            };
 
         static CharacterFootTransitionDecision NoChange(
             in CharacterFootDiscreteStateContext discrete,
@@ -255,6 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 discrete.State,
                 discrete.State,
                 discrete.LockResponse,
+                discrete.PlantCycleConsumed,
                 CharacterFootAnchorCommand.None,
                 false,
                 false,
@@ -265,6 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootConstraintState source,
             CharacterFootConstraintState target,
             CharacterFootLockResponse targetResponse,
+            bool plantCycleConsumed,
             CharacterFootAnchorCommand anchorCommand,
             bool suppressOutput,
             bool resetInterpolation,
@@ -276,27 +262,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 source,
                 target,
                 targetResponse,
+                plantCycleConsumed,
                 anchorCommand,
                 suppressOutput,
                 resetInterpolation);
 
-        static bool CanAcquire(in CharacterFootStateFrame frame)
-        {
-            if (!frame.HasContactLanding ||
-                frame.ContactLanding.LandingEventIdentity == 0 ||
-                !frame.FormalMotion.ContactStep.IsValid ||
-                frame.ContactLanding.LandingEventIdentity !=
-                frame.FormalMotion.ContactStep.LandingEventIdentity)
-            {
-                return false;
-            }
-            Vector3 correction =
-                CharacterFootConstraintMath.ResolveContactCorrection(
-                    frame.AnimatedFoot,
-                    frame.ContactLanding.Point);
-            return CharacterFootConstraintMath.ResolveHorizontalError(
-                       correction,
-                       frame.ComponentUp) <= frame.Settings.LockDistance;
-        }
+        static bool CanAcquire(in CharacterFootStateFrame frame) =>
+            frame.HasContactLanding &&
+            frame.ContactLanding.LandingEventIdentity != 0;
     }
 }

@@ -1,0 +1,65 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "landing-observation-reuse",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "178667857ca945eeee053a04b9f89136298f44e898ea99373f561edf0871c3f3",
+    "schema": "character-foot-motion-facts/21",
+    "sampleIdentity": "8f0824c8781a48329f69ddfd3a43f53d"
+  },
+  "targets": [
+    {
+      "id": "landing-observation-reuse-contract",
+      "question": "FutureLanding是否只在新canonical Key查询，并让相同Observation identity保持不可变结果",
+      "eventKinds": [
+        "LandingObservation"
+      ],
+      "rules": [
+        "cacheStateConsistent=false",
+        "sameKeyResultChanged=true"
+      ],
+      "eligibleEventCount": 1393,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "ValidCandidateCount": {
+          "available": true,
+          "count": 1393,
+          "median": 1.0,
+          "p90": 2.0,
+          "p99": 2.0,
+          "maximum": 2.0
+        }
+      },
+      "categoricalMeasurements": {
+        "CacheState": [
+          {
+            "value": "Queried",
+            "count": 1334
+          },
+          {
+            "value": "Reused",
+            "count": 59
+          }
+        ]
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    }
+  ],
+  "summary": {
+    "targetCount": 1,
+    "targetWithMatchesCount": 0,
+    "matchedEventCount": 0,
+    "targetResults": [
+      {
+        "id": "landing-observation-reuse-contract",
+        "eligibleEventCount": 1393,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      }
+    ]
+  }
+}

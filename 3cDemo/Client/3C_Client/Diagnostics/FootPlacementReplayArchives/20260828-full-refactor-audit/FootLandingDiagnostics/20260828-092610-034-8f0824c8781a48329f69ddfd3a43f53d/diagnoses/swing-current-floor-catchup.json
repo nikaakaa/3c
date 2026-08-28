@@ -1,0 +1,3286 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "swing-current-floor-catchup",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "178667857ca945eeee053a04b9f89136298f44e898ea99373f561edf0871c3f3",
+    "schema": "character-foot-motion-facts/21",
+    "sampleIdentity": "8f0824c8781a48329f69ddfd3a43f53d"
+  },
+  "targets": [
+    {
+      "id": "swing-current-floor-catchup",
+      "question": "同一Landing Event的无Anchor Swing中，CurrentSwingFloor从Builder目标或Residual滞后处补齐了多少高度",
+      "eventKinds": [
+        "SwingCurrentFloorCatchup"
+      ],
+      "rules": [
+        "currentFloorCatchupMeters>0.01"
+      ],
+      "eligibleEventCount": 839,
+      "matchedEventCount": 37,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.044100119189511323,
+      "occurrence": {
+        "available": true,
+        "sampleUnit": "ContinuousAcceptedUnanchoredSwingPairWithCurrentFloor",
+        "metric": "CurrentFloorCatchup",
+        "comparison": "GreaterThan",
+        "thresholdUnit": "Meters",
+        "eligibleEventCount": 839,
+        "configuredThresholds": [
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "primaryRate": {
+          "threshold": 0.01,
+          "eligibleEventCount": 839,
+          "matchedEventCount": 37,
+          "matchedEventRate": 0.044100119189511323
+        },
+        "rates": [
+          {
+            "threshold": 0.01,
+            "eligibleEventCount": 839,
+            "matchedEventCount": 37,
+            "matchedEventRate": 0.044100119189511323
+          },
+          {
+            "threshold": 0.02,
+            "eligibleEventCount": 839,
+            "matchedEventCount": 29,
+            "matchedEventRate": 0.034564958283671038
+          },
+          {
+            "threshold": 0.05,
+            "eligibleEventCount": 839,
+            "matchedEventCount": 9,
+            "matchedEventRate": 0.010727056019070322
+          },
+          {
+            "threshold": 0.1,
+            "eligibleEventCount": 839,
+            "matchedEventCount": 1,
+            "matchedEventRate": 0.0011918951132300357
+          }
+        ]
+      },
+      "measurements": {
+        "BuilderSwingTargetAlongUp": {
+          "available": true,
+          "count": 839,
+          "median": 0.0030970275402069092,
+          "p90": 0.2103667736053467,
+          "p99": 0.28651185750961305,
+          "maximum": 0.35521364212036133
+        },
+        "CurrentFloorAboveBuilderTarget": {
+          "available": true,
+          "count": 839,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.045846428871154789,
+          "maximum": 0.13050699234008789
+        },
+        "CurrentFloorCatchup": {
+          "available": true,
+          "count": 839,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.050475514200188643,
+          "maximum": 0.13093732483685017
+        },
+        "CurrentSwingFloorMinimumAlongUp": {
+          "available": true,
+          "count": 839,
+          "median": -0.13222241401672363,
+          "p90": 0.1145077228546144,
+          "p99": 0.23882220268249513,
+          "maximum": 0.26623106002807617
+        },
+        "FinalOutputAlongUp": {
+          "available": true,
+          "count": 839,
+          "median": 0.0066951271146535873,
+          "p90": 0.17850686013698583,
+          "p99": 0.26167705714702605,
+          "maximum": 0.28193634748458862
+        },
+        "PhysicalAnkleStep": {
+          "available": true,
+          "count": 839,
+          "median": 0.14571373164653778,
+          "p90": 0.17715421020984651,
+          "p99": 0.20152883648872377,
+          "maximum": 0.2289869487285614
+        },
+        "PhysicalSoleStep": {
+          "available": true,
+          "count": 839,
+          "median": 0.15367284417152405,
+          "p90": 0.19278495013713837,
+          "p99": 0.22039055109024047,
+          "maximum": 0.24748246371746063
+        },
+        "ResidualLagBelowCurrentFloor": {
+          "available": true,
+          "count": 839,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.024084390848875058,
+          "maximum": 0.052054382860660553
+        },
+        "SafetyFloorClamp": {
+          "available": true,
+          "count": 839,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.050475514456629775,
+          "maximum": 0.13093732297420502
+        },
+        "StateOutputBeforeFloorAlongUp": {
+          "available": true,
+          "count": 839,
+          "median": 0.0060452255420386791,
+          "p90": 0.17586073577404027,
+          "p99": 0.25696364879608152,
+          "maximum": 0.28193634748458862
+        }
+      },
+      "categoricalMeasurements": {
+        "Classification": [
+          {
+            "value": "CurrentFloorAboveBuilderTarget",
+            "count": 27
+          },
+          {
+            "value": "NoCatchupRequired",
+            "count": 772
+          },
+          {
+            "value": "ResidualLagBelowCurrentFloor",
+            "count": 40
+          }
+        ]
+      },
+      "representativeEventCount": 8,
+      "representativeEvents": [
+        {
+          "eventKind": "SwingCurrentFloorCatchup",
+          "side": "Right",
+          "startFrame": 324,
+          "endFrame": 325,
+          "peakFrame": 325,
+          "eventIdentity": "18369873941196438956",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 4,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "BuilderSwingTargetAlongUp": 0.0256195068359375,
+            "CurrentFloorAboveBuilderTarget": 0.13050699234008789,
+            "CurrentFloorCatchup": 0.13093732483685017,
+            "CurrentSwingFloorMinimumAlongUp": 0.15612649917602539,
+            "FinalOutputAlongUp": 0.15612649917602539,
+            "PhysicalAnkleStep": 0.2088279128074646,
+            "PhysicalSoleStep": 0.21509756147861481,
+            "ResidualLagBelowCurrentFloor": 0.0,
+            "SafetyFloorClamp": 0.13093732297420502,
+            "StateOutputBeforeFloorAlongUp": 0.025189174339175224
+          },
+          "evidence": {
+            "acceptedSwingPair": true,
+            "anchorExcluded": true,
+            "builderSwingTargetAvailable": true,
+            "classificationMutuallyExclusive": true,
+            "currentFloorAboveBuilderTarget": true,
+            "currentSwingFloorAvailable": true,
+            "residualLagBelowCurrentFloor": false,
+            "sameLandingEvent": true
+          },
+          "swingCurrentFloorCatchup": {
+            "previousFrame": 324,
+            "frame": 325,
+            "side": "Right",
+            "landingEventIdentity": "18369873941196438956",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 4,
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0256195068359375,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0256195068359375,
+            "stateOutputBeforeFloor": {
+              "x": 6.646437213930767E-06,
+              "y": 0.025189174339175224,
+              "z": 5.02394823342911E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.025189174339175224,
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.15612649917602539,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.15612649917602539,
+            "safetyFloorClampMeters": 0.13093732297420502,
+            "finalOutput": {
+              "x": 6.646437213930767E-06,
+              "y": 0.15612649917602539,
+              "z": 5.02394823342911E-06
+            },
+            "finalOutputAlongUpMeters": 0.15612649917602539,
+            "currentFloorAboveBuilderTargetMeters": 0.13050699234008789,
+            "residualLagBelowCurrentFloorMeters": 0.0,
+            "currentFloorCatchupMeters": 0.13093732483685017,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14530,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentFloorSurfaceIdentity": -14530,
+            "currentFloorPoint": {
+              "x": 42.582611083984375,
+              "y": 4.320000171661377,
+              "z": 11.94999885559082
+            },
+            "physicalAnkleAvailable": true,
+            "previousPhysicalAnkle": {
+              "x": 42.735576629638672,
+              "y": 4.2867064476013184,
+              "z": 11.874246597290039
+            },
+            "physicalAnkle": {
+              "x": 42.567165374755859,
+              "y": 4.40927267074585,
+              "z": 11.889222145080566
+            },
+            "physicalAnkleStepMeters": 0.2088279128074646,
+            "physicalAnkleAlongUpDeltaMeters": 0.12256622314453125,
+            "physicalSoleAvailable": true,
+            "previousPhysicalSole": {
+              "x": 42.758598327636719,
+              "y": 4.1992459297180176,
+              "z": 11.867114067077637
+            },
+            "physicalSole": {
+              "x": 42.582618713378906,
+              "y": 4.3199996948242188,
+              "z": 11.893884658813477
+            },
+            "physicalSoleStepMeters": 0.21509756147861481,
+            "physicalSoleAlongUpDeltaMeters": 0.12075376510620117,
+            "classification": "CurrentFloorAboveBuilderTarget"
+          }
+        },
+        {
+          "eventKind": "SwingCurrentFloorCatchup",
+          "side": "Right",
+          "startFrame": 328,
+          "endFrame": 329,
+          "peakFrame": 329,
+          "eventIdentity": "18369873941196438956",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 4,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorAboveBuilderTarget": 0.071019172668457031,
+            "CurrentFloorCatchup": 0.065620854962617159,
+            "CurrentSwingFloorMinimumAlongUp": 0.071019172668457031,
+            "FinalOutputAlongUp": 0.071019172668457031,
+            "PhysicalAnkleStep": 0.17899139225482941,
+            "PhysicalSoleStep": 0.19632485508918762,
+            "ResidualLagBelowCurrentFloor": 0.0,
+            "SafetyFloorClamp": 0.065620854496955872,
+            "StateOutputBeforeFloorAlongUp": 0.0053983177058398724
+          },
+          "evidence": {
+            "acceptedSwingPair": true,
+            "anchorExcluded": true,
+            "builderSwingTargetAvailable": true,
+            "classificationMutuallyExclusive": true,
+            "currentFloorAboveBuilderTarget": true,
+            "currentSwingFloorAvailable": true,
+            "residualLagBelowCurrentFloor": false,
+            "sameLandingEvent": true
+          },
+          "swingCurrentFloorCatchup": {
+            "previousFrame": 328,
+            "frame": 329,
+            "side": "Right",
+            "landingEventIdentity": "18369873941196438956",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 4,
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloor": {
+              "x": 1.4244046724343207E-06,
+              "y": 0.0053983177058398724,
+              "z": 1.0766873401735211E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0053983177058398724,
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.071019172668457031,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.071019172668457031,
+            "safetyFloorClampMeters": 0.065620854496955872,
+            "finalOutput": {
+              "x": 1.4244046724343207E-06,
+              "y": 0.071019172668457031,
+              "z": 1.0766873401735211E-06
+            },
+            "finalOutputAlongUpMeters": 0.071019172668457031,
+            "currentFloorAboveBuilderTargetMeters": 0.071019172668457031,
+            "residualLagBelowCurrentFloorMeters": 0.0,
+            "currentFloorCatchupMeters": 0.065620854962617159,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14520,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentFloorSurfaceIdentity": -14520,
+            "currentFloorPoint": {
+              "x": 42.007904052734375,
+              "y": 4.1400003433227539,
+              "z": 11.485105514526367
+            },
+            "physicalAnkleAvailable": true,
+            "previousPhysicalAnkle": {
+              "x": 42.149463653564453,
+              "y": 4.2273492813110352,
+              "z": 11.629152297973633
+            },
+            "physicalAnkle": {
+              "x": 42.045280456542969,
+              "y": 4.2226505279541016,
+              "z": 11.483681678771973
+            },
+            "physicalAnkleStepMeters": 0.17899139225482941,
+            "physicalAnkleAlongUpDeltaMeters": -0.0046987533569335938,
+            "physicalSoleAvailable": true,
+            "previousPhysicalSole": {
+              "x": 42.127784729003906,
+              "y": 4.1400003433227539,
+              "z": 11.640581130981445
+            },
+            "physicalSole": {
+              "x": 42.007904052734375,
+              "y": 4.1400003433227539,
+              "z": 11.485107421875
+            },
+            "physicalSoleStepMeters": 0.19632485508918762,
+            "physicalSoleAlongUpDeltaMeters": 0.0,
+            "classification": "CurrentFloorAboveBuilderTarget"
+          }
+        },
+        {
+          "eventKind": "SwingCurrentFloorCatchup",
+          "side": "Right",
+          "startFrame": 467,
+          "endFrame": 468,
+          "peakFrame": 468,
+          "eventIdentity": "7413113028047531440",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 8,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "BuilderSwingTargetAlongUp": 0.070239663124084473,
+            "CurrentFloorAboveBuilderTarget": 0.052515804767608643,
+            "CurrentFloorCatchup": 0.0769924558699131,
+            "CurrentSwingFloorMinimumAlongUp": 0.12275546789169312,
+            "FinalOutputAlongUp": 0.12275546789169312,
+            "PhysicalAnkleStep": 0.1955559104681015,
+            "PhysicalSoleStep": 0.20786671340465546,
+            "ResidualLagBelowCurrentFloor": 0.0,
+            "SafetyFloorClamp": 0.0769924521446228,
+            "StateOutputBeforeFloorAlongUp": 0.045763012021780014
+          },
+          "evidence": {
+            "acceptedSwingPair": true,
+            "anchorExcluded": true,
+            "builderSwingTargetAvailable": true,
+            "classificationMutuallyExclusive": true,
+            "currentFloorAboveBuilderTarget": true,
+            "currentSwingFloorAvailable": true,
+            "residualLagBelowCurrentFloor": false,
+            "sameLandingEvent": true
+          },
+          "swingCurrentFloorCatchup": {
+            "previousFrame": 467,
+            "frame": 468,
+            "side": "Right",
+            "landingEventIdentity": "7413113028047531440",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 8,
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.070239663124084473,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.070239663124084473,
+            "stateOutputBeforeFloor": {
+              "x": 4.9282507461612113E-06,
+              "y": 0.045763012021780014,
+              "z": -1.1863004374390584E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.045763012021780014,
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.12275546789169312,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.12275546789169312,
+            "safetyFloorClampMeters": 0.0769924521446228,
+            "finalOutput": {
+              "x": 4.9282507461612113E-06,
+              "y": 0.12275546789169312,
+              "z": -1.1863004374390584E-06
+            },
+            "finalOutputAlongUpMeters": 0.12275546789169312,
+            "currentFloorAboveBuilderTargetMeters": 0.052515804767608643,
+            "residualLagBelowCurrentFloorMeters": 0.0,
+            "currentFloorCatchupMeters": 0.0769924558699131,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14350,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentFloorSurfaceIdentity": -14350,
+            "currentFloorPoint": {
+              "x": 40.7220458984375,
+              "y": 1.0799983739852905,
+              "z": 2.5899984836578369
+            },
+            "physicalAnkleAvailable": true,
+            "previousPhysicalAnkle": {
+              "x": 40.863563537597656,
+              "y": 1.0836547613143921,
+              "z": 2.4620568752288818
+            },
+            "physicalAnkle": {
+              "x": 40.698455810546875,
+              "y": 1.1674582958221436,
+              "z": 2.5249736309051514
+            },
+            "physicalAnkleStepMeters": 0.1955559104681015,
+            "physicalAnkleAlongUpDeltaMeters": 0.083803534507751465,
+            "physicalSoleAvailable": true,
+            "previousPhysicalSole": {
+              "x": 40.89959716796875,
+              "y": 1.000578761100769,
+              "z": 2.4565412998199463
+            },
+            "physicalSole": {
+              "x": 40.722053527832031,
+              "y": 1.0799980163574219,
+              "z": 2.5298857688903809
+            },
+            "physicalSoleStepMeters": 0.20786671340465546,
+            "physicalSoleAlongUpDeltaMeters": 0.079419255256652832,
+            "classification": "CurrentFloorAboveBuilderTarget"
+          }
+        },
+        {
+          "eventKind": "SwingCurrentFloorCatchup",
+          "side": "Right",
+          "startFrame": 468,
+          "endFrame": 469,
+          "peakFrame": 469,
+          "eventIdentity": "7413113028047531440",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 8,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "BuilderSwingTargetAlongUp": 0.088756442070007324,
+            "CurrentFloorAboveBuilderTarget": 0.030242204666137695,
+            "CurrentFloorCatchup": 0.059494718909263611,
+            "CurrentSwingFloorMinimumAlongUp": 0.11899864673614502,
+            "FinalOutputAlongUp": 0.11899864673614502,
+            "PhysicalAnkleStep": 0.14448298513889313,
+            "PhysicalSoleStep": 0.15576887130737305,
+            "ResidualLagBelowCurrentFloor": 0.0,
+            "SafetyFloorClamp": 0.059494718909263611,
+            "StateOutputBeforeFloorAlongUp": 0.059503927826881409
+          },
+          "evidence": {
+            "acceptedSwingPair": true,
+            "anchorExcluded": true,
+            "builderSwingTargetAvailable": true,
+            "classificationMutuallyExclusive": true,
+            "currentFloorAboveBuilderTarget": true,
+            "currentSwingFloorAvailable": true,
+            "residualLagBelowCurrentFloor": false,
+            "sameLandingEvent": true
+          },
+          "swingCurrentFloorCatchup": {
+            "previousFrame": 468,
+            "frame": 469,
+            "side": "Right",
+            "landingEventIdentity": "7413113028047531440",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 8,
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.088756442070007324,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.088756442070007324,
+            "stateOutputBeforeFloor": {
+              "x": 3.3531571261846693E-06,
+              "y": 0.059503927826881409,
+              "z": -8.0715290096122772E-07
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.059503927826881409,
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.11899864673614502,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.11899864673614502,
+            "safetyFloorClampMeters": 0.059494718909263611,
+            "finalOutput": {
+              "x": 3.3531571261846693E-06,
+              "y": 0.11899864673614502,
+              "z": -8.0715290096122772E-07
+            },
+            "finalOutputAlongUpMeters": 0.11899864673614502,
+            "currentFloorAboveBuilderTargetMeters": 0.030242204666137695,
+            "residualLagBelowCurrentFloorMeters": 0.0,
+            "currentFloorCatchupMeters": 0.059494718909263611,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14350,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentFloorSurfaceIdentity": -14350,
+            "currentFloorPoint": {
+              "x": 40.579505920410156,
+              "y": 1.0800001621246338,
+              "z": 2.5926973819732666
+            },
+            "physicalAnkleAvailable": true,
+            "previousPhysicalAnkle": {
+              "x": 40.698455810546875,
+              "y": 1.1674582958221436,
+              "z": 2.5249736309051514
+            },
+            "physicalAnkle": {
+              "x": 40.566318511962891,
+              "y": 1.1692726612091064,
+              "z": 2.5833840370178223
+            },
+            "physicalAnkleStepMeters": 0.14448298513889313,
+            "physicalAnkleAlongUpDeltaMeters": 0.0018143653869628906,
+            "physicalSoleAvailable": true,
+            "previousPhysicalSole": {
+              "x": 40.722053527832031,
+              "y": 1.0799980163574219,
+              "z": 2.5298857688903809
+            },
+            "physicalSole": {
+              "x": 40.579509735107422,
+              "y": 1.0799999237060547,
+              "z": 2.5926966667175293
+            },
+            "physicalSoleStepMeters": 0.15576887130737305,
+            "physicalSoleAlongUpDeltaMeters": 1.9073486328125E-06,
+            "classification": "CurrentFloorAboveBuilderTarget"
+          }
+        },
+        {
+          "eventKind": "SwingCurrentFloorCatchup",
+          "side": "Right",
+          "startFrame": 611,
+          "endFrame": 612,
+          "peakFrame": 612,
+          "eventIdentity": "4916451974527316740",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorAboveBuilderTarget": 0.079691648483276367,
+            "CurrentFloorCatchup": 0.079678657845761336,
+            "CurrentSwingFloorMinimumAlongUp": 0.079691648483276367,
+            "FinalOutputAlongUp": 0.079691648483276367,
+            "PhysicalAnkleStep": 0.16294370591640472,
+            "PhysicalSoleStep": 0.17134787142276764,
+            "ResidualLagBelowCurrentFloor": 0.0,
+            "SafetyFloorClamp": 0.079678654670715332,
+            "StateOutputBeforeFloorAlongUp": 1.2990637515031267E-05
+          },
+          "evidence": {
+            "acceptedSwingPair": true,
+            "anchorExcluded": true,
+            "builderSwingTargetAvailable": true,
+            "classificationMutuallyExclusive": true,
+            "currentFloorAboveBuilderTarget": true,
+            "currentSwingFloorAvailable": true,
+            "residualLagBelowCurrentFloor": false,
+            "sameLandingEvent": true
+          },
+          "swingCurrentFloorCatchup": {
+            "previousFrame": 611,
+            "frame": 612,
+            "side": "Right",
+            "landingEventIdentity": "4916451974527316740",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 12,
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloor": {
+              "x": 3.2010157156037167E-06,
+              "y": 1.2990637515031267E-05,
+              "z": 7.3337055255251471E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 1.2990637515031267E-05,
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.079691648483276367,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.079691648483276367,
+            "safetyFloorClampMeters": 0.079678654670715332,
+            "finalOutput": {
+              "x": 3.2010157156037167E-06,
+              "y": 0.079691648483276367,
+              "z": 7.3337055255251471E-06
+            },
+            "finalOutputAlongUpMeters": 0.079691648483276367,
+            "currentFloorAboveBuilderTargetMeters": 0.079691648483276367,
+            "residualLagBelowCurrentFloorMeters": 0.0,
+            "currentFloorCatchupMeters": 0.079678657845761336,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14460,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentFloorSurfaceIdentity": -14460,
+            "currentFloorPoint": {
+              "x": 37.607643127441406,
+              "y": 3.06000018119812,
+              "z": 8.3099994659423828
+            },
+            "physicalAnkleAvailable": true,
+            "previousPhysicalAnkle": {
+              "x": 37.755321502685547,
+              "y": 3.1430761814117432,
+              "z": 8.2545070648193359
+            },
+            "physicalAnkle": {
+              "x": 37.592781066894531,
+              "y": 3.1474602222442627,
+              "z": 8.243922233581543
+            },
+            "physicalAnkleStepMeters": 0.16294370591640472,
+            "physicalAnkleAlongUpDeltaMeters": 0.0043840408325195313,
+            "physicalSoleAvailable": true,
+            "previousPhysicalSole": {
+              "x": 37.777786254882813,
+              "y": 3.059999942779541,
+              "z": 8.2832107543945313
+            },
+            "physicalSole": {
+              "x": 37.607646942138672,
+              "y": 3.059999942779541,
+              "z": 8.2628955841064453
+            },
+            "physicalSoleStepMeters": 0.17134787142276764,
+            "physicalSoleAlongUpDeltaMeters": 0.0,
+            "classification": "CurrentFloorAboveBuilderTarget"
+          }
+        },
+        {
+          "eventKind": "SwingCurrentFloorCatchup",
+          "side": "Right",
+          "startFrame": 612,
+          "endFrame": 613,
+          "peakFrame": 613,
+          "eventIdentity": "4916451974527316740",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "BuilderSwingTargetAlongUp": 0.066111087799072266,
+            "CurrentFloorAboveBuilderTarget": 0.020289182662963867,
+            "CurrentFloorCatchup": 0.065261997282505035,
+            "CurrentSwingFloorMinimumAlongUp": 0.086400270462036133,
+            "FinalOutputAlongUp": 0.086400270462036133,
+            "PhysicalAnkleStep": 0.14827921986579895,
+            "PhysicalSoleStep": 0.15354487299919128,
+            "ResidualLagBelowCurrentFloor": 0.0,
+            "SafetyFloorClamp": 0.065261997282505035,
+            "StateOutputBeforeFloorAlongUp": 0.021138273179531097
+          },
+          "evidence": {
+            "acceptedSwingPair": true,
+            "anchorExcluded": true,
+            "builderSwingTargetAvailable": true,
+            "classificationMutuallyExclusive": true,
+            "currentFloorAboveBuilderTarget": true,
+            "currentSwingFloorAvailable": true,
+            "residualLagBelowCurrentFloor": false,
+            "sameLandingEvent": true
+          },
+          "swingCurrentFloorCatchup": {
+            "previousFrame": 612,
+            "frame": 613,
+            "side": "Right",
+            "landingEventIdentity": "4916451974527316740",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 12,
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.066111087799072266,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.066111087799072266,
+            "stateOutputBeforeFloor": {
+              "x": 2.1779551389045082E-06,
+              "y": 0.021138273179531097,
+              "z": 4.9898167162609752E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.021138273179531097,
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.086400270462036133,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.086400270462036133,
+            "safetyFloorClampMeters": 0.065261997282505035,
+            "finalOutput": {
+              "x": 2.1779551389045082E-06,
+              "y": 0.086400270462036133,
+              "z": 4.9898167162609752E-06
+            },
+            "finalOutputAlongUpMeters": 0.086400270462036133,
+            "currentFloorAboveBuilderTargetMeters": 0.020289182662963867,
+            "residualLagBelowCurrentFloorMeters": 0.0,
+            "currentFloorCatchupMeters": 0.065261997282505035,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14460,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentFloorSurfaceIdentity": -14460,
+            "currentFloorPoint": {
+              "x": 37.461750030517578,
+              "y": 3.06000018119812,
+              "z": 8.3107576370239258
+            },
+            "physicalAnkleAvailable": true,
+            "previousPhysicalAnkle": {
+              "x": 37.592781066894531,
+              "y": 3.1474602222442627,
+              "z": 8.243922233581543
+            },
+            "physicalAnkle": {
+              "x": 37.454154968261719,
+              "y": 3.1492726802825928,
+              "z": 8.2965173721313477
+            },
+            "physicalAnkleStepMeters": 0.14827921986579895,
+            "physicalAnkleAlongUpDeltaMeters": 0.0018124580383300781,
+            "physicalSoleAvailable": true,
+            "previousPhysicalSole": {
+              "x": 37.607646942138672,
+              "y": 3.059999942779541,
+              "z": 8.2628955841064453
+            },
+            "physicalSole": {
+              "x": 37.461753845214844,
+              "y": 3.059999942779541,
+              "z": 8.3107624053955078
+            },
+            "physicalSoleStepMeters": 0.15354487299919128,
+            "physicalSoleAlongUpDeltaMeters": 0.0,
+            "classification": "CurrentFloorAboveBuilderTarget"
+          }
+        },
+        {
+          "eventKind": "SwingCurrentFloorCatchup",
+          "side": "Right",
+          "startFrame": 724,
+          "endFrame": 725,
+          "peakFrame": 725,
+          "eventIdentity": "10257638667488449871",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 15,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorAboveBuilderTarget": 0.10301303863525391,
+            "CurrentFloorCatchup": 0.074647309258580208,
+            "CurrentSwingFloorMinimumAlongUp": 0.10301303863525391,
+            "FinalOutputAlongUp": 0.10301303863525391,
+            "PhysicalAnkleStep": 0.16123497486114502,
+            "PhysicalSoleStep": 0.1691463440656662,
+            "ResidualLagBelowCurrentFloor": 0.0,
+            "SafetyFloorClamp": 0.074647307395935059,
+            "StateOutputBeforeFloorAlongUp": 0.0283657293766737
+          },
+          "evidence": {
+            "acceptedSwingPair": true,
+            "anchorExcluded": true,
+            "builderSwingTargetAvailable": true,
+            "classificationMutuallyExclusive": true,
+            "currentFloorAboveBuilderTarget": true,
+            "currentSwingFloorAvailable": true,
+            "residualLagBelowCurrentFloor": false,
+            "sameLandingEvent": true
+          },
+          "swingCurrentFloorCatchup": {
+            "previousFrame": 724,
+            "frame": 725,
+            "side": "Right",
+            "landingEventIdentity": "10257638667488449871",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 15,
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloor": {
+              "x": -9.3134110557002714E-07,
+              "y": 0.0283657293766737,
+              "z": 2.1225632735877298E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0283657293766737,
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.10301303863525391,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.10301303863525391,
+            "safetyFloorClampMeters": 0.074647307395935059,
+            "finalOutput": {
+              "x": -9.3134110557002714E-07,
+              "y": 0.10301303863525391,
+              "z": 2.1225632735877298E-06
+            },
+            "finalOutputAlongUpMeters": 0.10301303863525391,
+            "currentFloorAboveBuilderTargetMeters": 0.10301303863525391,
+            "residualLagBelowCurrentFloorMeters": 0.0,
+            "currentFloorCatchupMeters": 0.074647309258580208,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14470,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentFloorSurfaceIdentity": -14470,
+            "currentFloorPoint": {
+              "x": 41.757537841796875,
+              "y": 3.2400002479553223,
+              "z": 8.8299999237060547
+            },
+            "physicalAnkleAvailable": true,
+            "previousPhysicalAnkle": {
+              "x": 41.6138916015625,
+              "y": 3.3273487091064453,
+              "z": 8.92711353302002
+            },
+            "physicalAnkle": {
+              "x": 41.720149993896484,
+              "y": 3.3226501941680908,
+              "z": 8.8059368133544922
+            },
+            "physicalAnkleStepMeters": 0.16123497486114502,
+            "physicalAnkleAlongUpDeltaMeters": -0.0046985149383544922,
+            "physicalSoleAvailable": true,
+            "previousPhysicalSole": {
+              "x": 41.638397216796875,
+              "y": 3.2399997711181641,
+              "z": 8.927215576171875
+            },
+            "physicalSole": {
+              "x": 41.757537841796875,
+              "y": 3.2399997711181641,
+              "z": 8.8071489334106445
+            },
+            "physicalSoleStepMeters": 0.1691463440656662,
+            "physicalSoleAlongUpDeltaMeters": 0.0,
+            "classification": "CurrentFloorAboveBuilderTarget"
+          }
+        },
+        {
+          "eventKind": "SwingCurrentFloorCatchup",
+          "side": "Right",
+          "startFrame": 754,
+          "endFrame": 755,
+          "peakFrame": 755,
+          "eventIdentity": "10879890780635794856",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 16,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "BuilderSwingTargetAlongUp": 0.00769805908203125,
+            "CurrentFloorAboveBuilderTarget": 0.058397769927978516,
+            "CurrentFloorCatchup": 0.063633532728999853,
+            "CurrentSwingFloorMinimumAlongUp": 0.066095829010009766,
+            "FinalOutputAlongUp": 0.066095829010009766,
+            "PhysicalAnkleStep": 0.13050241768360138,
+            "PhysicalSoleStep": 0.1309078186750412,
+            "ResidualLagBelowCurrentFloor": 0.0,
+            "SafetyFloorClamp": 0.063633531332015991,
+            "StateOutputBeforeFloorAlongUp": 0.0024622962810099125
+          },
+          "evidence": {
+            "acceptedSwingPair": true,
+            "anchorExcluded": true,
+            "builderSwingTargetAvailable": true,
+            "classificationMutuallyExclusive": true,
+            "currentFloorAboveBuilderTarget": true,
+            "currentSwingFloorAvailable": true,
+            "residualLagBelowCurrentFloor": false,
+            "sameLandingEvent": true
+          },
+          "swingCurrentFloorCatchup": {
+            "previousFrame": 754,
+            "frame": 755,
+            "side": "Right",
+            "landingEventIdentity": "10879890780635794856",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 16,
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.00769805908203125,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.00769805908203125,
+            "stateOutputBeforeFloor": {
+              "x": -1.1539343699323856E-12,
+              "y": 0.0024622962810099125,
+              "z": 2.6298613894221168E-12
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0024622962810099125,
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.066095829010009766,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.066095829010009766,
+            "safetyFloorClampMeters": 0.063633531332015991,
+            "finalOutput": {
+              "x": -1.1539343699323856E-12,
+              "y": 0.066095829010009766,
+              "z": 2.6298613894221168E-12
+            },
+            "finalOutputAlongUpMeters": 0.066095829010009766,
+            "currentFloorAboveBuilderTargetMeters": 0.058397769927978516,
+            "residualLagBelowCurrentFloorMeters": 0.0,
+            "currentFloorCatchupMeters": 0.063633532728999853,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14480,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentFloorSurfaceIdentity": -14480,
+            "currentFloorPoint": {
+              "x": 40.771171569824219,
+              "y": 3.4200000762939453,
+              "z": 9.3500003814697266
+            },
+            "physicalAnkleAvailable": true,
+            "previousPhysicalAnkle": {
+              "x": 40.661483764648438,
+              "y": 3.5346105098724365,
+              "z": 9.2862396240234375
+            },
+            "physicalAnkle": {
+              "x": 40.749538421630859,
+              "y": 3.5030760765075684,
+              "z": 9.3772497177124023
+            },
+            "physicalAnkleStepMeters": 0.13050241768360138,
+            "physicalAnkleAlongUpDeltaMeters": -0.031534433364868164,
+            "physicalSoleAvailable": true,
+            "previousPhysicalSole": {
+              "x": 40.695602416992188,
+              "y": 3.4594616889953613,
+              "z": 9.24856948852539
+            },
+            "physicalSole": {
+              "x": 40.771171569824219,
+              "y": 3.4199995994567871,
+              "z": 9.3479118347167969
+            },
+            "physicalSoleStepMeters": 0.1309078186750412,
+            "physicalSoleAlongUpDeltaMeters": -0.039462089538574219,
+            "classification": "CurrentFloorAboveBuilderTarget"
+          }
+        }
+      ]
+    },
+    {
+      "id": "swing-actual-foot-envelope-counterfactual",
+      "question": "真实脚水平距离处的GroundPath Envelope候选是否唯一，以及非歧义候选能否在CurrentSwingFloor硬Clamp前覆盖地面",
+      "eventKinds": [
+        "SwingActualFootEnvelopeCounterfactual"
+      ],
+      "rules": [
+        "currentFloorCatchupMeters>0.01"
+      ],
+      "eligibleEventCount": 805,
+      "matchedEventCount": 37,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.045962732919254658,
+      "occurrence": {
+        "available": true,
+        "sampleUnit": "ContinuousAcceptedUnanchoredSwingPairWithCurrentFloor",
+        "metric": "CurrentFloorCatchup",
+        "comparison": "GreaterThan",
+        "thresholdUnit": "Meters",
+        "eligibleEventCount": 805,
+        "configuredThresholds": [
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "primaryRate": {
+          "threshold": 0.01,
+          "eligibleEventCount": 805,
+          "matchedEventCount": 37,
+          "matchedEventRate": 0.045962732919254658
+        },
+        "rates": [
+          {
+            "threshold": 0.01,
+            "eligibleEventCount": 805,
+            "matchedEventCount": 37,
+            "matchedEventRate": 0.045962732919254658
+          },
+          {
+            "threshold": 0.02,
+            "eligibleEventCount": 805,
+            "matchedEventCount": 29,
+            "matchedEventRate": 0.036024844720496892
+          },
+          {
+            "threshold": 0.05,
+            "eligibleEventCount": 805,
+            "matchedEventCount": 9,
+            "matchedEventRate": 0.011180124223602485
+          },
+          {
+            "threshold": 0.1,
+            "eligibleEventCount": 805,
+            "matchedEventCount": 1,
+            "matchedEventRate": 0.0012422360248447205
+          }
+        ]
+      },
+      "supplementalOccurrences": [
+        {
+          "available": true,
+          "sampleUnit": "UnambiguousActualFootEnvelopePairWithCurrentFloor",
+          "metric": "ActualEnvelopeCoversCurrentFloor",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Boolean",
+          "eligibleEventCount": 279,
+          "configuredThresholds": [
+            0.5
+          ],
+          "primaryRate": {
+            "threshold": 0.5,
+            "eligibleEventCount": 279,
+            "matchedEventCount": 274,
+            "matchedEventRate": 0.982078853046595
+          },
+          "rates": [
+            {
+              "threshold": 0.5,
+              "eligibleEventCount": 279,
+              "matchedEventCount": 274,
+              "matchedEventRate": 0.982078853046595
+            }
+          ]
+        }
+      ],
+      "measurements": {
+        "ActualEnvelopeCandidateCount": {
+          "available": true,
+          "count": 805,
+          "median": 1.0,
+          "p90": 1.0,
+          "p99": 1.0,
+          "maximum": 1.0
+        },
+        "ActualEnvelopeCoversCurrentFloor": {
+          "available": true,
+          "count": 279,
+          "median": 1.0,
+          "p90": 1.0,
+          "p99": 1.0,
+          "maximum": 1.0
+        },
+        "ActualEnvelopeHeightSpan": {
+          "available": true,
+          "count": 805,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "ActualFootClosestPathParameter": {
+          "available": true,
+          "count": 805,
+          "median": 0.51350140571594238,
+          "p90": 0.991804873943329,
+          "p99": 1.0,
+          "maximum": 1.0
+        },
+        "ActualFootCrossTrackDistance": {
+          "available": true,
+          "count": 805,
+          "median": 0.164254829287529,
+          "p90": 0.8011503934860229,
+          "p99": 1.2938121747970592,
+          "maximum": 1.4481462240219116
+        },
+        "ActualFootDistanceAlongAxis": {
+          "available": true,
+          "count": 805,
+          "median": 1.3337033987045288,
+          "p90": 2.7809686660766606,
+          "p99": 3.3867841911315919,
+          "maximum": 3.5442671775817871
+        },
+        "ActualFootHorizontalDistance": {
+          "available": true,
+          "count": 805,
+          "median": 1.3434721231460571,
+          "p90": 2.7814391136169436,
+          "p99": 3.3963530445098877,
+          "maximum": 3.5442671775817871
+        },
+        "ActualMinusPhaseEnvelopeHorizontalDistance": {
+          "available": true,
+          "count": 805,
+          "median": -0.19304347038269043,
+          "p90": 0.076129913330078125,
+          "p99": 0.63375526905059931,
+          "maximum": 0.85442864894866943
+        },
+        "ActualProgressEnvelopeAdvanceAboveBuilderTarget": {
+          "available": true,
+          "count": 279,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.082186079025268463,
+          "maximum": 0.13341856002807617
+        },
+        "ActualProgressEnvelopeMinimumCorrection": {
+          "available": true,
+          "count": 279,
+          "median": -0.050832033157348633,
+          "p90": 0.18504648208618166,
+          "p99": 0.2441349458694457,
+          "maximum": 0.25584268569946289
+        },
+        "ActualProgressEnvelopeRemainingBelowCurrentFloor": {
+          "available": true,
+          "count": 279,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.00573379993438716,
+          "maximum": 0.018125653266906738
+        },
+        "BaselineHorizontalDistance": {
+          "available": true,
+          "count": 805,
+          "median": 1.5743246078491211,
+          "p90": 2.9253219604492187,
+          "p99": 3.3602468776702881,
+          "maximum": 3.5102839469909668
+        },
+        "BuilderSwingTargetAlongUp": {
+          "available": true,
+          "count": 805,
+          "median": 0.0036385059356689453,
+          "p90": 0.21091523170471191,
+          "p99": 0.2871073818206788,
+          "maximum": 0.35521364212036133
+        },
+        "CurrentFloorCatchup": {
+          "available": true,
+          "count": 805,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0518881861595584,
+          "maximum": 0.13093732483685017
+        },
+        "CurrentSwingFloorMinimumAlongUp": {
+          "available": true,
+          "count": 805,
+          "median": -0.13222241401672363,
+          "p90": 0.11248937845230103,
+          "p99": 0.23915990829467776,
+          "maximum": 0.26623106002807617
+        },
+        "FinalOutputAlongUp": {
+          "available": true,
+          "count": 805,
+          "median": 0.00679957028478384,
+          "p90": 0.17800502777099611,
+          "p99": 0.26192248344421387,
+          "maximum": 0.28193634748458862
+        },
+        "GroundPathCorridorRadius": {
+          "available": true,
+          "count": 805,
+          "median": 0.10000000149011612,
+          "p90": 0.10000000149011612,
+          "p99": 0.10000000149011612,
+          "maximum": 0.10000000149011612
+        },
+        "PhaseEnvelopeHorizontalDistance": {
+          "available": true,
+          "count": 805,
+          "median": 1.5604737997055054,
+          "p90": 2.9242659091949466,
+          "p99": 3.3651348400115966,
+          "maximum": 3.5101420879364014
+        },
+        "PhaseSampleHeightAlongUp": {
+          "available": true,
+          "count": 805,
+          "median": 2.4574131965637207,
+          "p90": 3.5093552589416506,
+          "p99": 4.0595153427124044,
+          "maximum": 4.2503929138183594
+        },
+        "StateOutputBeforeFloorAlongUp": {
+          "available": true,
+          "count": 805,
+          "median": 0.0060945106670260429,
+          "p90": 0.17565512657165527,
+          "p99": 0.25730962276458746,
+          "maximum": 0.28193634748458862
+        }
+      },
+      "categoricalMeasurements": {
+        "CounterfactualState": [
+          {
+            "value": "NoIntersection",
+            "count": 33
+          },
+          {
+            "value": "OutsideGroundPathCorridor",
+            "count": 493
+          },
+          {
+            "value": "UniqueInCorridor",
+            "count": 279
+          }
+        ]
+      },
+      "representativeEventCount": 16,
+      "representativeEvents": [
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 251,
+          "endFrame": 252,
+          "peakFrame": 252,
+          "eventIdentity": "3668125845813722234",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 2,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeCoversCurrentFloor": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.72330951690673828,
+            "ActualFootCrossTrackDistance": 0.070912040770053864,
+            "ActualFootDistanceAlongAxis": 2.4232473373413086,
+            "ActualFootHorizontalDistance": 2.4232473373413086,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.086739301681518555,
+            "ActualProgressEnvelopeAdvanceAboveBuilderTarget": 0.0,
+            "ActualProgressEnvelopeMinimumCorrection": 0.1155165433883667,
+            "ActualProgressEnvelopeRemainingBelowCurrentFloor": 0.0,
+            "BaselineHorizontalDistance": 2.5292820930480957,
+            "BuilderSwingTargetAlongUp": 0.145521879196167,
+            "CurrentFloorCatchup": 0.052054382860660553,
+            "CurrentSwingFloorMinimumAlongUp": 0.12981891632080078,
+            "FinalOutputAlongUp": 0.12981891632080078,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 2.5099866390228271,
+            "PhaseSampleHeightAlongUp": 1.995702862739563,
+            "StateOutputBeforeFloorAlongUp": 0.077764533460140228
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": true,
+            "actualEnvelopeCurrentFloorComparisonAvailable": true,
+            "actualFootWithinGroundPathCorridor": true,
+            "actualProgressEnvelopeCorrectionAvailable": true,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": false,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": true
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 251,
+            "frame": 252,
+            "side": "Right",
+            "landingEventIdentity": "3668125845813722234",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 2,
+            "groundPathInputIdentity": "611126975115442932",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 2.4232473373413086,
+            "baselineHorizontalDistanceMeters": 2.5292820930480957,
+            "phaseEnvelopeHorizontalDistanceMeters": 2.5099866390228271,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.086739301681518555,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.72330951690673828,
+            "actualFootDistanceAlongAxisMeters": 2.4232473373413086,
+            "actualFootCrossTrackDistanceMeters": 0.070912040770053864,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": true,
+            "intersectionState": "Unique",
+            "counterfactualState": "UniqueInCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 1.9656975269317627,
+            "maximumCandidateHeightAlongUpMeters": 1.9656975269317627,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 1.995702862739563,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.145521879196167,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.145521879196167,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 1.3908231267123483E-05,
+              "y": 0.077764533460140228,
+              "z": 6.8083213591307867E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.077764533460140228,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14400,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.12981891632080078,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.12981891632080078,
+            "finalOutput": {
+              "x": 1.3908231267123483E-05,
+              "y": 0.12981891632080078,
+              "z": 6.8083213591307867E-06
+            },
+            "finalOutputAlongUpMeters": 0.12981891632080078,
+            "actualProgressEnvelopeCorrectionAvailable": true,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.1155165433883667,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": true,
+            "currentFloorCatchupMeters": 0.052054382860660553
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 324,
+          "endFrame": 325,
+          "peakFrame": 325,
+          "eventIdentity": "18369873941196438956",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 4,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.84585100412368774,
+            "ActualFootCrossTrackDistance": 0.83605325222015381,
+            "ActualFootDistanceAlongAxis": 2.267437219619751,
+            "ActualFootHorizontalDistance": 2.267437219619751,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": 0.00055527687072753906,
+            "BaselineHorizontalDistance": 2.1340169906616211,
+            "BuilderSwingTargetAlongUp": 0.0256195068359375,
+            "CurrentFloorCatchup": 0.13093732483685017,
+            "CurrentSwingFloorMinimumAlongUp": 0.15612649917602539,
+            "FinalOutputAlongUp": 0.15612649917602539,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 2.2668819427490234,
+            "PhaseSampleHeightAlongUp": 4.1894931793212891,
+            "StateOutputBeforeFloorAlongUp": 0.025189174339175224
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 324,
+            "frame": 325,
+            "side": "Right",
+            "landingEventIdentity": "18369873941196438956",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 4,
+            "groundPathInputIdentity": "10102089793812037216",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 2.267437219619751,
+            "baselineHorizontalDistanceMeters": 2.1340169906616211,
+            "phaseEnvelopeHorizontalDistanceMeters": 2.2668819427490234,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": 0.00055527687072753906,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.84585100412368774,
+            "actualFootDistanceAlongAxisMeters": 2.267437219619751,
+            "actualFootCrossTrackDistanceMeters": 0.83605325222015381,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 4.1896686553955078,
+            "maximumCandidateHeightAlongUpMeters": 4.1896686553955078,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 4.1894931793212891,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0256195068359375,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0256195068359375,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 6.646437213930767E-06,
+              "y": 0.025189174339175224,
+              "z": 5.02394823342911E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.025189174339175224,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14530,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.15612649917602539,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.15612649917602539,
+            "finalOutput": {
+              "x": 6.646437213930767E-06,
+              "y": 0.15612649917602539,
+              "z": 5.02394823342911E-06
+            },
+            "finalOutputAlongUpMeters": 0.15612649917602539,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.13093732483685017
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 327,
+          "endFrame": 328,
+          "peakFrame": 328,
+          "eventIdentity": "18369873941196438956",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 4,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 0.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 1.0,
+            "ActualFootCrossTrackDistance": 0.54341500997543335,
+            "ActualFootDistanceAlongAxis": 2.022160530090332,
+            "ActualFootHorizontalDistance": 2.2320899963378906,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": 0.41647994518280029,
+            "BaselineHorizontalDistance": 1.824228048324585,
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorCatchup": 0.038324832916259766,
+            "CurrentSwingFloorMinimumAlongUp": 0.046258926391601563,
+            "FinalOutputAlongUp": 0.046258926391601563,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 1.8156100511550903,
+            "PhaseSampleHeightAlongUp": 3.9599997997283936,
+            "StateOutputBeforeFloorAlongUp": 0.0079340934753417969
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": false,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 327,
+            "frame": 328,
+            "side": "Right",
+            "landingEventIdentity": "18369873941196438956",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 4,
+            "groundPathInputIdentity": "15256500282471636980",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 2.2320899963378906,
+            "baselineHorizontalDistanceMeters": 1.824228048324585,
+            "phaseEnvelopeHorizontalDistanceMeters": 1.8156100511550903,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": 0.41647994518280029,
+            "actualFootAxisRegion": "AfterPathEnd",
+            "actualFootClosestPathParameter": 1.0,
+            "actualFootDistanceAlongAxisMeters": 2.022160530090332,
+            "actualFootCrossTrackDistanceMeters": 0.54341500997543335,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "NoIntersection",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 0,
+            "minimumCandidateHeightAlongUpMeters": 0.0,
+            "maximumCandidateHeightAlongUpMeters": 0.0,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 3.9599997997283936,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 2.0934967324137688E-06,
+              "y": 0.0079340934753417969,
+              "z": 1.5824444972167839E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0079340934753417969,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14520,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.046258926391601563,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.046258926391601563,
+            "finalOutput": {
+              "x": 2.0934967324137688E-06,
+              "y": 0.046258926391601563,
+              "z": 1.5824444972167839E-06
+            },
+            "finalOutputAlongUpMeters": 0.046258926391601563,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.038324832916259766
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 328,
+          "endFrame": 329,
+          "peakFrame": 329,
+          "eventIdentity": "18369873941196438956",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 4,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 0.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 1.0,
+            "ActualFootCrossTrackDistance": 0.40104967355728149,
+            "ActualFootDistanceAlongAxis": 1.9356521368026733,
+            "ActualFootHorizontalDistance": 2.1673598289489746,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": 0.3726966381072998,
+            "BaselineHorizontalDistance": 1.8008308410644531,
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorCatchup": 0.065620854962617159,
+            "CurrentSwingFloorMinimumAlongUp": 0.071019172668457031,
+            "FinalOutputAlongUp": 0.071019172668457031,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 1.7946631908416748,
+            "PhaseSampleHeightAlongUp": 3.9600000381469727,
+            "StateOutputBeforeFloorAlongUp": 0.0053983177058398724
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": false,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 328,
+            "frame": 329,
+            "side": "Right",
+            "landingEventIdentity": "18369873941196438956",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 4,
+            "groundPathInputIdentity": "5826594081367278567",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 2.1673598289489746,
+            "baselineHorizontalDistanceMeters": 1.8008308410644531,
+            "phaseEnvelopeHorizontalDistanceMeters": 1.7946631908416748,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": 0.3726966381072998,
+            "actualFootAxisRegion": "AfterPathEnd",
+            "actualFootClosestPathParameter": 1.0,
+            "actualFootDistanceAlongAxisMeters": 1.9356521368026733,
+            "actualFootCrossTrackDistanceMeters": 0.40104967355728149,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "NoIntersection",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 0,
+            "minimumCandidateHeightAlongUpMeters": 0.0,
+            "maximumCandidateHeightAlongUpMeters": 0.0,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 3.9600000381469727,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 1.4244046724343207E-06,
+              "y": 0.0053983177058398724,
+              "z": 1.0766873401735211E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0053983177058398724,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14520,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.071019172668457031,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.071019172668457031,
+            "finalOutput": {
+              "x": 1.4244046724343207E-06,
+              "y": 0.071019172668457031,
+              "z": 1.0766873401735211E-06
+            },
+            "finalOutputAlongUpMeters": 0.071019172668457031,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.065620854962617159
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 467,
+          "endFrame": 468,
+          "peakFrame": 468,
+          "eventIdentity": "7413113028047531440",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 8,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.69212323427200317,
+            "ActualFootCrossTrackDistance": 0.29832395911216736,
+            "ActualFootDistanceAlongAxis": 2.17256498336792,
+            "ActualFootHorizontalDistance": 2.17256498336792,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.1702878475189209,
+            "BaselineHorizontalDistance": 2.3698091506958008,
+            "BuilderSwingTargetAlongUp": 0.070239663124084473,
+            "CurrentFloorCatchup": 0.0769924558699131,
+            "CurrentSwingFloorMinimumAlongUp": 0.12275546789169312,
+            "FinalOutputAlongUp": 0.12275546789169312,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 2.3428528308868408,
+            "PhaseSampleHeightAlongUp": 1.0274825096130371,
+            "StateOutputBeforeFloorAlongUp": 0.045763012021780014
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 467,
+            "frame": 468,
+            "side": "Right",
+            "landingEventIdentity": "7413113028047531440",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 8,
+            "groundPathInputIdentity": "7866126883433314092",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 2.17256498336792,
+            "baselineHorizontalDistanceMeters": 2.3698091506958008,
+            "phaseEnvelopeHorizontalDistanceMeters": 2.3428528308868408,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.1702878475189209,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.69212323427200317,
+            "actualFootDistanceAlongAxisMeters": 2.17256498336792,
+            "actualFootCrossTrackDistanceMeters": 0.29832395911216736,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 0.99036180973052979,
+            "maximumCandidateHeightAlongUpMeters": 0.99036180973052979,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 1.0274825096130371,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.070239663124084473,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.070239663124084473,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 4.9282507461612113E-06,
+              "y": 0.045763012021780014,
+              "z": -1.1863004374390584E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.045763012021780014,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14350,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.12275546789169312,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.12275546789169312,
+            "finalOutput": {
+              "x": 4.9282507461612113E-06,
+              "y": 0.12275546789169312,
+              "z": -1.1863004374390584E-06
+            },
+            "finalOutputAlongUpMeters": 0.12275546789169312,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.0769924558699131
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 468,
+          "endFrame": 469,
+          "peakFrame": 469,
+          "eventIdentity": "7413113028047531440",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 8,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.73970717191696167,
+            "ActualFootCrossTrackDistance": 0.27610039710998535,
+            "ActualFootDistanceAlongAxis": 2.3190805912017822,
+            "ActualFootHorizontalDistance": 2.3190805912017822,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.15301012992858887,
+            "BaselineHorizontalDistance": 2.4958162307739258,
+            "BuilderSwingTargetAlongUp": 0.088756442070007324,
+            "CurrentFloorCatchup": 0.059494718909263611,
+            "CurrentSwingFloorMinimumAlongUp": 0.11899864673614502,
+            "FinalOutputAlongUp": 0.11899864673614502,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 2.4720907211303711,
+            "PhaseSampleHeightAlongUp": 1.0497579574584961,
+            "StateOutputBeforeFloorAlongUp": 0.059503927826881409
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 468,
+            "frame": 469,
+            "side": "Right",
+            "landingEventIdentity": "7413113028047531440",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 8,
+            "groundPathInputIdentity": "3786448499010337305",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 2.3190805912017822,
+            "baselineHorizontalDistanceMeters": 2.4958162307739258,
+            "phaseEnvelopeHorizontalDistanceMeters": 2.4720907211303711,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.15301012992858887,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.73970717191696167,
+            "actualFootDistanceAlongAxisMeters": 2.3190805912017822,
+            "actualFootCrossTrackDistanceMeters": 0.27610039710998535,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 1.0169285535812378,
+            "maximumCandidateHeightAlongUpMeters": 1.0169285535812378,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 1.0497579574584961,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.088756442070007324,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.088756442070007324,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 3.3531571261846693E-06,
+              "y": 0.059503927826881409,
+              "z": -8.0715290096122772E-07
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.059503927826881409,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14350,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.11899864673614502,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.11899864673614502,
+            "finalOutput": {
+              "x": 3.3531571261846693E-06,
+              "y": 0.11899864673614502,
+              "z": -8.0715290096122772E-07
+            },
+            "finalOutputAlongUpMeters": 0.11899864673614502,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.059494718909263611
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 469,
+          "endFrame": 470,
+          "peakFrame": 470,
+          "eventIdentity": "7413113028047531440",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 8,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.78371495008468628,
+            "ActualFootCrossTrackDistance": 0.24201206862926483,
+            "ActualFootDistanceAlongAxis": 2.4562313556671143,
+            "ActualFootHorizontalDistance": 2.4562313556671143,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.13834452629089355,
+            "BaselineHorizontalDistance": 2.6156485080718994,
+            "BuilderSwingTargetAlongUp": 0.10351824760437012,
+            "CurrentFloorCatchup": 0.036421440541744232,
+            "CurrentSwingFloorMinimumAlongUp": 0.10999256372451782,
+            "FinalOutputAlongUp": 0.10999256372451782,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 2.5945758819580078,
+            "PhaseSampleHeightAlongUp": 1.0735257863998413,
+            "StateOutputBeforeFloorAlongUp": 0.07357112318277359
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 469,
+            "frame": 470,
+            "side": "Right",
+            "landingEventIdentity": "7413113028047531440",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 8,
+            "groundPathInputIdentity": "13063408724722236120",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 2.4562313556671143,
+            "baselineHorizontalDistanceMeters": 2.6156485080718994,
+            "phaseEnvelopeHorizontalDistanceMeters": 2.5945758819580078,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.13834452629089355,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.78371495008468628,
+            "actualFootDistanceAlongAxisMeters": 2.4562313556671143,
+            "actualFootCrossTrackDistanceMeters": 0.24201206862926483,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 1.0439416170120239,
+            "maximumCandidateHeightAlongUpMeters": 1.0439416170120239,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 1.0735257863998413,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.10351824760437012,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.10351824760437012,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 2.281471324749873E-06,
+              "y": 0.07357112318277359,
+              "z": -5.4918280056881486E-07
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.07357112318277359,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14350,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.10999256372451782,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.10999256372451782,
+            "finalOutput": {
+              "x": 2.281471324749873E-06,
+              "y": 0.10999256372451782,
+              "z": -5.4918280056881486E-07
+            },
+            "finalOutputAlongUpMeters": 0.10999256372451782,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.036421440541744232
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 610,
+          "endFrame": 611,
+          "peakFrame": 611,
+          "eventIdentity": "4916451974527316740",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.54658478498458862,
+            "ActualFootCrossTrackDistance": 0.644745409488678,
+            "ActualFootDistanceAlongAxis": 1.2141215801239014,
+            "ActualFootHorizontalDistance": 1.2141215801239014,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.49303770065307617,
+            "BaselineHorizontalDistance": 1.5807218551635742,
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorCatchup": 0.047899465333102853,
+            "CurrentSwingFloorMinimumAlongUp": 0.047918558120727539,
+            "FinalOutputAlongUp": 0.047918558120727539,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 1.7071592807769775,
+            "PhaseSampleHeightAlongUp": 2.8628418445587158,
+            "StateOutputBeforeFloorAlongUp": 1.9092787624686025E-05
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 610,
+            "frame": 611,
+            "side": "Right",
+            "landingEventIdentity": "4916451974527316740",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 12,
+            "groundPathInputIdentity": "1980416306055776949",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 1.2141215801239014,
+            "baselineHorizontalDistanceMeters": 1.5807218551635742,
+            "phaseEnvelopeHorizontalDistanceMeters": 1.7071592807769775,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.49303770065307617,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.54658478498458862,
+            "actualFootDistanceAlongAxisMeters": 1.2141215801239014,
+            "actualFootCrossTrackDistanceMeters": 0.644745409488678,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 2.8158121109008789,
+            "maximumCandidateHeightAlongUpMeters": 2.8158121109008789,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 2.8628418445587158,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 4.7046432882780209E-06,
+              "y": 1.9092787624686025E-05,
+              "z": 1.077859997167252E-05
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 1.9092787624686025E-05,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14460,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.047918558120727539,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.047918558120727539,
+            "finalOutput": {
+              "x": 4.7046432882780209E-06,
+              "y": 0.047918558120727539,
+              "z": 1.077859997167252E-05
+            },
+            "finalOutputAlongUpMeters": 0.047918558120727539,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.047899465333102853
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 611,
+          "endFrame": 612,
+          "peakFrame": 612,
+          "eventIdentity": "4916451974527316740",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.60924553871154785,
+            "ActualFootCrossTrackDistance": 0.45548626780509949,
+            "ActualFootDistanceAlongAxis": 1.4412978887557983,
+            "ActualFootHorizontalDistance": 1.4412978887557983,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.34015309810638428,
+            "BaselineHorizontalDistance": 1.786015510559082,
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorCatchup": 0.079678657845761336,
+            "CurrentSwingFloorMinimumAlongUp": 0.079691648483276367,
+            "FinalOutputAlongUp": 0.079691648483276367,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 1.7814509868621826,
+            "PhaseSampleHeightAlongUp": 2.8799998760223389,
+            "StateOutputBeforeFloorAlongUp": 1.2990637515031267E-05
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 611,
+            "frame": 612,
+            "side": "Right",
+            "landingEventIdentity": "4916451974527316740",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 12,
+            "groundPathInputIdentity": "799744312621694115",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 1.4412978887557983,
+            "baselineHorizontalDistanceMeters": 1.786015510559082,
+            "phaseEnvelopeHorizontalDistanceMeters": 1.7814509868621826,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.34015309810638428,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.60924553871154785,
+            "actualFootDistanceAlongAxisMeters": 1.4412978887557983,
+            "actualFootCrossTrackDistanceMeters": 0.45548626780509949,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 2.880000114440918,
+            "maximumCandidateHeightAlongUpMeters": 2.880000114440918,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 2.8799998760223389,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 3.2010157156037167E-06,
+              "y": 1.2990637515031267E-05,
+              "z": 7.3337055255251471E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 1.2990637515031267E-05,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14460,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.079691648483276367,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.079691648483276367,
+            "finalOutput": {
+              "x": 3.2010157156037167E-06,
+              "y": 0.079691648483276367,
+              "z": 7.3337055255251471E-06
+            },
+            "finalOutputAlongUpMeters": 0.079691648483276367,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.079678657845761336
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 612,
+          "endFrame": 613,
+          "peakFrame": 613,
+          "eventIdentity": "4916451974527316740",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.66285258531570435,
+            "ActualFootCrossTrackDistance": 0.23719137907028198,
+            "ActualFootDistanceAlongAxis": 1.6459752321243286,
+            "ActualFootHorizontalDistance": 1.6459752321243286,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.32409107685089111,
+            "BaselineHorizontalDistance": 1.9768021106719971,
+            "BuilderSwingTargetAlongUp": 0.066111087799072266,
+            "CurrentFloorCatchup": 0.065261997282505035,
+            "CurrentSwingFloorMinimumAlongUp": 0.086400270462036133,
+            "FinalOutputAlongUp": 0.086400270462036133,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 1.9700663089752197,
+            "PhaseSampleHeightAlongUp": 3.0397109985351563,
+            "StateOutputBeforeFloorAlongUp": 0.021138273179531097
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 612,
+            "frame": 613,
+            "side": "Right",
+            "landingEventIdentity": "4916451974527316740",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 12,
+            "groundPathInputIdentity": "9208369254627474611",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 1.6459752321243286,
+            "baselineHorizontalDistanceMeters": 1.9768021106719971,
+            "phaseEnvelopeHorizontalDistanceMeters": 1.9700663089752197,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.32409107685089111,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.66285258531570435,
+            "actualFootDistanceAlongAxisMeters": 1.6459752321243286,
+            "actualFootCrossTrackDistanceMeters": 0.23719137907028198,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 3.0031569004058838,
+            "maximumCandidateHeightAlongUpMeters": 3.0031569004058838,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 3.0397109985351563,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.066111087799072266,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.066111087799072266,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 2.1779551389045082E-06,
+              "y": 0.021138273179531097,
+              "z": 4.9898167162609752E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.021138273179531097,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14460,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.086400270462036133,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.086400270462036133,
+            "finalOutput": {
+              "x": 2.1779551389045082E-06,
+              "y": 0.086400270462036133,
+              "z": 4.9898167162609752E-06
+            },
+            "finalOutputAlongUpMeters": 0.086400270462036133,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.065261997282505035
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 613,
+          "endFrame": 614,
+          "peakFrame": 614,
+          "eventIdentity": "4916451974527316740",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeCoversCurrentFloor": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.72191089391708374,
+            "ActualFootCrossTrackDistance": 0.029341699555516243,
+            "ActualFootDistanceAlongAxis": 1.8100802898406982,
+            "ActualFootHorizontalDistance": 1.8100802898406982,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.27342081069946289,
+            "ActualProgressEnvelopeAdvanceAboveBuilderTarget": 2.384185791015625E-07,
+            "ActualProgressEnvelopeMinimumCorrection": 0.075765371322631836,
+            "ActualProgressEnvelopeRemainingBelowCurrentFloor": 0.0,
+            "BaselineHorizontalDistance": 2.0925843715667725,
+            "BuilderSwingTargetAlongUp": 0.075765132904052734,
+            "CurrentFloorCatchup": 0.037168081849813461,
+            "CurrentSwingFloorMinimumAlongUp": 0.075765371322631836,
+            "FinalOutputAlongUp": 0.075765371322631836,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 2.0835011005401611,
+            "PhaseSampleHeightAlongUp": 3.059999942779541,
+            "StateOutputBeforeFloorAlongUp": 0.038597289472818375
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": true,
+            "actualEnvelopeCurrentFloorComparisonAvailable": true,
+            "actualFootWithinGroundPathCorridor": true,
+            "actualProgressEnvelopeCorrectionAvailable": true,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": false,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": true
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 613,
+            "frame": 614,
+            "side": "Right",
+            "landingEventIdentity": "4916451974527316740",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 12,
+            "groundPathInputIdentity": "9955615598909544071",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 1.8100802898406982,
+            "baselineHorizontalDistanceMeters": 2.0925843715667725,
+            "phaseEnvelopeHorizontalDistanceMeters": 2.0835011005401611,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.27342081069946289,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.72191089391708374,
+            "actualFootDistanceAlongAxisMeters": 1.8100802898406982,
+            "actualFootCrossTrackDistanceMeters": 0.029341699555516243,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": true,
+            "intersectionState": "Unique",
+            "counterfactualState": "UniqueInCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 3.06000018119812,
+            "maximumCandidateHeightAlongUpMeters": 3.06000018119812,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 3.059999942779541,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.075765132904052734,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.075765132904052734,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 1.4818698446106282E-06,
+              "y": 0.038597289472818375,
+              "z": 3.3950464057852514E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.038597289472818375,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14460,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.075765371322631836,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.075765371322631836,
+            "finalOutput": {
+              "x": 1.4818698446106282E-06,
+              "y": 0.075765371322631836,
+              "z": 3.3950464057852514E-06
+            },
+            "finalOutputAlongUpMeters": 0.075765371322631836,
+            "actualProgressEnvelopeCorrectionAvailable": true,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.075765371322631836,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 2.384185791015625E-07,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": true,
+            "currentFloorCatchupMeters": 0.037168081849813461
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Left",
+          "startFrame": 632,
+          "endFrame": 633,
+          "peakFrame": 633,
+          "eventIdentity": "4916455273062201373",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 13,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.5047878623008728,
+            "ActualFootCrossTrackDistance": 0.25018274784088135,
+            "ActualFootDistanceAlongAxis": 0.55618190765380859,
+            "ActualFootHorizontalDistance": 0.55618190765380859,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.54563140869140625,
+            "BaselineHorizontalDistance": 0.98722332715988159,
+            "BuilderSwingTargetAlongUp": 0.0020401477813720703,
+            "CurrentFloorCatchup": 0.03869217075407505,
+            "CurrentSwingFloorMinimumAlongUp": 0.047213554382324219,
+            "FinalOutputAlongUp": 0.047213554382324219,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 1.1018133163452148,
+            "PhaseSampleHeightAlongUp": 3.194826602935791,
+            "StateOutputBeforeFloorAlongUp": 0.0085213836282491684
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 632,
+            "frame": 633,
+            "side": "Left",
+            "landingEventIdentity": "4916455273062201373",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 13,
+            "groundPathInputIdentity": "1153413208697650172",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 0.55618190765380859,
+            "baselineHorizontalDistanceMeters": 0.98722332715988159,
+            "phaseEnvelopeHorizontalDistanceMeters": 1.1018133163452148,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.54563140869140625,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.5047878623008728,
+            "actualFootDistanceAlongAxisMeters": 0.55618190765380859,
+            "actualFootCrossTrackDistanceMeters": 0.25018274784088135,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 3.1508591175079346,
+            "maximumCandidateHeightAlongUpMeters": 3.1508591175079346,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 3.194826602935791,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0020401477813720703,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0020401477813720703,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": 6.0249584521443467E-07,
+              "y": 0.0085213836282491684,
+              "z": 3.7406823594210437E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0085213836282491684,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14470,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.047213554382324219,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.047213554382324219,
+            "finalOutput": {
+              "x": 6.0249584521443467E-07,
+              "y": 0.047213554382324219,
+              "z": 3.7406823594210437E-06
+            },
+            "finalOutputAlongUpMeters": 0.047213554382324219,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.03869217075407505
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 723,
+          "endFrame": 724,
+          "peakFrame": 724,
+          "eventIdentity": "10257638667488449871",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 15,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.708903968334198,
+            "ActualFootCrossTrackDistance": 0.13597974181175232,
+            "ActualFootDistanceAlongAxis": 1.090901255607605,
+            "ActualFootHorizontalDistance": 1.090901255607605,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.29170238971710205,
+            "BaselineHorizontalDistance": 1.3882303237915039,
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorCatchup": 0.035707976669073105,
+            "CurrentSwingFloorMinimumAlongUp": 0.079485416412353516,
+            "FinalOutputAlongUp": 0.079485416412353516,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 1.382603645324707,
+            "PhaseSampleHeightAlongUp": 3.1357367038726807,
+            "StateOutputBeforeFloorAlongUp": 0.043777439743280411
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 723,
+            "frame": 724,
+            "side": "Right",
+            "landingEventIdentity": "10257638667488449871",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 15,
+            "groundPathInputIdentity": "17015232242925991722",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 1.090901255607605,
+            "baselineHorizontalDistanceMeters": 1.3882303237915039,
+            "phaseEnvelopeHorizontalDistanceMeters": 1.382603645324707,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.29170238971710205,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.708903968334198,
+            "actualFootDistanceAlongAxisMeters": 1.090901255607605,
+            "actualFootCrossTrackDistanceMeters": 0.13597974181175232,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 3.2518095970153809,
+            "maximumCandidateHeightAlongUpMeters": 3.2518095970153809,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 3.1357367038726807,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": -1.4373587191585102E-06,
+              "y": 0.043777439743280411,
+              "z": 3.2757973258412676E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.043777439743280411,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14470,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.079485416412353516,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.079485416412353516,
+            "finalOutput": {
+              "x": -1.4373587191585102E-06,
+              "y": 0.079485416412353516,
+              "z": 3.2757973258412676E-06
+            },
+            "finalOutputAlongUpMeters": 0.079485416412353516,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.035707976669073105
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 724,
+          "endFrame": 725,
+          "peakFrame": 725,
+          "eventIdentity": "10257638667488449871",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 15,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.80554395914077759,
+            "ActualFootCrossTrackDistance": 0.19380877912044525,
+            "ActualFootDistanceAlongAxis": 1.2364672422409058,
+            "ActualFootHorizontalDistance": 1.2364672422409058,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": -0.19492518901824951,
+            "BaselineHorizontalDistance": 1.4280349016189575,
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorCatchup": 0.074647309258580208,
+            "CurrentSwingFloorMinimumAlongUp": 0.10301303863525391,
+            "FinalOutputAlongUp": 0.10301303863525391,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 1.4313924312591553,
+            "PhaseSampleHeightAlongUp": 3.0937156677246094,
+            "StateOutputBeforeFloorAlongUp": 0.0283657293766737
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 724,
+            "frame": 725,
+            "side": "Right",
+            "landingEventIdentity": "10257638667488449871",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 15,
+            "groundPathInputIdentity": "11607166360972625242",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 1.2364672422409058,
+            "baselineHorizontalDistanceMeters": 1.4280349016189575,
+            "phaseEnvelopeHorizontalDistanceMeters": 1.4313924312591553,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": -0.19492518901824951,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.80554395914077759,
+            "actualFootDistanceAlongAxisMeters": 1.2364672422409058,
+            "actualFootCrossTrackDistanceMeters": 0.19380877912044525,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 3.15718150138855,
+            "maximumCandidateHeightAlongUpMeters": 3.15718150138855,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 3.0937156677246094,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": -9.3134110557002714E-07,
+              "y": 0.0283657293766737,
+              "z": 2.1225632735877298E-06
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0283657293766737,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14470,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.10301303863525391,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.10301303863525391,
+            "finalOutput": {
+              "x": -9.3134110557002714E-07,
+              "y": 0.10301303863525391,
+              "z": 2.1225632735877298E-06
+            },
+            "finalOutputAlongUpMeters": 0.10301303863525391,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.074647309258580208
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 736,
+          "endFrame": 737,
+          "peakFrame": 737,
+          "eventIdentity": "10879890780635794856",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 16,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.16657179594039917,
+            "ActualFootCrossTrackDistance": 0.13788656890392303,
+            "ActualFootDistanceAlongAxis": 0.58035886287689209,
+            "ActualFootHorizontalDistance": 0.58035886287689209,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": 0.555907130241394,
+            "BaselineHorizontalDistance": 0.04163433238863945,
+            "BuilderSwingTargetAlongUp": 0.0,
+            "CurrentFloorCatchup": 0.040600465144962072,
+            "CurrentSwingFloorMinimumAlongUp": 0.04260563850402832,
+            "FinalOutputAlongUp": 0.04260563850402832,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 0.024451706558465958,
+            "PhaseSampleHeightAlongUp": 2.9157795906066895,
+            "StateOutputBeforeFloorAlongUp": 0.0020051733590662479
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 736,
+            "frame": 737,
+            "side": "Right",
+            "landingEventIdentity": "10879890780635794856",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 16,
+            "groundPathInputIdentity": "8153863212782189772",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 0.58035886287689209,
+            "baselineHorizontalDistanceMeters": 0.04163433238863945,
+            "phaseEnvelopeHorizontalDistanceMeters": 0.024451706558465958,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": 0.555907130241394,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.16657179594039917,
+            "actualFootDistanceAlongAxisMeters": 0.58035886287689209,
+            "actualFootCrossTrackDistanceMeters": 0.13788656890392303,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 3.1450634002685547,
+            "maximumCandidateHeightAlongUpMeters": 3.1450634002685547,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 2.9157795906066895,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.0,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": -1.1816287948107629E-09,
+              "y": 0.0020051733590662479,
+              "z": 2.6929780627682476E-09
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0020051733590662479,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14460,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.04260563850402832,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.04260563850402832,
+            "finalOutput": {
+              "x": -1.1816287948107629E-09,
+              "y": 0.04260563850402832,
+              "z": 2.6929780627682476E-09
+            },
+            "finalOutputAlongUpMeters": 0.04260563850402832,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.040600465144962072
+          }
+        },
+        {
+          "eventKind": "SwingActualFootEnvelopeCounterfactual",
+          "side": "Right",
+          "startFrame": 754,
+          "endFrame": 755,
+          "peakFrame": 755,
+          "eventIdentity": "10879890780635794856",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 16,
+          "matchedRules": [
+            "currentFloorCatchupMeters>0.01"
+          ],
+          "metrics": {
+            "ActualEnvelopeCandidateCount": 1.0,
+            "ActualEnvelopeHeightSpan": 0.0,
+            "ActualFootClosestPathParameter": 0.74200552701950073,
+            "ActualFootCrossTrackDistance": 0.963563084602356,
+            "ActualFootDistanceAlongAxis": 1.0473092794418335,
+            "ActualFootHorizontalDistance": 1.0473092794418335,
+            "ActualMinusPhaseEnvelopeHorizontalDistance": 0.082561492919921875,
+            "BaselineHorizontalDistance": 1.0044282674789429,
+            "BuilderSwingTargetAlongUp": 0.00769805908203125,
+            "CurrentFloorCatchup": 0.063633532728999853,
+            "CurrentSwingFloorMinimumAlongUp": 0.066095829010009766,
+            "FinalOutputAlongUp": 0.066095829010009766,
+            "GroundPathCorridorRadius": 0.10000000149011612,
+            "PhaseEnvelopeHorizontalDistance": 0.96474778652191162,
+            "PhaseSampleHeightAlongUp": 3.3616023063659668,
+            "StateOutputBeforeFloorAlongUp": 0.0024622962810099125
+          },
+          "evidence": {
+            "actualEnvelopeCoversCurrentFloor": false,
+            "actualEnvelopeCurrentFloorComparisonAvailable": false,
+            "actualFootWithinGroundPathCorridor": false,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "ambiguousInCorridor": false,
+            "ambiguousProducedNoCorrectionConclusion": true,
+            "continuousAcceptedUnanchoredSwingPair": true,
+            "currentFloorCatchupAbove1cm": true,
+            "currentFloorComparisonAvailable": true,
+            "groundPathAvailable": true,
+            "noIntersection": false,
+            "outsideGroundPathCorridor": true,
+            "sameFormalSourceCycle": true,
+            "sameLandingEvent": true,
+            "uniqueActualEnvelopeCandidate": true,
+            "uniqueInCorridor": false
+          },
+          "swingActualFootEnvelopeCounterfactual": {
+            "previousFrame": 754,
+            "frame": 755,
+            "side": "Right",
+            "landingEventIdentity": "10879890780635794856",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceCycle": 16,
+            "groundPathInputIdentity": "3754468320854618658",
+            "componentUp": {
+              "x": 0.0,
+              "y": 1.0,
+              "z": 0.0
+            },
+            "actualFootHorizontalDistanceMeters": 1.0473092794418335,
+            "baselineHorizontalDistanceMeters": 1.0044282674789429,
+            "phaseEnvelopeHorizontalDistanceMeters": 0.96474778652191162,
+            "actualMinusPhaseEnvelopeHorizontalDistanceMeters": 0.082561492919921875,
+            "actualFootAxisRegion": "WithinPathSegment",
+            "actualFootClosestPathParameter": 0.74200552701950073,
+            "actualFootDistanceAlongAxisMeters": 1.0473092794418335,
+            "actualFootCrossTrackDistanceMeters": 0.963563084602356,
+            "groundPathCorridorRadiusMeters": 0.10000000149011612,
+            "actualFootWithinGroundPathCorridor": false,
+            "intersectionState": "Unique",
+            "counterfactualState": "OutsideGroundPathCorridor",
+            "candidateCount": 1,
+            "minimumCandidateHeightAlongUpMeters": 3.3900704383850098,
+            "maximumCandidateHeightAlongUpMeters": 3.3900704383850098,
+            "candidateHeightSpanMeters": 0.0,
+            "hasVerticalEdge": false,
+            "hasMultipleHeights": false,
+            "ambiguousEnvelopeAtActualFootDistance": false,
+            "phaseSampleHeightAlongUpMeters": 3.3616023063659668,
+            "builderSwingTargetAvailable": true,
+            "builderSwingTarget": {
+              "x": 0.0,
+              "y": 0.00769805908203125,
+              "z": 0.0
+            },
+            "builderSwingTargetAlongUpMeters": 0.00769805908203125,
+            "stateOutputBeforeFloorAvailable": true,
+            "stateOutputBeforeFloor": {
+              "x": -1.1539343699323856E-12,
+              "y": 0.0024622962810099125,
+              "z": 2.6298613894221168E-12
+            },
+            "stateOutputBeforeFloorAlongUpMeters": 0.0024622962810099125,
+            "currentFloorComparisonAvailable": true,
+            "safetyFloorOwner": "CurrentGroundFloor",
+            "safetyFloorOwnerSurfaceIdentity": -14480,
+            "safetyFloorOwnerPathIdentity": "0",
+            "currentSwingFloorMinimum": {
+              "x": 0.0,
+              "y": 0.066095829010009766,
+              "z": 0.0
+            },
+            "currentSwingFloorMinimumAlongUpMeters": 0.066095829010009766,
+            "finalOutput": {
+              "x": -1.1539343699323856E-12,
+              "y": 0.066095829010009766,
+              "z": 2.6298613894221168E-12
+            },
+            "finalOutputAlongUpMeters": 0.066095829010009766,
+            "actualProgressEnvelopeCorrectionAvailable": false,
+            "actualProgressEnvelopeMinimumCorrectionMeters": 0.0,
+            "actualProgressEnvelopeAdvanceAboveBuilderTargetMeters": 0.0,
+            "actualProgressEnvelopeRemainingBelowCurrentFloorMeters": 0.0,
+            "actualProgressEnvelopeCoversCurrentFloor": false,
+            "currentFloorCatchupMeters": 0.063633532728999853
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "targetCount": 2,
+    "targetWithMatchesCount": 2,
+    "matchedEventCount": 74,
+    "targetResults": [
+      {
+        "id": "swing-current-floor-catchup",
+        "eligibleEventCount": 839,
+        "matchedEventCount": 37,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.044100119189511323
+      },
+      {
+        "id": "swing-actual-foot-envelope-counterfactual",
+        "eligibleEventCount": 805,
+        "matchedEventCount": 37,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.045962732919254658
+      }
+    ]
+  }
+}

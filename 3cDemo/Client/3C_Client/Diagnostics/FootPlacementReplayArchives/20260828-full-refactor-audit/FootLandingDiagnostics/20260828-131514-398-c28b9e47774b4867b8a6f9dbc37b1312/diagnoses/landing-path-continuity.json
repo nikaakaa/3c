@@ -1,0 +1,335 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "landing-path-continuity",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "e14310cca28946ea5ee12062b6ed9053e0816dc7b31f818b1f2cb535c92f6366",
+    "schema": "character-foot-motion-facts/22",
+    "sampleIdentity": "c28b9e47774b4867b8a6f9dbc37b1312"
+  },
+  "targets": [
+    {
+      "id": "identity-only-residual-rebuild",
+      "question": "只有Ground Path输入identity变化时是否错误重建Swing Residual",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "identityOnlyInputChange=true&&pathResidualRebuilt=true"
+      ],
+      "eligibleEventCount": 1,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "correctionStepMeters": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "landingPointDeltaMeters": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "residualAfterDecayMeters": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "residualBeforeRevisionMeters": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "swingTargetDeltaMeters": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "path-revision-contract-mismatch",
+      "question": "Path可用性、Event、Landing Point和Swing Target是否与Residual重建原因一致",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "pathRevisionExpected!=pathResidualRebuilt",
+        "pathRevisionReasonMatchesExpected=false"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "measurements": {
+        "landingPointDeltaMeters": {
+          "available": false,
+          "count": 0
+        },
+        "landingUpdateDistanceMeters": {
+          "available": false,
+          "count": 0
+        },
+        "residualAfterDecayMeters": {
+          "available": false,
+          "count": 0
+        },
+        "residualBeforeDecayMeters": {
+          "available": false,
+          "count": 0
+        },
+        "residualBeforeRevisionMeters": {
+          "available": false,
+          "count": 0
+        },
+        "swingTargetDeltaMeters": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "releasing-to-swing-envelope-violation",
+      "question": "Releasing完成进入Swing的同帧脚底是否仍低于真实Envelope",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "safetyFloorClearanceAfterMeters<-0.0001"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "measurements": {
+        "correctionStepMeters": {
+          "available": false,
+          "count": 0
+        },
+        "safetyFloorClampMeters": {
+          "available": false,
+          "count": 0
+        },
+        "safetyFloorClearanceAfterMeters": {
+          "available": false,
+          "count": 0
+        },
+        "safetyFloorClearanceBeforeMeters": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "residual-deadline-miss",
+      "question": "到达Landing截止帧时Swing Residual是否仍超过SwingRevisionDistance",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "residualAfterDecayMeters>landingUpdateDistanceMeters"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "measurements": {
+        "appliedHalfLifeSeconds": {
+          "available": false,
+          "count": 0
+        },
+        "baseHalfLifeSeconds": {
+          "available": false,
+          "count": 0
+        },
+        "deadlineHalfLifeSeconds": {
+          "available": false,
+          "count": 0
+        },
+        "landingUpdateDistanceMeters": {
+          "available": false,
+          "count": 0
+        },
+        "residualAfterDecayMeters": {
+          "available": false,
+          "count": 0
+        },
+        "residualBeforeDecayMeters": {
+          "available": false,
+          "count": 0
+        },
+        "timeToLandingSeconds": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "residual-growth-without-revision",
+      "question": "没有Path Revision时Swing Residual是否反而增大",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "residualGrewWithoutRevision=true"
+      ],
+      "eligibleEventCount": 1,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "appliedHalfLifeSeconds": {
+          "available": true,
+          "count": 1,
+          "median": 0.029999999329447746,
+          "p90": 0.029999999329447746,
+          "p99": 0.029999999329447746,
+          "maximum": 0.029999999329447746
+        },
+        "residualAfterDecayMeters": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "residualBeforeDecayMeters": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "late-approach-landing-revision",
+      "question": "同一Landing Event进入Approach Contact后Consumed NextSwingLanding是否仍跨Surface或超阈值换点",
+      "eventKinds": [
+        "LateApproachLandingRevision"
+      ],
+      "rules": [
+        "consumedSurfaceChanged=true",
+        "LandingPointDelta>SwingRevisionDistance"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "measurements": {
+        "CorrectionStep": {
+          "available": false,
+          "count": 0
+        },
+        "CurrentApproachContactPhase": {
+          "available": false,
+          "count": 0
+        },
+        "CurrentEventPhase": {
+          "available": false,
+          "count": 0
+        },
+        "LandingPointDelta": {
+          "available": false,
+          "count": 0
+        },
+        "ObservedLandingPointDelta": {
+          "available": false,
+          "count": 0
+        },
+        "PhysicalAnkleAlongUpStep": {
+          "available": false,
+          "count": 0
+        },
+        "PhysicalSoleAlongUpStep": {
+          "available": false,
+          "count": 0
+        },
+        "SelectedApproachContactPhase": {
+          "available": false,
+          "count": 0
+        },
+        "SelectedEventPhase": {
+          "available": false,
+          "count": 0
+        },
+        "SwingRevisionDistance": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    }
+  ],
+  "summary": {
+    "targetCount": 6,
+    "targetWithMatchesCount": 0,
+    "matchedEventCount": 0,
+    "targetResults": [
+      {
+        "id": "identity-only-residual-rebuild",
+        "eligibleEventCount": 1,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "path-revision-contract-mismatch",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      },
+      {
+        "id": "releasing-to-swing-envelope-violation",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      },
+      {
+        "id": "residual-deadline-miss",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      },
+      {
+        "id": "residual-growth-without-revision",
+        "eligibleEventCount": 1,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "late-approach-landing-revision",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      }
+    ]
+  }
+}

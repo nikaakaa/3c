@@ -1,0 +1,59 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "locked-sole-motion",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "e14310cca28946ea5ee12062b6ed9053e0816dc7b31f818b1f2cb535c92f6366",
+    "schema": "character-foot-motion-facts/22",
+    "sampleIdentity": "c28b9e47774b4867b8a6f9dbc37b1312"
+  },
+  "targets": [
+    {
+      "id": "locked-sole-sink-or-drift",
+      "question": "Locked阶段脚底是否相对稳定Anchor下陷或漂移",
+      "eventKinds": [
+        "Locked"
+      ],
+      "rules": [
+        "soleDownwardExcursionMeters>0.005",
+        "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "measurements": {
+        "anchorDisplacementMeters": {
+          "available": false,
+          "count": 0
+        },
+        "correctedSoleAnchorDistanceChangeMeters": {
+          "available": false,
+          "count": 0
+        },
+        "soleDownwardExcursionMeters": {
+          "available": false,
+          "count": 0
+        },
+        "visibleSoleStepMaximumMeters": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    }
+  ],
+  "summary": {
+    "targetCount": 1,
+    "targetWithMatchesCount": 0,
+    "matchedEventCount": 0,
+    "targetResults": [
+      {
+        "id": "locked-sole-sink-or-drift",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,1283 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "landing-path-continuity",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "178667857ca945eeee053a04b9f89136298f44e898ea99373f561edf0871c3f3",
+    "schema": "character-foot-motion-facts/21",
+    "sampleIdentity": "8f0824c8781a48329f69ddfd3a43f53d"
+  },
+  "targets": [
+    {
+      "id": "identity-only-residual-rebuild",
+      "question": "只有Ground Path输入identity变化时是否错误重建Swing Residual",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "identityOnlyInputChange=true&&pathResidualRebuilt=true"
+      ],
+      "eligibleEventCount": 9,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "correctionStepMeters": {
+          "available": true,
+          "count": 9,
+          "median": 0.011631131172180176,
+          "p90": 0.040395689010620121,
+          "p99": 0.052884740829467772,
+          "maximum": 0.05427241325378418
+        },
+        "landingPointDeltaMeters": {
+          "available": true,
+          "count": 9,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "residualAfterDecayMeters": {
+          "available": true,
+          "count": 9,
+          "median": 0.024761097505688667,
+          "p90": 0.0859968975186348,
+          "p99": 0.11258403152227402,
+          "maximum": 0.11553815752267838
+        },
+        "residualBeforeRevisionMeters": {
+          "available": true,
+          "count": 9,
+          "median": 0.036392237991094589,
+          "p90": 0.12639260888099671,
+          "p99": 0.16546863377094267,
+          "maximum": 0.16981041431427002
+        },
+        "swingTargetDeltaMeters": {
+          "available": true,
+          "count": 9,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "path-revision-contract-mismatch",
+      "question": "Path可用性、Event、Landing Point和Swing Target是否与Residual重建原因一致",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "pathRevisionExpected!=pathResidualRebuilt",
+        "pathRevisionReasonMatchesExpected=false"
+      ],
+      "eligibleEventCount": 845,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "landingPointDeltaMeters": {
+          "available": true,
+          "count": 845,
+          "median": 0.053039118647575378,
+          "p90": 0.38186939954757693,
+          "p99": 0.83954522132873255,
+          "maximum": 3.1847190856933594
+        },
+        "landingUpdateDistanceMeters": {
+          "available": true,
+          "count": 845,
+          "median": 0.004999999888241291,
+          "p90": 0.004999999888241291,
+          "p99": 0.004999999888241291,
+          "maximum": 0.004999999888241291
+        },
+        "residualAfterDecayMeters": {
+          "available": true,
+          "count": 845,
+          "median": 0.0044584143906831741,
+          "p90": 0.056523087620735185,
+          "p99": 0.14060105383396135,
+          "maximum": 0.17637696862220764
+        },
+        "residualBeforeDecayMeters": {
+          "available": true,
+          "count": 845,
+          "median": 0.0065526850521564484,
+          "p90": 0.088473823666572582,
+          "p99": 0.21010263681411726,
+          "maximum": 0.25922730565071106
+        },
+        "residualBeforeRevisionMeters": {
+          "available": true,
+          "count": 845,
+          "median": 0.0033141970634460449,
+          "p90": 0.045501303672790532,
+          "p99": 0.10060154497623433,
+          "maximum": 0.15576338768005371
+        },
+        "swingTargetDeltaMeters": {
+          "available": true,
+          "count": 845,
+          "median": 0.002025604248046875,
+          "p90": 0.032192635536193864,
+          "p99": 0.12402627944946236,
+          "maximum": 0.16735044121742249
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "releasing-to-swing-envelope-violation",
+      "question": "Releasing完成进入Swing的同帧脚底是否仍低于真实Envelope",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "safetyFloorClearanceAfterMeters<-0.0001"
+      ],
+      "eligibleEventCount": 36,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "correctionStepMeters": {
+          "available": true,
+          "count": 36,
+          "median": 0.0019571731681935489,
+          "p90": 0.0023078039521351457,
+          "p99": 0.078200978203676483,
+          "maximum": 0.11699771881103516
+        },
+        "safetyFloorClampMeters": {
+          "available": true,
+          "count": 36,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.078411961719393575,
+          "maximum": 0.11838199943304062
+        },
+        "safetyFloorClearanceAfterMeters": {
+          "available": true,
+          "count": 36,
+          "median": 0.3813779354095459,
+          "p90": 0.57519939541816711,
+          "p99": 0.63477481305599215,
+          "maximum": 0.63722127676010132
+        },
+        "safetyFloorClearanceBeforeMeters": {
+          "available": true,
+          "count": 36,
+          "median": 0.3813779354095459,
+          "p90": 0.57519939541816711,
+          "p99": 0.63477481305599215,
+          "maximum": 0.63722127676010132
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "residual-deadline-miss",
+      "question": "到达Landing截止帧时Swing Residual是否仍超过LandingUpdateDistance",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "residualAfterDecayMeters>landingUpdateDistanceMeters"
+      ],
+      "eligibleEventCount": 39,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "appliedHalfLifeSeconds": {
+          "available": true,
+          "count": 39,
+          "median": 0.014338340610265732,
+          "p90": 0.029999999329447746,
+          "p99": 0.029999999329447746,
+          "maximum": 0.029999999329447746
+        },
+        "baseHalfLifeSeconds": {
+          "available": true,
+          "count": 39,
+          "median": 0.029999999329447746,
+          "p90": 0.029999999329447746,
+          "p99": 0.029999999329447746,
+          "maximum": 0.029999999329447746
+        },
+        "deadlineHalfLifeSeconds": {
+          "available": true,
+          "count": 39,
+          "median": 0.00650665070861578,
+          "p90": 0.018474024906754493,
+          "p99": 0.030473809428513045,
+          "maximum": 0.030945705249905586
+        },
+        "landingUpdateDistanceMeters": {
+          "available": true,
+          "count": 39,
+          "median": 0.004999999888241291,
+          "p90": 0.004999999888241291,
+          "p99": 0.004999999888241291,
+          "maximum": 0.004999999888241291
+        },
+        "residualAfterDecayMeters": {
+          "available": true,
+          "count": 39,
+          "median": 0.00499996542930603,
+          "p90": 0.004999995231628418,
+          "p99": 0.004999995231628418,
+          "maximum": 0.004999995231628418
+        },
+        "residualBeforeDecayMeters": {
+          "available": true,
+          "count": 39,
+          "median": 0.011191338300704956,
+          "p90": 0.04537904113531116,
+          "p99": 0.1667973271012306,
+          "maximum": 0.1711588054895401
+        },
+        "timeToLandingSeconds": {
+          "available": true,
+          "count": 39,
+          "median": 0.016666607931256294,
+          "p90": 0.016666661575436593,
+          "p99": 0.016666747331619262,
+          "maximum": 0.016666769981384277
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "residual-growth-without-revision",
+      "question": "没有Path Revision时Swing Residual是否反而增大",
+      "eventKinds": [
+        "PathContinuity"
+      ],
+      "rules": [
+        "residualGrewWithoutRevision=true"
+      ],
+      "eligibleEventCount": 12,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "appliedHalfLifeSeconds": {
+          "available": true,
+          "count": 12,
+          "median": 0.029999999329447746,
+          "p90": 0.029999999329447746,
+          "p99": 0.029999999329447746,
+          "maximum": 0.029999999329447746
+        },
+        "residualAfterDecayMeters": {
+          "available": true,
+          "count": 12,
+          "median": 3.523192162901978E-06,
+          "p90": 0.076099117100238811,
+          "p99": 0.1114762342721224,
+          "maximum": 0.11553815752267838
+        },
+        "residualBeforeDecayMeters": {
+          "available": true,
+          "count": 12,
+          "median": 5.1781569254671922E-06,
+          "p90": 0.11184550002217294,
+          "p99": 0.16384046606719496,
+          "maximum": 0.16981041431427002
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "late-approach-landing-revision",
+      "question": "同一Landing Event进入Approach Contact后Consumed NextSwingLanding是否仍跨Surface或超阈值换点",
+      "eventKinds": [
+        "LateApproachLandingRevision"
+      ],
+      "rules": [
+        "consumedSurfaceChanged=true",
+        "LandingPointDelta>LandingUpdateDistance"
+      ],
+      "eligibleEventCount": 624,
+      "matchedEventCount": 589,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.94391025641025639,
+      "measurements": {
+        "CorrectionStep": {
+          "available": true,
+          "count": 624,
+          "median": 0.0048637851141393185,
+          "p90": 0.032911599427461621,
+          "p99": 0.087602959945797851,
+          "maximum": 0.16615891456604004
+        },
+        "CurrentApproachContactPhase": {
+          "available": true,
+          "count": 624,
+          "median": 0.47222220897674561,
+          "p90": 0.52777779102325439,
+          "p99": 0.604651153087616,
+          "maximum": 0.604651153087616
+        },
+        "CurrentEventPhase": {
+          "available": true,
+          "count": 624,
+          "median": 0.75000005960464478,
+          "p90": 0.94444453716278076,
+          "p99": 0.97222238779067993,
+          "maximum": 0.97674411535263062
+        },
+        "LandingPointDelta": {
+          "available": true,
+          "count": 624,
+          "median": 0.052786273881793022,
+          "p90": 0.3418652951717378,
+          "p99": 0.64620549678802464,
+          "maximum": 3.1847190856933594
+        },
+        "LandingUpdateDistance": {
+          "available": true,
+          "count": 624,
+          "median": 0.004999999888241291,
+          "p90": 0.004999999888241291,
+          "p99": 0.004999999888241291,
+          "maximum": 0.004999999888241291
+        },
+        "ObservedLandingPointDelta": {
+          "available": true,
+          "count": 624,
+          "median": 0.052786273881793022,
+          "p90": 0.3418652951717378,
+          "p99": 0.64620549678802464,
+          "maximum": 3.1847190856933594
+        },
+        "PhysicalAnkleAlongUpStep": {
+          "available": true,
+          "count": 624,
+          "median": 0.029341340065002441,
+          "p90": 0.066379022598266613,
+          "p99": 0.11335003137588466,
+          "maximum": 0.16991132497787476
+        },
+        "PhysicalSoleAlongUpStep": {
+          "available": true,
+          "count": 624,
+          "median": 0.034446001052856445,
+          "p90": 0.07785401344299317,
+          "p99": 0.11733041286468504,
+          "maximum": 0.17400598526000977
+        },
+        "SelectedApproachContactPhase": {
+          "available": true,
+          "count": 624,
+          "median": 0.47222220897674561,
+          "p90": 0.52777779102325439,
+          "p99": 0.604651153087616,
+          "maximum": 0.604651153087616
+        },
+        "SelectedEventPhase": {
+          "available": true,
+          "count": 624,
+          "median": 0.75000005960464478,
+          "p90": 0.94444453716278076,
+          "p99": 0.97222238779067993,
+          "maximum": 0.97674411535263062
+        }
+      },
+      "representativeEventCount": 8,
+      "representativeEvents": [
+        {
+          "eventKind": "LateApproachLandingRevision",
+          "side": "Right",
+          "startFrame": 323,
+          "endFrame": 324,
+          "peakFrame": 324,
+          "eventIdentity": "18369873941196438956",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 4,
+          "matchedRules": [
+            "consumedSurfaceChanged=true",
+            "LandingPointDelta>LandingUpdateDistance"
+          ],
+          "metrics": {
+            "CorrectionStep": 0.0017721056938171387,
+            "CurrentApproachContactPhase": 0.47222220897674561,
+            "CurrentEventPhase": 0.72222226858139038,
+            "LandingPointDelta": 0.64949238300323486,
+            "LandingUpdateDistance": 0.004999999888241291,
+            "ObservedLandingPointDelta": 0.64949238300323486,
+            "PhysicalAnkleAlongUpStep": 0.007472991943359375,
+            "PhysicalSoleAlongUpStep": 0.011857509613037109,
+            "SelectedApproachContactPhase": 0.47222220897674561,
+            "SelectedEventPhase": 0.72222226858139038
+          },
+          "evidence": {
+            "bothInApproachContactToLanding": true,
+            "componentUpAvailable": true,
+            "consumedLandingAvailable": true,
+            "consumedPointExceededLandingUpdateDistance": true,
+            "consumedSurfaceChanged": true,
+            "observedLandingAvailable": true,
+            "physicalAnkleAvailable": true,
+            "physicalSoleAvailable": true,
+            "sameLandingEvent": true,
+            "sourceChanged": false
+          },
+          "lateApproachLandingRevision": {
+            "previousFrame": 323,
+            "frame": 324,
+            "side": "Right",
+            "landingEventIdentity": "18369873941196438956",
+            "previousSourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "previousSourceCycle": 4,
+            "sourceCycle": 4,
+            "previousContributionContinuityIdentity": "4",
+            "contributionContinuityIdentity": "4",
+            "previousSelectedEventPhase": 0.69444453716278076,
+            "selectedEventPhase": 0.72222226858139038,
+            "previousSelectedApproachContactPhase": 0.47222220897674561,
+            "selectedApproachContactPhase": 0.47222220897674561,
+            "previousSelectedLandingPhase": 1.0,
+            "selectedLandingPhase": 1.0,
+            "previousCurrentEventPhase": 0.69444453716278076,
+            "currentEventPhase": 0.72222226858139038,
+            "previousCurrentApproachContactPhase": 0.47222220897674561,
+            "currentApproachContactPhase": 0.47222220897674561,
+            "previousSelectedInApproachContactToLanding": true,
+            "selectedInApproachContactToLanding": true,
+            "previousCurrentAtOrAfterApproachContact": true,
+            "currentAtOrAfterApproachContact": true,
+            "previousObservedAvailable": true,
+            "observedAvailable": true,
+            "previousObservedEventIdentity": "18369873941196438956",
+            "observedEventIdentity": "18369873941196438956",
+            "previousObservedSurfaceIdentity": -14232,
+            "observedSurfaceIdentity": -14530,
+            "previousObservedPoint": {
+              "x": 42.291000366210938,
+              "y": 4.320000171661377,
+              "z": 12.701000213623047
+            },
+            "observedPoint": {
+              "x": 41.798999786376953,
+              "y": 4.320000171661377,
+              "z": 12.277000427246094
+            },
+            "observedLandingPointDeltaMeters": 0.64949238300323486,
+            "previousConsumedEventIdentity": "18369873941196438956",
+            "consumedEventIdentity": "18369873941196438956",
+            "previousConsumedSurfaceIdentity": -14232,
+            "consumedSurfaceIdentity": -14530,
+            "previousConsumedPoint": {
+              "x": 42.291000366210938,
+              "y": 4.320000171661377,
+              "z": 12.701000213623047
+            },
+            "consumedPoint": {
+              "x": 41.798999786376953,
+              "y": 4.320000171661377,
+              "z": 12.277000427246094
+            },
+            "landingPointDeltaMeters": 0.64949238300323486,
+            "landingUpdateDistanceMeters": 0.004999999888241291,
+            "correctionStepMeters": 0.0017721056938171387,
+            "physicalAnkleAvailable": true,
+            "physicalAnkleAlongUpStepMeters": 0.007472991943359375,
+            "physicalSoleAvailable": true,
+            "physicalSoleAlongUpStepMeters": 0.011857509613037109,
+            "consumedSurfaceChanged": true,
+            "consumedPointExceededLandingUpdateDistance": true
+          }
+        },
+        {
+          "eventKind": "LateApproachLandingRevision",
+          "side": "Right",
+          "startFrame": 532,
+          "endFrame": 533,
+          "peakFrame": 533,
+          "eventIdentity": "8661447952854151634",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 10,
+          "matchedRules": [
+            "consumedSurfaceChanged=true",
+            "LandingPointDelta>LandingUpdateDistance"
+          ],
+          "metrics": {
+            "CorrectionStep": 0.00083448609802871943,
+            "CurrentApproachContactPhase": 0.47222220897674561,
+            "CurrentEventPhase": 0.527777910232544,
+            "LandingPointDelta": 0.8882983922958374,
+            "LandingUpdateDistance": 0.004999999888241291,
+            "ObservedLandingPointDelta": 0.8882983922958374,
+            "PhysicalAnkleAlongUpStep": 0.024674177169799805,
+            "PhysicalSoleAlongUpStep": 0.033541202545166016,
+            "SelectedApproachContactPhase": 0.47222220897674561,
+            "SelectedEventPhase": 0.527777910232544
+          },
+          "evidence": {
+            "bothInApproachContactToLanding": true,
+            "componentUpAvailable": true,
+            "consumedLandingAvailable": true,
+            "consumedPointExceededLandingUpdateDistance": true,
+            "consumedSurfaceChanged": true,
+            "observedLandingAvailable": true,
+            "physicalAnkleAvailable": true,
+            "physicalSoleAvailable": true,
+            "sameLandingEvent": true,
+            "sourceChanged": false
+          },
+          "lateApproachLandingRevision": {
+            "previousFrame": 532,
+            "frame": 533,
+            "side": "Right",
+            "landingEventIdentity": "8661447952854151634",
+            "previousSourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "previousSourceCycle": 10,
+            "sourceCycle": 10,
+            "previousContributionContinuityIdentity": "4",
+            "contributionContinuityIdentity": "4",
+            "previousSelectedEventPhase": 0.50000011920928955,
+            "selectedEventPhase": 0.527777910232544,
+            "previousSelectedApproachContactPhase": 0.47222220897674561,
+            "selectedApproachContactPhase": 0.47222220897674561,
+            "previousSelectedLandingPhase": 1.0,
+            "selectedLandingPhase": 1.0,
+            "previousCurrentEventPhase": 0.50000011920928955,
+            "currentEventPhase": 0.527777910232544,
+            "previousCurrentApproachContactPhase": 0.47222220897674561,
+            "currentApproachContactPhase": 0.47222220897674561,
+            "previousSelectedInApproachContactToLanding": true,
+            "selectedInApproachContactToLanding": true,
+            "previousCurrentAtOrAfterApproachContact": true,
+            "currentAtOrAfterApproachContact": true,
+            "previousObservedAvailable": true,
+            "observedAvailable": true,
+            "previousObservedEventIdentity": "8661447952854151634",
+            "observedEventIdentity": "8661447952854151634",
+            "previousObservedSurfaceIdentity": -14420,
+            "observedSurfaceIdentity": -14400,
+            "previousObservedPoint": {
+              "x": 40.872001647949219,
+              "y": 2.3399999141693115,
+              "z": 6.249000072479248
+            },
+            "observedPoint": {
+              "x": 41.047000885009766,
+              "y": 1.9800000190734863,
+              "z": 5.4559998512268066
+            },
+            "observedLandingPointDeltaMeters": 0.8882983922958374,
+            "previousConsumedEventIdentity": "8661447952854151634",
+            "consumedEventIdentity": "8661447952854151634",
+            "previousConsumedSurfaceIdentity": -14420,
+            "consumedSurfaceIdentity": -14400,
+            "previousConsumedPoint": {
+              "x": 40.872001647949219,
+              "y": 2.3399999141693115,
+              "z": 6.249000072479248
+            },
+            "consumedPoint": {
+              "x": 41.047000885009766,
+              "y": 1.9800000190734863,
+              "z": 5.4559998512268066
+            },
+            "landingPointDeltaMeters": 0.8882983922958374,
+            "landingUpdateDistanceMeters": 0.004999999888241291,
+            "correctionStepMeters": 0.00083448609802871943,
+            "physicalAnkleAvailable": true,
+            "physicalAnkleAlongUpStepMeters": 0.024674177169799805,
+            "physicalSoleAvailable": true,
+            "physicalSoleAlongUpStepMeters": 0.033541202545166016,
+            "consumedSurfaceChanged": true,
+            "consumedPointExceededLandingUpdateDistance": true
+          }
+        },
+        {
+          "eventKind": "LateApproachLandingRevision",
+          "side": "Left",
+          "startFrame": 590,
+          "endFrame": 591,
+          "peakFrame": 591,
+          "eventIdentity": "4294200960891599966",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "consumedSurfaceChanged=true",
+            "LandingPointDelta>LandingUpdateDistance"
+          ],
+          "metrics": {
+            "CorrectionStep": 0.018408738076686859,
+            "CurrentApproachContactPhase": 0.52777779102325439,
+            "CurrentEventPhase": 0.66666680574417114,
+            "LandingPointDelta": 0.63520157337188721,
+            "LandingUpdateDistance": 0.004999999888241291,
+            "ObservedLandingPointDelta": 0.63520157337188721,
+            "PhysicalAnkleAlongUpStep": 0.00040650367736816406,
+            "PhysicalSoleAlongUpStep": 0.019094944000244141,
+            "SelectedApproachContactPhase": 0.52777779102325439,
+            "SelectedEventPhase": 0.66666680574417114
+          },
+          "evidence": {
+            "bothInApproachContactToLanding": true,
+            "componentUpAvailable": true,
+            "consumedLandingAvailable": true,
+            "consumedPointExceededLandingUpdateDistance": true,
+            "consumedSurfaceChanged": true,
+            "observedLandingAvailable": true,
+            "physicalAnkleAvailable": true,
+            "physicalSoleAvailable": true,
+            "sameLandingEvent": true,
+            "sourceChanged": false
+          },
+          "lateApproachLandingRevision": {
+            "previousFrame": 590,
+            "frame": 591,
+            "side": "Left",
+            "landingEventIdentity": "4294200960891599966",
+            "previousSourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "previousSourceCycle": 12,
+            "sourceCycle": 12,
+            "previousContributionContinuityIdentity": "4",
+            "contributionContinuityIdentity": "4",
+            "previousSelectedEventPhase": 0.63888901472091675,
+            "selectedEventPhase": 0.66666680574417114,
+            "previousSelectedApproachContactPhase": 0.52777779102325439,
+            "selectedApproachContactPhase": 0.52777779102325439,
+            "previousSelectedLandingPhase": 1.0,
+            "selectedLandingPhase": 1.0,
+            "previousCurrentEventPhase": 0.63888901472091675,
+            "currentEventPhase": 0.66666680574417114,
+            "previousCurrentApproachContactPhase": 0.52777779102325439,
+            "currentApproachContactPhase": 0.52777779102325439,
+            "previousSelectedInApproachContactToLanding": true,
+            "selectedInApproachContactToLanding": true,
+            "previousCurrentAtOrAfterApproachContact": true,
+            "currentAtOrAfterApproachContact": true,
+            "previousObservedAvailable": true,
+            "observedAvailable": true,
+            "previousObservedEventIdentity": "4294200960891599966",
+            "observedEventIdentity": "4294200960891599966",
+            "previousObservedSurfaceIdentity": -14460,
+            "observedSurfaceIdentity": -14470,
+            "previousObservedPoint": {
+              "x": 40.390998840332031,
+              "y": 3.06000018119812,
+              "z": 8.4139995574951172
+            },
+            "observedPoint": {
+              "x": 39.945999145507813,
+              "y": 3.2400002479553223,
+              "z": 8.8299999237060547
+            },
+            "observedLandingPointDeltaMeters": 0.63520157337188721,
+            "previousConsumedEventIdentity": "4294200960891599966",
+            "consumedEventIdentity": "4294200960891599966",
+            "previousConsumedSurfaceIdentity": -14460,
+            "consumedSurfaceIdentity": -14470,
+            "previousConsumedPoint": {
+              "x": 40.390998840332031,
+              "y": 3.06000018119812,
+              "z": 8.4139995574951172
+            },
+            "consumedPoint": {
+              "x": 39.945999145507813,
+              "y": 3.2400002479553223,
+              "z": 8.8299999237060547
+            },
+            "landingPointDeltaMeters": 0.63520157337188721,
+            "landingUpdateDistanceMeters": 0.004999999888241291,
+            "correctionStepMeters": 0.018408738076686859,
+            "physicalAnkleAvailable": true,
+            "physicalAnkleAlongUpStepMeters": 0.00040650367736816406,
+            "physicalSoleAvailable": true,
+            "physicalSoleAlongUpStepMeters": 0.019094944000244141,
+            "consumedSurfaceChanged": true,
+            "consumedPointExceededLandingUpdateDistance": true
+          }
+        },
+        {
+          "eventKind": "LateApproachLandingRevision",
+          "side": "Left",
+          "startFrame": 623,
+          "endFrame": 624,
+          "peakFrame": 624,
+          "eventIdentity": "4916455273062201373",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 13,
+          "matchedRules": [
+            "consumedSurfaceChanged=true",
+            "LandingPointDelta>LandingUpdateDistance"
+          ],
+          "metrics": {
+            "CorrectionStep": 0.0014570943312719464,
+            "CurrentApproachContactPhase": 0.52777779102325439,
+            "CurrentEventPhase": 0.58333349227905273,
+            "LandingPointDelta": 0.66652065515518188,
+            "LandingUpdateDistance": 0.004999999888241291,
+            "ObservedLandingPointDelta": 0.66652065515518188,
+            "PhysicalAnkleAlongUpStep": 0.049604415893554688,
+            "PhysicalSoleAlongUpStep": 0.065250158309936523,
+            "SelectedApproachContactPhase": 0.52777779102325439,
+            "SelectedEventPhase": 0.58333349227905273
+          },
+          "evidence": {
+            "bothInApproachContactToLanding": true,
+            "componentUpAvailable": true,
+            "consumedLandingAvailable": true,
+            "consumedPointExceededLandingUpdateDistance": true,
+            "consumedSurfaceChanged": true,
+            "observedLandingAvailable": true,
+            "physicalAnkleAvailable": true,
+            "physicalSoleAvailable": true,
+            "sameLandingEvent": true,
+            "sourceChanged": false
+          },
+          "lateApproachLandingRevision": {
+            "previousFrame": 623,
+            "frame": 624,
+            "side": "Left",
+            "landingEventIdentity": "4916455273062201373",
+            "previousSourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "previousSourceCycle": 13,
+            "sourceCycle": 13,
+            "previousContributionContinuityIdentity": "4",
+            "contributionContinuityIdentity": "4",
+            "previousSelectedEventPhase": 0.55555570125579834,
+            "selectedEventPhase": 0.58333349227905273,
+            "previousSelectedApproachContactPhase": 0.52777779102325439,
+            "selectedApproachContactPhase": 0.52777779102325439,
+            "previousSelectedLandingPhase": 1.0,
+            "selectedLandingPhase": 1.0,
+            "previousCurrentEventPhase": 0.55555570125579834,
+            "currentEventPhase": 0.58333349227905273,
+            "previousCurrentApproachContactPhase": 0.52777779102325439,
+            "currentApproachContactPhase": 0.52777779102325439,
+            "previousSelectedInApproachContactToLanding": true,
+            "selectedInApproachContactToLanding": true,
+            "previousCurrentAtOrAfterApproachContact": true,
+            "currentAtOrAfterApproachContact": true,
+            "previousObservedAvailable": true,
+            "observedAvailable": true,
+            "previousObservedEventIdentity": "4916455273062201373",
+            "observedEventIdentity": "4916455273062201373",
+            "previousObservedSurfaceIdentity": -14490,
+            "observedSurfaceIdentity": -14480,
+            "previousObservedPoint": {
+              "x": 39.120998382568359,
+              "y": 3.6000001430511475,
+              "z": 10.017999649047852
+            },
+            "observedPoint": {
+              "x": 39.405998229980469,
+              "y": 3.4199998378753662,
+              "z": 9.4429998397827148
+            },
+            "observedLandingPointDeltaMeters": 0.66652065515518188,
+            "previousConsumedEventIdentity": "4916455273062201373",
+            "consumedEventIdentity": "4916455273062201373",
+            "previousConsumedSurfaceIdentity": -14490,
+            "consumedSurfaceIdentity": -14480,
+            "previousConsumedPoint": {
+              "x": 39.120998382568359,
+              "y": 3.6000001430511475,
+              "z": 10.017999649047852
+            },
+            "consumedPoint": {
+              "x": 39.405998229980469,
+              "y": 3.4199998378753662,
+              "z": 9.4429998397827148
+            },
+            "landingPointDeltaMeters": 0.66652065515518188,
+            "landingUpdateDistanceMeters": 0.004999999888241291,
+            "correctionStepMeters": 0.0014570943312719464,
+            "physicalAnkleAvailable": true,
+            "physicalAnkleAlongUpStepMeters": 0.049604415893554688,
+            "physicalSoleAvailable": true,
+            "physicalSoleAlongUpStepMeters": 0.065250158309936523,
+            "consumedSurfaceChanged": true,
+            "consumedPointExceededLandingUpdateDistance": true
+          }
+        },
+        {
+          "eventKind": "LateApproachLandingRevision",
+          "side": "Left",
+          "startFrame": 695,
+          "endFrame": 696,
+          "peakFrame": 696,
+          "eventIdentity": "6164785799822308723",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 15,
+          "matchedRules": [
+            "consumedSurfaceChanged=true",
+            "LandingPointDelta>LandingUpdateDistance"
+          ],
+          "metrics": {
+            "CorrectionStep": 7.2244483817485161E-07,
+            "CurrentApproachContactPhase": 0.52777779102325439,
+            "CurrentEventPhase": 0.58333349227905273,
+            "LandingPointDelta": 0.72508567571640015,
+            "LandingUpdateDistance": 0.004999999888241291,
+            "ObservedLandingPointDelta": 0.72508567571640015,
+            "PhysicalAnkleAlongUpStep": 0.0705270767211914,
+            "PhysicalSoleAlongUpStep": 0.086173057556152344,
+            "SelectedApproachContactPhase": 0.52777779102325439,
+            "SelectedEventPhase": 0.58333349227905273
+          },
+          "evidence": {
+            "bothInApproachContactToLanding": true,
+            "componentUpAvailable": true,
+            "consumedLandingAvailable": true,
+            "consumedPointExceededLandingUpdateDistance": true,
+            "consumedSurfaceChanged": true,
+            "observedLandingAvailable": true,
+            "physicalAnkleAvailable": true,
+            "physicalSoleAvailable": true,
+            "sameLandingEvent": true,
+            "sourceChanged": false
+          },
+          "lateApproachLandingRevision": {
+            "previousFrame": 695,
+            "frame": 696,
+            "side": "Left",
+            "landingEventIdentity": "6164785799822308723",
+            "previousSourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "previousSourceCycle": 15,
+            "sourceCycle": 15,
+            "previousContributionContinuityIdentity": "4",
+            "contributionContinuityIdentity": "4",
+            "previousSelectedEventPhase": 0.55555576086044312,
+            "selectedEventPhase": 0.58333349227905273,
+            "previousSelectedApproachContactPhase": 0.52777779102325439,
+            "selectedApproachContactPhase": 0.52777779102325439,
+            "previousSelectedLandingPhase": 1.0,
+            "selectedLandingPhase": 1.0,
+            "previousCurrentEventPhase": 0.55555576086044312,
+            "currentEventPhase": 0.58333349227905273,
+            "previousCurrentApproachContactPhase": 0.52777779102325439,
+            "currentApproachContactPhase": 0.52777779102325439,
+            "previousSelectedInApproachContactToLanding": true,
+            "selectedInApproachContactToLanding": true,
+            "previousCurrentAtOrAfterApproachContact": true,
+            "currentAtOrAfterApproachContact": true,
+            "previousObservedAvailable": true,
+            "observedAvailable": true,
+            "previousObservedEventIdentity": "6164785799822308723",
+            "observedEventIdentity": "6164785799822308723",
+            "previousObservedSurfaceIdentity": -14470,
+            "observedSurfaceIdentity": -14460,
+            "previousObservedPoint": {
+              "x": 42.386001586914063,
+              "y": 3.2400000095367432,
+              "z": 9.1319999694824219
+            },
+            "observedPoint": {
+              "x": 42.217998504638672,
+              "y": 3.059999942779541,
+              "z": 8.4499998092651367
+            },
+            "observedLandingPointDeltaMeters": 0.72508567571640015,
+            "previousConsumedEventIdentity": "6164785799822308723",
+            "consumedEventIdentity": "6164785799822308723",
+            "previousConsumedSurfaceIdentity": -14470,
+            "consumedSurfaceIdentity": -14460,
+            "previousConsumedPoint": {
+              "x": 42.386001586914063,
+              "y": 3.2400000095367432,
+              "z": 9.1319999694824219
+            },
+            "consumedPoint": {
+              "x": 42.217998504638672,
+              "y": 3.059999942779541,
+              "z": 8.4499998092651367
+            },
+            "landingPointDeltaMeters": 0.72508567571640015,
+            "landingUpdateDistanceMeters": 0.004999999888241291,
+            "correctionStepMeters": 7.2244483817485161E-07,
+            "physicalAnkleAvailable": true,
+            "physicalAnkleAlongUpStepMeters": 0.0705270767211914,
+            "physicalSoleAvailable": true,
+            "physicalSoleAlongUpStepMeters": 0.086173057556152344,
+            "consumedSurfaceChanged": true,
+            "consumedPointExceededLandingUpdateDistance": true
+          }
+        },
+        {
+          "eventKind": "LateApproachLandingRevision",
+          "side": "Left",
+          "startFrame": 696,
+          "endFrame": 697,
+          "peakFrame": 697,
+          "eventIdentity": "6164785799822308723",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 15,
+          "matchedRules": [
+            "consumedSurfaceChanged=true",
+            "LandingPointDelta>LandingUpdateDistance"
+          ],
+          "metrics": {
+            "CorrectionStep": 4.91547893943789E-07,
+            "CurrentApproachContactPhase": 0.52777779102325439,
+            "CurrentEventPhase": 0.61111128330230713,
+            "LandingPointDelta": 0.66773521900177,
+            "LandingUpdateDistance": 0.004999999888241291,
+            "ObservedLandingPointDelta": 0.66773521900177,
+            "PhysicalAnkleAlongUpStep": 0.065390586853027344,
+            "PhysicalSoleAlongUpStep": 0.084666967391967773,
+            "SelectedApproachContactPhase": 0.52777779102325439,
+            "SelectedEventPhase": 0.61111128330230713
+          },
+          "evidence": {
+            "bothInApproachContactToLanding": true,
+            "componentUpAvailable": true,
+            "consumedLandingAvailable": true,
+            "consumedPointExceededLandingUpdateDistance": true,
+            "consumedSurfaceChanged": true,
+            "observedLandingAvailable": true,
+            "physicalAnkleAvailable": true,
+            "physicalSoleAvailable": true,
+            "sameLandingEvent": true,
+            "sourceChanged": false
+          },
+          "lateApproachLandingRevision": {
+            "previousFrame": 696,
+            "frame": 697,
+            "side": "Left",
+            "landingEventIdentity": "6164785799822308723",
+            "previousSourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "previousSourceCycle": 15,
+            "sourceCycle": 15,
+            "previousContributionContinuityIdentity": "4",
+            "contributionContinuityIdentity": "4",
+            "previousSelectedEventPhase": 0.58333349227905273,
+            "selectedEventPhase": 0.61111128330230713,
+            "previousSelectedApproachContactPhase": 0.52777779102325439,
+            "selectedApproachContactPhase": 0.52777779102325439,
+            "previousSelectedLandingPhase": 1.0,
+            "selectedLandingPhase": 1.0,
+            "previousCurrentEventPhase": 0.58333349227905273,
+            "currentEventPhase": 0.61111128330230713,
+            "previousCurrentApproachContactPhase": 0.52777779102325439,
+            "currentApproachContactPhase": 0.52777779102325439,
+            "previousSelectedInApproachContactToLanding": true,
+            "selectedInApproachContactToLanding": true,
+            "previousCurrentAtOrAfterApproachContact": true,
+            "currentAtOrAfterApproachContact": true,
+            "previousObservedAvailable": true,
+            "observedAvailable": true,
+            "previousObservedEventIdentity": "6164785799822308723",
+            "observedEventIdentity": "6164785799822308723",
+            "previousObservedSurfaceIdentity": -14460,
+            "observedSurfaceIdentity": -14450,
+            "previousObservedPoint": {
+              "x": 42.217998504638672,
+              "y": 3.059999942779541,
+              "z": 8.4499998092651367
+            },
+            "observedPoint": {
+              "x": 41.810001373291016,
+              "y": 2.880000114440918,
+              "z": 7.9530000686645508
+            },
+            "observedLandingPointDeltaMeters": 0.66773521900177,
+            "previousConsumedEventIdentity": "6164785799822308723",
+            "consumedEventIdentity": "6164785799822308723",
+            "previousConsumedSurfaceIdentity": -14460,
+            "consumedSurfaceIdentity": -14450,
+            "previousConsumedPoint": {
+              "x": 42.217998504638672,
+              "y": 3.059999942779541,
+              "z": 8.4499998092651367
+            },
+            "consumedPoint": {
+              "x": 41.810001373291016,
+              "y": 2.880000114440918,
+              "z": 7.9530000686645508
+            },
+            "landingPointDeltaMeters": 0.66773521900177,
+            "landingUpdateDistanceMeters": 0.004999999888241291,
+            "correctionStepMeters": 4.91547893943789E-07,
+            "physicalAnkleAvailable": true,
+            "physicalAnkleAlongUpStepMeters": 0.065390586853027344,
+            "physicalSoleAvailable": true,
+            "physicalSoleAlongUpStepMeters": 0.084666967391967773,
+            "consumedSurfaceChanged": true,
+            "consumedPointExceededLandingUpdateDistance": true
+          }
+        },
+        {
+          "eventKind": "LateApproachLandingRevision",
+          "side": "Left",
+          "startFrame": 730,
+          "endFrame": 731,
+          "peakFrame": 731,
+          "eventIdentity": "10257639767000078082",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 16,
+          "matchedRules": [
+            "LandingPointDelta>LandingUpdateDistance"
+          ],
+          "metrics": {
+            "CorrectionStep": 9.4390743470285088E-06,
+            "CurrentApproachContactPhase": 0.52777779102325439,
+            "CurrentEventPhase": 0.55555576086044312,
+            "LandingPointDelta": 0.76478254795074463,
+            "LandingUpdateDistance": 0.004999999888241291,
+            "ObservedLandingPointDelta": 0.76478254795074463,
+            "PhysicalAnkleAlongUpStep": 0.040625810623168945,
+            "PhysicalSoleAlongUpStep": 0.039510250091552734,
+            "SelectedApproachContactPhase": 0.52777779102325439,
+            "SelectedEventPhase": 0.55555576086044312
+          },
+          "evidence": {
+            "bothInApproachContactToLanding": true,
+            "componentUpAvailable": true,
+            "consumedLandingAvailable": true,
+            "consumedPointExceededLandingUpdateDistance": true,
+            "consumedSurfaceChanged": false,
+            "observedLandingAvailable": true,
+            "physicalAnkleAvailable": true,
+            "physicalSoleAvailable": true,
+            "sameLandingEvent": true,
+            "sourceChanged": false
+          },
+          "lateApproachLandingRevision": {
+            "previousFrame": 730,
+            "frame": 731,
+            "side": "Left",
+            "landingEventIdentity": "10257639767000078082",
+            "previousSourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "previousSourceCycle": 16,
+            "sourceCycle": 16,
+            "previousContributionContinuityIdentity": "4",
+            "contributionContinuityIdentity": "4",
+            "previousSelectedEventPhase": 0.52777796983718872,
+            "selectedEventPhase": 0.55555576086044312,
+            "previousSelectedApproachContactPhase": 0.52777779102325439,
+            "selectedApproachContactPhase": 0.52777779102325439,
+            "previousSelectedLandingPhase": 1.0,
+            "selectedLandingPhase": 1.0,
+            "previousCurrentEventPhase": 0.52777796983718872,
+            "currentEventPhase": 0.55555576086044312,
+            "previousCurrentApproachContactPhase": 0.52777779102325439,
+            "currentApproachContactPhase": 0.52777779102325439,
+            "previousSelectedInApproachContactToLanding": true,
+            "selectedInApproachContactToLanding": true,
+            "previousCurrentAtOrAfterApproachContact": true,
+            "currentAtOrAfterApproachContact": true,
+            "previousObservedAvailable": true,
+            "observedAvailable": true,
+            "previousObservedEventIdentity": "10257639767000078082",
+            "observedEventIdentity": "10257639767000078082",
+            "previousObservedSurfaceIdentity": -14430,
+            "observedSurfaceIdentity": -14430,
+            "previousObservedPoint": {
+              "x": 41.056999206542969,
+              "y": 2.5199737548828125,
+              "z": 6.7499594688415527
+            },
+            "observedPoint": {
+              "x": 40.351001739501953,
+              "y": 2.5199997425079346,
+              "z": 7.0440001487731934
+            },
+            "observedLandingPointDeltaMeters": 0.76478254795074463,
+            "previousConsumedEventIdentity": "10257639767000078082",
+            "consumedEventIdentity": "10257639767000078082",
+            "previousConsumedSurfaceIdentity": -14430,
+            "consumedSurfaceIdentity": -14430,
+            "previousConsumedPoint": {
+              "x": 41.056999206542969,
+              "y": 2.5199737548828125,
+              "z": 6.7499594688415527
+            },
+            "consumedPoint": {
+              "x": 40.351001739501953,
+              "y": 2.5199997425079346,
+              "z": 7.0440001487731934
+            },
+            "landingPointDeltaMeters": 0.76478254795074463,
+            "landingUpdateDistanceMeters": 0.004999999888241291,
+            "correctionStepMeters": 9.4390743470285088E-06,
+            "physicalAnkleAvailable": true,
+            "physicalAnkleAlongUpStepMeters": 0.040625810623168945,
+            "physicalSoleAvailable": true,
+            "physicalSoleAlongUpStepMeters": 0.039510250091552734,
+            "consumedSurfaceChanged": false,
+            "consumedPointExceededLandingUpdateDistance": true
+          }
+        },
+        {
+          "eventKind": "LateApproachLandingRevision",
+          "side": "Right",
+          "startFrame": 750,
+          "endFrame": 751,
+          "peakFrame": 751,
+          "eventIdentity": "10879890780635794856",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 16,
+          "matchedRules": [
+            "consumedSurfaceChanged=true",
+            "LandingPointDelta>LandingUpdateDistance"
+          ],
+          "metrics": {
+            "CorrectionStep": 4.2920019041048363E-06,
+            "CurrentApproachContactPhase": 0.47222220897674561,
+            "CurrentEventPhase": 0.58333349227905273,
+            "LandingPointDelta": 3.1847190856933594,
+            "LandingUpdateDistance": 0.004999999888241291,
+            "ObservedLandingPointDelta": 3.1847190856933594,
+            "PhysicalAnkleAlongUpStep": 0.031145811080932617,
+            "PhysicalSoleAlongUpStep": 0.047550201416015625,
+            "SelectedApproachContactPhase": 0.47222220897674561,
+            "SelectedEventPhase": 0.58333349227905273
+          },
+          "evidence": {
+            "bothInApproachContactToLanding": true,
+            "componentUpAvailable": true,
+            "consumedLandingAvailable": true,
+            "consumedPointExceededLandingUpdateDistance": true,
+            "consumedSurfaceChanged": true,
+            "observedLandingAvailable": true,
+            "physicalAnkleAvailable": true,
+            "physicalSoleAvailable": true,
+            "sameLandingEvent": true,
+            "sourceChanged": false
+          },
+          "lateApproachLandingRevision": {
+            "previousFrame": 750,
+            "frame": 751,
+            "side": "Right",
+            "landingEventIdentity": "10879890780635794856",
+            "previousSourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+            "previousSourceCycle": 16,
+            "sourceCycle": 16,
+            "previousContributionContinuityIdentity": "4",
+            "contributionContinuityIdentity": "4",
+            "previousSelectedEventPhase": 0.55555576086044312,
+            "selectedEventPhase": 0.58333349227905273,
+            "previousSelectedApproachContactPhase": 0.47222220897674561,
+            "selectedApproachContactPhase": 0.47222220897674561,
+            "previousSelectedLandingPhase": 1.0,
+            "selectedLandingPhase": 1.0,
+            "previousCurrentEventPhase": 0.55555576086044312,
+            "currentEventPhase": 0.58333349227905273,
+            "previousCurrentApproachContactPhase": 0.47222220897674561,
+            "currentApproachContactPhase": 0.47222220897674561,
+            "previousSelectedInApproachContactToLanding": true,
+            "selectedInApproachContactToLanding": true,
+            "previousCurrentAtOrAfterApproachContact": true,
+            "currentAtOrAfterApproachContact": true,
+            "previousObservedAvailable": true,
+            "observedAvailable": true,
+            "previousObservedEventIdentity": "10879890780635794856",
+            "observedEventIdentity": "10879890780635794856",
+            "previousObservedSurfaceIdentity": -14490,
+            "observedSurfaceIdentity": -14470,
+            "previousObservedPoint": {
+              "x": 38.561000823974609,
+              "y": 3.5999999046325684,
+              "z": 9.9069995880126953
+            },
+            "observedPoint": {
+              "x": 41.571998596191406,
+              "y": 3.2400002479553223,
+              "z": 8.9340000152587891
+            },
+            "observedLandingPointDeltaMeters": 3.1847190856933594,
+            "previousConsumedEventIdentity": "10879890780635794856",
+            "consumedEventIdentity": "10879890780635794856",
+            "previousConsumedSurfaceIdentity": -14490,
+            "consumedSurfaceIdentity": -14470,
+            "previousConsumedPoint": {
+              "x": 38.561000823974609,
+              "y": 3.5999999046325684,
+              "z": 9.9069995880126953
+            },
+            "consumedPoint": {
+              "x": 41.571998596191406,
+              "y": 3.2400002479553223,
+              "z": 8.9340000152587891
+            },
+            "landingPointDeltaMeters": 3.1847190856933594,
+            "landingUpdateDistanceMeters": 0.004999999888241291,
+            "correctionStepMeters": 4.2920019041048363E-06,
+            "physicalAnkleAvailable": true,
+            "physicalAnkleAlongUpStepMeters": 0.031145811080932617,
+            "physicalSoleAvailable": true,
+            "physicalSoleAlongUpStepMeters": 0.047550201416015625,
+            "consumedSurfaceChanged": true,
+            "consumedPointExceededLandingUpdateDistance": true
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "targetCount": 6,
+    "targetWithMatchesCount": 1,
+    "matchedEventCount": 589,
+    "targetResults": [
+      {
+        "id": "identity-only-residual-rebuild",
+        "eligibleEventCount": 9,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "path-revision-contract-mismatch",
+        "eligibleEventCount": 845,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "releasing-to-swing-envelope-violation",
+        "eligibleEventCount": 36,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "residual-deadline-miss",
+        "eligibleEventCount": 39,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "residual-growth-without-revision",
+        "eligibleEventCount": 12,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "late-approach-landing-revision",
+        "eligibleEventCount": 624,
+        "matchedEventCount": 589,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.94391025641025639
+      }
+    ]
+  }
+}

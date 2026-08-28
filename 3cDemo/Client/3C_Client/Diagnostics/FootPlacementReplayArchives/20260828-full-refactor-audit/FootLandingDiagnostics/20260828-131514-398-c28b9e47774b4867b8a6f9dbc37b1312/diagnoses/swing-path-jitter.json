@@ -1,0 +1,726 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "swing-path-jitter",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "e14310cca28946ea5ee12062b6ed9053e0816dc7b31f818b1f2cb535c92f6366",
+    "schema": "character-foot-motion-facts/22",
+    "sampleIdentity": "c28b9e47774b4867b8a6f9dbc37b1312"
+  },
+  "targets": [
+    {
+      "id": "stable-swing-output-jump",
+      "question": "稳定Path的普通Swing中，Foot Placement相对原动画新增的最终可见输出是否逐帧跳变",
+      "eventKinds": [
+        "StableSwingOutputJump"
+      ],
+      "rules": [
+        "footPlacementOutputOffsetStepMeters>0.02"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "occurrence": {
+        "available": false,
+        "sampleUnit": "ContinuousAcceptedUnanchoredStableSwingFramePair",
+        "metric": "FootPlacementOutputOffsetStep",
+        "comparison": "GreaterThan",
+        "thresholdUnit": "Meters",
+        "eligibleEventCount": 0,
+        "configuredThresholds": [
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "rates": []
+      },
+      "supplementalOccurrences": [
+        {
+          "available": false,
+          "sampleUnit": "ContinuousAcceptedUnanchoredStableSwingFramePair",
+          "metric": "AnkleOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 0,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "rates": []
+        },
+        {
+          "available": false,
+          "sampleUnit": "ContinuousAcceptedUnanchoredStableSwingFramePair",
+          "metric": "HeelOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 0,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "rates": []
+        },
+        {
+          "available": false,
+          "sampleUnit": "ContinuousAcceptedUnanchoredStableSwingFramePair",
+          "metric": "ToeOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 0,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "rates": []
+        }
+      ],
+      "measurements": {
+        "AnkleOutputOffsetSpeed": {
+          "available": false,
+          "count": 0
+        },
+        "AnkleOutputOffsetStep": {
+          "available": false,
+          "count": 0
+        },
+        "BodyTickSpan": {
+          "available": false,
+          "count": 0
+        },
+        "EndpointDelta": {
+          "available": false,
+          "count": 0
+        },
+        "FootPlacementOutputOffsetAcceleration": {
+          "available": false,
+          "count": 0
+        },
+        "FootPlacementOutputOffsetJerk": {
+          "available": false,
+          "count": 0
+        },
+        "FootPlacementOutputOffsetSpeed": {
+          "available": false,
+          "count": 0
+        },
+        "FootPlacementOutputOffsetStep": {
+          "available": false,
+          "count": 0
+        },
+        "HeelOutputOffsetSpeed": {
+          "available": false,
+          "count": 0
+        },
+        "HeelOutputOffsetStep": {
+          "available": false,
+          "count": 0
+        },
+        "LandingPointDelta": {
+          "available": false,
+          "count": 0
+        },
+        "ObservedSwingTargetDelta": {
+          "available": false,
+          "count": 0
+        },
+        "PathRevisionDelta": {
+          "available": false,
+          "count": 0
+        },
+        "PhaseAdvanceDelta": {
+          "available": false,
+          "count": 0
+        },
+        "PresentationDeltaSeconds": {
+          "available": false,
+          "count": 0
+        },
+        "TargetDelta": {
+          "available": false,
+          "count": 0
+        },
+        "ToeOutputOffsetSpeed": {
+          "available": false,
+          "count": 0
+        },
+        "ToeOutputOffsetStep": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "categoricalMeasurements": {
+        "PathRevisionReason": [],
+        "PrimaryProbe": [],
+        "SafetyFloorOwner": []
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "path-revision-output-jump",
+      "question": "Path语义修订当帧，Foot Placement相对原动画新增的最终可见输出是否跳变",
+      "eventKinds": [
+        "PathRevisionOutputJump"
+      ],
+      "rules": [
+        "footPlacementOutputOffsetStepMeters>0.02"
+      ],
+      "eligibleEventCount": 0,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": false,
+      "occurrence": {
+        "available": false,
+        "sampleUnit": "ContinuousAcceptedUnanchoredPathRevisionSwingFramePair",
+        "metric": "FootPlacementOutputOffsetStep",
+        "comparison": "GreaterThan",
+        "thresholdUnit": "Meters",
+        "eligibleEventCount": 0,
+        "configuredThresholds": [
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "rates": []
+      },
+      "supplementalOccurrences": [
+        {
+          "available": false,
+          "sampleUnit": "ContinuousAcceptedUnanchoredPathRevisionSwingFramePair",
+          "metric": "AnkleOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 0,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "rates": []
+        },
+        {
+          "available": false,
+          "sampleUnit": "ContinuousAcceptedUnanchoredPathRevisionSwingFramePair",
+          "metric": "HeelOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 0,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "rates": []
+        },
+        {
+          "available": false,
+          "sampleUnit": "ContinuousAcceptedUnanchoredPathRevisionSwingFramePair",
+          "metric": "ToeOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 0,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "rates": []
+        }
+      ],
+      "pathStageAnalysis": {
+        "available": false,
+        "eligibleEventCount": 0,
+        "availableEventCount": 0,
+        "unavailableEventCount": 0,
+        "missingStageCounts": {},
+        "firstAmplificationStageCounts": {}
+      },
+      "measurements": {
+        "AnkleOutputOffsetSpeed": {
+          "available": false,
+          "count": 0
+        },
+        "AnkleOutputOffsetStep": {
+          "available": false,
+          "count": 0
+        },
+        "BodyTickSpan": {
+          "available": false,
+          "count": 0
+        },
+        "EndpointDelta": {
+          "available": false,
+          "count": 0
+        },
+        "FootPlacementOutputOffsetAcceleration": {
+          "available": false,
+          "count": 0
+        },
+        "FootPlacementOutputOffsetJerk": {
+          "available": false,
+          "count": 0
+        },
+        "FootPlacementOutputOffsetSpeed": {
+          "available": false,
+          "count": 0
+        },
+        "FootPlacementOutputOffsetStep": {
+          "available": false,
+          "count": 0
+        },
+        "HeelOutputOffsetSpeed": {
+          "available": false,
+          "count": 0
+        },
+        "HeelOutputOffsetStep": {
+          "available": false,
+          "count": 0
+        },
+        "LandingPointDelta": {
+          "available": false,
+          "count": 0
+        },
+        "ObservedSwingTargetDelta": {
+          "available": false,
+          "count": 0
+        },
+        "PathRevisionDelta": {
+          "available": false,
+          "count": 0
+        },
+        "PhaseAdvanceDelta": {
+          "available": false,
+          "count": 0
+        },
+        "PresentationDeltaSeconds": {
+          "available": false,
+          "count": 0
+        },
+        "TargetDelta": {
+          "available": false,
+          "count": 0
+        },
+        "ToeOutputOffsetSpeed": {
+          "available": false,
+          "count": 0
+        },
+        "ToeOutputOffsetStep": {
+          "available": false,
+          "count": 0
+        }
+      },
+      "categoricalMeasurements": {
+        "PathRevisionReason": [],
+        "PrimaryProbe": [],
+        "SafetyFloorOwner": []
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "swing-to-landing-output-jump",
+      "question": "Swing进入Landing当帧，Foot Placement相对原动画新增的最终可见输出是否跳变",
+      "eventKinds": [
+        "SwingToLandingOutputJump"
+      ],
+      "rules": [
+        "footPlacementOutputOffsetStepMeters>0.02"
+      ],
+      "eligibleEventCount": 1,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "occurrence": {
+        "available": true,
+        "sampleUnit": "ContinuousSwingToLandingFramePair",
+        "metric": "FootPlacementOutputOffsetStep",
+        "comparison": "GreaterThan",
+        "thresholdUnit": "Meters",
+        "eligibleEventCount": 1,
+        "configuredThresholds": [
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "primaryRate": {
+          "threshold": 0.02,
+          "eligibleEventCount": 1,
+          "matchedEventCount": 0,
+          "matchedEventRate": 0.0
+        },
+        "rates": [
+          {
+            "threshold": 0.01,
+            "eligibleEventCount": 1,
+            "matchedEventCount": 0,
+            "matchedEventRate": 0.0
+          },
+          {
+            "threshold": 0.02,
+            "eligibleEventCount": 1,
+            "matchedEventCount": 0,
+            "matchedEventRate": 0.0
+          },
+          {
+            "threshold": 0.05,
+            "eligibleEventCount": 1,
+            "matchedEventCount": 0,
+            "matchedEventRate": 0.0
+          },
+          {
+            "threshold": 0.1,
+            "eligibleEventCount": 1,
+            "matchedEventCount": 0,
+            "matchedEventRate": 0.0
+          }
+        ]
+      },
+      "supplementalOccurrences": [
+        {
+          "available": true,
+          "sampleUnit": "ContinuousSwingToLandingFramePair",
+          "metric": "AnkleOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 1,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "primaryRate": {
+            "threshold": 0.02,
+            "eligibleEventCount": 1,
+            "matchedEventCount": 0,
+            "matchedEventRate": 0.0
+          },
+          "rates": [
+            {
+              "threshold": 0.01,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.02,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.05,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.1,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            }
+          ]
+        },
+        {
+          "available": true,
+          "sampleUnit": "ContinuousSwingToLandingFramePair",
+          "metric": "HeelOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 1,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "primaryRate": {
+            "threshold": 0.02,
+            "eligibleEventCount": 1,
+            "matchedEventCount": 0,
+            "matchedEventRate": 0.0
+          },
+          "rates": [
+            {
+              "threshold": 0.01,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.02,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.05,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.1,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            }
+          ]
+        },
+        {
+          "available": true,
+          "sampleUnit": "ContinuousSwingToLandingFramePair",
+          "metric": "ToeOutputOffsetStep",
+          "comparison": "GreaterThan",
+          "thresholdUnit": "Meters",
+          "eligibleEventCount": 1,
+          "configuredThresholds": [
+            0.01,
+            0.02,
+            0.05,
+            0.1
+          ],
+          "primaryRate": {
+            "threshold": 0.02,
+            "eligibleEventCount": 1,
+            "matchedEventCount": 0,
+            "matchedEventRate": 0.0
+          },
+          "rates": [
+            {
+              "threshold": 0.01,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.02,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.05,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            },
+            {
+              "threshold": 0.1,
+              "eligibleEventCount": 1,
+              "matchedEventCount": 0,
+              "matchedEventRate": 0.0
+            }
+          ]
+        }
+      ],
+      "measurements": {
+        "AnkleOutputOffsetSpeed": {
+          "available": true,
+          "count": 1,
+          "median": 3.5762784591497621E-06,
+          "p90": 3.5762784591497621E-06,
+          "p99": 3.5762784591497621E-06,
+          "maximum": 3.5762784591497621E-06
+        },
+        "AnkleOutputOffsetStep": {
+          "available": true,
+          "count": 1,
+          "median": 5.9604644775390625E-08,
+          "p90": 5.9604644775390625E-08,
+          "p99": 5.9604644775390625E-08,
+          "maximum": 5.9604644775390625E-08
+        },
+        "BodyTickSpan": {
+          "available": true,
+          "count": 1,
+          "median": 1.0,
+          "p90": 1.0,
+          "p99": 1.0,
+          "maximum": 1.0
+        },
+        "EndpointDelta": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "FootPlacementOutputOffsetAcceleration": {
+          "available": true,
+          "count": 1,
+          "median": 0.000885128800291568,
+          "p90": 0.000885128800291568,
+          "p99": 0.000885128800291568,
+          "maximum": 0.000885128800291568
+        },
+        "FootPlacementOutputOffsetJerk": {
+          "available": true,
+          "count": 1,
+          "median": 0.16399775445461273,
+          "p90": 0.16399775445461273,
+          "p99": 0.16399775445461273,
+          "maximum": 0.16399775445461273
+        },
+        "FootPlacementOutputOffsetSpeed": {
+          "available": true,
+          "count": 1,
+          "median": 4.470347903406946E-06,
+          "p90": 4.470347903406946E-06,
+          "p99": 4.470347903406946E-06,
+          "maximum": 4.470347903406946E-06
+        },
+        "FootPlacementOutputOffsetStep": {
+          "available": true,
+          "count": 1,
+          "median": 7.4505805969238281E-08,
+          "p90": 7.4505805969238281E-08,
+          "p99": 7.4505805969238281E-08,
+          "maximum": 7.4505805969238281E-08
+        },
+        "HeelOutputOffsetSpeed": {
+          "available": true,
+          "count": 1,
+          "median": 3.91155481338501E-06,
+          "p90": 3.91155481338501E-06,
+          "p99": 3.91155481338501E-06,
+          "maximum": 3.91155481338501E-06
+        },
+        "HeelOutputOffsetStep": {
+          "available": true,
+          "count": 1,
+          "median": 6.51925802230835E-08,
+          "p90": 6.51925802230835E-08,
+          "p99": 6.51925802230835E-08,
+          "maximum": 6.51925802230835E-08
+        },
+        "LandingPointDelta": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "ObservedSwingTargetDelta": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "PathRevisionDelta": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "PhaseAdvanceDelta": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "PresentationDeltaSeconds": {
+          "available": true,
+          "count": 1,
+          "median": 0.01666666753590107,
+          "p90": 0.01666666753590107,
+          "p99": 0.01666666753590107,
+          "maximum": 0.01666666753590107
+        },
+        "TargetDelta": {
+          "available": true,
+          "count": 1,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "ToeOutputOffsetSpeed": {
+          "available": true,
+          "count": 1,
+          "median": 4.470347903406946E-06,
+          "p90": 4.470347903406946E-06,
+          "p99": 4.470347903406946E-06,
+          "maximum": 4.470347903406946E-06
+        },
+        "ToeOutputOffsetStep": {
+          "available": true,
+          "count": 1,
+          "median": 7.4505805969238281E-08,
+          "p90": 7.4505805969238281E-08,
+          "p99": 7.4505805969238281E-08,
+          "maximum": 7.4505805969238281E-08
+        }
+      },
+      "categoricalMeasurements": {
+        "PathRevisionReason": [
+          {
+            "value": "None",
+            "count": 1
+          }
+        ],
+        "PrimaryProbe": [
+          {
+            "value": "Toe",
+            "count": 1
+          }
+        ],
+        "SafetyFloorOwner": [
+          {
+            "value": "ContactAnchor",
+            "count": 1
+          }
+        ]
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    }
+  ],
+  "summary": {
+    "targetCount": 3,
+    "targetWithMatchesCount": 0,
+    "matchedEventCount": 0,
+    "targetResults": [
+      {
+        "id": "stable-swing-output-jump",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      },
+      {
+        "id": "path-revision-output-jump",
+        "eligibleEventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": false
+      },
+      {
+        "id": "swing-to-landing-output-jump",
+        "eligibleEventCount": 1,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      }
+    ]
+  }
+}

@@ -72,13 +72,15 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string RollbackLaunchArgumentPrefix = "--deterministic-rollback-profile=";
         const string SharedWorldId = "corin-gameplay-lab-world";
         const string SharedWorldRevision = "corin-gameplay-lab-world-v1";
+        const float FixedFootIkCourseX = 40f;
+        const float FixedFootIkCourseStartZ = 0f;
+        const float FixedFootIkEndpointMargin = 3f;
 
         static readonly Vector3 s_FloatPlayerPosition = new Vector3(2.96f, 0f, -5.27f);
         static readonly Vector3 s_FixedFootIkPlayerPosition = new Vector3(
-            GameplayLabFootIkRegressionCourse.CourseX,
+            FixedFootIkCourseX,
             0f,
-            GameplayLabFootIkRegressionCourse.CourseStartZ -
-            GameplayLabFootIkRegressionCourse.EndpointMargin);
+            FixedFootIkCourseStartZ - FixedFootIkEndpointMargin);
         static readonly Vector3 s_TargetPosition = new Vector3(2.96f, 0f, -1.7f);
 
         public static void Rebuild()

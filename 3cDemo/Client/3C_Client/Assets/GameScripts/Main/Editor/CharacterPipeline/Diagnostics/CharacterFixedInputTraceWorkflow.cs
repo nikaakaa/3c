@@ -1183,8 +1183,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (IsPending || IsRecording || IsReplaying || s_ReplayWaitingForSampling ||
                 CharacterFootLandingPredictionSampler.IsFinalizing)
                 throw new InvalidOperationException("Another canonical Fixed input trace operation is already active.");
-            if (GameplayLabFootIkKeyboardRouteDriver.IsActive || GameplayLabFootIkKeyboardRouteDriver.IsPending)
-                throw new InvalidOperationException("The legacy automatic keyboard route is active and cannot share character input ownership.");
             if (CharacterFootLandingPredictionSampler.IsCapturing || CharacterFootLandingPredictionSampler.IsStartPending)
                 throw new InvalidOperationException("Foot Landing sampling is already active.");
         }

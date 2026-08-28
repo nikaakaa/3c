@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/22";
+        const string Schema = "character-foot-motion-facts/23";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 22;
+        const int AnalyzerVersion = 23;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 672;
         const float PositionNoiseFloor = 0.001f;
@@ -426,11 +426,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         landingPointRevised,
                     ["counterfactualPathRevisionAboveNoiseFloor"] =
                         counterfactualPathRevision,
-                    ["swingTargetChangedOnly"] =
-                        RevisionReasonIncludes(
-                            current.PathRevisionReason,
-                            "SwingTargetChanged") &&
-                        !semanticPathRevision,
                     ["safetyFloorOwnerGroundPathEnvelope"] =
                         current.SafetyFloorOwner == "GroundPathEnvelope",
                     ["safetyFloorOwnerContactAnchor"] =
@@ -2679,10 +2674,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.PathCurrentLandingEventIdentity;
                 bool landingPointChanged = comparablePath &&
                     current.PathLandingPointDelta > current.PathRevisionDistance;
-                bool swingTargetChanged = comparablePath &&
-                    current.PathTargetDelta > current.PathRevisionDistance;
                 bool revisionExpected = availabilityChanged || eventChanged ||
-                                        landingPointChanged || swingTargetChanged;
+                                        landingPointChanged;
                 bool reasonAvailability = HasRevisionReason(
                     current.PathRevisionReason,
                     "PathAvailabilityChanged");
@@ -2692,16 +2685,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool reasonLandingPoint = HasRevisionReason(
                     current.PathRevisionReason,
                     "LandingPointChanged");
-                bool reasonSwingTarget = HasRevisionReason(
-                    current.PathRevisionReason,
-                    "SwingTargetChanged");
                 bool reasonAvailable = reasonAvailability || reasonEvent ||
-                                       reasonLandingPoint || reasonSwingTarget;
+                                       reasonLandingPoint;
                 bool reasonMatchesExpected =
                     reasonAvailability == availabilityChanged &&
                     reasonEvent == eventChanged &&
-                    reasonLandingPoint == landingPointChanged &&
-                    reasonSwingTarget == swingTargetChanged;
+                    reasonLandingPoint == landingPointChanged;
                 double residualBeforeRevision =
                     current.SwingResidualBeforeRevision.magnitude;
                 double residualBeforeDecay =
@@ -2773,7 +2762,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["expectedLandingEventRevision"] = eventChanged,
                     ["expectedLandingPointRevision"] = landingPointChanged,
                     ["expectedPathAvailabilityRevision"] = availabilityChanged,
-                    ["expectedSwingTargetRevision"] = swingTargetChanged,
                     ["identityOnlyInputChange"] = identityOnlyInputChange,
                     ["pathContinuityEvaluated"] =
                         current.PathContinuityEvaluated,
@@ -2785,7 +2773,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["reasonLandingEventChanged"] = reasonEvent,
                     ["reasonLandingPointChanged"] = reasonLandingPoint,
                     ["reasonPathAvailabilityChanged"] = reasonAvailability,
-                    ["reasonSwingTargetChanged"] = reasonSwingTarget,
                     ["releasingCompletedToSwing"] =
                         current.ReleasingCompletedToSwing,
                     ["residualGrewWithoutRevision"] =
@@ -4283,8 +4270,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool valid = reason == "None" ||
                              reason == "PathAvailabilityChanged" ||
                              reason == "LandingEventChanged" ||
-                             reason == "LandingPointChanged" ||
-                             reason == "SwingTargetChanged";
+                             reason == "LandingPointChanged";
                 if (!valid)
                 {
                     throw new InvalidDataException(

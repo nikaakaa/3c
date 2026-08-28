@@ -224,19 +224,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 revisionReason |=
                     CharacterFootPathRevisionReason.LandingPointChanged;
             }
-            if (comparablePath &&
-                targetDelta > frame.Settings.PathRevisionDistance)
-            {
-                revisionReason |=
-                    CharacterFootPathRevisionReason.SwingTargetChanged;
-            }
             bool revised = revisionReason !=
                            CharacterFootPathRevisionReason.None;
-            if (revised)
-            {
-                state.Residual =
-                    state.EffectiveCorrection - target.Correction;
-            }
+            state.Residual =
+                state.EffectiveCorrection - target.Correction;
             Vector3 residualBeforeDecay = state.Residual;
             state.HasSwingPath = hasPath;
             state.SwingLandingEventIdentity = hasPath

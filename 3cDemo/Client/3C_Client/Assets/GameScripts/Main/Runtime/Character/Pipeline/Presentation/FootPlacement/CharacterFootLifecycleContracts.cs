@@ -18,8 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         PathAvailabilityChanged = 1,
         LandingEventChanged = 2,
-        LandingPointChanged = 4,
-        SwingTargetChanged = 8
+        LandingPointChanged = 4
     }
 
     public enum CharacterFootSafetyFloorOwner : byte

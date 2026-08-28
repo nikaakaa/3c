@@ -127,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "residualAfterDecayMeters"),
                 context.Target(
                     "path-revision-contract-mismatch",
-                    "Path可用性、Event、Landing Point和Swing Target是否与Residual重建原因一致",
+                    "Path可用性、Event和Landing Point是否与Residual重建原因一致",
                     new[] { "PathContinuity" },
                     new[]
                     {

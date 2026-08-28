@@ -394,7 +394,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 WorldNormal);
 
         internal static CharacterFootLandingFact Create(
-            in AnimationFootMotionRuntimeSample step,
+            in AnimationBiomechanicalStepHeader step,
             in CharacterFootLandingPredictionResult diagnostics) =>
             new CharacterFootLandingFact(
                 step.LandingEventIdentity,
@@ -616,8 +616,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
-            in AnimationFootMotionRuntimeSample currentStep,
-            in AnimationFootMotionRuntimeSample selectedStep,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in AnimationBiomechanicalStepHeader selectedStep,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootStateFrame frame)
         {
@@ -629,8 +629,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal CharacterFootSide Side { get; }
-        internal AnimationFootMotionRuntimeSample CurrentStep { get; }
-        internal AnimationFootMotionRuntimeSample SelectedStep { get; }
+        internal AnimationBiomechanicalStepHeader CurrentStep { get; }
+        internal AnimationBiomechanicalStepHeader SelectedStep { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }
     }

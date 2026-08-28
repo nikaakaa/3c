@@ -7,7 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal static CharacterFootLandingSnapshot ProjectBeforePrediction(
             in CharacterFootLifecycleContext context,
-            in AnimationFootMotionRuntimeSample currentStep)
+            in AnimationBiomechanicalStepHeader currentStep)
         {
             CharacterFootLandingContext projected = context.Landing;
             projected.BeginFrame();
@@ -17,8 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootLandingSnapshot ProjectAfterPrediction(
             in CharacterFootLifecycleContext context,
-            in AnimationFootMotionRuntimeSample currentStep,
-            in AnimationFootMotionRuntimeSample selectedStep,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in AnimationBiomechanicalStepHeader selectedStep,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootMotionSettings settings)
         {
@@ -35,8 +35,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static void Evaluate(
             ref CharacterFootLandingContext context,
-            in AnimationFootMotionRuntimeSample currentStep,
-            in AnimationFootMotionRuntimeSample selectedStep,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in AnimationBiomechanicalStepHeader selectedStep,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootMotionSettings settings)
         {
@@ -51,18 +51,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static void PromoteLanded(
             ref CharacterFootLandingContext context,
-            in AnimationFootMotionRuntimeSample step)
+            in AnimationBiomechanicalStepHeader step)
         {
-            bool hasCurrentEvent = step.HasCurrentContactEvent;
+            bool hasCurrentEvent = step.IsAuthoritative &&
+                                   step.HasConsistentLandingEventIdentity &&
+                                   step.LandingEventIdentity != 0;
             ulong currentEventIdentity = hasCurrentEvent
-                ? step.CurrentContactEventIdentity
+                ? step.LandingEventIdentity
                 : 0;
             if (context.NextSwingLanding.HasValue)
             {
                 ulong acceptedEventIdentity =
                     context.NextSwingLanding.LandingEventIdentity;
                 bool completedInPlace = hasCurrentEvent &&
-                                        currentEventIdentity == acceptedEventIdentity;
+                                        currentEventIdentity == acceptedEventIdentity &&
+                                        step.TimeToLandingSeconds <= 0.000001f;
                 bool advancedToNextEvent = hasCurrentEvent &&
                                            context.ObservedCurrentEventIdentity == acceptedEventIdentity &&
                                            currentEventIdentity != acceptedEventIdentity;
@@ -78,6 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
             }
             else if (hasCurrentEvent &&
+                     step.TimeToLandingSeconds <= 0.000001f &&
                      context.TrackedEventIdentity == currentEventIdentity)
             {
                 context.LastLanding = default;
@@ -91,12 +95,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static void CaptureNextSwing(
             ref CharacterFootLandingContext context,
-            in AnimationFootMotionRuntimeSample step,
+            in AnimationBiomechanicalStepHeader step,
             in CharacterFootLandingPredictionResult diagnostics,
             in CharacterFootMotionSettings settings)
         {
             CharacterFootLandingSnapshot snapshot = context.Snapshot;
-            bool validCandidate = step.HasPredictiveLanding &&
+            bool validCandidate = step.IsAuthoritative &&
+                                  step.HasConsistentLandingEventIdentity &&
+                                  (step.IsPreSwing || step.IsSwing) &&
                                   step.TimeToLandingSeconds > 0.000001f &&
                                   step.LandingEventIdentity != 0 &&
                                   step.LandingEventIdentity !=

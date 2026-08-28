@@ -1,0 +1,77 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "locked-sole-motion",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "54da32a9204535d9134d009d3c59a614623c55b2d811eec2022904a9f3a32036",
+    "schema": "character-foot-motion-facts/22",
+    "sampleIdentity": "2e911742a9334223a19e9548dfc6abcd"
+  },
+  "targets": [
+    {
+      "id": "locked-sole-sink-or-drift",
+      "question": "Locked阶段脚底是否相对稳定Anchor下陷或漂移",
+      "eventKinds": [
+        "Locked"
+      ],
+      "rules": [
+        "soleDownwardExcursionMeters>0.005",
+        "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+      ],
+      "eligibleEventCount": 8,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "anchorDisplacementMeters": {
+          "available": true,
+          "count": 8,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "correctedSoleAnchorDistanceChangeMeters": {
+          "available": true,
+          "count": 8,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "soleDownwardExcursionMeters": {
+          "available": true,
+          "count": 8,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "visibleSoleStepMaximumMeters": {
+          "available": true,
+          "count": 8,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    }
+  ],
+  "summary": {
+    "targetCount": 1,
+    "targetWithMatchesCount": 0,
+    "matchedEventCount": 0,
+    "targetResults": [
+      {
+        "id": "locked-sole-sink-or-drift",
+        "eligibleEventCount": 8,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      }
+    ]
+  }
+}

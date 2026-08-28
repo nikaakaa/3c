@@ -1,0 +1,1388 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "landing-state-consistency",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "1982ac5764831c8d6fb36345c56408d6a264192964e182f7817719b556a77c61",
+    "schema": "character-foot-motion-facts/22",
+    "sampleIdentity": "07e3a9be101b414f9a65ef4c683eafba"
+  },
+  "targets": [
+    {
+      "id": "missed-landing-entry",
+      "question": "Formal落地边界发生时Runtime是否仍未进入Landing或Locked",
+      "eventKinds": [
+        "LandingStateBoundary"
+      ],
+      "rules": [
+        "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+      ],
+      "eligibleEventCount": 54,
+      "matchedEventCount": 54,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 1.0,
+      "measurements": {
+        "correctionStepMeters": {
+          "available": true,
+          "count": 54,
+          "median": 0.0046749114990234375,
+          "p90": 0.031840336322784435,
+          "p99": 0.11015285640954961,
+          "maximum": 0.16068968176841736
+        },
+        "finalSoleStepMeters": {
+          "available": true,
+          "count": 54,
+          "median": 0.076825860887765884,
+          "p90": 0.18803399056196213,
+          "p99": 0.56915581822395289,
+          "maximum": 0.76418048143386841
+        },
+        "formalStepTimeSeconds": {
+          "available": true,
+          "count": 54,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.60000002384185791,
+          "maximum": 0.60000002384185791
+        }
+      },
+      "representativeEventCount": 8,
+      "representativeEvents": [
+        {
+          "eventKind": "LandingStateBoundary",
+          "side": "Left",
+          "startFrame": 205,
+          "endFrame": 206,
+          "peakFrame": 206,
+          "eventIdentity": "2419794219541986673",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 1,
+          "matchedRules": [
+            "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+          ],
+          "metrics": {
+            "correctionStepMeters": 0.16068968176841736,
+            "finalSoleStepMeters": 0.18426130712032318,
+            "formalStepTimeSeconds": 0.0
+          },
+          "evidence": {
+            "contactPlaneAvailable": false,
+            "runtimeLandingAtBoundary": false,
+            "runtimeLockedAtBoundary": false,
+            "runtimeReleasingAtBoundary": false,
+            "runtimeSwingAtBoundary": true,
+            "runtimeUnlockedSupportAtBoundary": false
+          }
+        },
+        {
+          "eventKind": "LandingStateBoundary",
+          "side": "Left",
+          "startFrame": 457,
+          "endFrame": 458,
+          "peakFrame": 458,
+          "eventIdentity": "6790862014411814666",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 8,
+          "matchedRules": [
+            "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+          ],
+          "metrics": {
+            "correctionStepMeters": 0.032702326774597168,
+            "finalSoleStepMeters": 0.064876951277256012,
+            "formalStepTimeSeconds": 0.0
+          },
+          "evidence": {
+            "contactPlaneAvailable": false,
+            "runtimeLandingAtBoundary": false,
+            "runtimeLockedAtBoundary": false,
+            "runtimeReleasingAtBoundary": false,
+            "runtimeSwingAtBoundary": true,
+            "runtimeUnlockedSupportAtBoundary": false
+          }
+        },
+        {
+          "eventKind": "LandingStateBoundary",
+          "side": "Right",
+          "startFrame": 583,
+          "endFrame": 584,
+          "peakFrame": 584,
+          "eventIdentity": "4294199861379971755",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 11,
+          "matchedRules": [
+            "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+          ],
+          "metrics": {
+            "correctionStepMeters": 0.0653371810913086,
+            "finalSoleStepMeters": 0.12932668626308441,
+            "formalStepTimeSeconds": 0.0
+          },
+          "evidence": {
+            "contactPlaneAvailable": false,
+            "runtimeLandingAtBoundary": false,
+            "runtimeLockedAtBoundary": false,
+            "runtimeReleasingAtBoundary": false,
+            "runtimeSwingAtBoundary": true,
+            "runtimeUnlockedSupportAtBoundary": false
+          }
+        },
+        {
+          "eventKind": "LandingStateBoundary",
+          "side": "Left",
+          "startFrame": 637,
+          "endFrame": 638,
+          "peakFrame": 638,
+          "eventIdentity": "4916455273062201373",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 13,
+          "matchedRules": [
+            "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+          ],
+          "metrics": {
+            "correctionStepMeters": 0.032978057861328125,
+            "finalSoleStepMeters": 0.041019964963197708,
+            "formalStepTimeSeconds": 0.0
+          },
+          "evidence": {
+            "contactPlaneAvailable": false,
+            "runtimeLandingAtBoundary": false,
+            "runtimeLockedAtBoundary": false,
+            "runtimeReleasingAtBoundary": false,
+            "runtimeSwingAtBoundary": true,
+            "runtimeUnlockedSupportAtBoundary": false
+          }
+        },
+        {
+          "eventKind": "LandingStateBoundary",
+          "side": "Right",
+          "startFrame": 727,
+          "endFrame": 728,
+          "peakFrame": 728,
+          "eventIdentity": "10257638667488449871",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 15,
+          "matchedRules": [
+            "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+          ],
+          "metrics": {
+            "correctionStepMeters": 0.035388946533203125,
+            "finalSoleStepMeters": 0.16120906174182892,
+            "formalStepTimeSeconds": 0.0
+          },
+          "evidence": {
+            "contactPlaneAvailable": false,
+            "runtimeLandingAtBoundary": false,
+            "runtimeLockedAtBoundary": false,
+            "runtimeReleasingAtBoundary": false,
+            "runtimeSwingAtBoundary": true,
+            "runtimeUnlockedSupportAtBoundary": false
+          }
+        },
+        {
+          "eventKind": "LandingStateBoundary",
+          "side": "Right",
+          "startFrame": 763,
+          "endFrame": 764,
+          "peakFrame": 764,
+          "eventIdentity": "10879890780635794856",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 16,
+          "matchedRules": [
+            "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+          ],
+          "metrics": {
+            "correctionStepMeters": 0.022935867309570313,
+            "finalSoleStepMeters": 0.067771412432193756,
+            "formalStepTimeSeconds": 0.0
+          },
+          "evidence": {
+            "contactPlaneAvailable": false,
+            "runtimeLandingAtBoundary": false,
+            "runtimeLockedAtBoundary": false,
+            "runtimeReleasingAtBoundary": false,
+            "runtimeSwingAtBoundary": true,
+            "runtimeUnlockedSupportAtBoundary": false
+          }
+        },
+        {
+          "eventKind": "LandingStateBoundary",
+          "side": "Left",
+          "startFrame": 781,
+          "endFrame": 782,
+          "peakFrame": 782,
+          "eventIdentity": "10879894079170679489",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 17,
+          "matchedRules": [
+            "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+          ],
+          "metrics": {
+            "correctionStepMeters": 0.029829025268554688,
+            "finalSoleStepMeters": 0.070135273039340973,
+            "formalStepTimeSeconds": 0.0
+          },
+          "evidence": {
+            "contactPlaneAvailable": false,
+            "runtimeLandingAtBoundary": false,
+            "runtimeLockedAtBoundary": false,
+            "runtimeReleasingAtBoundary": false,
+            "runtimeSwingAtBoundary": true,
+            "runtimeUnlockedSupportAtBoundary": false
+          }
+        },
+        {
+          "eventKind": "LandingStateBoundary",
+          "side": "Left",
+          "startFrame": 925,
+          "endFrame": 926,
+          "peakFrame": 926,
+          "eventIdentity": "8383233025650464789",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 21,
+          "matchedRules": [
+            "runtimeLandingAtBoundary=false&&runtimeLockedAtBoundary=false"
+          ],
+          "metrics": {
+            "correctionStepMeters": 0.045268058776855469,
+            "finalSoleStepMeters": 0.14153289794921875,
+            "formalStepTimeSeconds": 0.0
+          },
+          "evidence": {
+            "contactPlaneAvailable": false,
+            "runtimeLandingAtBoundary": false,
+            "runtimeLockedAtBoundary": false,
+            "runtimeReleasingAtBoundary": false,
+            "runtimeSwingAtBoundary": true,
+            "runtimeUnlockedSupportAtBoundary": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "early-landing-entry",
+      "question": "Runtime Landing入口是否没有对应Formal落地边界",
+      "eventKinds": [
+        "LandingStateSpan"
+      ],
+      "rules": [
+        "entryFollowedFormalBoundary=false"
+      ],
+      "eligibleEventCount": 48,
+      "matchedEventCount": 48,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 1.0,
+      "measurements": {
+        "entryCorrectionStepMeters": {
+          "available": true,
+          "count": 48,
+          "median": 0.013789772987365723,
+          "p90": 0.037087082862854011,
+          "p99": 0.043575695157051085,
+          "maximum": 0.04363018274307251
+        },
+        "frameCount": {
+          "available": true,
+          "count": 48,
+          "median": 1.0,
+          "p90": 1.0,
+          "p99": 2.0,
+          "maximum": 2.0
+        }
+      },
+      "representativeEventCount": 8,
+      "representativeEvents": [
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 226,
+          "endFrame": 226,
+          "peakFrame": 227,
+          "eventIdentity": "3045873732666377249",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 2,
+          "matchedRules": [
+            "entryFollowedFormalBoundary=false"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.013471703976392746,
+            "correctedSoleAnchorDistanceExitMeters": 0.013471703976392746,
+            "entryCorrectionStepMeters": 0.039216458797454834,
+            "exitCorrectionStepMeters": 0.039860464632511139,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.013472037389874458,
+            "finalSoleAnchorDistanceExitMeters": 0.013472037389874458,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Left",
+          "startFrame": 243,
+          "endFrame": 243,
+          "peakFrame": 244,
+          "eventIdentity": "3045870434131492616",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 2,
+          "matchedRules": [
+            "entryFollowedFormalBoundary=false"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0057450025342404842,
+            "correctedSoleAnchorDistanceExitMeters": 0.0057450025342404842,
+            "entryCorrectionStepMeters": 0.032774209976196289,
+            "exitCorrectionStepMeters": 0.038643933832645416,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.0057450025342404842,
+            "finalSoleAnchorDistanceExitMeters": 0.0057450025342404842,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 262,
+          "endFrame": 262,
+          "peakFrame": 263,
+          "eventIdentity": "3668125845813722234",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 3,
+          "matchedRules": [
+            "entryFollowedFormalBoundary=false"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.013576850295066833,
+            "correctedSoleAnchorDistanceExitMeters": 0.013576850295066833,
+            "entryCorrectionStepMeters": 0.041081905364990234,
+            "exitCorrectionStepMeters": 0.041497897356748581,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.013576850295066833,
+            "finalSoleAnchorDistanceExitMeters": 0.013576850295066833,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 298,
+          "endFrame": 298,
+          "peakFrame": 299,
+          "eventIdentity": "17747621828049093971",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 4,
+          "matchedRules": [
+            "entryFollowedFormalBoundary=false"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0086488174274563789,
+            "correctedSoleAnchorDistanceExitMeters": 0.0086488174274563789,
+            "entryCorrectionStepMeters": 0.036462306976318359,
+            "exitCorrectionStepMeters": 0.036476649343967438,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.0086488174274563789,
+            "finalSoleAnchorDistanceExitMeters": 0.0086488174274563789,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Left",
+          "startFrame": 315,
+          "endFrame": 315,
+          "peakFrame": 315,
+          "eventIdentity": "17747622927560722182",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 4,
+          "matchedRules": [
+            "entryFollowedFormalBoundary=false"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.018433433026075363,
+            "correctedSoleAnchorDistanceExitMeters": 0.018433433026075363,
+            "entryCorrectionStepMeters": 0.038544893264770508,
+            "exitCorrectionStepMeters": 0.033614546060562134,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.018433433026075363,
+            "finalSoleAnchorDistanceExitMeters": 0.018433433026075363,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 334,
+          "endFrame": 334,
+          "peakFrame": 335,
+          "eventIdentity": "18369873941196438956",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 5,
+          "matchedRules": [
+            "entryFollowedFormalBoundary=false"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.071532987058162689,
+            "correctedSoleAnchorDistanceExitMeters": 0.071532987058162689,
+            "entryCorrectionStepMeters": 0.033992528915405273,
+            "exitCorrectionStepMeters": 0.12287262827157974,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.071532987058162689,
+            "finalSoleAnchorDistanceExitMeters": 0.071532987058162689,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Left",
+          "startFrame": 459,
+          "endFrame": 459,
+          "peakFrame": 460,
+          "eventIdentity": "6790862014411814666",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 8,
+          "matchedRules": [
+            "entryFollowedFormalBoundary=false"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.025804297998547554,
+            "correctedSoleAnchorDistanceExitMeters": 0.025804297998547554,
+            "entryCorrectionStepMeters": 0.04363018274307251,
+            "exitCorrectionStepMeters": 0.056726396083831787,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.025804297998547554,
+            "finalSoleAnchorDistanceExitMeters": 0.025804297998547554,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 838,
+          "endFrame": 838,
+          "peakFrame": 838,
+          "eventIdentity": "12128225705442415050",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 19,
+          "matchedRules": [
+            "entryFollowedFormalBoundary=false"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0075140483677387238,
+            "correctedSoleAnchorDistanceExitMeters": 0.0075140483677387238,
+            "entryCorrectionStepMeters": 0.043514251708984375,
+            "exitCorrectionStepMeters": 0.037317395210266113,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.0075138662941753864,
+            "finalSoleAnchorDistanceExitMeters": 0.0075138662941753864,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "landing-without-contact-plane",
+      "question": "Runtime Landing状态段是否缺少同Event接触平面",
+      "eventKinds": [
+        "LandingStateSpan"
+      ],
+      "rules": [
+        "contactPlaneAvailableThroughout=false"
+      ],
+      "eligibleEventCount": 48,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "frameCount": {
+          "available": true,
+          "count": 48,
+          "median": 1.0,
+          "p90": 1.0,
+          "p99": 2.0,
+          "maximum": 2.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "landing-not-closing",
+      "question": "多帧Landing状态段是否没有向Anchor闭合",
+      "eventKinds": [
+        "LandingStateSpan"
+      ],
+      "rules": [
+        "frameCount>1&&correctedSoleAnchorClosureMeters<=0"
+      ],
+      "eligibleEventCount": 48,
+      "matchedEventCount": 1,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.020833333333333332,
+      "measurements": {
+        "correctedSoleAnchorClosureMeters": {
+          "available": true,
+          "count": 48,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 1.1846423149108912E-07,
+          "maximum": 2.2351741790771484E-07
+        },
+        "correctedSoleAnchorDistanceEntryMeters": {
+          "available": true,
+          "count": 48,
+          "median": 0.025146044790744781,
+          "p90": 0.0717503197491169,
+          "p99": 0.094968125522136709,
+          "maximum": 0.10293734818696976
+        },
+        "correctedSoleAnchorDistanceExitMeters": {
+          "available": true,
+          "count": 48,
+          "median": 0.025145933032035828,
+          "p90": 0.0717503197491169,
+          "p99": 0.094968125522136709,
+          "maximum": 0.10293734818696976
+        },
+        "finalSoleAnchorClosureMeters": {
+          "available": true,
+          "count": 48,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 2.2014603018760728E-07,
+          "maximum": 4.1536986827850342E-07
+        },
+        "frameCount": {
+          "available": true,
+          "count": 48,
+          "median": 1.0,
+          "p90": 1.0,
+          "p99": 2.0,
+          "maximum": 2.0
+        }
+      },
+      "representativeEventCount": 1,
+      "representativeEvents": [
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 998,
+          "endFrame": 999,
+          "peakFrame": 1000,
+          "eventIdentity": "13306976713404251039",
+          "sourceIdentity": "90d528fc935ce2e43b4b301c8c2b98db:7400000",
+          "sourceCycle": 0,
+          "matchedRules": [
+            "frameCount>1&&correctedSoleAnchorClosureMeters<=0"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.008818749338388443,
+            "correctedSoleAnchorDistanceExitMeters": 0.008818749338388443,
+            "entryCorrectionStepMeters": 0.0060541629791259766,
+            "exitCorrectionStepMeters": 0.030823582783341408,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.0088192112743854523,
+            "finalSoleAnchorDistanceExitMeters": 0.0088192112743854523,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 2.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "landing-wrong-exit",
+      "question": "Landing连续退出是否没有进入Locked或Releasing",
+      "eventKinds": [
+        "LandingStateSpan"
+      ],
+      "rules": [
+        "hasContinuousExit=true&&exitedToLocked=false&&exitedToReleasing=false"
+      ],
+      "eligibleEventCount": 48,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "exitCorrectionStepMeters": {
+          "available": true,
+          "count": 48,
+          "median": 0.038638507947325706,
+          "p90": 0.12293889448046684,
+          "p99": 0.14951407447457316,
+          "maximum": 0.15550962090492249
+        },
+        "frameCount": {
+          "available": true,
+          "count": 48,
+          "median": 1.0,
+          "p90": 1.0,
+          "p99": 2.0,
+          "maximum": 2.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "landing-exit-jump",
+      "question": "Landing退出边界是否出现超过1厘米的Correction跳变",
+      "eventKinds": [
+        "LandingStateSpan"
+      ],
+      "rules": [
+        "exitCorrectionStepMeters>0.01"
+      ],
+      "eligibleEventCount": 48,
+      "matchedEventCount": 43,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.89583333333333337,
+      "measurements": {
+        "entryCorrectionStepMeters": {
+          "available": true,
+          "count": 48,
+          "median": 0.013789772987365723,
+          "p90": 0.037087082862854011,
+          "p99": 0.043575695157051085,
+          "maximum": 0.04363018274307251
+        },
+        "exitCorrectionStepMeters": {
+          "available": true,
+          "count": 48,
+          "median": 0.038638507947325706,
+          "p90": 0.12293889448046684,
+          "p99": 0.14951407447457316,
+          "maximum": 0.15550962090492249
+        }
+      },
+      "representativeEventCount": 8,
+      "representativeEvents": [
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Left",
+          "startFrame": 171,
+          "endFrame": 171,
+          "peakFrame": 172,
+          "eventIdentity": "1797539907371385266",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 0,
+          "matchedRules": [
+            "exitCorrectionStepMeters>0.01"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.056209184229373932,
+            "correctedSoleAnchorDistanceExitMeters": 0.056209184229373932,
+            "entryCorrectionStepMeters": 3.1292438507080078E-07,
+            "exitCorrectionStepMeters": 0.15550962090492249,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.0562092661857605,
+            "finalSoleAnchorDistanceExitMeters": 0.0562092661857605,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 190,
+          "endFrame": 190,
+          "peakFrame": 191,
+          "eventIdentity": "2419790921007102040",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 1,
+          "matchedRules": [
+            "exitCorrectionStepMeters>0.01"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.055916141718626022,
+            "correctedSoleAnchorDistanceExitMeters": 0.055916141718626022,
+            "entryCorrectionStepMeters": 0.014283463358879089,
+            "exitCorrectionStepMeters": 0.11153548210859299,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.055916093289852142,
+            "finalSoleAnchorDistanceExitMeters": 0.055916093289852142,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 334,
+          "endFrame": 334,
+          "peakFrame": 335,
+          "eventIdentity": "18369873941196438956",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 5,
+          "matchedRules": [
+            "exitCorrectionStepMeters>0.01"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.071532987058162689,
+            "correctedSoleAnchorDistanceExitMeters": 0.071532987058162689,
+            "entryCorrectionStepMeters": 0.033992528915405273,
+            "exitCorrectionStepMeters": 0.12287262827157974,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.071532987058162689,
+            "finalSoleAnchorDistanceExitMeters": 0.071532987058162689,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 622,
+          "endFrame": 622,
+          "peakFrame": 623,
+          "eventIdentity": "4916451974527316740",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 13,
+          "matchedRules": [
+            "exitCorrectionStepMeters>0.01"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.059621881693601608,
+            "correctedSoleAnchorDistanceExitMeters": 0.059621881693601608,
+            "entryCorrectionStepMeters": 0.031723737716674805,
+            "exitCorrectionStepMeters": 0.14275313913822174,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.059621881693601608,
+            "finalSoleAnchorDistanceExitMeters": 0.059621881693601608,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 658,
+          "endFrame": 658,
+          "peakFrame": 659,
+          "eventIdentity": "5542534786186591949",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 14,
+          "matchedRules": [
+            "exitCorrectionStepMeters>0.01"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.046071272343397141,
+            "correctedSoleAnchorDistanceExitMeters": 0.046071272343397141,
+            "entryCorrectionStepMeters": 0.017298221588134766,
+            "exitCorrectionStepMeters": 0.12171152234077454,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.046071272343397141,
+            "finalSoleAnchorDistanceExitMeters": 0.046071272343397141,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 694,
+          "endFrame": 694,
+          "peakFrame": 695,
+          "eventIdentity": "6164786899333936934",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 15,
+          "matchedRules": [
+            "exitCorrectionStepMeters>0.01"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.072934649884700775,
+            "correctedSoleAnchorDistanceExitMeters": 0.072934649884700775,
+            "entryCorrectionStepMeters": 0.027205705642700195,
+            "exitCorrectionStepMeters": 0.12309351563453674,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.072934627532958984,
+            "finalSoleAnchorDistanceExitMeters": 0.072934627532958984,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Right",
+          "startFrame": 874,
+          "endFrame": 874,
+          "peakFrame": 875,
+          "eventIdentity": "7760977613968235171",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 20,
+          "matchedRules": [
+            "exitCorrectionStepMeters>0.01"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.05057874321937561,
+            "correctedSoleAnchorDistanceExitMeters": 0.05057874321937561,
+            "entryCorrectionStepMeters": 5.0067901611328125E-06,
+            "exitCorrectionStepMeters": 0.13266713917255402,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.050572808831930161,
+            "finalSoleAnchorDistanceExitMeters": 0.050572808831930161,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        },
+        {
+          "eventKind": "LandingStateSpan",
+          "side": "Left",
+          "startFrame": 927,
+          "endFrame": 927,
+          "peakFrame": 928,
+          "eventIdentity": "8383233025650464789",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 21,
+          "matchedRules": [
+            "exitCorrectionStepMeters>0.01"
+          ],
+          "metrics": {
+            "correctedSoleAnchorClosureMeters": 0.0,
+            "correctedSoleAnchorDistanceEntryMeters": 0.056186910718679428,
+            "correctedSoleAnchorDistanceExitMeters": 0.056186910718679428,
+            "entryCorrectionStepMeters": 0.0209197998046875,
+            "exitCorrectionStepMeters": 0.13107365369796753,
+            "finalSoleAnchorClosureMeters": 0.0,
+            "finalSoleAnchorDistanceEntryMeters": 0.056186910718679428,
+            "finalSoleAnchorDistanceExitMeters": 0.056186910718679428,
+            "formalUnlockedFrameCount": 0.0,
+            "frameCount": 1.0
+          },
+          "evidence": {
+            "closedTowardAnchor": false,
+            "contactPlaneAvailableThroughout": true,
+            "entryFollowedFormalBoundary": false,
+            "exitedToLocked": true,
+            "exitedToReleasing": false,
+            "exitedToSwing": false,
+            "exitedToUnlockedSupport": false,
+            "formalUnlockedWithinLanding": false,
+            "hasContinuousExit": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "landing-persists-after-formal-unlock",
+      "question": "Runtime Landing期间是否已经出现Formal Unlocked",
+      "eventKinds": [
+        "LandingStateSpan"
+      ],
+      "rules": [
+        "formalUnlockedWithinLanding=true"
+      ],
+      "eligibleEventCount": 48,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "formalUnlockedFrameCount": {
+          "available": true,
+          "count": 48,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "frameCount": {
+          "available": true,
+          "count": 48,
+          "median": 1.0,
+          "p90": 1.0,
+          "p99": 2.0,
+          "maximum": 2.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "release-flyback",
+      "question": "Releasing阶段是否出现Correction突跳后反向回拉",
+      "eventKinds": [
+        "Release"
+      ],
+      "rules": [
+        "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+      ],
+      "eligibleEventCount": 46,
+      "matchedEventCount": 9,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.19565217391304349,
+      "measurements": {
+        "correctionExcursionMeters": {
+          "available": true,
+          "count": 46,
+          "median": 0.05812523141503334,
+          "p90": 0.14489859342575073,
+          "p99": 0.201324600726366,
+          "maximum": 0.20951844751834869
+        },
+        "correctionStepMaximumMeters": {
+          "available": true,
+          "count": 46,
+          "median": 0.030269145034253597,
+          "p90": 0.051220495253801346,
+          "p99": 0.064933094009757039,
+          "maximum": 0.065861597657203674
+        },
+        "velocityDirectionReversalCount": {
+          "available": true,
+          "count": 46,
+          "median": 0.0,
+          "p90": 1.0,
+          "p99": 1.0,
+          "maximum": 1.0
+        }
+      },
+      "representativeEventCount": 8,
+      "representativeEvents": [
+        {
+          "eventKind": "Release",
+          "side": "Left",
+          "startFrame": 355,
+          "endFrame": 358,
+          "peakFrame": 357,
+          "eventIdentity": "18369877239731323589",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 5,
+          "matchedRules": [
+            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+          ],
+          "metrics": {
+            "correctionExcursionMeters": 0.0474042110145092,
+            "correctionStepMaximumMeters": 0.031504388898611069,
+            "velocityDirectionReversalCount": 1.0
+          },
+          "evidence": {
+            "anchorAvailable": true,
+            "groundedThroughout": true,
+            "pathChanged": true
+          }
+        },
+        {
+          "eventKind": "Release",
+          "side": "Left",
+          "startFrame": 391,
+          "endFrame": 394,
+          "peakFrame": 393,
+          "eventIdentity": "549209380611277916",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 6,
+          "matchedRules": [
+            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+          ],
+          "metrics": {
+            "correctionExcursionMeters": 0.061275236308574677,
+            "correctionStepMaximumMeters": 0.03969506174325943,
+            "velocityDirectionReversalCount": 1.0
+          },
+          "evidence": {
+            "anchorAvailable": true,
+            "groundedThroughout": true,
+            "pathChanged": true
+          }
+        },
+        {
+          "eventKind": "Release",
+          "side": "Left",
+          "startFrame": 607,
+          "endFrame": 614,
+          "peakFrame": 608,
+          "eventIdentity": "4294200960891599966",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 12,
+          "matchedRules": [
+            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+          ],
+          "metrics": {
+            "correctionExcursionMeters": 0.10235324501991272,
+            "correctionStepMaximumMeters": 0.0386531688272953,
+            "velocityDirectionReversalCount": 1.0
+          },
+          "evidence": {
+            "anchorAvailable": true,
+            "groundedThroughout": true,
+            "pathChanged": true
+          }
+        },
+        {
+          "eventKind": "Release",
+          "side": "Left",
+          "startFrame": 643,
+          "endFrame": 645,
+          "peakFrame": 644,
+          "eventIdentity": "4916455273062201373",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 13,
+          "matchedRules": [
+            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+          ],
+          "metrics": {
+            "correctionExcursionMeters": 0.051018457859754562,
+            "correctionStepMaximumMeters": 0.051018457859754562,
+            "velocityDirectionReversalCount": 1.0
+          },
+          "evidence": {
+            "anchorAvailable": true,
+            "groundedThroughout": true,
+            "pathChanged": true
+          }
+        },
+        {
+          "eventKind": "Release",
+          "side": "Left",
+          "startFrame": 751,
+          "endFrame": 759,
+          "peakFrame": 752,
+          "eventIdentity": "10257639767000078082",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 16,
+          "matchedRules": [
+            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+          ],
+          "metrics": {
+            "correctionExcursionMeters": 0.17595721781253815,
+            "correctionStepMaximumMeters": 0.06379825621843338,
+            "velocityDirectionReversalCount": 1.0
+          },
+          "evidence": {
+            "anchorAvailable": true,
+            "groundedThroughout": true,
+            "pathChanged": true
+          }
+        },
+        {
+          "eventKind": "Release",
+          "side": "Right",
+          "startFrame": 841,
+          "endFrame": 844,
+          "peakFrame": 843,
+          "eventIdentity": "12128225705442415050",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 19,
+          "matchedRules": [
+            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+          ],
+          "metrics": {
+            "correctionExcursionMeters": 0.064687073230743408,
+            "correctionStepMaximumMeters": 0.043336544185876846,
+            "velocityDirectionReversalCount": 1.0
+          },
+          "evidence": {
+            "anchorAvailable": true,
+            "groundedThroughout": true,
+            "pathChanged": true
+          }
+        },
+        {
+          "eventKind": "Release",
+          "side": "Left",
+          "startFrame": 859,
+          "endFrame": 862,
+          "peakFrame": 861,
+          "eventIdentity": "12128224605930786839",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 19,
+          "matchedRules": [
+            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+          ],
+          "metrics": {
+            "correctionExcursionMeters": 0.054444141685962677,
+            "correctionStepMaximumMeters": 0.035970605909824371,
+            "velocityDirectionReversalCount": 1.0
+          },
+          "evidence": {
+            "anchorAvailable": true,
+            "groundedThroughout": true,
+            "pathChanged": true
+          }
+        },
+        {
+          "eventKind": "Release",
+          "side": "Left",
+          "startFrame": 931,
+          "endFrame": 941,
+          "peakFrame": 932,
+          "eventIdentity": "8383233025650464789",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 21,
+          "matchedRules": [
+            "velocityDirectionReversalCount>0&&correctionExcursionMeters>0.01"
+          ],
+          "metrics": {
+            "correctionExcursionMeters": 0.18578746914863586,
+            "correctionStepMaximumMeters": 0.065861597657203674,
+            "velocityDirectionReversalCount": 1.0
+          },
+          "evidence": {
+            "anchorAvailable": true,
+            "groundedThroughout": true,
+            "pathChanged": true
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "targetCount": 8,
+    "targetWithMatchesCount": 5,
+    "matchedEventCount": 155,
+    "targetResults": [
+      {
+        "id": "missed-landing-entry",
+        "eligibleEventCount": 54,
+        "matchedEventCount": 54,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 1.0
+      },
+      {
+        "id": "early-landing-entry",
+        "eligibleEventCount": 48,
+        "matchedEventCount": 48,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 1.0
+      },
+      {
+        "id": "landing-without-contact-plane",
+        "eligibleEventCount": 48,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "landing-not-closing",
+        "eligibleEventCount": 48,
+        "matchedEventCount": 1,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.020833333333333332
+      },
+      {
+        "id": "landing-wrong-exit",
+        "eligibleEventCount": 48,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "landing-exit-jump",
+        "eligibleEventCount": 48,
+        "matchedEventCount": 43,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.89583333333333337
+      },
+      {
+        "id": "landing-persists-after-formal-unlock",
+        "eligibleEventCount": 48,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "release-flyback",
+        "eligibleEventCount": 46,
+        "matchedEventCount": 9,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.19565217391304349
+      }
+    ]
+  }
+}

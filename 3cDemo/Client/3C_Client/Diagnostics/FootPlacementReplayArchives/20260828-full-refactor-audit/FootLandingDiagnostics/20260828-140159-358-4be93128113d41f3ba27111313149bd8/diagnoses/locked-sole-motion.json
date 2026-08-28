@@ -1,0 +1,366 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "locked-sole-motion",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "3556f50563dfbc1942ef0f59f8b4e23cac817a817093ffb3efa0c3c450058882",
+    "schema": "character-foot-motion-facts/22",
+    "sampleIdentity": "4be93128113d41f3ba27111313149bd8"
+  },
+  "targets": [
+    {
+      "id": "locked-sole-sink-or-drift",
+      "question": "Locked阶段脚底是否相对稳定Anchor下陷或漂移",
+      "eventKinds": [
+        "Locked"
+      ],
+      "rules": [
+        "soleDownwardExcursionMeters>0.005",
+        "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+      ],
+      "eligibleEventCount": 44,
+      "matchedEventCount": 16,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.36363636363636365,
+      "measurements": {
+        "anchorDisplacementMeters": {
+          "available": true,
+          "count": 44,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "correctedSoleAnchorDistanceChangeMeters": {
+          "available": true,
+          "count": 44,
+          "median": 0.0,
+          "p90": 0.071684940159320851,
+          "p99": 0.19221194565296174,
+          "maximum": 0.19328568875789642
+        },
+        "soleDownwardExcursionMeters": {
+          "available": true,
+          "count": 44,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "visibleSoleStepMaximumMeters": {
+          "available": true,
+          "count": 44,
+          "median": 0.0,
+          "p90": 0.038263344019651417,
+          "p99": 0.19221194565296174,
+          "maximum": 0.19328568875789642
+        }
+      },
+      "representativeEventCount": 8,
+      "representativeEvents": [
+        {
+          "eventKind": "Locked",
+          "side": "Left",
+          "startFrame": 100,
+          "endFrame": 107,
+          "peakFrame": 107,
+          "eventIdentity": "5183112122125523965",
+          "sourceIdentity": "90d528fc935ce2e43b4b301c8c2b98db:7400000",
+          "sourceCycle": 0,
+          "matchedRules": [
+            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+          ],
+          "metrics": {
+            "anchorDisplacementMeters": 0.0,
+            "correctedSoleAnchorDistanceChangeMeters": 0.1024753525853157,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0,
+            "correctedSoleAnchorDistanceExitMeters": 0.1024753525853157,
+            "correctedSoleAnchorDistanceMaximumMeters": 0.1024753525853157,
+            "correctedSoleAnchorDistanceMinimumMeters": 0.0,
+            "lockWeightEntry": 1.0,
+            "lockWeightExit": 0.99999988079071045,
+            "lockWeightMinimum": 0.99964773654937744,
+            "soleAlongUpEntryMeters": 0.0,
+            "soleAlongUpMinimumMeters": 0.0,
+            "soleDownwardExcursionMeters": 0.0,
+            "supportEntry": 0.26992243528366089,
+            "supportExit": 0.5,
+            "visibleSoleStepMaximumMeters": 0.023983145132660866
+          },
+          "evidence": {
+            "anchorStable": true,
+            "groundedThroughout": true,
+            "lockWeightDecreased": true,
+            "supportStayedPositive": true
+          }
+        },
+        {
+          "eventKind": "Locked",
+          "side": "Right",
+          "startFrame": 191,
+          "endFrame": 194,
+          "peakFrame": 194,
+          "eventIdentity": "2419790921007102040",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 1,
+          "matchedRules": [
+            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+          ],
+          "metrics": {
+            "anchorDisplacementMeters": 0.0,
+            "correctedSoleAnchorDistanceChangeMeters": 0.052312199026346207,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0,
+            "correctedSoleAnchorDistanceExitMeters": 0.052312199026346207,
+            "correctedSoleAnchorDistanceMaximumMeters": 0.052312199026346207,
+            "correctedSoleAnchorDistanceMinimumMeters": 0.0,
+            "lockWeightEntry": 0.98653101921081543,
+            "lockWeightExit": 0.0,
+            "lockWeightMinimum": 0.0,
+            "soleAlongUpEntryMeters": 0.0,
+            "soleAlongUpMinimumMeters": 0.0,
+            "soleDownwardExcursionMeters": 0.0,
+            "supportEntry": 0.93767499923706055,
+            "supportExit": 0.74090510606765747,
+            "visibleSoleStepMaximumMeters": 0.036848410964012146
+          },
+          "evidence": {
+            "anchorStable": true,
+            "groundedThroughout": true,
+            "lockWeightDecreased": true,
+            "supportStayedPositive": true
+          }
+        },
+        {
+          "eventKind": "Locked",
+          "side": "Right",
+          "startFrame": 551,
+          "endFrame": 554,
+          "peakFrame": 554,
+          "eventIdentity": "8661447952854151634",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 11,
+          "matchedRules": [
+            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+          ],
+          "metrics": {
+            "anchorDisplacementMeters": 0.0,
+            "correctedSoleAnchorDistanceChangeMeters": 0.052001606673002243,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0,
+            "correctedSoleAnchorDistanceExitMeters": 0.052001606673002243,
+            "correctedSoleAnchorDistanceMaximumMeters": 0.052001606673002243,
+            "correctedSoleAnchorDistanceMinimumMeters": 0.0,
+            "lockWeightEntry": 0.98652797937393188,
+            "lockWeightExit": 0.0,
+            "lockWeightMinimum": 0.0,
+            "soleAlongUpEntryMeters": 0.0,
+            "soleAlongUpMinimumMeters": 0.0,
+            "soleDownwardExcursionMeters": 0.0,
+            "supportEntry": 0.937674880027771,
+            "supportExit": 0.740903913974762,
+            "visibleSoleStepMaximumMeters": 0.038476653397083282
+          },
+          "evidence": {
+            "anchorStable": true,
+            "groundedThroughout": true,
+            "lockWeightDecreased": true,
+            "supportStayedPositive": true
+          }
+        },
+        {
+          "eventKind": "Locked",
+          "side": "Right",
+          "startFrame": 659,
+          "endFrame": 662,
+          "peakFrame": 662,
+          "eventIdentity": "5542534786186591949",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 14,
+          "matchedRules": [
+            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+          ],
+          "metrics": {
+            "anchorDisplacementMeters": 0.0,
+            "correctedSoleAnchorDistanceChangeMeters": 0.074047192931175232,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0,
+            "correctedSoleAnchorDistanceExitMeters": 0.074047192931175232,
+            "correctedSoleAnchorDistanceMaximumMeters": 0.074047192931175232,
+            "correctedSoleAnchorDistanceMinimumMeters": 0.0,
+            "lockWeightEntry": 0.986527144908905,
+            "lockWeightExit": 0.0,
+            "lockWeightMinimum": 0.0,
+            "soleAlongUpEntryMeters": 0.0,
+            "soleAlongUpMinimumMeters": 0.0,
+            "soleDownwardExcursionMeters": 0.0,
+            "supportEntry": 0.937674880027771,
+            "supportExit": 0.74090361595153809,
+            "visibleSoleStepMaximumMeters": 0.035075366497039795
+          },
+          "evidence": {
+            "anchorStable": true,
+            "groundedThroughout": true,
+            "lockWeightDecreased": true,
+            "supportStayedPositive": true
+          }
+        },
+        {
+          "eventKind": "Locked",
+          "side": "Right",
+          "startFrame": 839,
+          "endFrame": 840,
+          "peakFrame": 840,
+          "eventIdentity": "12128225705442415050",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 19,
+          "matchedRules": [
+            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+          ],
+          "metrics": {
+            "anchorDisplacementMeters": 0.0,
+            "correctedSoleAnchorDistanceChangeMeters": 0.19078861176967621,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0,
+            "correctedSoleAnchorDistanceExitMeters": 0.19078861176967621,
+            "correctedSoleAnchorDistanceMaximumMeters": 0.19078861176967621,
+            "correctedSoleAnchorDistanceMinimumMeters": 0.0,
+            "lockWeightEntry": 0.98652571439743042,
+            "lockWeightExit": 0.33018606901168823,
+            "lockWeightMinimum": 0.33018606901168823,
+            "soleAlongUpEntryMeters": 0.0,
+            "soleAlongUpMinimumMeters": 0.0,
+            "soleDownwardExcursionMeters": 0.0,
+            "supportEntry": 0.93767482042312622,
+            "supportExit": 0.9180217981338501,
+            "visibleSoleStepMaximumMeters": 0.19078861176967621
+          },
+          "evidence": {
+            "anchorStable": true,
+            "groundedThroughout": true,
+            "lockWeightDecreased": true,
+            "supportStayedPositive": true
+          }
+        },
+        {
+          "eventKind": "Locked",
+          "side": "Right",
+          "startFrame": 875,
+          "endFrame": 878,
+          "peakFrame": 878,
+          "eventIdentity": "7760977613968235171",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 20,
+          "matchedRules": [
+            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+          ],
+          "metrics": {
+            "anchorDisplacementMeters": 0.0,
+            "correctedSoleAnchorDistanceChangeMeters": 0.10855517536401749,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0,
+            "correctedSoleAnchorDistanceExitMeters": 0.10855517536401749,
+            "correctedSoleAnchorDistanceMaximumMeters": 0.10855517536401749,
+            "correctedSoleAnchorDistanceMinimumMeters": 0.0,
+            "lockWeightEntry": 0.98652535676956177,
+            "lockWeightExit": 0.0,
+            "lockWeightMinimum": 0.0,
+            "soleAlongUpEntryMeters": 0.0,
+            "soleAlongUpMinimumMeters": 0.0,
+            "soleDownwardExcursionMeters": 0.0,
+            "supportEntry": 0.93767482042312622,
+            "supportExit": 0.74090296030044556,
+            "visibleSoleStepMaximumMeters": 0.052663274109363556
+          },
+          "evidence": {
+            "anchorStable": true,
+            "groundedThroughout": true,
+            "lockWeightDecreased": true,
+            "supportStayedPositive": true
+          }
+        },
+        {
+          "eventKind": "Locked",
+          "side": "Right",
+          "startFrame": 911,
+          "endFrame": 913,
+          "peakFrame": 913,
+          "eventIdentity": "8383229727115580156",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 21,
+          "matchedRules": [
+            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+          ],
+          "metrics": {
+            "anchorDisplacementMeters": 0.0,
+            "correctedSoleAnchorDistanceChangeMeters": 0.19328568875789642,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0,
+            "correctedSoleAnchorDistanceExitMeters": 0.19328568875789642,
+            "correctedSoleAnchorDistanceMaximumMeters": 0.19328568875789642,
+            "correctedSoleAnchorDistanceMinimumMeters": 0.0,
+            "lockWeightEntry": 0.98652511835098267,
+            "lockWeightExit": 0.30485662817955017,
+            "lockWeightMinimum": 0.30485662817955017,
+            "soleAlongUpEntryMeters": 0.0,
+            "soleAlongUpMinimumMeters": 0.0,
+            "soleDownwardExcursionMeters": 0.0,
+            "supportEntry": 0.93767482042312622,
+            "supportExit": 0.9293408989906311,
+            "visibleSoleStepMaximumMeters": 0.19328568875789642
+          },
+          "evidence": {
+            "anchorStable": true,
+            "groundedThroughout": true,
+            "lockWeightDecreased": true,
+            "supportStayedPositive": true
+          }
+        },
+        {
+          "eventKind": "Locked",
+          "side": "Left",
+          "startFrame": 928,
+          "endFrame": 930,
+          "peakFrame": 930,
+          "eventIdentity": "8383233025650464789",
+          "sourceIdentity": "a42a3b1b15a10b44f9892c728d72b74f:7400000",
+          "sourceCycle": 21,
+          "matchedRules": [
+            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+          ],
+          "metrics": {
+            "anchorDisplacementMeters": 0.0,
+            "correctedSoleAnchorDistanceChangeMeters": 0.0661730170249939,
+            "correctedSoleAnchorDistanceEntryMeters": 0.0,
+            "correctedSoleAnchorDistanceExitMeters": 0.0661730170249939,
+            "correctedSoleAnchorDistanceMaximumMeters": 0.0661730170249939,
+            "correctedSoleAnchorDistanceMinimumMeters": 0.0,
+            "lockWeightEntry": 0.99999958276748657,
+            "lockWeightExit": 0.33018606901168823,
+            "lockWeightMinimum": 0.33018606901168823,
+            "soleAlongUpEntryMeters": 0.0,
+            "soleAlongUpMinimumMeters": 0.0,
+            "soleDownwardExcursionMeters": 0.0,
+            "supportEntry": 0.70805841684341431,
+            "supportExit": 0.9180217981338501,
+            "visibleSoleStepMaximumMeters": 0.034679923206567764
+          },
+          "evidence": {
+            "anchorStable": true,
+            "groundedThroughout": true,
+            "lockWeightDecreased": true,
+            "supportStayedPositive": true
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "targetCount": 1,
+    "targetWithMatchesCount": 1,
+    "matchedEventCount": 16,
+    "targetResults": [
+      {
+        "id": "locked-sole-sink-or-drift",
+        "eligibleEventCount": 44,
+        "matchedEventCount": 16,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.36363636363636365
+      }
+    ]
+  }
+}

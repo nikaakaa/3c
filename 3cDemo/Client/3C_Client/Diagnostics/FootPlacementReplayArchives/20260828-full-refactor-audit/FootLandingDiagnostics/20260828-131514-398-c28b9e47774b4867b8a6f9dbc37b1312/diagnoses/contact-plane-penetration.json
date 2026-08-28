@@ -1,0 +1,312 @@
+{
+  "schema": "character-foot-diagnosis-file/3",
+  "diagnosticId": "contact-plane-penetration",
+  "facts": {
+    "file": "facts.json",
+    "sha256": "e14310cca28946ea5ee12062b6ed9053e0816dc7b31f818b1f2cb535c92f6366",
+    "schema": "character-foot-motion-facts/22",
+    "sampleIdentity": "c28b9e47774b4867b8a6f9dbc37b1312"
+  },
+  "coverage": {
+    "availableFootRowCount": 2,
+    "unavailableFootRowCount": 2084,
+    "unavailableReasons": {
+      "Available": 2,
+      "ContactLifecycleUnavailable": 2084
+    }
+  },
+  "targets": [
+    {
+      "id": "source-contact-plane-penetration",
+      "question": "Foot Placement处理前的Heel-Toe接触线是否已进入正式接触平面",
+      "eventKinds": [
+        "ContactPlanePenetration"
+      ],
+      "rules": [
+        "sourceDepthMaximumMeters>0.00001"
+      ],
+      "eligibleEventCount": 2,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "sourceDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "sourceHeelDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "sourceLengthCoefficientMaximum": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "sourceToeDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "foot-placement-introduced-contact-plane-penetration",
+      "question": "当前Foot Placement与最终IK是否新增接触平面侵入",
+      "eventKinds": [
+        "ContactPlanePenetration"
+      ],
+      "rules": [
+        "introducedDepthMaximumMeters>0.00001"
+      ],
+      "eligibleEventCount": 2,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "finalDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "introducedDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "introducedFrameCount": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "sourceDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "foot-placement-amplified-contact-plane-penetration",
+      "question": "当前Foot Placement与最终IK是否加重动画源已有侵入",
+      "eventKinds": [
+        "ContactPlanePenetration"
+      ],
+      "rules": [
+        "amplifiedFrameCount>0"
+      ],
+      "eligibleEventCount": 2,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "amplifiedFrameCount": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "finalDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "introducedDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "sourceDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "unresolved-toe-contact-plane-penetration",
+      "question": "最终Toe接触探针是否仍进入接触平面，仅记录视觉残留不自动归责",
+      "eventKinds": [
+        "ContactPlanePenetration"
+      ],
+      "rules": [
+        "finalToeDepthMaximumMeters>0.00001"
+      ],
+      "eligibleEventCount": 2,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "baselineResidualFrameCount": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "finalToeDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "introducedDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "sourceToeDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    },
+    {
+      "id": "final-heel-contact-plane-penetration",
+      "question": "最终Heel接触探针是否进入正式接触平面",
+      "eventKinds": [
+        "ContactPlanePenetration"
+      ],
+      "rules": [
+        "finalHeelDepthMaximumMeters>0.00001"
+      ],
+      "eligibleEventCount": 2,
+      "matchedEventCount": 0,
+      "matchedEventRateAvailable": true,
+      "matchedEventRate": 0.0,
+      "measurements": {
+        "finalDepthTimeIntegralMeterSeconds": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "finalHeelDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "finalLengthCoefficientMaximum": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        },
+        "sourceHeelDepthMaximumMeters": {
+          "available": true,
+          "count": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "representativeEventCount": 0,
+      "representativeEvents": []
+    }
+  ],
+  "summary": {
+    "targetCount": 5,
+    "targetWithMatchesCount": 0,
+    "matchedEventCount": 0,
+    "targetResults": [
+      {
+        "id": "source-contact-plane-penetration",
+        "eligibleEventCount": 2,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "foot-placement-introduced-contact-plane-penetration",
+        "eligibleEventCount": 2,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "foot-placement-amplified-contact-plane-penetration",
+        "eligibleEventCount": 2,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "unresolved-toe-contact-plane-penetration",
+        "eligibleEventCount": 2,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      },
+      {
+        "id": "final-heel-contact-plane-penetration",
+        "eligibleEventCount": 2,
+        "matchedEventCount": 0,
+        "matchedEventRateAvailable": true,
+        "matchedEventRate": 0.0
+      }
+    ]
+  }
+}

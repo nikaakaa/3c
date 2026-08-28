@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         Empty = 0,
         Tracking = 1,
-        Accepted = 2
+        Committed = 2
     }
 
     [Flags]
@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         OwnershipLost = 1,
         SwingStarted = 2,
-        PlantCycleConsumed = 3,
+        ContactEventUnavailable = 3,
         ContactUnavailable = 4,
         ContactOutOfLockRange = 5,
         ContactAcquired = 6,
@@ -49,7 +49,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ContactOutOfSlideRange = 8,
         LockResponseChanged = 9,
         LandingCompleted = 10,
-        ReleaseCompleted = 11
+        ReleaseCompleted = 11,
+        SameEventContactReentryRefresh = 12,
+        NewEventContactAcquired = 13
+    }
+
+    internal enum CharacterFootContactEdge : byte
+    {
+        None = 0,
+        Rising = 1,
+        Falling = 2,
+        EventChanged = 3
+    }
+
+    internal enum CharacterFootLockRequestAvailability : byte
+    {
+        Ready = 1,
+        ContactEventUnavailable = 2
     }
 
     internal enum CharacterFootAnchorCommand : byte
@@ -394,10 +410,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 WorldNormal);
 
         internal static CharacterFootLandingFact Create(
-            in AnimationBiomechanicalStepHeader step,
+            ulong landingEventIdentity,
             in CharacterFootLandingPredictionResult diagnostics) =>
             new CharacterFootLandingFact(
-                step.LandingEventIdentity,
+                landingEventIdentity,
                 diagnostics.TrajectoryGeneration,
                 diagnostics.FutureBodyTranslationSourceIdentity,
                 diagnostics.SurfaceIdentity,
@@ -417,7 +433,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float nextSwingPredictionError,
             float nextSwingConstraintWeight,
             bool hasPromotedLanding,
-            CharacterFootGroundPathLanding promotedLanding)
+            CharacterFootGroundPathLanding promotedLanding,
+            bool commitAttempted,
+            bool commitUnavailable)
         {
             State = state;
             EventIdentity = eventIdentity;
@@ -429,6 +447,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingConstraintWeight = nextSwingConstraintWeight;
             HasPromotedLanding = hasPromotedLanding;
             PromotedLanding = promotedLanding;
+            CommitAttempted = commitAttempted;
+            CommitUnavailable = commitUnavailable;
         }
 
         internal CharacterFootLandingTrackingState State { get; }
@@ -443,6 +463,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float NextSwingConstraintWeight { get; }
         internal bool HasPromotedLanding { get; }
         internal CharacterFootGroundPathLanding PromotedLanding { get; }
+        internal bool CommitAttempted { get; }
+        internal bool CommitUnavailable { get; }
+        internal bool IsCommitted =>
+            State == CharacterFootLandingTrackingState.Committed;
 
         internal bool TryResolveLanding(
             ulong landingEventIdentity,
@@ -478,6 +502,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
         internal CharacterFootLandingTrackingState TrackingState;
+        internal bool CommitAttempted;
+        internal bool CommitUnavailable;
 
         internal CharacterFootLandingSnapshot Snapshot =>
             new CharacterFootLandingSnapshot(
@@ -485,23 +511,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 TrackedEventIdentity,
                 LastLanding.HasValue,
                 LastLanding.HasValue ? LastLanding.Resolve() : default,
-                TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue,
-                TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
-                TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
-                TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
                 PromotedLanding.HasValue,
-                PromotedLanding.HasValue ? PromotedLanding.Resolve() : default);
+                PromotedLanding.HasValue ? PromotedLanding.Resolve() : default,
+                CommitAttempted,
+                CommitUnavailable);
 
-        internal void BeginFrame() => PromotedLanding = default;
+        internal void BeginFrame()
+        {
+            PromotedLanding = default;
+            CommitAttempted = false;
+            CommitUnavailable = false;
+        }
 
         internal void InvalidateCurrent()
         {
+            if (TrackingState == CharacterFootLandingTrackingState.Committed)
+                return;
             NextSwingPredictionError = 0f;
             NextSwingConstraintWeight = 0f;
+            CommitAttempted = false;
+            CommitUnavailable = false;
             TrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;
@@ -523,9 +556,60 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootConstraintState State;
         internal CharacterFootLockResponse LockResponse;
-        internal bool PlantCycleConsumed;
         internal CharacterFootTransitionPhase LastTransitionPhase;
         internal CharacterFootTransitionReason LastTransitionReason;
+    }
+
+    internal readonly struct CharacterFootLockRequest
+    {
+        internal CharacterFootLockRequest(
+            in AnimationFootStepObservationSample sample)
+        {
+            if (!sample.IsValid || !sample.Events.IsValid)
+                throw new ArgumentException("Formal Foot Lock request is invalid.");
+            Contact = sample.Contact;
+            Mode = sample.LockMode;
+            Weight = sample.LockWeight;
+            bool requestsLock = Contact > 0f &&
+                                Mode != AnimationFootStepObservationLockMode.Unlocked;
+            AnimationFootMotionEventOccurrence current =
+                sample.Events.CurrentContact;
+            EventIdentity = current.IsBound ? current.Identity : 0;
+            Availability = requestsLock && EventIdentity == 0
+                ? CharacterFootLockRequestAvailability.ContactEventUnavailable
+                : CharacterFootLockRequestAvailability.Ready;
+        }
+
+        internal float Contact { get; }
+        internal AnimationFootStepObservationLockMode Mode { get; }
+        internal float Weight { get; }
+        internal ulong EventIdentity { get; }
+        internal CharacterFootLockRequestAvailability Availability { get; }
+        internal bool RequestsLock =>
+            Availability == CharacterFootLockRequestAvailability.Ready &&
+            Contact > 0f &&
+            Mode != AnimationFootStepObservationLockMode.Unlocked;
+        internal CharacterFootLockResponse Response => Mode switch
+        {
+            AnimationFootStepObservationLockMode.Sliding =>
+                CharacterFootLockResponse.Sliding,
+            AnimationFootStepObservationLockMode.Locked =>
+                CharacterFootLockResponse.FullAnchor,
+            _ => CharacterFootLockResponse.None
+        };
+    }
+
+    internal struct CharacterFootContactTransitionContext
+    {
+        internal bool HasPreviousRequest;
+        internal bool PreviousRequestedLock;
+        internal ulong PreviousEventIdentity;
+        internal AnimationFootStepObservationLockMode PreviousMode;
+        internal float PreviousWeight;
+        internal float SecondsSinceEdge;
+        internal ulong LatestContactEventIdentity;
+        internal ulong LatestReleasedContactEventIdentity;
+        internal CharacterFootContactEdge LastEdge;
     }
 
     internal struct CharacterFootContactContext
@@ -560,6 +644,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingContext Landing;
         internal CharacterFootDiscreteStateContext Discrete;
         internal CharacterFootContactContext Contact;
+        internal CharacterFootContactTransitionContext ContactTransition;
         internal CharacterFootInterpolationState Interpolation;
 
         internal CharacterFootLandingSnapshot LandingSnapshot => Landing.Snapshot;
@@ -576,6 +661,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult swingMotion,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
+            in CharacterFootLockRequest lockRequest,
             bool hardOwnershipLoss,
             float footPlacementWeight,
             Vector3 componentUp,
@@ -590,6 +676,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingMotion = swingMotion;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
+            LockRequest = lockRequest;
             HardOwnershipLoss = hardOwnershipLoss;
             FootPlacementWeight = footPlacementWeight;
             ComponentUp = componentUp;
@@ -605,6 +692,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSwingMotionResult SwingMotion { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
+        internal CharacterFootLockRequest LockRequest { get; }
         internal bool HardOwnershipLoss { get; }
         internal float FootPlacementWeight { get; }
         internal Vector3 ComponentUp { get; }
@@ -616,21 +704,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
-            in AnimationBiomechanicalStepHeader currentStep,
             in AnimationBiomechanicalStepHeader selectedStep,
+            in AnimationFootStepObservationSample formalFootMotion,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootStateFrame frame)
         {
             Side = side;
-            CurrentStep = currentStep;
             SelectedStep = selectedStep;
+            FormalFootMotion = formalFootMotion;
             LandingPrediction = landingPrediction;
             Frame = frame;
         }
 
         internal CharacterFootSide Side { get; }
-        internal AnimationBiomechanicalStepHeader CurrentStep { get; }
         internal AnimationBiomechanicalStepHeader SelectedStep { get; }
+        internal AnimationFootStepObservationSample FormalFootMotion { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }
     }
@@ -643,7 +731,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootConstraintState sourceState,
             CharacterFootConstraintState targetState,
             CharacterFootLockResponse targetLockResponse,
-            bool plantCycleConsumed,
+            CharacterFootContactEdge contactEdge,
             CharacterFootAnchorCommand anchorCommand,
             bool suppressOutput,
             bool resetInterpolation)
@@ -653,7 +741,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceState = sourceState;
             TargetState = targetState;
             TargetLockResponse = targetLockResponse;
-            PlantCycleConsumed = plantCycleConsumed;
+            ContactEdge = contactEdge;
             AnchorCommand = anchorCommand;
             SuppressOutput = suppressOutput;
             ResetInterpolation = resetInterpolation;
@@ -664,7 +752,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootConstraintState SourceState { get; }
         internal CharacterFootConstraintState TargetState { get; }
         internal CharacterFootLockResponse TargetLockResponse { get; }
-        internal bool PlantCycleConsumed { get; }
+        internal CharacterFootContactEdge ContactEdge { get; }
         internal CharacterFootAnchorCommand AnchorCommand { get; }
         internal bool SuppressOutput { get; }
         internal bool ResetInterpolation { get; }

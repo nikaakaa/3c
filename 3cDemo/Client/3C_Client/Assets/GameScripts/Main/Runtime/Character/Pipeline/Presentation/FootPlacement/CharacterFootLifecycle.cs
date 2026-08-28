@@ -261,7 +261,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     outputCorrection,
                     frame.ComponentUp.normalized),
                 swing.LandingPredictionError,
-                swing.LandingConstraintWeight,
                 originalSole + outputCorrection,
                 originalAnkle + outputCorrection,
                 positionWeight,

@@ -110,7 +110,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float baseHalfLifeSeconds,
             bool deadlineHalfLifeAvailable,
             float deadlineHalfLifeSeconds,
-            float appliedHalfLifeSeconds)
+            float appliedHalfLifeSeconds,
+            float swingVerticalCorrectionMaximumSpeed,
+            bool swingVerticalRateLimitApplied,
+            Vector3 correctionBeforeSwingVerticalRateLimit)
         {
             Evaluated = evaluated;
             RevisionReason = revisionReason;
@@ -136,6 +139,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DeadlineHalfLifeAvailable = deadlineHalfLifeAvailable;
             DeadlineHalfLifeSeconds = deadlineHalfLifeSeconds;
             AppliedHalfLifeSeconds = appliedHalfLifeSeconds;
+            SwingVerticalCorrectionMaximumSpeed =
+                swingVerticalCorrectionMaximumSpeed;
+            SwingVerticalRateLimitApplied = swingVerticalRateLimitApplied;
+            CorrectionBeforeSwingVerticalRateLimit =
+                correctionBeforeSwingVerticalRateLimit;
             PreTransitionReason = CharacterFootTransitionReason.None;
             PreTransitionSource = default;
             PreTransitionTarget = default;
@@ -215,6 +223,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DeadlineHalfLifeAvailable = source.DeadlineHalfLifeAvailable;
             DeadlineHalfLifeSeconds = source.DeadlineHalfLifeSeconds;
             AppliedHalfLifeSeconds = source.AppliedHalfLifeSeconds;
+            SwingVerticalCorrectionMaximumSpeed =
+                source.SwingVerticalCorrectionMaximumSpeed;
+            SwingVerticalRateLimitApplied =
+                source.SwingVerticalRateLimitApplied;
+            CorrectionBeforeSwingVerticalRateLimit =
+                source.CorrectionBeforeSwingVerticalRateLimit;
             PreTransitionReason = preTransition.Reason;
             PreTransitionSource = preTransition.SourceState;
             PreTransitionTarget = preTransition.TargetState;
@@ -273,6 +287,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool DeadlineHalfLifeAvailable { get; }
         internal float DeadlineHalfLifeSeconds { get; }
         internal float AppliedHalfLifeSeconds { get; }
+        internal float SwingVerticalCorrectionMaximumSpeed { get; }
+        internal bool SwingVerticalRateLimitApplied { get; }
+        internal Vector3 CorrectionBeforeSwingVerticalRateLimit { get; }
         internal CharacterFootTransitionReason PreTransitionReason { get; }
         internal CharacterFootConstraintState PreTransitionSource { get; }
         internal CharacterFootConstraintState PreTransitionTarget { get; }
@@ -374,7 +391,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.EffectiveCorrectionHalfLifeSeconds,
                 false,
                 0f,
-                settings.EffectiveCorrectionHalfLifeSeconds);
+                settings.EffectiveCorrectionHalfLifeSeconds,
+                settings.SwingVerticalCorrectionMaximumSpeed,
+                false,
+                default);
     }
 
     internal readonly struct CharacterFootLandingFact
@@ -435,7 +455,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasNextSwingLanding,
             CharacterFootGroundPathLanding nextSwingLanding,
             float nextSwingPredictionError,
-            float nextSwingConstraintWeight,
             bool hasPromotedLanding,
             CharacterFootGroundPathLanding promotedLanding,
             bool commitAttempted,
@@ -448,7 +467,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasNextSwingLanding = hasNextSwingLanding;
             NextSwingLanding = nextSwingLanding;
             NextSwingPredictionError = nextSwingPredictionError;
-            NextSwingConstraintWeight = nextSwingConstraintWeight;
             HasPromotedLanding = hasPromotedLanding;
             PromotedLanding = promotedLanding;
             CommitAttempted = commitAttempted;
@@ -464,7 +482,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasNextSwingLanding { get; }
         internal CharacterFootGroundPathLanding NextSwingLanding { get; }
         internal float NextSwingPredictionError { get; }
-        internal float NextSwingConstraintWeight { get; }
         internal bool HasPromotedLanding { get; }
         internal CharacterFootGroundPathLanding PromotedLanding { get; }
         internal bool CommitAttempted { get; }
@@ -502,7 +519,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingFact PromotedLanding;
         internal Vector3 NextSwingReferencePoint;
         internal float NextSwingPredictionError;
-        internal float NextSwingConstraintWeight;
         internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
         internal CharacterFootLandingTrackingState TrackingState;
@@ -518,7 +534,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextSwingLanding.HasValue,
                 NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
-                NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
                 PromotedLanding.HasValue,
                 PromotedLanding.HasValue ? PromotedLanding.Resolve() : default,
                 CommitAttempted,
@@ -536,7 +551,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (TrackingState == CharacterFootLandingTrackingState.Committed)
                 return;
             NextSwingPredictionError = 0f;
-            NextSwingConstraintWeight = 0f;
             CommitAttempted = false;
             CommitUnavailable = false;
             TrackingState = TrackedEventIdentity != 0
@@ -549,7 +563,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingLanding = default;
             NextSwingReferencePoint = default;
             NextSwingPredictionError = 0f;
-            NextSwingConstraintWeight = 0f;
             TrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;

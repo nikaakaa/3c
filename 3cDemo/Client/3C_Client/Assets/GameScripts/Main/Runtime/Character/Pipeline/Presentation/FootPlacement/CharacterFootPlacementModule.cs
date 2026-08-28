@@ -1210,8 +1210,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var request = new CharacterFutureBodyTranslationRequest(
                 m_ActorId,
                 duration,
-                body.TargetVelocity.x,
-                body.TargetVelocity.z,
+                timeline.CurrentVelocityX,
+                timeline.CurrentVelocityZ,
                 timeline.ContinuationVelocityX,
                 timeline.ContinuationVelocityZ,
                 currentSegmentRemainingSeconds,

@@ -154,13 +154,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingObservationKey(
             CharacterFootSide side,
             ulong landingEventIdentity,
+            string sourceIdentity,
+            int sourceCycle,
+            ulong contributionContinuityIdentity,
             Vector3 rawLanding,
             Vector3 componentUp,
             string profileRevision,
             ulong worldRevision)
         {
             if ((side != CharacterFootSide.Left && side != CharacterFootSide.Right) ||
-                landingEventIdentity == 0 || !Finite(rawLanding) ||
+                landingEventIdentity == 0 ||
+                string.IsNullOrWhiteSpace(sourceIdentity) || sourceCycle < 0 ||
+                contributionContinuityIdentity == 0 || !Finite(rawLanding) ||
                 !Finite(componentUp) || componentUp.sqrMagnitude <= 0.000001f ||
                 string.IsNullOrWhiteSpace(profileRevision) || worldRevision == 0)
             {
@@ -169,6 +174,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up = componentUp.normalized;
             Side = side;
             LandingEventIdentity = landingEventIdentity;
+            SourceIdentity = sourceIdentity.Trim();
+            SourceCycle = sourceCycle;
+            ContributionContinuityIdentity = contributionContinuityIdentity;
             RawLandingX = Quantize(rawLanding.x, PositionScale);
             RawLandingY = Quantize(rawLanding.y, PositionScale);
             RawLandingZ = Quantize(rawLanding.z, PositionScale);
@@ -183,6 +191,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootSide Side { get; }
         internal ulong LandingEventIdentity { get; }
+        internal string SourceIdentity { get; }
+        internal int SourceCycle { get; }
+        internal ulong ContributionContinuityIdentity { get; }
         internal int RawLandingX { get; }
         internal int RawLandingY { get; }
         internal int RawLandingZ { get; }
@@ -205,6 +216,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool Equals(CharacterFootLandingObservationKey other) =>
             Side == other.Side &&
             LandingEventIdentity == other.LandingEventIdentity &&
+            SourceCycle == other.SourceCycle &&
+            ContributionContinuityIdentity == other.ContributionContinuityIdentity &&
             RawLandingX == other.RawLandingX &&
             RawLandingY == other.RawLandingY &&
             RawLandingZ == other.RawLandingZ &&
@@ -212,6 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ComponentUpY == other.ComponentUpY &&
             ComponentUpZ == other.ComponentUpZ &&
             WorldRevision == other.WorldRevision &&
+            string.Equals(SourceIdentity, other.SourceIdentity, StringComparison.Ordinal) &&
             string.Equals(ProfileRevision, other.ProfileRevision, StringComparison.Ordinal);
 
         public override bool Equals(object obj) =>
@@ -220,12 +234,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public override int GetHashCode() => HashCode.Combine(
             (int)Side,
             LandingEventIdentity,
+            SourceCycle,
+            ContributionContinuityIdentity,
             RawLandingX,
             RawLandingY,
-            RawLandingZ,
-            ComponentUpX,
-            ComponentUpY,
-            ComponentUpZ);
+            RawLandingZ);
+
+        internal bool HasSameRevisionLineage(
+            CharacterFootSide side,
+            ulong landingEventIdentity,
+            string sourceIdentity,
+            int sourceCycle,
+            ulong contributionContinuityIdentity,
+            string profileRevision,
+            ulong worldRevision) =>
+            Side == side &&
+            LandingEventIdentity == landingEventIdentity &&
+            SourceCycle == sourceCycle &&
+            ContributionContinuityIdentity == contributionContinuityIdentity &&
+            WorldRevision == worldRevision &&
+            string.Equals(SourceIdentity, sourceIdentity, StringComparison.Ordinal) &&
+            string.Equals(ProfileRevision, profileRevision, StringComparison.Ordinal);
 
         static int Quantize(float value, float scale) =>
             Mathf.RoundToInt(value * scale);
@@ -235,6 +264,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong hash = 14695981039346656037UL;
             Add(ref hash, (ulong)key.Side);
             Add(ref hash, key.LandingEventIdentity);
+            Add(ref hash, key.SourceIdentity);
+            Add(ref hash, unchecked((ulong)(long)key.SourceCycle));
+            Add(ref hash, key.ContributionContinuityIdentity);
             Add(ref hash, unchecked((ulong)(uint)key.RawLandingX));
             Add(ref hash, unchecked((ulong)(uint)key.RawLandingY));
             Add(ref hash, unchecked((ulong)(uint)key.RawLandingZ));
@@ -338,14 +370,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootLandingObservationResult(
             CharacterFootLandingObservationPage page,
-            CharacterFootLandingObservationCacheState cacheState)
+            CharacterFootLandingObservationCacheState cacheState,
+            bool hasPreviousQueryInput,
+            float predictionInputMovement,
+            float componentUpDeltaDegrees,
+            bool revisionLineageChanged)
         {
             Page = page ?? throw new ArgumentNullException(nameof(page));
             CacheState = cacheState;
+            HasPreviousQueryInput = hasPreviousQueryInput;
+            PredictionInputMovement = predictionInputMovement;
+            ComponentUpDeltaDegrees = componentUpDeltaDegrees;
+            RevisionLineageChanged = revisionLineageChanged;
         }
 
         internal CharacterFootLandingObservationPage Page { get; }
         internal CharacterFootLandingObservationCacheState CacheState { get; }
+        internal bool HasPreviousQueryInput { get; }
+        internal float PredictionInputMovement { get; }
+        internal float ComponentUpDeltaDegrees { get; }
+        internal bool RevisionLineageChanged { get; }
         internal bool QueryExecutedThisFrame =>
             CacheState == CharacterFootLandingObservationCacheState.Queried;
     }
@@ -361,6 +405,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CacheState = result.CacheState;
             QueryExecutedThisFrame = result.QueryExecutedThisFrame;
             CanonicalRawLanding = page.Key.CanonicalRawLanding;
+            HasPreviousQueryInput = result.HasPreviousQueryInput;
+            PredictionInputMovement = result.PredictionInputMovement;
+            ComponentUpDeltaDegrees = result.ComponentUpDeltaDegrees;
+            RevisionLineageChanged = result.RevisionLineageChanged;
         }
 
         public ulong Identity { get; }
@@ -368,6 +416,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootLandingObservationCacheState CacheState { get; }
         public bool QueryExecutedThisFrame { get; }
         public Vector3 CanonicalRawLanding { get; }
+        public bool HasPreviousQueryInput { get; }
+        public float PredictionInputMovement { get; }
+        public float ComponentUpDeltaDegrees { get; }
+        public bool RevisionLineageChanged { get; }
         public bool IsAvailable => Identity != 0;
     }
 
@@ -1036,10 +1088,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal static CharacterFootLandingObservationResult ResolveObservation(
             CharacterFootSide side,
             ulong landingEventIdentity,
+            string sourceIdentity,
+            int sourceCycle,
+            ulong contributionContinuityIdentity,
             Vector3 rawLandingCandidate,
             Vector3 componentUp,
             string profileRevision,
             in CharacterFootLandingPredictionSettings settings,
+            in CharacterFootMotionSettings motionSettings,
             ICharacterFootLandingWorldQuery world,
             CharacterFootLandingObservationPagePool pool,
             CharacterFootLandingObservationPage committedPage,
@@ -1049,22 +1105,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(world));
             if (pool == null)
                 throw new ArgumentNullException(nameof(pool));
-            var key = new CharacterFootLandingObservationKey(
-                side,
-                landingEventIdentity,
-                rawLandingCandidate,
-                componentUp,
-                profileRevision,
-                world.WorldRevision);
-            if (committedPage != null && committedPage.HasValue &&
-                committedPage.Key.Equals(key))
+            Vector3 normalizedUp = componentUp.normalized;
+            bool hasPreviousQueryInput = committedPage != null &&
+                                         committedPage.HasValue;
+            bool sameRevisionLineage = hasPreviousQueryInput &&
+                committedPage.Key.HasSameRevisionLineage(
+                    side,
+                    landingEventIdentity,
+                    sourceIdentity,
+                    sourceCycle,
+                    contributionContinuityIdentity,
+                    profileRevision,
+                    world.WorldRevision);
+            float predictionInputMovement = hasPreviousQueryInput
+                ? Vector3.Distance(
+                    committedPage.Key.CanonicalRawLanding,
+                    rawLandingCandidate)
+                : 0f;
+            float componentUpDeltaDegrees = hasPreviousQueryInput
+                ? Vector3.Angle(
+                    committedPage.Key.CanonicalComponentUp,
+                    normalizedUp)
+                : 0f;
+            if (sameRevisionLineage &&
+                predictionInputMovement <=
+                motionSettings.PredictionInputUpdateDistance &&
+                componentUpDeltaDegrees <=
+                motionSettings.PredictionInputUpAngleDegrees)
             {
                 pendingPage = CharacterFootLandingObservationPagePool
                     .ReuseCommitted(committedPage);
                 return new CharacterFootLandingObservationResult(
                     pendingPage,
-                    CharacterFootLandingObservationCacheState.Reused);
+                    CharacterFootLandingObservationCacheState.Reused,
+                    true,
+                    predictionInputMovement,
+                    componentUpDeltaDegrees,
+                    false);
             }
+            var key = new CharacterFootLandingObservationKey(
+                side,
+                landingEventIdentity,
+                sourceIdentity,
+                sourceCycle,
+                contributionContinuityIdentity,
+                rawLandingCandidate,
+                componentUp,
+                profileRevision,
+                world.WorldRevision);
             pendingPage = pool.AcquireWritable(committedPage);
             CharacterFootPlacementQueryRequest query = BuildQuery(
                 in key,
@@ -1073,7 +1161,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             pendingPage.Set(in key, in query, in result);
             return new CharacterFootLandingObservationResult(
                 pendingPage,
-                CharacterFootLandingObservationCacheState.Queried);
+                CharacterFootLandingObservationCacheState.Queried,
+                hasPreviousQueryInput,
+                predictionInputMovement,
+                componentUpDeltaDegrees,
+                hasPreviousQueryInput && !sameRevisionLineage);
         }
 
         static bool Finite(Vector3 value) =>

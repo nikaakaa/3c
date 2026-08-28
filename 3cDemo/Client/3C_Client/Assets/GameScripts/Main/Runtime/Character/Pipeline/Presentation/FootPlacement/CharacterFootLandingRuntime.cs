@@ -131,13 +131,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (context.NextSwingLanding.HasValue)
             {
                 Vector3 landingPoint = diagnostics.LandingPoint;
+                bool sameSurface =
+                    diagnostics.SurfaceIdentity ==
+                    context.NextSwingLanding.SurfaceIdentity;
                 context.NextSwingPredictionError = Vector3.Distance(
                     context.NextSwingReferencePoint,
                     landingPoint);
                 context.NextSwingConstraintWeight = 1f;
-                if (Vector3.Distance(
+                if (sameSurface && Vector3.Distance(
                         landingPoint,
-                        context.NextSwingLanding.WorldPoint) <
+                        context.NextSwingLanding.WorldPoint) <=
                     settings.LandingPointAcceptanceDistance)
                 {
                     context.TrackingState =

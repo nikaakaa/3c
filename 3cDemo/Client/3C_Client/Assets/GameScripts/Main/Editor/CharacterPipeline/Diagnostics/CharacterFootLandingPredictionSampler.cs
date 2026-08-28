@@ -135,8 +135,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FutureBodyTranslationVelocityX,FutureBodyTranslationVelocityY,FutureBodyTranslationVelocityZ," +
             "CurrentAnimatedSoleX,CurrentAnimatedSoleY,CurrentAnimatedSoleZ," +
             "RawLandingAvailable,RawLandingCandidateX,RawLandingCandidateY,RawLandingCandidateZ," +
-            "LandingObservationIdentity,LandingObservationWorldRevision,LandingObservationCacheState,LandingObservationQueryExecuted," +
+            "LandingObservationIdentity,LandingObservationWorldRevision,LandingObservationSourceSampleIdentity,LandingObservationSourceSampleCycle," +
+            "LandingObservationCacheState,LandingObservationQueryExecuted,LandingObservationQueryReason," +
             "LandingObservationCanonicalRawX,LandingObservationCanonicalRawY,LandingObservationCanonicalRawZ," +
+            "LandingObservationCanonicalComponentUpX,LandingObservationCanonicalComponentUpY,LandingObservationCanonicalComponentUpZ," +
+            "LandingObservationCandidateRawX,LandingObservationCandidateRawY,LandingObservationCandidateRawZ," +
+            "LandingObservationCandidateComponentUpX,LandingObservationCandidateComponentUpY,LandingObservationCandidateComponentUpZ," +
+            "LandingObservationQueryInputDistance,LandingObservationQueryComponentUpAngleDegrees," +
+            "LandingObservationPredictionInputAccumulationDistance,LandingObservationComponentUpChangeAngleDegrees," +
             "QueryShape,QueryPurpose,QueryFootIndex,QueryOriginX,QueryOriginY,QueryOriginZ," +
             "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot," +
             "QueryCandidateSelectionState,QueryValidCandidateCount," +
@@ -1808,9 +1814,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 foot.Observation;
             Add(row, observation.Identity);
             Add(row, observation.WorldRevision);
+            Add(row, observation.SourceSampleIdentity);
+            Add(row, observation.SourceSampleCycle);
             Add(row, observation.CacheState.ToString());
             Add(row, observation.QueryExecutedThisFrame);
+            Add(row, observation.QueryReason.ToString());
             Add(row, observation.CanonicalRawLanding);
+            Add(row, observation.CanonicalComponentUp);
+            Add(row, observation.CandidateRawLanding);
+            Add(row, observation.CandidateComponentUp);
+            Add(row, observation.QueryInputDistance);
+            Add(row, observation.QueryComponentUpAngleDegrees);
+            Add(row, observation.PredictionInputAccumulationDistance);
+            Add(row, observation.ComponentUpChangeAngleDegrees);
             Add(row, query.Shape.ToString());
             Add(row, query.Purpose.ToString());
             Add(row, query.FootIndex);

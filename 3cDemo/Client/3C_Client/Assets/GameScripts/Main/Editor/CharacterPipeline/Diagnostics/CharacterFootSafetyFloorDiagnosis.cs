@@ -29,21 +29,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value,
                         "resultMatchesPrevious"))
                     rules.Add("sameKeyResultChanged=true");
+                if (!CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "queryThresholdContractConsistent"))
+                {
+                    rules.Add("queryThresholdContractConsistent=false");
+                }
                 return rules;
             };
             CharacterFootDiagnosisTarget target = context.Target(
                 "landing-observation-reuse-contract",
-                "FutureLanding是否只在新canonical Key查询，并让相同Observation identity保持不可变结果",
+                "FutureLanding是否只在累计输入或强制lineage变化时查询，并让复用Observation保持不可变结果",
                 new[] { "LandingObservation" },
                 new[]
                 {
                     "cacheStateConsistent=false",
-                    "sameKeyResultChanged=true"
+                    "sameKeyResultChanged=true",
+                    "queryThresholdContractConsistent=false"
                 },
                 events,
                 match,
                 _ => 0d,
-                "ValidCandidateCount");
+                "ValidCandidateCount",
+                "QueryInputDistance",
+                "PredictionInputAccumulationDistance",
+                "QueryComponentUpAngleDegrees",
+                "ComponentUpChangeAngleDegrees");
             target.categoricalMeasurements =
                 new SortedDictionary<
                     string,
@@ -55,6 +66,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             value => value["landingObservation"]?
                                          ["cacheState"]?.Value<string>() ??
                                      "Unavailable",
+                            StringComparer.Ordinal)
+                        .OrderBy(value => value.Key, StringComparer.Ordinal)
+                        .Select(value => new CharacterFootDiagnosisCategoryCount
+                        {
+                            value = value.Key,
+                            count = value.Count()
+                        })
+                        .ToList(),
+                    ["QueryReason"] = events
+                        .GroupBy(
+                            value => value["landingObservation"]?
+                                         ["queryReason"]?.Value<string>() ??
+                                     "None",
                             StringComparer.Ordinal)
                         .OrderBy(value => value.Key, StringComparer.Ordinal)
                         .Select(value => new CharacterFootDiagnosisCategoryCount
@@ -95,15 +119,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int sourceCycle;
         public string observationIdentity;
         public string worldRevision;
+        public string sourceSampleIdentity;
+        public int sourceSampleCycle;
         public string cacheState;
         public bool queryExecutedThisFrame;
+        public string queryReason;
         public CharacterFootVectorFact canonicalRawLanding;
+        public CharacterFootVectorFact canonicalComponentUp;
+        public CharacterFootVectorFact candidateRawLanding;
+        public CharacterFootVectorFact candidateComponentUp;
+        public double queryInputDistanceMeters;
+        public double queryComponentUpAngleDegrees;
+        public double predictionInputAccumulationDistanceMeters;
+        public double componentUpChangeAngleDegrees;
         public string selectionState;
         public int validCandidateCount;
         public CharacterFootLandingQueryCandidateFact selected;
         public bool identitySeenBefore;
         public bool resultMatchesPrevious;
         public bool cacheStateConsistent;
+        public bool queryThresholdContractConsistent;
     }
 
     [Serializable]

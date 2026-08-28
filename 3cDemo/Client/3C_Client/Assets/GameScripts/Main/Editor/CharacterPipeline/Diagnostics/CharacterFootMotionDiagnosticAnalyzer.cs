@@ -662,6 +662,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                               "Reused";
                 bool duplicateQuery = identitySeenBefore &&
                                       current.LandingObservationQueryExecuted;
+                bool distanceExceeded =
+                    current.LandingObservationQueryInputDistance >
+                    current.LandingObservationPredictionInputAccumulationDistance;
+                bool angleExceeded =
+                    current.LandingObservationQueryComponentUpAngleDegrees >
+                    current.LandingObservationComponentUpChangeAngleDegrees;
+                bool distanceReason = HasRevisionReason(
+                    current.LandingObservationQueryReason,
+                    "PredictionInputDistanceExceeded");
+                bool angleReason = HasRevisionReason(
+                    current.LandingObservationQueryReason,
+                    "ComponentUpAngleExceeded");
+                bool hasQueryReason = current.LandingObservationQueryReason !=
+                                      "None";
+                bool queryThresholdContractConsistent =
+                    distanceExceeded == distanceReason &&
+                    angleExceeded == angleReason &&
+                    queried == hasQueryReason &&
+                    (!reused || !distanceExceeded && !angleExceeded);
                 bool cacheStateConsistent =
                     (queried && current.LandingObservationQueryExecuted ||
                      reused && !current.LandingObservationQueryExecuted) &&
@@ -679,11 +698,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .ToString(CultureInfo.InvariantCulture),
                     worldRevision = current.LandingObservationWorldRevision
                         .ToString(CultureInfo.InvariantCulture),
+                    sourceSampleIdentity =
+                        current.LandingObservationSourceSampleIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    sourceSampleCycle =
+                        current.LandingObservationSourceSampleCycle,
                     cacheState = current.LandingObservationCacheState,
                     queryExecutedThisFrame =
                         current.LandingObservationQueryExecuted,
+                    queryReason = current.LandingObservationQueryReason,
                     canonicalRawLanding = CharacterFootVectorFact.From(
                         current.LandingObservationCanonicalRaw),
+                    canonicalComponentUp = CharacterFootVectorFact.From(
+                        current.LandingObservationCanonicalComponentUp),
+                    candidateRawLanding = CharacterFootVectorFact.From(
+                        current.LandingObservationCandidateRaw),
+                    candidateComponentUp = CharacterFootVectorFact.From(
+                        current.LandingObservationCandidateComponentUp),
+                    queryInputDistanceMeters =
+                        current.LandingObservationQueryInputDistance,
+                    queryComponentUpAngleDegrees =
+                        current.LandingObservationQueryComponentUpAngleDegrees,
+                    predictionInputAccumulationDistanceMeters =
+                        current.LandingObservationPredictionInputAccumulationDistance,
+                    componentUpChangeAngleDegrees =
+                        current.LandingObservationComponentUpChangeAngleDegrees,
                     selectionState =
                         current.FutureLandingCandidateSelectionState,
                     validCandidateCount =
@@ -700,13 +739,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     },
                     identitySeenBefore = identitySeenBefore,
                     resultMatchesPrevious = resultMatchesPrevious,
-                    cacheStateConsistent = cacheStateConsistent
+                    cacheStateConsistent = cacheStateConsistent,
+                    queryThresholdContractConsistent =
+                        queryThresholdContractConsistent
                 };
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
                     ["ValidCandidateCount"] =
-                        current.FutureLandingValidCandidateCount
+                        current.FutureLandingValidCandidateCount,
+                    ["QueryInputDistance"] =
+                        current.LandingObservationQueryInputDistance,
+                    ["PredictionInputAccumulationDistance"] =
+                        current.LandingObservationPredictionInputAccumulationDistance,
+                    ["QueryComponentUpAngleDegrees"] =
+                        current.LandingObservationQueryComponentUpAngleDegrees,
+                    ["ComponentUpChangeAngleDegrees"] =
+                        current.LandingObservationComponentUpChangeAngleDegrees
                 };
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
@@ -717,7 +766,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.LandingObservationQueryExecuted,
                     ["identitySeenBefore"] = identitySeenBefore,
                     ["resultMatchesPrevious"] = resultMatchesPrevious,
-                    ["cacheStateConsistent"] = cacheStateConsistent
+                    ["cacheStateConsistent"] = cacheStateConsistent,
+                    ["distanceExceeded"] = distanceExceeded,
+                    ["angleExceeded"] = angleExceeded,
+                    ["distanceReason"] = distanceReason,
+                    ["angleReason"] = angleReason,
+                    ["queryThresholdContractConsistent"] =
+                        queryThresholdContractConsistent
                 };
                 events.Add(new EventFact(
                     "LandingObservation",
@@ -3315,12 +3370,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Ulong("LandingObservationIdentity"),
                 LandingObservationWorldRevision =
                     Ulong("LandingObservationWorldRevision"),
+                LandingObservationSourceSampleIdentity =
+                    Ulong("LandingObservationSourceSampleIdentity"),
+                LandingObservationSourceSampleCycle =
+                    Int("LandingObservationSourceSampleCycle"),
                 LandingObservationCacheState =
                     Cell("LandingObservationCacheState"),
                 LandingObservationQueryExecuted =
                     Int("LandingObservationQueryExecuted") != 0,
+                LandingObservationQueryReason =
+                    Cell("LandingObservationQueryReason"),
                 LandingObservationCanonicalRaw =
                     Vector("LandingObservationCanonicalRaw"),
+                LandingObservationCanonicalComponentUp =
+                    Vector("LandingObservationCanonicalComponentUp"),
+                LandingObservationCandidateRaw =
+                    Vector("LandingObservationCandidateRaw"),
+                LandingObservationCandidateComponentUp =
+                    Vector("LandingObservationCandidateComponentUp"),
+                LandingObservationQueryInputDistance =
+                    Float("LandingObservationQueryInputDistance"),
+                LandingObservationQueryComponentUpAngleDegrees =
+                    Float("LandingObservationQueryComponentUpAngleDegrees"),
+                LandingObservationPredictionInputAccumulationDistance =
+                    Float("LandingObservationPredictionInputAccumulationDistance"),
+                LandingObservationComponentUpChangeAngleDegrees =
+                    Float("LandingObservationComponentUpChangeAngleDegrees"),
                 FutureLandingQueryDirection = Vector("QueryDirection"),
                 FutureLandingCandidateSelectionState =
                     Cell("QueryCandidateSelectionState"),
@@ -3779,8 +3854,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!observationAvailable)
             {
                 if (frame.LandingObservationWorldRevision != 0 ||
+                    frame.LandingObservationSourceSampleIdentity != 0 ||
                     frame.LandingObservationCacheState != "Unavailable" ||
                     frame.LandingObservationQueryExecuted ||
+                    frame.LandingObservationQueryReason != "None" ||
                     frame.FutureLandingValidCandidateCount != 0 ||
                     frame.FutureLandingSelectedAvailable)
                 {
@@ -3793,8 +3870,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool queried = frame.LandingObservationCacheState == "Queried";
             bool reused = frame.LandingObservationCacheState == "Reused";
             if (frame.LandingObservationWorldRevision == 0 ||
+                frame.LandingObservationSourceSampleIdentity == 0 ||
                 !queried && !reused ||
                 queried != frame.LandingObservationQueryExecuted ||
+                queried == (frame.LandingObservationQueryReason == "None") ||
+                frame.LandingObservationCanonicalComponentUp.sqrMagnitude <=
+                TimeEpsilon * TimeEpsilon ||
+                frame.LandingObservationCandidateComponentUp.sqrMagnitude <=
+                TimeEpsilon * TimeEpsilon ||
+                frame.LandingObservationPredictionInputAccumulationDistance <= 0f ||
+                frame.LandingObservationComponentUpChangeAngleDegrees <= 0f ||
                 frame.FutureLandingQueryDirection.sqrMagnitude <=
                 TimeEpsilon * TimeEpsilon)
             {
@@ -4280,11 +4365,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "LandingPointZ", "QueryDistance",
                 "LandingObservationIdentity",
                 "LandingObservationWorldRevision",
+                "LandingObservationSourceSampleIdentity",
+                "LandingObservationSourceSampleCycle",
                 "LandingObservationCacheState",
                 "LandingObservationQueryExecuted",
+                "LandingObservationQueryReason",
                 "LandingObservationCanonicalRawX",
                 "LandingObservationCanonicalRawY",
                 "LandingObservationCanonicalRawZ",
+                "LandingObservationCanonicalComponentUpX",
+                "LandingObservationCanonicalComponentUpY",
+                "LandingObservationCanonicalComponentUpZ",
+                "LandingObservationCandidateRawX",
+                "LandingObservationCandidateRawY",
+                "LandingObservationCandidateRawZ",
+                "LandingObservationCandidateComponentUpX",
+                "LandingObservationCandidateComponentUpY",
+                "LandingObservationCandidateComponentUpZ",
+                "LandingObservationQueryInputDistance",
+                "LandingObservationQueryComponentUpAngleDegrees",
+                "LandingObservationPredictionInputAccumulationDistance",
+                "LandingObservationComponentUpChangeAngleDegrees",
                 "QueryDirectionX", "QueryDirectionY", "QueryDirectionZ",
                 "QueryCandidateSelectionState", "QueryValidCandidateCount",
                 "QuerySelectedCandidateAvailable",
@@ -4868,9 +4969,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float ObservedLandingQueryDistance;
             internal ulong LandingObservationIdentity;
             internal ulong LandingObservationWorldRevision;
+            internal ulong LandingObservationSourceSampleIdentity;
+            internal int LandingObservationSourceSampleCycle;
             internal string LandingObservationCacheState;
             internal bool LandingObservationQueryExecuted;
+            internal string LandingObservationQueryReason;
             internal Vector3 LandingObservationCanonicalRaw;
+            internal Vector3 LandingObservationCanonicalComponentUp;
+            internal Vector3 LandingObservationCandidateRaw;
+            internal Vector3 LandingObservationCandidateComponentUp;
+            internal float LandingObservationQueryInputDistance;
+            internal float LandingObservationQueryComponentUpAngleDegrees;
+            internal float LandingObservationPredictionInputAccumulationDistance;
+            internal float LandingObservationComponentUpChangeAngleDegrees;
             internal Vector3 FutureLandingQueryDirection;
             internal string FutureLandingCandidateSelectionState;
             internal int FutureLandingValidCandidateCount;

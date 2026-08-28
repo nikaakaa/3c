@@ -6,7 +6,9 @@
 
 Raw Landing MUST继续按`VisiblePosition + FutureBodyTranslation + VisibleRotation * RootLocalLanding`从本帧输入重新投影。Step Distance MUST不替代committed Body世界速度、Future Body Translation或世界地形；RootLocalLanding MUST只乘本帧Visible Rotation，不外推Future Body Yaw。
 
-Runtime MUST从Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`量化的Component Up、Profile Revision与非零World Revision构造canonical Landing Observation Key。SphereCast MUST从Key反量化后的canonical Raw Landing上方沿Component Down使用Profile半径和有限距离查询，并过滤自身Collider、初始重叠、非法点、非法法线与超坡度命中。相同Key MUST复用根事务已提交的不可变Accepted或Rejected Observation且不得执行SphereCast；新Key MUST恰好查询一次，并在固定容量合法候选中按距离与稳定identity选择canonical最近候选。容量溢出或没有合法命中 MUST发布typed拒绝，不得沿用另一Key、旧Landing、默认Surface或另一Event结果。
+Runtime MUST把上次真实查询使用的Side、Landing Event、Source Sample identity、Source Cycle、按1毫米量化的Raw Landing、按`1e-4`量化的Component Up、Profile Revision与非零World Revision保存在Committed Observation Page中。除正式`Sliding`接触准入或强制lineage变化外，当前Raw Landing Candidate相对该查询快照的世界位移累计不超过Profile显式`PredictionInputAccumulationDistance`且Component Up夹角不超过`ComponentUpChangeAngleDegrees`时，Runtime MUST复用根事务已提交的不可变Accepted或Rejected Observation，不得更新查询快照或执行SphereCast。距离阈值 MUST为正且不得超过SphereCast半径。
+
+超过任一累计阈值，或Landing Event、Source Sample、Source Cycle、Profile Revision、World Revision变化时，Runtime MUST从当前Candidate生成新的canonical Landing Observation Key并恰好查询一次。SphereCast MUST从Key反量化后的canonical Raw Landing上方沿Component Down使用Profile半径和有限距离查询，并过滤自身Collider、初始重叠、非法点、非法法线与超坡度命中，在固定容量合法候选中按距离与稳定identity选择canonical最近候选。容量溢出或没有合法命中 MUST发布typed拒绝，不得沿用另一Key、旧Landing、默认Surface或另一Event结果。
 
 上一Committed Surface、Frame、Authority Tick、Trajectory Generation、Future Translation Source、Foot State、Residual与查询输出 MUST不进入Observation Key或候选选择。Pending Observation MUST随Foot根事务提交或丢弃；Reset、Retarget与World Query Backend重建 MUST清空Observation Page。当前静态FootPlacementSurface在Backend生命周期内使用固定非零World Revision；移动平台不属于本change。
 
@@ -16,17 +18,29 @@ Runtime MUST从Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`
 - **THEN** Runtime MUST发布唯一Accepted Landing、Surface、点、法线、查询距离及完整Event lineage
 - **AND** Step Time变化 MUST只改变该Event预测时域，不得重建另一套Landing生命周期
 
-#### Scenario: 相同Landing Observation Key
+#### Scenario: 预测输入累计变化未超过阈值
 
-- **WHEN** 当前Foot帧生成的canonical Observation Key与上一Committed Page相同
+- **WHEN** 当前Candidate与上一真实查询属于同Source、Cycle、Event、Profile、World，累计世界位移不超过正式距离阈值且Up变化不超过正式角度阈值
 - **THEN** Runtime MUST复用相同Observation identity、Surface、点、法线与Reject结果
-- **AND** MUST不执行FutureLanding SphereCast或读取上一Surface重新选择候选
+- **AND** MUST不更新查询快照、不执行FutureLanding SphereCast或读取上一Surface重新选择候选
 
-#### Scenario: 新Landing Observation Key
+#### Scenario: 预测输入累计变化超过阈值
 
-- **WHEN** canonical Raw Landing、Component Up、Event、Profile Revision或World Revision产生新Key
+- **WHEN** 当前Candidate相对上一真实查询的世界位移或Component Up夹角超过正式阈值
 - **THEN** Runtime MUST执行一次FutureLanding SphereCast并提交canonical最近合法候选或typed拒绝
 - **AND** Pending Foot事务失败时 MUST丢弃该Observation，不得污染上一Committed Page
+
+#### Scenario: 预测lineage变化
+
+- **WHEN** Landing Event、Source Sample、Source Cycle、Profile Revision或World Revision变化
+- **THEN** Runtime MUST不受距离或角度阈值限制并执行一次新查询
+- **AND** 新查询 MUST建立新的Observation identity，不得把旧结果改名继续使用
+
+#### Scenario: Sliding接触准入刷新
+
+- **WHEN** 正式Foot Lock Mode为`Sliding`且当前canonical预测输入identity不同于上一真实查询输入
+- **THEN** Runtime MUST执行一次新查询并发布`ContactAcquisitionRefresh`原因
+- **AND** canonical输入identity未变时 MUST复用Committed Observation，不得重复查询
 
 #### Scenario: Step Event与RootLocalLanding不一致
 
@@ -36,13 +50,13 @@ Runtime MUST从Side、Landing Event、按1毫米量化的Raw Landing、按`1e-4`
 
 ### Requirement: Ground Path必须使用上一已提交落点与下一事件落点
 
-每只脚 MUST按Landing Event identity缓存Accepted Landing。PreSwing或Swing阶段的每个有效表现帧 MUST重新投影Raw Landing并构造canonical Landing Observation Key；只有新Key MUST执行一次正式Landing SphereCast，相同Key MUST复用Committed Observation。新Observation与同一事件NextSwingLanding的距离小于正式Foot Motion Profile死区时 MUST保留原落点并复用Ground Path；达到死区时 MUST提交新的NextSwingLanding。该事件实际落地后最新NextSwingLanding MUST晋级为LastLanding，之后才为新的Swing事件建立下一落点。
+每只脚 MUST按Landing Event identity缓存Accepted Landing。PreSwing或Swing阶段的每个有效表现帧 MUST重新投影Raw Landing Candidate；只有累计输入或强制lineage触发Query Admission时 MUST执行一次正式Landing SphereCast，其余帧 MUST复用Committed Observation。新Observation命中不同Surface时 MUST无条件提交新的NextSwingLanding；同Surface新点与NextSwingLanding的距离小于正式`LandingAcceptanceDistance`时 MUST保留原落点并复用Ground Path，达到阈值时 MUST提交新点。该事件实际落地后最新NextSwingLanding MUST晋级为LastLanding，之后才为新的Swing事件建立下一落点。
 
 Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没有LastLanding时 MUST发布`CurrentLandingUnavailable`；不得用Animated Sole、Transform、固定高度或默认地面补起点。
 
-#### Scenario: 同一Landing Observation Key持续多个表现帧
+#### Scenario: 查询前累计输入持续低于阈值
 
-- **WHEN** PreSwing或Swing连续帧产生相同canonical Observation Key
+- **WHEN** PreSwing或Swing连续帧相对上次真实查询的累计位移和Up变化持续不超过正式阈值且lineage稳定
 - **THEN** Runtime MUST复用Committed Observation、NextSwingLanding与Committed Ground Path
 - **AND** MUST不执行新的Landing SphereCast或Capsule Ground Detection
 
@@ -57,6 +71,12 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 - **WHEN** 新Key产生的Accepted Observation与同Event NextSwingLanding距离小于正式更新死区
 - **THEN** Runtime MUST提交新的Observation Page但保留NextSwingLanding与Committed Ground Path
 - **AND** MUST不因毫米级预测误差执行Capsule Ground Detection
+
+#### Scenario: 新Observation切换Surface
+
+- **WHEN** 一次正式新查询命中与同Event NextSwingLanding不同的Surface
+- **THEN** Runtime MUST无条件提交新NextSwingLanding并重建Ground Path
+- **AND** MUST不以LandingAcceptanceDistance保留旧Surface
 
 #### Scenario: 下一Swing Event完成
 
@@ -148,7 +168,7 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Hard Constraint前后Correction、Encoded Goal、Residual基础与截止HalfLife、Ground Path Envelope Clamp与clearance、Support与Landing Reach区间、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个阈值、Query Reason、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Hard Constraint前后Correction、Encoded Goal、Residual基础与截止HalfLife、Ground Path Envelope Clamp与clearance、Support与Landing Reach区间、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 

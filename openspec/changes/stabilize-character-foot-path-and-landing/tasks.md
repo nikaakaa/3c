@@ -23,8 +23,11 @@
 - [x] 3.8 把采样包迁移为项目本地持久`Diagnostics/FootPlacementRuns/<run-id>/`下的每Frame/Side唯一主行与独立Ground Path几何表，删除Unity Temp写入和每个Contact/Envelope重复整套阶段列的旧展开行
 - [x] 3.9 让停止、队列失败和自动路线统一进入后台Finalizing，排空Writer、封存双表并运行唯一Analyzer/Publisher后再发布结果
 - [x] 3.10 为每脚建立根事务所有的Landing Observation Key、Committed/Pending Page与双页Pool，相同Key复用已提交Accepted或Rejected结果
-- [x] 3.11 让新Observation Key只执行一次canonical SphereCast并删除PreferredSurfaceIdentity选择行为，保持5毫米Acceptance死区不变
+- [x] 3.11 让超过正式累计阈值或Source/Cycle/Event/Profile/World lineage变化只执行一次canonical SphereCast并删除PreferredSurfaceIdentity选择行为
 - [x] 3.12 把Observation identity、World revision、cache state、query executed与canonical Raw Landing接入唯一facts/diagnosis链并删除Preferred旧口径
+- [x] 3.13 为Corin显式配置5厘米预测输入累计距离与1度Component Up变化阈值，阈值内复用Committed Observation，并在正式Sliding接触准入输入变化时刷新观测
+- [x] 3.14 让PreSwing与Swing消费同一Accepted Swing Motion和Ground Envelope，消除进入Swing首帧才补Path的Correction跳变
+- [ ] 3.15 在正式Current Contact Anchor与Next Landing Event所有权闭合后，让新查询的Surface变化只无条件换代NextSwingLanding
 
 ## 4. 拆分State、Transition、Interpolation与Hard Constraint
 

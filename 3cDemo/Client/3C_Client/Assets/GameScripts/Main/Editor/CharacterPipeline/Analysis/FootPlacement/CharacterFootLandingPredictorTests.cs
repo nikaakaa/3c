@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 55f,
                 2f,
                 0.1f,
-                30f,
+                60f,
                 8f,
                 0.05f,
                 1f);
@@ -81,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 55f,
                 2f,
                 0.1f,
-                30f,
+                60f,
                 8f,
                 0.05f,
                 1f);

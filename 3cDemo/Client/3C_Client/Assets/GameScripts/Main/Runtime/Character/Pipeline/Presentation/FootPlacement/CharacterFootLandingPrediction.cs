@@ -21,14 +21,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         FutureBodyTranslationUnavailable = 5,
         FutureBodyTranslationRangeInvalid = 6,
         GroundQueryMissed = 7,
-        GroundQueryCapacityExceeded = 8
+        GroundQueryCapacityExceeded = 8,
+        LandingCommitted = 9
     }
 
     public enum CharacterFootLandingStepSource : byte
     {
         None = 0,
-        Current = 1,
-        Incoming = 2
+        FormalCurrentContact = 1,
+        FormalNextLanding = 2
     }
 
     internal readonly struct CharacterFootLandingSupport
@@ -530,7 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterFootLandingPredictionResult(
             in CharacterFootLandingPredictionResult source,
             CharacterFootLandingStepSource stepSource,
-            AnimationBiomechanicalStepHeader step,
+            AnimationFootMotionRuntimeSample step,
             Vector3 currentAnimatedSole,
             CharacterFullBodyIkGoal goal)
         {
@@ -540,7 +541,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             StepSource = stepSource;
             LandingEventIdentity = source.LandingEventIdentity;
             TrajectoryGeneration = source.TrajectoryGeneration;
-            LandingConfidence = step.Confidence;
+            LandingConfidence = step.IsAuthoritative ? 1f : 0f;
             TimeToLandingSeconds = step.TimeToLandingSeconds;
             RootLocalLanding = step.RootLocalLanding;
             FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
@@ -624,7 +625,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootLandingPredictionResult WithLiveStep(
             CharacterFootLandingStepSource stepSource,
-            AnimationBiomechanicalStepHeader step,
+            AnimationFootMotionRuntimeSample step,
             Vector3 currentAnimatedSole,
             CharacterFullBodyIkGoal goal) =>
             new CharacterFootLandingPredictionResult(
@@ -651,7 +652,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingPredictionFootDiagnostics(
             in CharacterFootLandingPredictionResult result,
             CharacterFootPlacementAnimatedFootPose sourcePose,
-            in CharacterFootStepCandidateSelectionDiagnostics stepCandidateSelection)
+            in CharacterFootStepCandidateSelectionDiagnostics stepCandidateSelection,
+            CharacterFootLandingSnapshot landing)
         {
             Side = result.Side;
             State = result.State;
@@ -681,6 +683,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceHeelPosition = sourcePose.HeelPosition;
             SourceToePosition = sourcePose.ToePosition;
             StepCandidateSelection = stepCandidateSelection;
+            LandingTrackingState = landing.State.ToString();
+            LandingTrackingEventIdentity = landing.EventIdentity;
+            LandingCommitted = landing.IsCommitted;
+            LandingCommitAttempted = landing.CommitAttempted;
+            LandingCommitUnavailable = landing.CommitUnavailable;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
             CharacterFootSwingMotionResult footMotion = result.FootMotion;
             GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
@@ -718,6 +725,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SourceHeelPosition { get; }
         public Vector3 SourceToePosition { get; }
         public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
+        public string LandingTrackingState { get; }
+        public ulong LandingTrackingEventIdentity { get; }
+        public bool LandingCommitted { get; }
+        public bool LandingCommitAttempted { get; }
+        public bool LandingCommitUnavailable { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
         public bool RawLandingAvailable =>
@@ -725,14 +737,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason ==
             CharacterFootLandingPredictionRejectReason.GroundQueryMissed ||
             RejectReason ==
-            CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded;
+            CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded ||
+            RejectReason ==
+            CharacterFootLandingPredictionRejectReason.LandingCommitted;
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
     }
 
     public readonly struct CharacterFootStepCandidateDiagnostics
     {
         internal CharacterFootStepCandidateDiagnostics(
-            in AnimationBiomechanicalStepHeader step)
+            in AnimationFootMotionRuntimeSample step)
         {
             IsValid = step.IsValid;
             IsAuthoritative = step.IsAuthoritative;
@@ -740,16 +754,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 step.HasConsistentLandingEventIdentity;
             IsPreSwing = step.IsPreSwing;
             IsSwing = step.IsSwing;
+            HasCurrentContactEvent = step.HasCurrentContactEvent;
+            CurrentContactEventIdentity = step.CurrentContactEventIdentity;
             EventOrdinal = step.EventOrdinal;
-            SourceLandingCycleOffset = step.SourceLandingCycleOffset;
             SourceSampleCycle = step.SourceSampleCycle;
             ContributionContinuityIdentity =
                 step.ContributionContinuityIdentity;
             LandingEventIdentity = step.LandingEventIdentity;
             TimeToLandingSeconds = step.TimeToLandingSeconds;
-            EventPhase = step.EventPhase;
-            ApproachContactPhase = step.ApproachContactPhase;
-            LandingPhase = step.LandingPhase;
+            Distance = step.Distance;
+            Phase = step.Events.Phase;
+            SwingProgress = step.SwingProgress;
             RootLocalLanding = step.RootLocalLanding;
         }
 
@@ -758,44 +773,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool HasConsistentLandingEventIdentity { get; }
         public bool IsPreSwing { get; }
         public bool IsSwing { get; }
+        public bool HasCurrentContactEvent { get; }
+        public ulong CurrentContactEventIdentity { get; }
         public int EventOrdinal { get; }
-        public int SourceLandingCycleOffset { get; }
+        public int SourceLandingCycleOffset => 0;
         public int SourceSampleCycle { get; }
         public ulong ContributionContinuityIdentity { get; }
         public ulong LandingEventIdentity { get; }
         public float TimeToLandingSeconds { get; }
-        public float EventPhase { get; }
-        public float ApproachContactPhase { get; }
-        public float LandingPhase { get; }
+        public float Distance { get; }
+        public AnimationFootMotionEventPhase Phase { get; }
+        public float SwingProgress { get; }
+        public float EventPhase => SwingProgress;
+        public float ApproachContactPhase =>
+            !IsValid ? 0f : InApproachContactToLanding ? SwingProgress : 1f;
+        public float LandingPhase => IsValid ? 1f : 0f;
         public bool AtOrAfterApproachContact =>
-            IsValid && EventPhase >= ApproachContactPhase;
+            IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
         public bool InApproachContactToLanding =>
-            AtOrAfterApproachContact &&
-            IsSwing &&
-            EventPhase <= LandingPhase;
+            IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
         public Vector3 RootLocalLanding { get; }
     }
 
     public readonly struct CharacterFootStepCandidateSelectionDiagnostics
     {
         internal CharacterFootStepCandidateSelectionDiagnostics(
-            in AnimationBiomechanicalStepHeader current,
-            in AnimationBiomechanicalStepHeader incoming,
+            in AnimationFootMotionRuntimeSample footMotion,
             ulong lastLandingEventIdentity,
             CharacterFootLandingStepSource selectedSource,
             ulong selectedLandingEventIdentity,
             float maximumPredictionTimeSeconds)
         {
-            Current = new CharacterFootStepCandidateDiagnostics(in current);
-            Incoming = new CharacterFootStepCandidateDiagnostics(in incoming);
+            FootMotion = new CharacterFootStepCandidateDiagnostics(in footMotion);
             LastLandingEventIdentity = lastLandingEventIdentity;
             SelectedSource = selectedSource;
             SelectedLandingEventIdentity = selectedLandingEventIdentity;
             MaximumPredictionTimeSeconds = maximumPredictionTimeSeconds;
         }
 
-        public CharacterFootStepCandidateDiagnostics Current { get; }
-        public CharacterFootStepCandidateDiagnostics Incoming { get; }
+        public CharacterFootStepCandidateDiagnostics FootMotion { get; }
+        public CharacterFootStepCandidateDiagnostics Current => FootMotion;
+        public CharacterFootStepCandidateDiagnostics Incoming => default;
         public ulong LastLandingEventIdentity { get; }
         public CharacterFootLandingStepSource SelectedSource { get; }
         public ulong SelectedLandingEventIdentity { get; }
@@ -805,7 +823,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterFootStepObservationInputDiagnostics
     {
         internal CharacterFootStepObservationInputDiagnostics(
-            in AnimationFootStepObservationFrame frame)
+            in AnimationFootMotionRuntimeFrame frame)
         {
             if (!frame.IsValid)
                 throw new ArgumentException("Foot Step observation input diagnostics is invalid.");
@@ -831,8 +849,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int Cycle { get; }
         public float SourceWeight { get; }
         public float NormalizedTime { get; }
-        public AnimationFootStepObservationSample Left { get; }
-        public AnimationFootStepObservationSample Right { get; }
+        public AnimationFootMotionRuntimeSample Left { get; }
+        public AnimationFootMotionRuntimeSample Right { get; }
         public bool IsValid => m_IsSpecified != 0;
     }
 
@@ -847,7 +865,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootActionOccupancy rightAction,
             in ThirdPersonSimulation.CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
-            in AnimationFootStepObservationFrame footStepObservation)
+            in AnimationFootMotionRuntimeFrame footStepObservation)
         {
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Grounded = grounded;

@@ -210,7 +210,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 context.InputSequence,
                 m_InputValues,
                 m_InputRequests);
-            return FixedCharacterInputTraceModule.Resolve(context, m_Program.ProgramHash, liveInput);
+            return FixedCharacterInputTraceModule.Resolve(context, liveInput);
         }
 
         public byte[] CaptureState()

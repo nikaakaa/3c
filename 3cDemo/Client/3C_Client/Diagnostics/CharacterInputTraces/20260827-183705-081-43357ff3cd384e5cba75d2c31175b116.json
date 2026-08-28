@@ -1,19 +1,11 @@
 {
-  "schema": "character-fixed-input-trace/2",
+  "schema": "character-fixed-input-trace/3",
   "trace_id": "43357ff3cd384e5cba75d2c31175b116",
   "created_utc": "2026-08-27T10:37:05.0816281Z",
   "actor_id": "gameplay-lab-player",
-  "program_hash": "3d7377bcf71aeffedf4e75f3aa986a2648cc84902526a904c3c1e2ec937682a5",
   "tick_rate": 60,
   "first_tick": 1,
   "frame_count": 1044,
-  "launcher_variant_index": 0,
-  "start_pose": {
-    "x": 40.0,
-    "y": 0.0,
-    "z": -3.0,
-    "yaw_degrees": 0.0
-  },
   "frames": [
     {
       "simulation_tick": 1,
@@ -4192,5 +4184,5 @@
       "input_payload_base64": "REJSSQMAAAABEwAAAGdhbWVwbGF5LWxhYi1wbGF5ZXIVBAAAAAAAAAEkAAAAY29yaW4tZ2FtZXBsYXktbGFiLWZpeGVkLWxvY2FsLWxvZ2ljFQQAAAAAAACiAAAAVW5pdHlJbnB1dFN5c3RlbS9GaXhlZFEzMi4zMi8zZDczNzdiY2Y3MWFlZmZlZGY0ZTc1ZjNhYTk4NmEyNjQ4Y2M4NDkwMjUyNmE5MDRjM2MxZTJlYzkzNzY4MmE1L0tleWJvYXJkJk1vdXNlL0FjdGlvblRhcmdldC9zZXNzaW9uLWFjdG9yLXRhcmdldC9nYW1lcGxheS1sYWItdGFyZ2V0FQQAAAAAAAADAAAADAAAAEFjdGlvblRhcmdldAYTAAAAZ2FtZXBsYXktbGFiLXRhcmdldCMEwPUCAAAAlQOPAgAAAABVRM9M/v///wAAAABM////CAAAAExvb2tBeGlzAwAAAAAAAAAAAAAAAAAAAAAIAAAATW92ZUF4aXMDAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     }
   ],
-  "content_hash": "83663412bd797c5127eb3b21b146e3907834a3301849a06e6910166a920f1a19"
+  "content_hash": "01337b4896c787fbac487d97d474cd62f9f5a7c013661776932b2a6b8d6e0eda"
 }

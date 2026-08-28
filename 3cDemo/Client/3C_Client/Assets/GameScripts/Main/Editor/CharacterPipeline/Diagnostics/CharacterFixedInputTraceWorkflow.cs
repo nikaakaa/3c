@@ -19,6 +19,62 @@ using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
+    internal readonly struct CharacterFixedInputReplayRuntimeIdentity
+    {
+        internal CharacterFixedInputReplayRuntimeIdentity(
+            string programId,
+            string programHash,
+            string sourceRevision,
+            string semanticHash,
+            int tickRate,
+            string projectionRevision,
+            string projectionSourceRevision,
+            string projectionSemanticHash,
+            string projectionContractHash,
+            string worldRevision,
+            int launcherVariantIndex)
+        {
+            if (string.IsNullOrWhiteSpace(programId) ||
+                string.IsNullOrWhiteSpace(programHash) ||
+                string.IsNullOrWhiteSpace(sourceRevision) ||
+                string.IsNullOrWhiteSpace(semanticHash) ||
+                tickRate <= 0 ||
+                string.IsNullOrWhiteSpace(projectionRevision) ||
+                string.IsNullOrWhiteSpace(projectionSourceRevision) ||
+                string.IsNullOrWhiteSpace(projectionSemanticHash) ||
+                string.IsNullOrWhiteSpace(projectionContractHash) ||
+                string.IsNullOrWhiteSpace(worldRevision) ||
+                launcherVariantIndex < 0)
+            {
+                throw new ArgumentException(
+                    "Fixed input replay runtime identity is incomplete.");
+            }
+            ProgramId = programId.Trim();
+            ProgramHash = programHash.Trim();
+            SourceRevision = sourceRevision.Trim();
+            SemanticHash = semanticHash.Trim();
+            TickRate = tickRate;
+            ProjectionRevision = projectionRevision.Trim();
+            ProjectionSourceRevision = projectionSourceRevision.Trim();
+            ProjectionSemanticHash = projectionSemanticHash.Trim();
+            ProjectionContractHash = projectionContractHash.Trim();
+            WorldRevision = worldRevision.Trim();
+            LauncherVariantIndex = launcherVariantIndex;
+        }
+
+        internal string ProgramId { get; }
+        internal string ProgramHash { get; }
+        internal string SourceRevision { get; }
+        internal string SemanticHash { get; }
+        internal int TickRate { get; }
+        internal string ProjectionRevision { get; }
+        internal string ProjectionSourceRevision { get; }
+        internal string ProjectionSemanticHash { get; }
+        internal string ProjectionContractHash { get; }
+        internal string WorldRevision { get; }
+        internal int LauncherVariantIndex { get; }
+    }
+
     public readonly struct CharacterFixedInputTraceSummary
     {
         public CharacterFixedInputTraceSummary(
@@ -45,8 +101,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [InitializeOnLoad]
     public static class CharacterFixedInputTraceWorkflow
     {
-        const string Schema = "character-fixed-input-trace/2";
-        const string ReplayProofSchema = "character-fixed-input-replay-proof/2";
+        const string Schema = "character-fixed-input-trace/3";
+        const string ReplayProofSchema = "character-fixed-input-replay-proof/4";
         const string ReplayTickDriveMode = "one-fixed-tick-per-presentation-frame";
         const string ReplayPresentationClockMode = "logic-locked";
         const string StandardReplayOperation = "replay";
@@ -70,7 +126,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Running = 4
         }
 
-        static int s_RecordingVariantIndex;
         static bool s_ReplayOwnsSampling;
         static bool s_ReplayWaitingForSampling;
         static bool s_ReplayFinalizing;
@@ -83,6 +138,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string s_LastPresentationSchedulePath = string.Empty;
         static TraceDocument s_PendingReplayDocument;
         static TraceDocument s_ActiveReplayDocument;
+        static CharacterFixedInputReplayRuntimeIdentity
+            s_ActiveReplayRuntimeIdentity;
         static FixedCharacterInputReplayEvidence s_LastReplayEvidence;
         static string s_LastReplayProofPath = string.Empty;
         static string s_LastReplayComparison = string.Empty;
@@ -160,9 +217,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!IsRecording)
                 throw new InvalidOperationException("Canonical Fixed input recording is not active.");
             FixedCharacterInputTrace trace = FixedCharacterInputTraceModule.StopRecording();
-            TraceDocument document = CreateDocument(
-                trace,
-                s_RecordingVariantIndex);
+            TraceDocument document = CreateDocument(trace);
             string path = SaveDocument(document);
             s_LastTracePath = path;
             s_LastTraceId = trace.TraceId;
@@ -250,6 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ReleaseReplayTickDrive();
             s_PendingReplayDocument = null;
             s_ActiveReplayDocument = null;
+            s_ActiveReplayRuntimeIdentity = default;
             s_LastReplayEvidence = null;
             if (s_ReplayOwnsSampling &&
                 (CharacterFootLandingPredictionSampler.IsCapturing ||
@@ -306,10 +362,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastFailure = string.Empty;
             s_LastTracePath = path;
             s_LastTraceId = document.trace_id;
+            GameplayLabLauncherState launcherState =
+                RequireLauncher().ReadState();
             ArmPending(
                 operation,
                 document.trace_id,
-                document.launcher_variant_index);
+                launcherState.SelectedVariantIndex);
             s_LastStatus =
                 $"Restarting Gameplay Lab for {operation} trace {document.trace_id}.";
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -330,8 +388,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             RequirePoseMatchesBody(pose, initialBody);
-            s_RecordingVariantIndex = EditorPrefs.GetInt(PendingVariantKey, -1);
-            if (s_RecordingVariantIndex < 0)
+            if (EditorPrefs.GetInt(PendingVariantKey, -1) < 0)
                 throw new InvalidOperationException("Canonical Fixed input recording has no Gameplay Lab variant identity.");
             if (host.SessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
                 return;
@@ -356,26 +413,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     return;
                 }
-                RequireBodyEquals(
-                    initialBody,
-                    trace.StartBody,
-                    "Replay Session InitialBody does not match the trace canonical start body.");
-                float positionError = Vector3.Distance(
-                    current.Position,
-                    document.start_pose.Position);
-                float yawError = Mathf.Abs(Mathf.DeltaAngle(current.yaw_degrees, document.start_pose.yaw_degrees));
-                if (positionError > PositionTolerance || yawError > YawTolerance)
-                {
-                    throw new InvalidOperationException(
-                        $"Replay start state does not match the recording. PositionError={positionError:0.###}, YawError={yawError:0.###}.");
-                }
+                RequirePoseMatchesBody(current, initialBody);
+                s_ActiveReplayRuntimeIdentity =
+                    ResolveReplayRuntimeIdentity(host);
                 ResetPendingDeadline();
                 CharacterFootLandingPredictionSampler.StartControlledSampling();
                 s_ReplayOwnsSampling = true;
                 s_ReplayWaitingForSampling = true;
                 EditorApplication.isPaused = false;
                 s_LastStatus =
-                    $"Canonical start body restored. Waiting for Foot Landing sampling before replaying {trace.Frames.Count} Fixed input frames.";
+                    $"Current canonical start body registered. Waiting for Foot Landing sampling before replaying {trace.Frames.Count} Fixed input frames.";
             }
             if (CharacterFootLandingPredictionSampler.IsStartPending)
                 return;
@@ -608,6 +655,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastPresentationSchedulePath = schedule.Save();
             s_ActivePresentationSchedule = schedule;
             s_ActiveReplayDocument = null;
+            s_ActiveReplayRuntimeIdentity = default;
             s_LastReplayEvidence = null;
             s_LastPresentationScheduleFrames = null;
         }
@@ -641,6 +689,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFixedInputScheduledReplayProofResult result =
                 CharacterFixedInputScheduledReplayProof.Publish(
                     in binding,
+                    in s_ActiveReplayRuntimeIdentity,
                     schedule,
                     evidence,
                     scheduleFrames,
@@ -650,6 +699,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastReplayProofPath = result.Path;
             s_LastReplayComparison = result.Summary;
             s_ActiveReplayDocument = null;
+            s_ActiveReplayRuntimeIdentity = default;
             s_LastReplayEvidence = null;
             s_LastPresentationScheduleFrames = null;
             if (!result.Matched)
@@ -683,6 +733,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CultureInfo.InvariantCulture),
                 trace_id = trace.trace_id,
                 trace_content_hash = trace.content_hash,
+                runtime_identity = BuildRuntimeIdentityDocument(
+                    in s_ActiveReplayRuntimeIdentity),
                 start_body_hash = evidence.StartBodyHash.ToString(),
                 replay_start_tick = evidence.ReplayStartTick,
                 frame_count = evidence.Frames.Count,
@@ -747,8 +799,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(
                     DescribeReplayComparisonFailure(document.comparison, path));
             s_ActiveReplayDocument = null;
+            s_ActiveReplayRuntimeIdentity = default;
             s_LastReplayEvidence = null;
         }
+
+        static ReplayRuntimeIdentityDocument BuildRuntimeIdentityDocument(
+            in CharacterFixedInputReplayRuntimeIdentity identity) =>
+            new ReplayRuntimeIdentityDocument
+            {
+                program_id = identity.ProgramId,
+                program_hash = identity.ProgramHash,
+                source_revision = identity.SourceRevision,
+                semantic_hash = identity.SemanticHash,
+                tick_rate = identity.TickRate,
+                projection_revision = identity.ProjectionRevision,
+                projection_source_revision = identity.ProjectionSourceRevision,
+                projection_semantic_hash = identity.ProjectionSemanticHash,
+                projection_contract_hash = identity.ProjectionContractHash,
+                world_revision = identity.WorldRevision,
+                launcher_variant_index = identity.LauncherVariantIndex
+            };
 
         static ReplayFootSampleDocument ReadReplayFootSample()
         {
@@ -833,6 +903,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "trace_content_hash",
                 baseline.trace_content_hash,
                 current.trace_content_hash);
+            AddReplayRuntimeIdentityMismatches(
+                aggregate,
+                baseline.runtime_identity,
+                current.runtime_identity);
             AddReplayMismatch(
                 aggregate,
                 "start_body_hash",
@@ -940,6 +1014,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
         }
 
+        static void AddReplayRuntimeIdentityMismatches(
+            ICollection<ReplayMismatchDocument> mismatches,
+            ReplayRuntimeIdentityDocument baseline,
+            ReplayRuntimeIdentityDocument candidate)
+        {
+            AddReplayMismatch(mismatches, "program_id", baseline.program_id, candidate.program_id);
+            AddReplayMismatch(mismatches, "program_hash", baseline.program_hash, candidate.program_hash);
+            AddReplayMismatch(mismatches, "source_revision", baseline.source_revision, candidate.source_revision);
+            AddReplayMismatch(mismatches, "semantic_hash", baseline.semantic_hash, candidate.semantic_hash);
+            AddReplayMismatch(
+                mismatches,
+                "runtime_tick_rate",
+                baseline.tick_rate.ToString(CultureInfo.InvariantCulture),
+                candidate.tick_rate.ToString(CultureInfo.InvariantCulture));
+            AddReplayMismatch(mismatches, "projection_revision", baseline.projection_revision, candidate.projection_revision);
+            AddReplayMismatch(mismatches, "projection_source_revision", baseline.projection_source_revision, candidate.projection_source_revision);
+            AddReplayMismatch(mismatches, "projection_semantic_hash", baseline.projection_semantic_hash, candidate.projection_semantic_hash);
+            AddReplayMismatch(mismatches, "projection_contract_hash", baseline.projection_contract_hash, candidate.projection_contract_hash);
+            AddReplayMismatch(mismatches, "world_revision", baseline.world_revision, candidate.world_revision);
+            AddReplayMismatch(
+                mismatches,
+                "launcher_variant_index",
+                baseline.launcher_variant_index.ToString(CultureInfo.InvariantCulture),
+                candidate.launcher_variant_index.ToString(CultureInfo.InvariantCulture));
+        }
+
         static void AddReplayMismatch(
             ICollection<ReplayMismatchDocument> mismatches,
             string field,
@@ -989,7 +1089,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 document.frame_count <= 0 ||
                 document.frames == null ||
                 document.frames.Length != document.frame_count ||
-                document.foot_sample == null)
+                document.foot_sample == null ||
+                !IsRuntimeIdentityValid(document.runtime_identity))
             {
                 throw new InvalidDataException(
                     "Fixed input replay proof document is incomplete.");
@@ -1007,6 +1108,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AppendHash(hash, document.created_utc);
             AppendHash(hash, document.trace_id);
             AppendHash(hash, document.trace_content_hash);
+            AppendRuntimeIdentityHash(hash, document.runtime_identity);
             AppendHash(hash, document.start_body_hash);
             AppendHash(
                 hash,
@@ -1048,6 +1150,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return builder.ToString();
         }
 
+        static bool IsRuntimeIdentityValid(
+            ReplayRuntimeIdentityDocument identity) =>
+            identity != null &&
+            !string.IsNullOrWhiteSpace(identity.program_id) &&
+            !string.IsNullOrWhiteSpace(identity.program_hash) &&
+            !string.IsNullOrWhiteSpace(identity.source_revision) &&
+            !string.IsNullOrWhiteSpace(identity.semantic_hash) &&
+            identity.tick_rate > 0 &&
+            !string.IsNullOrWhiteSpace(identity.projection_revision) &&
+            !string.IsNullOrWhiteSpace(identity.projection_source_revision) &&
+            !string.IsNullOrWhiteSpace(identity.projection_semantic_hash) &&
+            !string.IsNullOrWhiteSpace(identity.projection_contract_hash) &&
+            !string.IsNullOrWhiteSpace(identity.world_revision) &&
+            identity.launcher_variant_index >= 0;
+
+        static void AppendRuntimeIdentityHash(
+            IncrementalHash hash,
+            ReplayRuntimeIdentityDocument identity)
+        {
+            AppendHash(hash, identity.program_id);
+            AppendHash(hash, identity.program_hash);
+            AppendHash(hash, identity.source_revision);
+            AppendHash(hash, identity.semantic_hash);
+            AppendHash(hash, identity.tick_rate.ToString(CultureInfo.InvariantCulture));
+            AppendHash(hash, identity.projection_revision);
+            AppendHash(hash, identity.projection_source_revision);
+            AppendHash(hash, identity.projection_semantic_hash);
+            AppendHash(hash, identity.projection_contract_hash);
+            AppendHash(hash, identity.world_revision);
+            AppendHash(hash, identity.launcher_variant_index.ToString(CultureInfo.InvariantCulture));
+        }
+
         static string FindLatestReplayProofPath(string directory) =>
             Directory.EnumerateFiles(
                     directory,
@@ -1063,7 +1197,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "..",
                     "Temp",
                     "CharacterInputReplayProofs",
-                    "v2")),
+                    "v4")),
                 traceId);
 
         static void StartPendingPlayMode()
@@ -1146,6 +1280,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_ReplayWaitingForSampling = false;
             s_PendingReplayDocument = null;
             s_ActiveReplayDocument = null;
+            s_ActiveReplayRuntimeIdentity = default;
             s_LastReplayEvidence = null;
             s_LastPresentationScheduleFrames = null;
             StopPresentationScheduleRun();
@@ -1171,6 +1306,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_ActiveReplayOperation = StandardReplayOperation;
             s_PendingReplayDocument = null;
             s_ActiveReplayDocument = null;
+            s_ActiveReplayRuntimeIdentity = default;
             s_LastReplayEvidence = null;
             s_LastPresentationScheduleFrames = null;
             s_ActivePresentationSchedule = null;
@@ -1229,6 +1365,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return false;
         }
 
+        static CharacterFixedInputReplayRuntimeIdentity
+            ResolveReplayRuntimeIdentity(FixedCharacterHost host)
+        {
+            if (host == null || !host.ProgramAsset ||
+                !host.ProjectionAsset || !host.SessionHost ||
+                !host.SessionHost.Composition)
+            {
+                throw new InvalidOperationException(
+                    "Fixed input replay runtime products are unavailable.");
+            }
+            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program =
+                host.ProgramAsset.Load();
+            return new CharacterFixedInputReplayRuntimeIdentity(
+                program.Manifest.ProgramId.Value,
+                program.ProgramHash.ToString(),
+                program.Manifest.SourceRevision.Value,
+                program.Manifest.SemanticHash.ToString(),
+                program.Manifest.TickRate,
+                host.ProjectionAsset.ProjectionRevision,
+                host.ProjectionAsset.SourceRevision,
+                host.ProjectionAsset.SemanticHash,
+                host.ProjectionAsset.ContractHash,
+                host.SessionHost.Composition.WorldRevision,
+                EditorPrefs.GetInt(PendingVariantKey, -1));
+        }
+
         static PoseRecord PoseFromBody(FixedWorldBodyState body) => new PoseRecord
         {
             x = body.Position.X.ToSingle(),
@@ -1254,26 +1416,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static void RequireBodyEquals(
-            FixedWorldBodyState actual,
-            FixedWorldBodyState expected,
-            string message)
-        {
-            if (actual.ActorId != expected.ActorId ||
-                actual.Position != expected.Position ||
-                actual.Yaw != expected.Yaw ||
-                actual.Velocity != expected.Velocity ||
-                actual.VerticalVelocity != expected.VerticalVelocity ||
-                actual.Grounded != expected.Grounded ||
-                actual.Collision != expected.Collision)
-            {
-                throw new InvalidOperationException(message);
-            }
-        }
-
-        static TraceDocument CreateDocument(
-            FixedCharacterInputTrace trace,
-            int launcherVariantIndex)
+        static TraceDocument CreateDocument(FixedCharacterInputTrace trace)
         {
             var document = new TraceDocument
             {
@@ -1281,12 +1424,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 trace_id = trace.TraceId,
                 created_utc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                 actor_id = trace.ActorId.Value,
-                program_hash = trace.ProgramHash.ToString(),
                 tick_rate = trace.TickRate,
                 first_tick = trace.Frames[0].Tick.Value,
                 frame_count = trace.Frames.Count,
-                launcher_variant_index = launcherVariantIndex,
-                start_pose = PoseFromBody(trace.StartBody),
                 frames = new TraceFrameDocument[trace.Frames.Count]
             };
             for (int i = 0; i < trace.Frames.Count; i++)
@@ -1328,27 +1468,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return new FixedCharacterInputTrace(
                 document.trace_id,
                 actorId,
-                new ProgramHash(new StableHash(document.program_hash)),
                 document.tick_rate,
-                BuildStartBody(document, actorId),
                 frames);
         }
-
-        static FixedWorldBodyState BuildStartBody(
-            TraceDocument document,
-            ActorId actorId) =>
-            new FixedWorldBodyState(
-                actorId,
-                new FixedVector3(
-                    FixedScalar.FromSingle(document.start_pose.x),
-                    FixedScalar.FromSingle(document.start_pose.y),
-                    FixedScalar.FromSingle(document.start_pose.z)),
-                new FixedYaw(FixedScalar.FromSingle(
-                    document.start_pose.yaw_degrees)),
-                FixedVector3.Zero,
-                FixedScalar.Zero,
-                true,
-                ThirdPersonSimulation.Fixed.WorldCollisionSummary.Below);
 
         static string SaveDocument(TraceDocument document)
         {
@@ -1370,18 +1492,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TraceDocument document = JsonConvert.DeserializeObject<TraceDocument>(File.ReadAllText(path, Encoding.UTF8));
             if (document == null || !string.Equals(document.schema, Schema, StringComparison.Ordinal) ||
                 string.IsNullOrWhiteSpace(document.trace_id) || string.IsNullOrWhiteSpace(document.actor_id) ||
-                string.IsNullOrWhiteSpace(document.program_hash) || document.tick_rate <= 0 ||
+                document.tick_rate <= 0 || document.first_tick == 0 ||
                 document.frame_count <= 0 || document.frames == null ||
-                document.frames.Length != document.frame_count || document.start_pose == null)
+                document.frames.Length != document.frame_count)
             {
                 throw new InvalidDataException("Canonical Fixed input trace document is incomplete.");
             }
-            if (document.launcher_variant_index < 0)
-                throw new InvalidDataException("Canonical Fixed input trace Gameplay Lab variant is invalid.");
             for (int i = 0; i < document.frames.Length; i++)
             {
                 TraceFrameDocument frame = document.frames[i];
                 if (frame == null || frame.simulation_tick == 0 ||
+                    frame.simulation_tick != document.first_tick + (ulong)i ||
                     string.IsNullOrWhiteSpace(frame.input_payload_base64))
                 {
                     throw new InvalidDataException($"Canonical Fixed input trace frame {i} is incomplete.");
@@ -1406,15 +1527,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AppendHash(hash, document.trace_id);
             AppendHash(hash, document.created_utc);
             AppendHash(hash, document.actor_id);
-            AppendHash(hash, document.program_hash);
             AppendHash(hash, document.tick_rate.ToString(CultureInfo.InvariantCulture));
             AppendHash(hash, document.first_tick.ToString(CultureInfo.InvariantCulture));
             AppendHash(hash, document.frame_count.ToString(CultureInfo.InvariantCulture));
-            AppendHash(hash, document.launcher_variant_index.ToString(CultureInfo.InvariantCulture));
-            AppendHash(hash, document.start_pose.x.ToString("R", CultureInfo.InvariantCulture));
-            AppendHash(hash, document.start_pose.y.ToString("R", CultureInfo.InvariantCulture));
-            AppendHash(hash, document.start_pose.z.ToString("R", CultureInfo.InvariantCulture));
-            AppendHash(hash, document.start_pose.yaw_degrees.ToString("R", CultureInfo.InvariantCulture));
             for (int i = 0; i < document.frames.Length; i++)
             {
                 AppendHash(
@@ -1494,10 +1609,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 document.trace_id,
                 document.content_hash,
                 document.actor_id,
-                document.program_hash,
-                document.tick_rate,
+                s_ActiveReplayRuntimeIdentity.ProgramHash,
+                s_ActiveReplayRuntimeIdentity.TickRate,
                 document.frame_count,
-                document.launcher_variant_index);
+                s_ActiveReplayRuntimeIdentity.LauncherVariantIndex);
 
         static void BeginReplayTickDrive(int frameCount)
         {
@@ -1669,6 +1784,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string created_utc;
             public string trace_id;
             public string trace_content_hash;
+            public ReplayRuntimeIdentityDocument runtime_identity;
             public string start_body_hash;
             public ulong replay_start_tick;
             public int frame_count;
@@ -1680,6 +1796,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public ReplayProofFrameDocument[] frames;
             public ReplayComparisonDocument comparison;
             public string proof_hash;
+        }
+
+        [Serializable]
+        sealed class ReplayRuntimeIdentityDocument
+        {
+            public string program_id;
+            public string program_hash;
+            public string source_revision;
+            public string semantic_hash;
+            public int tick_rate;
+            public string projection_revision;
+            public string projection_source_revision;
+            public string projection_semantic_hash;
+            public string projection_contract_hash;
+            public string world_revision;
+            public int launcher_variant_index;
         }
 
         [Serializable]
@@ -1752,12 +1884,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string trace_id;
             public string created_utc;
             public string actor_id;
-            public string program_hash;
             public int tick_rate;
             public ulong first_tick;
             public int frame_count;
-            public int launcher_variant_index;
-            public PoseRecord start_pose;
             public TraceFrameDocument[] frames;
             public string content_hash;
         }

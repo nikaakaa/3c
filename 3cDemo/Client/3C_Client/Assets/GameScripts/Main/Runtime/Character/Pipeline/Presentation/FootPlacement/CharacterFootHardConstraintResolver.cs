@@ -48,29 +48,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootConstraintState.UnlockedSupport
                     when swing.Accepted:
                 {
-                    if (!frame.CurrentGroundFloor.Accepted)
-                    {
-                        return new CharacterFootHardConstraintResult(
-                            false,
-                            false,
-                            CharacterFootSafetyFloorOwner.None,
-                            0,
-                            0,
-                            correction,
-                            default,
-                            correction);
-                    }
                     Vector3 minimum =
                         CharacterFootConstraintMath.ResolvePointMinimumCorrection(
                         frame.AnimatedFoot,
-                        frame.CurrentGroundFloor.Point,
+                        swing.EnvelopeSample,
                         frame.ComponentUp);
                     return Result(
                         true,
                         true,
-                        CharacterFootSafetyFloorOwner.CurrentGroundFloor,
-                        frame.CurrentGroundFloor.SurfaceIdentity,
+                        CharacterFootSafetyFloorOwner.GroundPathEnvelope,
                         0,
+                        swing.GroundPathInputIdentity,
                         correction,
                         minimum,
                         frame.ComponentUp);

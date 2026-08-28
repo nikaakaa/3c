@@ -300,14 +300,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value["lateApproachLandingRevision"]?
                             .ToObject<
                                 CharacterFootLateApproachLandingRevisionAnalysis>(),
-                    swingCurrentFloorCatchup =
-                        value["swingCurrentFloorCatchup"]?
-                            .ToObject<
-                                CharacterFootSwingCurrentFloorCatchupAnalysis>(),
-                    swingActualFootEnvelopeCounterfactual =
-                        value["swingActualFootEnvelopeCounterfactual"]?
-                            .ToObject<
-                                CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis>(),
                     landingObservation = value["landingObservation"]?
                         .ToObject<CharacterFootLandingObservationAnalysis>(),
                     visibleOutputJump =
@@ -483,10 +475,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             swingToLandingFloorHandoff;
         public CharacterFootLateApproachLandingRevisionAnalysis
             lateApproachLandingRevision;
-        public CharacterFootSwingCurrentFloorCatchupAnalysis
-            swingCurrentFloorCatchup;
-        public CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
-            swingActualFootEnvelopeCounterfactual;
         public CharacterFootLandingObservationAnalysis landingObservation;
         public CharacterFootVisibleOutputJumpAnalysis visibleOutputJump;
     }

@@ -409,30 +409,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rightSelectedStep.ConstraintWeight)
                 .WithPlantConfidence(
                     frame.Pose.RightFootSteps.Kinematics.PlantConfidence);
-            CharacterFootLandingPredictionSettings landingSettings =
-                m_Settings.LandingPrediction;
-            CharacterFootCurrentGroundFloorResult leftCurrentGroundFloor =
-                leftSwingMotion.Accepted
-                    ? CharacterFootCurrentGroundFloorResolver.Resolve(
-                        CharacterFootSide.Left,
-                        (pose.Left.HeelPosition + pose.Left.ToePosition) * 0.5f,
-                        componentUp,
-                        in landingSettings,
-                        m_WorldQuery)
-                    : CharacterFootCurrentGroundFloorResult.SwingUnavailable(
-                        CharacterFootSide.Left);
-            CharacterFootCurrentGroundFloorResult rightCurrentGroundFloor =
-                rightSwingMotion.Accepted
-                    ? CharacterFootCurrentGroundFloorResolver.Resolve(
-                        CharacterFootSide.Right,
-                        (pose.Right.HeelPosition + pose.Right.ToePosition) * 0.5f,
-                        componentUp,
-                        in landingSettings,
-                        m_WorldQuery)
-                    : CharacterFootCurrentGroundFloorResult.SwingUnavailable(
-                        CharacterFootSide.Right);
-            left = left.WithCurrentGroundFloor(in leftCurrentGroundFloor);
-            right = right.WithCurrentGroundFloor(in rightCurrentGroundFloor);
             bool hasSelectedSwing = CharacterFootStrideHipsBuilder.TrySelectSwing(
                 in leftSelectedStep,
                 in rightSelectedStep,
@@ -447,7 +423,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Left,
                 in leftSwingMotion,
-                in leftCurrentGroundFloor,
                 hasLeftContactLanding,
                 in leftContactLanding,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction),
@@ -462,7 +437,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Right,
                 in rightSwingMotion,
-                in rightCurrentGroundFloor,
                 hasRightContactLanding,
                 in rightContactLanding,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction),

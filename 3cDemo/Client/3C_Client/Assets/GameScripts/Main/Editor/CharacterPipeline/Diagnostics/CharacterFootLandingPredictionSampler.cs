@@ -160,13 +160,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "GroundPathFirstInvalidSegmentBottomX,GroundPathFirstInvalidSegmentBottomY,GroundPathFirstInvalidSegmentBottomZ," +
             "GroundPathFirstInvalidSegmentTopX,GroundPathFirstInvalidSegmentTopY,GroundPathFirstInvalidSegmentTopZ," +
             "GroundPathFirstInvalidSegmentVerticalDistance,GroundPathMaximumReachableVerticalEdge,GroundEnvelopeVertexCount," +
-            "CurrentFloorState,CurrentFloorRejectReason,CurrentFloorQueryPurpose," +
-            "CurrentFloorQueryOriginX,CurrentFloorQueryOriginY,CurrentFloorQueryOriginZ," +
-            "CurrentFloorQueryDirectionX,CurrentFloorQueryDirectionY,CurrentFloorQueryDirectionZ," +
-            "CurrentFloorQueryMaxDistance,CurrentFloorQueryRadius,CurrentFloorQueryLayerMask,CurrentFloorQueryMinimumNormalDot," +
-            "CurrentFloorAccepted,CurrentFloorSurfaceIdentity," +
-            "CurrentFloorPointX,CurrentFloorPointY,CurrentFloorPointZ," +
-            "CurrentFloorNormalX,CurrentFloorNormalY,CurrentFloorNormalZ,CurrentFloorDistance," +
             "FootMotionState,FootMotionRejectReason,FootMotionLandingEventIdentity,FootMotionGroundPathInputIdentity," +
             "FootMotionDistance,FootMotionProgress," +
             "FootMotionOriginalSoleX,FootMotionOriginalSoleY,FootMotionOriginalSoleZ," +
@@ -188,8 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionActualEnvelopeHasVerticalEdge,FootMotionActualEnvelopeHasMultipleHeights,FootMotionActualEnvelopeAmbiguous," +
             "FootMotionActualEnvelopeCounterfactualState," +
             "FootMotionActualProgressEnvelopeCorrectionAvailable,FootMotionActualProgressEnvelopeMinimumCorrection," +
-            "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget,FootMotionActualProgressEnvelopeCurrentFloorComparisonAvailable," +
-            "FootMotionActualProgressEnvelopeRemainingBelowCurrentFloor,FootMotionActualProgressEnvelopeCoversCurrentFloor," +
+            "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget," +
             "FootMotionLandingPredictionError,FootMotionPlantConfidence," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
@@ -1882,24 +1874,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, ground.FirstInvalidSegmentVerticalDistance);
             Add(row, ground.MaximumReachableVerticalEdge);
             Add(row, ground.EnvelopeVertexCount);
-            CharacterFootCurrentGroundFloorDiagnostics currentFloor =
-                foot.CurrentGroundFloor;
-            CharacterFootPlacementQueryRequest currentFloorQuery =
-                currentFloor.Query;
-            Add(row, currentFloor.State.ToString());
-            Add(row, currentFloor.RejectReason.ToString());
-            Add(row, currentFloorQuery.Purpose.ToString());
-            Add(row, currentFloorQuery.Origin);
-            Add(row, currentFloorQuery.Direction);
-            Add(row, currentFloorQuery.MaximumDistance);
-            Add(row, currentFloorQuery.Radius);
-            Add(row, currentFloorQuery.LayerMask);
-            Add(row, currentFloorQuery.MinimumGroundNormalDot);
-            Add(row, currentFloor.Accepted);
-            Add(row, currentFloor.SurfaceIdentity);
-            Add(row, currentFloor.Point);
-            Add(row, currentFloor.Normal);
-            Add(row, currentFloor.Distance);
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
             CharacterFullBodyIkGoal footGoal = foot.Goal;
             Add(row, motion.State.ToString());
@@ -2021,35 +1995,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         actualEnvelopeMinimumCorrection -
                         builderSwingTargetAlongUp)
                     : 0f;
-            bool actualEnvelopeCurrentFloorComparisonAvailable =
-                actualEnvelopeCorrectionAvailable &&
-                motion.OutputStagesAvailable &&
-                motion.SafetyFloorAvailable &&
-                motion.SafetyFloorOwner ==
-                CharacterFootSafetyFloorOwner.CurrentGroundFloor;
-            float actualEnvelopeRemainingBelowCurrentFloor = 0f;
-            bool actualEnvelopeCoversCurrentFloor = false;
-            if (actualEnvelopeCurrentFloorComparisonAvailable)
-            {
-                float counterfactualBuilderTarget = Mathf.Max(
-                    builderSwingTargetAlongUp,
-                    actualEnvelopeMinimumCorrection);
-                float currentFloorMinimum = Vector3.Dot(
-                    motion.SafetyFloorMinimumCorrection,
-                    motionUp);
-                actualEnvelopeRemainingBelowCurrentFloor = Mathf.Max(
-                    0f,
-                    currentFloorMinimum - counterfactualBuilderTarget);
-                actualEnvelopeCoversCurrentFloor =
-                    actualEnvelopeRemainingBelowCurrentFloor <=
-                    ActualEnvelopeHeightEpsilonMeters;
-            }
             Add(row, actualEnvelopeCorrectionAvailable);
             Add(row, actualEnvelopeMinimumCorrection);
             Add(row, actualEnvelopeAdvanceAboveBuilderTarget);
-            Add(row, actualEnvelopeCurrentFloorComparisonAvailable);
-            Add(row, actualEnvelopeRemainingBelowCurrentFloor);
-            Add(row, actualEnvelopeCoversCurrentFloor);
             Add(row, motion.LandingPredictionError);
             Add(row, motion.PlantConfidence);
             Add(row, motion.CorrectedSole);

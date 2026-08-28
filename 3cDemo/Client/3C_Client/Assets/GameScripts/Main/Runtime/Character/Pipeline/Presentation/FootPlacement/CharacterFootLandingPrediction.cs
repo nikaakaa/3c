@@ -429,7 +429,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QuerySelection = querySelection;
             Goal = goal;
             GroundPath = default;
-            CurrentGroundFloor = default;
             FootMotion = default;
         }
 
@@ -461,7 +460,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QuerySelection = source.QuerySelection;
             Goal = source.Goal;
             GroundPath = groundPath;
-            CurrentGroundFloor = source.CurrentGroundFloor;
             FootMotion = source.FootMotion;
         }
 
@@ -496,7 +494,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QuerySelection = source.QuerySelection;
             Goal = goal;
             GroundPath = source.GroundPath;
-            CurrentGroundFloor = source.CurrentGroundFloor;
             FootMotion = source.FootMotion;
         }
 
@@ -529,40 +526,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QuerySelection = source.QuerySelection;
             Goal = goal;
             GroundPath = source.GroundPath;
-            CurrentGroundFloor = source.CurrentGroundFloor;
             FootMotion = footMotion;
-        }
-
-        CharacterFootLandingPredictionResult(
-            in CharacterFootLandingPredictionResult source,
-            in CharacterFootCurrentGroundFloorResult currentGroundFloor)
-        {
-            Side = source.Side;
-            State = source.State;
-            RejectReason = source.RejectReason;
-            StepSource = source.StepSource;
-            LandingEventIdentity = source.LandingEventIdentity;
-            TrajectoryGeneration = source.TrajectoryGeneration;
-            LandingConfidence = source.LandingConfidence;
-            TimeToLandingSeconds = source.TimeToLandingSeconds;
-            RootLocalLanding = source.RootLocalLanding;
-            FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
-            FutureBodyTranslationSourceIdentity = source.FutureBodyTranslationSourceIdentity;
-            FutureBodyRelativeTranslation = source.FutureBodyRelativeTranslation;
-            FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
-            CurrentAnimatedSole = source.CurrentAnimatedSole;
-            RawLandingCandidate = source.RawLandingCandidate;
-            Observation = source.Observation;
-            Query = source.Query;
-            SurfaceIdentity = source.SurfaceIdentity;
-            LandingPoint = source.LandingPoint;
-            LandingNormal = source.LandingNormal;
-            QueryDistance = source.QueryDistance;
-            QuerySelection = source.QuerySelection;
-            Goal = source.Goal;
-            GroundPath = source.GroundPath;
-            CurrentGroundFloor = currentGroundFloor;
-            FootMotion = source.FootMotion;
         }
         public CharacterFootSide Side { get; }
         public CharacterFootLandingPredictionState State { get; }
@@ -591,7 +555,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
         public CharacterFullBodyIkGoal Goal { get; }
         internal CharacterFootGroundPathResult GroundPath { get; }
-        internal CharacterFootCurrentGroundFloorResult CurrentGroundFloor { get; }
         internal CharacterFootSwingMotionResult FootMotion { get; }
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
 
@@ -609,12 +572,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingPredictionResult WithGroundPath(
             in CharacterFootGroundPathResult groundPath) =>
             new CharacterFootLandingPredictionResult(in this, in groundPath);
-
-        internal CharacterFootLandingPredictionResult WithCurrentGroundFloor(
-            in CharacterFootCurrentGroundFloorResult currentGroundFloor) =>
-            new CharacterFootLandingPredictionResult(
-                in this,
-                in currentGroundFloor);
 
         internal CharacterFootLandingPredictionResult WithFootMotion(
             in CharacterFootSwingMotionResult footMotion,
@@ -661,13 +618,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceToePosition = sourcePose.ToePosition;
             StepCandidateSelection = stepCandidateSelection;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
-            CharacterFootCurrentGroundFloorResult currentGroundFloor =
-                result.CurrentGroundFloor;
             CharacterFootSwingMotionResult footMotion = result.FootMotion;
             GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
-            CurrentGroundFloor =
-                new CharacterFootCurrentGroundFloorDiagnostics(
-                    in currentGroundFloor);
             FootMotion = new CharacterFootSwingMotionDiagnostics(in footMotion);
         }
 
@@ -703,7 +655,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SourceToePosition { get; }
         public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
-        public CharacterFootCurrentGroundFloorDiagnostics CurrentGroundFloor { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
         public bool RawLandingAvailable =>
             RejectReason == CharacterFootLandingPredictionRejectReason.None ||
@@ -1045,151 +996,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             s_ByRoot.TryGetValue(rootInstanceId, out diagnostics);
 
         internal static void Remove(int rootInstanceId) => s_ByRoot.Remove(rootInstanceId);
-    }
-
-    public enum CharacterFootCurrentGroundFloorState : byte
-    {
-        None = 0,
-        Rejected = 1,
-        Accepted = 2
-    }
-
-    public enum CharacterFootCurrentGroundFloorRejectReason : byte
-    {
-        None = 0,
-        SwingUnavailable = 1,
-        InvalidRequest = 2,
-        NoHit = 3,
-        CapacityExceeded = 4
-    }
-
-    internal readonly struct CharacterFootCurrentGroundFloorResult
-    {
-        internal CharacterFootCurrentGroundFloorResult(
-            CharacterFootSide side,
-            CharacterFootCurrentGroundFloorState state,
-            CharacterFootCurrentGroundFloorRejectReason rejectReason,
-            in CharacterFootPlacementQueryRequest query,
-            in CharacterFootLandingSupport support)
-        {
-            Side = side;
-            State = state;
-            RejectReason = rejectReason;
-            Query = query;
-            SurfaceIdentity = support.SurfaceIdentity;
-            Point = support.Point;
-            Normal = support.Normal;
-            Distance = support.Distance;
-        }
-
-        internal CharacterFootSide Side { get; }
-        internal CharacterFootCurrentGroundFloorState State { get; }
-        internal CharacterFootCurrentGroundFloorRejectReason RejectReason { get; }
-        internal CharacterFootPlacementQueryRequest Query { get; }
-        internal int SurfaceIdentity { get; }
-        internal Vector3 Point { get; }
-        internal Vector3 Normal { get; }
-        internal float Distance { get; }
-        internal bool Accepted => State == CharacterFootCurrentGroundFloorState.Accepted;
-
-        internal static CharacterFootCurrentGroundFloorResult SwingUnavailable(
-            CharacterFootSide side) =>
-            new CharacterFootCurrentGroundFloorResult(
-                side,
-                CharacterFootCurrentGroundFloorState.Rejected,
-                CharacterFootCurrentGroundFloorRejectReason.SwingUnavailable,
-                default,
-                default);
-    }
-
-    public readonly struct CharacterFootCurrentGroundFloorDiagnostics
-    {
-        internal CharacterFootCurrentGroundFloorDiagnostics(
-            in CharacterFootCurrentGroundFloorResult result)
-        {
-            Side = result.Side;
-            State = result.State;
-            RejectReason = result.RejectReason;
-            Query = result.Query;
-            SurfaceIdentity = result.SurfaceIdentity;
-            Point = result.Point;
-            Normal = result.Normal;
-            Distance = result.Distance;
-        }
-
-        public CharacterFootSide Side { get; }
-        public CharacterFootCurrentGroundFloorState State { get; }
-        public CharacterFootCurrentGroundFloorRejectReason RejectReason { get; }
-        public CharacterFootPlacementQueryRequest Query { get; }
-        public int SurfaceIdentity { get; }
-        public Vector3 Point { get; }
-        public Vector3 Normal { get; }
-        public float Distance { get; }
-        public bool Accepted => State == CharacterFootCurrentGroundFloorState.Accepted;
-    }
-
-    internal static class CharacterFootCurrentGroundFloorResolver
-    {
-        internal static CharacterFootCurrentGroundFloorResult Resolve(
-            CharacterFootSide side,
-            Vector3 currentAnimatedSole,
-            Vector3 componentUp,
-            in CharacterFootLandingPredictionSettings settings,
-            ICharacterFootLandingWorldQuery world)
-        {
-            if (world == null)
-                throw new ArgumentNullException(nameof(world));
-            if (side != CharacterFootSide.Left &&
-                side != CharacterFootSide.Right)
-                throw new ArgumentOutOfRangeException(nameof(side));
-            CharacterFootPlacementQueryRequest query = BuildQuery(
-                side,
-                currentAnimatedSole,
-                componentUp,
-                in settings);
-            CharacterFootLandingQueryResult result = world.Query(in query);
-            CharacterFootCurrentGroundFloorRejectReason rejectReason =
-                result.RejectReason switch
-                {
-                    CharacterFootLandingQueryRejectReason.None =>
-                        CharacterFootCurrentGroundFloorRejectReason.None,
-                    CharacterFootLandingQueryRejectReason.InvalidRequest =>
-                        CharacterFootCurrentGroundFloorRejectReason.InvalidRequest,
-                    CharacterFootLandingQueryRejectReason.NoHit =>
-                        CharacterFootCurrentGroundFloorRejectReason.NoHit,
-                    CharacterFootLandingQueryRejectReason.CapacityExceeded =>
-                        CharacterFootCurrentGroundFloorRejectReason.CapacityExceeded,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-            CharacterFootLandingSupport support = result.Support;
-            return new CharacterFootCurrentGroundFloorResult(
-                side,
-                result.Accepted
-                    ? CharacterFootCurrentGroundFloorState.Accepted
-                    : CharacterFootCurrentGroundFloorState.Rejected,
-                rejectReason,
-                in query,
-                in support);
-        }
-
-        static CharacterFootPlacementQueryRequest BuildQuery(
-            CharacterFootSide side,
-            Vector3 currentAnimatedSole,
-            Vector3 componentUp,
-            in CharacterFootLandingPredictionSettings settings)
-        {
-            Vector3 up = componentUp.normalized;
-            return new CharacterFootPlacementQueryRequest(
-                CharacterFootPlacementQueryShape.Sphere,
-                CharacterFootPlacementQueryPurpose.CurrentSwingFloor,
-                side == CharacterFootSide.Left ? 0 : 1,
-                currentAnimatedSole + up * settings.CastAbove,
-                -up,
-                settings.CastAbove + settings.CastBelow,
-                settings.SphereRadius,
-                settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot);
-        }
     }
 
     internal static class CharacterFootLandingPredictor

@@ -170,6 +170,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     false);
             }
+            if (formal.LockWeight <
+                1f - CharacterFootConstraintMath.GeometryEpsilon)
+            {
+                return Decision(
+                    CharacterFootTransitionReason.LockWeightReduced,
+                    discrete.State,
+                    CharacterFootConstraintState.Landing,
+                    CharacterFootLockResponse.None,
+                    CharacterFootAnchorCommand.Retain,
+                    false,
+                    false);
+            }
             CharacterFootLockResponse response = ResolveResponse(
                 formal.LockMode,
                 frame.FormalMotion.ContactStep.LandingEventIdentity,

@@ -10,6 +10,7 @@
 - [ ] 2.2 让选中Live Animation Source按同Contribution、Cycle、Normalized Time和Completion采样左右正式Foot Motion Sample
 - [ ] 2.3 把唯一typed Foot Motion Frame接入Foot Placement Pose Input，并严格校验Source与Contribution lineage
 - [ ] 2.4 对缺失、重复、旧binding、Event不一致和非有限值发布typed invalid，不读取旧Artifact或默认值补全
+- [ ] 2.5 让稳定Landing Event table正式保存PreSwing、Swing、Approach Contact与Landing边界，并由同Source/Cycle/Side/ordinal的Runtime Frame发布`InApproachContactToLanding`供Landing Commit消费
 
 ## 3. 收口Path换代与Floor顺序
 
@@ -21,13 +22,17 @@
 - [x] 3.6 把Swing硬Floor收敛为同一Accepted Ground Path Envelope，删除逐帧CurrentSwingFloor Query，并区分普通目标追踪与Envelope Clamp
 - [x] 3.7 扩展正式诊断事实，记录Revision原因、逐阶段Correction、Envelope clearance和Releasing到Swing转换结果
 - [x] 3.8 把采样包迁移为项目本地持久`Diagnostics/FootPlacementRuns/<run-id>/`下的每Frame/Side唯一主行与独立Ground Path几何表，删除Unity Temp写入和每个Contact/Envelope重复整套阶段列的旧展开行
-- [x] 3.9 让停止、队列失败和自动路线统一进入后台Finalizing，排空Writer、封存双表并运行唯一Analyzer/Publisher后再发布结果
+- [x] 3.9 让停止与队列失败统一进入后台Finalizing，排空Writer、封存双表并运行唯一Analyzer/Publisher后再发布结果
 - [x] 3.10 为每脚建立根事务所有的Landing Observation Key、Committed/Pending Page与双页Pool，相同Key复用已提交Accepted或Rejected结果
 - [x] 3.11 让超过正式累计阈值或Source/Cycle/Event/Profile/World lineage变化只执行一次canonical SphereCast并删除PreferredSurfaceIdentity选择行为
 - [x] 3.12 把Observation identity、World revision、cache state、query executed与canonical Raw Landing接入唯一facts/diagnosis链并删除Preferred旧口径
 - [x] 3.13 为Corin显式配置5厘米预测输入累计距离与1度Component Up变化阈值，阈值内复用Committed Observation，并在正式Sliding接触准入输入变化时刷新观测
 - [x] 3.14 让PreSwing与Swing消费同一Accepted Swing Motion和Ground Envelope，消除进入Swing首帧才补Path的Correction跳变
-- [ ] 3.15 在正式Current Contact Anchor与Next Landing Event所有权闭合后，让新查询的Surface变化只无条件换代NextSwingLanding
+- [ ] 3.15 在Tracking阶段让新查询的Surface变化只无条件换代NextSwingLanding，不得覆盖Current Contact Anchor或受LandingAcceptanceDistance保留
+- [ ] 3.16 把现有Landing Context收敛为`Empty / Tracking / Committed`所有权，Promotion只作为Current Contact Event的当帧输出事实，不建立第二状态机
+- [ ] 3.17 用正式`ApproachContactToLanding`把同Event最新Accepted NextSwingLanding提交为Committed，并禁止后续普通Prediction查询、换点、切Surface或重建Ground Path
+- [ ] 3.18 在Approach Contact没有同Event Accepted Landing时发布typed unavailable，不用Animated Sole、旧Event、Rejected Observation或默认Surface建立承诺
+- [ ] 3.19 让Tracking的新Rejected Observation保持自身Key和拒绝结果，同时允许既有同Event Accepted Landing继续保留原始lineage，禁止把保留Landing改名成本次查询命中
 
 ## 4. 拆分State、Transition、Interpolation与Hard Constraint
 
@@ -51,6 +56,13 @@
 - [ ] 5.3 用正式Step Distance与Event table校验RootLocalLanding的同脚相邻事件和水平步长，不改变世界速度或地形查询数学
 - [ ] 5.4 删除旧隐藏Step Time/Distance/Event消费者及其Projection字段，不保留双读或fallback
 - [ ] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
+- [ ] 5.6 在Foot根Bank增加左右脚共享的Prediction Motion State，保存稳定当前/Continuation速度、初始化事实、Timeline Generation、Body Reset与Prediction Source lineage，并随同一事务Seal或Discard
+- [ ] 5.7 在Foot Motion Profile增加必须显式序列化的`PredictionVelocityDeltaThreshold`、`PredictionVelocitySmoothSpeed`与`PredictionMaximumSpeed`，纳入Profile Revision并严格拒绝缺失、非有限和非正值
+- [ ] 5.8 参照ZZZ PIK已确认的阈值、EMA与上限控制顺序稳定committed Timeline世界速度，只把稳定速度交给唯一KCC Future Body Translation，不增加普通/预测双路径或KCC后位置低通
+- [ ] 5.9 让Body Reset、Retarget、Timeline Generation与Prediction Source变化重置Prediction Motion State，普通Landing Event、Animation Source、Source Sample与左右脚Step换代不得重置角色级稳定速度
+- [ ] 5.10 发布Raw/Stable当前与Continuation速度、速度差、EMA响应、最大速度Clamp、Prediction初始化/重置原因、KCC Future Translation与晚期Candidate消费结果诊断
+- [ ] 5.11 对Prediction输入执行有限值和lineage接纳；非法输入必须使Pending事务失败且不得推进稳定状态，合法急转只进入同一EMA控制，不套用语义未确认的PIK相对突变公式
+- [ ] 5.12 让Prediction Motion State与Future Translation Workspace保持根Bank预分配固定布局，热路径不创建Trajectory对象、临时Sample数组或托管集合
 
 ## 6. 单独接入Foot Height
 
@@ -65,6 +77,9 @@
 - [ ] 7.2 让Primary Support按Support Intent、Event lineage和Reach Reference获取/保留，不读取Foot State或Lock Mode
 - [ ] 7.3 让Pelvis消费正式Support Presence/Share并保持双脚都无Support时的typed Release
 - [ ] 7.4 删除由旧Lock状态推导Support Weight、Intent和Eligibility的消费者，不把弱单侧Support归一成1
+- [ ] 7.5 在Foot Motion Profile增加必须显式序列化的`PelvisMaximumUpVelocity`与`PelvisMaximumDownVelocity`，纳入Profile Revision并拒绝默认值或旧配置补全
+- [ ] 7.6 参照ZZZ Pelvis最大上下速度政策，在唯一Critical Spring积分后限制非对称Velocity、再限制Reach Output，并在撞到区间边界时清除继续向外的速度
+- [ ] 7.7 发布Pelvis原始Target、Spring输入/输出/Velocity、上下速度上限、Reach边界Clamp与向外Velocity清除诊断
 
 ## 8. 闭合Landing腿可达
 
@@ -78,13 +93,22 @@
 
 - [ ] 9.1 用正式Contact与Lock Mode通过Pre-Interpolation Transition建立同Event唯一Anchor并进入Landing
 - [ ] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target
-- [ ] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition，并由Interpolation Completion产生Post-Interpolation `Releasing -> Swing`
-- [ ] 9.4 删除旧PlantConfidence、PlantCycleConsumed和Constraint Weight状态准入消费者及其Projection字段
+- [ ] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition；同Event合法重入在Pre-Interpolation执行`Releasing -> Landing`，Interpolation Completion只在Post-Interpolation执行`Releasing -> Swing`
+- [ ] 9.4 删除旧PlantConfidence、无identity的PlantCycleConsumed布尔和Constraint Weight状态准入消费者及其Projection字段
+- [ ] 9.5 让Contact Anchor只消费同Event Committed/Promoted Landing；Committed阶段Sliding误差超出LockDistance或Reach不可用时拒绝Lock，不以晚期重查移动承诺落点
+- [ ] 9.6 在同一Foot根Bank增加唯一Contact Transition Context，保存上一正式Lock请求、距最近边沿秒数、最近与最近释放Contact Event identity，不新增Rebound、Blocked或Grounded顶层状态
+- [ ] 9.7 让唯一Transition Resolver生成Contact Rising/Falling/Same-Event Reentry Refresh Decision事实，唯一Transition Runtime随根事务更新Context；Pending失败或Discard不得推进边沿历史
+- [ ] 9.8 Releasing期间同Event合法重入时发布`SameEventContactReentryRefresh`并执行`Releasing -> Landing`，只Retain原Anchor、复用Committed Landing并从当前Effective Correction连续接管，不查询、不Create、不清零Interpolation
+- [ ] 9.9 Release完成或Anchor清除后阻止旧Event复活；新Event紧接上一边沿时必须按自己的Committed Landing正常准入
+- [ ] 9.10 发布上一/当前Lock请求、边沿、距边沿秒数、最近/最近释放Event、Reentry Refresh/Unavailable、Retained Anchor与连续接管诊断，确认下游Resolved Foot、Pelvis和Goal不读取内部Context
 
 ## 10. 清理、构建与严格校验
 
 - [ ] 10.1 删除全部旧Foot Motion Runtime payload、旧隐藏Feature reader、旧配置字段和失去消费者的诊断列
 - [ ] 10.2 使用精确Corin Definition显式重建Presentation Projection、Float32 Program与Fixed Program，不修改TrainingEnemy
 - [ ] 10.3 使用规定参数编译Runtime与Editor工程，并在每次构建后立即关闭dotnet build server
-- [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Transition、Interpolation、Path、Envelope、Landing Reach、Support、Goal、Solved和Physical阶段责任
+- [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Raw/Stable Prediction速度、KCC Future Translation、Landing Tracking/Commit、Contact边沿、同EventReentry Refresh/Unavailable、Transition、Interpolation、Path、Envelope、Pelvis速度边界、Landing Reach、Support、Goal、Solved和Physical阶段责任
 - [ ] 10.5 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验，清除旧spec冲突和失效任务引用
+- [ ] 10.6 按design中的ZZZ最新证据等级与成熟结论对账表逐项核对实现，分别记录直接采用、现有更强等价、后续change和明确不照搬，不把匿名B/D输入、推断名词或未激活实例参数写成正式算法与默认值
+- [ ] 10.7 确认新增Prediction、Observation、Landing、Interpolation与Pelvis路径具有固定容量、有限值校验、数组边界、确定性tie-break和typed容量失败，且热路径没有每帧托管分配
+- [ ] 10.8 确认不存在独立PIK组件、预测/普通fallback、全局Foot缓存、第二Landing生命周期、第二Interpolation、第二IK、第二Writer、LateUpdate骨骼旁路或常驻Final Pose低通

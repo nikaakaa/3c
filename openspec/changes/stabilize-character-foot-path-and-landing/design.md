@@ -28,7 +28,7 @@ ZZZ资料的“成熟”必须按证据等级使用，不能把字段名、推�
 
 | ZZZ结论 | 本项目采用结论 | 当前归属 |
 |---|---|---|
-| 预测先做死区、EMA、速度上限，再外推 | 本change直接采用同型控制顺序；稳定的是committed Timeline当前/Continuation速度，KCC仍是唯一Future Translation | shared Prediction Motion State |
+| 预测先做死区、EMA、速度上限，再外推 | 本change直接采用同型控制顺序；当前输入是committed Body Target世界速度，Continuation输入是committed Timeline下一段世界速度，KCC仍是唯一Future Translation | shared Prediction Motion State |
 | 生产侧异常记录先拒绝，不让滤波器吞坏数据 | 本项目先由Foot Motion/Timeline typed lineage、有限值和范围合同接纳输入；非法输入使Pending事务失败且不得推进稳定状态。合法但急剧转向是真实运动，只进入EMA，不套用语义尚未确认的PIK相对值公式 | Frame Input验证、根Bank Seal/Discard |
 | 查询无效时不更新目标 | Accepted与Rejected Observation保持各自Key；Rejected不生成新Landing。Tracking只可继续持有同Event较早Accepted Landing及其原始lineage，Committed则继续使用承诺值 | Observation Page、Landing Context |
 | Plant期间不响应普通目标重定位 | Approach Contact把Landing从Tracking提交为Committed；Current Contact再Promote，Anchor建立后只由正式Contact/Lock迁移 | Landing Context、Transition Runtime |
@@ -77,7 +77,7 @@ Path逐阶段归因
 -> Contact/Lock接入Transition、State Target与Interpolation
 ```
 
-每一步只切换一个业务定义。对应旧字段在同一步删除；未轮到的正式字段可以存在于不可变Frame，但不得影响行为。架构拆分已经完成并继续保持单一Owner。Step Time先成为Prediction唯一时域，再驱动已经连续的Residual截止；共享Prediction Motion只稳定Timeline世界速度，不修改正式Step Time、RootLocalLanding、Visible Rotation或KCC世界碰撞。Landing提交必须在Contact/Lock迁移前建立，因为Approach Contact后的Next Landing要先成为不可再被普通预测改写的正式承诺。Contact/Lock最后迁移，因为延长Landing前必须先让Swing接近Anchor并让Pelvis拥有有效Support/Reach输入。
+每一步只切换一个业务定义。对应旧字段在同一步删除；未轮到的正式字段可以存在于不可变Frame，但不得影响行为。架构拆分已经完成并继续保持单一Owner。Step Time先成为Prediction唯一时域，再驱动已经连续的Residual截止；共享Prediction Motion只稳定committed Body Target当前速度与Timeline Continuation，不修改正式Step Time、RootLocalLanding、Visible Rotation或KCC世界碰撞。Landing提交必须在Contact/Lock迁移前建立，因为Approach Contact后的Next Landing要先成为不可再被普通预测改写的正式承诺。Contact/Lock最后迁移，因为延长Landing前必须先让Swing接近Anchor并让Pelvis拥有有效Support/Reach输入。
 
 ## Decision 3: State、Transition、Interpolation与Hard Constraint分层
 
@@ -121,9 +121,9 @@ Hard Constraint只在插值后消费结果并立即执行不可违反的物理�
 
 ## Decision 4: 先定位Path同帧放大，再分离连续目标与Envelope安全
 
-FutureLanding世界事实固定拆成`Committed Timeline Velocity -> shared Prediction Motion State -> KCC Future Body Translation -> Raw Landing Candidate -> Query Admission -> canonical Landing Observation -> Landing Tracking/Commit`。Prediction Motion State属于Foot根Bank且左右脚共享一份；它不得进入Gameplay、World State、rollback或网络packet。状态至少保存初始化标志、稳定当前速度、稳定Continuation速度、Timeline Generation、Body Reset Sequence与Prediction Source identity，并随根事务Seal或Discard。
+FutureLanding世界事实固定拆成`Committed Body Target Current + Timeline Continuation -> shared Prediction Motion State -> KCC Future Body Translation -> Raw Landing Candidate -> Query Admission -> canonical Landing Observation -> Landing Tracking/Commit`。Prediction Motion State属于Foot根Bank且左右脚共享一份；它不得进入Gameplay、World State、rollback或网络packet。状态至少保存初始化标志、稳定当前速度、稳定Continuation速度、Timeline Generation、Body Reset Sequence与Prediction Source identity，并随根事务Seal或Discard。
 
-Prediction使用ZZZ同型控制律，不重新设计第二Trajectory算法。对当前与Continuation世界速度分别计算`TargetVelocity - StableVelocity`；差值不超过Profile显式`PredictionVelocityDeltaThreshold`时保持稳定速度，超过时按`PredictionVelocitySmoothSpeed * PresentationDelta`执行有界EMA响应，再把结果限制到`PredictionMaximumSpeed`。三个配置必须为有限正值、纳入Profile Revision且由Corin正式序列化；缺失或非法时整项typed invalid，不提供默认值。首次合法输入直接以当前正式速度初始化，避免从零产生启动滞后；Body Reset、Retarget、Timeline Generation或Prediction Source变化清空状态，普通Landing Event、Animation Source和左右脚Step换代不得重置角色级Prediction Motion。
+Prediction使用ZZZ同型控制律，不重新设计第二Trajectory算法。当前目标取committed Body Target世界速度，Continuation目标取committed Timeline下一段世界速度；两者分别计算`TargetVelocity - StableVelocity`。差值不超过Profile显式`PredictionVelocityDeltaThreshold`时保持稳定速度，超过时按`PredictionVelocitySmoothSpeed * PresentationDelta`执行有界EMA响应，再把结果限制到`PredictionMaximumSpeed`。三个配置必须为有限正值、纳入Profile Revision且由Corin正式序列化；缺失或非法时整项typed invalid，不提供默认值。首次合法输入直接以对应正式速度初始化，避免从零产生启动滞后；Body Reset、Retarget、Timeline Generation或Prediction Source变化清空状态，普通Landing Event、Animation Source和左右脚Step换代不得重置角色级Prediction Motion。`Timeline.CurrentVelocity`只作为诊断对照，不得替换KCC当前运动起点。
 
 唯一KCC Future Body Translation继续负责真实世界碰撞，只是请求中的当前与Continuation平面速度改为稳定速度。左右脚按各自正式Step Time读取同一Pending Workspace；RootLocalLanding仍只乘本帧Visible Rotation，不预测Future Yaw。Prediction不得复制KCC、创建低速普通路径或在KCC结果后另做位置低通。
 
@@ -214,7 +214,7 @@ Target/Solved Extension Ratio与Compression Reserve
 
 Diagnostics不得创建Anchor、选择Support、改变Reach、Clamp Goal或执行第二次Query。
 
-Prediction诊断必须补齐`Raw Timeline Velocity -> Stable Prediction Velocity -> KCC Future Translation -> Raw Landing -> Observation -> Tracking/Committed Landing`，记录速度差、阈值、EMA响应、最大速度Clamp、状态初始化/重置原因、Landing Tracking状态、Commit Frame/Reason、晚期Candidate与是否被忽略。这样实现阶段必须先证明Prediction稳定，再判断Interpolation或Hard Constraint，不得把所有抖动归到最终Pose。
+Prediction诊断必须补齐`Raw Body Target Current + Raw Timeline Continuation -> Stable Prediction Velocity -> KCC Future Translation -> Raw Landing -> Observation -> Tracking/Committed Landing`，并把Timeline Current作为对照列记录，连同速度差、阈值、EMA响应、最大速度Clamp、状态初始化/重置原因、Landing Tracking状态、Commit Frame/Reason、晚期Candidate与是否被忽略。这样实现阶段必须先证明Prediction稳定，再判断Interpolation或Hard Constraint，不得把所有抖动归到最终Pose。
 
 采样包固定由同一Recorder发布`每Frame/Side一行的samples.csv + 只保存Ground Contact/Envelope数组项的ground-path-geometry.csv`。几何表必须按Sample、Frame、Completion、Side与Ground Path identity连接主表，不得为每个几何项重复整套Source、State、Goal和Solver列。
 
@@ -269,7 +269,7 @@ Prediction诊断必须补齐`Raw Timeline Velocity -> Stable Prediction Velocity
 4. 固定当前State、Transition边、目标、Residual和Hard Constraint映射；建立分型Context、纯Transition Resolver、State Target Resolver与唯一Interpolation Runtime，在根事务内逐项迁移等价行为。
 5. 切换固定帧内管线并删除旧`CharacterFootStateMachine`、三套Residual、Contact Progress、分散HalfLife推进与所有兼容入口；从此只有Transition Runtime写离散State/Anchor，只有Interpolation Runtime写Effective Correction。
 6. 发布唯一Foot Motion Runtime Frame，用正式Step Time/Distance替换旧Prediction时域并删除旧Step消费者。
-7. 在同一根Bank增加左右脚共享Prediction Motion State，以ZZZ同型阈值、EMA和最大速度稳定Timeline世界速度；只把稳定速度交给唯一KCC Future Body Translation，并补齐Raw/Stable/Translation诊断。
+7. 在同一根Bank增加左右脚共享Prediction Motion State，以ZZZ同型阈值、EMA和最大速度分别稳定committed Body Target当前速度与Timeline Continuation；只把稳定速度交给唯一KCC Future Body Translation，并补齐Raw/Stable/Translation及Timeline Current对照诊断。
 8. 把Landing Context收敛为Tracking与Committed所有权；Approach Contact提交Next Landing，晚期普通预测不再查询或换点，Current Contact只Promote已提交Landing。
 9. 让Foot Height进入Swing并删除旧Baseline Height Error政策。
 10. 让Support进入Resolved Foot、Primary Support和Pelvis，但保持Lock生命周期不变；为唯一Pelvis Spring增加非对称速度边界。

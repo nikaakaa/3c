@@ -58,7 +58,7 @@
 - [ ] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
 - [ ] 5.6 在Foot根Bank增加左右脚共享的Prediction Motion State，保存稳定当前/Continuation速度、初始化事实、Timeline Generation、Body Reset与Prediction Source lineage，并随同一事务Seal或Discard
 - [x] 5.7 在Foot Motion Profile增加必须显式序列化的`PredictionVelocityDeltaThreshold`、`PredictionVelocitySmoothSpeed`与`PredictionMaximumSpeed`，纳入Profile Revision并严格拒绝缺失、非有限和非正值
-- [ ] 5.8 参照ZZZ PIK已确认的阈值、EMA与上限控制顺序稳定committed Timeline世界速度，只把稳定速度交给唯一KCC Future Body Translation，不增加普通/预测双路径或KCC后位置低通
+- [ ] 5.8 参照ZZZ PIK已确认的阈值、EMA与上限控制顺序分别稳定committed Body Target当前世界速度与Timeline Continuation，只把稳定速度交给唯一KCC Future Body Translation，不增加Timeline Current替代路径、普通/预测双路径或KCC后位置低通
 - [ ] 5.9 让Body Reset、Retarget、Timeline Generation与Prediction Source变化重置Prediction Motion State，普通Landing Event、Animation Source、Source Sample与左右脚Step换代不得重置角色级稳定速度
 - [ ] 5.10 发布Raw/Stable当前与Continuation速度、速度差、EMA响应、最大速度Clamp、Prediction初始化/重置原因、KCC Future Translation与晚期Candidate消费结果诊断
 - [ ] 5.11 对Prediction输入执行有限值和lineage接纳；非法输入必须使Pending事务失败且不得推进稳定状态，合法急转只进入同一EMA控制，不套用语义未确认的PIK相对突变公式

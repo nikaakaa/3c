@@ -8,7 +8,7 @@ Raw Landing MUST继续按`VisiblePosition + FutureBodyTranslation + VisibleRotat
 
 Foot根Bank MUST为每个Actor保存一份左右脚共享的Prediction Motion State，状态至少包含稳定当前速度、稳定Continuation速度、初始化事实、Timeline Generation、Body Reset Sequence与Prediction Source identity。Runtime MUST对当前与Continuation世界速度分别应用Profile显式`PredictionVelocityDeltaThreshold`、`PredictionVelocitySmoothSpeed`与`PredictionMaximumSpeed`：速度差未超过阈值时保持稳定速度，超过时按Presentation Delta执行有界EMA响应，并把结果限制在最大预测速度内。三个配置 MUST为有限正值、进入Profile Revision且由正式Corin Profile显式序列化；缺失或非法时 MUST发布typed invalid，不得使用代码默认值、旧配置或普通/预测回退路径。
 
-committed Timeline当前/Continuation速度、Presentation Delta和所有中间Prediction量 MUST通过有限值与lineage校验后才能推进Prediction Motion State。输入非法时，Runtime MUST使当前Pending Foot事务失败并保持上一Committed Prediction状态不变，不得把NaN/Inf、错误Generation或部分更新结果送入EMA，也不得把上一输出改名为本帧成功结果。合法但幅度或方向急变的正式速度 MUST进入同一阈值/EMA/上限控制，不得由未经验证的PIK相对突变公式静默丢弃。
+committed Body Target当前速度、committed Timeline Continuation、Presentation Delta和所有中间Prediction量 MUST通过有限值与lineage校验后才能推进Prediction Motion State。`Timeline.CurrentVelocity` MUST只作为计划对照诊断，不得替换KCC Future Body Translation的当前运动起点。输入非法时，Runtime MUST使当前Pending Foot事务失败并保持上一Committed Prediction状态不变，不得把NaN/Inf、错误Generation或部分更新结果送入EMA，也不得把上一输出改名为本帧成功结果。合法但幅度或方向急变的正式速度 MUST进入同一阈值/EMA/上限控制，不得由未经验证的PIK相对突变公式静默丢弃。
 
 首次合法输入 MUST直接以正式速度初始化Prediction Motion State。Body Reset、Retarget、Timeline Generation变化或Prediction Source变化 MUST清空状态；普通Landing Event、Animation Source、左右脚Step或Source Sample变化 MUST不重置角色级稳定速度。唯一KCC Future Body Translation MUST消费稳定当前/Continuation速度并在同一Pending Workspace内服务左右脚；Prediction State与Workspace MUST使用根Bank预分配的固定布局，不得在表现帧热路径创建Trajectory对象、临时Sample数组或托管集合。Runtime MUST不复制KCC、在KCC结果后平滑世界位置或创建第二Trajectory Source。
 
@@ -26,7 +26,7 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 
 #### Scenario: 高角速度下稳定Prediction速度
 
-- **WHEN** 同一Timeline Generation内角色急转导致相邻表现帧的committed世界速度方向大幅变化
+- **WHEN** 同一Timeline Generation内角色急转导致相邻表现帧的committed Body Target当前速度或Timeline Continuation方向大幅变化
 - **THEN** 根Bank MUST先按正式阈值、EMA响应和最大速度更新共享Prediction Motion State，再用稳定速度生成唯一KCC Future Body Translation
 - **AND** 左右脚 MUST读取同一Workspace在各自正式Step Time的Sample，不得各自滤波或直接使用瞬时世界速度建立第二轨迹
 
@@ -38,7 +38,7 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 
 #### Scenario: Prediction输入非法
 
-- **WHEN** committed当前/Continuation速度、Presentation Delta或Prediction lineage缺失、非有限或不匹配
+- **WHEN** committed Body Target当前速度、Timeline Continuation、Presentation Delta或Prediction lineage缺失、非有限或不匹配
 - **THEN** 当前Pending Foot事务 MUST失败且上一Committed Prediction Motion State MUST保持不变
 - **AND** Runtime MUST不执行部分EMA、不发布伪Stable速度或把上一帧结果标记为本帧成功
 
@@ -258,7 +258,7 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Anchor与连续接管事实、Raw Timeline当前/Continuation速度、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Reason、Landing Tracking/Committed状态、Commit Frame/Reason、晚期Candidate忽略原因、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Hard Constraint前后Correction、Encoded Goal、Residual基础与截止HalfLife、Ground Path Envelope Clamp与clearance、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Anchor与连续接管事实、Raw Body Target当前速度、Raw Timeline Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Reason、Landing Tracking/Committed状态、Commit Frame/Reason、晚期Candidate忽略原因、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Hard Constraint前后Correction、Encoded Goal、Residual基础与截止HalfLife、Ground Path Envelope Clamp与clearance、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 

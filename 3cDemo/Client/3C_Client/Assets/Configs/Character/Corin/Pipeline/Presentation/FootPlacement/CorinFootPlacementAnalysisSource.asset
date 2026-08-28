@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: CorinFootPlacementAnalysisSource
   m_EditorClassIdentifier: 
   m_AnalysisSourceId: Corin.FootPlacementAnalysis
-  m_AnalysisVersion: 1
+  m_AnalysisVersion: 2
   m_SamplingRigAssetGuid: 846373e25bc0479cb06bd295c0103817
   m_RigDefinition: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
   m_RigCalibration: {fileID: 11400000, guid: 471a3432ddd640c187b4ebfdf8c94e69, type: 2}

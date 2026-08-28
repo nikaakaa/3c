@@ -75,10 +75,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             Vector3 finalSole,
             Vector3 finalAnkle,
-            Quaternion finalAnkleRotation,
             Vector3 effectiveCorrection,
             float goalWeight,
-            float rotationWeight,
             in CharacterFootContactReference contactReference,
             float contactOwnership,
             CharacterFootSupportEligibility supportEligibility,
@@ -86,8 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float supportIntentWeight,
             float supportHorizontalError,
             ulong supportEventIdentity,
-            in CharacterFootPelvisReachReference pelvisReachReference,
-            bool landingReachUnavailable = false)
+            in CharacterFootPelvisReachReference pelvisReachReference)
         {
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
@@ -96,10 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Side = side;
             FinalSole = finalSole;
             FinalAnkle = finalAnkle;
-            FinalAnkleRotation = finalAnkleRotation;
             EffectiveCorrection = effectiveCorrection;
             GoalWeight = goalWeight;
-            RotationWeight = rotationWeight;
             ContactReference = contactReference;
             ContactOwnership = contactOwnership;
             SupportEligibility = supportEligibility;
@@ -108,7 +103,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SupportHorizontalError = supportHorizontalError;
             SupportEventIdentity = supportEventIdentity;
             PelvisReachReference = pelvisReachReference;
-            LandingReachUnavailable = landingReachUnavailable;
             Outcome = CharacterFootResolvedOutcome.Ready;
         }
 
@@ -119,10 +113,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSide Side { get; }
         internal Vector3 FinalSole { get; }
         internal Vector3 FinalAnkle { get; }
-        internal Quaternion FinalAnkleRotation { get; }
         internal Vector3 EffectiveCorrection { get; }
         internal float GoalWeight { get; }
-        internal float RotationWeight { get; }
         internal CharacterFootContactReference ContactReference { get; }
         internal float ContactOwnership { get; }
         internal CharacterFootSupportEligibility SupportEligibility { get; }
@@ -131,39 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SupportHorizontalError { get; }
         internal ulong SupportEventIdentity { get; }
         internal CharacterFootPelvisReachReference PelvisReachReference { get; }
-        internal bool LandingReachUnavailable { get; }
         internal CharacterFootResolvedOutcome Outcome { get; }
-
-        internal CharacterResolvedFootResult WithLandingReach(
-            Vector3 resolvedAnkle,
-            bool unavailable)
-        {
-            Vector3 delta = resolvedAnkle - FinalAnkle;
-            CharacterFootContactReference contactReference = ContactReference;
-            CharacterFootPelvisReachReference pelvisReachReference =
-                PelvisReachReference;
-            return new CharacterResolvedFootResult(
-                FrameSequence,
-                CompletionIdentity,
-                RigId,
-                RigRevision,
-                Side,
-                FinalSole + delta,
-                resolvedAnkle,
-                FinalAnkleRotation,
-                EffectiveCorrection + delta,
-                GoalWeight,
-                RotationWeight,
-                in contactReference,
-                ContactOwnership,
-                SupportEligibility,
-                SupportWeight,
-                SupportIntentWeight,
-                SupportHorizontalError,
-                SupportEventIdentity,
-                in pelvisReachReference,
-                unavailable);
-        }
     }
 
     internal readonly struct CharacterResolvedFootPair
@@ -268,6 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 envelopeSample,
             float verticalCorrection,
             float landingPredictionError,
+            float landingConstraintWeight,
             Vector3 correctedSole,
             Vector3 correctedAnkle,
             float positionWeight,
@@ -278,13 +239,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float contactOwnership = 0f,
             float supportWeight = 0f,
             Vector3 supportContactAnchor = default,
+            float plantConfidence = 0f,
             Vector3 desiredCorrection = default,
             bool contactPlaneAvailable = false,
             int contactSurfaceIdentity = 0,
             Vector3 contactPlaneNormal = default,
-            CharacterFootPathContinuityFact pathContinuity = default,
-            bool landingReachUnavailable = false,
-            Quaternion correctedAnkleRotation = default)
+            CharacterFootPathContinuityFact pathContinuity = default)
         {
             State = state;
             RejectReason = rejectReason;
@@ -299,6 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EnvelopeSample = envelopeSample;
             VerticalCorrection = verticalCorrection;
             LandingPredictionError = landingPredictionError;
+            LandingConstraintWeight = landingConstraintWeight;
             CorrectedSole = correctedSole;
             CorrectedAnkle = correctedAnkle;
             PositionWeight = positionWeight;
@@ -309,13 +270,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactOwnership = contactOwnership;
             SupportWeight = supportWeight;
             SupportContactAnchor = supportContactAnchor;
+            PlantConfidence = plantConfidence;
             DesiredCorrection = desiredCorrection;
             ContactPlaneAvailable = contactPlaneAvailable;
             ContactSurfaceIdentity = contactSurfaceIdentity;
             ContactPlaneNormal = contactPlaneNormal;
             PathContinuity = pathContinuity;
-            LandingReachUnavailable = landingReachUnavailable;
-            CorrectedAnkleRotation = correctedAnkleRotation;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -331,6 +291,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 EnvelopeSample { get; }
         public float VerticalCorrection { get; }
         public float LandingPredictionError { get; }
+        public float LandingConstraintWeight { get; }
         public Vector3 CorrectedSole { get; }
         public Vector3 CorrectedAnkle { get; }
         public float PositionWeight { get; }
@@ -341,21 +302,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ContactOwnership { get; }
         public float SupportWeight { get; }
         public Vector3 SupportContactAnchor { get; }
+        public float PlantConfidence { get; }
         public Vector3 DesiredCorrection { get; }
         public bool ContactPlaneAvailable { get; }
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
         internal CharacterFootPathContinuityFact PathContinuity { get; }
-        public bool LandingReachUnavailable { get; }
-        public Quaternion CorrectedAnkleRotation { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
 
-        internal CharacterFootSwingMotionResult WithLandingReach(
-            Vector3 resolvedAnkle,
-            bool unavailable)
-        {
-            Vector3 delta = resolvedAnkle - CorrectedAnkle;
-            return new CharacterFootSwingMotionResult(
+        internal CharacterFootSwingMotionResult WithPlantConfidence(
+            float plantConfidence) =>
+            new CharacterFootSwingMotionResult(
                 State,
                 RejectReason,
                 LandingEventIdentity,
@@ -369,27 +326,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 EnvelopeSample,
                 VerticalCorrection,
                 LandingPredictionError,
-                CorrectedSole + delta,
-                resolvedAnkle,
+                LandingConstraintWeight,
+                CorrectedSole,
+                CorrectedAnkle,
                 PositionWeight,
                 RotationWeight,
                 ConstraintState,
-                unavailable && LockResponse == CharacterFootLockResponse.FullAnchor
-                    ? CharacterFootLockResponse.Sliding
-                    : LockResponse,
+                LockResponse,
                 SupportHorizontalError,
                 ContactOwnership,
                 SupportWeight,
                 SupportContactAnchor,
-                DesiredCorrection + delta,
+                plantConfidence,
+                DesiredCorrection,
                 ContactPlaneAvailable,
                 ContactSurfaceIdentity,
                 ContactPlaneNormal,
-                PathContinuity,
-                unavailable,
-                CorrectedAnkleRotation);
-        }
-
+                PathContinuity);
     }
 
     public readonly struct CharacterFootSwingMotionDiagnostics
@@ -409,6 +362,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EnvelopeSample = result.EnvelopeSample;
             VerticalCorrection = result.VerticalCorrection;
             LandingPredictionError = result.LandingPredictionError;
+            LandingConstraintWeight = result.LandingConstraintWeight;
             CorrectedSole = result.CorrectedSole;
             CorrectedAnkle = result.CorrectedAnkle;
             PositionWeight = result.PositionWeight;
@@ -419,12 +373,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactOwnership = result.ContactOwnership;
             SupportWeight = result.SupportWeight;
             SupportContactAnchor = result.SupportContactAnchor;
+            PlantConfidence = result.PlantConfidence;
             DesiredCorrection = result.DesiredCorrection;
             ContactPlaneAvailable = result.ContactPlaneAvailable;
             ContactSurfaceIdentity = result.ContactSurfaceIdentity;
             ContactPlaneNormal = result.ContactPlaneNormal;
-            LandingReachUnavailable = result.LandingReachUnavailable;
-            CorrectedAnkleRotation = result.CorrectedAnkleRotation;
             CharacterFootPathContinuityFact path = result.PathContinuity;
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
@@ -441,7 +394,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingResidualBeforeDecay = path.ResidualBeforeDecay;
             SwingResidualAfterDecay = path.ResidualAfterDecay;
             ResidualOutputCorrection = path.ResidualOutputCorrection;
-            SwingRevisionDistance = path.SwingRevisionDistance;
+            LandingUpdateDistance = path.LandingUpdateDistance;
             ResidualTimeToLandingSeconds = path.TimeToLandingSeconds;
             ResidualBaseHalfLifeSeconds = path.BaseHalfLifeSeconds;
             ResidualDeadlineHalfLifeAvailable = path.DeadlineHalfLifeAvailable;
@@ -497,6 +450,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 EnvelopeSample { get; }
         public float VerticalCorrection { get; }
         public float LandingPredictionError { get; }
+        public float LandingConstraintWeight { get; }
         public Vector3 CorrectedSole { get; }
         public Vector3 CorrectedAnkle { get; }
         public float PositionWeight { get; }
@@ -507,12 +461,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ContactOwnership { get; }
         public float SupportWeight { get; }
         public Vector3 SupportContactAnchor { get; }
+        public float PlantConfidence { get; }
         public Vector3 DesiredCorrection { get; }
         public bool ContactPlaneAvailable { get; }
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
-        public bool LandingReachUnavailable { get; }
-        public Quaternion CorrectedAnkleRotation { get; }
         public bool PathContinuityEvaluated { get; }
         public string PathRevisionReason { get; }
         public bool PathResidualRebuilt { get; }
@@ -528,7 +481,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SwingResidualBeforeDecay { get; }
         public Vector3 SwingResidualAfterDecay { get; }
         public Vector3 ResidualOutputCorrection { get; }
-        public float SwingRevisionDistance { get; }
+        public float LandingUpdateDistance { get; }
         public float ResidualTimeToLandingSeconds { get; }
         public float ResidualBaseHalfLifeSeconds { get; }
         public bool ResidualDeadlineHalfLifeAvailable { get; }
@@ -572,12 +525,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootSwingMotionResult Build(
             CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in AnimationFootMotionStep step,
+            in AnimationBiomechanicalStepHeader step,
             float footPlacementWeight,
             Vector3 componentUp,
             in CharacterFootGroundPathResult groundPath,
+            bool formalFootHeightAvailable,
             float formalFootHeight,
-            float landingPredictionError)
+            float landingPredictionError,
+            float landingConstraintWeight)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
@@ -603,7 +558,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     groundPath.InputIdentity,
                     originalSole,
                     originalAnkle);
-            if (!float.IsFinite(formalFootHeight) ||
+            if (!formalFootHeightAvailable ||
+                !float.IsFinite(formalFootHeight) ||
                 formalFootHeight < 0f)
             {
                 return Rejected(
@@ -621,18 +577,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 in groundPath,
                 formalFootHeight,
-                landingPredictionError);
+                landingPredictionError,
+                landingConstraintWeight);
         }
 
         internal static CharacterFootSwingMotionResult BuildForSwing(
             CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in AnimationFootMotionStep step,
+            in AnimationBiomechanicalStepHeader step,
             ulong landingEventIdentity,
             float footPlacementWeight,
             Vector3 componentUp,
             in CharacterFootGroundPathResult groundPath,
             float formalFootHeight,
-            float landingPredictionError)
+            float landingPredictionError,
+            float landingConstraintWeight)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
@@ -651,7 +609,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     originalSole,
                     originalAnkle);
             if (!float.IsFinite(landingPredictionError) || landingPredictionError < 0f ||
-                !float.IsFinite(formalFootHeight) || formalFootHeight < 0f)
+                !float.IsFinite(formalFootHeight) || formalFootHeight < 0f ||
+                !float.IsFinite(landingConstraintWeight) ||
+                landingConstraintWeight < 0f || landingConstraintWeight > 1f)
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.InvalidWeight,
                     landingEventIdentity,
@@ -742,7 +702,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 envelopeSample,
                 up) - originalSoleHeight;
             float formalTargetCorrection = Vector3.Dot(
-                envelopeSample,
+                baselineSample,
                 up) + formalFootHeight - originalSoleHeight;
             if (!float.IsFinite(envelopeMinimumCorrection) ||
                 !float.IsFinite(formalTargetCorrection))
@@ -760,7 +720,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 Mathf.Max(
                     envelopeMinimumCorrection,
-                    formalTargetCorrection));
+                    landingConstraintWeight * formalTargetCorrection));
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = footPlacementWeight;
@@ -780,6 +740,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 envelopeSample,
                 verticalCorrection,
                 landingPredictionError,
+                landingConstraintWeight,
                 correctedSole,
                 correctedAnkle,
                 positionWeight,
@@ -805,14 +766,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.EnvelopeSample,
                 motion.VerticalCorrection,
                 motion.LandingPredictionError,
+                motion.LandingConstraintWeight,
                 motion.OriginalSole,
                 motion.OriginalAnkle,
                 0f,
-                0f);
+                0f,
+                plantConfidence: motion.PlantConfidence);
         }
 
         static bool TryResolveSwingPhaseWeight(
-            in AnimationFootMotionStep step,
+            in AnimationBiomechanicalStepHeader step,
             out float weight)
         {
             weight = 0f;
@@ -919,7 +882,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 baselineSample = default,
             Vector3 envelopeSample = default,
             float verticalCorrection = 0f,
-            float landingPredictionError = 0f) =>
+            float landingPredictionError = 0f,
+            float landingConstraintWeight = 0f) =>
             new CharacterFootSwingMotionResult(
                 CharacterFootSwingMotionState.Rejected,
                 reason,
@@ -934,6 +898,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 envelopeSample,
                 verticalCorrection,
                 landingPredictionError,
+                landingConstraintWeight,
                 originalSole,
                 originalAnkle,
                 0f,

@@ -15,7 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveSwingCorrection(
                     frame.AnimatedFoot,
                     frame.SwingMotion);
-            Quaternion swingRotation = frame.AnimatedFoot.AnkleRotation;
             if (transition.SuppressOutput)
             {
                 return new CharacterFootStateTarget(
@@ -26,9 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     true,
                     0f,
-                    timeToLandingSeconds,
-                    swingRotation,
-                    swingRotation);
+                    timeToLandingSeconds);
             }
             switch (context.Discrete.State)
             {
@@ -40,15 +37,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterFootInterpolationPolicy.SwingResidual,
                         transition,
                         0f,
-                        timeToLandingSeconds,
-                        swingRotation,
-                        swingRotation);
+                        timeToLandingSeconds);
                 case CharacterFootConstraintState.Landing:
-                    Quaternion landingRotation =
-                        CharacterFootConstraintMath.ResolveContactRotation(
-                            frame.AnimatedFoot,
-                            context.Contact.Normal,
-                            frame.ComponentUp);
                     return Target(
                         CharacterFootConstraintMath.ResolveContactCorrection(
                             frame.AnimatedFoot,
@@ -56,16 +46,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         swingCorrection,
                         CharacterFootInterpolationPolicy.AcquireByWeight,
                         transition,
-                        frame.FormalMotion.Observation.LockWeight,
-                        timeToLandingSeconds,
-                        landingRotation,
-                        swingRotation);
+                        ResolvePlantOwnership(
+                            frame.SwingMotion.PlantConfidence),
+                        timeToLandingSeconds);
                 case CharacterFootConstraintState.Locked:
                     return ResolveLockedTarget(
                         in context,
                         in transition,
                         swingCorrection,
-                        swingRotation,
                         timeToLandingSeconds,
                         in frame);
                 case CharacterFootConstraintState.Releasing:
@@ -75,9 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterFootInterpolationPolicy.ReleaseResidual,
                         transition,
                         0f,
-                        timeToLandingSeconds,
-                        swingRotation,
-                        swingRotation);
+                        timeToLandingSeconds);
                 default:
                     throw new System.InvalidOperationException(
                         "Foot state target is invalid.");
@@ -88,7 +74,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
-            Quaternion swingRotation,
             float timeToLandingSeconds,
             in CharacterFootStateFrame frame)
         {
@@ -96,11 +81,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveContactCorrection(
                     frame.AnimatedFoot,
                     context.Contact.Anchor);
-            Quaternion contactRotation =
-                CharacterFootConstraintMath.ResolveContactRotation(
-                    frame.AnimatedFoot,
-                    context.Contact.Normal,
-                    frame.ComponentUp);
             if (context.Discrete.LockResponse ==
                 CharacterFootLockResponse.FullAnchor)
             {
@@ -109,10 +89,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     swingCorrection,
                     CharacterFootInterpolationPolicy.Direct,
                     transition,
-                    frame.FormalMotion.Observation.LockWeight,
-                    timeToLandingSeconds,
-                    contactRotation,
-                    swingRotation);
+                    1f,
+                    timeToLandingSeconds);
             }
             if (context.Discrete.LockResponse !=
                 CharacterFootLockResponse.Sliding)
@@ -135,10 +113,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 swingCorrection,
                 CharacterFootInterpolationPolicy.HalfLife,
                 transition,
-                frame.FormalMotion.Observation.LockWeight,
-                timeToLandingSeconds,
-                contactRotation,
-                swingRotation);
+                1f,
+                timeToLandingSeconds);
         }
 
         static CharacterFootStateTarget Target(
@@ -147,9 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootInterpolationPolicy policy,
             in CharacterFootTransitionDecision transition,
             float progress,
-            float timeToLandingSeconds,
-            Quaternion rotation,
-            Quaternion swingRotation) =>
+            float timeToLandingSeconds) =>
             new CharacterFootStateTarget(
                 correction,
                 swingCorrection,
@@ -159,9 +133,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootTransitionReason.LockResponseChanged,
                 false,
                 progress,
-                timeToLandingSeconds,
-                rotation,
-                swingRotation);
+                timeToLandingSeconds);
 
+        static float ResolvePlantOwnership(float plantConfidence) =>
+            Mathf.InverseLerp(
+                AnimationFootConstraintFacts.GroundedMinimumConfidence,
+                AnimationFootConstraintFacts.LockedMinimumConfidence,
+                plantConfidence);
     }
 }

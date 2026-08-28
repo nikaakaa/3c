@@ -22,29 +22,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 contactAnchor) =>
             contactAnchor - ResolveOriginalSole(foot);
 
-        internal static Quaternion ResolveContactRotation(
-            CharacterFootPlacementAnimatedFootPose foot,
-            Vector3 contactNormal,
-            Vector3 componentUp)
-        {
-            Vector3 normal = contactNormal.normalized;
-            Vector3 yawForward = Vector3.ProjectOnPlane(
-                foot.SoleForward,
-                componentUp.normalized);
-            Vector3 surfaceForward = Vector3.ProjectOnPlane(
-                yawForward,
-                normal);
-            if (surfaceForward.sqrMagnitude <= GeometryEpsilon)
-                surfaceForward = Vector3.ProjectOnPlane(foot.SoleForward, normal);
-            if (surfaceForward.sqrMagnitude <= GeometryEpsilon)
-                surfaceForward = Vector3.Cross(foot.SemanticRotation * Vector3.right, normal);
-            Quaternion semanticRotation = Quaternion.LookRotation(
-                surfaceForward.normalized,
-                normal);
-            return (semanticRotation *
-                    Quaternion.Inverse(foot.SoleFrameLocalRotation)).normalized;
-        }
-
         internal static Vector3 ResolvePointMinimumCorrection(
             CharacterFootPlacementAnimatedFootPose foot,
             Vector3 point,

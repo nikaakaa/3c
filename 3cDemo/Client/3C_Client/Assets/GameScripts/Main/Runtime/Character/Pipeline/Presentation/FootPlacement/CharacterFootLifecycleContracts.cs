@@ -41,13 +41,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         OwnershipLost = 1,
         SwingStarted = 2,
-        ContactUnavailable = 3,
-        ContactAcquired = 4,
-        ContactReleased = 5,
-        ContactOutOfSlideRange = 6,
-        LockResponseChanged = 7,
-        LandingCompleted = 8,
-        ReleaseCompleted = 9
+        PlantCycleConsumed = 3,
+        ContactUnavailable = 4,
+        ContactOutOfLockRange = 5,
+        ContactAcquired = 6,
+        ContactReleased = 7,
+        ContactOutOfSlideRange = 8,
+        LockResponseChanged = 9,
+        LandingCompleted = 10,
+        ReleaseCompleted = 11
     }
 
     internal enum CharacterFootAnchorCommand : byte
@@ -85,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 residualBeforeRevision,
             Vector3 residualBeforeDecay,
             Vector3 residualAfterDecay,
-            float swingRevisionDistance,
+            float landingUpdateDistance,
             float timeToLandingSeconds,
             float baseHalfLifeSeconds,
             bool deadlineHalfLifeAvailable,
@@ -107,7 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualBeforeDecay = residualBeforeDecay;
             ResidualAfterDecay = residualAfterDecay;
             ResidualOutputCorrection = currentTargetCorrection + residualAfterDecay;
-            SwingRevisionDistance = swingRevisionDistance;
+            LandingUpdateDistance = landingUpdateDistance;
             TimeToLandingSeconds = timeToLandingSeconds;
             BaseHalfLifeSeconds = baseHalfLifeSeconds;
             DeadlineHalfLifeAvailable = deadlineHalfLifeAvailable;
@@ -183,7 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualBeforeDecay = source.ResidualBeforeDecay;
             ResidualAfterDecay = source.ResidualAfterDecay;
             ResidualOutputCorrection = source.ResidualOutputCorrection;
-            SwingRevisionDistance = source.SwingRevisionDistance;
+            LandingUpdateDistance = source.LandingUpdateDistance;
             TimeToLandingSeconds = source.TimeToLandingSeconds;
             BaseHalfLifeSeconds = source.BaseHalfLifeSeconds;
             DeadlineHalfLifeAvailable = source.DeadlineHalfLifeAvailable;
@@ -238,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 ResidualBeforeDecay { get; }
         internal Vector3 ResidualAfterDecay { get; }
         internal Vector3 ResidualOutputCorrection { get; }
-        internal float SwingRevisionDistance { get; }
+        internal float LandingUpdateDistance { get; }
         internal float TimeToLandingSeconds { get; }
         internal float BaseHalfLifeSeconds { get; }
         internal bool DeadlineHalfLifeAvailable { get; }
@@ -337,7 +339,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 default,
                 default,
-                settings.SwingRevisionDistance,
+                settings.LandingUpdateDistance,
                 timeToLandingSeconds,
                 settings.EffectiveCorrectionHalfLifeSeconds,
                 false,
@@ -382,7 +384,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 WorldNormal);
 
         internal static CharacterFootLandingFact Create(
-            in AnimationFootMotionStep step,
+            in AnimationBiomechanicalStepHeader step,
             in CharacterFootLandingPredictionResult diagnostics) =>
             new CharacterFootLandingFact(
                 step.LandingEventIdentity,
@@ -403,6 +405,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasNextSwingLanding,
             CharacterFootGroundPathLanding nextSwingLanding,
             float nextSwingPredictionError,
+            float nextSwingConstraintWeight,
             bool hasPromotedLanding,
             CharacterFootGroundPathLanding promotedLanding)
         {
@@ -413,6 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasNextSwingLanding = hasNextSwingLanding;
             NextSwingLanding = nextSwingLanding;
             NextSwingPredictionError = nextSwingPredictionError;
+            NextSwingConstraintWeight = nextSwingConstraintWeight;
             HasPromotedLanding = hasPromotedLanding;
             PromotedLanding = promotedLanding;
         }
@@ -426,6 +430,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasNextSwingLanding { get; }
         internal CharacterFootGroundPathLanding NextSwingLanding { get; }
         internal float NextSwingPredictionError { get; }
+        internal float NextSwingConstraintWeight { get; }
         internal bool HasPromotedLanding { get; }
         internal CharacterFootGroundPathLanding PromotedLanding { get; }
 
@@ -459,6 +464,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingFact PromotedLanding;
         internal Vector3 NextSwingReferencePoint;
         internal float NextSwingPredictionError;
+        internal float NextSwingConstraintWeight;
         internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
         internal CharacterFootLandingTrackingState TrackingState;
@@ -475,6 +481,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
                 TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
+                TrackingState == CharacterFootLandingTrackingState.Accepted &&
+                NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
                 PromotedLanding.HasValue,
                 PromotedLanding.HasValue ? PromotedLanding.Resolve() : default);
 
@@ -483,6 +491,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void InvalidateCurrent()
         {
             NextSwingPredictionError = 0f;
+            NextSwingConstraintWeight = 0f;
             TrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;
@@ -493,6 +502,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingLanding = default;
             NextSwingReferencePoint = default;
             NextSwingPredictionError = 0f;
+            NextSwingConstraintWeight = 0f;
             TrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;
@@ -503,10 +513,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootConstraintState State;
         internal CharacterFootLockResponse LockResponse;
+        internal bool PlantCycleConsumed;
         internal CharacterFootTransitionPhase LastTransitionPhase;
         internal CharacterFootTransitionReason LastTransitionReason;
-        internal ulong LandingReachEventIdentity;
-        internal bool LandingReachUnavailable;
     }
 
     internal struct CharacterFootContactContext
@@ -530,10 +539,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PreviousSwingTargetCorrection;
         internal Vector3 EffectiveCorrection;
         internal Vector3 Residual;
-        internal Quaternion EffectiveRotation;
-        internal Quaternion RotationResidual;
-        internal float RotationProgress;
-        internal float RotationReleaseStartAngle;
         internal float Progress;
         internal float StartResidual;
         internal bool Completed;
@@ -558,7 +563,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigId,
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in AnimationFootMotionRuntimeSample formalMotion,
             in CharacterFootSwingMotionResult swingMotion,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
@@ -573,7 +577,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigId = rigId;
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
-            FormalMotion = formalMotion;
             SwingMotion = swingMotion;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
@@ -589,7 +592,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
-        internal AnimationFootMotionRuntimeSample FormalMotion { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
@@ -604,21 +606,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
-            in AnimationFootMotionStep contactStep,
-            in AnimationFootMotionStep selectedStep,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in AnimationBiomechanicalStepHeader selectedStep,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootStateFrame frame)
         {
             Side = side;
-            ContactStep = contactStep;
+            CurrentStep = currentStep;
             SelectedStep = selectedStep;
             LandingPrediction = landingPrediction;
             Frame = frame;
         }
 
         internal CharacterFootSide Side { get; }
-        internal AnimationFootMotionStep ContactStep { get; }
-        internal AnimationFootMotionStep SelectedStep { get; }
+        internal AnimationBiomechanicalStepHeader CurrentStep { get; }
+        internal AnimationBiomechanicalStepHeader SelectedStep { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }
     }
@@ -631,6 +633,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootConstraintState sourceState,
             CharacterFootConstraintState targetState,
             CharacterFootLockResponse targetLockResponse,
+            bool plantCycleConsumed,
             CharacterFootAnchorCommand anchorCommand,
             bool suppressOutput,
             bool resetInterpolation)
@@ -640,6 +643,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceState = sourceState;
             TargetState = targetState;
             TargetLockResponse = targetLockResponse;
+            PlantCycleConsumed = plantCycleConsumed;
             AnchorCommand = anchorCommand;
             SuppressOutput = suppressOutput;
             ResetInterpolation = resetInterpolation;
@@ -650,6 +654,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootConstraintState SourceState { get; }
         internal CharacterFootConstraintState TargetState { get; }
         internal CharacterFootLockResponse TargetLockResponse { get; }
+        internal bool PlantCycleConsumed { get; }
         internal CharacterFootAnchorCommand AnchorCommand { get; }
         internal bool SuppressOutput { get; }
         internal bool ResetInterpolation { get; }
@@ -666,9 +671,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool responseEntered,
             bool suppressOutput,
             float progress,
-            float timeToLandingSeconds,
-            Quaternion rotation,
-            Quaternion swingRotation)
+            float timeToLandingSeconds)
         {
             Correction = correction;
             SwingCorrection = swingCorrection;
@@ -678,8 +681,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SuppressOutput = suppressOutput;
             Progress = progress;
             TimeToLandingSeconds = timeToLandingSeconds;
-            Rotation = rotation;
-            SwingRotation = swingRotation;
         }
 
         internal Vector3 Correction { get; }
@@ -690,29 +691,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool SuppressOutput { get; }
         internal float Progress { get; }
         internal float TimeToLandingSeconds { get; }
-        internal Quaternion Rotation { get; }
-        internal Quaternion SwingRotation { get; }
     }
 
     internal readonly struct CharacterFootInterpolationResult
     {
         internal CharacterFootInterpolationResult(
             Vector3 correction,
-            Quaternion rotation,
-            float rotationProgress,
             bool completed,
             in CharacterFootPathContinuityFact continuityFact)
         {
             Correction = correction;
-            Rotation = rotation;
-            RotationProgress = rotationProgress;
             Completed = completed;
             ContinuityFact = continuityFact;
         }
 
         internal Vector3 Correction { get; }
-        internal Quaternion Rotation { get; }
-        internal float RotationProgress { get; }
         internal bool Completed { get; }
         internal CharacterFootPathContinuityFact ContinuityFact { get; }
     }

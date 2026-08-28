@@ -7,7 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal static CharacterFootLandingSnapshot ProjectBeforePrediction(
             in CharacterFootLifecycleContext context,
-            in AnimationFootMotionStep currentStep)
+            in AnimationBiomechanicalStepHeader currentStep)
         {
             CharacterFootLandingContext projected = context.Landing;
             projected.BeginFrame();
@@ -17,8 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootLandingSnapshot ProjectAfterPrediction(
             in CharacterFootLifecycleContext context,
-            in AnimationFootMotionStep currentStep,
-            in AnimationFootMotionStep selectedStep,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in AnimationBiomechanicalStepHeader selectedStep,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootMotionSettings settings)
         {
@@ -35,8 +35,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static void Evaluate(
             ref CharacterFootLandingContext context,
-            in AnimationFootMotionStep currentStep,
-            in AnimationFootMotionStep selectedStep,
+            in AnimationBiomechanicalStepHeader currentStep,
+            in AnimationBiomechanicalStepHeader selectedStep,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootMotionSettings settings)
         {
@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static void PromoteLanded(
             ref CharacterFootLandingContext context,
-            in AnimationFootMotionStep step)
+            in AnimationBiomechanicalStepHeader step)
         {
             bool hasCurrentEvent = step.IsAuthoritative &&
                                    step.HasConsistentLandingEventIdentity &&
@@ -95,7 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static void CaptureNextSwing(
             ref CharacterFootLandingContext context,
-            in AnimationFootMotionStep step,
+            in AnimationBiomechanicalStepHeader step,
             in CharacterFootLandingPredictionResult diagnostics,
             in CharacterFootMotionSettings settings)
         {
@@ -125,36 +125,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!diagnostics.Accepted ||
                 diagnostics.LandingEventIdentity != step.LandingEventIdentity)
             {
-                bool retainAcceptedObservation =
-                    context.NextSwingLanding.HasValue &&
-                    context.NextSwingLanding.LandingEventIdentity ==
-                    step.LandingEventIdentity &&
-                    context.TrackingState ==
-                    CharacterFootLandingTrackingState.Accepted &&
-                    (diagnostics.RejectReason ==
-                     CharacterFootLandingPredictionRejectReason
-                         .FutureBodyTranslationUnavailable ||
-                     diagnostics.RejectReason ==
-                     CharacterFootLandingPredictionRejectReason
-                         .FutureBodyTranslationRangeInvalid);
-                if (retainAcceptedObservation)
-                    return;
                 context.InvalidateCurrent();
                 return;
             }
             if (context.NextSwingLanding.HasValue)
             {
                 Vector3 landingPoint = diagnostics.LandingPoint;
-                bool sameSurface =
-                    diagnostics.SurfaceIdentity ==
-                    context.NextSwingLanding.SurfaceIdentity;
                 context.NextSwingPredictionError = Vector3.Distance(
                     context.NextSwingReferencePoint,
                     landingPoint);
-                if (sameSurface && Vector3.Distance(
+                context.NextSwingConstraintWeight = 1f;
+                if (Vector3.Distance(
                         landingPoint,
-                        context.NextSwingLanding.WorldPoint) <=
-                    settings.LandingPointAcceptanceDistance)
+                        context.NextSwingLanding.WorldPoint) <
+                    settings.LandingUpdateDistance)
                 {
                     context.TrackingState =
                         CharacterFootLandingTrackingState.Accepted;
@@ -170,6 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootLandingFact.Create(in step, in diagnostics);
             context.NextSwingReferencePoint = diagnostics.LandingPoint;
             context.NextSwingPredictionError = 0f;
+            context.NextSwingConstraintWeight = 1f;
             context.TrackingState = CharacterFootLandingTrackingState.Accepted;
         }
     }

@@ -17,8 +17,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state = default;
                 return new CharacterFootInterpolationResult(
                     default,
-                    target.SwingRotation,
-                    0f,
                     false,
                     default);
             }
@@ -26,7 +24,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 state.HasOutput = true;
                 state.EffectiveCorrection = target.SwingCorrection;
-                state.EffectiveRotation = target.SwingRotation;
             }
             state.Policy = target.InterpolationPolicy;
             switch (target.InterpolationPolicy)
@@ -42,8 +39,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     state.StartResidual = 0f;
                     state.Completed = false;
                     state.EffectiveCorrection = target.Correction;
-                    state.EffectiveRotation = target.Rotation;
-                    state.RotationProgress = target.Progress;
                     return Result(
                         in state,
                         false,
@@ -56,11 +51,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             target.Correction,
                             frame.DeltaSeconds,
                             frame.Settings.EffectiveCorrectionHalfLifeSeconds);
-                        state.EffectiveRotation = Advance(
-                            state.EffectiveRotation,
-                            target.Rotation,
-                            frame.DeltaSeconds,
-                            frame.Settings.EffectiveCorrectionHalfLifeSeconds);
                     }
                     state.PreviousTargetCorrection = target.Correction;
                     state.Residual =
@@ -68,7 +58,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     state.Progress = 1f;
                     state.StartResidual = 0f;
                     state.Completed = false;
-                    state.RotationProgress = target.Progress;
                     return Result(
                         in state,
                         false,
@@ -92,13 +81,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             }
             Vector3 correction = state.EffectiveCorrection;
-            Quaternion rotation = state.EffectiveRotation;
-            float rotationProgress = state.RotationProgress;
             state = default;
             state.HasOutput = true;
             state.EffectiveCorrection = correction;
-            state.EffectiveRotation = rotation;
-            state.RotationProgress = rotationProgress;
         }
 
         static CharacterFootInterpolationResult EvaluateAcquire(
@@ -120,9 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         false,
                         false,
                         0f,
-                        target.TimeToLandingSeconds,
-                        target.SwingRotation,
-                        target.SwingRotation),
+                        target.TimeToLandingSeconds),
                     in frame);
                 continuityFact = swing.ContinuityFact;
                 state.EffectiveCorrection =
@@ -136,8 +119,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.Progress = 0f;
                 state.StartResidual = 0f;
                 state.Completed = false;
-                state.EffectiveRotation = target.SwingRotation;
-                state.RotationProgress = 0f;
                 state.Policy = CharacterFootInterpolationPolicy.AcquireByWeight;
                 return Result(in state, false, in continuityFact);
             }
@@ -146,11 +127,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.EffectiveCorrection = target.Correction +
                                         state.Residual *
                                         (1f - state.Progress);
-            state.EffectiveRotation = Quaternion.SlerpUnclamped(
-                target.SwingRotation,
-                target.Rotation,
-                state.Progress);
-            state.RotationProgress = state.Progress;
             state.Completed = state.Progress >=
                               1f - CharacterFootConstraintMath.GeometryEpsilon;
             if (state.Completed)
@@ -158,8 +134,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.EffectiveCorrection = target.Correction;
                 state.Residual = default;
                 state.Progress = 1f;
-                state.EffectiveRotation = target.Rotation;
-                state.RotationProgress = target.Progress;
             }
             return Result(in state, state.Completed, in continuityFact);
         }
@@ -176,12 +150,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     state.EffectiveCorrection - target.Correction;
                 state.StartResidual = state.Residual.magnitude;
                 state.Progress = 0f;
-                state.RotationReleaseStartAngle = Quaternion.Angle(
-                    state.EffectiveRotation,
-                    target.SwingRotation);
-                state.RotationResidual = (
-                    Quaternion.Inverse(target.SwingRotation) *
-                    state.EffectiveRotation).normalized;
             }
             else
             {
@@ -195,28 +163,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.Settings.EffectiveCorrectionHalfLifeSeconds);
                 state.EffectiveCorrection =
                     target.Correction + state.Residual;
-                state.RotationResidual = Advance(
-                    state.RotationResidual,
-                    Quaternion.identity,
-                    frame.DeltaSeconds,
-                    frame.Settings.EffectiveCorrectionHalfLifeSeconds);
-                state.EffectiveRotation = (
-                    target.SwingRotation * state.RotationResidual).normalized;
             }
-            float rotationResidual = Quaternion.Angle(
-                state.RotationResidual,
-                Quaternion.identity);
-            state.RotationProgress = state.RotationReleaseStartAngle > 0.5f
-                ? Mathf.Clamp01(
-                    rotationResidual / state.RotationReleaseStartAngle)
-                : 0f;
-            state.Completed = frame.FormalMotion.Observation.LockWeight <=
-                              CharacterFootConstraintMath.GeometryEpsilon &&
+            state.Completed = frame.SwingMotion.PlantConfidence <
+                              AnimationFootConstraintFacts
+                                  .GroundedMinimumConfidence &&
                               Vector3.Distance(
                                   state.EffectiveCorrection,
                                   target.SwingCorrection) <=
-                              frame.Settings.ReleaseCompletionDistance &&
-                              rotationResidual <= 0.5f;
+                              frame.Settings.LandingUpdateDistance;
             return Result(
                 in state,
                 state.Completed,
@@ -267,13 +221,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootPathRevisionReason.LandingEventChanged;
             }
             if (comparablePath &&
-                landingPointDelta > frame.Settings.SwingRevisionDistance)
+                landingPointDelta > frame.Settings.LandingUpdateDistance)
             {
                 revisionReason |=
                     CharacterFootPathRevisionReason.LandingPointChanged;
             }
             if (comparablePath &&
-                targetDelta > frame.Settings.SwingRevisionDistance)
+                targetDelta > frame.Settings.LandingUpdateDistance)
             {
                 revisionReason |=
                     CharacterFootPathRevisionReason.SwingTargetChanged;
@@ -316,8 +270,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.Progress = 0f;
             state.StartResidual = 0f;
             state.Completed = false;
-            state.EffectiveRotation = target.SwingRotation;
-            state.RotationProgress = 0f;
             var continuityFact = new CharacterFootPathContinuityFact(
                 true,
                 revisionReason,
@@ -333,7 +285,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 residualBeforeRevision,
                 residualBeforeDecay,
                 state.Residual,
-                frame.Settings.SwingRevisionDistance,
+                frame.Settings.LandingUpdateDistance,
                 target.TimeToLandingSeconds,
                 frame.Settings.EffectiveCorrectionHalfLifeSeconds,
                 deadlineHalfLifeAvailable,
@@ -348,8 +300,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPathContinuityFact continuityFact) =>
             new CharacterFootInterpolationResult(
                 state.EffectiveCorrection,
-                state.EffectiveRotation,
-                state.RotationProgress,
                 completed,
                 in continuityFact);
 
@@ -373,19 +323,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Vector3.LerpUnclamped(current, target, alpha);
         }
 
-        static Quaternion Advance(
-            Quaternion current,
-            Quaternion target,
-            float deltaSeconds,
-            float halfLifeSeconds)
-        {
-            if (deltaSeconds <= 0f)
-                return current;
-            float alpha = 1f -
-                          Mathf.Pow(0.5f, deltaSeconds / halfLifeSeconds);
-            return Quaternion.SlerpUnclamped(current, target, alpha).normalized;
-        }
-
         static float ResolveSwingResidualHalfLife(
             Vector3 residual,
             float timeToLandingSeconds,
@@ -399,14 +336,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.EffectiveCorrectionHalfLifeSeconds;
             float residualDistance = residual.magnitude;
             if (!float.IsFinite(residualDistance) ||
-                residualDistance <= settings.ResidualLandingTolerance ||
+                residualDistance <= settings.LandingUpdateDistance ||
                 !float.IsFinite(timeToLandingSeconds) ||
                 timeToLandingSeconds <= 0f)
             {
                 return halfLifeSeconds;
             }
             float halfLifeCount = Mathf.Log(
-                residualDistance / settings.ResidualLandingTolerance,
+                residualDistance / settings.LandingUpdateDistance,
                 2f);
             if (!float.IsFinite(halfLifeCount) || halfLifeCount <= 0f)
                 return halfLifeSeconds;

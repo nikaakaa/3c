@@ -23,10 +23,8 @@
 - [x] 3.8 把采样包迁移为每Frame/Side唯一主行与独立Ground Path几何表，删除每个Contact/Envelope重复整套阶段列的旧展开行
 - [x] 3.9 让停止、队列失败和自动路线统一进入后台Finalizing，排空Writer、封存双表并运行唯一Analyzer/Publisher后再发布结果
 - [x] 3.10 为每脚建立根事务所有的Landing Observation Key、Committed/Pending Page与双页Pool，相同Key复用已提交Accepted或Rejected结果
-- [x] 3.11 让新Observation Key只执行一次canonical SphereCast并删除PreferredSurfaceIdentity选择行为
+- [x] 3.11 让新Observation Key只执行一次canonical SphereCast并删除PreferredSurfaceIdentity选择行为，保持5毫米Acceptance死区不变
 - [x] 3.12 把Observation identity、World revision、cache state、query executed与canonical Raw Landing接入唯一facts/diagnosis链并删除Preferred旧口径
-- [ ] 3.13 把预测输入累计位移5厘米与Component Up 1度阈值放到SphereCast之前，并让Source/Cycle、Event、Profile与World Revision绕过连续阈值
-- [ ] 3.14 把Landing接受2厘米、Swing Revision、Residual截止5毫米与Release完成5毫米拆成独立正式配置，删除复用`LandingUpdateDistance`的全部消费者
 
 ## 4. 拆分State、Transition、Interpolation与Hard Constraint
 
@@ -43,7 +41,7 @@
 ## 5. 单独接入Step Time与Step Distance
 
 - [ ] 5.1 用正式Step Time替换Landing Prediction时域、Current/Incoming选择和Future Body Translation请求时长
-- [ ] 5.2 在Path瞬时Correction链连续后，用正式Step Time、Residual Landing Tolerance和基础HalfLife计算统一Interpolation State中Swing政策的Landing截止收敛
+- [ ] 5.2 在Path瞬时Correction链连续后，用正式Step Time、LandingUpdateDistance和基础HalfLife计算统一Interpolation State中Swing政策的Landing截止收敛
 - [ ] 5.3 用正式Step Distance与Event table校验RootLocalLanding的同脚相邻事件和水平步长，不改变世界速度或地形查询数学
 - [ ] 5.4 删除旧隐藏Step Time/Distance/Event消费者及其Projection字段，不保留双读或fallback
 - [ ] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
@@ -73,7 +71,7 @@
 ## 9. 单独接入Contact与Lock
 
 - [ ] 9.1 用正式Contact与Lock Mode通过Pre-Interpolation Transition建立同Event唯一Anchor并进入Landing
-- [ ] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target，同时保留动画Yaw并把脚掌Pitch/Roll对齐Contact Normal
+- [ ] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target
 - [ ] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition，并由Interpolation Completion产生Post-Interpolation `Releasing -> Swing`
 - [ ] 9.4 删除旧PlantConfidence、PlantCycleConsumed和Constraint Weight状态准入消费者及其Projection字段
 
@@ -82,5 +80,5 @@
 - [ ] 10.1 删除全部旧Foot Motion Runtime payload、旧隐藏Feature reader、旧配置字段和失去消费者的诊断列
 - [ ] 10.2 使用精确Corin Definition显式重建Presentation Projection、Float32 Program与Fixed Program，不修改TrainingEnemy
 - [ ] 10.3 使用规定参数编译Runtime与Editor工程，并在每次构建后立即关闭dotnet build server
-- [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Profile identity、预测输入阈值、Transition、Interpolation、Path、Envelope、Landing Reach、Support、位置/旋转Goal、Solved和Physical阶段责任
+- [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Transition、Interpolation、Path、Envelope、Landing Reach、Support、Goal、Solved和Physical阶段责任
 - [ ] 10.5 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验，清除旧spec冲突和失效任务引用

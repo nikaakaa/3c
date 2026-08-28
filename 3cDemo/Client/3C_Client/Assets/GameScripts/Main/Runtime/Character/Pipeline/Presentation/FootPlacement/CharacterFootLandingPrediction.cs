@@ -27,7 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootLandingStepSource : byte
     {
         None = 0,
-        Formal = 1
+        Current = 1,
+        Incoming = 2
     }
 
     internal readonly struct CharacterFootLandingSupport
@@ -154,18 +155,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingObservationKey(
             CharacterFootSide side,
             ulong landingEventIdentity,
-            string sourceIdentity,
-            int sourceCycle,
-            ulong contributionContinuityIdentity,
             Vector3 rawLanding,
             Vector3 componentUp,
             string profileRevision,
             ulong worldRevision)
         {
             if ((side != CharacterFootSide.Left && side != CharacterFootSide.Right) ||
-                landingEventIdentity == 0 ||
-                string.IsNullOrWhiteSpace(sourceIdentity) || sourceCycle < 0 ||
-                contributionContinuityIdentity == 0 || !Finite(rawLanding) ||
+                landingEventIdentity == 0 || !Finite(rawLanding) ||
                 !Finite(componentUp) || componentUp.sqrMagnitude <= 0.000001f ||
                 string.IsNullOrWhiteSpace(profileRevision) || worldRevision == 0)
             {
@@ -174,9 +170,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up = componentUp.normalized;
             Side = side;
             LandingEventIdentity = landingEventIdentity;
-            SourceIdentity = sourceIdentity.Trim();
-            SourceCycle = sourceCycle;
-            ContributionContinuityIdentity = contributionContinuityIdentity;
             RawLandingX = Quantize(rawLanding.x, PositionScale);
             RawLandingY = Quantize(rawLanding.y, PositionScale);
             RawLandingZ = Quantize(rawLanding.z, PositionScale);
@@ -191,9 +184,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootSide Side { get; }
         internal ulong LandingEventIdentity { get; }
-        internal string SourceIdentity { get; }
-        internal int SourceCycle { get; }
-        internal ulong ContributionContinuityIdentity { get; }
         internal int RawLandingX { get; }
         internal int RawLandingY { get; }
         internal int RawLandingZ { get; }
@@ -216,8 +206,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool Equals(CharacterFootLandingObservationKey other) =>
             Side == other.Side &&
             LandingEventIdentity == other.LandingEventIdentity &&
-            SourceCycle == other.SourceCycle &&
-            ContributionContinuityIdentity == other.ContributionContinuityIdentity &&
             RawLandingX == other.RawLandingX &&
             RawLandingY == other.RawLandingY &&
             RawLandingZ == other.RawLandingZ &&
@@ -225,7 +213,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ComponentUpY == other.ComponentUpY &&
             ComponentUpZ == other.ComponentUpZ &&
             WorldRevision == other.WorldRevision &&
-            string.Equals(SourceIdentity, other.SourceIdentity, StringComparison.Ordinal) &&
             string.Equals(ProfileRevision, other.ProfileRevision, StringComparison.Ordinal);
 
         public override bool Equals(object obj) =>
@@ -234,27 +221,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public override int GetHashCode() => HashCode.Combine(
             (int)Side,
             LandingEventIdentity,
-            SourceCycle,
-            ContributionContinuityIdentity,
             RawLandingX,
             RawLandingY,
-            RawLandingZ);
-
-        internal bool HasSameRevisionLineage(
-            CharacterFootSide side,
-            ulong landingEventIdentity,
-            string sourceIdentity,
-            int sourceCycle,
-            ulong contributionContinuityIdentity,
-            string profileRevision,
-            ulong worldRevision) =>
-            Side == side &&
-            LandingEventIdentity == landingEventIdentity &&
-            SourceCycle == sourceCycle &&
-            ContributionContinuityIdentity == contributionContinuityIdentity &&
-            WorldRevision == worldRevision &&
-            string.Equals(SourceIdentity, sourceIdentity, StringComparison.Ordinal) &&
-            string.Equals(ProfileRevision, profileRevision, StringComparison.Ordinal);
+            RawLandingZ,
+            ComponentUpX,
+            ComponentUpY,
+            ComponentUpZ);
 
         static int Quantize(float value, float scale) =>
             Mathf.RoundToInt(value * scale);
@@ -264,9 +236,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong hash = 14695981039346656037UL;
             Add(ref hash, (ulong)key.Side);
             Add(ref hash, key.LandingEventIdentity);
-            Add(ref hash, key.SourceIdentity);
-            Add(ref hash, unchecked((ulong)(long)key.SourceCycle));
-            Add(ref hash, key.ContributionContinuityIdentity);
             Add(ref hash, unchecked((ulong)(uint)key.RawLandingX));
             Add(ref hash, unchecked((ulong)(uint)key.RawLandingY));
             Add(ref hash, unchecked((ulong)(uint)key.RawLandingZ));
@@ -370,26 +339,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootLandingObservationResult(
             CharacterFootLandingObservationPage page,
-            CharacterFootLandingObservationCacheState cacheState,
-            bool hasPreviousQueryInput,
-            float predictionInputMovement,
-            float componentUpDeltaDegrees,
-            bool revisionLineageChanged)
+            CharacterFootLandingObservationCacheState cacheState)
         {
             Page = page ?? throw new ArgumentNullException(nameof(page));
             CacheState = cacheState;
-            HasPreviousQueryInput = hasPreviousQueryInput;
-            PredictionInputMovement = predictionInputMovement;
-            ComponentUpDeltaDegrees = componentUpDeltaDegrees;
-            RevisionLineageChanged = revisionLineageChanged;
         }
 
         internal CharacterFootLandingObservationPage Page { get; }
         internal CharacterFootLandingObservationCacheState CacheState { get; }
-        internal bool HasPreviousQueryInput { get; }
-        internal float PredictionInputMovement { get; }
-        internal float ComponentUpDeltaDegrees { get; }
-        internal bool RevisionLineageChanged { get; }
         internal bool QueryExecutedThisFrame =>
             CacheState == CharacterFootLandingObservationCacheState.Queried;
     }
@@ -405,10 +362,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CacheState = result.CacheState;
             QueryExecutedThisFrame = result.QueryExecutedThisFrame;
             CanonicalRawLanding = page.Key.CanonicalRawLanding;
-            HasPreviousQueryInput = result.HasPreviousQueryInput;
-            PredictionInputMovement = result.PredictionInputMovement;
-            ComponentUpDeltaDegrees = result.ComponentUpDeltaDegrees;
-            RevisionLineageChanged = result.RevisionLineageChanged;
         }
 
         public ulong Identity { get; }
@@ -416,10 +369,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootLandingObservationCacheState CacheState { get; }
         public bool QueryExecutedThisFrame { get; }
         public Vector3 CanonicalRawLanding { get; }
-        public bool HasPreviousQueryInput { get; }
-        public float PredictionInputMovement { get; }
-        public float ComponentUpDeltaDegrees { get; }
-        public bool RevisionLineageChanged { get; }
         public bool IsAvailable => Identity != 0;
     }
 
@@ -517,7 +466,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterFootLandingPredictionResult(
             in CharacterFootLandingPredictionResult source,
             CharacterFootLandingStepSource stepSource,
-            AnimationFootMotionStep step,
+            AnimationBiomechanicalStepHeader step,
             Vector3 currentAnimatedSole,
             CharacterFullBodyIkGoal goal)
         {
@@ -611,7 +560,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootLandingPredictionResult WithLiveStep(
             CharacterFootLandingStepSource stepSource,
-            AnimationFootMotionStep step,
+            AnimationBiomechanicalStepHeader step,
             Vector3 currentAnimatedSole,
             CharacterFullBodyIkGoal goal) =>
             new CharacterFootLandingPredictionResult(
@@ -667,9 +616,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceAnkleRotation = sourcePose.AnkleRotation;
             SourceHeelPosition = sourcePose.HeelPosition;
             SourceToePosition = sourcePose.ToePosition;
-            SourceSoleForward = sourcePose.SoleForward;
-            SourceSoleUp = sourcePose.SoleUp;
-            SourceSoleFrameLocalRotation = sourcePose.SoleFrameLocalRotation;
             StepCandidateSelection = stepCandidateSelection;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
             CharacterFootSwingMotionResult footMotion = result.FootMotion;
@@ -707,9 +653,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Quaternion SourceAnkleRotation { get; }
         public Vector3 SourceHeelPosition { get; }
         public Vector3 SourceToePosition { get; }
-        public Vector3 SourceSoleForward { get; }
-        public Vector3 SourceSoleUp { get; }
-        public Quaternion SourceSoleFrameLocalRotation { get; }
         public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
@@ -725,7 +668,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterFootStepCandidateDiagnostics
     {
         internal CharacterFootStepCandidateDiagnostics(
-            in AnimationFootMotionStep step)
+            in AnimationBiomechanicalStepHeader step)
         {
             IsValid = step.IsValid;
             IsAuthoritative = step.IsAuthoritative;
@@ -772,33 +715,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterFootStepCandidateSelectionDiagnostics
     {
         internal CharacterFootStepCandidateSelectionDiagnostics(
-            in AnimationFootMotionStep contact,
-            in AnimationFootMotionStep prediction,
+            in AnimationBiomechanicalStepHeader current,
+            in AnimationBiomechanicalStepHeader incoming,
             ulong lastLandingEventIdentity,
             CharacterFootLandingStepSource selectedSource,
             ulong selectedLandingEventIdentity,
             float maximumPredictionTimeSeconds)
         {
-            Contact = new CharacterFootStepCandidateDiagnostics(in contact);
-            Prediction = new CharacterFootStepCandidateDiagnostics(in prediction);
+            Current = new CharacterFootStepCandidateDiagnostics(in current);
+            Incoming = new CharacterFootStepCandidateDiagnostics(in incoming);
             LastLandingEventIdentity = lastLandingEventIdentity;
             SelectedSource = selectedSource;
             SelectedLandingEventIdentity = selectedLandingEventIdentity;
             MaximumPredictionTimeSeconds = maximumPredictionTimeSeconds;
         }
 
-        public CharacterFootStepCandidateDiagnostics Contact { get; }
-        public CharacterFootStepCandidateDiagnostics Prediction { get; }
+        public CharacterFootStepCandidateDiagnostics Current { get; }
+        public CharacterFootStepCandidateDiagnostics Incoming { get; }
         public ulong LastLandingEventIdentity { get; }
         public CharacterFootLandingStepSource SelectedSource { get; }
         public ulong SelectedLandingEventIdentity { get; }
         public float MaximumPredictionTimeSeconds { get; }
     }
 
-    public readonly struct CharacterFootMotionInputDiagnostics
+    public readonly struct CharacterFootStepObservationInputDiagnostics
     {
-        internal CharacterFootMotionInputDiagnostics(
-            in AnimationFootMotionRuntimeFrame frame)
+        internal CharacterFootStepObservationInputDiagnostics(
+            in AnimationFootStepObservationFrame frame)
         {
             if (!frame.IsValid)
                 throw new ArgumentException("Foot Step observation input diagnostics is invalid.");
@@ -810,8 +753,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Cycle = frame.Cycle;
             SourceWeight = frame.SourceWeight;
             NormalizedTime = frame.NormalizedTime;
-            Left = frame.Left.Observation;
-            Right = frame.Right.Observation;
+            Left = frame.Left;
+            Right = frame.Right;
             m_IsSpecified = 1;
         }
 
@@ -840,7 +783,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootActionOccupancy rightAction,
             in ThirdPersonSimulation.CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
-            in AnimationFootMotionRuntimeFrame footMotion)
+            in AnimationFootStepObservationFrame footStepObservation)
         {
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Grounded = grounded;
@@ -887,8 +830,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TimelineMaximumBodyYawVelocityDegreesPerSecond =
                 timeline.MaximumBodyYawVelocityDegreesPerSecond;
             CurrentSegmentRemainingSeconds = currentSegmentRemainingSeconds;
-            FootMotion =
-                new CharacterFootMotionInputDiagnostics(in footMotion);
+            FootStepObservation =
+                new CharacterFootStepObservationInputDiagnostics(in footStepObservation);
         }
 
         public float PresentationDeltaSeconds { get; }
@@ -931,7 +874,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float TimelineBodyYawVelocityDegreesPerSecond { get; }
         public float TimelineMaximumBodyYawVelocityDegreesPerSecond { get; }
         public float CurrentSegmentRemainingSeconds { get; }
-        public CharacterFootMotionInputDiagnostics FootMotion { get; }
+        public CharacterFootStepObservationInputDiagnostics FootStepObservation { get; }
     }
 
     public readonly struct CharacterFootLandingPredictionDiagnostics
@@ -942,9 +885,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ulong frameSequence,
                 ulong completionIdentity,
                 int rootInstanceId,
-                string profileId,
-                string profileRevision,
-                in CharacterFootMotionSettings motionSettings,
                 CharacterFootLandingPredictionInputDiagnostics input,
                 in CharacterFootPrimarySupportDiagnostics primarySupport,
                 CharacterFullBodyIkGoal pelvisGoal,
@@ -955,19 +895,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 FrameSequence = frameSequence;
                 CompletionIdentity = completionIdentity;
                 RootInstanceId = rootInstanceId;
-                ProfileId = profileId;
-                ProfileRevision = profileRevision;
-                PredictionInputUpdateDistance =
-                    motionSettings.PredictionInputUpdateDistance;
-                PredictionInputUpAngleDegrees =
-                    motionSettings.PredictionInputUpAngleDegrees;
-                LandingPointAcceptanceDistance =
-                    motionSettings.LandingPointAcceptanceDistance;
-                SwingRevisionDistance = motionSettings.SwingRevisionDistance;
-                ResidualLandingTolerance =
-                    motionSettings.ResidualLandingTolerance;
-                ReleaseCompletionDistance =
-                    motionSettings.ReleaseCompletionDistance;
                 Input = input;
                 PrimarySupport = primarySupport;
                 PelvisGoal = pelvisGoal;
@@ -979,14 +906,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal ulong FrameSequence { get; }
             internal ulong CompletionIdentity { get; }
             internal int RootInstanceId { get; }
-            internal string ProfileId { get; }
-            internal string ProfileRevision { get; }
-            internal float PredictionInputUpdateDistance { get; }
-            internal float PredictionInputUpAngleDegrees { get; }
-            internal float LandingPointAcceptanceDistance { get; }
-            internal float SwingRevisionDistance { get; }
-            internal float ResidualLandingTolerance { get; }
-            internal float ReleaseCompletionDistance { get; }
             internal CharacterFootLandingPredictionInputDiagnostics Input { get; }
             internal CharacterFootPrimarySupportDiagnostics PrimarySupport { get; }
             internal CharacterFullBodyIkGoal PelvisGoal { get; }
@@ -1001,9 +920,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong frameSequence,
             ulong completionIdentity,
             int rootInstanceId,
-            string profileId,
-            string profileRevision,
-            in CharacterFootMotionSettings motionSettings,
             CharacterFootLandingPredictionInputDiagnostics input,
             in CharacterFootPrimarySupportDiagnostics primarySupport,
             CharacterFullBodyIkGoal pelvisGoal,
@@ -1015,9 +931,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frameSequence,
                 completionIdentity,
                 rootInstanceId,
-                profileId,
-                profileRevision,
-                in motionSettings,
                 input,
                 in primarySupport,
                 pelvisGoal,
@@ -1029,20 +942,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong FrameSequence => m_Frame?.FrameSequence ?? 0;
         public ulong CompletionIdentity => m_Frame?.CompletionIdentity ?? 0;
         public int RootInstanceId => m_Frame?.RootInstanceId ?? 0;
-        public string ProfileId => m_Frame?.ProfileId ?? string.Empty;
-        public string ProfileRevision => m_Frame?.ProfileRevision ?? string.Empty;
-        public float PredictionInputUpdateDistance =>
-            m_Frame?.PredictionInputUpdateDistance ?? 0f;
-        public float PredictionInputUpAngleDegrees =>
-            m_Frame?.PredictionInputUpAngleDegrees ?? 0f;
-        public float LandingPointAcceptanceDistance =>
-            m_Frame?.LandingPointAcceptanceDistance ?? 0f;
-        public float SwingRevisionDistance =>
-            m_Frame?.SwingRevisionDistance ?? 0f;
-        public float ResidualLandingTolerance =>
-            m_Frame?.ResidualLandingTolerance ?? 0f;
-        public float ReleaseCompletionDistance =>
-            m_Frame?.ReleaseCompletionDistance ?? 0f;
         public CharacterFootLandingPredictionInputDiagnostics Input =>
             m_Frame == null ? default : m_Frame.Input;
         public CharacterFootPrimarySupportDiagnostics PrimarySupport =>
@@ -1060,8 +959,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Frame.FrameSequence != 0 &&
             m_Frame.CompletionIdentity != 0 &&
             m_Frame.RootInstanceId != 0 &&
-            !string.IsNullOrWhiteSpace(m_Frame.ProfileId) &&
-            !string.IsNullOrWhiteSpace(m_Frame.ProfileRevision) &&
             m_Frame.PelvisGoal.IsValid &&
             m_Frame.Left.Goal.IsValid &&
             m_Frame.Right.Goal.IsValid;
@@ -1140,14 +1037,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal static CharacterFootLandingObservationResult ResolveObservation(
             CharacterFootSide side,
             ulong landingEventIdentity,
-            string sourceIdentity,
-            int sourceCycle,
-            ulong contributionContinuityIdentity,
             Vector3 rawLandingCandidate,
             Vector3 componentUp,
             string profileRevision,
             in CharacterFootLandingPredictionSettings settings,
-            in CharacterFootMotionSettings motionSettings,
             ICharacterFootLandingWorldQuery world,
             CharacterFootLandingObservationPagePool pool,
             CharacterFootLandingObservationPage committedPage,
@@ -1157,54 +1050,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(world));
             if (pool == null)
                 throw new ArgumentNullException(nameof(pool));
-            Vector3 normalizedUp = componentUp.normalized;
-            bool hasPreviousQueryInput = committedPage != null &&
-                                         committedPage.HasValue;
-            bool sameRevisionLineage = hasPreviousQueryInput &&
-                committedPage.Key.HasSameRevisionLineage(
-                    side,
-                    landingEventIdentity,
-                    sourceIdentity,
-                    sourceCycle,
-                    contributionContinuityIdentity,
-                    profileRevision,
-                    world.WorldRevision);
-            float predictionInputMovement = hasPreviousQueryInput
-                ? Vector3.Distance(
-                    committedPage.Key.CanonicalRawLanding,
-                    rawLandingCandidate)
-                : 0f;
-            float componentUpDeltaDegrees = hasPreviousQueryInput
-                ? Vector3.Angle(
-                    committedPage.Key.CanonicalComponentUp,
-                    normalizedUp)
-                : 0f;
-            if (sameRevisionLineage &&
-                predictionInputMovement <=
-                motionSettings.PredictionInputUpdateDistance &&
-                componentUpDeltaDegrees <=
-                motionSettings.PredictionInputUpAngleDegrees)
+            var key = new CharacterFootLandingObservationKey(
+                side,
+                landingEventIdentity,
+                rawLandingCandidate,
+                componentUp,
+                profileRevision,
+                world.WorldRevision);
+            if (committedPage != null && committedPage.HasValue &&
+                committedPage.Key.Equals(key))
             {
                 pendingPage = CharacterFootLandingObservationPagePool
                     .ReuseCommitted(committedPage);
                 return new CharacterFootLandingObservationResult(
                     pendingPage,
-                    CharacterFootLandingObservationCacheState.Reused,
-                    true,
-                    predictionInputMovement,
-                    componentUpDeltaDegrees,
-                    false);
+                    CharacterFootLandingObservationCacheState.Reused);
             }
-            var key = new CharacterFootLandingObservationKey(
-                side,
-                landingEventIdentity,
-                sourceIdentity,
-                sourceCycle,
-                contributionContinuityIdentity,
-                rawLandingCandidate,
-                componentUp,
-                profileRevision,
-                world.WorldRevision);
             pendingPage = pool.AcquireWritable(committedPage);
             CharacterFootPlacementQueryRequest query = BuildQuery(
                 in key,
@@ -1213,11 +1074,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             pendingPage.Set(in key, in query, in result);
             return new CharacterFootLandingObservationResult(
                 pendingPage,
-                CharacterFootLandingObservationCacheState.Queried,
-                hasPreviousQueryInput,
-                predictionInputMovement,
-                componentUpDeltaDegrees,
-                hasPreviousQueryInput && !sameRevisionLineage);
+                CharacterFootLandingObservationCacheState.Queried);
         }
 
         static bool Finite(Vector3 value) =>

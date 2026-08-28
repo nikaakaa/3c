@@ -29,7 +29,7 @@
 - 用独立typed `CharacterFootTransitionResolver`声明固定Transition边、判定阶段和优先级。Resolver只生成不可变Decision；唯一Transition Runtime应用State与Anchor命令，不执行插值、不查询世界、不写Goal。
 - 用纯`CharacterFootStateTargetResolver`按Transition后的离散State生成Correction Target、接触引用、Goal/Ownership目标和Interpolation Policy Request。State Target不得保存时间状态、推进Residual或跳转到另一State。
 - 用唯一typed `CharacterFootInterpolationRuntime`拥有Effective Correction、唯一Residual、上一Target与Completion。Swing Path换代、Landing Acquire和Release都提交固定Policy Request给它执行；删除分散在State分支中的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`与重复`Advance`数学。
-- 让Swing/UnlockedSupport的State Target复用同帧不可变CurrentSwingFloor作为连续目标下界，再由插值后的Hard Constraint使用同一事实立即兜底；不得执行第二次Query。Releasing继续只回到原始Swing目标。Hard Constraint不得反向决定State、Transition或改写Interpolation历史。
+- Swing/UnlockedSupport的State Target只使用正式Ground Path、Envelope与Foot Height。CurrentSwingFloor只在插值后作为Hard Constraint消费同帧查询事实，不得进入预测目标、触发Residual Revision或改写Interpolation历史；不得执行第二次Query。Releasing继续只回到原始Swing目标。
 - 只把Foot Height接入Swing，使动画抬脚高度叠加到Runtime Ground Envelope，删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`提前改脚目标的旧政策。
 - 只把Support接入Resolved Foot、Primary Support与Pelvis，使承重意图不再依赖Lock资格，并为Landing腿提供独立Reach请求。
 - 增加必须显式序列化的米制最小Landing腿压缩余量；缺失即typed invalid，不提供默认值。Pelvis优先求双腿可达交集，无法同时满足时夹紧Foot Goal并发布typed不可达结果，不允许完全伸直后继续进入Full Lock。
@@ -88,8 +88,8 @@ Contact/Lock生命周期只读取正式Contact、Lock Mode与Lock Weight
 State Target不拥有Transition、Residual、HalfLife、时间推进或Hard Constraint
 Swing、Landing Acquire与Release只通过一个Interpolation State、一个Residual和一个Effective Correction Owner连续化
 Pre/Post Transition、Interpolation与Hard Constraint顺序固定且每帧各执行一次
-CurrentSwingFloor与Reach只约束插值后的结果，不反向修改State或Transition
-CurrentSwingFloor下降通过Swing唯一Interpolation连续释放，上升仍由Hard Constraint立即保护
+CurrentSwingFloor与Reach只约束插值后的结果，不反向修改State、Transition、Target或Residual
+CurrentSwingFloor命中变化不得重建Swing预测目标；只有插值后结果低于真实地面时Hard Constraint才立即保护
 旧隐藏Step、Constraint、PlantConfidence和Support消费者被删除
 不存在fallback、旧新双读、第二状态机、第二Goal链或TrainingEnemy变化
 ```

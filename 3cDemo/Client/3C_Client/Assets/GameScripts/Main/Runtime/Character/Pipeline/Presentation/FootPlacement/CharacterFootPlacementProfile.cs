@@ -15,6 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_CastBelow = 0.75f;
         [SerializeField] float m_MaximumSurfaceSlopeDegrees = 55f;
         [SerializeField] float m_MaximumPredictionTimeSeconds = 2f;
+        [SerializeField] float m_PredictionInputAccumulationDistance;
+        [SerializeField] float m_ComponentUpChangeAngleDegrees;
 
         internal CharacterFootLandingPredictionSettings Build() =>
             new CharacterFootLandingPredictionSettings(
@@ -24,7 +26,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CastAbove,
                 m_CastBelow,
                 m_MaximumSurfaceSlopeDegrees,
-                m_MaximumPredictionTimeSeconds);
+                m_MaximumPredictionTimeSeconds,
+                m_PredictionInputAccumulationDistance,
+                m_ComponentUpChangeAngleDegrees);
 
         internal void ApplyTuning(string fieldPath, CharacterPoseTuningValue value)
         {
@@ -45,7 +49,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float castAbove,
             float castBelow,
             float maximumSurfaceSlopeDegrees,
-            float maximumPredictionTimeSeconds)
+            float maximumPredictionTimeSeconds,
+            float predictionInputAccumulationDistance,
+            float componentUpChangeAngleDegrees)
         {
             GroundLayerMask = groundLayerMask;
             HitCapacity = hitCapacity;
@@ -54,6 +60,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CastBelow = castBelow;
             MaximumSurfaceSlopeDegrees = maximumSurfaceSlopeDegrees;
             MaximumPredictionTimeSeconds = maximumPredictionTimeSeconds;
+            PredictionInputAccumulationDistance =
+                predictionInputAccumulationDistance;
+            ComponentUpChangeAngleDegrees = componentUpChangeAngleDegrees;
             RequireValid();
         }
 
@@ -64,6 +73,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float CastBelow { get; }
         internal float MaximumSurfaceSlopeDegrees { get; }
         internal float MaximumPredictionTimeSeconds { get; }
+        internal float PredictionInputAccumulationDistance { get; }
+        internal float ComponentUpChangeAngleDegrees { get; }
         internal float MinimumGroundNormalDot =>
             Mathf.Cos(MaximumSurfaceSlopeDegrees * Mathf.Deg2Rad);
 
@@ -76,7 +87,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !float.IsFinite(MaximumSurfaceSlopeDegrees) ||
                 MaximumSurfaceSlopeDegrees <= 0f || MaximumSurfaceSlopeDegrees >= 90f ||
                 !float.IsFinite(MaximumPredictionTimeSeconds) ||
-                MaximumPredictionTimeSeconds <= 0f)
+                MaximumPredictionTimeSeconds <= 0f ||
+                !float.IsFinite(PredictionInputAccumulationDistance) ||
+                PredictionInputAccumulationDistance <= 0f ||
+                PredictionInputAccumulationDistance > SphereRadius ||
+                !float.IsFinite(ComponentUpChangeAngleDegrees) ||
+                ComponentUpChangeAngleDegrees <= 0f ||
+                ComponentUpChangeAngleDegrees >= 90f)
             {
                 throw new InvalidOperationException(
                     "Foot Landing Prediction settings are invalid.");
@@ -267,7 +284,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v27-split-interpolation-tolerances";
+        public const string SchemaVersion = "character-foot-placement-profile/v28-prediction-input-accumulation";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

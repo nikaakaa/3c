@@ -40,11 +40,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0.35f,
                 0.75f,
                 55f,
-                2f);
+                2f,
+                0.05f,
+                1f);
             Vector3 raw = new Vector3(1f, 2f, 3f);
             var key = new CharacterFootLandingObservationKey(
                 CharacterFootSide.Right,
                 1UL,
+                1UL,
+                0,
                 raw,
                 Vector3.up,
                 "test-profile",
@@ -72,7 +76,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0.35f,
                 0.75f,
                 55f,
-                2f);
+                2f,
+                0.05f,
+                1f);
             var world = new MissingWorldQuery();
             var pool = new CharacterFootLandingObservationPagePool();
 
@@ -80,8 +86,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootLandingPredictor.ResolveObservation(
                 CharacterFootSide.Left,
                 1UL,
+                1UL,
+                0,
                 Vector3.zero,
                 Vector3.up,
+                false,
                 "test-profile",
                 in settings,
                 world,

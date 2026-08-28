@@ -17,14 +17,14 @@
 - 正式Step Time只提供Landing前Residual欠账的截止时间。它不能解释Raw Landing端点变化约1厘米而Correction同帧跳变约12厘米的放大，不得在首个不连续阶段尚未定位时作为当前抖动修复接入。
 - 逐阶段诊断已经把`Raw Landing/Path Target -> Swing Target -> Captured Residual -> State Output -> Safety Floor -> Encoded Goal`放在同Frame与Event lineage下对账，并以typed失败阻止缺失阶段时继续生成伪结论。
 - `20260826-231414`在右脚4367到4368帧证明旧Event的Promoted Contact Landing遮住同帧新Event的Accepted Swing Landing，使State Machine错误发布`PathAvailable 1 -> 0 -> 1`。Swing Path Landing与Contact Landing必须拆成两个typed输入；该修复不改变后续Residual截止衰减政策。
-- canonical nearest对照已经证明，上一Committed `SurfaceIdentity`通过`PreferredSurfaceIdentity`参与下一帧候选选择时，相同查询几何会因历史不同得到不同Surface；超过5厘米的23次CurrentFloor catchup中18次、超过10厘米的14次中13次来自旧Surface覆盖nearest。FutureLanding必须先收敛为相同canonical Observation Key复用不可变结果、新Key只查询一次的纯世界事实，历史只允许参与后续5毫米Acceptance。
+- canonical nearest对照已经证明，上一Committed `SurfaceIdentity`通过`PreferredSurfaceIdentity`参与下一帧候选选择时，相同查询几何会因历史不同得到不同Surface；超过5厘米的23次CurrentFloor catchup中18次、超过10厘米的14次中13次来自旧Surface覆盖nearest。FutureLanding必须把上次真实查询输入作为累计基准；同Source/Cycle/Event/Profile/World下Raw Landing累计位移不超过5厘米且Component Up变化不超过1度时复用不可变Observation，超过阈值或lineage变化才查询一次。正式`Sliding`接触准入窗口在输入identity变化时刷新Observation，避免缓存误差与动画脚底残差叠加后拒绝正式Lock。历史Surface不得参与查询；查询后的Surface变化必须在Current Anchor与Next Landing所有权闭合后只换代Next Landing。
 
 ## What Changes
 
 - 从当前选中动画Source的原生Foot Motion Curve生成唯一typed Runtime Foot Motion Frame，并保持Source、Cycle、Contribution、Completion、Clip与Landing Event lineage。
 - 保留已经完成的`Releasing -> Swing`顺序修正和identity触发清理，先对Ground Path到Encoded Goal的逐阶段Correction做同帧归因，修复首个已证明的不连续阶段；之后才接入Residual截止收敛与真实Envelope安全边界。
 - 只把Step Time/Distance接入Landing Prediction，保持世界落点仍由正式Future Body Translation、RootLocalLanding与唯一SphereCast生成。
-- 为每脚FutureLanding建立根事务所有的Committed/Pending Observation Page；每帧继续重新投影Raw Landing，但相同canonical Observation Key不重复SphereCast，新Key始终选择canonical最近合法Surface并删除历史Surface偏好。
+- 为每脚FutureLanding建立根事务所有的Committed/Pending Observation Page；每帧继续重新投影Raw Landing，但只在相对上次真实查询输入累计超过正式距离/Up角度阈值、Source/Cycle/Event/Profile/World lineage变化或正式`Sliding`接触准入输入identity变化时执行一次SphereCast，其余帧复用Committed Observation。新查询始终选择canonical最近合法Surface并删除历史Surface偏好。
 - 把每脚约束执行固定为`不可变输入与Observation -> Pre-Interpolation Transition -> State Target -> 统一Interpolation -> Post-Interpolation Transition -> Hard Constraint -> Resolved Foot`。同一根事务按固定顺序执行一次，不建立第二状态机或第二输出路径。
 - 用独立typed `CharacterFootTransitionResolver`声明固定Transition边、判定阶段和优先级。Resolver只生成不可变Decision；唯一Transition Runtime应用State与Anchor命令，不执行插值、不查询世界、不写Goal。
 - 用纯`CharacterFootStateTargetResolver`按Transition后的离散State生成Correction Target、接触引用、Goal/Ownership目标和Interpolation Policy Request。State Target不得保存时间状态、推进Residual或跳转到另一State。

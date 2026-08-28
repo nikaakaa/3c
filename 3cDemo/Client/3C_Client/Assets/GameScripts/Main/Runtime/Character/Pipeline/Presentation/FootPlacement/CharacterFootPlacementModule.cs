@@ -1053,12 +1053,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Body.VisibleRotation,
                 in bodyTranslation,
                 step.RootLocalLanding);
+            AnimationFootStepObservationFrame formalFootFrame =
+                frame.Pose.FootStepObservation;
+            AnimationFootStepObservationSample formalFoot =
+                side == CharacterFootSide.Left
+                    ? formalFootFrame.Left
+                    : formalFootFrame.Right;
+            bool contactAcquisitionRefresh =
+                formalFootFrame.IsValid &&
+                formalFootFrame.CompletionIdentity == frame.Pose.CompletionIdentity &&
+                formalFoot.LockMode ==
+                AnimationFootStepObservationLockMode.Sliding;
             CharacterFootLandingObservationResult observation =
                 CharacterFootLandingPredictor.ResolveObservation(
                 side,
                 step.LandingEventIdentity,
+                step.SourceSampleIdentity,
+                step.SourceSampleCycle,
                 rawLanding,
                 componentUp,
+                contactAcquisitionRefresh,
                 m_Settings.ProfileRevision,
                 in settings,
                 m_WorldQuery,

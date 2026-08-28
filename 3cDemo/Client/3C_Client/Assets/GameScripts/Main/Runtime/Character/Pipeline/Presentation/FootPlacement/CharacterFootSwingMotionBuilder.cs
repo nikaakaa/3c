@@ -548,7 +548,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     groundPath.InputIdentity,
                     originalSole,
                     originalAnkle);
-            if (!step.IsSwing)
+            if (!step.IsPreSwing && !step.IsSwing)
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.StepNotSwing,
                     landingEventIdentity,

@@ -180,6 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateTarget target,
             in CharacterFootStateFrame frame)
         {
+            Vector3 previousEffectiveCorrection = state.EffectiveCorrection;
             bool pathAvailableBefore = state.HasSwingPath;
             ulong previousLandingEventIdentity =
                 state.SwingLandingEventIdentity;
@@ -258,7 +259,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 frame.DeltaSeconds,
                 halfLifeSeconds);
-            state.EffectiveCorrection = target.Correction + state.Residual;
+            Vector3 correctionBeforeVerticalRateLimit =
+                target.Correction + state.Residual;
+            state.EffectiveCorrection = LimitVerticalRate(
+                previousEffectiveCorrection,
+                correctionBeforeVerticalRateLimit,
+                frame.ComponentUp,
+                frame.DeltaSeconds,
+                frame.Settings.SwingVerticalCorrectionMaximumSpeed,
+                out bool verticalRateLimitApplied);
             state.Residual =
                 state.EffectiveCorrection - target.Correction;
             state.Progress = 0f;
@@ -287,7 +296,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Settings.EffectiveCorrectionHalfLifeSeconds,
                 deadlineHalfLifeAvailable,
                 deadlineHalfLifeSeconds,
-                halfLifeSeconds);
+                halfLifeSeconds,
+                frame.Settings.SwingVerticalCorrectionMaximumSpeed,
+                verticalRateLimitApplied,
+                correctionBeforeVerticalRateLimit);
             return Result(in state, false, in continuityFact);
         }
 
@@ -318,6 +330,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float alpha = 1f -
                           Mathf.Pow(0.5f, deltaSeconds / halfLifeSeconds);
             return Vector3.LerpUnclamped(current, target, alpha);
+        }
+
+        static Vector3 LimitVerticalRate(
+            Vector3 previous,
+            Vector3 candidate,
+            Vector3 componentUp,
+            float deltaSeconds,
+            float maximumSpeed,
+            out bool applied)
+        {
+            Vector3 up = componentUp.normalized;
+            float delta = Vector3.Dot(candidate - previous, up);
+            float maximumDelta = maximumSpeed * Mathf.Max(0f, deltaSeconds);
+            float limitedDelta = Mathf.Clamp(delta, -maximumDelta, maximumDelta);
+            applied = Mathf.Abs(delta - limitedDelta) >
+                      CharacterFootConstraintMath.GeometryEpsilon;
+            return candidate + up * (limitedDelta - delta);
         }
 
         static float ResolveSwingResidualHalfLife(

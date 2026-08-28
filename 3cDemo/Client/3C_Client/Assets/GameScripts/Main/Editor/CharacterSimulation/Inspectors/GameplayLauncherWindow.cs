@@ -105,7 +105,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterFootLandingPredictionSampler.StopAndSaveSampling();
             }
             m_AutoSampleStopTime = 0d;
-            GameplayLabFootIkKeyboardRouteDriver.Stop();
         }
 
         void OnGUI()
@@ -295,56 +294,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         StartAutoSample();
                 }
                 using (new EditorGUI.DisabledScope(
-                           EditorApplication.isCompiling ||
-                           EditorApplication.isPlayingOrWillChangePlaymode &&
-                           !EditorApplication.isPlaying ||
-                           capturing ||
-                           starting ||
-                           GameplayLabFootIkKeyboardRouteDriver.IsActive ||
-                           GameplayLabFootIkKeyboardRouteDriver.IsPending ||
-                           m_AutoSampleStopTime > 0d))
-                {
-                    if (GUILayout.Button("Auto Walk Stairs AD Sample"))
-                        StartStairSample(GameplayLabFootIkAutomaticRouteMode.StairAdStress);
-                }
-                using (new EditorGUI.DisabledScope(
                            string.IsNullOrEmpty(diagnosisDirectory) ||
                            !Directory.Exists(diagnosisDirectory)))
                 {
                     if (GUILayout.Button("Show Last Diagnoses"))
                         ShowLastDiagnostics();
                 }
-            }
-            using (new EditorGUI.DisabledScope(
-                       EditorApplication.isCompiling ||
-                       EditorApplication.isPlayingOrWillChangePlaymode &&
-                       !EditorApplication.isPlaying ||
-                       capturing ||
-                       starting ||
-                       GameplayLabFootIkKeyboardRouteDriver.IsActive ||
-                       GameplayLabFootIkKeyboardRouteDriver.IsPending ||
-                       m_AutoSampleStopTime > 0d))
-            {
-                if (GUILayout.Button("Auto Walk Stairs Straight Sample"))
-                    StartStairSample(GameplayLabFootIkAutomaticRouteMode.StairStraight);
-            }
-            if (GameplayLabFootIkKeyboardRouteDriver.IsActive)
-            {
-                EditorGUILayout.HelpBox(
-                    $"{GameplayLabFootIkKeyboardRouteDriver.Mode} {GameplayLabFootIkKeyboardRouteDriver.PhaseName} lap {GameplayLabFootIkKeyboardRouteDriver.Lap}",
-                    MessageType.Info);
-            }
-            else if (GameplayLabFootIkKeyboardRouteDriver.IsPending)
-            {
-                EditorGUILayout.HelpBox(
-                    $"Starting Gameplay Lab for {GameplayLabFootIkKeyboardRouteDriver.Mode} sample...",
-                    MessageType.Info);
-            }
-            if (!string.IsNullOrEmpty(GameplayLabFootIkKeyboardRouteDriver.LastDiagnosticSummary))
-            {
-                EditorGUILayout.HelpBox(
-                    GameplayLabFootIkKeyboardRouteDriver.LastDiagnosticSummary,
-                    MessageType.Info);
             }
             DrawFixedInputTrace();
             EditorGUILayout.Space(4f);
@@ -670,34 +625,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        void StartStairSample(GameplayLabFootIkAutomaticRouteMode mode)
-        {
-            IGameplayLabLauncherOperations operations = GameplayLabLauncherRegistry.Operations;
-            if (operations == null)
-            {
-                EditorUtility.DisplayDialog("3C Launcher", "Gameplay Lab launcher module is not registered.", "OK");
-                return;
-            }
-            try
-            {
-                if (EditorApplication.isPlaying)
-                {
-                    GameplayLabFootIkKeyboardRouteDriver.Start(mode);
-                    return;
-                }
-                GameplayLabFootIkKeyboardRouteDriver.ArmPending(mode);
-                operations.Play(m_LabVariantIndex);
-                if (!EditorApplication.isPlayingOrWillChangePlaymode)
-                    GameplayLabFootIkKeyboardRouteDriver.ClearPending();
-            }
-            catch (Exception exception)
-            {
-                GameplayLabFootIkKeyboardRouteDriver.ClearPending();
-                Debug.LogException(exception);
-                EditorUtility.DisplayDialog("3C Launcher", exception.Message, "OK");
-            }
-        }
-
         void TickAutoSample()
         {
             if (m_AutoSampleStopTime == 0d)
@@ -725,7 +652,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             EditorApplication.update -= TickAutoSample;
             m_AutoSampleStopTime = 0d;
-            GameplayLabFootIkKeyboardRouteDriver.Stop();
             ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
             ShowLastDiagnostics();
             Repaint();

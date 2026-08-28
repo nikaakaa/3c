@@ -11,13 +11,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out CharacterFootSwingMotionResult result)
         {
             CharacterFootStateFrame frame = evaluation.Frame;
+            var currentStep = evaluation.CurrentStep;
             var selectedStep = evaluation.SelectedStep;
-            var formalFootMotion = evaluation.FormalFootMotion;
             var landingPrediction = evaluation.LandingPrediction;
             CharacterFootMotionSettings settings = frame.Settings;
             CharacterFootLandingRuntime.Evaluate(
                 ref context.Landing,
-                in formalFootMotion,
+                in currentStep,
                 in selectedStep,
                 in landingPrediction,
                 in settings);

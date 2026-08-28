@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         Empty = 0,
         Tracking = 1,
-        Committed = 2
+        Accepted = 2
     }
 
     [Flags]
@@ -394,10 +394,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 WorldNormal);
 
         internal static CharacterFootLandingFact Create(
-            ulong landingEventIdentity,
+            in AnimationBiomechanicalStepHeader step,
             in CharacterFootLandingPredictionResult diagnostics) =>
             new CharacterFootLandingFact(
-                landingEventIdentity,
+                step.LandingEventIdentity,
                 diagnostics.TrajectoryGeneration,
                 diagnostics.FutureBodyTranslationSourceIdentity,
                 diagnostics.SurfaceIdentity,
@@ -417,9 +417,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float nextSwingPredictionError,
             float nextSwingConstraintWeight,
             bool hasPromotedLanding,
-            CharacterFootGroundPathLanding promotedLanding,
-            bool commitAttempted,
-            bool commitUnavailable)
+            CharacterFootGroundPathLanding promotedLanding)
         {
             State = state;
             EventIdentity = eventIdentity;
@@ -431,8 +429,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingConstraintWeight = nextSwingConstraintWeight;
             HasPromotedLanding = hasPromotedLanding;
             PromotedLanding = promotedLanding;
-            CommitAttempted = commitAttempted;
-            CommitUnavailable = commitUnavailable;
         }
 
         internal CharacterFootLandingTrackingState State { get; }
@@ -447,10 +443,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float NextSwingConstraintWeight { get; }
         internal bool HasPromotedLanding { get; }
         internal CharacterFootGroundPathLanding PromotedLanding { get; }
-        internal bool CommitAttempted { get; }
-        internal bool CommitUnavailable { get; }
-        internal bool IsCommitted =>
-            State == CharacterFootLandingTrackingState.Committed;
 
         internal bool TryResolveLanding(
             ulong landingEventIdentity,
@@ -486,8 +478,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
         internal CharacterFootLandingTrackingState TrackingState;
-        internal bool CommitAttempted;
-        internal bool CommitUnavailable;
 
         internal CharacterFootLandingSnapshot Snapshot =>
             new CharacterFootLandingSnapshot(
@@ -495,30 +485,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 TrackedEventIdentity,
                 LastLanding.HasValue,
                 LastLanding.HasValue ? LastLanding.Resolve() : default,
+                TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue,
+                TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
+                TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
+                TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
                 PromotedLanding.HasValue,
-                PromotedLanding.HasValue ? PromotedLanding.Resolve() : default,
-                CommitAttempted,
-                CommitUnavailable);
+                PromotedLanding.HasValue ? PromotedLanding.Resolve() : default);
 
-        internal void BeginFrame()
-        {
-            PromotedLanding = default;
-            CommitAttempted = false;
-            CommitUnavailable = false;
-        }
+        internal void BeginFrame() => PromotedLanding = default;
 
         internal void InvalidateCurrent()
         {
-            if (TrackingState == CharacterFootLandingTrackingState.Committed)
-                return;
             NextSwingPredictionError = 0f;
             NextSwingConstraintWeight = 0f;
-            CommitAttempted = false;
-            CommitUnavailable = false;
             TrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;
@@ -633,21 +616,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
+            in AnimationBiomechanicalStepHeader currentStep,
             in AnimationBiomechanicalStepHeader selectedStep,
-            in AnimationFootStepObservationSample formalFootMotion,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootStateFrame frame)
         {
             Side = side;
+            CurrentStep = currentStep;
             SelectedStep = selectedStep;
-            FormalFootMotion = formalFootMotion;
             LandingPrediction = landingPrediction;
             Frame = frame;
         }
 
         internal CharacterFootSide Side { get; }
+        internal AnimationBiomechanicalStepHeader CurrentStep { get; }
         internal AnimationBiomechanicalStepHeader SelectedStep { get; }
-        internal AnimationFootStepObservationSample FormalFootMotion { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }
     }

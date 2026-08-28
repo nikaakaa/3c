@@ -19,8 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         PathAvailabilityChanged = 1,
         LandingEventChanged = 2,
         LandingPointChanged = 4,
-        SwingTargetChanged = 8,
-        ContinuousTargetChanged = 16
+        SwingTargetChanged = 8
     }
 
     public enum CharacterFootSafetyFloorOwner : byte
@@ -538,7 +537,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong SwingLandingEventIdentity;
         internal Vector3 SwingLandingPoint;
         internal Vector3 PreviousTargetCorrection;
-        internal Vector3 PreviousRawSwingCorrection;
+        internal Vector3 PreviousSwingTargetCorrection;
         internal Vector3 EffectiveCorrection;
         internal Vector3 Residual;
         internal float Progress;
@@ -671,7 +670,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootStateTarget(
             Vector3 correction,
             Vector3 swingCorrection,
-            Vector3 rawSwingCorrection,
             CharacterFootInterpolationPolicy interpolationPolicy,
             bool stateEntered,
             bool responseEntered,
@@ -681,7 +679,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Correction = correction;
             SwingCorrection = swingCorrection;
-            RawSwingCorrection = rawSwingCorrection;
             InterpolationPolicy = interpolationPolicy;
             StateEntered = stateEntered;
             ResponseEntered = responseEntered;
@@ -692,7 +689,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal Vector3 Correction { get; }
         internal Vector3 SwingCorrection { get; }
-        internal Vector3 RawSwingCorrection { get; }
         internal CharacterFootInterpolationPolicy InterpolationPolicy { get; }
         internal bool StateEntered { get; }
         internal bool ResponseEntered { get; }

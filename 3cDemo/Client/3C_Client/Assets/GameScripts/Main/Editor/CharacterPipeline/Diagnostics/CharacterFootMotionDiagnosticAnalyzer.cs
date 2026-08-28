@@ -3301,15 +3301,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.PathLandingPointDelta > current.LandingUpdateDistance;
                 bool swingTargetChanged = comparablePath &&
                     current.PathTargetDelta > current.LandingUpdateDistance;
-                bool continuousTargetChanged = comparablePath &&
-                    continuous &&
-                    Vector3.Distance(
-                        previous.StateTargetCorrection,
-                        current.StateTargetCorrection) >
-                    current.LandingUpdateDistance;
                 bool revisionExpected = availabilityChanged || eventChanged ||
-                                        landingPointChanged || swingTargetChanged ||
-                                        continuousTargetChanged;
+                                        landingPointChanged || swingTargetChanged;
                 bool reasonAvailability = HasRevisionReason(
                     current.PathRevisionReason,
                     "PathAvailabilityChanged");
@@ -3322,18 +3315,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool reasonSwingTarget = HasRevisionReason(
                     current.PathRevisionReason,
                     "SwingTargetChanged");
-                bool reasonContinuousTarget = HasRevisionReason(
-                    current.PathRevisionReason,
-                    "ContinuousTargetChanged");
                 bool reasonAvailable = reasonAvailability || reasonEvent ||
-                                       reasonLandingPoint || reasonSwingTarget ||
-                                       reasonContinuousTarget;
+                                       reasonLandingPoint || reasonSwingTarget;
                 bool reasonMatchesExpected =
                     reasonAvailability == availabilityChanged &&
                     reasonEvent == eventChanged &&
                     reasonLandingPoint == landingPointChanged &&
-                    reasonSwingTarget == swingTargetChanged &&
-                    reasonContinuousTarget == continuousTargetChanged;
+                    reasonSwingTarget == swingTargetChanged;
                 double residualBeforeRevision =
                     current.SwingResidualBeforeRevision.magnitude;
                 double residualBeforeDecay =
@@ -3404,8 +3392,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["expectedLandingPointRevision"] = landingPointChanged,
                     ["expectedPathAvailabilityRevision"] = availabilityChanged,
                     ["expectedSwingTargetRevision"] = swingTargetChanged,
-                    ["expectedContinuousTargetRevision"] =
-                        continuousTargetChanged,
                     ["identityOnlyInputChange"] = identityOnlyInputChange,
                     ["pathContinuityEvaluated"] =
                         current.PathContinuityEvaluated,
@@ -3418,8 +3404,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["reasonLandingPointChanged"] = reasonLandingPoint,
                     ["reasonPathAvailabilityChanged"] = reasonAvailability,
                     ["reasonSwingTargetChanged"] = reasonSwingTarget,
-                    ["reasonContinuousTargetChanged"] =
-                        reasonContinuousTarget,
                     ["releasingCompletedToSwing"] =
                         current.ReleasingCompletedToSwing,
                     ["residualGrewWithoutRevision"] =
@@ -4999,8 +4983,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                              reason == "PathAvailabilityChanged" ||
                              reason == "LandingEventChanged" ||
                              reason == "LandingPointChanged" ||
-                             reason == "SwingTargetChanged" ||
-                             reason == "ContinuousTargetChanged";
+                             reason == "SwingTargetChanged";
                 if (!valid)
                 {
                     throw new InvalidDataException(

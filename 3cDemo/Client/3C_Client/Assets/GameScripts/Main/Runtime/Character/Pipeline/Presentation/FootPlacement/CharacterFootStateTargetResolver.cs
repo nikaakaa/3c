@@ -15,14 +15,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveSwingCorrection(
                     frame.AnimatedFoot,
                     frame.SwingMotion);
-            Vector3 swingTarget = ResolveSwingTarget(
-                swingCorrection,
-                in frame);
             if (transition.SuppressOutput)
             {
                 return new CharacterFootStateTarget(
                     default,
-                    swingTarget,
                     swingCorrection,
                     CharacterFootInterpolationPolicy.Suppressed,
                     transition.StateChanged,
@@ -36,8 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootConstraintState.Swing:
                 case CharacterFootConstraintState.UnlockedSupport:
                     return Target(
-                        swingTarget,
-                        swingTarget,
+                        swingCorrection,
                         swingCorrection,
                         CharacterFootInterpolationPolicy.SwingResidual,
                         transition,
@@ -48,7 +43,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterFootConstraintMath.ResolveContactCorrection(
                             frame.AnimatedFoot,
                             context.Contact.Anchor),
-                        swingTarget,
                         swingCorrection,
                         CharacterFootInterpolationPolicy.AcquireByWeight,
                         transition,
@@ -59,13 +53,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return ResolveLockedTarget(
                         in context,
                         in transition,
-                        swingTarget,
                         swingCorrection,
                         timeToLandingSeconds,
                         in frame);
                 case CharacterFootConstraintState.Releasing:
                     return Target(
-                        swingCorrection,
                         swingCorrection,
                         swingCorrection,
                         CharacterFootInterpolationPolicy.ReleaseResidual,
@@ -82,7 +74,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
-            Vector3 rawSwingCorrection,
             float timeToLandingSeconds,
             in CharacterFootStateFrame frame)
         {
@@ -96,7 +87,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return Target(
                     fullCorrection,
                     swingCorrection,
-                    rawSwingCorrection,
                     CharacterFootInterpolationPolicy.Direct,
                     transition,
                     1f,
@@ -121,34 +111,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Target(
                 correction,
                 swingCorrection,
-                rawSwingCorrection,
                 CharacterFootInterpolationPolicy.HalfLife,
                 transition,
                 1f,
                 timeToLandingSeconds);
         }
 
-        static Vector3 ResolveSwingTarget(
-            Vector3 swingCorrection,
-            in CharacterFootStateFrame frame)
-        {
-            if (!frame.CurrentGroundFloor.Accepted)
-                return swingCorrection;
-            Vector3 minimum =
-                CharacterFootConstraintMath.ResolvePointMinimumCorrection(
-                    frame.AnimatedFoot,
-                    frame.CurrentGroundFloor.Point,
-                    frame.ComponentUp);
-            return CharacterFootConstraintMath.RaiseToMinimum(
-                swingCorrection,
-                minimum,
-                frame.ComponentUp);
-        }
-
         static CharacterFootStateTarget Target(
             Vector3 correction,
             Vector3 swingCorrection,
-            Vector3 rawSwingCorrection,
             CharacterFootInterpolationPolicy policy,
             in CharacterFootTransitionDecision transition,
             float progress,
@@ -156,7 +127,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootStateTarget(
                 correction,
                 swingCorrection,
-                rawSwingCorrection,
                 policy,
                 transition.StateChanged,
                 transition.Reason ==

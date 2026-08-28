@@ -9,63 +9,57 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            CharacterFootLockRequest request = frame.LockRequest;
-            CharacterFootContactEdge edge = ResolveContactEdge(
-                in context.ContactTransition,
-                in request);
+            CharacterFootConstraintState sourceState = discrete.State;
             if (frame.HardOwnershipLoss)
             {
+                bool consumed = frame.SwingMotion.PlantConfidence >=
+                                AnimationFootConstraintFacts
+                                    .GroundedMinimumConfidence;
                 return Decision(
                     CharacterFootTransitionReason.OwnershipLost,
-                    discrete.State,
-                    CharacterFootConstraintState.Swing,
+                    sourceState,
+                    consumed
+                        ? CharacterFootConstraintState.UnlockedSupport
+                        : CharacterFootConstraintState.Swing,
                     CharacterFootLockResponse.None,
-                    edge,
+                    consumed,
                     CharacterFootAnchorCommand.Release,
                     true,
                     true);
             }
 
-            return discrete.State switch
+            switch (sourceState)
             {
-                CharacterFootConstraintState.Swing =>
-                    ResolveUnconstrained(in context, in frame, edge),
-                CharacterFootConstraintState.UnlockedSupport =>
-                    ResolveUnconstrained(in context, in frame, edge),
-                CharacterFootConstraintState.Landing =>
-                    ResolveLanding(in context, in frame, edge),
-                CharacterFootConstraintState.Locked =>
-                    ResolveLocked(in context, in frame, edge),
-                CharacterFootConstraintState.Releasing =>
-                    ResolveReleasing(in context, in frame, edge),
-                _ => throw new System.InvalidOperationException(
-                    "Foot constraint state is invalid.")
-            };
+                case CharacterFootConstraintState.Swing:
+                case CharacterFootConstraintState.UnlockedSupport:
+                    return ResolveUnconstrained(in context, in frame);
+                case CharacterFootConstraintState.Landing:
+                    return ResolveLanding(in context, in frame);
+                case CharacterFootConstraintState.Locked:
+                    return ResolveLocked(in context, in frame);
+                case CharacterFootConstraintState.Releasing:
+                    return NoChange(in discrete);
+                default:
+                    throw new System.InvalidOperationException(
+                        "Foot constraint state is invalid.");
+            }
         }
 
         internal static CharacterFootTransitionDecision ResolvePostInterpolation(
             in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame,
             bool interpolationCompleted)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
             if (!interpolationCompleted)
-                return NoChange(in discrete, CharacterFootContactEdge.None,
-                    CharacterFootTransitionPhase.PostInterpolation);
+                return NoChange(in discrete, CharacterFootTransitionPhase.PostInterpolation);
             if (discrete.State == CharacterFootConstraintState.Landing)
             {
-                if (!frame.LockRequest.RequestsLock ||
-                    frame.LockRequest.EventIdentity != context.Contact.EventIdentity)
-                {
-                    return NoChange(in discrete, CharacterFootContactEdge.None,
-                        CharacterFootTransitionPhase.PostInterpolation);
-                }
                 return Decision(
                     CharacterFootTransitionReason.LandingCompleted,
                     discrete.State,
                     CharacterFootConstraintState.Locked,
-                    frame.LockRequest.Response,
-                    CharacterFootContactEdge.None,
+                    CharacterFootLockResponse.FullAnchor,
+                    discrete.PlantCycleConsumed,
                     CharacterFootAnchorCommand.Retain,
                     false,
                     false,
@@ -78,60 +72,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     discrete.State,
                     CharacterFootConstraintState.Swing,
                     CharacterFootLockResponse.None,
-                    CharacterFootContactEdge.None,
+                    false,
                     CharacterFootAnchorCommand.Release,
                     false,
                     true,
                     CharacterFootTransitionPhase.PostInterpolation);
             }
-            return NoChange(in discrete, CharacterFootContactEdge.None,
-                CharacterFootTransitionPhase.PostInterpolation);
+            return NoChange(in discrete, CharacterFootTransitionPhase.PostInterpolation);
         }
 
         static CharacterFootTransitionDecision ResolveUnconstrained(
             in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame,
-            CharacterFootContactEdge edge)
+            in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            CharacterFootLockRequest request = frame.LockRequest;
-            bool wantsLock = request.Contact > 0f &&
-                             request.Mode !=
-                             AnimationFootStepObservationLockMode.Unlocked;
-            if (wantsLock && request.Availability ==
-                    CharacterFootLockRequestAvailability.ContactEventUnavailable)
-            {
-                return Decision(
-                    CharacterFootTransitionReason.ContactEventUnavailable,
-                    discrete.State,
-                    CharacterFootConstraintState.Swing,
-                    CharacterFootLockResponse.None,
-                    edge,
-                    CharacterFootAnchorCommand.Release,
-                    false,
-                    false);
-            }
-            if (!request.RequestsLock)
+            float plantConfidence = frame.SwingMotion.PlantConfidence;
+            if (plantConfidence <
+                AnimationFootConstraintFacts.GroundedMinimumConfidence)
             {
                 return Decision(
                     CharacterFootTransitionReason.SwingStarted,
                     discrete.State,
                     CharacterFootConstraintState.Swing,
                     CharacterFootLockResponse.None,
-                    edge,
+                    false,
                     CharacterFootAnchorCommand.Release,
                     false,
                     false);
             }
-            if (context.ContactTransition.LatestReleasedContactEventIdentity ==
-                request.EventIdentity)
+            if (discrete.PlantCycleConsumed)
             {
                 return Decision(
-                    CharacterFootTransitionReason.ContactUnavailable,
+                    CharacterFootTransitionReason.PlantCycleConsumed,
                     discrete.State,
                     CharacterFootConstraintState.UnlockedSupport,
                     CharacterFootLockResponse.None,
-                    edge,
+                    true,
                     CharacterFootAnchorCommand.Release,
                     false,
                     false);
@@ -143,12 +119,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     discrete.State,
                     CharacterFootConstraintState.UnlockedSupport,
                     CharacterFootLockResponse.None,
-                    edge,
+                    true,
                     CharacterFootAnchorCommand.Release,
                     false,
                     false);
             }
-            float horizontalError = ResolveHorizontalError(in frame);
+            var correction = CharacterFootConstraintMath.ResolveContactCorrection(
+                frame.AnimatedFoot,
+                frame.ContactLanding.Point);
+            float horizontalError =
+                CharacterFootConstraintMath.ResolveHorizontalError(
+                    correction,
+                    frame.ComponentUp);
             if (horizontalError > frame.Settings.LockDistance)
             {
                 return Decision(
@@ -156,7 +138,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     discrete.State,
                     CharacterFootConstraintState.UnlockedSupport,
                     CharacterFootLockResponse.None,
-                    edge,
+                    true,
                     CharacterFootAnchorCommand.Release,
                     false,
                     false);
@@ -166,7 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 discrete.State,
                 CharacterFootConstraintState.Landing,
                 CharacterFootLockResponse.None,
-                edge,
+                true,
                 CharacterFootAnchorCommand.Create,
                 false,
                 false);
@@ -174,74 +156,67 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static CharacterFootTransitionDecision ResolveLanding(
             in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame,
-            CharacterFootContactEdge edge)
+            in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            if (!OwnsRequest(in context, in frame))
+            var correction = CharacterFootConstraintMath.ResolveContactCorrection(
+                frame.AnimatedFoot,
+                context.Contact.Anchor);
+            float horizontalError =
+                CharacterFootConstraintMath.ResolveHorizontalError(
+                    correction,
+                    frame.ComponentUp);
+            if (frame.SwingMotion.PlantConfidence >=
+                    AnimationFootConstraintFacts.GroundedMinimumConfidence &&
+                horizontalError <= frame.Settings.SlideDistance)
             {
-                return Decision(
-                    CharacterFootTransitionReason.ContactReleased,
-                    discrete.State,
-                    CharacterFootConstraintState.Releasing,
-                    CharacterFootLockResponse.None,
-                    edge,
-                    CharacterFootAnchorCommand.Retain,
-                    false,
-                    false);
+                return NoChange(in discrete);
             }
-            float horizontalError = ResolveAnchorHorizontalError(
-                in context,
-                in frame);
-            if (horizontalError > frame.Settings.SlideDistance)
-            {
-                return Decision(
-                    CharacterFootTransitionReason.ContactOutOfSlideRange,
-                    discrete.State,
-                    CharacterFootConstraintState.Releasing,
-                    CharacterFootLockResponse.None,
-                    edge,
-                    CharacterFootAnchorCommand.Retain,
-                    false,
-                    false);
-            }
-            return NoChange(in discrete, edge);
+            return Decision(
+                horizontalError > frame.Settings.SlideDistance
+                    ? CharacterFootTransitionReason.ContactOutOfSlideRange
+                    : CharacterFootTransitionReason.ContactReleased,
+                discrete.State,
+                CharacterFootConstraintState.Releasing,
+                CharacterFootLockResponse.None,
+                discrete.PlantCycleConsumed,
+                CharacterFootAnchorCommand.Retain,
+                false,
+                false);
         }
 
         static CharacterFootTransitionDecision ResolveLocked(
             in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame,
-            CharacterFootContactEdge edge)
+            in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            if (!OwnsRequest(in context, in frame))
+            var fullCorrection = CharacterFootConstraintMath.ResolveContactCorrection(
+                frame.AnimatedFoot,
+                context.Contact.Anchor);
+            float horizontalError =
+                CharacterFootConstraintMath.ResolveHorizontalError(
+                    fullCorrection,
+                    frame.ComponentUp);
+            if (frame.SwingMotion.PlantConfidence <
+                    AnimationFootConstraintFacts.LockedMinimumConfidence ||
+                horizontalError > frame.Settings.SlideDistance)
             {
                 return Decision(
-                    CharacterFootTransitionReason.ContactReleased,
+                    horizontalError > frame.Settings.SlideDistance
+                        ? CharacterFootTransitionReason.ContactOutOfSlideRange
+                        : CharacterFootTransitionReason.ContactReleased,
                     discrete.State,
                     CharacterFootConstraintState.Releasing,
                     CharacterFootLockResponse.None,
-                    edge,
+                    discrete.PlantCycleConsumed,
                     CharacterFootAnchorCommand.Retain,
                     false,
                     false);
             }
-            float horizontalError = ResolveAnchorHorizontalError(
-                in context,
-                in frame);
-            if (horizontalError > frame.Settings.SlideDistance)
-            {
-                return Decision(
-                    CharacterFootTransitionReason.ContactOutOfSlideRange,
-                    discrete.State,
-                    CharacterFootConstraintState.Releasing,
-                    CharacterFootLockResponse.None,
-                    edge,
-                    CharacterFootAnchorCommand.Retain,
-                    false,
-                    false);
-            }
-            CharacterFootLockResponse response = frame.LockRequest.Response;
+            CharacterFootLockResponse response =
+                horizontalError > frame.Settings.LockDistance
+                    ? CharacterFootLockResponse.Sliding
+                    : CharacterFootLockResponse.FullAnchor;
             return Decision(
                 response != discrete.LockResponse
                     ? CharacterFootTransitionReason.LockResponseChanged
@@ -249,79 +224,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 discrete.State,
                 discrete.State,
                 response,
-                edge,
+                discrete.PlantCycleConsumed,
                 CharacterFootAnchorCommand.Retain,
                 false,
                 false);
         }
 
-        static CharacterFootTransitionDecision ResolveReleasing(
-            in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame,
-            CharacterFootContactEdge edge)
-        {
-            CharacterFootDiscreteStateContext discrete = context.Discrete;
-            CharacterFootLockRequest request = frame.LockRequest;
-            if (!request.RequestsLock || !CanAcquire(in frame))
-                return NoChange(in discrete, edge);
-            float horizontalError = ResolveHorizontalError(in frame);
-            if (horizontalError > frame.Settings.LockDistance)
-                return NoChange(in discrete, edge);
-            if (context.Contact.HasContact &&
-                context.Contact.EventIdentity == request.EventIdentity &&
-                edge == CharacterFootContactEdge.Rising)
-            {
-                return Decision(
-                    CharacterFootTransitionReason.SameEventContactReentryRefresh,
-                    discrete.State,
-                    CharacterFootConstraintState.Landing,
-                    CharacterFootLockResponse.None,
-                    edge,
-                    CharacterFootAnchorCommand.Retain,
-                    false,
-                    false);
-            }
-            if (request.EventIdentity != context.Contact.EventIdentity &&
-                request.EventIdentity !=
-                context.ContactTransition.LatestReleasedContactEventIdentity)
-            {
-                return Decision(
-                    CharacterFootTransitionReason.NewEventContactAcquired,
-                    discrete.State,
-                    CharacterFootConstraintState.Landing,
-                    CharacterFootLockResponse.None,
-                    edge,
-                    CharacterFootAnchorCommand.Create,
-                    false,
-                    false);
-            }
-            return NoChange(in discrete, edge);
-        }
-
-        static CharacterFootContactEdge ResolveContactEdge(
-            in CharacterFootContactTransitionContext context,
-            in CharacterFootLockRequest request)
-        {
-            if (!context.HasPreviousRequest)
-                return request.RequestsLock
-                    ? CharacterFootContactEdge.Rising
-                    : CharacterFootContactEdge.None;
-            if (request.RequestsLock)
-            {
-                if (!context.PreviousRequestedLock)
-                    return CharacterFootContactEdge.Rising;
-                return request.EventIdentity != context.PreviousEventIdentity
-                    ? CharacterFootContactEdge.EventChanged
-                    : CharacterFootContactEdge.None;
-            }
-            return context.PreviousRequestedLock
-                ? CharacterFootContactEdge.Falling
-                : CharacterFootContactEdge.None;
-        }
-
         static CharacterFootTransitionDecision NoChange(
             in CharacterFootDiscreteStateContext discrete,
-            CharacterFootContactEdge edge,
             CharacterFootTransitionPhase phase =
                 CharacterFootTransitionPhase.PreInterpolation) =>
             Decision(
@@ -329,7 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 discrete.State,
                 discrete.State,
                 discrete.LockResponse,
-                edge,
+                discrete.PlantCycleConsumed,
                 CharacterFootAnchorCommand.None,
                 false,
                 false,
@@ -340,7 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootConstraintState source,
             CharacterFootConstraintState target,
             CharacterFootLockResponse targetResponse,
-            CharacterFootContactEdge edge,
+            bool plantCycleConsumed,
             CharacterFootAnchorCommand anchorCommand,
             bool suppressOutput,
             bool resetInterpolation,
@@ -352,44 +262,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 source,
                 target,
                 targetResponse,
-                edge,
+                plantCycleConsumed,
                 anchorCommand,
                 suppressOutput,
                 resetInterpolation);
 
         static bool CanAcquire(in CharacterFootStateFrame frame) =>
-            frame.LockRequest.RequestsLock &&
             frame.HasContactLanding &&
-            frame.ContactLanding.LandingEventIdentity ==
-                frame.LockRequest.EventIdentity;
-
-        static bool OwnsRequest(
-            in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame) =>
-            frame.LockRequest.RequestsLock &&
-            context.Contact.HasContact &&
-            frame.LockRequest.EventIdentity == context.Contact.EventIdentity;
-
-        static float ResolveHorizontalError(in CharacterFootStateFrame frame)
-        {
-            var correction = CharacterFootConstraintMath.ResolveContactCorrection(
-                frame.AnimatedFoot,
-                frame.ContactLanding.Point);
-            return CharacterFootConstraintMath.ResolveHorizontalError(
-                correction,
-                frame.ComponentUp);
-        }
-
-        static float ResolveAnchorHorizontalError(
-            in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame)
-        {
-            var correction = CharacterFootConstraintMath.ResolveContactCorrection(
-                frame.AnimatedFoot,
-                context.Contact.Anchor);
-            return CharacterFootConstraintMath.ResolveHorizontalError(
-                correction,
-                frame.ComponentUp);
-        }
+            frame.ContactLanding.LandingEventIdentity != 0;
     }
 }

@@ -1,5 +1,4 @@
 using System;
-using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -11,9 +10,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Locked = 2
     }
 
-    public readonly struct AnimationFootMotionRuntimeSample
+    public readonly struct AnimationFootStepObservationSample
     {
-        internal AnimationFootMotionRuntimeSample(
+        internal AnimationFootStepObservationSample(
             float timeToLandingSeconds,
             float distance,
             float footHeight,
@@ -40,8 +39,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentOutOfRangeException(nameof(timeToLandingSeconds));
             }
-            ObservedTimeToLandingSeconds = timeToLandingSeconds;
-            ObservedDistance = distance;
+            TimeToLandingSeconds = timeToLandingSeconds;
+            Distance = distance;
             FootHeight = footHeight;
             ToeHeight = toeHeight;
             ToeSpeed = toeSpeed;
@@ -56,8 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly byte m_IsSpecified;
-        public float ObservedTimeToLandingSeconds { get; }
-        public float ObservedDistance { get; }
+        public float TimeToLandingSeconds { get; }
+        public float Distance { get; }
         public float FootHeight { get; }
         public float ToeHeight { get; }
         public float ToeSpeed { get; }
@@ -69,89 +68,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float Support { get; }
         public AnimationFootMotionEventFrame Events { get; }
         public bool IsValid => m_IsSpecified != 0;
-        public bool HasPredictiveLanding =>
-            IsValid && Events.NextLanding.IsBound &&
-            (Events.Phase == AnimationFootMotionEventPhase.PreSwing ||
-             Events.Phase == AnimationFootMotionEventPhase.Swing ||
-             Events.Phase == AnimationFootMotionEventPhase.ApproachContact);
-        public bool IsPreSwing =>
-            IsValid && Events.Phase == AnimationFootMotionEventPhase.PreSwing;
-        public bool IsSwing =>
-            IsValid &&
-            (Events.Phase == AnimationFootMotionEventPhase.Swing ||
-             Events.Phase == AnimationFootMotionEventPhase.ApproachContact);
-        public ulong LandingEventIdentity =>
-            HasPredictiveLanding ? Events.NextLanding.Identity : 0;
-        public float TimeToLandingSeconds =>
-            HasPredictiveLanding ? Events.TimeToLandingSeconds : 0f;
-        public float Distance =>
-            HasPredictiveLanding ? Events.NextLanding.Distance : 0f;
-        public Vector3 RootLocalLanding =>
-            HasPredictiveLanding ? Events.NextLanding.RootLocalLanding : default;
-        public float SwingProgress =>
-            HasPredictiveLanding ? Events.SwingProgress : 0f;
-        public int EventOrdinal =>
-            HasPredictiveLanding ? Events.NextLanding.Ordinal : 0;
-        public int SourceSampleCycle =>
-            HasPredictiveLanding ? Events.NextLanding.LandingCycle : 0;
-        public ulong SourceSampleIdentity =>
-            HasPredictiveLanding ? Events.NextLanding.SourceSampleIdentity : 0;
-        public ulong ContributionContinuityIdentity =>
-            HasPredictiveLanding
-                ? Events.NextLanding.ContributionContinuityIdentity
-                : 0;
-        public bool IsAuthoritative => HasPredictiveLanding;
-        public bool HasConsistentLandingEventIdentity =>
-            HasPredictiveLanding && LandingEventIdentity != 0;
-        public bool HasCurrentContactEvent =>
-            IsValid && Events.CurrentContact.IsBound;
-        public ulong CurrentContactEventIdentity =>
-            HasCurrentContactEvent ? Events.CurrentContact.Identity : 0;
-
-        internal AnimationFootMotionRuntimeSample BindEventLineage(
-            ulong sourceSampleIdentity,
-            ulong contributionContinuityIdentity,
-            CharacterFootSide side) =>
-            new AnimationFootMotionRuntimeSample(
-                ObservedTimeToLandingSeconds,
-                ObservedDistance,
-                FootHeight,
-                ToeHeight,
-                ToeSpeed,
-                PositionError,
-                RotationError,
-                Contact,
-                LockMode,
-                LockWeight,
-                Support,
-                Events.Bind(
-                    sourceSampleIdentity,
-                    contributionContinuityIdentity,
-                    side));
 
         static bool Normalized(float value) =>
             float.IsFinite(value) && value >= 0f && value <= 1f;
     }
 
-    internal readonly struct AnimationFootMotionRuntimeFrame
+    internal readonly struct AnimationFootStepObservationFrame
     {
-        internal AnimationFootMotionRuntimeFrame(
+        internal AnimationFootStepObservationFrame(
             ulong completionIdentity,
             PoseNodeId nodeId,
             AnimationPoseSourceId sourceId,
             ulong contributionContinuityIdentity,
             string sourceIdentity,
-            ulong sourceSampleIdentity,
             int clipBindingIndex,
             int cycle,
             float sourceWeight,
             float normalizedTime,
-            AnimationFootMotionRuntimeSample left,
-            AnimationFootMotionRuntimeSample right)
+            AnimationFootStepObservationSample left,
+            AnimationFootStepObservationSample right)
         {
             if (completionIdentity == 0 || !nodeId.IsValid || !sourceId.IsValid ||
                 contributionContinuityIdentity == 0 || clipBindingIndex < 0 ||
-                sourceSampleIdentity == 0 ||
                 string.IsNullOrWhiteSpace(sourceIdentity) ||
                 !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f ||
                 !float.IsFinite(normalizedTime) || normalizedTime < 0f || normalizedTime > 1f ||
@@ -164,19 +102,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SourceId = sourceId;
             ContributionContinuityIdentity = contributionContinuityIdentity;
             SourceIdentity = sourceIdentity.Trim();
-            SourceSampleIdentity = sourceSampleIdentity;
             ClipBindingIndex = clipBindingIndex;
             Cycle = cycle;
             SourceWeight = sourceWeight;
             NormalizedTime = normalizedTime;
-            Left = left.BindEventLineage(
-                sourceSampleIdentity,
-                contributionContinuityIdentity,
-                CharacterFootSide.Left);
-            Right = right.BindEventLineage(
-                sourceSampleIdentity,
-                contributionContinuityIdentity,
-                CharacterFootSide.Right);
+            Left = left;
+            Right = right;
             m_IsSpecified = 1;
         }
 
@@ -186,13 +117,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal AnimationPoseSourceId SourceId { get; }
         internal ulong ContributionContinuityIdentity { get; }
         internal string SourceIdentity { get; }
-        internal ulong SourceSampleIdentity { get; }
         internal int ClipBindingIndex { get; }
         internal int Cycle { get; }
         internal float SourceWeight { get; }
         internal float NormalizedTime { get; }
-        internal AnimationFootMotionRuntimeSample Left { get; }
-        internal AnimationFootMotionRuntimeSample Right { get; }
+        internal AnimationFootStepObservationSample Left { get; }
+        internal AnimationFootStepObservationSample Right { get; }
         internal bool IsValid => m_IsSpecified != 0;
     }
 
@@ -255,7 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationCurve Support => m_Support;
         public AnimationFootStepLandingEventTable LandingEvents => m_LandingEvents;
 
-        public AnimationFootMotionRuntimeSample Sample(
+        public AnimationFootStepObservationSample Sample(
             float normalizedTime,
             int sourceCycle,
             float sourceDurationSeconds,
@@ -268,7 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 sourceCycle,
                 sourceDurationSeconds,
                 looping);
-            return new AnimationFootMotionRuntimeSample(
+            return new AnimationFootStepObservationSample(
                 m_TimeToLandingSeconds.Evaluate(time),
                 m_Distance.Evaluate(time),
                 m_FootHeight.Evaluate(time),

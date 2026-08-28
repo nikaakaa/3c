@@ -1,5 +1,4 @@
 using System;
-using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -70,27 +69,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationFootMotionEventFrame Events { get; }
         public bool IsValid => m_IsSpecified != 0;
 
-        internal AnimationFootStepObservationSample BindEventLineage(
-            ulong sourceSampleIdentity,
-            ulong contributionContinuityIdentity,
-            CharacterFootSide side) =>
-            new AnimationFootStepObservationSample(
-                TimeToLandingSeconds,
-                Distance,
-                FootHeight,
-                ToeHeight,
-                ToeSpeed,
-                PositionError,
-                RotationError,
-                Contact,
-                LockMode,
-                LockWeight,
-                Support,
-                Events.Bind(
-                    sourceSampleIdentity,
-                    contributionContinuityIdentity,
-                    side));
-
         static bool Normalized(float value) =>
             float.IsFinite(value) && value >= 0f && value <= 1f;
     }
@@ -103,7 +81,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPoseSourceId sourceId,
             ulong contributionContinuityIdentity,
             string sourceIdentity,
-            ulong sourceSampleIdentity,
             int clipBindingIndex,
             int cycle,
             float sourceWeight,
@@ -113,7 +90,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (completionIdentity == 0 || !nodeId.IsValid || !sourceId.IsValid ||
                 contributionContinuityIdentity == 0 || clipBindingIndex < 0 ||
-                sourceSampleIdentity == 0 ||
                 string.IsNullOrWhiteSpace(sourceIdentity) ||
                 !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f ||
                 !float.IsFinite(normalizedTime) || normalizedTime < 0f || normalizedTime > 1f ||
@@ -126,19 +102,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SourceId = sourceId;
             ContributionContinuityIdentity = contributionContinuityIdentity;
             SourceIdentity = sourceIdentity.Trim();
-            SourceSampleIdentity = sourceSampleIdentity;
             ClipBindingIndex = clipBindingIndex;
             Cycle = cycle;
             SourceWeight = sourceWeight;
             NormalizedTime = normalizedTime;
-            Left = left.BindEventLineage(
-                sourceSampleIdentity,
-                contributionContinuityIdentity,
-                CharacterFootSide.Left);
-            Right = right.BindEventLineage(
-                sourceSampleIdentity,
-                contributionContinuityIdentity,
-                CharacterFootSide.Right);
+            Left = left;
+            Right = right;
             m_IsSpecified = 1;
         }
 
@@ -148,7 +117,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal AnimationPoseSourceId SourceId { get; }
         internal ulong ContributionContinuityIdentity { get; }
         internal string SourceIdentity { get; }
-        internal ulong SourceSampleIdentity { get; }
         internal int ClipBindingIndex { get; }
         internal int Cycle { get; }
         internal float SourceWeight { get; }

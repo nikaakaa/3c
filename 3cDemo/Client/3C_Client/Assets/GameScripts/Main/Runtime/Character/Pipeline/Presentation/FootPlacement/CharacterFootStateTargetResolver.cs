@@ -1,3 +1,4 @@
+using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -45,7 +46,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         swingCorrection,
                         CharacterFootInterpolationPolicy.AcquireByWeight,
                         transition,
-                        frame.LockRequest.Weight,
+                        ResolvePlantOwnership(
+                            frame.SwingMotion.PlantConfidence),
                         timeToLandingSeconds);
                 case CharacterFootConstraintState.Locked:
                     return ResolveLockedTarget(
@@ -133,5 +135,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 progress,
                 timeToLandingSeconds);
 
+        static float ResolvePlantOwnership(float plantConfidence) =>
+            Mathf.InverseLerp(
+                AnimationFootConstraintFacts.GroundedMinimumConfidence,
+                AnimationFootConstraintFacts.LockedMinimumConfidence,
+                plantConfidence);
     }
 }

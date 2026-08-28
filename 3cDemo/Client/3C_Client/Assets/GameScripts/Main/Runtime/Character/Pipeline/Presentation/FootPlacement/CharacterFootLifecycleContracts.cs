@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         OwnershipLost = 1,
         SwingStarted = 2,
-        ContactEventUnavailable = 3,
+        PlantCycleConsumed = 3,
         ContactUnavailable = 4,
         ContactOutOfLockRange = 5,
         ContactAcquired = 6,
@@ -49,23 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ContactOutOfSlideRange = 8,
         LockResponseChanged = 9,
         LandingCompleted = 10,
-        ReleaseCompleted = 11,
-        SameEventContactReentryRefresh = 12,
-        NewEventContactAcquired = 13
-    }
-
-    internal enum CharacterFootContactEdge : byte
-    {
-        None = 0,
-        Rising = 1,
-        Falling = 2,
-        EventChanged = 3
-    }
-
-    internal enum CharacterFootLockRequestAvailability : byte
-    {
-        Ready = 1,
-        ContactEventUnavailable = 2
+        ReleaseCompleted = 11
     }
 
     internal enum CharacterFootAnchorCommand : byte
@@ -539,60 +523,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootConstraintState State;
         internal CharacterFootLockResponse LockResponse;
+        internal bool PlantCycleConsumed;
         internal CharacterFootTransitionPhase LastTransitionPhase;
         internal CharacterFootTransitionReason LastTransitionReason;
-    }
-
-    internal readonly struct CharacterFootLockRequest
-    {
-        internal CharacterFootLockRequest(
-            in AnimationFootStepObservationSample sample)
-        {
-            if (!sample.IsValid || !sample.Events.IsValid)
-                throw new ArgumentException("Formal Foot Lock request is invalid.");
-            Contact = sample.Contact;
-            Mode = sample.LockMode;
-            Weight = sample.LockWeight;
-            bool requestsLock = Contact > 0f &&
-                                Mode != AnimationFootStepObservationLockMode.Unlocked;
-            AnimationFootMotionEventOccurrence current =
-                sample.Events.CurrentContact;
-            EventIdentity = current.IsBound ? current.Identity : 0;
-            Availability = requestsLock && EventIdentity == 0
-                ? CharacterFootLockRequestAvailability.ContactEventUnavailable
-                : CharacterFootLockRequestAvailability.Ready;
-        }
-
-        internal float Contact { get; }
-        internal AnimationFootStepObservationLockMode Mode { get; }
-        internal float Weight { get; }
-        internal ulong EventIdentity { get; }
-        internal CharacterFootLockRequestAvailability Availability { get; }
-        internal bool RequestsLock =>
-            Availability == CharacterFootLockRequestAvailability.Ready &&
-            Contact > 0f &&
-            Mode != AnimationFootStepObservationLockMode.Unlocked;
-        internal CharacterFootLockResponse Response => Mode switch
-        {
-            AnimationFootStepObservationLockMode.Sliding =>
-                CharacterFootLockResponse.Sliding,
-            AnimationFootStepObservationLockMode.Locked =>
-                CharacterFootLockResponse.FullAnchor,
-            _ => CharacterFootLockResponse.None
-        };
-    }
-
-    internal struct CharacterFootContactTransitionContext
-    {
-        internal bool HasPreviousRequest;
-        internal bool PreviousRequestedLock;
-        internal ulong PreviousEventIdentity;
-        internal AnimationFootStepObservationLockMode PreviousMode;
-        internal float PreviousWeight;
-        internal float SecondsSinceEdge;
-        internal ulong LatestContactEventIdentity;
-        internal ulong LatestReleasedContactEventIdentity;
-        internal CharacterFootContactEdge LastEdge;
     }
 
     internal struct CharacterFootContactContext
@@ -627,7 +560,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingContext Landing;
         internal CharacterFootDiscreteStateContext Discrete;
         internal CharacterFootContactContext Contact;
-        internal CharacterFootContactTransitionContext ContactTransition;
         internal CharacterFootInterpolationState Interpolation;
 
         internal CharacterFootLandingSnapshot LandingSnapshot => Landing.Snapshot;
@@ -644,7 +576,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult swingMotion,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
-            in CharacterFootLockRequest lockRequest,
             bool hardOwnershipLoss,
             float footPlacementWeight,
             Vector3 componentUp,
@@ -659,7 +590,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingMotion = swingMotion;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
-            LockRequest = lockRequest;
             HardOwnershipLoss = hardOwnershipLoss;
             FootPlacementWeight = footPlacementWeight;
             ComponentUp = componentUp;
@@ -675,7 +605,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSwingMotionResult SwingMotion { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
-        internal CharacterFootLockRequest LockRequest { get; }
         internal bool HardOwnershipLoss { get; }
         internal float FootPlacementWeight { get; }
         internal Vector3 ComponentUp { get; }
@@ -714,7 +643,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootConstraintState sourceState,
             CharacterFootConstraintState targetState,
             CharacterFootLockResponse targetLockResponse,
-            CharacterFootContactEdge contactEdge,
+            bool plantCycleConsumed,
             CharacterFootAnchorCommand anchorCommand,
             bool suppressOutput,
             bool resetInterpolation)
@@ -724,7 +653,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceState = sourceState;
             TargetState = targetState;
             TargetLockResponse = targetLockResponse;
-            ContactEdge = contactEdge;
+            PlantCycleConsumed = plantCycleConsumed;
             AnchorCommand = anchorCommand;
             SuppressOutput = suppressOutput;
             ResetInterpolation = resetInterpolation;
@@ -735,7 +664,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootConstraintState SourceState { get; }
         internal CharacterFootConstraintState TargetState { get; }
         internal CharacterFootLockResponse TargetLockResponse { get; }
-        internal CharacterFootContactEdge ContactEdge { get; }
+        internal bool PlantCycleConsumed { get; }
         internal CharacterFootAnchorCommand AnchorCommand { get; }
         internal bool SuppressOutput { get; }
         internal bool ResetInterpolation { get; }

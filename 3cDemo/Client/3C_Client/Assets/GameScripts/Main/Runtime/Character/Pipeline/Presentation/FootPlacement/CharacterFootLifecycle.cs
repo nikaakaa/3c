@@ -64,7 +64,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootTransitionDecision postTransition =
                 CharacterFootTransitionResolver.ResolvePostInterpolation(
                     in context,
-                    in frame,
                     interpolation.Completed);
             CharacterFootTransitionRuntime.Apply(
                 ref context,
@@ -274,6 +273,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 contactOwnership,
                 supportWeight,
                 hasContact ? context.Contact.Anchor : default,
+                swing.PlantConfidence,
                 desiredCorrection,
                 hasContact,
                 hasContact ? context.Contact.SurfaceIdentity : 0,
@@ -359,6 +359,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.FootPlacementWeight > 1f ||
                 !float.IsFinite(frame.DeltaSeconds) ||
                 frame.DeltaSeconds < 0f ||
+                !float.IsFinite(frame.SwingMotion.PlantConfidence) ||
+                frame.SwingMotion.PlantConfidence < 0f ||
+                frame.SwingMotion.PlantConfidence > 1f ||
                 frame.SwingMotion.Accepted !=
                 frame.SwingMotion.SwingPathReference.IsAvailable ||
                 frame.SwingMotion.Accepted &&

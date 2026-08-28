@@ -860,7 +860,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumPredictionTimeSeconds) =>
             step.IsAuthoritative &&
             step.HasConsistentLandingEventIdentity &&
-            step.IsSwing &&
+            (step.IsPreSwing || step.IsSwing) &&
             step.TimeToLandingSeconds > 0.000001f &&
             step.TimeToLandingSeconds <= maximumPredictionTimeSeconds &&
             step.LandingEventIdentity != 0 &&
@@ -908,6 +908,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     goal);
             }
             CharacterFootLandingPredictionSettings settings = m_Settings.LandingPrediction;
+            CharacterFootMotionSettings motionSettings = m_Settings.FootMotion;
             if (step.TimeToLandingSeconds < 0f ||
                 step.TimeToLandingSeconds > settings.MaximumPredictionTimeSeconds)
             {
@@ -984,13 +985,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 step.RootLocalLanding);
             CharacterFootLandingObservationResult observation =
                 CharacterFootLandingPredictor.ResolveObservation(
-                side,
-                step.LandingEventIdentity,
-                rawLanding,
-                componentUp,
-                m_Settings.ProfileRevision,
-                in settings,
-                m_WorldQuery,
+                    side,
+                    step.LandingEventIdentity,
+                    frame.Pose.FootMotion.SourceIdentity,
+                    frame.Pose.FootMotion.Cycle,
+                    frame.Pose.FootMotion.ContributionContinuityIdentity,
+                    rawLanding,
+                    componentUp,
+                    m_Settings.ProfileRevision,
+                    in settings,
+                    in motionSettings,
+                    m_WorldQuery,
                 observationPool,
                 committedObservation,
                 out pendingObservation);

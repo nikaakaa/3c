@@ -1629,7 +1629,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string ResolveTraceDirectory() => Path.GetFullPath(Path.Combine(
             Application.dataPath,
             "..",
-            "Temp",
+            "Diagnostics",
             "CharacterInputTraces"));
 
         [Serializable]

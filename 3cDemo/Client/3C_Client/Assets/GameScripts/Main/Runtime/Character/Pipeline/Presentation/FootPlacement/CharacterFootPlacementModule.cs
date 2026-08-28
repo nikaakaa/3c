@@ -1441,14 +1441,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterResolvedFootResult result)
         {
             Transform root = m_Rig.PoseRoot;
-            bool hasEffectiveOutput =
-                                      result.Outcome == CharacterFootResolvedOutcome.Ready &&
-                                      result.GoalWeight >
-                                      CharacterPoseConstraintMath.Epsilon;
-            Vector3 anklePosition = hasEffectiveOutput
+            bool ready = result.Outcome == CharacterFootResolvedOutcome.Ready;
+            bool hasPositionOutput = ready &&
+                                     result.GoalWeight >
+                                     CharacterPoseConstraintMath.Epsilon;
+            bool hasRotationOutput = ready &&
+                                     result.RotationWeight >
+                                     CharacterPoseConstraintMath.Epsilon;
+            Vector3 anklePosition = hasPositionOutput
                 ? result.FinalAnkle
                 : foot.AnklePosition;
-            float positionWeight = hasEffectiveOutput
+            Quaternion ankleRotation = hasRotationOutput
+                ? result.FinalAnkleRotation
+                : foot.AnkleRotation;
+            float positionWeight = hasPositionOutput
                 ? result.GoalWeight
                 : 0f;
             return new CharacterFullBodyIkGoal(
@@ -1456,9 +1462,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? CharacterFullBodyIkEffectorSlot.LeftFoot
                     : CharacterFullBodyIkEffectorSlot.RightFoot,
                 root.InverseTransformPoint(anklePosition),
-                (Quaternion.Inverse(root.rotation) * foot.AnkleRotation).normalized,
+                (Quaternion.Inverse(root.rotation) * ankleRotation).normalized,
                 positionWeight,
-                0f,
+                hasRotationOutput ? result.RotationWeight : 0f,
                 CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget,
                 CharacterFullBodyIkGoalSourceKind.FootPlacement,
                 -1);

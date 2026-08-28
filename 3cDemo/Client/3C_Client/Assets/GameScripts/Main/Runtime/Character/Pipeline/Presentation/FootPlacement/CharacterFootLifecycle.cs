@@ -148,6 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in outputSwing,
                 desiredCorrection,
                 hardConstraint.OutputCorrection,
+                in interpolation,
                 in continuityFact,
                 out result);
         }
@@ -237,6 +238,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult swing,
             Vector3 desiredCorrection,
             Vector3 outputCorrection,
+            in CharacterFootInterpolationResult interpolation,
             in CharacterFootPathContinuityFact continuityFact,
             out CharacterFootSwingMotionResult result)
         {
@@ -288,6 +290,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.FormalMotion.Observation.LockWeight,
                     contactOwnership)
                 : 0f;
+            float rotationWeight = frame.FootPlacementWeight *
+                                   interpolation.RotationProgress;
             CharacterFootSwingMotionState outputState = hasContact
                 ? CharacterFootSwingMotionState.Accepted
                 : swing.State;
@@ -316,7 +320,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 originalSole + outputCorrection,
                 originalAnkle + outputCorrection,
                 positionWeight,
-                0f,
+                rotationWeight,
                 context.Discrete.State,
                 context.Discrete.LockResponse,
                 horizontalError,
@@ -327,7 +331,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasContact,
                 hasContact ? context.Contact.SurfaceIdentity : 0,
                 hasContact ? context.Contact.Normal : default,
-                continuityFact);
+                continuityFact,
+                false,
+                interpolation.Rotation);
             var contactReference = hasContact
                 ? new CharacterFootContactReference(
                     context.Contact.EventIdentity,
@@ -341,8 +347,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 side,
                 originalSole + outputCorrection,
                 originalAnkle + outputCorrection,
+                interpolation.Rotation,
                 outputCorrection,
                 positionWeight,
+                rotationWeight,
                 in contactReference,
                 contactOwnership,
                 supportEligibility,

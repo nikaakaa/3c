@@ -75,8 +75,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             Vector3 finalSole,
             Vector3 finalAnkle,
+            Quaternion finalAnkleRotation,
             Vector3 effectiveCorrection,
             float goalWeight,
+            float rotationWeight,
             in CharacterFootContactReference contactReference,
             float contactOwnership,
             CharacterFootSupportEligibility supportEligibility,
@@ -94,8 +96,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Side = side;
             FinalSole = finalSole;
             FinalAnkle = finalAnkle;
+            FinalAnkleRotation = finalAnkleRotation;
             EffectiveCorrection = effectiveCorrection;
             GoalWeight = goalWeight;
+            RotationWeight = rotationWeight;
             ContactReference = contactReference;
             ContactOwnership = contactOwnership;
             SupportEligibility = supportEligibility;
@@ -115,8 +119,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSide Side { get; }
         internal Vector3 FinalSole { get; }
         internal Vector3 FinalAnkle { get; }
+        internal Quaternion FinalAnkleRotation { get; }
         internal Vector3 EffectiveCorrection { get; }
         internal float GoalWeight { get; }
+        internal float RotationWeight { get; }
         internal CharacterFootContactReference ContactReference { get; }
         internal float ContactOwnership { get; }
         internal CharacterFootSupportEligibility SupportEligibility { get; }
@@ -144,8 +150,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Side,
                 FinalSole + delta,
                 resolvedAnkle,
+                FinalAnkleRotation,
                 EffectiveCorrection + delta,
                 GoalWeight,
+                RotationWeight,
                 in contactReference,
                 ContactOwnership,
                 SupportEligibility,
@@ -275,7 +283,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int contactSurfaceIdentity = 0,
             Vector3 contactPlaneNormal = default,
             CharacterFootPathContinuityFact pathContinuity = default,
-            bool landingReachUnavailable = false)
+            bool landingReachUnavailable = false,
+            Quaternion correctedAnkleRotation = default)
         {
             State = state;
             RejectReason = rejectReason;
@@ -306,6 +315,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneNormal = contactPlaneNormal;
             PathContinuity = pathContinuity;
             LandingReachUnavailable = landingReachUnavailable;
+            CorrectedAnkleRotation = correctedAnkleRotation;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -337,6 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 ContactPlaneNormal { get; }
         internal CharacterFootPathContinuityFact PathContinuity { get; }
         public bool LandingReachUnavailable { get; }
+        public Quaternion CorrectedAnkleRotation { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
 
         internal CharacterFootSwingMotionResult WithLandingReach(
@@ -375,7 +386,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ContactSurfaceIdentity,
                 ContactPlaneNormal,
                 PathContinuity,
-                unavailable);
+                unavailable,
+                CorrectedAnkleRotation);
         }
 
     }
@@ -412,6 +424,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactSurfaceIdentity = result.ContactSurfaceIdentity;
             ContactPlaneNormal = result.ContactPlaneNormal;
             LandingReachUnavailable = result.LandingReachUnavailable;
+            CorrectedAnkleRotation = result.CorrectedAnkleRotation;
             CharacterFootPathContinuityFact path = result.PathContinuity;
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
@@ -499,6 +512,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
         public bool LandingReachUnavailable { get; }
+        public Quaternion CorrectedAnkleRotation { get; }
         public bool PathContinuityEvaluated { get; }
         public string PathRevisionReason { get; }
         public bool PathResidualRebuilt { get; }

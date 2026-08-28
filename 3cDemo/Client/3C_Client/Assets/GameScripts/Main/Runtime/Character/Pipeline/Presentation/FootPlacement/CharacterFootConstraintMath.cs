@@ -22,24 +22,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 contactAnchor) =>
             contactAnchor - ResolveOriginalSole(foot);
 
-        internal static Vector3 ResolveContactAnchor(
-            CharacterFootPlacementAnimatedFootPose foot,
-            Vector3 contactPoint,
-            Vector3 contactNormal)
-        {
-            Vector3 sole = ResolveOriginalSole(foot);
-            Vector3 normal = contactNormal.normalized;
-            return sole + normal * Vector3.Dot(contactPoint - sole, normal);
-        }
-
-        internal static float ResolveContactPlaneDistance(
-            CharacterFootPlacementAnimatedFootPose foot,
-            Vector3 contactPoint,
-            Vector3 contactNormal) =>
-            Mathf.Abs(Vector3.Dot(
-                contactPoint - ResolveOriginalSole(foot),
-                contactNormal.normalized));
-
         internal static Quaternion ResolveContactRotation(
             CharacterFootPlacementAnimatedFootPose foot,
             Vector3 contactNormal,

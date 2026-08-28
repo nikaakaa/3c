@@ -47,8 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ContactOutOfSlideRange = 6,
         LockResponseChanged = 7,
         LandingCompleted = 8,
-        ReleaseCompleted = 9,
-        LockWeightReduced = 10
+        ReleaseCompleted = 9
     }
 
     internal enum CharacterFootAnchorCommand : byte

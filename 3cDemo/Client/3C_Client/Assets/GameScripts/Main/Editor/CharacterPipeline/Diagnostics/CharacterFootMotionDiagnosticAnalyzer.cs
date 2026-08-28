@@ -3849,8 +3849,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Vector3 rateDelta =
                     frame.CorrectionBeforeSwingVerticalRateLimit -
                     frame.ResidualOutputCorrection;
-                Vector3 up = frame.ComponentUp.normalized;
-                if (Vector3.ProjectOnPlane(rateDelta, up).magnitude >
+                bool componentUpAvailable = frame.ComponentUp.sqrMagnitude >
+                    TimeEpsilon * TimeEpsilon;
+                if (componentUpAvailable &&
+                    Vector3.ProjectOnPlane(
+                        rateDelta,
+                        frame.ComponentUp.normalized).magnitude >
                     PositionNoiseFloor ||
                     !frame.SwingVerticalRateLimitApplied &&
                     rateDelta.magnitude > PositionNoiseFloor)

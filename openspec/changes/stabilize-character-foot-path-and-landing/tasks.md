@@ -28,11 +28,11 @@
 - [x] 3.12 把Observation identity、World revision、cache state、query executed与canonical Raw Landing接入唯一facts/diagnosis链并删除Preferred旧口径
 - [x] 3.13 为Corin显式配置5厘米预测输入累计距离与1度Component Up变化阈值，阈值内复用Committed Observation，并在正式Sliding接触准入输入变化时刷新观测
 - [x] 3.14 让PreSwing与Swing消费同一Accepted Swing Motion和Ground Envelope，消除进入Swing首帧才补Path的Correction跳变
-- [ ] 3.15 在Tracking阶段让新查询的Surface变化只无条件换代NextSwingLanding，不得覆盖Current Contact Anchor或受LandingAcceptanceDistance保留
-- [ ] 3.16 把现有Landing Context收敛为`Empty / Tracking / Committed`所有权，Promotion只作为Current Contact Event的当帧输出事实，不建立第二状态机
-- [ ] 3.17 用正式`ApproachContactToLanding`把同Event最新Accepted NextSwingLanding提交为Committed，并禁止后续普通Prediction查询、换点、切Surface或重建Ground Path
-- [ ] 3.18 在Approach Contact没有同Event Accepted Landing时发布typed unavailable，不用Animated Sole、旧Event、Rejected Observation或默认Surface建立承诺
-- [ ] 3.19 让Tracking的新Rejected Observation保持自身Key和拒绝结果，同时允许既有同Event Accepted Landing继续保留原始lineage，禁止把保留Landing改名成本次查询命中
+- [x] 3.15 在Tracking阶段让新查询的Surface变化只无条件换代NextSwingLanding，不得覆盖Current Contact Anchor或受LandingAcceptanceDistance保留
+- [x] 3.16 把现有Landing Context收敛为`Empty / Tracking / Committed`所有权，Promotion只作为Current Contact Event的当帧输出事实，不建立第二状态机
+- [x] 3.17 用正式`ApproachContactToLanding`把同Event最新Accepted NextSwingLanding提交为Committed，并禁止后续普通Prediction查询、换点、切Surface或重建Ground Path
+- [x] 3.18 在Approach Contact没有同Event Accepted Landing时发布typed unavailable，不用Animated Sole、旧Event、Rejected Observation或默认Surface建立承诺
+- [x] 3.19 让Tracking的新Rejected Observation保持自身Key和拒绝结果，同时允许既有同Event Accepted Landing继续保留原始lineage，禁止把保留Landing改名成本次查询命中
 
 ## 4. 拆分State、Transition、Interpolation与Hard Constraint
 

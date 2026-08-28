@@ -174,6 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     [Serializable]
     public sealed class CharacterFootMotionAuthoringSettings
     {
+        [SerializeField] float m_LandingAcceptanceDistance;
         [SerializeField] float m_LandingUpdateDistance = 0.005f;
         [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_LockDistance = 0.08f;
@@ -183,6 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(
+                m_LandingAcceptanceDistance,
                 m_LandingUpdateDistance,
                 m_EffectiveCorrectionHalfLifeSeconds,
                 m_LockDistance,
@@ -194,6 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct CharacterFootMotionSettings
     {
         internal CharacterFootMotionSettings(
+            float landingAcceptanceDistance,
             float landingUpdateDistance,
             float effectiveCorrectionHalfLifeSeconds,
             float lockDistance,
@@ -201,6 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float pelvisSpringFrequency,
             float minimumLandingLegCompressionReserve)
         {
+            LandingAcceptanceDistance = landingAcceptanceDistance;
             LandingUpdateDistance = landingUpdateDistance;
             EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
             LockDistance = lockDistance;
@@ -211,6 +215,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireValid();
         }
 
+        internal float LandingAcceptanceDistance { get; }
         internal float LandingUpdateDistance { get; }
         internal float EffectiveCorrectionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
@@ -220,10 +225,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void RequireValid()
         {
-            if (!float.IsFinite(LandingUpdateDistance) || LandingUpdateDistance <= 0f ||
+            if (!float.IsFinite(LandingAcceptanceDistance) ||
+                LandingAcceptanceDistance <= 0f ||
+                !float.IsFinite(LandingUpdateDistance) || LandingUpdateDistance <= 0f ||
                 !float.IsFinite(EffectiveCorrectionHalfLifeSeconds) ||
                 EffectiveCorrectionHalfLifeSeconds <= 0f ||
                 !float.IsFinite(LockDistance) ||
+                LockDistance <= LandingAcceptanceDistance ||
                 LockDistance <= LandingUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
@@ -242,7 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v24-live-landing-goal-transition";
+        public const string SchemaVersion = "character-foot-placement-profile/v25-split-landing-acceptance";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

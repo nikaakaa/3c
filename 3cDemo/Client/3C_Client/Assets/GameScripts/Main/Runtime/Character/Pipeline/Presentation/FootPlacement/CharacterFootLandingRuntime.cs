@@ -138,7 +138,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (Vector3.Distance(
                         landingPoint,
                         context.NextSwingLanding.WorldPoint) <
-                    settings.LandingUpdateDistance)
+                    settings.LandingAcceptanceDistance)
                 {
                     context.TrackingState =
                         CharacterFootLandingTrackingState.Accepted;

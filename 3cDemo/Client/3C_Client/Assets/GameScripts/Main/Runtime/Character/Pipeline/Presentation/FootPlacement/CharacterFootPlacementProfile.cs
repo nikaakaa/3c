@@ -176,7 +176,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         [SerializeField] float m_LandingAcceptanceDistance;
         [SerializeField] float m_PathRevisionDistance;
-        [SerializeField] float m_LandingUpdateDistance = 0.005f;
+        [SerializeField] float m_SwingResidualTolerance;
+        [SerializeField] float m_ReleaseCompletionTolerance;
         [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
@@ -187,7 +188,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootMotionSettings(
                 m_LandingAcceptanceDistance,
                 m_PathRevisionDistance,
-                m_LandingUpdateDistance,
+                m_SwingResidualTolerance,
+                m_ReleaseCompletionTolerance,
                 m_EffectiveCorrectionHalfLifeSeconds,
                 m_LockDistance,
                 m_SlideDistance,
@@ -200,7 +202,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootMotionSettings(
             float landingAcceptanceDistance,
             float pathRevisionDistance,
-            float landingUpdateDistance,
+            float swingResidualTolerance,
+            float releaseCompletionTolerance,
             float effectiveCorrectionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
@@ -209,7 +212,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             LandingAcceptanceDistance = landingAcceptanceDistance;
             PathRevisionDistance = pathRevisionDistance;
-            LandingUpdateDistance = landingUpdateDistance;
+            SwingResidualTolerance = swingResidualTolerance;
+            ReleaseCompletionTolerance = releaseCompletionTolerance;
             EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
@@ -221,7 +225,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal float LandingAcceptanceDistance { get; }
         internal float PathRevisionDistance { get; }
-        internal float LandingUpdateDistance { get; }
+        internal float SwingResidualTolerance { get; }
+        internal float ReleaseCompletionTolerance { get; }
         internal float EffectiveCorrectionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
@@ -234,13 +239,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LandingAcceptanceDistance <= 0f ||
                 !float.IsFinite(PathRevisionDistance) ||
                 PathRevisionDistance <= 0f ||
-                !float.IsFinite(LandingUpdateDistance) || LandingUpdateDistance <= 0f ||
+                !float.IsFinite(SwingResidualTolerance) ||
+                SwingResidualTolerance <= 0f ||
+                !float.IsFinite(ReleaseCompletionTolerance) ||
+                ReleaseCompletionTolerance <= 0f ||
                 !float.IsFinite(EffectiveCorrectionHalfLifeSeconds) ||
                 EffectiveCorrectionHalfLifeSeconds <= 0f ||
                 !float.IsFinite(LockDistance) ||
                 LockDistance <= LandingAcceptanceDistance ||
                 LockDistance <= PathRevisionDistance ||
-                LockDistance <= LandingUpdateDistance ||
+                LockDistance <= SwingResidualTolerance ||
+                LockDistance <= ReleaseCompletionTolerance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f ||
@@ -258,7 +267,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v26-split-path-revision";
+        public const string SchemaVersion = "character-foot-placement-profile/v27-split-interpolation-tolerances";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

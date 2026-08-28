@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double previousSafetyFloorClearanceBeforeMeters;
         public double previousSafetyFloorClearanceAfterMeters;
         public double previousResidualAfterDecayMeters;
-        public double landingUpdateDistanceMeters;
+        public double swingResidualToleranceMeters;
         public CharacterFootVectorFact previousFinalEffectiveCorrection;
         public CharacterFootVectorFact finalEffectiveCorrection;
         public CharacterFootVectorFact previousSafetyFloorMinimumCorrection;

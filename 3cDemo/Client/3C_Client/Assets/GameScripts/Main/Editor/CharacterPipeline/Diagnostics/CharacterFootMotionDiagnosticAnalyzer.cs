@@ -202,7 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 double pathNoiseFloor = Math.Max(
                     PositionNoiseFloor,
-                    current.LandingUpdateDistance);
+                    current.PathRevisionDistance);
                 bool pathAvailabilityChanged =
                     previous.PathAvailableAfter != current.PathAvailableAfter ||
                     RevisionReasonIncludes(
@@ -868,8 +868,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool consumedSurfaceChanged =
                     previous.NextLandingSurfaceIdentity !=
                     current.NextLandingSurfaceIdentity;
-                bool pointExceededUpdateDistance =
-                    consumedPointDelta > current.LandingUpdateDistance;
+                bool pointExceededAcceptanceDistance =
+                    consumedPointDelta > current.LandingAcceptanceDistance;
                 double observedPointDelta =
                     previous.ObservedLandingAccepted &&
                     current.ObservedLandingAccepted
@@ -992,8 +992,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         consumedPoint = CharacterFootVectorFact.From(
                             current.NextLanding),
                         landingPointDeltaMeters = consumedPointDelta,
-                        landingUpdateDistanceMeters =
-                            current.LandingUpdateDistance,
+                        landingAcceptanceDistanceMeters =
+                            current.LandingAcceptanceDistance,
                         correctionStepMeters = correctionStep,
                         physicalAnkleAvailable = physicalAvailable,
                         physicalAnkleAlongUpStepMeters =
@@ -1003,16 +1003,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             physicalSoleAlongUpStep,
                         consumedSurfaceChanged =
                             consumedSurfaceChanged,
-                        consumedPointExceededLandingUpdateDistance =
-                            pointExceededUpdateDistance
+                        consumedPointExceededLandingAcceptanceDistance =
+                            pointExceededAcceptanceDistance
                     };
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
                     ["LandingPointDelta"] = consumedPointDelta,
                     ["ObservedLandingPointDelta"] = observedPointDelta,
-                    ["LandingUpdateDistance"] =
-                        current.LandingUpdateDistance,
+                    ["LandingAcceptanceDistance"] =
+                        current.LandingAcceptanceDistance,
                     ["CorrectionStep"] = correctionStep,
                     ["PhysicalAnkleAlongUpStep"] =
                         physicalAnkleAlongUpStep,
@@ -1035,8 +1035,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["consumedLandingAvailable"] = true,
                     ["consumedSurfaceChanged"] =
                         consumedSurfaceChanged,
-                    ["consumedPointExceededLandingUpdateDistance"] =
-                        pointExceededUpdateDistance,
+                    ["consumedPointExceededLandingAcceptanceDistance"] =
+                        pointExceededAcceptanceDistance,
                     ["observedLandingAvailable"] =
                         previous.ObservedLandingAccepted &&
                         current.ObservedLandingAccepted,
@@ -1409,9 +1409,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.SafetyFloorClamped &&
                     previous.SafetyFloorClampMeters > PositionNoiseFloor;
                 bool residualWithinDeadline =
-                    previous.LandingUpdateDistance > 0f &&
+                    previous.SwingResidualTolerance > 0f &&
                     previousResidualAfterDecay <=
-                    previous.LandingUpdateDistance + TimeEpsilon;
+                    previous.SwingResidualTolerance + TimeEpsilon;
                 Vector3 previousFloorCompensation =
                     previous.SafetyFloorOutputCorrection -
                     previous.CorrectionBeforeSafetyFloor;
@@ -1481,8 +1481,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             previous.SafetyFloorClearanceAfterMeters,
                         previousResidualAfterDecayMeters =
                             previousResidualAfterDecay,
-                        landingUpdateDistanceMeters =
-                            previous.LandingUpdateDistance,
+                        swingResidualToleranceMeters =
+                            previous.SwingResidualTolerance,
                         previousFinalEffectiveCorrection =
                             CharacterFootVectorFact.From(
                                 previous.FinalEffectiveCorrection),
@@ -1562,8 +1562,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         previous.SafetyFloorClearanceAfterMeters,
                     ["previousResidualAfterDecayMeters"] =
                         previousResidualAfterDecay,
-                    ["landingUpdateDistanceMeters"] =
-                        previous.LandingUpdateDistance,
+                    ["swingResidualToleranceMeters"] =
+                        previous.SwingResidualTolerance,
                     ["previousSafetyFloorCompensationMeters"] =
                         previousFloorCompensation.magnitude,
                     ["stepHeightMeters"] = stepHeight,
@@ -2623,9 +2623,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.PathPreviousLandingEventIdentity !=
                     current.PathCurrentLandingEventIdentity;
                 bool landingPointChanged = comparablePath &&
-                    current.PathLandingPointDelta > current.LandingUpdateDistance;
+                    current.PathLandingPointDelta > current.PathRevisionDistance;
                 bool swingTargetChanged = comparablePath &&
-                    current.PathTargetDelta > current.LandingUpdateDistance;
+                    current.PathTargetDelta > current.PathRevisionDistance;
                 bool revisionExpected = availabilityChanged || eventChanged ||
                                         landingPointChanged || swingTargetChanged;
                 bool reasonAvailability = HasRevisionReason(
@@ -2695,8 +2695,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.SafetyFloorClearanceBeforeMeters,
                     ["landingPointDeltaMeters"] =
                         current.PathLandingPointDelta,
-                    ["landingUpdateDistanceMeters"] =
-                        current.LandingUpdateDistance,
+                    ["pathRevisionDistanceMeters"] =
+                        current.PathRevisionDistance,
+                    ["swingResidualToleranceMeters"] =
+                        current.SwingResidualTolerance,
                     ["residualAfterDecayMeters"] = residualAfterDecay,
                     ["residualBeforeDecayMeters"] = residualBeforeDecay,
                     ["residualBeforeRevisionMeters"] = residualBeforeRevision,
@@ -3465,7 +3467,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("FootMotionSwingResidualAfterDecay"),
                 ResidualOutputCorrection =
                     Vector("FootMotionResidualOutputCorrection"),
-                LandingUpdateDistance = Float("FootMotionLandingUpdateDistance"),
+                LandingAcceptanceDistance =
+                    Float("FootMotionLandingAcceptanceDistance"),
+                PathRevisionDistance =
+                    Float("FootMotionPathRevisionDistance"),
+                SwingResidualTolerance =
+                    Float("FootMotionSwingResidualTolerance"),
                 ResidualTimeToLandingSeconds =
                     Float("FootMotionResidualTimeToLandingSeconds"),
                 ResidualBaseHalfLifeSeconds =
@@ -4375,7 +4382,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionResidualOutputCorrectionX",
                 "FootMotionResidualOutputCorrectionY",
                 "FootMotionResidualOutputCorrectionZ",
-                "FootMotionLandingUpdateDistance",
+                "FootMotionLandingAcceptanceDistance",
+                "FootMotionPathRevisionDistance",
+                "FootMotionSwingResidualTolerance",
                 "FootMotionResidualTimeToLandingSeconds",
                 "FootMotionResidualBaseHalfLifeSeconds",
                 "FootMotionResidualDeadlineHalfLifeAvailable",
@@ -4953,7 +4962,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 SwingResidualBeforeDecay;
             internal Vector3 SwingResidualAfterDecay;
             internal Vector3 ResidualOutputCorrection;
-            internal float LandingUpdateDistance;
+            internal float LandingAcceptanceDistance;
+            internal float PathRevisionDistance;
+            internal float SwingResidualTolerance;
             internal float ResidualTimeToLandingSeconds;
             internal float ResidualBaseHalfLifeSeconds;
             internal bool ResidualDeadlineHalfLifeAvailable;

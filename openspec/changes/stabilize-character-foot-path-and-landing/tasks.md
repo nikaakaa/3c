@@ -37,13 +37,14 @@
 - [x] 4.7 把Ground Path Envelope与Landing Reach放在Interpolation之后执行，禁止Hard Constraint回写State Target、Residual或Transition
 - [x] 4.8 让Resolved Foot只消费Post-Transition、Post-Interpolation和Post-Constraint结果，并补齐Transition、Target、Interpolation与Constraint逐阶段事实
 - [x] 4.9 删除旧`CharacterFootStateMachine`、旧分散Residual/Progress字段、重复Advance方法和全部兼容入口，确认State/Anchor与Effective Correction各自只有一个写入者
-- [x] 4.10 把查询后Landing接受距离从`LandingUpdateDistance`剥离为独立正式配置，保持Corin现行2厘米行为不变
-- [x] 4.11 把Landing端点与Swing Target的Path Revision距离从`LandingUpdateDistance`剥离为独立正式配置，保持Corin现行2厘米行为不变
+- [x] 4.10 把查询后Landing接受距离剥离为独立`LandingAcceptanceDistance`正式配置，保持Corin现行2厘米行为不变
+- [x] 4.11 把Landing端点与Swing Target的Path Revision距离剥离为独立`PathRevisionDistance`正式配置，保持Corin现行2厘米行为不变
+- [x] 4.12 把Swing截止残差与Release完成距离拆成独立`SwingResidualTolerance`和`ReleaseCompletionTolerance`正式配置，删除旧复用字段并保持Corin现行2厘米行为不变
 
 ## 5. 单独接入Step Time与Step Distance
 
 - [ ] 5.1 用正式Step Time替换Landing Prediction时域、Current/Incoming选择和Future Body Translation请求时长
-- [ ] 5.2 在Path瞬时Correction链连续后，用正式Step Time、LandingUpdateDistance和基础HalfLife计算统一Interpolation State中Swing政策的Landing截止收敛
+- [ ] 5.2 在Path瞬时Correction链连续后，用正式Step Time、SwingResidualTolerance和基础HalfLife计算统一Interpolation State中Swing政策的Landing截止收敛
 - [ ] 5.3 用正式Step Distance与Event table校验RootLocalLanding的同脚相邻事件和水平步长，不改变世界速度或地形查询数学
 - [ ] 5.4 删除旧隐藏Step Time/Distance/Event消费者及其Projection字段，不保留双读或fallback
 - [ ] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移

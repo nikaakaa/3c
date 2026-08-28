@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new[]
                     {
                         "consumedSurfaceChanged=true",
-                        "LandingPointDelta>LandingUpdateDistance"
+                        "LandingPointDelta>LandingAcceptanceDistance"
                     },
                     lateApproach,
                     value =>
@@ -69,10 +69,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         }
                         if (CharacterFootDiagnosisContext.Evidence(
                                 value,
-                                "consumedPointExceededLandingUpdateDistance"))
+                                "consumedPointExceededLandingAcceptanceDistance"))
                         {
                             rules.Add(
-                                "LandingPointDelta>LandingUpdateDistance");
+                                "LandingPointDelta>LandingAcceptanceDistance");
                         }
                         return rules;
                     },
@@ -93,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                     "PhysicalSoleAlongUpStep")))),
                     "LandingPointDelta",
                     "ObservedLandingPointDelta",
-                    "LandingUpdateDistance",
+                    "LandingAcceptanceDistance",
                     "CorrectionStep",
                     "PhysicalAnkleAlongUpStep",
                     "PhysicalSoleAlongUpStep",
@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             "swingTargetDeltaMeters")),
                     "landingPointDeltaMeters",
                     "swingTargetDeltaMeters",
-                    "landingUpdateDistanceMeters",
+                    "pathRevisionDistanceMeters",
                     "residualBeforeRevisionMeters",
                     "residualBeforeDecayMeters",
                     "residualAfterDecayMeters"),
@@ -173,11 +173,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "correctionStepMeters"),
                 context.Target(
                     "residual-deadline-miss",
-                    "到达Landing截止帧时Swing Residual是否仍超过LandingUpdateDistance",
+                    "到达Landing截止帧时Swing Residual是否仍超过SwingResidualTolerance",
                     new[] { "PathContinuity" },
                     new[]
                     {
-                        "residualAfterDecayMeters>landingUpdateDistanceMeters"
+                        "residualAfterDecayMeters>swingResidualToleranceMeters"
                     },
                     deadlines,
                     value => CharacterFootDiagnosisContext.Metric(
@@ -185,11 +185,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                  "residualAfterDecayMeters") >
                              CharacterFootDiagnosisContext.Metric(
                                  value,
-                                 "landingUpdateDistanceMeters") +
+                                 "swingResidualToleranceMeters") +
                              ClearanceToleranceMeters
                         ? new List<string>
                         {
-                            "residualAfterDecayMeters>landingUpdateDistanceMeters"
+                            "residualAfterDecayMeters>swingResidualToleranceMeters"
                         }
                         : new List<string>(),
                     value => CharacterFootDiagnosisContext.Metric(
@@ -197,9 +197,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                  "residualAfterDecayMeters") -
                              CharacterFootDiagnosisContext.Metric(
                                  value,
-                                 "landingUpdateDistanceMeters"),
+                                 "swingResidualToleranceMeters"),
                     "timeToLandingSeconds",
-                    "landingUpdateDistanceMeters",
+                    "swingResidualToleranceMeters",
                     "residualBeforeDecayMeters",
                     "residualAfterDecayMeters",
                     "baseHalfLifeSeconds",
@@ -294,14 +294,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact previousConsumedPoint;
         public CharacterFootVectorFact consumedPoint;
         public double landingPointDeltaMeters;
-        public double landingUpdateDistanceMeters;
+        public double landingAcceptanceDistanceMeters;
         public double correctionStepMeters;
         public bool physicalAnkleAvailable;
         public double physicalAnkleAlongUpStepMeters;
         public bool physicalSoleAvailable;
         public double physicalSoleAlongUpStepMeters;
         public bool consumedSurfaceChanged;
-        public bool consumedPointExceededLandingUpdateDistance;
+        public bool consumedPointExceededLandingAcceptanceDistance;
     }
 
 }

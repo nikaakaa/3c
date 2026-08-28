@@ -87,7 +87,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 residualBeforeRevision,
             Vector3 residualBeforeDecay,
             Vector3 residualAfterDecay,
-            float landingUpdateDistance,
+            float landingAcceptanceDistance,
+            float pathRevisionDistance,
+            float swingResidualTolerance,
             float timeToLandingSeconds,
             float baseHalfLifeSeconds,
             bool deadlineHalfLifeAvailable,
@@ -109,7 +111,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualBeforeDecay = residualBeforeDecay;
             ResidualAfterDecay = residualAfterDecay;
             ResidualOutputCorrection = currentTargetCorrection + residualAfterDecay;
-            LandingUpdateDistance = landingUpdateDistance;
+            LandingAcceptanceDistance = landingAcceptanceDistance;
+            PathRevisionDistance = pathRevisionDistance;
+            SwingResidualTolerance = swingResidualTolerance;
             TimeToLandingSeconds = timeToLandingSeconds;
             BaseHalfLifeSeconds = baseHalfLifeSeconds;
             DeadlineHalfLifeAvailable = deadlineHalfLifeAvailable;
@@ -185,7 +189,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualBeforeDecay = source.ResidualBeforeDecay;
             ResidualAfterDecay = source.ResidualAfterDecay;
             ResidualOutputCorrection = source.ResidualOutputCorrection;
-            LandingUpdateDistance = source.LandingUpdateDistance;
+            LandingAcceptanceDistance = source.LandingAcceptanceDistance;
+            PathRevisionDistance = source.PathRevisionDistance;
+            SwingResidualTolerance = source.SwingResidualTolerance;
             TimeToLandingSeconds = source.TimeToLandingSeconds;
             BaseHalfLifeSeconds = source.BaseHalfLifeSeconds;
             DeadlineHalfLifeAvailable = source.DeadlineHalfLifeAvailable;
@@ -240,7 +246,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 ResidualBeforeDecay { get; }
         internal Vector3 ResidualAfterDecay { get; }
         internal Vector3 ResidualOutputCorrection { get; }
-        internal float LandingUpdateDistance { get; }
+        internal float LandingAcceptanceDistance { get; }
+        internal float PathRevisionDistance { get; }
+        internal float SwingResidualTolerance { get; }
         internal float TimeToLandingSeconds { get; }
         internal float BaseHalfLifeSeconds { get; }
         internal bool DeadlineHalfLifeAvailable { get; }
@@ -339,7 +347,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 default,
                 default,
-                settings.LandingUpdateDistance,
+                settings.LandingAcceptanceDistance,
+                settings.PathRevisionDistance,
+                settings.SwingResidualTolerance,
                 timeToLandingSeconds,
                 settings.EffectiveCorrectionHalfLifeSeconds,
                 false,

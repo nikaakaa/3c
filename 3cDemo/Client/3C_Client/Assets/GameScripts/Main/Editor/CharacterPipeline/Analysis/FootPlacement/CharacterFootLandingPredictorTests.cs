@@ -41,6 +41,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0.75f,
                 55f,
                 2f,
+                0.1f,
+                30f,
+                8f,
                 0.05f,
                 1f);
             Vector3 raw = new Vector3(1f, 2f, 3f);
@@ -77,6 +80,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0.75f,
                 55f,
                 2f,
+                0.1f,
+                30f,
+                8f,
                 0.05f,
                 1f);
             var world = new MissingWorldQuery();

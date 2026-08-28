@@ -15,9 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_CastBelow = 0.75f;
         [SerializeField] float m_MaximumSurfaceSlopeDegrees = 55f;
         [SerializeField] float m_MaximumPredictionTimeSeconds = 2f;
-        [SerializeField] float m_PredictionVelocityDeltaThreshold;
-        [SerializeField] float m_PredictionVelocitySmoothSpeed;
-        [SerializeField] float m_PredictionMaximumSpeed;
         [SerializeField] float m_PredictionInputAccumulationDistance;
         [SerializeField] float m_ComponentUpChangeAngleDegrees;
 
@@ -30,9 +27,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CastBelow,
                 m_MaximumSurfaceSlopeDegrees,
                 m_MaximumPredictionTimeSeconds,
-                m_PredictionVelocityDeltaThreshold,
-                m_PredictionVelocitySmoothSpeed,
-                m_PredictionMaximumSpeed,
                 m_PredictionInputAccumulationDistance,
                 m_ComponentUpChangeAngleDegrees);
 
@@ -56,9 +50,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float castBelow,
             float maximumSurfaceSlopeDegrees,
             float maximumPredictionTimeSeconds,
-            float predictionVelocityDeltaThreshold,
-            float predictionVelocitySmoothSpeed,
-            float predictionMaximumSpeed,
             float predictionInputAccumulationDistance,
             float componentUpChangeAngleDegrees)
         {
@@ -69,9 +60,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CastBelow = castBelow;
             MaximumSurfaceSlopeDegrees = maximumSurfaceSlopeDegrees;
             MaximumPredictionTimeSeconds = maximumPredictionTimeSeconds;
-            PredictionVelocityDeltaThreshold = predictionVelocityDeltaThreshold;
-            PredictionVelocitySmoothSpeed = predictionVelocitySmoothSpeed;
-            PredictionMaximumSpeed = predictionMaximumSpeed;
             PredictionInputAccumulationDistance =
                 predictionInputAccumulationDistance;
             ComponentUpChangeAngleDegrees = componentUpChangeAngleDegrees;
@@ -85,9 +73,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float CastBelow { get; }
         internal float MaximumSurfaceSlopeDegrees { get; }
         internal float MaximumPredictionTimeSeconds { get; }
-        internal float PredictionVelocityDeltaThreshold { get; }
-        internal float PredictionVelocitySmoothSpeed { get; }
-        internal float PredictionMaximumSpeed { get; }
         internal float PredictionInputAccumulationDistance { get; }
         internal float ComponentUpChangeAngleDegrees { get; }
         internal float MinimumGroundNormalDot =>
@@ -103,12 +88,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 MaximumSurfaceSlopeDegrees <= 0f || MaximumSurfaceSlopeDegrees >= 90f ||
                 !float.IsFinite(MaximumPredictionTimeSeconds) ||
                 MaximumPredictionTimeSeconds <= 0f ||
-                !float.IsFinite(PredictionVelocityDeltaThreshold) ||
-                PredictionVelocityDeltaThreshold <= 0f ||
-                !float.IsFinite(PredictionVelocitySmoothSpeed) ||
-                PredictionVelocitySmoothSpeed <= 0f ||
-                !float.IsFinite(PredictionMaximumSpeed) ||
-                PredictionMaximumSpeed <= PredictionVelocityDeltaThreshold ||
                 !float.IsFinite(PredictionInputAccumulationDistance) ||
                 PredictionInputAccumulationDistance <= 0f ||
                 PredictionInputAccumulationDistance > SphereRadius ||
@@ -305,7 +284,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v29-prediction-motion";
+        public const string SchemaVersion = "character-foot-placement-profile/v28-prediction-input-accumulation";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

@@ -370,6 +370,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var rightAnkleRotations = new Quaternion[sampleCount];
             var rootPositions = new Vector3[sampleCount];
             var rootRotations = new Quaternion[sampleCount];
+            CharacterFootMotionSampleInput leftMotion =
+                CreateMotionFootInput(sampleCount, samplingContext.LeftLegLength);
+            CharacterFootMotionSampleInput rightMotion =
+                CreateMotionFootInput(sampleCount, samplingContext.RightLegLength);
             for (int i = 0; i < sampleCount; i++)
             {
                 CharacterFootPlacementAnimatedPose pose = samplingContext.Sample(i * step, (ulong)i + 1UL);
@@ -389,6 +393,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 rightAnkleRotations[i] = samplingContext.ToVisualRootLocal(pose.Right.AnkleRotation);
                 rootPositions[i] = Vector3.zero;
                 rootRotations[i] = Quaternion.identity;
+                CaptureMotionFoot(samplingContext, pose.Left, leftMotion, i, true);
+                CaptureMotionFoot(samplingContext, pose.Right, rightMotion, i, false);
                 RequireFinite(leftHeelPositions[i], "left heel position", i);
                 RequireFinite(leftToePositions[i], "left toe position", i);
                 RequireFinite(leftAnklePositions[i], "left ankle position", i);
@@ -526,7 +532,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 samplingContext,
                 source,
                 in motionReference,
-                sourceDuration);
+                sourceDuration,
+                leftMotion,
+                rightMotion);
             return new AnimationFootAnalysisBuildResult(
                 features,
                 new AnimationFootPhaseValidationDescriptor(
@@ -547,7 +555,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             SamplingContext samplingContext,
             CharacterFootPlacementAnalysisSource source,
             in CharacterFootMotionReference motionReference,
-            float sourceDuration)
+            float sourceDuration,
+            CharacterFootMotionSampleInput targetLeft,
+            CharacterFootMotionSampleInput targetRight)
         {
             AnimationClip motionClip = motionReference.MotionReference;
             AnimationClip samplingClip = CreateMotionSamplingClip(motionClip);
@@ -559,18 +569,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 float step = sourceDuration / intervals;
                 var rootPositions = new Vector3[sampleCount];
                 var rootRotations = new Quaternion[sampleCount];
-                CharacterFootMotionSampleInput left = CreateMotionFootInput(sampleCount, samplingContext.LeftLegLength);
-                CharacterFootMotionSampleInput right = CreateMotionFootInput(sampleCount, samplingContext.RightLegLength);
                 for (int i = 0; i < sampleCount; i++)
                 {
-                    CharacterFootPlacementAnimatedPose pose = samplingContext.Sample(i * step, (ulong)i + 1UL);
+                    _ = samplingContext.Sample(i * step, (ulong)i + 1UL);
                     rootPositions[i] = samplingContext.MotionRootPosition;
                     rootRotations[i] = samplingContext.MotionRootRotation;
-                    CaptureMotionFoot(samplingContext, pose.Left, left, i, true);
-                    CaptureMotionFoot(samplingContext, pose.Right, right, i, false);
                     RequireFinite(rootPositions[i], "motion reference root position", i);
                     RequireFinite(rootRotations[i], "motion reference root rotation", i);
                 }
+                CharacterFootMotionSampleInput left = TransformMotionFoot(
+                    targetLeft,
+                    rootPositions,
+                    rootRotations);
+                CharacterFootMotionSampleInput right = TransformMotionFoot(
+                    targetRight,
+                    rootPositions,
+                    rootRotations);
                 return CharacterFootMotionDataBuilder.Build(
                     new CharacterFootMotionDataInput
                     {
@@ -590,6 +604,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (samplingClip != motionClip)
                     UnityEngine.Object.DestroyImmediate(samplingClip);
             }
+        }
+
+        static CharacterFootMotionSampleInput TransformMotionFoot(
+            CharacterFootMotionSampleInput source,
+            Vector3[] rootPositions,
+            Quaternion[] rootRotations)
+        {
+            CharacterFootMotionSampleInput result =
+                CreateMotionFootInput(rootPositions.Length, source.RigLegLength);
+            for (int i = 0; i < rootPositions.Length; i++)
+            {
+                Vector3 rootPosition = rootPositions[i];
+                Quaternion rootRotation = rootRotations[i];
+                result.HipPositions[i] = rootPosition + rootRotation * source.HipPositions[i];
+                result.KneePositions[i] = rootPosition + rootRotation * source.KneePositions[i];
+                result.AnklePositions[i] = rootPosition + rootRotation * source.AnklePositions[i];
+                result.HeelPositions[i] = rootPosition + rootRotation * source.HeelPositions[i];
+                result.ToePositions[i] = rootPosition + rootRotation * source.ToePositions[i];
+                result.SolePositions[i] = rootPosition + rootRotation * source.SolePositions[i];
+                result.HipRotations[i] = (rootRotation * source.HipRotations[i]).normalized;
+                result.KneeRotations[i] = (rootRotation * source.KneeRotations[i]).normalized;
+                result.AnkleRotations[i] = (rootRotation * source.AnkleRotations[i]).normalized;
+                result.ToeRotations[i] = (rootRotation * source.ToeRotations[i]).normalized;
+                result.SoleRotations[i] = (rootRotation * source.SoleRotations[i]).normalized;
+            }
+            return result;
         }
 
         static AnimationClip CreateMotionSamplingClip(AnimationClip source)

@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -20,6 +21,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float normalizedTime,
             float distance,
             Vector3 rootLocalLanding)
+            : this(
+                ordinal,
+                landingCycle,
+                normalizedTime,
+                distance,
+                rootLocalLanding,
+                0,
+                0,
+                0)
+        {
+        }
+
+        AnimationFootMotionEventOccurrence(
+            int ordinal,
+            int landingCycle,
+            float normalizedTime,
+            float distance,
+            Vector3 rootLocalLanding,
+            ulong sourceSampleIdentity,
+            ulong contributionContinuityIdentity,
+            ulong identity)
         {
             if (ordinal <= 0 ||
                 !float.IsFinite(normalizedTime) ||
@@ -36,6 +58,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NormalizedTime = normalizedTime;
             Distance = distance;
             RootLocalLanding = rootLocalLanding;
+            SourceSampleIdentity = sourceSampleIdentity;
+            ContributionContinuityIdentity = contributionContinuityIdentity;
+            Identity = identity;
             m_IsSpecified = 1;
         }
 
@@ -45,7 +70,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float NormalizedTime { get; }
         public float Distance { get; }
         public Vector3 RootLocalLanding { get; }
+        public ulong SourceSampleIdentity { get; }
+        public ulong ContributionContinuityIdentity { get; }
+        public ulong Identity { get; }
         public bool IsValid => m_IsSpecified != 0;
+        public bool IsBound => IsValid && SourceSampleIdentity != 0 && Identity != 0;
+
+        internal AnimationFootMotionEventOccurrence Bind(
+            ulong sourceSampleIdentity,
+            ulong contributionContinuityIdentity,
+            CharacterFootSide side)
+        {
+            if (!IsValid || sourceSampleIdentity == 0 ||
+                contributionContinuityIdentity == 0 ||
+                side != CharacterFootSide.Left && side != CharacterFootSide.Right)
+            {
+                throw new ArgumentException("Foot Motion Event lineage is invalid.");
+            }
+            return new AnimationFootMotionEventOccurrence(
+                Ordinal,
+                LandingCycle,
+                NormalizedTime,
+                Distance,
+                RootLocalLanding,
+                sourceSampleIdentity,
+                contributionContinuityIdentity,
+                AnimationFootMotionIdentity.LandingEvent(
+                    contributionContinuityIdentity,
+                    sourceSampleIdentity,
+                    LandingCycle,
+                    Ordinal,
+                    side));
+        }
 
         static bool Finite(Vector3 value) =>
             float.IsFinite(value.x) &&
@@ -59,11 +115,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationFootMotionEventOccurrence currentContact,
             AnimationFootMotionEventOccurrence nextLanding,
             AnimationFootMotionEventPhase phase,
-            float timeToLandingSeconds)
+            float timeToLandingSeconds,
+            float swingProgress)
         {
             if (!Enum.IsDefined(typeof(AnimationFootMotionEventPhase), phase) ||
                 !float.IsFinite(timeToLandingSeconds) ||
                 timeToLandingSeconds < 0f ||
+                !float.IsFinite(swingProgress) ||
+                swingProgress < 0f || swingProgress > 1f ||
                 phase == AnimationFootMotionEventPhase.Unavailable &&
                 (currentContact.IsValid || nextLanding.IsValid) ||
                 phase == AnimationFootMotionEventPhase.Contact &&
@@ -78,6 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NextLanding = nextLanding;
             Phase = phase;
             TimeToLandingSeconds = timeToLandingSeconds;
+            SwingProgress = swingProgress;
             m_IsSpecified = 1;
         }
 
@@ -86,9 +146,96 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationFootMotionEventOccurrence NextLanding { get; }
         public AnimationFootMotionEventPhase Phase { get; }
         public float TimeToLandingSeconds { get; }
+        public float SwingProgress { get; }
         public bool IsValid => m_IsSpecified != 0;
         public bool InApproachContactToLanding =>
             IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
+
+        internal AnimationFootMotionEventFrame Bind(
+            ulong sourceSampleIdentity,
+            ulong contributionContinuityIdentity,
+            CharacterFootSide side)
+        {
+            if (!IsValid)
+                throw new InvalidOperationException("Foot Motion Event frame is unavailable.");
+            return new AnimationFootMotionEventFrame(
+                CurrentContact.IsValid
+                    ? CurrentContact.Bind(
+                        sourceSampleIdentity,
+                        contributionContinuityIdentity,
+                        side)
+                    : default,
+                NextLanding.IsValid
+                    ? NextLanding.Bind(
+                        sourceSampleIdentity,
+                        contributionContinuityIdentity,
+                        side)
+                    : default,
+                Phase,
+                TimeToLandingSeconds,
+                SwingProgress);
+        }
+    }
+
+    internal static class AnimationFootMotionIdentity
+    {
+        internal static ulong Source(AnimationPoseSourceId sourceId)
+        {
+            if (!sourceId.IsValid)
+                throw new ArgumentException("Foot Motion source is invalid.", nameof(sourceId));
+            return HashText(sourceId.ToString());
+        }
+
+        internal static ulong Source(string stableIdentity)
+        {
+            if (string.IsNullOrWhiteSpace(stableIdentity))
+                throw new ArgumentException("Foot Motion source is invalid.", nameof(stableIdentity));
+            return HashText(stableIdentity.Trim());
+        }
+
+        internal static ulong LandingEvent(
+            ulong contributionContinuityIdentity,
+            ulong sourceSampleIdentity,
+            int sourceSampleCycle,
+            int eventOrdinal,
+            CharacterFootSide side)
+        {
+            if (contributionContinuityIdentity == 0 || sourceSampleIdentity == 0 ||
+                eventOrdinal <= 0 ||
+                side != CharacterFootSide.Left && side != CharacterFootSide.Right)
+            {
+                throw new ArgumentException("Foot Motion Landing Event lineage is invalid.");
+            }
+            return Hash(
+                contributionContinuityIdentity,
+                sourceSampleIdentity,
+                unchecked((ulong)(long)sourceSampleCycle),
+                (ulong)(uint)eventOrdinal,
+                (ulong)side);
+        }
+
+        static ulong Hash(ulong a, ulong b, ulong c, ulong d, ulong e)
+        {
+            const ulong offset = 14695981039346656037UL;
+            const ulong prime = 1099511628211UL;
+            ulong value = offset;
+            value = (value ^ a) * prime;
+            value = (value ^ b) * prime;
+            value = (value ^ c) * prime;
+            value = (value ^ d) * prime;
+            value = (value ^ e) * prime;
+            return value == 0 ? 1UL : value;
+        }
+
+        static ulong HashText(string value)
+        {
+            const ulong offset = 14695981039346656037UL;
+            const ulong prime = 1099511628211UL;
+            ulong hash = offset;
+            for (int i = 0; i < value.Length; i++)
+                hash = (hash ^ value[i]) * prime;
+            return hash == 0 ? 1UL : hash;
+        }
     }
 
     [Serializable]
@@ -211,6 +358,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     default,
                     default,
                     AnimationFootMotionEventPhase.Unavailable,
+                    0f,
                     0f);
             }
 
@@ -261,11 +409,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         currentContact,
                         default,
                         AnimationFootMotionEventPhase.Contact,
+                        0f,
                         0f)
                     : new AnimationFootMotionEventFrame(
                         default,
                         default,
                         AnimationFootMotionEventPhase.Unavailable,
+                        0f,
                         0f);
             }
 
@@ -295,13 +445,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     default,
                     default,
                     AnimationFootMotionEventPhase.Unavailable,
+                    0f,
                     0f);
             }
+            float swingProgress = phase == AnimationFootMotionEventPhase.Swing ||
+                                  phase == AnimationFootMotionEventPhase.ApproachContact
+                ? Mathf.Clamp01(1f - timeToLandingSeconds / nextEvent.SwingLeadSeconds)
+                : 0f;
             return new AnimationFootMotionEventFrame(
                 currentContact,
                 nextLanding,
                 phase,
-                timeToLandingSeconds);
+                timeToLandingSeconds,
+                swingProgress);
         }
 
         public void RequireValid()

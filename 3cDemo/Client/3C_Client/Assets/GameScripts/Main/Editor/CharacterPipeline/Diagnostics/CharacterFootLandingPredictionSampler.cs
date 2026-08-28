@@ -92,6 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
+            "LandingTrackingState,LandingTrackingEventIdentity,LandingCommitted,LandingCommitAttempted,LandingCommitUnavailable," +
             "StepSelectionMaximumPredictionTimeSeconds,StepSelectionLastLandingEventIdentity,SelectedStepSource,SelectedLandingEventIdentity," +
             "SelectedStepEventPhase,SelectedStepApproachContactPhase,SelectedStepLandingPhase,SelectedStepAtOrAfterApproachContact,SelectedStepInApproachContactToLanding," +
             "CurrentStepIsValid,CurrentStepIsAuthoritative,CurrentStepHasConsistentLandingEventIdentity,CurrentStepIsPreSwing,CurrentStepIsSwing," +
@@ -106,15 +107,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
             "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
             "FormalEventPhase,FormalEventTimeToLandingSeconds,FormalInApproachContactToLanding," +
-            "FormalCurrentContactEventAvailable,FormalCurrentContactEventOrdinal,FormalCurrentContactEventCycle,FormalCurrentContactEventDistance,FormalCurrentContactRootLocalLandingX,FormalCurrentContactRootLocalLandingY,FormalCurrentContactRootLocalLandingZ," +
-            "FormalNextLandingEventAvailable,FormalNextLandingEventOrdinal,FormalNextLandingEventCycle,FormalNextLandingEventDistance,FormalNextRootLocalLandingX,FormalNextRootLocalLandingY,FormalNextRootLocalLandingZ," +
+            "FormalCurrentContactEventAvailable,FormalCurrentContactEventIdentity,FormalCurrentContactEventOrdinal,FormalCurrentContactEventCycle,FormalCurrentContactEventDistance,FormalCurrentContactRootLocalLandingX,FormalCurrentContactRootLocalLandingY,FormalCurrentContactRootLocalLandingZ," +
+            "FormalNextLandingEventAvailable,FormalNextLandingEventIdentity,FormalNextLandingEventOrdinal,FormalNextLandingEventCycle,FormalNextLandingEventDistance,FormalNextRootLocalLandingX,FormalNextRootLocalLandingY,FormalNextRootLocalLandingZ," +
             "InputFormalStepObservationAvailable,InputFormalStepSourceId,InputFormalStepSourceIdentity,InputFormalStepSourceWeight,InputFormalStepSourceNormalizedTime," +
             "InputFormalStepClipBindingIndex,InputFormalStepSourceCycle,InputFormalStepContributionContinuityIdentity,InputFormalStepCompletionIdentity,InputFormalStepTimeSeconds,InputFormalStepDistance," +
             "InputFormalFootHeight,InputFormalToeHeight,InputFormalToeSpeed,InputFormalPositionError,InputFormalRotationError," +
             "InputFormalContact,InputFormalLockMode,InputFormalLockWeight,InputFormalSupport," +
             "InputFormalEventPhase,InputFormalEventTimeToLandingSeconds,InputFormalInApproachContactToLanding," +
-            "InputFormalCurrentContactEventAvailable,InputFormalCurrentContactEventOrdinal,InputFormalCurrentContactEventCycle,InputFormalCurrentContactEventDistance,InputFormalCurrentContactRootLocalLandingX,InputFormalCurrentContactRootLocalLandingY,InputFormalCurrentContactRootLocalLandingZ," +
-            "InputFormalNextLandingEventAvailable,InputFormalNextLandingEventOrdinal,InputFormalNextLandingEventCycle,InputFormalNextLandingEventDistance,InputFormalNextRootLocalLandingX,InputFormalNextRootLocalLandingY,InputFormalNextRootLocalLandingZ," +
+            "InputFormalCurrentContactEventAvailable,InputFormalCurrentContactEventIdentity,InputFormalCurrentContactEventOrdinal,InputFormalCurrentContactEventCycle,InputFormalCurrentContactEventDistance,InputFormalCurrentContactRootLocalLandingX,InputFormalCurrentContactRootLocalLandingY,InputFormalCurrentContactRootLocalLandingZ," +
+            "InputFormalNextLandingEventAvailable,InputFormalNextLandingEventIdentity,InputFormalNextLandingEventOrdinal,InputFormalNextLandingEventCycle,InputFormalNextLandingEventDistance,InputFormalNextRootLocalLandingX,InputFormalNextRootLocalLandingY,InputFormalNextRootLocalLandingZ," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
             "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
@@ -194,7 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionActualEnvelopeCounterfactualState," +
             "FootMotionActualProgressEnvelopeCorrectionAvailable,FootMotionActualProgressEnvelopeMinimumCorrection," +
             "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget," +
-            "FootMotionLandingPredictionError,FootMotionPlantConfidence," +
+            "FootMotionLandingPredictionError," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
@@ -736,8 +737,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 string sourceIdentity,
                 float weight,
                 float normalizedTime,
-                AnimationFootStepObservationSample left,
-                AnimationFootStepObservationSample right)
+                AnimationFootMotionRuntimeSample left,
+                AnimationFootMotionRuntimeSample right)
             {
                 if (string.IsNullOrWhiteSpace(sourceIdentity) ||
                     !float.IsFinite(weight) || weight < 0f || weight > 1f ||
@@ -758,8 +759,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string SourceIdentity { get; }
             internal float Weight { get; }
             internal float NormalizedTime { get; }
-            internal AnimationFootStepObservationSample Left { get; }
-            internal AnimationFootStepObservationSample Right { get; }
+            internal AnimationFootMotionRuntimeSample Left { get; }
+            internal AnimationFootMotionRuntimeSample Right { get; }
             internal bool IsValid => m_IsSpecified != 0;
         }
 
@@ -1689,6 +1690,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.TrajectoryGeneration);
             Add(row, foot.LandingConfidence);
             Add(row, foot.TimeToLandingSeconds);
+            Add(row, foot.LandingTrackingState);
+            Add(row, foot.LandingTrackingEventIdentity);
+            Add(row, foot.LandingCommitted);
+            Add(row, foot.LandingCommitAttempted);
+            Add(row, foot.LandingCommitUnavailable);
             CharacterFootStepCandidateSelectionDiagnostics stepSelection =
                 foot.StepCandidateSelection;
             Add(row, stepSelection.MaximumPredictionTimeSeconds);
@@ -1697,16 +1703,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stepSelection.SelectedLandingEventIdentity);
             CharacterFootStepCandidateDiagnostics selectedStep =
                 stepSelection.SelectedSource ==
-                CharacterFootLandingStepSource.Current
+                CharacterFootLandingStepSource.FormalNextLanding
                     ? stepSelection.Current
-                    : stepSelection.SelectedSource ==
-                      CharacterFootLandingStepSource.Incoming
-                        ? stepSelection.Incoming
-                        : default;
+                    : default;
             AddStepPhase(row, in selectedStep);
             AddStepCandidate(row, stepSelection.Current);
             AddStepCandidate(row, stepSelection.Incoming);
-            AnimationFootStepObservationSample observedStep =
+            AnimationFootMotionRuntimeSample observedStep =
                 foot.Side == CharacterFootSide.Left
                     ? footStepObservation.Left
                     : footStepObservation.Right;
@@ -1729,7 +1732,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AddFormalEventFrame(row, hasObservedStep, observedStep.Events);
             CharacterFootStepObservationInputDiagnostics inputObservation =
                 input.FootStepObservation;
-            AnimationFootStepObservationSample inputObservedStep =
+            AnimationFootMotionRuntimeSample inputObservedStep =
                 foot.Side == CharacterFootSide.Left
                     ? inputObservation.Left
                     : inputObservation.Right;
@@ -2024,7 +2027,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, actualEnvelopeMinimumCorrection);
             Add(row, actualEnvelopeAdvanceAboveBuilderTarget);
             Add(row, motion.LandingPredictionError);
-            Add(row, motion.PlantConfidence);
+
             Add(row, motion.CorrectedSole);
             Add(row, motion.CorrectedAnkle);
             Add(row, motion.PositionWeight);
@@ -2611,11 +2614,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, valid ? events.TimeToLandingSeconds : 0f);
             Add(row, valid && events.InApproachContactToLanding);
             Add(row, current.IsValid);
+            Add(row, current.IsBound ? current.Identity : 0UL);
             Add(row, current.IsValid ? current.Ordinal : 0);
             Add(row, current.IsValid ? current.LandingCycle : 0);
             Add(row, current.IsValid ? current.Distance : 0f);
             Add(row, current.IsValid ? current.RootLocalLanding : Vector3.zero);
             Add(row, next.IsValid);
+            Add(row, next.IsBound ? next.Identity : 0UL);
             Add(row, next.IsValid ? next.Ordinal : 0);
             Add(row, next.IsValid ? next.LandingCycle : 0);
             Add(row, next.IsValid ? next.Distance : 0f);

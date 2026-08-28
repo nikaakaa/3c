@@ -2741,7 +2741,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["swingTargetDeltaMeters"] = current.PathTargetDelta,
                     ["swingVerticalRateLimitMeters"] = Vector3.Distance(
                         current.CorrectionBeforeSwingVerticalRateLimit,
-                        current.InterpolationOutputCorrection),
+                        current.ResidualOutputCorrection),
                     ["swingVerticalCorrectionMaximumSpeed"] =
                         current.SwingVerticalCorrectionMaximumSpeed,
                     ["timeToLandingSeconds"] =
@@ -3848,7 +3848,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 Vector3 rateDelta =
                     frame.CorrectionBeforeSwingVerticalRateLimit -
-                    frame.InterpolationOutputCorrection;
+                    frame.ResidualOutputCorrection;
                 Vector3 up = frame.ComponentUp.normalized;
                 if (Vector3.ProjectOnPlane(rateDelta, up).magnitude >
                     PositionNoiseFloor ||

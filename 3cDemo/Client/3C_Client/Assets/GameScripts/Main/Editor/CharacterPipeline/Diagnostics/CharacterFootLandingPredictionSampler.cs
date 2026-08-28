@@ -121,13 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
             "TimelineCurrentVelocityX,TimelineCurrentVelocityZ,TimelineContinuationVelocityX,TimelineContinuationVelocityZ," +
             "TimelineHasContinuation,TimelineBodyYawVelocityDegreesPerSecond,TimelineMaximumBodyYawVelocityDegreesPerSecond,CurrentSegmentRemainingSeconds," +
-            "PredictionMotionAvailable,PredictionMotionRejectReason,PredictionMotionResetReason,PredictionMotionSourceIdentity," +
-            "PredictionRawCurrentVelocityX,PredictionRawCurrentVelocityZ,PredictionRawContinuationVelocityX,PredictionRawContinuationVelocityZ," +
-            "PredictionPreviousStableCurrentVelocityX,PredictionPreviousStableCurrentVelocityZ,PredictionPreviousStableContinuationVelocityX,PredictionPreviousStableContinuationVelocityZ," +
-            "PredictionStableCurrentVelocityX,PredictionStableCurrentVelocityZ,PredictionStableContinuationVelocityX,PredictionStableContinuationVelocityZ," +
-            "PredictionCurrentVelocityDeltaX,PredictionCurrentVelocityDeltaZ,PredictionContinuationVelocityDeltaX,PredictionContinuationVelocityDeltaZ," +
-            "PredictionVelocityResponseAlpha,PredictionVelocityDeltaThreshold,PredictionVelocitySmoothSpeed,PredictionMaximumSpeed," +
-            "PredictionCurrentResponseApplied,PredictionContinuationResponseApplied,PredictionCurrentMaximumSpeedClamped,PredictionContinuationMaximumSpeedClamped,PredictionMotionRevision," +
             "Grounded,HorizontalSpeed,LeftActionInstanceIdentity,LeftActionFootWeight,RightActionInstanceIdentity,RightActionFootWeight," +
             "PrimarySupportHasValue,PrimarySupportSide,PrimarySupportLandingEventIdentity,PrimarySupportRetained," +
             "LogicRootPositionX,LogicRootPositionY,LogicRootPositionZ,LogicRootRotationX,LogicRootRotationY,LogicRootRotationZ,LogicRootRotationW," +
@@ -1785,35 +1778,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, input.TimelineBodyYawVelocityDegreesPerSecond);
             Add(row, input.TimelineMaximumBodyYawVelocityDegreesPerSecond);
             Add(row, input.CurrentSegmentRemainingSeconds);
-            Add(row, input.PredictionMotionAvailable);
-            Add(row, input.PredictionMotionRejectReason);
-            Add(row, input.PredictionMotionResetReason);
-            Add(row, input.PredictionMotionSourceIdentity);
-            Add(row, input.PredictionRawCurrentVelocityX);
-            Add(row, input.PredictionRawCurrentVelocityZ);
-            Add(row, input.PredictionRawContinuationVelocityX);
-            Add(row, input.PredictionRawContinuationVelocityZ);
-            Add(row, input.PredictionPreviousStableCurrentVelocityX);
-            Add(row, input.PredictionPreviousStableCurrentVelocityZ);
-            Add(row, input.PredictionPreviousStableContinuationVelocityX);
-            Add(row, input.PredictionPreviousStableContinuationVelocityZ);
-            Add(row, input.PredictionStableCurrentVelocityX);
-            Add(row, input.PredictionStableCurrentVelocityZ);
-            Add(row, input.PredictionStableContinuationVelocityX);
-            Add(row, input.PredictionStableContinuationVelocityZ);
-            Add(row, input.PredictionCurrentVelocityDeltaX);
-            Add(row, input.PredictionCurrentVelocityDeltaZ);
-            Add(row, input.PredictionContinuationVelocityDeltaX);
-            Add(row, input.PredictionContinuationVelocityDeltaZ);
-            Add(row, input.PredictionVelocityResponseAlpha);
-            Add(row, input.PredictionVelocityDeltaThreshold);
-            Add(row, input.PredictionVelocitySmoothSpeed);
-            Add(row, input.PredictionMaximumSpeed);
-            Add(row, input.PredictionCurrentResponseApplied);
-            Add(row, input.PredictionContinuationResponseApplied);
-            Add(row, input.PredictionCurrentMaximumSpeedClamped);
-            Add(row, input.PredictionContinuationMaximumSpeedClamped);
-            Add(row, input.PredictionMotionRevision);
             Add(row, input.Grounded);
             Add(row, input.HorizontalSpeed);
             Add(row, input.LeftActionInstanceIdentity);

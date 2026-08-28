@@ -24,7 +24,7 @@
 - 从当前选中动画Source的原生Foot Motion Curve生成唯一typed Runtime Foot Motion Frame，并保持Source、Cycle、Contribution、Completion、Clip与Landing Event lineage。
 - 保留已经完成的`Releasing -> Swing`顺序修正和identity触发清理，先对Ground Path到Encoded Goal的逐阶段Correction做同帧归因，修复首个已证明的不连续阶段；之后才接入Residual截止收敛与真实Envelope安全边界。
 - 只把Step Time/Distance接入Landing Prediction，保持世界落点仍由正式Future Body Translation、RootLocalLanding与唯一SphereCast生成。
-- 为每脚FutureLanding建立根事务所有的Committed/Pending Observation Page；每帧继续重新投影Raw Landing，但相同canonical Observation Key不重复SphereCast，新Key始终选择canonical最近合法Surface并删除历史Surface偏好。
+- 为每脚FutureLanding建立根事务所有的Committed/Pending Observation Page和预测输入快照；每帧继续重新投影Raw Landing，但同Event输入累计位移不超过5厘米且Component Up变化不超过1度时复用Committed Observation并禁止SphereCast。超过阈值或Source/Cycle、Event、Profile、World Revision变化时才建立新canonical Observation Key并查询一次。
 - 把每脚约束执行固定为`不可变输入与Observation -> Pre-Interpolation Transition -> State Target -> 统一Interpolation -> Post-Interpolation Transition -> Hard Constraint -> Resolved Foot`。同一根事务按固定顺序执行一次，不建立第二状态机或第二输出路径。
 - 用独立typed `CharacterFootTransitionResolver`声明固定Transition边、判定阶段和优先级。Resolver只生成不可变Decision；唯一Transition Runtime应用State与Anchor命令，不执行插值、不查询世界、不写Goal。
 - 用纯`CharacterFootStateTargetResolver`按Transition后的离散State生成Correction Target、接触引用、Goal/Ownership目标和Interpolation Policy Request。State Target不得保存时间状态、推进Residual或跳转到另一State。
@@ -33,7 +33,7 @@
 - 只把Foot Height接入Swing，使动画抬脚高度叠加到Runtime Ground Envelope，删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`提前改脚目标的旧政策。
 - 只把Support接入Resolved Foot、Primary Support与Pelvis，使承重意图不再依赖Lock资格，并为Landing腿提供独立Reach请求。
 - 增加必须显式序列化的米制最小Landing腿压缩余量；缺失即typed invalid，不提供默认值。Pelvis优先求双腿可达交集，无法同时满足时夹紧Foot Goal并发布typed不可达结果，不允许完全伸直后继续进入Full Lock。
-- 最后用Contact、Lock Mode和Lock Weight替换旧PlantConfidence的Landing、Locked、Sliding与Release生命周期；由独立Transition、State Target与统一Interpolation链执行，Anchor与Interpolation各自只有一个typed Owner。
+- 最后用Contact、Lock Mode和Lock Weight替换旧PlantConfidence的Landing、Locked、Sliding与Release生命周期；由独立Transition、State Target与统一Interpolation链执行，Anchor与Interpolation各自只有一个typed Owner。锁定旋转保留动画Yaw并把Pitch/Roll对齐Contact Normal，位置与旋转都由正式Lock Weight通过同一Interpolation接管和释放。
 - 每迁移一个消费者就删除对应旧输入与旧解释，不保留新旧双读、fallback、运行开关或兼容reader。
 - Foot诊断采样包把每Frame/Side唯一阶段事实与一对多Ground Contact/Envelope几何拆成正式主表和几何表；停止录制后由唯一后台Finalizer排空、封存、分析并发布，不在Unity主线程等待Writer或扫描CSV。
 
@@ -61,7 +61,7 @@
 
 ## Non-Goals
 
-- 不实现Heel/Toe双点IK、脚掌旋转、移动平台、Reactive Foot或第二种Ground Query。
+- 不实现Heel/Toe双点IK、移动平台、Reactive Foot或第二种Ground Query。
 - 不增加第二Foot State Machine、第二Goal Set、第二FBBIK、全局Goal低通或图外骨骼修正。
 - 不创建字符串Channel、Dictionary字段、任意Tween注册表或跨Foot/PoseState/AnimationSlot共享的全局插值服务。统一Interpolation只服务Foot Constraint的固定typed通道，不复用Pose Transition Routing。
 - 不用膝盖最小角度直接覆盖FBBIK结果，不用降低Goal Weight掩盖不可达。
@@ -89,7 +89,9 @@ State Target不拥有Transition、Residual、HalfLife、时间推进或Hard Cons
 Swing、Landing Acquire与Release只通过一个Interpolation State、一个Residual和一个Effective Correction Owner连续化
 Pre/Post Transition、Interpolation与Hard Constraint顺序固定且每帧各执行一次
 Ground Path Envelope与Reach只约束插值后的结果，不反向修改State、Transition、Target或Residual
-Swing Hard Constraint只消费已接受预测Path；预测输入不变时不得执行实时地面查询或逐踏面切换输出
+Swing Hard Constraint只消费已接受预测Path；同Event预测输入累计位移不超过5厘米且Component Up变化不超过1度时不得执行实时地面查询或逐踏面切换输出
+Landing、Swing Revision、Residual截止与Release完成使用分离的正式容差，不得继续复用LandingUpdateDistance
+正式Locked输出具有非零旋转权重，保留动画Yaw并把脚掌Pitch/Roll对齐Contact Normal
 旧隐藏Step、Constraint、PlantConfidence和Support消费者被删除
 不存在fallback、旧新双读、第二状态机、第二Goal链或TrainingEnemy变化
 ```

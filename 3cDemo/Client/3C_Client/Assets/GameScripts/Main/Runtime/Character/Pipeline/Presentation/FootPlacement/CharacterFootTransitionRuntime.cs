@@ -22,7 +22,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         frame.ContactLanding.LandingEventIdentity;
                     context.Contact.SurfaceIdentity =
                         frame.ContactLanding.SurfaceIdentity;
-                    context.Contact.Anchor = frame.ContactLanding.Point;
+                    context.Contact.Anchor =
+                        CharacterFootConstraintMath.ResolveContactAnchor(
+                            frame.AnimatedFoot,
+                            frame.ContactLanding.Point,
+                            frame.ContactLanding.Normal);
                     context.Contact.Normal = frame.ContactLanding.Normal;
                     break;
                 case CharacterFootAnchorCommand.Release:

@@ -531,6 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 EffectiveCorrection;
         internal Vector3 Residual;
         internal Quaternion EffectiveRotation;
+        internal Quaternion RotationResidual;
         internal float RotationProgress;
         internal float RotationReleaseStartAngle;
         internal float Progress;

@@ -1,4 +1,5 @@
 using ThirdPersonCharacter.Pipeline.Animation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
@@ -34,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootConstraintState.Locked:
                     return ResolveLocked(in context, in frame);
                 case CharacterFootConstraintState.Releasing:
-                    return NoChange(in discrete);
+                    return ResolveReleasing(in context, in frame);
                 default:
                     throw new System.InvalidOperationException(
                         "Foot constraint state is invalid.");
@@ -186,6 +187,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 false);
         }
 
+        static CharacterFootTransitionDecision ResolveReleasing(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateFrame frame)
+        {
+            CharacterFootDiscreteStateContext discrete = context.Discrete;
+            ulong contactEventIdentity =
+                frame.FormalMotion.ContactStep.LandingEventIdentity;
+            if (!RequestsContact(frame.FormalMotion.Observation) ||
+                contactEventIdentity == 0 ||
+                contactEventIdentity == context.Contact.EventIdentity ||
+                !CanAcquire(in frame))
+            {
+                return NoChange(in discrete);
+            }
+            return Decision(
+                CharacterFootTransitionReason.ContactAcquired,
+                discrete.State,
+                CharacterFootConstraintState.Landing,
+                CharacterFootLockResponse.None,
+                CharacterFootAnchorCommand.Create,
+                false,
+                false);
+        }
+
         static float ResolveHorizontalError(
             in CharacterFootLifecycleContext context,
             in CharacterFootStateFrame frame)
@@ -255,11 +280,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 suppressOutput,
                 resetInterpolation);
 
-        static bool CanAcquire(in CharacterFootStateFrame frame) =>
-            frame.HasContactLanding &&
-            frame.ContactLanding.LandingEventIdentity != 0 &&
-            frame.FormalMotion.ContactStep.IsValid &&
-            frame.ContactLanding.LandingEventIdentity ==
-            frame.FormalMotion.ContactStep.LandingEventIdentity;
+        static bool CanAcquire(in CharacterFootStateFrame frame)
+        {
+            if (!frame.HasContactLanding ||
+                frame.ContactLanding.LandingEventIdentity == 0 ||
+                !frame.FormalMotion.ContactStep.IsValid ||
+                frame.ContactLanding.LandingEventIdentity !=
+                frame.FormalMotion.ContactStep.LandingEventIdentity)
+            {
+                return false;
+            }
+            Vector3 correction =
+                CharacterFootConstraintMath.ResolveContactCorrection(
+                    frame.AnimatedFoot,
+                    frame.ContactLanding.Point);
+            return CharacterFootConstraintMath.ResolveHorizontalError(
+                       correction,
+                       frame.ComponentUp) <= frame.Settings.LockDistance;
+        }
     }
 }

@@ -179,6 +179,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.RotationReleaseStartAngle = Quaternion.Angle(
                     state.EffectiveRotation,
                     target.SwingRotation);
+                state.RotationResidual = (
+                    Quaternion.Inverse(target.SwingRotation) *
+                    state.EffectiveRotation).normalized;
             }
             else
             {
@@ -192,15 +195,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.Settings.EffectiveCorrectionHalfLifeSeconds);
                 state.EffectiveCorrection =
                     target.Correction + state.Residual;
-                state.EffectiveRotation = Advance(
-                    state.EffectiveRotation,
-                    target.SwingRotation,
+                state.RotationResidual = Advance(
+                    state.RotationResidual,
+                    Quaternion.identity,
                     frame.DeltaSeconds,
                     frame.Settings.EffectiveCorrectionHalfLifeSeconds);
+                state.EffectiveRotation = (
+                    target.SwingRotation * state.RotationResidual).normalized;
             }
             float rotationResidual = Quaternion.Angle(
-                state.EffectiveRotation,
-                target.SwingRotation);
+                state.RotationResidual,
+                Quaternion.identity);
             state.RotationProgress = state.RotationReleaseStartAngle > 0.5f
                 ? Mathf.Clamp01(
                     rotationResidual / state.RotationReleaseStartAngle)

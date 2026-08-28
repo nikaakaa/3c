@@ -125,6 +125,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!diagnostics.Accepted ||
                 diagnostics.LandingEventIdentity != step.LandingEventIdentity)
             {
+                bool retainAcceptedObservation =
+                    context.NextSwingLanding.HasValue &&
+                    context.NextSwingLanding.LandingEventIdentity ==
+                    step.LandingEventIdentity &&
+                    context.TrackingState ==
+                    CharacterFootLandingTrackingState.Accepted &&
+                    (diagnostics.RejectReason ==
+                     CharacterFootLandingPredictionRejectReason
+                         .FutureBodyTranslationUnavailable ||
+                     diagnostics.RejectReason ==
+                     CharacterFootLandingPredictionRejectReason
+                         .FutureBodyTranslationRangeInvalid);
+                if (retainAcceptedObservation)
+                    return;
                 context.InvalidateCurrent();
                 return;
             }

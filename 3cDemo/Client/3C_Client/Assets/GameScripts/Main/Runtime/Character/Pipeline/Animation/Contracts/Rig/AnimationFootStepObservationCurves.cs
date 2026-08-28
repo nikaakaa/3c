@@ -84,15 +84,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!observation.IsValid ||
                 observation.TimeToLandingSeconds > 0.000001f &&
                 !nextLandingEvent.IsValid ||
-                nextLandingEvent.IsValid &&
-                Mathf.Abs(observation.Distance - nextLandingEvent.Distance) > 0.02f ||
                 (observation.Contact > 0.0001f ||
                  observation.LockMode != AnimationFootStepObservationLockMode.Unlocked ||
                  observation.LockWeight > 0.0001f ||
                  observation.Support > 0.0001f) &&
                 !contactEvent.IsValid)
             {
-                throw new ArgumentException("Foot Motion Runtime sample is invalid.");
+                throw new ArgumentException(
+                    $"Foot Motion Runtime sample is invalid. " +
+                    $"Time={observation.TimeToLandingSeconds:R}, " +
+                    $"Distance={observation.Distance:R}, " +
+                    $"NextValid={nextLandingEvent.IsValid}, " +
+                    $"NextDistance={(nextLandingEvent.IsValid ? nextLandingEvent.Distance : 0f):R}, " +
+                    $"Contact={observation.Contact:R}, " +
+                    $"LockMode={observation.LockMode}, " +
+                    $"LockWeight={observation.LockWeight:R}, " +
+                    $"Support={observation.Support:R}, " +
+                    $"ContactEventValid={contactEvent.IsValid}.");
             }
             Observation = observation;
             ContactEvent = contactEvent;

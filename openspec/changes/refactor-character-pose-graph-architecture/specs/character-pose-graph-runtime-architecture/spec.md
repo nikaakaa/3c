@@ -2,12 +2,12 @@
 
 ### Requirement: 动画表现根必须只编排typed Pose Frame结果
 
-唯一`CharacterAnimationPresentationRuntime` MUST只拥有表现Frame Lease、固定Module调用顺序、Animancer Evaluate Barrier、统一Seal/Discard/Fault和外部输入输出装配。它 MUST通过typed Demand、Prepared、Result和Publication合同调用Pose Program、Source、Constraint与Final Publication Module；MUST不保存Node业务状态、不解释Operation Payload、不索引内部Workspace，也 MUST不实现source选择、blend、Foot、Goal、FBBIK或Writer数学。
+唯一`CharacterAnimationPresentationRuntime` MUST拥有根`CharacterPoseFrameTransaction`、表现Frame Lease、固定Module调用顺序、Animancer Evaluate Barrier、统一Seal/Discard/Fault、actor-local Tuning协调和外部输入输出装配。根Transaction MUST只保存lineage、阶段、Program/Source/Constraint/Publication typed lease/result与统一Outcome，不得保存或索引任一Module内部Workspace。根Runtime MUST通过typed Demand、Prepared、Result和Publication合同调用各Module；MUST不保存Node业务状态、不解释Operation Payload，也 MUST不实现source选择、Action lifecycle、blend、Foot、Goal、FBBIK或Writer数学。
 
 #### Scenario: 正常执行完整表现帧
 
 - **WHEN** 当前Frame的Presentation Fact、Action输入、Projection、Rig、Source与World Context全部合法
-- **THEN** 根Runtime MUST按固定阶段交换同一lineage的typed结果并只执行一次统一Seal
+- **THEN** 根Runtime MUST按固定阶段交换同一lineage与Tuning Generation的typed结果并只执行一次统一Seal
 - **AND** 调用方 MUST不取得任何Module内部页或逐个提交节点状态
 
 #### Scenario: 根Runtime需要读取Goal offset
@@ -18,7 +18,7 @@
 
 ### Requirement: Pose运行必须形成四个唯一业务Owner
 
-系统 MUST使用唯一`CharacterPoseProgramRuntime`拥有逻辑节点与Operation执行，唯一`CharacterPoseSourceModule`拥有source sample与物理Playable生命周期，唯一`CharacterPoseConstraintRuntime`拥有Foot/Goal/FBBIK，唯一`CharacterFinalPosePublication`拥有Final Pose与Physical Writer。Diagnostics MUST只作为Committed Result Projector存在。任何业务状态、结果页或写入动作 MUST恰有一个Owner，不得由外层协调器、Preview或Diagnostics复制。
+系统 MUST使用唯一`CharacterPoseProgramRuntime`拥有PoseState、Player、ActionPlaybackInput lifecycle、Slot、Blend、Inertialization等逻辑节点与Operation调度，唯一`CharacterPoseSourceModule`拥有source sample与物理Playable生命周期，唯一`CharacterPoseConstraintRuntime`拥有Foot/Goal/FBBIK，唯一`CharacterFinalPosePublication`拥有Final Pose与Physical Writer。Diagnostics MUST只作为Committed Result Projector存在。任何业务状态、结果页或写入动作 MUST恰有一个Owner，不得由外层协调器、Preview或Diagnostics复制。
 
 #### Scenario: Constraint Family Operations执行
 
@@ -32,14 +32,16 @@
 - **THEN** Final Publication MUST是唯一能够写Physical Bones的Module
 - **AND** Program Runtime与Constraint Runtime MUST只发布数据结果而不直接写Transform
 
-### Requirement: Program Image、Actor State与Frame Transaction必须完全分型
+### Requirement: Program Image、Execution View、Actor State、Owned Frame页与根Transaction必须完全分型
 
-`CharacterPoseProgramImage` MUST是由Projection Build发布并保存在`CharacterPresentationProjection`内部的唯一不可变Pose程序，只保存schema、identity、Rig、Stage、Operation Header、Family Payload、typed Value layout、Workspace layout、Source Map和容量。Runtime MUST不从Projection复制、转换或构造第二Native Program容器。`CharacterPoseActorState` MUST只保存Pose Program逻辑节点的跨帧Committed状态。`CharacterPoseFrameTransaction` MUST只保存当前Frame的Pending控制、Value、completion、Module Result引用、journal和可选Diagnostics页。三者 MUST不互相复制不同寿命的真相。
+`CharacterPoseProgramImage` MUST是由Projection Build发布并保存在`CharacterPresentationProjection`内部的唯一不可变语义Pose程序，只保存schema、identity、PoseProgramImageHash、Rig、Stage、Operation Header、Family Payload、typed Value layout、Workspace layout、Source Map和容量；Gameplay ContractHash只由外层Presentation Contract与Projection拥有。Runtime如需NativeArray、NativeSlice或其它不可序列化存储，MAY让每个`CharacterPoseProgramRuntime`建立最多一份actor-local、只读、identity/hash精确匹配的`CharacterPoseProgramExecutionView`；该View MUST只逐值materialize Image，不得编译、重排、补字段、保存Frame状态或运行时Tuning，并 MUST由对应Program Runtime唯一Dispose。
+
+`CharacterPoseActorState` MUST只保存Pose Program逻辑节点的跨帧Committed状态，包括ActionPlaybackInput lifecycle与command cursor。`CharacterPoseProgramFramePages` MUST只保存当前Frame的Pending node control、Source Demand输出、Value、completion和Program diagnostics。Source、Constraint与Final Publication MUST分别拥有自己的Pending页。根`CharacterPoseFrameTransaction` MUST只保存lineage、Tuning Generation、阶段、Module lease/result和统一Outcome。上述对象 MUST不互相复制不同寿命的真相。
 
 #### Scenario: 同一Program供两个Actor使用
 
 - **WHEN** 两个Actor引用同一Projection和Program Image
-- **THEN** 两者 MUST共享同一不可变Program Image并各自拥有独立Actor State与Frame Transaction
+- **THEN** 两者 MUST共享同一不可变Program Image，并各自拥有独立Execution View、Actor State、Program Frame Pages、Module页与根Frame Transaction
 - **AND** 一个Actor的PoseState、Inertialization或Fault MUST不修改Program Image或另一Actor状态
 
 #### Scenario: Frame被Discard
@@ -50,7 +52,7 @@
 
 ### Requirement: Frame数据必须通过唯一写入页和typed只读View单向流动
 
-每个Frame页 MUST声明唯一写入Owner和合法读取阶段。Module间 MUST只交换带Frame、Completion、Program、Projection和Rig lineage的typed只读View；不得使用共享无类型黑板、公开NativeArray集合、反射查找或调用方约定offset传递业务结果。Frame Transaction MAY持有预分配页，但任何Module MUST只能写入其正式Owned页。
+每个Frame页 MUST声明唯一写入Owner和合法读取阶段。Module间 MUST只交换带Frame、Completion、Program、Projection、Rig和Tuning Generation lineage的typed只读View；不得使用共享无类型黑板、公开NativeArray集合、反射查找或调用方约定offset传递业务结果。根Frame Transaction MUST不持有或索引Module内部页；任何Module MUST只能写入其正式Owned页并向根Transaction返回typed lease/result。
 
 #### Scenario: Source结果进入Program
 
@@ -82,7 +84,7 @@
 
 ### Requirement: Source Module必须独占物理source与release生命周期
 
-`CharacterPoseSourceModule` MUST只消费typed Source Demand与Program发布的Usage/Retirement Permission，唯一拥有Clip、Blend Space、Motion Matching和Action sample Adapter、Animancer/Playable source、Physical Pose Source Registry、capture binding、prepared resource、deferred release及release completion。PoseState、Player endpoint、Transition、Slot、Blend Stack和Inertialization的逻辑状态 MUST仍由Program Runtime拥有；Source Module MUST不决定State、cross-source weight或OutputPose。
+`CharacterPoseSourceModule` MUST只消费typed Source Demand与Program发布的Usage/Retirement Permission，唯一拥有Clip、Blend Space、Motion Matching和Action sample Adapter、Animancer/Playable source、Physical Pose Source Registry、capture binding、prepared resource、deferred release及release completion。PoseState、Player endpoint、ActionPlaybackInput lifecycle、Transition、Slot、Blend Stack和Inertialization的逻辑状态 MUST仍由Program Runtime拥有；Source Module MUST只返回Action sample readiness而不得仲裁Action winner、推进lifecycle、决定State、cross-source weight或OutputPose。
 
 #### Scenario: PoseState target等待首份sample
 
@@ -114,7 +116,9 @@
 
 ### Requirement: Final Pose Publication必须原子拥有最终结果与Physical写入
 
-`CharacterFinalPosePublication` MUST唯一拥有Committed/Pending Final Pose物理页、完整Physical Bone binding、Final Writer binding、整Rig预验证、唯一Apply和Publication Result。Program Image的Output Family MUST只保存指向Publication Pending页的typed write handle；Program Runtime通过该handle写入Output Pose并发布只读`ProgramOutputPoseResult`，MUST不在Program Workspace分配第二Final Pose buffer。Final Publication MUST在写任何Physical Bone前验证Pose availability、Rig、continuity、Program completion、Constraint completion和Frame lineage；合法时一次写入完整Pending Pose，非法时保持Committed Pose并返回正式失败。当前只有一个Writer Implementation，系统 MUST不建立第二Writer、第二Final Pose页、图外Transform写入或运行时Writer选择。
+`CharacterFinalPosePublication` MUST唯一拥有Committed/Pending Final Pose物理页、完整Physical Bone binding、Final Writer binding、整Rig预验证、唯一Apply和Publication Result。Program Image的Output Family MUST只保存稳定`CharacterFinalPosePublicationLayoutHandle`，该handle只表达Output layout slot而不包含Actor页指针；Actor Runtime创建时 MUST由Final Publication把它绑定到当前Actor唯一Pending页。Program Runtime通过actor-local binding写入Output Pose并发布只读`ProgramOutputPoseResult`，MUST不在Program Workspace分配第二Final Pose buffer。Final Publication MUST在写任何Physical Bone前验证Pose availability、Rig、continuity、Program completion、Constraint completion和Frame lineage；合法时一次写入完整Pending Pose，非法时保持Committed Pose并返回正式失败。
+
+Compiler MUST只证明唯一OutputPose、唯一Final Publication requirement与唯一layout handle；具体Final Publication实例、Physical Bone binding和Writer唯一性 MUST由Runtime Factory和Final Publication构造验证。当前只有一个Writer Implementation，系统 MUST不建立Writer Graph节点、第二Writer、第二Final Pose页、图外Transform写入或运行时Writer选择。
 
 #### Scenario: Pending Pose完整合法
 
@@ -130,7 +134,7 @@
 
 ### Requirement: 所有Module必须服从唯一表现帧事务和Barrier
 
-每个Actor MUST继续使用唯一`Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现事务。Module MAY拥有内部预分配双页、pending state、journal和prepared resource，但 MUST共享根Frame lineage并只由根事务决定Seal/Discard。Barrier前失败 MUST丢弃Pending且保持Committed；Barrier内或之后失败 MUST阻止Pending发布并使Actor Animation Runtime进入Faulted；Writer成功后的Seal MUST只执行已验证的no-throw页切换、journal、acknowledgement与deferred release。
+每个Actor MUST继续使用唯一`Apply Pending Tuning -> Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现事务。Tuning Candidate MUST在根Frame打开前完成原子Generation提升；Frame内不得变更Tuning Generation。Module MAY拥有内部预分配双页、pending state、journal和prepared resource，但 MUST共享根Frame lineage与Tuning Generation并只由根事务决定Seal/Discard。Barrier前失败 MUST丢弃Pending且保持Committed；Barrier内或之后失败 MUST阻止Pending发布并使Actor Animation Runtime进入Faulted；Writer成功后的Seal MUST只执行已验证的no-throw页切换、journal、acknowledgement与deferred release。
 
 #### Scenario: Source准备阶段失败
 
@@ -144,9 +148,25 @@
 - **THEN** 根事务 MUST阻止Final Publication、Discard Pending并使Actor Runtime Faulted
 - **AND** MUST不只回滚Constraint后继续提交Source或Program状态
 
+### Requirement: 在线调参必须使用actor-local原子Snapshot
+
+Program Image与actor-local Execution View MUST只保存Build默认值。每个Actor MUST拥有独立`CharacterPoseTuningSnapshot`和单调`TuningGeneration`，并按Program、Source与Constraint Owner保存对应调参分区。根Runtime MUST在打开新Frame前让三个Module从同一Pending Tuning Block构造不可变Candidate，完成identity、容量、值域与`resetOwnerState`预验证；全部成功后 MUST一次提升同一Generation，任一失败时三个Committed Snapshot与Actor状态 MUST全部保持不变。系统 MUST不先修改运行对象再反向Apply旧Block，不得修改Program Image、Execution View、静态Projection或其它Actor。
+
+#### Scenario: 一个Constraint调参字段非法
+
+- **WHEN** Program与Source Candidate合法但Constraint Candidate包含非法值
+- **THEN** 根Runtime MUST拒绝整个Tuning Generation且三个Module继续使用上一Committed Snapshot
+- **AND** 下一Frame MUST不观察到部分Program/Source新值或被重置一半的Owner状态
+
+#### Scenario: 两个Actor共享同一Program Image
+
+- **WHEN** 作者只对Actor A应用新的Pose Tuning Block
+- **THEN** Actor A MUST提升自己的Tuning Generation，Actor B、共享Program Image与两个actor-local Execution View MUST保持不变
+- **AND** Runtime与Preview MUST保持现行字段、生效时机与`resetOwnerState`语义
+
 ### Requirement: Diagnostics必须只投影Committed typed Result
 
-系统 MUST在Frame开始冻结Diagnostics interest和容量，并只在有interest时从Module Pending Result向预分配诊断页深冻结允许观察的数据。成功Seal后，`CharacterPoseDiagnosticsProjector` MUST只读取匹配同一lineage的Committed Source、Program、Constraint和Final Publication Result；MUST不持有Runtime Module引用、不读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推结果，也 MUST不参与任何运行决定。
+系统 MUST在Frame开始冻结Diagnostics interest和容量，并只在有interest时从Module Pending Result向预分配诊断页深冻结允许观察的数据。成功Seal后，`CharacterPoseDiagnosticsProjector` MUST只读取匹配同一lineage与Tuning Generation的Committed Source、Program、Constraint和Final Publication Result；MUST不持有Runtime Module引用、不读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推结果，也 MUST不参与任何运行决定。
 
 #### Scenario: 同时观察Player、Foot和FBBIK
 
@@ -162,7 +182,7 @@
 
 ### Requirement: Preview与正式Runtime必须复用同一Module Factory和Program Image
 
-Pose Graph Preview与正式Runtime MUST使用同一Program Image schema、Program Runtime、Source Module、Constraint Module、Final Publication、Frame Transaction和completion语义。两者 MAY通过正式Adapter提供不同Presentation Fact、Action、World Context、source sample与Physical Rig host；Preview MUST不创建简化Executor、临时Program、第二PlayableGraph、默认Foot结果或Stale Projection fallback。
+Pose Graph Preview与正式Runtime MUST使用同一Program Image schema、actor-local Execution View规则、Program Runtime、Source Module、Constraint Module、Final Publication、根Frame Transaction、actor-local Tuning Snapshot和completion语义。两者 MAY通过正式Adapter提供不同Presentation Fact、Action、World Context、source sample与Physical Rig host；Preview MUST不创建逐Preview第二Native Program、简化Executor、临时Program、第二PlayableGraph、默认Foot结果或Stale Projection fallback。
 
 #### Scenario: Preview缺少world context
 
@@ -172,7 +192,7 @@ Pose Graph Preview与正式Runtime MUST使用同一Program Image schema、Progra
 
 ### Requirement: Reset、Replacement与Dispose必须按Owner清理状态
 
-Program replacement、Projection revision变化、Preview非连续seek、Actor reset、Fault和Dispose MUST由根Runtime生成typed reset reason，并按固定顺序让Program Runtime、Source Module、Constraint Module和Final Publication各自清理Owned状态。Reset MUST提升相关generation并使旧Frame lease、source completion、constraint result和diagnostics失效；MUST不由一个Module直接清空另一Module内部页，也 MUST不保留旧Program reader或source资源fallback。
+Program replacement、Projection revision变化、Preview非连续seek、Actor reset、Fault和Dispose MUST由根Runtime生成typed reset reason，并按固定顺序让Program Runtime、Source Module、Constraint Module和Final Publication各自清理Owned状态。Reset MUST提升相关generation并使旧Frame lease、Tuning Candidate、source completion、constraint result和diagnostics失效；Projection replacement MUST由Program Runtime释放自己的旧Execution View并只按新Image/hash建立一份新View。系统 MUST不由一个Module直接清空另一Module内部页，也 MUST不保留旧Program reader、旧Execution View或source资源fallback。
 
 #### Scenario: Projection被显式重建
 

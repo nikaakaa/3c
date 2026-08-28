@@ -2,7 +2,7 @@
 
 ### Requirement: Foot Placement必须是唯一Goal事务
 
-唯一`CharacterPoseConstraintRuntime` MUST继续为每个Actor和表现帧建立匹配Frame、Completion、Program、Projection与Rig lineage的Pending Constraint Bank，并唯一拥有Foot Context、Resolved Foot Pair、Primary Support/Pelvis、Goal Contribution、唯一Goal Assembler、唯一Goal Set、FBBIK BendHistory与Solver Result。它 MUST不再拥有Final Pose物理页、Physical Writer或Physical Result；这些真相只属于`CharacterFinalPosePublication`。
+唯一`CharacterPoseConstraintRuntime` MUST继续为每个Actor和表现帧建立匹配Frame、Completion、Program、Projection、Rig与Tuning Generation lineage的Pending Constraint Bank，并唯一拥有Foot Context、Resolved Foot Pair、Primary Support/Pelvis、Goal Contribution、唯一Goal Assembler、唯一Goal Set、FBBIK BendHistory与Solver Result。它 MUST不再拥有Final Pose物理页、Physical Writer或Physical Result；这些真相只属于`CharacterFinalPosePublication`。Foot Placement与FBBIK在线调参 MUST只进入actor-local Constraint Tuning Snapshot，不得修改Program Image、actor-local Execution View或其它Actor。
 
 `CharacterPoseProgramRuntime` MUST在Program Image中Foot Placement、PoseBone Contribution、Goal Assembler与FBBIK各自Operation的位置，通过对应typed编译Handle恰好调用一次Constraint Runtime入口并写入唯一per-operation completion。Constraint Module MUST不扫描Program、不维护第二份Stage Schedule、不接收NativeSlice、Goal offset/count、Operation index或call-site index，也 MUST不重新执行已经完成的Operation。Constraint `Complete`只能验证完整闭包并发布一个`CharacterPoseConstraintResult`。
 
@@ -23,7 +23,7 @@ Foot Placement MUST继续形成一个深`CharacterFootPlacementModule`，其Impl
 #### Scenario: Constraint完成后发布Final Pose
 
 - **WHEN** Foot、Goal Assembler与FBBIK已经形成合法Constraint Result
-- **THEN** Program Output MUST只通过typed write handle写入Final Publication唯一Pending Pose物理页
+- **THEN** Program Output MUST只通过actor-local Publication binding解析Program Image中的稳定layout handle并写入Final Publication唯一Pending Pose物理页
 - **AND** Constraint Bank MUST不保存Physical Writer、Physical Result或第二Final Pose副本
 
 ### Requirement: Foot Placement诊断必须只显示正式结果

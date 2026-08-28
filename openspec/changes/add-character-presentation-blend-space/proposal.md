@@ -2,7 +2,7 @@
 
 ## Why
 
-当前角色表现链已经能够由`CharacterPresentationFactFrame`驱动Locomotion PoseStateMachine，并用显式ClipPlayer、State transition、AnimationSlot、骨骼分层、脚步修正和最终输出形成唯一Pose；但它还不能在PoseState内部用移动速度、局部移动方向等连续参数，在多个动画样本之间计算同一时刻的姿势贡献。
+本change建立时，角色表现链已经能够由`CharacterPresentationFactFrame`驱动Locomotion PoseStateMachine，并用显式ClipPlayer、State transition、AnimationSlot、骨骼分层、脚步修正和最终输出形成唯一Pose，但还不能在PoseState内部按连续参数计算多动画样本贡献。通用Blend Space能力现已实施并进入current specs；active状态只保留尚未完成的独立演示内容，不再代表运行能力缺失。
 
 因此，需要为后续具备完整方向移动素材的演示配置提供连续样本空间能力。当前Corin可以继续用Idle、起步、循环、停步和转身等明确ClipPlayer State；在素材未齐时强行把这些状态压进Blend Space会丢掉动作阶段。继续把参数插值问题塞进PoseState transition或`BlendStack`也会混淆两件业务：
 
@@ -44,12 +44,12 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 
 ## Current Spec Comparison
 
-- current specs中不存在Blend Space能力；Presentation Pose source binding目前只能表达direct Clip，不能表达稳定BlendSpace source identity。
-- current `character-animation-presentation-authoring`规定Profile是持续Pose source资源的唯一入口。本change沿用这个入口并新增BlendSpace variant，不在节点、Timeline或Agent Patch中复制资产引用。
-- current `character-animation-foot-analysis-artifact`按Timeline/Track/Clip绑定分析产物。本change为BlendSpaceAsset/SampleId/Clip增加并列正式source identity；同一个BlendSpace sample不得同时从Timeline与BlendSpace读取两份feature。
-- 当前Character Document负责Presentation editable。本change只提供Blend Space领域能力与独立内容，并由`replace-animation-sequence-with-clip-authoring`统一重基线到Document v4。
-- current Pose Graph合同已经包含显式Player与线性Native Pose Plan；本change在该拓扑上增加正式BlendSpacePlayer，不回到隐藏per-slot装配。
-- current Pose Graph规定持续Locomotion source只能位于PoseState inline subgraph。本change把BlendSpacePlayer加入该有限Player目录，并保持Presentation Fact只携带参数、不携带最终样本权重。
+- current specs已经安装`CharacterAnimationBlendSpaceAsset`、typed Profile binding、`BlendSpacePlayer`、Projection计划、Foot Analysis sample source和正式workspace；通用能力不再是active缺口。
+- current `character-animation-presentation-authoring`规定Profile是持续Pose source资源的唯一入口，Blend Space binding已经沿用该入口，节点、Timeline和Agent Document都不复制资产引用。
+- current `character-animation-foot-analysis-artifact`已经把Blend Space Dynamic Sample纳入Definition Build与稳定source usage，不存在Timeline与Blend Space双读feature的第二路径。
+- current Character Document v4已经表达BlendSpacePlayer typed payload与Profile binding；资源正文、generated payload和运行时权重保持只读。
+- current Pose Graph已经包含正式BlendSpacePlayer并限定在PoseState inline subgraph；Presentation Fact只携带参数，不携带最终样本权重。
+- 本change剩余任务只创建独立Definition、Profile、Pose Graph和完整样本内容，不修改Corin主图或通用Runtime合同。
 - current BlendStack合同规定BlendStack独占跨source过渡。本change不把参数空间插值塞入BlendStack，也不让BlendSpacePlayer保留旧来源。
 - `refactor-pose-graph-to-btsmtl-authoring-domain`提供唯一Navigator、Canvas、Details、Bottom Dock、Pose Watch、Capability和显式Compile边界；本change不得保留独立BlendSpace节点UI或字段switch。
 - current Timeline authoring合同把Timeline和独立领域工具分开。本change使用独立Blend Space资产模式，不把二维样本空间伪装成Timeline lane。

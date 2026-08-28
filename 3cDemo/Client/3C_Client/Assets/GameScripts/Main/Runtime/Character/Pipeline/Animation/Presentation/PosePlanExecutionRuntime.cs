@@ -2757,7 +2757,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in inputBinding,
                     m_PhysicalSources,
                     m_FootPlacementContributions);
-            AnimationFootStepObservationFrame footStepObservation =
+            AnimationFootMotionRuntimeFrame footStepObservation =
                 ResolveFootStepObservationFrame(
                     completionIdentity,
                     m_FootPlacementContributions,
@@ -2792,7 +2792,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in planningFrame);
         }
 
-        AnimationFootStepObservationFrame ResolveFootStepObservationFrame(
+        AnimationFootMotionRuntimeFrame ResolveFootStepObservationFrame(
             ulong completionIdentity,
             AnimationPoseSourceContribution[] contributions,
             int contributionCount)
@@ -2807,6 +2807,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 completionIdentity);
             AnimationFootStepObservationCurvePair curves;
             string sourceIdentity;
+            ulong sourceSampleIdentity;
             switch (contribution.SourceId.SourceKind)
             {
                 case AnimationPoseSourceKind.Timeline:
@@ -2838,6 +2839,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     }
                     curves = binding.FootStepObservation;
                     sourceIdentity = binding.ClipIdentity;
+                    sourceSampleIdentity = AnimationFootMotionIdentity.Source(
+                        binding.ClipAuthoringId);
                     break;
                 case AnimationPoseSourceKind.Clip:
                     if (!m_Projection.TryGetPoseSource(
@@ -2852,6 +2855,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     source.RequireValid();
                     curves = source.FootStepObservation;
                     sourceIdentity = source.ClipIdentity;
+                    sourceSampleIdentity = AnimationFootMotionIdentity.Source(
+                        contribution.SourceId);
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -2860,12 +2865,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             curves.RequireValid();
             int cycle = checked((int)Math.Floor(
                 clipSample.ContinuousClipTime / clipSample.Clip.length));
-            return new AnimationFootStepObservationFrame(
+            return new AnimationFootMotionRuntimeFrame(
                 completionIdentity,
                 contribution.NodeId,
                 contribution.SourceId,
                 contribution.ContributionContinuityIdentity,
                 sourceIdentity,
+                sourceSampleIdentity,
                 clipSample.ClipBindingIndex,
                 cycle,
                 contribution.Weight,

@@ -7,105 +7,134 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal static CharacterFootLandingSnapshot ProjectBeforePrediction(
             in CharacterFootLifecycleContext context,
-            in AnimationBiomechanicalStepHeader currentStep)
+            in AnimationFootMotionRuntimeSample formalFootMotion)
         {
             CharacterFootLandingContext projected = context.Landing;
             projected.BeginFrame();
-            PromoteLanded(ref projected, in currentStep);
+            PromoteLanded(ref projected, in formalFootMotion);
             return projected.Snapshot;
         }
 
         internal static CharacterFootLandingSnapshot ProjectAfterPrediction(
             in CharacterFootLifecycleContext context,
-            in AnimationBiomechanicalStepHeader currentStep,
-            in AnimationBiomechanicalStepHeader selectedStep,
+            in AnimationFootMotionRuntimeSample formalFootMotion,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootMotionSettings settings)
         {
             CharacterFootLandingContext projected = context.Landing;
             projected.BeginFrame();
-            PromoteLanded(ref projected, in currentStep);
+            PromoteLanded(ref projected, in formalFootMotion);
+            CaptureCurrentContact(
+                ref projected,
+                in formalFootMotion,
+                in landingPrediction);
             CaptureNextSwing(
                 ref projected,
-                in selectedStep,
+                in formalFootMotion,
                 in landingPrediction,
                 in settings);
+            CommitApproach(ref projected, in formalFootMotion);
             return projected.Snapshot;
         }
 
         internal static void Evaluate(
             ref CharacterFootLandingContext context,
-            in AnimationBiomechanicalStepHeader currentStep,
-            in AnimationBiomechanicalStepHeader selectedStep,
+            in AnimationFootMotionRuntimeSample formalFootMotion,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootMotionSettings settings)
         {
             context.BeginFrame();
-            PromoteLanded(ref context, in currentStep);
+            PromoteLanded(ref context, in formalFootMotion);
+            CaptureCurrentContact(
+                ref context,
+                in formalFootMotion,
+                in landingPrediction);
             CaptureNextSwing(
                 ref context,
-                in selectedStep,
+                in formalFootMotion,
                 in landingPrediction,
                 in settings);
+            CommitApproach(ref context, in formalFootMotion);
         }
 
         static void PromoteLanded(
             ref CharacterFootLandingContext context,
-            in AnimationBiomechanicalStepHeader step)
+            in AnimationFootMotionRuntimeSample formalFootMotion)
         {
-            bool hasCurrentEvent = step.IsAuthoritative &&
-                                   step.HasConsistentLandingEventIdentity &&
-                                   step.LandingEventIdentity != 0;
-            ulong currentEventIdentity = hasCurrentEvent
-                ? step.LandingEventIdentity
-                : 0;
-            if (context.NextSwingLanding.HasValue)
+            AnimationFootMotionEventOccurrence current =
+                formalFootMotion.Events.CurrentContact;
+            bool hasCurrentEvent = current.IsBound;
+            ulong currentEventIdentity = hasCurrentEvent ? current.Identity : 0;
+            if (hasCurrentEvent &&
+                context.TrackingState ==
+                    CharacterFootLandingTrackingState.Committed &&
+                context.NextSwingLanding.HasValue &&
+                context.NextSwingLanding.LandingEventIdentity ==
+                    currentEventIdentity)
             {
-                ulong acceptedEventIdentity =
-                    context.NextSwingLanding.LandingEventIdentity;
-                bool completedInPlace = hasCurrentEvent &&
-                                        currentEventIdentity == acceptedEventIdentity &&
-                                        step.TimeToLandingSeconds <= 0.000001f;
-                bool advancedToNextEvent = hasCurrentEvent &&
-                                           context.ObservedCurrentEventIdentity == acceptedEventIdentity &&
-                                           currentEventIdentity != acceptedEventIdentity;
-                if (completedInPlace || advancedToNextEvent)
-                {
-                    context.LastLanding = context.TrackingState ==
-                                          CharacterFootLandingTrackingState.Accepted
-                        ? context.NextSwingLanding
-                        : default;
-                    context.PromotedLanding = context.LastLanding;
-                    context.TrackedEventIdentity = 0;
-                    context.ClearNextSwing();
-                }
+                context.LastLanding = context.NextSwingLanding;
+                context.PromotedLanding = context.LastLanding;
+                context.TrackedEventIdentity = 0;
+                context.ClearNextSwing();
             }
             else if (hasCurrentEvent &&
-                     step.TimeToLandingSeconds <= 0.000001f &&
+                     context.TrackingState !=
+                         CharacterFootLandingTrackingState.Committed &&
                      context.TrackedEventIdentity == currentEventIdentity)
             {
-                context.LastLanding = default;
                 context.TrackedEventIdentity = 0;
-                context.TrackingState =
-                    CharacterFootLandingTrackingState.Empty;
+                context.ClearNextSwing();
             }
             if (hasCurrentEvent)
                 context.ObservedCurrentEventIdentity = currentEventIdentity;
         }
 
+        static void CaptureCurrentContact(
+            ref CharacterFootLandingContext context,
+            in AnimationFootMotionRuntimeSample formalFootMotion,
+            in CharacterFootLandingPredictionResult diagnostics)
+        {
+            if (diagnostics.StepSource !=
+                    CharacterFootLandingStepSource.FormalCurrentContact ||
+                !diagnostics.Accepted)
+            {
+                return;
+            }
+            AnimationFootMotionEventOccurrence current =
+                formalFootMotion.Events.CurrentContact;
+            if (!current.IsBound ||
+                diagnostics.LandingEventIdentity != current.Identity)
+            {
+                return;
+            }
+            context.LastLanding = CharacterFootLandingFact.Create(
+                current.Identity,
+                in diagnostics);
+            context.PromotedLanding = context.LastLanding;
+        }
+
         static void CaptureNextSwing(
             ref CharacterFootLandingContext context,
-            in AnimationBiomechanicalStepHeader step,
+            in AnimationFootMotionRuntimeSample formalFootMotion,
             in CharacterFootLandingPredictionResult diagnostics,
             in CharacterFootMotionSettings settings)
         {
+            if (context.TrackingState ==
+                CharacterFootLandingTrackingState.Committed)
+            {
+                return;
+            }
+            AnimationFootMotionEventFrame events = formalFootMotion.Events;
+            AnimationFootMotionEventOccurrence next = events.NextLanding;
+            bool predictivePhase =
+                events.Phase == AnimationFootMotionEventPhase.PreSwing ||
+                events.Phase == AnimationFootMotionEventPhase.Swing ||
+                events.Phase == AnimationFootMotionEventPhase.ApproachContact;
             CharacterFootLandingSnapshot snapshot = context.Snapshot;
-            bool validCandidate = step.IsAuthoritative &&
-                                  step.HasConsistentLandingEventIdentity &&
-                                  (step.IsPreSwing || step.IsSwing) &&
-                                  step.TimeToLandingSeconds > 0.000001f &&
-                                  step.LandingEventIdentity != 0 &&
-                                  step.LandingEventIdentity !=
+            bool validCandidate = next.IsBound &&
+                                  predictivePhase &&
+                                  events.TimeToLandingSeconds > 0.000001f &&
+                                  next.Identity !=
                                   snapshot.LastLandingEventIdentity;
             if (!validCandidate)
             {
@@ -113,17 +142,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             }
             if (context.NextSwingLanding.HasValue &&
-                context.NextSwingLanding.LandingEventIdentity !=
-                step.LandingEventIdentity)
+                context.NextSwingLanding.LandingEventIdentity != next.Identity)
             {
                 context.TrackedEventIdentity = 0;
                 context.ClearNextSwing();
             }
-            context.TrackedEventIdentity = step.LandingEventIdentity;
-            if (!context.NextSwingLanding.HasValue)
-                context.TrackingState = CharacterFootLandingTrackingState.Tracking;
+            context.TrackedEventIdentity = next.Identity;
+            context.TrackingState = CharacterFootLandingTrackingState.Tracking;
             if (!diagnostics.Accepted ||
-                diagnostics.LandingEventIdentity != step.LandingEventIdentity)
+                diagnostics.LandingEventIdentity != next.Identity)
             {
                 context.InvalidateCurrent();
                 return;
@@ -135,27 +162,50 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.NextSwingReferencePoint,
                     landingPoint);
                 context.NextSwingConstraintWeight = 1f;
-                if (Vector3.Distance(
-                        landingPoint,
-                        context.NextSwingLanding.WorldPoint) <
+                CharacterFootGroundPathLanding previous =
+                    context.NextSwingLanding.Resolve();
+                bool sameSurface = previous.SurfaceIdentity ==
+                                   diagnostics.SurfaceIdentity;
+                if (sameSurface &&
+                    Vector3.Distance(landingPoint, previous.Point) <
                     settings.LandingAcceptanceDistance)
                 {
-                    context.TrackingState =
-                        CharacterFootLandingTrackingState.Accepted;
                     return;
                 }
-                context.NextSwingLanding =
-                    CharacterFootLandingFact.Create(in step, in diagnostics);
-                context.TrackingState =
-                    CharacterFootLandingTrackingState.Accepted;
+                context.NextSwingLanding = CharacterFootLandingFact.Create(
+                    next.Identity,
+                    in diagnostics);
                 return;
             }
-            context.NextSwingLanding =
-                CharacterFootLandingFact.Create(in step, in diagnostics);
+            context.NextSwingLanding = CharacterFootLandingFact.Create(
+                next.Identity,
+                in diagnostics);
             context.NextSwingReferencePoint = diagnostics.LandingPoint;
             context.NextSwingPredictionError = 0f;
             context.NextSwingConstraintWeight = 1f;
-            context.TrackingState = CharacterFootLandingTrackingState.Accepted;
+        }
+
+        static void CommitApproach(
+            ref CharacterFootLandingContext context,
+            in AnimationFootMotionRuntimeSample formalFootMotion)
+        {
+            AnimationFootMotionEventFrame events = formalFootMotion.Events;
+            if (!events.InApproachContactToLanding)
+                return;
+            context.CommitAttempted = true;
+            AnimationFootMotionEventOccurrence next = events.NextLanding;
+            bool canCommit = next.IsBound &&
+                             context.TrackedEventIdentity == next.Identity &&
+                             context.NextSwingLanding.HasValue &&
+                             context.NextSwingLanding.LandingEventIdentity ==
+                                 next.Identity;
+            if (!canCommit)
+            {
+                context.CommitUnavailable = true;
+                return;
+            }
+            context.TrackingState =
+                CharacterFootLandingTrackingState.Committed;
         }
     }
 }

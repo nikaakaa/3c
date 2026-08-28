@@ -397,8 +397,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             string sourceIdentity,
             float sourceWeight,
             float normalizedTime,
-            AnimationFootStepObservationSample left,
-            AnimationFootStepObservationSample right)
+            AnimationFootMotionRuntimeSample left,
+            AnimationFootMotionRuntimeSample right)
         {
             if (!nodeId.IsValid || !sourceIndex.IsValid || !sourceId.IsValid ||
                 string.IsNullOrWhiteSpace(sourceIdentity) ||
@@ -426,8 +426,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public string SourceIdentity { get; }
         public float SourceWeight { get; }
         public float NormalizedTime { get; }
-        public AnimationFootStepObservationSample Left { get; }
-        public AnimationFootStepObservationSample Right { get; }
+        public AnimationFootMotionRuntimeSample Left { get; }
+        public AnimationFootMotionRuntimeSample Right { get; }
         public bool IsValid => m_IsSpecified != 0;
     }
 

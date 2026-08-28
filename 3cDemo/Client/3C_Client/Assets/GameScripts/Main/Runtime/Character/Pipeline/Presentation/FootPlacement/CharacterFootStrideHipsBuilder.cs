@@ -486,8 +486,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static CharacterFootStrideIntentResult ResolveIntent(
-            in AnimationBiomechanicalStepHeader leftSwingStep,
-            in AnimationBiomechanicalStepHeader rightSwingStep,
+            in AnimationFootMotionRuntimeSample leftSwingStep,
+            in AnimationFootMotionRuntimeSample rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
             bool hasLeftNextSwingLanding,
@@ -596,8 +596,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static bool TrySelectSwing(
-            in AnimationBiomechanicalStepHeader leftStep,
-            in AnimationBiomechanicalStepHeader rightStep,
+            in AnimationFootMotionRuntimeSample leftStep,
+            in AnimationFootMotionRuntimeSample rightStep,
             in CharacterFootSwingMotionResult leftMotion,
             in CharacterFootSwingMotionResult rightMotion,
             out CharacterFootSide swingSide)
@@ -632,8 +632,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static bool TryResolveStride(
-            in AnimationBiomechanicalStepHeader leftSwingStep,
-            in AnimationBiomechanicalStepHeader rightSwingStep,
+            in AnimationFootMotionRuntimeSample leftSwingStep,
+            in AnimationFootMotionRuntimeSample rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
             bool hasPrimarySupport,
@@ -1270,7 +1270,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    minimumAlongUp <= maximumAlongUp;
         }
 
-        static bool IsAuthoritativeSwing(in AnimationBiomechanicalStepHeader step) =>
+        static bool IsAuthoritativeSwing(in AnimationFootMotionRuntimeSample step) =>
             step.IsValid &&
             step.IsAuthoritative &&
             step.IsSwing &&

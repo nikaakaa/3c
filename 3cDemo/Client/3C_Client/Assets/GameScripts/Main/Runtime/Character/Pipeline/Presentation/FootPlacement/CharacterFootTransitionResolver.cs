@@ -52,7 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (discrete.State == CharacterFootConstraintState.Landing)
             {
                 CharacterFootLockResponse response = ResolveResponse(
-                    frame.FormalMotion.Observation.LockMode);
+                    frame.FormalMotion.Observation.LockMode,
+                    frame.FormalMotion.ContactStep.LandingEventIdentity,
+                    in discrete);
                 return Decision(
                     CharacterFootTransitionReason.LandingCompleted,
                     discrete.State,
@@ -168,7 +170,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     false);
             }
-            CharacterFootLockResponse response = ResolveResponse(formal.LockMode);
+            CharacterFootLockResponse response = ResolveResponse(
+                formal.LockMode,
+                frame.FormalMotion.ContactStep.LandingEventIdentity,
+                in discrete);
             return Decision(
                 response != discrete.LockResponse
                     ? CharacterFootTransitionReason.LockResponseChanged
@@ -199,8 +204,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             formal.LockMode != AnimationFootStepObservationLockMode.Unlocked;
 
         static CharacterFootLockResponse ResolveResponse(
-            AnimationFootStepObservationLockMode mode) =>
-            mode switch
+            AnimationFootStepObservationLockMode mode,
+            ulong contactEventIdentity,
+            in CharacterFootDiscreteStateContext discrete) =>
+            mode == AnimationFootStepObservationLockMode.Locked &&
+            discrete.LandingReachUnavailable &&
+            discrete.LandingReachEventIdentity == contactEventIdentity
+                ? CharacterFootLockResponse.Sliding
+                : mode switch
             {
                 AnimationFootStepObservationLockMode.Locked =>
                     CharacterFootLockResponse.FullAnchor,

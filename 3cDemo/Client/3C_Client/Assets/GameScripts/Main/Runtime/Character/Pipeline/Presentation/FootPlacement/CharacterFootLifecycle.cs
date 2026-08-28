@@ -5,6 +5,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootLifecycle
     {
+        internal static void ApplyLandingReach(
+            ref CharacterFootLifecycleContext context,
+            ulong landingEventIdentity,
+            bool unavailable)
+        {
+            if (landingEventIdentity == 0)
+                throw new System.ArgumentOutOfRangeException(nameof(landingEventIdentity));
+            context.Discrete.LandingReachEventIdentity = landingEventIdentity;
+            context.Discrete.LandingReachUnavailable = unavailable;
+            if (unavailable &&
+                context.Contact.EventIdentity == landingEventIdentity &&
+                context.Discrete.LockResponse == CharacterFootLockResponse.FullAnchor)
+            {
+                context.Discrete.LockResponse = CharacterFootLockResponse.Sliding;
+            }
+        }
+
         internal static CharacterResolvedFootResult Evaluate(
             ref CharacterFootLifecycleContext context,
             in CharacterFootStateEvaluation evaluation,
@@ -14,6 +31,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var currentStep = evaluation.CurrentStep;
             var selectedStep = evaluation.SelectedStep;
             var landingPrediction = evaluation.LandingPrediction;
+            ulong reachEventIdentity =
+                context.Discrete.LandingReachEventIdentity;
+            if (reachEventIdentity != 0 &&
+                currentStep.LandingEventIdentity != reachEventIdentity &&
+                selectedStep.LandingEventIdentity != reachEventIdentity)
+            {
+                context.Discrete.LandingReachEventIdentity = 0;
+                context.Discrete.LandingReachUnavailable = false;
+            }
             CharacterFootMotionSettings settings = frame.Settings;
             CharacterFootLandingRuntime.Evaluate(
                 ref context.Landing,

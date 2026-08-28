@@ -84,7 +84,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float supportIntentWeight,
             float supportHorizontalError,
             ulong supportEventIdentity,
-            in CharacterFootPelvisReachReference pelvisReachReference)
+            in CharacterFootPelvisReachReference pelvisReachReference,
+            bool landingReachUnavailable = false)
         {
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
@@ -103,6 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SupportHorizontalError = supportHorizontalError;
             SupportEventIdentity = supportEventIdentity;
             PelvisReachReference = pelvisReachReference;
+            LandingReachUnavailable = landingReachUnavailable;
             Outcome = CharacterFootResolvedOutcome.Ready;
         }
 
@@ -123,7 +125,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SupportHorizontalError { get; }
         internal ulong SupportEventIdentity { get; }
         internal CharacterFootPelvisReachReference PelvisReachReference { get; }
+        internal bool LandingReachUnavailable { get; }
         internal CharacterFootResolvedOutcome Outcome { get; }
+
+        internal CharacterResolvedFootResult WithLandingReach(
+            Vector3 resolvedAnkle,
+            bool unavailable)
+        {
+            Vector3 delta = resolvedAnkle - FinalAnkle;
+            CharacterFootContactReference contactReference = ContactReference;
+            CharacterFootPelvisReachReference pelvisReachReference =
+                PelvisReachReference;
+            return new CharacterResolvedFootResult(
+                FrameSequence,
+                CompletionIdentity,
+                RigId,
+                RigRevision,
+                Side,
+                FinalSole + delta,
+                resolvedAnkle,
+                EffectiveCorrection + delta,
+                GoalWeight,
+                in contactReference,
+                ContactOwnership,
+                SupportEligibility,
+                SupportWeight,
+                SupportIntentWeight,
+                SupportHorizontalError,
+                SupportEventIdentity,
+                in pelvisReachReference,
+                unavailable);
+        }
     }
 
     internal readonly struct CharacterResolvedFootPair
@@ -242,7 +274,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool contactPlaneAvailable = false,
             int contactSurfaceIdentity = 0,
             Vector3 contactPlaneNormal = default,
-            CharacterFootPathContinuityFact pathContinuity = default)
+            CharacterFootPathContinuityFact pathContinuity = default,
+            bool landingReachUnavailable = false)
         {
             State = state;
             RejectReason = rejectReason;
@@ -272,6 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactSurfaceIdentity = contactSurfaceIdentity;
             ContactPlaneNormal = contactPlaneNormal;
             PathContinuity = pathContinuity;
+            LandingReachUnavailable = landingReachUnavailable;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -302,7 +336,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
         internal CharacterFootPathContinuityFact PathContinuity { get; }
+        public bool LandingReachUnavailable { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
+
+        internal CharacterFootSwingMotionResult WithLandingReach(
+            Vector3 resolvedAnkle,
+            bool unavailable)
+        {
+            Vector3 delta = resolvedAnkle - CorrectedAnkle;
+            return new CharacterFootSwingMotionResult(
+                State,
+                RejectReason,
+                LandingEventIdentity,
+                GroundPathInputIdentity,
+                SwingPathReference,
+                OriginalSole,
+                OriginalAnkle,
+                Distance,
+                Progress,
+                BaselineSample,
+                EnvelopeSample,
+                VerticalCorrection,
+                LandingPredictionError,
+                CorrectedSole + delta,
+                resolvedAnkle,
+                PositionWeight,
+                RotationWeight,
+                ConstraintState,
+                unavailable && LockResponse == CharacterFootLockResponse.FullAnchor
+                    ? CharacterFootLockResponse.Sliding
+                    : LockResponse,
+                SupportHorizontalError,
+                ContactOwnership,
+                SupportWeight,
+                SupportContactAnchor,
+                DesiredCorrection + delta,
+                ContactPlaneAvailable,
+                ContactSurfaceIdentity,
+                ContactPlaneNormal,
+                PathContinuity,
+                unavailable);
+        }
 
     }
 
@@ -337,6 +411,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneAvailable = result.ContactPlaneAvailable;
             ContactSurfaceIdentity = result.ContactSurfaceIdentity;
             ContactPlaneNormal = result.ContactPlaneNormal;
+            LandingReachUnavailable = result.LandingReachUnavailable;
             CharacterFootPathContinuityFact path = result.PathContinuity;
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
@@ -423,6 +498,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ContactPlaneAvailable { get; }
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
+        public bool LandingReachUnavailable { get; }
         public bool PathContinuityEvaluated { get; }
         public string PathRevisionReason { get; }
         public bool PathResidualRebuilt { get; }

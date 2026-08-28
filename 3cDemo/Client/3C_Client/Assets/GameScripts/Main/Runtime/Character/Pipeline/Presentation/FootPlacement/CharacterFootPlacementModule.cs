@@ -259,17 +259,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentSegmentRemainingSeconds,
                 frame.Body);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
-            AnimationFootMotionStep leftCurrentStep = leftFormal.ContactStep;
-            AnimationFootMotionStep rightCurrentStep = rightFormal.ContactStep;
+            AnimationFootMotionStep leftContactStep = leftFormal.ContactStep;
+            AnimationFootMotionStep rightContactStep = rightFormal.ContactStep;
 
             CharacterFootLandingSnapshot leftLanding =
                 CharacterFootLandingRuntime.ProjectBeforePrediction(
                     in bank.LeftFoot,
-                    in leftCurrentStep);
+                    in leftContactStep);
             CharacterFootLandingSnapshot rightLanding =
                 CharacterFootLandingRuntime.ProjectBeforePrediction(
                     in bank.RightFoot,
-                    in rightCurrentStep);
+                    in rightContactStep);
             CharacterFootLandingPredictionSelection leftSelection = PredictFoot(
                 CharacterFootSide.Left,
                 leftFormal.PredictionStep,
@@ -302,13 +302,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootMotionStep rightSelectedStep = rightSelection.SelectedStep;
             leftLanding = CharacterFootLandingRuntime.ProjectAfterPrediction(
                 in bank.LeftFoot,
-                in leftCurrentStep,
+                in leftContactStep,
                 in leftSelectedStep,
                 in left,
                 m_Settings.FootMotion);
             rightLanding = CharacterFootLandingRuntime.ProjectAfterPrediction(
                 in bank.RightFoot,
-                in rightCurrentStep,
+                in rightContactStep,
                 in rightSelectedStep,
                 in right,
                 m_Settings.FootMotion);
@@ -326,7 +326,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!hasLeftContactLanding)
             {
                 hasLeftContactLanding = leftLanding.TryResolveLanding(
-                    leftCurrentStep.LandingEventIdentity,
+                    leftContactStep.LandingEventIdentity,
                     out leftContactLanding);
             }
             bool hasRightContactLanding = rightLanding.HasPromotedLanding;
@@ -335,7 +335,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!hasRightContactLanding)
             {
                 hasRightContactLanding = rightLanding.TryResolveLanding(
-                    rightCurrentStep.LandingEventIdentity,
+                    rightContactStep.LandingEventIdentity,
                     out rightContactLanding);
             }
             CharacterFootGroundPathResult leftGroundPath = PrepareGroundPath(
@@ -421,13 +421,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Settings.FootMotion);
             var leftEvaluation = new CharacterFootStateEvaluation(
                 CharacterFootSide.Left,
-                in leftCurrentStep,
+                in leftContactStep,
                 in leftSelectedStep,
                 in left,
                 in leftConstraintFrame);
             var rightEvaluation = new CharacterFootStateEvaluation(
                 CharacterFootSide.Right,
-                in rightCurrentStep,
+                in rightContactStep,
                 in rightSelectedStep,
                 in right,
                 in rightConstraintFrame);
@@ -685,6 +685,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.RenderFrame,
                     frame.Pose.CompletionIdentity,
                     m_Rig.VisualRoot.GetInstanceID(),
+                    m_Settings.ProfileId,
+                    m_Settings.ProfileRevision,
+                    m_Settings.FootMotion,
                     inputDiagnostics,
                     in primarySupportDiagnostics,
                     pelvisGoal,

@@ -28,13 +28,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out CharacterFootSwingMotionResult result)
         {
             CharacterFootStateFrame frame = evaluation.Frame;
-            var currentStep = evaluation.CurrentStep;
+            var contactStep = evaluation.ContactStep;
             var selectedStep = evaluation.SelectedStep;
             var landingPrediction = evaluation.LandingPrediction;
             ulong reachEventIdentity =
                 context.Discrete.LandingReachEventIdentity;
             if (reachEventIdentity != 0 &&
-                currentStep.LandingEventIdentity != reachEventIdentity &&
+                contactStep.LandingEventIdentity != reachEventIdentity &&
                 selectedStep.LandingEventIdentity != reachEventIdentity)
             {
                 context.Discrete.LandingReachEventIdentity = 0;
@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootMotionSettings settings = frame.Settings;
             CharacterFootLandingRuntime.Evaluate(
                 ref context.Landing,
-                in currentStep,
+                in contactStep,
                 in selectedStep,
                 in landingPrediction,
                 in settings);

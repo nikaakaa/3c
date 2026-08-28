@@ -667,6 +667,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceAnkleRotation = sourcePose.AnkleRotation;
             SourceHeelPosition = sourcePose.HeelPosition;
             SourceToePosition = sourcePose.ToePosition;
+            SourceSoleForward = sourcePose.SoleForward;
+            SourceSoleUp = sourcePose.SoleUp;
+            SourceSoleFrameLocalRotation = sourcePose.SoleFrameLocalRotation;
             StepCandidateSelection = stepCandidateSelection;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
             CharacterFootSwingMotionResult footMotion = result.FootMotion;
@@ -704,6 +707,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Quaternion SourceAnkleRotation { get; }
         public Vector3 SourceHeelPosition { get; }
         public Vector3 SourceToePosition { get; }
+        public Vector3 SourceSoleForward { get; }
+        public Vector3 SourceSoleUp { get; }
+        public Quaternion SourceSoleFrameLocalRotation { get; }
         public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
@@ -766,23 +772,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterFootStepCandidateSelectionDiagnostics
     {
         internal CharacterFootStepCandidateSelectionDiagnostics(
-            in AnimationFootMotionStep current,
-            in AnimationFootMotionStep incoming,
+            in AnimationFootMotionStep contact,
+            in AnimationFootMotionStep prediction,
             ulong lastLandingEventIdentity,
             CharacterFootLandingStepSource selectedSource,
             ulong selectedLandingEventIdentity,
             float maximumPredictionTimeSeconds)
         {
-            Current = new CharacterFootStepCandidateDiagnostics(in current);
-            Incoming = new CharacterFootStepCandidateDiagnostics(in incoming);
+            Contact = new CharacterFootStepCandidateDiagnostics(in contact);
+            Prediction = new CharacterFootStepCandidateDiagnostics(in prediction);
             LastLandingEventIdentity = lastLandingEventIdentity;
             SelectedSource = selectedSource;
             SelectedLandingEventIdentity = selectedLandingEventIdentity;
             MaximumPredictionTimeSeconds = maximumPredictionTimeSeconds;
         }
 
-        public CharacterFootStepCandidateDiagnostics Current { get; }
-        public CharacterFootStepCandidateDiagnostics Incoming { get; }
+        public CharacterFootStepCandidateDiagnostics Contact { get; }
+        public CharacterFootStepCandidateDiagnostics Prediction { get; }
         public ulong LastLandingEventIdentity { get; }
         public CharacterFootLandingStepSource SelectedSource { get; }
         public ulong SelectedLandingEventIdentity { get; }
@@ -936,6 +942,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ulong frameSequence,
                 ulong completionIdentity,
                 int rootInstanceId,
+                string profileId,
+                string profileRevision,
+                in CharacterFootMotionSettings motionSettings,
                 CharacterFootLandingPredictionInputDiagnostics input,
                 in CharacterFootPrimarySupportDiagnostics primarySupport,
                 CharacterFullBodyIkGoal pelvisGoal,
@@ -946,6 +955,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 FrameSequence = frameSequence;
                 CompletionIdentity = completionIdentity;
                 RootInstanceId = rootInstanceId;
+                ProfileId = profileId;
+                ProfileRevision = profileRevision;
+                PredictionInputUpdateDistance =
+                    motionSettings.PredictionInputUpdateDistance;
+                PredictionInputUpAngleDegrees =
+                    motionSettings.PredictionInputUpAngleDegrees;
+                LandingPointAcceptanceDistance =
+                    motionSettings.LandingPointAcceptanceDistance;
+                SwingRevisionDistance = motionSettings.SwingRevisionDistance;
+                ResidualLandingTolerance =
+                    motionSettings.ResidualLandingTolerance;
+                ReleaseCompletionDistance =
+                    motionSettings.ReleaseCompletionDistance;
                 Input = input;
                 PrimarySupport = primarySupport;
                 PelvisGoal = pelvisGoal;
@@ -957,6 +979,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal ulong FrameSequence { get; }
             internal ulong CompletionIdentity { get; }
             internal int RootInstanceId { get; }
+            internal string ProfileId { get; }
+            internal string ProfileRevision { get; }
+            internal float PredictionInputUpdateDistance { get; }
+            internal float PredictionInputUpAngleDegrees { get; }
+            internal float LandingPointAcceptanceDistance { get; }
+            internal float SwingRevisionDistance { get; }
+            internal float ResidualLandingTolerance { get; }
+            internal float ReleaseCompletionDistance { get; }
             internal CharacterFootLandingPredictionInputDiagnostics Input { get; }
             internal CharacterFootPrimarySupportDiagnostics PrimarySupport { get; }
             internal CharacterFullBodyIkGoal PelvisGoal { get; }
@@ -971,6 +1001,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong frameSequence,
             ulong completionIdentity,
             int rootInstanceId,
+            string profileId,
+            string profileRevision,
+            in CharacterFootMotionSettings motionSettings,
             CharacterFootLandingPredictionInputDiagnostics input,
             in CharacterFootPrimarySupportDiagnostics primarySupport,
             CharacterFullBodyIkGoal pelvisGoal,
@@ -982,6 +1015,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frameSequence,
                 completionIdentity,
                 rootInstanceId,
+                profileId,
+                profileRevision,
+                in motionSettings,
                 input,
                 in primarySupport,
                 pelvisGoal,
@@ -993,6 +1029,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong FrameSequence => m_Frame?.FrameSequence ?? 0;
         public ulong CompletionIdentity => m_Frame?.CompletionIdentity ?? 0;
         public int RootInstanceId => m_Frame?.RootInstanceId ?? 0;
+        public string ProfileId => m_Frame?.ProfileId ?? string.Empty;
+        public string ProfileRevision => m_Frame?.ProfileRevision ?? string.Empty;
+        public float PredictionInputUpdateDistance =>
+            m_Frame?.PredictionInputUpdateDistance ?? 0f;
+        public float PredictionInputUpAngleDegrees =>
+            m_Frame?.PredictionInputUpAngleDegrees ?? 0f;
+        public float LandingPointAcceptanceDistance =>
+            m_Frame?.LandingPointAcceptanceDistance ?? 0f;
+        public float SwingRevisionDistance =>
+            m_Frame?.SwingRevisionDistance ?? 0f;
+        public float ResidualLandingTolerance =>
+            m_Frame?.ResidualLandingTolerance ?? 0f;
+        public float ReleaseCompletionDistance =>
+            m_Frame?.ReleaseCompletionDistance ?? 0f;
         public CharacterFootLandingPredictionInputDiagnostics Input =>
             m_Frame == null ? default : m_Frame.Input;
         public CharacterFootPrimarySupportDiagnostics PrimarySupport =>
@@ -1010,6 +1060,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Frame.FrameSequence != 0 &&
             m_Frame.CompletionIdentity != 0 &&
             m_Frame.RootInstanceId != 0 &&
+            !string.IsNullOrWhiteSpace(m_Frame.ProfileId) &&
+            !string.IsNullOrWhiteSpace(m_Frame.ProfileRevision) &&
             m_Frame.PelvisGoal.IsValid &&
             m_Frame.Left.Goal.IsValid &&
             m_Frame.Right.Goal.IsValid;

@@ -85,7 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 residualBeforeRevision,
             Vector3 residualBeforeDecay,
             Vector3 residualAfterDecay,
-            float landingUpdateDistance,
+            float swingRevisionDistance,
             float timeToLandingSeconds,
             float baseHalfLifeSeconds,
             bool deadlineHalfLifeAvailable,
@@ -107,7 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualBeforeDecay = residualBeforeDecay;
             ResidualAfterDecay = residualAfterDecay;
             ResidualOutputCorrection = currentTargetCorrection + residualAfterDecay;
-            LandingUpdateDistance = landingUpdateDistance;
+            SwingRevisionDistance = swingRevisionDistance;
             TimeToLandingSeconds = timeToLandingSeconds;
             BaseHalfLifeSeconds = baseHalfLifeSeconds;
             DeadlineHalfLifeAvailable = deadlineHalfLifeAvailable;
@@ -183,7 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualBeforeDecay = source.ResidualBeforeDecay;
             ResidualAfterDecay = source.ResidualAfterDecay;
             ResidualOutputCorrection = source.ResidualOutputCorrection;
-            LandingUpdateDistance = source.LandingUpdateDistance;
+            SwingRevisionDistance = source.SwingRevisionDistance;
             TimeToLandingSeconds = source.TimeToLandingSeconds;
             BaseHalfLifeSeconds = source.BaseHalfLifeSeconds;
             DeadlineHalfLifeAvailable = source.DeadlineHalfLifeAvailable;
@@ -238,7 +238,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 ResidualBeforeDecay { get; }
         internal Vector3 ResidualAfterDecay { get; }
         internal Vector3 ResidualOutputCorrection { get; }
-        internal float LandingUpdateDistance { get; }
+        internal float SwingRevisionDistance { get; }
         internal float TimeToLandingSeconds { get; }
         internal float BaseHalfLifeSeconds { get; }
         internal bool DeadlineHalfLifeAvailable { get; }
@@ -403,7 +403,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasNextSwingLanding,
             CharacterFootGroundPathLanding nextSwingLanding,
             float nextSwingPredictionError,
-            float nextSwingConstraintWeight,
             bool hasPromotedLanding,
             CharacterFootGroundPathLanding promotedLanding)
         {
@@ -414,7 +413,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasNextSwingLanding = hasNextSwingLanding;
             NextSwingLanding = nextSwingLanding;
             NextSwingPredictionError = nextSwingPredictionError;
-            NextSwingConstraintWeight = nextSwingConstraintWeight;
             HasPromotedLanding = hasPromotedLanding;
             PromotedLanding = promotedLanding;
         }
@@ -428,7 +426,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasNextSwingLanding { get; }
         internal CharacterFootGroundPathLanding NextSwingLanding { get; }
         internal float NextSwingPredictionError { get; }
-        internal float NextSwingConstraintWeight { get; }
         internal bool HasPromotedLanding { get; }
         internal CharacterFootGroundPathLanding PromotedLanding { get; }
 
@@ -462,7 +459,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingFact PromotedLanding;
         internal Vector3 NextSwingReferencePoint;
         internal float NextSwingPredictionError;
-        internal float NextSwingConstraintWeight;
         internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
         internal CharacterFootLandingTrackingState TrackingState;
@@ -479,8 +475,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
                 TrackingState == CharacterFootLandingTrackingState.Accepted &&
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
-                TrackingState == CharacterFootLandingTrackingState.Accepted &&
-                NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
                 PromotedLanding.HasValue,
                 PromotedLanding.HasValue ? PromotedLanding.Resolve() : default);
 
@@ -489,7 +483,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void InvalidateCurrent()
         {
             NextSwingPredictionError = 0f;
-            NextSwingConstraintWeight = 0f;
             TrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;
@@ -500,7 +493,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingLanding = default;
             NextSwingReferencePoint = default;
             NextSwingPredictionError = 0f;
-            NextSwingConstraintWeight = 0f;
             TrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;

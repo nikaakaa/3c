@@ -137,7 +137,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.NextSwingPredictionError = Vector3.Distance(
                     context.NextSwingReferencePoint,
                     landingPoint);
-                context.NextSwingConstraintWeight = 1f;
                 if (sameSurface && Vector3.Distance(
                         landingPoint,
                         context.NextSwingLanding.WorldPoint) <=
@@ -157,7 +156,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootLandingFact.Create(in step, in diagnostics);
             context.NextSwingReferencePoint = diagnostics.LandingPoint;
             context.NextSwingPredictionError = 0f;
-            context.NextSwingConstraintWeight = 1f;
             context.TrackingState = CharacterFootLandingTrackingState.Accepted;
         }
     }

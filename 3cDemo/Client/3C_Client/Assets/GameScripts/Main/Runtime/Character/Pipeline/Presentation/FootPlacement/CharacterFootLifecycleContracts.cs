@@ -26,8 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         None = 0,
         GroundPathEnvelope = 1,
-        CurrentGroundFloor = 2,
-        ContactAnchor = 3
+        ContactAnchor = 2
     }
 
     internal enum CharacterFootTransitionPhase : byte
@@ -565,7 +564,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CharacterFootSwingMotionResult swingMotion,
-            in CharacterFootCurrentGroundFloorResult currentGroundFloor,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
             bool hardOwnershipLoss,
@@ -580,7 +578,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
             SwingMotion = swingMotion;
-            CurrentGroundFloor = currentGroundFloor;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
             HardOwnershipLoss = hardOwnershipLoss;
@@ -596,7 +593,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
-        internal CharacterFootCurrentGroundFloorResult CurrentGroundFloor { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool HardOwnershipLoss { get; }

@@ -15,11 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var selectedStep = evaluation.SelectedStep;
             var landingPrediction = evaluation.LandingPrediction;
             CharacterFootMotionSettings settings = frame.Settings;
-            if (frame.CurrentGroundFloor.Side != evaluation.Side)
-            {
-                throw new InvalidOperationException(
-                    "Current Ground Floor side does not match the evaluation.");
-            }
             CharacterFootLandingRuntime.Evaluate(
                 ref context.Landing,
                 in currentStep,
@@ -371,36 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.SwingMotion.SwingPathReference.IsAvailable ||
                 frame.SwingMotion.Accepted &&
                 frame.SwingMotion.SwingPathReference.LandingEventIdentity !=
-                frame.SwingMotion.LandingEventIdentity ||
-                frame.CurrentGroundFloor.State !=
-                    CharacterFootCurrentGroundFloorState.Rejected &&
-                frame.CurrentGroundFloor.State !=
-                    CharacterFootCurrentGroundFloorState.Accepted ||
-                frame.SwingMotion.Accepted &&
-                frame.CurrentGroundFloor.RejectReason ==
-                CharacterFootCurrentGroundFloorRejectReason.SwingUnavailable ||
-                !frame.SwingMotion.Accepted &&
-                frame.CurrentGroundFloor.RejectReason !=
-                CharacterFootCurrentGroundFloorRejectReason.SwingUnavailable ||
-                frame.CurrentGroundFloor.Accepted &&
-                frame.CurrentGroundFloor.RejectReason !=
-                CharacterFootCurrentGroundFloorRejectReason.None ||
-                frame.CurrentGroundFloor.State ==
-                    CharacterFootCurrentGroundFloorState.Rejected &&
-                frame.CurrentGroundFloor.RejectReason ==
-                    CharacterFootCurrentGroundFloorRejectReason.None ||
-                frame.CurrentGroundFloor.Accepted &&
-                (frame.CurrentGroundFloor.Query.Purpose !=
-                     CharacterFootPlacementQueryPurpose.CurrentSwingFloor ||
-                 frame.CurrentGroundFloor.SurfaceIdentity == 0 ||
-                 !CharacterFootConstraintMath.Finite(
-                     frame.CurrentGroundFloor.Point) ||
-                 !CharacterFootConstraintMath.Finite(
-                     frame.CurrentGroundFloor.Normal) ||
-                 frame.CurrentGroundFloor.Normal.sqrMagnitude <=
-                 CharacterFootConstraintMath.GeometryEpsilon ||
-                 !float.IsFinite(frame.CurrentGroundFloor.Distance) ||
-                 frame.CurrentGroundFloor.Distance < 0f) ||
+                    frame.SwingMotion.LandingEventIdentity ||
                 frame.HasContactLanding &&
                 frame.ContactLanding.LandingEventIdentity == 0)
             {

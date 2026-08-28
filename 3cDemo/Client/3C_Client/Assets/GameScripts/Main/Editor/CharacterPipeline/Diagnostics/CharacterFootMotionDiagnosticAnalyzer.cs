@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/21";
+        const string Schema = "character-foot-motion-facts/22";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 21;
+        const int AnalyzerVersion = 22;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 672;
         const float PositionNoiseFloor = 0.001f;
@@ -131,14 +131,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"swingToLandingOutputJumps={document.coverage.swingToLandingOutputJumpCount} " +
                 $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
-                $"swingCurrentFloorCatchups={document.coverage.swingCurrentFloorCatchupCount} " +
-                $"swingActualFootEnvelopeCounterfactuals={document.coverage.swingActualFootEnvelopeCounterfactualCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
-                $"safetyFloorEvents={document.coverage.safetyFloorEventCount} " +
-                $"currentFloorAccepted={document.coverage.currentFloorAcceptedEventCount} " +
-                $"currentFloorAcceptedButNotConsumed={document.coverage.currentFloorAcceptedButNotConsumedEventCount} " +
-                $"safetyFloorClampWithoutInput={document.coverage.safetyFloorClampWithoutInputEventCount} " +
                 $"stepTimeCandidateSelections={document.coverage.stepTimeCandidateSelectionCount} " +
                 $"stepTimeRepresentativeEvents={document.coverage.stepTimeCandidateRepresentativeEventCount} " +
                 $"landingObservations={document.coverage.landingObservationCount} " +
@@ -175,11 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeSwingToLandingFloorHandoffs(frames, events);
             AnalyzeLockedEvents(frames, events);
             AnalyzeContactPlanePenetration(frames, events);
-            AnalyzeSafetyFloor(frames, events);
             AnalyzeReleaseEvents(frames, events);
             AnalyzeLateApproachLandingRevisions(frames, events);
-            AnalyzeSwingCurrentFloorCatchups(frames, events);
-            AnalyzeSwingActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
         }
@@ -442,8 +433,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         !semanticPathRevision,
                     ["safetyFloorOwnerGroundPathEnvelope"] =
                         current.SafetyFloorOwner == "GroundPathEnvelope",
-                    ["safetyFloorOwnerCurrentGroundFloor"] =
-                        current.SafetyFloorOwner == "CurrentGroundFloor",
                     ["safetyFloorOwnerContactAnchor"] =
                         current.SafetyFloorOwner == "ContactAnchor"
                 };
@@ -1078,664 +1067,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             frame.NextLandingEventIdentity != 0 &&
             frame.NextLandingSurfaceIdentity != 0;
 
-        static void AnalyzeSwingCurrentFloorCatchups(
-            List<FootFrame> frames,
-            List<EventFact> events)
-        {
-            for (int i = 1; i < frames.Count; i++)
-            {
-                FootFrame previous = frames[i - 1];
-                FootFrame current = frames[i];
-                if (!Continuous(previous, current) ||
-                    previous.ConstraintState != "Swing" ||
-                    current.ConstraintState != "Swing" ||
-                    previous.FootMotionState != "Accepted" ||
-                    current.FootMotionState != "Accepted" ||
-                    previous.HasAnchor || current.HasAnchor ||
-                    current.FootMotionEventIdentity == 0 ||
-                    previous.FootMotionEventIdentity !=
-                    current.FootMotionEventIdentity ||
-                    !current.BuilderSwingTargetAvailable ||
-                    !current.OutputStagesAvailable ||
-                    !current.SafetyFloorAvailable ||
-                    current.SafetyFloorOwner != "CurrentGroundFloor" ||
-                    !current.CurrentFloorAccepted ||
-                    current.ComponentUp.sqrMagnitude <=
-                    TimeEpsilon * TimeEpsilon)
-                {
-                    continue;
-                }
-                Vector3 up = current.ComponentUp.normalized;
-                double builderTargetAlongUp = Vector3.Dot(
-                    current.BuilderSwingTargetCorrection,
-                    up);
-                double stateOutputBeforeFloorAlongUp = Vector3.Dot(
-                    current.CorrectionBeforeSafetyFloor,
-                    up);
-                double currentFloorMinimumAlongUp = Vector3.Dot(
-                    current.SafetyFloorMinimumCorrection,
-                    up);
-                double finalOutputAlongUp = Vector3.Dot(
-                    current.FinalEffectiveCorrection,
-                    up);
-                double currentFloorAboveBuilderTargetMeters = Math.Max(
-                    0d,
-                    currentFloorMinimumAlongUp - builderTargetAlongUp);
-                double currentFloorCatchupMeters = Math.Max(
-                    0d,
-                    currentFloorMinimumAlongUp -
-                    stateOutputBeforeFloorAlongUp);
-                if (Math.Abs(
-                        currentFloorCatchupMeters -
-                        current.SafetyFloorClampMeters) >
-                    PositionNoiseFloor ||
-                    finalOutputAlongUp + PositionNoiseFloor <
-                    currentFloorMinimumAlongUp)
-                {
-                    throw new InvalidDataException(
-                        "Foot Motion Current Floor catchup stages are inconsistent.");
-                }
-                double residualLagBelowCurrentFloorMeters =
-                    currentFloorAboveBuilderTargetMeters <=
-                    PositionNoiseFloor
-                        ? currentFloorCatchupMeters
-                        : 0d;
-                string classification =
-                    currentFloorCatchupMeters <= PositionNoiseFloor
-                        ? "NoCatchupRequired"
-                        : currentFloorAboveBuilderTargetMeters >
-                          PositionNoiseFloor
-                            ? "CurrentFloorAboveBuilderTarget"
-                            : "ResidualLagBelowCurrentFloor";
-                bool physicalAnkleAvailable =
-                    previous.FinalPhysicalWriteAvailable &&
-                    current.FinalPhysicalWriteAvailable;
-                Vector3 previousPhysicalAnkle = physicalAnkleAvailable
-                    ? FinalPhysicalAnkleWorld(previous)
-                    : default;
-                Vector3 physicalAnkle = physicalAnkleAvailable
-                    ? FinalPhysicalAnkleWorld(current)
-                    : default;
-                bool physicalSoleAvailable =
-                    previous.FinalPhysicalWriteAvailable &&
-                    current.FinalPhysicalWriteAvailable;
-                Vector3 previousPhysicalSole = physicalSoleAvailable
-                    ? FinalSole(previous)
-                    : default;
-                Vector3 physicalSole = physicalSoleAvailable
-                    ? FinalSole(current)
-                    : default;
-                double physicalAnkleStepMeters = physicalAnkleAvailable
-                    ? Vector3.Distance(previousPhysicalAnkle, physicalAnkle)
-                    : 0d;
-                double physicalSoleStepMeters = physicalSoleAvailable
-                    ? Vector3.Distance(previousPhysicalSole, physicalSole)
-                    : 0d;
-                var detail = new CharacterFootSwingCurrentFloorCatchupAnalysis
-                {
-                    previousFrame = previous.Frame,
-                    frame = current.Frame,
-                    side = current.Side,
-                    landingEventIdentity =
-                        current.FootMotionEventIdentity.ToString(
-                            CultureInfo.InvariantCulture),
-                    sourceIdentity = current.SourceIdentity,
-                    sourceCycle = current.SourceCycle,
-                    componentUp = CharacterFootVectorFact.From(up),
-                    builderSwingTarget = CharacterFootVectorFact.From(
-                        current.BuilderSwingTargetCorrection),
-                    builderSwingTargetAlongUpMeters =
-                        builderTargetAlongUp,
-                    stateOutputBeforeFloor = CharacterFootVectorFact.From(
-                        current.CorrectionBeforeSafetyFloor),
-                    stateOutputBeforeFloorAlongUpMeters =
-                        stateOutputBeforeFloorAlongUp,
-                    currentSwingFloorMinimum = CharacterFootVectorFact.From(
-                        current.SafetyFloorMinimumCorrection),
-                    currentSwingFloorMinimumAlongUpMeters =
-                        currentFloorMinimumAlongUp,
-                    safetyFloorClampMeters =
-                        current.SafetyFloorClampMeters,
-                    finalOutput = CharacterFootVectorFact.From(
-                        current.FinalEffectiveCorrection),
-                    finalOutputAlongUpMeters = finalOutputAlongUp,
-                    currentFloorAboveBuilderTargetMeters =
-                        currentFloorAboveBuilderTargetMeters,
-                    residualLagBelowCurrentFloorMeters =
-                        residualLagBelowCurrentFloorMeters,
-                    currentFloorCatchupMeters = currentFloorCatchupMeters,
-                    safetyFloorOwner = current.SafetyFloorOwner,
-                    safetyFloorOwnerSurfaceIdentity =
-                        current.SafetyFloorOwnerSurfaceIdentity,
-                    safetyFloorOwnerPathIdentity =
-                        current.SafetyFloorOwnerPathIdentity.ToString(
-                            CultureInfo.InvariantCulture),
-                    currentFloorSurfaceIdentity =
-                        current.CurrentFloorSurfaceIdentity,
-                    currentFloorPoint = CharacterFootVectorFact.From(
-                        current.CurrentFloorPoint),
-                    physicalAnkleAvailable = physicalAnkleAvailable,
-                    previousPhysicalAnkle = CharacterFootVectorFact.From(
-                        previousPhysicalAnkle),
-                    physicalAnkle = CharacterFootVectorFact.From(
-                        physicalAnkle),
-                    physicalAnkleStepMeters = physicalAnkleStepMeters,
-                    physicalAnkleAlongUpDeltaMeters = physicalAnkleAvailable
-                        ? Vector3.Dot(
-                            physicalAnkle - previousPhysicalAnkle,
-                            up)
-                        : 0d,
-                    physicalSoleAvailable = physicalSoleAvailable,
-                    previousPhysicalSole = CharacterFootVectorFact.From(
-                        previousPhysicalSole),
-                    physicalSole = CharacterFootVectorFact.From(
-                        physicalSole),
-                    physicalSoleStepMeters = physicalSoleStepMeters,
-                    physicalSoleAlongUpDeltaMeters = physicalSoleAvailable
-                        ? Vector3.Dot(
-                            physicalSole - previousPhysicalSole,
-                            up)
-                        : 0d,
-                    classification = classification
-                };
-                var metrics = new SortedDictionary<string, double>(
-                    StringComparer.Ordinal)
-                {
-                    ["BuilderSwingTargetAlongUp"] =
-                        builderTargetAlongUp,
-                    ["StateOutputBeforeFloorAlongUp"] =
-                        stateOutputBeforeFloorAlongUp,
-                    ["CurrentSwingFloorMinimumAlongUp"] =
-                        currentFloorMinimumAlongUp,
-                    ["CurrentFloorAboveBuilderTarget"] =
-                        currentFloorAboveBuilderTargetMeters,
-                    ["ResidualLagBelowCurrentFloor"] =
-                        residualLagBelowCurrentFloorMeters,
-                    ["CurrentFloorCatchup"] = currentFloorCatchupMeters,
-                    ["SafetyFloorClamp"] =
-                        current.SafetyFloorClampMeters,
-                    ["FinalOutputAlongUp"] = finalOutputAlongUp,
-                    ["PhysicalAnkleStep"] = physicalAnkleStepMeters,
-                    ["PhysicalSoleStep"] = physicalSoleStepMeters
-                };
-                var evidence = new SortedDictionary<string, bool>(
-                    StringComparer.Ordinal)
-                {
-                    ["sameLandingEvent"] = true,
-                    ["acceptedSwingPair"] = true,
-                    ["anchorExcluded"] = true,
-                    ["builderSwingTargetAvailable"] = true,
-                    ["currentSwingFloorAvailable"] = true,
-                    ["currentFloorAboveBuilderTarget"] =
-                        classification == "CurrentFloorAboveBuilderTarget",
-                    ["residualLagBelowCurrentFloor"] =
-                        classification == "ResidualLagBelowCurrentFloor",
-                    ["classificationMutuallyExclusive"] =
-                        !(currentFloorAboveBuilderTargetMeters >
-                          PositionNoiseFloor &&
-                          residualLagBelowCurrentFloorMeters >
-                          PositionNoiseFloor)
-                };
-                events.Add(new EventFact(
-                    "SwingCurrentFloorCatchup",
-                    current.Side,
-                    previous.Frame,
-                    current.Frame,
-                    current.Frame,
-                    current.FootMotionEventIdentity,
-                    current.SourceIdentity,
-                    current.SourceCycle,
-                    DeltaSeconds(current),
-                    metrics,
-                    evidence,
-                    swingCurrentFloorCatchup: detail));
-            }
-        }
-
-        static void AnalyzeSwingActualFootEnvelopeCounterfactuals(
-            List<FootFrame> frames,
-            List<EventFact> events)
-        {
-            for (int i = 1; i < frames.Count; i++)
-            {
-                FootFrame previous = frames[i - 1];
-                FootFrame current = frames[i];
-                if (!Continuous(previous, current) ||
-                    previous.ConstraintState != "Swing" ||
-                    current.ConstraintState != "Swing" ||
-                    previous.FootMotionState != "Accepted" ||
-                    current.FootMotionState != "Accepted" ||
-                    previous.HasAnchor || current.HasAnchor ||
-                    current.FootMotionEventIdentity == 0 ||
-                    previous.FootMotionEventIdentity !=
-                    current.FootMotionEventIdentity ||
-                    previous.SourceIdentity != current.SourceIdentity ||
-                    previous.SourceCycle != current.SourceCycle ||
-                    previous.GroundPathState != "Accepted" ||
-                    current.GroundPathState != "Accepted" ||
-                    previous.GroundPathInputIdentity == 0 ||
-                    current.GroundPathInputIdentity == 0 ||
-                    current.SafetyFloorOwner != "CurrentGroundFloor" ||
-                    current.ComponentUp.sqrMagnitude <=
-                    TimeEpsilon * TimeEpsilon)
-                {
-                    continue;
-                }
-                Vector3 up = current.ComponentUp.normalized;
-                bool currentFloorComparisonAvailable =
-                    current.OutputStagesAvailable &&
-                    current.SafetyFloorAvailable &&
-                    current.SafetyFloorOwner == "CurrentGroundFloor" &&
-                    current.CurrentFloorAccepted;
-                double builderTargetAlongUp =
-                    current.BuilderSwingTargetAvailable
-                        ? Vector3.Dot(
-                            current.BuilderSwingTargetCorrection,
-                            up)
-                        : 0d;
-                double stateOutputBeforeFloorAlongUp =
-                    current.OutputStagesAvailable
-                        ? Vector3.Dot(
-                            current.CorrectionBeforeSafetyFloor,
-                            up)
-                        : 0d;
-                double currentFloorMinimumAlongUp =
-                    currentFloorComparisonAvailable
-                        ? Vector3.Dot(
-                            current.SafetyFloorMinimumCorrection,
-                            up)
-                        : 0d;
-                double finalOutputAlongUp =
-                    current.OutputStagesAvailable
-                        ? Vector3.Dot(
-                            current.FinalEffectiveCorrection,
-                            up)
-                        : 0d;
-                double currentFloorCatchupMeters =
-                    currentFloorComparisonAvailable
-                        ? Math.Max(
-                            0d,
-                            currentFloorMinimumAlongUp -
-                            stateOutputBeforeFloorAlongUp)
-                        : 0d;
-                var detail =
-                    new CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
-                    {
-                        previousFrame = previous.Frame,
-                        frame = current.Frame,
-                        side = current.Side,
-                        landingEventIdentity =
-                            current.FootMotionEventIdentity.ToString(
-                                CultureInfo.InvariantCulture),
-                        sourceIdentity = current.SourceIdentity,
-                        sourceCycle = current.SourceCycle,
-                        groundPathInputIdentity =
-                            current.GroundPathInputIdentity.ToString(
-                                CultureInfo.InvariantCulture),
-                        componentUp = CharacterFootVectorFact.From(up),
-                        actualFootHorizontalDistanceMeters =
-                            current.ActualFootHorizontalDistance,
-                        baselineHorizontalDistanceMeters =
-                            current.BaselineHorizontalDistance,
-                        phaseEnvelopeHorizontalDistanceMeters =
-                            current.EnvelopeHorizontalDistance,
-                        actualMinusPhaseEnvelopeHorizontalDistanceMeters =
-                            current.ActualMinusEnvelopeHorizontalDistance,
-                        actualFootAxisRegion =
-                            current.ActualFootAxisRegion,
-                        actualFootClosestPathParameter =
-                            current.ActualFootClosestPathParameter,
-                        actualFootDistanceAlongAxisMeters =
-                            current.ActualFootDistanceAlongAxis,
-                        actualFootCrossTrackDistanceMeters =
-                            current.ActualFootCrossTrackDistance,
-                        groundPathCorridorRadiusMeters =
-                            current.ActualFootGroundPathCorridorRadius,
-                        actualFootWithinGroundPathCorridor =
-                            current.ActualFootWithinGroundPathCorridor,
-                        intersectionState =
-                            current.ActualEnvelopeIntersectionState,
-                        counterfactualState =
-                            current.ActualEnvelopeCounterfactualState,
-                        candidateCount =
-                            current.ActualEnvelopeCandidateCount,
-                        minimumCandidateHeightAlongUpMeters =
-                            current.ActualEnvelopeMinimumHeightAlongUp,
-                        maximumCandidateHeightAlongUpMeters =
-                            current.ActualEnvelopeMaximumHeightAlongUp,
-                        candidateHeightSpanMeters =
-                            current.ActualEnvelopeHeightSpan,
-                        hasVerticalEdge =
-                            current.ActualEnvelopeHasVerticalEdge,
-                        hasMultipleHeights =
-                            current.ActualEnvelopeHasMultipleHeights,
-                        ambiguousEnvelopeAtActualFootDistance =
-                            current.ActualEnvelopeAmbiguous,
-                        phaseSampleHeightAlongUpMeters =
-                            current.SwingEnvelopeSampleAlongUp,
-                        builderSwingTargetAvailable =
-                            current.BuilderSwingTargetAvailable,
-                        builderSwingTarget = CharacterFootVectorFact.From(
-                            current.BuilderSwingTargetCorrection),
-                        builderSwingTargetAlongUpMeters =
-                            builderTargetAlongUp,
-                        stateOutputBeforeFloorAvailable =
-                            current.OutputStagesAvailable,
-                        stateOutputBeforeFloor =
-                            CharacterFootVectorFact.From(
-                                current.CorrectionBeforeSafetyFloor),
-                        stateOutputBeforeFloorAlongUpMeters =
-                            stateOutputBeforeFloorAlongUp,
-                        currentFloorComparisonAvailable =
-                            currentFloorComparisonAvailable,
-                        safetyFloorOwner = current.SafetyFloorOwner,
-                        safetyFloorOwnerSurfaceIdentity =
-                            current.SafetyFloorOwnerSurfaceIdentity,
-                        safetyFloorOwnerPathIdentity =
-                            current.SafetyFloorOwnerPathIdentity.ToString(
-                                CultureInfo.InvariantCulture),
-                        currentSwingFloorMinimum =
-                            CharacterFootVectorFact.From(
-                                current.SafetyFloorMinimumCorrection),
-                        currentSwingFloorMinimumAlongUpMeters =
-                            currentFloorMinimumAlongUp,
-                        finalOutput = CharacterFootVectorFact.From(
-                            current.FinalEffectiveCorrection),
-                        finalOutputAlongUpMeters = finalOutputAlongUp,
-                        actualProgressEnvelopeCorrectionAvailable =
-                            current.ActualProgressEnvelopeCorrectionAvailable,
-                        actualProgressEnvelopeMinimumCorrectionMeters =
-                            current.ActualProgressEnvelopeMinimumCorrection,
-                        actualProgressEnvelopeAdvanceAboveBuilderTargetMeters =
-                            current
-                                .ActualProgressEnvelopeAdvanceAboveBuilderTarget,
-                        actualProgressEnvelopeRemainingBelowCurrentFloorMeters =
-                            current
-                                .ActualProgressEnvelopeRemainingBelowCurrentFloor,
-                        actualProgressEnvelopeCoversCurrentFloor =
-                            current.ActualProgressEnvelopeCoversCurrentFloor,
-                        currentFloorCatchupMeters =
-                            currentFloorCatchupMeters
-                    };
-                var metrics = new SortedDictionary<string, double>(
-                    StringComparer.Ordinal)
-                {
-                    ["ActualFootHorizontalDistance"] =
-                        current.ActualFootHorizontalDistance,
-                    ["BaselineHorizontalDistance"] =
-                        current.BaselineHorizontalDistance,
-                    ["PhaseEnvelopeHorizontalDistance"] =
-                        current.EnvelopeHorizontalDistance,
-                    ["ActualMinusPhaseEnvelopeHorizontalDistance"] =
-                        current.ActualMinusEnvelopeHorizontalDistance,
-                    ["ActualFootClosestPathParameter"] =
-                        current.ActualFootClosestPathParameter,
-                    ["ActualFootDistanceAlongAxis"] =
-                        current.ActualFootDistanceAlongAxis,
-                    ["ActualFootCrossTrackDistance"] =
-                        current.ActualFootCrossTrackDistance,
-                    ["GroundPathCorridorRadius"] =
-                        current.ActualFootGroundPathCorridorRadius,
-                    ["ActualEnvelopeCandidateCount"] =
-                        current.ActualEnvelopeCandidateCount,
-                    ["ActualEnvelopeHeightSpan"] =
-                        current.ActualEnvelopeHeightSpan,
-                    ["PhaseSampleHeightAlongUp"] =
-                        current.SwingEnvelopeSampleAlongUp,
-                    ["BuilderSwingTargetAlongUp"] =
-                        builderTargetAlongUp,
-                    ["StateOutputBeforeFloorAlongUp"] =
-                        stateOutputBeforeFloorAlongUp,
-                    ["FinalOutputAlongUp"] = finalOutputAlongUp
-                };
-                if (current.ActualProgressEnvelopeCorrectionAvailable)
-                {
-                    metrics["ActualProgressEnvelopeMinimumCorrection"] =
-                        current.ActualProgressEnvelopeMinimumCorrection;
-                    metrics[
-                            "ActualProgressEnvelopeAdvanceAboveBuilderTarget"] =
-                        current
-                            .ActualProgressEnvelopeAdvanceAboveBuilderTarget;
-                }
-                if (currentFloorComparisonAvailable)
-                {
-                    metrics["CurrentSwingFloorMinimumAlongUp"] =
-                        currentFloorMinimumAlongUp;
-                    metrics["CurrentFloorCatchup"] =
-                        currentFloorCatchupMeters;
-                }
-                if (current
-                    .ActualProgressEnvelopeCurrentFloorComparisonAvailable)
-                {
-                    metrics[
-                            "ActualProgressEnvelopeRemainingBelowCurrentFloor"] =
-                        current
-                            .ActualProgressEnvelopeRemainingBelowCurrentFloor;
-                    metrics["ActualEnvelopeCoversCurrentFloor"] =
-                        current.ActualProgressEnvelopeCoversCurrentFloor
-                            ? 1d
-                            : 0d;
-                }
-                var evidence = new SortedDictionary<string, bool>(
-                    StringComparer.Ordinal)
-                {
-                    ["continuousAcceptedUnanchoredSwingPair"] = true,
-                    ["sameLandingEvent"] = true,
-                    ["sameFormalSourceCycle"] = true,
-                    ["groundPathAvailable"] = true,
-                    ["actualFootWithinGroundPathCorridor"] =
-                        current.ActualFootWithinGroundPathCorridor,
-                    ["outsideGroundPathCorridor"] =
-                        current.ActualEnvelopeCounterfactualState ==
-                        "OutsideGroundPathCorridor",
-                    ["noIntersection"] =
-                        current.ActualEnvelopeCounterfactualState ==
-                        "NoIntersection",
-                    ["uniqueInCorridor"] =
-                        current.ActualEnvelopeCounterfactualState ==
-                        "UniqueInCorridor",
-                    ["ambiguousInCorridor"] =
-                        current.ActualEnvelopeCounterfactualState ==
-                        "AmbiguousInCorridor",
-                    ["uniqueActualEnvelopeCandidate"] =
-                        current.ActualEnvelopeIntersectionState == "Unique",
-                    ["ambiguousEnvelopeAtActualFootDistance"] =
-                        current.ActualEnvelopeAmbiguous,
-                    ["actualProgressEnvelopeCorrectionAvailable"] =
-                        current.ActualProgressEnvelopeCorrectionAvailable,
-                    ["currentFloorComparisonAvailable"] =
-                        currentFloorComparisonAvailable,
-                    ["actualEnvelopeCurrentFloorComparisonAvailable"] =
-                        current
-                            .ActualProgressEnvelopeCurrentFloorComparisonAvailable,
-                    ["actualEnvelopeCoversCurrentFloor"] =
-                        current.ActualProgressEnvelopeCoversCurrentFloor,
-                    ["currentFloorCatchupAbove1cm"] =
-                        currentFloorComparisonAvailable &&
-                        currentFloorCatchupMeters > 0.01d,
-                    ["ambiguousProducedNoCorrectionConclusion"] =
-                        !current.ActualEnvelopeAmbiguous ||
-                        (!current.ActualProgressEnvelopeCorrectionAvailable &&
-                         !current
-                             .ActualProgressEnvelopeCurrentFloorComparisonAvailable)
-                };
-                events.Add(new EventFact(
-                    "SwingActualFootEnvelopeCounterfactual",
-                    current.Side,
-                    previous.Frame,
-                    current.Frame,
-                    current.Frame,
-                    current.FootMotionEventIdentity,
-                    current.SourceIdentity,
-                    current.SourceCycle,
-                    DeltaSeconds(current),
-                    metrics,
-                    evidence,
-                    swingActualFootEnvelopeCounterfactual: detail));
-            }
-        }
-
-        static bool SameDirection(double source, double response) =>
-            Math.Abs(response) > PositionNoiseFloor &&
-            source * response > 0d;
-
-        static void AnalyzeSafetyFloor(
-            List<FootFrame> frames,
-            List<EventFact> events)
-        {
-            for (int i = 0; i < frames.Count; i++)
-            {
-                FootFrame current = frames[i];
-                bool eligible =
-                    current.CurrentFloorState == "Accepted" ||
-                    current.CurrentFloorState == "Rejected" &&
-                    current.FootMotionState == "Accepted" &&
-                    current.ConstraintState == "Swing";
-                if (!eligible)
-                    continue;
-                bool purposeValid =
-                    current.CurrentFloorQueryPurpose ==
-                    "CurrentSwingFloor";
-                bool ownerConsumed = current.SafetyFloorOwner != "None";
-                bool ownerInputAvailable = current.SafetyFloorOwner switch
-                {
-                    "None" => true,
-                    "GroundPathEnvelope" =>
-                        current.GroundPathState == "Accepted" &&
-                        current.SafetyFloorOwnerPathIdentity != 0 &&
-                        (current.SafetyFloorOwnerPathIdentity ==
-                         current.GroundPathInputIdentity ||
-                         current.SafetyFloorOwnerPathIdentity ==
-                         current.FootMotionGroundPathInputIdentity),
-                    "CurrentGroundFloor" =>
-                        current.CurrentFloorAccepted &&
-                        current.SafetyFloorOwnerSurfaceIdentity ==
-                        current.CurrentFloorSurfaceIdentity,
-                    "ContactAnchor" =>
-                        current.ContactPlaneAvailable &&
-                        current.SafetyFloorOwnerSurfaceIdentity ==
-                        current.ContactSurfaceIdentity,
-                    _ => false
-                };
-                bool currentFloorAcceptedButNotConsumed =
-                    current.CurrentFloorAccepted &&
-                    current.SafetyFloorOwner != "CurrentGroundFloor";
-                bool clearanceNonNegative =
-                    !ownerConsumed ||
-                    current.SafetyFloorClearanceAfterMeters >=
-                    -PositionNoiseFloor;
-                bool clampHasInput =
-                    !current.SafetyFloorClamped ||
-                    ownerInputAvailable;
-                bool largeClampWithoutInput =
-                    current.SafetyFloorClampMeters > 0.1f &&
-                    !ownerInputAvailable;
-                Vector3 up = current.ComponentUp.normalized;
-                Vector3 ownerPoint = current.SafetyFloorOwner switch
-                {
-                    "GroundPathEnvelope" => current.SwingEnvelopeSample,
-                    "CurrentGroundFloor" => current.CurrentFloorPoint,
-                    "ContactAnchor" => current.Anchor,
-                    _ => default
-                };
-                Vector3 expectedMinimumCorrection = ownerConsumed
-                    ? up * Vector3.Dot(
-                        ownerPoint - current.OriginalSole,
-                        up)
-                    : default;
-                bool minimumCorrectionMatchesOwner =
-                    !ownerConsumed ||
-                    ownerInputAvailable &&
-                    Vector3.Distance(
-                        expectedMinimumCorrection,
-                        current.SafetyFloorMinimumCorrection) <=
-                    PositionNoiseFloor;
-                var metrics = new SortedDictionary<string, double>(
-                    StringComparer.Ordinal)
-                {
-                    ["clampMeters"] =
-                        current.SafetyFloorClampMeters,
-                    ["clearanceBeforeMeters"] =
-                        current.SafetyFloorClearanceBeforeMeters,
-                    ["clearanceAfterMeters"] =
-                        current.SafetyFloorClearanceAfterMeters,
-                    ["currentFloorDistanceMeters"] =
-                        current.CurrentFloorDistance,
-                    ["currentFloorSurfaceIdentity"] =
-                        current.CurrentFloorSurfaceIdentity,
-                    ["minimumCorrectionMeters"] =
-                        current.SafetyFloorMinimumCorrection.magnitude,
-                    ["minimumCorrectionOwnerSourceErrorMeters"] =
-                        Vector3.Distance(
-                            expectedMinimumCorrection,
-                            current.SafetyFloorMinimumCorrection),
-                    ["currentFloorPointHeight"] =
-                        Vector3.Dot(current.CurrentFloorPoint, up),
-                    ["swingEnvelopeSampleHeight"] =
-                        Vector3.Dot(current.SwingEnvelopeSample, up),
-                    ["currentFloorVsSwingEnvelopeHeightDeltaMeters"] =
-                        Vector3.Dot(
-                            current.CurrentFloorPoint -
-                            current.SwingEnvelopeSample,
-                            up),
-                    ["queryMaximumDistanceMeters"] =
-                        current.CurrentFloorQueryMaxDistance,
-                    ["queryRadiusMeters"] =
-                        current.CurrentFloorQueryRadius,
-                    ["queryMinimumNormalDot"] =
-                        current.CurrentFloorQueryMinimumNormalDot
-                };
-                var evidence = new SortedDictionary<string, bool>(
-                    StringComparer.Ordinal)
-                {
-                    ["safetyFloorOwnerInputAvailable"] =
-                        ownerInputAvailable,
-                    ["currentFloorAcceptedButNotConsumed"] =
-                        currentFloorAcceptedButNotConsumed,
-                    ["clearanceAfterNonNegative"] =
-                        clearanceNonNegative,
-                    ["clampHasOwnerInput"] =
-                        clampHasInput,
-                    ["currentFloorAccepted"] =
-                        current.CurrentFloorAccepted,
-                    ["currentFloorSurfaceAvailable"] =
-                        current.CurrentFloorSurfaceIdentity != 0,
-                    ["largeClampWithoutOwnerInput"] =
-                        largeClampWithoutInput,
-                    ["minimumCorrectionMatchesOwner"] =
-                        minimumCorrectionMatchesOwner,
-                    ["queryDirectionValid"] =
-                        current.CurrentFloorQueryDirection.sqrMagnitude >
-                        0.999f,
-                    ["queryPurposeCurrentSwingFloor"] =
-                        purposeValid,
-                    ["safetyFloorAvailable"] =
-                        current.SafetyFloorAvailable,
-                    ["safetyFloorOwnerConsumed"] = ownerConsumed,
-                    ["safetyFloorOwnerGroundPathEnvelope"] =
-                        current.SafetyFloorOwner == "GroundPathEnvelope",
-                    ["safetyFloorOwnerCurrentGroundFloor"] =
-                        current.SafetyFloorOwner == "CurrentGroundFloor",
-                    ["safetyFloorOwnerContactAnchor"] =
-                        current.SafetyFloorOwner == "ContactAnchor",
-                    ["safetyFloorClamped"] =
-                        current.SafetyFloorClamped
-                };
-                events.Add(new EventFact(
-                    "SafetyFloor",
-                    current.Side,
-                    current.Frame,
-                    current.Frame,
-                    current.Frame,
-                    current.FootMotionEventIdentity,
-                    current.SourceIdentity,
-                    current.SourceCycle,
-                    DeltaSeconds(current),
-                    metrics,
-                    evidence));
-            }
-        }
-
         static void AnalyzeLandingEvents(
             List<FootFrame> frames,
             List<EventFact> events)
@@ -2183,10 +1514,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 CultureInfo.InvariantCulture),
                         currentSafetyFloorAvailable =
                             current.SafetyFloorAvailable,
-                        currentFloorState = current.CurrentFloorState,
-                        currentFloorAccepted = current.CurrentFloorAccepted,
-                        currentFloorSurfaceIdentity =
-                            current.CurrentFloorSurfaceIdentity,
                         currentContactOwnership =
                             current.ContactOwnership,
                         currentContactPlaneAvailable =
@@ -2272,8 +1599,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         physicalAvailable,
                     ["currentSafetyFloorAvailable"] =
                         current.SafetyFloorAvailable,
-                    ["currentFloorAccepted"] =
-                        current.CurrentFloorAccepted,
                     ["currentContactPlaneAvailable"] =
                         current.ContactPlaneAvailable,
                     ["previousFormalFootHeightAvailable"] =
@@ -3411,8 +2736,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["safetyFloorClamped"] = current.SafetyFloorClamped,
                     ["safetyFloorOwnerGroundPathEnvelope"] =
                         current.SafetyFloorOwner == "GroundPathEnvelope",
-                    ["safetyFloorOwnerCurrentGroundFloor"] =
-                        current.SafetyFloorOwner == "CurrentGroundFloor",
                     ["safetyFloorOwnerContactAnchor"] =
                         current.SafetyFloorOwner == "ContactAnchor",
                     ["stateAfterSwing"] =
@@ -3571,28 +2894,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     lateApproachLandingRevisionCount = events.Count(
                         value => value.kind ==
                                  "LateApproachLandingRevision"),
-                    swingCurrentFloorCatchupCount = events.Count(
-                        value => value.kind ==
-                                 "SwingCurrentFloorCatchup"),
-                    swingActualFootEnvelopeCounterfactualCount = events.Count(
-                        value => value.kind ==
-                                 "SwingActualFootEnvelopeCounterfactual"),
                     supportChangeCount = events.Count(value => value.kind == "SupportChange"),
                     contactPlanePenetrationEventCount = events.Count(
                         value => value.kind == "ContactPlanePenetration"),
-                    safetyFloorEventCount = events.Count(
-                        value => value.kind == "SafetyFloor"),
-                    currentFloorAcceptedEventCount = events.Count(
-                        value => value.kind == "SafetyFloor" &&
-                                 value.evidence["currentFloorAccepted"]),
-                    currentFloorAcceptedButNotConsumedEventCount =
-                        events.Count(
-                            value => value.kind == "SafetyFloor" &&
-                                     value.evidence[
-                                         "currentFloorAcceptedButNotConsumed"]),
-                    safetyFloorClampWithoutInputEventCount = events.Count(
-                        value => value.kind == "SafetyFloor" &&
-                                 !value.evidence["clampHasOwnerInput"]),
                     stepTimeCandidateSelectionCount =
                         stepTimeCandidateSelections.Count,
                     stepTimeCandidateRepresentativeEventCount = events.Count(
@@ -3617,9 +2921,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         BuildPenetrationAvailabilityCounts(capture.FootRows),
                     groundPathRejectedFootRowCount = capture.FootRows.Count(value => value.GroundPathState != "Accepted")
                 },
-                currentFloors = capture.FootRows
-                    .Select(CurrentFloorFact.From)
-                    .ToList(),
                 landingReaches = capture.FootRows
                     .Select(LandingReachFact.From)
                     .ToList(),
@@ -4048,31 +3349,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("GroundEnvelopeVertexCount"),
                 ComponentUp = Vector("GroundPathComponentUp"),
                 GroundPathRadius = Float("GroundPathRadius"),
-                CurrentFloorState = Cell("CurrentFloorState"),
-                CurrentFloorRejectReason =
-                    Cell("CurrentFloorRejectReason"),
-                CurrentFloorQueryPurpose =
-                    Cell("CurrentFloorQueryPurpose"),
-                CurrentFloorQueryOrigin =
-                    Vector("CurrentFloorQueryOrigin"),
-                CurrentFloorQueryDirection =
-                    Vector("CurrentFloorQueryDirection"),
-                CurrentFloorQueryMaxDistance =
-                    Float("CurrentFloorQueryMaxDistance"),
-                CurrentFloorQueryRadius =
-                    Float("CurrentFloorQueryRadius"),
-                CurrentFloorQueryLayerMask =
-                    Int("CurrentFloorQueryLayerMask"),
-                CurrentFloorQueryMinimumNormalDot =
-                    Float("CurrentFloorQueryMinimumNormalDot"),
-                CurrentFloorAccepted =
-                    Int("CurrentFloorAccepted") != 0,
-                CurrentFloorSurfaceIdentity =
-                    Int("CurrentFloorSurfaceIdentity"),
-                CurrentFloorPoint = Vector("CurrentFloorPoint"),
-                CurrentFloorNormal = Vector("CurrentFloorNormal"),
-                CurrentFloorDistance =
-                    Float("CurrentFloorDistance"),
                 FootMotionEventIdentity = Ulong("FootMotionLandingEventIdentity"),
                 FootMotionGroundPathInputIdentity =
                     Ulong("FootMotionGroundPathInputIdentity"),
@@ -4152,12 +3428,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionActualProgressEnvelopeMinimumCorrection"),
                 ActualProgressEnvelopeAdvanceAboveBuilderTarget =
                     Float("FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget"),
-                ActualProgressEnvelopeCurrentFloorComparisonAvailable =
-                    Int("FootMotionActualProgressEnvelopeCurrentFloorComparisonAvailable") != 0,
-                ActualProgressEnvelopeRemainingBelowCurrentFloor =
-                    Float("FootMotionActualProgressEnvelopeRemainingBelowCurrentFloor"),
-                ActualProgressEnvelopeCoversCurrentFloor =
-                    Int("FootMotionActualProgressEnvelopeCoversCurrentFloor") != 0,
                 SwingDesiredCorrection =
                     Vector("FootMotionDesiredCorrection"),
                 CorrectedSole = Vector("FootMotionCorrectedSole"),
@@ -4366,33 +3636,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootSwingMotionState>(
                 frame.FootMotionState,
                 "FootMotionState");
-            RequireEnum<CharacterFootCurrentGroundFloorState>(
-                frame.CurrentFloorState,
-                "CurrentFloorState");
-            RequireEnum<CharacterFootCurrentGroundFloorRejectReason>(
-                frame.CurrentFloorRejectReason,
-                "CurrentFloorRejectReason");
-            bool swingUnavailable =
-                frame.CurrentFloorRejectReason == "SwingUnavailable";
-            if (!swingUnavailable)
-            {
-                RequireEnum<CharacterFootPlacementQueryPurpose>(
-                    frame.CurrentFloorQueryPurpose,
-                    "CurrentFloorQueryPurpose");
-            }
-            if (frame.CurrentFloorAccepted !=
-                    (frame.CurrentFloorState == "Accepted") ||
-                frame.CurrentFloorAccepted &&
-                (frame.CurrentFloorRejectReason != "None" ||
-                 frame.CurrentFloorSurfaceIdentity == 0) ||
-                (swingUnavailable
-                    ? frame.CurrentFloorQueryPurpose != "0"
-                    : frame.CurrentFloorQueryPurpose !=
-                      "CurrentSwingFloor"))
-            {
-                throw new InvalidDataException(
-                    "Foot Motion Current Floor typed facts are inconsistent.");
-            }
             RequireEnum<CharacterFootConstraintState>(
                 frame.ConstraintState,
                 "FootMotionConstraintState");
@@ -4416,10 +3659,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "GroundPathEnvelope" => frame.SafetyFloorAvailable &&
                                         frame.SafetyFloorOwnerSurfaceIdentity == 0 &&
                                         frame.SafetyFloorOwnerPathIdentity != 0,
-                "CurrentGroundFloor" => frame.SafetyFloorAvailable &&
-                                        frame.SafetyFloorOwnerSurfaceIdentity != 0 &&
-                                        frame.SafetyFloorOwnerPathIdentity == 0 &&
-                                        frame.CurrentFloorAccepted,
                 "ContactAnchor" => !frame.SafetyFloorAvailable &&
                                    frame.SafetyFloorOwnerSurfaceIdentity != 0 &&
                                    frame.SafetyFloorOwnerPathIdentity == 0 &&
@@ -4810,9 +4049,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.ActualEnvelopeHasVerticalEdge ||
                     frame.ActualEnvelopeHasMultipleHeights ||
                     frame.ActualEnvelopeAmbiguous ||
-                    frame.ActualProgressEnvelopeCorrectionAvailable ||
-                    frame.ActualProgressEnvelopeCurrentFloorComparisonAvailable ||
-                    frame.ActualProgressEnvelopeCoversCurrentFloor)
+                    frame.ActualProgressEnvelopeCorrectionAvailable)
                 {
                     throw new InvalidDataException(
                         "Foot Motion empty Actual Envelope intersection facts are inconsistent.");
@@ -4858,16 +4095,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (ambiguous)
             {
                 if (frame.ActualProgressEnvelopeCorrectionAvailable ||
-                    frame.ActualProgressEnvelopeCurrentFloorComparisonAvailable ||
-                    frame.ActualProgressEnvelopeCoversCurrentFloor ||
                     Math.Abs(
                         frame.ActualProgressEnvelopeMinimumCorrection) >
                     PositionNoiseFloor ||
                     Math.Abs(
                         frame.ActualProgressEnvelopeAdvanceAboveBuilderTarget) >
-                    PositionNoiseFloor ||
-                    Math.Abs(
-                        frame.ActualProgressEnvelopeRemainingBelowCurrentFloor) >
                     PositionNoiseFloor)
                 {
                     throw new InvalidDataException(
@@ -4890,24 +4122,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     0f,
                     minimumCorrection - builderTargetAlongUp)
                 : 0f;
-            bool currentFloorComparisonAvailable = correctionAvailable &&
-                frame.OutputStagesAvailable &&
-                frame.SafetyFloorAvailable &&
-                frame.SafetyFloorOwner == "CurrentGroundFloor";
-            float remainingBelowCurrentFloor = 0f;
-            bool coversCurrentFloor = false;
-            if (currentFloorComparisonAvailable)
-            {
-                float counterfactualBuilderTarget = Mathf.Max(
-                    builderTargetAlongUp,
-                    minimumCorrection);
-                remainingBelowCurrentFloor = Mathf.Max(
-                    0f,
-                    Vector3.Dot(frame.SafetyFloorMinimumCorrection, up) -
-                    counterfactualBuilderTarget);
-                coversCurrentFloor = remainingBelowCurrentFloor <=
-                                     PositionNoiseFloor;
-            }
             if (frame.ActualProgressEnvelopeCorrectionAvailable !=
                     correctionAvailable ||
                 Math.Abs(
@@ -4915,14 +4129,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     minimumCorrection) > PositionNoiseFloor ||
                 Math.Abs(
                     frame.ActualProgressEnvelopeAdvanceAboveBuilderTarget -
-                    advanceAboveBuilder) > PositionNoiseFloor ||
-                frame.ActualProgressEnvelopeCurrentFloorComparisonAvailable !=
-                    currentFloorComparisonAvailable ||
-                Math.Abs(
-                    frame.ActualProgressEnvelopeRemainingBelowCurrentFloor -
-                    remainingBelowCurrentFloor) > PositionNoiseFloor ||
-                frame.ActualProgressEnvelopeCoversCurrentFloor !=
-                    coversCurrentFloor)
+                    advanceAboveBuilder) > PositionNoiseFloor)
             {
                 throw new InvalidDataException(
                     "Foot Motion Actual Envelope counterfactual facts are inconsistent.");
@@ -5091,21 +4298,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "GroundEnvelopeVertexCount",
                 "GroundPathComponentUpX", "GroundPathComponentUpY", "GroundPathComponentUpZ",
                 "GroundPathRadius",
-                "CurrentFloorState", "CurrentFloorRejectReason",
-                "CurrentFloorQueryPurpose",
-                "CurrentFloorQueryOriginX", "CurrentFloorQueryOriginY",
-                "CurrentFloorQueryOriginZ",
-                "CurrentFloorQueryDirectionX",
-                "CurrentFloorQueryDirectionY",
-                "CurrentFloorQueryDirectionZ",
-                "CurrentFloorQueryMaxDistance", "CurrentFloorQueryRadius",
-                "CurrentFloorQueryLayerMask",
-                "CurrentFloorQueryMinimumNormalDot",
-                "CurrentFloorAccepted", "CurrentFloorSurfaceIdentity",
-                "CurrentFloorPointX", "CurrentFloorPointY",
-                "CurrentFloorPointZ", "CurrentFloorNormalX",
-                "CurrentFloorNormalY", "CurrentFloorNormalZ",
-                "CurrentFloorDistance",
                 "FootMotionLandingEventIdentity", "FootMotionGroundPathInputIdentity",
                 "FootMotionState", "FootMotionConstraintState",
                 "FootMotionLockResponse",
@@ -5150,9 +4342,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionActualProgressEnvelopeCorrectionAvailable",
                 "FootMotionActualProgressEnvelopeMinimumCorrection",
                 "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget",
-                "FootMotionActualProgressEnvelopeCurrentFloorComparisonAvailable",
-                "FootMotionActualProgressEnvelopeRemainingBelowCurrentFloor",
-                "FootMotionActualProgressEnvelopeCoversCurrentFloor",
                 "FootMotionDesiredCorrectionX",
                 "FootMotionDesiredCorrectionY",
                 "FootMotionDesiredCorrectionZ",
@@ -5698,20 +4887,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal readonly SortedDictionary<int, Vector3>
                 GroundEnvelopeVertices =
                     new SortedDictionary<int, Vector3>();
-            internal string CurrentFloorState;
-            internal string CurrentFloorRejectReason;
-            internal string CurrentFloorQueryPurpose;
-            internal Vector3 CurrentFloorQueryOrigin;
-            internal Vector3 CurrentFloorQueryDirection;
-            internal float CurrentFloorQueryMaxDistance;
-            internal float CurrentFloorQueryRadius;
-            internal int CurrentFloorQueryLayerMask;
-            internal float CurrentFloorQueryMinimumNormalDot;
-            internal bool CurrentFloorAccepted;
-            internal int CurrentFloorSurfaceIdentity;
-            internal Vector3 CurrentFloorPoint;
-            internal Vector3 CurrentFloorNormal;
-            internal float CurrentFloorDistance;
             internal ulong FootMotionEventIdentity;
             internal ulong FootMotionGroundPathInputIdentity;
             internal string FootMotionState;
@@ -5755,9 +4930,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool ActualProgressEnvelopeCorrectionAvailable;
             internal float ActualProgressEnvelopeMinimumCorrection;
             internal float ActualProgressEnvelopeAdvanceAboveBuilderTarget;
-            internal bool ActualProgressEnvelopeCurrentFloorComparisonAvailable;
-            internal float ActualProgressEnvelopeRemainingBelowCurrentFloor;
-            internal bool ActualProgressEnvelopeCoversCurrentFloor;
             internal Vector3 SwingDesiredCorrection;
             internal Vector3 CorrectedSole;
             internal Vector3 CorrectedAnkle;
@@ -6356,98 +5528,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public SampleFact sample;
             public AnalyzerFact analyzer;
             public CoverageFact coverage;
-            public List<CurrentFloorFact> currentFloors;
             public List<LandingReachFact> landingReaches;
             public List<StepTimeCandidateSelectionFact>
                 stepTimeCandidateSelections;
             public List<EventFact> events;
-        }
-
-        [Serializable]
-        sealed class CurrentFloorFact
-        {
-            public int frame;
-            public string side;
-            public string state;
-            public string rejectReason;
-            public string queryPurpose;
-            public ScalarVector3Fact queryOrigin;
-            public ScalarVector3Fact queryDirection;
-            public float queryMaximumDistance;
-            public float queryRadius;
-            public int queryLayerMask;
-            public float queryMinimumNormalDot;
-            public bool accepted;
-            public int surfaceIdentity;
-            public ScalarVector3Fact point;
-            public ScalarVector3Fact normal;
-            public float distance;
-            public ScalarVector3Fact swingPathEnvelopeSample;
-            public bool safetyFloorAvailable;
-            public string safetyFloorOwner;
-            public int safetyFloorOwnerSurfaceIdentity;
-            public string safetyFloorOwnerPathIdentity;
-            public ScalarVector3Fact correctionBeforeSafetyFloor;
-            public ScalarVector3Fact safetyFloorMinimumCorrection;
-            public ScalarVector3Fact safetyFloorOutputCorrection;
-            public bool safetyFloorClamped;
-            public float safetyFloorClampMeters;
-            public float safetyFloorClearanceBeforeMeters;
-            public float safetyFloorClearanceAfterMeters;
-
-            internal static CurrentFloorFact From(FootFrame frame) =>
-                new CurrentFloorFact
-                {
-                    frame = frame.Frame,
-                    side = frame.Side,
-                    state = frame.CurrentFloorState,
-                    rejectReason = frame.CurrentFloorRejectReason,
-                    queryPurpose = frame.CurrentFloorQueryPurpose,
-                    queryOrigin = ScalarVector3Fact.From(
-                        frame.CurrentFloorQueryOrigin),
-                    queryDirection = ScalarVector3Fact.From(
-                        frame.CurrentFloorQueryDirection),
-                    queryMaximumDistance =
-                        frame.CurrentFloorQueryMaxDistance,
-                    queryRadius = frame.CurrentFloorQueryRadius,
-                    queryLayerMask = frame.CurrentFloorQueryLayerMask,
-                    queryMinimumNormalDot =
-                        frame.CurrentFloorQueryMinimumNormalDot,
-                    accepted = frame.CurrentFloorAccepted,
-                    surfaceIdentity =
-                        frame.CurrentFloorSurfaceIdentity,
-                    point = ScalarVector3Fact.From(
-                        frame.CurrentFloorPoint),
-                    normal = ScalarVector3Fact.From(
-                        frame.CurrentFloorNormal),
-                    distance = frame.CurrentFloorDistance,
-                    swingPathEnvelopeSample =
-                        ScalarVector3Fact.From(
-                            frame.SwingEnvelopeSample),
-                    safetyFloorAvailable = frame.SafetyFloorAvailable,
-                    safetyFloorOwner = frame.SafetyFloorOwner,
-                    safetyFloorOwnerSurfaceIdentity =
-                        frame.SafetyFloorOwnerSurfaceIdentity,
-                    safetyFloorOwnerPathIdentity =
-                        frame.SafetyFloorOwnerPathIdentity.ToString(
-                            CultureInfo.InvariantCulture),
-                    correctionBeforeSafetyFloor =
-                        ScalarVector3Fact.From(
-                            frame.CorrectionBeforeSafetyFloor),
-                    safetyFloorMinimumCorrection =
-                        ScalarVector3Fact.From(
-                            frame.SafetyFloorMinimumCorrection),
-                    safetyFloorOutputCorrection =
-                        ScalarVector3Fact.From(
-                            frame.SafetyFloorOutputCorrection),
-                    safetyFloorClamped = frame.SafetyFloorClamped,
-                    safetyFloorClampMeters =
-                        frame.SafetyFloorClampMeters,
-                    safetyFloorClearanceBeforeMeters =
-                        frame.SafetyFloorClearanceBeforeMeters,
-                    safetyFloorClearanceAfterMeters =
-                        frame.SafetyFloorClearanceAfterMeters
-                };
         }
 
         [Serializable]
@@ -6508,14 +5592,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int swingToLandingOutputJumpCount;
             public int swingToLandingFloorHandoffCount;
             public int lateApproachLandingRevisionCount;
-            public int swingCurrentFloorCatchupCount;
-            public int swingActualFootEnvelopeCounterfactualCount;
             public int supportChangeCount;
             public int contactPlanePenetrationEventCount;
-            public int safetyFloorEventCount;
-            public int currentFloorAcceptedEventCount;
-            public int currentFloorAcceptedButNotConsumedEventCount;
-            public int safetyFloorClampWithoutInputEventCount;
             public int stepTimeCandidateSelectionCount;
             public int stepTimeCandidateRepresentativeEventCount;
             public int normalizedTimeWrapCount;
@@ -6552,10 +5630,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingToLandingFloorHandoff = null,
                 CharacterFootLateApproachLandingRevisionAnalysis
                     lateApproachLandingRevision = null,
-                CharacterFootSwingCurrentFloorCatchupAnalysis
-                    swingCurrentFloorCatchup = null,
-                CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
-                    swingActualFootEnvelopeCounterfactual = null,
                 CharacterFootLandingObservationAnalysis
                     landingObservation = null,
                 CharacterFootVisibleOutputJumpAnalysis
@@ -6577,10 +5651,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingToLandingFloorHandoff;
                 this.lateApproachLandingRevision =
                     lateApproachLandingRevision;
-                this.swingCurrentFloorCatchup =
-                    swingCurrentFloorCatchup;
-                this.swingActualFootEnvelopeCounterfactual =
-                    swingActualFootEnvelopeCounterfactual;
                 this.landingObservation = landingObservation;
                 this.visibleOutputJump = visibleOutputJump;
             }
@@ -6601,10 +5671,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 swingToLandingFloorHandoff;
             public CharacterFootLateApproachLandingRevisionAnalysis
                 lateApproachLandingRevision;
-            public CharacterFootSwingCurrentFloorCatchupAnalysis
-                swingCurrentFloorCatchup;
-            public CharacterFootSwingActualFootEnvelopeCounterfactualAnalysis
-                swingActualFootEnvelopeCounterfactual;
             public CharacterFootLandingObservationAnalysis landingObservation;
             public CharacterFootVisibleOutputJumpAnalysis visibleOutputJump;
 

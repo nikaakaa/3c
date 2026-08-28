@@ -182,8 +182,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSourceToeX,FootMotionSourceToeY,FootMotionSourceToeZ," +
             "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ,FootMotionBaselineSampleAlongUp," +
             "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionEnvelopeSampleAlongUp," +
-            "FootMotionFormalFootHeight,FootMotionUnweightedFormalTargetHeight,FootMotionLandingConstraintWeight," +
-            "FootMotionWeightedFormalCorrection,FootMotionEnvelopeMinimumCorrection,FootMotionBuilderSelectedCorrection," +
+            "FootMotionFormalFootHeight,FootMotionFormalTargetHeight,FootMotionFormalTargetCorrection," +
+            "FootMotionEnvelopeMinimumCorrection,FootMotionBuilderSelectedCorrection," +
             "FootMotionBuilderSwingTargetAvailable,FootMotionBuilderSwingTargetCorrectionX,FootMotionBuilderSwingTargetCorrectionY,FootMotionBuilderSwingTargetCorrectionZ," +
             "FootMotionSwingPathHorizontalAxisState,FootMotionActualFootHorizontalDistanceMeters,FootMotionBaselineHorizontalDistanceMeters," +
             "FootMotionEnvelopeHorizontalDistanceMeters,FootMotionActualMinusEnvelopeHorizontalDistanceMeters," +
@@ -1933,18 +1933,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             float motionFormalFootHeight = hasInputObservedStep
                 ? inputObservedStep.FootHeight
                 : 0f;
-            float unweightedFormalTargetHeight =
-                baselineSampleAlongUp + motionFormalFootHeight;
-            float weightedFormalCorrection =
-                motion.LandingConstraintWeight *
-                (unweightedFormalTargetHeight - originalSoleAlongUp);
+            float formalTargetHeight =
+                envelopeSampleAlongUp + motionFormalFootHeight;
+            float formalTargetCorrection =
+                formalTargetHeight - originalSoleAlongUp;
             float envelopeMinimumCorrection =
                 envelopeSampleAlongUp - originalSoleAlongUp;
             float builderSelectedCorrection = Mathf.Max(
                 0f,
-                Mathf.Max(
-                    envelopeMinimumCorrection,
-                    weightedFormalCorrection));
+                formalTargetCorrection);
             bool builderSwingTargetAvailable =
                 motion.PathContinuityEvaluated &&
                 motion.PathAvailableAfter &&
@@ -1956,9 +1953,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     : default;
             Add(row, envelopeSampleAlongUp);
             Add(row, motionFormalFootHeight);
-            Add(row, unweightedFormalTargetHeight);
-            Add(row, motion.LandingConstraintWeight);
-            Add(row, weightedFormalCorrection);
+            Add(row, formalTargetHeight);
+            Add(row, formalTargetCorrection);
             Add(row, envelopeMinimumCorrection);
             Add(row, builderSelectedCorrection);
             Add(row, builderSwingTargetAvailable);

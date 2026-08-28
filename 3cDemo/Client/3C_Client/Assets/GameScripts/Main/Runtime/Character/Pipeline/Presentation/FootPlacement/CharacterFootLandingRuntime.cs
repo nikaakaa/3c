@@ -168,7 +168,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.NextSwingPredictionError = Vector3.Distance(
                     context.NextSwingReferencePoint,
                     landingPoint);
-                context.NextSwingConstraintWeight = 1f;
                 CharacterFootGroundPathLanding previous =
                     context.NextSwingLanding.Resolve();
                 bool sameSurface = previous.SurfaceIdentity ==
@@ -189,7 +188,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in diagnostics);
             context.NextSwingReferencePoint = diagnostics.LandingPoint;
             context.NextSwingPredictionError = 0f;
-            context.NextSwingConstraintWeight = 1f;
         }
 
         static void CommitApproach(

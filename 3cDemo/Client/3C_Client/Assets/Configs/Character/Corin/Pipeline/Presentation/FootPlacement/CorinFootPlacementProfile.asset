@@ -35,8 +35,9 @@ MonoBehaviour:
     m_CastBelow: 0.85
     m_MaximumReachableVerticalEdge: 0.3
   m_FootMotion:
-    m_LandingUpdateDistance: 0.005
+    m_LandingUpdateDistance: 0.02
     m_EffectiveCorrectionHalfLifeSeconds: 0.03
     m_LockDistance: 0.08
     m_SlideDistance: 0.2
     m_PelvisSpringFrequency: 3
+    m_MinimumLandingLegCompressionReserve: 0.02

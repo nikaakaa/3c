@@ -2,12 +2,12 @@
 
 ### Requirement: 每种Pose节点必须只有一个Node Definition真相
 
-Editor MUST提供唯一`CharacterPoseNodeDefinitionModule`，并为每个正式Node Kind注册恰好一个`CharacterPoseNodeDefinition` Adapter。Definition MUST集中声明Capability identity、Payload类型、字段合同、固定/动态端口、允许Graph Role、Execution Domain、Operation Family、Authoring codec、局部Payload/Rig校验、typed lowering和Source Map命名。Canvas、Document v4、Clipboard、Mutation、局部Validator与Compiler MUST读取同一定义，不得复制第二字段表、端口表、compiler binding或NodeKind特例目录。
+Editor MUST提供唯一`CharacterPoseNodeDefinitionModule`，并为每个正式Node Kind注册恰好一个`CharacterPoseNodeDefinition` Adapter。Definition MUST集中声明Capability identity、Payload类型、字段合同、固定端口、条件`portVariants`、动态端口政策、允许Graph Role、Execution Domain、Operation Family、Authoring codec、Graph dependency投影、局部Payload/Rig校验、typed lowering和Source Map命名。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Canvas、Document v4、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency与typed lowering。系统不得复制第二字段表、端口表、compiler binding或NodeKind特例目录。
 
 #### Scenario: 新增正式Pose节点
 
 - **WHEN** 项目增加一个新的正式Pose Node Kind
-- **THEN** 作者创建、Document往返、Clipboard、局部校验和typed lowering MUST由同一个Definition Adapter提供
+- **THEN** 作者创建、Document往返、Clipboard、统一Port Shape、Graph dependency、局部校验和typed lowering MUST由同一个Definition Adapter及其Capability投影提供
 - **AND** 缺少任一必要合同 MUST使Editor初始化或Character Build失败而不得由调用方补默认逻辑
 
 #### Scenario: 同一Node Kind重复定义
@@ -18,7 +18,7 @@ Editor MUST提供唯一`CharacterPoseNodeDefinitionModule`，并为每个正式N
 
 ### Requirement: Node Definition与全局Topology规则必须分离
 
-Node Definition MUST只拥有单节点局部语义，不得查询其它节点或决定Graph全局合法性。Graph closure、typed edge兼容、递归、唯一Output、唯一Goal Assembler、唯一Goal Set、唯一FBBIK、唯一Writer、重复Goal Slot、写冲突和Stage依赖 MUST只由Compiler Topology Pass验证。系统 MUST删除以大量节点特例布尔值表达全局编译分支的`ICharacterPoseCompilerHandler`与Registry。
+Node Definition MUST只拥有单节点局部语义与该节点直接引用的Graph dependency，不得查询其它节点或决定Graph全局合法性。Graph Closure Pass MUST组合这些dependency并唯一验证可达call graph、悬空引用与递归；typed edge兼容、唯一Output、唯一Goal Assembler、唯一Goal Set、唯一FBBIK、唯一Final Publication requirement、重复Goal Slot、写冲突和Stage依赖 MUST只由Compiler Topology Pass验证。具体Final Publication实例与Physical Writer唯一性 MUST只由Runtime Factory和Final Publication构造验证。系统 MUST删除以大量节点特例布尔值表达全局编译分支的`ICharacterPoseCompilerHandler`与Registry。
 
 #### Scenario: 两个Goal Source写入同一Slot
 
@@ -34,13 +34,13 @@ Node Definition MUST只拥有单节点局部语义，不得查询其它节点或
 
 ### Requirement: Pose Compiler必须使用固定不可逆Pass链
 
-唯一Pose Compiler Module MUST按`Graph Closure -> Typed Lowering -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Bind Family Payload -> Seal Program Image`顺序执行。Symbolic Family Lowering MUST先固定每个Operation的Family、symbolic typed value依赖、跨帧状态需求、Frame页需求与Workspace需求；Stage固定后 Value Lifetime才能计算真实消费寿命，Workspace Plan才能分配容量，Bind Family Payload只能绑定既有typed handle而不得发现新的Operation或容量需求。每个Pass MUST只消费上一个或明确前置Pass的不可变Result，不得原地修改共享`CompilationState`、回读后续Pass的临时字段或让多个Pass共同拥有同一可变集合。Compiler外部Interface MUST只接受一个typed Compilation Request并返回一个Program Image或结构化失败。
+唯一Pose Compiler Module MUST按`Graph Closure -> Typed Lowering -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Bind Family Payload -> Seal Program Image`顺序执行。Graph Closure MUST只通过root catalog、PoseState引用与Node Definition Graph dependency投影展开Subgraph和Linked Pose call，不得中央switch具体Payload。Symbolic Family Lowering MUST先固定每个Operation的Family、symbolic typed value依赖、跨帧状态需求、Frame页需求与Workspace需求；Stage固定后 Value Lifetime才能计算真实消费寿命，Workspace Plan才能分配容量，Bind Family Payload只能绑定既有typed handle而不得发现新的Operation或容量需求。每个Pass MUST只消费上一个或明确前置Pass的不可变Result，不得原地修改共享`CompilationState`、回读后续Pass的临时字段或让多个Pass共同拥有同一可变集合。Compiler外部Interface MUST只接受一个typed Compilation Request并返回一个Program Image或结构化失败。
 
 #### Scenario: Value规划失败
 
 - **WHEN** Typed Topology合法但Value生命周期或类型无法分配
 - **THEN** Value Plan Pass MUST返回带Pass、GraphId、NodeId、PortId和reason的失败
-- **AND** Symbolic Operation、Stage、Workspace、Payload和Program Image MUST不生成部分结果
+- **AND** 已生成的前置不可变Result MUST只作为本次失败的内部诊断上下文而不得发布，Workspace、Payload和Program Image MUST不生成部分产物
 
 #### Scenario: Compiler入口调用
 
@@ -50,7 +50,7 @@ Node Definition MUST只拥有单节点局部语义，不得查询其它节点或
 
 ### Requirement: Graph Closure Pass必须唯一展开全部可达图
 
-Graph Closure Pass MUST从root-owned flat graph catalog、PoseState inline GraphId、Subgraph call和Linked Pose entry建立稳定可达闭包，验证GraphId、Entry、Output、call identity、递归与悬空引用，并按稳定identity生成唯一call-site lineage。后续Pass MUST只读取该Closure，不得再次遍历authoring对象树或动态展开Subgraph。
+Graph Closure Pass MUST从root-owned flat graph catalog、PoseState inline GraphId和每个Node Definition发布的Graph dependency建立稳定可达闭包。Subgraph call与Linked Pose call target MUST只由匹配Definition从typed Payload投影，中央Compiler不得按NodeKind、Payload C#类型或显示名解释目标。Closure MUST验证GraphId、Entry、Output、call identity、递归与悬空引用，并按稳定identity生成唯一call-site lineage；后续Pass MUST只读取该Closure，不得再次遍历authoring对象树或动态展开Subgraph。
 
 #### Scenario: Subgraph递归
 
@@ -70,7 +70,7 @@ Typed Lowering Pass MUST把Closure中的authoring node、payload和edge降低为
 
 ### Requirement: Topology Pass必须统一证明全局执行闭包
 
-Topology Pass MUST从typed IR建立唯一有向拓扑和稳定执行依赖，验证Port kind、Pose空间、Graph Role、source/parameter使用、write set、Operation Domain、World-aware依赖、Goal Contribution、唯一Assembler、唯一Goal Set、唯一FBBIK、唯一Output和唯一Final Writer。它 MUST生成后续Value与Stage规划使用的不可变Topology Plan；Runtime MUST不重复这些静态证明。
+Topology Pass MUST从typed IR建立唯一有向拓扑和稳定执行依赖，验证Port kind、Pose空间、Graph Role、source/parameter使用、write set、Operation Domain、World-aware依赖、Goal Contribution、唯一Assembler、唯一Goal Set、唯一FBBIK、唯一Output和唯一Final Publication requirement。它 MUST生成后续Value与Stage规划使用的不可变Topology Plan；Runtime MUST不重复这些静态证明。Graph call递归只属于前置Closure Pass；Physical Writer不是Graph节点，Topology MUST不引用具体Writer Implementation或证明Runtime实例数量。
 
 #### Scenario: World-aware节点位于非法阶段
 
@@ -86,7 +86,7 @@ Topology Pass MUST从typed IR建立唯一有向拓扑和稳定执行依赖，验
 
 ### Requirement: Value与Workspace必须由独立Pass按类型和寿命规划
 
-Value Lifetime Pass MUST按已经固定的Stage Schedule为Local Pose、Component Pose、Parameter、Discontinuity、Source Demand、Goal Contribution、Goal Set、Control与Output分配typed Value地址和生命周期。Workspace Plan Pass MUST按Symbolic Operation需求、Stage、Value寿命、Rig、节点状态、source并发、Constraint容量、Inertialization、Operation completion、Final Pose和Diagnostics manifest分配固定页与handle。两者 MUST不使用作者字符串、运行时动态扩容或万能Value slot，也 MUST不允许后续Bind Family Payload回写容量。
+Value Lifetime Pass MUST按已经固定的Stage Schedule为Local Pose、Component Pose、Parameter、Discontinuity、Source Demand、Goal Contribution、Goal Set、Control与Output分配typed Value地址和生命周期。Workspace Plan Pass MUST按Symbolic Operation需求、Stage、Value寿命、Rig、节点状态、source并发、Constraint容量、Inertialization、Operation completion、Final Publication layout requirement和Diagnostics manifest分配固定页与handle。Final Pose物理页 MUST由Final Publication按该requirement分配，Program Workspace不得分配第二份。两者 MUST不使用作者字符串、运行时动态扩容或万能Value slot，也 MUST不允许后续Bind Family Payload回写容量。
 
 #### Scenario: 两类Value错误复用
 
@@ -128,7 +128,7 @@ ABI切换前 MUST为全部现行Operation Code建立并封存唯一迁移表，�
 
 ### Requirement: Stage Schedule必须由typed依赖和Execution Domain唯一生成
 
-Stage Schedule Pass MUST按Topology Plan、Symbolic Operation依赖、Pose空间和Execution Domain生成固定`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并为每个Operation分配恰好一个Stage位置。Schedule MUST静态保证source每帧最多capture一次、每Operation最多执行一次、每个Constraint Family Operation在自己的位置调用一次、Constraint完整结果先于消费者、唯一Final Pose在全部依赖完成后发布。Runtime与Preview MUST只执行该Schedule，不得现场重新排序。
+Stage Schedule Pass MUST按Topology Plan、Symbolic Operation依赖、Pose空间和Execution Domain生成固定`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并为每个Operation分配恰好一个Stage位置。Schedule MUST静态保证source每帧最多capture一次、每Operation最多执行一次、每个Constraint Family Operation在自己的位置调用一次、Constraint完整结果先于消费者、唯一Output layout在全部依赖完成后产生。Physical Writer由Runtime Factory装配的Final Publication在该结果之后执行，不属于Graph Operation。Runtime与Preview MUST只执行该Schedule，不得现场重新排序。
 
 #### Scenario: Operation出现在两个Stage
 
@@ -138,12 +138,12 @@ Stage Schedule Pass MUST按Topology Plan、Symbolic Operation依赖、Pose空间
 
 ### Requirement: Program Image必须在Seal后不可变且自描述完整
 
-Seal Program Image Pass MUST验证全部Pass identity、schema、Rig、Operation Header、Family Payload、typed Value、Workspace handle、Stage、Source Map、容量和hash，并把不可变`CharacterPoseProgramImage`作为`CharacterPresentationProjection`内部唯一Pose程序随同一ProjectionRevision发布。Program Image MUST包含Runtime装配所需的完整固定数据，不得保存authoring asset、Editor对象、Actor状态、Frame页或运行时编译器。Runtime MUST不从Projection复制、转换或构造第二Native Program容器；任何内容或schema变化 MUST提升正式identity并要求显式Build。
+Seal Program Image Pass MUST验证全部Pass identity、schema、Rig、Operation Header、Family Payload、typed Value、Workspace handle、Stage、Source Map、容量和PoseProgramImageHash，并把不可变`CharacterPoseProgramImage`作为`CharacterPresentationProjection`内部唯一语义Pose程序随同一ProjectionRevision发布。Program Image MUST包含Runtime装配所需的完整固定数据，不得保存authoring asset、Editor对象、Actor状态、Frame页、运行时Tuning或运行时编译器。Runtime MUST不重新编译、重排或构造第二语义Program；如需不可序列化执行存储，每个Program Runtime只能建立最多一份同identity、actor-local、只读的Execution View并唯一Dispose。任何内容或schema变化 MUST提升PoseProgramImageHash与ProjectionRevision并要求显式Build。
 
 #### Scenario: Runtime加载Program Image
 
 - **WHEN** Character Presentation Runtime加载匹配Profile、Rig和Projection revision的Program Image
-- **THEN** Runtime MUST只按Image容量建立Actor State、Frame Transaction和Module实例
+- **THEN** Runtime MUST只按Image容量建立自己的actor-local Execution View、Actor State、Program Frame Pages、根Frame Transaction和Module实例
 - **AND** MUST不读取Pose Graph资产、Capability Catalog、Node Definition或Compiler
 
 #### Scenario: Program Image与Rig不匹配
@@ -164,7 +164,7 @@ Seal Program Image Pass MUST验证全部Pass identity、schema、Rig、Operation
 
 ### Requirement: 新Program ABI必须破坏性替换旧Projection
 
-分段Operation ABI接入时 MUST提升Presentation Projection schema、Program Image schema、ContractHash与ProjectionRevision，并通过显式Character Build重新发布正式generated资产。旧`CharacterPresentationPoseOperation`、旧Native Operation镜像、旧codec reader、旧字段默认补齐、兼容schema和Runtime fallback MUST删除；项目 MUST不同时维护两套Program reader或根据版本选择Executor。
+分段Operation ABI接入时 MUST提升Presentation Projection schema、Program Image schema、PoseProgramImageHash与ProjectionRevision，并通过显式Character Build重新发布正式generated资产。Gameplay-owned`CharacterPresentationSemanticContract.ContractHash`、SemanticHash、Float32/Fixed ProgramHash与Network identity MUST保持不变。旧`CharacterPresentationPoseOperation`、旧Native Operation镜像、旧codec reader、旧字段默认补齐、兼容schema和Runtime fallback MUST删除；项目 MUST不同时维护两套Program reader或根据版本选择Executor。
 
 #### Scenario: 加载旧Projection
 

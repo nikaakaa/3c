@@ -2,16 +2,16 @@
 
 ### Requirement: Authoring Capability Catalog必须是UI与Document的唯一语义目录
 
-唯一Framework MUST继续通过`GraphAuthoringCapabilityCatalog`查询每个domain的Graph kind、node kind、typed payload、静态/动态logical port、数据类型、Pose空间、非Pose瞬时value空间、execution domain、允许连接、资源引用、创建菜单、显示标题、Details provider与Mutation入口。Pose领域 MUST由唯一`CharacterPoseNodeDefinitionModule`为每个正式Node Kind集中声明Payload、字段、端口、Graph Role、Execution Domain、Operation Family、局部校验与typed lowering，并向共享Capability、人工UI、Document、Clipboard、Mutation、Validator和Compiler投影同一节点局部语义；Capability MUST不再保存与Pose Definition重复的Compiler Handler或布尔能力矩阵。
+唯一Framework MUST继续通过`GraphAuthoringCapabilityCatalog`查询每个domain的Graph kind、node kind、typed payload、固定端口、条件`portVariants`、动态logical port、数据类型、Pose空间、非Pose瞬时value空间、execution domain、允许连接、资源引用、创建菜单、显示标题、Details provider与Mutation入口。Pose领域 MUST由唯一`CharacterPoseNodeDefinitionModule`为每个正式Node Kind集中声明Payload、字段、端口、Graph Role、Execution Domain、Operation Family、Graph dependency、局部校验与typed lowering，并向共享Capability投影同一节点局部语义；Capability MUST不再保存与Pose Definition重复的Compiler Handler或布尔能力矩阵。
 
-BTSMTL、AI与其它Graph领域 MAY通过各自正式Definition Adapter向同一Framework提供Capability，但 MUST不被迫引用Pose运行类型。人工UI、Document exporter、strict parser、Reconciler、Validator和Compiler MUST读取同一领域Definition/Capability投影；固定port MUST不在实例数据中复制。Definition与Capability未声明的字段、port、Pose空间转换、瞬时value lineage或execution domain MUST不被任何入口创建或保存，系统 MUST不按C#类型名、显示名、窗口类型或字段路径重复硬编码能力。
+BTSMTL、AI与其它Graph领域 MAY通过各自正式Definition Adapter向同一Framework提供Capability，但 MUST不被迫引用Pose运行类型。唯一`GraphAuthoringNodePortShapeProjector` MUST只从Capability、typed properties与node-local动态端口合成固定、唯一命中的条件端口和动态端口，并拒绝三类端口identity重叠。人工UI、Document exporter、strict parser、Target Mapper、Clipboard、Reconciler、Mutation preflight和Validator MUST只消费同一Capability与Port Shape；不得各自判断mode、构造默认Node或从现有edge反推端口。Compiler MUST从同一Pose Definition读取Graph dependency与typed lowering。Definition与Capability未声明的字段、port、Pose空间转换、瞬时value lineage或execution domain MUST不被任何入口创建或保存，系统 MUST不按C#类型名、显示名、窗口类型或字段路径重复硬编码能力。
 
-Pose Node Definition只拥有节点局部作者与lowering语义，MUST不接管Document package路径、文件闭包、diff、Undo、rollback、save或reverse export事务；现有Reconciler与Document Transaction Service MUST继续分别拥有唯一对账和事务生命周期。
+Pose Node Definition只拥有节点局部作者语义、直接Graph dependency与lowering语义，MUST不接管Document package路径、文件闭包、diff、Undo、rollback、save、reverse export或五个MCP生命周期；现有Reconciler与Document Transaction Service MUST继续分别拥有唯一对账和事务生命周期。Definition变化如果改变Agent能看到、创建、连接或必须验证的语义，MUST同步Document v4模型、Presentation codec/exporter、Target Mapper、唯一Reconciler、typed Presentation Mutation、Validator与`btsmtl-agent-authoring`当前合同。
 
 #### Scenario: FootPlacement声明双输出
 
 - **WHEN** FootPlacement Pose Definition声明`pose.component`与`component.full-body-ik-goal-contribution`两个输出
-- **THEN** Capability、Canvas、Document、Validator与Compiler MUST从同一Definition投影识别两个稳定port及其lineage规则
+- **THEN** Capability与唯一Port Shape Projector MUST让Canvas、Document、Reconciler、Mutation、Validator与Compiler识别两个稳定port及其lineage规则
 - **AND** MUST不把Goal Contribution伪装成Pose、动态字符串port或隐藏Compiler字段
 
 #### Scenario: Goal Contribution连接错误节点
@@ -23,7 +23,7 @@ Pose Node Definition只拥有节点局部作者与lowering语义，MUST不接管
 #### Scenario: 新增Pose节点能力
 
 - **WHEN** 开发者注册一个新的Component Pose骨骼控制节点
-- **THEN** 唯一Pose Definition MUST声明其Component Pose端口、execution domain、typed payload、Operation Family与typed lowering
+- **THEN** 唯一Pose Definition MUST声明其Component Pose端口、execution domain、typed payload、Operation Family、Graph dependency与typed lowering
 - **AND** Capability、人工创建菜单、Document、Validator和Compiler MUST同时识别该能力而不得注册第二Compiler Handler
 
 #### Scenario: Definition未声明字段

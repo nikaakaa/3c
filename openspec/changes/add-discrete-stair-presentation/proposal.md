@@ -49,4 +49,4 @@
 - current `deterministic-kcc-world-solver`的Baker楼梯段落同样使用宽泛“连续梯段”措辞。本change明确楼梯validator只约束已注册Ramp绑定；未注册的离散台阶继续沿普通显式`Ground` Surface owner进入Artifact。KCC算法要求不变。
 - current `character-presentation-interpolation`要求正常连续interval不持续运行第二次SmoothDamp，并让Grounded branch replacement的Y直接使用target。本change不改变这两个要求；新增阶段只处理普通canonical interval中达到阈值的接地竖直不连续，且不参与branch replacement纠偏。
 - current `character-camera-pipeline`已经要求VisualRoot和默认Camera使用同一个Body visible pose。本change继续沿该路径传递竖直修正，不创建Camera专用滤波器。
-- completed但未归档的`separate-stair-gameplay-and-foot-surfaces`仍然是Ramp楼梯工具与现有六条Ramp的实现来源；本change不撤销、不复制其作者工具，只在同一场景旁增加普通Ground离散楼梯。
+- 已归档的`separate-stair-gameplay-and-foot-surfaces`是Ramp楼梯工具与现有六条Ramp的历史来源；当前行为以current specs和现有场景合同为准。本change不撤销、不复制其作者工具，只在同一场景旁增加普通Ground离散楼梯。

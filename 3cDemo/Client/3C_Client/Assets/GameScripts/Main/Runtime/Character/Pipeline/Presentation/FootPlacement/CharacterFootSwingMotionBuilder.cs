@@ -353,7 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingResidualBeforeDecay = path.ResidualBeforeDecay;
             SwingResidualAfterDecay = path.ResidualAfterDecay;
             ResidualOutputCorrection = path.ResidualOutputCorrection;
-            LandingUpdateDistance = path.LandingUpdateDistance;
+            SwingRevisionDistance = path.SwingRevisionDistance;
             ResidualTimeToLandingSeconds = path.TimeToLandingSeconds;
             ResidualBaseHalfLifeSeconds = path.BaseHalfLifeSeconds;
             ResidualDeadlineHalfLifeAvailable = path.DeadlineHalfLifeAvailable;
@@ -438,7 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SwingResidualBeforeDecay { get; }
         public Vector3 SwingResidualAfterDecay { get; }
         public Vector3 ResidualOutputCorrection { get; }
-        public float LandingUpdateDistance { get; }
+        public float SwingRevisionDistance { get; }
         public float ResidualTimeToLandingSeconds { get; }
         public float ResidualBaseHalfLifeSeconds { get; }
         public bool ResidualDeadlineHalfLifeAvailable { get; }

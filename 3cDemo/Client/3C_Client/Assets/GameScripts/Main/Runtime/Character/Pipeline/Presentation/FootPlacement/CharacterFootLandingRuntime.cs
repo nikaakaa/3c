@@ -119,13 +119,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLandingPredictionResult diagnostics,
             in CharacterFootMotionSettings settings)
         {
+            AnimationFootMotionEventFrame events = formalFootMotion.Events;
+            AnimationFootMotionEventOccurrence next = events.NextLanding;
             if (context.TrackingState ==
                 CharacterFootLandingTrackingState.Committed)
             {
-                return;
+                bool retainsCommittedNext = next.IsBound &&
+                    context.TrackedEventIdentity == next.Identity &&
+                    context.NextSwingLanding.HasValue &&
+                    context.NextSwingLanding.LandingEventIdentity == next.Identity;
+                if (retainsCommittedNext)
+                    return;
+                context.TrackedEventIdentity = 0;
+                context.ClearNextSwing();
             }
-            AnimationFootMotionEventFrame events = formalFootMotion.Events;
-            AnimationFootMotionEventOccurrence next = events.NextLanding;
             bool predictivePhase =
                 events.Phase == AnimationFootMotionEventPhase.PreSwing ||
                 events.Phase == AnimationFootMotionEventPhase.Swing ||

@@ -49,14 +49,11 @@ namespace ThirdPersonSimulation.Fixed
         public FixedCharacterInputTrace(
             string traceId,
             ActorId actorId,
-            ProgramHash programHash,
             int tickRate,
-            WorldBodyState startBody,
             IEnumerable<FixedCharacterInputTraceFrame> frames)
         {
             if (string.IsNullOrWhiteSpace(traceId) || !actorId.IsValid ||
-                !programHash.IsValid || tickRate <= 0 ||
-                startBody.ActorId != actorId)
+                tickRate <= 0)
             {
                 throw new ArgumentException("Fixed character input trace identity is incomplete.");
             }
@@ -78,19 +75,13 @@ namespace ThirdPersonSimulation.Fixed
             }
             TraceId = traceId.Trim();
             ActorId = actorId;
-            ProgramHash = programHash;
             TickRate = tickRate;
-            StartBody = startBody;
-            StartBodyHash = ComputeBodyHash(startBody);
             m_Frames = values.AsReadOnly();
         }
 
         public string TraceId { get; }
         public ActorId ActorId { get; }
-        public ProgramHash ProgramHash { get; }
         public int TickRate { get; }
-        public WorldBodyState StartBody { get; }
-        public StableHash StartBodyHash { get; }
         public IReadOnlyList<FixedCharacterInputTraceFrame> Frames => m_Frames;
 
         public static StableHash ComputeBodyHash(WorldBodyState body) =>
@@ -239,7 +230,6 @@ namespace ThirdPersonSimulation.Fixed
 
         static FixedCharacterInputTraceMode s_Mode;
         static ActorId s_ActorId;
-        static ProgramHash s_ProgramHash;
         static int s_TickRate;
         static FixedCharacterInputTrace s_Replay;
         static WorldBodyState s_StartBody;
@@ -298,8 +288,8 @@ namespace ThirdPersonSimulation.Fixed
             if (s_Mode != FixedCharacterInputTraceMode.Recording)
                 throw new InvalidOperationException(
                     "Fixed character input recording is not active.");
-            if (s_RecordingFrames.Count == 0 || !s_ProgramHash.IsValid ||
-                s_TickRate <= 0 || !s_HasStartBody)
+            if (s_RecordingFrames.Count == 0 || s_TickRate <= 0 ||
+                !s_HasStartBody)
             {
                 throw new InvalidOperationException(
                     "Fixed character input recording has no canonical closure.");
@@ -307,9 +297,7 @@ namespace ThirdPersonSimulation.Fixed
             var trace = new FixedCharacterInputTrace(
                 s_TraceId,
                 s_ActorId,
-                s_ProgramHash,
                 s_TickRate,
-                s_StartBody,
                 s_RecordingFrames);
             ResetState();
             return trace;
@@ -323,10 +311,7 @@ namespace ThirdPersonSimulation.Fixed
             ResetState();
             s_Replay = trace;
             s_ActorId = trace.ActorId;
-            s_ProgramHash = trace.ProgramHash;
-            s_TickRate = trace.TickRate;
             s_TraceId = trace.TraceId;
-            s_StartBody = trace.StartBody;
             s_ReplayEvidence = new ReplayFrameBuilder[trace.Frames.Count];
             for (int i = 0; i < s_ReplayEvidence.Length; i++)
                 s_ReplayEvidence[i] = new ReplayFrameBuilder();
@@ -353,12 +338,6 @@ namespace ThirdPersonSimulation.Fixed
                 s_Mode != FixedCharacterInputTraceMode.PreparingReplay)
             {
                 return authoredBody;
-            }
-            if (s_Mode == FixedCharacterInputTraceMode.PreparingReplay &&
-                !BodyEquals(authoredBody, s_Replay.StartBody))
-            {
-                throw new InvalidOperationException(
-                    "Fixed character input replay authored spawn does not match the recorded canonical start body.");
             }
             if (s_HasStartBody && !BodyEquals(s_StartBody, authoredBody))
                 throw new InvalidOperationException(
@@ -447,7 +426,7 @@ namespace ThirdPersonSimulation.Fixed
             }
             return new FixedCharacterInputReplayEvidence(
                 s_Replay.TraceId,
-                s_Replay.StartBodyHash,
+                FixedCharacterInputTrace.ComputeBodyHash(s_StartBody),
                 s_ReplayStartTick,
                 frames);
         }
@@ -459,7 +438,6 @@ namespace ThirdPersonSimulation.Fixed
 
         public static CharacterSimulationInput Resolve(
             FixedCharacterInputBuildContext context,
-            ProgramHash programHash,
             CharacterSimulationInput liveInput)
         {
             if (liveInput == null)
@@ -477,14 +455,14 @@ namespace ThirdPersonSimulation.Fixed
                         throw new InvalidOperationException(
                             "Fixed character input recording consumed input before start release."),
                     FixedCharacterInputTraceMode.Recording =>
-                        Record(context, programHash, liveInput),
+                        Record(context, liveInput),
                     FixedCharacterInputTraceMode.PreparingReplay =>
                         throw new InvalidOperationException(
                             "Fixed character input replay consumed input before start release."),
                     FixedCharacterInputTraceMode.Replaying =>
-                        Replay(context, programHash),
+                        Replay(context),
                     FixedCharacterInputTraceMode.Completed =>
-                        HoldLastReplayFrame(context, programHash),
+                        HoldLastReplayFrame(context),
                     FixedCharacterInputTraceMode.Faulted =>
                         throw new InvalidOperationException(s_Message),
                     _ => liveInput
@@ -500,21 +478,17 @@ namespace ThirdPersonSimulation.Fixed
 
         static CharacterSimulationInput Record(
             FixedCharacterInputBuildContext context,
-            ProgramHash programHash,
             CharacterSimulationInput liveInput)
         {
             if (s_RecordingFrames.Count == 0)
             {
-                s_ProgramHash = programHash;
                 s_TickRate = context.TickRate;
             }
-            else if (!programHash.Equals(s_ProgramHash) ||
-                     context.TickRate != s_TickRate ||
-                     s_RecordingFrames[^1].Tick.Value + 1 !=
+            else if (s_RecordingFrames[^1].Tick.Value + 1 !=
                      context.SimulationTick.Value)
             {
                 throw new InvalidOperationException(
-                    "Fixed character input recording identity or Tick continuity changed.");
+                    "Fixed character input recording Tick continuity changed.");
             }
             s_RecordingFrames.Add(new FixedCharacterInputTraceFrame(
                 context.ActorId,
@@ -525,10 +499,8 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static CharacterSimulationInput Replay(
-            FixedCharacterInputBuildContext context,
-            ProgramHash programHash)
+            FixedCharacterInputBuildContext context)
         {
-            ValidateReplayContext(context, programHash);
             if (s_ReplayStartTick == 0)
                 s_ReplayStartTick = context.SimulationTick.Value;
             ulong expectedTick = checked(s_ReplayStartTick + (ulong)s_ReplayIndex);
@@ -558,10 +530,8 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static CharacterSimulationInput HoldLastReplayFrame(
-            FixedCharacterInputBuildContext context,
-            ProgramHash programHash)
+            FixedCharacterInputBuildContext context)
         {
-            ValidateReplayContext(context, programHash);
             FixedCharacterInputTraceFrame frame = s_Replay.Frames[^1];
             return new CharacterSimulationInput(
                 FixedSimulationNumericProfile.Value,
@@ -619,18 +589,6 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException(
                     "Fixed character input request predates the replay clock.");
             return replayFrameTick - age;
-        }
-
-        static void ValidateReplayContext(
-            FixedCharacterInputBuildContext context,
-            ProgramHash programHash)
-        {
-            if (!programHash.Equals(s_ProgramHash))
-                throw new InvalidOperationException(
-                    "Fixed character input replay ProgramHash does not match the recording.");
-            if (context.TickRate != s_TickRate)
-                throw new InvalidOperationException(
-                    "Fixed character input replay TickRate does not match the recording.");
         }
 
         static bool BodyEquals(WorldBodyState left, WorldBodyState right) =>
@@ -713,7 +671,6 @@ namespace ThirdPersonSimulation.Fixed
         {
             s_Mode = FixedCharacterInputTraceMode.Idle;
             s_ActorId = default;
-            s_ProgramHash = default;
             s_TickRate = 0;
             s_Replay = null;
             s_StartBody = default;

@@ -31,10 +31,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFixedInputScheduledReplayProof
     {
-        const string Schema = "character-fixed-input-replay-proof/3";
+        const string Schema = "character-fixed-input-replay-proof/4";
 
         internal static CharacterFixedInputScheduledReplayProofResult Publish(
             in CharacterFixedInputPresentationScheduleBinding binding,
+            in CharacterFixedInputReplayRuntimeIdentity runtimeIdentity,
             CharacterFixedInputPresentationSchedule schedule,
             FixedCharacterInputReplayEvidence fixedEvidence,
             IReadOnlyList<GameplayPresentationScheduleFrame> scheduleFrames,
@@ -52,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             ProofDocument document = Build(
                 in binding,
+                in runtimeIdentity,
                 schedule,
                 fixedEvidence,
                 scheduleFrames,
@@ -88,6 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static ProofDocument Build(
             in CharacterFixedInputPresentationScheduleBinding binding,
+            in CharacterFixedInputReplayRuntimeIdentity runtimeIdentity,
             CharacterFixedInputPresentationSchedule schedule,
             FixedCharacterInputReplayEvidence fixedEvidence,
             IReadOnlyList<GameplayPresentationScheduleFrame> scheduleFrames,
@@ -139,6 +142,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CultureInfo.InvariantCulture),
                 trace_id = binding.TraceId,
                 trace_content_hash = binding.TraceContentHash,
+                runtime_identity = new RuntimeIdentityDocument
+                {
+                    program_id = runtimeIdentity.ProgramId,
+                    program_hash = runtimeIdentity.ProgramHash,
+                    source_revision = runtimeIdentity.SourceRevision,
+                    semantic_hash = runtimeIdentity.SemanticHash,
+                    tick_rate = runtimeIdentity.TickRate,
+                    projection_revision = runtimeIdentity.ProjectionRevision,
+                    projection_source_revision = runtimeIdentity.ProjectionSourceRevision,
+                    projection_semantic_hash = runtimeIdentity.ProjectionSemanticHash,
+                    projection_contract_hash = runtimeIdentity.ProjectionContractHash,
+                    world_revision = runtimeIdentity.WorldRevision,
+                    launcher_variant_index = runtimeIdentity.LauncherVariantIndex
+                },
                 start_body_hash = fixedEvidence.StartBodyHash.ToString(),
                 fixed_frame_count = fixedFrames.Length,
                 input_sequence_hash =
@@ -183,6 +200,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "trace_content_hash",
                 baseline.trace_content_hash,
                 candidate.trace_content_hash);
+            AddRuntimeIdentity(
+                aggregate,
+                baseline.runtime_identity,
+                candidate.runtime_identity);
             Add(
                 aggregate,
                 "start_body_hash",
@@ -371,6 +392,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             });
         }
 
+        static void AddRuntimeIdentity(
+            ICollection<MismatchDocument> target,
+            RuntimeIdentityDocument baseline,
+            RuntimeIdentityDocument candidate)
+        {
+            Add(target, "program_id", baseline.program_id, candidate.program_id);
+            Add(target, "program_hash", baseline.program_hash, candidate.program_hash);
+            Add(target, "source_revision", baseline.source_revision, candidate.source_revision);
+            Add(target, "semantic_hash", baseline.semantic_hash, candidate.semantic_hash);
+            Add(target, "runtime_tick_rate", baseline.tick_rate, candidate.tick_rate);
+            Add(target, "projection_revision", baseline.projection_revision, candidate.projection_revision);
+            Add(target, "projection_source_revision", baseline.projection_source_revision, candidate.projection_source_revision);
+            Add(target, "projection_semantic_hash", baseline.projection_semantic_hash, candidate.projection_semantic_hash);
+            Add(target, "projection_contract_hash", baseline.projection_contract_hash, candidate.projection_contract_hash);
+            Add(target, "world_revision", baseline.world_revision, candidate.world_revision);
+            Add(target, "launcher_variant_index", baseline.launcher_variant_index, candidate.launcher_variant_index);
+        }
+
         static string Format(object value) => value switch
         {
             float number => number.ToString("R", CultureInfo.InvariantCulture),
@@ -409,6 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Append(hash, document.created_utc);
             Append(hash, document.trace_id);
             Append(hash, document.trace_content_hash);
+            AppendRuntimeIdentity(hash, document.runtime_identity);
             Append(hash, document.start_body_hash);
             Append(hash, document.input_sequence_hash);
             Append(hash, document.body_trajectory_hash);
@@ -424,6 +464,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Append(hash, document.fixed_frames[i].body_hash);
             }
             return ToHex(hash.GetHashAndReset());
+        }
+
+        static void AppendRuntimeIdentity(
+            IncrementalHash hash,
+            RuntimeIdentityDocument identity)
+        {
+            Append(hash, identity.program_id);
+            Append(hash, identity.program_hash);
+            Append(hash, identity.source_revision);
+            Append(hash, identity.semantic_hash);
+            Append(hash, identity.tick_rate);
+            Append(hash, identity.projection_revision);
+            Append(hash, identity.projection_source_revision);
+            Append(hash, identity.projection_semantic_hash);
+            Append(hash, identity.projection_contract_hash);
+            Append(hash, identity.world_revision);
+            Append(hash, identity.launcher_variant_index);
         }
 
         static void Append(IncrementalHash hash, object value)
@@ -449,7 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "..",
                 "Temp",
                 "CharacterInputReplayProofs",
-                "v3",
+                "v4",
                 traceId,
                 scheduleHash));
 
@@ -465,13 +522,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (document == null || document.schema != Schema ||
                 document.fixed_frames == null ||
                 document.presentation_frames == null ||
-                document.foot == null)
+                document.foot == null ||
+                !IsRuntimeIdentityValid(document.runtime_identity))
             {
                 throw new InvalidDataException(
                     "Scheduled replay baseline proof is invalid.");
             }
             return document;
         }
+
+        static bool IsRuntimeIdentityValid(RuntimeIdentityDocument identity) =>
+            identity != null &&
+            !string.IsNullOrWhiteSpace(identity.program_id) &&
+            !string.IsNullOrWhiteSpace(identity.program_hash) &&
+            !string.IsNullOrWhiteSpace(identity.source_revision) &&
+            !string.IsNullOrWhiteSpace(identity.semantic_hash) &&
+            identity.tick_rate > 0 &&
+            !string.IsNullOrWhiteSpace(identity.projection_revision) &&
+            !string.IsNullOrWhiteSpace(identity.projection_source_revision) &&
+            !string.IsNullOrWhiteSpace(identity.projection_semantic_hash) &&
+            !string.IsNullOrWhiteSpace(identity.projection_contract_hash) &&
+            !string.IsNullOrWhiteSpace(identity.world_revision) &&
+            identity.launcher_variant_index >= 0;
 
         static void Write(string path, ProofDocument document)
         {
@@ -530,6 +602,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string created_utc;
             public string trace_id;
             public string trace_content_hash;
+            public RuntimeIdentityDocument runtime_identity;
             public string start_body_hash;
             public int fixed_frame_count;
             public string input_sequence_hash;
@@ -544,6 +617,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public ScheduleFrameDocument[] presentation_frames;
             public ComparisonDocument comparison;
             public string proof_hash;
+        }
+
+        [Serializable]
+        sealed class RuntimeIdentityDocument
+        {
+            public string program_id;
+            public string program_hash;
+            public string source_revision;
+            public string semantic_hash;
+            public int tick_rate;
+            public string projection_revision;
+            public string projection_source_revision;
+            public string projection_semantic_hash;
+            public string projection_contract_hash;
+            public string world_revision;
+            public int launcher_variant_index;
         }
 
         [Serializable]

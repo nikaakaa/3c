@@ -221,13 +221,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootPathRevisionReason.LandingEventChanged;
             }
             if (comparablePath &&
-                landingPointDelta > frame.Settings.LandingUpdateDistance)
+                landingPointDelta > frame.Settings.PathRevisionDistance)
             {
                 revisionReason |=
                     CharacterFootPathRevisionReason.LandingPointChanged;
             }
             if (comparablePath &&
-                targetDelta > frame.Settings.LandingUpdateDistance)
+                targetDelta > frame.Settings.PathRevisionDistance)
             {
                 revisionReason |=
                     CharacterFootPathRevisionReason.SwingTargetChanged;

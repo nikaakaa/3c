@@ -75,7 +75,7 @@ FutureLanding世界事实固定拆成`Raw Landing -> canonical Landing Observati
 
 当前FootPlacementSurface在World Query Backend生命周期内视为静态，Backend发布固定非零World Revision；Reset、Retarget或Backend重建必须清空每脚Observation Page。移动平台和运行时Surface变更不在本change范围。
 
-Ground Path Input identity只表示查询输入lineage，不单独触发Residual重置。Interpolation Runtime只有在Event、Path可用性、Landing端点或正式Swing目标变化超过现有`LandingUpdateDistance`时捕获`PreviousOutput - NewTarget`。原始Builder目标与State Target继续分列诊断，不得互相改名覆盖。
+Ground Path Input identity只表示查询输入lineage，不单独触发Residual重置。Interpolation Runtime只有在Event、Path可用性、Landing端点或正式Swing目标变化超过独立`PathRevisionDistance`时捕获`PreviousOutput - NewTarget`。原始Builder目标与State Target继续分列诊断，不得互相改名覆盖。`PathRevisionDistance`不得控制Landing接受、Residual截止或Release完成。
 
 Accepted Swing Motion必须携带与同一Ground Path Event匹配的typed Swing Path Landing Reference。Promoted Landing与按当前Step解析的Landing只属于Contact/Anchor准入，不得门控Swing Path可用性或提供Swing Residual的Landing Point。同帧旧Event完成并Promote、下一Swing Event已经Accepted时，Foot根事务必须同时保留旧Contact Landing和新Swing Path Landing，不得把Path发布为一帧不可用。
 

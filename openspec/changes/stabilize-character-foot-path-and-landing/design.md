@@ -59,13 +59,13 @@ Releasing -> Swing
 
 输入驱动的边在Pre-Interpolation阶段执行；只有依赖本帧插值完成事实的边在Post-Interpolation阶段执行。`Releasing -> Swing`属于Post阶段，完成后必须用Swing输出分类执行同帧Hard Constraint。系统不得循环求Transition直到稳定，也不得让状态目标或插值器暗中改State。唯一Transition Runtime负责应用Decision、改写离散State、执行Anchor Create/Retain/Release命令并记录原因；其他模块不得写这些字段。
 
-`CharacterFootStateTargetResolver`按已经确定的State纯计算本帧目标，输出目标Correction、Reference、Contact/Support/Reach意图和固定typed Interpolation Request。它不得读取或推进Delta Time、Residual、Progress与上一输出，也不得查询世界。Swing/UnlockedSupport目标来自Ground Path、Envelope、正式Foot Height与已经查询完成的不可变CurrentSwingFloor下界；Landing/Locked目标来自唯一Anchor和正式Contact/Lock；Releasing只回到原始动画Swing目标，不继承CurrentSwingFloor连续目标。
+`CharacterFootStateTargetResolver`按已经确定的State纯计算本帧目标，输出目标Correction、Reference、Contact/Support/Reach意图和固定typed Interpolation Request。它不得读取或推进Delta Time、Residual、Progress与上一输出，也不得查询世界。Swing/UnlockedSupport目标只来自Ground Path、Envelope与正式Foot Height；Landing/Locked目标来自唯一Anchor和正式Contact/Lock；Releasing只回到原始动画Swing目标。CurrentSwingFloor不是预测目标输入。
 
 `CharacterFootInterpolationRuntime`是Effective Correction连续性的唯一所有者。它只接受`Previous Effective Correction + State Target + typed Policy + Delta Time`，持有一份统一Interpolation State并发布Output、Residual和Completion。现有Swing Residual、Acquire Residual、Release Residual、Contact Progress与散落的HalfLife推进必须迁入这里；政策固定为直接跟随、Residual Half-Life与正式Weight接管等有业务含义的typed策略，不提供string key、字典注册、任意曲线回调或项目级通用Tween。统一的是执行生命周期和状态所有权，不是强迫Swing、Landing与Release使用同一条曲线。
 
 根`CharacterFootStateContext`收敛为一组分型数据块：`Discrete State Context`只存当前State与最近Transition，`Contact Context`只存Anchor和Lock响应，`Interpolation State`只存上一目标、Effective Correction、统一Residual与完成事实，Landing与Observation继续使用各自typed Page。所有数据块仍由同一个Pending/Committed根事务一次Seal或Discard，不建立独立生命周期。
 
-Hard Constraint只在插值后消费结果并立即执行不可违反的物理边界。CurrentSwingFloor同一不可变事实先作为Swing连续目标下界进入唯一Interpolation，再在这里负责当前真实地面最低高度兜底；两阶段消费不得产生第二次Query。Landing Reach负责双腿可达和最小压缩余量。两者不得回写State Target、Residual或Transition，也不得被插值延迟。这样Floor下降通过统一Interpolation连续释放，Floor上升仍可立即保护，而真实穿地和已知超长Goal不会因为追求平滑被保留。
+Hard Constraint只在插值后消费结果并立即执行不可违反的物理边界。CurrentSwingFloor只在这里负责当前真实地面最低高度兜底，并复用本帧唯一Query结果；它不得进入State Target、触发Residual Revision或写回Interpolation历史。Landing Reach负责双腿可达和最小压缩余量。两者不得回写State Target、Residual或Transition，也不得被插值延迟。这样预测输入稳定时Swing连续目标保持稳定，真实穿地和已知超长Goal仍不会因为追求平滑被保留。
 
 ## Decision 4: 先定位Path同帧放大，再分离连续目标与Envelope安全
 
@@ -75,7 +75,7 @@ FutureLanding世界事实固定拆成`Raw Landing -> canonical Landing Observati
 
 当前FootPlacementSurface在World Query Backend生命周期内视为静态，Backend发布固定非零World Revision；Reset、Retarget或Backend重建必须清空每脚Observation Page。移动平台和运行时Surface变更不在本change范围。
 
-Ground Path Input identity只表示查询输入lineage，不单独触发Residual重置。Interpolation Runtime只有在Event、Path可用性、Landing端点、原始Swing目标或包含CurrentSwingFloor下界的连续State Target变化超过现有`LandingUpdateDistance`时捕获`PreviousOutput - NewTarget`；原始Builder目标与连续State Target必须分列诊断，不得互相改名覆盖。
+Ground Path Input identity只表示查询输入lineage，不单独触发Residual重置。Interpolation Runtime只有在Event、Path可用性、Landing端点或正式Swing目标变化超过现有`LandingUpdateDistance`时捕获`PreviousOutput - NewTarget`；CurrentSwingFloor命中变化不得触发Residual Revision。原始Builder目标与State Target继续分列诊断，不得互相改名覆盖。
 
 Accepted Swing Motion必须携带与同一Ground Path Event匹配的typed Swing Path Landing Reference。Promoted Landing与按当前Step解析的Landing只属于Contact/Anchor准入，不得门控Swing Path可用性或提供Swing Residual的Landing Point。同帧旧Event完成并Promote、下一Swing Event已经Accepted时，Foot根事务必须同时保留旧Contact Landing和新Swing Path Landing，不得把Path发布为一帧不可用。
 
@@ -83,7 +83,7 @@ Path诊断必须先在同Frame、Side与Event lineage下记录`Raw Landing/Path 
 
 在上述Correction链已经连续后，普通Swing目标使用统一Interpolation State中的Residual。基础半衰期仍来自Profile；当Residual大于`LandingUpdateDistance`时，Interpolation Runtime按剩余Step Time计算保证在Landing前收敛到容差所需的半衰期，并取它与基础半衰期的较小值。没有有效Step Time时不得猜测截止时间，只能发布明确输入不可用。Step Time只解决Landing前仍有Residual欠账，不负责改变Raw Target、重选State Output或修正同帧放大。
 
-Swing的未来Ground Path Envelope只服务连续轨迹目标，不得作为当前脚硬Floor。正式`CurrentSwingFloor`查询命中的真实Surface Point相对`AnimatedSole`沿Component Up所需的最低Correction，同时进入Swing连续State Target和插值后的Hard Constraint；两者必须复用同一查询结果。Query Miss、Capacity或Invalid时发布typed unavailable，不得回读未来Envelope补全。Foot Height、Landing目标和Residual属于连续目标，不得作为硬Floor。若CurrentSwingFloor在当前帧高于Interpolation Output，系统允许立即抬升并必须诊断为Safety Floor Clamp；Floor下降时由唯一Interpolation连续释放，不得把Hard Constraint输出写回Residual。
+Swing的未来Ground Path Envelope只服务连续轨迹目标，不得作为当前脚硬Floor。正式`CurrentSwingFloor`查询命中的真实Surface Point相对`AnimatedSole`沿Component Up所需的最低Correction只进入插值后的Hard Constraint。Query Miss、Capacity或Invalid时发布typed unavailable，不得回读未来Envelope补全。Foot Height、Landing目标和Residual属于连续目标，不得作为硬Floor。若CurrentSwingFloor在当前帧高于Interpolation Output，系统允许立即抬升并必须诊断为Safety Floor Clamp；CurrentSwingFloor变化不得重建Swing目标或Residual，也不得把Hard Constraint输出写回Interpolation历史。
 
 `Releasing -> Swing`完成必须由Post-Interpolation Transition先更新顶层State，再按新State执行Ground Floor和最终输出分类，避免同一帧发布Swing却跳过Swing Envelope保护。
 
@@ -158,6 +158,7 @@ Diagnostics不得创建Anchor、选择Support、改变Reach、Clamp Goal或执�
 - 复用Animation Pose Graph的Transition Routing；Pose Source权重换代与Foot接触所有权是两种业务事务，共用路由会让Foot状态依赖动画图内部生命周期。
 - 保留旧`CharacterFootStateMachine`作为新模块外的转发或兼容入口；这会让离散状态和Effective Correction继续存在两个可写位置。
 - Path identity每帧变化就无条件重置Residual。
+- 把每帧CurrentSwingFloor命中接进Swing State Target并以`ContinuousTargetChanged`重建Residual；这会让预测输入稳定时悬空脚仍追逐实时地面查询。
 - 把完整Swing目标当作Ground Floor，或为了连续性允许脚穿过真实Envelope。
 - 把当前脚水平投影到一维Ground Path上包络并取同距离最高点；该做法无法区分竖直边两侧的真实Surface。
 - 直接给膝盖设置最小角度而不处理Foot Goal与Pelvis可达。

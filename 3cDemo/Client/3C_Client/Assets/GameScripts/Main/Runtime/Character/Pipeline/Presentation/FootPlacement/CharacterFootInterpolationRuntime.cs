@@ -1,3 +1,4 @@
+using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -163,8 +164,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.EffectiveCorrection =
                     target.Correction + state.Residual;
             }
-            state.Completed = frame.LockRequest.Weight <=
-                              CharacterFootConstraintMath.GeometryEpsilon &&
+            state.Completed = frame.SwingMotion.PlantConfidence <
+                              AnimationFootConstraintFacts
+                                  .GroundedMinimumConfidence &&
                               Vector3.Distance(
                                   state.EffectiveCorrection,
                                   target.SwingCorrection) <=

@@ -3360,10 +3360,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FormalLockMode = Cell("InputFormalLockMode"),
                 FormalLockWeight = Float("InputFormalLockWeight"),
                 FormalSupport = Float("InputFormalSupport"),
-                FormalCurrentContactEventIdentity =
-                    Ulong("InputFormalCurrentContactEventIdentity"),
-                FormalNextLandingEventIdentity =
-                    Ulong("InputFormalNextLandingEventIdentity"),
                 LandingPredictionState = Cell("State"),
                 ObservedLandingEventIdentity = Ulong("LandingEventIdentity"),
                 ObservedLandingAccepted = Int("Accepted") != 0,
@@ -3670,11 +3666,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "SelectedStepSource");
             bool selectedStepConsistent = frame.SelectedStepSource == "None"
                 ? frame.SelectedLandingEventIdentity == 0
-                : frame.SelectedStepSource == "FormalCurrentContact"
+                : frame.SelectedStepSource == "Current"
                     ? frame.SelectedLandingEventIdentity ==
-                      frame.FormalCurrentContactEventIdentity
+                      frame.CurrentStep.LandingEventIdentity
                     : frame.SelectedLandingEventIdentity ==
-                      frame.FormalNextLandingEventIdentity;
+                      frame.IncomingStep.LandingEventIdentity;
             if (!selectedStepConsistent ||
                 frame.StepSelectionMaximumPredictionTimeSeconds <= 0f)
             {
@@ -3684,9 +3680,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireStepPhase(frame.CurrentStep, "CurrentStep");
             RequireStepPhase(frame.IncomingStep, "IncomingStep");
             StepCandidateFrame selected = frame.SelectedStepSource ==
-                                          "FormalNextLanding"
+                                          "Current"
                 ? frame.CurrentStep
-                : null;
+                : frame.SelectedStepSource == "Incoming"
+                    ? frame.IncomingStep
+                    : null;
             if (selected == null
                     ? frame.SelectedStepEventPhase != 0f ||
                       frame.SelectedStepApproachContactPhase != 0f ||
@@ -4963,8 +4961,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string FormalLockMode;
             internal float FormalLockWeight;
             internal float FormalSupport;
-            internal ulong FormalCurrentContactEventIdentity;
-            internal ulong FormalNextLandingEventIdentity;
             internal string LandingPredictionState;
             internal ulong ObservedLandingEventIdentity;
             internal bool ObservedLandingAccepted;
@@ -5452,9 +5448,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.IncomingStep.TimeToLandingSeconds)
                     : null;
                 double? selectedOldTime =
-                    frame.SelectedStepSource == "FormalNextLanding"
+                    frame.SelectedStepSource == "Current"
                         ? frame.CurrentStep.TimeToLandingSeconds
-                        : null;
+                        : frame.SelectedStepSource == "Incoming"
+                            ? frame.IncomingStep.TimeToLandingSeconds
+                            : null;
                 double? selectedDelta = frame.FormalObservationAvailable &&
                                         selectedOldTime.HasValue
                     ? Math.Abs(frame.FormalStepTime - selectedOldTime.Value)

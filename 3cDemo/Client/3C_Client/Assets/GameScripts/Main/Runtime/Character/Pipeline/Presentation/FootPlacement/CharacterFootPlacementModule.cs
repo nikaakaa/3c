@@ -35,12 +35,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathPage RightGroundPath;
         internal CharacterFootLandingObservationPage LeftLandingObservation;
         internal CharacterFootLandingObservationPage RightLandingObservation;
+        internal CharacterFootPredictionMotionState PredictionMotion;
+        internal CharacterFootPredictionMotionResult PredictionMotionResult;
         internal readonly CharacterFutureBodyTranslation BodyTrajectory =
             new CharacterFutureBodyTranslation();
         internal ulong BodyTrajectoryTick;
         internal ulong BodyTrajectoryResetSequence;
         internal ulong BodyTrajectoryGeneration;
         internal ulong BodyTrajectoryAuthorityTick;
+        internal ulong BodyTrajectoryPredictionMotionRevision;
         internal float BodyTrajectoryRequestedDuration;
         internal bool HasBodyTrajectoryAttempt;
         internal readonly CharacterFootPlacementDiagnosticsPage Diagnostics =
@@ -73,11 +76,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RightGroundPath = null;
                 LeftLandingObservation = null;
                 RightLandingObservation = null;
+                PredictionMotion = committed.PredictionMotion;
+                PredictionMotionResult = default;
                 BodyTrajectory.CopyFrom(committed.BodyTrajectory);
                 BodyTrajectoryTick = committed.BodyTrajectoryTick;
                 BodyTrajectoryResetSequence = committed.BodyTrajectoryResetSequence;
                 BodyTrajectoryGeneration = committed.BodyTrajectoryGeneration;
                 BodyTrajectoryAuthorityTick = committed.BodyTrajectoryAuthorityTick;
+                BodyTrajectoryPredictionMotionRevision =
+                    committed.BodyTrajectoryPredictionMotionRevision;
                 BodyTrajectoryRequestedDuration = committed.BodyTrajectoryRequestedDuration;
                 HasBodyTrajectoryAttempt = committed.HasBodyTrajectoryAttempt;
                 Diagnostics.Clear();
@@ -94,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RightGroundPath = null;
             LeftLandingObservation = null;
             RightLandingObservation = null;
+            PredictionMotionResult = default;
             ResolvedFeet = default;
             StrideHips = default;
             PelvisGoal = default;
@@ -121,11 +129,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RightGroundPath = null;
             LeftLandingObservation = null;
             RightLandingObservation = null;
+            PredictionMotion.Clear();
+            PredictionMotionResult = default;
             BodyTrajectory.Clear();
             BodyTrajectoryTick = 0;
             BodyTrajectoryResetSequence = 0;
             BodyTrajectoryGeneration = 0;
             BodyTrajectoryAuthorityTick = 0;
+            BodyTrajectoryPredictionMotionRevision = 0;
             BodyTrajectoryRequestedDuration = 0f;
             HasBodyTrajectoryAttempt = false;
             Diagnostics.Clear();
@@ -261,6 +272,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightCurrentStep,
                 in timeline,
                 currentSegmentRemainingSeconds,
+                frame.PresentationDeltaSeconds,
                 frame.Body);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
 
@@ -561,6 +573,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in rightAction,
                     in timeline,
                     currentSegmentRemainingSeconds,
+                    in bank.PredictionMotionResult,
                     in footStepObservation);
                 var leftDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
@@ -1174,14 +1187,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootMotionRuntimeSample rightFootMotion,
             in CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
+            float presentationDeltaSeconds,
             CharacterBodyPresentationFrame body)
         {
+            CharacterFootLandingPredictionSettings settings =
+                m_Settings.LandingPrediction;
+            Vector2 rawCurrentVelocity = timeline.IsValid
+                ? new Vector2(
+                    timeline.CurrentVelocityX,
+                    timeline.CurrentVelocityZ)
+                : default;
+            Vector2 rawContinuationVelocity = timeline.IsValid
+                ? new Vector2(
+                    timeline.ContinuationVelocityX,
+                    timeline.ContinuationVelocityZ)
+                : default;
+            string predictionSourceIdentity =
+                m_FutureBodyTranslationSource?.PredictionSourceIdentity ??
+                string.Empty;
+            CharacterFootPredictionMotionResult predictionMotion =
+                CharacterFootPredictionMotionRuntime.Evaluate(
+                    ref bank.PredictionMotion,
+                    timeline.IsValid,
+                    timeline.IsValid ? timeline.Generation : 0,
+                    body.ResetSequence,
+                    predictionSourceIdentity,
+                    rawCurrentVelocity,
+                    rawContinuationVelocity,
+                    presentationDeltaSeconds,
+                    in settings);
+            bank.PredictionMotionResult = predictionMotion;
             float maximum = m_Settings.LandingPrediction.MaximumPredictionTimeSeconds;
             float leftTime = ResolvePredictionTime(leftFootMotion, maximum);
             float rightTime = ResolvePredictionTime(rightFootMotion, maximum);
             float duration = Mathf.Max(leftTime, rightTime);
-            if (duration <= 0f || !timeline.IsValid ||
+            if (!predictionMotion.IsValid ||
                 m_FutureBodyTranslationSource == null)
+            {
+                bank.BodyTrajectory.Clear();
+                bank.HasBodyTrajectoryAttempt = false;
+                bank.BodyTrajectoryPredictionMotionRevision = 0;
+                return null;
+            }
+            if (duration <= 0f)
             {
                 return null;
             }
@@ -1190,7 +1238,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                      bank.BodyTrajectoryTick == body.CurrentTick &&
                                      bank.BodyTrajectoryResetSequence == body.ResetSequence &&
                                      bank.BodyTrajectoryGeneration == timeline.Generation &&
-                                     bank.BodyTrajectoryAuthorityTick == timeline.AuthorityTick.Value;
+                                     bank.BodyTrajectoryAuthorityTick == timeline.AuthorityTick.Value &&
+                                     bank.BodyTrajectoryPredictionMotionRevision ==
+                                     predictionMotion.Revision;
             if (sameCommittedBody &&
                 duration <= bank.BodyTrajectoryRequestedDuration + 0.0001f)
             {
@@ -1204,16 +1254,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bank.BodyTrajectoryResetSequence = body.ResetSequence;
             bank.BodyTrajectoryGeneration = timeline.Generation;
             bank.BodyTrajectoryAuthorityTick = timeline.AuthorityTick.Value;
+            bank.BodyTrajectoryPredictionMotionRevision =
+                predictionMotion.Revision;
             bank.BodyTrajectoryRequestedDuration = duration;
             bank.BodyTrajectory.Clear();
 
             var request = new CharacterFutureBodyTranslationRequest(
                 m_ActorId,
                 duration,
-                body.TargetVelocity.x,
-                body.TargetVelocity.z,
-                timeline.ContinuationVelocityX,
-                timeline.ContinuationVelocityZ,
+                predictionMotion.StableCurrentVelocity.x,
+                predictionMotion.StableCurrentVelocity.y,
+                predictionMotion.StableContinuationVelocity.x,
+                predictionMotion.StableContinuationVelocity.y,
                 currentSegmentRemainingSeconds,
                 timeline.HasContinuation,
                 leftTime,

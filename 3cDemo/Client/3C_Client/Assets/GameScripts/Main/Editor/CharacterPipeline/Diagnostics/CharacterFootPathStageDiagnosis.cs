@@ -85,6 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string lockResponseAfter;
         public string revisionReason;
         public bool residualRebuilt;
+        public bool targetTrackingApplied;
         public bool safetyFloorClamped;
 
         internal void RequireValid(bool required)

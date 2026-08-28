@@ -2196,6 +2196,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 lockResponseAfter = current.LockResponse,
                 revisionReason = current.PathRevisionReason,
                 residualRebuilt = current.PathResidualRebuilt,
+                targetTrackingApplied = current.TargetTrackingApplied,
                 safetyFloorClamped = current.SafetyFloorClamped
             };
             CharacterFootSwingTargetCounterfactual counterfactual =
@@ -2249,7 +2250,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 stateEvidence = stateEvidence,
                 stageFacts = new CharacterFootPathStageFacts
                 {
-                    residualCaptureAvailable = current.PathResidualRebuilt,
+                    residualCaptureAvailable =
+                        current.PathResidualRebuilt ||
+                        current.TargetTrackingApplied,
                     residualBeforeRevisionPrevious = StageVector(
                         previous.SwingResidualBeforeRevision),
                     residualBeforeRevision = StageVector(
@@ -2710,6 +2713,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !revisionExpected;
                 bool relevant = inputIdentityChanged ||
                                 current.PathResidualRebuilt ||
+                                current.TargetTrackingApplied ||
                                 revisionExpected ||
                                 reasonAvailable ||
                                 current.ReleasingCompletedToSwing ||
@@ -2767,6 +2771,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PathContinuityEvaluated,
                     ["pathInputIdentityChanged"] = inputIdentityChanged,
                     ["pathResidualRebuilt"] = current.PathResidualRebuilt,
+                    ["targetTrackingApplied"] =
+                        current.TargetTrackingApplied,
                     ["pathRevisionExpected"] = revisionExpected,
                     ["pathRevisionReasonMatchesExpected"] =
                         reasonMatchesExpected,
@@ -3510,6 +3516,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PathRevisionReason = Cell("FootMotionPathRevisionReason"),
                 PathResidualRebuilt =
                     Int("FootMotionPathResidualRebuilt") != 0,
+                TargetTrackingApplied =
+                    Int("FootMotionTargetTrackingApplied") != 0,
                 PathAvailableBefore =
                     Int("FootMotionPathAvailableBefore") != 0,
                 PathAvailableAfter =
@@ -4449,7 +4457,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionContactPlaneNormalX", "FootMotionContactPlaneNormalY", "FootMotionContactPlaneNormalZ",
                 "FootContactPlanePenetrationAvailability",
                 "FootMotionPathContinuityEvaluated", "FootMotionPathRevisionReason",
-                "FootMotionPathResidualRebuilt", "FootMotionPathAvailableBefore",
+                "FootMotionPathResidualRebuilt", "FootMotionTargetTrackingApplied",
+                "FootMotionPathAvailableBefore",
                 "FootMotionPathAvailableAfter", "FootMotionPathPreviousLandingEventIdentity",
                 "FootMotionPathCurrentLandingEventIdentity",
                 "FootMotionPathPreviousTargetCorrectionX",
@@ -5051,6 +5060,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool PathContinuityEvaluated;
             internal string PathRevisionReason;
             internal bool PathResidualRebuilt;
+            internal bool TargetTrackingApplied;
             internal bool PathAvailableBefore;
             internal bool PathAvailableAfter;
             internal ulong PathPreviousLandingEventIdentity;

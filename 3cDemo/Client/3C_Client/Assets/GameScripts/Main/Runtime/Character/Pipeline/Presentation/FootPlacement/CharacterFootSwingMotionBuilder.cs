@@ -344,6 +344,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
             PathResidualRebuilt = path.ResidualRebuilt;
+            TargetTrackingApplied = path.TargetTrackingApplied;
             PathAvailableBefore = path.PathAvailableBefore;
             PathAvailableAfter = path.PathAvailableAfter;
             PathPreviousLandingEventIdentity = path.PreviousLandingEventIdentity;
@@ -432,6 +433,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PathContinuityEvaluated { get; }
         public string PathRevisionReason { get; }
         public bool PathResidualRebuilt { get; }
+        public bool TargetTrackingApplied { get; }
         public bool PathAvailableBefore { get; }
         public bool PathAvailableAfter { get; }
         public ulong PathPreviousLandingEventIdentity { get; }

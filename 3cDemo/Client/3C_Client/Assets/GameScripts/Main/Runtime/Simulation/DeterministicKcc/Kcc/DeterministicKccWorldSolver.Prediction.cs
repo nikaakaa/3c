@@ -8,6 +8,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
         const string FutureBodyTranslationSourceIdentity =
             "thirdperson.simulation.solver.deterministic-kcc.future-body-translation/v2";
 
+        public string PredictionSourceIdentity =>
+            FutureBodyTranslationSourceIdentity;
+
         public bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,
             CharacterFutureBodyTranslation output)

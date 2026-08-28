@@ -233,6 +233,8 @@ namespace ThirdPersonSimulation
 
     public interface ICharacterFutureBodyTranslationSource
     {
+        string PredictionSourceIdentity { get; }
+
         bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,
             CharacterFutureBodyTranslation output);

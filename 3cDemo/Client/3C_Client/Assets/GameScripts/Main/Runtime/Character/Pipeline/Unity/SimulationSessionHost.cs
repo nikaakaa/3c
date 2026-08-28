@@ -42,6 +42,10 @@ namespace ThirdPersonCharacter.Pipeline
             m_Runtime?.Diagnostics ?? m_Preparation?.Diagnostics ?? m_LastDiagnostics;
         public int RegistrationCount => m_Registrations.Count;
         public bool IsQuiesced => m_Quiesced;
+        public string PredictionSourceIdentity =>
+            m_Runtime is ICharacterFutureBodyTranslationSource source
+                ? source.PredictionSourceIdentity
+                : string.Empty;
 
         public bool TryPredict(
             in CharacterFutureBodyTranslationRequest request,

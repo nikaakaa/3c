@@ -72,7 +72,7 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 
 纯`CharacterFootStateTargetResolver` MUST按Transition后的离散State生成Correction Target、Contact Reference、Goal与Ownership目标及typed Interpolation Policy Request。Swing与UnlockedSupport的Target MUST只使用正式Ground Path、Envelope与Foot Height；Releasing MUST只回到原始Swing Target。Resolver MUST不保存跨帧时间状态、不推进Residual、不改写State、不得执行World Query，也不得执行Hard Constraint。
 
-唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。Residual大于`LandingUpdateDistance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
+唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。Residual大于`SwingResidualTolerance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Releasing完成 MUST只读取独立`ReleaseCompletionTolerance`。Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
 
 Ground Path Envelope和Reach MUST在Interpolation之后作为Hard Constraint执行。Swing Hard Constraint MUST复用本帧Accepted Swing Motion已经采样的同一Envelope Point与Path identity，不得执行Raycast、SphereCast或读取另一Surface；只有连续输出低于Envelope时 MAY立即Clamp。Hard Constraint MUST不修改State Target、不触发Residual Revision，也不得写回Interpolation历史；它 MAY限制已知不可达Goal，但 MUST不反向修改State、Transition Decision或Target。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
 
@@ -83,7 +83,7 @@ Landing Anchor MUST在同Event正式Lock Mode首次进入Sliding或Locked且Acce
 #### Scenario: 同Event Path换代
 
 - **WHEN** 同一Swing Event的Landing或Envelope Target发生正式Revision
-- **THEN** State Target Resolver MUST发布新Target，Interpolation Runtime MUST从上一Effective Correction连续接管并按Step Time在LandingUpdateDistance内收敛
+- **THEN** State Target Resolver MUST发布新Target，Interpolation Runtime MUST从上一Effective Correction连续接管并按Step Time在SwingResidualTolerance内收敛
 - **AND** 只有同一Accepted Ground Path Envelope高于连续输出时 Hard Constraint MAY立即向上Clamp并发布Safety Floor事实
 
 #### Scenario: 旧Contact Event与新Swing Event同帧交接

@@ -201,7 +201,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSwingResidualBeforeDecayX,FootMotionSwingResidualBeforeDecayY,FootMotionSwingResidualBeforeDecayZ," +
             "FootMotionSwingResidualAfterDecayX,FootMotionSwingResidualAfterDecayY,FootMotionSwingResidualAfterDecayZ," +
             "FootMotionResidualOutputCorrectionX,FootMotionResidualOutputCorrectionY,FootMotionResidualOutputCorrectionZ," +
-            "FootMotionLandingUpdateDistance,FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
+            "FootMotionLandingAcceptanceDistance,FootMotionPathRevisionDistance,FootMotionSwingResidualTolerance," +
+            "FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
             "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
             "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
             "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
@@ -2033,7 +2034,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SwingResidualBeforeDecay);
             Add(row, motion.SwingResidualAfterDecay);
             Add(row, motion.ResidualOutputCorrection);
-            Add(row, motion.LandingUpdateDistance);
+            Add(row, motion.LandingAcceptanceDistance);
+            Add(row, motion.PathRevisionDistance);
+            Add(row, motion.SwingResidualTolerance);
             Add(row, motion.ResidualTimeToLandingSeconds);
             Add(row, motion.ResidualBaseHalfLifeSeconds);
             Add(row, motion.ResidualDeadlineHalfLifeAvailable);

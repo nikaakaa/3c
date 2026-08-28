@@ -37,7 +37,8 @@ MonoBehaviour:
   m_FootMotion:
     m_LandingAcceptanceDistance: 0.02
     m_PathRevisionDistance: 0.02
-    m_LandingUpdateDistance: 0.02
+    m_SwingResidualTolerance: 0.02
+    m_ReleaseCompletionTolerance: 0.02
     m_EffectiveCorrectionHalfLifeSeconds: 0.03
     m_LockDistance: 0.08
     m_SlideDistance: 0.2

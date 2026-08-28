@@ -174,7 +174,16 @@ Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、S
 
 Foot诊断Recorder MUST为每个Frame、Completion与Side只写一条包含Source、Path、State、Goal、Solved和Physical阶段事实的`samples.csv`主行。一对多Ground Contact与Envelope顶点 MUST写入同目录唯一`ground-path-geometry.csv`，并通过Sample、Frame、Completion、Side与Ground Path identity连接主行；不得为每个几何项重复整套主行列。
 
+每个Foot诊断包 MUST写入项目本地持久目录`Diagnostics/FootPlacementRuns/<run-id>/`，MUST NOT写入Unity `Temp`。该目录 MUST只保存本地原始诊断，Recorder MUST NOT自动复制、晋升或加入版本控制；需要提交的诊断基线由作者明确选择后另行归档。
+
 停止采样、捕获队列失败和自动路线结束 MUST统一进入`Finalizing`。Unity主线程 MUST停止捕获并立即返回；唯一后台Finalizer MUST排空现有Writer、封存双表、运行同一Analyzer与Publisher并原子发布facts和diagnoses。程序集重载 MAY等待同一Finalizer完成以保护包完整性，但不得建立同步Analyzer、Python Reporter、第二输出schema或仅扩大队列的替代路径。
+
+#### Scenario: Unity清理临时目录后保留诊断包
+
+- **WHEN** 一次Foot诊断已经完成且Unity随后清理项目临时目录或重新启动
+- **THEN** 完整诊断包 MUST仍保留在`Diagnostics/FootPlacementRuns/<run-id>/`
+- **AND** Recorder查找最近一次采样 MUST只使用该持久目录
+- **AND** 系统 MUST NOT自动移动、覆盖或删除已有诊断包
 
 #### Scenario: 停止包含大量Ground Path几何的录制
 

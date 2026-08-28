@@ -148,6 +148,8 @@ Diagnostics不得创建Anchor、选择Support、改变Reach、Clamp Goal或执�
 
 采样包固定由同一Recorder发布`每Frame/Side一行的samples.csv + 只保存Ground Contact/Envelope数组项的ground-path-geometry.csv`。几何表必须按Sample、Frame、Completion、Side与Ground Path identity连接主表，不得为每个几何项重复整套Source、State、Goal和Solver列。
 
+每次采样固定写入项目本地持久目录`Diagnostics/FootPlacementRuns/<run-id>/`，不得写入Unity会清理的`Temp`。该目录只承载本地原始诊断，不自动复制、晋升或加入版本控制；需要对账的基线由作者明确选择后再单独归档。
+
 停止录制必须进入唯一`Finalizing`生命周期。Unity主线程只停止捕获并冻结最后一批不可变Frame；后台Finalizer继续排空同一Writer、先封存几何表再以`samples.csv`作为包完成标志、运行同一C# Analyzer与Publisher，最后把Completed或Failed状态发布回Editor。不得增加Python Reporter、同步停止分析路径或仅扩大队列掩盖持续吞吐不足。
 
 ## Rejected Alternatives

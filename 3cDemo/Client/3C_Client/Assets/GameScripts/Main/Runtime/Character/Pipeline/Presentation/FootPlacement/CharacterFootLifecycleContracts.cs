@@ -531,12 +531,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CommitUnavailable = false;
         }
 
-        internal void InvalidateCurrent()
+        internal void RetainTracking()
         {
             if (TrackingState == CharacterFootLandingTrackingState.Committed)
                 return;
-            NextSwingPredictionError = 0f;
-            NextSwingConstraintWeight = 0f;
+            bool retainsLanding = NextSwingLanding.HasValue &&
+                                  NextSwingLanding.LandingEventIdentity ==
+                                  TrackedEventIdentity;
+            if (!retainsLanding)
+            {
+                NextSwingReferencePoint = default;
+                NextSwingPredictionError = 0f;
+                NextSwingConstraintWeight = 0f;
+            }
             CommitAttempted = false;
             CommitUnavailable = false;
             TrackingState = TrackedEventIdentity != 0

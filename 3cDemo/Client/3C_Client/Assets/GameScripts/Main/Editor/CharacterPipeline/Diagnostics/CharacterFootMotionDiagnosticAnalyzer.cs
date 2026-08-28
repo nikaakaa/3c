@@ -3666,7 +3666,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "SelectedStepSource");
             bool selectedStepConsistent = frame.SelectedStepSource == "None"
                 ? frame.SelectedLandingEventIdentity == 0
-                : frame.SelectedStepSource == "FormalNextLanding"
+                : frame.SelectedStepSource == "Current"
                     ? frame.SelectedLandingEventIdentity ==
                       frame.CurrentStep.LandingEventIdentity
                     : frame.SelectedLandingEventIdentity ==
@@ -3680,7 +3680,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireStepPhase(frame.CurrentStep, "CurrentStep");
             RequireStepPhase(frame.IncomingStep, "IncomingStep");
             StepCandidateFrame selected = frame.SelectedStepSource ==
-                                          "FormalNextLanding"
+                                          "Current"
                 ? frame.CurrentStep
                 : frame.SelectedStepSource == "Incoming"
                     ? frame.IncomingStep
@@ -5448,7 +5448,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.IncomingStep.TimeToLandingSeconds)
                     : null;
                 double? selectedOldTime =
-                    frame.SelectedStepSource == "FormalNextLanding"
+                    frame.SelectedStepSource == "Current"
                         ? frame.CurrentStep.TimeToLandingSeconds
                         : frame.SelectedStepSource == "Incoming"
                             ? frame.IncomingStep.TimeToLandingSeconds

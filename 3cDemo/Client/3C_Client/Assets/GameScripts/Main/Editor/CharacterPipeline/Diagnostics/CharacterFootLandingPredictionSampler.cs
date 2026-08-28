@@ -736,8 +736,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 string sourceIdentity,
                 float weight,
                 float normalizedTime,
-                AnimationFootMotionRuntimeSample left,
-                AnimationFootMotionRuntimeSample right)
+                AnimationFootStepObservationSample left,
+                AnimationFootStepObservationSample right)
             {
                 if (string.IsNullOrWhiteSpace(sourceIdentity) ||
                     !float.IsFinite(weight) || weight < 0f || weight > 1f ||
@@ -758,8 +758,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string SourceIdentity { get; }
             internal float Weight { get; }
             internal float NormalizedTime { get; }
-            internal AnimationFootMotionRuntimeSample Left { get; }
-            internal AnimationFootMotionRuntimeSample Right { get; }
+            internal AnimationFootStepObservationSample Left { get; }
+            internal AnimationFootStepObservationSample Right { get; }
             internal bool IsValid => m_IsSpecified != 0;
         }
 
@@ -1697,13 +1697,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stepSelection.SelectedLandingEventIdentity);
             CharacterFootStepCandidateDiagnostics selectedStep =
                 stepSelection.SelectedSource ==
-                CharacterFootLandingStepSource.FormalNextLanding
+                CharacterFootLandingStepSource.Current
                     ? stepSelection.Current
-                    : default;
+                    : stepSelection.SelectedSource ==
+                      CharacterFootLandingStepSource.Incoming
+                        ? stepSelection.Incoming
+                        : default;
             AddStepPhase(row, in selectedStep);
             AddStepCandidate(row, stepSelection.Current);
             AddStepCandidate(row, stepSelection.Incoming);
-            AnimationFootMotionRuntimeSample observedStep =
+            AnimationFootStepObservationSample observedStep =
                 foot.Side == CharacterFootSide.Left
                     ? footStepObservation.Left
                     : footStepObservation.Right;
@@ -1712,8 +1715,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, hasObservedStep ? footStepObservation.SourceIdentity : string.Empty);
             Add(row, hasObservedStep ? footStepObservation.Weight : 0f);
             Add(row, hasObservedStep ? footStepObservation.NormalizedTime : 0f);
-            Add(row, hasObservedStep ? observedStep.ObservedTimeToLandingSeconds : 0f);
-            Add(row, hasObservedStep ? observedStep.ObservedDistance : 0f);
+            Add(row, hasObservedStep ? observedStep.TimeToLandingSeconds : 0f);
+            Add(row, hasObservedStep ? observedStep.Distance : 0f);
             Add(row, hasObservedStep ? observedStep.FootHeight : 0f);
             Add(row, hasObservedStep ? observedStep.ToeHeight : 0f);
             Add(row, hasObservedStep ? observedStep.ToeSpeed : 0f);
@@ -1726,7 +1729,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AddFormalEventFrame(row, hasObservedStep, observedStep.Events);
             CharacterFootStepObservationInputDiagnostics inputObservation =
                 input.FootStepObservation;
-            AnimationFootMotionRuntimeSample inputObservedStep =
+            AnimationFootStepObservationSample inputObservedStep =
                 foot.Side == CharacterFootSide.Left
                     ? inputObservation.Left
                     : inputObservation.Right;
@@ -1742,8 +1745,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? inputObservation.ContributionContinuityIdentity
                 : 0UL);
             Add(row, hasInputObservedStep ? inputObservation.CompletionIdentity : 0UL);
-            Add(row, hasInputObservedStep ? inputObservedStep.ObservedTimeToLandingSeconds : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.ObservedDistance : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.TimeToLandingSeconds : 0f);
+            Add(row, hasInputObservedStep ? inputObservedStep.Distance : 0f);
             Add(row, hasInputObservedStep ? inputObservedStep.FootHeight : 0f);
             Add(row, hasInputObservedStep ? inputObservedStep.ToeHeight : 0f);
             Add(row, hasInputObservedStep ? inputObservedStep.ToeSpeed : 0f);

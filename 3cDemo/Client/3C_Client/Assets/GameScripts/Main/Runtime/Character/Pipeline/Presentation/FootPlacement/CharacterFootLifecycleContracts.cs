@@ -505,6 +505,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockResponse LockResponse;
         internal CharacterFootTransitionPhase LastTransitionPhase;
         internal CharacterFootTransitionReason LastTransitionReason;
+        internal ulong LandingReachEventIdentity;
+        internal bool LandingReachUnavailable;
     }
 
     internal struct CharacterFootContactContext

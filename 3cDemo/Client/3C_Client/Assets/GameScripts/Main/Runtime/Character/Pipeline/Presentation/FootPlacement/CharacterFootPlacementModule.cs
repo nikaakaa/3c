@@ -444,7 +444,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var resolvedPair = new CharacterResolvedFootPair(
                 in leftResolved,
                 in rightResolved);
-            bank.ResolvedFeet = resolvedPair;
             leftGoal = CreateFootGoal(
                 CharacterFootSide.Left,
                 pose.Left,
@@ -516,22 +515,110 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in rightResolved);
                 if (leftLandingReach || rightLandingReach)
                 {
-                    strideHips = CharacterFootStrideHipsBuilder.ApplyLandingReach(
+                    CharacterFootLandingReachRequest supportReachRequest = default;
+                    if (primarySupport.HasValue)
+                    {
+                        bool supportLeft = primarySupport.Side ==
+                                           CharacterFootSide.Left;
+                        Vector3 supportHip = supportLeft
+                            ? pose.Left.HipPosition
+                            : pose.Right.HipPosition;
+                        Vector3 supportAnimatedAnkle = supportLeft
+                            ? pose.Left.AnklePosition
+                            : pose.Right.AnklePosition;
+                        Vector3 supportTargetAnkle = supportLeft
+                            ? leftResolved.FinalAnkle
+                            : rightResolved.FinalAnkle;
+                        float supportLegLength = supportLeft
+                            ? m_Rig.LeftLegLength
+                            : m_Rig.RightLegLength;
+                        float supportCompressionReserve = Mathf.Clamp(
+                            supportLegLength - Vector3.Distance(
+                                supportHip,
+                                supportAnimatedAnkle),
+                            0.005f,
+                            supportLegLength - 0.005f);
+                        supportReachRequest =
+                            new CharacterFootLandingReachRequest(
+                                primarySupport.Side,
+                                primarySupport.LandingEventIdentity,
+                                supportHip,
+                                supportTargetAnkle,
+                                supportLegLength,
+                                supportCompressionReserve);
+                    }
+                    CharacterFootLandingReachRequest leftReachRequest =
+                        leftLandingReach
+                            ? new CharacterFootLandingReachRequest(
+                                CharacterFootSide.Left,
+                                leftSelectedStep.LandingEventIdentity,
+                                pose.Left.HipPosition,
+                                leftResolved.FinalAnkle,
+                                m_Rig.LeftLegLength,
+                                m_Settings.FootMotion
+                                    .MinimumLandingLegCompressionReserve)
+                            : default;
+                    CharacterFootLandingReachRequest rightReachRequest =
+                        rightLandingReach
+                            ? new CharacterFootLandingReachRequest(
+                                CharacterFootSide.Right,
+                                rightSelectedStep.LandingEventIdentity,
+                                pose.Right.HipPosition,
+                                rightResolved.FinalAnkle,
+                                m_Rig.RightLegLength,
+                                m_Settings.FootMotion
+                                    .MinimumLandingLegCompressionReserve)
+                            : default;
+                    CharacterFootLandingReachResult reach =
+                        CharacterFootStrideHipsBuilder.ResolveLandingReach(
                         in strideHips,
-                        leftLandingReach,
-                        pose.Left.HipPosition,
-                        leftResolved.FinalAnkle,
-                        m_Rig.LeftLegLength,
-                        rightLandingReach,
-                        pose.Right.HipPosition,
-                        rightResolved.FinalAnkle,
-                        m_Rig.RightLegLength,
+                        in supportReachRequest,
+                        in leftReachRequest,
+                        in rightReachRequest,
                         componentUp,
                         footPlacementWeight,
-                        m_Settings.FootMotion,
                         ref bank.PelvisSpring);
+                    strideHips = reach.Hips;
+                    if (leftLandingReach)
+                    {
+                        leftResolved = leftResolved.WithLandingReach(
+                            reach.LeftResolvedAnkle,
+                            reach.LeftUnavailable);
+                        leftFootMotion = leftFootMotion.WithLandingReach(
+                            reach.LeftResolvedAnkle,
+                            reach.LeftUnavailable);
+                        CharacterFootLifecycle.ApplyLandingReach(
+                            ref bank.LeftFoot,
+                            leftSelectedStep.LandingEventIdentity,
+                            reach.LeftUnavailable);
+                    }
+                    if (rightLandingReach)
+                    {
+                        rightResolved = rightResolved.WithLandingReach(
+                            reach.RightResolvedAnkle,
+                            reach.RightUnavailable);
+                        rightFootMotion = rightFootMotion.WithLandingReach(
+                            reach.RightResolvedAnkle,
+                            reach.RightUnavailable);
+                        CharacterFootLifecycle.ApplyLandingReach(
+                            ref bank.RightFoot,
+                            rightSelectedStep.LandingEventIdentity,
+                            reach.RightUnavailable);
+                    }
                 }
             }
+            resolvedPair = new CharacterResolvedFootPair(
+                in leftResolved,
+                in rightResolved);
+            bank.ResolvedFeet = resolvedPair;
+            leftGoal = CreateFootGoal(
+                CharacterFootSide.Left,
+                pose.Left,
+                in leftResolved);
+            rightGoal = CreateFootGoal(
+                CharacterFootSide.Right,
+                pose.Right,
+                in rightResolved);
             pelvisGoal = CreatePelvisGoal(in strideHips, m_Rig.PoseRoot);
             bank.StrideHips = strideHips;
             if (!strideHips.ProducesPelvisGoal)

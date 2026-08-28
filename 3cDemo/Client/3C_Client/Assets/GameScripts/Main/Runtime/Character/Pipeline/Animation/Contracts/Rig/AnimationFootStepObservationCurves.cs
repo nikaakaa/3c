@@ -23,7 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float contact,
             AnimationFootStepObservationLockMode lockMode,
             float lockWeight,
-            float support)
+            float support,
+            in AnimationFootMotionEventFrame events)
         {
             if (!float.IsFinite(timeToLandingSeconds) || timeToLandingSeconds < 0f ||
                 !float.IsFinite(distance) || distance < 0f ||
@@ -33,7 +34,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !float.IsFinite(positionError) || positionError < 0f ||
                 !float.IsFinite(rotationError) || rotationError < 0f ||
                 !Normalized(contact) || !Enum.IsDefined(typeof(AnimationFootStepObservationLockMode), lockMode) ||
-                !Normalized(lockWeight) || !Normalized(support))
+                !Normalized(lockWeight) || !Normalized(support) ||
+                !events.IsValid)
             {
                 throw new ArgumentOutOfRangeException(nameof(timeToLandingSeconds));
             }
@@ -48,6 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             LockMode = lockMode;
             LockWeight = lockWeight;
             Support = support;
+            Events = events;
             m_IsSpecified = 1;
         }
 
@@ -63,6 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationFootStepObservationLockMode LockMode { get; }
         public float LockWeight { get; }
         public float Support { get; }
+        public AnimationFootMotionEventFrame Events { get; }
         public bool IsValid => m_IsSpecified != 0;
 
         static bool Normalized(float value) =>
@@ -181,10 +185,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationCurve Support => m_Support;
         public AnimationFootStepLandingEventTable LandingEvents => m_LandingEvents;
 
-        public AnimationFootStepObservationSample Sample(float normalizedTime)
+        public AnimationFootStepObservationSample Sample(
+            float normalizedTime,
+            int sourceCycle,
+            float sourceDurationSeconds,
+            bool looping)
         {
             RequireValid();
             float time = Mathf.Clamp01(normalizedTime);
+            AnimationFootMotionEventFrame events = m_LandingEvents.Resolve(
+                time,
+                sourceCycle,
+                sourceDurationSeconds,
+                looping);
             return new AnimationFootStepObservationSample(
                 m_TimeToLandingSeconds.Evaluate(time),
                 m_Distance.Evaluate(time),
@@ -196,7 +209,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Contact.Evaluate(time),
                 (AnimationFootStepObservationLockMode)Mathf.RoundToInt(m_LockMode.Evaluate(time)),
                 m_LockWeight.Evaluate(time),
-                m_Support.Evaluate(time));
+                m_Support.Evaluate(time),
+                in events);
         }
 
         public void RequireValid()

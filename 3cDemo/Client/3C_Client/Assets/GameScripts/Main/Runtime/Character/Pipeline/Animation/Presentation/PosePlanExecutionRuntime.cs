@@ -2870,8 +2870,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 cycle,
                 contribution.Weight,
                 clipSample.NormalizedTime,
-                curves.Left.Sample(clipSample.NormalizedTime),
-                curves.Right.Sample(clipSample.NormalizedTime));
+                curves.Left.Sample(
+                    clipSample.NormalizedTime,
+                    cycle,
+                    clipSample.Clip.length,
+                    clipSample.Clip.isLooping),
+                curves.Right.Sample(
+                    clipSample.NormalizedTime,
+                    cycle,
+                    clipSample.Clip.length,
+                    clipSample.Clip.isLooping));
         }
 
         static AnimationPoseSourceContribution

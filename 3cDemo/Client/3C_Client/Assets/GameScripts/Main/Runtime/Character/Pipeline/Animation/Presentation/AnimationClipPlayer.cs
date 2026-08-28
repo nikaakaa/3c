@@ -379,8 +379,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Source.ClipIdentity,
                 sourceWeight,
                 normalizedTime,
-                m_Source.FootStepObservation.Left.Sample(normalizedTime),
-                m_Source.FootStepObservation.Right.Sample(normalizedTime));
+                m_Source.FootStepObservation.Left.Sample(
+                    normalizedTime,
+                    Cycle,
+                    Duration,
+                    m_Source.Clip.isLooping),
+                m_Source.FootStepObservation.Right.Sample(
+                    normalizedTime,
+                    Cycle,
+                    Duration,
+                    m_Source.Clip.isLooping));
         }
 
         internal string ApplyTuning(float playRate)

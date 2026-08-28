@@ -37,6 +37,7 @@
 - [x] 4.7 把Ground Path Envelope与Landing Reach放在Interpolation之后执行，禁止Hard Constraint回写State Target、Residual或Transition
 - [x] 4.8 让Resolved Foot只消费Post-Transition、Post-Interpolation和Post-Constraint结果，并补齐Transition、Target、Interpolation与Constraint逐阶段事实
 - [x] 4.9 删除旧`CharacterFootStateMachine`、旧分散Residual/Progress字段、重复Advance方法和全部兼容入口，确认State/Anchor与Effective Correction各自只有一个写入者
+- [x] 4.10 把查询后Landing接受距离从`LandingUpdateDistance`剥离为独立正式配置，保持Corin现行2厘米行为不变
 
 ## 5. 单独接入Step Time与Step Distance
 

@@ -205,7 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionContactPlaneNormalX,FootMotionContactPlaneNormalY,FootMotionContactPlaneNormalZ," +
             "FootContactPlanePenetrationAvailability," +
             "FootMotionDesiredCorrectionX,FootMotionDesiredCorrectionY,FootMotionDesiredCorrectionZ," +
-            "FootMotionPathContinuityEvaluated,FootMotionPathRevisionReason,FootMotionPathResidualRebuilt," +
+            "FootMotionPathContinuityEvaluated,FootMotionPathRevisionReason,FootMotionPathResidualRebuilt,FootMotionTargetTrackingApplied," +
             "FootMotionPathAvailableBefore,FootMotionPathAvailableAfter,FootMotionPathPreviousLandingEventIdentity,FootMotionPathCurrentLandingEventIdentity," +
             "FootMotionPathPreviousTargetCorrectionX,FootMotionPathPreviousTargetCorrectionY,FootMotionPathPreviousTargetCorrectionZ," +
             "FootMotionPathCurrentTargetCorrectionX,FootMotionPathCurrentTargetCorrectionY,FootMotionPathCurrentTargetCorrectionZ," +
@@ -2049,6 +2049,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PathContinuityEvaluated);
             Add(row, motion.PathRevisionReason);
             Add(row, motion.PathResidualRebuilt);
+            Add(row, motion.TargetTrackingApplied);
             Add(row, motion.PathAvailableBefore);
             Add(row, motion.PathAvailableAfter);
             Add(row, motion.PathPreviousLandingEventIdentity);

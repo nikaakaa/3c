@@ -91,6 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool evaluated,
             CharacterFootPathRevisionReason revisionReason,
             bool residualRebuilt,
+            bool targetTrackingApplied,
             bool pathAvailableBefore,
             bool pathAvailableAfter,
             ulong previousLandingEventIdentity,
@@ -114,6 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Evaluated = evaluated;
             RevisionReason = revisionReason;
             ResidualRebuilt = residualRebuilt;
+            TargetTrackingApplied = targetTrackingApplied;
             PathAvailableBefore = pathAvailableBefore;
             PathAvailableAfter = pathAvailableAfter;
             PreviousLandingEventIdentity = previousLandingEventIdentity;
@@ -192,6 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Evaluated = source.Evaluated;
             RevisionReason = source.RevisionReason;
             ResidualRebuilt = source.ResidualRebuilt;
+            TargetTrackingApplied = source.TargetTrackingApplied;
             PathAvailableBefore = source.PathAvailableBefore;
             PathAvailableAfter = source.PathAvailableAfter;
             PreviousLandingEventIdentity = source.PreviousLandingEventIdentity;
@@ -249,6 +252,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool Evaluated { get; }
         internal CharacterFootPathRevisionReason RevisionReason { get; }
         internal bool ResidualRebuilt { get; }
+        internal bool TargetTrackingApplied { get; }
         internal bool PathAvailableBefore { get; }
         internal bool PathAvailableAfter { get; }
         internal ulong PreviousLandingEventIdentity { get; }
@@ -350,6 +354,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootPathContinuityFact(
                 false,
                 CharacterFootPathRevisionReason.None,
+                false,
                 false,
                 false,
                 false,

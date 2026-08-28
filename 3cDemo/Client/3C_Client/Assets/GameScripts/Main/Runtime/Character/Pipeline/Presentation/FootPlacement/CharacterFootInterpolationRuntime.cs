@@ -226,8 +226,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             bool revised = revisionReason !=
                            CharacterFootPathRevisionReason.None;
-            state.Residual =
-                state.EffectiveCorrection - target.Correction;
+            bool targetTrackingApplied = comparablePath &&
+                targetDelta > frame.Settings.PathRevisionDistance;
+            if (revised || targetTrackingApplied)
+            {
+                state.Residual =
+                    state.EffectiveCorrection - target.Correction;
+            }
             Vector3 residualBeforeDecay = state.Residual;
             state.HasSwingPath = hasPath;
             state.SwingLandingEventIdentity = hasPath
@@ -263,6 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 true,
                 revisionReason,
                 revised,
+                targetTrackingApplied,
                 pathAvailableBefore,
                 hasPath,
                 previousLandingEventIdentity,

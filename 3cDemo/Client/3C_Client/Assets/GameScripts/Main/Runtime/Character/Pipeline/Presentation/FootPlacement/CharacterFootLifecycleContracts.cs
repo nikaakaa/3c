@@ -530,6 +530,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PreviousSwingTargetCorrection;
         internal Vector3 EffectiveCorrection;
         internal Vector3 Residual;
+        internal Quaternion EffectiveRotation;
+        internal float RotationProgress;
+        internal float RotationReleaseStartAngle;
         internal float Progress;
         internal float StartResidual;
         internal bool Completed;
@@ -662,7 +665,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool responseEntered,
             bool suppressOutput,
             float progress,
-            float timeToLandingSeconds)
+            float timeToLandingSeconds,
+            Quaternion rotation,
+            Quaternion swingRotation)
         {
             Correction = correction;
             SwingCorrection = swingCorrection;
@@ -672,6 +677,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SuppressOutput = suppressOutput;
             Progress = progress;
             TimeToLandingSeconds = timeToLandingSeconds;
+            Rotation = rotation;
+            SwingRotation = swingRotation;
         }
 
         internal Vector3 Correction { get; }
@@ -682,21 +689,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool SuppressOutput { get; }
         internal float Progress { get; }
         internal float TimeToLandingSeconds { get; }
+        internal Quaternion Rotation { get; }
+        internal Quaternion SwingRotation { get; }
     }
 
     internal readonly struct CharacterFootInterpolationResult
     {
         internal CharacterFootInterpolationResult(
             Vector3 correction,
+            Quaternion rotation,
+            float rotationProgress,
             bool completed,
             in CharacterFootPathContinuityFact continuityFact)
         {
             Correction = correction;
+            Rotation = rotation;
+            RotationProgress = rotationProgress;
             Completed = completed;
             ContinuityFact = continuityFact;
         }
 
         internal Vector3 Correction { get; }
+        internal Quaternion Rotation { get; }
+        internal float RotationProgress { get; }
         internal bool Completed { get; }
         internal CharacterFootPathContinuityFact ContinuityFact { get; }
     }

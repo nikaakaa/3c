@@ -41,15 +41,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         OwnershipLost = 1,
         SwingStarted = 2,
-        PlantCycleConsumed = 3,
-        ContactUnavailable = 4,
-        ContactOutOfLockRange = 5,
-        ContactAcquired = 6,
-        ContactReleased = 7,
-        ContactOutOfSlideRange = 8,
-        LockResponseChanged = 9,
-        LandingCompleted = 10,
-        ReleaseCompleted = 11
+        ContactUnavailable = 3,
+        ContactAcquired = 4,
+        ContactReleased = 5,
+        ContactOutOfSlideRange = 6,
+        LockResponseChanged = 7,
+        LandingCompleted = 8,
+        ReleaseCompleted = 9
     }
 
     internal enum CharacterFootAnchorCommand : byte
@@ -339,7 +337,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 default,
                 default,
-                settings.LandingUpdateDistance,
+                settings.SwingRevisionDistance,
                 timeToLandingSeconds,
                 settings.EffectiveCorrectionHalfLifeSeconds,
                 false,
@@ -384,7 +382,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 WorldNormal);
 
         internal static CharacterFootLandingFact Create(
-            in AnimationBiomechanicalStepHeader step,
+            in AnimationFootMotionStep step,
             in CharacterFootLandingPredictionResult diagnostics) =>
             new CharacterFootLandingFact(
                 step.LandingEventIdentity,
@@ -513,7 +511,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootConstraintState State;
         internal CharacterFootLockResponse LockResponse;
-        internal bool PlantCycleConsumed;
         internal CharacterFootTransitionPhase LastTransitionPhase;
         internal CharacterFootTransitionReason LastTransitionReason;
     }
@@ -563,6 +560,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigId,
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in AnimationFootMotionRuntimeSample formalMotion,
             in CharacterFootSwingMotionResult swingMotion,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
@@ -577,6 +575,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigId = rigId;
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
+            FormalMotion = formalMotion;
             SwingMotion = swingMotion;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
@@ -592,6 +591,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
+        internal AnimationFootMotionRuntimeSample FormalMotion { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
@@ -606,8 +606,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
-            in AnimationBiomechanicalStepHeader currentStep,
-            in AnimationBiomechanicalStepHeader selectedStep,
+            in AnimationFootMotionStep currentStep,
+            in AnimationFootMotionStep selectedStep,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootStateFrame frame)
         {
@@ -619,8 +619,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal CharacterFootSide Side { get; }
-        internal AnimationBiomechanicalStepHeader CurrentStep { get; }
-        internal AnimationBiomechanicalStepHeader SelectedStep { get; }
+        internal AnimationFootMotionStep CurrentStep { get; }
+        internal AnimationFootMotionStep SelectedStep { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }
     }
@@ -633,7 +633,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootConstraintState sourceState,
             CharacterFootConstraintState targetState,
             CharacterFootLockResponse targetLockResponse,
-            bool plantCycleConsumed,
             CharacterFootAnchorCommand anchorCommand,
             bool suppressOutput,
             bool resetInterpolation)
@@ -643,7 +642,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceState = sourceState;
             TargetState = targetState;
             TargetLockResponse = targetLockResponse;
-            PlantCycleConsumed = plantCycleConsumed;
             AnchorCommand = anchorCommand;
             SuppressOutput = suppressOutput;
             ResetInterpolation = resetInterpolation;
@@ -654,7 +652,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootConstraintState SourceState { get; }
         internal CharacterFootConstraintState TargetState { get; }
         internal CharacterFootLockResponse TargetLockResponse { get; }
-        internal bool PlantCycleConsumed { get; }
         internal CharacterFootAnchorCommand AnchorCommand { get; }
         internal bool SuppressOutput { get; }
         internal bool ResetInterpolation { get; }

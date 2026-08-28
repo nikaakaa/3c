@@ -174,7 +174,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     [Serializable]
     public sealed class CharacterFootMotionAuthoringSettings
     {
-        [SerializeField] float m_LandingUpdateDistance = 0.005f;
+        [SerializeField] int m_ConfigurationVersion;
+        [SerializeField] float m_PredictionInputUpdateDistance = 0.05f;
+        [SerializeField] float m_PredictionInputUpAngleDegrees = 1f;
+        [SerializeField] float m_LandingPointAcceptanceDistance = 0.02f;
+        [SerializeField] float m_SwingRevisionDistance = 0.02f;
+        [SerializeField] float m_ResidualLandingTolerance = 0.005f;
+        [SerializeField] float m_ReleaseCompletionDistance = 0.005f;
         [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
@@ -183,7 +189,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(
-                m_LandingUpdateDistance,
+                m_ConfigurationVersion,
+                m_PredictionInputUpdateDistance,
+                m_PredictionInputUpAngleDegrees,
+                m_LandingPointAcceptanceDistance,
+                m_SwingRevisionDistance,
+                m_ResidualLandingTolerance,
+                m_ReleaseCompletionDistance,
                 m_EffectiveCorrectionHalfLifeSeconds,
                 m_LockDistance,
                 m_SlideDistance,
@@ -194,14 +206,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct CharacterFootMotionSettings
     {
         internal CharacterFootMotionSettings(
-            float landingUpdateDistance,
+            int configurationVersion,
+            float predictionInputUpdateDistance,
+            float predictionInputUpAngleDegrees,
+            float landingPointAcceptanceDistance,
+            float swingRevisionDistance,
+            float residualLandingTolerance,
+            float releaseCompletionDistance,
             float effectiveCorrectionHalfLifeSeconds,
             float lockDistance,
             float slideDistance,
             float pelvisSpringFrequency,
             float minimumLandingLegCompressionReserve)
         {
-            LandingUpdateDistance = landingUpdateDistance;
+            ConfigurationVersion = configurationVersion;
+            PredictionInputUpdateDistance = predictionInputUpdateDistance;
+            PredictionInputUpAngleDegrees = predictionInputUpAngleDegrees;
+            LandingPointAcceptanceDistance = landingPointAcceptanceDistance;
+            SwingRevisionDistance = swingRevisionDistance;
+            ResidualLandingTolerance = residualLandingTolerance;
+            ReleaseCompletionDistance = releaseCompletionDistance;
             EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
@@ -211,7 +235,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireValid();
         }
 
-        internal float LandingUpdateDistance { get; }
+        internal int ConfigurationVersion { get; }
+        internal float PredictionInputUpdateDistance { get; }
+        internal float PredictionInputUpAngleDegrees { get; }
+        internal float LandingPointAcceptanceDistance { get; }
+        internal float SwingRevisionDistance { get; }
+        internal float ResidualLandingTolerance { get; }
+        internal float ReleaseCompletionDistance { get; }
         internal float EffectiveCorrectionHalfLifeSeconds { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
@@ -220,11 +250,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void RequireValid()
         {
-            if (!float.IsFinite(LandingUpdateDistance) || LandingUpdateDistance <= 0f ||
+            if (ConfigurationVersion != 2 ||
+                !float.IsFinite(PredictionInputUpdateDistance) ||
+                PredictionInputUpdateDistance <= 0f ||
+                !float.IsFinite(PredictionInputUpAngleDegrees) ||
+                PredictionInputUpAngleDegrees <= 0f ||
+                PredictionInputUpAngleDegrees >= 90f ||
+                !float.IsFinite(LandingPointAcceptanceDistance) ||
+                LandingPointAcceptanceDistance <= 0f ||
+                LandingPointAcceptanceDistance > PredictionInputUpdateDistance ||
+                !float.IsFinite(SwingRevisionDistance) ||
+                SwingRevisionDistance <= 0f ||
+                !float.IsFinite(ResidualLandingTolerance) ||
+                ResidualLandingTolerance <= 0f ||
+                !float.IsFinite(ReleaseCompletionDistance) ||
+                ReleaseCompletionDistance <= 0f ||
                 !float.IsFinite(EffectiveCorrectionHalfLifeSeconds) ||
                 EffectiveCorrectionHalfLifeSeconds <= 0f ||
                 !float.IsFinite(LockDistance) ||
-                LockDistance <= LandingUpdateDistance ||
+                LockDistance <= PredictionInputUpdateDistance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f ||

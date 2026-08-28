@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPlacementPoseInput(
             string posePlanHash,
             in AnimationPoseValueNativeReadBinding binding,
-            in AnimationFootStepObservationFrame footStepObservation,
+            in AnimationFootMotionRuntimeFrame footMotion,
             AnimationPoseSourceContribution[] contributions,
             int contributionCount)
         {
@@ -55,9 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 binding.InvalidReason[0] !=
                 AnimationPoseNativeInvalidReason.None ||
                 binding.ContinuityIdentity[0] == 0 ||
-                binding.HasFootFeatures[0] != 1 ||
-                !footStepObservation.IsValid ||
-                footStepObservation.CompletionIdentity != binding.CompletionIdentity ||
+                !footMotion.IsValid ||
+                footMotion.CompletionIdentity != binding.CompletionIdentity ||
                 contributions == null || contributionCount <= 0 ||
                 contributionCount != nativeContributionCount ||
                 contributionCount > contributions.Length)
@@ -68,49 +67,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PosePlanHash = posePlanHash;
             CompletionIdentity = binding.CompletionIdentity;
             DenseComponentPoses = binding.DensePoses;
-            AnimationFootFeatureSample left = binding.LeftFootFeatures[0];
-            AnimationFootFeatureSample right = binding.RightFootFeatures[0];
-            if (!left.IsValid || !right.IsValid)
-                throw new ArgumentException("Foot Placement feature input is invalid.");
-            LeftFootSteps = new AnimationBiomechanicalStepReadPage(
-                in left,
-                CharacterFootSide.Left);
-            RightFootSteps = new AnimationBiomechanicalStepReadPage(
-                in right,
-                CharacterFootSide.Right);
             ContinuityIdentity = binding.ContinuityIdentity[0];
-            FootStepObservation = footStepObservation;
+            FootMotion = footMotion;
             Contributions = contributions;
             ContributionCount = contributionCount;
-            bool hasObservationContribution = false;
+            bool hasFootMotionContribution = false;
             for (int i = 0; i < contributionCount; i++)
             {
                 AnimationPoseSourceContribution contribution = contributions[i];
                 if (contribution.Kind != AnimationPoseContributionKind.Live ||
-                    !contribution.NodeId.Equals(footStepObservation.NodeId) ||
-                    !contribution.SourceId.Equals(footStepObservation.SourceId) ||
+                    !contribution.NodeId.Equals(footMotion.NodeId) ||
+                    !contribution.SourceId.Equals(footMotion.SourceId) ||
                     contribution.ContributionContinuityIdentity !=
-                    footStepObservation.ContributionContinuityIdentity)
+                    footMotion.ContributionContinuityIdentity)
                 {
                     continue;
                 }
-                hasObservationContribution = true;
+                hasFootMotionContribution = true;
                 break;
             }
-            if (!hasObservationContribution)
+            if (!hasFootMotionContribution)
             {
                 throw new ArgumentException(
-                    "Foot Placement formal Foot Step input does not belong to its Pose contribution frame.");
+                    "Foot Placement formal Foot Motion input does not belong to its Pose contribution frame.");
             }
         }
 
         internal string PosePlanHash { get; }
         internal ulong CompletionIdentity { get; }
         internal NativeSlice<AnimationLocalBonePose> DenseComponentPoses { get; }
-        internal AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
-        internal AnimationBiomechanicalStepReadPage RightFootSteps { get; }
         internal ulong ContinuityIdentity { get; }
-        internal AnimationFootStepObservationFrame FootStepObservation { get; }
+        internal AnimationFootMotionRuntimeFrame FootMotion { get; }
         internal AnimationPoseSourceContribution[] Contributions { get; }
         internal int ContributionCount { get; }
     }
@@ -162,5 +149,4 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFullBodyIkGoal LeftGoal { get; }
         internal CharacterFullBodyIkGoal RightGoal { get; }
     }
-
 }

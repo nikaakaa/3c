@@ -27,8 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootLandingStepSource : byte
     {
         None = 0,
-        Current = 1,
-        Incoming = 2
+        Formal = 1
     }
 
     internal readonly struct CharacterFootLandingSupport
@@ -466,7 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterFootLandingPredictionResult(
             in CharacterFootLandingPredictionResult source,
             CharacterFootLandingStepSource stepSource,
-            AnimationBiomechanicalStepHeader step,
+            AnimationFootMotionStep step,
             Vector3 currentAnimatedSole,
             CharacterFullBodyIkGoal goal)
         {
@@ -560,7 +559,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootLandingPredictionResult WithLiveStep(
             CharacterFootLandingStepSource stepSource,
-            AnimationBiomechanicalStepHeader step,
+            AnimationFootMotionStep step,
             Vector3 currentAnimatedSole,
             CharacterFullBodyIkGoal goal) =>
             new CharacterFootLandingPredictionResult(
@@ -668,7 +667,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterFootStepCandidateDiagnostics
     {
         internal CharacterFootStepCandidateDiagnostics(
-            in AnimationBiomechanicalStepHeader step)
+            in AnimationFootMotionStep step)
         {
             IsValid = step.IsValid;
             IsAuthoritative = step.IsAuthoritative;
@@ -715,8 +714,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterFootStepCandidateSelectionDiagnostics
     {
         internal CharacterFootStepCandidateSelectionDiagnostics(
-            in AnimationBiomechanicalStepHeader current,
-            in AnimationBiomechanicalStepHeader incoming,
+            in AnimationFootMotionStep current,
+            in AnimationFootMotionStep incoming,
             ulong lastLandingEventIdentity,
             CharacterFootLandingStepSource selectedSource,
             ulong selectedLandingEventIdentity,
@@ -738,10 +737,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float MaximumPredictionTimeSeconds { get; }
     }
 
-    public readonly struct CharacterFootStepObservationInputDiagnostics
+    public readonly struct CharacterFootMotionInputDiagnostics
     {
-        internal CharacterFootStepObservationInputDiagnostics(
-            in AnimationFootStepObservationFrame frame)
+        internal CharacterFootMotionInputDiagnostics(
+            in AnimationFootMotionRuntimeFrame frame)
         {
             if (!frame.IsValid)
                 throw new ArgumentException("Foot Step observation input diagnostics is invalid.");
@@ -753,8 +752,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Cycle = frame.Cycle;
             SourceWeight = frame.SourceWeight;
             NormalizedTime = frame.NormalizedTime;
-            Left = frame.Left;
-            Right = frame.Right;
+            Left = frame.Left.Observation;
+            Right = frame.Right.Observation;
             m_IsSpecified = 1;
         }
 
@@ -783,7 +782,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootActionOccupancy rightAction,
             in ThirdPersonSimulation.CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
-            in AnimationFootStepObservationFrame footStepObservation)
+            in AnimationFootMotionRuntimeFrame footMotion)
         {
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Grounded = grounded;
@@ -830,8 +829,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TimelineMaximumBodyYawVelocityDegreesPerSecond =
                 timeline.MaximumBodyYawVelocityDegreesPerSecond;
             CurrentSegmentRemainingSeconds = currentSegmentRemainingSeconds;
-            FootStepObservation =
-                new CharacterFootStepObservationInputDiagnostics(in footStepObservation);
+            FootMotion =
+                new CharacterFootMotionInputDiagnostics(in footMotion);
         }
 
         public float PresentationDeltaSeconds { get; }
@@ -874,7 +873,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float TimelineBodyYawVelocityDegreesPerSecond { get; }
         public float TimelineMaximumBodyYawVelocityDegreesPerSecond { get; }
         public float CurrentSegmentRemainingSeconds { get; }
-        public CharacterFootStepObservationInputDiagnostics FootStepObservation { get; }
+        public CharacterFootMotionInputDiagnostics FootMotion { get; }
     }
 
     public readonly struct CharacterFootLandingPredictionDiagnostics

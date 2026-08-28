@@ -2375,6 +2375,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !currentState.FormalOutputObservationAvailable ||
                 !float.IsFinite(
                     currentState.SwingFormalFootHeight) ||
+                !float.IsFinite(
+                    currentState.SwingLandingConstraintWeight) ||
                 currentState.ComponentUp.sqrMagnitude <=
                 PositionNoiseFloor * PositionNoiseFloor)
             {
@@ -2398,21 +2400,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return false;
             }
+            Vector3 baselineSample = Vector3.Lerp(
+                path.LastLanding,
+                path.NextLanding,
+                progress);
             float originalSoleHeight = Vector3.Dot(
                 currentState.OriginalSole,
                 up);
-            float formalTargetHeight = Vector3.Dot(
+            float envelopeMinimumCorrection = Vector3.Dot(
                 envelopeSample,
+                up) - originalSoleHeight;
+            float unweightedFormalTargetHeight = Vector3.Dot(
+                baselineSample,
                 up) + currentState.SwingFormalFootHeight;
-            float formalTargetCorrection =
-                formalTargetHeight - originalSoleHeight;
-            if (!float.IsFinite(formalTargetHeight) ||
-                !float.IsFinite(formalTargetCorrection) ||
+            float weightedFormalCorrection =
+                currentState.SwingLandingConstraintWeight *
+                (unweightedFormalTargetHeight - originalSoleHeight);
+            if (!float.IsFinite(envelopeMinimumCorrection) ||
+                !float.IsFinite(unweightedFormalTargetHeight) ||
+                !float.IsFinite(weightedFormalCorrection) ||
                 !float.IsFinite(originalSoleHeight))
             {
                 return false;
             }
-            float verticalCorrection = Mathf.Max(0f, formalTargetCorrection);
+            float verticalCorrection = Mathf.Max(
+                0f,
+                Mathf.Max(
+                    envelopeMinimumCorrection,
+                    weightedFormalCorrection));
             target = up * verticalCorrection;
             return FiniteVector(target);
         }
@@ -3434,10 +3449,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionEnvelopeSampleAlongUp"),
                 SwingFormalFootHeight =
                     Float("FootMotionFormalFootHeight"),
-                SwingFormalTargetHeight =
-                    Float("FootMotionFormalTargetHeight"),
-                SwingFormalTargetCorrection =
-                    Float("FootMotionFormalTargetCorrection"),
+                SwingUnweightedFormalTargetHeight =
+                    Float("FootMotionUnweightedFormalTargetHeight"),
+                SwingLandingConstraintWeight =
+                    Float("FootMotionLandingConstraintWeight"),
+                SwingWeightedFormalCorrection =
+                    Float("FootMotionWeightedFormalCorrection"),
                 SwingEnvelopeMinimumCorrection =
                     Float("FootMotionEnvelopeMinimumCorrection"),
                 SwingBuilderSelectedCorrection =
@@ -3764,15 +3781,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 float envelopeAlongUp = Vector3.Dot(
                     frame.SwingEnvelopeSample,
                     up);
-                float expectedFormalTargetHeight =
-                    envelopeAlongUp + frame.SwingFormalFootHeight;
-                float expectedFormalTargetCorrection =
-                    expectedFormalTargetHeight - originalSoleAlongUp;
+                float expectedUnweightedFormalTargetHeight =
+                    baselineAlongUp + frame.SwingFormalFootHeight;
+                float expectedWeightedFormalCorrection =
+                    frame.SwingLandingConstraintWeight *
+                    (expectedUnweightedFormalTargetHeight -
+                     originalSoleAlongUp);
                 float expectedEnvelopeMinimumCorrection =
                     envelopeAlongUp - originalSoleAlongUp;
                 float expectedBuilderSelectedCorrection = Mathf.Max(
                     0f,
-                    expectedFormalTargetCorrection);
+                    Mathf.Max(
+                        expectedEnvelopeMinimumCorrection,
+                        expectedWeightedFormalCorrection));
                 if (Math.Abs(
                         baselineAlongUp -
                         frame.SwingBaselineSampleAlongUp) >
@@ -3782,12 +3803,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.SwingEnvelopeSampleAlongUp) >
                     PositionNoiseFloor ||
                     Math.Abs(
-                        frame.SwingFormalTargetHeight -
-                        expectedFormalTargetHeight) >
+                        frame.SwingUnweightedFormalTargetHeight -
+                        expectedUnweightedFormalTargetHeight) >
                     PositionNoiseFloor ||
+                    frame.SwingLandingConstraintWeight < 0f ||
+                    frame.SwingLandingConstraintWeight > 1f ||
                     Math.Abs(
-                        frame.SwingFormalTargetCorrection -
-                        expectedFormalTargetCorrection) >
+                        frame.SwingWeightedFormalCorrection -
+                        expectedWeightedFormalCorrection) >
                     PositionNoiseFloor ||
                     Math.Abs(
                         frame.SwingEnvelopeMinimumCorrection -
@@ -4397,8 +4420,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionEnvelopeSampleZ",
                 "FootMotionEnvelopeSampleAlongUp",
                 "FootMotionFormalFootHeight",
-                "FootMotionFormalTargetHeight",
-                "FootMotionFormalTargetCorrection",
+                "FootMotionUnweightedFormalTargetHeight",
+                "FootMotionLandingConstraintWeight",
+                "FootMotionWeightedFormalCorrection",
                 "FootMotionEnvelopeMinimumCorrection",
                 "FootMotionBuilderSelectedCorrection",
                 "FootMotionBuilderSwingTargetAvailable",
@@ -5000,8 +5024,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 SwingEnvelopeSample;
             internal float SwingEnvelopeSampleAlongUp;
             internal float SwingFormalFootHeight;
-            internal float SwingFormalTargetHeight;
-            internal float SwingFormalTargetCorrection;
+            internal float SwingUnweightedFormalTargetHeight;
+            internal float SwingLandingConstraintWeight;
+            internal float SwingWeightedFormalCorrection;
             internal float SwingEnvelopeMinimumCorrection;
             internal float SwingBuilderSelectedCorrection;
             internal bool BuilderSwingTargetAvailable;

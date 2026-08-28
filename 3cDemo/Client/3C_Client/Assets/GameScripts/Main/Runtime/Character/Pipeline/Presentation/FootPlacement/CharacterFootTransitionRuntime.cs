@@ -9,7 +9,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             context.Discrete.State = decision.TargetState;
             context.Discrete.LockResponse = decision.TargetLockResponse;
-            context.Discrete.PlantCycleConsumed = decision.PlantCycleConsumed;
             context.Discrete.LastTransitionPhase = decision.Phase;
             context.Discrete.LastTransitionReason = decision.Reason;
             switch (decision.AnchorCommand)

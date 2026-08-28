@@ -46,8 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         swingCorrection,
                         CharacterFootInterpolationPolicy.AcquireByWeight,
                         transition,
-                        ResolvePlantOwnership(
-                            frame.SwingMotion.PlantConfidence),
+                        frame.FormalMotion.Observation.LockWeight,
                         timeToLandingSeconds);
                 case CharacterFootConstraintState.Locked:
                     return ResolveLockedTarget(
@@ -135,10 +134,5 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 progress,
                 timeToLandingSeconds);
 
-        static float ResolvePlantOwnership(float plantConfidence) =>
-            Mathf.InverseLerp(
-                AnimationFootConstraintFacts.GroundedMinimumConfidence,
-                AnimationFootConstraintFacts.LockedMinimumConfidence,
-                plantConfidence);
     }
 }

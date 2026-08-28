@@ -2757,15 +2757,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in inputBinding,
                     m_PhysicalSources,
                     m_FootPlacementContributions);
-            AnimationFootStepObservationFrame footStepObservation =
-                ResolveFootStepObservationFrame(
+            AnimationFootMotionRuntimeFrame footMotion =
+                ResolveFootMotionRuntimeFrame(
                     completionIdentity,
                     m_FootPlacementContributions,
                     contributionCount);
             var input = new CharacterFootPlacementPoseInput(
                 m_Projection.PosePlan.PlanHash,
                 in inputBinding,
-                in footStepObservation,
+                in footMotion,
                 m_FootPlacementContributions,
                 contributionCount);
             if ((uint)operation.ParameterIndex >=
@@ -2792,7 +2792,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in planningFrame);
         }
 
-        AnimationFootStepObservationFrame ResolveFootStepObservationFrame(
+        AnimationFootMotionRuntimeFrame ResolveFootMotionRuntimeFrame(
             ulong completionIdentity,
             AnimationPoseSourceContribution[] contributions,
             int contributionCount)
@@ -2860,7 +2860,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             curves.RequireValid();
             int cycle = checked((int)Math.Floor(
                 clipSample.ContinuousClipTime / clipSample.Clip.length));
-            return new AnimationFootStepObservationFrame(
+            return new AnimationFootMotionRuntimeFrame(
                 completionIdentity,
                 contribution.NodeId,
                 contribution.SourceId,
@@ -2870,8 +2870,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 cycle,
                 contribution.Weight,
                 clipSample.NormalizedTime,
-                curves.Left.Sample(clipSample.NormalizedTime),
-                curves.Right.Sample(clipSample.NormalizedTime));
+                clipSample.Clip.length,
+                curves);
         }
 
         static AnimationPoseSourceContribution

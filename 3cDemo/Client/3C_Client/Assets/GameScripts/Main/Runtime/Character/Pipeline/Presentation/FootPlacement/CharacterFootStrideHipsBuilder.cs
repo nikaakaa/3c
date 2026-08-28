@@ -486,8 +486,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static CharacterFootStrideIntentResult ResolveIntent(
-            in AnimationBiomechanicalStepHeader leftSwingStep,
-            in AnimationBiomechanicalStepHeader rightSwingStep,
+            in AnimationFootMotionStep leftSwingStep,
+            in AnimationFootMotionStep rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
             bool hasLeftNextSwingLanding,
@@ -596,8 +596,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static bool TrySelectSwing(
-            in AnimationBiomechanicalStepHeader leftStep,
-            in AnimationBiomechanicalStepHeader rightStep,
+            in AnimationFootMotionStep leftStep,
+            in AnimationFootMotionStep rightStep,
             in CharacterFootSwingMotionResult leftMotion,
             in CharacterFootSwingMotionResult rightMotion,
             out CharacterFootSide swingSide)
@@ -632,8 +632,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static bool TryResolveStride(
-            in AnimationBiomechanicalStepHeader leftSwingStep,
-            in AnimationBiomechanicalStepHeader rightSwingStep,
+            in AnimationFootMotionStep leftSwingStep,
+            in AnimationFootMotionStep rightSwingStep,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
             bool hasPrimarySupport,
@@ -1270,7 +1270,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    minimumAlongUp <= maximumAlongUp;
         }
 
-        static bool IsAuthoritativeSwing(in AnimationBiomechanicalStepHeader step) =>
+        static bool IsAuthoritativeSwing(in AnimationFootMotionStep step) =>
             step.IsValid &&
             step.IsAuthoritative &&
             step.IsSwing &&
@@ -1279,7 +1279,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static bool IsRetainablePrimarySupport(
             in CharacterResolvedFootResult motion) =>
             motion.Outcome == CharacterFootResolvedOutcome.Ready &&
-            motion.ContactReference.IsAvailable &&
+            motion.PelvisReachReference.IsAvailable &&
             motion.SupportEventIdentity != 0 &&
             motion.SupportWeight > GeometryEpsilon &&
             motion.SupportEligibility != CharacterFootSupportEligibility.None;
@@ -1307,7 +1307,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 default,
                 default,
-                0f,
                 0f,
                 0f,
                 originalSole,

@@ -164,13 +164,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.EffectiveCorrection =
                     target.Correction + state.Residual;
             }
-            state.Completed = frame.SwingMotion.PlantConfidence <
-                              AnimationFootConstraintFacts
-                                  .GroundedMinimumConfidence &&
+            state.Completed = frame.FormalMotion.Observation.LockWeight <=
+                              CharacterFootConstraintMath.GeometryEpsilon &&
                               Vector3.Distance(
                                   state.EffectiveCorrection,
                                   target.SwingCorrection) <=
-                              frame.Settings.LandingUpdateDistance;
+                              frame.Settings.ReleaseCompletionDistance;
             return Result(
                 in state,
                 state.Completed,
@@ -221,13 +220,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootPathRevisionReason.LandingEventChanged;
             }
             if (comparablePath &&
-                landingPointDelta > frame.Settings.LandingUpdateDistance)
+                landingPointDelta > frame.Settings.SwingRevisionDistance)
             {
                 revisionReason |=
                     CharacterFootPathRevisionReason.LandingPointChanged;
             }
             if (comparablePath &&
-                targetDelta > frame.Settings.LandingUpdateDistance)
+                targetDelta > frame.Settings.SwingRevisionDistance)
             {
                 revisionReason |=
                     CharacterFootPathRevisionReason.SwingTargetChanged;
@@ -285,7 +284,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 residualBeforeRevision,
                 residualBeforeDecay,
                 state.Residual,
-                frame.Settings.LandingUpdateDistance,
+                frame.Settings.SwingRevisionDistance,
                 target.TimeToLandingSeconds,
                 frame.Settings.EffectiveCorrectionHalfLifeSeconds,
                 deadlineHalfLifeAvailable,
@@ -336,14 +335,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.EffectiveCorrectionHalfLifeSeconds;
             float residualDistance = residual.magnitude;
             if (!float.IsFinite(residualDistance) ||
-                residualDistance <= settings.LandingUpdateDistance ||
+                residualDistance <= settings.ResidualLandingTolerance ||
                 !float.IsFinite(timeToLandingSeconds) ||
                 timeToLandingSeconds <= 0f)
             {
                 return halfLifeSeconds;
             }
             float halfLifeCount = Mathf.Log(
-                residualDistance / settings.LandingUpdateDistance,
+                residualDistance / settings.ResidualLandingTolerance,
                 2f);
             if (!float.IsFinite(halfLifeCount) || halfLifeCount <= 0f)
                 return halfLifeSeconds;

@@ -64,6 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootTransitionDecision postTransition =
                 CharacterFootTransitionResolver.ResolvePostInterpolation(
                     in context,
+                    in frame,
                     interpolation.Completed);
             CharacterFootTransitionRuntime.Apply(
                 ref context,
@@ -224,18 +225,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.ComponentUp.normalized).magnitude
                 : 0f;
             float contactOwnership = ResolveContactOwnership(in context);
-            CharacterFootSupportEligibility supportEligibility =
-                ResolveSupportEligibility(context.Discrete.State);
-            float supportWeight = context.Discrete.State switch
+            float supportIntent = frame.FormalMotion.Observation.Support;
+            ulong reachEventIdentity = 0;
+            Vector3 reachPoint = default;
+            if (hasContact)
             {
-                CharacterFootConstraintState.Locked => 1f,
-                CharacterFootConstraintState.Releasing => contactOwnership,
-                _ => 0f
-            };
+                reachEventIdentity = context.Contact.EventIdentity;
+                reachPoint = context.Contact.Anchor;
+            }
+            else if (frame.HasContactLanding)
+            {
+                reachEventIdentity = frame.ContactLanding.LandingEventIdentity;
+                reachPoint = frame.ContactLanding.Point;
+            }
+            else if (swing.SwingPathReference.IsAvailable)
+            {
+                reachEventIdentity = swing.SwingPathReference.LandingEventIdentity;
+                reachPoint = swing.SwingPathReference.LandingPoint;
+            }
+            var pelvisReachReference =
+                supportIntent > CharacterFootConstraintMath.GeometryEpsilon &&
+                reachEventIdentity != 0
+                    ? new CharacterFootPelvisReachReference(
+                        reachEventIdentity,
+                        reachPoint)
+                    : default;
+            CharacterFootSupportEligibility supportEligibility =
+                pelvisReachReference.IsAvailable
+                    ? CharacterFootSupportEligibility.AcquireAndRetain
+                    : CharacterFootSupportEligibility.None;
             float positionWeight = outputCorrection.sqrMagnitude >
                                    CharacterFootConstraintMath.GeometryEpsilon *
                                    CharacterFootConstraintMath.GeometryEpsilon
-                ? frame.FootPlacementWeight
+                ? frame.FootPlacementWeight * ResolveGoalWeight(
+                    context.Discrete.State,
+                    frame.FormalMotion.Observation.LockWeight,
+                    contactOwnership)
                 : 0f;
             CharacterFootSwingMotionState outputState = hasContact
                 ? CharacterFootSwingMotionState.Accepted
@@ -262,7 +287,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     outputCorrection,
                     frame.ComponentUp.normalized),
                 swing.LandingPredictionError,
-                swing.LandingConstraintWeight,
                 originalSole + outputCorrection,
                 originalAnkle + outputCorrection,
                 positionWeight,
@@ -271,9 +295,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.Discrete.LockResponse,
                 horizontalError,
                 contactOwnership,
-                supportWeight,
-                hasContact ? context.Contact.Anchor : default,
-                swing.PlantConfidence,
+                supportIntent,
+                pelvisReachReference.IsAvailable ? pelvisReachReference.Point : default,
                 desiredCorrection,
                 hasContact,
                 hasContact ? context.Contact.SurfaceIdentity : 0,
@@ -284,13 +307,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.Contact.EventIdentity,
                     context.Contact.Anchor)
                 : default;
-            var pelvisReachReference =
-                hasContact &&
-                supportEligibility != CharacterFootSupportEligibility.None
-                    ? new CharacterFootPelvisReachReference(
-                        context.Contact.EventIdentity,
-                        context.Contact.Anchor)
-                    : default;
             return new CharacterResolvedFootResult(
                 frame.FrameSequence,
                 frame.CompletionIdentity,
@@ -304,10 +320,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in contactReference,
                 contactOwnership,
                 supportEligibility,
-                supportWeight,
-                supportWeight,
+                supportIntent,
+                supportIntent,
                 horizontalError,
-                hasContact ? context.Contact.EventIdentity : 0,
+                pelvisReachReference.IsAvailable
+                    ? pelvisReachReference.EventIdentity
+                    : 0,
                 in pelvisReachReference);
         }
 
@@ -334,15 +352,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static CharacterFootSupportEligibility ResolveSupportEligibility(
-            CharacterFootConstraintState state) =>
+        static float ResolveGoalWeight(
+            CharacterFootConstraintState state,
+            float lockWeight,
+            float contactOwnership) =>
             state switch
             {
-                CharacterFootConstraintState.Locked =>
-                    CharacterFootSupportEligibility.AcquireAndRetain,
-                CharacterFootConstraintState.Releasing =>
-                    CharacterFootSupportEligibility.RetainOnly,
-                _ => CharacterFootSupportEligibility.None
+                CharacterFootConstraintState.Landing => lockWeight,
+                CharacterFootConstraintState.Locked => lockWeight,
+                CharacterFootConstraintState.Releasing => contactOwnership,
+                _ => 1f
             };
 
         static void RequireValid(in CharacterFootStateFrame frame)
@@ -359,9 +378,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.FootPlacementWeight > 1f ||
                 !float.IsFinite(frame.DeltaSeconds) ||
                 frame.DeltaSeconds < 0f ||
-                !float.IsFinite(frame.SwingMotion.PlantConfidence) ||
-                frame.SwingMotion.PlantConfidence < 0f ||
-                frame.SwingMotion.PlantConfidence > 1f ||
+                !frame.FormalMotion.IsValid ||
+                frame.FormalMotion.Observation.LockMode ==
+                    ThirdPersonCharacter.Pipeline.Animation
+                        .AnimationFootStepObservationLockMode.Unlocked &&
+                frame.FormalMotion.Observation.LockWeight >
+                    CharacterFootConstraintMath.GeometryEpsilon ||
                 frame.SwingMotion.Accepted !=
                 frame.SwingMotion.SwingPathReference.IsAvailable ||
                 frame.SwingMotion.Accepted &&

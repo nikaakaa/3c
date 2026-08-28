@@ -431,6 +431,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasNextSwingLanding,
             CharacterFootGroundPathLanding nextSwingLanding,
             float nextSwingPredictionError,
+            float nextSwingConstraintWeight,
             bool hasPromotedLanding,
             CharacterFootGroundPathLanding promotedLanding,
             bool commitAttempted,
@@ -443,6 +444,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasNextSwingLanding = hasNextSwingLanding;
             NextSwingLanding = nextSwingLanding;
             NextSwingPredictionError = nextSwingPredictionError;
+            NextSwingConstraintWeight = nextSwingConstraintWeight;
             HasPromotedLanding = hasPromotedLanding;
             PromotedLanding = promotedLanding;
             CommitAttempted = commitAttempted;
@@ -458,6 +460,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasNextSwingLanding { get; }
         internal CharacterFootGroundPathLanding NextSwingLanding { get; }
         internal float NextSwingPredictionError { get; }
+        internal float NextSwingConstraintWeight { get; }
         internal bool HasPromotedLanding { get; }
         internal CharacterFootGroundPathLanding PromotedLanding { get; }
         internal bool CommitAttempted { get; }
@@ -495,6 +498,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingFact PromotedLanding;
         internal Vector3 NextSwingReferencePoint;
         internal float NextSwingPredictionError;
+        internal float NextSwingConstraintWeight;
         internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
         internal CharacterFootLandingTrackingState TrackingState;
@@ -510,6 +514,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextSwingLanding.HasValue,
                 NextSwingLanding.HasValue ? NextSwingLanding.Resolve() : default,
                 NextSwingLanding.HasValue ? NextSwingPredictionError : 0f,
+                NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
                 PromotedLanding.HasValue,
                 PromotedLanding.HasValue ? PromotedLanding.Resolve() : default,
                 CommitAttempted,
@@ -527,6 +532,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (TrackingState == CharacterFootLandingTrackingState.Committed)
                 return;
             NextSwingPredictionError = 0f;
+            NextSwingConstraintWeight = 0f;
             CommitAttempted = false;
             CommitUnavailable = false;
             TrackingState = TrackedEventIdentity != 0
@@ -539,6 +545,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingLanding = default;
             NextSwingReferencePoint = default;
             NextSwingPredictionError = 0f;
+            NextSwingConstraintWeight = 0f;
             TrackingState = TrackedEventIdentity != 0
                 ? CharacterFootLandingTrackingState.Tracking
                 : CharacterFootLandingTrackingState.Empty;

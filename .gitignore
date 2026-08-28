@@ -55,6 +55,9 @@ coverage.cobertura.xml
 *.coveragexml
 /3cDemo/Client/3C_Client/FootIkEnduranceRuns/
 
+# Local diagnostic output
+/3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/
+
 # .NET generated output
 artifacts/
 publish/

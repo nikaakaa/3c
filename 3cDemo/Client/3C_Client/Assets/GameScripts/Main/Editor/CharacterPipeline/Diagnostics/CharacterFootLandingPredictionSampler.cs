@@ -1638,8 +1638,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string ResolveSaveDirectory() => Path.GetFullPath(Path.Combine(
             Application.dataPath,
             "..",
-            "Temp",
-            "FootLandingDiagnostics"));
+            "Diagnostics",
+            "FootPlacementRuns"));
 
         static void WriteSampleRow(
             SamplingSession session,

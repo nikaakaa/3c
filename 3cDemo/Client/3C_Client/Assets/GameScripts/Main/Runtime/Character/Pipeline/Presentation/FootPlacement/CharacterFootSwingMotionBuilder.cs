@@ -529,7 +529,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootSwingMotionResult Build(
             CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in AnimationBiomechanicalStepHeader step,
+            in AnimationFootMotionRuntimeSample step,
             float footPlacementWeight,
             Vector3 componentUp,
             in CharacterFootGroundPathResult groundPath,
@@ -587,7 +587,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootSwingMotionResult BuildForSwing(
             CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in AnimationBiomechanicalStepHeader step,
+            in AnimationFootMotionRuntimeSample step,
             ulong landingEventIdentity,
             float footPlacementWeight,
             Vector3 componentUp,
@@ -779,20 +779,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static bool TryResolveSwingPhaseWeight(
-            in AnimationBiomechanicalStepHeader step,
+            in AnimationFootMotionRuntimeSample step,
             out float weight)
         {
-            weight = 0f;
-            if (!float.IsFinite(step.EventPhase) ||
-                !float.IsFinite(step.LiftOffPhase) ||
-                !float.IsFinite(step.LandingPhase) ||
-                step.LandingPhase <= step.LiftOffPhase)
+            if (!step.HasPredictiveLanding ||
+                !float.IsFinite(step.SwingProgress))
+            {
+                weight = 0f;
                 return false;
-            float phase = Mathf.InverseLerp(
-                step.LiftOffPhase,
-                step.LandingPhase,
-                step.EventPhase);
-            weight = Mathf.SmoothStep(0f, 1f, phase);
+            }
+            weight = Mathf.SmoothStep(0f, 1f, step.SwingProgress);
             return float.IsFinite(weight);
         }
 

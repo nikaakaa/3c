@@ -194,7 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionActualEnvelopeCounterfactualState," +
             "FootMotionActualProgressEnvelopeCorrectionAvailable,FootMotionActualProgressEnvelopeMinimumCorrection," +
             "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget," +
-            "FootMotionLandingPredictionError,FootMotionPlantConfidence," +
+            "FootMotionLandingPredictionError," +
             "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
@@ -2024,7 +2024,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, actualEnvelopeMinimumCorrection);
             Add(row, actualEnvelopeAdvanceAboveBuilderTarget);
             Add(row, motion.LandingPredictionError);
-            Add(row, motion.PlantConfidence);
             Add(row, motion.CorrectedSole);
             Add(row, motion.CorrectedAnkle);
             Add(row, motion.PositionWeight);

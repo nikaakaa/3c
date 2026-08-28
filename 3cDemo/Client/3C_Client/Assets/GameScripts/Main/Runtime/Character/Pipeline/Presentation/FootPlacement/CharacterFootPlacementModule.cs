@@ -331,24 +331,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathLanding leftNextSwingLanding = leftLanding.NextSwingLanding;
             CharacterFootGroundPathLanding rightLastLanding = rightLanding.LastLanding;
             CharacterFootGroundPathLanding rightNextSwingLanding = rightLanding.NextSwingLanding;
-            bool hasLeftContactLanding = leftLanding.HasPromotedLanding;
-            CharacterFootGroundPathLanding leftContactLanding =
-                hasLeftContactLanding ? leftLanding.PromotedLanding : default;
-            if (!hasLeftContactLanding)
-            {
-                hasLeftContactLanding = leftLanding.TryResolveLanding(
-                    leftSelectedStep.LandingEventIdentity,
+            AnimationFootStepObservationFrame formalFootFrame =
+                frame.Pose.FootStepObservation;
+            AnimationFootStepObservationSample leftFormalFoot =
+                formalFootFrame.Left;
+            AnimationFootStepObservationSample rightFormalFoot =
+                formalFootFrame.Right;
+            var leftLockRequest = new CharacterFootLockRequest(
+                in leftFormalFoot);
+            var rightLockRequest = new CharacterFootLockRequest(
+                in rightFormalFoot);
+            CharacterFootGroundPathLanding leftContactLanding = default;
+            bool hasLeftContactLanding = leftLockRequest.RequestsLock &&
+                leftLanding.TryResolveLanding(
+                    leftLockRequest.EventIdentity,
                     out leftContactLanding);
-            }
-            bool hasRightContactLanding = rightLanding.HasPromotedLanding;
-            CharacterFootGroundPathLanding rightContactLanding =
-                hasRightContactLanding ? rightLanding.PromotedLanding : default;
-            if (!hasRightContactLanding)
-            {
-                hasRightContactLanding = rightLanding.TryResolveLanding(
-                    rightSelectedStep.LandingEventIdentity,
+            CharacterFootGroundPathLanding rightContactLanding = default;
+            bool hasRightContactLanding = rightLockRequest.RequestsLock &&
+                rightLanding.TryResolveLanding(
+                    rightLockRequest.EventIdentity,
                     out rightContactLanding);
-            }
             CharacterFootGroundPathResult leftGroundPath = PrepareGroundPath(
                 CharacterFootSide.Left,
                 hasLeftLastLanding,
@@ -374,8 +376,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             left = left.WithGroundPath(in leftGroundPath);
             right = right.WithGroundPath(in rightGroundPath);
 
-            AnimationFootStepObservationFrame formalFootFrame =
-                frame.Pose.FootStepObservation;
             bool formalFootFrameAvailable = formalFootFrame.IsValid &&
                 formalFootFrame.CompletionIdentity == frame.Pose.CompletionIdentity;
             float footPlacementWeight = frame.FootPlacementWeight;
@@ -391,9 +391,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         ? formalFootFrame.Left.FootHeight
                         : 0f,
                     leftLanding.NextSwingPredictionError,
-                    leftSelectedStep.ConstraintWeight)
-                .WithPlantConfidence(
-                    frame.Pose.LeftFootSteps.Kinematics.PlantConfidence);
+                    leftSelectedStep.ConstraintWeight);
             CharacterFootSwingMotionResult rightSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
                     pose.Right,
@@ -406,9 +404,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         ? formalFootFrame.Right.FootHeight
                         : 0f,
                     rightLanding.NextSwingPredictionError,
-                    rightSelectedStep.ConstraintWeight)
-                .WithPlantConfidence(
-                    frame.Pose.RightFootSteps.Kinematics.PlantConfidence);
+                    rightSelectedStep.ConstraintWeight);
             bool hasSelectedSwing = CharacterFootStrideHipsBuilder.TrySelectSwing(
                 in leftSelectedStep,
                 in rightSelectedStep,
@@ -425,6 +421,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftSwingMotion,
                 hasLeftContactLanding,
                 in leftContactLanding,
+                in leftLockRequest,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction),
                 footPlacementWeight,
                 componentUp,
@@ -439,6 +436,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightSwingMotion,
                 hasRightContactLanding,
                 in rightContactLanding,
+                in rightLockRequest,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction),
                 footPlacementWeight,
                 componentUp,

@@ -54,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string ScheduleReplayOperation = "schedule-replay";
         const string PlayerActorId = "gameplay-lab-player";
         const string PendingOperationKey = "ThirdPerson.CharacterInputTrace.PendingOperation.v1";
-        const string PendingTracePathKey = "ThirdPerson.CharacterInputTrace.PendingTracePath.v1";
+        const string PendingTraceIdKey = "ThirdPerson.CharacterInputTrace.PendingTraceId.v2";
         const string PendingVariantKey = "ThirdPerson.CharacterInputTrace.PendingVariant.v1";
         const string PendingDeadlineKey = "ThirdPerson.CharacterInputTrace.PendingDeadline.v1";
         const string PendingLaunchPhaseKey = "ThirdPerson.CharacterInputTrace.PendingLaunchPhase.v1";
@@ -101,12 +101,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastTraceId = TraceIdFromPath(s_LastTracePath);
             if (IsPending)
             {
-                EnsurePendingTracePreparation();
-                if (EditorApplication.isPlaying &&
-                    ReadPendingLaunchPhase() == PendingLaunchPhase.AwaitingPlayMode)
+                try
                 {
-                    WritePendingLaunchPhase(PendingLaunchPhase.Running);
-                    ResetPendingDeadline();
+                    EnsurePendingTracePreparation();
+                    if (EditorApplication.isPlaying &&
+                        ReadPendingLaunchPhase() == PendingLaunchPhase.AwaitingPlayMode)
+                    {
+                        WritePendingLaunchPhase(PendingLaunchPhase.Running);
+                        ResetPendingDeadline();
+                    }
+                }
+                catch (Exception exception)
+                {
+                    AbortPendingInitialization(exception);
                 }
             }
         }
@@ -299,7 +306,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastFailure = string.Empty;
             s_LastTracePath = path;
             s_LastTraceId = document.trace_id;
-            ArmPending(operation, path, document.launcher_variant_index);
+            ArmPending(
+                operation,
+                document.trace_id,
+                document.launcher_variant_index);
             s_LastStatus =
                 $"Restarting Gameplay Lab for {operation} trace {document.trace_id}.";
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -455,9 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     $"Canonical Fixed input pending operation '{operation}' is invalid.");
             }
-            s_PendingReplayDocument ??= ReadDocument(
-                EditorPrefs.GetString(PendingTracePathKey, string.Empty),
-                true);
+            s_PendingReplayDocument ??= ReadPendingReplayDocument();
             BeginReplay(s_PendingReplayDocument);
         }
 
@@ -1452,17 +1460,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     $"Canonical Fixed input pending operation '{operation}' is invalid.");
             }
-            s_PendingReplayDocument ??= ReadDocument(
-                EditorPrefs.GetString(PendingTracePathKey, string.Empty),
-                true);
+            s_PendingReplayDocument ??= ReadPendingReplayDocument();
             FixedCharacterInputTraceModule.PrepareReplay(
                 ToRuntimeTrace(s_PendingReplayDocument));
         }
 
-        static void ArmPending(string operation, string tracePath, int variantIndex)
+        static TraceDocument ReadPendingReplayDocument()
+        {
+            string traceId = EditorPrefs.GetString(
+                PendingTraceIdKey,
+                string.Empty);
+            if (string.IsNullOrWhiteSpace(traceId))
+            {
+                throw new InvalidDataException(
+                    "Canonical Fixed input pending TraceId is unavailable.");
+            }
+            return ReadDocument(ResolveTracePath(traceId), true);
+        }
+
+        static void ArmPending(string operation, string traceId, int variantIndex)
         {
             EditorPrefs.SetString(PendingOperationKey, operation);
-            EditorPrefs.SetString(PendingTracePathKey, tracePath ?? string.Empty);
+            EditorPrefs.SetString(PendingTraceIdKey, traceId ?? string.Empty);
             EditorPrefs.SetInt(PendingVariantKey, variantIndex);
             WritePendingLaunchPhase(
                 EditorApplication.isPlayingOrWillChangePlaymode
@@ -1598,11 +1617,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void ClearPending()
         {
             EditorPrefs.DeleteKey(PendingOperationKey);
-            EditorPrefs.DeleteKey(PendingTracePathKey);
+            EditorPrefs.DeleteKey(PendingTraceIdKey);
+            EditorPrefs.DeleteKey(
+                "ThirdPerson.CharacterInputTrace.PendingTracePath.v1");
             EditorPrefs.DeleteKey(PendingVariantKey);
             EditorPrefs.DeleteKey(PendingDeadlineKey);
             EditorPrefs.DeleteKey(PendingLaunchPhaseKey);
             s_PendingReplayDocument = null;
+        }
+
+        static void AbortPendingInitialization(Exception exception)
+        {
+            s_LastFailure = exception.Message;
+            s_LastStatus =
+                $"Canonical Fixed input pending operation was aborted: {exception.Message}";
+            ClearPending();
+            FixedCharacterInputTraceModule.Stop();
+            Debug.LogException(exception);
         }
 
         static string FindLatestTracePath()

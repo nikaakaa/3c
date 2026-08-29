@@ -14,17 +14,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public CharacterFootDiagnosisDocument Build(CharacterFootDiagnosisContext context)
         {
-            List<JObject> events = context.Events("Locked");
-            CharacterFootDiagnosisTarget target = context.Target(
+            List<JObject> fullAnchorEvents = context.Events("LockedFullAnchor");
+            CharacterFootDiagnosisTarget fullAnchorTarget = context.Target(
                 "locked-sole-sink-or-drift",
-                "Locked阶段脚底是否相对稳定Anchor下陷或漂移",
-                new[] { "Locked" },
+                "FullAnchor子段脚底是否相对稳定Anchor下陷或水平漂移",
+                new[] { "LockedFullAnchor" },
                 new[]
                 {
                     "soleDownwardExcursionMeters>0.005",
-                    "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01"
+                    "anchorStable=true&&correctedSoleAnchorHorizontalDistanceMaximumMeters>0.01"
                 },
-                events,
+                fullAnchorEvents,
                 value =>
                 {
                     var rules = new List<string>(2);
@@ -39,10 +39,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             "anchorStable") &&
                         CharacterFootDiagnosisContext.Metric(
                             value,
-                            "correctedSoleAnchorDistanceChangeMeters") > DriftMeters)
+                            "correctedSoleAnchorHorizontalDistanceMaximumMeters") > DriftMeters)
                     {
                         rules.Add(
-                            "anchorStable=true&&correctedSoleAnchorDistanceChangeMeters>0.01");
+                            "anchorStable=true&&correctedSoleAnchorHorizontalDistanceMaximumMeters>0.01");
                     }
                     return rules;
                 },
@@ -52,12 +52,45 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "soleDownwardExcursionMeters") / SinkMeters,
                     CharacterFootDiagnosisContext.Metric(
                         value,
-                        "correctedSoleAnchorDistanceChangeMeters") / DriftMeters),
+                        "correctedSoleAnchorHorizontalDistanceMaximumMeters") / DriftMeters),
                 "soleDownwardExcursionMeters",
-                "correctedSoleAnchorDistanceChangeMeters",
+                "correctedSoleAnchorHorizontalDistanceMaximumMeters",
                 "visibleSoleStepMaximumMeters",
                 "anchorDisplacementMeters");
-            return context.Document(DiagnosticId, target);
+            List<JObject> slidingEvents = context.Events("LockedSliding");
+            CharacterFootDiagnosisTarget slidingTarget = context.Target(
+                "locked-sliding-vertical-anchor",
+                "Sliding子段是否向垂直Anchor下方下陷；水平离锚距离与输出步长只发布事实，不在缺少正式距离政策时判定",
+                new[] { "LockedSliding" },
+                new[]
+                {
+                    "soleDownwardExcursionMeters>0.005"
+                },
+                slidingEvents,
+                value =>
+                {
+                    var rules = new List<string>(1);
+                    if (CharacterFootDiagnosisContext.Metric(
+                            value,
+                            "soleDownwardExcursionMeters") > SinkMeters)
+                    {
+                        rules.Add(
+                            "soleDownwardExcursionMeters>0.005");
+                    }
+                    return rules;
+                },
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "soleDownwardExcursionMeters") / SinkMeters,
+                "soleAlongUpAbsoluteMaximumMeters",
+                "soleDownwardExcursionMeters",
+                "correctedSoleAnchorHorizontalDistanceMaximumMeters",
+                "visibleSoleStepMaximumMeters",
+                "anchorDisplacementMeters");
+            return context.Document(
+                DiagnosticId,
+                fullAnchorTarget,
+                slidingTarget);
         }
     }
 }

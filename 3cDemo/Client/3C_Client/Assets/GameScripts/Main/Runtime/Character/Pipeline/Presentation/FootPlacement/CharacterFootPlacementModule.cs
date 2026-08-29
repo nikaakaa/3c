@@ -294,9 +294,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bodyTrajectory,
                 in frame,
                 in leftLanding,
-                RequiresCurrentContactRefresh(
-                    in bank.LeftFoot.ContactTransition,
-                    in leftLockRequest),
                 m_LeftLandingObservation,
                 committedBank?.LeftLandingObservation,
                 out bank.LeftLandingObservation);
@@ -310,9 +307,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bodyTrajectory,
                 in frame,
                 in rightLanding,
-                RequiresCurrentContactRefresh(
-                    in bank.RightFoot.ContactTransition,
-                    in rightLockRequest),
                 m_RightLandingObservation,
                 committedBank?.RightLandingObservation,
                 out bank.RightLandingObservation);
@@ -823,7 +817,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFutureBodyTranslation bodyTrajectory,
             in CharacterFootPlacementFrameInput frame,
             in CharacterFootLandingSnapshot landingSnapshot,
-            bool refreshCurrentContact,
             CharacterFootLandingObservationPagePool observationPool,
             CharacterFootLandingObservationPage committedObservation,
             out CharacterFootLandingObservationPage pendingObservation)
@@ -838,7 +831,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool needsCurrentContact = footMotion.Contact > 0f &&
                 footMotion.LockMode != AnimationFootStepObservationLockMode.Unlocked &&
                 current.IsBound &&
-                (refreshCurrentContact || !hasCurrentLanding);
+                !hasCurrentLanding;
             AnimationFootMotionEventOccurrence next = events.NextLanding;
             bool hasNextCandidate = IsPredictiveLanding(
                 in footMotion,
@@ -911,14 +904,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 selected,
                 selectedSource);
         }
-
-        static bool RequiresCurrentContactRefresh(
-            in CharacterFootContactTransitionContext context,
-            in CharacterFootLockRequest request) =>
-            request.RequestsLock &&
-            (!context.HasPreviousRequest ||
-             !context.PreviousRequestedLock ||
-             context.PreviousEventIdentity != request.EventIdentity);
 
         static bool IsPredictiveLanding(
             in AnimationFootMotionRuntimeSample footMotion,

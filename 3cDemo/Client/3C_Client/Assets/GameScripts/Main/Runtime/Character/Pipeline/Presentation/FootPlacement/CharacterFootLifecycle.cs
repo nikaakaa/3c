@@ -130,6 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in outputSwing,
                 desiredCorrection,
                 hardConstraint.OutputCorrection,
+                in target.SupportIntent,
                 in continuityFact,
                 out result);
         }
@@ -219,6 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult swing,
             Vector3 desiredCorrection,
             Vector3 outputCorrection,
+            in CharacterFootSupportIntent supportIntent,
             in CharacterFootPathContinuityFact continuityFact,
             out CharacterFootSwingMotionResult result)
         {
@@ -233,14 +235,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.ComponentUp.normalized).magnitude
                 : 0f;
             float contactOwnership = ResolveContactOwnership(in context);
-            CharacterFootSupportEligibility supportEligibility =
-                ResolveSupportEligibility(context.Discrete.State);
-            float supportWeight = context.Discrete.State switch
-            {
-                CharacterFootConstraintState.Locked => 1f,
-                CharacterFootConstraintState.Releasing => contactOwnership,
-                _ => 0f
-            };
+            bool ownsSupport = supportIntent.Available &&
+                               supportIntent.Weight > 0f &&
+                               hasContact &&
+                               supportIntent.EventIdentity ==
+                               context.Contact.EventIdentity;
+            CharacterFootSupportEligibility supportEligibility = ownsSupport
+                ? CharacterFootSupportEligibility.AcquireAndRetain
+                : CharacterFootSupportEligibility.None;
+            float supportWeight = ownsSupport ? supportIntent.Weight : 0f;
             float positionWeight = outputCorrection.sqrMagnitude >
                                    CharacterFootConstraintMath.GeometryEpsilon *
                                    CharacterFootConstraintMath.GeometryEpsilon
@@ -315,7 +318,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportWeight,
                 supportWeight,
                 horizontalError,
-                hasContact ? context.Contact.EventIdentity : 0,
+                ownsSupport ? supportIntent.EventIdentity : 0,
                 in pelvisReachReference);
         }
 
@@ -342,17 +345,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static CharacterFootSupportEligibility ResolveSupportEligibility(
-            CharacterFootConstraintState state) =>
-            state switch
-            {
-                CharacterFootConstraintState.Locked =>
-                    CharacterFootSupportEligibility.AcquireAndRetain,
-                CharacterFootConstraintState.Releasing =>
-                    CharacterFootSupportEligibility.RetainOnly,
-                _ => CharacterFootSupportEligibility.None
-            };
-
         static void RequireValid(in CharacterFootStateFrame frame)
         {
             if (frame.FrameSequence == 0 ||
@@ -367,6 +359,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.FootPlacementWeight > 1f ||
                 !float.IsFinite(frame.DeltaSeconds) ||
                 frame.DeltaSeconds < 0f ||
+                !float.IsFinite(frame.FormalSupport) ||
+                frame.FormalSupport < 0f ||
+                frame.FormalSupport > 1f ||
                 frame.SwingMotion.Accepted !=
                 frame.SwingMotion.SwingPathReference.IsAvailable ||
                 frame.SwingMotion.Accepted &&

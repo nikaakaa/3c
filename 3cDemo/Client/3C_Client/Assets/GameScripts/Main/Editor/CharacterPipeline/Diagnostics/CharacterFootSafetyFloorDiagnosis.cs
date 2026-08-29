@@ -130,10 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "ToeCandidateHeightAlongUp",
                     "RearProbeExtension",
                     "LateralProbeExtent",
-                    "ToeProbeExtension",
-                    "RearAxisErrorMeters",
-                    "LateralAxisErrorMeters",
-                    "LateralSymmetryErrorMeters");
+                    "ToeProbeExtension");
             currentSupportTarget.scorePolicy = "Informational";
             currentSupportTarget.categoricalMeasurements =
                 new SortedDictionary<

@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/44";
+        const string Schema = "character-foot-motion-facts/45";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 44;
+        const int AnalyzerVersion = 45;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -67,6 +67,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const double LandingReachCompressionReserveMeters = 0.02d;
         const double LowPresentationSamplingDeltaSeconds = 1d / 30d;
         const double SwingSpeedAnomalyMetersPerSecond = 5d;
+        const float CorrectionHoldMaximumMeters = 0.005f;
+        const float CorrectionAdvanceMinimumMeters = 0.02f;
 
         internal static CharacterFootMotionDiagnosticAnalysis Analyze(
             string samplesPath)
@@ -139,6 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"swingToLandingOutputJumps={document.coverage.swingToLandingOutputJumpCount} " +
                 $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
                 $"plantInterpolationJumps={document.coverage.plantInterpolationOutputJumpCount} " +
+                $"stableSwingCorrectionCadence={document.coverage.stableSwingCorrectionResponseCadenceCount} " +
                 $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
@@ -188,6 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeReleaseEvents(frames, events);
             AnalyzeLateApproachLandingRevisions(frames, events);
             AnalyzePlantInterpolationOutputJumps(frames, events);
+            AnalyzeStableSwingCorrectionResponseCadence(frames, events);
             AnalyzeActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
@@ -366,6 +370,259 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     metrics,
                     evidence));
             }
+        }
+
+        static void AnalyzeStableSwingCorrectionResponseCadence(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 2; i < frames.Count; i++)
+            {
+                FootFrame first = frames[i - 2];
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(first, previous) ||
+                    !Continuous(previous, current) ||
+                    first.FootMotionState != "Accepted" ||
+                    previous.FootMotionState != "Accepted" ||
+                    current.FootMotionState != "Accepted" ||
+                    first.ConstraintState != "Swing" ||
+                    previous.ConstraintState != "Swing" ||
+                    current.ConstraintState != "Swing" ||
+                    first.SourceIdentity != current.SourceIdentity ||
+                    previous.SourceIdentity != current.SourceIdentity ||
+                    first.SourceCycle != current.SourceCycle ||
+                    previous.SourceCycle != current.SourceCycle ||
+                    first.FootMotionEventIdentity == 0 ||
+                    first.FootMotionEventIdentity !=
+                    current.FootMotionEventIdentity ||
+                    previous.FootMotionEventIdentity !=
+                    current.FootMotionEventIdentity ||
+                    first.FootMotionGroundPathInputIdentity == 0 ||
+                    first.FootMotionGroundPathInputIdentity !=
+                    current.FootMotionGroundPathInputIdentity ||
+                    previous.FootMotionGroundPathInputIdentity !=
+                    current.FootMotionGroundPathInputIdentity ||
+                    current.PathRevisionReason != "None" ||
+                    current.PathResidualRebuilt ||
+                    !first.OutputStagesAvailable ||
+                    !previous.OutputStagesAvailable ||
+                    !current.OutputStagesAvailable ||
+                    !first.CorrectionResponseEvaluated ||
+                    !previous.CorrectionResponseEvaluated ||
+                    !current.CorrectionResponseEvaluated)
+                {
+                    continue;
+                }
+                float previousCorrectionStep = Vector3.Distance(
+                    first.FinalEffectiveCorrection,
+                    previous.FinalEffectiveCorrection);
+                float currentCorrectionStep = Vector3.Distance(
+                    previous.FinalEffectiveCorrection,
+                    current.FinalEffectiveCorrection);
+                bool holdToAdvance =
+                    previousCorrectionStep < CorrectionHoldMaximumMeters &&
+                    currentCorrectionStep > CorrectionAdvanceMinimumMeters;
+                bool advanceToHold =
+                    previousCorrectionStep > CorrectionAdvanceMinimumMeters &&
+                    currentCorrectionStep < CorrectionHoldMaximumMeters;
+                string classification = holdToAdvance
+                    ? "HoldToAdvance"
+                    : advanceToHold
+                        ? "AdvanceToHold"
+                        : "ContinuousCadence";
+                float previousDesiredDelta =
+                    previous.CorrectionResponseDesired -
+                    first.CorrectionResponseDesired;
+                float currentDesiredDelta =
+                    current.CorrectionResponseDesired -
+                    previous.CorrectionResponseDesired;
+                float previousResponseOutputStep = Vector3.Distance(
+                    first.ResponseOutputPoint,
+                    previous.ResponseOutputPoint);
+                float currentResponseOutputStep = Vector3.Distance(
+                    previous.ResponseOutputPoint,
+                    current.ResponseOutputPoint);
+                float previousFormalHeightDelta =
+                    previous.SwingFormalFootHeight -
+                    first.SwingFormalFootHeight;
+                float currentFormalHeightDelta =
+                    current.SwingFormalFootHeight -
+                    previous.SwingFormalFootHeight;
+                float previousEnvelopeStep = Vector3.Distance(
+                    first.SwingEnvelopeSample,
+                    previous.SwingEnvelopeSample);
+                float currentEnvelopeStep = Vector3.Distance(
+                    previous.SwingEnvelopeSample,
+                    current.SwingEnvelopeSample);
+                float previousEnvelopeAlongUpDelta =
+                    previous.SwingEnvelopeSampleAlongUp -
+                    first.SwingEnvelopeSampleAlongUp;
+                float currentEnvelopeAlongUpDelta =
+                    current.SwingEnvelopeSampleAlongUp -
+                    previous.SwingEnvelopeSampleAlongUp;
+                float previousOriginalSoleStep = Vector3.Distance(
+                    first.OriginalSole,
+                    previous.OriginalSole);
+                float currentOriginalSoleStep = Vector3.Distance(
+                    previous.OriginalSole,
+                    current.OriginalSole);
+                float previousEnvelopeDirectionContribution = Vector3.Dot(
+                    previous.SwingEnvelopeSample - first.SwingEnvelopeSample,
+                    previous.CorrectionResponseDirection);
+                float currentEnvelopeDirectionContribution = Vector3.Dot(
+                    current.SwingEnvelopeSample -
+                    previous.SwingEnvelopeSample,
+                    current.CorrectionResponseDirection);
+                float previousOriginalSoleDirectionContribution = -Vector3.Dot(
+                    previous.OriginalSole - first.OriginalSole,
+                    previous.CorrectionResponseDirection);
+                float currentOriginalSoleDirectionContribution = -Vector3.Dot(
+                    current.OriginalSole - previous.OriginalSole,
+                    current.CorrectionResponseDirection);
+                bool useCurrentStep = holdToAdvance || !advanceToHold;
+                string firstLargeStepStage = ResolveFirstLargeCadenceStage(
+                    useCurrentStep
+                        ? Math.Abs(currentFormalHeightDelta)
+                        : Math.Abs(previousFormalHeightDelta),
+                    useCurrentStep
+                        ? Math.Abs(currentDesiredDelta)
+                        : Math.Abs(previousDesiredDelta),
+                    useCurrentStep
+                        ? Math.Abs(current.CorrectionResponseAppliedDelta)
+                        : Math.Abs(previous.CorrectionResponseAppliedDelta),
+                    useCurrentStep
+                        ? currentCorrectionStep
+                        : previousCorrectionStep);
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["HoldMaximumMeters"] = CorrectionHoldMaximumMeters,
+                    ["AdvanceMinimumMeters"] =
+                        CorrectionAdvanceMinimumMeters,
+                    ["PreviousDesiredResponseDelta"] =
+                        previousDesiredDelta,
+                    ["CurrentDesiredResponseDelta"] = currentDesiredDelta,
+                    ["PreviousCorrectionResponsePrevious"] =
+                        previous.CorrectionResponsePrevious,
+                    ["PreviousCorrectionResponseCurrent"] =
+                        previous.CorrectionResponseCurrent,
+                    ["PreviousCorrectionResponseAppliedDelta"] =
+                        previous.CorrectionResponseAppliedDelta,
+                    ["PreviousCorrectionResponseSelectedSpeed"] =
+                        previous.CorrectionResponseSelectedSpeed,
+                    ["CurrentCorrectionResponsePrevious"] =
+                        current.CorrectionResponsePrevious,
+                    ["CurrentCorrectionResponseCurrent"] =
+                        current.CorrectionResponseCurrent,
+                    ["CurrentCorrectionResponseAppliedDelta"] =
+                        current.CorrectionResponseAppliedDelta,
+                    ["CurrentCorrectionResponseSelectedSpeed"] =
+                        current.CorrectionResponseSelectedSpeed,
+                    ["PreviousResponseOutputStep"] =
+                        previousResponseOutputStep,
+                    ["CurrentResponseOutputStep"] =
+                        currentResponseOutputStep,
+                    ["PreviousFinalEffectiveCorrectionStep"] =
+                        previousCorrectionStep,
+                    ["CurrentFinalEffectiveCorrectionStep"] =
+                        currentCorrectionStep,
+                    ["PreviousFormalFootHeightDelta"] =
+                        previousFormalHeightDelta,
+                    ["CurrentFormalFootHeightDelta"] =
+                        currentFormalHeightDelta,
+                    ["PreviousEnvelopeSampleStep"] = previousEnvelopeStep,
+                    ["CurrentEnvelopeSampleStep"] = currentEnvelopeStep,
+                    ["PreviousEnvelopeSampleAlongUpDelta"] =
+                        previousEnvelopeAlongUpDelta,
+                    ["CurrentEnvelopeSampleAlongUpDelta"] =
+                        currentEnvelopeAlongUpDelta,
+                    ["PreviousOriginalSoleStep"] = previousOriginalSoleStep,
+                    ["CurrentOriginalSoleStep"] = currentOriginalSoleStep,
+                    ["PreviousEnvelopeDirectionContribution"] =
+                        previousEnvelopeDirectionContribution,
+                    ["CurrentEnvelopeDirectionContribution"] =
+                        currentEnvelopeDirectionContribution,
+                    ["PreviousOriginalSoleDirectionContribution"] =
+                        previousOriginalSoleDirectionContribution,
+                    ["CurrentOriginalSoleDirectionContribution"] =
+                        currentOriginalSoleDirectionContribution
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["holdToAdvance"] = holdToAdvance,
+                    ["advanceToHold"] = advanceToHold,
+                    ["previousObservationQueryExecuted"] =
+                        previous.LandingObservationQueryExecuted,
+                    ["currentObservationQueryExecuted"] =
+                        current.LandingObservationQueryExecuted,
+                    ["previousObservationReused"] =
+                        previous.LandingObservationCacheState == "Reused",
+                    ["currentObservationReused"] =
+                        current.LandingObservationCacheState == "Reused"
+                };
+                var detail = new CharacterFootCorrectionResponseCadenceAnalysis
+                {
+                    classification = classification,
+                    firstFrame = first.Frame,
+                    previousFrame = previous.Frame,
+                    frame = current.Frame,
+                    pathIdentity =
+                        current.FootMotionGroundPathInputIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    previousPathRevisionReason =
+                        previous.PathRevisionReason,
+                    currentPathRevisionReason = current.PathRevisionReason,
+                    previousObservationCacheState =
+                        previous.LandingObservationCacheState,
+                    previousObservationQueryPurpose =
+                        previous.LandingObservationQueryPurpose,
+                    previousObservationRefreshMode =
+                        previous.LandingObservationRefreshMode,
+                    previousObservationQueryReason =
+                        previous.LandingObservationQueryReason,
+                    currentObservationCacheState =
+                        current.LandingObservationCacheState,
+                    currentObservationQueryPurpose =
+                        current.LandingObservationQueryPurpose,
+                    currentObservationRefreshMode =
+                        current.LandingObservationRefreshMode,
+                    currentObservationQueryReason =
+                        current.LandingObservationQueryReason,
+                    firstLargeStepStage = firstLargeStepStage
+                };
+                events.Add(new EventFact(
+                    "StableSwingCorrectionResponseCadence",
+                    current.Side,
+                    first.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.FootMotionEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(previous) + DeltaSeconds(current),
+                    metrics,
+                    evidence,
+                    correctionResponseCadence: detail));
+            }
+        }
+
+        static string ResolveFirstLargeCadenceStage(
+            float formalHeightDelta,
+            float desiredResponseDelta,
+            float appliedResponseDelta,
+            float finalCorrectionStep)
+        {
+            if (formalHeightDelta > CorrectionAdvanceMinimumMeters)
+                return "FormalFootHeight";
+            if (desiredResponseDelta > CorrectionAdvanceMinimumMeters)
+                return "DesiredResponse";
+            if (appliedResponseDelta > CorrectionAdvanceMinimumMeters)
+                return "CorrectionResponseScalar";
+            return finalCorrectionStep > CorrectionAdvanceMinimumMeters
+                ? "FinalEffectiveCorrection"
+                : "Unavailable";
         }
 
         static void AnalyzeActualFootEnvelopeCounterfactuals(
@@ -3837,6 +4094,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     plantInterpolationOutputJumpCount = events.Count(
                         value => value.kind ==
                                  "PlantInterpolationOutputJump"),
+                    stableSwingCorrectionResponseCadenceCount = events.Count(
+                        value => value.kind ==
+                                 "StableSwingCorrectionResponseCadence"),
                     actualFootEnvelopeCounterfactualCount = events.Count(
                         value => value.kind ==
                                  "ActualFootEnvelopeCounterfactual"),
@@ -9087,6 +9347,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int swingToLandingOutputJumpCount;
             public int swingToLandingFloorHandoffCount;
             public int plantInterpolationOutputJumpCount;
+            public int stableSwingCorrectionResponseCadenceCount;
             public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;
             public int supportChangeCount;
@@ -9139,7 +9400,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootLandingObservationAnalysis
                     landingObservation = null,
                 CharacterFootVisibleOutputJumpAnalysis
-                    visibleOutputJump = null)
+                    visibleOutputJump = null,
+                CharacterFootCorrectionResponseCadenceAnalysis
+                    correctionResponseCadence = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -9159,6 +9422,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     lateApproachLandingRevision;
                 this.landingObservation = landingObservation;
                 this.visibleOutputJump = visibleOutputJump;
+                this.correctionResponseCadence = correctionResponseCadence;
             }
 
             public string kind;
@@ -9179,6 +9443,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 lateApproachLandingRevision;
             public CharacterFootLandingObservationAnalysis landingObservation;
             public CharacterFootVisibleOutputJumpAnalysis visibleOutputJump;
+            public CharacterFootCorrectionResponseCadenceAnalysis
+                correctionResponseCadence;
 
             internal static int Compare(EventFact left, EventFact right)
             {

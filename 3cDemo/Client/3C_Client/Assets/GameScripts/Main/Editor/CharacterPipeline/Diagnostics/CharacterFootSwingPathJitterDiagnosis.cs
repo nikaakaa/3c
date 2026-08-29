@@ -5,6 +5,27 @@ using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
+    [Serializable]
+    internal sealed class CharacterFootCorrectionResponseCadenceAnalysis
+    {
+        public string classification;
+        public int firstFrame;
+        public int previousFrame;
+        public int frame;
+        public string pathIdentity;
+        public string previousPathRevisionReason;
+        public string currentPathRevisionReason;
+        public string previousObservationCacheState;
+        public string previousObservationQueryPurpose;
+        public string previousObservationRefreshMode;
+        public string previousObservationQueryReason;
+        public string currentObservationCacheState;
+        public string currentObservationQueryPurpose;
+        public string currentObservationRefreshMode;
+        public string currentObservationQueryReason;
+        public string firstLargeStepStage;
+    }
+
     internal sealed class CharacterFootSwingPathJitterDiagnosis :
         ICharacterFootDiagnosis
     {
@@ -46,12 +67,108 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "ContinuousSwingToLandingFramePair");
             CharacterFootDiagnosisTarget actualEnvelope =
                 BuildActualFootEnvelopeCounterfactual(context);
+            CharacterFootDiagnosisTarget correctionCadence =
+                BuildCorrectionResponseCadence(context);
             return context.Document(
                 DiagnosticId,
                 stable,
                 revision,
                 handoff,
-                actualEnvelope);
+                actualEnvelope,
+                correctionCadence);
+        }
+
+        static CharacterFootDiagnosisTarget BuildCorrectionResponseCadence(
+            CharacterFootDiagnosisContext context)
+        {
+            List<JObject> events = context.Events(
+                "StableSwingCorrectionResponseCadence");
+            CharacterFootDiagnosisTarget target = context.Target(
+                "stable-swing-correction-response-cadence",
+                "同Source、Cycle、Event与Ground Path的连续Swing三帧中，Correction输出是否在小于5毫米Hold与大于2厘米Advance之间切换",
+                new[] { "StableSwingCorrectionResponseCadence" },
+                new[]
+                {
+                    "previousFinalEffectiveCorrectionStep<0.005&&currentFinalEffectiveCorrectionStep>0.02",
+                    "previousFinalEffectiveCorrectionStep>0.02&&currentFinalEffectiveCorrectionStep<0.005"
+                },
+                events,
+                value => CharacterFootDiagnosisContext.Evidence(
+                             value,
+                             "holdToAdvance")
+                    ? new List<string>
+                    {
+                        "previousFinalEffectiveCorrectionStep<0.005&&currentFinalEffectiveCorrectionStep>0.02"
+                    }
+                    : CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "advanceToHold")
+                        ? new List<string>
+                        {
+                            "previousFinalEffectiveCorrectionStep>0.02&&currentFinalEffectiveCorrectionStep<0.005"
+                        }
+                        : new List<string>(),
+                value => Math.Max(
+                    CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "PreviousFinalEffectiveCorrectionStep"),
+                    CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "CurrentFinalEffectiveCorrectionStep")),
+                "HoldMaximumMeters",
+                "AdvanceMinimumMeters",
+                "PreviousDesiredResponseDelta",
+                "CurrentDesiredResponseDelta",
+                "PreviousCorrectionResponsePrevious",
+                "PreviousCorrectionResponseCurrent",
+                "PreviousCorrectionResponseAppliedDelta",
+                "PreviousCorrectionResponseSelectedSpeed",
+                "CurrentCorrectionResponsePrevious",
+                "CurrentCorrectionResponseCurrent",
+                "CurrentCorrectionResponseAppliedDelta",
+                "CurrentCorrectionResponseSelectedSpeed",
+                "PreviousResponseOutputStep",
+                "CurrentResponseOutputStep",
+                "PreviousFinalEffectiveCorrectionStep",
+                "CurrentFinalEffectiveCorrectionStep",
+                "PreviousFormalFootHeightDelta",
+                "CurrentFormalFootHeightDelta",
+                "PreviousEnvelopeSampleStep",
+                "CurrentEnvelopeSampleStep",
+                "PreviousEnvelopeSampleAlongUpDelta",
+                "CurrentEnvelopeSampleAlongUpDelta",
+                "PreviousOriginalSoleStep",
+                "CurrentOriginalSoleStep",
+                "PreviousEnvelopeDirectionContribution",
+                "CurrentEnvelopeDirectionContribution",
+                "PreviousOriginalSoleDirectionContribution",
+                "CurrentOriginalSoleDirectionContribution");
+            target.scorePolicy = "Informational";
+            target.occurrence = context.Occurrence(
+                "ContinuousAcceptedSameSourceCycleEventPathSwingFrameTriple",
+                "CurrentFinalEffectiveCorrectionStep",
+                "Meters",
+                events,
+                PrimaryThresholdMeters,
+                s_Thresholds);
+            target.categoricalMeasurements = new SortedDictionary<
+                string,
+                List<CharacterFootDiagnosisCategoryCount>>(
+                StringComparer.Ordinal)
+            {
+                ["CadenceTransition"] = CategoryCounts(
+                    events,
+                    CorrectionCadenceTransition),
+                ["FirstLargeStepStage"] = CategoryCounts(
+                    events,
+                    value => value["correctionResponseCadence"]?
+                        ["firstLargeStepStage"]?.Value<string>() ??
+                        "Unavailable"),
+                ["ObservationClassification"] = CategoryCounts(
+                    events,
+                    CorrectionCadenceObservation)
+            };
+            return target;
         }
 
         static CharacterFootDiagnosisTarget
@@ -255,6 +372,45 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             target.representativeEventCount =
                 target.representativeEvents.Count;
             return target;
+        }
+
+        static string CorrectionCadenceTransition(JObject value)
+        {
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "holdToAdvance"))
+            {
+                return "HoldToAdvance";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "advanceToHold"))
+            {
+                return "AdvanceToHold";
+            }
+            return "ContinuousCadence";
+        }
+
+        static string CorrectionCadenceObservation(JObject value)
+        {
+            JObject detail = value["correctionResponseCadence"] as JObject;
+            if (detail == null)
+                return "Unavailable";
+            bool previousQuery = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "previousObservationQueryExecuted");
+            bool currentQuery = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "currentObservationQueryExecuted");
+            if (previousQuery || currentQuery)
+                return "QueryExecuted";
+            string previous = detail["previousObservationCacheState"]?
+                .Value<string>() ?? "Unavailable";
+            string current = detail["currentObservationCacheState"]?
+                .Value<string>() ?? "Unavailable";
+            return previous == "Reused" && current == "Reused"
+                ? "Reused"
+                : previous + "To" + current;
         }
 
         static CharacterFootDiagnosisDistribution Distribution(

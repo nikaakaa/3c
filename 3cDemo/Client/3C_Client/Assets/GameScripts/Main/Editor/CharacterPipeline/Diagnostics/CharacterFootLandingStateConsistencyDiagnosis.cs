@@ -129,7 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 };
             CharacterFootDiagnosisTarget plantTarget = context.Target(
                 "plant-interpolation-output-jump",
-                "Plant目标、Blend或Correction限速阶段是否伴随Foot Placement最终可见输出跳变",
+                "Plant目标高度、世界Residual或直接目标接管是否伴随Foot Placement最终可见输出跳变",
                 new[] { "PlantInterpolationOutputJump" },
                 new[] { "footPlacementOutputOffsetStepMeters>0.02" },
                 plantInterpolation,
@@ -147,10 +147,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "FootPlacementOutputOffsetStep"),
                 "FootPlacementOutputOffsetStep",
                 "FootPlacementOutputOffsetSpeed",
-                "PlantTargetPointStep",
-                "PlantCorrectionStep",
+                "PlantMixedWorldTargetStep",
+                "PlantOutputPointStep",
+                "PlantWorldResidualCaptureDelta",
+                "PlantWorldResidualAfterDecay",
+                "PlantEffectiveCorrectionStep",
                 "PlantTargetAppliedVerticalDelta",
-                "PlantCorrectionAppliedVerticalDelta",
                 "PlantBlendWeightDelta",
                 "PlantOutputDistance",
                 "PlantPenetrationDepth",
@@ -356,6 +358,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
+                    "plantTargetKindChanged"))
+            {
+                return "TargetKindChanged";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantLockResponseChanged"))
+            {
+                return "LockResponseChanged";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
                     "plantTargetForceRefreshed"))
             {
                 return "TargetForceRefresh";
@@ -368,15 +382,45 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "plantCorrectionVerticalClamped"))
+                    "plantWeightStarted"))
             {
-                return "CorrectionRateClamp";
+                return "WeightStartedResidualCapture";
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "directLockedFollow"))
+                    "plantWeightCompleted"))
             {
-                return "DirectLockedFollow";
+                return "WeightCompletedResidualCapture";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantResidualCaptured"))
+            {
+                return "WorldResidualCaptured";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantWorldResidualOwned"))
+            {
+                return "WorldResidualContinuity";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "targetHeightOwned"))
+            {
+                return "TargetHeightContinuity";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantWeightBlendOwned"))
+            {
+                return "PlantWeightBlendContinuity";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantTargetSynchronized"))
+            {
+                return "PlantTargetSynchronized";
             }
             return "ContinuousPlantBlend";
         }

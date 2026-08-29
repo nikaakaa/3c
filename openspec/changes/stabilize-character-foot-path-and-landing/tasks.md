@@ -71,7 +71,7 @@
 - [x] 6.2 在3.17持续准备Plant目标、3.20建立Verified Anchor后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留普通Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
 - [x] 6.3 在唯一Interpolation内建立同Event持久Plant Target高度历史与单调`PlantBlend`权重，让Approach、Landing与Locked共用同一Policy；该步骤只确认持久槽、目标高度历史和单调权重已经进入唯一Owner，不代表状态切换混合、门控、Correction历史与完成条件已经闭合
 - [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
-- [ ] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；未满足时保留同Anchor Landing继续接管
+- [x] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；Landing完成Decision延后到双脚/Pelvis Reach求解之后，未满足时保留同Anchor Landing继续接管
 - [x] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼；Swing进入与Plant同属每脚唯一Target Height历史，并记录Raw、History Before、Delta、Applied Delta、Clamp与Filtered Height
 - [x] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策、`NextSwingConstraintWeight`状态及对应代码和诊断列
 - [ ] 6.8 发布Formal Foot Height、目标高度、限速前后Correction、竖直速率、Envelope/Anchor穿透、Ground Catchup、Full Lock门控和最终Correction诊断事实，删除把同帧抬升描述为Safety Floor成功的旧口径
@@ -81,27 +81,27 @@
 
 ## 7. 单独接入Support与Pelvis
 
-- [ ] 7.1 把正式Support写入Resolved Foot的Support Intent，并建立与Lock分离的Pelvis Reach Reference
-- [ ] 7.2 让Primary Support按Support Intent、Event lineage和Reach Reference获取/保留，不读取Foot State或Lock Mode
-- [ ] 7.3 让Pelvis消费正式Support Presence/Share并保持双脚都无Support时的typed Release
-- [ ] 7.4 删除由旧Lock状态推导Support Weight、Intent和Eligibility的消费者，不把弱单侧Support归一成1
+- [x] 7.1 把正式Support写入Resolved Foot的Support Intent，并建立与Lock分离的Pelvis Reach Reference
+- [x] 7.2 让Primary Support按Support Intent、Event lineage和Reach Reference获取/保留，不读取Foot State或Lock Mode
+- [x] 7.3 让Pelvis消费正式Support Presence/Share并保持双脚都无Support时的typed Release
+- [x] 7.4 删除由旧Lock状态推导Support Weight、Intent和Eligibility的消费者，不把弱单侧Support归一成1
 - [ ] 7.5 在Foot Motion Profile增加必须显式序列化的`PelvisMaximumUpVelocity`与`PelvisMaximumDownVelocity`，纳入Profile Revision并拒绝默认值或旧配置补全
 - [ ] 7.6 按本项目Landing Reach业务在唯一Critical Spring积分后限制非对称Velocity、再限制Reach Output，并在撞到区间边界时清除继续向外的速度；ZZZ Pelvis字段与上下速度语义未闭合，不作为公式或参数来源
 - [ ] 7.7 发布Pelvis原始Target、Spring输入/输出/Velocity、上下速度上限、Reach边界Clamp与向外Velocity清除诊断
 
 ## 8. 闭合Landing腿可达
 
-- [ ] 8.1 在Foot Motion Profile新增必须显式序列化的米制最小Landing腿压缩余量，纳入Profile revision和严格校验，缺失时typed invalid且不提供默认值
-- [ ] 8.2 让State Target与Resolved Foot发布Landing Reach Request，包含Event、世界Reference、腿长与最小压缩余量
-- [ ] 8.3 让Pelvis Builder求Primary Support腿与Landing腿Reach区间交集，并限制Target与Spring Output
-- [ ] 8.4 在Reach无交集时保持支撑腿安全、夹紧Landing Foot Goal、发布`LandingReachUnavailable`并禁止Full Lock
+- [x] 8.1 在Foot Motion Profile新增必须显式序列化的米制最小Landing腿压缩余量，纳入Profile revision和严格校验，缺失时typed invalid且不提供默认值
+- [x] 8.2 让State Target与Resolved Foot发布Landing Reach Request，包含Event、世界Hip、目标Ankle、腿长与最小压缩余量
+- [x] 8.3 让Pelvis Builder求Primary Support腿与Landing腿Reach区间交集，并限制Target与Spring Output
+- [x] 8.4 在Reach无交集时保持支撑腿安全、按最小压缩余量夹紧Landing Foot Goal、发布`LandingReachUnavailable`并禁止Full Lock
 - [ ] 8.5 发布Target/Solved Extension Ratio、Compression Reserve、Reach区间、交集和Goal夹紧量诊断事实
 
 ## 9. 单独接入Contact与Lock
 
-- [ ] 9.1 用正式Contact与Lock Mode通过Pre-Interpolation Transition建立同Event唯一Anchor并进入Landing
-- [ ] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target；Weight完成不得绕过6.5的位置、穿透与Reach门控
-- [ ] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition；同Event合法重入在Pre-Interpolation执行`Releasing -> Landing`，Interpolation Completion只在Post-Interpolation执行`Releasing -> Swing`
+- [x] 9.1 用正式Contact与Lock Mode通过Pre-Interpolation Transition建立同Event唯一Anchor并进入Landing
+- [x] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target；Weight完成不得绕过6.5的位置、穿透与Reach门控
+- [x] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition；同Event合法重入在Pre-Interpolation执行`Releasing -> Landing`，Interpolation Completion只在Post-Interpolation执行`Releasing -> Swing`
 - [ ] 9.4 删除旧PlantConfidence、无identity的PlantCycleConsumed布尔和Constraint Weight状态准入消费者及其Projection字段
 - [x] 9.5 让Contact Anchor只消费同Event首次Contact Rising产生的Verified Plant Landing；稳定Plant阶段LockDistance或Reach不可用时拒绝Full Lock，不以重复查询移动Anchor
 - [ ] 9.6 在同一Foot根Bank增加唯一Contact Transition Context，保存上一正式Lock请求、距最近边沿秒数、最近与最近释放Contact Event identity，不新增Rebound、Blocked或Grounded顶层状态

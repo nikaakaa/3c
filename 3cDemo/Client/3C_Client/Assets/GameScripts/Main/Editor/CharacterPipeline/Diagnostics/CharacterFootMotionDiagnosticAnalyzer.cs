@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/27";
+        const string Schema = "character-foot-motion-facts/28";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 27;
+        const int AnalyzerVersion = 28;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 800;
         const float PositionNoiseFloor = 0.001f;
@@ -3678,6 +3678,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Anchor = Vector("FootMotionSupportContactAnchor"),
                 ContactPlaneAvailable = Int("FootMotionContactPlaneAvailable") != 0,
                 ContactOwnership = Float("FootMotionContactOwnership"),
+                LandingReachEvaluated =
+                    Int("FootMotionLandingReachEvaluated") != 0,
+                LandingReachAvailable =
+                    Int("FootMotionLandingReachAvailable") != 0,
+                LandingReachGoalClamped =
+                    Int("FootMotionLandingReachGoalClamped") != 0,
+                LandingReachGoalClampDistance =
+                    Float("FootMotionLandingReachGoalClampDistance"),
                 ContactSurfaceIdentity = Int("FootMotionContactSurfaceIdentity"),
                 ContactNormal = Vector("FootMotionContactPlaneNormal"),
                 PathContinuityEvaluated =
@@ -3945,6 +3953,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootSafetyFloorOwner>(
                 frame.SafetyFloorOwner,
                 "FootMotionSafetyFloorOwner");
+            if (!float.IsFinite(frame.LandingReachGoalClampDistance) ||
+                frame.LandingReachGoalClampDistance < 0f ||
+                frame.LandingReachGoalClamped !=
+                (frame.LandingReachGoalClampDistance > PositionNoiseFloor) ||
+                frame.LandingReachAvailable &&
+                !frame.LandingReachEvaluated ||
+                frame.PostTransitionReason == "LandingCompleted" &&
+                (!frame.LandingReachEvaluated ||
+                 !frame.LandingReachAvailable))
+            {
+                throw new InvalidDataException(
+                    "Foot Motion Landing Reach facts are inconsistent.");
+            }
             bool floorOwnerValid = frame.SafetyFloorOwner switch
             {
                 "None" => !frame.SafetyFloorAvailable &&
@@ -4901,6 +4922,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionCorrectedAnkleX", "FootMotionCorrectedAnkleY", "FootMotionCorrectedAnkleZ",
                 "FootMotionSupportContactAnchorX", "FootMotionSupportContactAnchorY", "FootMotionSupportContactAnchorZ",
                 "FootMotionContactOwnership",
+                "FootMotionLandingReachEvaluated",
+                "FootMotionLandingReachAvailable",
+                "FootMotionLandingReachGoalClamped",
+                "FootMotionLandingReachGoalClampDistance",
                 "FootMotionContactPlaneAvailable", "FootMotionContactSurfaceIdentity",
                 "FootMotionContactPlaneNormalX", "FootMotionContactPlaneNormalY", "FootMotionContactPlaneNormalZ",
                 "FootContactPlanePenetrationAvailability",
@@ -5555,6 +5580,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 Anchor;
             internal bool ContactPlaneAvailable;
             internal float ContactOwnership;
+            internal bool LandingReachEvaluated;
+            internal bool LandingReachAvailable;
+            internal bool LandingReachGoalClamped;
+            internal float LandingReachGoalClampDistance;
             internal int ContactSurfaceIdentity;
             internal Vector3 ContactNormal;
             internal bool PathContinuityEvaluated;

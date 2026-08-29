@@ -224,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_PelvisSpringFrequency = 3f;
-        [SerializeField] float m_MinimumLandingLegCompressionReserve = 0.02f;
+        [SerializeField] float m_MinimumLandingLegCompressionReserve;
 
         internal CharacterFootMotionSettings Build() =>
             new CharacterFootMotionSettings(

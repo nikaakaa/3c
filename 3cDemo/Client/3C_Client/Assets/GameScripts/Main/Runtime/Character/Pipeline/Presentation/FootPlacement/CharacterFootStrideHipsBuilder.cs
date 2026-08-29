@@ -1002,8 +1002,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp,
             float footPlacementWeight,
             in CharacterFootMotionSettings settings,
-            ref CharacterFootPelvisSpringState spring)
+            ref CharacterFootPelvisSpringState spring,
+            out bool leftReachAvailable,
+            out bool rightReachAvailable)
         {
+            leftReachAvailable = false;
+            rightReachAvailable = false;
             if (!Finite(componentUp) ||
                 componentUp.sqrMagnitude <= GeometryEpsilon ||
                 !leftAvailable && !rightAvailable ||
@@ -1071,6 +1075,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (minimum > maximum)
                     return source;
             }
+            leftReachAvailable = leftAvailable;
+            rightReachAvailable = rightAvailable;
             float sourceTarget = source.ProducesPelvisGoal
                 ? source.SpringTarget
                 : 0f;

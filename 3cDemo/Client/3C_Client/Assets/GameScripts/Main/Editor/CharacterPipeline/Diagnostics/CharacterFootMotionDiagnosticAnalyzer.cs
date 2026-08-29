@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/37";
+        const string Schema = "character-foot-motion-facts/38";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 37;
+        const int AnalyzerVersion = 38;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -626,6 +626,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     interpolationCompleted = current.InterpolationCompleted,
                     plantInterpolationEvaluated =
                         current.PlantInterpolationEvaluated,
+                    interpolationComponentUp =
+                        CharacterFootVectorFact.From(current.ComponentUp),
                     plantTargetEventIdentity =
                         current.PlantTargetEventIdentity.ToString(
                             CultureInfo.InvariantCulture),
@@ -2806,14 +2808,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !float.IsFinite(
                     currentState.SwingFormalFootHeight) ||
                 currentState.ComponentUp.sqrMagnitude <=
+                PositionNoiseFloor * PositionNoiseFloor ||
+                path.GroundPathComponentUp.sqrMagnitude <=
                 PositionNoiseFloor * PositionNoiseFloor)
             {
                 return false;
             }
             Vector3 up = currentState.ComponentUp.normalized;
+            Vector3 groundPathUp = path.GroundPathComponentUp.normalized;
             Vector3 horizontal = Vector3.ProjectOnPlane(
                 path.NextLanding - path.LastLanding,
-                up);
+                groundPathUp);
             float pathLength = horizontal.magnitude;
             if (!float.IsFinite(pathLength) ||
                 pathLength <= 0.0001f)
@@ -4009,7 +4014,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 NextLanding = Vector("GroundPathNextSwingLanding"),
                 GroundEnvelopeVertexCount =
                     Int("GroundEnvelopeVertexCount"),
-                ComponentUp = Vector("GroundPathComponentUp"),
+                GroundPathComponentUp = Vector("GroundPathComponentUp"),
+                ComponentUp = Vector("FootMotionInterpolationComponentUp"),
                 GroundPathRadius = Float("GroundPathRadius"),
                 FootMotionEventIdentity = Ulong("FootMotionLandingEventIdentity"),
                 FootMotionGroundPathInputIdentity =
@@ -4683,6 +4689,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     actualOwners == expectedOwners;
                 if (frame.PlantTargetEventIdentity == 0 ||
                     frame.PlantTargetKind == "None" ||
+                    !FiniteVector(frame.ComponentUp) ||
+                    frame.ComponentUp.sqrMagnitude <=
+                        RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
                     frame.PlantTargetHeightEventIdentity !=
                     frame.PlantTargetEventIdentity ||
                     !FiniteVector(frame.PlantDesiredPoint) ||
@@ -5198,7 +5207,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "InvalidComponentUp" ||
                     frame.ActualFootAxisRegion != "Unavailable" ||
                     frame.ActualEnvelopeCounterfactualState != "Unavailable" ||
-                    frame.ComponentUp.sqrMagnitude > 0.000001f ||
+                    frame.GroundPathComponentUp.sqrMagnitude > 0.000001f ||
                     valueMagnitude > PositionNoiseFloor ||
                     finiteSegmentMagnitude > PositionNoiseFloor ||
                     frame.ActualFootWithinGroundPathCorridor)
@@ -5208,7 +5217,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 return;
             }
-            Vector3 up = frame.ComponentUp.normalized;
+            Vector3 up = frame.GroundPathComponentUp.normalized;
             Vector3 horizontalAxis = Vector3.ProjectOnPlane(
                 frame.NextLanding - frame.LastLanding,
                 up);
@@ -5695,6 +5704,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "GroundPathComponentUpX", "GroundPathComponentUpY", "GroundPathComponentUpZ",
                 "GroundPathRadius",
                 "FootMotionLandingEventIdentity", "FootMotionGroundPathInputIdentity",
+                "FootMotionInterpolationComponentUpX",
+                "FootMotionInterpolationComponentUpY",
+                "FootMotionInterpolationComponentUpZ",
                 "FootMotionState", "FootMotionConstraintState",
                 "FootMotionLockResponse",
                 "FootMotionOriginalSoleX", "FootMotionOriginalSoleY", "FootMotionOriginalSoleZ",
@@ -6405,6 +6417,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 NextLanding;
             internal int GroundEnvelopeVertexCount;
             internal Vector3 ComponentUp;
+            internal Vector3 GroundPathComponentUp;
             internal float GroundPathRadius;
             internal readonly SortedDictionary<int, Vector3>
                 GroundEnvelopeVertices =

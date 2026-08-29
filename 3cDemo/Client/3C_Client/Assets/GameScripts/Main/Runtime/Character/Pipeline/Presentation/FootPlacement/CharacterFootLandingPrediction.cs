@@ -21,8 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         FutureBodyTranslationUnavailable = 5,
         FutureBodyTranslationRangeInvalid = 6,
         GroundQueryMissed = 7,
-        GroundQueryCapacityExceeded = 8,
-        LandingCommitted = 9
+        GroundQueryCapacityExceeded = 8
     }
 
     public enum CharacterFootLandingStepSource : byte
@@ -683,11 +682,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceHeelPosition = sourcePose.HeelPosition;
             SourceToePosition = sourcePose.ToePosition;
             StepCandidateSelection = stepCandidateSelection;
-            LandingTrackingState = landing.State.ToString();
-            LandingTrackingEventIdentity = landing.EventIdentity;
-            LandingCommitted = landing.IsCommitted;
-            LandingCommitAttempted = landing.CommitAttempted;
-            LandingCommitUnavailable = landing.CommitUnavailable;
+            NextLandingTrackingState = landing.NextTrackingState.ToString();
+            NextLandingTrackingEventIdentity =
+                landing.NextTrackingEventIdentity;
+            VerifiedLastLandingAvailable = landing.HasVerifiedLastLanding;
+            VerifiedLastLandingEventIdentity =
+                landing.VerifiedLastLandingEventIdentity;
+            PlantTargetState = landing.PlantTargetState.ToString();
+            PlantTargetAvailable = landing.HasPlantTarget;
+            PlantTargetEventIdentity = landing.HasPlantTarget
+                ? landing.PlantTarget.LandingEventIdentity
+                : 0;
+            PlantTargetSurfaceIdentity = landing.HasPlantTarget
+                ? landing.PlantTarget.SurfaceIdentity
+                : 0;
+            PlantTargetPoint = landing.HasPlantTarget
+                ? landing.PlantTarget.Point
+                : default;
+            PlantTargetUpdated = landing.PlantTargetUpdated;
+            PlantVerificationAttempted = landing.PlantVerificationAttempted;
+            PlantVerificationUnavailable = landing.PlantVerificationUnavailable;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
             CharacterFootSwingMotionResult footMotion = result.FootMotion;
             GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
@@ -725,11 +739,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SourceHeelPosition { get; }
         public Vector3 SourceToePosition { get; }
         public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
-        public string LandingTrackingState { get; }
-        public ulong LandingTrackingEventIdentity { get; }
-        public bool LandingCommitted { get; }
-        public bool LandingCommitAttempted { get; }
-        public bool LandingCommitUnavailable { get; }
+        public string NextLandingTrackingState { get; }
+        public ulong NextLandingTrackingEventIdentity { get; }
+        public bool VerifiedLastLandingAvailable { get; }
+        public ulong VerifiedLastLandingEventIdentity { get; }
+        public string PlantTargetState { get; }
+        public bool PlantTargetAvailable { get; }
+        public ulong PlantTargetEventIdentity { get; }
+        public int PlantTargetSurfaceIdentity { get; }
+        public Vector3 PlantTargetPoint { get; }
+        public bool PlantTargetUpdated { get; }
+        public bool PlantVerificationAttempted { get; }
+        public bool PlantVerificationUnavailable { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
         public bool RawLandingAvailable =>
@@ -737,9 +758,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason ==
             CharacterFootLandingPredictionRejectReason.GroundQueryMissed ||
             RejectReason ==
-            CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded ||
-            RejectReason ==
-            CharacterFootLandingPredictionRejectReason.LandingCommitted;
+            CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded;
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
     }
 

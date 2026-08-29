@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/24";
+        const string Schema = "character-foot-motion-facts/25";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 24;
+        const int AnalyzerVersion = 25;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 704;
         const float PositionNoiseFloor = 0.001f;
@@ -336,6 +336,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterFootVectorFact.From(
                             current.InterpolationOutputCorrection),
                     interpolationCompleted = current.InterpolationCompleted,
+                    plantInterpolationEvaluated =
+                        current.PlantInterpolationEvaluated,
+                    plantTargetEventIdentity =
+                        current.PlantTargetEventIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    plantTargetVerified = current.PlantTargetVerified,
+                    plantDesiredPoint = CharacterFootVectorFact.From(
+                        current.PlantDesiredPoint),
+                    plantFilteredPoint = CharacterFootVectorFact.From(
+                        current.PlantFilteredPoint),
+                    plantBlendWeight = current.PlantBlendWeight,
+                    plantVerticalDelta = current.PlantVerticalDelta,
+                    plantAppliedVerticalDelta =
+                        current.PlantAppliedVerticalDelta,
+                    plantVerticalClamped = current.PlantVerticalClamped,
+                    plantOutputDistance = current.PlantOutputDistance,
+                    plantPenetrationDepth = current.PlantPenetrationDepth,
                     presentationDeltaSeconds = current.DeltaSeconds,
                     bodyTickSpan = current.CurrentBodyTick >=
                                    previous.CurrentBodyTick
@@ -3738,6 +3755,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionSafetyFloorClearanceBeforeMeters"),
                 SafetyFloorClearanceAfterMeters =
                     Float("FootMotionSafetyFloorClearanceAfterMeters"),
+                PlantInterpolationEvaluated =
+                    Int("FootMotionPlantInterpolationEvaluated") != 0,
+                PlantTargetEventIdentity =
+                    Ulong("FootMotionPlantTargetEventIdentity"),
+                PlantTargetVerified =
+                    Int("FootMotionPlantTargetVerified") != 0,
+                PlantDesiredPoint = Vector("FootMotionPlantDesiredPoint"),
+                PlantFilteredPoint = Vector("FootMotionPlantFilteredPoint"),
+                PlantBlendWeight = Float("FootMotionPlantBlendWeight"),
+                PlantVerticalDelta = Float("FootMotionPlantVerticalDelta"),
+                PlantAppliedVerticalDelta =
+                    Float("FootMotionPlantAppliedVerticalDelta"),
+                PlantVerticalClamped =
+                    Int("FootMotionPlantVerticalClamped") != 0,
+                PlantOutputDistance =
+                    Float("FootMotionPlantOutputDistance"),
+                PlantPenetrationDepth =
+                    Float("FootMotionPlantPenetrationDepth"),
                 EncodedGoalAvailable =
                     Int("FootMotionEncodedGoalAvailable") != 0,
                 EncodedGoalPosition = Vector("FinalGoalPosition"),
@@ -4810,6 +4845,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionSafetyFloorClamped", "FootMotionSafetyFloorClampMeters",
                 "FootMotionSafetyFloorClearanceBeforeMeters",
                 "FootMotionSafetyFloorClearanceAfterMeters",
+                "FootMotionPlantInterpolationEvaluated",
+                "FootMotionPlantTargetEventIdentity",
+                "FootMotionPlantTargetVerified",
+                "FootMotionPlantDesiredPointX",
+                "FootMotionPlantDesiredPointY",
+                "FootMotionPlantDesiredPointZ",
+                "FootMotionPlantFilteredPointX",
+                "FootMotionPlantFilteredPointY",
+                "FootMotionPlantFilteredPointZ",
+                "FootMotionPlantBlendWeight",
+                "FootMotionPlantVerticalDelta",
+                "FootMotionPlantAppliedVerticalDelta",
+                "FootMotionPlantVerticalClamped",
+                "FootMotionPlantOutputDistance",
+                "FootMotionPlantPenetrationDepth",
                 "FootMotionEncodedGoalAvailable",
                 "FootMotionEncodedGoalCorrectionX",
                 "FootMotionEncodedGoalCorrectionY",
@@ -5433,6 +5483,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float SafetyFloorClampMeters;
             internal float SafetyFloorClearanceBeforeMeters;
             internal float SafetyFloorClearanceAfterMeters;
+            internal bool PlantInterpolationEvaluated;
+            internal ulong PlantTargetEventIdentity;
+            internal bool PlantTargetVerified;
+            internal Vector3 PlantDesiredPoint;
+            internal Vector3 PlantFilteredPoint;
+            internal float PlantBlendWeight;
+            internal float PlantVerticalDelta;
+            internal float PlantAppliedVerticalDelta;
+            internal bool PlantVerticalClamped;
+            internal float PlantOutputDistance;
+            internal float PlantPenetrationDepth;
             internal bool EncodedGoalAvailable;
             internal Vector3 EncodedGoalPosition;
             internal Vector3 EncodedGoalCorrection;

@@ -29,11 +29,11 @@
 - [x] 3.13 为Corin显式配置5厘米预测输入累计距离与1度Component Up变化阈值，阈值内复用Committed Observation，并在正式Sliding接触准入输入变化时刷新观测
 - [x] 3.14 让PreSwing与Swing消费同一Accepted Swing Motion和Ground Envelope，消除进入Swing首帧才补Path的Correction跳变
 - [x] 3.15 在Tracking阶段让新查询的Surface变化只无条件换代NextSwingLanding，不得覆盖Current Contact Anchor或受LandingAcceptanceDistance保留
-- [ ] 3.16 把现有Landing Context收敛为可并存的`NextSwing Empty/Tracking`与`Verified LastLanding`两个typed槽位，Prediction Landing与真实Plant Landing分权但不建立第二状态机
-- [ ] 3.17 让正式`ApproachContactToLanding`保持同Event Prediction Tracking与Ground Path目标更新，并把该阶段作为统一Interpolation的Plant目标准备区；不得在实际Contact Rising前冻结世界落点
+- [x] 3.16 把现有Landing Context收敛为可并存的`NextSwing Empty/Tracking`、`Plant Target Tracking/Verified`与`Verified LastLanding` typed槽位，Prediction Landing、连续Plant目标与真实Plant事实分权但不建立第二状态机
+- [x] 3.17 让正式`ApproachContactToLanding`保持同Event Prediction Tracking与Ground Path几何更新，同时由持久Plant Target隔离可见输出并作为唯一Interpolation的Plant目标准备区；不得在实际Contact Rising前冻结世界落点或把每次Path Revision直接写入可见Correction
 - [x] 3.18 在Approach Contact没有同Event Accepted Landing时发布typed unavailable，不用Animated Sole、旧Event、Rejected Observation或默认Surface建立承诺
 - [x] 3.19 让Tracking的新Rejected Observation保持自身Key和拒绝结果，同时允许既有同Event Accepted Landing继续保留原始lineage，禁止把保留Landing改名成本次查询命中
-- [ ] 3.20 让同Event首次正式Contact Rising恰好执行一次Current Contact Plant Verification，以该Verified Landing建立LastLanding与唯一Anchor；稳定Plant期间冻结Anchor且不得再次查询或重定位
+- [x] 3.20 让同Event首次正式Contact Rising恰好执行一次Current Contact Plant Verification，以该Verified Landing建立LastLanding与唯一Anchor；稳定Plant及同EventReentry期间冻结Anchor且不得再次查询或重定位
 
 ## 4. 拆分State、Transition、Interpolation与Post Constraint
 
@@ -68,9 +68,9 @@
 ## 6. 连续接管Foot Height与Landing/Lock垂直误差
 
 - [x] 6.1 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选分别使用`0.6m/s`、`0.01m`与`0.01m`
-- [ ] 6.2 在3.17持续准备Plant目标、3.20建立Verified Anchor后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
-- [ ] 6.3 参照ZZZ实际`目标态高度历史限速 -> 权重混合`顺序，只让Landing/Locked的Contact接管Policy按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制Component Up变化；Swing/UnlockedSupport继续由正式轨迹和Envelope决定高度，Release继续使用统一Residual，不建立第二高度状态或Floor旁路
-- [ ] 6.4 让Post Constraint对Swing/UnlockedSupport继续执行Accepted Ground Envelope硬最低约束，对Landing/Locked Contact Anchor只测量穿透并发布容差内、Ground Catchup与Full Lock门控；继承的超预算Contact误差连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
+- [x] 6.2 在3.17持续准备Plant目标、3.20建立Verified Anchor后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留普通Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
+- [x] 6.3 直接采用ZZZ实际`持久目标态 -> Component Up高度历史限速 -> 正式Contact/Lock权重混合`顺序，让Approach、Landing与Locked共用单一`PlantBlend` Policy并按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制目标高度；普通Swing继续由正式轨迹和Envelope决定高度，Release继续使用统一Residual
+- [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
 - [ ] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；未满足时保留同Anchor Landing继续接管
 - [ ] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼
 - [ ] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策和对应旧输入
@@ -100,11 +100,11 @@
 - [ ] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target；Weight完成不得绕过6.5的位置、穿透与Reach门控
 - [ ] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition；同Event合法重入在Pre-Interpolation执行`Releasing -> Landing`，Interpolation Completion只在Post-Interpolation执行`Releasing -> Swing`
 - [ ] 9.4 删除旧PlantConfidence、无identity的PlantCycleConsumed布尔和Constraint Weight状态准入消费者及其Projection字段
-- [ ] 9.5 让Contact Anchor只消费同Event首次Contact Rising产生的Verified Plant Landing；稳定Plant阶段LockDistance或Reach不可用时拒绝Full Lock，不以重复查询移动Anchor
+- [x] 9.5 让Contact Anchor只消费同Event首次Contact Rising产生的Verified Plant Landing；稳定Plant阶段LockDistance或Reach不可用时拒绝Full Lock，不以重复查询移动Anchor
 - [ ] 9.6 在同一Foot根Bank增加唯一Contact Transition Context，保存上一正式Lock请求、距最近边沿秒数、最近与最近释放Contact Event identity，不新增Rebound、Blocked或Grounded顶层状态
 - [ ] 9.7 让唯一Transition Resolver生成Contact Rising/Falling/Same-Event Reentry Refresh Decision事实，唯一Transition Runtime随根事务更新Context；Pending失败或Discard不得推进边沿历史
-- [ ] 9.8 Releasing期间同Event合法重入时发布`SameEventContactReentryRefresh`并执行`Releasing -> Landing`，只Retain原Verified Anchor并从当前Effective Correction连续接管，不查询、不Create、不清零Interpolation
-- [ ] 9.9 Release完成或Anchor清除后阻止旧Event复活；新Event紧接上一边沿时必须执行自己的首次Plant Verification
+- [x] 9.8 Releasing期间同Event合法重入时发布`SameEventContactReentryRefresh`并执行`Releasing -> Landing`，只Retain原Verified Anchor并从当前Effective Correction连续接管，不查询、不Create、不清零Interpolation
+- [x] 9.9 Release完成或Anchor清除后阻止旧Event复活；新Event紧接上一边沿时必须执行自己的首次Plant Verification
 - [ ] 9.10 发布上一/当前Lock请求、边沿、距边沿秒数、最近/最近释放Event、Reentry Refresh/Unavailable、Retained Anchor与连续接管诊断，确认下游Resolved Foot、Pelvis和Goal不读取内部Context
 
 ## 10. 清理、构建与严格校验

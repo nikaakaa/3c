@@ -20,6 +20,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     swingCorrection,
                     CharacterFootInterpolationPolicy.Suppressed,
+                    false,
+                    0,
+                    false,
+                    default,
                     transition.StateChanged,
                     false,
                     true,
@@ -30,25 +34,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterFootConstraintState.Swing:
                 case CharacterFootConstraintState.UnlockedSupport:
-                    return Target(
-                        swingCorrection,
-                        swingCorrection,
-                        CharacterFootInterpolationPolicy.SwingResidual,
-                        transition,
-                        0f,
-                        timeToLandingSeconds);
+                    return frame.ApproachPlantActive
+                        ? ResolveApproachPlant(
+                            in transition,
+                            swingCorrection,
+                            timeToLandingSeconds,
+                            in frame)
+                        : Target(
+                            swingCorrection,
+                            swingCorrection,
+                            CharacterFootInterpolationPolicy.SwingResidual,
+                            transition,
+                            0f,
+                            timeToLandingSeconds);
                 case CharacterFootConstraintState.Landing:
-                    return Target(
-                        CharacterFootConstraintMath.ResolveContactCorrection(
-                            frame.AnimatedFoot,
-                            context.Contact.Anchor),
+                    return ResolveContactPlant(
+                        in context,
+                        in transition,
                         swingCorrection,
-                        CharacterFootInterpolationPolicy.AcquireByWeight,
-                        transition,
-                        frame.LockRequest.Weight,
-                        timeToLandingSeconds);
+                        Mathf.Max(
+                            frame.LockRequest.Contact,
+                            frame.LockRequest.Weight),
+                        timeToLandingSeconds,
+                        in frame);
                 case CharacterFootConstraintState.Locked:
-                    return ResolveLockedTarget(
+                    return ResolveLockedPlant(
                         in context,
                         in transition,
                         swingCorrection,
@@ -68,7 +78,52 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static CharacterFootStateTarget ResolveLockedTarget(
+        static CharacterFootStateTarget ResolveApproachPlant(
+            in CharacterFootTransitionDecision transition,
+            Vector3 swingCorrection,
+            float timeToLandingSeconds,
+            in CharacterFootStateFrame frame)
+        {
+            CharacterFootGroundPathLanding plant = frame.ApproachPlantTarget;
+            Vector3 correction =
+                CharacterFootConstraintMath.ResolveContactCorrection(
+                    frame.AnimatedFoot,
+                    plant.Point);
+            return PlantTarget(
+                correction,
+                swingCorrection,
+                plant.LandingEventIdentity,
+                false,
+                plant.Point,
+                transition,
+                frame.LockRequest.Contact,
+                timeToLandingSeconds);
+        }
+
+        static CharacterFootStateTarget ResolveContactPlant(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootTransitionDecision transition,
+            Vector3 swingCorrection,
+            float progress,
+            float timeToLandingSeconds,
+            in CharacterFootStateFrame frame)
+        {
+            Vector3 correction =
+                CharacterFootConstraintMath.ResolveContactCorrection(
+                    frame.AnimatedFoot,
+                    context.Contact.Anchor);
+            return PlantTarget(
+                correction,
+                swingCorrection,
+                context.Contact.EventIdentity,
+                true,
+                context.Contact.Anchor,
+                transition,
+                progress,
+                timeToLandingSeconds);
+        }
+
+        static CharacterFootStateTarget ResolveLockedPlant(
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
@@ -79,37 +134,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveContactCorrection(
                     frame.AnimatedFoot,
                     context.Contact.Anchor);
+            Vector3 correction;
             if (context.Discrete.LockResponse ==
                 CharacterFootLockResponse.FullAnchor)
             {
-                return Target(
-                    fullCorrection,
-                    swingCorrection,
-                    CharacterFootInterpolationPolicy.Direct,
-                    transition,
-                    1f,
-                    timeToLandingSeconds);
+                correction = fullCorrection;
             }
-            if (context.Discrete.LockResponse !=
-                CharacterFootLockResponse.Sliding)
+            else if (context.Discrete.LockResponse ==
+                     CharacterFootLockResponse.Sliding)
+            {
+                float horizontalError =
+                    CharacterFootConstraintMath.ResolveHorizontalError(
+                        fullCorrection,
+                        frame.ComponentUp);
+                correction =
+                    CharacterFootConstraintMath.ResolveSlidingCorrection(
+                        fullCorrection,
+                        frame.ComponentUp,
+                        horizontalError,
+                        frame.Settings);
+            }
+            else
             {
                 throw new System.InvalidOperationException(
                     "Locked Foot response is invalid.");
             }
-            float horizontalError =
-                CharacterFootConstraintMath.ResolveHorizontalError(
-                    fullCorrection,
-                    frame.ComponentUp);
-            Vector3 correction =
-                CharacterFootConstraintMath.ResolveSlidingCorrection(
-                    fullCorrection,
-                    frame.ComponentUp,
-                    horizontalError,
-                    frame.Settings);
-            return Target(
+            Vector3 originalSole =
+                CharacterFootConstraintMath.ResolveOriginalSole(
+                    frame.AnimatedFoot);
+            return PlantTarget(
                 correction,
                 swingCorrection,
-                CharacterFootInterpolationPolicy.HalfLife,
+                context.Contact.EventIdentity,
+                true,
+                originalSole + correction,
                 transition,
                 1f,
                 timeToLandingSeconds);
@@ -126,6 +184,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correction,
                 swingCorrection,
                 policy,
+                false,
+                0,
+                false,
+                default,
                 transition.StateChanged,
                 transition.Reason ==
                 CharacterFootTransitionReason.LockResponseChanged,
@@ -133,5 +195,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 progress,
                 timeToLandingSeconds);
 
+        static CharacterFootStateTarget PlantTarget(
+            Vector3 correction,
+            Vector3 swingCorrection,
+            ulong eventIdentity,
+            bool verified,
+            Vector3 point,
+            in CharacterFootTransitionDecision transition,
+            float progress,
+            float timeToLandingSeconds) =>
+            new CharacterFootStateTarget(
+                correction,
+                swingCorrection,
+                CharacterFootInterpolationPolicy.PlantBlend,
+                true,
+                eventIdentity,
+                verified,
+                point,
+                transition.StateChanged,
+                transition.Reason ==
+                CharacterFootTransitionReason.LockResponseChanged,
+                false,
+                Mathf.Clamp01(progress),
+                timeToLandingSeconds);
     }
 }

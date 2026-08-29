@@ -92,7 +92,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
-            "LandingTrackingState,LandingTrackingEventIdentity,LandingCommitted,LandingCommitAttempted,LandingCommitUnavailable," +
+            "NextLandingTrackingState,NextLandingTrackingEventIdentity,VerifiedLastLandingAvailable,VerifiedLastLandingEventIdentity," +
+            "PlantTargetState,PlantTargetAvailable,PlantTargetEventIdentity,PlantTargetSurfaceIdentity,PlantTargetPointX,PlantTargetPointY,PlantTargetPointZ,PlantTargetUpdated,PlantVerificationAttempted,PlantVerificationUnavailable," +
             "StepSelectionMaximumPredictionTimeSeconds,StepSelectionLastLandingEventIdentity,SelectedStepSource,SelectedLandingEventIdentity," +
             "SelectedStepEventPhase,SelectedStepApproachContactPhase,SelectedStepLandingPhase,SelectedStepAtOrAfterApproachContact,SelectedStepInApproachContactToLanding," +
             "CurrentStepIsValid,CurrentStepIsAuthoritative,CurrentStepHasConsistentLandingEventIdentity,CurrentStepIsPreSwing,CurrentStepIsSwing," +
@@ -235,6 +236,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSafetyFloorOutputCorrectionX,FootMotionSafetyFloorOutputCorrectionY,FootMotionSafetyFloorOutputCorrectionZ," +
             "FootMotionFinalEffectiveCorrectionX,FootMotionFinalEffectiveCorrectionY,FootMotionFinalEffectiveCorrectionZ," +
             "FootMotionSafetyFloorClamped,FootMotionSafetyFloorClampMeters,FootMotionSafetyFloorClearanceBeforeMeters,FootMotionSafetyFloorClearanceAfterMeters," +
+            "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified," +
+            "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
+            "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
+            "FootMotionPlantBlendWeight,FootMotionPlantVerticalDelta,FootMotionPlantAppliedVerticalDelta,FootMotionPlantVerticalClamped,FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -1697,11 +1702,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.TrajectoryGeneration);
             Add(row, foot.LandingConfidence);
             Add(row, foot.TimeToLandingSeconds);
-            Add(row, foot.LandingTrackingState);
-            Add(row, foot.LandingTrackingEventIdentity);
-            Add(row, foot.LandingCommitted);
-            Add(row, foot.LandingCommitAttempted);
-            Add(row, foot.LandingCommitUnavailable);
+            Add(row, foot.NextLandingTrackingState);
+            Add(row, foot.NextLandingTrackingEventIdentity);
+            Add(row, foot.VerifiedLastLandingAvailable);
+            Add(row, foot.VerifiedLastLandingEventIdentity);
+            Add(row, foot.PlantTargetState);
+            Add(row, foot.PlantTargetAvailable);
+            Add(row, foot.PlantTargetEventIdentity);
+            Add(row, foot.PlantTargetSurfaceIdentity);
+            Add(row, foot.PlantTargetPoint);
+            Add(row, foot.PlantTargetUpdated);
+            Add(row, foot.PlantVerificationAttempted);
+            Add(row, foot.PlantVerificationUnavailable);
             CharacterFootStepCandidateSelectionDiagnostics stepSelection =
                 foot.StepCandidateSelection;
             Add(row, stepSelection.MaximumPredictionTimeSeconds);
@@ -2134,6 +2146,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SafetyFloorClampMeters);
             Add(row, motion.SafetyFloorClearanceBeforeMeters);
             Add(row, motion.SafetyFloorClearanceAfterMeters);
+            Add(row, motion.PlantInterpolationEvaluated);
+            Add(row, motion.PlantTargetEventIdentity);
+            Add(row, motion.PlantTargetVerified);
+            Add(row, motion.PlantDesiredPoint);
+            Add(row, motion.PlantFilteredPoint);
+            Add(row, motion.PlantBlendWeight);
+            Add(row, motion.PlantVerticalDelta);
+            Add(row, motion.PlantAppliedVerticalDelta);
+            Add(row, motion.PlantVerticalClamped);
+            Add(row, motion.PlantOutputDistance);
+            Add(row, motion.PlantPenetrationDepth);
             Add(row, footGoal.IsValid);
             Add(
                 row,

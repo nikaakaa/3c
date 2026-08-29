@@ -254,6 +254,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string interpolationPolicy;
         public CharacterFootVectorFact interpolationOutputCorrection;
         public bool interpolationCompleted;
+        public bool plantInterpolationEvaluated;
+        public string plantTargetEventIdentity;
+        public bool plantTargetVerified;
+        public CharacterFootVectorFact plantDesiredPoint;
+        public CharacterFootVectorFact plantFilteredPoint;
+        public double plantBlendWeight;
+        public double plantVerticalDelta;
+        public double plantAppliedVerticalDelta;
+        public bool plantVerticalClamped;
+        public double plantOutputDistance;
+        public double plantPenetrationDepth;
         public double presentationDeltaSeconds;
         public ulong bodyTickSpan;
         public string primaryProbe;

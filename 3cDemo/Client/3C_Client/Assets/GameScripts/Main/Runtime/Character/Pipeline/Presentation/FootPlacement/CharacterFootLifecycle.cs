@@ -363,7 +363,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.SwingMotion.SwingPathReference.LandingEventIdentity !=
                     frame.SwingMotion.LandingEventIdentity ||
                 frame.HasContactLanding &&
-                frame.ContactLanding.LandingEventIdentity == 0)
+                frame.ContactLanding.LandingEventIdentity == 0 ||
+                frame.ApproachPlantActive &&
+                (frame.ApproachPlantTarget.LandingEventIdentity == 0 ||
+                 !CharacterFootConstraintMath.Finite(
+                     frame.ApproachPlantTarget.Point) ||
+                 !CharacterFootConstraintMath.Finite(
+                     frame.ApproachPlantTarget.Normal)))
             {
                 throw new InvalidOperationException(
                     "Foot lifecycle frame is invalid.");

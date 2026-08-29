@@ -294,9 +294,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bodyTrajectory,
                 in frame,
                 in leftLanding,
-                RequiresCurrentContactRefresh(
-                    in bank.LeftFoot.ContactTransition,
-                    in leftLockRequest),
                 m_LeftLandingObservation,
                 committedBank?.LeftLandingObservation,
                 out bank.LeftLandingObservation);
@@ -310,9 +307,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bodyTrajectory,
                 in frame,
                 in rightLanding,
-                RequiresCurrentContactRefresh(
-                    in bank.RightFoot.ContactTransition,
-                    in rightLockRequest),
                 m_RightLandingObservation,
                 committedBank?.RightLandingObservation,
                 out bank.RightLandingObservation);
@@ -340,14 +334,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathLanding rightNextSwingLanding = rightLanding.NextSwingLanding;
             CharacterFootGroundPathLanding leftContactLanding = default;
             bool hasLeftContactLanding = leftLockRequest.RequestsLock &&
-                leftLanding.TryResolveLanding(
+                leftLanding.TryResolveVerifiedLanding(
                     leftLockRequest.EventIdentity,
                     out leftContactLanding);
             CharacterFootGroundPathLanding rightContactLanding = default;
             bool hasRightContactLanding = rightLockRequest.RequestsLock &&
-                rightLanding.TryResolveLanding(
+                rightLanding.TryResolveVerifiedLanding(
                     rightLockRequest.EventIdentity,
                     out rightContactLanding);
+            bool leftApproachPlantActive =
+                leftCurrentStep.Events.InApproachContactToLanding &&
+                leftLanding.PlantTargetState ==
+                    CharacterFootPlantTargetState.Tracking &&
+                leftLanding.HasPlantTarget &&
+                leftCurrentStep.Events.NextLanding.IsBound &&
+                leftLanding.PlantTarget.LandingEventIdentity ==
+                    leftCurrentStep.Events.NextLanding.Identity;
+            bool rightApproachPlantActive =
+                rightCurrentStep.Events.InApproachContactToLanding &&
+                rightLanding.PlantTargetState ==
+                    CharacterFootPlantTargetState.Tracking &&
+                rightLanding.HasPlantTarget &&
+                rightCurrentStep.Events.NextLanding.IsBound &&
+                rightLanding.PlantTarget.LandingEventIdentity ==
+                    rightCurrentStep.Events.NextLanding.Identity;
+            CharacterFootGroundPathLanding leftApproachPlantTarget =
+                leftApproachPlantActive ? leftLanding.PlantTarget : default;
+            CharacterFootGroundPathLanding rightApproachPlantTarget =
+                rightApproachPlantActive ? rightLanding.PlantTarget : default;
             CharacterFootGroundPathResult leftGroundPath = PrepareGroundPath(
                 CharacterFootSide.Left,
                 hasLeftLastLanding,
@@ -412,6 +426,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftSwingMotion,
                 hasLeftContactLanding,
                 in leftContactLanding,
+                leftApproachPlantActive,
+                in leftApproachPlantTarget,
                 in leftLockRequest,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction),
                 footPlacementWeight,
@@ -427,6 +443,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightSwingMotion,
                 hasRightContactLanding,
                 in rightContactLanding,
+                rightApproachPlantActive,
+                in rightApproachPlantTarget,
                 in rightLockRequest,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction),
                 footPlacementWeight,
@@ -823,7 +841,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFutureBodyTranslation bodyTrajectory,
             in CharacterFootPlacementFrameInput frame,
             in CharacterFootLandingSnapshot landingSnapshot,
-            bool refreshCurrentContact,
             CharacterFootLandingObservationPagePool observationPool,
             CharacterFootLandingObservationPage committedObservation,
             out CharacterFootLandingObservationPage pendingObservation)
@@ -834,20 +851,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootMotionEventFrame events = footMotion.Events;
             AnimationFootMotionEventOccurrence current = events.CurrentContact;
             bool hasCurrentLanding = current.IsBound &&
-                landingSnapshot.TryResolveLanding(current.Identity, out _);
+                landingSnapshot.TryResolveVerifiedLanding(current.Identity, out _);
             bool needsCurrentContact = footMotion.Contact > 0f &&
                 footMotion.LockMode != AnimationFootStepObservationLockMode.Unlocked &&
                 current.IsBound &&
-                (refreshCurrentContact || !hasCurrentLanding);
+                !hasCurrentLanding;
             AnimationFootMotionEventOccurrence next = events.NextLanding;
             bool hasNextCandidate = IsPredictiveLanding(
                 in footMotion,
                 in next,
                 landingSnapshot.LastLandingEventIdentity,
                 m_Settings.LandingPrediction.MaximumPredictionTimeSeconds);
-            bool nextCommitted = landingSnapshot.IsCommitted &&
-                next.IsBound &&
-                landingSnapshot.EventIdentity == next.Identity;
             CharacterFootLandingStepSource selectedSource;
             CharacterFootLandingPredictionResult selected;
             if (needsCurrentContact)
@@ -860,7 +874,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     selectedSource,
                     0f,
                     true,
-                    false,
                     currentSole,
                     goal,
                     in timeline,
@@ -871,7 +884,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     committedObservation,
                     out pendingObservation);
             }
-            else if (hasNextCandidate || nextCommitted)
+            else if (hasNextCandidate)
             {
                 selectedSource = CharacterFootLandingStepSource.FormalNextLanding;
                 selected = PredictEvent(
@@ -881,7 +894,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     selectedSource,
                     events.TimeToLandingSeconds,
                     false,
-                    nextCommitted,
                     currentSole,
                     goal,
                     in timeline,
@@ -912,14 +924,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 selectedSource);
         }
 
-        static bool RequiresCurrentContactRefresh(
-            in CharacterFootContactTransitionContext context,
-            in CharacterFootLockRequest request) =>
-            request.RequestsLock &&
-            (!context.HasPreviousRequest ||
-             !context.PreviousRequestedLock ||
-             context.PreviousEventIdentity != request.EventIdentity);
-
         static bool IsPredictiveLanding(
             in AnimationFootMotionRuntimeSample footMotion,
             in AnimationFootMotionEventOccurrence next,
@@ -939,7 +943,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingStepSource stepSource,
             float timeToLandingSeconds,
             bool currentContact,
-            bool landingCommitted,
             Vector3 currentSole,
             CharacterFullBodyIkGoal goal,
             in CommittedLocomotionPlanarMotionTimeline timeline,
@@ -1055,32 +1058,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.Body.VisibleRotation,
                     in bodyTranslation,
                     landingEvent.RootLocalLanding);
-            if (landingCommitted)
-            {
-                return new CharacterFootLandingPredictionResult(
-                    side,
-                    CharacterFootLandingPredictionState.Rejected,
-                    CharacterFootLandingPredictionRejectReason.LandingCommitted,
-                    stepSource,
-                    landingEvent.Identity,
-                    trajectoryGeneration,
-                    1f,
-                    timeToLandingSeconds,
-                    landingEvent.RootLocalLanding,
-                    bodyTrajectory != null,
-                    bodyTrajectory != null
-                        ? bodyTrajectory.SourceIdentity
-                        : string.Empty,
-                    in bodyTranslation,
-                    currentSole,
-                    rawLanding,
-                    default,
-                    default,
-                    default,
-                    default,
-                    goal);
-            }
-
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
             bool contactAcquisitionRefresh = !currentContact &&
                 footMotion.LockMode ==

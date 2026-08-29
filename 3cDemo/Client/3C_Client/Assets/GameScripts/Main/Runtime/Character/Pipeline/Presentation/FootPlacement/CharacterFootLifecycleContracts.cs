@@ -5,11 +5,17 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    internal enum CharacterFootLandingTrackingState : byte
+    internal enum CharacterFootNextLandingTrackingState : byte
+    {
+        Empty = 0,
+        Tracking = 1
+    }
+
+    internal enum CharacterFootPlantTargetState : byte
     {
         Empty = 0,
         Tracking = 1,
-        Committed = 2
+        Verified = 2
     }
 
     [Flags]
@@ -25,7 +31,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         None = 0,
         GroundPathEnvelope = 1,
-        ContactAnchor = 2
+        ContactAnchor = 2,
+        PlantTarget = 3
     }
 
     internal enum CharacterFootTransitionPhase : byte
@@ -79,10 +86,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         Suppressed = 0,
         SwingResidual = 1,
-        AcquireByWeight = 2,
-        Direct = 3,
-        HalfLife = 4,
-        ReleaseResidual = 5
+        PlantBlend = 2,
+        ReleaseResidual = 3
     }
 
     internal readonly struct CharacterFootPathContinuityFact
@@ -166,6 +171,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SafetyFloorClampMeters = 0f;
             SafetyFloorClearanceBeforeMeters = 0f;
             SafetyFloorClearanceAfterMeters = 0f;
+            PlantInterpolationEvaluated = false;
+            PlantTargetEventIdentity = 0;
+            PlantTargetVerified = false;
+            PlantDesiredPoint = default;
+            PlantFilteredPoint = default;
+            PlantBlendWeight = 0f;
+            PlantVerticalDelta = 0f;
+            PlantAppliedVerticalDelta = 0f;
+            PlantVerticalClamped = false;
+            PlantOutputDistance = 0f;
+            PlantPenetrationDepth = 0f;
         }
 
         CharacterFootPathContinuityFact(
@@ -247,6 +263,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SafetyFloorClampMeters = safetyFloorClampMeters;
             SafetyFloorClearanceBeforeMeters = safetyFloorClearanceBeforeMeters;
             SafetyFloorClearanceAfterMeters = safetyFloorClearanceAfterMeters;
+            CharacterFootPlantInterpolationFact plant = interpolation.PlantFact;
+            PlantInterpolationEvaluated = plant.Evaluated;
+            PlantTargetEventIdentity = plant.EventIdentity;
+            PlantTargetVerified = plant.Verified;
+            PlantDesiredPoint = plant.DesiredPoint;
+            PlantFilteredPoint = plant.FilteredPoint;
+            PlantBlendWeight = plant.BlendWeight;
+            PlantVerticalDelta = plant.VerticalDelta;
+            PlantAppliedVerticalDelta = plant.AppliedVerticalDelta;
+            PlantVerticalClamped = plant.VerticalClamped;
+            PlantOutputDistance = plant.OutputDistance;
+            PlantPenetrationDepth = plant.PenetrationDepth;
         }
 
         internal bool Evaluated { get; }
@@ -303,6 +331,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SafetyFloorClampMeters { get; }
         internal float SafetyFloorClearanceBeforeMeters { get; }
         internal float SafetyFloorClearanceAfterMeters { get; }
+        internal bool PlantInterpolationEvaluated { get; }
+        internal ulong PlantTargetEventIdentity { get; }
+        internal bool PlantTargetVerified { get; }
+        internal Vector3 PlantDesiredPoint { get; }
+        internal Vector3 PlantFilteredPoint { get; }
+        internal float PlantBlendWeight { get; }
+        internal float PlantVerticalDelta { get; }
+        internal float PlantAppliedVerticalDelta { get; }
+        internal bool PlantVerticalClamped { get; }
+        internal float PlantOutputDistance { get; }
+        internal float PlantPenetrationDepth { get; }
 
         internal CharacterFootPathContinuityFact Complete(
             in CharacterFootTransitionDecision preTransition,
@@ -428,8 +467,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct CharacterFootLandingSnapshot
     {
         internal CharacterFootLandingSnapshot(
-            CharacterFootLandingTrackingState state,
-            ulong eventIdentity,
+            CharacterFootNextLandingTrackingState nextTrackingState,
+            ulong nextTrackingEventIdentity,
             bool hasLastLanding,
             CharacterFootGroundPathLanding lastLanding,
             bool hasNextSwingLanding,
@@ -438,11 +477,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float nextSwingConstraintWeight,
             bool hasPromotedLanding,
             CharacterFootGroundPathLanding promotedLanding,
-            bool commitAttempted,
-            bool commitUnavailable)
+            CharacterFootPlantTargetState plantTargetState,
+            bool hasPlantTarget,
+            CharacterFootGroundPathLanding plantTarget,
+            bool plantTargetUpdated,
+            bool plantVerificationAttempted,
+            bool plantVerificationUnavailable)
         {
-            State = state;
-            EventIdentity = eventIdentity;
+            NextTrackingState = nextTrackingState;
+            NextTrackingEventIdentity = nextTrackingEventIdentity;
             HasLastLanding = hasLastLanding;
             LastLanding = lastLanding;
             HasNextSwingLanding = hasNextSwingLanding;
@@ -451,12 +494,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingConstraintWeight = nextSwingConstraintWeight;
             HasPromotedLanding = hasPromotedLanding;
             PromotedLanding = promotedLanding;
-            CommitAttempted = commitAttempted;
-            CommitUnavailable = commitUnavailable;
+            PlantTargetState = plantTargetState;
+            HasPlantTarget = hasPlantTarget;
+            PlantTarget = plantTarget;
+            PlantTargetUpdated = plantTargetUpdated;
+            PlantVerificationAttempted = plantVerificationAttempted;
+            PlantVerificationUnavailable = plantVerificationUnavailable;
         }
 
-        internal CharacterFootLandingTrackingState State { get; }
-        internal ulong EventIdentity { get; }
+        internal CharacterFootNextLandingTrackingState NextTrackingState { get; }
+        internal ulong NextTrackingEventIdentity { get; }
         internal bool HasLastLanding { get; }
         internal CharacterFootGroundPathLanding LastLanding { get; }
         internal ulong LastLandingEventIdentity =>
@@ -467,22 +514,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float NextSwingConstraintWeight { get; }
         internal bool HasPromotedLanding { get; }
         internal CharacterFootGroundPathLanding PromotedLanding { get; }
-        internal bool CommitAttempted { get; }
-        internal bool CommitUnavailable { get; }
-        internal bool IsCommitted =>
-            State == CharacterFootLandingTrackingState.Committed;
+        internal CharacterFootPlantTargetState PlantTargetState { get; }
+        internal bool HasPlantTarget { get; }
+        internal CharacterFootGroundPathLanding PlantTarget { get; }
+        internal bool PlantTargetUpdated { get; }
+        internal bool PlantVerificationAttempted { get; }
+        internal bool PlantVerificationUnavailable { get; }
+        internal bool HasVerifiedLastLanding => HasLastLanding;
+        internal ulong VerifiedLastLandingEventIdentity =>
+            HasLastLanding ? LastLanding.LandingEventIdentity : 0;
 
-        internal bool TryResolveLanding(
+        internal bool TryResolveVerifiedLanding(
             ulong landingEventIdentity,
             out CharacterFootGroundPathLanding landing)
         {
-            if (landingEventIdentity != 0 &&
-                HasNextSwingLanding &&
-                NextSwingLanding.LandingEventIdentity == landingEventIdentity)
-            {
-                landing = NextSwingLanding;
-                return true;
-            }
             if (landingEventIdentity != 0 &&
                 HasLastLanding &&
                 LastLanding.LandingEventIdentity == landingEventIdentity)
@@ -500,18 +545,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingFact LastLanding;
         internal CharacterFootLandingFact NextSwingLanding;
         internal CharacterFootLandingFact PromotedLanding;
+        internal CharacterFootLandingFact PlantTarget;
         internal Vector3 NextSwingReferencePoint;
         internal float NextSwingPredictionError;
         internal float NextSwingConstraintWeight;
-        internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
-        internal CharacterFootLandingTrackingState TrackingState;
-        internal bool CommitAttempted;
-        internal bool CommitUnavailable;
+        internal CharacterFootNextLandingTrackingState NextTrackingState;
+        internal CharacterFootPlantTargetState PlantTargetState;
+        internal bool PlantTargetUpdated;
+        internal bool PlantVerificationAttempted;
+        internal bool PlantVerificationUnavailable;
 
         internal CharacterFootLandingSnapshot Snapshot =>
             new CharacterFootLandingSnapshot(
-                TrackingState,
+                NextTrackingState,
                 TrackedEventIdentity,
                 LastLanding.HasValue,
                 LastLanding.HasValue ? LastLanding.Resolve() : default,
@@ -521,20 +568,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
                 PromotedLanding.HasValue,
                 PromotedLanding.HasValue ? PromotedLanding.Resolve() : default,
-                CommitAttempted,
-                CommitUnavailable);
+                PlantTargetState,
+                PlantTarget.HasValue,
+                PlantTarget.HasValue ? PlantTarget.Resolve() : default,
+                PlantTargetUpdated,
+                PlantVerificationAttempted,
+                PlantVerificationUnavailable);
 
         internal void BeginFrame()
         {
             PromotedLanding = default;
-            CommitAttempted = false;
-            CommitUnavailable = false;
+            PlantTargetUpdated = false;
+            PlantVerificationAttempted = false;
+            PlantVerificationUnavailable = false;
         }
 
         internal void RetainTracking()
         {
-            if (TrackingState == CharacterFootLandingTrackingState.Committed)
-                return;
             bool retainsLanding = NextSwingLanding.HasValue &&
                                   NextSwingLanding.LandingEventIdentity ==
                                   TrackedEventIdentity;
@@ -544,11 +594,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextSwingPredictionError = 0f;
                 NextSwingConstraintWeight = 0f;
             }
-            CommitAttempted = false;
-            CommitUnavailable = false;
-            TrackingState = TrackedEventIdentity != 0
-                ? CharacterFootLandingTrackingState.Tracking
-                : CharacterFootLandingTrackingState.Empty;
+            NextTrackingState = TrackedEventIdentity != 0
+                ? CharacterFootNextLandingTrackingState.Tracking
+                : CharacterFootNextLandingTrackingState.Empty;
         }
 
         internal void ClearNextSwing()
@@ -557,9 +605,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingReferencePoint = default;
             NextSwingPredictionError = 0f;
             NextSwingConstraintWeight = 0f;
-            TrackingState = TrackedEventIdentity != 0
-                ? CharacterFootLandingTrackingState.Tracking
-                : CharacterFootLandingTrackingState.Empty;
+            NextTrackingState = TrackedEventIdentity != 0
+                ? CharacterFootNextLandingTrackingState.Tracking
+                : CharacterFootNextLandingTrackingState.Empty;
+        }
+
+        internal void TrackPlantTarget(in CharacterFootLandingFact target)
+        {
+            bool changed = !PlantTarget.HasValue ||
+                           PlantTarget.LandingEventIdentity !=
+                           target.LandingEventIdentity ||
+                           PlantTarget.SurfaceIdentity != target.SurfaceIdentity ||
+                           Vector3.Distance(
+                               PlantTarget.WorldPoint,
+                               target.WorldPoint) >
+                           CharacterFootConstraintMath.GeometryEpsilon;
+            PlantTarget = target;
+            PlantTargetState = CharacterFootPlantTargetState.Tracking;
+            PlantTargetUpdated |= changed;
+        }
+
+        internal void VerifyPlantTarget(in CharacterFootLandingFact target)
+        {
+            PlantTarget = target;
+            PlantTargetState = CharacterFootPlantTargetState.Verified;
+            PlantTargetUpdated = true;
+        }
+
+        internal void ClearTrackingPlantTarget()
+        {
+            if (PlantTargetState == CharacterFootPlantTargetState.Verified)
+                return;
+            PlantTarget = default;
+            PlantTargetState = CharacterFootPlantTargetState.Empty;
         }
     }
 
@@ -634,6 +712,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void Clear() => this = default;
     }
 
+    internal readonly struct CharacterFootPlantInterpolationFact
+    {
+        internal CharacterFootPlantInterpolationFact(
+            bool evaluated,
+            ulong eventIdentity,
+            bool verified,
+            Vector3 desiredPoint,
+            Vector3 filteredPoint,
+            float blendWeight,
+            float verticalDelta,
+            float appliedVerticalDelta,
+            bool verticalClamped,
+            float outputDistance,
+            float penetrationDepth)
+        {
+            Evaluated = evaluated;
+            EventIdentity = eventIdentity;
+            Verified = verified;
+            DesiredPoint = desiredPoint;
+            FilteredPoint = filteredPoint;
+            BlendWeight = blendWeight;
+            VerticalDelta = verticalDelta;
+            AppliedVerticalDelta = appliedVerticalDelta;
+            VerticalClamped = verticalClamped;
+            OutputDistance = outputDistance;
+            PenetrationDepth = penetrationDepth;
+        }
+
+        internal bool Evaluated { get; }
+        internal ulong EventIdentity { get; }
+        internal bool Verified { get; }
+        internal Vector3 DesiredPoint { get; }
+        internal Vector3 FilteredPoint { get; }
+        internal float BlendWeight { get; }
+        internal float VerticalDelta { get; }
+        internal float AppliedVerticalDelta { get; }
+        internal bool VerticalClamped { get; }
+        internal float OutputDistance { get; }
+        internal float PenetrationDepth { get; }
+    }
+
     internal struct CharacterFootInterpolationState
     {
         internal bool HasOutput;
@@ -643,11 +762,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PreviousTargetCorrection;
         internal Vector3 PreviousSwingTargetCorrection;
         internal Vector3 EffectiveCorrection;
+        internal Vector3 SwingResidual;
         internal Vector3 Residual;
         internal float Progress;
         internal float StartResidual;
         internal bool Completed;
         internal CharacterFootInterpolationPolicy Policy;
+        internal bool HasPlantTarget;
+        internal ulong PlantTargetEventIdentity;
+        internal Vector3 PlantDesiredPoint;
+        internal Vector3 PlantFilteredPoint;
+        internal float PlantBlendWeight;
+        internal CharacterFootPlantInterpolationFact PlantFact;
     }
 
     internal struct CharacterFootLifecycleContext
@@ -672,6 +798,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult swingMotion,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
+            bool approachPlantActive,
+            in CharacterFootGroundPathLanding approachPlantTarget,
             in CharacterFootLockRequest lockRequest,
             bool hardOwnershipLoss,
             float footPlacementWeight,
@@ -687,6 +815,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingMotion = swingMotion;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
+            ApproachPlantActive = approachPlantActive;
+            ApproachPlantTarget = approachPlantTarget;
             LockRequest = lockRequest;
             HardOwnershipLoss = hardOwnershipLoss;
             FootPlacementWeight = footPlacementWeight;
@@ -703,6 +833,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSwingMotionResult SwingMotion { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
+        internal bool ApproachPlantActive { get; }
+        internal CharacterFootGroundPathLanding ApproachPlantTarget { get; }
         internal CharacterFootLockRequest LockRequest { get; }
         internal bool HardOwnershipLoss { get; }
         internal float FootPlacementWeight { get; }
@@ -773,6 +905,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 correction,
             Vector3 swingCorrection,
             CharacterFootInterpolationPolicy interpolationPolicy,
+            bool plantTargetAvailable,
+            ulong plantTargetEventIdentity,
+            bool plantTargetVerified,
+            Vector3 plantTargetPoint,
             bool stateEntered,
             bool responseEntered,
             bool suppressOutput,
@@ -782,6 +918,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Correction = correction;
             SwingCorrection = swingCorrection;
             InterpolationPolicy = interpolationPolicy;
+            PlantTargetAvailable = plantTargetAvailable;
+            PlantTargetEventIdentity = plantTargetEventIdentity;
+            PlantTargetVerified = plantTargetVerified;
+            PlantTargetPoint = plantTargetPoint;
             StateEntered = stateEntered;
             ResponseEntered = responseEntered;
             SuppressOutput = suppressOutput;
@@ -792,6 +932,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 Correction { get; }
         internal Vector3 SwingCorrection { get; }
         internal CharacterFootInterpolationPolicy InterpolationPolicy { get; }
+        internal bool PlantTargetAvailable { get; }
+        internal ulong PlantTargetEventIdentity { get; }
+        internal bool PlantTargetVerified { get; }
+        internal Vector3 PlantTargetPoint { get; }
         internal bool StateEntered { get; }
         internal bool ResponseEntered { get; }
         internal bool SuppressOutput { get; }
@@ -804,15 +948,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootInterpolationResult(
             Vector3 correction,
             bool completed,
-            in CharacterFootPathContinuityFact continuityFact)
+            in CharacterFootPathContinuityFact continuityFact,
+            in CharacterFootPlantInterpolationFact plantFact)
         {
             Correction = correction;
             Completed = completed;
             ContinuityFact = continuityFact;
+            PlantFact = plantFact;
         }
 
         internal Vector3 Correction { get; }
         internal bool Completed { get; }
         internal CharacterFootPathContinuityFact ContinuityFact { get; }
+        internal CharacterFootPlantInterpolationFact PlantFact { get; }
     }
 }

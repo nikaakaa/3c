@@ -65,6 +65,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 Point { get; }
     }
 
+    internal readonly struct CharacterFootLandingReachRequest
+    {
+        internal CharacterFootLandingReachRequest(
+            ulong eventIdentity,
+            Vector3 hip,
+            Vector3 targetAnkle,
+            float legLength,
+            float minimumCompressionReserve)
+        {
+            if (eventIdentity == 0 ||
+                !CharacterPoseConstraintMath.IsFinite(hip) ||
+                !CharacterPoseConstraintMath.IsFinite(targetAnkle) ||
+                !float.IsFinite(legLength) ||
+                !float.IsFinite(minimumCompressionReserve) ||
+                minimumCompressionReserve <= 0f ||
+                legLength <= minimumCompressionReserve)
+            {
+                throw new ArgumentException(
+                    "Landing Reach request is invalid.");
+            }
+            EventIdentity = eventIdentity;
+            Hip = hip;
+            TargetAnkle = targetAnkle;
+            LegLength = legLength;
+            MinimumCompressionReserve = minimumCompressionReserve;
+            IsAvailable = eventIdentity != 0;
+        }
+
+        internal bool IsAvailable { get; }
+        internal ulong EventIdentity { get; }
+        internal Vector3 Hip { get; }
+        internal Vector3 TargetAnkle { get; }
+        internal float LegLength { get; }
+        internal float MinimumCompressionReserve { get; }
+    }
+
     internal readonly struct CharacterResolvedFootResult
     {
         internal CharacterResolvedFootResult(
@@ -84,7 +120,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float supportIntentWeight,
             float supportHorizontalError,
             ulong supportEventIdentity,
-            in CharacterFootPelvisReachReference pelvisReachReference)
+            in CharacterFootPelvisReachReference pelvisReachReference,
+            in CharacterFootLandingReachRequest landingReachRequest)
         {
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
@@ -103,6 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SupportHorizontalError = supportHorizontalError;
             SupportEventIdentity = supportEventIdentity;
             PelvisReachReference = pelvisReachReference;
+            LandingReachRequest = landingReachRequest;
             Outcome = CharacterFootResolvedOutcome.Ready;
         }
 
@@ -123,6 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SupportHorizontalError { get; }
         internal ulong SupportEventIdentity { get; }
         internal CharacterFootPelvisReachReference PelvisReachReference { get; }
+        internal CharacterFootLandingReachRequest LandingReachRequest { get; }
         internal CharacterFootResolvedOutcome Outcome { get; }
     }
 
@@ -243,7 +282,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool contactPlaneAvailable = false,
             int contactSurfaceIdentity = 0,
             Vector3 contactPlaneNormal = default,
-            CharacterFootPathContinuityFact pathContinuity = default)
+            CharacterFootPathContinuityFact pathContinuity = default,
+            bool landingReachEvaluated = false,
+            bool landingReachAvailable = false,
+            bool landingReachGoalClamped = false,
+            float landingReachGoalClampDistance = 0f)
         {
             State = state;
             RejectReason = rejectReason;
@@ -274,6 +317,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactSurfaceIdentity = contactSurfaceIdentity;
             ContactPlaneNormal = contactPlaneNormal;
             PathContinuity = pathContinuity;
+            LandingReachEvaluated = landingReachEvaluated;
+            LandingReachAvailable = landingReachAvailable;
+            LandingReachGoalClamped = landingReachGoalClamped;
+            LandingReachGoalClampDistance = landingReachGoalClampDistance;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -304,6 +351,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ContactPlaneAvailable { get; }
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
+        public bool LandingReachEvaluated { get; }
+        public bool LandingReachAvailable { get; }
+        public bool LandingReachGoalClamped { get; }
+        public float LandingReachGoalClampDistance { get; }
         internal CharacterFootPathContinuityFact PathContinuity { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
@@ -340,6 +391,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneAvailable = result.ContactPlaneAvailable;
             ContactSurfaceIdentity = result.ContactSurfaceIdentity;
             ContactPlaneNormal = result.ContactPlaneNormal;
+            LandingReachEvaluated = result.LandingReachEvaluated;
+            LandingReachAvailable = result.LandingReachAvailable;
+            LandingReachGoalClamped = result.LandingReachGoalClamped;
+            LandingReachGoalClampDistance =
+                result.LandingReachGoalClampDistance;
             CharacterFootPathContinuityFact path = result.PathContinuity;
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
@@ -465,6 +521,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ContactPlaneAvailable { get; }
         public int ContactSurfaceIdentity { get; }
         public Vector3 ContactPlaneNormal { get; }
+        public bool LandingReachEvaluated { get; }
+        public bool LandingReachAvailable { get; }
+        public bool LandingReachGoalClamped { get; }
+        public float LandingReachGoalClampDistance { get; }
         public bool PathContinuityEvaluated { get; }
         public string PathRevisionReason { get; }
         public bool PathResidualRebuilt { get; }
@@ -793,6 +853,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 0f);
         }
+
+        internal static CharacterFootSwingMotionResult WithLandingReach(
+            in CharacterFootSwingMotionResult motion,
+            bool evaluated,
+            bool available,
+            bool goalClamped,
+            float goalClampDistance) =>
+            new CharacterFootSwingMotionResult(
+                motion.State,
+                motion.RejectReason,
+                motion.LandingEventIdentity,
+                motion.GroundPathInputIdentity,
+                motion.SwingPathReference,
+                motion.OriginalSole,
+                motion.OriginalAnkle,
+                motion.Distance,
+                motion.Progress,
+                motion.BaselineSample,
+                motion.EnvelopeSample,
+                motion.FormalTargetHeightAlongUp,
+                motion.VerticalCorrection,
+                motion.LandingPredictionError,
+                motion.CorrectedSole,
+                motion.CorrectedAnkle,
+                motion.PositionWeight,
+                motion.RotationWeight,
+                motion.ConstraintState,
+                motion.LockResponse,
+                motion.SupportHorizontalError,
+                motion.ContactOwnership,
+                motion.SupportWeight,
+                motion.SupportContactAnchor,
+                motion.DesiredCorrection,
+                motion.ContactPlaneAvailable,
+                motion.ContactSurfaceIdentity,
+                motion.ContactPlaneNormal,
+                motion.PathContinuity,
+                evaluated,
+                available,
+                goalClamped,
+                goalClampDistance);
 
         static bool TryResolveSwingPhaseWeight(
             in AnimationFootMotionRuntimeSample step,

@@ -893,6 +893,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigId,
             FixedString64Bytes rigRevision,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
+            Vector3 animatedHip,
+            float legLength,
             in CharacterFootSwingMotionResult swingMotion,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
@@ -913,6 +915,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigId = rigId;
             RigRevision = rigRevision;
             AnimatedFoot = animatedFoot;
+            AnimatedHip = animatedHip;
+            LegLength = legLength;
             SwingMotion = swingMotion;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
@@ -934,6 +938,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
+        internal Vector3 AnimatedHip { get; }
+        internal float LegLength { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
@@ -968,6 +974,44 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal AnimationFootMotionRuntimeSample FormalFootMotion { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }
+    }
+
+    internal readonly struct CharacterFootLifecycleEvaluationReceipt
+    {
+        internal CharacterFootLifecycleEvaluationReceipt(
+            in CharacterFootStateEvaluation evaluation,
+            in CharacterFootTransitionDecision preTransition,
+            in CharacterFootStateTarget target,
+            in CharacterFootInterpolationResult interpolation,
+            CharacterFootConstraintState stateBefore,
+            CharacterFootLockResponse lockResponseBefore,
+            in CharacterFootSwingMotionResult outputSwing,
+            in CharacterResolvedFootResult preliminaryResolved,
+            in CharacterFootSwingMotionResult preliminaryMotion,
+            bool landingCompletionPending)
+        {
+            Evaluation = evaluation;
+            PreTransition = preTransition;
+            Target = target;
+            Interpolation = interpolation;
+            StateBefore = stateBefore;
+            LockResponseBefore = lockResponseBefore;
+            OutputSwing = outputSwing;
+            PreliminaryResolved = preliminaryResolved;
+            PreliminaryMotion = preliminaryMotion;
+            LandingCompletionPending = landingCompletionPending;
+        }
+
+        internal CharacterFootStateEvaluation Evaluation { get; }
+        internal CharacterFootTransitionDecision PreTransition { get; }
+        internal CharacterFootStateTarget Target { get; }
+        internal CharacterFootInterpolationResult Interpolation { get; }
+        internal CharacterFootConstraintState StateBefore { get; }
+        internal CharacterFootLockResponse LockResponseBefore { get; }
+        internal CharacterFootSwingMotionResult OutputSwing { get; }
+        internal CharacterResolvedFootResult PreliminaryResolved { get; }
+        internal CharacterFootSwingMotionResult PreliminaryMotion { get; }
+        internal bool LandingCompletionPending { get; }
     }
 
     internal readonly struct CharacterFootTransitionDecision

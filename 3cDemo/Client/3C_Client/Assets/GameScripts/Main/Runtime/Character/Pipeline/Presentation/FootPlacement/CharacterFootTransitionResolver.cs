@@ -76,7 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal static CharacterFootTransitionDecision ResolvePostInterpolation(
             in CharacterFootLifecycleContext context,
             in CharacterFootStateFrame frame,
-            bool interpolationCompleted)
+            bool interpolationCompleted,
+            bool landingCompletionAllowed)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
             if (!interpolationCompleted)
@@ -84,6 +85,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootTransitionPhase.PostInterpolation);
             if (discrete.State == CharacterFootConstraintState.Landing)
             {
+                if (!landingCompletionAllowed)
+                    return NoChange(in discrete, CharacterFootContactEdge.None,
+                        CharacterFootTransitionPhase.PostInterpolation);
                 if (!frame.LockRequest.RequestsLock ||
                     frame.LockRequest.EventIdentity != context.Contact.EventIdentity)
                 {

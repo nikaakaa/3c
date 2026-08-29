@@ -437,6 +437,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Left,
+                pose.Left.HipPosition,
+                m_Rig.LeftLegLength,
                 in leftSwingMotion,
                 hasLeftContactLanding,
                 in leftContactLanding,
@@ -458,6 +460,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 pose.Right,
+                pose.Right.HipPosition,
+                m_Rig.RightLegLength,
                 in rightSwingMotion,
                 hasRightContactLanding,
                 in rightContactLanding,
@@ -487,16 +491,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootLifecycle.Evaluate(
                     ref bank.LeftFoot,
                     in leftEvaluation,
-                    out CharacterFootSwingMotionResult leftFootMotion);
+                    out CharacterFootSwingMotionResult leftFootMotion,
+                    out CharacterFootLifecycleEvaluationReceipt
+                        leftLifecycleReceipt);
             CharacterResolvedFootResult rightResolved =
                 CharacterFootLifecycle.Evaluate(
                     ref bank.RightFoot,
                     in rightEvaluation,
-                    out CharacterFootSwingMotionResult rightFootMotion);
+                    out CharacterFootSwingMotionResult rightFootMotion,
+                    out CharacterFootLifecycleEvaluationReceipt
+                        rightLifecycleReceipt);
             var resolvedPair = new CharacterResolvedFootPair(
                 in leftResolved,
                 in rightResolved);
-            bank.ResolvedFeet = resolvedPair;
+            CharacterFootLandingReachRequest leftReachRequest =
+                leftResolved.LandingReachRequest;
+            CharacterFootLandingReachRequest rightReachRequest =
+                rightResolved.LandingReachRequest;
             leftGoal = CreateFootGoal(
                 CharacterFootSide.Left,
                 pose.Left,
@@ -554,15 +565,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in primarySupport,
                 in pelvisFrame,
                 ref bank.PelvisSpring);
+            bool leftReachAvailable = false;
+            bool rightReachAvailable = false;
+            bool leftLandingReach = false;
+            bool rightLandingReach = false;
             if (facts.Grounded &&
                 !leftAction.IsOccupied &&
                 !rightAction.IsOccupied)
             {
-                bool leftLandingReach = IsLandingReachCandidate(
+                leftLandingReach = IsLandingReachCandidate(
                     in leftSelectedStep,
                     in leftFootMotion,
                     in leftResolved);
-                bool rightLandingReach = IsLandingReachCandidate(
+                rightLandingReach = IsLandingReachCandidate(
                     in rightSelectedStep,
                     in rightFootMotion,
                     in rightResolved);
@@ -571,19 +586,85 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     strideHips = CharacterFootStrideHipsBuilder.ApplyLandingReach(
                         in strideHips,
                         leftLandingReach,
-                        pose.Left.HipPosition,
-                        leftResolved.FinalAnkle,
-                        m_Rig.LeftLegLength,
+                        leftReachRequest.Hip,
+                        leftReachRequest.TargetAnkle,
+                        leftReachRequest.LegLength,
                         rightLandingReach,
-                        pose.Right.HipPosition,
-                        rightResolved.FinalAnkle,
-                        m_Rig.RightLegLength,
+                        rightReachRequest.Hip,
+                        rightReachRequest.TargetAnkle,
+                        rightReachRequest.LegLength,
                         componentUp,
                         footPlacementWeight,
                         m_Settings.FootMotion,
-                        ref bank.PelvisSpring);
+                        ref bank.PelvisSpring,
+                        out leftReachAvailable,
+                        out rightReachAvailable);
                 }
             }
+            leftResolved = CharacterFootLifecycle.FinalizeLanding(
+                ref bank.LeftFoot,
+                in leftLifecycleReceipt,
+                !leftLifecycleReceipt.LandingCompletionPending ||
+                leftReachAvailable,
+                out leftFootMotion);
+            rightResolved = CharacterFootLifecycle.FinalizeLanding(
+                ref bank.RightFoot,
+                in rightLifecycleReceipt,
+                !rightLifecycleReceipt.LandingCompletionPending ||
+                rightReachAvailable,
+                out rightFootMotion);
+            resolvedPair = new CharacterResolvedFootPair(
+                in leftResolved,
+                in rightResolved);
+            bank.ResolvedFeet = resolvedPair;
+            leftGoal = CreateFootGoal(
+                CharacterFootSide.Left,
+                pose.Left,
+                in leftResolved);
+            rightGoal = CreateFootGoal(
+                CharacterFootSide.Right,
+                pose.Right,
+                in rightResolved);
+            float leftReachClampDistance = 0f;
+            float rightReachClampDistance = 0f;
+            if (leftLandingReach && !leftReachAvailable)
+            {
+                leftGoal = ClampFootGoalToReach(
+                    in leftGoal,
+                    leftReachRequest.Hip +
+                    strideHips.PelvisDelta * strideHips.PositionWeight,
+                    pose.Left.AnklePosition,
+                    leftReachRequest.LegLength,
+                    leftReachRequest.MinimumCompressionReserve,
+                    goalRoot,
+                    out leftReachClampDistance);
+            }
+            if (rightLandingReach && !rightReachAvailable)
+            {
+                rightGoal = ClampFootGoalToReach(
+                    in rightGoal,
+                    rightReachRequest.Hip +
+                    strideHips.PelvisDelta * strideHips.PositionWeight,
+                    pose.Right.AnklePosition,
+                    rightReachRequest.LegLength,
+                    rightReachRequest.MinimumCompressionReserve,
+                    goalRoot,
+                    out rightReachClampDistance);
+            }
+            leftFootMotion = CharacterFootSwingMotionBuilder.WithLandingReach(
+                in leftFootMotion,
+                leftLandingReach,
+                leftReachAvailable,
+                leftReachClampDistance >
+                CharacterPoseConstraintMath.Epsilon,
+                leftReachClampDistance);
+            rightFootMotion = CharacterFootSwingMotionBuilder.WithLandingReach(
+                in rightFootMotion,
+                rightLandingReach,
+                rightReachAvailable,
+                rightReachClampDistance >
+                CharacterPoseConstraintMath.Epsilon,
+                rightReachClampDistance);
             pelvisGoal = CreatePelvisGoal(in strideHips, m_Rig.PoseRoot);
             bank.StrideHips = strideHips;
             if (!strideHips.ProducesPelvisGoal)
@@ -1463,13 +1544,72 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static bool IsLandingReachCandidate(
             in AnimationFootMotionRuntimeSample step,
             in CharacterFootSwingMotionResult motion,
-            in CharacterResolvedFootResult resolved) =>
-            step.IsAuthoritative &&
-            step.HasConsistentLandingEventIdentity &&
-            step.IsSwing &&
-            motion.Accepted &&
-            motion.LandingEventIdentity == step.LandingEventIdentity &&
-            resolved.GoalWeight > CharacterPoseConstraintMath.Epsilon;
+            in CharacterResolvedFootResult resolved)
+        {
+            if (!resolved.LandingReachRequest.IsAvailable ||
+                resolved.GoalWeight <= CharacterPoseConstraintMath.Epsilon ||
+                motion.LandingEventIdentity !=
+                resolved.LandingReachRequest.EventIdentity)
+            {
+                return false;
+            }
+            if (motion.ConstraintState == CharacterFootConstraintState.Landing)
+                return resolved.ContactReference.IsAvailable;
+            return step.IsAuthoritative &&
+                   step.HasConsistentLandingEventIdentity &&
+                   step.IsSwing &&
+                   motion.Accepted &&
+                   motion.LandingEventIdentity == step.LandingEventIdentity;
+        }
+
+        static CharacterFullBodyIkGoal ClampFootGoalToReach(
+            in CharacterFullBodyIkGoal goal,
+            Vector3 hipPosition,
+            Vector3 originalAnklePosition,
+            float legLength,
+            float compressionReserve,
+            Transform root,
+            out float clampDistance)
+        {
+            clampDistance = 0f;
+            if (goal.PositionWeight <= CharacterPoseConstraintMath.Epsilon)
+                return goal;
+            float usableLength = legLength - compressionReserve;
+            if (root == null || usableLength <=
+                CharacterPoseConstraintMath.Epsilon)
+            {
+                throw new InvalidOperationException(
+                    "Landing Reach clamp input is invalid.");
+            }
+            Vector3 target = root.TransformPoint(goal.ComponentPosition);
+            Vector3 effectiveTarget = Vector3.LerpUnclamped(
+                originalAnklePosition,
+                target,
+                goal.PositionWeight);
+            Vector3 hipToTarget = effectiveTarget - hipPosition;
+            float distance = hipToTarget.magnitude;
+            if (distance <= usableLength)
+                return goal;
+            Vector3 clampedEffectiveTarget = hipPosition +
+                                             hipToTarget / distance *
+                                             usableLength;
+            Vector3 clampedTarget = originalAnklePosition +
+                                    (clampedEffectiveTarget -
+                                     originalAnklePosition) /
+                                    goal.PositionWeight;
+            clampDistance = Vector3.Distance(
+                effectiveTarget,
+                clampedEffectiveTarget);
+            return new CharacterFullBodyIkGoal(
+                goal.Slot,
+                root.InverseTransformPoint(clampedTarget),
+                goal.ComponentRotation,
+                goal.PositionWeight,
+                goal.RotationWeight,
+                goal.Application,
+                goal.SourceKind,
+                goal.DiagnosticMetadataIndex);
+        }
 
         CharacterFootStrideHipsResult ReleaseStride(
             CharacterFootStrideRejectReason reason,

@@ -207,6 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
             "FootMotionContactOwnership,FootMotionSupportWeight," +
+            "FootMotionLandingReachEvaluated,FootMotionLandingReachAvailable,FootMotionLandingReachGoalClamped,FootMotionLandingReachGoalClampDistance," +
             "FootMotionSupportContactAnchorX,FootMotionSupportContactAnchorY,FootMotionSupportContactAnchorZ," +
             "FootMotionContactPlaneAvailable,FootMotionContactSurfaceIdentity," +
             "FootMotionContactPlaneNormalX,FootMotionContactPlaneNormalY,FootMotionContactPlaneNormalZ," +
@@ -2082,6 +2083,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SupportHorizontalError);
             Add(row, motion.ContactOwnership);
             Add(row, motion.SupportWeight);
+            Add(row, motion.LandingReachEvaluated);
+            Add(row, motion.LandingReachAvailable);
+            Add(row, motion.LandingReachGoalClamped);
+            Add(row, motion.LandingReachGoalClampDistance);
             Add(row, motion.SupportContactAnchor);
             Add(row, motion.ContactPlaneAvailable);
             Add(row, motion.ContactSurfaceIdentity);

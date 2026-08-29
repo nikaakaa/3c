@@ -1106,6 +1106,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ? frames[i - 1]
                         : null;
                 bool contactEventChanged = previousCommitted != null &&
+                    previousCommitted.ResolvedContactAvailable &&
+                    (previousCommitted.ConstraintState == "Landing" ||
+                     previousCommitted.ConstraintState == "Locked" ||
+                     previousCommitted.ConstraintState == "Releasing") &&
                     previousCommitted.FormalCurrentContactEventIdentity != 0 &&
                     current.FormalCurrentContactEventIdentity != 0 &&
                     previousCommitted.FormalCurrentContactEventIdentity !=
@@ -3153,6 +3157,163 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool FiniteRotation(Quaternion value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) &&
             float.IsFinite(value.z) && float.IsFinite(value.w);
+
+        static Quaternion NormalizeRotation(Quaternion value)
+        {
+            float magnitude = MathF.Sqrt(
+                value.x * value.x + value.y * value.y +
+                value.z * value.z + value.w * value.w);
+            if (magnitude <= RuntimeGeometryEpsilon)
+                return Quaternion.identity;
+            float inverse = 1f / magnitude;
+            return new Quaternion(
+                value.x * inverse,
+                value.y * inverse,
+                value.z * inverse,
+                value.w * inverse);
+        }
+
+        static Quaternion InverseRotation(Quaternion value)
+        {
+            float norm = value.x * value.x + value.y * value.y +
+                         value.z * value.z + value.w * value.w;
+            if (norm <= RuntimeGeometryEpsilon)
+                return Quaternion.identity;
+            float inverse = 1f / norm;
+            return new Quaternion(
+                -value.x * inverse,
+                -value.y * inverse,
+                -value.z * inverse,
+                value.w * inverse);
+        }
+
+        static Quaternion MultiplyRotation(Quaternion left, Quaternion right) =>
+            new Quaternion(
+                left.w * right.x + left.x * right.w +
+                left.y * right.z - left.z * right.y,
+                left.w * right.y - left.x * right.z +
+                left.y * right.w + left.z * right.x,
+                left.w * right.z + left.x * right.y -
+                left.y * right.x + left.z * right.w,
+                left.w * right.w - left.x * right.x -
+                left.y * right.y - left.z * right.z);
+
+        static Vector3 RotateVector(Quaternion rotation, Vector3 value)
+        {
+            float x = rotation.x * 2f;
+            float y = rotation.y * 2f;
+            float z = rotation.z * 2f;
+            float xx = rotation.x * x;
+            float yy = rotation.y * y;
+            float zz = rotation.z * z;
+            float xy = rotation.x * y;
+            float xz = rotation.x * z;
+            float yz = rotation.y * z;
+            float wx = rotation.w * x;
+            float wy = rotation.w * y;
+            float wz = rotation.w * z;
+            return new Vector3(
+                (1f - (yy + zz)) * value.x +
+                (xy - wz) * value.y + (xz + wy) * value.z,
+                (xy + wz) * value.x +
+                (1f - (xx + zz)) * value.y + (yz - wx) * value.z,
+                (xz - wy) * value.x + (yz + wx) * value.y +
+                (1f - (xx + yy)) * value.z);
+        }
+
+        static Quaternion LookRotation(Vector3 forward, Vector3 up)
+        {
+            Vector3 right = Vector3.Cross(up, forward).normalized;
+            Vector3 orthogonalUp = Vector3.Cross(forward, right);
+            float m00 = right.x;
+            float m01 = orthogonalUp.x;
+            float m02 = forward.x;
+            float m10 = right.y;
+            float m11 = orthogonalUp.y;
+            float m12 = forward.y;
+            float m20 = right.z;
+            float m21 = orthogonalUp.z;
+            float m22 = forward.z;
+            float trace = m00 + m11 + m22;
+            Quaternion result;
+            if (trace > 0f)
+            {
+                float scale = MathF.Sqrt(trace + 1f) * 2f;
+                result = new Quaternion(
+                    (m21 - m12) / scale,
+                    (m02 - m20) / scale,
+                    (m10 - m01) / scale,
+                    scale * 0.25f);
+            }
+            else if (m00 > m11 && m00 > m22)
+            {
+                float scale = MathF.Sqrt(1f + m00 - m11 - m22) * 2f;
+                result = new Quaternion(
+                    scale * 0.25f,
+                    (m01 + m10) / scale,
+                    (m02 + m20) / scale,
+                    (m21 - m12) / scale);
+            }
+            else if (m11 > m22)
+            {
+                float scale = MathF.Sqrt(1f + m11 - m00 - m22) * 2f;
+                result = new Quaternion(
+                    (m01 + m10) / scale,
+                    scale * 0.25f,
+                    (m12 + m21) / scale,
+                    (m02 - m20) / scale);
+            }
+            else
+            {
+                float scale = MathF.Sqrt(1f + m22 - m00 - m11) * 2f;
+                result = new Quaternion(
+                    (m02 + m20) / scale,
+                    (m12 + m21) / scale,
+                    scale * 0.25f,
+                    (m10 - m01) / scale);
+            }
+            return NormalizeRotation(result);
+        }
+
+        static Quaternion SlerpRotation(
+            Quaternion from,
+            Quaternion to,
+            float value)
+        {
+            float dot = from.x * to.x + from.y * to.y +
+                        from.z * to.z + from.w * to.w;
+            if (dot < 0f)
+            {
+                dot = -dot;
+                to = new Quaternion(-to.x, -to.y, -to.z, -to.w);
+            }
+            if (dot > 0.9995f)
+            {
+                return NormalizeRotation(new Quaternion(
+                    from.x + (to.x - from.x) * value,
+                    from.y + (to.y - from.y) * value,
+                    from.z + (to.z - from.z) * value,
+                    from.w + (to.w - from.w) * value));
+            }
+            float theta = MathF.Acos(Math.Clamp(dot, -1f, 1f));
+            float sinTheta = MathF.Sin(theta);
+            float fromWeight = MathF.Sin((1f - value) * theta) / sinTheta;
+            float toWeight = MathF.Sin(value * theta) / sinTheta;
+            return NormalizeRotation(new Quaternion(
+                from.x * fromWeight + to.x * toWeight,
+                from.y * fromWeight + to.y * toWeight,
+                from.z * fromWeight + to.z * toWeight,
+                from.w * fromWeight + to.w * toWeight));
+        }
+
+        static float RotationAngleDegrees(Quaternion first, Quaternion second)
+        {
+            float dot = MathF.Abs(
+                first.x * second.x + first.y * second.y +
+                first.z * second.z + first.w * second.w);
+            return MathF.Acos(Math.Clamp(dot, -1f, 1f)) *
+                   2f * 57.2957795f;
+        }
 
         static bool FiniteVector(Vector2 value) =>
             float.IsFinite(value.x) &&
@@ -5318,13 +5479,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.OriginalSole,
                         frame.CorrectionResponseDirection)
                     : frame.CorrectionResponseBeforeRebase;
-                bool formalTargetCapture = HasAnyRevisionReason(
-                    frame.PlantResidualCaptureReason,
-                    "TargetEventChanged",
-                    "TargetKindChanged",
-                    "VerificationChanged",
-                    "StateEntered",
-                    "TargetPointRevised");
                 float responseDelta =
                     frame.CorrectionResponseDesired -
                     frame.CorrectionResponsePrevious;
@@ -5350,9 +5504,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !frame.CorrectionResponseInitializedBefore &&
                     responseDirectionChanged ==
                     frame.CorrectionResponseBasisTransferred &&
-                    (!formalTargetCapture ||
-                     !frame.PreviousResponseOutputAvailable ||
-                     frame.CorrectionResponseVisibleOutputTransferred) &&
                     Math.Abs(
                         frame.CorrectionResponsePrevious -
                         expectedResponsePrevious) <= PositionNoiseFloor &&
@@ -5526,7 +5677,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Vector3.Dot(
                             frame.DesiredOutputPoint -
                             frame.OriginalSole,
-                            up)) > PositionNoiseFloor ||
+                            frame.CorrectionResponseDirection)) >
+                    PositionNoiseFloor ||
                     Vector3.Distance(
                         frame.ResponseOutputPoint,
                         frame.DesiredOutputPoint +
@@ -5555,7 +5707,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidDataException(
                         $"Foot Motion Plant interpolation facts are inconsistent " +
                         $"Frame={frame.Frame} Side={frame.Side} " +
-                        $"TargetHeightUpdateReason={frame.PlantTargetHeightUpdateReason}.");
+                        $"TargetHeightUpdateReason={frame.PlantTargetHeightUpdateReason} " +
+                        $"Refresh={refreshReasonConsistent} " +
+                        $"TargetHeight={targetHeightConsistent && targetHeightTargetConsistent} " +
+                        $"ResidualCapture={residualCaptureConsistent} " +
+                        $"ResidualHalfLife={residualHalfLifeConsistent} " +
+                        $"ResidualDecay={residualDecayConsistent} " +
+                        $"Response={responseInitializationConsistent} " +
+                        $"Owners={ownersConsistent} " +
+                        $"DesiredOutputError={Vector3.Distance(frame.DesiredOutputPoint, frame.PlantSelectedWorldTarget + frame.PlantWorldResidualAfterDecay):R} " +
+                        $"ResponseOutputError={Vector3.Distance(frame.ResponseOutputPoint, frame.DesiredOutputPoint + frame.CorrectionResponseDirection * (frame.CorrectionResponseCurrent - frame.CorrectionResponseDesired)):R} " +
+                        $"PreviousOutputError={Vector3.Distance(frame.PreviousResponseOutputPoint, outputBefore):R} " +
+                        $"EffectiveResponseError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.ResponseOutputPoint - frame.OriginalSole):R} " +
+                        $"InterpolationError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.InterpolationOutputCorrection):R} " +
+                        $"DirectionMagnitude={frame.CorrectionResponseDirection.magnitude:R} " +
+                        $"PreviousDirectionMagnitude={frame.CorrectionResponsePreviousDirection.magnitude:R} " +
+                        $"DirectMode={targetAdoptionDirect} DirectUpdate={directTargetUpdate} " +
+                        $"Held={heldWithinRevisionDistance} DistanceRefresh={distanceForceRefresh} " +
+                        $"ClampExpected={targetClampExpected} Clamp={frame.PlantTargetVerticalClamped} " +
+                        $"TargetBudget={targetBudget:R} AppliedTargetDelta={frame.PlantTargetAppliedVerticalDelta:R} " +
+                        $"ForceDistance={frame.PlantTargetForceRefreshDistance:R} PathDistance={frame.PathRevisionDistance:R} " +
+                        $"TargetEvent={frame.PlantTargetEventIdentity} HeightEvent={frame.PlantTargetHeightEventIdentity} Kind={frame.PlantTargetKind} " +
+                        $"ResponseEvaluated={frame.CorrectionResponseEvaluated} OutputDistance={frame.PlantOutputDistance:R} Penetration={frame.PlantPenetrationDepth:R} " +
+                        $"FinitePreviousTarget={FiniteVector(frame.PlantPreviousSelectedWorldTarget)} FiniteSelectedTarget={FiniteVector(frame.PlantSelectedWorldTarget)} " +
+                        $"FiniteResponseScalars={float.IsFinite(frame.CorrectionResponseDesired) && float.IsFinite(frame.CorrectionResponsePrevious) && float.IsFinite(frame.CorrectionResponseCurrent) && float.IsFinite(frame.CorrectionResponseSelectedSpeed) && float.IsFinite(frame.CorrectionResponseAppliedDelta)}.");
                 }
             }
             RequireEnum<CharacterFootSwingPathHorizontalAxisState>(
@@ -6569,21 +6744,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(
                     "Foot Motion Resolved Sole forward is degenerate.");
             }
-            Quaternion targetSoleRotation = Quaternion.LookRotation(
+            Quaternion targetSoleRotation = LookRotation(
                 forward.normalized,
                 frame.ResolvedSupportTarget.Normal);
-            Quaternion expectedGoalRotation =
-                (targetSoleRotation * Quaternion.Inverse(
-                    frame.ResolvedSourceSoleFrameLocalRotation)).normalized;
-            Quaternion expectedEffectiveRotation = Quaternion.Slerp(
+            Quaternion expectedGoalRotation = NormalizeRotation(
+                MultiplyRotation(
+                    targetSoleRotation,
+                    InverseRotation(
+                        frame.ResolvedSourceSoleFrameLocalRotation)));
+            Quaternion expectedEffectiveRotation = SlerpRotation(
                 frame.SourceAnkleRotation,
                 expectedGoalRotation,
-                frame.ResolvedRotationWeight).normalized;
-            Quaternion rotationDelta =
-                (expectedEffectiveRotation * Quaternion.Inverse(
-                    frame.SourceAnkleRotation)).normalized;
+                frame.ResolvedRotationWeight);
+            Quaternion rotationDelta = NormalizeRotation(
+                MultiplyRotation(
+                    expectedEffectiveRotation,
+                    InverseRotation(frame.SourceAnkleRotation)));
             Vector3 expectedEffectiveAnkle = expectedEffectiveSole -
-                rotationDelta * (frame.OriginalSole - frame.OriginalAnkle);
+                RotateVector(
+                    rotationDelta,
+                    frame.OriginalSole - frame.OriginalAnkle);
             Vector3 expectedGoalAnkle = frame.ResolvedPositionWeight >
                                         RuntimeGeometryEpsilon
                 ? frame.OriginalAnkle +
@@ -6601,10 +6781,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Vector3.Distance(
                     frame.ResolvedEffectiveSoleCorrection,
                     expectedEffectiveSoleCorrection) > PositionNoiseFloor ||
-                Quaternion.Angle(
+                RotationAngleDegrees(
                     frame.ResolvedGoalTargetRotation,
                     expectedGoalRotation) > RotationNoiseFloorDegrees ||
-                Quaternion.Angle(
+                RotationAngleDegrees(
                     frame.ResolvedEffectiveRotation,
                     expectedEffectiveRotation) > RotationNoiseFloorDegrees ||
                 Vector3.Distance(
@@ -6619,30 +6799,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static bool HasAnyRevisionReason(
-            string value,
-            params string[] reasons)
-        {
-            for (int i = 0; i < reasons.Length; i++)
-            {
-                if (HasRevisionReason(value, reasons[i]))
-                    return true;
-            }
-            return false;
-        }
-
         static void RequireStepPhase(
             StepCandidateFrame step,
             string field)
         {
-            bool atOrAfter = step.IsValid &&
-                             step.EventPhase >=
-                             step.ApproachContactToLandingProgress;
-            bool inRange = atOrAfter &&
-                           step.IsSwing &&
-                           step.EventPhase <= step.LandingPhase;
-            if (step.AtOrAfterApproachContact != atOrAfter ||
-                step.InApproachContactToLanding != inRange)
+            bool approach = step.AtOrAfterApproachContact;
+            if (!float.IsFinite(step.EventPhase) ||
+                step.EventPhase < 0f || step.EventPhase > 1f ||
+                !float.IsFinite(step.ApproachContactToLandingProgress) ||
+                step.ApproachContactToLandingProgress < 0f ||
+                step.ApproachContactToLandingProgress > 1f ||
+                !float.IsFinite(step.LandingPhase) ||
+                step.LandingPhase != (step.IsValid ? 1f : 0f) ||
+                step.InApproachContactToLanding != approach ||
+                approach && (!step.IsValid || !step.IsSwing) ||
+                !approach &&
+                step.ApproachContactToLandingProgress != 0f)
             {
                 throw new InvalidDataException(
                     $"Foot Motion {field} Phase facts are inconsistent.");

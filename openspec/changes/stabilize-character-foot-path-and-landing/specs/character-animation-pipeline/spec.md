@@ -2,9 +2,11 @@
 
 ### Requirement: Animation Pipeline必须发布唯一正式Foot Motion Runtime Frame
 
-在`build-character-foot-motion-data-foundation`归档后，Projection Compiler MUST从原生AnimationClip Catalog的完整Foot Motion Curve组和匹配Foot Analysis lineage生成唯一typed Runtime payload。Payload MUST包含左右脚Step Time、Step Distance、Foot Height、Contact、Lock Mode、Lock Weight、Support及稳定Landing Event table；Event table MUST把Contact-only Landing与Predictive Landing显式分型。Contact-only Landing只可成为Current Contact且三个Swing提前时间 MUST全部为0；Predictive Landing才可成为Next Landing，并 MUST保存与同Source/Cycle/Side/ordinal一致的PreSwing、Swing、Approach Contact与Landing边界，使Runtime可以发布typed `InApproachContactToLanding`与归一化`ApproachContactToLandingProgress`事实。该进度 MUST以同一Event的Approach Contact边界为0、Landing边界为1，并随正式时间单调推进；不得从Contact Curve、Lock Weight、固定秒数或运行时累计值重新推导。Approach Contact边界 MUST取同一Foot Motion Artifact在正式LiftOff之后、Landing之前最后一次Contact由零进入正值的首个正值采样；缺少该Contact边沿时Projection Build MUST拒绝该Source，不得用LiftOff、旧Feature Phase或固定提前时间补全。非循环片段的首个Landing没有前置LiftOff时，0秒正式Contact为零才可把片段起点声明为被裁剪Swing的明确起点；0秒已经Contact时该Landing MUST作为Contact-only Event，不能进入Next Landing。若Landing本身就在0秒，同样只建立起始Current Contact。Foot Motion Curve中的Toe、Ground Pose证据 MAY进入只读诊断字段，但不得形成第二Foot Motion行为输入；Current Support使用的是同一`FinalAnimationPoseFrame`和Rig Calibration发布的Heel/Toe世界脚掌几何，不得从Curve payload或另一Animation Source重复生产。
+在`build-character-foot-motion-data-foundation`归档后，Projection Compiler MUST从原生AnimationClip Catalog的完整Foot Motion Curve组和匹配Foot Analysis lineage生成唯一typed Runtime payload。Payload MUST包含左右脚Step Time、Step Distance、Foot Height、Contact、Lock Mode、Lock Weight、Support及稳定Landing Event table；Event table MUST把Contact-only Landing与Predictive Landing显式分型。Contact-only Landing只可成为Current Contact且三个Swing提前时间 MUST全部为0；Predictive Landing才可成为Next Landing，并 MUST保存与同Source/Cycle/Side/ordinal一致的PreSwing、Swing、Approach Contact与Landing边界，使Runtime可以发布typed `InApproachContactToLanding`与归一化`ApproachContactToLandingProgress`事实。非零Approach区间的进度 MUST以同一Event的Approach Contact边界为0、Landing边界为1，并随正式时间单调推进；Approach时长为0时，Landing前 MUST继续发布Swing且进度为0，不得利用时间容差提前发布满权Approach。该进度只表达Prediction准备区间和诊断时钟，不得成为Foot Placement Position、Normal、Residual、PlantBlend或Goal权重；它不得从Contact Curve、Lock Weight、固定秒数或运行时累计值重新推导。Approach Contact边界 MUST取同一Foot Motion Artifact在正式LiftOff之后、Landing之前最后一次Contact由零进入正值的首个正值采样；缺少该Contact边沿时Projection Build MUST拒绝该Source，不得用LiftOff、旧Feature Phase或固定提前时间补全。非循环片段的首个Landing没有前置LiftOff时，0秒正式Contact为零才可把片段起点声明为被裁剪Swing的明确起点；0秒已经Contact时该Landing MUST作为Contact-only Event，不能进入Next Landing。若Landing本身就在0秒，同样只建立起始Current Contact。Foot Motion Curve中的Toe、Ground Pose证据 MAY进入只读诊断字段，但不得形成第二Foot Motion行为输入；Current Support使用的是同一`FinalAnimationPoseFrame`和Rig Calibration发布的Heel/Toe世界脚掌几何，不得从Curve payload或另一Animation Source重复生产。
 
 每个表现帧 MUST从与Component Pose相同的选中Live Contribution采样一个`Foot Motion Runtime Frame`，并携带Program、Projection、Completion、Node、Source、Contribution Continuity、Clip、Cycle、Normalized Time、Event lineage与按Event table求出的PreSwing/Swing/Approach Contact/Landing阶段事实。离散Lock Mode、Landing Event与Approach Contact阶段 MUST不跨Source混合；多Source混合时 MUST使用Pose贡献链已经选定的同一正式Source，而不是按Foot字段另行择优。
+
+Action Slot的`SourceActionInstanceId`与左右脚Live Pose Contribution Weight MUST只表示动画Source provenance和Action Pose对Original Sole基线的贡献，不得成为Foot Goal ownership token。`animation.foot-placement-weight` MUST继续是作者控制现有Foot Goal可见权重的唯一Action边界；它 MAY把Goal权重降到0，但 MUST不使Foot Motion Runtime Frame失效、不触发Foot Anchor释放或Interpolation reset。Action开始、结束与crossfade MUST继续使用同一Foot Placement Target Height、World Residual、Correction Response、Reach和Goal链，不得创建Action专用Foot路径。
 
 Foot Placement MUST只消费这一份Frame。缺失完整Curve、Event table、Contribution归属、非有限值或stale lineage时 MUST使依赖Foot Placement的当前Pose帧typed invalid；不得读取Library Artifact、旧隐藏Foot Feature、默认Curve或另一Source作为fallback。
 
@@ -26,4 +28,16 @@ Foot Placement MUST只消费这一份Frame。缺失完整Curve、Event table、C
 
 - **WHEN** 选中Source的同一Landing Event从Swing进入Event table声明的Approach Contact区间
 - **THEN** Foot Motion Runtime Frame MUST发布同Source、Cycle、Side、ordinal与Event identity的`InApproachContactToLanding`及从0到1的`ApproachContactToLandingProgress`
-- **AND** Runtime MUST用该进度持续接管Plant目标；Contact Curve只保留接触证据职责，不得按Contact、Lock Weight、固定秒数、脚高、PlantConfidence或另一Source重算可见接管进度
+- **AND** Runtime MUST只用该进度准备同Event Prediction、Prepared Target与诊断时钟，不得让它改变Position、Support Normal、World Residual、Correction Response或Goal权重；Contact Curve、Lock Weight、固定秒数、脚高、PlantConfidence或另一Source也不得重算可见接管权重
+
+#### Scenario: 全接触循环没有Contact边沿
+
+- **WHEN** 循环Foot Motion的某只脚在全部Active Sample中均为正式Contact，且没有LiftOff或Contact Rising边沿
+- **THEN** Foot Motion Artifact MUST在sample 0生成该脚唯一Contact-only Landing Event，三个Swing提前时间全部为0
+- **AND** Runtime MUST把它只发布为Current Contact，不得生成Predictive Next Landing、PreSwing、Swing或Approach Contact阶段
+
+#### Scenario: Action Slot改变脚部动画基线
+
+- **WHEN** Action Slot对脚骨骼具有非零Live Pose Contribution，且`animation.foot-placement-weight`在动作crossfade中改变Goal可见权重
+- **THEN** Animation Pipeline MUST继续发布同一正式Foot Motion Runtime Frame与Action Pose后的Original Sole基线
+- **AND** Foot Placement MUST不把Action occupancy解释为第二Goal Owner、Hard Ownership Loss或Correction Response reset

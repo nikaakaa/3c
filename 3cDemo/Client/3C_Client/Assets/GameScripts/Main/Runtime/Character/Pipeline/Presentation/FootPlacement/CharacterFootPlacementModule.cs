@@ -216,7 +216,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal ulong ActionInstanceIdentity { get; }
         internal float Weight { get; }
-        internal bool IsOccupied => ActionInstanceIdentity != 0 && Weight > 0.0001f;
     }
 
     internal sealed class CharacterFootPlacementModule : IDisposable
@@ -623,7 +622,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftGroundPath.Accepted,
                 rightGroundPath.Accepted,
                 facts.Grounded,
-                leftAction.IsOccupied || rightAction.IsOccupied,
                 in resolvedPair,
                 in primarySupport,
                 componentUp);
@@ -1824,22 +1822,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform root = m_Rig.PoseRoot;
             bool hasEffectiveOutput =
                                       result.Outcome == CharacterFootResolvedOutcome.Ready &&
-                                      result.GoalWeight >
-                                      CharacterPoseConstraintMath.Epsilon;
+                                      (result.GoalWeight >
+                                           CharacterPoseConstraintMath.Epsilon ||
+                                       result.RotationWeight >
+                                           CharacterPoseConstraintMath.Epsilon);
             Vector3 anklePosition = hasEffectiveOutput
                 ? result.FinalAnkle
                 : foot.AnklePosition;
             float positionWeight = hasEffectiveOutput
                 ? result.GoalWeight
                 : 0f;
+            Quaternion ankleRotation = hasEffectiveOutput
+                ? result.FinalRotation
+                : foot.AnkleRotation;
+            float rotationWeight = hasEffectiveOutput
+                ? result.RotationWeight
+                : 0f;
             return new CharacterFullBodyIkGoal(
                 side == CharacterFootSide.Left
                     ? CharacterFullBodyIkEffectorSlot.LeftFoot
                     : CharacterFullBodyIkEffectorSlot.RightFoot,
                 root.InverseTransformPoint(anklePosition),
-                (Quaternion.Inverse(root.rotation) * foot.AnkleRotation).normalized,
+                (Quaternion.Inverse(root.rotation) * ankleRotation).normalized,
                 positionWeight,
-                0f,
+                rotationWeight,
                 CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget,
                 CharacterFullBodyIkGoalSourceKind.FootPlacement,
                 -1);

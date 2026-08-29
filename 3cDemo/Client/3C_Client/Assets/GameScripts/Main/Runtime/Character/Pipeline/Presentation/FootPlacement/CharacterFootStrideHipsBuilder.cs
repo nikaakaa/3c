@@ -23,11 +23,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         InvalidComponentUp = 5,
         DegenerateStride = 6,
         BodyNotGrounded = 7,
-        ActionOccupied = 8,
-        GroundPathRejected = 9,
-        InvalidInput = 10,
-        SupportUnavailable = 11,
-        SupportLegUnreachable = 12
+        GroundPathRejected = 8,
+        InvalidInput = 9,
+        SupportUnavailable = 10,
+        SupportLegUnreachable = 11
     }
 
     public enum CharacterFootStrideSlope : byte
@@ -497,7 +496,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool leftGroundPathAccepted,
             bool rightGroundPathAccepted,
             bool grounded,
-            bool actionOccupied,
             in CharacterResolvedFootPair resolvedPair,
             in CharacterFootPrimarySupportResult primarySupport,
             Vector3 componentUp)
@@ -506,17 +504,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return new CharacterFootStrideIntentResult(
                     CharacterFootStrideRejectReason.BodyNotGrounded,
-                    default,
-                    default,
-                    default,
-                    default,
-                    0f,
-                    false);
-            }
-            if (actionOccupied)
-            {
-                return new CharacterFootStrideIntentResult(
-                    CharacterFootStrideRejectReason.ActionOccupied,
                     default,
                     default,
                     default,

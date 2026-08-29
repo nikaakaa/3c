@@ -30,7 +30,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal enum CharacterFootResolvedOutcome : byte
     {
-        Ready = 1
+        Ready = 1,
+        CurrentSupportUnavailable = 2
     }
 
     internal readonly struct CharacterFootContactReference
@@ -111,8 +112,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             Vector3 finalSole,
             Vector3 finalAnkle,
+            Quaternion finalRotation,
             Vector3 effectiveCorrection,
             float goalWeight,
+            float rotationWeight,
+            in CharacterFootSupportTarget supportTarget,
             in CharacterFootContactReference contactReference,
             float contactOwnership,
             CharacterFootSupportEligibility supportEligibility,
@@ -130,8 +134,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Side = side;
             FinalSole = finalSole;
             FinalAnkle = finalAnkle;
+            FinalRotation = finalRotation;
             EffectiveCorrection = effectiveCorrection;
             GoalWeight = goalWeight;
+            RotationWeight = rotationWeight;
+            SupportTarget = supportTarget;
             ContactReference = contactReference;
             ContactOwnership = contactOwnership;
             SupportEligibility = supportEligibility;
@@ -151,8 +158,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSide Side { get; }
         internal Vector3 FinalSole { get; }
         internal Vector3 FinalAnkle { get; }
+        internal Quaternion FinalRotation { get; }
         internal Vector3 EffectiveCorrection { get; }
         internal float GoalWeight { get; }
+        internal float RotationWeight { get; }
+        internal CharacterFootSupportTarget SupportTarget { get; }
         internal CharacterFootContactReference ContactReference { get; }
         internal float ContactOwnership { get; }
         internal CharacterFootSupportEligibility SupportEligibility { get; }
@@ -163,6 +173,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPelvisReachReference PelvisReachReference { get; }
         internal CharacterFootLandingReachRequest LandingReachRequest { get; }
         internal CharacterFootResolvedOutcome Outcome { get; }
+
+        internal static CharacterResolvedFootResult CurrentSupportUnavailable(
+            ulong frameSequence,
+            ulong completionIdentity,
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
+            CharacterFootSide side,
+            in CharacterFootPlacementAnimatedFootPose foot)
+        {
+            CharacterResolvedFootResult result = new CharacterResolvedFootResult(
+                frameSequence,
+                completionIdentity,
+                rigId,
+                rigRevision,
+                side,
+                (foot.HeelPosition + foot.ToePosition) * 0.5f,
+                foot.AnklePosition,
+                foot.AnkleRotation,
+                default,
+                0f,
+                0f,
+                default,
+                default,
+                0f,
+                CharacterFootSupportEligibility.None,
+                0f,
+                0f,
+                0f,
+                0,
+                default,
+                default);
+            return new CharacterResolvedFootResult(
+                in result,
+                CharacterFootResolvedOutcome.CurrentSupportUnavailable);
+        }
+
+        CharacterResolvedFootResult(
+            in CharacterResolvedFootResult source,
+            CharacterFootResolvedOutcome outcome)
+        {
+            this = source;
+            Outcome = outcome;
+        }
     }
 
     internal readonly struct CharacterResolvedFootPair
@@ -171,8 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterResolvedFootResult left,
             in CharacterResolvedFootResult right)
         {
-            if (left.Outcome != CharacterFootResolvedOutcome.Ready ||
-                right.Outcome != CharacterFootResolvedOutcome.Ready ||
+            if (!ValidOutcome(left.Outcome) || !ValidOutcome(right.Outcome) ||
                 left.FrameSequence == 0 ||
                 left.FrameSequence != right.FrameSequence ||
                 left.CompletionIdentity == 0 ||
@@ -190,6 +242,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Left = left;
             Right = right;
         }
+
+        static bool ValidOutcome(CharacterFootResolvedOutcome outcome) =>
+            outcome == CharacterFootResolvedOutcome.Ready ||
+            outcome == CharacterFootResolvedOutcome.CurrentSupportUnavailable;
 
         internal ulong FrameSequence { get; }
         internal ulong CompletionIdentity { get; }

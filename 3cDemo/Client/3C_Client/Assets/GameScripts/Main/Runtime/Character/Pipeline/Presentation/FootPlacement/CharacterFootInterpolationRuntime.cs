@@ -24,17 +24,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.HasOutput = true;
                 state.EffectiveCorrection = target.SwingCorrection;
             }
-            Vector3 previousCorrection = state.EffectiveCorrection;
             state.Policy = target.InterpolationPolicy;
-            CharacterFootInterpolationResult result;
             switch (target.InterpolationPolicy)
             {
                 case CharacterFootInterpolationPolicy.SwingResidual:
-                    result = EvaluateSwing(ref state, in target, in frame);
-                    break;
+                    return EvaluateSwing(ref state, in target, in frame);
                 case CharacterFootInterpolationPolicy.AcquireByWeight:
-                    result = EvaluateAcquire(ref state, in target, in frame);
-                    break;
+                    return EvaluateAcquire(ref state, in target, in frame);
                 case CharacterFootInterpolationPolicy.Direct:
                     state.PreviousTargetCorrection = target.Correction;
                     state.Residual = default;
@@ -42,11 +38,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     state.StartResidual = 0f;
                     state.Completed = false;
                     state.EffectiveCorrection = target.Correction;
-                    result = Result(
+                    return Result(
                         in state,
                         false,
                         Unevaluated(in target, in frame));
-                    break;
                 case CharacterFootInterpolationPolicy.HalfLife:
                     if (!target.ResponseEntered)
                     {
@@ -62,24 +57,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     state.Progress = 1f;
                     state.StartResidual = 0f;
                     state.Completed = false;
-                    result = Result(
+                    return Result(
                         in state,
                         false,
                         Unevaluated(in target, in frame));
-                    break;
                 case CharacterFootInterpolationPolicy.ReleaseResidual:
-                    result = EvaluateRelease(ref state, in target, in frame);
-                    break;
+                    return EvaluateRelease(ref state, in target, in frame);
                 default:
                     throw new System.InvalidOperationException(
                         "Foot interpolation policy is invalid.");
             }
-            return ApplyVerticalRateLimit(
-                ref state,
-                previousCorrection,
-                in target,
-                in frame,
-                in result);
         }
 
         internal static void ApplyPostTransition(
@@ -120,6 +107,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         target.TimeToLandingSeconds),
                     in frame);
                 continuityFact = swing.ContinuityFact;
+                state.EffectiveCorrection =
+                    CharacterFootConstraintMath.RaiseToMinimum(
+                        state.EffectiveCorrection,
+                        target.Correction,
+                        frame.ComponentUp);
                 state.Residual =
                     state.EffectiveCorrection - target.Correction;
                 state.PreviousTargetCorrection = target.Correction;
@@ -129,17 +121,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.Policy = CharacterFootInterpolationPolicy.AcquireByWeight;
                 return Result(in state, false, in continuityFact);
             }
-            float previousRemaining = Mathf.Max(
-                CharacterFootConstraintMath.GeometryEpsilon,
-                1f - state.Progress);
-            Vector3 fullResidual = state.Progress >=
-                                   1f - CharacterFootConstraintMath.GeometryEpsilon
-                ? default
-                : state.Residual / previousRemaining;
             state.Progress = Mathf.Max(state.Progress, target.Progress);
             state.PreviousTargetCorrection = target.Correction;
             state.EffectiveCorrection = target.Correction +
-                                        fullResidual *
+                                        state.Residual *
                                         (1f - state.Progress);
             state.Completed = state.Progress >=
                               1f - CharacterFootConstraintMath.GeometryEpsilon;
@@ -150,57 +135,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.Progress = 1f;
             }
             return Result(in state, state.Completed, in continuityFact);
-        }
-
-        static CharacterFootInterpolationResult ApplyVerticalRateLimit(
-            ref CharacterFootInterpolationState state,
-            Vector3 previousCorrection,
-            in CharacterFootStateTarget target,
-            in CharacterFootStateFrame frame,
-            in CharacterFootInterpolationResult result)
-        {
-            Vector3 up = frame.ComponentUp.normalized;
-            float maximumDelta =
-                frame.Settings.MaximumVerticalCorrectionSpeed *
-                frame.DeltaSeconds;
-            float requestedDelta = Vector3.Dot(
-                state.EffectiveCorrection - previousCorrection,
-                up);
-            float appliedDelta = Mathf.Clamp(
-                requestedDelta,
-                -maximumDelta,
-                maximumDelta);
-            state.EffectiveCorrection +=
-                up * (appliedDelta - requestedDelta);
-            state.Residual = state.EffectiveCorrection - target.Correction;
-            bool completed = target.InterpolationPolicy switch
-            {
-                CharacterFootInterpolationPolicy.AcquireByWeight =>
-                    state.Progress >=
-                    1f - CharacterFootConstraintMath.GeometryEpsilon &&
-                    state.Residual.magnitude <=
-                    frame.Settings.LandingLockCompletionTolerance &&
-                    Mathf.Max(
-                        0f,
-                        Vector3.Dot(
-                            target.Correction - state.EffectiveCorrection,
-                            up)) <= frame.Settings.GroundPenetrationTolerance,
-                CharacterFootInterpolationPolicy.ReleaseResidual =>
-                    frame.LockRequest.Weight <=
-                    CharacterFootConstraintMath.GeometryEpsilon &&
-                    Vector3.Distance(
-                        state.EffectiveCorrection,
-                        target.SwingCorrection) <=
-                    frame.Settings.ReleaseCompletionTolerance,
-                _ => result.Completed
-            };
-            state.Completed = completed;
-            CharacterFootPathContinuityFact continuityFact =
-                result.ContinuityFact;
-            return new CharacterFootInterpolationResult(
-                state.EffectiveCorrection,
-                completed,
-                in continuityFact);
         }
 
         static CharacterFootInterpolationResult EvaluateRelease(

@@ -116,13 +116,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationFootMotionEventOccurrence nextLanding,
             AnimationFootMotionEventPhase phase,
             float timeToLandingSeconds,
-            float swingProgress)
+            float swingProgress,
+            float approachContactToLandingProgress)
         {
             if (!Enum.IsDefined(typeof(AnimationFootMotionEventPhase), phase) ||
                 !float.IsFinite(timeToLandingSeconds) ||
                 timeToLandingSeconds < 0f ||
                 !float.IsFinite(swingProgress) ||
                 swingProgress < 0f || swingProgress > 1f ||
+                !float.IsFinite(approachContactToLandingProgress) ||
+                approachContactToLandingProgress < 0f ||
+                approachContactToLandingProgress > 1f ||
+                phase != AnimationFootMotionEventPhase.ApproachContact &&
+                approachContactToLandingProgress != 0f ||
                 phase == AnimationFootMotionEventPhase.Unavailable &&
                 (currentContact.IsValid || nextLanding.IsValid) ||
                 phase == AnimationFootMotionEventPhase.Contact &&
@@ -138,6 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Phase = phase;
             TimeToLandingSeconds = timeToLandingSeconds;
             SwingProgress = swingProgress;
+            ApproachContactToLandingProgress =
+                approachContactToLandingProgress;
             m_IsSpecified = 1;
         }
 
@@ -147,6 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationFootMotionEventPhase Phase { get; }
         public float TimeToLandingSeconds { get; }
         public float SwingProgress { get; }
+        public float ApproachContactToLandingProgress { get; }
         public bool IsValid => m_IsSpecified != 0;
         public bool InApproachContactToLanding =>
             IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
@@ -173,7 +182,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     : default,
                 Phase,
                 TimeToLandingSeconds,
-                SwingProgress);
+                SwingProgress,
+                ApproachContactToLandingProgress);
         }
     }
 
@@ -359,6 +369,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     default,
                     AnimationFootMotionEventPhase.Unavailable,
                     0f,
+                    0f,
                     0f);
             }
 
@@ -410,11 +421,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         default,
                         AnimationFootMotionEventPhase.Contact,
                         0f,
+                        0f,
                         0f)
                     : new AnimationFootMotionEventFrame(
                         default,
                         default,
                         AnimationFootMotionEventPhase.Unavailable,
+                        0f,
                         0f,
                         0f);
             }
@@ -430,7 +443,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Foot Motion Event time is invalid.");
             timeToLandingSeconds = Mathf.Max(0f, timeToLandingSeconds);
             AnimationFootMotionEventPhase phase =
-                timeToLandingSeconds <= nextEvent.ApproachContactLeadSeconds + 0.0001f
+                nextEvent.ApproachContactLeadSeconds > boundaryTolerance &&
+                timeToLandingSeconds <=
+                nextEvent.ApproachContactLeadSeconds + 0.0001f
                     ? AnimationFootMotionEventPhase.ApproachContact
                     : timeToLandingSeconds <= nextEvent.SwingLeadSeconds + 0.0001f
                         ? AnimationFootMotionEventPhase.Swing
@@ -446,18 +461,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     default,
                     AnimationFootMotionEventPhase.Unavailable,
                     0f,
+                    0f,
                     0f);
             }
             float swingProgress = phase == AnimationFootMotionEventPhase.Swing ||
                                   phase == AnimationFootMotionEventPhase.ApproachContact
                 ? Mathf.Clamp01(1f - timeToLandingSeconds / nextEvent.SwingLeadSeconds)
                 : 0f;
+            float approachContactToLandingProgress =
+                phase == AnimationFootMotionEventPhase.ApproachContact
+                    ? Mathf.Clamp01(
+                        1f - timeToLandingSeconds /
+                        nextEvent.ApproachContactLeadSeconds)
+                    : 0f;
             return new AnimationFootMotionEventFrame(
                 currentContact,
                 nextLanding,
                 phase,
                 timeToLandingSeconds,
-                swingProgress);
+                swingProgress,
+                approachContactToLandingProgress);
         }
 
         public void RequireValid()

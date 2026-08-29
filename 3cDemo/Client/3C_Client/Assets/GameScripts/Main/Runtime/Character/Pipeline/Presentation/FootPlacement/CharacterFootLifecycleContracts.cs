@@ -124,8 +124,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         DirectFollowChanged = 1 << 4,
         StateEntered = 1 << 5,
         ResponseEntered = 1 << 6,
-        WeightStarted = 1 << 7,
-        WeightCompleted = 1 << 8,
+        TakeoverStarted = 1 << 7,
+        TakeoverCompleted = 1 << 8,
         TargetPointRevised = 1 << 9,
         TargetHeightForceRefreshed = 1 << 10
     }
@@ -1300,7 +1300,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGroundPathLanding contactLanding,
             bool preparedPlantActive,
             in CharacterFootGroundPathLanding preparedPlantTarget,
-            float preparedPlantWeight,
+            float preparedPlantTakeoverProgress,
             in CharacterFootLockRequest lockRequest,
             float formalSupport,
             ulong formalSupportEventIdentity,
@@ -1325,7 +1325,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactLanding = contactLanding;
             PreparedPlantActive = preparedPlantActive;
             PreparedPlantTarget = preparedPlantTarget;
-            PreparedPlantWeight = preparedPlantWeight;
+            PreparedPlantTakeoverProgress = preparedPlantTakeoverProgress;
             LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
@@ -1351,7 +1351,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool PreparedPlantActive { get; }
         internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
-        internal float PreparedPlantWeight { get; }
+        internal float PreparedPlantTakeoverProgress { get; }
         internal CharacterFootLockRequest LockRequest { get; }
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }
@@ -1477,7 +1477,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool responseEntered,
             bool directPlantFollow,
             bool suppressOutput,
-            float progress,
+            float plantTakeoverProgress,
             float timeToLandingSeconds,
             in CharacterFootSupportIntent supportIntent)
         {
@@ -1494,7 +1494,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResponseEntered = responseEntered;
             DirectPlantFollow = directPlantFollow;
             SuppressOutput = suppressOutput;
-            Progress = progress;
+            if (!float.IsFinite(plantTakeoverProgress) ||
+                plantTakeoverProgress < 0f ||
+                plantTakeoverProgress > 1f)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(plantTakeoverProgress));
+            }
+            PlantTakeoverProgress = plantTakeoverProgress;
             TimeToLandingSeconds = timeToLandingSeconds;
             SupportIntent = supportIntent;
         }
@@ -1512,7 +1519,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool ResponseEntered { get; }
         internal bool DirectPlantFollow { get; }
         internal bool SuppressOutput { get; }
-        internal float Progress { get; }
+        internal float PlantTakeoverProgress { get; }
         internal float TimeToLandingSeconds { get; }
         internal CharacterFootSupportIntent SupportIntent { get; }
     }

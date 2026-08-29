@@ -571,9 +571,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                      frame.PreparedPlantTarget.Point) ||
                  !CharacterFootConstraintMath.Finite(
                      frame.PreparedPlantTarget.Normal) ||
-                 !float.IsFinite(frame.PreparedPlantWeight) ||
-                 frame.PreparedPlantWeight < 0f ||
-                 frame.PreparedPlantWeight > 1f))
+                 !float.IsFinite(frame.PreparedPlantTakeoverProgress) ||
+                 frame.PreparedPlantTakeoverProgress < 0f ||
+                 frame.PreparedPlantTakeoverProgress > 1f))
             {
                 throw new InvalidOperationException(
                     "Foot lifecycle frame is invalid.");

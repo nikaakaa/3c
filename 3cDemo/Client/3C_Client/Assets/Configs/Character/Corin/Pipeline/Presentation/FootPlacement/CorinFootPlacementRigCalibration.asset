@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_CalibrationId: Corin.FootPlacementRig
   m_SchemaVersion: 5
-  m_ContentRevision: 2c7d4bb657dc9ac1e6df1bc18a7c86bf59af43e1da968005537ad1306544f239
+  m_ContentRevision: 2997edf1c34f13f7e2a3033372226eb399379f30c4303fddfe3e97ec1e4bf38d
   m_RigId: corin.animation-rig
   m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
   m_LeftHeelContactLocalOffset: {x: -0.08124063, y: -0.00005460252, z: -0.000029267168}
@@ -31,12 +31,12 @@ MonoBehaviour:
   m_RightToeProbeExtension: 0.01
   m_GeometryValidation:
     m_SchemaVersion: 2
-    m_IdentityHash: fa80fa64e7b4a13e0e690c13cb3557fbba89146b46d248875a4c573cb0e95bcd
+    m_IdentityHash: 1b9ea95b7dc7ee84d4dd027c4927b006c39cefd465d7b30452c445eed8fe713d
     m_GeometryContentHash: 9996f30d90702cc7d2aa0f54d41501f6c2c38fdede3d8eff4e0ae1387b50325a
     m_RigId: corin.animation-rig
     m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
     m_CalibrationId: Corin.FootPlacementRig
-    m_CalibrationRevision: 2c7d4bb657dc9ac1e6df1bc18a7c86bf59af43e1da968005537ad1306544f239
+    m_CalibrationRevision: 2997edf1c34f13f7e2a3033372226eb399379f30c4303fddfe3e97ec1e4bf38d
     m_SamplingRigAssetGuid: 846373e25bc0479cb06bd295c0103817
     m_SamplingRigDependencyHash: 009b549f30a1784de1a9be266d071a39931e19948179544bc101e7799c054631
     m_PreviewClipAssetGuid: 7dbd59f643bcfbe4495990d45ad359ef

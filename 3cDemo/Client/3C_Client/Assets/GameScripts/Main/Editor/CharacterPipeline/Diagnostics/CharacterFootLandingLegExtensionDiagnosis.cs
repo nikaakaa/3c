@@ -64,11 +64,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ? 1d
                         : 0d),
                 "targetExtensionRatioDelta",
+                "originalExtensionRatioPeak",
+                "targetExtensionRatioPeak",
                 "solvedBendDropDegrees",
                 "solvedExtensionRatioPeak",
                 "solvedBendDegreesMinimum",
+                "originalCompressionReserveMinimumMeters",
+                "targetCompressionReserveMinimumMeters",
+                "solvedCompressionReserveMinimumMeters",
                 "landingReachMinimumCorrectionMeters",
                 "landingReachSignedCorrectionAlongUpMeters",
+                "landingReachRuntimeGoalClampDistanceMeters",
                 "landingReachLegLengthMeters",
                 "landingReachUsableLegLengthMeters",
                 "landingReachMinimumAlongUpMeters",
@@ -93,6 +99,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public SortedDictionary<string, int> classificationCounts;
         public CharacterFootDiagnosisDistribution
             minimumCorrectionDistributionMeters;
+        public CharacterFootDiagnosisDistribution
+            originalExtensionRatioDistribution;
+        public CharacterFootDiagnosisDistribution
+            targetExtensionRatioDistribution;
+        public CharacterFootDiagnosisDistribution
+            solvedExtensionRatioDistribution;
+        public CharacterFootDiagnosisDistribution
+            originalCompressionReserveDistributionMeters;
+        public CharacterFootDiagnosisDistribution
+            targetCompressionReserveDistributionMeters;
+        public CharacterFootDiagnosisDistribution
+            solvedCompressionReserveDistributionMeters;
+        public CharacterFootDiagnosisDistribution
+            runtimeGoalClampDistributionMeters;
         public List<CharacterFootLandingReachRepresentative>
             representativeEvents;
 
@@ -140,6 +160,52 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         observations
                             .Where(value => value.landingReachAvailable)
                             .Select(value => value.minimumCorrectionMeters)
+                            .ToList()),
+                originalExtensionRatioDistribution =
+                    CharacterFootDiagnosisDistribution.Create(
+                        observations
+                            .Where(value => value.finalIkLegAvailable)
+                            .Select(value => value.originalExtensionRatio)
+                            .ToList()),
+                targetExtensionRatioDistribution =
+                    CharacterFootDiagnosisDistribution.Create(
+                        observations
+                            .Where(value => value.finalIkLegAvailable)
+                            .Select(value => value.targetExtensionRatio)
+                            .ToList()),
+                solvedExtensionRatioDistribution =
+                    CharacterFootDiagnosisDistribution.Create(
+                        observations
+                            .Where(value => value.finalIkLegAvailable)
+                            .Select(value => value.solvedExtensionRatio)
+                            .ToList()),
+                originalCompressionReserveDistributionMeters =
+                    CharacterFootDiagnosisDistribution.Create(
+                        observations
+                            .Where(value => value.finalIkLegAvailable)
+                            .Select(value =>
+                                value.originalCompressionReserveMeters)
+                            .ToList()),
+                targetCompressionReserveDistributionMeters =
+                    CharacterFootDiagnosisDistribution.Create(
+                        observations
+                            .Where(value => value.finalIkLegAvailable)
+                            .Select(value =>
+                                value.actualTargetCompressionReserveMeters)
+                            .ToList()),
+                solvedCompressionReserveDistributionMeters =
+                    CharacterFootDiagnosisDistribution.Create(
+                        observations
+                            .Where(value => value.finalIkLegAvailable)
+                            .Select(value =>
+                                value.solvedCompressionReserveMeters)
+                            .ToList()),
+                runtimeGoalClampDistributionMeters =
+                    CharacterFootDiagnosisDistribution.Create(
+                        observations
+                            .Where(value => value.runtimeReachEvaluated)
+                            .Select(value =>
+                                value.runtimeGoalClampDistanceMeters)
                             .ToList()),
                 representativeEvents = representatives
                     .OrderBy(value => value.startFrame)
@@ -220,7 +286,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double minimumCorrectionMeters;
         public double signedCorrectionAlongUpMeters;
         public string correctionDirection;
+        public double originalExtensionRatio;
+        public double targetExtensionRatio;
+        public double solvedExtensionRatio;
+        public double originalCompressionReserveMeters;
         public double actualTargetCompressionReserveMeters;
+        public double solvedCompressionReserveMeters;
+        public bool runtimeReachEvaluated;
+        public bool runtimeReachAvailable;
+        public bool runtimeGoalClamped;
+        public double runtimeGoalClampDistanceMeters;
+        public bool resolvedReachRequestAvailable;
+        public string resolvedReachEventIdentity;
+        public double resolvedReachLegLengthMeters;
+        public double resolvedReachMinimumCompressionReserveMeters;
         public bool primarySupportAvailable;
         public string primarySupportSide;
         public string primarySupportLandingEventIdentity;
@@ -298,9 +377,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 correctionDirection =
                     value.Value<string>("correctionDirection") ??
                     string.Empty,
+                originalExtensionRatio =
+                    value.Value<double>("originalExtensionRatio"),
+                targetExtensionRatio =
+                    value.Value<double>("targetExtensionRatio"),
+                solvedExtensionRatio =
+                    value.Value<double>("solvedExtensionRatio"),
+                originalCompressionReserveMeters =
+                    value.Value<double>(
+                        "originalCompressionReserveMeters"),
                 actualTargetCompressionReserveMeters =
                     value.Value<double>(
                         "actualTargetCompressionReserveMeters"),
+                solvedCompressionReserveMeters =
+                    value.Value<double>(
+                        "solvedCompressionReserveMeters"),
+                runtimeReachEvaluated =
+                    value.Value<bool>("runtimeReachEvaluated"),
+                runtimeReachAvailable =
+                    value.Value<bool>("runtimeReachAvailable"),
+                runtimeGoalClamped =
+                    value.Value<bool>("runtimeGoalClamped"),
+                runtimeGoalClampDistanceMeters =
+                    value.Value<double>(
+                        "runtimeGoalClampDistanceMeters"),
+                resolvedReachRequestAvailable =
+                    value.Value<bool>("resolvedReachRequestAvailable"),
+                resolvedReachEventIdentity =
+                    value.Value<string>("resolvedReachEventIdentity") ??
+                    "0",
+                resolvedReachLegLengthMeters =
+                    value.Value<double>("resolvedReachLegLengthMeters"),
+                resolvedReachMinimumCompressionReserveMeters =
+                    value.Value<double>(
+                        "resolvedReachMinimumCompressionReserveMeters"),
                 primarySupportAvailable =
                     value.Value<bool>("primarySupportAvailable"),
                 primarySupportSide =

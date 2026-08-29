@@ -427,6 +427,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingTargetHeightDelta = path.SwingTargetHeightDelta;
             SwingTargetHeightAppliedDelta =
                 path.SwingTargetHeightAppliedDelta;
+            SwingTargetHeightUpdateHeld =
+                path.SwingTargetHeightUpdateHeld;
             SwingTargetHeightRateLimited =
                 path.SwingTargetHeightRateLimited;
             SwingTargetHeightClamped = path.SwingTargetHeightClamped;
@@ -554,6 +556,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SwingFilteredTargetHeightBefore { get; }
         public float SwingTargetHeightDelta { get; }
         public float SwingTargetHeightAppliedDelta { get; }
+        public bool SwingTargetHeightUpdateHeld { get; }
         public bool SwingTargetHeightRateLimited { get; }
         public bool SwingTargetHeightClamped { get; }
         public float SwingTargetMaximumVerticalSpeed { get; }

@@ -72,7 +72,7 @@
 - [x] 6.3 在唯一Interpolation内建立同Event持久Plant Target高度历史与单调`PlantBlend`权重，让Approach、Landing与Locked共用同一Policy；该步骤只确认持久槽、目标高度历史和单调权重已经进入唯一Owner，不代表状态切换混合、门控、Correction历史与完成条件已经闭合
 - [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
 - [x] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；Landing完成Decision延后到双脚/Pelvis Reach求解之后，未满足时保留同Anchor Landing继续接管
-- [x] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼；Swing进入与Plant同属每脚唯一Target Height历史，正常Phase直接刷新正式Height，同Event Ground Path换代且Landing沿Up有效变化才限速，并记录Raw、History Before、Delta、Applied Delta、Rate Limited、Clamp与Filtered Height
+- [x] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing Raw Height，保持Foot XZ来自动画骨骼；唯一Target Height历史保存Accepted Landing沿Up高度，Swing按`Raw Height + Filtered Landing Height - Current Landing Height`输出，正常Phase直接通过，同Event Landing高度有效换代才限速，Plant接管时Swing发布Held并由Plant继续同一历史；记录Raw、History Before、Delta、Applied Delta、Held、Rate Limited、Clamp与Filtered Height
 - [x] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策、`NextSwingConstraintWeight`状态及对应代码和诊断列
 - [ ] 6.8 发布Formal Foot Height、目标高度、限速前后Correction、竖直速率、Envelope/Anchor穿透、Ground Catchup、Full Lock门控和最终Correction诊断事实，删除把同帧抬升描述为Safety Floor成功的旧口径
 - [x] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只控制同Event Ground Path换代且Landing沿Up有效变化及Approach/Plant目标接管，不限制正常动画Phase，现有`MaximumVerticalCorrectionSpeed`只控制状态混合后的Effective Correction历史，不提供共享默认值

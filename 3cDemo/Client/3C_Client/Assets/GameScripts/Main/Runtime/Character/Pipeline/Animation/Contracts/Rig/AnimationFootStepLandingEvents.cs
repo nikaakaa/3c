@@ -442,8 +442,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!float.IsFinite(timeToLandingSeconds) || timeToLandingSeconds < -0.0001f)
                 throw new InvalidOperationException("Foot Motion Event time is invalid.");
             timeToLandingSeconds = Mathf.Max(0f, timeToLandingSeconds);
+            bool hasApproachContactRange =
+                nextEvent.ApproachContactLeadSeconds > boundaryTolerance;
             AnimationFootMotionEventPhase phase =
-                timeToLandingSeconds <= nextEvent.ApproachContactLeadSeconds + 0.0001f
+                hasApproachContactRange &&
+                timeToLandingSeconds <=
+                nextEvent.ApproachContactLeadSeconds + 0.0001f
                     ? AnimationFootMotionEventPhase.ApproachContact
                     : timeToLandingSeconds <= nextEvent.SwingLeadSeconds + 0.0001f
                         ? AnimationFootMotionEventPhase.Swing
@@ -467,8 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ? Mathf.Clamp01(1f - timeToLandingSeconds / nextEvent.SwingLeadSeconds)
                 : 0f;
             float approachContactToLandingProgress =
-                phase == AnimationFootMotionEventPhase.ApproachContact &&
-                nextEvent.ApproachContactLeadSeconds > boundaryTolerance
+                phase == AnimationFootMotionEventPhase.ApproachContact
                     ? Mathf.Clamp01(
                         1f - timeToLandingSeconds /
                         nextEvent.ApproachContactLeadSeconds)

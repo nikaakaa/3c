@@ -44,11 +44,85 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Swing进入Landing当帧，Foot Placement相对原动画新增的最终可见输出是否跳变",
                 "SwingToLandingOutputJump",
                 "ContinuousSwingToLandingFramePair");
+            CharacterFootDiagnosisTarget actualEnvelope =
+                BuildActualFootEnvelopeCounterfactual(context);
             return context.Document(
                 DiagnosticId,
                 stable,
                 revision,
-                handoff);
+                handoff,
+                actualEnvelope);
+        }
+
+        static CharacterFootDiagnosisTarget
+            BuildActualFootEnvelopeCounterfactual(
+                CharacterFootDiagnosisContext context)
+        {
+            List<JObject> events = context.Events(
+                "ActualFootEnvelopeCounterfactual");
+            List<JObject> unique = events.FindAll(value =>
+                CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "uniqueInCorridor"));
+            CharacterFootDiagnosisTarget target = context.Target(
+                "swing-actual-foot-envelope-counterfactual",
+                "同一Ground Path普通Swing中，实际脚水平位置的唯一Envelope候选相对Builder目标需要提前抬升多少",
+                new[] { "ActualFootEnvelopeCounterfactual" },
+                new[]
+                {
+                    "uniqueInCorridor=true&&actualProgressEnvelopeAdvanceAboveBuilderTarget>0.02"
+                },
+                events,
+                value =>
+                    CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "uniqueInCorridor") &&
+                    CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "ActualProgressEnvelopeAdvanceAboveBuilderTarget") >
+                    PrimaryThresholdMeters
+                        ? new List<string>
+                        {
+                            "uniqueInCorridor=true&&actualProgressEnvelopeAdvanceAboveBuilderTarget>0.02"
+                        }
+                        : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "ActualProgressEnvelopeAdvanceAboveBuilderTarget"),
+                "ActualProgressEnvelopeAdvanceAboveBuilderTarget",
+                "ActualProgressEnvelopeMinimumCorrection",
+                "BuilderSwingTargetAlongUp",
+                "ActualFootCrossTrackDistance",
+                "ActualEnvelopeCandidateCount",
+                "ActualEnvelopeHeightSpan",
+                "GroundEnvelopeHardClamp",
+                "FootPlacementOutputOffsetStep",
+                "PresentationDeltaSeconds");
+            target.scorePolicy = "Informational";
+            target.occurrence = context.Occurrence(
+                "ContinuousAcceptedUnanchoredSameGroundPathSwingFramePairWithUniqueActualEnvelope",
+                "ActualProgressEnvelopeAdvanceAboveBuilderTarget",
+                "Meters",
+                unique,
+                PrimaryThresholdMeters,
+                s_Thresholds);
+            target.categoricalMeasurements = new SortedDictionary<
+                string,
+                List<CharacterFootDiagnosisCategoryCount>>(
+                StringComparer.Ordinal)
+            {
+                ["CounterfactualState"] = CategoryCounts(
+                    events,
+                    CounterfactualState),
+                ["GroundEnvelopeOwner"] = CategoryCounts(
+                    events,
+                    value => CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "groundEnvelopeOwner")
+                        ? "Consumed"
+                        : "NotConsumed")
+            };
+            return target;
         }
 
         static CharacterFootDiagnosisTarget BuildTarget(
@@ -156,7 +230,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     events,
                     value => value["visibleOutputJump"]?
                                  ["pathRevisionReason"]?.Value<string>() ??
-                             "None")
+                             "None"),
+                ["PresentationSamplingClassification"] = CategoryCounts(
+                    events,
+                    value => value["visibleOutputJump"]?
+                                 ["presentationSamplingClassification"]?
+                                 .Value<string>() ?? "Unavailable")
             };
             target.representativeEvents = context.Representatives(
                 events,
@@ -206,6 +285,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     count = value.Count()
                 })
                 .ToList();
+
+        static string CounterfactualState(JObject value)
+        {
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "uniqueInCorridor"))
+            {
+                return "UniqueInCorridor";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "ambiguousInCorridor"))
+            {
+                return "AmbiguousInCorridor";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "outsideGroundPathCorridor"))
+            {
+                return "OutsideGroundPathCorridor";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "noIntersection"))
+            {
+                return "NoIntersection";
+            }
+            return "Unavailable";
+        }
     }
 
     [Serializable]
@@ -274,6 +382,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double plantPenetrationDepth;
         public double presentationDeltaSeconds;
         public ulong bodyTickSpan;
+        public string presentationSamplingClassification;
+        public bool lowPresentationCadence;
+        public bool outputSpeedAnomaly;
         public string primaryProbe;
         public double footPlacementOutputOffsetStepMeters;
         public double footPlacementOutputOffsetSpeedMetersPerSecond;

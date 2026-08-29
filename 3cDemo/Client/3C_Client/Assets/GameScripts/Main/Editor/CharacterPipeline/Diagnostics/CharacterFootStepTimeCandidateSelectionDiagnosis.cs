@@ -22,8 +22,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterFootStepTimeCandidateSelectionObservation
                             .From)
                     .ToList();
+            var target = new CharacterFootDiagnosisTarget
+            {
+                id = "step-time-candidate-selection-observations",
+                question =
+                    "Formal Step Time与Current/Incoming候选选择事实是否具有足够样本",
+                eventKinds = new List<string>
+                {
+                    "StepTimeCandidateSelectionObservation"
+                },
+                rules = new List<string>(),
+                eligibleEventCount = observations.Count,
+                matchedEventCount = 0,
+                matchedEventRateAvailable = observations.Count > 0,
+                matchedEventRate = observations.Count > 0 ? 0d : null,
+                scorePolicy = "Informational",
+                measurements = new SortedDictionary<
+                    string,
+                    CharacterFootDiagnosisDistribution>(
+                    StringComparer.Ordinal),
+                representativeEvents = new List<
+                    CharacterFootDiagnosisEvidence>()
+            };
             CharacterFootDiagnosisDocument document = context.Document(
-                DiagnosticId);
+                DiagnosticId,
+                target);
             document.stepTimeCandidateSelection =
                 CharacterFootStepTimeCandidateSelectionReport.Create(
                     observations,

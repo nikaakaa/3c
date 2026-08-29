@@ -79,6 +79,8 @@
 - [ ] 6.10 按ZZZ已确认顺序闭合`当前态到目标态混合 -> 目标高度历史限速 -> typed状态权重混合 -> Correction历史限速 -> 既有Foot Goal权重基准混合`，并用项目正式State、Response、Event与边沿定义各历史的更新、冻结、强制刷新和Reset门；同Event换点、Contact Verification、Lock Response切换与Same-Event Reentry不得跳过状态混合或同时清零两份历史
 - [ ] 6.11 删除Correction限速之前或之后重复修改可见Correction的Plant、Ground或Goal混合路径，确认基准混合只由既有Foot Goal/Position Weight执行一次，并把两次限速的输入、历史、输出、Clamp与Reset原因纳入6.8诊断
 - [x] 6.12 在Foot Motion Profile新增独立`TargetHeightForceRefreshDistance`并纳入Revision与严格校验；Corin显式使用`0.30m`。同Event Current Landing或Plant Target与Filtered Landing历史的累计沿Up差达到该值时强制刷新内部高度、取消Target Height限速欠账并由Swing Residual或Plant Correction保持可见连续，小于该值且超过`PathRevisionDistance`的换代才走`MaximumVerticalTargetSpeed`；记录Swing/Plant Force Refresh与正式阈值
+- [x] 6.13 把既有Swing到Landing Floor交接、Actual Foot Envelope反事实、Plant Interpolation和表现采样节奏事实接入唯一Analyzer/Publisher正式Target，不执行第二次World Query
+- [x] 6.14 为每个可判定Target发布独立Health Score与Evidence Score，保留次数、分母、严重度档位、扣分构成和代表帧；零eligible或纯候选比较发布typed Unavailable，不生成全Foot总分
 
 ## 7. 单独接入Support与Pelvis
 

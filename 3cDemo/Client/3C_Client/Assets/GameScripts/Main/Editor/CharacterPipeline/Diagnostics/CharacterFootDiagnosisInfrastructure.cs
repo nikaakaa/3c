@@ -212,9 +212,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             JObject sample = m_Facts["sample"] as JObject;
             var list = targets.ToList();
-            return new CharacterFootDiagnosisDocument
+            var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/3",
+                schema = "character-foot-diagnosis-file/4",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
@@ -243,11 +243,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 matchedEventRateAvailable =
                                     value.matchedEventRateAvailable,
                                 matchedEventRate =
-                                    value.matchedEventRate
+                                    value.matchedEventRate,
+                                score = value.score
                             })
                         .ToList()
                 }
             };
+            CharacterFootDiagnosisScoring.Apply(document);
+            return document;
         }
 
         internal static double Metric(JObject value, string name) =>
@@ -398,6 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int targetCount;
         public int targetWithMatchesCount;
         public int matchedEventCount;
+        public CharacterFootDiagnosisScore score;
         public List<CharacterFootDiagnosisTargetResult> targetResults;
     }
 
@@ -409,6 +413,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int matchedEventCount;
         public bool matchedEventRateAvailable;
         public double? matchedEventRate;
+        public CharacterFootDiagnosisScore score;
     }
 
     [Serializable]
@@ -422,6 +427,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int matchedEventCount;
         public bool matchedEventRateAvailable;
         public double? matchedEventRate;
+        public string scorePolicy = "Health";
+        public CharacterFootDiagnosisScore score;
         public CharacterFootDiagnosisOccurrenceProfile occurrence;
         public List<CharacterFootDiagnosisOccurrenceProfile>
             supplementalOccurrences;
@@ -454,6 +461,346 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int eligibleEventCount;
         public int matchedEventCount;
         public double matchedEventRate;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootDiagnosisScore
+    {
+        public string policy;
+        public bool healthAvailable;
+        public double? healthScore;
+        public string healthRating;
+        public bool evidenceAvailable;
+        public double? evidenceScore;
+        public string evidenceRating;
+        public string unavailableReason;
+        public int evidenceFullSampleEventCount;
+        public int healthTargetCount;
+        public int evidenceTargetCount;
+        public double? frequencyBurden;
+        public double? frequencyHealthScore;
+        public string worstSeverityBand;
+        public double? tailScoreCeiling;
+        public string worstTargetId;
+        public double? targetAverageHealthScore;
+        public double? worstTargetHealthScore;
+        public List<CharacterFootDiagnosisScoreBand> severityBands;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootDiagnosisScoreBand
+    {
+        public string id;
+        public double? lowerExclusive;
+        public double? upperInclusive;
+        public int eventCount;
+        public double eventRate;
+        public double penaltyWeight;
+    }
+
+    internal static class CharacterFootDiagnosisScoring
+    {
+        const int FullEvidenceEventCount = 50;
+        static readonly double[] s_FiveBandPenalties =
+        {
+            0d,
+            0.1d,
+            0.35d,
+            0.7d,
+            1d
+        };
+        static readonly double[] s_FiveBandCeilings =
+        {
+            100d,
+            95d,
+            89d,
+            74d,
+            49d
+        };
+
+        internal static void Apply(CharacterFootDiagnosisDocument document)
+        {
+            if (document == null)
+                throw new ArgumentNullException(nameof(document));
+            document.targets ??= new List<CharacterFootDiagnosisTarget>();
+            for (int i = 0; i < document.targets.Count; i++)
+                document.targets[i].score = Score(document.targets[i]);
+            if (document.summary == null)
+                throw new InvalidOperationException(
+                    "Foot diagnosis summary is unavailable.");
+            document.summary.targetResults ??=
+                new List<CharacterFootDiagnosisTargetResult>();
+            for (int i = 0; i < document.summary.targetResults.Count; i++)
+            {
+                CharacterFootDiagnosisTargetResult result =
+                    document.summary.targetResults[i];
+                CharacterFootDiagnosisTarget target = document.targets.Find(
+                    value => string.Equals(
+                        value.id,
+                        result.id,
+                        StringComparison.Ordinal));
+                result.score = target?.score;
+            }
+            document.summary.score = Aggregate(document.targets);
+        }
+
+        static CharacterFootDiagnosisScore Score(
+            CharacterFootDiagnosisTarget target)
+        {
+            if (target == null)
+                throw new ArgumentNullException(nameof(target));
+            string policy = string.IsNullOrWhiteSpace(target.scorePolicy)
+                ? "Health"
+                : target.scorePolicy;
+            CharacterFootDiagnosisScore score = Evidence(
+                policy,
+                target.eligibleEventCount,
+                target.pathStageAnalysis);
+            if (target.eligibleEventCount <= 0)
+            {
+                score.unavailableReason = "NoEligibleEvents";
+                return score;
+            }
+            if (string.Equals(
+                    policy,
+                    "Informational",
+                    StringComparison.Ordinal))
+            {
+                score.unavailableReason = "InformationalTarget";
+                return score;
+            }
+            if (target.pathStageAnalysis != null &&
+                target.pathStageAnalysis.availableEventCount <
+                target.pathStageAnalysis.eligibleEventCount)
+            {
+                score.unavailableReason = "RequiredStageFactsIncomplete";
+                return score;
+            }
+            score.healthAvailable = true;
+            if (target.occurrence?.available == true)
+            {
+                ScoreOccurrence(target, score);
+            }
+            else
+            {
+                double rate = target.matchedEventRate ?? 0d;
+                RequireRate(rate);
+                score.frequencyBurden = rate;
+                score.frequencyHealthScore = Round(
+                    100d * (1d - rate));
+                score.healthScore = score.frequencyHealthScore;
+                score.worstSeverityBand = target.matchedEventCount > 0
+                    ? "MatchedViolation"
+                    : "NoMatchedViolation";
+            }
+            score.healthRating = HealthRating(score.healthScore.Value);
+            return score;
+        }
+
+        static void ScoreOccurrence(
+            CharacterFootDiagnosisTarget target,
+            CharacterFootDiagnosisScore score)
+        {
+            CharacterFootDiagnosisOccurrenceProfile occurrence =
+                target.occurrence;
+            int thresholdCount = occurrence.configuredThresholds?.Count ?? 0;
+            if (thresholdCount == 0 ||
+                occurrence.rates == null ||
+                occurrence.rates.Count != thresholdCount ||
+                occurrence.eligibleEventCount != target.eligibleEventCount)
+            {
+                throw new InvalidOperationException(
+                    $"Foot diagnosis target '{target.id}' occurrence score input is invalid.");
+            }
+            var bands = new List<CharacterFootDiagnosisScoreBand>(
+                thresholdCount + 1);
+            int previousMatched = occurrence.eligibleEventCount;
+            double burden = 0d;
+            int worstBand = 0;
+            for (int i = 0; i <= thresholdCount; i++)
+            {
+                int matched = i < thresholdCount
+                    ? occurrence.rates[i].matchedEventCount
+                    : 0;
+                if (matched < 0 || matched > previousMatched)
+                {
+                    throw new InvalidOperationException(
+                        $"Foot diagnosis target '{target.id}' occurrence counts are invalid.");
+                }
+                int count = previousMatched - matched;
+                double rate = (double)count / occurrence.eligibleEventCount;
+                RequireRate(rate);
+                double penalty = Penalty(i, thresholdCount + 1);
+                burden += rate * penalty;
+                if (count > 0)
+                    worstBand = i;
+                bands.Add(new CharacterFootDiagnosisScoreBand
+                {
+                    id = BandId(occurrence.configuredThresholds, i),
+                    lowerExclusive = i == 0
+                        ? null
+                        : occurrence.configuredThresholds[i - 1],
+                    upperInclusive = i < thresholdCount
+                        ? occurrence.configuredThresholds[i]
+                        : null,
+                    eventCount = count,
+                    eventRate = rate,
+                    penaltyWeight = penalty
+                });
+                previousMatched = matched;
+            }
+            double ceiling = Ceiling(worstBand, thresholdCount + 1);
+            double health = Math.Min(100d * (1d - burden), ceiling);
+            score.frequencyBurden = Round(burden);
+            score.frequencyHealthScore = Round(100d * (1d - burden));
+            score.worstSeverityBand = bands[worstBand].id;
+            score.tailScoreCeiling = ceiling;
+            score.severityBands = bands;
+            score.healthScore = Round(health);
+        }
+
+        static CharacterFootDiagnosisScore Evidence(
+            string policy,
+            int eligibleEventCount,
+            CharacterFootPathStageAnalysisCoverage stage)
+        {
+            var score = new CharacterFootDiagnosisScore
+            {
+                policy = policy,
+                evidenceFullSampleEventCount = FullEvidenceEventCount,
+                healthRating = "Unavailable",
+                evidenceRating = "Unavailable",
+                severityBands = new List<CharacterFootDiagnosisScoreBand>()
+            };
+            if (eligibleEventCount <= 0)
+                return score;
+            double sampleCoverage = Math.Min(
+                1d,
+                (double)eligibleEventCount / FullEvidenceEventCount);
+            double stageCoverage = stage == null
+                ? 1d
+                : stage.eligibleEventCount > 0
+                    ? (double)stage.availableEventCount /
+                      stage.eligibleEventCount
+                    : 0d;
+            RequireRate(stageCoverage);
+            double evidence = 100d * sampleCoverage * stageCoverage;
+            score.evidenceAvailable = true;
+            score.evidenceScore = Round(evidence);
+            score.evidenceRating = EvidenceRating(evidence);
+            return score;
+        }
+
+        static CharacterFootDiagnosisScore Aggregate(
+            List<CharacterFootDiagnosisTarget> targets)
+        {
+            List<CharacterFootDiagnosisTarget> healthTargets = targets
+                .Where(value => value.score?.healthAvailable == true)
+                .ToList();
+            List<CharacterFootDiagnosisTarget> evidenceTargets = targets
+                .Where(value => value.score?.evidenceAvailable == true)
+                .ToList();
+            var score = new CharacterFootDiagnosisScore
+            {
+                policy = "DiagnosticTargetAggregate",
+                evidenceFullSampleEventCount = FullEvidenceEventCount,
+                healthTargetCount = healthTargets.Count,
+                evidenceTargetCount = evidenceTargets.Count,
+                healthRating = "Unavailable",
+                evidenceRating = "Unavailable",
+                severityBands = new List<CharacterFootDiagnosisScoreBand>()
+            };
+            if (healthTargets.Count > 0)
+            {
+                CharacterFootDiagnosisTarget worst = healthTargets
+                    .OrderBy(value => value.score.healthScore.Value)
+                    .ThenBy(value => value.id, StringComparer.Ordinal)
+                    .First();
+                double average = healthTargets.Average(
+                    value => value.score.healthScore.Value);
+                double health = Math.Min(
+                    average,
+                    worst.score.healthScore.Value + 15d);
+                score.healthAvailable = true;
+                score.healthScore = Round(health);
+                score.healthRating = HealthRating(health);
+                score.worstTargetId = worst.id;
+                score.targetAverageHealthScore = Round(average);
+                score.worstTargetHealthScore =
+                    worst.score.healthScore;
+            }
+            else
+            {
+                score.unavailableReason = "NoHealthScoredTargets";
+            }
+            if (evidenceTargets.Count > 0)
+            {
+                double evidence = evidenceTargets.Average(
+                    value => value.score.evidenceScore.Value);
+                score.evidenceAvailable = true;
+                score.evidenceScore = Round(evidence);
+                score.evidenceRating = EvidenceRating(evidence);
+            }
+            return score;
+        }
+
+        static double Penalty(int index, int bandCount)
+        {
+            if (bandCount == s_FiveBandPenalties.Length)
+                return s_FiveBandPenalties[index];
+            return bandCount <= 1
+                ? 0d
+                : (double)index / (bandCount - 1);
+        }
+
+        static double Ceiling(int index, int bandCount)
+        {
+            if (bandCount == s_FiveBandCeilings.Length)
+                return s_FiveBandCeilings[index];
+            if (index <= 0)
+                return 100d;
+            double normalized = (double)index / (bandCount - 1);
+            return normalized >= 1d
+                ? 49d
+                : normalized >= 0.75d
+                    ? 74d
+                    : normalized >= 0.5d
+                        ? 89d
+                        : 95d;
+        }
+
+        static string BandId(List<double> thresholds, int index)
+        {
+            if (index == 0)
+                return "AtOrBelowFirstThreshold";
+            if (index == thresholds.Count)
+                return "AboveLastThreshold";
+            return $"ThresholdBand{index}";
+        }
+
+        static void RequireRate(double value)
+        {
+            if (!double.IsFinite(value) || value < 0d || value > 1d)
+                throw new InvalidOperationException(
+                    "Foot diagnosis score rate is invalid.");
+        }
+
+        static double Round(double value) =>
+            Math.Round(value, 1, MidpointRounding.AwayFromZero);
+
+        static string HealthRating(double value) => value >= 90d
+            ? "Stable"
+            : value >= 75d
+                ? "Attention"
+                : value >= 50d
+                    ? "Degraded"
+                    : "Severe";
+
+        static string EvidenceRating(double value) => value >= 90d
+            ? "Strong"
+            : value >= 60d
+                ? "Moderate"
+                : "Limited";
     }
 
     [Serializable]

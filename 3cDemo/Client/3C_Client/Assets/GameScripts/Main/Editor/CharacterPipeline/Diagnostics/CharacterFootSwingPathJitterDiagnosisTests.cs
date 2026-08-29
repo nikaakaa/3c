@@ -43,13 +43,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisDocument document =
                 new CharacterFootSwingPathJitterDiagnosis().Build(
                     new CharacterFootDiagnosisContext(facts));
-            Assert.That(document.targets.Count, Is.EqualTo(3));
+            Assert.That(document.targets.Count, Is.EqualTo(4));
             Assert.That(document.targets[0].eligibleEventCount, Is.EqualTo(1));
             Assert.That(document.targets[1].eligibleEventCount, Is.EqualTo(1));
             Assert.That(document.targets[2].eligibleEventCount, Is.EqualTo(1));
             Assert.That(document.targets[0].matchedEventCount, Is.EqualTo(0));
             Assert.That(document.targets[1].matchedEventCount, Is.EqualTo(1));
             Assert.That(document.targets[2].matchedEventCount, Is.EqualTo(1));
+            Assert.That(
+                document.targets[3].id,
+                Is.EqualTo("swing-actual-foot-envelope-counterfactual"));
         }
 
         [Test]

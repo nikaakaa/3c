@@ -1068,6 +1068,234 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void Clear() => this = default;
     }
 
+    internal readonly struct CharacterFootLifecycleTransitionFact
+    {
+        CharacterFootLifecycleTransitionFact(
+            bool evaluated,
+            bool previousRequestAvailable,
+            bool previousRequestedLock,
+            ulong previousRequestEventIdentity,
+            AnimationFootStepObservationLockMode previousRequestMode,
+            float previousRequestWeight,
+            float previousSecondsSinceEdge,
+            ulong previousLatestContactEventIdentity,
+            ulong previousLatestReleasedContactEventIdentity,
+            ulong previousCompletedLockWeightEventIdentity,
+            bool previousAnchorAvailable,
+            ulong previousAnchorEventIdentity,
+            bool currentRequestedLock,
+            ulong currentRequestEventIdentity,
+            AnimationFootStepObservationLockMode currentRequestMode,
+            float currentRequestWeight,
+            CharacterFootLockRequestAvailability currentRequestAvailability,
+            CharacterFootContactEdge contactEdge,
+            float currentSecondsSinceEdge,
+            ulong currentLatestContactEventIdentity,
+            ulong currentLatestReleasedContactEventIdentity,
+            ulong currentCompletedLockWeightEventIdentity,
+            bool currentAnchorAvailable,
+            ulong currentAnchorEventIdentity,
+            bool sameEventContactReentryRefreshed,
+            bool sameEventContactReentryUnavailable,
+            bool retainedVerifiedAnchor,
+            bool continuousReentryTakeover,
+            CharacterFootGoalOwnershipLossReason ownershipLossReason,
+            bool preTransitionSuppressOutput,
+            bool preTransitionResetInterpolation,
+            bool postTransitionSuppressOutput,
+            bool postTransitionResetInterpolation)
+        {
+            Evaluated = evaluated;
+            PreviousRequestAvailable = previousRequestAvailable;
+            PreviousRequestedLock = previousRequestedLock;
+            PreviousRequestEventIdentity = previousRequestEventIdentity;
+            PreviousRequestMode = previousRequestMode;
+            PreviousRequestWeight = previousRequestWeight;
+            PreviousSecondsSinceEdge = previousSecondsSinceEdge;
+            PreviousLatestContactEventIdentity =
+                previousLatestContactEventIdentity;
+            PreviousLatestReleasedContactEventIdentity =
+                previousLatestReleasedContactEventIdentity;
+            PreviousCompletedLockWeightEventIdentity =
+                previousCompletedLockWeightEventIdentity;
+            PreviousAnchorAvailable = previousAnchorAvailable;
+            PreviousAnchorEventIdentity = previousAnchorEventIdentity;
+            CurrentRequestedLock = currentRequestedLock;
+            CurrentRequestEventIdentity = currentRequestEventIdentity;
+            CurrentRequestMode = currentRequestMode;
+            CurrentRequestWeight = currentRequestWeight;
+            CurrentRequestAvailability = currentRequestAvailability;
+            ContactEdge = contactEdge;
+            CurrentSecondsSinceEdge = currentSecondsSinceEdge;
+            CurrentLatestContactEventIdentity =
+                currentLatestContactEventIdentity;
+            CurrentLatestReleasedContactEventIdentity =
+                currentLatestReleasedContactEventIdentity;
+            CurrentCompletedLockWeightEventIdentity =
+                currentCompletedLockWeightEventIdentity;
+            CurrentAnchorAvailable = currentAnchorAvailable;
+            CurrentAnchorEventIdentity = currentAnchorEventIdentity;
+            SameEventContactReentryRefreshed =
+                sameEventContactReentryRefreshed;
+            SameEventContactReentryUnavailable =
+                sameEventContactReentryUnavailable;
+            RetainedVerifiedAnchor = retainedVerifiedAnchor;
+            ContinuousReentryTakeover = continuousReentryTakeover;
+            OwnershipLossReason = ownershipLossReason;
+            PreTransitionSuppressOutput = preTransitionSuppressOutput;
+            PreTransitionResetInterpolation = preTransitionResetInterpolation;
+            PostTransitionSuppressOutput = postTransitionSuppressOutput;
+            PostTransitionResetInterpolation = postTransitionResetInterpolation;
+        }
+
+        internal bool Evaluated { get; }
+        internal bool PreviousRequestAvailable { get; }
+        internal bool PreviousRequestedLock { get; }
+        internal ulong PreviousRequestEventIdentity { get; }
+        internal AnimationFootStepObservationLockMode PreviousRequestMode { get; }
+        internal float PreviousRequestWeight { get; }
+        internal float PreviousSecondsSinceEdge { get; }
+        internal ulong PreviousLatestContactEventIdentity { get; }
+        internal ulong PreviousLatestReleasedContactEventIdentity { get; }
+        internal ulong PreviousCompletedLockWeightEventIdentity { get; }
+        internal bool PreviousAnchorAvailable { get; }
+        internal ulong PreviousAnchorEventIdentity { get; }
+        internal bool CurrentRequestedLock { get; }
+        internal ulong CurrentRequestEventIdentity { get; }
+        internal AnimationFootStepObservationLockMode CurrentRequestMode { get; }
+        internal float CurrentRequestWeight { get; }
+        internal CharacterFootLockRequestAvailability CurrentRequestAvailability { get; }
+        internal CharacterFootContactEdge ContactEdge { get; }
+        internal float CurrentSecondsSinceEdge { get; }
+        internal ulong CurrentLatestContactEventIdentity { get; }
+        internal ulong CurrentLatestReleasedContactEventIdentity { get; }
+        internal ulong CurrentCompletedLockWeightEventIdentity { get; }
+        internal bool CurrentAnchorAvailable { get; }
+        internal ulong CurrentAnchorEventIdentity { get; }
+        internal bool SameEventContactReentryRefreshed { get; }
+        internal bool SameEventContactReentryUnavailable { get; }
+        internal bool RetainedVerifiedAnchor { get; }
+        internal bool ContinuousReentryTakeover { get; }
+        internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }
+        internal bool HardOwnershipLoss =>
+            OwnershipLossReason != CharacterFootGoalOwnershipLossReason.None;
+        internal bool PreTransitionSuppressOutput { get; }
+        internal bool PreTransitionResetInterpolation { get; }
+        internal bool PostTransitionSuppressOutput { get; }
+        internal bool PostTransitionResetInterpolation { get; }
+
+        internal static CharacterFootLifecycleTransitionFact Begin(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateFrame frame)
+        {
+            CharacterFootContactTransitionContext transition =
+                context.ContactTransition;
+            CharacterFootContactContext contact = context.Contact;
+            CharacterFootLockRequest request = frame.LockRequest;
+            return new CharacterFootLifecycleTransitionFact(
+                false,
+                transition.HasPreviousRequest,
+                transition.PreviousRequestedLock,
+                transition.PreviousEventIdentity,
+                transition.PreviousMode,
+                transition.PreviousWeight,
+                transition.SecondsSinceEdge,
+                transition.LatestContactEventIdentity,
+                transition.LatestReleasedContactEventIdentity,
+                transition.CompletedLockWeightEventIdentity,
+                contact.HasContact,
+                contact.EventIdentity,
+                request.RequestsLock,
+                request.EventIdentity,
+                request.Mode,
+                request.Weight,
+                request.Availability,
+                CharacterFootContactEdge.None,
+                transition.SecondsSinceEdge,
+                transition.LatestContactEventIdentity,
+                transition.LatestReleasedContactEventIdentity,
+                transition.CompletedLockWeightEventIdentity,
+                contact.HasContact,
+                contact.EventIdentity,
+                false,
+                false,
+                false,
+                false,
+                frame.OwnershipLossReason,
+                false,
+                false,
+                false,
+                false);
+        }
+
+        internal CharacterFootLifecycleTransitionFact Complete(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootTransitionDecision preTransition,
+            in CharacterFootTransitionDecision postTransition)
+        {
+            bool sameAnchor = PreviousAnchorAvailable &&
+                              context.Contact.HasContact &&
+                              PreviousAnchorEventIdentity ==
+                              context.Contact.EventIdentity;
+            bool reentryRefreshed = preTransition.Reason ==
+                CharacterFootTransitionReason.SameEventContactReentryRefresh;
+            bool reentryUnavailable =
+                preTransition.Reason ==
+                    CharacterFootTransitionReason.ContactUnavailable &&
+                CurrentRequestedLock &&
+                CurrentRequestEventIdentity != 0 &&
+                CurrentRequestEventIdentity ==
+                    PreviousLatestReleasedContactEventIdentity &&
+                !PreviousAnchorAvailable;
+            bool retainedAnchor = sameAnchor &&
+                                  preTransition.AnchorCommand !=
+                                      CharacterFootAnchorCommand.Release &&
+                                  postTransition.AnchorCommand !=
+                                      CharacterFootAnchorCommand.Release;
+            bool continuousTakeover = reentryRefreshed && retainedAnchor &&
+                                      !preTransition.SuppressOutput &&
+                                      !preTransition.ResetInterpolation &&
+                                      !postTransition.SuppressOutput &&
+                                      !postTransition.ResetInterpolation;
+            CharacterFootContactTransitionContext transition =
+                context.ContactTransition;
+            return new CharacterFootLifecycleTransitionFact(
+                true,
+                PreviousRequestAvailable,
+                PreviousRequestedLock,
+                PreviousRequestEventIdentity,
+                PreviousRequestMode,
+                PreviousRequestWeight,
+                PreviousSecondsSinceEdge,
+                PreviousLatestContactEventIdentity,
+                PreviousLatestReleasedContactEventIdentity,
+                PreviousCompletedLockWeightEventIdentity,
+                PreviousAnchorAvailable,
+                PreviousAnchorEventIdentity,
+                CurrentRequestedLock,
+                CurrentRequestEventIdentity,
+                CurrentRequestMode,
+                CurrentRequestWeight,
+                CurrentRequestAvailability,
+                preTransition.ContactEdge,
+                transition.SecondsSinceEdge,
+                transition.LatestContactEventIdentity,
+                transition.LatestReleasedContactEventIdentity,
+                transition.CompletedLockWeightEventIdentity,
+                context.Contact.HasContact,
+                context.Contact.EventIdentity,
+                reentryRefreshed,
+                reentryUnavailable,
+                retainedAnchor,
+                continuousTakeover,
+                OwnershipLossReason,
+                preTransition.SuppressOutput,
+                preTransition.ResetInterpolation,
+                postTransition.SuppressOutput,
+                postTransition.ResetInterpolation);
+        }
+    }
+
     internal readonly struct CharacterFootSupportIntent
     {
         internal CharacterFootSupportIntent(
@@ -1468,6 +1696,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult outputSwing,
             in CharacterResolvedFootResult preliminaryResolved,
             in CharacterFootSwingMotionResult preliminaryMotion,
+            in CharacterFootLifecycleTransitionFact lifecycleTransition,
             bool landingCompletionPending)
         {
             Evaluation = evaluation;
@@ -1479,6 +1708,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OutputSwing = outputSwing;
             PreliminaryResolved = preliminaryResolved;
             PreliminaryMotion = preliminaryMotion;
+            LifecycleTransition = lifecycleTransition;
             LandingCompletionPending = landingCompletionPending;
         }
 
@@ -1491,6 +1721,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSwingMotionResult OutputSwing { get; }
         internal CharacterResolvedFootResult PreliminaryResolved { get; }
         internal CharacterFootSwingMotionResult PreliminaryMotion { get; }
+        internal CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
         internal bool LandingCompletionPending { get; }
     }
 

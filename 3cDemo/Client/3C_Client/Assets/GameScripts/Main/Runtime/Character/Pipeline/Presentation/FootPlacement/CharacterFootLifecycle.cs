@@ -45,6 +45,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out CharacterFootLifecycleEvaluationReceipt receipt)
         {
             RequireValid(in frame);
+            CharacterFootLifecycleTransitionFact lifecycleTransition =
+                CharacterFootLifecycleTransitionFact.Begin(
+                    in context,
+                    in frame);
             CharacterFootConstraintState stateBefore = context.Discrete.State;
             CharacterFootLockResponse lockResponseBefore =
                 context.Discrete.LockResponse;
@@ -85,6 +89,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 result = CharacterFootSwingMotionBuilder.WithPathContinuity(
                     in result,
                     in unavailableContinuity);
+                CharacterFootTransitionDecision unavailablePostTransition =
+                    default;
+                lifecycleTransition = lifecycleTransition.Complete(
+                    in context,
+                    in preTransition,
+                    in unavailablePostTransition);
+                result = CharacterFootSwingMotionBuilder.WithLifecycleTransition(
+                    in result,
+                    in lifecycleTransition);
                 CharacterFootPlacementAnimatedFootPose unavailableFoot =
                     frame.AnimatedFoot;
                 CharacterFootResolvedOutcome unavailableOutcome =
@@ -116,6 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in result,
                     in unavailable,
                     in result,
+                    in lifecycleTransition,
                     false);
                 return unavailable;
             }
@@ -160,6 +174,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         context.Interpolation.EffectiveCorrection);
             CharacterFootPathContinuityFact continuityFact =
                 interpolation.ContinuityFact;
+            lifecycleTransition = lifecycleTransition.Complete(
+                in context,
+                in preTransition,
+                in postTransition);
             if (!preTransition.SuppressOutput)
             {
                 continuityFact = CompleteContinuity(
@@ -192,6 +210,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in selectedSupportTarget,
                 in supportIntent,
                 in continuityFact,
+                in lifecycleTransition,
                 out result);
             bool landingCompletionPending =
                 context.Discrete.State == CharacterFootConstraintState.Landing &&
@@ -210,6 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in outputSwing,
                 in resolved,
                 in result,
+                in lifecycleTransition,
                 landingCompletionPending);
             return resolved;
         }
@@ -265,6 +285,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.Discrete.LockResponse,
                     in hardConstraint,
                     frame.ComponentUp);
+            CharacterFootLifecycleTransitionFact lifecycleTransition =
+                receipt.LifecycleTransition.Complete(
+                    in context,
+                    in preTransition,
+                    in postTransition);
             Vector3 desiredCorrection = ResolveDiagnosticDesiredCorrection(
                 in context,
                 in target,
@@ -283,6 +308,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in selectedSupportTarget,
                 in supportIntent,
                 in continuityFact,
+                in lifecycleTransition,
                 out result);
         }
 
@@ -374,6 +400,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSupportTarget supportTarget,
             in CharacterFootSupportIntent supportIntent,
             in CharacterFootPathContinuityFact continuityFact,
+            in CharacterFootLifecycleTransitionFact lifecycleTransition,
             out CharacterFootSwingMotionResult result)
         {
             bool hasContact = context.Contact.HasContact;
@@ -409,6 +436,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 result = CharacterFootSwingMotionBuilder.SuppressUnselected(
                     in swing);
+                result = CharacterFootSwingMotionBuilder.WithLifecycleTransition(
+                    in result,
+                    in lifecycleTransition);
                 return CharacterResolvedFootResult.Unavailable(
                     frame.FrameSequence,
                     frame.CompletionIdentity,
@@ -485,7 +515,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasContact,
                 hasContact ? context.Contact.SurfaceIdentity : 0,
                 hasContact ? context.Contact.Normal : default,
-                continuityFact);
+                continuityFact,
+                lifecycleTransition: lifecycleTransition);
             var contactReference = hasContact
                 ? new CharacterFootContactReference(
                     context.Contact.EventIdentity,

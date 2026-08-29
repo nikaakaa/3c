@@ -481,7 +481,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool landingReachEvaluated = false,
             bool landingReachAvailable = false,
             bool landingReachGoalClamped = false,
-            float landingReachGoalClampDistance = 0f)
+            float landingReachGoalClampDistance = 0f,
+            CharacterFootLifecycleTransitionFact lifecycleTransition = default)
         {
             State = state;
             RejectReason = rejectReason;
@@ -516,6 +517,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingReachAvailable = landingReachAvailable;
             LandingReachGoalClamped = landingReachGoalClamped;
             LandingReachGoalClampDistance = landingReachGoalClampDistance;
+            LifecycleTransition = lifecycleTransition;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -551,6 +553,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool LandingReachGoalClamped { get; }
         public float LandingReachGoalClampDistance { get; }
         internal CharacterFootPathContinuityFact PathContinuity { get; }
+        internal CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 
@@ -591,6 +594,59 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingReachGoalClamped = result.LandingReachGoalClamped;
             LandingReachGoalClampDistance =
                 result.LandingReachGoalClampDistance;
+            CharacterFootLifecycleTransitionFact lifecycle =
+                result.LifecycleTransition;
+            LifecycleTransitionEvaluated = lifecycle.Evaluated;
+            PreviousLockRequestAvailable = lifecycle.PreviousRequestAvailable;
+            PreviousLockRequested = lifecycle.PreviousRequestedLock;
+            PreviousLockRequestEventIdentity =
+                lifecycle.PreviousRequestEventIdentity;
+            PreviousLockRequestMode = lifecycle.PreviousRequestMode.ToString();
+            PreviousLockRequestWeight = lifecycle.PreviousRequestWeight;
+            PreviousContactEdgeSeconds = lifecycle.PreviousSecondsSinceEdge;
+            PreviousLatestContactEventIdentity =
+                lifecycle.PreviousLatestContactEventIdentity;
+            PreviousLatestReleasedContactEventIdentity =
+                lifecycle.PreviousLatestReleasedContactEventIdentity;
+            PreviousCompletedLockWeightEventIdentity =
+                lifecycle.PreviousCompletedLockWeightEventIdentity;
+            PreviousContactAnchorAvailable = lifecycle.PreviousAnchorAvailable;
+            PreviousContactAnchorEventIdentity =
+                lifecycle.PreviousAnchorEventIdentity;
+            CurrentLockRequested = lifecycle.CurrentRequestedLock;
+            CurrentLockRequestEventIdentity =
+                lifecycle.CurrentRequestEventIdentity;
+            CurrentLockRequestMode = lifecycle.CurrentRequestMode.ToString();
+            CurrentLockRequestWeight = lifecycle.CurrentRequestWeight;
+            CurrentLockRequestAvailability =
+                lifecycle.CurrentRequestAvailability.ToString();
+            ContactEdge = lifecycle.ContactEdge.ToString();
+            CurrentContactEdgeSeconds = lifecycle.CurrentSecondsSinceEdge;
+            CurrentLatestContactEventIdentity =
+                lifecycle.CurrentLatestContactEventIdentity;
+            CurrentLatestReleasedContactEventIdentity =
+                lifecycle.CurrentLatestReleasedContactEventIdentity;
+            CurrentCompletedLockWeightEventIdentity =
+                lifecycle.CurrentCompletedLockWeightEventIdentity;
+            CurrentContactAnchorAvailable = lifecycle.CurrentAnchorAvailable;
+            CurrentContactAnchorEventIdentity =
+                lifecycle.CurrentAnchorEventIdentity;
+            SameEventContactReentryRefreshed =
+                lifecycle.SameEventContactReentryRefreshed;
+            SameEventContactReentryUnavailable =
+                lifecycle.SameEventContactReentryUnavailable;
+            RetainedVerifiedAnchor = lifecycle.RetainedVerifiedAnchor;
+            ContinuousReentryTakeover = lifecycle.ContinuousReentryTakeover;
+            HardOwnershipLoss = lifecycle.HardOwnershipLoss;
+            HardOwnershipLossReason = lifecycle.OwnershipLossReason.ToString();
+            PreTransitionSuppressOutput =
+                lifecycle.PreTransitionSuppressOutput;
+            PreTransitionResetInterpolation =
+                lifecycle.PreTransitionResetInterpolation;
+            PostTransitionSuppressOutput =
+                lifecycle.PostTransitionSuppressOutput;
+            PostTransitionResetInterpolation =
+                lifecycle.PostTransitionResetInterpolation;
             CharacterFootPathContinuityFact path = result.PathContinuity;
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
@@ -814,6 +870,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool LandingReachAvailable { get; }
         public bool LandingReachGoalClamped { get; }
         public float LandingReachGoalClampDistance { get; }
+        public bool LifecycleTransitionEvaluated { get; }
+        public bool PreviousLockRequestAvailable { get; }
+        public bool PreviousLockRequested { get; }
+        public ulong PreviousLockRequestEventIdentity { get; }
+        public string PreviousLockRequestMode { get; }
+        public float PreviousLockRequestWeight { get; }
+        public float PreviousContactEdgeSeconds { get; }
+        public ulong PreviousLatestContactEventIdentity { get; }
+        public ulong PreviousLatestReleasedContactEventIdentity { get; }
+        public ulong PreviousCompletedLockWeightEventIdentity { get; }
+        public bool PreviousContactAnchorAvailable { get; }
+        public ulong PreviousContactAnchorEventIdentity { get; }
+        public bool CurrentLockRequested { get; }
+        public ulong CurrentLockRequestEventIdentity { get; }
+        public string CurrentLockRequestMode { get; }
+        public float CurrentLockRequestWeight { get; }
+        public string CurrentLockRequestAvailability { get; }
+        public string ContactEdge { get; }
+        public float CurrentContactEdgeSeconds { get; }
+        public ulong CurrentLatestContactEventIdentity { get; }
+        public ulong CurrentLatestReleasedContactEventIdentity { get; }
+        public ulong CurrentCompletedLockWeightEventIdentity { get; }
+        public bool CurrentContactAnchorAvailable { get; }
+        public ulong CurrentContactAnchorEventIdentity { get; }
+        public bool SameEventContactReentryRefreshed { get; }
+        public bool SameEventContactReentryUnavailable { get; }
+        public bool RetainedVerifiedAnchor { get; }
+        public bool ContinuousReentryTakeover { get; }
+        public bool HardOwnershipLoss { get; }
+        public string HardOwnershipLossReason { get; }
+        public bool PreTransitionSuppressOutput { get; }
+        public bool PreTransitionResetInterpolation { get; }
+        public bool PostTransitionSuppressOutput { get; }
+        public bool PostTransitionResetInterpolation { get; }
         public bool PathContinuityEvaluated { get; }
         public string PathRevisionReason { get; }
         public bool PathResidualRebuilt { get; }
@@ -1235,7 +1325,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 evaluated,
                 available,
                 goalClamped,
-                goalClampDistance);
+                goalClampDistance,
+                motion.LifecycleTransition);
 
         internal static CharacterFootSwingMotionResult WithPathContinuity(
             in CharacterFootSwingMotionResult motion,
@@ -1273,7 +1364,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.LandingReachEvaluated,
                 motion.LandingReachAvailable,
                 motion.LandingReachGoalClamped,
-                motion.LandingReachGoalClampDistance);
+                motion.LandingReachGoalClampDistance,
+                motion.LifecycleTransition);
+
+        internal static CharacterFootSwingMotionResult WithLifecycleTransition(
+            in CharacterFootSwingMotionResult motion,
+            in CharacterFootLifecycleTransitionFact lifecycleTransition) =>
+            new CharacterFootSwingMotionResult(
+                motion.State,
+                motion.RejectReason,
+                motion.LandingEventIdentity,
+                motion.GroundPathInputIdentity,
+                motion.SwingPathReference,
+                motion.OriginalSole,
+                motion.OriginalAnkle,
+                motion.Distance,
+                motion.Progress,
+                motion.BaselineSample,
+                motion.EnvelopeSample,
+                motion.FormalTargetHeightAlongUp,
+                motion.VerticalCorrection,
+                motion.LandingPredictionError,
+                motion.CorrectedSole,
+                motion.CorrectedAnkle,
+                motion.PositionWeight,
+                motion.RotationWeight,
+                motion.ConstraintState,
+                motion.LockResponse,
+                motion.SupportHorizontalError,
+                motion.ContactOwnership,
+                motion.SupportWeight,
+                motion.SupportContactAnchor,
+                motion.DesiredCorrection,
+                motion.ContactPlaneAvailable,
+                motion.ContactSurfaceIdentity,
+                motion.ContactPlaneNormal,
+                motion.PathContinuity,
+                motion.LandingReachEvaluated,
+                motion.LandingReachAvailable,
+                motion.LandingReachGoalClamped,
+                motion.LandingReachGoalClampDistance,
+                lifecycleTransition);
 
         static bool TryResolveSwingPhaseWeight(
             in AnimationFootMotionRuntimeSample step,

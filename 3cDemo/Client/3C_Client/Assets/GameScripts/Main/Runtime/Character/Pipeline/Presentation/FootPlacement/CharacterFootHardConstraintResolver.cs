@@ -60,7 +60,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         0,
                         swing.GroundPathInputIdentity,
                         correction,
-                        minimum);
+                        minimum,
+                        frame.ComponentUp);
                 }
                 case CharacterFootConstraintState.Landing:
                 case CharacterFootConstraintState.Locked:
@@ -76,7 +77,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         context.Contact.SurfaceIdentity,
                         0,
                         correction,
-                        minimum);
+                        minimum,
+                        frame.ComponentUp);
                 }
                 default:
                     return new CharacterFootHardConstraintResult(
@@ -98,7 +100,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int surfaceIdentity,
             ulong pathIdentity,
             Vector3 correction,
-            Vector3 minimum) =>
+            Vector3 minimum,
+            Vector3 componentUp) =>
             new CharacterFootHardConstraintResult(
                 resolved,
                 available,
@@ -107,7 +110,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pathIdentity,
                 correction,
                 minimum,
-                correction);
+                CharacterFootConstraintMath.RaiseToMinimum(
+                    correction,
+                    minimum,
+                    componentUp));
 
     }
 }

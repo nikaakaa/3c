@@ -11,7 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootPlacementQueryPurpose : byte
     {
         FutureLanding = 1,
-        CurrentContactVerification = 2
+        CurrentContactVerification = 2,
+        CurrentSupport = 3
     }
 
     public readonly struct CharacterFootPlacementQueryRequest
@@ -290,11 +291,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootCurrentSupportProbeResult Query(
             in CharacterFootCurrentSupportProbeRequest request)
         {
-            if (!request.IsValid)
+            ulong queryRevision = WorldRevision;
+            if (!request.IsValid ||
+                request.HitCapacity != m_CurrentSupportHits.Length)
             {
                 return CharacterFootCurrentSupportProbeResult.Rejected(
                     request.Kind,
-                    CharacterFootCurrentSupportProbeRejectReason.InvalidRequest);
+                    CharacterFootCurrentSupportProbeRejectReason.InvalidRequest,
+                    queryRevision,
+                    false);
             }
             int count = m_PhysicsScene.SphereCast(
                 request.Origin,
@@ -308,7 +313,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return CharacterFootCurrentSupportProbeResult.Rejected(
                     request.Kind,
-                    CharacterFootCurrentSupportProbeRejectReason.CapacityExceeded);
+                    CharacterFootCurrentSupportProbeRejectReason.CapacityExceeded,
+                    queryRevision,
+                    true);
             }
             Vector3 up = request.ComponentUp.normalized;
             int validCount = 0;
@@ -335,7 +342,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RaycastHit value = m_CurrentSupportHits[i];
                 int insertion = i;
                 while (insertion > 0 &&
-                       CompareLanding(value, m_CurrentSupportHits[insertion - 1]) < 0)
+                       CompareCurrentSupport(
+                           value,
+                           m_CurrentSupportHits[insertion - 1]) < 0)
                 {
                     m_CurrentSupportHits[insertion] =
                         m_CurrentSupportHits[insertion - 1];
@@ -347,7 +356,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return CharacterFootCurrentSupportProbeResult.Rejected(
                     request.Kind,
-                    CharacterFootCurrentSupportProbeRejectReason.NoHit);
+                    CharacterFootCurrentSupportProbeRejectReason.NoHit,
+                    queryRevision,
+                    true);
             }
             RaycastHit selected = m_CurrentSupportHits[0];
             return new CharacterFootCurrentSupportProbeResult(
@@ -358,7 +369,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 selected.collider.GetInstanceID(),
                 selected.point,
                 selected.normal.normalized,
-                selected.distance);
+                selected.distance,
+                queryRevision,
+                true);
+        }
+
+        static int CompareCurrentSupport(RaycastHit left, RaycastHit right)
+        {
+            int landing = CompareLanding(left, right);
+            if (landing != 0)
+                return landing;
+            int normalX = left.normal.x.CompareTo(right.normal.x);
+            if (normalX != 0)
+                return normalX;
+            int normalY = left.normal.y.CompareTo(right.normal.y);
+            if (normalY != 0)
+                return normalY;
+            int normalZ = left.normal.z.CompareTo(right.normal.z);
+            return normalZ != 0
+                ? normalZ
+                : left.triangleIndex.CompareTo(right.triangleIndex);
         }
 
         static int CompareLanding(RaycastHit left, RaycastHit right)

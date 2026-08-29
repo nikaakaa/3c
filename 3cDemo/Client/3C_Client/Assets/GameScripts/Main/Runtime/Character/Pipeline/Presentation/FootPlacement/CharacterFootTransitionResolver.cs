@@ -30,6 +30,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     request.EventIdentity != context.Contact.EventIdentity &&
                     request.EventIdentity != context.ContactTransition
                         .LatestReleasedContactEventIdentity,
+                CharacterFootConstraintState.Landing =>
+                    edge == CharacterFootContactEdge.EventChanged &&
+                    request.EventIdentity != context.Contact.EventIdentity,
+                CharacterFootConstraintState.Locked =>
+                    edge == CharacterFootContactEdge.EventChanged &&
+                    request.EventIdentity != context.Contact.EventIdentity,
                 _ => false
             };
         }
@@ -214,6 +220,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootDiscreteStateContext discrete = context.Discrete;
             if (!OwnsRequest(in context, in frame))
             {
+                if (CanAcquire(in frame) && context.Contact.HasContact &&
+                    frame.LockRequest.EventIdentity !=
+                    context.Contact.EventIdentity)
+                {
+                    return Decision(
+                        CharacterFootTransitionReason.NewEventContactAcquired,
+                        discrete.State,
+                        CharacterFootConstraintState.Landing,
+                        CharacterFootLockResponse.None,
+                        edge,
+                        CharacterFootAnchorCommand.Create,
+                        false,
+                        false);
+                }
                 return Decision(
                     CharacterFootTransitionReason.ContactReleased,
                     discrete.State,
@@ -250,6 +270,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootDiscreteStateContext discrete = context.Discrete;
             if (!OwnsRequest(in context, in frame))
             {
+                if (CanAcquire(in frame) && context.Contact.HasContact &&
+                    frame.LockRequest.EventIdentity !=
+                    context.Contact.EventIdentity)
+                {
+                    return Decision(
+                        CharacterFootTransitionReason.NewEventContactAcquired,
+                        discrete.State,
+                        CharacterFootConstraintState.Landing,
+                        CharacterFootLockResponse.None,
+                        edge,
+                        CharacterFootAnchorCommand.Create,
+                        false,
+                        false);
+                }
                 return Decision(
                     CharacterFootTransitionReason.ContactReleased,
                     discrete.State,

@@ -97,7 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (GroundLayerMask == 0 || HitCapacity < 4 || HitCapacity > 32 ||
                 !float.IsFinite(SphereRadius) || SphereRadius <= 0f ||
-                !float.IsFinite(CastAbove) || CastAbove <= 0f ||
+                !float.IsFinite(CastAbove) || CastAbove <= SphereRadius ||
                 !float.IsFinite(CastBelow) || CastBelow <= 0f ||
                 !float.IsFinite(MaximumSurfaceSlopeDegrees) ||
                 MaximumSurfaceSlopeDegrees <= 0f || MaximumSurfaceSlopeDegrees >= 90f ||

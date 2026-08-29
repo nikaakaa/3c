@@ -675,7 +675,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLandingPredictionResult result,
             CharacterFootPlacementAnimatedFootPose sourcePose,
             in CharacterFootStepCandidateSelectionDiagnostics stepCandidateSelection,
-            CharacterFootLandingSnapshot landing)
+            CharacterFootLandingSnapshot landing,
+            bool approachPlantTargetPrepared,
+            in CharacterFootCurrentSupportObservation currentSupport,
+            in CharacterResolvedFootResult resolved)
         {
             Side = result.Side;
             State = result.State;
@@ -722,13 +725,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetPoint = landing.HasPlantTarget
                 ? landing.PlantTarget.Point
                 : default;
+            PlantTargetNormal = landing.HasPlantTarget
+                ? landing.PlantTarget.Normal
+                : default;
+            PlantTargetTrajectoryGeneration = landing.HasPlantTarget
+                ? landing.PlantTarget.TrajectoryGeneration
+                : 0;
+            PlantTargetFutureBodyTranslationSourceIdentity =
+                landing.HasPlantTarget
+                    ? landing.PlantTarget.FutureBodyTranslationSourceIdentity
+                    : string.Empty;
             PlantTargetUpdated = landing.PlantTargetUpdated;
             PlantVerificationAttempted = landing.PlantVerificationAttempted;
             PlantVerificationUnavailable = landing.PlantVerificationUnavailable;
+            ApproachPlantTargetPrepared = approachPlantTargetPrepared;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
             CharacterFootSwingMotionResult footMotion = result.FootMotion;
             GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
             FootMotion = new CharacterFootSwingMotionDiagnostics(in footMotion);
+            CurrentSupport = new CharacterFootCurrentSupportDiagnostics(
+                in currentSupport);
+            Resolved = new CharacterResolvedFootDiagnostics(
+                in resolved,
+                in sourcePose);
         }
 
         public CharacterFootSide Side { get; }
@@ -771,11 +790,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong PlantTargetEventIdentity { get; }
         public int PlantTargetSurfaceIdentity { get; }
         public Vector3 PlantTargetPoint { get; }
+        public Vector3 PlantTargetNormal { get; }
+        public ulong PlantTargetTrajectoryGeneration { get; }
+        public string PlantTargetFutureBodyTranslationSourceIdentity { get; }
         public bool PlantTargetUpdated { get; }
         public bool PlantVerificationAttempted { get; }
         public bool PlantVerificationUnavailable { get; }
+        public bool ApproachPlantTargetPrepared { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
+        public CharacterFootCurrentSupportDiagnostics CurrentSupport { get; }
+        public CharacterResolvedFootDiagnostics Resolved { get; }
         public bool RawLandingAvailable =>
             RejectReason == CharacterFootLandingPredictionRejectReason.None ||
             RejectReason ==
@@ -807,6 +832,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Distance = step.Distance;
             Phase = step.Events.Phase;
             SwingProgress = step.SwingProgress;
+            ApproachContactToLandingProgress =
+                step.ApproachContactToLandingProgress;
             RootLocalLanding = step.RootLocalLanding;
         }
 
@@ -827,8 +854,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public AnimationFootMotionEventPhase Phase { get; }
         public float SwingProgress { get; }
         public float EventPhase => SwingProgress;
-        public float ApproachContactPhase =>
-            !IsValid ? 0f : InApproachContactToLanding ? SwingProgress : 1f;
+        public float ApproachContactToLandingProgress { get; }
         public float LandingPhase => IsValid ? 1f : 0f;
         public bool AtOrAfterApproachContact =>
             IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
@@ -1087,6 +1113,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ulong frameSequence,
                 ulong completionIdentity,
                 int rootInstanceId,
+                string profileId,
+                string profileRevision,
                 CharacterFootLandingPredictionInputDiagnostics input,
                 in CharacterFootPrimarySupportDiagnostics primarySupport,
                 CharacterFullBodyIkGoal pelvisGoal,
@@ -1097,6 +1125,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 FrameSequence = frameSequence;
                 CompletionIdentity = completionIdentity;
                 RootInstanceId = rootInstanceId;
+                ProfileId = profileId;
+                ProfileRevision = profileRevision;
                 Input = input;
                 PrimarySupport = primarySupport;
                 PelvisGoal = pelvisGoal;
@@ -1108,6 +1138,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal ulong FrameSequence { get; }
             internal ulong CompletionIdentity { get; }
             internal int RootInstanceId { get; }
+            internal string ProfileId { get; }
+            internal string ProfileRevision { get; }
             internal CharacterFootLandingPredictionInputDiagnostics Input { get; }
             internal CharacterFootPrimarySupportDiagnostics PrimarySupport { get; }
             internal CharacterFullBodyIkGoal PelvisGoal { get; }
@@ -1122,6 +1154,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong frameSequence,
             ulong completionIdentity,
             int rootInstanceId,
+            string profileId,
+            string profileRevision,
             CharacterFootLandingPredictionInputDiagnostics input,
             in CharacterFootPrimarySupportDiagnostics primarySupport,
             CharacterFullBodyIkGoal pelvisGoal,
@@ -1133,6 +1167,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frameSequence,
                 completionIdentity,
                 rootInstanceId,
+                profileId,
+                profileRevision,
                 input,
                 in primarySupport,
                 pelvisGoal,
@@ -1144,6 +1180,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong FrameSequence => m_Frame?.FrameSequence ?? 0;
         public ulong CompletionIdentity => m_Frame?.CompletionIdentity ?? 0;
         public int RootInstanceId => m_Frame?.RootInstanceId ?? 0;
+        public string ProfileId => m_Frame?.ProfileId ?? string.Empty;
+        public string ProfileRevision =>
+            m_Frame?.ProfileRevision ?? string.Empty;
         public CharacterFootLandingPredictionInputDiagnostics Input =>
             m_Frame == null ? default : m_Frame.Input;
         public CharacterFootPrimarySupportDiagnostics PrimarySupport =>

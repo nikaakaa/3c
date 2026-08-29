@@ -27,6 +27,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.Contact.HasContact = true;
                     context.Contact.EventIdentity =
                         frame.ContactLanding.LandingEventIdentity;
+                    context.Contact.AcquiredFrameSequence =
+                        frame.FrameSequence;
+                    context.Contact.AcquiredCompletionIdentity =
+                        frame.CompletionIdentity;
+                    context.Contact.WorldRevision = frame.WorldRevision;
                     context.Contact.SurfaceIdentity =
                         frame.ContactLanding.SurfaceIdentity;
                     context.Contact.Anchor = frame.ContactLanding.Point;

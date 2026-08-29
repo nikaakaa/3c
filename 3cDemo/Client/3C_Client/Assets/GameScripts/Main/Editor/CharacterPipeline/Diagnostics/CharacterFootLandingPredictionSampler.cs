@@ -250,13 +250,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPreviousResponseOutputAvailable,FootMotionPreviousResponseOutputPointX,FootMotionPreviousResponseOutputPointY,FootMotionPreviousResponseOutputPointZ," +
             "FootMotionDesiredOutputPointX,FootMotionDesiredOutputPointY,FootMotionDesiredOutputPointZ," +
             "FootMotionResponseOutputPointX,FootMotionResponseOutputPointY,FootMotionResponseOutputPointZ,FootMotionPlantResidualCaptureReason," +
-            "FootMotionPlantWorldResidualBeforeCaptureX,FootMotionPlantWorldResidualBeforeCaptureY,FootMotionPlantWorldResidualBeforeCaptureZ," +
-            "FootMotionPlantWorldResidualCapturedBeforeDecayX,FootMotionPlantWorldResidualCapturedBeforeDecayY,FootMotionPlantWorldResidualCapturedBeforeDecayZ," +
-            "FootMotionPlantWorldResidualDecayApplied,FootMotionPlantWorldResidualBaseHalfLifeSeconds,FootMotionPlantWorldResidualDeadlineHalfLifeAvailable,FootMotionPlantWorldResidualDeadlineHalfLifeSeconds,FootMotionPlantWorldResidualAppliedHalfLifeSeconds," +
-            "FootMotionPlantWorldResidualAfterDecayX,FootMotionPlantWorldResidualAfterDecayY,FootMotionPlantWorldResidualAfterDecayZ," +
-            "FootMotionPlantWorldResidualCompletionTolerance,FootMotionPlantWorldResidualClearedAtCompletionTolerance," +
+            "FootMotionPlantCorrectionResidualBeforeCaptureX,FootMotionPlantCorrectionResidualBeforeCaptureY,FootMotionPlantCorrectionResidualBeforeCaptureZ," +
+            "FootMotionPlantCorrectionResidualCapturedBeforeDecayX,FootMotionPlantCorrectionResidualCapturedBeforeDecayY,FootMotionPlantCorrectionResidualCapturedBeforeDecayZ," +
+            "FootMotionPlantCorrectionResidualDecayApplied,FootMotionPlantCorrectionResidualBaseHalfLifeSeconds,FootMotionPlantCorrectionResidualDeadlineHalfLifeAvailable,FootMotionPlantCorrectionResidualDeadlineHalfLifeSeconds,FootMotionPlantCorrectionResidualAppliedHalfLifeSeconds," +
+            "FootMotionPlantCorrectionResidualAfterDecayX,FootMotionPlantCorrectionResidualAfterDecayY,FootMotionPlantCorrectionResidualAfterDecayZ," +
+            "FootMotionPlantCorrectionResidualCompletionTolerance,FootMotionPlantCorrectionResidualClearedAtCompletionTolerance," +
             "FootMotionCorrectionResponseEvaluated,FootMotionCorrectionResponseInitializedBefore,FootMotionCorrectionResponseInitializedThisFrame,FootMotionCorrectionResponseInitializationReason," +
-            "FootMotionCorrectionResponseDesired,FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
+            "FootMotionCorrectionResponseDesired,FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
             "FootMotionPlantVerticalContinuityOwners," +
             "FootMotionPlantEffectiveCorrectionBeforeX,FootMotionPlantEffectiveCorrectionBeforeY,FootMotionPlantEffectiveCorrectionBeforeZ," +
             "FootMotionPlantEffectiveCorrectionAfterX,FootMotionPlantEffectiveCorrectionAfterY,FootMotionPlantEffectiveCorrectionAfterZ," +
@@ -2224,16 +2224,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.DesiredOutputPoint);
             Add(row, motion.ResponseOutputPoint);
             Add(row, motion.PlantResidualCaptureReason);
-            Add(row, motion.PlantWorldResidualBeforeCapture);
-            Add(row, motion.PlantWorldResidualCapturedBeforeDecay);
-            Add(row, motion.PlantWorldResidualDecayApplied);
-            Add(row, motion.PlantWorldResidualBaseHalfLifeSeconds);
-            Add(row, motion.PlantWorldResidualDeadlineHalfLifeAvailable);
-            Add(row, motion.PlantWorldResidualDeadlineHalfLifeSeconds);
-            Add(row, motion.PlantWorldResidualAppliedHalfLifeSeconds);
-            Add(row, motion.PlantWorldResidualAfterDecay);
-            Add(row, motion.PlantWorldResidualCompletionTolerance);
-            Add(row, motion.PlantWorldResidualClearedAtCompletionTolerance);
+            Add(row, motion.PlantCorrectionResidualBeforeCapture);
+            Add(row, motion.PlantCorrectionResidualCapturedBeforeDecay);
+            Add(row, motion.PlantCorrectionResidualDecayApplied);
+            Add(row, motion.PlantCorrectionResidualBaseHalfLifeSeconds);
+            Add(row, motion.PlantCorrectionResidualDeadlineHalfLifeAvailable);
+            Add(row, motion.PlantCorrectionResidualDeadlineHalfLifeSeconds);
+            Add(row, motion.PlantCorrectionResidualAppliedHalfLifeSeconds);
+            Add(row, motion.PlantCorrectionResidualAfterDecay);
+            Add(row, motion.PlantCorrectionResidualCompletionTolerance);
+            Add(row, motion.PlantCorrectionResidualClearedAtCompletionTolerance);
             Add(row, motion.CorrectionResponseEvaluated);
             Add(row, motion.CorrectionResponseInitializedBefore);
             Add(row, motion.CorrectionResponseInitializedThisFrame);
@@ -2244,8 +2244,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.CorrectionResponseDirectionLimited);
             Add(row, motion.CorrectionResponseMaximumDirectionChangeDegrees);
             Add(row, motion.CorrectionResponseAppliedDirectionChangeDegrees);
-            Add(row, motion.CorrectionResponseVisibleOutputTransferred);
-            Add(row, motion.CorrectionResponseBeforeRebase);
             Add(row, motion.CorrectionResponsePrevious);
             Add(row, motion.CorrectionResponseCurrent);
             Add(row, motion.CorrectionResponseDirection);

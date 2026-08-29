@@ -23,8 +23,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact originalSole;
         public CharacterFootVectorFact previousVisibleOutput;
         public CharacterFootVectorFact previousResponseOutput;
-        public CharacterFootVectorFact capturedBeforeDecay;
-        public CharacterFootVectorFact afterDecay;
+        public CharacterFootVectorFact selectedTargetCorrection;
+        public CharacterFootVectorFact effectiveCorrectionBefore;
+        public CharacterFootVectorFact correctionResidualCapturedBeforeDecay;
+        public CharacterFootVectorFact correctionResidualAfterDecay;
         public CharacterFootVectorFact desiredOutput;
         public CharacterFootVectorFact responseOutput;
         public CharacterFootVectorFact finalOutput;
@@ -183,11 +185,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PlantSelectedWorldTargetStep",
                 "DesiredOutputPointStep",
                 "ResponseOutputPointStep",
-                "PlantWorldResidualCaptureDelta",
-                "PlantWorldResidualCaptureContinuityError",
-                "PlantWorldResidualDecayStep",
-                "PlantWorldResidualAfterDecay",
-                "PlantWorldResidualAppliedHalfLifeSeconds",
+                "PlantCorrectionResidualCaptureDelta",
+                "PlantCorrectionResidualCaptureContinuityError",
+                "PlantCorrectionResidualDecayStep",
+                "PlantCorrectionResidualAfterDecay",
+                "PlantCorrectionResidualAppliedHalfLifeSeconds",
                 "CorrectionResponseDesired",
                 "CorrectionResponsePrevious",
                 "CorrectionResponseCurrent",
@@ -222,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisTarget contactAcquisitionTarget =
                 context.Target(
                     "contact-acquisition-continuity",
-                    "非Idle正式接触建锚首帧，上一可见输出经World Residual与Correction Response接管后是否产生超过2厘米的世界输出步长",
+                    "非Idle正式接触建锚首帧，上一可见输出经Correction Residual与Correction Response接管后是否产生超过2厘米的世界输出步长",
                     new[] { "ContactAcquisitionContinuity" },
                     new[]
                     {
@@ -253,10 +255,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "PreviousResponseOutputToAnchorMeters",
                     "PreviousResponseOutputToAnchorHorizontalMeters",
                     "PreviousResponseOutputToAnchorAlongUpMeters",
-                    "CapturedResidualMeters",
-                    "ResidualAfterDecayMeters",
-                    "ResidualDecayStepMeters",
-                    "ResidualCaptureContinuityErrorMeters",
+                    "SelectedTargetCorrectionMeters",
+                    "SelectedTargetCorrectionHorizontalMeters",
+                    "SelectedTargetCorrectionAlongUpMeters",
+                    "EffectiveCorrectionBeforeMeters",
+                    "EffectiveCorrectionBeforeHorizontalMeters",
+                    "EffectiveCorrectionBeforeAlongUpMeters",
+                    "CorrectionResidualCapturedBeforeDecayMeters",
+                    "CorrectionResidualAfterDecayMeters",
+                    "CorrectionResidualDecayStepMeters",
+                    "CorrectionResidualCaptureErrorMeters",
                     "DesiredToResponseMeters",
                     "DesiredToResponseHorizontalMeters",
                     "DesiredToResponseAlongUpMeters",
@@ -545,13 +553,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value,
                     "plantResidualCaptured"))
             {
-                return "WorldResidualCaptured";
+                return "CorrectionResidualCaptured";
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "plantWorldResidualOwned"))
+                    "plantCorrectionResidualOwned"))
             {
-                return "WorldResidualContinuity";
+                return "CorrectionResidualContinuity";
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
@@ -602,7 +610,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             bool capture = CharacterFootDiagnosisContext.Evidence(
                 value,
-                "captureContinuitySatisfied");
+                "relativeCorrectionCaptureSatisfied");
             bool target = CharacterFootDiagnosisContext.Evidence(
                 value,
                 "anchorMatchesSelectedTarget");

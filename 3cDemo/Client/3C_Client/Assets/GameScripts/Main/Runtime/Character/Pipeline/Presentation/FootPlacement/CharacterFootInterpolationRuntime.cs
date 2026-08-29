@@ -158,7 +158,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 targetAppliedVerticalDelta);
             state.FilteredTargetHeightAlongUp += targetAppliedVerticalDelta;
             CharacterFootPlantTargetHeightUpdateReason targetHeightUpdateReason;
-            if (Mathf.Approximately(targetVerticalDelta, 0f))
+            if (verificationRefresh)
+            {
+                targetHeightUpdateReason = CharacterFootPlantTargetHeightUpdateReason
+                    .VerificationRefresh;
+            }
+            else if (Mathf.Approximately(targetVerticalDelta, 0f))
             {
                 targetHeightUpdateReason = targetHeightInitialized
                     ? CharacterFootPlantTargetHeightUpdateReason.Initialized
@@ -168,11 +173,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 targetHeightUpdateReason =
                     CharacterFootPlantTargetHeightUpdateReason.DirectFollow;
-            }
-            else if (verificationRefresh)
-            {
-                targetHeightUpdateReason = CharacterFootPlantTargetHeightUpdateReason
-                    .VerificationRefresh;
             }
             else if (distanceForceRefresh)
             {

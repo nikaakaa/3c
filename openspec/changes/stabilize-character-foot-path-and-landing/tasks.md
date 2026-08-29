@@ -66,7 +66,7 @@
 
 ## 6. 连续接管Foot Height与Landing/Lock垂直误差
 
-- [ ] 6.1 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选分别使用`0.6m/s`、`0.01m`与`0.01m`
+- [x] 6.1 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选分别使用`0.6m/s`、`0.01m`与`0.01m`
 - [ ] 6.2 删除`AcquireByWeight`进入帧的立即`RaiseToMinimum`和Post Constraint对Envelope/Anchor的可见Correction抬升，确认Effective Correction仍只有唯一Interpolation Owner
 - [ ] 6.3 让唯一Interpolation Runtime在所有Policy写回前按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制Component Up变化，不限制Foot XZ，也不建立第二高度状态或Floor旁路
 - [ ] 6.4 让Post Constraint只测量Envelope/Anchor穿透并发布容差内、Ground Catchup与Full Lock门控；继承的超预算误差连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal

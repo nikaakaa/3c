@@ -182,6 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "GroundPathFirstInvalidSegmentTopX,GroundPathFirstInvalidSegmentTopY,GroundPathFirstInvalidSegmentTopZ," +
             "GroundPathFirstInvalidSegmentVerticalDistance,GroundPathMaximumReachableVerticalEdge,GroundEnvelopeVertexCount," +
             "FootMotionState,FootMotionRejectReason,FootMotionLandingEventIdentity,FootMotionGroundPathInputIdentity," +
+            "FootMotionInterpolationComponentUpX,FootMotionInterpolationComponentUpY,FootMotionInterpolationComponentUpZ," +
             "FootMotionDistance,FootMotionProgress," +
             "FootMotionOriginalSoleX,FootMotionOriginalSoleY,FootMotionOriginalSoleZ," +
             "FootMotionOriginalAnkleX,FootMotionOriginalAnkleY,FootMotionOriginalAnkleZ," +
@@ -1976,6 +1977,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.RejectReason.ToString());
             Add(row, motion.LandingEventIdentity);
             Add(row, motion.GroundPathInputIdentity);
+            Add(row, motion.InterpolationComponentUp);
             Add(row, motion.Distance);
             Add(row, motion.Progress);
             Add(row, motion.OriginalSole);
@@ -1984,7 +1986,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.SourceHeelPosition);
             Add(row, foot.SourceToePosition);
             Add(row, motion.BaselineSample);
-            Vector3 motionUp = ground.ComponentUp.sqrMagnitude > 0.000001f
+            Vector3 motionUp =
+                motion.InterpolationComponentUp.sqrMagnitude > 0.000001f
+                ? motion.InterpolationComponentUp.normalized
+                : default;
+            Vector3 groundPathUp = ground.ComponentUp.sqrMagnitude > 0.000001f
                 ? ground.ComponentUp.normalized
                 : default;
             float originalSoleAlongUp = Vector3.Dot(
@@ -2028,7 +2034,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ResolveActualFootEnvelopeIntersection(
                     in ground,
                     in motion,
-                    motionUp);
+                    groundPathUp);
             CharacterFootSwingPathHorizontalAxisState horizontalAxisState =
                 actualEnvelope.State switch
                 {

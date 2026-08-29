@@ -363,6 +363,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact interpolationOutputCorrection;
         public bool interpolationCompleted;
         public bool plantInterpolationEvaluated;
+        public CharacterFootVectorFact interpolationComponentUp;
         public string plantTargetEventIdentity;
         public bool plantTargetVerified;
         public string plantTargetKind;

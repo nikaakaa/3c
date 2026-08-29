@@ -303,15 +303,15 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 ### Requirement: Current Support必须由Foot/Toe脚掌查询解析唯一位置与法线
 
-每个表现帧 MUST从与Foot Placement相同的`FinalAnimationPoseFrame`和Rig Calibration取得真实Foot、Toe、Heel接触几何、Foot Rotation、Sole Forward、Component Up与脚掌尺寸，并在现有World Query Backend内建立固定容量`CurrentSupportObservation`。所有必需Probe MUST使用Profile正式声明的查询距离、半径、坡度、Layer、自身Collider排除、有限值与World Revision合同；查询形状、Probe布局和Position组合 MUST由项目Backend与Rig Calibration形成typed合同，不得从ZZZ未恢复名字的外部函数猜测Unity重载、硬编码匿名六次常量或复制对象偏移。
+每个表现帧 MUST从与Foot Placement相同的`FinalAnimationPoseFrame`和Rig Calibration取得真实Foot、Toe、Heel接触几何、Foot Rotation、Sole Forward、Sole Right、Component Up与脚掌尺寸，并在现有World Query Backend内建立固定容量`CurrentSupportObservation`。Rig Calibration MUST为每脚显式序列化正数`RearProbeExtension`、`LateralProbeExtent`和`ToeProbeExtension`并纳入Calibration Revision；Corin MUST分别使用`0.03m / 0.04m / 0.01m`。Runtime MUST按固定顺序建立`Base = Heel`、`Rear = Heel - SoleForward × RearProbeExtension`、`PositiveLateral = Heel + SoleRight × LateralProbeExtent`、`NegativeLateral = Heel - SoleRight × LateralProbeExtent`、`Toe = Toe + SoleForward × ToeProbeExtension`五点布局。它只迁移ZZZ已经公式闭合的前五点关系；匿名条件第六点和外部查询typed重载不得实施或命名。五点 MUST使用Profile正式声明的查询距离、半径、坡度、Layer、自身Collider排除、有限值与World Revision合同；Foot尺度不得复用Sphere Radius、Cast距离或另一Profile配置。
 
-每个Probe MUST分别保存Accepted/Rejected/NotExecuted、是否实际执行查询、完整命中记录、距离、Surface identity、World Revision和拒绝原因。任一必需Probe没有合法命中或容量溢出时，Current Support MUST发布typed unavailable；不得用上一结果、Animated Up、单点降级、默认地面或另一脚结果冒充本帧成功。全部必需记录合法时，Runtime MUST在同一事务内解析一个完整XYZ Foot Target Position与一个Requested Support Direction，并为两者分别保留确定的记录lineage。`CharacterFootSupportTarget.Position`在本项目中 MUST明确表示Sole Center，不得因ZZZ匿名Foot writer改名为Ankle。022607使用的`OriginalSole + ComponentUp × max displacement`与同一selected SphereCast raw Normal组合 MUST删除；不得把带Sphere半径偏移的hit point直接当Foot Position，也不得调低Slope阈值、偏好Up或平均多法线规避。Resolved阶段 MUST使用同一Applied Direction生成Final Sole Rotation，并以Rig Calibration按实际Position/Rotation Weight把Sole Center唯一反解为Ankle Goal，对账加权后Heel/Toe中点仍等于加权目标Sole。
+每个Probe MUST分别保存Accepted/Rejected/NotExecuted、是否实际执行查询、完整命中记录、距离、Surface identity、World Revision和拒绝原因。Base与Toe MUST是必需记录；任一必需记录没有合法命中、任一已执行Probe容量溢出或World Revision不一致时，Current Support MUST发布typed unavailable。Rear与两个Lateral MUST始终执行并作为正式候选；NoHit只发布候选缺席，不得读取上一结果、Animated Up、另一点或另一脚结果冒充本帧成功。至少Base与Toe合法时，每个Accepted记录 MUST生成`N = normalize(HitNormal)`、`Translation = N × dot(HitPoint - ProbePosition, N)`与`CandidateSole = OriginalSole + Translation`，再按`dot(CandidateSole, ComponentUp)`选择最高安全候选；等价高度 MUST依次按Surface identity与固定Probe顺序打破平局。最终完整XYZ Position与Requested Support Direction MUST来自同一Selected记录并分别保留记录lineage。`CharacterFootSupportTarget.Position`在本项目中 MUST明确表示Sole Center，不得因ZZZ匿名Foot writer改名为Ankle。022607使用的`OriginalSole + ComponentUp × max displacement`与另一条selected raw Normal组合 MUST删除；不得把带Sphere半径切向偏移的HitPoint直接当Foot Position，也不得调低Slope阈值、偏好Up或平均多法线规避。Resolved阶段 MUST使用同一Applied Direction生成Final Sole Rotation，并以Rig Calibration按实际Position/Rotation Weight把Sole Center唯一反解为Ankle Goal，对账加权后Heel/Toe中点仍等于加权目标Sole。
 
 State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一个完整`CharacterFootSupportTarget`；Target Kind、Position Source与Requested Direction Source MUST显式发布，两路来源 MUST分别保留Event、Path、Frame、Completion与World lineage。Requested Direction MUST归一化后进入唯一Direction History，Applied Direction MUST同时成为Correction Response Direction和Foot Rotation方向。Runtime MUST以动画Sole Forward在Applied Direction平面的有限投影生成同一个Final Sole Rotation，再结合`SoleFrameLocalRotation`生成Ankle Rotation与唯一Foot Goal；投影退化时该脚 MUST typed unavailable，不得使用World Forward、上一Rotation或默认方向。Target Height继续沿Component Up处理，Correction Response标量只沿Applied Direction作用。Position、Rotation、Applied Direction、Goal Weight、分型lineage与Writer MUST属于同一Resolved Foot。当前Final Component Pose已经完成Pose Graph动画混合；没有正式双Support lineage时不得在Foot Placement内补造第二State Blend。Toe MUST没有独立Goal、Direction/Correction History、IK、Writer或Pose后Rotation低通。Pelvis、Primary Support与下游Goal Assembler MUST只消费Resolved Foot Pair，不得读取原始多点命中或执行第二次查询。
 
 #### Scenario: Foot与Toe多点记录跨越台阶边缘
 
-- **WHEN** 同一Current Support事务的必需多点记录同时覆盖不同高度或Surface
+- **WHEN** 同一Current Support事务的五点记录同时覆盖不同高度或Surface
 - **THEN** Runtime MUST按正式Rig/Backend几何合同解析一个完整XYZ Position和一个Requested Direction，并保留各输入记录及选择lineage
 - **AND** MUST不退化为纯Up最大位移、同一selected raw Normal、Slope调参或多法线平均，只写一个Foot Goal
 
@@ -323,7 +323,7 @@ State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一�
 
 #### Scenario: 任一脚掌Probe不可用
 
-- **WHEN** Heel或Toe任一Probe没有合法命中、World Revision不匹配或固定容量溢出，且本帧Selected Target需要Current Support Position或Normal
+- **WHEN** Base或Toe任一必需Probe没有合法命中、任一已执行Probe发生容量溢出、World Revision不匹配，且本帧Selected Target需要Current Support Position或Normal
 - **THEN** Current Support MUST提交本帧Rejected Observation并让该脚发布typed unavailable、零Support Correction与零Foot Goal Position/Rotation Weight，使动画基准保持可见；不得把它误报成Animation Frame或Source失权
 - **AND** Target Height与Swing Residual等不依赖Support Normal的历史 MUST继续推进，Correction Response因本帧没有合法Direction只发布typed未执行并保留原History；不得冻结或回滚整份Foot Lifecycle Context
 - **AND** 已持有Verified/Retained Anchor的Landing、Locked与Releasing MUST继续使用冻结Anchor Target；Rejected Current Support只记录事实，不得释放Anchor、回滚Landing Context或重置Interpolation

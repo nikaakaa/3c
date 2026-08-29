@@ -15,8 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisContext context)
         {
             List<JObject> events = context.Events("LandingObservation");
-            List<JObject> currentSupport = context.Events(
-                "CurrentSupportQuery");
             Func<JObject, List<string>> match = value =>
             {
                 var rules = new List<string>();
@@ -102,110 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 16);
             target.representativeEventCount =
                 target.representativeEvents.Count;
-            CharacterFootDiagnosisTarget currentSupportTarget =
-                context.Target(
-                    "current-support-five-probe-resolution",
-                    "Current Support五点事务是否按固定候选合同解析同一Position与Direction记录",
-                    new[] { "CurrentSupportQuery" },
-                    new[] { "available=false" },
-                    currentSupport,
-                    value => CharacterFootDiagnosisContext.Evidence(
-                                 value,
-                                 "available")
-                        ? new List<string>()
-                        : new List<string> { "available=false" },
-                    value => CharacterFootDiagnosisContext.Metric(
-                        value,
-                        "AvailableSoleCandidateCount"),
-                    "BaseHitCandidateCount",
-                    "RearHitCandidateCount",
-                    "PositiveLateralHitCandidateCount",
-                    "NegativeLateralHitCandidateCount",
-                    "ToeCandidateCount",
-                    "AvailableSoleCandidateCount",
-                    "BaseCandidateHeightAlongUp",
-                    "RearCandidateHeightAlongUp",
-                    "PositiveLateralCandidateHeightAlongUp",
-                    "NegativeLateralCandidateHeightAlongUp",
-                    "ToeCandidateHeightAlongUp",
-                    "RearProbeExtension",
-                    "LateralProbeExtent",
-                    "ToeProbeExtension");
-            currentSupportTarget.scorePolicy = "Informational";
-            currentSupportTarget.categoricalMeasurements =
-                new SortedDictionary<
-                    string,
-                    List<CharacterFootDiagnosisCategoryCount>>(
-                    StringComparer.Ordinal)
-                {
-                    ["SelectedProbe"] = currentSupport
-                        .GroupBy(CurrentSupportSelectedProbe)
-                        .OrderBy(value => value.Key, StringComparer.Ordinal)
-                        .Select(value => new CharacterFootDiagnosisCategoryCount
-                        {
-                            value = value.Key,
-                            count = value.Count()
-                        })
-                        .ToList(),
-                    ["RejectReason"] = currentSupport
-                        .GroupBy(CurrentSupportRejectReason)
-                        .OrderBy(value => value.Key, StringComparer.Ordinal)
-                        .Select(value => new CharacterFootDiagnosisCategoryCount
-                        {
-                            value = value.Key,
-                            count = value.Count()
-                        })
-                        .ToList()
-                };
-            return context.Document(
-                DiagnosticId,
-                target,
-                currentSupportTarget);
-        }
-
-        static string CurrentSupportSelectedProbe(JObject value)
-        {
-            if (!CharacterFootDiagnosisContext.Evidence(value, "available"))
-                return "Unavailable";
-            if (CharacterFootDiagnosisContext.Evidence(value, "selectedBase"))
-                return "Base";
-            if (CharacterFootDiagnosisContext.Evidence(value, "selectedRear"))
-                return "Rear";
-            if (CharacterFootDiagnosisContext.Evidence(
-                    value,
-                    "selectedPositiveLateral"))
-                return "PositiveLateral";
-            if (CharacterFootDiagnosisContext.Evidence(
-                    value,
-                    "selectedNegativeLateral"))
-                return "NegativeLateral";
-            if (CharacterFootDiagnosisContext.Evidence(value, "selectedToe"))
-                return "Toe";
-            return "Invalid";
-        }
-
-        static string CurrentSupportRejectReason(JObject value)
-        {
-            if (CharacterFootDiagnosisContext.Evidence(value, "available"))
-                return "None";
-            string[] reasons =
-            {
-                "BaseUnavailable",
-                "ToeUnavailable",
-                "BaseAndToeUnavailable",
-                "InvalidSupportNormal",
-                "NotGrounded",
-                "WorldRevisionMismatch",
-                "CapacityExceeded"
-            };
-            for (int i = 0; i < reasons.Length; i++)
-            {
-                if (CharacterFootDiagnosisContext.Evidence(
-                        value,
-                        "reject" + reasons[i]))
-                    return reasons[i];
-            }
-            return "Invalid";
+            return context.Document(DiagnosticId, target);
         }
     }
 

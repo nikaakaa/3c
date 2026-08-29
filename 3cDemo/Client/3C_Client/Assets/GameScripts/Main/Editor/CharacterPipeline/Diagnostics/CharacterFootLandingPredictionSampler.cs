@@ -88,7 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string StopMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Stop and Save";
         const string GeometryFileName = "ground-path-geometry.csv";
-        static readonly string Header =
+        const string Header =
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,FootProfileId,FootProfileRevision,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
@@ -242,7 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified,FootMotionPlantTargetKind,FootMotionPlantLockResponse,FootMotionPlantLockWeightCompleted," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
-            "FootMotionSelectedSupportTargetAvailable,FootMotionSelectedSupportTargetFrameSequence,FootMotionSelectedSupportTargetCompletionIdentity,FootMotionSelectedSupportTargetSide,FootMotionSelectedSupportTargetPositionX,FootMotionSelectedSupportTargetPositionY,FootMotionSelectedSupportTargetPositionZ,FootMotionSelectedSupportTargetNormalX,FootMotionSelectedSupportTargetNormalY,FootMotionSelectedSupportTargetNormalZ,FootMotionSelectedSupportTargetSurfaceIdentity,FootMotionSelectedSupportTargetWorldRevision,FootMotionSelectedSupportTargetKind,FootMotionSelectedSupportTargetPositionSource,FootMotionSelectedSupportTargetPositionFrameSequence,FootMotionSelectedSupportTargetPositionCompletionIdentity,FootMotionSelectedSupportTargetPositionEventIdentity,FootMotionSelectedSupportTargetPositionPathIdentity,FootMotionSelectedSupportTargetNormalSource,FootMotionSelectedSupportTargetNormalFrameSequence,FootMotionSelectedSupportTargetNormalCompletionIdentity,FootMotionSelectedSupportTargetNormalEventIdentity,FootMotionSelectedSupportTargetCurrentSupportProbeKind," +
+            "FootMotionSelectedSupportTargetAvailable,FootMotionSelectedSupportTargetFrameSequence,FootMotionSelectedSupportTargetCompletionIdentity,FootMotionSelectedSupportTargetSide,FootMotionSelectedSupportTargetPositionX,FootMotionSelectedSupportTargetPositionY,FootMotionSelectedSupportTargetPositionZ,FootMotionSelectedSupportTargetNormalX,FootMotionSelectedSupportTargetNormalY,FootMotionSelectedSupportTargetNormalZ,FootMotionSelectedSupportTargetSurfaceIdentity,FootMotionSelectedSupportTargetWorldRevision,FootMotionSelectedSupportTargetKind,FootMotionSelectedSupportTargetPositionSource,FootMotionSelectedSupportTargetPositionFrameSequence,FootMotionSelectedSupportTargetPositionCompletionIdentity,FootMotionSelectedSupportTargetPositionEventIdentity,FootMotionSelectedSupportTargetPositionPathIdentity,FootMotionSelectedSupportTargetNormalSource,FootMotionSelectedSupportTargetNormalFrameSequence,FootMotionSelectedSupportTargetNormalCompletionIdentity,FootMotionSelectedSupportTargetNormalEventIdentity," +
             "FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
             "FootMotionPlantTargetHeightBefore,FootMotionPlantTargetHeightTarget,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightAfter,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetHeightUpdateReason,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
             "FootMotionPlantPreviousSelectedWorldTargetX,FootMotionPlantPreviousSelectedWorldTargetY,FootMotionPlantPreviousSelectedWorldTargetZ," +
@@ -262,20 +262,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantEffectiveCorrectionAfterX,FootMotionPlantEffectiveCorrectionAfterY,FootMotionPlantEffectiveCorrectionAfterZ," +
             "FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
             "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason," +
-            CurrentSupportProbeHeader("CurrentSupportBase") +
-            CurrentSupportProbeHeader("CurrentSupportRear") +
-            CurrentSupportProbeHeader("CurrentSupportPositiveLateral") +
-            CurrentSupportProbeHeader("CurrentSupportNegativeLateral") +
-            CurrentSupportProbeHeader("CurrentSupportToe") +
-            CurrentSupportCandidateHeader("CurrentSupportBaseCandidate") +
-            CurrentSupportCandidateHeader("CurrentSupportRearCandidate") +
-            CurrentSupportCandidateHeader("CurrentSupportPositiveLateralCandidate") +
-            CurrentSupportCandidateHeader("CurrentSupportNegativeLateralCandidate") +
-            CurrentSupportCandidateHeader("CurrentSupportToeCandidate") +
-            "CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedDirectionBeforeNormalizationX,CurrentSupportSelectedDirectionBeforeNormalizationY,CurrentSupportSelectedDirectionBeforeNormalizationZ," +
-            "CurrentSupportTargetAvailable,CurrentSupportTargetFrameSequence,CurrentSupportTargetCompletionIdentity,CurrentSupportTargetSide,CurrentSupportTargetPositionX,CurrentSupportTargetPositionY,CurrentSupportTargetPositionZ,CurrentSupportTargetNormalX,CurrentSupportTargetNormalY,CurrentSupportTargetNormalZ,CurrentSupportTargetSurfaceIdentity,CurrentSupportTargetWorldRevision,CurrentSupportTargetKind,CurrentSupportTargetPositionSource,CurrentSupportTargetPositionFrameSequence,CurrentSupportTargetPositionCompletionIdentity,CurrentSupportTargetPositionEventIdentity,CurrentSupportTargetPositionPathIdentity,CurrentSupportTargetNormalSource,CurrentSupportTargetNormalFrameSequence,CurrentSupportTargetNormalCompletionIdentity,CurrentSupportTargetNormalEventIdentity,CurrentSupportTargetCurrentSupportProbeKind," +
+            "CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted," +
+            "CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted," +
+            "CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ," +
+            "CurrentSupportTargetAvailable,CurrentSupportTargetFrameSequence,CurrentSupportTargetCompletionIdentity,CurrentSupportTargetSide,CurrentSupportTargetPositionX,CurrentSupportTargetPositionY,CurrentSupportTargetPositionZ,CurrentSupportTargetNormalX,CurrentSupportTargetNormalY,CurrentSupportTargetNormalZ,CurrentSupportTargetSurfaceIdentity,CurrentSupportTargetWorldRevision,CurrentSupportTargetKind,CurrentSupportTargetPositionSource,CurrentSupportTargetPositionFrameSequence,CurrentSupportTargetPositionCompletionIdentity,CurrentSupportTargetPositionEventIdentity,CurrentSupportTargetPositionPathIdentity,CurrentSupportTargetNormalSource,CurrentSupportTargetNormalFrameSequence,CurrentSupportTargetNormalCompletionIdentity,CurrentSupportTargetNormalEventIdentity," +
             "ResolvedFrameSequence,ResolvedCompletionIdentity,ResolvedRigId,ResolvedRigRevision,ResolvedSide,ResolvedOutcome,ResolvedFinalSoleX,ResolvedFinalSoleY,ResolvedFinalSoleZ,ResolvedEffectiveSoleX,ResolvedEffectiveSoleY,ResolvedEffectiveSoleZ,ResolvedGoalTargetAnkleX,ResolvedGoalTargetAnkleY,ResolvedGoalTargetAnkleZ,ResolvedGoalTargetRotationX,ResolvedGoalTargetRotationY,ResolvedGoalTargetRotationZ,ResolvedGoalTargetRotationW,ResolvedEffectiveAnkleX,ResolvedEffectiveAnkleY,ResolvedEffectiveAnkleZ,ResolvedEffectiveRotationX,ResolvedEffectiveRotationY,ResolvedEffectiveRotationZ,ResolvedEffectiveRotationW,ResolvedEffectiveHeelX,ResolvedEffectiveHeelY,ResolvedEffectiveHeelZ,ResolvedEffectiveToeX,ResolvedEffectiveToeY,ResolvedEffectiveToeZ,ResolvedEffectiveSoleFromContactsX,ResolvedEffectiveSoleFromContactsY,ResolvedEffectiveSoleFromContactsZ,ResolvedSourceSoleForwardX,ResolvedSourceSoleForwardY,ResolvedSourceSoleForwardZ,ResolvedSourceSoleFrameLocalRotationX,ResolvedSourceSoleFrameLocalRotationY,ResolvedSourceSoleFrameLocalRotationZ,ResolvedSourceSoleFrameLocalRotationW,ResolvedGoalTargetCorrectionX,ResolvedGoalTargetCorrectionY,ResolvedGoalTargetCorrectionZ,ResolvedEffectiveSoleCorrectionX,ResolvedEffectiveSoleCorrectionY,ResolvedEffectiveSoleCorrectionZ,ResolvedPositionWeight,ResolvedRotationWeight," +
-            "ResolvedSupportTargetAvailable,ResolvedSupportTargetFrameSequence,ResolvedSupportTargetCompletionIdentity,ResolvedSupportTargetSide,ResolvedSupportTargetPositionX,ResolvedSupportTargetPositionY,ResolvedSupportTargetPositionZ,ResolvedSupportTargetNormalX,ResolvedSupportTargetNormalY,ResolvedSupportTargetNormalZ,ResolvedSupportTargetSurfaceIdentity,ResolvedSupportTargetWorldRevision,ResolvedSupportTargetKind,ResolvedSupportTargetPositionSource,ResolvedSupportTargetPositionFrameSequence,ResolvedSupportTargetPositionCompletionIdentity,ResolvedSupportTargetPositionEventIdentity,ResolvedSupportTargetPositionPathIdentity,ResolvedSupportTargetNormalSource,ResolvedSupportTargetNormalFrameSequence,ResolvedSupportTargetNormalCompletionIdentity,ResolvedSupportTargetNormalEventIdentity,ResolvedSupportTargetCurrentSupportProbeKind," +
+            "ResolvedSupportTargetAvailable,ResolvedSupportTargetFrameSequence,ResolvedSupportTargetCompletionIdentity,ResolvedSupportTargetSide,ResolvedSupportTargetPositionX,ResolvedSupportTargetPositionY,ResolvedSupportTargetPositionZ,ResolvedSupportTargetNormalX,ResolvedSupportTargetNormalY,ResolvedSupportTargetNormalZ,ResolvedSupportTargetSurfaceIdentity,ResolvedSupportTargetWorldRevision,ResolvedSupportTargetKind,ResolvedSupportTargetPositionSource,ResolvedSupportTargetPositionFrameSequence,ResolvedSupportTargetPositionCompletionIdentity,ResolvedSupportTargetPositionEventIdentity,ResolvedSupportTargetPositionPathIdentity,ResolvedSupportTargetNormalSource,ResolvedSupportTargetNormalFrameSequence,ResolvedSupportTargetNormalCompletionIdentity,ResolvedSupportTargetNormalEventIdentity," +
             "ResolvedContactAvailable,ResolvedContactEventIdentity,ResolvedContactPointX,ResolvedContactPointY,ResolvedContactPointZ,ResolvedContactOwnership,ResolvedSupportEligibility,ResolvedSupportWeight,ResolvedSupportIntentWeight,ResolvedSupportHorizontalError,ResolvedSupportEventIdentity,ResolvedPelvisReachAvailable,ResolvedPelvisReachEventIdentity,ResolvedPelvisReachPointX,ResolvedPelvisReachPointY,ResolvedPelvisReachPointZ,ResolvedLandingReachAvailable,ResolvedLandingReachEventIdentity,ResolvedLandingReachHipX,ResolvedLandingReachHipY,ResolvedLandingReachHipZ,ResolvedLandingReachTargetAnkleX,ResolvedLandingReachTargetAnkleY,ResolvedLandingReachTargetAnkleZ,ResolvedLandingReachLegLength,ResolvedLandingReachMinimumCompressionReserve," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
@@ -2791,33 +2783,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, target.NormalFrameSequence);
             Add(row, target.NormalCompletionIdentity);
             Add(row, target.NormalEventIdentity);
-            Add(row, target.CurrentSupportProbeKind.ToString());
         }
-
-        static string CurrentSupportProbeHeader(string prefix) =>
-            prefix + "Purpose," + prefix + "Kind," + prefix + "State," +
-            prefix + "RejectReason," + prefix + "ProbePositionX," +
-            prefix + "ProbePositionY," + prefix + "ProbePositionZ," +
-            prefix + "ComponentUpX," + prefix + "ComponentUpY," +
-            prefix + "ComponentUpZ," + prefix + "OriginX," +
-            prefix + "OriginY," + prefix + "OriginZ," +
-            prefix + "DirectionX," + prefix + "DirectionY," +
-            prefix + "DirectionZ," + prefix + "MaximumDistance," +
-            prefix + "Radius," + prefix + "LayerMask," +
-            prefix + "MinimumGroundNormalDot," + prefix + "HitCapacity," +
-            prefix + "CandidateCount," + prefix + "SurfaceIdentity," +
-            prefix + "PointX," + prefix + "PointY," + prefix + "PointZ," +
-            prefix + "NormalX," + prefix + "NormalY," + prefix + "NormalZ," +
-            prefix + "Distance," + prefix + "WorldRevision," +
-            prefix + "SphereCastExecuted," + prefix + "Accepted,";
-
-        static string CurrentSupportCandidateHeader(string prefix) =>
-            prefix + "Available," + prefix + "Kind," +
-            prefix + "SolePositionX," + prefix + "SolePositionY," +
-            prefix + "SolePositionZ," + prefix + "HeightAlongUp," +
-            prefix + "DirectionX," + prefix + "DirectionY," +
-            prefix + "DirectionZ," + prefix + "SurfaceIdentity," +
-            prefix + "WorldRevision,";
 
         static void AddCurrentSupportProbe(
             StringBuilder row,
@@ -2846,19 +2812,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, probe.Accepted);
         }
 
-        static void AddCurrentSupportCandidate(
-            StringBuilder row,
-            in CharacterFootCurrentSupportCandidateDiagnostics candidate)
-        {
-            Add(row, candidate.Available);
-            Add(row, candidate.Kind.ToString());
-            Add(row, candidate.SolePosition);
-            Add(row, candidate.HeightAlongUp);
-            Add(row, candidate.Direction);
-            Add(row, candidate.SurfaceIdentity);
-            Add(row, candidate.WorldRevision);
-        }
-
         static void AddCurrentSupport(
             StringBuilder row,
             in CharacterFootCurrentSupportDiagnostics support)
@@ -2869,20 +2822,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, support.IsSpecified);
             Add(row, support.Available);
             Add(row, support.RejectReason.ToString());
-            AddCurrentSupportProbe(row, support.Base);
-            AddCurrentSupportProbe(row, support.Rear);
-            AddCurrentSupportProbe(row, support.PositiveLateral);
-            AddCurrentSupportProbe(row, support.NegativeLateral);
+            AddCurrentSupportProbe(row, support.Heel);
             AddCurrentSupportProbe(row, support.Toe);
-            AddCurrentSupportCandidate(row, support.BaseCandidate);
-            AddCurrentSupportCandidate(row, support.RearCandidate);
-            AddCurrentSupportCandidate(row, support.PositiveLateralCandidate);
-            AddCurrentSupportCandidate(row, support.NegativeLateralCandidate);
-            AddCurrentSupportCandidate(row, support.ToeCandidate);
+            Add(row, support.HeelRequiredDisplacement);
+            Add(row, support.ToeRequiredDisplacement);
             Add(row, support.SelectedProbe.ToString());
             Add(row, support.SelectionReason.ToString());
             Add(row, support.SelectionEpsilon);
-            Add(row, support.SelectedDirectionBeforeNormalization);
+            Add(row, support.SelectedSupportNormalBeforeNormalization);
             AddSupportTarget(row, support.Target);
         }
 

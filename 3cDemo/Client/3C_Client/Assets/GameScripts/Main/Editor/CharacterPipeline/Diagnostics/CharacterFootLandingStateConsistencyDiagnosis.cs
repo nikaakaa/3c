@@ -74,6 +74,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "ContactAcquisitionContinuity");
             List<JObject> lockWeightEvents = context.Events(
                 "LockWeightCompletionEvent");
+            List<JObject> approachProgressOwnership = context.Events(
+                "ApproachProgressOwnership");
             CharacterFootDiagnosisTarget releaseTarget = context.Target(
                 "release-flyback",
                 "Releasing阶段是否出现Correction突跳后反向回拉",
@@ -384,6 +386,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         lockWeightEvents,
                         LockWeightCompletionOutcome)
                 };
+            CharacterFootDiagnosisTarget approachOwnershipTarget =
+                context.Target(
+                    "approach-progress-ownership",
+                    "正式Approach Progress推进是否只准备Prediction目标，而未在Contact Verification前取得Plant Position、Normal或Residual所有权；Goal权重变化另行保留待正式输入事实对账",
+                    new[] { "ApproachProgressOwnership" },
+                    new[]
+                    {
+                        "progressMonotonic=false",
+                        "sameEventPlantInterpolation=true",
+                        "sameEventResidualCapture=true",
+                        "approachEventVisiblePositionOwned=true"
+                    },
+                    approachProgressOwnership,
+                    value =>
+                    {
+                        var rules = new List<string>();
+                        if (!CharacterFootDiagnosisContext.Evidence(
+                                value,
+                                "progressMonotonic"))
+                            rules.Add("progressMonotonic=false");
+                        if (CharacterFootDiagnosisContext.Evidence(
+                                value,
+                                "sameEventPlantInterpolation"))
+                            rules.Add("sameEventPlantInterpolation=true");
+                        if (CharacterFootDiagnosisContext.Evidence(
+                                value,
+                                "sameEventResidualCapture"))
+                            rules.Add("sameEventResidualCapture=true");
+                        if (CharacterFootDiagnosisContext.Evidence(
+                                value,
+                                "approachEventVisiblePositionOwned"))
+                            rules.Add(
+                                "approachEventVisiblePositionOwned=true");
+                        return rules;
+                    },
+                    value => CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "FinalEffectiveCorrectionStep"),
+                    "ApproachProgress",
+                    "ApproachProgressDelta",
+                    "PreparedTargetPointStep",
+                    "SelectedTargetPositionStep",
+                    "FinalEffectiveCorrectionStep",
+                    "PositionWeightDelta",
+                    "RotationWeightDelta");
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -544,7 +591,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 handoffTarget,
                 plantTarget,
                 contactAcquisitionTarget,
-                lockWeightTarget);
+                lockWeightTarget,
+                approachOwnershipTarget);
         }
 
         static List<CharacterFootDiagnosisCategoryCount> CategoryCounts(

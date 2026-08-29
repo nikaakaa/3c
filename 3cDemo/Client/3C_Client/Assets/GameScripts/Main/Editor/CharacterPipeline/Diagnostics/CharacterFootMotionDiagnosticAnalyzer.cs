@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/47";
+        const string Schema = "character-foot-motion-facts/48";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 47;
+        const int AnalyzerVersion = 48;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -144,6 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"plantInterpolationJumps={document.coverage.plantInterpolationOutputJumpCount} " +
                 $"contactAcquisitions={document.coverage.contactAcquisitionContinuityCount} " +
                 $"lockWeightEvents={document.coverage.lockWeightCompletionEventCount} " +
+                $"approachOwnership={document.coverage.approachProgressOwnershipCount} " +
                 $"stableSwingCorrectionCadence={document.coverage.stableSwingCorrectionResponseCadenceCount} " +
                 $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
@@ -188,6 +189,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeCurrentSupportQueries(frames, events);
             AnalyzeLandingEvents(frames, events);
             AnalyzeLandingStateConsistency(frames, events);
+            AnalyzeApproachProgressOwnership(frames, events);
             AnalyzeLockWeightCompletionEvents(frames, events);
             AnalyzeSwingToLandingFloorHandoffs(frames, events);
             AnalyzeLockedEvents(frames, events);
@@ -200,6 +202,146 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
+        }
+
+        static void AnalyzeApproachProgressOwnership(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame current = frames[i];
+                if (!current.InputFormalInApproachContactToLanding ||
+                    current.FormalNextLandingEventIdentity == 0)
+                {
+                    continue;
+                }
+                ulong eventIdentity = current.FormalNextLandingEventIdentity;
+                FootFrame previous = i > 0 &&
+                                     Continuous(frames[i - 1], current)
+                    ? frames[i - 1]
+                    : null;
+                bool sameLineage = previous != null &&
+                    previous.InputFormalInApproachContactToLanding &&
+                    previous.FormalNextLandingEventIdentity == eventIdentity &&
+                    previous.SourceIdentity == current.SourceIdentity &&
+                    previous.SourceCycle == current.SourceCycle;
+                float progressDelta = sameLineage
+                    ? current.InputFormalApproachContactToLandingProgress -
+                      previous.InputFormalApproachContactToLandingProgress
+                    : 0f;
+                bool progressMonotonic = !sameLineage ||
+                    progressDelta >= -TimeEpsilon;
+                bool sameEventPlantInterpolation =
+                    current.PlantInterpolationEvaluated &&
+                    current.PlantTargetEventIdentity == eventIdentity;
+                bool sameEventResidualCapture =
+                    sameEventPlantInterpolation &&
+                    current.PlantResidualCaptureReason != "None";
+                bool ordinarySwingDomain =
+                    (current.ConstraintState == "Swing" ||
+                     current.ConstraintState == "UnlockedSupport") &&
+                    current.SelectedSupportTarget.Kind == "SwingGround";
+                bool approachEventVisiblePositionOwned =
+                    ordinarySwingDomain &&
+                    (!current.SelectedSupportTarget.Available ||
+                     current.SelectedSupportTarget.PositionSource !=
+                     "SwingMotion" ||
+                     current.SelectedSupportTarget.NormalSource !=
+                     "CurrentSupport");
+                bool ownershipConsistent = progressMonotonic &&
+                    !sameEventPlantInterpolation &&
+                    !sameEventResidualCapture &&
+                    !approachEventVisiblePositionOwned;
+                bool goalWeightChanged = sameLineage &&
+                    (Math.Abs(
+                         current.MotionPositionWeight -
+                         previous.MotionPositionWeight) > TimeEpsilon ||
+                     Math.Abs(
+                         current.MotionRotationWeight -
+                         previous.MotionRotationWeight) > TimeEpsilon);
+                if (!ownershipConsistent)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Approach progress ownership is inconsistent " +
+                        $"Frame={current.Frame} Side={current.Side} " +
+                        $"Event={eventIdentity} ProgressDelta={progressDelta:R} " +
+                        $"PlantInterpolation={sameEventPlantInterpolation} " +
+                        $"ResidualCapture={sameEventResidualCapture} " +
+                        $"PositionSource={current.SelectedSupportTarget.PositionSource}.");
+                }
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["ApproachProgress"] =
+                        current.InputFormalApproachContactToLandingProgress,
+                    ["ApproachProgressDelta"] = progressDelta,
+                    ["PreparedTargetPointStep"] = sameLineage &&
+                        previous.PreparedTargetAvailable &&
+                        current.PreparedTargetAvailable
+                            ? Vector3.Distance(
+                                previous.PreparedTargetPoint,
+                                current.PreparedTargetPoint)
+                            : 0d,
+                    ["SelectedTargetPositionStep"] = sameLineage &&
+                        previous.SelectedSupportTarget.Available &&
+                        current.SelectedSupportTarget.Available
+                            ? Vector3.Distance(
+                                previous.SelectedSupportTarget.Position,
+                                current.SelectedSupportTarget.Position)
+                            : 0d,
+                    ["FinalEffectiveCorrectionStep"] = sameLineage
+                        ? Vector3.Distance(
+                            previous.FinalEffectiveCorrection,
+                            current.FinalEffectiveCorrection)
+                        : 0d,
+                    ["PositionWeightDelta"] = sameLineage
+                        ? current.MotionPositionWeight -
+                          previous.MotionPositionWeight
+                        : 0d,
+                    ["RotationWeightDelta"] = sameLineage
+                        ? current.MotionRotationWeight -
+                          previous.MotionRotationWeight
+                        : 0d
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["sameLineage"] = sameLineage,
+                    ["progressMonotonic"] = progressMonotonic,
+                    ["progressAdvanced"] = sameLineage &&
+                        progressDelta > TimeEpsilon,
+                    ["preparedTargetAvailable"] =
+                        current.PreparedTargetAvailable,
+                    ["ordinarySwingDomain"] = ordinarySwingDomain,
+                    ["sameEventPlantInterpolation"] =
+                        sameEventPlantInterpolation,
+                    ["sameEventResidualCapture"] =
+                        sameEventResidualCapture,
+                    ["approachEventVisiblePositionOwned"] =
+                        approachEventVisiblePositionOwned,
+                    ["goalWeightChanged"] = goalWeightChanged,
+                    ["goalWeightAttributionAvailable"] = false,
+                    ["selectedPositionFromSwingMotion"] =
+                        current.SelectedSupportTarget.PositionSource ==
+                        "SwingMotion",
+                    ["selectedDirectionFromCurrentSupport"] =
+                        current.SelectedSupportTarget.NormalSource ==
+                        "CurrentSupport"
+                };
+                events.Add(new EventFact(
+                    "ApproachProgressOwnership",
+                    current.Side,
+                    previous?.Frame ?? current.Frame,
+                    current.Frame,
+                    current.Frame,
+                    eventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence));
+            }
         }
 
         static void AnalyzeLockWeightCompletionEvents(
@@ -2412,10 +2554,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Math.Max(0, i - 1),
                     end - Math.Max(0, i - 1) + 1);
                 double correctionStep = MaximumCorrectionStep(window);
+                double originalExtensionPeak = window.Max(
+                    frame => frame.OriginalExtensionRatio);
                 double targetExtensionPeak = window.Max(frame => frame.TargetExtensionRatio);
                 double solvedExtensionPeak = window.Max(frame => frame.SolvedExtensionRatio);
                 double bendMinimum = window.Min(frame => frame.SolvedBendDegrees);
-                double compressionMinimum = window.Min(frame => frame.TargetCompressionReserve);
+                double originalCompressionMinimum = window.Min(
+                    frame => frame.OriginalCompressionReserve);
+                double targetCompressionMinimum = window.Min(
+                    frame => frame.TargetCompressionReserve);
+                double solvedCompressionMinimum = window.Min(
+                    frame => frame.SolvedCompressionReserve);
                 double bendDirectionMinimum = window.Min(frame => frame.BendDirectionPreviousDot);
                 double targetExtensionDelta =
                     targetExtensionPeak - previous.TargetExtensionRatio;
@@ -2438,8 +2587,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new SortedDictionary<string, double>(StringComparer.Ordinal)
                     {
                         ["bendDirectionPreviousDotMinimum"] = bendDirectionMinimum,
-                        ["compressionReserveMinimumMeters"] = compressionMinimum,
+                        ["originalCompressionReserveMinimumMeters"] =
+                            originalCompressionMinimum,
+                        ["targetCompressionReserveMinimumMeters"] =
+                            targetCompressionMinimum,
+                        ["solvedCompressionReserveMinimumMeters"] =
+                            solvedCompressionMinimum,
                         ["correctionStepMaximumMeters"] = correctionStep,
+                        ["originalExtensionRatioPeak"] =
+                            originalExtensionPeak,
                         ["solvedBendDegreesMinimum"] = bendMinimum,
                         ["solvedBendDropDegrees"] = bendDrop,
                         ["solvedExtensionRatioPeak"] = solvedExtensionPeak,
@@ -2473,7 +2629,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["landingReachSupportConflictGapMeters"] =
                             landingReach.supportConflictGapMeters,
                         ["landingReachActualTargetCompressionReserveMeters"] =
-                            landingReach.actualTargetCompressionReserveMeters
+                            landingReach.actualTargetCompressionReserveMeters,
+                        ["landingReachSolvedCompressionReserveMeters"] =
+                            landingReach.solvedCompressionReserveMeters,
+                        ["landingReachRuntimeGoalClampDistanceMeters"] =
+                            landingReach.runtimeGoalClampDistanceMeters
                     },
                     new SortedDictionary<string, bool>(StringComparer.Ordinal)
                     {
@@ -2496,6 +2656,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             landingReach.supportReachAvailable,
                         ["landingReachSupportIntersectionExists"] =
                             landingReach.supportIntersectionExists,
+                        ["landingReachRuntimeEvaluated"] =
+                            landingReach.runtimeReachEvaluated,
+                        ["landingReachRuntimeAvailable"] =
+                            landingReach.runtimeReachAvailable,
+                        ["landingReachRuntimeGoalClamped"] =
+                            landingReach.runtimeGoalClamped,
+                        ["landingReachResolvedRequestAvailable"] =
+                            landingReach.resolvedReachRequestAvailable,
                         ["landingReachNoSupportLandingOnly"] =
                             landingReach.classification ==
                             "NoSupportLandingOnly",
@@ -4566,6 +4734,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     lockWeightCompletionEventCount = events.Count(
                         value => value.kind ==
                                  "LockWeightCompletionEvent"),
+                    approachProgressOwnershipCount = events.Count(
+                        value => value.kind ==
+                                 "ApproachProgressOwnership"),
                     stableSwingCorrectionResponseCadenceCount = events.Count(
                         value => value.kind ==
                                  "StableSwingCorrectionResponseCadence"),
@@ -5959,16 +6130,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FinalToe = Vector("FinalPhysicalToeWorld"),
                 HasAnchor = Ulong("FootMotionLandingEventIdentity") != 0 &&
                             Cell("FootMotionConstraintState") != "Swing",
+                OriginalExtensionRatio =
+                    Float("FinalIkLegOriginalExtensionRatio"),
                 TargetExtensionRatio = Float("FinalIkLegTargetExtensionRatio"),
                 SolvedExtensionRatio = Float("FinalIkLegSolvedExtensionRatio"),
                 SolvedBendDegrees = Float("FinalIkLegSolvedBendDegrees"),
-                TargetCompressionReserve = Float("FinalIkLegTargetCompressionReserve"),
+                OriginalCompressionReserve =
+                    Float("FinalIkLegOriginalCompressionReserve"),
+                TargetCompressionReserve =
+                    Float("FinalIkLegTargetCompressionReserve"),
+                SolvedCompressionReserve =
+                    Float("FinalIkLegSolvedCompressionReserve"),
                 BendDirectionPreviousDot = Float("FinalIkLegEffectiveBendDirectionPreviousDot"),
                 FinalIkLegAvailable = Int("FinalIkLegAvailable") != 0,
                 FinalIkLegOriginalHip = Vector("FinalIkLegOriginalHip"),
                 FinalIkLegOriginalKnee = Vector("FinalIkLegOriginalKnee"),
                 FinalIkLegOriginalAnkle = Vector("FinalIkLegOriginalAnkle"),
                 FinalIkLegTargetAnkle = Vector("FinalIkLegTargetAnkle"),
+                FinalIkLegSolvedHip = Vector("FinalIkLegSolvedHip"),
+                FinalIkLegSolvedKnee = Vector("FinalIkLegSolvedKnee"),
+                FinalIkLegSolvedAnkle = Vector("FinalIkLegSolvedAnkle"),
                 PrimarySupportAvailable =
                     Int("PrimarySupportHasValue") != 0,
                 PrimarySupportSide = Cell("PrimarySupportSide"),
@@ -6108,6 +6289,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequirePreparedAndSelectedTarget(frame);
             RequireCorrectionResponseDirectionHistory(frame);
             RequireResolvedFoot(frame);
+            RequireLegReachFacts(frame);
             if (!float.IsFinite(frame.LandingReachGoalClampDistance) ||
                 frame.LandingReachGoalClampDistance < 0f ||
                 frame.LandingReachGoalClamped !=
@@ -7803,6 +7985,103 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void RequireLegReachFacts(FootFrame frame)
+        {
+            if (!frame.FinalIkLegAvailable)
+                return;
+            double legLength = Vector3.Distance(
+                                   frame.FinalIkLegOriginalHip,
+                                   frame.FinalIkLegOriginalKnee) +
+                               Vector3.Distance(
+                                   frame.FinalIkLegOriginalKnee,
+                                   frame.FinalIkLegOriginalAnkle);
+            if (!double.IsFinite(legLength) || legLength <= TimeEpsilon)
+            {
+                throw new InvalidDataException(
+                    "Foot Motion leg length facts are invalid.");
+            }
+            double originalLength = Vector3.Distance(
+                frame.FinalIkLegOriginalHip,
+                frame.FinalIkLegOriginalAnkle);
+            double targetLength = Vector3.Distance(
+                frame.FinalIkLegOriginalHip,
+                frame.FinalIkLegTargetAnkle);
+            double solvedLegLength = Vector3.Distance(
+                                         frame.FinalIkLegSolvedHip,
+                                         frame.FinalIkLegSolvedKnee) +
+                                     Vector3.Distance(
+                                         frame.FinalIkLegSolvedKnee,
+                                         frame.FinalIkLegSolvedAnkle);
+            double solvedLength = Vector3.Distance(
+                frame.FinalIkLegSolvedHip,
+                frame.FinalIkLegSolvedAnkle);
+            bool consistent =
+                float.IsFinite(frame.OriginalExtensionRatio) &&
+                float.IsFinite(frame.TargetExtensionRatio) &&
+                float.IsFinite(frame.SolvedExtensionRatio) &&
+                float.IsFinite(frame.OriginalCompressionReserve) &&
+                float.IsFinite(frame.TargetCompressionReserve) &&
+                float.IsFinite(frame.SolvedCompressionReserve) &&
+                Math.Abs(solvedLegLength - legLength) <=
+                    PositionNoiseFloor &&
+                Math.Abs(
+                    frame.OriginalExtensionRatio -
+                    originalLength / legLength) <= PositionNoiseFloor &&
+                Math.Abs(
+                    frame.TargetExtensionRatio -
+                    targetLength / legLength) <= PositionNoiseFloor &&
+                Math.Abs(
+                    frame.SolvedExtensionRatio -
+                    solvedLength / legLength) <= PositionNoiseFloor &&
+                Math.Abs(
+                    frame.OriginalCompressionReserve -
+                    (legLength - originalLength)) <= PositionNoiseFloor &&
+                Math.Abs(
+                    frame.TargetCompressionReserve -
+                    (legLength - targetLength)) <= PositionNoiseFloor &&
+                Math.Abs(
+                    frame.SolvedCompressionReserve -
+                    (legLength - solvedLength)) <= PositionNoiseFloor;
+            if (!consistent)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion leg extension and compression facts are inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
+            bool resolvedReachConsistent =
+                float.IsFinite(frame.ResolvedLandingReachLegLength) &&
+                float.IsFinite(
+                    frame.ResolvedLandingReachMinimumCompressionReserve) &&
+                frame.ResolvedLandingReachLegLength >= 0f &&
+                frame.ResolvedLandingReachMinimumCompressionReserve >= 0f &&
+                (!frame.ResolvedLandingReachAvailable ||
+                 frame.ResolvedLandingReachEventIdentity != 0 &&
+                 FiniteVector(frame.ResolvedLandingReachHip) &&
+                 FiniteVector(frame.ResolvedLandingReachTargetAnkle) &&
+                 frame.ResolvedLandingReachLegLength > TimeEpsilon &&
+                 frame.ResolvedLandingReachMinimumCompressionReserve <
+                 frame.ResolvedLandingReachLegLength &&
+                 Math.Abs(
+                     frame.ResolvedLandingReachLegLength - legLength) <=
+                 PositionNoiseFloor) &&
+                (!frame.LandingReachEvaluated ||
+                 frame.ResolvedLandingReachAvailable) &&
+                (!frame.LandingReachGoalClamped ||
+                 frame.LandingReachEvaluated &&
+                 !frame.LandingReachAvailable) &&
+                (!frame.StrideSupportReachAvailable ||
+                 float.IsFinite(frame.StrideSupportReachMinimumAlongUp) &&
+                 float.IsFinite(frame.StrideSupportReachMaximumAlongUp) &&
+                 frame.StrideSupportReachMinimumAlongUp <=
+                 frame.StrideSupportReachMaximumAlongUp);
+            if (!resolvedReachConsistent)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Landing Reach request and interval facts are inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
+        }
+
         static void RequireStepPhase(
             StepCandidateFrame step,
             string field)
@@ -8250,8 +8529,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FinalIkLegOriginalAnkleZ",
                 "FinalIkLegTargetAnkleX", "FinalIkLegTargetAnkleY",
                 "FinalIkLegTargetAnkleZ",
-                "FinalIkLegTargetExtensionRatio", "FinalIkLegSolvedExtensionRatio",
-                "FinalIkLegSolvedBendDegrees", "FinalIkLegTargetCompressionReserve",
+                "FinalIkLegSolvedHipX", "FinalIkLegSolvedHipY",
+                "FinalIkLegSolvedHipZ", "FinalIkLegSolvedKneeX",
+                "FinalIkLegSolvedKneeY", "FinalIkLegSolvedKneeZ",
+                "FinalIkLegSolvedAnkleX", "FinalIkLegSolvedAnkleY",
+                "FinalIkLegSolvedAnkleZ",
+                "FinalIkLegOriginalExtensionRatio", "FinalIkLegTargetExtensionRatio", "FinalIkLegSolvedExtensionRatio",
+                "FinalIkLegSolvedBendDegrees", "FinalIkLegOriginalCompressionReserve", "FinalIkLegTargetCompressionReserve", "FinalIkLegSolvedCompressionReserve",
                 "FinalIkLegEffectiveBendDirectionPreviousDot",
                 "PrimarySupportHasValue", "PrimarySupportSide",
                 "PrimarySupportLandingEventIdentity",
@@ -9151,16 +9435,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 (ConstraintState == "Landing" || ConstraintState == "Locked") &&
                 PenetrationAvailability ==
                 CharacterFootContactPlanePenetrationAvailability.Available.ToString();
+            internal float OriginalExtensionRatio;
             internal float TargetExtensionRatio;
             internal float SolvedExtensionRatio;
             internal float SolvedBendDegrees;
+            internal float OriginalCompressionReserve;
             internal float TargetCompressionReserve;
+            internal float SolvedCompressionReserve;
             internal float BendDirectionPreviousDot;
             internal bool FinalIkLegAvailable;
             internal Vector3 FinalIkLegOriginalHip;
             internal Vector3 FinalIkLegOriginalKnee;
             internal Vector3 FinalIkLegOriginalAnkle;
             internal Vector3 FinalIkLegTargetAnkle;
+            internal Vector3 FinalIkLegSolvedHip;
+            internal Vector3 FinalIkLegSolvedKnee;
+            internal Vector3 FinalIkLegSolvedAnkle;
             internal bool PrimarySupportAvailable;
             internal string PrimarySupportSide;
             internal ulong PrimarySupportEventIdentity;
@@ -9215,7 +9505,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public double minimumCorrectionMeters;
             public double signedCorrectionAlongUpMeters;
             public string correctionDirection;
+            public double originalExtensionRatio;
+            public double targetExtensionRatio;
+            public double solvedExtensionRatio;
+            public double originalCompressionReserveMeters;
             public double actualTargetCompressionReserveMeters;
+            public double solvedCompressionReserveMeters;
+            public bool runtimeReachEvaluated;
+            public bool runtimeReachAvailable;
+            public bool runtimeGoalClamped;
+            public double runtimeGoalClampDistanceMeters;
+            public bool resolvedReachRequestAvailable;
+            public string resolvedReachEventIdentity;
+            public double resolvedReachLegLengthMeters;
+            public double resolvedReachMinimumCompressionReserveMeters;
             public bool primarySupportAvailable;
             public string primarySupportSide;
             public string primarySupportLandingEventIdentity;
@@ -9253,8 +9556,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ScalarVector3Fact.From(
                             frame.FinalIkLegOriginalHip),
                     strideSpringOutputMeters = frame.StrideSpringOutput,
+                    originalExtensionRatio = frame.OriginalExtensionRatio,
+                    targetExtensionRatio = frame.TargetExtensionRatio,
+                    solvedExtensionRatio = frame.SolvedExtensionRatio,
+                    originalCompressionReserveMeters =
+                        frame.OriginalCompressionReserve,
                     actualTargetCompressionReserveMeters =
                         frame.TargetCompressionReserve,
+                    solvedCompressionReserveMeters =
+                        frame.SolvedCompressionReserve,
+                    runtimeReachEvaluated = frame.LandingReachEvaluated,
+                    runtimeReachAvailable = frame.LandingReachAvailable,
+                    runtimeGoalClamped = frame.LandingReachGoalClamped,
+                    runtimeGoalClampDistanceMeters =
+                        frame.LandingReachGoalClampDistance,
+                    resolvedReachRequestAvailable =
+                        frame.ResolvedLandingReachAvailable,
+                    resolvedReachEventIdentity =
+                        frame.ResolvedLandingReachEventIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    resolvedReachLegLengthMeters =
+                        frame.ResolvedLandingReachLegLength,
+                    resolvedReachMinimumCompressionReserveMeters =
+                        frame.ResolvedLandingReachMinimumCompressionReserve,
                     primarySupportAvailable =
                         frame.PrimarySupportAvailable,
                     primarySupportSide = frame.PrimarySupportSide,
@@ -9828,6 +10152,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int plantInterpolationOutputJumpCount;
             public int contactAcquisitionContinuityCount;
             public int lockWeightCompletionEventCount;
+            public int approachProgressOwnershipCount;
             public int stableSwingCorrectionResponseCadenceCount;
             public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;

@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootDiagnosisPublisher
     {
-        const string FactsSchema = "character-foot-motion-facts/28";
+        const string FactsSchema = "character-foot-motion-facts/29";
         static readonly ICharacterFootDiagnosis[] s_Diagnoses =
         {
             new CharacterFootLandingLegExtensionDiagnosis(),

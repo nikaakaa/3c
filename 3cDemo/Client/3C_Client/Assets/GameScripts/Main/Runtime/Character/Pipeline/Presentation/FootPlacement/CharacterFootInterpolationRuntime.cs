@@ -101,14 +101,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.HasPlantTarget = true;
                 state.PlantTargetEventIdentity =
                     target.PlantTargetEventIdentity;
-                state.PlantFilteredPoint =
-                    originalSole + state.EffectiveCorrection;
+                if (!state.HasTargetHeight ||
+                    state.TargetHeightEventIdentity !=
+                    target.PlantTargetEventIdentity)
+                {
+                    state.HasTargetHeight = true;
+                    state.TargetHeightEventIdentity =
+                        target.PlantTargetEventIdentity;
+                    state.FilteredTargetHeightAlongUp = Vector3.Dot(
+                        originalSole + state.EffectiveCorrection,
+                        up);
+                }
                 state.PlantBlendWeight = 0f;
                 state.PlantResponseTransitionActive = false;
             }
-            Vector3 targetDelta =
-                target.PlantTargetPoint - state.PlantFilteredPoint;
-            float targetVerticalDelta = Vector3.Dot(targetDelta, up);
+            float desiredTargetHeightAlongUp = Vector3.Dot(
+                target.PlantTargetPoint,
+                up);
+            float targetVerticalDelta = desiredTargetHeightAlongUp -
+                                        state.FilteredTargetHeightAlongUp;
             float maximumTargetDelta =
                 frame.Settings.MaximumVerticalTargetSpeed *
                 frame.DeltaSeconds;
@@ -121,9 +132,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool targetVerticalClamped = !Mathf.Approximately(
                 targetVerticalDelta,
                 targetAppliedVerticalDelta);
-            state.PlantFilteredPoint +=
-                Vector3.ProjectOnPlane(targetDelta, up) +
-                up * targetAppliedVerticalDelta;
+            state.FilteredTargetHeightAlongUp += targetAppliedVerticalDelta;
+            state.PlantFilteredPoint = Vector3.ProjectOnPlane(
+                target.PlantTargetPoint,
+                up) + up * state.FilteredTargetHeightAlongUp;
             state.PlantDesiredPoint = target.PlantTargetPoint;
             state.PlantBlendWeight = Mathf.Max(
                 state.PlantBlendWeight,
@@ -285,6 +297,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool pathAvailableBefore = state.HasSwingPath;
             ulong previousLandingEventIdentity =
                 state.SwingLandingEventIdentity;
+            ulong previousGroundPathInputIdentity =
+                state.SwingGroundPathInputIdentity;
             Vector3 previousLandingPoint = state.SwingLandingPoint;
             Vector3 previousTargetCorrection =
                 state.PreviousSwingTargetCorrection;
@@ -302,58 +316,100 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
             float originalSoleHeight = Vector3.Dot(originalSole, up);
-            bool sameHeightTarget = hasPath &&
-                                    state.HasSwingTargetHeight &&
-                                    state.SwingTargetHeightEventIdentity ==
-                                    swing.LandingEventIdentity;
-            float filteredTargetHeightBefore =
-                state.SwingFilteredTargetHeightAlongUp;
-            if (hasPath && !sameHeightTarget)
-            {
-                state.HasSwingTargetHeight = true;
-                state.SwingTargetHeightEventIdentity =
-                    swing.LandingEventIdentity;
-                state.SwingFilteredTargetHeightAlongUp =
-                    originalSoleHeight +
-                    Vector3.Dot(state.EffectiveCorrection, up);
-            }
-            if (hasPath)
-            {
-                filteredTargetHeightBefore =
-                    state.SwingFilteredTargetHeightAlongUp;
-                float targetHeightDelta =
-                    swing.FormalTargetHeightAlongUp -
-                    state.SwingFilteredTargetHeightAlongUp;
-                float maximumHeightDelta = ResolveVerticalHistoryDelta(
-                    frame.DeltaSeconds,
-                    frame.Settings.MaximumVerticalTargetSpeed);
-                float appliedHeightDelta = Mathf.Clamp(
-                    targetHeightDelta,
-                    -maximumHeightDelta,
-                    maximumHeightDelta);
-                state.SwingFilteredTargetHeightAlongUp += appliedHeightDelta;
-            }
-            else
-            {
-                state.HasSwingTargetHeight = false;
-                state.SwingTargetHeightEventIdentity = 0;
-                state.SwingFilteredTargetHeightAlongUp = 0f;
-            }
-            Vector3 swingTargetCorrection = hasPath
-                ? up * Mathf.Max(
-                    0f,
-                    state.SwingFilteredTargetHeightAlongUp -
-                    originalSoleHeight)
-                : default;
+            float rawTargetHeightAlongUp = hasPath
+                ? swing.FormalTargetHeightAlongUp
+                : 0f;
+            float rawTargetCorrectionAlongUp = hasPath
+                ? Mathf.Max(0f, rawTargetHeightAlongUp - originalSoleHeight)
+                : 0f;
             float landingPointDelta = comparablePath
                 ? Vector3.Distance(
                     previousLandingPoint,
                     swingPath.LandingPoint)
                 : 0f;
+            float landingHeightDelta = comparablePath
+                ? Mathf.Abs(Vector3.Dot(
+                    swingPath.LandingPoint - previousLandingPoint,
+                    up))
+                : 0f;
+            bool sameEvent = comparablePath &&
+                             previousLandingEventIdentity ==
+                             swing.LandingEventIdentity;
+            bool groundPathInputChanged = sameEvent &&
+                                          previousGroundPathInputIdentity !=
+                                          swing.GroundPathInputIdentity;
+            bool sameHeightTarget = hasPath &&
+                                    state.HasTargetHeight &&
+                                    state.TargetHeightEventIdentity ==
+                                    swing.LandingEventIdentity;
+            float filteredTargetHeightBefore =
+                state.FilteredTargetHeightAlongUp;
+            bool targetCorrectionRateLimited = false;
+            bool targetCorrectionClamped = false;
+            if (hasPath && !sameHeightTarget)
+            {
+                state.HasTargetHeight = true;
+                state.TargetHeightEventIdentity =
+                    swing.LandingEventIdentity;
+                state.FilteredTargetHeightAlongUp =
+                    rawTargetHeightAlongUp;
+                state.TargetHeightRetargetActive = false;
+            }
+            if (hasPath)
+            {
+                filteredTargetHeightBefore =
+                    state.FilteredTargetHeightAlongUp;
+                float targetHeightDelta = rawTargetHeightAlongUp -
+                                          state.FilteredTargetHeightAlongUp;
+                bool retargetRequested = groundPathInputChanged &&
+                                         landingHeightDelta >
+                                         frame.Settings.PathRevisionDistance;
+                if (retargetRequested)
+                    state.TargetHeightRetargetActive = true;
+                float maximumHeightDelta = ResolveVerticalHistoryDelta(
+                    frame.DeltaSeconds,
+                    frame.Settings.MaximumVerticalTargetSpeed);
+                if (state.TargetHeightRetargetActive)
+                {
+                    targetCorrectionRateLimited = true;
+                    float appliedHeightDelta = Mathf.Clamp(
+                        targetHeightDelta,
+                        -maximumHeightDelta,
+                        maximumHeightDelta);
+                    targetCorrectionClamped = !Mathf.Approximately(
+                        targetHeightDelta,
+                        appliedHeightDelta);
+                    state.FilteredTargetHeightAlongUp += appliedHeightDelta;
+                    if (Mathf.Approximately(
+                            targetHeightDelta,
+                            appliedHeightDelta))
+                    {
+                        state.TargetHeightRetargetActive = false;
+                    }
+                }
+                else
+                {
+                    state.FilteredTargetHeightAlongUp =
+                        rawTargetHeightAlongUp;
+                }
+            }
+            else if (state.Policy ==
+                     CharacterFootInterpolationPolicy.SwingResidual)
+            {
+                state.HasTargetHeight = false;
+                state.TargetHeightEventIdentity = 0;
+                state.FilteredTargetHeightAlongUp = 0f;
+                state.TargetHeightRetargetActive = false;
+            }
+            Vector3 swingTargetCorrection = hasPath
+                ? up * Mathf.Max(
+                    0f,
+                    state.FilteredTargetHeightAlongUp - originalSoleHeight)
+                : default;
             float targetDelta = comparablePath
                 ? Vector3.Distance(
                     previousTargetCorrection,
-                    swingTargetCorrection)
+                    up * rawTargetCorrectionAlongUp)
                 : 0f;
             CharacterFootPathRevisionReason revisionReason =
                 CharacterFootPathRevisionReason.None;
@@ -376,7 +432,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             bool revised = revisionReason !=
                            CharacterFootPathRevisionReason.None;
-            bool targetTrackingApplied = comparablePath &&
+            bool targetTrackingApplied = groundPathInputChanged &&
                 targetDelta > frame.Settings.PathRevisionDistance;
             if (revised || targetTrackingApplied)
             {
@@ -387,6 +443,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.HasSwingPath = hasPath;
             state.SwingLandingEventIdentity = hasPath
                 ? swing.LandingEventIdentity
+                : 0;
+            state.SwingGroundPathInputIdentity = hasPath
+                ? swing.GroundPathInputIdentity
                 : 0;
             state.SwingLandingPoint = hasPath
                 ? swingPath.LandingPoint
@@ -442,23 +501,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 deadlineHalfLifeAvailable,
                 deadlineHalfLifeSeconds,
                 halfLifeSeconds,
-                hasPath ? swing.FormalTargetHeightAlongUp : 0f,
+                hasPath ? rawTargetHeightAlongUp : 0f,
                 hasPath ? filteredTargetHeightBefore : 0f,
                 hasPath
-                    ? swing.FormalTargetHeightAlongUp -
-                      filteredTargetHeightBefore
+                    ? rawTargetHeightAlongUp - filteredTargetHeightBefore
                     : 0f,
                 hasPath
-                    ? state.SwingFilteredTargetHeightAlongUp -
+                    ? state.FilteredTargetHeightAlongUp -
                       filteredTargetHeightBefore
                     : 0f,
-                hasPath && !Mathf.Approximately(
-                    swing.FormalTargetHeightAlongUp -
-                    filteredTargetHeightBefore,
-                    state.SwingFilteredTargetHeightAlongUp -
-                    filteredTargetHeightBefore),
+                hasPath && targetCorrectionRateLimited,
+                hasPath && targetCorrectionClamped,
                 frame.Settings.MaximumVerticalTargetSpeed,
-                hasPath ? state.SwingFilteredTargetHeightAlongUp : 0f);
+                hasPath
+                    ? state.FilteredTargetHeightAlongUp
+                    : 0f);
             return new CharacterFootInterpolationResult(
                 swingCorrection,
                 false,

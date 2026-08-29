@@ -120,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float swingFilteredTargetHeightBefore,
             float swingTargetHeightDelta,
             float swingTargetHeightAppliedDelta,
+            bool swingTargetHeightRateLimited,
             bool swingTargetHeightClamped,
             float swingTargetMaximumVerticalSpeed,
             float swingFilteredTargetHeightAlongUp)
@@ -153,6 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 swingFilteredTargetHeightBefore;
             SwingTargetHeightDelta = swingTargetHeightDelta;
             SwingTargetHeightAppliedDelta = swingTargetHeightAppliedDelta;
+            SwingTargetHeightRateLimited = swingTargetHeightRateLimited;
             SwingTargetHeightClamped = swingTargetHeightClamped;
             SwingTargetMaximumVerticalSpeed =
                 swingTargetMaximumVerticalSpeed;
@@ -261,6 +263,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingTargetHeightDelta = source.SwingTargetHeightDelta;
             SwingTargetHeightAppliedDelta =
                 source.SwingTargetHeightAppliedDelta;
+            SwingTargetHeightRateLimited =
+                source.SwingTargetHeightRateLimited;
             SwingTargetHeightClamped = source.SwingTargetHeightClamped;
             SwingTargetMaximumVerticalSpeed =
                 source.SwingTargetMaximumVerticalSpeed;
@@ -351,6 +355,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SwingFilteredTargetHeightBefore { get; }
         internal float SwingTargetHeightDelta { get; }
         internal float SwingTargetHeightAppliedDelta { get; }
+        internal bool SwingTargetHeightRateLimited { get; }
         internal bool SwingTargetHeightClamped { get; }
         internal float SwingTargetMaximumVerticalSpeed { get; }
         internal float SwingFilteredTargetHeightAlongUp { get; }
@@ -477,6 +482,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 0f,
                 0f,
+                false,
                 false,
                 settings.MaximumVerticalTargetSpeed,
                 0f);
@@ -852,14 +858,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasOutput;
         internal bool HasSwingPath;
         internal ulong SwingLandingEventIdentity;
+        internal ulong SwingGroundPathInputIdentity;
         internal Vector3 SwingLandingPoint;
         internal Vector3 PreviousTargetCorrection;
         internal Vector3 PreviousSwingTargetCorrection;
         internal Vector3 EffectiveCorrection;
         internal Vector3 SwingResidual;
-        internal bool HasSwingTargetHeight;
-        internal ulong SwingTargetHeightEventIdentity;
-        internal float SwingFilteredTargetHeightAlongUp;
+        internal bool HasTargetHeight;
+        internal ulong TargetHeightEventIdentity;
+        internal float FilteredTargetHeightAlongUp;
+        internal bool TargetHeightRetargetActive;
         internal Vector3 Residual;
         internal float Progress;
         internal float StartResidual;

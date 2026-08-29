@@ -395,17 +395,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         context.Contact.EventIdentity,
                         context.Contact.Anchor)
                     : default;
+            bool constrainedContactReach = hasContact &&
+                                           (context.Discrete.State ==
+                                                CharacterFootConstraintState.Landing ||
+                                            context.Discrete.State ==
+                                                CharacterFootConstraintState.Locked ||
+                                            context.Discrete.State ==
+                                                CharacterFootConstraintState.Releasing);
+            bool predictedLandingReach =
+                (context.Discrete.State ==
+                     CharacterFootConstraintState.Swing ||
+                 context.Discrete.State ==
+                     CharacterFootConstraintState.UnlockedSupport) &&
+                swing.Accepted;
             bool landingReachRequested = positionWeight >
                                          CharacterFootConstraintMath
                                              .GeometryEpsilon &&
-                                         (context.Discrete.State ==
-                                              CharacterFootConstraintState.Landing ||
-                                          (context.Discrete.State ==
-                                               CharacterFootConstraintState.Swing ||
-                                           context.Discrete.State ==
-                                               CharacterFootConstraintState
-                                                   .UnlockedSupport) &&
-                                          swing.Accepted);
+                                         (constrainedContactReach ||
+                                          predictedLandingReach);
             var landingReachRequest = landingReachRequested
                 ? new CharacterFootLandingReachRequest(
                     landingEventIdentity,

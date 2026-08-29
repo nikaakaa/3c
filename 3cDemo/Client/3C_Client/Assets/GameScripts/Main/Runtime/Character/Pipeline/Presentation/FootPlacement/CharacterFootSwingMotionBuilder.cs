@@ -421,13 +421,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualDeadlineHalfLifeAvailable = path.DeadlineHalfLifeAvailable;
             ResidualDeadlineHalfLifeSeconds = path.DeadlineHalfLifeSeconds;
             ResidualAppliedHalfLifeSeconds = path.AppliedHalfLifeSeconds;
-            SwingRawTargetHeightAlongUp =
-                path.SwingRawTargetHeightAlongUp;
+            SwingRawTargetHeightAlongUp = path.SwingRawTargetHeightAlongUp;
             SwingFilteredTargetHeightBefore =
                 path.SwingFilteredTargetHeightBefore;
             SwingTargetHeightDelta = path.SwingTargetHeightDelta;
             SwingTargetHeightAppliedDelta =
                 path.SwingTargetHeightAppliedDelta;
+            SwingTargetHeightRateLimited =
+                path.SwingTargetHeightRateLimited;
             SwingTargetHeightClamped = path.SwingTargetHeightClamped;
             SwingTargetMaximumVerticalSpeed =
                 path.SwingTargetMaximumVerticalSpeed;
@@ -553,6 +554,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SwingFilteredTargetHeightBefore { get; }
         public float SwingTargetHeightDelta { get; }
         public float SwingTargetHeightAppliedDelta { get; }
+        public bool SwingTargetHeightRateLimited { get; }
         public bool SwingTargetHeightClamped { get; }
         public float SwingTargetMaximumVerticalSpeed { get; }
         public float SwingFilteredTargetHeightAlongUp { get; }

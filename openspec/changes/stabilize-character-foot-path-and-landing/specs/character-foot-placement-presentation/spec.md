@@ -2,15 +2,15 @@
 
 ### Requirement: Landing Prediction必须形成独立世界事实
 
-每只脚 MUST按`正式Foot Motion Step Event -> committed Body Target世界速度 + Timeline段边界/Continuation -> 根Bank共享Prediction Motion State -> KCC Future Body Translation -> Raw Landing -> Future Landing SphereCast -> Accepted/Rejected Observation -> Landing Tracking/Commit`执行。Step Event MUST携带同Source、Cycle、Side与ordinal的稳定Landing Event identity，并使用正式Step Time作为预测时域、正式Step Distance作为相邻同脚Event与RootLocalLanding水平步长一致性证据。
+每只脚 MUST按`正式Foot Motion Step Event -> committed Body Target世界速度 + 移动计划段边界/Continuation -> 根Bank共享Prediction Motion State -> KCC Future Body Translation -> Raw Landing -> Future Landing SphereCast -> Accepted/Rejected Observation -> Landing Tracking/Commit`执行。Step Event MUST携带同Source、Cycle、Side与ordinal的稳定Landing Event identity，并使用正式Step Time作为预测时域、正式Step Distance作为相邻同脚Event与RootLocalLanding水平步长一致性证据。
 
 Raw Landing MUST继续按`VisiblePosition + FutureBodyTranslation + VisibleRotation * RootLocalLanding`从本帧输入重新投影。Step Distance MUST不替代committed Body世界速度、Future Body Translation或世界地形；RootLocalLanding MUST只乘本帧Visible Rotation，不外推Future Body Yaw。
 
-Foot根Bank MUST为每个Actor保存一份左右脚共享的Prediction Motion State，状态至少包含稳定当前速度、稳定Continuation速度、初始化事实、Timeline Generation、Body Reset Sequence与Prediction Source identity。Runtime MUST对当前与Continuation世界速度分别应用Profile显式`PredictionVelocityDeltaThreshold`、`PredictionVelocitySmoothSpeed`与`PredictionMaximumSpeed`：速度差未超过阈值时保持稳定速度，超过时按Presentation Delta执行有界EMA响应，并把结果限制在最大预测速度内。三个配置 MUST为有限正值、进入Profile Revision且由正式Corin Profile显式序列化；缺失或非法时 MUST发布typed invalid，不得使用代码默认值、旧配置或普通/预测回退路径。
+Foot根Bank MUST为每个Actor保存一份左右脚共享的Prediction Motion State，状态至少包含稳定当前速度、稳定Continuation速度、初始化事实、移动计划Generation、Body Reset Sequence与Prediction Source identity。Runtime MUST对当前与Continuation世界速度分别应用Profile显式`PredictionVelocityDeltaThreshold`、`PredictionVelocitySmoothSpeed`与`PredictionMaximumSpeed`：速度差未超过阈值时保持稳定速度，超过时按Presentation Delta执行有界EMA响应，并把结果限制在最大预测速度内。三个配置 MUST为有限正值、进入Profile Revision且由正式Corin Profile显式序列化；缺失或非法时 MUST发布typed unavailable，不得使用代码默认值、旧配置或普通/预测回退路径。
 
-committed Body Target当前速度、committed Timeline Continuation、Presentation Delta和所有中间Prediction量 MUST通过有限值与lineage校验后才能推进Prediction Motion State。`Timeline.CurrentVelocity` MUST只作为计划对照诊断，不得替换KCC Future Body Translation的当前运动起点。输入非法时，Runtime MUST使当前Pending Foot事务失败并保持上一Committed Prediction状态不变，不得把NaN/Inf、错误Generation或部分更新结果送入EMA，也不得把上一输出改名为本帧成功结果。合法但幅度或方向急变的正式速度 MUST进入同一阈值/EMA/上限控制，不得由未经验证的PIK相对突变公式静默丢弃。
+committed Body Target当前速度、committed移动计划Continuation、Presentation Delta和所有中间Prediction量 MUST通过有限值与lineage校验后才能推进Prediction Motion State。移动计划Current Velocity MUST只作为计划对照诊断，不得替换KCC Future Body Translation的当前运动起点。输入非法或停止边界没有移动计划时，Runtime MUST发布typed unavailable、保持上一Committed Prediction状态不变且不得生成本帧Future Translation；不得把NaN/Inf、错误Generation或部分更新结果送入EMA，也不得把上一输出改名为本帧成功结果。Foot Placement MUST不把缺失移动计划猜成零速度或建立普通/预测Fallback；显式静止移动计划的生产侧生命周期不属于本change。合法但幅度或方向急变的正式速度 MUST进入同一阈值/EMA/上限控制，不得由未经验证的PIK相对突变公式静默丢弃。
 
-首次合法输入 MUST直接以正式速度初始化Prediction Motion State。Body Reset、Retarget、Timeline Generation变化或Prediction Source变化 MUST清空状态；普通Landing Event、Animation Source、左右脚Step或Source Sample变化 MUST不重置角色级稳定速度。唯一KCC Future Body Translation MUST消费稳定当前/Continuation速度并在同一Pending Workspace内服务左右脚；Prediction State与Workspace MUST使用根Bank预分配的固定布局，不得在表现帧热路径创建Trajectory对象、临时Sample数组或托管集合。Runtime MUST不复制KCC、在KCC结果后平滑世界位置或创建第二Trajectory Source。
+首次合法输入 MUST直接以正式速度初始化Prediction Motion State。Body Reset、Retarget、移动计划Generation变化或Prediction Source变化 MUST清空状态；普通Landing Event、Animation Source、左右脚Step或Source Sample变化 MUST不重置角色级稳定速度。唯一KCC Future Body Translation MUST消费稳定当前/Continuation速度并在同一Pending Workspace内服务左右脚；Prediction State与Workspace MUST使用根Bank预分配的固定布局，不得在表现帧热路径创建Trajectory对象、临时Sample数组或托管集合。Runtime MUST不复制KCC、在KCC结果后平滑世界位置或创建第二Trajectory Source。
 
 Runtime MUST把上次真实查询使用的Side、Landing Event、Source Sample identity、Source Cycle、按1毫米量化的Raw Landing、按`1e-4`量化的Component Up、Profile Revision与非零World Revision保存在Committed Observation Page中。Landing处于Tracking时，除正式`Sliding`接触准入或强制lineage变化外，当前Raw Landing Candidate相对该查询快照的世界位移累计不超过Profile显式`PredictionInputAccumulationDistance`且Component Up夹角不超过`ComponentUpChangeAngleDegrees`时，Runtime MUST复用根事务已提交的不可变Accepted或Rejected Observation，不得更新查询快照或执行SphereCast。距离阈值 MUST为正且不得超过SphereCast半径。
 
@@ -26,21 +26,21 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 
 #### Scenario: 高角速度下稳定Prediction速度
 
-- **WHEN** 同一Timeline Generation内角色急转导致相邻表现帧的committed Body Target当前速度或Timeline Continuation方向大幅变化
+- **WHEN** 同一移动计划Generation内角色急转导致相邻表现帧的committed Body Target当前速度或移动计划Continuation方向大幅变化
 - **THEN** 根Bank MUST先按正式阈值、EMA响应和最大速度更新共享Prediction Motion State，再用稳定速度生成唯一KCC Future Body Translation
 - **AND** 左右脚 MUST读取同一Workspace在各自正式Step Time的Sample，不得各自滤波或直接使用瞬时世界速度建立第二轨迹
 
 #### Scenario: Prediction Motion状态重置
 
-- **WHEN** Body Reset、Retarget、Timeline Generation或Prediction Source发生正式变化
+- **WHEN** Body Reset、Retarget、移动计划Generation或Prediction Source发生正式变化
 - **THEN** Runtime MUST清空旧稳定速度并以新lineage首个合法正式速度重新初始化
 - **AND** MUST不把另一Generation、Source或被Discard帧的速度历史带入新Prediction
 
-#### Scenario: Prediction输入非法
+#### Scenario: Prediction输入非法或移动计划缺失
 
-- **WHEN** committed Body Target当前速度、Timeline Continuation、Presentation Delta或Prediction lineage缺失、非有限或不匹配
-- **THEN** 当前Pending Foot事务 MUST失败且上一Committed Prediction Motion State MUST保持不变
-- **AND** Runtime MUST不执行部分EMA、不发布伪Stable速度或把上一帧结果标记为本帧成功
+- **WHEN** committed Body Target当前速度、移动计划Continuation、Presentation Delta或Prediction lineage缺失、非有限或不匹配
+- **THEN** 当前Prediction MUST发布typed unavailable、上一Committed Prediction Motion State MUST保持不变且本帧 MUST没有Future Translation
+- **AND** Runtime MUST不执行部分EMA、不发布伪Stable速度、把上一帧结果标记为本帧成功或在Foot Placement内补零
 
 #### Scenario: 预测输入累计变化未超过阈值
 
@@ -136,21 +136,23 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 
 ### Requirement: Foot Lifecycle必须生成唯一权威结果
 
-每只脚 MUST在同一根事务内按固定顺序执行`不可变输入与Observation -> Pre-Interpolation Transition -> State Target -> Interpolation -> Post-Interpolation Transition -> Hard Constraint -> Resolved Foot`。这些阶段 MUST每帧各执行一次，并只发布一份离散State、一份Effective Correction和一个Resolved Foot。
+每只脚 MUST在同一根事务内按固定顺序执行`不可变输入与Observation -> Pre-Interpolation Transition -> State Target -> Interpolation -> Post-Interpolation Transition -> Post Constraint -> Resolved Foot`。这些阶段 MUST每帧各执行一次，并只发布一份离散State、一份Effective Correction和一个Resolved Foot。
 
 顶层离散State MUST继续只包含`Swing / UnlockedSupport / Landing / Locked / Releasing`，不得增加Rebound、Blocked、Grounded或第二套状态枚举。根Bank内部 MUST为每脚保存唯一typed Contact Transition Context，至少包含上一Committed正式Lock请求、距最近Contact边沿的秒数、最近Contact Event identity和最近释放Contact Event identity。Contact Rising、Contact Falling与Same-Event Reentry Refresh MUST只作为本帧Transition事实或Reason发布，不得成为新的顶层State、Anchor Owner或Interpolation Owner。
 
 唯一typed `CharacterFootTransitionResolver` MUST只读取正式Foot Motion Frame、不可变Ground Observation、上一Committed离散State和当前阶段事实，并发布不可变Transition Decision。唯一Transition Runtime MUST应用Decision中的State与Anchor命令；Resolver和Runtime MUST不推进Residual、计算State Target、查询世界或写Goal。Pre与Post阶段允许的Transition边、优先级和输入集合 MUST固定且可编译校验。允许边固定为`Swing -> Landing | UnlockedSupport`、`UnlockedSupport -> Landing | Swing`、`Landing -> Locked | Releasing`、`Locked -> Releasing`、`Releasing -> Landing | Swing`；其中`Releasing -> Landing`只能由同Event Reentry Refresh在Pre阶段触发，`Releasing -> Swing`只能由Interpolation Completion在Post阶段触发。
 
-纯`CharacterFootStateTargetResolver` MUST按Transition后的离散State生成Correction Target、Contact Reference、Goal与Ownership目标及typed Interpolation Policy Request。Swing与UnlockedSupport的Target MUST只使用正式Ground Path、Envelope与Foot Height；Releasing MUST只回到原始Swing Target。Resolver MUST不保存跨帧时间状态、不推进Residual、不改写State、不得执行World Query，也不得执行Hard Constraint。
+纯`CharacterFootStateTargetResolver` MUST按Transition后的离散State生成Correction Target、Contact Reference、Goal与Ownership目标及typed Interpolation Policy Request。Swing与UnlockedSupport的Target MUST只使用正式Ground Path、Envelope与Foot Height；Landing与Locked MUST只使用冻结的同Event Contact Anchor；Releasing MUST只回到原始Swing Target。Resolver MUST不保存跨帧时间状态、不推进Residual、不改写State、不得执行World Query，也不得执行Post Constraint。
 
-唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。Residual大于`SwingResidualTolerance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Releasing完成 MUST只读取独立`ReleaseCompletionTolerance`。Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
+唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。所有Policy写回Effective Correction前 MUST把Component Up变化限制到Profile显式`MaximumVerticalCorrectionSpeed × Presentation Delta`；`AcquireByWeight`进入帧不得立即`RaiseToMinimum`，正式Weight达到1时也不得清除尚未收敛的Residual。Residual大于`SwingResidualTolerance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Releasing完成 MUST只读取独立`ReleaseCompletionTolerance`。Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
 
-Ground Path Envelope和Reach MUST在Interpolation之后作为Hard Constraint执行。Swing Hard Constraint MUST复用本帧Accepted Swing Motion已经采样的同一Envelope Point与Path identity，不得执行Raycast、SphereCast或读取另一Surface；只有连续输出低于Envelope时 MAY立即Clamp。Hard Constraint MUST不修改State Target、不触发Residual Revision，也不得写回Interpolation历史；它 MAY限制已知不可达Goal，但 MUST不反向修改State、Transition Decision或Target。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
+Ground Path Envelope、Contact Anchor与Reach MUST在Interpolation之后由唯一Post Constraint消费。Ground部分 MUST复用本帧Accepted Swing Motion已经采样的同一Envelope Point或冻结的同Event Anchor，不得执行Raycast、SphereCast或读取另一Surface；它 MUST只测量穿透、分类`GroundPenetrationTolerance`内外并发布Ground Catchup与Full Lock门控，不得立即Clamp、修改Effective Correction、触发Residual Revision或写回Interpolation历史。某次交接继承的超预算穿透 MUST继续受同一竖直速率限制并向可信目标收敛，期间 MUST禁止Full Lock。Reach部分 MAY硬夹紧已知不可达Goal，但 MUST不反向修改State、Transition Decision、Target或Residual。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
+
+`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance` MUST为有限正值、由Corin Profile显式序列化并进入Profile Revision，不得使用代码默认值或复用Landing接受、Path Revision、Swing Residual、Release完成与Lock准入距离。Corin首个Replay候选分别使用`0.6m/s`、`0.01m`与`0.01m`，后续只可按同一1044帧诊断调整正式资产值，不得硬编码。
 
 Swing Target MUST只使用Last Landing、Next Landing、Runtime Ground Envelope与正式Foot Height。Accepted Swing Motion MUST携带同Ground Path Event的typed Swing Path Landing Reference；Promoted Contact Landing MUST只服务Contact与Anchor。Path Residual Revision MUST只由Event、可用性或Accepted Landing端点变化触发；Ground Path identity单独变化和同一Path内的Phase目标推进 MUST不发布Path Revision。正式Swing目标的有效变化 MAY通过独立typed Target Tracking事实连续接管，但 MUST不伪装成Path Residual重建。Diagnostics MUST分别发布原始Builder Swing Target、State Target、Path Revision与Target Tracking，不得互相改名覆盖。
 
-Landing Anchor MUST在正式Contact有效、同Event Lock Mode首次从Unlocked进入Sliding或Locked、Committed Landing合法且该Event没有Active或Retained Anchor时由唯一Transition Runtime建立。正式Lock Weight MUST通过Interpolation Policy Request渐进接管Anchor。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing、记录Contact Falling与最近释放Event并继续Retain原Anchor；只有Releasing完成进入Swing后该Event才闭合并清除Anchor。完成帧 MUST先应用Post-Interpolation Transition，再按新State执行Ground Path Envelope Hard Constraint和最终输出分类，不得重跑State Target或Interpolation。
+Landing Anchor MUST在正式Contact有效、同Event Lock Mode首次从Unlocked进入Sliding或Locked、Committed Landing合法且该Event没有Active或Retained Anchor时由唯一Transition Runtime建立。正式Lock Weight MUST通过Interpolation Policy Request渐进接管Anchor。Landing MUST只有在Lock Weight完成、Effective Correction与Anchor目标距离不超过`LandingLockCompletionTolerance`、Ground穿透不超过`GroundPenetrationTolerance`且Reach允许时才进入Locked；未满足时必须保留Landing和同一Anchor继续连续追赶，不得把Weight完成当成瞬移许可。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing、记录Contact Falling与最近释放Event并继续Retain原Anchor；只有Releasing完成进入Swing后该Event才闭合并清除Anchor。完成帧 MUST先应用Post-Interpolation Transition，再按新State执行Post Constraint和最终输出分类，不得重跑State Target或Interpolation。
 
 Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保留、Committed Landing、Lock距离和Reach继续合法时，Resolver MUST发布typed `SameEventContactReentryRefresh`并在Pre-Interpolation阶段执行`Releasing -> Landing`。Transition Runtime MUST只Retain原Anchor，State Target MUST立即重新计算同Anchor目标，Interpolation Runtime MUST从当前Effective Correction连续接管；系统 MUST不创建Anchor、不执行Landing Query、不移动Committed Landing，也不得把Interpolation清零。Release已经完成或Anchor已经清除时，旧Event MUST不复活；不同Event即使紧接上一Contact边沿也 MUST按自己的Committed Landing正常准入。Contact Transition Context MUST只由唯一Transition Runtime随根Pending Bank更新；Pending失败或Discard MUST保持上一Committed边沿历史不变。迁移完成后全部阶段 MUST不读取旧PlantConfidence、PlantCycleConsumed布尔或旧Constraint Weight决定Landing、Lock与Release。
 
@@ -158,7 +160,7 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保�
 
 - **WHEN** 同一Swing Event的Landing或Envelope Target发生正式Revision
 - **THEN** State Target Resolver MUST发布新Target，Interpolation Runtime MUST从上一Effective Correction连续接管并按Step Time在SwingResidualTolerance内收敛
-- **AND** 只有同一Accepted Ground Path Envelope高于连续输出时 Hard Constraint MAY立即向上Clamp并发布Safety Floor事实
+- **AND** Post Constraint MUST只记录同一Accepted Ground Path的穿透与追赶事实，不得绕过Interpolation向上Clamp
 
 #### Scenario: 旧Contact Event与新Swing Event同帧交接
 
@@ -170,7 +172,7 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保�
 
 - **WHEN** 同Event Lock Mode从Unlocked进入Sliding且Lock Weight从0连续增加
 - **THEN** Transition Runtime MUST建立一次Anchor，State Target MUST发布Anchor目标，Interpolation Runtime MUST按Weight连续接管
-- **AND** MUST不新增固定Duration、第二Landing状态、第二Anchor或状态私有Residual
+- **AND** Weight完成后仍 MUST等待位置与穿透容差满足才进入Locked，不得新增固定Duration、第二Landing状态、第二Anchor或状态私有Residual
 
 #### Scenario: Releasing期间同Event Contact重新请求Lock
 
@@ -199,8 +201,8 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保�
 #### Scenario: Releasing完成进入Swing
 
 - **WHEN** Post-Interpolation Transition判定Releasing完成且当前帧具有合法Swing Envelope
-- **THEN** Transition Runtime MUST在同帧应用Swing，随后按新State执行Ground Path Envelope Hard Constraint和最终输出分类
-- **AND** 发布为Swing的Corrected Sole MUST不因旧Releasing顺序留在真实地面安全高度下方
+- **THEN** Transition Runtime MUST在同帧应用Swing，随后按新State执行Ground穿透测量和最终输出分类
+- **AND** 发布为Swing的Corrected Sole MUST继续受同一竖直速率限制；容差外误差必须发布Ground Catchup并连续减小，不得同帧抬升
 
 ### Requirement: Resolved Foot必须形成紧凑下游合同
 
@@ -258,25 +260,25 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Anchor与连续接管事实、Raw Body Target当前速度、Raw Timeline Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Reason、Landing Tracking/Committed状态、Commit Frame/Reason、晚期Candidate忽略原因、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Hard Constraint前后Correction、Encoded Goal、Residual基础与截止HalfLife、Ground Path Envelope Clamp与clearance、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Reason、Landing Tracking/Committed状态、Commit Frame/Reason、晚期Candidate忽略原因、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Component Up Correction变化、速率上限与是否限速、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 
-#### Scenario: Path Revision产生Ground Path Envelope Clamp
+#### Scenario: Path Revision产生Ground Catchup
 
-- **WHEN** Accepted Ground Path Envelope的最低安全Correction高于连续Swing输出
-- **THEN** 诊断 MUST记录Path identity、Envelope Point、Clamp前后Correction和Safety Floor clearance
-- **AND** MUST区分普通目标跟随与真实地面安全抬升
+- **WHEN** Accepted Ground Path Envelope高于连续Swing输出
+- **THEN** 诊断 MUST记录Path identity、Envelope Point、穿透深度、正式容差、限速前后Correction和预计追赶时间
+- **AND** MUST区分容差内轻微穿透、容差外连续追赶与Reach硬夹紧，不得记录不存在的同帧Safety Floor抬升
 
 #### Scenario: Prediction速度稳定阻止晚期Landing甩动
 
 - **WHEN** committed世界速度方向单帧大幅变化但Event、RootLocalLanding与正式Step lineage保持一致
 - **THEN** 诊断 MUST并列记录Raw/Stable速度、KCC Future Translation、Raw Landing、Tracking/Committed状态与最终Landing消费结果
-- **AND** MUST能区分Prediction输入断点、Observation换代、Landing提交、Interpolation响应和Hard Constraint抬升
+- **AND** MUST能区分Prediction输入断点、Observation换代、Landing提交、Interpolation响应、竖直限速和Ground Catchup
 
 #### Scenario: Correction在Path后继阶段被放大
 
-- **WHEN** Raw Landing、Path Target或State Target只有小幅单帧变化，但后继Interpolation Output、Hard Constraint Output或Encoded Goal产生明显更大的Correction变化
+- **WHEN** Raw Landing、Path Target或State Target只有小幅单帧变化，但后继Interpolation Output、Post Constraint Output或Encoded Goal产生明显更大的Correction变化
 - **THEN** 诊断 MUST定位第一个产生不连续或放大的阶段并记录其直接输入、输出和所有权状态
 - **AND** Runtime MUST不把该现象归类为Step Time截止欠账或通过缩短Residual HalfLife隐藏
 

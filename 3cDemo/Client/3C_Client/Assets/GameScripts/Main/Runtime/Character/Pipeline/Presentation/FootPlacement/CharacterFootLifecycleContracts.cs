@@ -735,6 +735,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void Clear() => this = default;
     }
 
+    internal readonly struct CharacterFootSupportIntent
+    {
+        internal CharacterFootSupportIntent(
+            bool available,
+            ulong eventIdentity,
+            float weight)
+        {
+            Available = available;
+            EventIdentity = eventIdentity;
+            Weight = weight;
+        }
+
+        internal bool Available { get; }
+        internal ulong EventIdentity { get; }
+        internal float Weight { get; }
+    }
+
     internal readonly struct CharacterFootPlantInterpolationFact
     {
         internal CharacterFootPlantInterpolationFact(
@@ -814,6 +831,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantDesiredPoint;
         internal Vector3 PlantFilteredPoint;
         internal float PlantBlendWeight;
+        internal bool PlantResponseTransitionActive;
         internal CharacterFootPlantInterpolationFact PlantFact;
     }
 
@@ -843,6 +861,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGroundPathLanding preparedPlantTarget,
             float preparedPlantWeight,
             in CharacterFootLockRequest lockRequest,
+            float formalSupport,
+            ulong formalSupportEventIdentity,
             bool hardOwnershipLoss,
             float footPlacementWeight,
             Vector3 componentUp,
@@ -861,6 +881,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreparedPlantTarget = preparedPlantTarget;
             PreparedPlantWeight = preparedPlantWeight;
             LockRequest = lockRequest;
+            FormalSupport = formalSupport;
+            FormalSupportEventIdentity = formalSupportEventIdentity;
             HardOwnershipLoss = hardOwnershipLoss;
             FootPlacementWeight = footPlacementWeight;
             ComponentUp = componentUp;
@@ -880,6 +902,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
         internal float PreparedPlantWeight { get; }
         internal CharacterFootLockRequest LockRequest { get; }
+        internal float FormalSupport { get; }
+        internal ulong FormalSupportEventIdentity { get; }
         internal bool HardOwnershipLoss { get; }
         internal float FootPlacementWeight { get; }
         internal Vector3 ComponentUp { get; }
@@ -955,9 +979,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 plantTargetPoint,
             bool stateEntered,
             bool responseEntered,
+            bool directPlantFollow,
             bool suppressOutput,
             float progress,
-            float timeToLandingSeconds)
+            float timeToLandingSeconds,
+            in CharacterFootSupportIntent supportIntent)
         {
             Correction = correction;
             SwingCorrection = swingCorrection;
@@ -968,9 +994,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetPoint = plantTargetPoint;
             StateEntered = stateEntered;
             ResponseEntered = responseEntered;
+            DirectPlantFollow = directPlantFollow;
             SuppressOutput = suppressOutput;
             Progress = progress;
             TimeToLandingSeconds = timeToLandingSeconds;
+            SupportIntent = supportIntent;
         }
 
         internal Vector3 Correction { get; }
@@ -982,9 +1010,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantTargetPoint { get; }
         internal bool StateEntered { get; }
         internal bool ResponseEntered { get; }
+        internal bool DirectPlantFollow { get; }
         internal bool SuppressOutput { get; }
         internal float Progress { get; }
         internal float TimeToLandingSeconds { get; }
+        internal CharacterFootSupportIntent SupportIntent { get; }
     }
 
     internal readonly struct CharacterFootInterpolationResult

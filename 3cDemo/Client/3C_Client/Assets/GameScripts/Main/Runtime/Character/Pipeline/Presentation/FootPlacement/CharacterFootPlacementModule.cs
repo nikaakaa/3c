@@ -446,7 +446,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftPreparedPlantTarget,
                 leftPreparedPlantWeight,
                 in leftLockRequest,
-                IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction),
+                leftCurrentStep.Support,
+                leftLockRequest.EventIdentity,
+                IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction) ||
+                !leftCurrentStep.IsAuthoritative,
                 footPlacementWeight,
                 componentUp,
                 frame.PresentationDeltaSeconds,
@@ -464,7 +467,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightPreparedPlantTarget,
                 rightPreparedPlantWeight,
                 in rightLockRequest,
-                IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction),
+                rightCurrentStep.Support,
+                rightLockRequest.EventIdentity,
+                IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction) ||
+                !rightCurrentStep.IsAuthoritative,
                 footPlacementWeight,
                 componentUp,
                 frame.PresentationDeltaSeconds,

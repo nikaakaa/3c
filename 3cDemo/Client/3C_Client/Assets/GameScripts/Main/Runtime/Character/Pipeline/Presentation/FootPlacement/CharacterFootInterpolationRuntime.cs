@@ -30,7 +30,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return new CharacterFootInterpolationResult(
                     default,
                     false,
-                    default,
+                    CharacterFootPathContinuityFact.CreateUnevaluated(
+                        target.TimeToLandingSeconds,
+                        frame.Settings),
                     default);
             }
             if (!state.HasOutput)

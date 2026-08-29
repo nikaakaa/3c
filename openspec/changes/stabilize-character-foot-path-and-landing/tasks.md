@@ -10,7 +10,7 @@
 - [ ] 2.2 让选中Live Animation Source按同Contribution、Cycle、Normalized Time和Completion采样左右正式Foot Motion Sample
 - [ ] 2.3 把唯一typed Foot Motion Frame接入Foot Placement Pose Input，并严格校验Source与Contribution lineage
 - [ ] 2.4 对缺失、重复、旧binding、Event不一致和非有限值发布typed invalid，不读取旧Artifact或默认值补全
-- [ ] 2.5 让稳定Landing Event table正式保存PreSwing、Swing、Approach Contact与Landing边界，并由同Source/Cycle/Side/ordinal的Runtime Frame发布`InApproachContactToLanding`供Landing Commit消费
+- [ ] 2.5 让稳定Landing Event table正式保存PreSwing、Swing、Approach Contact与Landing边界，并由同Source/Cycle/Side/ordinal的Runtime Frame发布`InApproachContactToLanding`供Plant目标准备消费
 
 ## 3. 收口Path换代与Floor顺序
 
@@ -29,11 +29,11 @@
 - [x] 3.13 为Corin显式配置5厘米预测输入累计距离与1度Component Up变化阈值，阈值内复用Committed Observation，并在正式Sliding接触准入输入变化时刷新观测
 - [x] 3.14 让PreSwing与Swing消费同一Accepted Swing Motion和Ground Envelope，消除进入Swing首帧才补Path的Correction跳变
 - [x] 3.15 在Tracking阶段让新查询的Surface变化只无条件换代NextSwingLanding，不得覆盖Current Contact Anchor或受LandingAcceptanceDistance保留
-- [x] 3.16 把现有Landing Context收敛为`Empty / Tracking / Committed`所有权，Promotion只作为Current Contact Event的当帧输出事实，不建立第二状态机
-- [x] 3.17 用正式`ApproachContactToLanding`把同Event最新Accepted NextSwingLanding提交为Committed，并禁止后续普通Prediction查询、换点、切Surface或重建Ground Path
+- [ ] 3.16 把现有Landing Context收敛为可并存的`NextSwing Empty/Tracking`与`Verified LastLanding`两个typed槽位，Prediction Landing与真实Plant Landing分权但不建立第二状态机
+- [ ] 3.17 让正式`ApproachContactToLanding`保持同Event Prediction Tracking与Ground Path目标更新，并把该阶段作为统一Interpolation的Plant目标准备区；不得在实际Contact Rising前冻结世界落点
 - [x] 3.18 在Approach Contact没有同Event Accepted Landing时发布typed unavailable，不用Animated Sole、旧Event、Rejected Observation或默认Surface建立承诺
 - [x] 3.19 让Tracking的新Rejected Observation保持自身Key和拒绝结果，同时允许既有同Event Accepted Landing继续保留原始lineage，禁止把保留Landing改名成本次查询命中
-- [ ] 3.20 让Current Contact命中同Event Promoted Landing时直接消费该承诺并禁止`ContactAcquisitionRefresh`重查；`CaptureCurrentContact`不得在Promotion同帧用Animated Sole查询结果覆盖Committed Landing
+- [ ] 3.20 让同Event首次正式Contact Rising恰好执行一次Current Contact Plant Verification，以该Verified Landing建立LastLanding与唯一Anchor；稳定Plant期间冻结Anchor且不得再次查询或重定位
 
 ## 4. 拆分State、Transition、Interpolation与Post Constraint
 
@@ -68,7 +68,7 @@
 ## 6. 连续接管Foot Height与Landing/Lock垂直误差
 
 - [x] 6.1 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选分别使用`0.6m/s`、`0.01m`与`0.01m`
-- [ ] 6.2 在3.20保证同Event Anchor连续后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
+- [ ] 6.2 在3.17持续准备Plant目标、3.20建立Verified Anchor后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
 - [ ] 6.3 参照ZZZ实际`目标态高度历史限速 -> 权重混合`顺序，只让Landing/Locked的Contact接管Policy按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制Component Up变化；Swing/UnlockedSupport继续由正式轨迹和Envelope决定高度，Release继续使用统一Residual，不建立第二高度状态或Floor旁路
 - [ ] 6.4 让Post Constraint对Swing/UnlockedSupport继续执行Accepted Ground Envelope硬最低约束，对Landing/Locked Contact Anchor只测量穿透并发布容差内、Ground Catchup与Full Lock门控；继承的超预算Contact误差连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
 - [ ] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；未满足时保留同Anchor Landing继续接管
@@ -100,11 +100,11 @@
 - [ ] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target；Weight完成不得绕过6.5的位置、穿透与Reach门控
 - [ ] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition；同Event合法重入在Pre-Interpolation执行`Releasing -> Landing`，Interpolation Completion只在Post-Interpolation执行`Releasing -> Swing`
 - [ ] 9.4 删除旧PlantConfidence、无identity的PlantCycleConsumed布尔和Constraint Weight状态准入消费者及其Projection字段
-- [ ] 9.5 让Contact Anchor只消费同Event Committed/Promoted Landing；Committed阶段Sliding误差超出LockDistance或Reach不可用时拒绝Lock，不以晚期重查移动承诺落点
+- [ ] 9.5 让Contact Anchor只消费同Event首次Contact Rising产生的Verified Plant Landing；稳定Plant阶段LockDistance或Reach不可用时拒绝Full Lock，不以重复查询移动Anchor
 - [ ] 9.6 在同一Foot根Bank增加唯一Contact Transition Context，保存上一正式Lock请求、距最近边沿秒数、最近与最近释放Contact Event identity，不新增Rebound、Blocked或Grounded顶层状态
 - [ ] 9.7 让唯一Transition Resolver生成Contact Rising/Falling/Same-Event Reentry Refresh Decision事实，唯一Transition Runtime随根事务更新Context；Pending失败或Discard不得推进边沿历史
-- [ ] 9.8 Releasing期间同Event合法重入时发布`SameEventContactReentryRefresh`并执行`Releasing -> Landing`，只Retain原Anchor、复用Committed Landing并从当前Effective Correction连续接管，不查询、不Create、不清零Interpolation
-- [ ] 9.9 Release完成或Anchor清除后阻止旧Event复活；新Event紧接上一边沿时必须按自己的Committed Landing正常准入
+- [ ] 9.8 Releasing期间同Event合法重入时发布`SameEventContactReentryRefresh`并执行`Releasing -> Landing`，只Retain原Verified Anchor并从当前Effective Correction连续接管，不查询、不Create、不清零Interpolation
+- [ ] 9.9 Release完成或Anchor清除后阻止旧Event复活；新Event紧接上一边沿时必须执行自己的首次Plant Verification
 - [ ] 9.10 发布上一/当前Lock请求、边沿、距边沿秒数、最近/最近释放Event、Reentry Refresh/Unavailable、Retained Anchor与连续接管诊断，确认下游Resolved Foot、Pelvis和Goal不读取内部Context
 
 ## 10. 清理、构建与严格校验
@@ -112,7 +112,7 @@
 - [ ] 10.1 删除全部旧Foot Motion Runtime payload、旧隐藏Feature reader、旧配置字段和失去消费者的诊断列
 - [ ] 10.2 使用精确Corin Definition显式重建Presentation Projection、Float32 Program与Fixed Program，不修改TrainingEnemy
 - [ ] 10.3 使用规定参数编译Runtime与Editor工程，并在每次构建后立即关闭dotnet build server
-- [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Raw/Stable Prediction速度、KCC Future Translation、Landing Tracking/Commit、Contact边沿、同EventReentry Refresh/Unavailable、Transition、Interpolation、竖直限速、Ground穿透与Catchup、Full Lock门控、Path、Envelope、Pelvis速度边界、Landing Reach、Support、Goal、Solved和Physical阶段责任
+- [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Raw/Stable Prediction速度、KCC Future Translation、NextSwing Tracking、Approach Plant目标准备、Contact Verification、Contact边沿、同EventReentry Refresh/Unavailable、Transition、Interpolation、竖直限速、Ground穿透与Catchup、Full Lock门控、Path、Envelope、Pelvis速度边界、Landing Reach、Support、Goal、Solved和Physical阶段责任
 - [ ] 10.5 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验，清除旧spec冲突和失效任务引用
 - [ ] 10.6 按design中的ZZZ最新证据等级与成熟结论对账表逐项核对实现，分别记录直接采用、现有更强等价、后续change和明确不照搬，不把匿名B/D输入、推断名词或未激活实例参数写成正式算法与默认值
 - [ ] 10.7 确认新增Prediction、Observation、Landing、Interpolation与Pelvis路径具有固定容量、有限值校验、数组边界、确定性tie-break和typed容量失败，且热路径没有每帧托管分配

@@ -2,7 +2,7 @@
 
 ### Requirement: Landing Prediction必须形成独立世界事实
 
-每只脚 MUST按`正式Foot Motion Step Event -> committed Body Target世界速度 + 移动计划段边界/Continuation -> 根Bank共享Prediction Motion State -> KCC Future Body Translation -> Raw Landing -> Future Landing SphereCast -> Accepted/Rejected Observation -> Landing Tracking/Commit`执行。Step Event MUST携带同Source、Cycle、Side与ordinal的稳定Landing Event identity，并使用正式Step Time作为预测时域、正式Step Distance作为相邻同脚Event与RootLocalLanding水平步长一致性证据。
+每只脚 MUST按`正式Foot Motion Step Event -> committed Body Target世界速度 + 移动计划段边界/Continuation -> 根Bank共享Prediction Motion State -> KCC Future Body Translation -> Raw Landing -> Future Landing SphereCast -> Accepted/Rejected Observation -> Landing Tracking -> Approach Plant Target Preparation -> Contact Verification`执行。Step Event MUST携带同Source、Cycle、Side与ordinal的稳定Landing Event identity，并使用正式Step Time作为预测时域、正式Step Distance作为相邻同脚Event与RootLocalLanding水平步长一致性证据。
 
 Raw Landing MUST继续按`VisiblePosition + FutureBodyTranslation + VisibleRotation * RootLocalLanding`从本帧输入重新投影。Step Distance MUST不替代committed Body世界速度、Future Body Translation或世界地形；RootLocalLanding MUST只乘本帧Visible Rotation，不外推Future Body Yaw。
 
@@ -60,11 +60,11 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 - **THEN** Runtime MUST不受距离或角度阈值限制并执行一次新查询
 - **AND** 新查询 MUST建立新的Observation identity，不得把旧结果改名继续使用
 
-#### Scenario: Sliding接触准入刷新
+#### Scenario: Sliding接触前Tracking刷新
 
 - **WHEN** Landing仍处于Tracking、正式Foot Lock Mode为`Sliding`且当前canonical预测输入identity不同于上一真实查询输入
 - **THEN** Runtime MUST执行一次新查询并发布`ContactAcquisitionRefresh`原因
-- **AND** canonical输入identity未变时 MUST复用Committed Observation；Landing已经Committed时 MUST使用承诺落点做Lock准入，不得以Sliding为由晚期重查
+- **AND** canonical输入identity未变时 MUST复用Committed Observation；实际Contact Rising后 MUST只执行一次Plant Verification，不得在稳定Plant期间以Sliding为由重复重查
 
 #### Scenario: Step Event与RootLocalLanding不一致
 
@@ -74,9 +74,9 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 
 ### Requirement: Ground Path必须使用上一已提交落点与下一事件落点
 
-每只脚 MUST按Landing Event identity在同一Landing Context中维护`Empty / Tracking / Committed`所有权；Promotion只作为事件成为Current Contact时的当帧输出事实，不得形成第二状态机。PreSwing与早期Swing MUST进入Tracking并重新投影Raw Landing Candidate；只有累计输入或强制lineage触发Query Admission时 MUST执行一次正式Landing SphereCast，其余帧 MUST复用Committed Observation。Tracking中新Observation命中不同Surface时 MUST无条件提交新的NextSwingLanding；同Surface新点与NextSwingLanding的距离小于正式`LandingAcceptanceDistance`时 MUST保留原落点并复用Ground Path，达到阈值时 MUST提交新点。
+每只脚 MUST在同一Landing Context中维护可并存的`NextSwing Empty/Tracking`与`Verified LastLanding`两个typed槽位，不得把Prediction Event与已接触Plant Event压成互斥状态或形成第二状态机。PreSwing、Swing与Approach Contact MUST保持NextSwing Tracking并重新投影Raw Landing Candidate；只有累计输入或强制lineage触发Query Admission时 MUST执行一次正式Landing SphereCast，其余帧 MUST复用Committed Observation。Tracking中新Observation命中不同Surface时 MUST无条件提交新的NextSwingLanding；同Surface新点与NextSwingLanding的距离小于正式`LandingAcceptanceDistance`时 MUST保留原落点并复用Ground Path，达到阈值时 MUST提交新点。
 
-正式Foot Motion进入`ApproachContactToLanding`且存在同Event Accepted NextSwingLanding时，Runtime MUST把该Landing原子提交为Committed。Committed阶段 MAY继续计算Raw Candidate供诊断，但普通速度、角度、Source Sample或Surface变化 MUST不创建新Observation Key、执行SphereCast、换点或重建Ground Path。该Event成为Current Contact Event时，Committed Landing MUST晋级为LastLanding并发布Promoted Contact Landing，之后才为新的Swing Event建立Tracking。
+正式Foot Motion进入`ApproachContactToLanding`后 MUST继续Tracking同Event Accepted NextSwingLanding并更新Ground Path，同时把该阶段交给唯一Interpolation准备Plant目标；不得在实际Contact Rising前冻结Observation、Surface或世界点。该Event首次产生正式Contact Rising且Lock Mode请求Sliding或Locked时，Runtime MUST恰好执行一次Current Contact Plant Verification；只有Verified Landing可建立LastLanding、Promoted Contact Landing与唯一Anchor。稳定Plant期间 MUST冻结Anchor并停止查询或重定位。
 
 Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没有LastLanding时 MUST发布`CurrentLandingUnavailable`；不得用Animated Sole、Transform、固定高度或默认地面补起点。
 
@@ -104,29 +104,29 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 - **THEN** Runtime MUST无条件提交新NextSwingLanding并重建Ground Path
 - **AND** MUST不以LandingAcceptanceDistance保留旧Surface
 
-#### Scenario: Approach Contact提交Landing
+#### Scenario: Approach Contact持续准备Plant目标
 
-- **WHEN** 正式Foot Motion首次进入`ApproachContactToLanding`且Tracking已经持有同Event Accepted NextSwingLanding
-- **THEN** Runtime MUST在同一根事务内把该Landing提交为Committed并保留其Surface、点、法线、Observation与Event lineage
-- **AND** 后续普通Prediction变化 MUST不再查询、换点、切Surface或重建该Event的Ground Path
+- **WHEN** 正式Foot Motion进入`ApproachContactToLanding`且Tracking已经持有同Event Accepted NextSwingLanding
+- **THEN** Runtime MUST继续按Query Admission更新Observation、NextSwingLanding与Ground Path，并由唯一Interpolation准备Plant目标
+- **AND** MUST不在实际Contact Rising前冻结Surface、世界点或把Prediction Observation直接作为Anchor
 
-#### Scenario: Approach Contact没有可提交Landing
+#### Scenario: Approach Contact暂时没有可用Prediction Landing
 
-- **WHEN** 正式Foot Motion进入`ApproachContactToLanding`但同Event从未产生Accepted NextSwingLanding
-- **THEN** Runtime MUST发布typed unavailable并保持该Event没有Committed Landing
-- **AND** MUST不使用Animated Sole、旧Event、默认Surface或Rejected Observation建立承诺
+- **WHEN** 正式Foot Motion进入`ApproachContactToLanding`但同Event当前没有Accepted NextSwingLanding
+- **THEN** Runtime MUST发布typed准备不可用并保持Tracking，后续合法Observation仍 MAY建立同Event Plant准备目标
+- **AND** MUST不使用Animated Sole、旧Event、默认Surface或Rejected Observation建立Prediction目标
 
-#### Scenario: Current Contact晋级已提交Landing
+#### Scenario: Contact Rising验证并冻结Plant Landing
 
-- **WHEN** 已Committed的Landing Event成为同脚Current Contact Event
-- **THEN** Runtime MUST把原Committed Landing原子晋级为Last Landing与Promoted Contact Landing
-- **AND** 同帧Current Contact预测与Capture MUST直接消费该Promoted Landing，不得因Contact Rising、Sliding或Animated Sole变化执行`ContactAcquisitionRefresh`、创建新Observation或覆盖其点、Surface、法线与lineage
+- **WHEN** Tracking中的Landing Event首次成为同脚Current Contact且Lock Mode请求Sliding或Locked
+- **THEN** Runtime MUST恰好执行一次Current Contact Plant Verification，并以Verified Landing原子建立Last Landing、Promoted Contact Landing与唯一Anchor
+- **AND** 稳定Plant期间 MUST不再次查询、移动Anchor或用后续Prediction覆盖其点、Surface、法线与lineage
 
-#### Scenario: Committed阶段出现晚期Candidate变化
+#### Scenario: 稳定Plant阶段出现新的Prediction Candidate
 
-- **WHEN** Landing已经Committed且后续Raw Candidate因急转、速度或Source Sample变化超过查询阈值
-- **THEN** Runtime MAY记录晚期Candidate与忽略原因，但 MUST继续消费原Committed Landing和Ground Path
-- **AND** MUST不创建普通Observation Key、执行SphereCast或把晚期Candidate传给Contact Anchor
+- **WHEN** Contact已经Verified且后续Raw Candidate因急转、速度或Source Sample变化超过查询阈值
+- **THEN** Runtime MAY记录该Candidate与忽略原因，但 MUST继续消费冻结Anchor
+- **AND** MUST不执行新的Plant Verification、移动Anchor或把Prediction Candidate传给Contact目标
 
 #### Scenario: Tracking查询拒绝后保留事件Landing
 
@@ -134,11 +134,11 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 - **THEN** Runtime MUST提交Rejected Observation事实并 MAY继续持有原NextSwingLanding及其原始lineage
 - **AND** MUST不把原Landing改名为Rejected Key的结果或声称本次查询成功
 
-#### Scenario: 下一Swing Event完成
+#### Scenario: 下一Swing Event进入实际Contact
 
-- **WHEN** NextSwingLanding对应的事件成为已完成Swing Event
-- **THEN** Runtime MUST把该Accepted Landing晋级为新的LastLanding
-- **AND** MUST只为新的PreSwing或Swing Event建立新的NextSwingLanding
+- **WHEN** NextSwingLanding对应的事件首次产生正式Contact Rising
+- **THEN** Runtime MUST通过一次Plant Verification建立新的LastLanding，不得直接晋级Prediction点
+- **AND** MUST只为新的PreSwing、Swing或Approach Contact Event维护新的NextSwingLanding
 
 ### Requirement: Foot Lifecycle必须生成唯一权威结果
 
@@ -158,9 +158,9 @@ Ground Path Envelope、Contact Anchor与Reach MUST在Interpolation之后由唯�
 
 Swing Target MUST只使用Last Landing、Next Landing、Runtime Ground Envelope与正式Foot Height。Accepted Swing Motion MUST携带同Ground Path Event的typed Swing Path Landing Reference；Promoted Contact Landing MUST只服务Contact与Anchor。Path Residual Revision MUST只由Event、可用性或Accepted Landing端点变化触发；Ground Path identity单独变化和同一Path内的Phase目标推进 MUST不发布Path Revision。正式Swing目标的有效变化 MAY通过独立typed Target Tracking事实连续接管，但 MUST不伪装成Path Residual重建。Diagnostics MUST分别发布原始Builder Swing Target、State Target、Path Revision与Target Tracking，不得互相改名覆盖。
 
-Landing Anchor MUST在正式Contact有效、同Event Lock Mode首次从Unlocked进入Sliding或Locked、Committed Landing合法且该Event没有Active或Retained Anchor时由唯一Transition Runtime建立。正式Lock Weight MUST通过Interpolation Policy Request渐进接管Anchor。Landing MUST只有在Lock Weight完成、Effective Correction与Anchor目标距离不超过`LandingLockCompletionTolerance`、Ground穿透不超过`GroundPenetrationTolerance`且Reach允许时才进入Locked；未满足时必须保留Landing和同一Anchor继续连续追赶，不得把Weight完成当成瞬移许可。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing、记录Contact Falling与最近释放Event并继续Retain原Anchor；只有Releasing完成进入Swing后该Event才闭合并清除Anchor。完成帧 MUST先应用Post-Interpolation Transition，再按新State执行Post Constraint和最终输出分类，不得重跑State Target或Interpolation。
+Landing Anchor MUST在正式Contact有效、同Event Lock Mode首次从Unlocked进入Sliding或Locked、一次Plant Verification成功且该Event没有Active或Retained Anchor时由唯一Transition Runtime建立。正式Lock Weight MUST通过Interpolation Policy Request渐进接管Anchor。Landing MUST只有在Lock Weight完成、Effective Correction与Anchor目标距离不超过`LandingLockCompletionTolerance`、Ground穿透不超过`GroundPenetrationTolerance`且Reach允许时才进入Locked；未满足时必须保留Landing和同一Anchor继续连续追赶，不得把Weight完成当成瞬移许可。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing、记录Contact Falling与最近释放Event并继续Retain原Anchor；只有Releasing完成进入Swing后该Event才闭合并清除Anchor。完成帧 MUST先应用Post-Interpolation Transition，再按新State执行Post Constraint和最终输出分类，不得重跑State Target或Interpolation。
 
-Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保留、Committed Landing、Lock距离和Reach继续合法时，Resolver MUST发布typed `SameEventContactReentryRefresh`并在Pre-Interpolation阶段执行`Releasing -> Landing`。Transition Runtime MUST只Retain原Anchor，State Target MUST立即重新计算同Anchor目标，Interpolation Runtime MUST从当前Effective Correction连续接管；系统 MUST不创建Anchor、不执行Landing Query、不移动Committed Landing，也不得把Interpolation清零。Release已经完成或Anchor已经清除时，旧Event MUST不复活；不同Event即使紧接上一Contact边沿也 MUST按自己的Committed Landing正常准入。Contact Transition Context MUST只由唯一Transition Runtime随根Pending Bank更新；Pending失败或Discard MUST保持上一Committed边沿历史不变。迁移完成后全部阶段 MUST不读取旧PlantConfidence、PlantCycleConsumed布尔或旧Constraint Weight决定Landing、Lock与Release。
+Releasing期间同Event再次出现Sliding或Locked请求，且原Verified Anchor仍保留、Lock距离和Reach继续合法时，Resolver MUST发布typed `SameEventContactReentryRefresh`并在Pre-Interpolation阶段执行`Releasing -> Landing`。Transition Runtime MUST只Retain原Anchor，State Target MUST立即重新计算同Anchor目标，Interpolation Runtime MUST从当前Effective Correction连续接管；系统 MUST不创建Anchor、不执行Landing Query、不移动Verified Landing，也不得把Interpolation清零。Release已经完成或Anchor已经清除时，旧Event MUST不复活；不同Event即使紧接上一Contact边沿也 MUST先执行自己的Plant Verification。Contact Transition Context MUST只由唯一Transition Runtime随根Pending Bank更新；Pending失败或Discard MUST保持上一Committed边沿历史不变。迁移完成后全部阶段 MUST不读取旧PlantConfidence、PlantCycleConsumed布尔或旧Constraint Weight决定Landing、Lock与Release。
 
 #### Scenario: 同Event Path换代
 
@@ -170,7 +170,7 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保�
 
 #### Scenario: 旧Contact Event与新Swing Event同帧交接
 
-- **WHEN** 旧Event的Landing在当前帧成为Promoted Contact Landing，且下一Event已经具有Accepted Swing Motion与匹配Ground Path
+- **WHEN** 旧Event在当前帧完成Plant Verification并成为Promoted Contact Landing，且下一Event已经具有Accepted Swing Motion与匹配Ground Path
 - **THEN** Transition与State Target MUST让旧Landing只服务Contact与Anchor，并让新Swing Path Landing继续服务Swing Target与Interpolation
 - **AND** MUST不因两者Event不同把Swing Path发布为一帧不可用
 
@@ -190,12 +190,12 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保�
 
 - **WHEN** Releasing已经完成且原Anchor已经清除，旧Event再次出现Sliding或Locked请求
 - **THEN** Runtime MUST发布typed旧Event重入不可用并保持没有Contact Anchor
-- **AND** MUST不复活旧Committed Landing、创建新Anchor或沿用已清除的Interpolation接管事实
+- **AND** MUST不复活旧Verified Landing、创建新Anchor或沿用已清除的Interpolation接管事实
 
 #### Scenario: 新Event紧接上一Contact边沿
 
-- **WHEN** 上一Contact Event刚进入Releasing或已经完成，而新的Event已经具有Committed Landing、正式Contact和Sliding或Locked请求
-- **THEN** 新Event MUST按自己的Event identity正常执行Contact Rising与Anchor准入
+- **WHEN** 上一Contact Event刚进入Releasing或已经完成，而新的Event已经具有Tracking Landing、正式Contact和Sliding或Locked请求
+- **THEN** 新Event MUST按自己的Event identity正常执行Contact Rising、Plant Verification与Anchor准入
 - **AND** MUST不因上一Event的驻留时间、回弹事实或已消费identity被错误抑制
 
 #### Scenario: Contact边沿事实保持内部
@@ -208,7 +208,7 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保�
 
 - **WHEN** Post-Interpolation Transition判定Releasing完成且当前帧具有合法Swing Envelope
 - **THEN** Transition Runtime MUST在同帧应用Swing，随后按新State执行Ground穿透测量和最终输出分类
-- **AND** 发布为Swing的Corrected Sole MUST继续受同一竖直速率限制；容差外误差必须发布Ground Catchup并连续减小，不得同帧抬升
+- **AND** 发布为Swing的Corrected Sole MUST立即遵守同一Accepted Ground Envelope硬最低约束并记录Clamp事实，不得沿用Landing/Locked的Contact竖直限速政策
 
 ### Requirement: Resolved Foot必须形成紧凑下游合同
 
@@ -266,7 +266,7 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Reason、Landing Tracking/Committed状态、Commit Frame/Reason、晚期Candidate忽略原因、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Component Up Correction变化、速率上限与是否限速、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Verified Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Reason、Landing Tracking状态、Approach Plant Target Preparation、Contact Verification Frame/Reason、稳定Plant候选忽略原因、Path Revision原因、Raw Landing/Path Target、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Output/Completion、Component Up Correction变化、速率上限与是否限速、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 
@@ -279,7 +279,7 @@ Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、S
 #### Scenario: Prediction速度稳定阻止晚期Landing甩动
 
 - **WHEN** committed世界速度方向单帧大幅变化但Event、RootLocalLanding与正式Step lineage保持一致
-- **THEN** 诊断 MUST并列记录Raw/Stable速度、KCC Future Translation、Raw Landing、Tracking/Committed状态与最终Landing消费结果
+- **THEN** 诊断 MUST并列记录Raw/Stable速度、KCC Future Translation、Raw Landing、Tracking/Approach Preparation/Contact Verification状态与最终Landing消费结果
 - **AND** MUST能区分Prediction输入断点、Observation换代、Landing提交、Interpolation响应、竖直限速和Ground Catchup
 
 #### Scenario: Correction在Path后继阶段被放大

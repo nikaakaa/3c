@@ -127,7 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         TakeoverStarted = 1 << 7,
         TakeoverCompleted = 1 << 8,
         TargetPointRevised = 1 << 9,
-        TargetHeightForceRefreshed = 1 << 10
+        TargetHeightForceRefreshed = 1 << 10,
+        TakeoverWeightAdvanced = 1 << 11
     }
 
     [Flags]

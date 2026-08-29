@@ -244,7 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
             "FootMotionPlantBlendWeight,FootMotionPlantTargetMaximumVerticalSpeed,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
             "FootMotionPlantBlendedCorrectionX,FootMotionPlantBlendedCorrectionY,FootMotionPlantBlendedCorrectionZ," +
-            "FootMotionPlantCorrectionMaximumVerticalSpeed,FootMotionPlantCorrectionHistoryRebased,FootMotionPlantCorrectionBaselineDeltaAlongUp,FootMotionPlantCorrectionVerticalDelta,FootMotionPlantCorrectionAppliedVerticalDelta,FootMotionPlantCorrectionVerticalClamped,FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
+            "FootMotionPlantCorrectionMaximumVerticalSpeed,FootMotionPlantCorrectionVerticalDelta,FootMotionPlantCorrectionAppliedVerticalDelta,FootMotionPlantCorrectionVerticalClamped,FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -2174,8 +2174,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantTargetVerticalClamped);
             Add(row, motion.PlantBlendedCorrection);
             Add(row, motion.PlantCorrectionMaximumVerticalSpeed);
-            Add(row, motion.PlantCorrectionHistoryRebased);
-            Add(row, motion.PlantCorrectionBaselineDeltaAlongUp);
             Add(row, motion.PlantCorrectionVerticalDelta);
             Add(row, motion.PlantCorrectionAppliedVerticalDelta);
             Add(row, motion.PlantCorrectionVerticalClamped);

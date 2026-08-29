@@ -267,8 +267,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool plantTargetVerticalClamped;
         public CharacterFootVectorFact plantBlendedCorrection;
         public double plantCorrectionMaximumVerticalSpeed;
-        public bool plantCorrectionHistoryRebased;
-        public double plantCorrectionBaselineDeltaAlongUp;
         public double plantCorrectionVerticalDelta;
         public double plantCorrectionAppliedVerticalDelta;
         public bool plantCorrectionVerticalClamped;

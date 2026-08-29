@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/31";
+        const string Schema = "character-foot-motion-facts/32";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 31;
+        const int AnalyzerVersion = 32;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 800;
         const float PositionNoiseFloor = 0.001f;
@@ -3821,6 +3821,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionPlantTargetVerticalDelta"),
                 PlantTargetAppliedVerticalDelta =
                     Float("FootMotionPlantTargetAppliedVerticalDelta"),
+                PlantTargetForceRefreshed =
+                    Int("FootMotionPlantTargetForceRefreshed") != 0,
+                PlantTargetForceRefreshDistance =
+                    Float("FootMotionPlantTargetForceRefreshDistance"),
                 PlantTargetVerticalClamped =
                     Int("FootMotionPlantTargetVerticalClamped") != 0,
                 PlantBlendedCorrection =
@@ -4010,6 +4014,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 bool directLockedFollow =
                     frame.ConstraintStateBefore == "Locked";
+                bool directTargetFollow = directLockedFollow ||
+                                          frame.PlantTargetForceRefreshed;
                 float targetBudget =
                     frame.PlantTargetMaximumVerticalSpeed *
                     frame.DeltaSeconds;
@@ -4034,9 +4040,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PlantCorrectionMaximumVerticalSpeed <= 0f ||
                     !float.IsFinite(frame.PlantTargetVerticalDelta) ||
                     !float.IsFinite(frame.PlantTargetAppliedVerticalDelta) ||
+                    !float.IsFinite(frame.PlantTargetForceRefreshDistance) ||
+                    frame.PlantTargetForceRefreshDistance <=
+                        frame.PathRevisionDistance ||
+                    frame.PlantTargetForceRefreshed &&
+                        Math.Abs(frame.PlantTargetVerticalDelta) <
+                        frame.PlantTargetForceRefreshDistance -
+                        PositionNoiseFloor ||
                     !float.IsFinite(frame.PlantCorrectionVerticalDelta) ||
                     !float.IsFinite(frame.PlantCorrectionAppliedVerticalDelta) ||
-                    !directLockedFollow &&
+                    !directTargetFollow &&
                     Math.Abs(frame.PlantTargetAppliedVerticalDelta) >
                     targetBudget + PositionNoiseFloor ||
                     !directLockedFollow &&
@@ -5044,6 +5057,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantTargetMaximumVerticalSpeed",
                 "FootMotionPlantTargetVerticalDelta",
                 "FootMotionPlantTargetAppliedVerticalDelta",
+                "FootMotionPlantTargetForceRefreshed",
+                "FootMotionPlantTargetForceRefreshDistance",
                 "FootMotionPlantTargetVerticalClamped",
                 "FootMotionPlantBlendedCorrectionX",
                 "FootMotionPlantBlendedCorrectionY",
@@ -5699,6 +5714,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float PlantTargetMaximumVerticalSpeed;
             internal float PlantTargetVerticalDelta;
             internal float PlantTargetAppliedVerticalDelta;
+            internal bool PlantTargetForceRefreshed;
+            internal float PlantTargetForceRefreshDistance;
             internal bool PlantTargetVerticalClamped;
             internal Vector3 PlantBlendedCorrection;
             internal float PlantCorrectionMaximumVerticalSpeed;

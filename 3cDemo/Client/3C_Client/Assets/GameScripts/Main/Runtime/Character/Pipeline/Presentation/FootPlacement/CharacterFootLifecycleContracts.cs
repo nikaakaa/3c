@@ -207,6 +207,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetMaximumVerticalSpeed = 0f;
             PlantTargetVerticalDelta = 0f;
             PlantTargetAppliedVerticalDelta = 0f;
+            PlantTargetForceRefreshed = false;
+            PlantTargetForceRefreshDistance = 0f;
             PlantTargetVerticalClamped = false;
             PlantBlendedCorrection = default;
             PlantCorrectionMaximumVerticalSpeed = 0f;
@@ -328,6 +330,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerticalDelta = plant.TargetVerticalDelta;
             PlantTargetAppliedVerticalDelta =
                 plant.TargetAppliedVerticalDelta;
+            PlantTargetForceRefreshed = plant.TargetForceRefreshed;
+            PlantTargetForceRefreshDistance =
+                plant.TargetForceRefreshDistance;
             PlantTargetVerticalClamped = plant.TargetVerticalClamped;
             PlantBlendedCorrection = plant.BlendedCorrection;
             PlantCorrectionMaximumVerticalSpeed =
@@ -415,6 +420,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float PlantTargetMaximumVerticalSpeed { get; }
         internal float PlantTargetVerticalDelta { get; }
         internal float PlantTargetAppliedVerticalDelta { get; }
+        internal bool PlantTargetForceRefreshed { get; }
+        internal float PlantTargetForceRefreshDistance { get; }
         internal bool PlantTargetVerticalClamped { get; }
         internal Vector3 PlantBlendedCorrection { get; }
         internal float PlantCorrectionMaximumVerticalSpeed { get; }
@@ -826,6 +833,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float targetMaximumVerticalSpeed,
             float targetVerticalDelta,
             float targetAppliedVerticalDelta,
+            bool targetForceRefreshed,
+            float targetForceRefreshDistance,
             bool targetVerticalClamped,
             Vector3 blendedCorrection,
             float correctionMaximumVerticalSpeed,
@@ -844,6 +853,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TargetMaximumVerticalSpeed = targetMaximumVerticalSpeed;
             TargetVerticalDelta = targetVerticalDelta;
             TargetAppliedVerticalDelta = targetAppliedVerticalDelta;
+            TargetForceRefreshed = targetForceRefreshed;
+            TargetForceRefreshDistance = targetForceRefreshDistance;
             TargetVerticalClamped = targetVerticalClamped;
             BlendedCorrection = blendedCorrection;
             CorrectionMaximumVerticalSpeed = correctionMaximumVerticalSpeed;
@@ -863,6 +874,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float TargetMaximumVerticalSpeed { get; }
         internal float TargetVerticalDelta { get; }
         internal float TargetAppliedVerticalDelta { get; }
+        internal bool TargetForceRefreshed { get; }
+        internal float TargetForceRefreshDistance { get; }
         internal bool TargetVerticalClamped { get; }
         internal Vector3 BlendedCorrection { get; }
         internal float CorrectionMaximumVerticalSpeed { get; }

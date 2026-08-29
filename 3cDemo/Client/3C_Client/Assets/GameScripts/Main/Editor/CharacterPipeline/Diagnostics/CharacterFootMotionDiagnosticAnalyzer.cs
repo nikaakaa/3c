@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/47";
+        const string Schema = "character-foot-motion-facts/48";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 47;
+        const int AnalyzerVersion = 48;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -4696,18 +4696,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CultureInfo.InvariantCulture),
                 worldRevision = frame.CurrentSupportWorldRevision.ToString(
                     CultureInfo.InvariantCulture),
-                heel = CurrentSupportProbeFact(frame.CurrentSupportHeel),
+                @base = CurrentSupportProbeFact(frame.CurrentSupportBase),
+                rear = CurrentSupportProbeFact(frame.CurrentSupportRear),
+                positiveLateral = CurrentSupportProbeFact(
+                    frame.CurrentSupportPositiveLateral),
+                negativeLateral = CurrentSupportProbeFact(
+                    frame.CurrentSupportNegativeLateral),
                 toe = CurrentSupportProbeFact(frame.CurrentSupportToe),
-                heelRequiredDisplacement =
-                    frame.CurrentSupportHeelRequiredDisplacement,
-                toeRequiredDisplacement =
-                    frame.CurrentSupportToeRequiredDisplacement,
+                baseCandidate = CurrentSupportCandidateFact(
+                    frame.CurrentSupportBaseCandidate),
+                rearCandidate = CurrentSupportCandidateFact(
+                    frame.CurrentSupportRearCandidate),
+                positiveLateralCandidate = CurrentSupportCandidateFact(
+                    frame.CurrentSupportPositiveLateralCandidate),
+                negativeLateralCandidate = CurrentSupportCandidateFact(
+                    frame.CurrentSupportNegativeLateralCandidate),
+                toeCandidate = CurrentSupportCandidateFact(
+                    frame.CurrentSupportToeCandidate),
                 selectedProbe = frame.CurrentSupportSelectedProbe,
                 selectionReason = frame.CurrentSupportSelectionReason,
                 selectionEpsilon = frame.CurrentSupportSelectionEpsilon,
-                selectedSupportNormalBeforeNormalization =
+                selectedDirectionBeforeNormalization =
                     CharacterFootVectorFact.From(
-                        frame.CurrentSupportSelectedNormalBeforeNormalization),
+                        frame.CurrentSupportSelectedDirectionBeforeNormalization),
                 target = SupportTargetFact(frame.CurrentSupportTarget)
             },
             correctionResponse = new
@@ -4846,7 +4857,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             normalCompletion = target.NormalCompletion.ToString(
                 CultureInfo.InvariantCulture),
             normalEvent = target.NormalEvent.ToString(
-                CultureInfo.InvariantCulture)
+                CultureInfo.InvariantCulture),
+            currentSupportProbeKind = target.CurrentSupportProbeKind
         };
 
         static object CurrentSupportProbeFact(
@@ -4874,6 +4886,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CultureInfo.InvariantCulture),
             sphereCastExecuted = probe.SphereCastExecuted,
             accepted = probe.Accepted
+        };
+
+        static object CurrentSupportCandidateFact(
+            CurrentSupportCandidateFrame candidate) => new
+        {
+            available = candidate.Available,
+            kind = candidate.Kind,
+            solePosition = CharacterFootVectorFact.From(
+                candidate.SolePosition),
+            heightAlongUp = candidate.HeightAlongUp,
+            direction = CharacterFootVectorFact.From(candidate.Direction),
+            surfaceIdentity = candidate.Surface,
+            worldRevision = candidate.WorldRevision.ToString(
+                CultureInfo.InvariantCulture)
         };
 
         static object RotationFact(Quaternion value) => new
@@ -5282,7 +5308,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     NormalFrame = Ulong(prefix + "NormalFrameSequence"),
                     NormalCompletion =
                         Ulong(prefix + "NormalCompletionIdentity"),
-                    NormalEvent = Ulong(prefix + "NormalEventIdentity")
+                    NormalEvent = Ulong(prefix + "NormalEventIdentity"),
+                    CurrentSupportProbeKind =
+                        Cell(prefix + "CurrentSupportProbeKind")
                 };
             CurrentSupportProbeFrame CurrentSupportProbe(string prefix) =>
                 new CurrentSupportProbeFrame
@@ -5310,6 +5338,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     SphereCastExecuted =
                         Int(prefix + "SphereCastExecuted") != 0,
                     Accepted = Int(prefix + "Accepted") != 0
+                };
+            CurrentSupportCandidateFrame CurrentSupportCandidate(
+                string prefix) => new CurrentSupportCandidateFrame
+                {
+                    Available = Int(prefix + "Available") != 0,
+                    Kind = Cell(prefix + "Kind"),
+                    SolePosition = Vector(prefix + "SolePosition"),
+                    HeightAlongUp = Float(prefix + "HeightAlongUp"),
+                    Direction = Vector(prefix + "Direction"),
+                    Surface = Int(prefix + "SurfaceIdentity"),
+                    WorldRevision = Ulong(prefix + "WorldRevision")
                 };
             var frame = new FootFrame
             {
@@ -5861,22 +5900,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Ulong("CurrentSupportCompletionIdentity"),
                 CurrentSupportWorldRevision =
                     Ulong("CurrentSupportWorldRevision"),
-                CurrentSupportHeel =
-                    CurrentSupportProbe("CurrentSupportHeel"),
+                CurrentSupportBase =
+                    CurrentSupportProbe("CurrentSupportBase"),
+                CurrentSupportRear =
+                    CurrentSupportProbe("CurrentSupportRear"),
+                CurrentSupportPositiveLateral =
+                    CurrentSupportProbe("CurrentSupportPositiveLateral"),
+                CurrentSupportNegativeLateral =
+                    CurrentSupportProbe("CurrentSupportNegativeLateral"),
                 CurrentSupportToe =
                     CurrentSupportProbe("CurrentSupportToe"),
-                CurrentSupportHeelRequiredDisplacement =
-                    Float("CurrentSupportHeelRequiredDisplacement"),
-                CurrentSupportToeRequiredDisplacement =
-                    Float("CurrentSupportToeRequiredDisplacement"),
+                CurrentSupportBaseCandidate =
+                    CurrentSupportCandidate("CurrentSupportBaseCandidate"),
+                CurrentSupportRearCandidate =
+                    CurrentSupportCandidate("CurrentSupportRearCandidate"),
+                CurrentSupportPositiveLateralCandidate =
+                    CurrentSupportCandidate(
+                        "CurrentSupportPositiveLateralCandidate"),
+                CurrentSupportNegativeLateralCandidate =
+                    CurrentSupportCandidate(
+                        "CurrentSupportNegativeLateralCandidate"),
+                CurrentSupportToeCandidate =
+                    CurrentSupportCandidate("CurrentSupportToeCandidate"),
                 CurrentSupportSelectedProbe =
                     Cell("CurrentSupportSelectedProbe"),
                 CurrentSupportSelectionReason =
                     Cell("CurrentSupportSelectionReason"),
                 CurrentSupportSelectionEpsilon =
                     Float("CurrentSupportSelectionEpsilon"),
-                CurrentSupportSelectedNormalBeforeNormalization =
-                    Vector("CurrentSupportSelectedSupportNormalBeforeNormalization"),
+                CurrentSupportSelectedDirectionBeforeNormalization =
+                    Vector("CurrentSupportSelectedDirectionBeforeNormalization"),
                 CurrentSupportTarget =
                     SupportTarget("CurrentSupportTarget"),
                 ResolvedFrame = Ulong("ResolvedFrameSequence"),
@@ -7324,25 +7377,92 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
-                    ["HeelCandidateCount"] =
-                        frame.CurrentSupportHeel.CandidateCount,
+                    ["BaseHitCandidateCount"] =
+                        frame.CurrentSupportBase.CandidateCount,
+                    ["RearHitCandidateCount"] =
+                        frame.CurrentSupportRear.CandidateCount,
+                    ["PositiveLateralHitCandidateCount"] =
+                        frame.CurrentSupportPositiveLateral.CandidateCount,
+                    ["NegativeLateralHitCandidateCount"] =
+                        frame.CurrentSupportNegativeLateral.CandidateCount,
                     ["ToeCandidateCount"] =
                         frame.CurrentSupportToe.CandidateCount,
-                    ["HeelRequiredDisplacement"] =
-                        frame.CurrentSupportHeelRequiredDisplacement,
-                    ["ToeRequiredDisplacement"] =
-                        frame.CurrentSupportToeRequiredDisplacement
+                    ["AvailableSoleCandidateCount"] =
+                        CurrentSupportCandidates(frame).Count(
+                            candidate => candidate.Available),
+                    ["BaseCandidateHeightAlongUp"] =
+                        frame.CurrentSupportBaseCandidate.HeightAlongUp,
+                    ["RearCandidateHeightAlongUp"] =
+                        frame.CurrentSupportRearCandidate.HeightAlongUp,
+                    ["PositiveLateralCandidateHeightAlongUp"] =
+                        frame.CurrentSupportPositiveLateralCandidate.HeightAlongUp,
+                    ["NegativeLateralCandidateHeightAlongUp"] =
+                        frame.CurrentSupportNegativeLateralCandidate.HeightAlongUp,
+                    ["ToeCandidateHeightAlongUp"] =
+                        frame.CurrentSupportToeCandidate.HeightAlongUp,
+                    ["RearProbeExtension"] = Vector3.Distance(
+                        frame.CurrentSupportBase.ProbePosition,
+                        frame.CurrentSupportRear.ProbePosition),
+                    ["LateralProbeExtent"] = 0.5d * Vector3.Distance(
+                        frame.CurrentSupportPositiveLateral.ProbePosition,
+                        frame.CurrentSupportNegativeLateral.ProbePosition),
+                    ["ToeProbeExtension"] = Vector3.Distance(
+                        frame.SourceToe,
+                        frame.CurrentSupportToe.ProbePosition)
                 };
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
                 {
                     ["available"] = frame.CurrentSupportAvailable,
-                    ["heelAccepted"] = frame.CurrentSupportHeel.Accepted,
+                    ["baseAccepted"] = frame.CurrentSupportBase.Accepted,
+                    ["rearAccepted"] = frame.CurrentSupportRear.Accepted,
+                    ["positiveLateralAccepted"] =
+                        frame.CurrentSupportPositiveLateral.Accepted,
+                    ["negativeLateralAccepted"] =
+                        frame.CurrentSupportNegativeLateral.Accepted,
                     ["toeAccepted"] = frame.CurrentSupportToe.Accepted,
-                    ["heelSphereCastExecuted"] =
-                        frame.CurrentSupportHeel.SphereCastExecuted,
+                    ["baseSphereCastExecuted"] =
+                        frame.CurrentSupportBase.SphereCastExecuted,
+                    ["rearSphereCastExecuted"] =
+                        frame.CurrentSupportRear.SphereCastExecuted,
+                    ["positiveLateralSphereCastExecuted"] =
+                        frame.CurrentSupportPositiveLateral.SphereCastExecuted,
+                    ["negativeLateralSphereCastExecuted"] =
+                        frame.CurrentSupportNegativeLateral.SphereCastExecuted,
                     ["toeSphereCastExecuted"] =
-                        frame.CurrentSupportToe.SphereCastExecuted
+                        frame.CurrentSupportToe.SphereCastExecuted,
+                    ["selectedTargetConsistent"] =
+                        CurrentSupportSelectionConsistent(frame),
+                    ["selectedBase"] =
+                        frame.CurrentSupportSelectedProbe == "Base",
+                    ["selectedRear"] =
+                        frame.CurrentSupportSelectedProbe == "Rear",
+                    ["selectedPositiveLateral"] =
+                        frame.CurrentSupportSelectedProbe ==
+                        "PositiveLateral",
+                    ["selectedNegativeLateral"] =
+                        frame.CurrentSupportSelectedProbe ==
+                        "NegativeLateral",
+                    ["selectedToe"] =
+                        frame.CurrentSupportSelectedProbe == "Toe",
+                    ["rejectBaseUnavailable"] =
+                        frame.CurrentSupportRejectReason == "BaseUnavailable",
+                    ["rejectToeUnavailable"] =
+                        frame.CurrentSupportRejectReason == "ToeUnavailable",
+                    ["rejectBaseAndToeUnavailable"] =
+                        frame.CurrentSupportRejectReason ==
+                        "BaseAndToeUnavailable",
+                    ["rejectInvalidSupportNormal"] =
+                        frame.CurrentSupportRejectReason ==
+                        "InvalidSupportNormal",
+                    ["rejectNotGrounded"] =
+                        frame.CurrentSupportRejectReason == "NotGrounded",
+                    ["rejectWorldRevisionMismatch"] =
+                        frame.CurrentSupportRejectReason ==
+                        "WorldRevisionMismatch",
+                    ["rejectCapacityExceeded"] =
+                        frame.CurrentSupportRejectReason ==
+                        "CapacityExceeded"
                 };
                 events.Add(new EventFact(
                     "CurrentSupportQuery",
@@ -7367,7 +7487,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!target.Available)
             {
                 if (target.Frame != 0 || target.Completion != 0 ||
-                    target.Surface != 0 || target.WorldRevision != 0)
+                    target.Surface != 0 || target.WorldRevision != 0 ||
+                    target.CurrentSupportProbeKind != "0")
                 {
                     throw new InvalidDataException(
                         $"Foot Motion {prefix} unavailable lineage is inconsistent.");
@@ -7384,6 +7505,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootSupportNormalSource>(
                 target.NormalSource,
                 prefix + "NormalSource");
+            bool consumesCurrentSupportProbe =
+                target.PositionSource == "CurrentSupport" ||
+                target.NormalSource == "CurrentSupport";
+            if (consumesCurrentSupportProbe)
+            {
+                RequireEnum<CharacterFootCurrentSupportProbeKind>(
+                    target.CurrentSupportProbeKind,
+                    prefix + "CurrentSupportProbeKind");
+            }
+            else if (target.CurrentSupportProbeKind != "0")
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion {prefix} has an unexpected Current Support Probe Kind.");
+            }
             if (target.Side != side || target.Frame == 0 ||
                 target.Completion == 0 || target.Surface == 0 ||
                 target.WorldRevision == 0 || target.PositionFrame == 0 ||
@@ -7451,6 +7586,180 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void RequireCurrentSupportCandidate(
+            FootFrame frame,
+            CurrentSupportProbeFrame probe,
+            CurrentSupportCandidateFrame candidate,
+            string kind,
+            string prefix)
+        {
+            bool expectedAvailable = probe.Accepted;
+            if (!expectedAvailable)
+            {
+                if (candidate.Available || candidate.Kind != "0" ||
+                    candidate.Surface != 0 || candidate.WorldRevision != 0)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion {prefix} unavailable facts are inconsistent.");
+                }
+                return;
+            }
+            RequireEnum<CharacterFootCurrentSupportProbeKind>(
+                candidate.Kind,
+                prefix + "Kind");
+            Vector3 direction = probe.Normal.normalized;
+            Vector3 translation = direction * Vector3.Dot(
+                probe.Point - probe.ProbePosition,
+                direction);
+            Vector3 solePosition = frame.OriginalSole + translation;
+            float heightAlongUp = Vector3.Dot(
+                solePosition,
+                frame.ComponentUp.normalized);
+            if (!candidate.Available || candidate.Kind != kind ||
+                !FiniteVector(candidate.SolePosition) ||
+                !FiniteVector(candidate.Direction) ||
+                candidate.Surface != probe.Surface ||
+                candidate.WorldRevision != probe.WorldRevision ||
+                Vector3.Distance(candidate.Direction, direction) >
+                RuntimeGeometryEpsilon ||
+                Vector3.Distance(candidate.SolePosition, solePosition) >
+                PositionNoiseFloor ||
+                Math.Abs(candidate.HeightAlongUp - heightAlongUp) >
+                PositionNoiseFloor)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion {prefix} facts are inconsistent.");
+            }
+        }
+
+        static CurrentSupportCandidateFrame[] CurrentSupportCandidates(
+            FootFrame frame) => new[]
+        {
+            frame.CurrentSupportBaseCandidate,
+            frame.CurrentSupportRearCandidate,
+            frame.CurrentSupportPositiveLateralCandidate,
+            frame.CurrentSupportNegativeLateralCandidate,
+            frame.CurrentSupportToeCandidate
+        };
+
+        static CurrentSupportProbeFrame[] CurrentSupportProbes(
+            FootFrame frame) => new[]
+        {
+            frame.CurrentSupportBase,
+            frame.CurrentSupportRear,
+            frame.CurrentSupportPositiveLateral,
+            frame.CurrentSupportNegativeLateral,
+            frame.CurrentSupportToe
+        };
+
+        static bool CurrentSupportSelectionConsistent(FootFrame frame)
+        {
+            if (!frame.CurrentSupportAvailable)
+                return !frame.CurrentSupportTarget.Available;
+            CurrentSupportCandidateFrame[] candidates =
+                CurrentSupportCandidates(frame);
+            CurrentSupportCandidateFrame selected = candidates[0];
+            string reason = "None";
+            for (int i = 1; i < candidates.Length; i++)
+            {
+                CurrentSupportCandidateFrame candidate = candidates[i];
+                if (!candidate.Available)
+                    continue;
+                float delta = candidate.HeightAlongUp -
+                              selected.HeightAlongUp;
+                if (delta > frame.CurrentSupportSelectionEpsilon)
+                {
+                    selected = candidate;
+                    reason = "HigherAlongComponentUp";
+                    continue;
+                }
+                if (delta < -frame.CurrentSupportSelectionEpsilon)
+                    continue;
+                int identity = candidate.Surface.CompareTo(selected.Surface);
+                if (identity < 0)
+                {
+                    selected = candidate;
+                    reason = "EquivalentHeightSurfaceIdentity";
+                    continue;
+                }
+                if (identity == 0 &&
+                    ProbeOrder(candidate.Kind) < ProbeOrder(selected.Kind))
+                {
+                    selected = candidate;
+                    reason = "EquivalentHeightProbeOrder";
+                }
+            }
+            SupportTargetFrame target = frame.CurrentSupportTarget;
+            return frame.CurrentSupportSelectedProbe == selected.Kind &&
+                   frame.CurrentSupportSelectionReason == reason &&
+                   Vector3.Distance(
+                       frame.CurrentSupportSelectedDirectionBeforeNormalization,
+                       selected.Direction) <= RuntimeGeometryEpsilon &&
+                   target.Available && target.Kind == "CurrentSupport" &&
+                   target.PositionSource == "CurrentSupport" &&
+                   target.NormalSource == "CurrentSupport" &&
+                   target.CurrentSupportProbeKind == selected.Kind &&
+                   target.Surface == selected.Surface &&
+                   target.WorldRevision == selected.WorldRevision &&
+                   target.PositionFrame == (ulong)frame.Frame &&
+                   target.NormalFrame == (ulong)frame.Frame &&
+                   target.PositionCompletion == frame.CompletionIdentity &&
+                   target.NormalCompletion == frame.CompletionIdentity &&
+                   Vector3.Distance(
+                       target.Position,
+                       selected.SolePosition) <= PositionNoiseFloor &&
+                   Vector3.Distance(
+                       target.Normal,
+                       selected.Direction) <= RuntimeGeometryEpsilon;
+        }
+
+        static int ProbeOrder(string kind) => kind switch
+        {
+            "Base" => 1,
+            "Rear" => 2,
+            "PositiveLateral" => 3,
+            "NegativeLateral" => 4,
+            "Toe" => 5,
+            _ => int.MaxValue
+        };
+
+        static bool CurrentSupportLayoutConsistent(FootFrame frame)
+        {
+            Vector3 basePosition = frame.CurrentSupportBase.ProbePosition;
+            Vector3 rearOffset =
+                frame.CurrentSupportRear.ProbePosition - basePosition;
+            Vector3 positiveOffset =
+                frame.CurrentSupportPositiveLateral.ProbePosition -
+                basePosition;
+            Vector3 negativeOffset =
+                frame.CurrentSupportNegativeLateral.ProbePosition -
+                basePosition;
+            Vector3 toeOffset =
+                frame.CurrentSupportToe.ProbePosition - frame.SourceToe;
+            if (Vector3.Distance(basePosition, frame.SourceHeel) >
+                    PositionNoiseFloor ||
+                rearOffset.sqrMagnitude <=
+                    RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
+                positiveOffset.sqrMagnitude <=
+                    RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
+                negativeOffset.sqrMagnitude <=
+                    RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
+                toeOffset.sqrMagnitude <=
+                    RuntimeGeometryEpsilon * RuntimeGeometryEpsilon)
+            {
+                return false;
+            }
+            Vector3 forward = toeOffset.normalized;
+            return Vector3.Dot(rearOffset.normalized, forward) <=
+                       -1f + RuntimeGeometryEpsilon &&
+                   Vector3.Distance(
+                       positiveOffset,
+                       -negativeOffset) <= PositionNoiseFloor &&
+                   Math.Abs(Vector3.Dot(
+                       positiveOffset.normalized,
+                       forward)) <= RuntimeGeometryEpsilon;
+        }
+
         static void RequireCurrentSupport(FootFrame frame)
         {
             if (!frame.CurrentSupportSpecified)
@@ -7467,10 +7776,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.CurrentSupportRejectReason,
                 "CurrentSupportRejectReason");
             RequireCurrentSupportProbe(
-                frame.CurrentSupportHeel,
-                "Heel",
+                frame.CurrentSupportBase,
+                "Base",
                 frame.CurrentSupportWorldRevision,
-                "CurrentSupportHeel");
+                "CurrentSupportBase");
+            RequireCurrentSupportProbe(
+                frame.CurrentSupportRear,
+                "Rear",
+                frame.CurrentSupportWorldRevision,
+                "CurrentSupportRear");
+            RequireCurrentSupportProbe(
+                frame.CurrentSupportPositiveLateral,
+                "PositiveLateral",
+                frame.CurrentSupportWorldRevision,
+                "CurrentSupportPositiveLateral");
+            RequireCurrentSupportProbe(
+                frame.CurrentSupportNegativeLateral,
+                "NegativeLateral",
+                frame.CurrentSupportWorldRevision,
+                "CurrentSupportNegativeLateral");
             RequireCurrentSupportProbe(
                 frame.CurrentSupportToe,
                 "Toe",
@@ -7480,26 +7804,83 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.CurrentSupportTarget,
                 frame.Side,
                 "CurrentSupportTarget");
-            bool available = frame.CurrentSupportRejectReason == "None" &&
-                             frame.CurrentSupportHeel.Accepted &&
-                             frame.CurrentSupportToe.Accepted &&
+            RequireCurrentSupportCandidate(
+                frame,
+                frame.CurrentSupportBase,
+                frame.CurrentSupportBaseCandidate,
+                "Base",
+                "CurrentSupportBaseCandidate");
+            RequireCurrentSupportCandidate(
+                frame,
+                frame.CurrentSupportRear,
+                frame.CurrentSupportRearCandidate,
+                "Rear",
+                "CurrentSupportRearCandidate");
+            RequireCurrentSupportCandidate(
+                frame,
+                frame.CurrentSupportPositiveLateral,
+                frame.CurrentSupportPositiveLateralCandidate,
+                "PositiveLateral",
+                "CurrentSupportPositiveLateralCandidate");
+            RequireCurrentSupportCandidate(
+                frame,
+                frame.CurrentSupportNegativeLateral,
+                frame.CurrentSupportNegativeLateralCandidate,
+                "NegativeLateral",
+                "CurrentSupportNegativeLateralCandidate");
+            RequireCurrentSupportCandidate(
+                frame,
+                frame.CurrentSupportToe,
+                frame.CurrentSupportToeCandidate,
+                "Toe",
+                "CurrentSupportToeCandidate");
+            CurrentSupportProbeFrame[] probes = CurrentSupportProbes(frame);
+            bool worldMismatch = probes.Any(
+                probe => probe.WorldRevision !=
+                         frame.CurrentSupportWorldRevision);
+            bool capacityExceeded = probes.Any(
+                probe => probe.RejectReason == "CapacityExceeded");
+            string expectedRejectReason;
+            if (!frame.Grounded)
+                expectedRejectReason = "NotGrounded";
+            else if (worldMismatch)
+                expectedRejectReason = "WorldRevisionMismatch";
+            else if (capacityExceeded)
+                expectedRejectReason = "CapacityExceeded";
+            else if (!frame.CurrentSupportBase.Accepted &&
+                     !frame.CurrentSupportToe.Accepted)
+                expectedRejectReason = "BaseAndToeUnavailable";
+            else if (!frame.CurrentSupportBase.Accepted)
+                expectedRejectReason = "BaseUnavailable";
+            else if (!frame.CurrentSupportToe.Accepted)
+                expectedRejectReason = "ToeUnavailable";
+            else if (!frame.CurrentSupportBaseCandidate.Available ||
+                     !frame.CurrentSupportToeCandidate.Available)
+                expectedRejectReason = "InvalidSupportNormal";
+            else
+                expectedRejectReason = "None";
+            bool available = expectedRejectReason == "None" &&
                              frame.CurrentSupportTarget.Available;
+            bool probesExecutedConsistently = !frame.Grounded
+                ? probes.All(probe =>
+                    !probe.SphereCastExecuted &&
+                    probe.State == "NotExecuted")
+                : probes.All(probe => probe.SphereCastExecuted);
             if (frame.CurrentSupportFrame != (ulong)frame.Frame ||
                 frame.CurrentSupportCompletion != frame.CompletionIdentity ||
                 frame.CurrentSupportWorldRevision == 0 ||
                 frame.CurrentSupportAvailable != available ||
-                !float.IsFinite(
-                    frame.CurrentSupportHeelRequiredDisplacement) ||
-                !float.IsFinite(
-                    frame.CurrentSupportToeRequiredDisplacement) ||
+                frame.CurrentSupportRejectReason != expectedRejectReason ||
+                !probesExecutedConsistently ||
+                !CurrentSupportLayoutConsistent(frame) ||
                 !float.IsFinite(frame.CurrentSupportSelectionEpsilon) ||
-                frame.CurrentSupportSelectionEpsilon <= 0f ||
+                Math.Abs(
+                    frame.CurrentSupportSelectionEpsilon - 0.0001f) >
+                TimeEpsilon ||
                 available &&
                     (!FiniteVector(
-                         frame.CurrentSupportSelectedNormalBeforeNormalization) ||
-                     frame.CurrentSupportSelectedNormalBeforeNormalization
-                         .sqrMagnitude <=
-                     RuntimeGeometryEpsilon * RuntimeGeometryEpsilon))
+                         frame.CurrentSupportSelectedDirectionBeforeNormalization) ||
+                     !CurrentSupportSelectionConsistent(frame)))
             {
                 throw new InvalidDataException(
                     "Foot Motion Current Support facts are inconsistent.");
@@ -7515,11 +7896,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void RequireCurrentSupportLineage(
+            FootFrame frame,
+            SupportTargetFrame target,
+            string prefix)
+        {
+            if (!target.Available)
+                return;
+            bool positionFromCurrentSupport =
+                target.PositionSource == "CurrentSupport";
+            bool normalFromCurrentSupport =
+                target.NormalSource == "CurrentSupport";
+            if (!positionFromCurrentSupport && !normalFromCurrentSupport)
+                return;
+            SupportTargetFrame current = frame.CurrentSupportTarget;
+            bool consistent = frame.CurrentSupportAvailable &&
+                              current.Available &&
+                              target.CurrentSupportProbeKind ==
+                              frame.CurrentSupportSelectedProbe;
+            if (positionFromCurrentSupport)
+            {
+                consistent &= target.PositionFrame == current.PositionFrame &&
+                              target.PositionCompletion ==
+                              current.PositionCompletion &&
+                              target.PositionEvent == current.PositionEvent &&
+                              target.PositionPath == current.PositionPath &&
+                              Vector3.Distance(
+                                  target.Position,
+                                  current.Position) <= PositionNoiseFloor;
+            }
+            if (normalFromCurrentSupport)
+            {
+                consistent &= target.NormalFrame == current.NormalFrame &&
+                              target.NormalCompletion ==
+                              current.NormalCompletion &&
+                              target.NormalEvent == current.NormalEvent;
+            }
+            if (!consistent)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion {prefix} Current Support lineage is inconsistent.");
+            }
+        }
+
         static void RequirePreparedAndSelectedTarget(FootFrame frame)
         {
             RequireSupportTarget(
                 frame.SelectedSupportTarget,
                 frame.Side,
+                "SelectedSupportTarget");
+            RequireCurrentSupportLineage(
+                frame,
+                frame.SelectedSupportTarget,
                 "SelectedSupportTarget");
             if (frame.ApproachPlantTargetPrepared &&
                 (!frame.PreparedTargetAvailable ||
@@ -7683,6 +8111,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireSupportTarget(
                 frame.ResolvedSupportTarget,
                 frame.Side,
+                "ResolvedSupportTarget");
+            RequireCurrentSupportLineage(
+                frame,
+                frame.ResolvedSupportTarget,
                 "ResolvedSupportTarget");
             if (frame.ResolvedFrame != (ulong)frame.Frame ||
                 frame.ResolvedCompletion != frame.CompletionIdentity ||
@@ -8280,7 +8712,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ");
             RequireColumnGroup(
                 indices,
-                "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason,CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted,CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted,CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ");
+                "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason");
+            RequireColumnGroup(indices, CurrentSupportProbeColumns("CurrentSupportBase"));
+            RequireColumnGroup(indices, CurrentSupportProbeColumns("CurrentSupportRear"));
+            RequireColumnGroup(
+                indices,
+                CurrentSupportProbeColumns("CurrentSupportPositiveLateral"));
+            RequireColumnGroup(
+                indices,
+                CurrentSupportProbeColumns("CurrentSupportNegativeLateral"));
+            RequireColumnGroup(indices, CurrentSupportProbeColumns("CurrentSupportToe"));
+            RequireColumnGroup(
+                indices,
+                CurrentSupportCandidateColumns("CurrentSupportBaseCandidate"));
+            RequireColumnGroup(
+                indices,
+                CurrentSupportCandidateColumns("CurrentSupportRearCandidate"));
+            RequireColumnGroup(
+                indices,
+                CurrentSupportCandidateColumns(
+                    "CurrentSupportPositiveLateralCandidate"));
+            RequireColumnGroup(
+                indices,
+                CurrentSupportCandidateColumns(
+                    "CurrentSupportNegativeLateralCandidate"));
+            RequireColumnGroup(
+                indices,
+                CurrentSupportCandidateColumns("CurrentSupportToeCandidate"));
+            RequireColumnGroup(
+                indices,
+                "CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedDirectionBeforeNormalizationX,CurrentSupportSelectedDirectionBeforeNormalizationY,CurrentSupportSelectedDirectionBeforeNormalizationZ");
             RequireColumnGroup(indices, SupportTargetColumns("CurrentSupportTarget"));
             RequireColumnGroup(indices, SupportTargetColumns("ResolvedSupportTarget"));
             RequireColumnGroup(
@@ -8289,7 +8750,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static string SupportTargetColumns(string prefix) =>
-            $"{prefix}Available,{prefix}FrameSequence,{prefix}CompletionIdentity,{prefix}Side,{prefix}PositionX,{prefix}PositionY,{prefix}PositionZ,{prefix}NormalX,{prefix}NormalY,{prefix}NormalZ,{prefix}SurfaceIdentity,{prefix}WorldRevision,{prefix}Kind,{prefix}PositionSource,{prefix}PositionFrameSequence,{prefix}PositionCompletionIdentity,{prefix}PositionEventIdentity,{prefix}PositionPathIdentity,{prefix}NormalSource,{prefix}NormalFrameSequence,{prefix}NormalCompletionIdentity,{prefix}NormalEventIdentity";
+            $"{prefix}Available,{prefix}FrameSequence,{prefix}CompletionIdentity,{prefix}Side,{prefix}PositionX,{prefix}PositionY,{prefix}PositionZ,{prefix}NormalX,{prefix}NormalY,{prefix}NormalZ,{prefix}SurfaceIdentity,{prefix}WorldRevision,{prefix}Kind,{prefix}PositionSource,{prefix}PositionFrameSequence,{prefix}PositionCompletionIdentity,{prefix}PositionEventIdentity,{prefix}PositionPathIdentity,{prefix}NormalSource,{prefix}NormalFrameSequence,{prefix}NormalCompletionIdentity,{prefix}NormalEventIdentity,{prefix}CurrentSupportProbeKind";
+
+        static string CurrentSupportProbeColumns(string prefix) =>
+            $"{prefix}Purpose,{prefix}Kind,{prefix}State,{prefix}RejectReason,{prefix}ProbePositionX,{prefix}ProbePositionY,{prefix}ProbePositionZ,{prefix}ComponentUpX,{prefix}ComponentUpY,{prefix}ComponentUpZ,{prefix}OriginX,{prefix}OriginY,{prefix}OriginZ,{prefix}DirectionX,{prefix}DirectionY,{prefix}DirectionZ,{prefix}MaximumDistance,{prefix}Radius,{prefix}LayerMask,{prefix}MinimumGroundNormalDot,{prefix}HitCapacity,{prefix}CandidateCount,{prefix}SurfaceIdentity,{prefix}PointX,{prefix}PointY,{prefix}PointZ,{prefix}NormalX,{prefix}NormalY,{prefix}NormalZ,{prefix}Distance,{prefix}WorldRevision,{prefix}SphereCastExecuted,{prefix}Accepted";
+
+        static string CurrentSupportCandidateColumns(string prefix) =>
+            $"{prefix}Available,{prefix}Kind,{prefix}SolePositionX,{prefix}SolePositionY,{prefix}SolePositionZ,{prefix}HeightAlongUp,{prefix}DirectionX,{prefix}DirectionY,{prefix}DirectionZ,{prefix}SurfaceIdentity,{prefix}WorldRevision";
 
         static void RequireColumnGroup(
             Dictionary<string, int> indices,
@@ -8734,6 +9201,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong NormalFrame;
             internal ulong NormalCompletion;
             internal ulong NormalEvent;
+            internal string CurrentSupportProbeKind;
         }
 
         sealed class CurrentSupportProbeFrame
@@ -8759,6 +9227,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong WorldRevision;
             internal bool SphereCastExecuted;
             internal bool Accepted;
+        }
+
+        sealed class CurrentSupportCandidateFrame
+        {
+            internal bool Available;
+            internal string Kind;
+            internal Vector3 SolePosition;
+            internal float HeightAlongUp;
+            internal Vector3 Direction;
+            internal int Surface;
+            internal ulong WorldRevision;
         }
 
         sealed class FootFrame
@@ -9083,14 +9562,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong CurrentSupportFrame;
             internal ulong CurrentSupportCompletion;
             internal ulong CurrentSupportWorldRevision;
-            internal CurrentSupportProbeFrame CurrentSupportHeel;
+            internal CurrentSupportProbeFrame CurrentSupportBase;
+            internal CurrentSupportProbeFrame CurrentSupportRear;
+            internal CurrentSupportProbeFrame CurrentSupportPositiveLateral;
+            internal CurrentSupportProbeFrame CurrentSupportNegativeLateral;
             internal CurrentSupportProbeFrame CurrentSupportToe;
-            internal float CurrentSupportHeelRequiredDisplacement;
-            internal float CurrentSupportToeRequiredDisplacement;
+            internal CurrentSupportCandidateFrame CurrentSupportBaseCandidate;
+            internal CurrentSupportCandidateFrame CurrentSupportRearCandidate;
+            internal CurrentSupportCandidateFrame
+                CurrentSupportPositiveLateralCandidate;
+            internal CurrentSupportCandidateFrame
+                CurrentSupportNegativeLateralCandidate;
+            internal CurrentSupportCandidateFrame CurrentSupportToeCandidate;
             internal string CurrentSupportSelectedProbe;
             internal string CurrentSupportSelectionReason;
             internal float CurrentSupportSelectionEpsilon;
-            internal Vector3 CurrentSupportSelectedNormalBeforeNormalization;
+            internal Vector3 CurrentSupportSelectedDirectionBeforeNormalization;
             internal SupportTargetFrame CurrentSupportTarget;
             internal ulong ResolvedFrame;
             internal ulong ResolvedCompletion;

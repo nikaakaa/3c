@@ -239,7 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSafetyFloorOutputCorrectionX,FootMotionSafetyFloorOutputCorrectionY,FootMotionSafetyFloorOutputCorrectionZ," +
             "FootMotionFinalEffectiveCorrectionX,FootMotionFinalEffectiveCorrectionY,FootMotionFinalEffectiveCorrectionZ," +
             "FootMotionSafetyFloorClamped,FootMotionSafetyFloorClampMeters,FootMotionSafetyFloorClearanceBeforeMeters,FootMotionSafetyFloorClearanceAfterMeters," +
-            "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified,FootMotionPlantTargetKind,FootMotionPlantLockResponse," +
+            "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified,FootMotionPlantTargetKind,FootMotionPlantLockResponse,FootMotionPlantLockWeightCompleted," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
             "FootMotionSelectedSupportTargetAvailable,FootMotionSelectedSupportTargetFrameSequence,FootMotionSelectedSupportTargetCompletionIdentity,FootMotionSelectedSupportTargetSide,FootMotionSelectedSupportTargetPositionX,FootMotionSelectedSupportTargetPositionY,FootMotionSelectedSupportTargetPositionZ,FootMotionSelectedSupportTargetNormalX,FootMotionSelectedSupportTargetNormalY,FootMotionSelectedSupportTargetNormalZ,FootMotionSelectedSupportTargetSurfaceIdentity,FootMotionSelectedSupportTargetWorldRevision,FootMotionSelectedSupportTargetKind,FootMotionSelectedSupportTargetPositionSource,FootMotionSelectedSupportTargetPositionFrameSequence,FootMotionSelectedSupportTargetPositionCompletionIdentity,FootMotionSelectedSupportTargetPositionEventIdentity,FootMotionSelectedSupportTargetPositionPathIdentity,FootMotionSelectedSupportTargetNormalSource,FootMotionSelectedSupportTargetNormalFrameSequence,FootMotionSelectedSupportTargetNormalCompletionIdentity,FootMotionSelectedSupportTargetNormalEventIdentity," +
@@ -2202,6 +2202,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantTargetVerified);
             Add(row, motion.PlantTargetKind);
             Add(row, motion.PlantLockResponse.ToString());
+            Add(row, motion.PlantLockWeightCompleted);
             Add(row, motion.PlantDesiredPoint);
             Add(row, motion.PlantFilteredPoint);
             AddSupportTarget(row, motion.SelectedSupportTarget);

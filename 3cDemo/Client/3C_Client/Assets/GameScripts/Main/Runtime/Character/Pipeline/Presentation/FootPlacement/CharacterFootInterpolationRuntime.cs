@@ -123,7 +123,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumTargetDelta =
                 frame.Settings.MaximumVerticalTargetSpeed *
                 frame.DeltaSeconds;
-            float targetAppliedVerticalDelta = target.DirectPlantFollow
+            bool targetForceRefreshed = !target.DirectPlantFollow &&
+                                        Mathf.Abs(targetVerticalDelta) >=
+                                        frame.Settings
+                                            .TargetHeightForceRefreshDistance;
+            float targetAppliedVerticalDelta = target.DirectPlantFollow ||
+                                               targetForceRefreshed
                 ? targetVerticalDelta
                 : Mathf.Clamp(
                     targetVerticalDelta,
@@ -154,7 +159,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                  frame.Settings.LandingAcceptanceDistance;
             bool captureTransition = !sameTarget ||
                                      target.ResponseEntered ||
-                                     targetRevised;
+                                     targetRevised ||
+                                     targetForceRefreshed;
             if (captureTransition)
             {
                 state.Residual =
@@ -236,6 +242,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Settings.MaximumVerticalTargetSpeed,
                 targetVerticalDelta,
                 targetAppliedVerticalDelta,
+                targetForceRefreshed,
+                frame.Settings.TargetHeightForceRefreshDistance,
                 targetVerticalClamped,
                 blendedCorrection,
                 frame.Settings.MaximumVerticalCorrectionSpeed,
@@ -379,7 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                          landingHeightDelta >
                                          frame.Settings.PathRevisionDistance;
                 if (retargetRequested &&
-                    landingHeightDelta >=
+                    Mathf.Abs(targetHeightDelta) >=
                     frame.Settings.TargetHeightForceRefreshDistance)
                 {
                     state.FilteredTargetHeightAlongUp =

@@ -242,7 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
-            "FootMotionPlantBlendWeight,FootMotionPlantTargetMaximumVerticalSpeed,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetVerticalClamped," +
+            "FootMotionPlantBlendWeight,FootMotionPlantTargetMaximumVerticalSpeed,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
             "FootMotionPlantBlendedCorrectionX,FootMotionPlantBlendedCorrectionY,FootMotionPlantBlendedCorrectionZ," +
             "FootMotionPlantCorrectionMaximumVerticalSpeed,FootMotionPlantCorrectionVerticalDelta,FootMotionPlantCorrectionAppliedVerticalDelta,FootMotionPlantCorrectionVerticalClamped,FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
@@ -2168,6 +2168,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantTargetMaximumVerticalSpeed);
             Add(row, motion.PlantTargetVerticalDelta);
             Add(row, motion.PlantTargetAppliedVerticalDelta);
+            Add(row, motion.PlantTargetForceRefreshed);
+            Add(row, motion.PlantTargetForceRefreshDistance);
             Add(row, motion.PlantTargetVerticalClamped);
             Add(row, motion.PlantBlendedCorrection);
             Add(row, motion.PlantCorrectionMaximumVerticalSpeed);

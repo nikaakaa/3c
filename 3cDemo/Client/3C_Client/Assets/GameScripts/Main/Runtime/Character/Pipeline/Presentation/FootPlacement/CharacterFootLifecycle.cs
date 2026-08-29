@@ -123,6 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in context,
                 in target,
                 in frame);
+            CharacterFootSupportIntent supportIntent = target.SupportIntent;
             return BuildOutput(
                 in context,
                 side,
@@ -130,7 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in outputSwing,
                 desiredCorrection,
                 hardConstraint.OutputCorrection,
-                in target.SupportIntent,
+                in supportIntent,
                 in continuityFact,
                 out result);
         }
@@ -270,11 +271,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 swing.Progress,
                 swing.BaselineSample,
                 swing.EnvelopeSample,
+                swing.FormalTargetHeightAlongUp,
                 Vector3.Dot(
                     outputCorrection,
                     frame.ComponentUp.normalized),
                 swing.LandingPredictionError,
-                swing.LandingConstraintWeight,
                 originalSole + outputCorrection,
                 originalAnkle + outputCorrection,
                 positionWeight,
@@ -367,6 +368,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.SwingMotion.Accepted &&
                 frame.SwingMotion.SwingPathReference.LandingEventIdentity !=
                     frame.SwingMotion.LandingEventIdentity ||
+                frame.SwingMotion.Accepted &&
+                !float.IsFinite(
+                    frame.SwingMotion.FormalTargetHeightAlongUp) ||
                 frame.HasContactLanding &&
                 frame.ContactLanding.LandingEventIdentity == 0 ||
                 frame.PreparedPlantActive &&

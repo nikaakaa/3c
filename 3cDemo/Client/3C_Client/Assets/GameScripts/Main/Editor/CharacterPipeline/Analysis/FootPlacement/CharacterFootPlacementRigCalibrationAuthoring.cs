@@ -696,10 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 draft = new CharacterFootPlacementFootCalibration(
                     ankle.InverseTransformPoint(nextHeel),
                     toe.InverseTransformPoint(nextToe),
-                    draft.SoleFrameLocalRotation,
-                    draft.RearProbeExtension,
-                    draft.LateralProbeExtent,
-                    draft.ToeProbeExtension);
+                    draft.SoleFrameLocalRotation);
                 draft = DeriveSoleFrame(draft, ankle, toe);
                 if (s_Side == CharacterFootSide.Left)
                     s_Left = draft;
@@ -775,10 +772,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return new CharacterFootPlacementFootCalibration(
                 source.HeelContactLocalOffset,
                 source.ToeContactLocalOffset,
-                Quaternion.Inverse(ankle.rotation) * worldRotation,
-                source.RearProbeExtension,
-                source.LateralProbeExtent,
-                source.ToeProbeExtension);
+                Quaternion.Inverse(ankle.rotation) * worldRotation);
         }
 
         static void DeriveSoleFrames()

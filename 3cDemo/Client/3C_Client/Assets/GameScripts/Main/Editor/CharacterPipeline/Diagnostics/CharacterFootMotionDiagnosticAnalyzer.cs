@@ -53,9 +53,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         const string Schema = "character-foot-motion-facts/26";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 25;
+        const int AnalyzerVersion = 26;
         const string GeometryFileName = "ground-path-geometry.csv";
-        const int HeaderColumnCapacity = 704;
+        const int HeaderColumnCapacity = 768;
         const float PositionNoiseFloor = 0.001f;
         const float TimeEpsilon = 0.000001f;
         const double LandingReachCompressionReserveMeters = 0.02d;
@@ -3964,14 +3964,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 float correctionBudget =
                     frame.PlantCorrectionMaximumVerticalSpeed *
                     frame.DeltaSeconds;
-                bool targetClampExpected = Math.Abs(
-                    frame.PlantTargetVerticalDelta -
-                    frame.PlantTargetAppliedVerticalDelta) >
-                    PositionNoiseFloor;
-                bool correctionClampExpected = Math.Abs(
-                    frame.PlantCorrectionVerticalDelta -
-                    frame.PlantCorrectionAppliedVerticalDelta) >
-                    PositionNoiseFloor;
+                bool targetClampExpected = !Mathf.Approximately(
+                    frame.PlantTargetVerticalDelta,
+                    frame.PlantTargetAppliedVerticalDelta);
+                bool correctionClampExpected = !Mathf.Approximately(
+                    frame.PlantCorrectionVerticalDelta,
+                    frame.PlantCorrectionAppliedVerticalDelta);
                 if (frame.PlantTargetEventIdentity == 0 ||
                     !FiniteVector(frame.PlantDesiredPoint) ||
                     !FiniteVector(frame.PlantFilteredPoint) ||

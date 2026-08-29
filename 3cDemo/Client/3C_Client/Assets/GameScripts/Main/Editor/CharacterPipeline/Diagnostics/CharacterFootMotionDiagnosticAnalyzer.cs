@@ -1001,10 +1001,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CultureInfo.InvariantCulture));
                 bool firstForcedVerification = forcedVerification &&
                     forcedVerificationByEvent.Add(forcedVerificationKey);
+                FootFrame previousCommitted = i > 0 &&
+                    Continuous(frames[i - 1], current)
+                        ? frames[i - 1]
+                        : null;
+                bool previousCommittedIdentityMatches =
+                    previousCommitted != null &&
+                    previousCommitted.LandingObservationIdentity ==
+                    current.LandingObservationIdentity;
                 bool duplicateQuery =
                     current.LandingObservationQueryExecuted &&
                     (forcedVerification && !firstForcedVerification ||
-                     identitySeenBefore && !forcedVerification);
+                     previousCommittedIdentityMatches &&
+                     !forcedVerification);
                 bool distanceExceeded =
                     current.LandingObservationQueryInputDistance >
                     current.LandingObservationPredictionInputAccumulationDistance;

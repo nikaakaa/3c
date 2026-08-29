@@ -217,6 +217,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_SwingResidualTolerance;
         [SerializeField] float m_ReleaseCompletionTolerance;
         [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
+        [SerializeField] float m_MaximumVerticalCorrectionSpeed;
+        [SerializeField] float m_GroundPenetrationTolerance;
+        [SerializeField] float m_LandingLockCompletionTolerance;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_PelvisSpringFrequency = 3f;
@@ -229,6 +232,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_SwingResidualTolerance,
                 m_ReleaseCompletionTolerance,
                 m_EffectiveCorrectionHalfLifeSeconds,
+                m_MaximumVerticalCorrectionSpeed,
+                m_GroundPenetrationTolerance,
+                m_LandingLockCompletionTolerance,
                 m_LockDistance,
                 m_SlideDistance,
                 m_PelvisSpringFrequency,
@@ -243,6 +249,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float swingResidualTolerance,
             float releaseCompletionTolerance,
             float effectiveCorrectionHalfLifeSeconds,
+            float maximumVerticalCorrectionSpeed,
+            float groundPenetrationTolerance,
+            float landingLockCompletionTolerance,
             float lockDistance,
             float slideDistance,
             float pelvisSpringFrequency,
@@ -253,6 +262,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingResidualTolerance = swingResidualTolerance;
             ReleaseCompletionTolerance = releaseCompletionTolerance;
             EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
+            MaximumVerticalCorrectionSpeed = maximumVerticalCorrectionSpeed;
+            GroundPenetrationTolerance = groundPenetrationTolerance;
+            LandingLockCompletionTolerance = landingLockCompletionTolerance;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
             PelvisSpringFrequency = pelvisSpringFrequency;
@@ -266,6 +278,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SwingResidualTolerance { get; }
         internal float ReleaseCompletionTolerance { get; }
         internal float EffectiveCorrectionHalfLifeSeconds { get; }
+        internal float MaximumVerticalCorrectionSpeed { get; }
+        internal float GroundPenetrationTolerance { get; }
+        internal float LandingLockCompletionTolerance { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
         internal float PelvisSpringFrequency { get; }
@@ -283,11 +298,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ReleaseCompletionTolerance <= 0f ||
                 !float.IsFinite(EffectiveCorrectionHalfLifeSeconds) ||
                 EffectiveCorrectionHalfLifeSeconds <= 0f ||
+                !float.IsFinite(MaximumVerticalCorrectionSpeed) ||
+                MaximumVerticalCorrectionSpeed <= 0f ||
+                !float.IsFinite(GroundPenetrationTolerance) ||
+                GroundPenetrationTolerance <= 0f ||
+                !float.IsFinite(LandingLockCompletionTolerance) ||
+                LandingLockCompletionTolerance <= 0f ||
                 !float.IsFinite(LockDistance) ||
                 LockDistance <= LandingAcceptanceDistance ||
                 LockDistance <= PathRevisionDistance ||
                 LockDistance <= SwingResidualTolerance ||
                 LockDistance <= ReleaseCompletionTolerance ||
+                LockDistance <= GroundPenetrationTolerance ||
+                LockDistance <= LandingLockCompletionTolerance ||
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f ||
@@ -305,7 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v29-prediction-motion";
+        public const string SchemaVersion = "character-foot-placement-profile/v30-ground-continuity";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

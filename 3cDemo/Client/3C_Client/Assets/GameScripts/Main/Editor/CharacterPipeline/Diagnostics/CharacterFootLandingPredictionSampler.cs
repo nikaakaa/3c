@@ -90,31 +90,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string GeometryFileName = "ground-path-geometry.csv";
         const string Header =
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
-            "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
+            "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,FootProfileId,FootProfileRevision,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
             "NextLandingTrackingState,NextLandingTrackingEventIdentity,VerifiedLastLandingAvailable,VerifiedLastLandingEventIdentity," +
-            "PlantTargetState,PlantTargetAvailable,PlantTargetEventIdentity,PlantTargetSurfaceIdentity,PlantTargetPointX,PlantTargetPointY,PlantTargetPointZ,PlantTargetUpdated,PlantVerificationAttempted,PlantVerificationUnavailable," +
+            "PlantTargetState,PlantTargetAvailable,PlantTargetEventIdentity,PlantTargetSurfaceIdentity,PlantTargetPointX,PlantTargetPointY,PlantTargetPointZ,PlantTargetNormalX,PlantTargetNormalY,PlantTargetNormalZ,PlantTargetTrajectoryGeneration,PlantTargetFutureBodyTranslationSourceIdentity,PlantTargetUpdated,PlantVerificationAttempted,PlantVerificationUnavailable,ApproachPlantTargetPrepared," +
             "StepSelectionMaximumPredictionTimeSeconds,StepSelectionLastLandingEventIdentity,SelectedStepSource,SelectedLandingEventIdentity," +
-            "SelectedStepEventPhase,SelectedStepApproachContactPhase,SelectedStepLandingPhase,SelectedStepAtOrAfterApproachContact,SelectedStepInApproachContactToLanding," +
+            "SelectedStepEventPhase,SelectedStepApproachContactToLandingProgress,SelectedStepLandingPhase,SelectedStepAtOrAfterApproachContact,SelectedStepInApproachContactToLanding," +
             "CurrentStepIsValid,CurrentStepIsAuthoritative,CurrentStepHasConsistentLandingEventIdentity,CurrentStepIsPreSwing,CurrentStepIsSwing," +
             "CurrentStepEventOrdinal,CurrentStepSourceLandingCycleOffset,CurrentStepSourceSampleCycle,CurrentStepContributionContinuityIdentity,CurrentStepLandingEventIdentity,CurrentStepTimeToLandingSeconds," +
-            "CurrentStepEventPhase,CurrentStepApproachContactPhase,CurrentStepLandingPhase,CurrentStepAtOrAfterApproachContact,CurrentStepInApproachContactToLanding," +
+            "CurrentStepEventPhase,CurrentStepApproachContactToLandingProgress,CurrentStepLandingPhase,CurrentStepAtOrAfterApproachContact,CurrentStepInApproachContactToLanding," +
             "CurrentStepRootLocalLandingX,CurrentStepRootLocalLandingY,CurrentStepRootLocalLandingZ," +
             "IncomingStepIsValid,IncomingStepIsAuthoritative,IncomingStepHasConsistentLandingEventIdentity,IncomingStepIsPreSwing,IncomingStepIsSwing," +
             "IncomingStepEventOrdinal,IncomingStepSourceLandingCycleOffset,IncomingStepSourceSampleCycle,IncomingStepContributionContinuityIdentity,IncomingStepLandingEventIdentity,IncomingStepTimeToLandingSeconds," +
-            "IncomingStepEventPhase,IncomingStepApproachContactPhase,IncomingStepLandingPhase,IncomingStepAtOrAfterApproachContact,IncomingStepInApproachContactToLanding," +
+            "IncomingStepEventPhase,IncomingStepApproachContactToLandingProgress,IncomingStepLandingPhase,IncomingStepAtOrAfterApproachContact,IncomingStepInApproachContactToLanding," +
             "IncomingStepRootLocalLandingX,IncomingStepRootLocalLandingY,IncomingStepRootLocalLandingZ," +
             "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
             "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
             "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
-            "FormalEventPhase,FormalEventTimeToLandingSeconds,FormalInApproachContactToLanding," +
+            "FormalEventPhase,FormalEventApproachContactToLandingProgress,FormalEventTimeToLandingSeconds,FormalInApproachContactToLanding," +
             "FormalCurrentContactEventAvailable,FormalCurrentContactEventIdentity,FormalCurrentContactEventOrdinal,FormalCurrentContactEventCycle,FormalCurrentContactEventDistance,FormalCurrentContactRootLocalLandingX,FormalCurrentContactRootLocalLandingY,FormalCurrentContactRootLocalLandingZ," +
             "FormalNextLandingEventAvailable,FormalNextLandingEventIdentity,FormalNextLandingEventOrdinal,FormalNextLandingEventCycle,FormalNextLandingEventDistance,FormalNextRootLocalLandingX,FormalNextRootLocalLandingY,FormalNextRootLocalLandingZ," +
             "InputFormalStepObservationAvailable,InputFormalStepSourceId,InputFormalStepSourceIdentity,InputFormalStepSourceWeight,InputFormalStepSourceNormalizedTime," +
             "InputFormalStepClipBindingIndex,InputFormalStepSourceCycle,InputFormalStepContributionContinuityIdentity,InputFormalStepCompletionIdentity,InputFormalStepTimeSeconds,InputFormalStepDistance," +
             "InputFormalFootHeight,InputFormalToeHeight,InputFormalToeSpeed,InputFormalPositionError,InputFormalRotationError," +
             "InputFormalContact,InputFormalLockMode,InputFormalLockWeight,InputFormalSupport," +
-            "InputFormalEventPhase,InputFormalEventTimeToLandingSeconds,InputFormalInApproachContactToLanding," +
+            "InputFormalEventPhase,InputFormalEventApproachContactToLandingProgress,InputFormalEventTimeToLandingSeconds,InputFormalInApproachContactToLanding," +
             "InputFormalCurrentContactEventAvailable,InputFormalCurrentContactEventIdentity,InputFormalCurrentContactEventOrdinal,InputFormalCurrentContactEventCycle,InputFormalCurrentContactEventDistance,InputFormalCurrentContactRootLocalLandingX,InputFormalCurrentContactRootLocalLandingY,InputFormalCurrentContactRootLocalLandingZ," +
             "InputFormalNextLandingEventAvailable,InputFormalNextLandingEventIdentity,InputFormalNextLandingEventOrdinal,InputFormalNextLandingEventCycle,InputFormalNextLandingEventDistance,InputFormalNextRootLocalLandingX,InputFormalNextRootLocalLandingY,InputFormalNextRootLocalLandingZ," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
@@ -182,7 +182,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "GroundPathFirstInvalidSegmentTopX,GroundPathFirstInvalidSegmentTopY,GroundPathFirstInvalidSegmentTopZ," +
             "GroundPathFirstInvalidSegmentVerticalDistance,GroundPathMaximumReachableVerticalEdge,GroundEnvelopeVertexCount," +
             "FootMotionState,FootMotionRejectReason,FootMotionLandingEventIdentity,FootMotionGroundPathInputIdentity," +
-            "FootMotionInterpolationComponentUpX,FootMotionInterpolationComponentUpY,FootMotionInterpolationComponentUpZ," +
             "FootMotionDistance,FootMotionProgress," +
             "FootMotionOriginalSoleX,FootMotionOriginalSoleY,FootMotionOriginalSoleZ," +
             "FootMotionOriginalAnkleX,FootMotionOriginalAnkleY,FootMotionOriginalAnkleZ," +
@@ -228,7 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
             "FootMotionSwingTargetHeightAdoptionMode,FootMotionSwingRawTargetHeightAlongUp,FootMotionSwingFilteredTargetHeightBefore,FootMotionSwingTargetHeightDelta," +
             "FootMotionSwingTargetHeightAppliedDelta,FootMotionSwingTargetHeightUpdateHeld,FootMotionSwingTargetHeightForceRefreshed,FootMotionSwingTargetHeightRateLimited,FootMotionSwingTargetHeightClamped,FootMotionSwingTargetHeightForceRefreshDistance,FootMotionSwingTargetMaximumVerticalSpeed," +
-            "FootMotionSwingFilteredTargetHeightAlongUp," +
+            "FootMotionSwingFilteredTargetHeightAlongUp,FootMotionTargetHeightComponentUpX,FootMotionTargetHeightComponentUpY,FootMotionTargetHeightComponentUpZ," +
             "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
             "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
             "FootMotionStateTargetCorrectionX,FootMotionStateTargetCorrectionY,FootMotionStateTargetCorrectionZ,FootMotionInterpolationPolicy," +
@@ -243,24 +242,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified,FootMotionPlantTargetKind,FootMotionPlantLockResponse," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
-            "FootMotionPlantPreviousBlendWeight,FootMotionPlantBlendWeight,FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
+            "FootMotionSelectedSupportTargetAvailable,FootMotionSelectedSupportTargetFrameSequence,FootMotionSelectedSupportTargetCompletionIdentity,FootMotionSelectedSupportTargetSide,FootMotionSelectedSupportTargetPositionX,FootMotionSelectedSupportTargetPositionY,FootMotionSelectedSupportTargetPositionZ,FootMotionSelectedSupportTargetNormalX,FootMotionSelectedSupportTargetNormalY,FootMotionSelectedSupportTargetNormalZ,FootMotionSelectedSupportTargetSurfaceIdentity,FootMotionSelectedSupportTargetWorldRevision,FootMotionSelectedSupportTargetKind,FootMotionSelectedSupportTargetPositionSource,FootMotionSelectedSupportTargetPositionFrameSequence,FootMotionSelectedSupportTargetPositionCompletionIdentity,FootMotionSelectedSupportTargetPositionEventIdentity,FootMotionSelectedSupportTargetPositionPathIdentity,FootMotionSelectedSupportTargetNormalSource,FootMotionSelectedSupportTargetNormalFrameSequence,FootMotionSelectedSupportTargetNormalCompletionIdentity,FootMotionSelectedSupportTargetNormalEventIdentity," +
+            "FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
             "FootMotionPlantTargetHeightBefore,FootMotionPlantTargetHeightTarget,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightAfter,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetHeightUpdateReason,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
-            "FootMotionPlantPreviousMixedWorldTargetX,FootMotionPlantPreviousMixedWorldTargetY,FootMotionPlantPreviousMixedWorldTargetZ," +
-            "FootMotionPlantMixedWorldTargetX,FootMotionPlantMixedWorldTargetY,FootMotionPlantMixedWorldTargetZ," +
-            "FootMotionPlantPreviousResponseOutputAvailable,FootMotionPlantPreviousResponseOutputPointX,FootMotionPlantPreviousResponseOutputPointY,FootMotionPlantPreviousResponseOutputPointZ," +
-            "FootMotionPlantDesiredOutputPointX,FootMotionPlantDesiredOutputPointY,FootMotionPlantDesiredOutputPointZ," +
-            "FootMotionPlantResponseOutputPointX,FootMotionPlantResponseOutputPointY,FootMotionPlantResponseOutputPointZ,FootMotionPlantResidualCaptureReason," +
+            "FootMotionPlantPreviousSelectedWorldTargetX,FootMotionPlantPreviousSelectedWorldTargetY,FootMotionPlantPreviousSelectedWorldTargetZ," +
+            "FootMotionPlantSelectedWorldTargetX,FootMotionPlantSelectedWorldTargetY,FootMotionPlantSelectedWorldTargetZ," +
+            "FootMotionPreviousResponseOutputAvailable,FootMotionPreviousResponseOutputPointX,FootMotionPreviousResponseOutputPointY,FootMotionPreviousResponseOutputPointZ," +
+            "FootMotionDesiredOutputPointX,FootMotionDesiredOutputPointY,FootMotionDesiredOutputPointZ," +
+            "FootMotionResponseOutputPointX,FootMotionResponseOutputPointY,FootMotionResponseOutputPointZ,FootMotionPlantResidualCaptureReason," +
             "FootMotionPlantWorldResidualBeforeCaptureX,FootMotionPlantWorldResidualBeforeCaptureY,FootMotionPlantWorldResidualBeforeCaptureZ," +
             "FootMotionPlantWorldResidualCapturedBeforeDecayX,FootMotionPlantWorldResidualCapturedBeforeDecayY,FootMotionPlantWorldResidualCapturedBeforeDecayZ," +
             "FootMotionPlantWorldResidualDecayApplied,FootMotionPlantWorldResidualBaseHalfLifeSeconds,FootMotionPlantWorldResidualDeadlineHalfLifeAvailable,FootMotionPlantWorldResidualDeadlineHalfLifeSeconds,FootMotionPlantWorldResidualAppliedHalfLifeSeconds," +
             "FootMotionPlantWorldResidualAfterDecayX,FootMotionPlantWorldResidualAfterDecayY,FootMotionPlantWorldResidualAfterDecayZ," +
             "FootMotionPlantWorldResidualCompletionTolerance,FootMotionPlantWorldResidualClearedAtCompletionTolerance," +
-            "FootMotionPlantCorrectionResponseEvaluated,FootMotionPlantCorrectionResponseInitializedBefore,FootMotionPlantCorrectionResponseInitializedThisFrame,FootMotionPlantCorrectionResponseInitializationReason," +
-            "FootMotionPlantCorrectionResponseDesired,FootMotionPlantCorrectionResponsePrevious,FootMotionPlantCorrectionResponseCurrent,FootMotionPlantCorrectionResponseDirection,FootMotionPlantCorrectionResponseSelectedSpeed,FootMotionPlantCorrectionResponseAppliedDelta," +
+            "FootMotionCorrectionResponseEvaluated,FootMotionCorrectionResponseInitializedBefore,FootMotionCorrectionResponseInitializedThisFrame,FootMotionCorrectionResponseInitializationReason," +
+            "FootMotionCorrectionResponseDesired,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseBasisTransferred,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
             "FootMotionPlantVerticalContinuityOwners," +
             "FootMotionPlantEffectiveCorrectionBeforeX,FootMotionPlantEffectiveCorrectionBeforeY,FootMotionPlantEffectiveCorrectionBeforeZ," +
             "FootMotionPlantEffectiveCorrectionAfterX,FootMotionPlantEffectiveCorrectionAfterY,FootMotionPlantEffectiveCorrectionAfterZ," +
             "FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
+            "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason," +
+            "CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted," +
+            "CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted," +
+            "CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ," +
+            "CurrentSupportTargetAvailable,CurrentSupportTargetFrameSequence,CurrentSupportTargetCompletionIdentity,CurrentSupportTargetSide,CurrentSupportTargetPositionX,CurrentSupportTargetPositionY,CurrentSupportTargetPositionZ,CurrentSupportTargetNormalX,CurrentSupportTargetNormalY,CurrentSupportTargetNormalZ,CurrentSupportTargetSurfaceIdentity,CurrentSupportTargetWorldRevision,CurrentSupportTargetKind,CurrentSupportTargetPositionSource,CurrentSupportTargetPositionFrameSequence,CurrentSupportTargetPositionCompletionIdentity,CurrentSupportTargetPositionEventIdentity,CurrentSupportTargetPositionPathIdentity,CurrentSupportTargetNormalSource,CurrentSupportTargetNormalFrameSequence,CurrentSupportTargetNormalCompletionIdentity,CurrentSupportTargetNormalEventIdentity," +
+            "ResolvedFrameSequence,ResolvedCompletionIdentity,ResolvedRigId,ResolvedRigRevision,ResolvedSide,ResolvedOutcome,ResolvedFinalSoleX,ResolvedFinalSoleY,ResolvedFinalSoleZ,ResolvedEffectiveSoleX,ResolvedEffectiveSoleY,ResolvedEffectiveSoleZ,ResolvedGoalTargetAnkleX,ResolvedGoalTargetAnkleY,ResolvedGoalTargetAnkleZ,ResolvedGoalTargetRotationX,ResolvedGoalTargetRotationY,ResolvedGoalTargetRotationZ,ResolvedGoalTargetRotationW,ResolvedEffectiveAnkleX,ResolvedEffectiveAnkleY,ResolvedEffectiveAnkleZ,ResolvedEffectiveRotationX,ResolvedEffectiveRotationY,ResolvedEffectiveRotationZ,ResolvedEffectiveRotationW,ResolvedEffectiveHeelX,ResolvedEffectiveHeelY,ResolvedEffectiveHeelZ,ResolvedEffectiveToeX,ResolvedEffectiveToeY,ResolvedEffectiveToeZ,ResolvedEffectiveSoleFromContactsX,ResolvedEffectiveSoleFromContactsY,ResolvedEffectiveSoleFromContactsZ,ResolvedSourceSoleForwardX,ResolvedSourceSoleForwardY,ResolvedSourceSoleForwardZ,ResolvedSourceSoleFrameLocalRotationX,ResolvedSourceSoleFrameLocalRotationY,ResolvedSourceSoleFrameLocalRotationZ,ResolvedSourceSoleFrameLocalRotationW,ResolvedGoalTargetCorrectionX,ResolvedGoalTargetCorrectionY,ResolvedGoalTargetCorrectionZ,ResolvedEffectiveSoleCorrectionX,ResolvedEffectiveSoleCorrectionY,ResolvedEffectiveSoleCorrectionZ,ResolvedPositionWeight,ResolvedRotationWeight," +
+            "ResolvedSupportTargetAvailable,ResolvedSupportTargetFrameSequence,ResolvedSupportTargetCompletionIdentity,ResolvedSupportTargetSide,ResolvedSupportTargetPositionX,ResolvedSupportTargetPositionY,ResolvedSupportTargetPositionZ,ResolvedSupportTargetNormalX,ResolvedSupportTargetNormalY,ResolvedSupportTargetNormalZ,ResolvedSupportTargetSurfaceIdentity,ResolvedSupportTargetWorldRevision,ResolvedSupportTargetKind,ResolvedSupportTargetPositionSource,ResolvedSupportTargetPositionFrameSequence,ResolvedSupportTargetPositionCompletionIdentity,ResolvedSupportTargetPositionEventIdentity,ResolvedSupportTargetPositionPathIdentity,ResolvedSupportTargetNormalSource,ResolvedSupportTargetNormalFrameSequence,ResolvedSupportTargetNormalCompletionIdentity,ResolvedSupportTargetNormalEventIdentity," +
+            "ResolvedContactAvailable,ResolvedContactEventIdentity,ResolvedContactPointX,ResolvedContactPointY,ResolvedContactPointZ,ResolvedContactOwnership,ResolvedSupportEligibility,ResolvedSupportWeight,ResolvedSupportIntentWeight,ResolvedSupportHorizontalError,ResolvedSupportEventIdentity,ResolvedPelvisReachAvailable,ResolvedPelvisReachEventIdentity,ResolvedPelvisReachPointX,ResolvedPelvisReachPointY,ResolvedPelvisReachPointZ,ResolvedLandingReachAvailable,ResolvedLandingReachEventIdentity,ResolvedLandingReachHipX,ResolvedLandingReachHipY,ResolvedLandingReachHipZ,ResolvedLandingReachTargetAnkleX,ResolvedLandingReachTargetAnkleY,ResolvedLandingReachTargetAnkleZ,ResolvedLandingReachLegLength,ResolvedLandingReachMinimumCompressionReserve," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -1715,6 +1723,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, targetRuntimeInstanceId.ToString("N"));
             Add(row, targetHostInstanceId);
             Add(row, frame.RootInstanceId);
+            Add(row, frame.ProfileId);
+            Add(row, frame.ProfileRevision);
             Add(row, foot.Side.ToString());
             Add(row, foot.State.ToString());
             Add(row, foot.RejectReason.ToString());
@@ -1732,9 +1742,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.PlantTargetEventIdentity);
             Add(row, foot.PlantTargetSurfaceIdentity);
             Add(row, foot.PlantTargetPoint);
+            Add(row, foot.PlantTargetNormal);
+            Add(row, foot.PlantTargetTrajectoryGeneration);
+            Add(row, foot.PlantTargetFutureBodyTranslationSourceIdentity);
             Add(row, foot.PlantTargetUpdated);
             Add(row, foot.PlantVerificationAttempted);
             Add(row, foot.PlantVerificationUnavailable);
+            Add(row, foot.ApproachPlantTargetPrepared);
             CharacterFootStepCandidateSelectionDiagnostics stepSelection =
                 foot.StepCandidateSelection;
             Add(row, stepSelection.MaximumPredictionTimeSeconds);
@@ -1979,7 +1993,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.RejectReason.ToString());
             Add(row, motion.LandingEventIdentity);
             Add(row, motion.GroundPathInputIdentity);
-            Add(row, motion.InterpolationComponentUp);
             Add(row, motion.Distance);
             Add(row, motion.Progress);
             Add(row, motion.OriginalSole);
@@ -1989,8 +2002,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.SourceToePosition);
             Add(row, motion.BaselineSample);
             Vector3 motionUp =
-                motion.InterpolationComponentUp.sqrMagnitude > 0.000001f
-                ? motion.InterpolationComponentUp.normalized
+                motion.TargetHeightComponentUp.sqrMagnitude > 0.000001f
+                ? motion.TargetHeightComponentUp.normalized
                 : default;
             Vector3 groundPathUp = ground.ComponentUp.sqrMagnitude > 0.000001f
                 ? ground.ComponentUp.normalized
@@ -2155,6 +2168,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SwingTargetHeightForceRefreshDistance);
             Add(row, motion.SwingTargetMaximumVerticalSpeed);
             Add(row, motion.SwingFilteredTargetHeightAlongUp);
+            Add(row, motion.TargetHeightComponentUp);
             Add(row, motion.PreTransitionReason);
             Add(row, motion.PreTransitionSource.ToString());
             Add(row, motion.PreTransitionTarget.ToString());
@@ -2190,8 +2204,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantLockResponse.ToString());
             Add(row, motion.PlantDesiredPoint);
             Add(row, motion.PlantFilteredPoint);
-            Add(row, motion.PlantPreviousBlendWeight);
-            Add(row, motion.PlantBlendWeight);
+            AddSupportTarget(row, motion.SelectedSupportTarget);
             Add(row, motion.PlantTargetHeightAdoptionMode);
             Add(row, motion.PlantTargetMaximumVerticalSpeed);
             Add(row, motion.PlantTargetHeightBefore);
@@ -2204,12 +2217,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantTargetForceRefreshed);
             Add(row, motion.PlantTargetForceRefreshDistance);
             Add(row, motion.PlantTargetVerticalClamped);
-            Add(row, motion.PlantPreviousMixedWorldTarget);
-            Add(row, motion.PlantMixedWorldTarget);
-            Add(row, motion.PlantPreviousResponseOutputAvailable);
-            Add(row, motion.PlantPreviousResponseOutputPoint);
-            Add(row, motion.PlantDesiredOutputPoint);
-            Add(row, motion.PlantResponseOutputPoint);
+            Add(row, motion.PlantPreviousSelectedWorldTarget);
+            Add(row, motion.PlantSelectedWorldTarget);
+            Add(row, motion.PreviousResponseOutputAvailable);
+            Add(row, motion.PreviousResponseOutputPoint);
+            Add(row, motion.DesiredOutputPoint);
+            Add(row, motion.ResponseOutputPoint);
             Add(row, motion.PlantResidualCaptureReason);
             Add(row, motion.PlantWorldResidualBeforeCapture);
             Add(row, motion.PlantWorldResidualCapturedBeforeDecay);
@@ -2221,21 +2234,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantWorldResidualAfterDecay);
             Add(row, motion.PlantWorldResidualCompletionTolerance);
             Add(row, motion.PlantWorldResidualClearedAtCompletionTolerance);
-            Add(row, motion.PlantCorrectionResponseEvaluated);
-            Add(row, motion.PlantCorrectionResponseInitializedBefore);
-            Add(row, motion.PlantCorrectionResponseInitializedThisFrame);
-            Add(row, motion.PlantCorrectionResponseInitializationReason);
-            Add(row, motion.PlantCorrectionResponseDesired);
-            Add(row, motion.PlantCorrectionResponsePrevious);
-            Add(row, motion.PlantCorrectionResponseCurrent);
-            Add(row, motion.PlantCorrectionResponseDirection);
-            Add(row, motion.PlantCorrectionResponseSelectedSpeed);
-            Add(row, motion.PlantCorrectionResponseAppliedDelta);
+            Add(row, motion.CorrectionResponseEvaluated);
+            Add(row, motion.CorrectionResponseInitializedBefore);
+            Add(row, motion.CorrectionResponseInitializedThisFrame);
+            Add(row, motion.CorrectionResponseInitializationReason);
+            Add(row, motion.CorrectionResponseDesired);
+            Add(row, motion.CorrectionResponsePreviousDirection);
+            Add(row, motion.CorrectionResponseBasisTransferred);
+            Add(row, motion.CorrectionResponseVisibleOutputTransferred);
+            Add(row, motion.CorrectionResponseBeforeRebase);
+            Add(row, motion.CorrectionResponsePrevious);
+            Add(row, motion.CorrectionResponseCurrent);
+            Add(row, motion.CorrectionResponseDirection);
+            Add(row, motion.CorrectionResponseDeltaDirection);
+            Add(row, motion.CorrectionResponseSelectedSpeed);
+            Add(row, motion.CorrectionResponseAppliedDelta);
             Add(row, motion.PlantVerticalContinuityOwners);
             Add(row, motion.PlantEffectiveCorrectionBefore);
             Add(row, motion.PlantEffectiveCorrectionAfter);
             Add(row, motion.PlantOutputDistance);
             Add(row, motion.PlantPenetrationDepth);
+            AddCurrentSupport(row, foot.CurrentSupport);
+            AddResolvedFoot(row, foot.Resolved);
             Add(row, footGoal.IsValid);
             Add(
                 row,
@@ -2737,6 +2757,124 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, value.w);
         }
 
+        static void AddSupportTarget(
+            StringBuilder row,
+            in CharacterFootSupportTargetDiagnostics target)
+        {
+            Add(row, target.Available);
+            Add(row, target.FrameSequence);
+            Add(row, target.CompletionIdentity);
+            Add(row, target.Side.ToString());
+            Add(row, target.Position);
+            Add(row, target.SupportNormal);
+            Add(row, target.SurfaceIdentity);
+            Add(row, target.WorldRevision);
+            Add(row, target.Kind.ToString());
+            Add(row, target.PositionSource.ToString());
+            Add(row, target.PositionFrameSequence);
+            Add(row, target.PositionCompletionIdentity);
+            Add(row, target.PositionEventIdentity);
+            Add(row, target.PositionPathIdentity);
+            Add(row, target.NormalSource.ToString());
+            Add(row, target.NormalFrameSequence);
+            Add(row, target.NormalCompletionIdentity);
+            Add(row, target.NormalEventIdentity);
+        }
+
+        static void AddCurrentSupportProbe(
+            StringBuilder row,
+            in CharacterFootCurrentSupportProbeDiagnostics probe)
+        {
+            Add(row, probe.Purpose.ToString());
+            Add(row, probe.Kind.ToString());
+            Add(row, probe.State.ToString());
+            Add(row, probe.RejectReason.ToString());
+            Add(row, probe.ProbePosition);
+            Add(row, probe.ComponentUp);
+            Add(row, probe.Origin);
+            Add(row, probe.Direction);
+            Add(row, probe.MaximumDistance);
+            Add(row, probe.Radius);
+            Add(row, probe.LayerMask);
+            Add(row, probe.MinimumGroundNormalDot);
+            Add(row, probe.HitCapacity);
+            Add(row, probe.CandidateCount);
+            Add(row, probe.SurfaceIdentity);
+            Add(row, probe.Point);
+            Add(row, probe.Normal);
+            Add(row, probe.Distance);
+            Add(row, probe.WorldRevision);
+            Add(row, probe.SphereCastExecuted);
+            Add(row, probe.Accepted);
+        }
+
+        static void AddCurrentSupport(
+            StringBuilder row,
+            in CharacterFootCurrentSupportDiagnostics support)
+        {
+            Add(row, support.FrameSequence);
+            Add(row, support.CompletionIdentity);
+            Add(row, support.WorldRevision);
+            Add(row, support.IsSpecified);
+            Add(row, support.Available);
+            Add(row, support.RejectReason.ToString());
+            AddCurrentSupportProbe(row, support.Heel);
+            AddCurrentSupportProbe(row, support.Toe);
+            Add(row, support.HeelRequiredDisplacement);
+            Add(row, support.ToeRequiredDisplacement);
+            Add(row, support.SelectedProbe.ToString());
+            Add(row, support.SelectionReason.ToString());
+            Add(row, support.SelectionEpsilon);
+            Add(row, support.SelectedSupportNormalBeforeNormalization);
+            AddSupportTarget(row, support.Target);
+        }
+
+        static void AddResolvedFoot(
+            StringBuilder row,
+            in CharacterResolvedFootDiagnostics resolved)
+        {
+            Add(row, resolved.FrameSequence);
+            Add(row, resolved.CompletionIdentity);
+            Add(row, resolved.RigId);
+            Add(row, resolved.RigRevision);
+            Add(row, resolved.Side.ToString());
+            Add(row, resolved.Outcome.ToString());
+            Add(row, resolved.FinalSole);
+            Add(row, resolved.EffectiveSole);
+            Add(row, resolved.GoalTargetAnkle);
+            Add(row, resolved.GoalTargetRotation);
+            Add(row, resolved.EffectiveAnkle);
+            Add(row, resolved.EffectiveRotation);
+            Add(row, resolved.EffectiveHeel);
+            Add(row, resolved.EffectiveToe);
+            Add(row, resolved.EffectiveSoleFromContacts);
+            Add(row, resolved.SourceSoleForward);
+            Add(row, resolved.SourceSoleFrameLocalRotation);
+            Add(row, resolved.GoalTargetCorrection);
+            Add(row, resolved.EffectiveSoleCorrection);
+            Add(row, resolved.PositionWeight);
+            Add(row, resolved.RotationWeight);
+            AddSupportTarget(row, resolved.SupportTarget);
+            Add(row, resolved.ContactAvailable);
+            Add(row, resolved.ContactEventIdentity);
+            Add(row, resolved.ContactPoint);
+            Add(row, resolved.ContactOwnership);
+            Add(row, resolved.SupportEligibility.ToString());
+            Add(row, resolved.SupportWeight);
+            Add(row, resolved.SupportIntentWeight);
+            Add(row, resolved.SupportHorizontalError);
+            Add(row, resolved.SupportEventIdentity);
+            Add(row, resolved.PelvisReachAvailable);
+            Add(row, resolved.PelvisReachEventIdentity);
+            Add(row, resolved.PelvisReachPoint);
+            Add(row, resolved.LandingReachAvailable);
+            Add(row, resolved.LandingReachEventIdentity);
+            Add(row, resolved.LandingReachHip);
+            Add(row, resolved.LandingReachTargetAnkle);
+            Add(row, resolved.LandingReachLegLength);
+            Add(row, resolved.LandingReachMinimumCompressionReserve);
+        }
+
         static void AddFormalEventFrame(
             StringBuilder row,
             bool available,
@@ -2750,6 +2888,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? events.NextLanding
                 : default;
             Add(row, valid ? events.Phase.ToString() : string.Empty);
+            Add(row, valid ? events.ApproachContactToLandingProgress : 0f);
             Add(row, valid ? events.TimeToLandingSeconds : 0f);
             Add(row, valid && events.InApproachContactToLanding);
             Add(row, current.IsValid);
@@ -2790,7 +2929,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in CharacterFootStepCandidateDiagnostics candidate)
         {
             Add(row, candidate.EventPhase);
-            Add(row, candidate.ApproachContactPhase);
+            Add(row, candidate.ApproachContactToLandingProgress);
             Add(row, candidate.LandingPhase);
             Add(row, candidate.AtOrAfterApproachContact);
             Add(row, candidate.InApproachContactToLanding);

@@ -251,7 +251,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string selectedSource;
         public string selectedLandingEventIdentity;
         public double selectedEventPhase;
-        public double selectedApproachContactPhase;
+        public double selectedApproachContactToLandingProgress;
         public double selectedLandingPhase;
         public bool selectedAtOrAfterApproachContact;
         public bool selectedInApproachContactToLanding;
@@ -305,8 +305,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "0",
                 selectedEventPhase =
                     value.Value<double>("selectedEventPhase"),
-                selectedApproachContactPhase =
-                    value.Value<double>("selectedApproachContactPhase"),
+                selectedApproachContactToLandingProgress =
+                    value.Value<double>("selectedApproachContactToLandingProgress"),
                 selectedLandingPhase =
                     value.Value<double>("selectedLandingPhase"),
                 selectedAtOrAfterApproachContact =

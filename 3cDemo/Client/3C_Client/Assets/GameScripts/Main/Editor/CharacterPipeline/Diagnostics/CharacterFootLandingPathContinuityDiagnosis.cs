@@ -98,9 +98,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "PhysicalAnkleAlongUpStep",
                     "PhysicalSoleAlongUpStep",
                     "SelectedEventPhase",
-                    "SelectedApproachContactPhase",
+                    "SelectedApproachContactToLandingProgress",
                     "CurrentEventPhase",
-                    "CurrentApproachContactPhase");
+                    "CurrentApproachContactToLandingProgress");
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -266,14 +266,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string contributionContinuityIdentity;
         public double previousSelectedEventPhase;
         public double selectedEventPhase;
-        public double previousSelectedApproachContactPhase;
-        public double selectedApproachContactPhase;
+        public double previousSelectedApproachContactToLandingProgress;
+        public double selectedApproachContactToLandingProgress;
         public double previousSelectedLandingPhase;
         public double selectedLandingPhase;
         public double previousCurrentEventPhase;
         public double currentEventPhase;
-        public double previousCurrentApproachContactPhase;
-        public double currentApproachContactPhase;
+        public double previousCurrentApproachContactToLandingProgress;
+        public double currentApproachContactToLandingProgress;
         public bool previousSelectedInApproachContactToLanding;
         public bool selectedInApproachContactToLanding;
         public bool previousCurrentAtOrAfterApproachContact;

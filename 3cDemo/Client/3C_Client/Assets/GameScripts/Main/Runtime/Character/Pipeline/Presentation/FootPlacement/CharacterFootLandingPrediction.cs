@@ -865,7 +865,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootActionOccupancy rightAction,
             in ThirdPersonSimulation.CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
-            in CharacterFootPredictionMotionResult predictionMotion,
             in AnimationFootMotionRuntimeFrame footStepObservation)
         {
             PresentationDeltaSeconds = presentationDeltaSeconds;
@@ -913,54 +912,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TimelineMaximumBodyYawVelocityDegreesPerSecond =
                 timeline.MaximumBodyYawVelocityDegreesPerSecond;
             CurrentSegmentRemainingSeconds = currentSegmentRemainingSeconds;
-            PredictionMotionAvailable = predictionMotion.IsValid;
-            PredictionMotionRejectReason = predictionMotion.RejectReason.ToString();
-            PredictionMotionResetReason = predictionMotion.ResetReason.ToString();
-            PredictionMotionSourceIdentity =
-                predictionMotion.PredictionSourceIdentity;
-            PredictionRawCurrentVelocityX = predictionMotion.RawCurrentVelocity.x;
-            PredictionRawCurrentVelocityZ = predictionMotion.RawCurrentVelocity.y;
-            PredictionRawContinuationVelocityX =
-                predictionMotion.RawContinuationVelocity.x;
-            PredictionRawContinuationVelocityZ =
-                predictionMotion.RawContinuationVelocity.y;
-            PredictionPreviousStableCurrentVelocityX =
-                predictionMotion.PreviousStableCurrentVelocity.x;
-            PredictionPreviousStableCurrentVelocityZ =
-                predictionMotion.PreviousStableCurrentVelocity.y;
-            PredictionPreviousStableContinuationVelocityX =
-                predictionMotion.PreviousStableContinuationVelocity.x;
-            PredictionPreviousStableContinuationVelocityZ =
-                predictionMotion.PreviousStableContinuationVelocity.y;
-            PredictionStableCurrentVelocityX =
-                predictionMotion.StableCurrentVelocity.x;
-            PredictionStableCurrentVelocityZ =
-                predictionMotion.StableCurrentVelocity.y;
-            PredictionStableContinuationVelocityX =
-                predictionMotion.StableContinuationVelocity.x;
-            PredictionStableContinuationVelocityZ =
-                predictionMotion.StableContinuationVelocity.y;
-            PredictionCurrentVelocityDeltaX =
-                predictionMotion.CurrentVelocityDelta.x;
-            PredictionCurrentVelocityDeltaZ =
-                predictionMotion.CurrentVelocityDelta.y;
-            PredictionContinuationVelocityDeltaX =
-                predictionMotion.ContinuationVelocityDelta.x;
-            PredictionContinuationVelocityDeltaZ =
-                predictionMotion.ContinuationVelocityDelta.y;
-            PredictionVelocityResponseAlpha = predictionMotion.ResponseAlpha;
-            PredictionVelocityDeltaThreshold = predictionMotion.DeltaThreshold;
-            PredictionVelocitySmoothSpeed = predictionMotion.SmoothSpeed;
-            PredictionMaximumSpeed = predictionMotion.MaximumSpeed;
-            PredictionCurrentResponseApplied =
-                predictionMotion.CurrentResponseApplied;
-            PredictionContinuationResponseApplied =
-                predictionMotion.ContinuationResponseApplied;
-            PredictionCurrentMaximumSpeedClamped =
-                predictionMotion.CurrentMaximumSpeedClamped;
-            PredictionContinuationMaximumSpeedClamped =
-                predictionMotion.ContinuationMaximumSpeedClamped;
-            PredictionMotionRevision = predictionMotion.Revision;
             FootStepObservation =
                 new CharacterFootStepObservationInputDiagnostics(in footStepObservation);
         }
@@ -1005,35 +956,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float TimelineBodyYawVelocityDegreesPerSecond { get; }
         public float TimelineMaximumBodyYawVelocityDegreesPerSecond { get; }
         public float CurrentSegmentRemainingSeconds { get; }
-        public bool PredictionMotionAvailable { get; }
-        public string PredictionMotionRejectReason { get; }
-        public string PredictionMotionResetReason { get; }
-        public string PredictionMotionSourceIdentity { get; }
-        public float PredictionRawCurrentVelocityX { get; }
-        public float PredictionRawCurrentVelocityZ { get; }
-        public float PredictionRawContinuationVelocityX { get; }
-        public float PredictionRawContinuationVelocityZ { get; }
-        public float PredictionPreviousStableCurrentVelocityX { get; }
-        public float PredictionPreviousStableCurrentVelocityZ { get; }
-        public float PredictionPreviousStableContinuationVelocityX { get; }
-        public float PredictionPreviousStableContinuationVelocityZ { get; }
-        public float PredictionStableCurrentVelocityX { get; }
-        public float PredictionStableCurrentVelocityZ { get; }
-        public float PredictionStableContinuationVelocityX { get; }
-        public float PredictionStableContinuationVelocityZ { get; }
-        public float PredictionCurrentVelocityDeltaX { get; }
-        public float PredictionCurrentVelocityDeltaZ { get; }
-        public float PredictionContinuationVelocityDeltaX { get; }
-        public float PredictionContinuationVelocityDeltaZ { get; }
-        public float PredictionVelocityResponseAlpha { get; }
-        public float PredictionVelocityDeltaThreshold { get; }
-        public float PredictionVelocitySmoothSpeed { get; }
-        public float PredictionMaximumSpeed { get; }
-        public bool PredictionCurrentResponseApplied { get; }
-        public bool PredictionContinuationResponseApplied { get; }
-        public bool PredictionCurrentMaximumSpeedClamped { get; }
-        public bool PredictionContinuationMaximumSpeedClamped { get; }
-        public ulong PredictionMotionRevision { get; }
         public CharacterFootStepObservationInputDiagnostics FootStepObservation { get; }
     }
 

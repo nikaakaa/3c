@@ -370,8 +370,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string plantLockResponse;
         public CharacterFootVectorFact plantDesiredPoint;
         public CharacterFootVectorFact plantFilteredPoint;
-        public double plantPreviousBlendWeight;
-        public double plantBlendWeight;
+        public double plantTakeoverWeightPrevious;
+        public double plantTakeoverWeightCurrent;
+        public double plantTakeoverWeightDelta;
+        public bool plantTakeoverWeightAdvanced;
+        public bool plantTakeoverTrackingActive;
         public string swingTargetHeightAdoptionMode;
         public string plantTargetHeightAdoptionMode;
         public double plantTargetMaximumVerticalSpeed;

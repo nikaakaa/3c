@@ -168,7 +168,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PlantCorrectionResponseAppliedDelta",
                 "PlantEffectiveCorrectionStep",
                 "PlantTargetAppliedVerticalDelta",
-                "PlantBlendWeightDelta",
+                "PlantTakeoverWeightPrevious",
+                "PlantTakeoverWeightCurrent",
+                "PlantTakeoverWeightDelta",
                 "PlantOutputDistance",
                 "PlantPenetrationDepth",
                 "PresentationDeltaSeconds",
@@ -188,7 +190,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     ["PlantDriver"] = CategoryCounts(
                         plantInterpolation,
-                        PlantDriver)
+                        PlantDriver),
+                    ["TakeoverWeightAdvance"] = CategoryCounts(
+                        plantInterpolation,
+                        TakeoverWeightAdvance)
                 };
             CharacterFootDiagnosisTarget plantBlendStutterTarget =
                 context.Target(
@@ -211,9 +216,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "FormalContactPrevious",
                     "FormalContactCurrent",
                     "FormalContactDelta",
-                    "PlantBlendPrevious",
-                    "PlantBlendCurrent",
-                    "PlantBlendDelta",
+                    "TakeoverWeightPrevious",
+                    "TakeoverWeightCurrent",
+                    "TakeoverWeightDelta",
+                    "TakeoverMixedWorldTargetStepMeters",
+                    "TakeoverPreviousResponseToMixedDistanceMeters",
+                    "TakeoverCapturedResidualMeters",
+                    "TakeoverCaptureContinuityErrorMeters",
+                    "TakeoverResidualDecayStepMeters",
+                    "TakeoverResidualAfterDecayMeters",
+                    "TakeoverDesiredFromPreviousResponseStepMeters",
+                    "TakeoverResponseFromPreviousResponseStepMeters",
+                    "TakeoverResidualBaseHalfLifeSeconds",
+                    "TakeoverResidualAppliedHalfLifeSeconds",
                     "LockWeightPrevious",
                     "LockWeightCurrent",
                     "LockWeightDelta",
@@ -559,6 +574,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             return "Stable";
         }
+
+        static string TakeoverWeightAdvance(JObject value) =>
+            CharacterFootDiagnosisContext.Evidence(
+                value,
+                "plantTakeoverWeightAdvanced")
+                ? "Advanced"
+                : "NotAdvanced";
 
         static string TrajectoryResponse(JObject value)
         {

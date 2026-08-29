@@ -243,7 +243,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified,FootMotionPlantTargetKind,FootMotionPlantLockResponse," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
-            "FootMotionPlantPreviousBlendWeight,FootMotionPlantBlendWeight,FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
+            "FootMotionPlantTakeoverWeightPrevious,FootMotionPlantTakeoverWeightCurrent,FootMotionPlantTakeoverWeightDelta,FootMotionPlantTakeoverWeightAdvanced,FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
             "FootMotionPlantTargetHeightBefore,FootMotionPlantTargetHeightTarget,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightAfter,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetHeightUpdateReason,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
             "FootMotionPlantPreviousMixedWorldTargetX,FootMotionPlantPreviousMixedWorldTargetY,FootMotionPlantPreviousMixedWorldTargetZ," +
             "FootMotionPlantMixedWorldTargetX,FootMotionPlantMixedWorldTargetY,FootMotionPlantMixedWorldTargetZ," +
@@ -2190,8 +2190,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantLockResponse.ToString());
             Add(row, motion.PlantDesiredPoint);
             Add(row, motion.PlantFilteredPoint);
+            if (!Enum.TryParse(
+                    motion.PlantResidualCaptureReason,
+                    out CharacterFootPlantResidualCaptureReason
+                        plantResidualCaptureReason))
+            {
+                throw new InvalidDataException(
+                    "Foot Motion Plant residual capture reason is invalid.");
+            }
             Add(row, motion.PlantPreviousBlendWeight);
             Add(row, motion.PlantBlendWeight);
+            Add(row,
+                motion.PlantBlendWeight -
+                motion.PlantPreviousBlendWeight);
+            Add(row,
+                (plantResidualCaptureReason &
+                 CharacterFootPlantResidualCaptureReason
+                     .TakeoverWeightAdvanced) != 0);
             Add(row, motion.PlantTargetHeightAdoptionMode);
             Add(row, motion.PlantTargetMaximumVerticalSpeed);
             Add(row, motion.PlantTargetHeightBefore);

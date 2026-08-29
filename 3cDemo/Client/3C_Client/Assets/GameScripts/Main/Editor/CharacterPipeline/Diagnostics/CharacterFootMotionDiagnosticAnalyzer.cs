@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/43";
+        const string Schema = "character-foot-motion-facts/44";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 43;
+        const int AnalyzerVersion = 44;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -213,7 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                      frame.FormalNextLandingEventIdentity !=
                      frame.PlantTargetEventIdentity ||
                      Math.Abs(
-                         frame.PlantBlendWeight -
+                         frame.PlantTakeoverWeightCurrent -
                          frame.FormalApproachProgress) >
                      RuntimeGeometryEpsilon))
                 {
@@ -221,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Foot Motion Prepared Prediction takeover facts are inconsistent Frame={frame.Frame} Side={frame.Side}.");
                 }
                 if (completed &&
-                    Math.Abs(frame.PlantBlendWeight - 1f) >
+                    Math.Abs(frame.PlantTakeoverWeightCurrent - 1f) >
                     RuntimeGeometryEpsilon)
                 {
                     throw new InvalidDataException(
@@ -238,8 +238,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 }
                 if (Math.Abs(
-                        frame.PlantPreviousBlendWeight -
-                        previous.PlantBlendWeight) >
+                        frame.PlantTakeoverWeightPrevious -
+                        previous.PlantTakeoverWeightCurrent) >
                     RuntimeGeometryEpsilon)
                 {
                     throw new InvalidDataException(
@@ -247,12 +247,62 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 if (prepared &&
                     previous.PlantTargetKind == "PreparedPrediction" &&
-                    frame.FormalApproachProgress +
-                    RuntimeGeometryEpsilon <
-                    previous.FormalApproachProgress)
+                    previous.SourceIdentity == frame.SourceIdentity &&
+                    previous.SourceCycle == frame.SourceCycle)
                 {
-                    throw new InvalidDataException(
-                        $"Foot Motion formal Approach progress retreated Frame={frame.Frame} Side={frame.Side}.");
+                    float formalProgressDelta =
+                        frame.FormalApproachProgress -
+                        previous.FormalApproachProgress;
+                    if (formalProgressDelta < 0f)
+                    {
+                        throw new InvalidDataException(
+                            $"Foot Motion formal Approach progress retreated Frame={frame.Frame} Side={frame.Side}.");
+                    }
+                    bool formalProgressAdvanced = formalProgressDelta > 0f;
+                    if (formalProgressAdvanced !=
+                        frame.PlantTakeoverWeightAdvanced ||
+                        Math.Abs(
+                            frame.PlantTakeoverWeightDelta -
+                            formalProgressDelta) >
+                        RuntimeGeometryEpsilon)
+                    {
+                        throw new InvalidDataException(
+                            $"Foot Motion formal Approach takeover advance facts are inconsistent Frame={frame.Frame} Side={frame.Side}.");
+                    }
+                    bool residualActiveBeforeDecay = frame
+                        .PlantWorldResidualCapturedBeforeDecay
+                        .sqrMagnitude >
+                        RuntimeGeometryEpsilon * RuntimeGeometryEpsilon;
+                    bool takeoverTrackingActive = residualActiveBeforeDecay &&
+                                                  (formalProgressAdvanced ||
+                                                   previous
+                                                       .PlantTakeoverTrackingActiveAfterFrame);
+                    frame.PlantTakeoverTrackingActive =
+                        takeoverTrackingActive;
+                    if (takeoverTrackingActive && frame.DeltaSeconds > 0f &&
+                        (!frame.PlantWorldResidualDecayApplied ||
+                         frame
+                             .PlantWorldResidualDeadlineHalfLifeAvailable ||
+                         Math.Abs(
+                             frame
+                                 .PlantWorldResidualDeadlineHalfLifeSeconds) >
+                         TimeEpsilon ||
+                         Math.Abs(
+                             frame
+                                 .PlantWorldResidualAppliedHalfLifeSeconds -
+                             frame
+                                 .PlantWorldResidualBaseHalfLifeSeconds) >
+                         TimeEpsilon))
+                    {
+                        throw new InvalidDataException(
+                            $"Foot Motion Prepared takeover tracking lost base Half-Life ownership Frame={frame.Frame} Side={frame.Side}.");
+                    }
+                    frame.PlantTakeoverTrackingActiveAfterFrame =
+                        takeoverTrackingActive &&
+                        !frame
+                            .PlantWorldResidualClearedAtCompletionTolerance &&
+                        frame.PlantWorldResidualAfterDecay.sqrMagnitude >
+                        RuntimeGeometryEpsilon * RuntimeGeometryEpsilon;
                 }
             }
         }
@@ -349,9 +399,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PlantEffectiveCorrectionAfter),
                     ["PlantTargetAppliedVerticalDelta"] = Math.Abs(
                         current.PlantTargetAppliedVerticalDelta),
-                    ["PlantBlendWeightDelta"] = Math.Abs(
-                        current.PlantBlendWeight -
-                        previous.PlantBlendWeight),
+                    ["PlantTakeoverWeightPrevious"] =
+                        current.PlantTakeoverWeightPrevious,
+                    ["PlantTakeoverWeightCurrent"] =
+                        current.PlantTakeoverWeightCurrent,
+                    ["PlantTakeoverWeightDelta"] =
+                        current.PlantTakeoverWeightDelta,
                     ["PlantOutputDistance"] =
                         current.PlantOutputDistance,
                     ["PlantPenetrationDepth"] =
@@ -394,6 +447,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["plantTakeoverCompleted"] = HasRevisionReason(
                         current.PlantResidualCaptureReason,
                         "TakeoverCompleted"),
+                    ["plantTakeoverWeightAdvanced"] =
+                        current.PlantTakeoverWeightAdvanced,
+                    ["plantTakeoverTrackingActive"] =
+                        current.PlantTakeoverTrackingActive,
+                    ["plantTakeoverPathRevisionAbsent"] =
+                        current.PathRevisionReason == "None" &&
+                        !current.PathResidualRebuilt,
                     ["targetHeightOwned"] = HasRevisionReason(
                         current.PlantVerticalContinuityOwners,
                         "TargetHeightHistory"),
@@ -734,9 +794,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PlantDesiredPoint),
                     plantFilteredPoint = CharacterFootVectorFact.From(
                         current.PlantFilteredPoint),
-                    plantPreviousBlendWeight =
-                        current.PlantPreviousBlendWeight,
-                    plantBlendWeight = current.PlantBlendWeight,
+                    plantTakeoverWeightPrevious =
+                        current.PlantTakeoverWeightPrevious,
+                    plantTakeoverWeightCurrent =
+                        current.PlantTakeoverWeightCurrent,
+                    plantTakeoverWeightDelta =
+                        current.PlantTakeoverWeightDelta,
+                    plantTakeoverWeightAdvanced =
+                        current.PlantTakeoverWeightAdvanced,
+                    plantTakeoverTrackingActive =
+                        current.PlantTakeoverTrackingActive,
                     swingTargetHeightAdoptionMode =
                         current.SwingTargetHeightAdoptionMode,
                     plantTargetHeightAdoptionMode =
@@ -2129,23 +2196,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.FormalApproachProgress -
                     previous.FormalApproachProgress;
                 double previousBlendDelta =
-                    previous.PlantBlendWeight -
-                    previous.PlantPreviousBlendWeight;
+                    previous.PlantTakeoverWeightDelta;
                 double currentBlendDelta =
-                    current.PlantBlendWeight -
-                    current.PlantPreviousBlendWeight;
-                bool previousProgressAdvanced = previousProgressDelta >
-                                                RuntimeGeometryEpsilon;
-                bool currentProgressAdvanced = currentProgressDelta >
-                                               RuntimeGeometryEpsilon;
+                    current.PlantTakeoverWeightDelta;
+                bool previousProgressAdvanced = previousProgressDelta > 0d;
+                bool currentProgressAdvanced = currentProgressDelta > 0d;
                 bool previousHeld = previousProgressAdvanced &&
-                                    Math.Abs(previousBlendDelta) <=
-                                    RuntimeGeometryEpsilon;
+                                    previousBlendDelta == 0d;
                 bool currentHeld = currentProgressAdvanced &&
-                                   Math.Abs(currentBlendDelta) <=
-                                   RuntimeGeometryEpsilon;
-                bool blendAdvanced = Math.Abs(currentBlendDelta) >
-                                     RuntimeGeometryEpsilon;
+                                   currentBlendDelta == 0d;
+                bool blendAdvanced = currentBlendDelta > 0d;
                 bool advanceToHold = currentHeld && !previousHeld;
                 bool holdToAdvance = previousHeld && blendAdvanced;
                 bool continuousHold = previousHeld && currentHeld;
@@ -2170,10 +2230,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["FormalContactPrevious"] = previous.FormalContact,
                     ["FormalContactCurrent"] = current.FormalContact,
                     ["FormalContactDelta"] = currentContactDelta,
-                    ["PlantBlendPrevious"] =
-                        current.PlantPreviousBlendWeight,
-                    ["PlantBlendCurrent"] = current.PlantBlendWeight,
-                    ["PlantBlendDelta"] = currentBlendDelta,
+                    ["TakeoverWeightPrevious"] =
+                        current.PlantTakeoverWeightPrevious,
+                    ["TakeoverWeightCurrent"] =
+                        current.PlantTakeoverWeightCurrent,
+                    ["TakeoverWeightDelta"] = currentBlendDelta,
+                    ["TakeoverMixedWorldTargetStepMeters"] =
+                        Vector3.Distance(
+                            previous.PlantMixedWorldTarget,
+                            current.PlantMixedWorldTarget),
+                    ["TakeoverPreviousResponseToMixedDistanceMeters"] =
+                        current.PlantPreviousResponseOutputAvailable
+                            ? Vector3.Distance(
+                                current.PlantPreviousResponseOutputPoint,
+                                current.PlantMixedWorldTarget)
+                            : 0d,
+                    ["TakeoverCapturedResidualMeters"] =
+                        current
+                            .PlantWorldResidualCapturedBeforeDecay
+                            .magnitude,
+                    ["TakeoverCaptureContinuityErrorMeters"] =
+                        current.PlantPreviousResponseOutputAvailable
+                            ? Vector3.Distance(
+                                current
+                                    .PlantWorldResidualCapturedBeforeDecay,
+                                current.PlantPreviousResponseOutputPoint -
+                                current.PlantMixedWorldTarget)
+                            : 0d,
+                    ["TakeoverResidualDecayStepMeters"] =
+                        Vector3.Distance(
+                            current
+                                .PlantWorldResidualCapturedBeforeDecay,
+                            current.PlantWorldResidualAfterDecay),
+                    ["TakeoverResidualAfterDecayMeters"] =
+                        current.PlantWorldResidualAfterDecay.magnitude,
+                    ["TakeoverDesiredFromPreviousResponseStepMeters"] =
+                        current.PlantPreviousResponseOutputAvailable
+                            ? Vector3.Distance(
+                                current.PlantDesiredOutputPoint,
+                                current.PlantPreviousResponseOutputPoint)
+                            : 0d,
+                    ["TakeoverResponseFromPreviousResponseStepMeters"] =
+                        current.PlantPreviousResponseOutputAvailable
+                            ? Vector3.Distance(
+                                current.PlantResponseOutputPoint,
+                                current.PlantPreviousResponseOutputPoint)
+                            : 0d,
+                    ["TakeoverResidualBaseHalfLifeSeconds"] =
+                        current
+                            .PlantWorldResidualBaseHalfLifeSeconds,
+                    ["TakeoverResidualAppliedHalfLifeSeconds"] =
+                        current
+                            .PlantWorldResidualAppliedHalfLifeSeconds,
                     ["LockWeightPrevious"] = previous.FormalLockWeight,
                     ["LockWeightCurrent"] = current.FormalLockWeight,
                     ["LockWeightDelta"] =
@@ -2222,16 +2330,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["pathStable"] = true,
                     ["formalProgressAdvanced"] =
                         currentProgressAdvanced,
+                    ["takeoverWeightAdvanced"] =
+                        current.PlantTakeoverWeightAdvanced,
+                    ["takeoverTrackingActive"] =
+                        current.PlantTakeoverTrackingActive,
+                    ["takeoverTrackingRetained"] =
+                        current.PlantTakeoverTrackingActive &&
+                        !current.PlantTakeoverWeightAdvanced,
+                    ["takeoverResidualCaptured"] =
+                        HasRevisionReason(
+                            current.PlantResidualCaptureReason,
+                            "TakeoverWeightAdvanced"),
+                    ["takeoverResidualDecayApplied"] =
+                        current.PlantWorldResidualDecayApplied,
+                    ["takeoverUsesBaseHalfLife"] =
+                        current.PlantTakeoverTrackingActive &&
+                        !current
+                            .PlantWorldResidualDeadlineHalfLifeAvailable &&
+                        Math.Abs(
+                            current
+                                .PlantWorldResidualAppliedHalfLifeSeconds -
+                            current
+                                .PlantWorldResidualBaseHalfLifeSeconds) <=
+                        TimeEpsilon,
+                    ["takeoverPathRevisionAbsent"] =
+                        current.PathRevisionReason == "None" &&
+                        !current.PathResidualRebuilt,
                     ["plantBlendHeld"] =
-                        Math.Abs(currentBlendDelta) <=
-                        RuntimeGeometryEpsilon,
+                        currentBlendDelta == 0d,
                     ["rawContactChanged"] =
                         Math.Abs(currentContactDelta) >
                         RuntimeGeometryEpsilon,
                     ["plantPreviousBlendMatchesPreviousFrame"] =
                         Math.Abs(
-                            current.PlantPreviousBlendWeight -
-                            previous.PlantBlendWeight) <=
+                            current.PlantTakeoverWeightPrevious -
+                            previous.PlantTakeoverWeightCurrent) <=
                         RuntimeGeometryEpsilon,
                     ["physicalDirectionReversed"] =
                         physicalDirectionCosine < 0d,
@@ -4721,9 +4854,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PlantLockResponse = Cell("FootMotionPlantLockResponse"),
                 PlantDesiredPoint = Vector("FootMotionPlantDesiredPoint"),
                 PlantFilteredPoint = Vector("FootMotionPlantFilteredPoint"),
-                PlantPreviousBlendWeight =
-                    Float("FootMotionPlantPreviousBlendWeight"),
-                PlantBlendWeight = Float("FootMotionPlantBlendWeight"),
+                PlantTakeoverWeightPrevious =
+                    Float("FootMotionPlantTakeoverWeightPrevious"),
+                PlantTakeoverWeightCurrent =
+                    Float("FootMotionPlantTakeoverWeightCurrent"),
+                PlantTakeoverWeightDelta =
+                    Float("FootMotionPlantTakeoverWeightDelta"),
+                PlantTakeoverWeightAdvanced =
+                    Int("FootMotionPlantTakeoverWeightAdvanced") != 0,
                 PlantTargetHeightAdoptionMode =
                     Cell("FootMotionPlantTargetHeightAdoptionMode"),
                 PlantTargetMaximumVerticalSpeed =
@@ -5105,6 +5243,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         : !distanceForceRefresh && !verificationRefresh);
                 bool residualCaptured =
                     frame.PlantResidualCaptureReason != "None";
+                bool takeoverAdvancedReason = HasRevisionReason(
+                    frame.PlantResidualCaptureReason,
+                    "TakeoverWeightAdvanced");
+                bool takeoverWeightFactsConsistent =
+                    Math.Abs(
+                        frame.PlantTakeoverWeightDelta -
+                        (frame.PlantTakeoverWeightCurrent -
+                         frame.PlantTakeoverWeightPrevious)) <=
+                    RuntimeGeometryEpsilon &&
+                    frame.PlantTakeoverWeightAdvanced ==
+                    takeoverAdvancedReason &&
+                    (!frame.PlantTakeoverWeightAdvanced ||
+                     frame.PlantTakeoverWeightDelta > 0f);
                 Vector3 outputBefore = frame.OriginalSole +
                                        frame.PlantEffectiveCorrectionBefore;
                 Vector3 expectedCapturedBeforeDecay = residualCaptured
@@ -5174,6 +5325,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.PlantWorldResidualAfterDecay,
                         expectedResidualAfterDecay) <=
                     RuntimeGeometryEpsilon;
+                bool takeoverAdvanceContractConsistent =
+                    !frame.PlantTakeoverWeightAdvanced ||
+                    (residualCaptured &&
+                     frame.PlantPreviousResponseOutputAvailable &&
+                     Vector3.Distance(
+                         frame.PlantWorldResidualCapturedBeforeDecay,
+                         frame.PlantPreviousResponseOutputPoint -
+                         frame.PlantMixedWorldTarget) <=
+                     RuntimeGeometryEpsilon &&
+                     frame.PlantWorldResidualDecayApplied &&
+                     !frame.PlantWorldResidualDeadlineHalfLifeAvailable &&
+                     Math.Abs(
+                         frame.PlantWorldResidualDeadlineHalfLifeSeconds) <=
+                     TimeEpsilon &&
+                     Math.Abs(
+                         frame.PlantWorldResidualAppliedHalfLifeSeconds -
+                         frame.PlantWorldResidualBaseHalfLifeSeconds) <=
+                     TimeEpsilon &&
+                     frame.PathRevisionReason == "None" &&
+                     !frame.PathResidualRebuilt);
                 bool responseInitializedThisFrame =
                     frame.PlantCorrectionResponseInitializedThisFrame;
                 float responseDelta =
@@ -5265,8 +5436,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .CorrectionResponseHistory;
                 }
                 if (!Mathf.Approximately(
-                        frame.PlantPreviousBlendWeight,
-                        frame.PlantBlendWeight))
+                        frame.PlantTakeoverWeightPrevious,
+                        frame.PlantTakeoverWeightCurrent))
                 {
                     expectedOwners |=
                         CharacterFootVerticalContinuityOwner.PlantWeightBlend;
@@ -5306,10 +5477,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !FiniteVector(frame.PlantWorldResidualAfterDecay) ||
                     !FiniteVector(frame.PlantEffectiveCorrectionBefore) ||
                     !FiniteVector(frame.PlantEffectiveCorrectionAfter) ||
-                    frame.PlantPreviousBlendWeight < 0f ||
-                    frame.PlantPreviousBlendWeight > 1f ||
-                    frame.PlantBlendWeight < 0f ||
-                    frame.PlantBlendWeight > 1f ||
+                    frame.PlantTakeoverWeightPrevious < 0f ||
+                    frame.PlantTakeoverWeightPrevious > 1f ||
+                    frame.PlantTakeoverWeightCurrent < 0f ||
+                    frame.PlantTakeoverWeightCurrent > 1f ||
                     !float.IsFinite(frame.PlantTargetMaximumVerticalSpeed) ||
                     frame.PlantTargetMaximumVerticalSpeed <= 0f ||
                     !float.IsFinite(frame.PlantTargetHeightBefore) ||
@@ -5346,9 +5517,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PlantTargetVerticalClamped != targetClampExpected ||
                     !targetHeightConsistent ||
                     !targetHeightTargetConsistent ||
+                    !takeoverWeightFactsConsistent ||
                     !residualCaptureConsistent ||
                     !residualHalfLifeConsistent ||
                     !residualDecayConsistent ||
+                    !takeoverAdvanceContractConsistent ||
                     !frame.PlantCorrectionResponseEvaluated ||
                     !float.IsFinite(frame.PlantCorrectionResponseDesired) ||
                     !float.IsFinite(frame.PlantCorrectionResponsePrevious) ||
@@ -6483,8 +6656,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantFilteredPointX",
                 "FootMotionPlantFilteredPointY",
                 "FootMotionPlantFilteredPointZ",
-                "FootMotionPlantPreviousBlendWeight",
-                "FootMotionPlantBlendWeight",
+                "FootMotionPlantTakeoverWeightPrevious",
+                "FootMotionPlantTakeoverWeightCurrent",
+                "FootMotionPlantTakeoverWeightDelta",
+                "FootMotionPlantTakeoverWeightAdvanced",
                 "FootMotionPlantTargetHeightAdoptionMode",
                 "FootMotionPlantTargetMaximumVerticalSpeed",
                 "FootMotionPlantTargetHeightBefore",
@@ -7253,8 +7428,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string PlantLockResponse;
             internal Vector3 PlantDesiredPoint;
             internal Vector3 PlantFilteredPoint;
-            internal float PlantPreviousBlendWeight;
-            internal float PlantBlendWeight;
+            internal float PlantTakeoverWeightPrevious;
+            internal float PlantTakeoverWeightCurrent;
+            internal float PlantTakeoverWeightDelta;
+            internal bool PlantTakeoverWeightAdvanced;
+            internal bool PlantTakeoverTrackingActive;
+            internal bool PlantTakeoverTrackingActiveAfterFrame;
             internal string PlantTargetHeightAdoptionMode;
             internal float PlantTargetMaximumVerticalSpeed;
             internal float PlantTargetHeightBefore;

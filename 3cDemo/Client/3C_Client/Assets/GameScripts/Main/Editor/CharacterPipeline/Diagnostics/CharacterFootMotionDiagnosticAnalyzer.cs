@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/41";
+        const string Schema = "character-foot-motion-facts/42";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 41;
+        const int AnalyzerVersion = 42;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -136,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"swingToLandingOutputJumps={document.coverage.swingToLandingOutputJumpCount} " +
                 $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
                 $"plantInterpolationJumps={document.coverage.plantInterpolationOutputJumpCount} " +
+                $"stableSwingPlantBlendKinematics={document.coverage.stableSwingPlantBlendKinematicsCount} " +
                 $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
@@ -181,6 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeReleaseEvents(frames, events);
             AnalyzeLateApproachLandingRevisions(frames, events);
             AnalyzePlantInterpolationOutputJumps(frames, events);
+            AnalyzeStableSwingPlantBlendKinematics(frames, events);
             AnalyzeActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
@@ -1957,6 +1959,204 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     : 0d);
         }
 
+        static void AnalyzeStableSwingPlantBlendKinematics(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 2; i < frames.Count; i++)
+            {
+                FootFrame first = frames[i - 2];
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(first, previous) ||
+                    !Continuous(previous, current) ||
+                    first.ConstraintState != "Swing" ||
+                    previous.ConstraintState != "Swing" ||
+                    current.ConstraintState != "Swing" ||
+                    !first.PlantInterpolationEvaluated ||
+                    !previous.PlantInterpolationEvaluated ||
+                    !current.PlantInterpolationEvaluated ||
+                    !first.FinalPhysicalWriteAvailable ||
+                    !previous.FinalPhysicalWriteAvailable ||
+                    !current.FinalPhysicalWriteAvailable ||
+                    current.PlantTargetEventIdentity == 0 ||
+                    first.PlantTargetEventIdentity !=
+                    current.PlantTargetEventIdentity ||
+                    previous.PlantTargetEventIdentity !=
+                    current.PlantTargetEventIdentity ||
+                    current.FootMotionGroundPathInputIdentity == 0 ||
+                    first.FootMotionGroundPathInputIdentity !=
+                    current.FootMotionGroundPathInputIdentity ||
+                    previous.FootMotionGroundPathInputIdentity !=
+                    current.FootMotionGroundPathInputIdentity ||
+                    first.SourceIdentity != current.SourceIdentity ||
+                    previous.SourceIdentity != current.SourceIdentity ||
+                    first.SourceCycle != current.SourceCycle ||
+                    previous.SourceCycle != current.SourceCycle)
+                {
+                    continue;
+                }
+                float previousDeltaSeconds = (float)DeltaSeconds(previous);
+                float currentDeltaSeconds = (float)DeltaSeconds(current);
+                Vector3 sourcePreviousStep =
+                    previous.OriginalAnkle - first.OriginalAnkle;
+                Vector3 sourceCurrentStep =
+                    current.OriginalAnkle - previous.OriginalAnkle;
+                Vector3 physicalFirst = FinalPhysicalAnkleWorld(first);
+                Vector3 physicalPrevious = FinalPhysicalAnkleWorld(previous);
+                Vector3 physicalCurrent = FinalPhysicalAnkleWorld(current);
+                Vector3 physicalPreviousStep =
+                    physicalPrevious - physicalFirst;
+                Vector3 physicalCurrentStep =
+                    physicalCurrent - physicalPrevious;
+                Vector3 offsetPreviousStep =
+                    physicalPreviousStep - sourcePreviousStep;
+                Vector3 offsetCurrentStep =
+                    physicalCurrentStep - sourceCurrentStep;
+                Vector3 sourcePreviousVelocity =
+                    sourcePreviousStep / previousDeltaSeconds;
+                Vector3 sourceCurrentVelocity =
+                    sourceCurrentStep / currentDeltaSeconds;
+                Vector3 physicalPreviousVelocity =
+                    physicalPreviousStep / previousDeltaSeconds;
+                Vector3 physicalCurrentVelocity =
+                    physicalCurrentStep / currentDeltaSeconds;
+                Vector3 offsetPreviousVelocity =
+                    offsetPreviousStep / previousDeltaSeconds;
+                Vector3 offsetCurrentVelocity =
+                    offsetCurrentStep / currentDeltaSeconds;
+                Vector3 sourceAccelerationPerFrame =
+                    sourceCurrentStep - sourcePreviousStep;
+                Vector3 physicalAccelerationPerFrame =
+                    physicalCurrentStep - physicalPreviousStep;
+                Vector3 addedAccelerationPerFrame =
+                    physicalAccelerationPerFrame -
+                    sourceAccelerationPerFrame;
+                float accelerationDeltaSeconds =
+                    (previousDeltaSeconds + currentDeltaSeconds) * 0.5f;
+                Vector3 sourceAccelerationPerSecond =
+                    (sourceCurrentVelocity - sourcePreviousVelocity) /
+                    accelerationDeltaSeconds;
+                Vector3 physicalAccelerationPerSecond =
+                    (physicalCurrentVelocity - physicalPreviousVelocity) /
+                    accelerationDeltaSeconds;
+                Vector3 addedAccelerationPerSecond =
+                    physicalAccelerationPerSecond -
+                    sourceAccelerationPerSecond;
+                double previousContactDelta =
+                    previous.FormalContact - first.FormalContact;
+                double currentContactDelta =
+                    current.FormalContact - previous.FormalContact;
+                double previousBlendDelta =
+                    previous.PlantBlendWeight -
+                    previous.PlantPreviousBlendWeight;
+                double currentBlendDelta =
+                    current.PlantBlendWeight -
+                    current.PlantPreviousBlendWeight;
+                bool previousContactChanged =
+                    Math.Abs(previousContactDelta) > RuntimeGeometryEpsilon;
+                bool currentContactChanged =
+                    Math.Abs(currentContactDelta) > RuntimeGeometryEpsilon;
+                bool previousHeld = previousContactChanged &&
+                                    Math.Abs(previousBlendDelta) <=
+                                    RuntimeGeometryEpsilon;
+                bool currentHeld = currentContactChanged &&
+                                   Math.Abs(currentBlendDelta) <=
+                                   RuntimeGeometryEpsilon;
+                bool blendAdvanced = Math.Abs(currentBlendDelta) >
+                                     RuntimeGeometryEpsilon;
+                bool advanceToHold = currentHeld && !previousHeld;
+                bool holdToAdvance = previousHeld && blendAdvanced;
+                bool continuousHold = previousHeld && currentHeld;
+                bool continuousAdvance = blendAdvanced && !holdToAdvance;
+                double sourceDirectionCosine = DirectionCosine(
+                    sourcePreviousStep,
+                    sourceCurrentStep);
+                double physicalDirectionCosine = DirectionCosine(
+                    physicalPreviousStep,
+                    physicalCurrentStep);
+                double offsetDirectionCosine = DirectionCosine(
+                    offsetPreviousStep,
+                    offsetCurrentStep);
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["FormalContactPrevious"] = previous.FormalContact,
+                    ["FormalContactCurrent"] = current.FormalContact,
+                    ["FormalContactDelta"] = currentContactDelta,
+                    ["PlantBlendPrevious"] =
+                        current.PlantPreviousBlendWeight,
+                    ["PlantBlendCurrent"] = current.PlantBlendWeight,
+                    ["PlantBlendDelta"] = currentBlendDelta,
+                    ["SourceAnkleStepMeters"] = sourceCurrentStep.magnitude,
+                    ["PhysicalAnkleStepMeters"] =
+                        physicalCurrentStep.magnitude,
+                    ["FootPlacementOffsetStepMeters"] =
+                        offsetCurrentStep.magnitude,
+                    ["SourceAnkleSpeedMetersPerSecond"] =
+                        sourceCurrentVelocity.magnitude,
+                    ["PhysicalAnkleSpeedMetersPerSecond"] =
+                        physicalCurrentVelocity.magnitude,
+                    ["FootPlacementOffsetSpeedMetersPerSecond"] =
+                        offsetCurrentVelocity.magnitude,
+                    ["SourceAnkleAccelerationMetersPerFrameSquared"] =
+                        sourceAccelerationPerFrame.magnitude,
+                    ["PhysicalAnkleAccelerationMetersPerFrameSquared"] =
+                        physicalAccelerationPerFrame.magnitude,
+                    ["FootPlacementAddedAccelerationMetersPerFrameSquared"] =
+                        addedAccelerationPerFrame.magnitude,
+                    ["SourceAnkleAccelerationMetersPerSecondSquared"] =
+                        sourceAccelerationPerSecond.magnitude,
+                    ["PhysicalAnkleAccelerationMetersPerSecondSquared"] =
+                        physicalAccelerationPerSecond.magnitude,
+                    ["FootPlacementAddedAccelerationMetersPerSecondSquared"] =
+                        addedAccelerationPerSecond.magnitude,
+                    ["SourceVelocityDirectionCosine"] =
+                        sourceDirectionCosine,
+                    ["PhysicalVelocityDirectionCosine"] =
+                        physicalDirectionCosine,
+                    ["FootPlacementOffsetVelocityDirectionCosine"] =
+                        offsetDirectionCosine,
+                    ["PreviousPresentationDeltaSeconds"] =
+                        previousDeltaSeconds,
+                    ["PresentationDeltaSeconds"] = currentDeltaSeconds
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["advanceToHold"] = advanceToHold,
+                    ["continuousAdvance"] = continuousAdvance,
+                    ["continuousHold"] = continuousHold,
+                    ["holdToAdvance"] = holdToAdvance,
+                    ["pathStable"] = true,
+                    ["plantPreviousBlendMatchesPreviousFrame"] =
+                        Math.Abs(
+                            current.PlantPreviousBlendWeight -
+                            previous.PlantBlendWeight) <=
+                        RuntimeGeometryEpsilon,
+                    ["physicalDirectionReversed"] =
+                        physicalDirectionCosine < 0d,
+                    ["sourceDirectionReversed"] =
+                        sourceDirectionCosine < 0d,
+                    ["trajectoryDirectionReversalIntroduced"] =
+                        physicalDirectionCosine < 0d &&
+                        sourceDirectionCosine >= 0d
+                };
+                events.Add(new EventFact(
+                    "StableSwingPlantBlendKinematics",
+                    current.Side,
+                    first.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.PlantTargetEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    previousDeltaSeconds + currentDeltaSeconds,
+                    metrics,
+                    evidence));
+            }
+        }
+
         static void AnalyzeSwingToLandingFloorHandoffs(
             List<FootFrame> frames,
             List<EventFact> events)
@@ -3569,6 +3769,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     plantInterpolationOutputJumpCount = events.Count(
                         value => value.kind ==
                                  "PlantInterpolationOutputJump"),
+                    stableSwingPlantBlendKinematicsCount = events.Count(
+                        value => value.kind ==
+                                 "StableSwingPlantBlendKinematics"),
                     actualFootEnvelopeCounterfactualCount = events.Count(
                         value => value.kind ==
                                  "ActualFootEnvelopeCounterfactual"),
@@ -4111,6 +4314,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Ulong("InputFormalStepCompletionIdentity"),
                 FormalNormalizedTime = Float("InputFormalStepSourceNormalizedTime"),
                 FormalStepTime = Float("InputFormalStepTimeSeconds"),
+                FormalContact = Float("FormalContact"),
                 FormalLockMode = Cell("InputFormalLockMode"),
                 FormalLockWeight = Float("InputFormalLockWeight"),
                 FormalSupport = Float("InputFormalSupport"),
@@ -5863,7 +6067,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
                 "InputFormalStepObservationAvailable",
                 "InputFormalStepCompletionIdentity",
-                "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
+                "FormalContact", "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
                 "StepSelectionMaximumPredictionTimeSeconds",
                 "StepSelectionLastLandingEventIdentity",
                 "SelectedStepSource", "SelectedLandingEventIdentity",
@@ -6366,6 +6570,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return count;
         }
 
+        static double DirectionCosine(Vector3 previous, Vector3 current)
+        {
+            double denominator = Math.Sqrt(
+                previous.sqrMagnitude * current.sqrMagnitude);
+            return denominator > RuntimeGeometryEpsilon *
+                   RuntimeGeometryEpsilon
+                ? Math.Clamp(
+                    Vector3.Dot(previous, current) / denominator,
+                    -1d,
+                    1d)
+                : 1d;
+        }
+
         static bool HasPathChange(IReadOnlyList<FootFrame> frames)
         {
             for (int i = 1; i < frames.Count; i++)
@@ -6660,6 +6877,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong FormalObservationCompletionIdentity;
             internal float FormalNormalizedTime;
             internal float FormalStepTime;
+            internal float FormalContact;
             internal string FormalLockMode;
             internal float FormalLockWeight;
             internal float FormalSupport;
@@ -7575,6 +7793,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int swingToLandingOutputJumpCount;
             public int swingToLandingFloorHandoffCount;
             public int plantInterpolationOutputJumpCount;
+            public int stableSwingPlantBlendKinematicsCount;
             public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;
             public int supportChangeCount;

@@ -28,6 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "SwingToLandingFloorHandoff");
             List<JObject> plantInterpolation = context.Events(
                 "PlantInterpolationOutputJump");
+            List<JObject> stableSwingPlantBlend = context.Events(
+                "StableSwingPlantBlendKinematics");
             CharacterFootDiagnosisTarget releaseTarget = context.Target(
                 "release-flyback",
                 "Releasing阶段是否出现Correction突跳后反向回拉",
@@ -188,6 +190,64 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         plantInterpolation,
                         PlantDriver)
                 };
+            CharacterFootDiagnosisTarget plantBlendStutterTarget =
+                context.Target(
+                    "stable-swing-plant-blend-stutter",
+                    "同Event、同Source、稳定Path的Swing中，Formal Contact推进是否被Plant Blend单帧Hold，并给物理脚引入相对动画Source的额外加速度",
+                    new[] { "StableSwingPlantBlendKinematics" },
+                    new[] { "advanceToHold=true" },
+                    stableSwingPlantBlend,
+                    value => CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "advanceToHold")
+                        ? new List<string> { "advanceToHold=true" }
+                        : new List<string>(),
+                    value => CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "FootPlacementAddedAccelerationMetersPerFrameSquared"),
+                    "FormalContactPrevious",
+                    "FormalContactCurrent",
+                    "FormalContactDelta",
+                    "PlantBlendPrevious",
+                    "PlantBlendCurrent",
+                    "PlantBlendDelta",
+                    "SourceAnkleStepMeters",
+                    "PhysicalAnkleStepMeters",
+                    "FootPlacementOffsetStepMeters",
+                    "SourceAnkleSpeedMetersPerSecond",
+                    "PhysicalAnkleSpeedMetersPerSecond",
+                    "FootPlacementOffsetSpeedMetersPerSecond",
+                    "SourceAnkleAccelerationMetersPerFrameSquared",
+                    "PhysicalAnkleAccelerationMetersPerFrameSquared",
+                    "FootPlacementAddedAccelerationMetersPerFrameSquared",
+                    "SourceAnkleAccelerationMetersPerSecondSquared",
+                    "PhysicalAnkleAccelerationMetersPerSecondSquared",
+                    "FootPlacementAddedAccelerationMetersPerSecondSquared",
+                    "SourceVelocityDirectionCosine",
+                    "PhysicalVelocityDirectionCosine",
+                    "FootPlacementOffsetVelocityDirectionCosine",
+                    "PreviousPresentationDeltaSeconds",
+                    "PresentationDeltaSeconds");
+            plantBlendStutterTarget.occurrence = context.Occurrence(
+                "StableSwingPlantBlendFrameTriple",
+                "FootPlacementAddedAccelerationMetersPerFrameSquared",
+                "MetersPerFrameSquared",
+                stableSwingPlantBlend,
+                PrimaryOutputJumpMeters,
+                s_OutputThresholds);
+            plantBlendStutterTarget.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["PlantBlendTransition"] = CategoryCounts(
+                        stableSwingPlantBlend,
+                        PlantBlendTransition),
+                    ["TrajectoryResponse"] = CategoryCounts(
+                        stableSwingPlantBlend,
+                        TrajectoryResponse)
+                };
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -346,7 +406,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "frameCount"),
                 releaseTarget,
                 handoffTarget,
-                plantTarget);
+                plantTarget,
+                plantBlendStutterTarget);
         }
 
         static List<CharacterFootDiagnosisCategoryCount> CategoryCounts(
@@ -462,6 +523,64 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return "PlantTargetContinuity";
             }
             return "ContinuousPlantBlend";
+        }
+
+        static string PlantBlendTransition(JObject value)
+        {
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "advanceToHold"))
+            {
+                return "AdvanceToHold";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "holdToAdvance"))
+            {
+                return "HoldToAdvance";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "continuousHold"))
+            {
+                return "ContinuousHold";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "continuousAdvance"))
+            {
+                return "ContinuousAdvance";
+            }
+            return "Stable";
+        }
+
+        static string TrajectoryResponse(JObject value)
+        {
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "trajectoryDirectionReversalIntroduced"))
+            {
+                return "FootPlacementIntroducedDirectionReversal";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "sourceDirectionReversed"))
+            {
+                return "SourceDirectionReversal";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "advanceToHold") ||
+                CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "holdToAdvance") ||
+                CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "continuousHold"))
+            {
+                return "SpeedHoldRelease";
+            }
+            return "ContinuousTrajectory";
         }
     }
 

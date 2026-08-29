@@ -226,9 +226,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float progress,
             Vector3 baselineSample,
             Vector3 envelopeSample,
+            float formalTargetHeightAlongUp,
             float verticalCorrection,
             float landingPredictionError,
-            float landingConstraintWeight,
             Vector3 correctedSole,
             Vector3 correctedAnkle,
             float positionWeight,
@@ -256,9 +256,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Progress = progress;
             BaselineSample = baselineSample;
             EnvelopeSample = envelopeSample;
+            FormalTargetHeightAlongUp = formalTargetHeightAlongUp;
             VerticalCorrection = verticalCorrection;
             LandingPredictionError = landingPredictionError;
-            LandingConstraintWeight = landingConstraintWeight;
             CorrectedSole = correctedSole;
             CorrectedAnkle = correctedAnkle;
             PositionWeight = positionWeight;
@@ -287,9 +287,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float Progress { get; }
         public Vector3 BaselineSample { get; }
         public Vector3 EnvelopeSample { get; }
+        public float FormalTargetHeightAlongUp { get; }
         public float VerticalCorrection { get; }
         public float LandingPredictionError { get; }
-        public float LandingConstraintWeight { get; }
         public Vector3 CorrectedSole { get; }
         public Vector3 CorrectedAnkle { get; }
         public float PositionWeight { get; }
@@ -323,9 +323,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Progress = result.Progress;
             BaselineSample = result.BaselineSample;
             EnvelopeSample = result.EnvelopeSample;
+            FormalTargetHeightAlongUp = result.FormalTargetHeightAlongUp;
             VerticalCorrection = result.VerticalCorrection;
             LandingPredictionError = result.LandingPredictionError;
-            LandingConstraintWeight = result.LandingConstraintWeight;
             CorrectedSole = result.CorrectedSole;
             CorrectedAnkle = result.CorrectedAnkle;
             PositionWeight = result.PositionWeight;
@@ -365,6 +365,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualDeadlineHalfLifeAvailable = path.DeadlineHalfLifeAvailable;
             ResidualDeadlineHalfLifeSeconds = path.DeadlineHalfLifeSeconds;
             ResidualAppliedHalfLifeSeconds = path.AppliedHalfLifeSeconds;
+            SwingRawTargetHeightAlongUp =
+                path.SwingRawTargetHeightAlongUp;
+            SwingFilteredTargetHeightBefore =
+                path.SwingFilteredTargetHeightBefore;
+            SwingTargetHeightDelta = path.SwingTargetHeightDelta;
+            SwingTargetHeightAppliedDelta =
+                path.SwingTargetHeightAppliedDelta;
+            SwingTargetHeightClamped = path.SwingTargetHeightClamped;
+            SwingTargetMaximumVerticalSpeed =
+                path.SwingTargetMaximumVerticalSpeed;
+            SwingFilteredTargetHeightAlongUp =
+                path.SwingFilteredTargetHeightAlongUp;
             PreTransitionReason = path.PreTransitionReason.ToString();
             PreTransitionSource = path.PreTransitionSource;
             PreTransitionTarget = path.PreTransitionTarget;
@@ -436,9 +448,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float Progress { get; }
         public Vector3 BaselineSample { get; }
         public Vector3 EnvelopeSample { get; }
+        public float FormalTargetHeightAlongUp { get; }
         public float VerticalCorrection { get; }
         public float LandingPredictionError { get; }
-        public float LandingConstraintWeight { get; }
         public Vector3 CorrectedSole { get; }
         public Vector3 CorrectedAnkle { get; }
         public float PositionWeight { get; }
@@ -477,6 +489,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ResidualDeadlineHalfLifeAvailable { get; }
         public float ResidualDeadlineHalfLifeSeconds { get; }
         public float ResidualAppliedHalfLifeSeconds { get; }
+        public float SwingRawTargetHeightAlongUp { get; }
+        public float SwingFilteredTargetHeightBefore { get; }
+        public float SwingTargetHeightDelta { get; }
+        public float SwingTargetHeightAppliedDelta { get; }
+        public bool SwingTargetHeightClamped { get; }
+        public float SwingTargetMaximumVerticalSpeed { get; }
+        public float SwingFilteredTargetHeightAlongUp { get; }
         public string PreTransitionReason { get; }
         public CharacterFootConstraintState PreTransitionSource { get; }
         public CharacterFootConstraintState PreTransitionTarget { get; }
@@ -538,8 +557,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGroundPathResult groundPath,
             bool formalFootHeightAvailable,
             float formalFootHeight,
-            float landingPredictionError,
-            float landingConstraintWeight)
+            float landingPredictionError)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
@@ -584,8 +602,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 in groundPath,
                 formalFootHeight,
-                landingPredictionError,
-                landingConstraintWeight);
+                landingPredictionError);
         }
 
         internal static CharacterFootSwingMotionResult BuildForSwing(
@@ -596,8 +613,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp,
             in CharacterFootGroundPathResult groundPath,
             float formalFootHeight,
-            float landingPredictionError,
-            float landingConstraintWeight)
+            float landingPredictionError)
         {
             Vector3 originalSole = (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             Vector3 originalAnkle = animatedFoot.AnklePosition;
@@ -616,9 +632,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     originalSole,
                     originalAnkle);
             if (!float.IsFinite(landingPredictionError) || landingPredictionError < 0f ||
-                !float.IsFinite(formalFootHeight) || formalFootHeight < 0f ||
-                !float.IsFinite(landingConstraintWeight) ||
-                landingConstraintWeight < 0f || landingConstraintWeight > 1f)
+                !float.IsFinite(formalFootHeight) || formalFootHeight < 0f)
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.InvalidWeight,
                     landingEventIdentity,
@@ -708,9 +722,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float envelopeMinimumCorrection = Vector3.Dot(
                 envelopeSample,
                 up) - originalSoleHeight;
-            float formalTargetCorrection = Vector3.Dot(
-                baselineSample,
-                up) + formalFootHeight - originalSoleHeight;
+            float formalTargetHeightAlongUp = Vector3.Dot(
+                envelopeSample,
+                up) + formalFootHeight;
+            float formalTargetCorrection =
+                formalTargetHeightAlongUp - originalSoleHeight;
             if (!float.IsFinite(envelopeMinimumCorrection) ||
                 !float.IsFinite(formalTargetCorrection))
                 return Rejected(
@@ -725,9 +741,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     envelopeSample);
             float verticalCorrection = Mathf.Max(
                 0f,
-                Mathf.Max(
-                    envelopeMinimumCorrection,
-                    landingConstraintWeight * formalTargetCorrection));
+                formalTargetCorrection);
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = footPlacementWeight;
@@ -745,9 +759,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 progress,
                 baselineSample,
                 envelopeSample,
+                formalTargetHeightAlongUp,
                 verticalCorrection,
                 landingPredictionError,
-                landingConstraintWeight,
                 correctedSole,
                 correctedAnkle,
                 positionWeight,
@@ -771,9 +785,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.Progress,
                 motion.BaselineSample,
                 motion.EnvelopeSample,
+                motion.FormalTargetHeightAlongUp,
                 motion.VerticalCorrection,
                 motion.LandingPredictionError,
-                motion.LandingConstraintWeight,
                 motion.OriginalSole,
                 motion.OriginalAnkle,
                 0f,
@@ -883,9 +897,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float progress = 0f,
             Vector3 baselineSample = default,
             Vector3 envelopeSample = default,
+            float formalTargetHeightAlongUp = 0f,
             float verticalCorrection = 0f,
-            float landingPredictionError = 0f,
-            float landingConstraintWeight = 0f) =>
+            float landingPredictionError = 0f) =>
             new CharacterFootSwingMotionResult(
                 CharacterFootSwingMotionState.Rejected,
                 reason,
@@ -898,9 +912,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 progress,
                 baselineSample,
                 envelopeSample,
+                formalTargetHeightAlongUp,
                 verticalCorrection,
                 landingPredictionError,
-                landingConstraintWeight,
                 originalSole,
                 originalAnkle,
                 0f,

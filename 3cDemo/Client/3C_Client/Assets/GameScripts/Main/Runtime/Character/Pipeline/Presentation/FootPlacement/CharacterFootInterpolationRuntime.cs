@@ -274,6 +274,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     "Foot Plant takeover progress regressed.");
             }
             state.PlantBlendWeight = target.PlantTakeoverProgress;
+            bool takeoverWeightAdvanced = sameTarget &&
+                                           state.PlantBlendWeight >
+                                           previousBlendWeight +
+                                           CharacterFootConstraintMath.GeometryEpsilon;
             Vector3 swingWorldTarget = originalSole + swing.Correction;
             Vector3 mixedWorldTarget = Vector3.LerpUnclamped(
                 swingWorldTarget,
@@ -330,6 +334,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (takeoverCompleted)
                 captureReason |=
                     CharacterFootPlantResidualCaptureReason.TakeoverCompleted;
+            if (takeoverWeightAdvanced)
+                captureReason |= CharacterFootPlantResidualCaptureReason
+                    .TakeoverWeightAdvanced;
             if (targetRevised)
                 captureReason |= CharacterFootPlantResidualCaptureReason
                     .TargetPointRevised;
@@ -359,12 +366,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (state.PlantWorldResidualTransitionActive &&
                 frame.DeltaSeconds > 0f)
             {
-                residualAppliedHalfLifeSeconds = ResolveSwingResidualHalfLife(
-                    state.PlantWorldResidual,
-                    target.TimeToLandingSeconds,
-                    frame.Settings,
-                    out residualDeadlineHalfLifeAvailable,
-                    out residualDeadlineHalfLifeSeconds);
+                residualAppliedHalfLifeSeconds = takeoverWeightAdvanced
+                    ? residualBaseHalfLifeSeconds
+                    : ResolveSwingResidualHalfLife(
+                        state.PlantWorldResidual,
+                        target.TimeToLandingSeconds,
+                        frame.Settings,
+                        out residualDeadlineHalfLifeAvailable,
+                        out residualDeadlineHalfLifeSeconds);
                 residualDecayApplied = true;
                 state.PlantWorldResidual = Advance(
                     state.PlantWorldResidual,

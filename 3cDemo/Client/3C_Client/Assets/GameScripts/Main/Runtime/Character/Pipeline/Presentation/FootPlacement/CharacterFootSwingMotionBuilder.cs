@@ -438,6 +438,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.SwingTargetHeightForceRefreshDistance;
             SwingTargetMaximumVerticalSpeed =
                 path.SwingTargetMaximumVerticalSpeed;
+            SwingTargetHeightAdoptionMode =
+                path.SwingTargetHeightAdoptionMode.ToString();
             SwingFilteredTargetHeightAlongUp =
                 path.SwingFilteredTargetHeightAlongUp;
             PreTransitionReason = path.PreTransitionReason.ToString();
@@ -485,9 +487,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantFilteredPoint = path.PlantFilteredPoint;
             PlantPreviousBlendWeight = path.PlantPreviousBlendWeight;
             PlantBlendWeight = path.PlantBlendWeight;
+            PlantTargetHeightAdoptionMode =
+                path.PlantTargetHeightAdoptionMode.ToString();
             PlantTargetMaximumVerticalSpeed =
                 path.PlantTargetMaximumVerticalSpeed;
             PlantTargetHeightBefore = path.PlantTargetHeightBefore;
+            PlantTargetHeightTarget = path.PlantTargetHeightTarget;
             PlantTargetVerticalDelta = path.PlantTargetVerticalDelta;
             PlantTargetAppliedVerticalDelta =
                 path.PlantTargetAppliedVerticalDelta;
@@ -504,8 +509,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPreviousMixedWorldTarget =
                 path.PlantPreviousMixedWorldTarget;
             PlantMixedWorldTarget = path.PlantMixedWorldTarget;
-            PlantPreviousOutputPoint = path.PlantPreviousOutputPoint;
-            PlantOutputPoint = path.PlantOutputPoint;
+            PlantPreviousResponseOutputAvailable =
+                path.PlantPreviousResponseOutputAvailable;
+            PlantPreviousResponseOutputPoint =
+                path.PlantPreviousResponseOutputPoint;
+            PlantDesiredOutputPoint = path.PlantDesiredOutputPoint;
+            PlantResponseOutputPoint = path.PlantResponseOutputPoint;
             PlantResidualCaptureReason =
                 path.PlantResidualCaptureReason.ToString();
             PlantWorldResidualBeforeCapture =
@@ -514,10 +523,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.PlantWorldResidualAfterCapture;
             PlantWorldResidualAfterDecay =
                 path.PlantWorldResidualAfterDecay;
-            PlantVerticalContinuityOwner =
-                path.PlantVerticalContinuityOwner.ToString();
-            PlantCorrectionStageDisposition =
-                path.PlantCorrectionStageDisposition.ToString();
+            PlantCorrectionResponseEvaluated =
+                path.PlantCorrectionResponseEvaluated;
+            PlantCorrectionResponseInitializedBefore =
+                path.PlantCorrectionResponseInitializedBefore;
+            PlantCorrectionResponseInitializedThisFrame =
+                path.PlantCorrectionResponseInitializedThisFrame;
+            PlantCorrectionResponseInitializationReason =
+                path.PlantCorrectionResponseInitializationReason.ToString();
+            PlantCorrectionResponseDesired =
+                path.PlantCorrectionResponseDesired;
+            PlantCorrectionResponsePrevious =
+                path.PlantCorrectionResponsePrevious;
+            PlantCorrectionResponseCurrent =
+                path.PlantCorrectionResponseCurrent;
+            PlantCorrectionResponseDirection =
+                path.PlantCorrectionResponseDirection.ToString();
+            PlantCorrectionResponseSelectedSpeed =
+                path.PlantCorrectionResponseSelectedSpeed;
+            PlantCorrectionResponseAppliedDelta =
+                path.PlantCorrectionResponseAppliedDelta;
+            PlantVerticalContinuityOwners =
+                path.PlantVerticalContinuityOwners.ToString();
             PlantEffectiveCorrectionBefore =
                 path.PlantEffectiveCorrectionBefore;
             PlantEffectiveCorrectionAfter =
@@ -591,6 +618,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool SwingTargetHeightClamped { get; }
         public float SwingTargetHeightForceRefreshDistance { get; }
         public float SwingTargetMaximumVerticalSpeed { get; }
+        public string SwingTargetHeightAdoptionMode { get; }
         public float SwingFilteredTargetHeightAlongUp { get; }
         public string PreTransitionReason { get; }
         public CharacterFootConstraintState PreTransitionSource { get; }
@@ -629,8 +657,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PlantFilteredPoint { get; }
         public float PlantPreviousBlendWeight { get; }
         public float PlantBlendWeight { get; }
+        public string PlantTargetHeightAdoptionMode { get; }
         public float PlantTargetMaximumVerticalSpeed { get; }
         public float PlantTargetHeightBefore { get; }
+        public float PlantTargetHeightTarget { get; }
         public float PlantTargetVerticalDelta { get; }
         public float PlantTargetAppliedVerticalDelta { get; }
         public float PlantTargetHeightAfter { get; }
@@ -641,14 +671,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantTargetVerticalClamped { get; }
         public Vector3 PlantPreviousMixedWorldTarget { get; }
         public Vector3 PlantMixedWorldTarget { get; }
-        public Vector3 PlantPreviousOutputPoint { get; }
-        public Vector3 PlantOutputPoint { get; }
+        public bool PlantPreviousResponseOutputAvailable { get; }
+        public Vector3 PlantPreviousResponseOutputPoint { get; }
+        public Vector3 PlantDesiredOutputPoint { get; }
+        public Vector3 PlantResponseOutputPoint { get; }
         public string PlantResidualCaptureReason { get; }
         public Vector3 PlantWorldResidualBeforeCapture { get; }
         public Vector3 PlantWorldResidualAfterCapture { get; }
         public Vector3 PlantWorldResidualAfterDecay { get; }
-        public string PlantVerticalContinuityOwner { get; }
-        public string PlantCorrectionStageDisposition { get; }
+        public bool PlantCorrectionResponseEvaluated { get; }
+        public bool PlantCorrectionResponseInitializedBefore { get; }
+        public bool PlantCorrectionResponseInitializedThisFrame { get; }
+        public string PlantCorrectionResponseInitializationReason { get; }
+        public float PlantCorrectionResponseDesired { get; }
+        public float PlantCorrectionResponsePrevious { get; }
+        public float PlantCorrectionResponseCurrent { get; }
+        public string PlantCorrectionResponseDirection { get; }
+        public float PlantCorrectionResponseSelectedSpeed { get; }
+        public float PlantCorrectionResponseAppliedDelta { get; }
+        public string PlantVerticalContinuityOwners { get; }
         public Vector3 PlantEffectiveCorrectionBefore { get; }
         public Vector3 PlantEffectiveCorrectionAfter { get; }
         public float PlantOutputDistance { get; }

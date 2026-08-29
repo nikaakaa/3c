@@ -116,8 +116,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void Reset()
         {
+            CharacterFootCorrectionResponseInitializationReason leftReason =
+                LeftFoot.Interpolation
+                    .PendingCorrectionResponseInitializationReason;
+            CharacterFootCorrectionResponseInitializationReason rightReason =
+                RightFoot.Interpolation
+                    .PendingCorrectionResponseInitializationReason;
+            if (leftReason !=
+                    CharacterFootCorrectionResponseInitializationReason.None &&
+                rightReason !=
+                    CharacterFootCorrectionResponseInitializationReason.None &&
+                leftReason != rightReason)
+            {
+                throw new InvalidOperationException(
+                    "Foot correction response reset reasons are inconsistent.");
+            }
+            Reset(leftReason !=
+                  CharacterFootCorrectionResponseInitializationReason.None
+                ? leftReason
+                : rightReason !=
+                  CharacterFootCorrectionResponseInitializationReason.None
+                    ? rightReason
+                    : CharacterFootCorrectionResponseInitializationReason
+                        .FirstLegalInput);
+        }
+
+        internal void Reset(
+            CharacterFootCorrectionResponseInitializationReason reason)
+        {
+            if (reason ==
+                CharacterFootCorrectionResponseInitializationReason.None)
+            {
+                throw new ArgumentOutOfRangeException(nameof(reason));
+            }
             LeftFoot = default;
             RightFoot = default;
+            LeftFoot.Interpolation
+                .PendingCorrectionResponseInitializationReason = reason;
+            RightFoot.Interpolation
+                .PendingCorrectionResponseInitializationReason = reason;
             PelvisSpring.Clear();
             PrimarySupport.Clear();
             ResolvedFeet = default;
@@ -431,6 +468,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightSwingMotion,
                 out CharacterFootSide selectedSwingSide);
             Transform goalRoot = m_Rig.PoseRoot;
+            var sourceLineage = new FixedString128Bytes(
+                frame.Pose.PosePlanHash);
+            var profileRevision = new FixedString128Bytes(
+                m_Settings.ProfileRevision);
+            ulong worldRevision = m_WorldQuery.WorldRevision;
             var leftConstraintFrame = new CharacterFootStateFrame(
                 frame.RenderFrame,
                 frame.Pose.CompletionIdentity,
@@ -448,11 +490,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftLockRequest,
                 leftCurrentStep.Support,
                 leftLockRequest.EventIdentity,
-                IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction) ||
-                !leftCurrentStep.IsAuthoritative,
+                ResolveFootGoalOwnershipLoss(
+                    facts.Grounded,
+                    leftCurrentStep.IsAuthoritative),
                 footPlacementWeight,
                 componentUp,
                 frame.PresentationDeltaSeconds,
+                sourceLineage,
+                profileRevision,
+                worldRevision,
                 m_Settings.FootMotion);
             var rightConstraintFrame = new CharacterFootStateFrame(
                 frame.RenderFrame,
@@ -471,11 +517,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightLockRequest,
                 rightCurrentStep.Support,
                 rightLockRequest.EventIdentity,
-                IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction) ||
-                !rightCurrentStep.IsAuthoritative,
+                ResolveFootGoalOwnershipLoss(
+                    facts.Grounded,
+                    rightCurrentStep.IsAuthoritative),
                 footPlacementWeight,
                 componentUp,
                 frame.PresentationDeltaSeconds,
+                sourceLineage,
+                profileRevision,
+                worldRevision,
                 m_Settings.FootMotion);
             var leftEvaluation = new CharacterFootStateEvaluation(
                 CharacterFootSide.Left,
@@ -569,9 +619,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool rightReachAvailable = false;
             bool leftLandingReach = false;
             bool rightLandingReach = false;
-            if (facts.Grounded &&
-                !leftAction.IsOccupied &&
-                !rightAction.IsOccupied)
+            if (facts.Grounded)
             {
                 leftLandingReach = IsLandingReachCandidate(
                     in leftSelectedStep,
@@ -1542,10 +1590,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    (targetAnkle - foot.AnklePosition) * goal.PositionWeight;
         }
 
-        static bool IsHardFootGoalOwnershipLoss(
+        static CharacterFootGoalOwnershipLossReason ResolveFootGoalOwnershipLoss(
             bool grounded,
-            in CharacterFootActionOccupancy action) =>
-            !grounded || action.IsOccupied;
+            bool authoritative)
+        {
+            CharacterFootGoalOwnershipLossReason reason =
+                CharacterFootGoalOwnershipLossReason.None;
+            if (!grounded)
+                reason |= CharacterFootGoalOwnershipLossReason.Ungrounded;
+            if (!authoritative)
+            {
+                reason |= CharacterFootGoalOwnershipLossReason
+                    .SourceLineageInvalidated;
+            }
+            return reason;
+        }
 
         static bool IsLandingReachCandidate(
             in AnimationFootMotionRuntimeSample step,

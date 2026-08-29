@@ -533,6 +533,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.CompletionIdentity == 0 ||
                 frame.RigId.Length == 0 ||
                 frame.RigRevision.Length == 0 ||
+                frame.SourceLineage.Length == 0 ||
+                frame.ProfileRevision.Length == 0 ||
+                frame.WorldRevision == 0 ||
+                ((byte)frame.OwnershipLossReason &
+                 ~((byte)CharacterFootGoalOwnershipLossReason.Ungrounded |
+                   (byte)CharacterFootGoalOwnershipLossReason
+                       .SourceLineageInvalidated)) != 0 ||
                 !CharacterFootConstraintMath.Finite(frame.ComponentUp) ||
                 frame.ComponentUp.sqrMagnitude <=
                     CharacterFootConstraintMath.GeometryEpsilon ||

@@ -1,3 +1,4 @@
+using Unity.Collections;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -9,11 +10,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateTarget target,
             in CharacterFootStateFrame frame)
         {
+            UpdateCorrectionResponseLineage(ref state, in frame);
             if (target.SuppressOutput ||
                 target.InterpolationPolicy ==
                 CharacterFootInterpolationPolicy.Suppressed)
             {
-                state = default;
+                CharacterFootCorrectionResponseInitializationReason reason =
+                    (frame.OwnershipLossReason &
+                     CharacterFootGoalOwnershipLossReason
+                         .SourceLineageInvalidated) != 0
+                        ? CharacterFootCorrectionResponseInitializationReason
+                            .SourceLineageInvalidated
+                        : CharacterFootCorrectionResponseInitializationReason
+                            .PolicyExited;
+                reason = ResolveSuppressedInitializationReason(
+                    state.PendingCorrectionResponseInitializationReason,
+                    reason);
+                ResetInterpolation(ref state, in frame, reason);
                 return new CharacterFootInterpolationResult(
                     default,
                     false,
@@ -29,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (target.InterpolationPolicy)
             {
                 case CharacterFootInterpolationPolicy.SwingResidual:
-                    ClearPlant(ref state);
+                    ClearPlant(ref state, true);
                     return EvaluateSwing(ref state, in target, in frame);
                 case CharacterFootInterpolationPolicy.PlantBlend:
                     return EvaluatePlant(ref state, in target, in frame);
@@ -52,9 +65,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             }
             Vector3 correction = state.EffectiveCorrection;
+            CharacterFootCorrectionResponseInitializationReason reason =
+                state.HasCorrectionResponse
+                    ? CharacterFootCorrectionResponseInitializationReason
+                        .PolicyExited
+                    : state.PendingCorrectionResponseInitializationReason;
+            FixedString128Bytes sourceLineage =
+                state.CorrectionResponseSourceLineage;
+            FixedString128Bytes profileRevision =
+                state.CorrectionResponseProfileRevision;
+            ulong worldRevision = state.CorrectionResponseWorldRevision;
+            bool hasLineage = state.HasCorrectionResponseLineage;
             state = default;
             state.HasOutput = true;
             state.EffectiveCorrection = correction;
+            state.HasCorrectionResponseLineage = hasLineage;
+            state.CorrectionResponseSourceLineage = sourceLineage;
+            state.CorrectionResponseProfileRevision = profileRevision;
+            state.CorrectionResponseWorldRevision = worldRevision;
+            state.PendingCorrectionResponseInitializationReason = reason;
         }
 
         static CharacterFootInterpolationResult EvaluatePlant(
@@ -95,8 +124,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     target.TimeToLandingSeconds,
                     in supportIntent),
                 in frame);
-            Vector3 currentOutputBefore = state.HasPlantOutputPoint
-                ? state.PreviousPlantOutputPoint
+            bool previousResponseOutputAvailable =
+                state.HasPreviousResponseOutputPoint;
+            Vector3 currentOutputBefore = previousResponseOutputAvailable
+                ? state.PreviousResponseOutputPoint
                 : originalSole + swing.Correction;
             Vector3 effectiveCorrectionBefore =
                 currentOutputBefore - originalSole;
@@ -114,70 +145,107 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 previousMixedWorldTarget =
                 state.PreviousPlantMixedWorldTarget;
             float previousBlendWeight = state.PlantBlendWeight;
-            bool matchingTargetHeight = state.HasTargetHeight &&
-                                        state.TargetHeightEventIdentity ==
-                                        target.PlantTargetEventIdentity;
-            bool targetHeightInitialized = !matchingTargetHeight;
-            if (targetHeightInitialized)
-            {
-                state.HasTargetHeight = true;
-                state.TargetHeightEventIdentity =
-                    target.PlantTargetEventIdentity;
-                state.FilteredTargetHeightAlongUp = Vector3.Dot(
-                    currentOutputBefore,
-                    up);
-                state.TargetHeightRetargetActive = false;
-            }
-            float targetHeightBefore = state.FilteredTargetHeightAlongUp;
             float desiredTargetHeightAlongUp = Vector3.Dot(
                 target.PlantTargetPoint,
                 up);
+            bool hadTargetHeight = state.HasTargetHeight;
+            bool matchingTargetHeight = hadTargetHeight &&
+                                        state.TargetHeightEventIdentity ==
+                                        target.PlantTargetEventIdentity;
+            bool targetHeightInitialized = !hadTargetHeight;
+            bool targetHeightEventChanged = hadTargetHeight &&
+                                            !matchingTargetHeight;
+            float targetHeightBefore = hadTargetHeight
+                ? state.FilteredTargetHeightAlongUp
+                : desiredTargetHeightAlongUp;
             float targetVerticalDelta = desiredTargetHeightAlongUp -
                                         targetHeightBefore;
+            bool verificationRefresh = matchingTargetHeight &&
+                                       target.PlantTargetVerified &&
+                                       !previousVerified;
+            bool directAdoption = frame.Settings.TargetHeightAdoptionMode ==
+                                  CharacterFootTargetHeightAdoptionMode.Direct;
+            bool distanceForceRefresh = matchingTargetHeight &&
+                                         !directAdoption &&
+                                         !target.DirectPlantFollow &&
+                                         !verificationRefresh &&
+                                         Mathf.Abs(targetVerticalDelta) >=
+                                         frame.Settings
+                                             .TargetHeightForceRefreshDistance;
+            bool targetForceRefreshed = verificationRefresh ||
+                                        distanceForceRefresh;
+            bool targetRevisionAdmitted =
+                Mathf.Abs(targetVerticalDelta) >
+                frame.Settings.PathRevisionDistance;
             float maximumTargetDelta =
                 frame.Settings.MaximumVerticalTargetSpeed *
                 frame.DeltaSeconds;
-            bool verificationRefresh = target.PlantTargetVerified &&
-                                       (!sameTarget || !previousVerified);
-            bool distanceForceRefresh = !target.DirectPlantFollow &&
-                                        !verificationRefresh &&
-                                        Mathf.Abs(targetVerticalDelta) >=
-                                        frame.Settings
-                                            .TargetHeightForceRefreshDistance;
-            bool targetForceRefreshed = verificationRefresh ||
-                                        distanceForceRefresh;
-            float targetAppliedVerticalDelta = target.DirectPlantFollow ||
+            float targetAppliedVerticalDelta = targetHeightInitialized ||
+                                               targetHeightEventChanged ||
+                                               directAdoption ||
+                                               target.DirectPlantFollow ||
                                                targetForceRefreshed
                 ? targetVerticalDelta
-                : Mathf.Clamp(
-                    targetVerticalDelta,
-                    -maximumTargetDelta,
-                    maximumTargetDelta);
-            bool targetVerticalClamped = !Mathf.Approximately(
-                targetVerticalDelta,
-                targetAppliedVerticalDelta);
-            state.FilteredTargetHeightAlongUp += targetAppliedVerticalDelta;
+                : targetRevisionAdmitted
+                    ? Mathf.Clamp(
+                        targetVerticalDelta,
+                        -maximumTargetDelta,
+                        maximumTargetDelta)
+                    : 0f;
+            bool targetVerticalClamped = targetRevisionAdmitted &&
+                                         !targetHeightInitialized &&
+                                         !targetHeightEventChanged &&
+                                         !directAdoption &&
+                                         !target.DirectPlantFollow &&
+                                         !targetForceRefreshed &&
+                                         !Mathf.Approximately(
+                                             targetVerticalDelta,
+                                             targetAppliedVerticalDelta);
+            state.HasTargetHeight = true;
+            state.TargetHeightEventIdentity = target.PlantTargetEventIdentity;
+            state.FilteredTargetHeightAlongUp =
+                targetHeightBefore + targetAppliedVerticalDelta;
+            state.TargetHeightRetargetActive = false;
             CharacterFootPlantTargetHeightUpdateReason targetHeightUpdateReason;
-            if (verificationRefresh)
+            if (targetHeightInitialized)
+            {
+                targetHeightUpdateReason =
+                    CharacterFootPlantTargetHeightUpdateReason.Initialized;
+            }
+            else if (targetHeightEventChanged)
+            {
+                targetHeightUpdateReason =
+                    CharacterFootPlantTargetHeightUpdateReason.EventChanged;
+            }
+            else if (verificationRefresh)
             {
                 targetHeightUpdateReason = CharacterFootPlantTargetHeightUpdateReason
                     .VerificationRefresh;
             }
-            else if (Mathf.Approximately(targetVerticalDelta, 0f))
+            else if (targetVerticalDelta == 0f)
             {
-                targetHeightUpdateReason = targetHeightInitialized
-                    ? CharacterFootPlantTargetHeightUpdateReason.Initialized
-                    : CharacterFootPlantTargetHeightUpdateReason.None;
+                targetHeightUpdateReason =
+                    CharacterFootPlantTargetHeightUpdateReason.None;
             }
             else if (target.DirectPlantFollow)
             {
                 targetHeightUpdateReason =
                     CharacterFootPlantTargetHeightUpdateReason.DirectFollow;
             }
+            else if (directAdoption)
+            {
+                targetHeightUpdateReason =
+                    CharacterFootPlantTargetHeightUpdateReason.DirectAdoption;
+            }
             else if (distanceForceRefresh)
             {
                 targetHeightUpdateReason = CharacterFootPlantTargetHeightUpdateReason
                     .ForceRefreshDistanceExceeded;
+            }
+            else if (!targetRevisionAdmitted)
+            {
+                targetHeightUpdateReason = CharacterFootPlantTargetHeightUpdateReason
+                    .HeldWithinRevisionDistance;
             }
             else if (targetVerticalClamped)
             {
@@ -266,13 +334,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 state.PlantWorldResidual =
                     currentOutputBefore - mixedWorldTarget;
-                state.PlantResponseTransitionActive =
+                state.PlantWorldResidualTransitionActive =
                     state.PlantWorldResidual.sqrMagnitude >
                     CharacterFootConstraintMath.GeometryEpsilon *
                     CharacterFootConstraintMath.GeometryEpsilon;
             }
             Vector3 residualAfterCapture = state.PlantWorldResidual;
-            if (!captureTransition && state.PlantResponseTransitionActive)
+            if (!captureTransition &&
+                state.PlantWorldResidualTransitionActive)
             {
                 float halfLifeSeconds = ResolveSwingResidualHalfLife(
                     state.PlantWorldResidual,
@@ -289,46 +358,118 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.Settings.LandingLockCompletionTolerance)
                 {
                     state.PlantWorldResidual = default;
-                    state.PlantResponseTransitionActive = false;
+                    state.PlantWorldResidualTransitionActive = false;
                 }
             }
-            Vector3 outputPoint =
+            Vector3 desiredOutputPoint =
                 mixedWorldTarget + state.PlantWorldResidual;
-            state.EffectiveCorrection = outputPoint - originalSole;
-            CharacterFootVerticalContinuityOwner verticalContinuityOwner;
-            CharacterFootCorrectionStageDisposition correctionStageDisposition;
-            if (state.PlantResponseTransitionActive)
+            float desiredResponse = Vector3.Dot(
+                desiredOutputPoint - originalSole,
+                up);
+            bool correctionResponseInitializedBefore =
+                state.HasCorrectionResponse;
+            bool correctionResponseInitializedThisFrame =
+                !correctionResponseInitializedBefore;
+            CharacterFootCorrectionResponseInitializationReason
+                correctionResponseInitializationReason =
+                    CharacterFootCorrectionResponseInitializationReason.None;
+            float previousResponse = correctionResponseInitializedBefore
+                ? state.CorrectionResponseAlongUp
+                : desiredResponse;
+            float currentResponse = correctionResponseInitializedBefore
+                ? previousResponse
+                : desiredResponse;
+            CharacterFootCorrectionResponseDirection responseDirection =
+                CharacterFootCorrectionResponseDirection.None;
+            float selectedResponseSpeed = 0f;
+            float responseAppliedDelta = 0f;
+            if (correctionResponseInitializedThisFrame)
             {
-                verticalContinuityOwner =
-                    CharacterFootVerticalContinuityOwner.PlantWorldResidual;
-                correctionStageDisposition = CharacterFootCorrectionStageDisposition
-                    .BypassedByWorldResidualOwner;
-            }
-            else if (Mathf.Abs(targetAppliedVerticalDelta) >
-                     CharacterFootConstraintMath.GeometryEpsilon ||
-                     targetVerticalClamped ||
-                     targetForceRefreshed)
-            {
-                verticalContinuityOwner =
-                    CharacterFootVerticalContinuityOwner.TargetHeightHistory;
-                correctionStageDisposition = CharacterFootCorrectionStageDisposition
-                    .BypassedByTargetHeightOwner;
-            }
-            else if (!Mathf.Approximately(
-                         previousBlendWeight,
-                         state.PlantBlendWeight))
-            {
-                verticalContinuityOwner =
-                    CharacterFootVerticalContinuityOwner.PlantWeightBlend;
-                correctionStageDisposition = CharacterFootCorrectionStageDisposition
-                    .BypassedByWeightBlendOwner;
+                correctionResponseInitializationReason =
+                    state.PendingCorrectionResponseInitializationReason !=
+                    CharacterFootCorrectionResponseInitializationReason.None
+                        ? state.PendingCorrectionResponseInitializationReason
+                        : CharacterFootCorrectionResponseInitializationReason
+                            .FirstLegalInput;
             }
             else
             {
-                verticalContinuityOwner =
-                    CharacterFootVerticalContinuityOwner.PlantTarget;
-                correctionStageDisposition = CharacterFootCorrectionStageDisposition
-                    .SynchronizedToPlantTarget;
+                float responseDelta = desiredResponse - previousResponse;
+                if (responseDelta != 0f)
+                {
+                    responseDirection = responseDelta > 0f
+                        ? CharacterFootCorrectionResponseDirection.Increase
+                        : CharacterFootCorrectionResponseDirection.Decrease;
+                    selectedResponseSpeed = responseDelta > 0f
+                        ? frame.Settings.CorrectionResponseIncreaseSpeed
+                        : frame.Settings.CorrectionResponseDecreaseSpeed;
+                    float maximumResponseDelta =
+                        selectedResponseSpeed * frame.DeltaSeconds;
+                    responseAppliedDelta = Mathf.Clamp(
+                        responseDelta,
+                        -maximumResponseDelta,
+                        maximumResponseDelta);
+                    currentResponse = previousResponse +
+                                      responseAppliedDelta;
+                }
+            }
+            Vector3 responseOutputPoint = desiredOutputPoint +
+                                          up *
+                                          (currentResponse - desiredResponse);
+            var correctionResponseFact =
+                new CharacterFootCorrectionResponseFact(
+                    true,
+                    correctionResponseInitializedBefore,
+                    correctionResponseInitializedThisFrame,
+                    correctionResponseInitializationReason,
+                    previousResponseOutputAvailable,
+                    currentOutputBefore,
+                    desiredOutputPoint,
+                    responseOutputPoint,
+                    desiredResponse,
+                    previousResponse,
+                    currentResponse,
+                    responseDirection,
+                    selectedResponseSpeed,
+                    responseAppliedDelta);
+            state.HasCorrectionResponse = true;
+            state.CorrectionResponseAlongUp = currentResponse;
+            state.PendingCorrectionResponseInitializationReason =
+                CharacterFootCorrectionResponseInitializationReason.None;
+            state.EffectiveCorrection = responseOutputPoint - originalSole;
+            CharacterFootVerticalContinuityOwner verticalContinuityOwners =
+                CharacterFootVerticalContinuityOwner.PlantTarget;
+            if (targetHeightUpdateReason !=
+                    CharacterFootPlantTargetHeightUpdateReason.None ||
+                targetVerticalClamped || targetForceRefreshed)
+            {
+                verticalContinuityOwners |=
+                    CharacterFootVerticalContinuityOwner.TargetHeightHistory;
+            }
+            if (captureTransition ||
+                residualAfterCapture.sqrMagnitude >
+                CharacterFootConstraintMath.GeometryEpsilon *
+                CharacterFootConstraintMath.GeometryEpsilon ||
+                state.PlantWorldResidual.sqrMagnitude >
+                CharacterFootConstraintMath.GeometryEpsilon *
+                CharacterFootConstraintMath.GeometryEpsilon)
+            {
+                verticalContinuityOwners |=
+                    CharacterFootVerticalContinuityOwner.PlantWorldResidual;
+            }
+            if (correctionResponseInitializedThisFrame ||
+                !Mathf.Approximately(currentResponse, desiredResponse) ||
+                !Mathf.Approximately(responseAppliedDelta, 0f))
+            {
+                verticalContinuityOwners |= CharacterFootVerticalContinuityOwner
+                    .CorrectionResponseHistory;
+            }
+            if (!Mathf.Approximately(
+                    previousBlendWeight,
+                    state.PlantBlendWeight))
+            {
+                verticalContinuityOwners |=
+                    CharacterFootVerticalContinuityOwner.PlantWeightBlend;
             }
             state.HasPlantTarget = true;
             state.PlantTargetEventIdentity = target.PlantTargetEventIdentity;
@@ -338,17 +479,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.PlantDirectFollow = target.DirectPlantFollow;
             state.PlantDesiredPoint = target.PlantTargetPoint;
             state.PreviousPlantMixedWorldTarget = mixedWorldTarget;
-            state.HasPlantOutputPoint = true;
-            state.PreviousPlantOutputPoint = outputPoint;
+            state.HasPreviousResponseOutputPoint = true;
+            state.PreviousResponseOutputPoint = responseOutputPoint;
             state.PreviousTargetCorrection = mixedWorldTarget - originalSole;
             state.Progress = state.PlantBlendWeight;
             state.StartResidual = 0f;
             float outputDistance = Vector3.Distance(
-                outputPoint,
+                responseOutputPoint,
                 target.PlantTargetPoint);
             float penetrationDepth = Mathf.Max(
                 0f,
-                Vector3.Dot(target.PlantTargetPoint - outputPoint, up));
+                Vector3.Dot(
+                    target.PlantTargetPoint - responseOutputPoint,
+                    up));
             state.Completed = target.PlantTargetVerified &&
                               state.PlantBlendWeight >=
                               1f - CharacterFootConstraintMath.GeometryEpsilon &&
@@ -366,8 +509,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.PlantFilteredPoint,
                 previousBlendWeight,
                 state.PlantBlendWeight,
+                frame.Settings.TargetHeightAdoptionMode,
                 frame.Settings.MaximumVerticalTargetSpeed,
                 targetHeightBefore,
+                desiredTargetHeightAlongUp,
                 targetVerticalDelta,
                 targetAppliedVerticalDelta,
                 state.FilteredTargetHeightAlongUp,
@@ -378,14 +523,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 targetVerticalClamped,
                 previousMixedWorldTarget,
                 mixedWorldTarget,
-                currentOutputBefore,
-                outputPoint,
                 captureReason,
                 residualBeforeCapture,
                 residualAfterCapture,
                 state.PlantWorldResidual,
-                verticalContinuityOwner,
-                correctionStageDisposition,
+                in correctionResponseFact,
+                verticalContinuityOwners,
                 effectiveCorrectionBefore,
                 state.EffectiveCorrection,
                 outputDistance,
@@ -407,10 +550,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.AnimatedFoot);
             if (target.StateEntered)
             {
-                if (state.HasPlantOutputPoint)
+                if (state.HasPreviousResponseOutputPoint)
                 {
                     state.EffectiveCorrection =
-                        state.PreviousPlantOutputPoint - originalSole;
+                        state.PreviousResponseOutputPoint - originalSole;
                 }
                 state.PreviousTargetCorrection = target.Correction;
                 state.Residual =
@@ -431,9 +574,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.EffectiveCorrection =
                     target.Correction + state.Residual;
             }
-            state.HasPlantOutputPoint = true;
-            state.PreviousPlantOutputPoint =
+            Vector3 releaseOutputPoint =
                 originalSole + state.EffectiveCorrection;
+            state.HasPreviousResponseOutputPoint = true;
+            state.PreviousResponseOutputPoint = releaseOutputPoint;
+            if (state.HasCorrectionResponse)
+            {
+                state.CorrectionResponseAlongUp = Vector3.Dot(
+                    releaseOutputPoint - originalSole,
+                    frame.ComponentUp.normalized);
+            }
             state.Completed = frame.LockRequest.Weight <=
                               CharacterFootConstraintMath.GeometryEpsilon &&
                               Vector3.Distance(
@@ -514,6 +664,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool ownsSwingTargetHeight = state.Policy ==
                                          CharacterFootInterpolationPolicy
                                              .SwingResidual;
+            bool directTargetHeightAdoption =
+                frame.Settings.TargetHeightAdoptionMode ==
+                CharacterFootTargetHeightAdoptionMode.Direct;
             if (hasPath && ownsSwingTargetHeight && !sameHeightTarget)
             {
                 state.HasTargetHeight = true;
@@ -538,47 +691,51 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 float targetHeightDelta = currentLandingHeightAlongUp -
                                           state.FilteredTargetHeightAlongUp;
-                bool retargetRequested = groundPathInputChanged &&
-                                         landingHeightDelta >
-                                         frame.Settings.PathRevisionDistance;
-                if (retargetRequested &&
-                    Mathf.Abs(targetHeightDelta) >=
-                    frame.Settings.TargetHeightForceRefreshDistance)
+                if (directTargetHeightAdoption)
                 {
                     state.FilteredTargetHeightAlongUp =
                         currentLandingHeightAlongUp;
                     state.TargetHeightRetargetActive = false;
-                    targetHeightForceRefreshed = true;
-                }
-                else if (retargetRequested)
-                {
-                    state.TargetHeightRetargetActive = true;
-                }
-                float maximumHeightDelta = ResolveVerticalHistoryDelta(
-                    frame.DeltaSeconds,
-                    frame.Settings.MaximumVerticalTargetSpeed);
-                if (state.TargetHeightRetargetActive)
-                {
-                    targetCorrectionRateLimited = true;
-                    float appliedHeightDelta = Mathf.Clamp(
-                        targetHeightDelta,
-                        -maximumHeightDelta,
-                        maximumHeightDelta);
-                    targetCorrectionClamped = !Mathf.Approximately(
-                        targetHeightDelta,
-                        appliedHeightDelta);
-                    state.FilteredTargetHeightAlongUp += appliedHeightDelta;
-                    if (Mathf.Approximately(
-                            targetHeightDelta,
-                            appliedHeightDelta))
-                    {
-                        state.TargetHeightRetargetActive = false;
-                    }
                 }
                 else
                 {
-                    state.FilteredTargetHeightAlongUp =
-                        currentLandingHeightAlongUp;
+                    bool retargetRequested = groundPathInputChanged &&
+                                             landingHeightDelta >
+                                             frame.Settings.PathRevisionDistance;
+                    if (retargetRequested &&
+                        Mathf.Abs(targetHeightDelta) >=
+                        frame.Settings.TargetHeightForceRefreshDistance)
+                    {
+                        state.FilteredTargetHeightAlongUp =
+                            currentLandingHeightAlongUp;
+                        state.TargetHeightRetargetActive = false;
+                        targetHeightForceRefreshed = true;
+                    }
+                    else if (retargetRequested)
+                    {
+                        state.TargetHeightRetargetActive = true;
+                    }
+                    float maximumHeightDelta = ResolveVerticalHistoryDelta(
+                        frame.DeltaSeconds,
+                        frame.Settings.MaximumVerticalTargetSpeed);
+                    if (state.TargetHeightRetargetActive)
+                    {
+                        targetCorrectionRateLimited = true;
+                        float appliedHeightDelta = Mathf.Clamp(
+                            targetHeightDelta,
+                            -maximumHeightDelta,
+                            maximumHeightDelta);
+                        targetCorrectionClamped = !Mathf.Approximately(
+                            targetHeightDelta,
+                            appliedHeightDelta);
+                        state.FilteredTargetHeightAlongUp += appliedHeightDelta;
+                        if (Mathf.Approximately(
+                                targetHeightDelta,
+                                appliedHeightDelta))
+                        {
+                            state.TargetHeightRetargetActive = false;
+                        }
+                    }
                 }
             }
             else if (ownsSwingTargetHeight)
@@ -710,6 +867,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasPath && targetCorrectionClamped,
                 frame.Settings.TargetHeightForceRefreshDistance,
                 frame.Settings.MaximumVerticalTargetSpeed,
+                frame.Settings.TargetHeightAdoptionMode,
                 hasPath
                     ? filteredTargetHeightAlongUp
                     : 0f);
@@ -737,7 +895,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.TimeToLandingSeconds,
                 frame.Settings);
 
-        static void ClearPlant(ref CharacterFootInterpolationState state)
+        static void ClearPlant(
+            ref CharacterFootInterpolationState state,
+            bool exitCorrectionResponse)
         {
             state.HasPlantTarget = false;
             state.PlantTargetEventIdentity = 0;
@@ -749,11 +909,110 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.PlantFilteredPoint = default;
             state.PlantBlendWeight = 0f;
             state.PreviousPlantMixedWorldTarget = default;
-            state.HasPlantOutputPoint = false;
-            state.PreviousPlantOutputPoint = default;
             state.PlantWorldResidual = default;
-            state.PlantResponseTransitionActive = false;
+            state.PlantWorldResidualTransitionActive = false;
             state.PlantFact = default;
+            if (exitCorrectionResponse && state.HasCorrectionResponse)
+            {
+                ClearCorrectionResponse(
+                    ref state,
+                    CharacterFootCorrectionResponseInitializationReason
+                        .PolicyExited);
+            }
+        }
+
+        static void UpdateCorrectionResponseLineage(
+            ref CharacterFootInterpolationState state,
+            in CharacterFootStateFrame frame)
+        {
+            if (!state.HasCorrectionResponseLineage)
+            {
+                SetCorrectionResponseLineage(ref state, in frame);
+                return;
+            }
+            CharacterFootCorrectionResponseInitializationReason reason =
+                CharacterFootCorrectionResponseInitializationReason.None;
+            if (!state.CorrectionResponseSourceLineage.Equals(
+                    frame.SourceLineage))
+            {
+                reason = CharacterFootCorrectionResponseInitializationReason
+                    .SourceLineageInvalidated;
+            }
+            else if (!state.CorrectionResponseProfileRevision.Equals(
+                         frame.ProfileRevision))
+            {
+                reason = CharacterFootCorrectionResponseInitializationReason
+                    .ProfileLineageInvalidated;
+            }
+            else if (state.CorrectionResponseWorldRevision !=
+                     frame.WorldRevision)
+            {
+                reason = CharacterFootCorrectionResponseInitializationReason
+                    .WorldLineageInvalidated;
+            }
+            if (reason ==
+                CharacterFootCorrectionResponseInitializationReason.None)
+            {
+                return;
+            }
+            ClearCorrectionResponse(ref state, reason);
+            SetCorrectionResponseLineage(ref state, in frame);
+        }
+
+        static void SetCorrectionResponseLineage(
+            ref CharacterFootInterpolationState state,
+            in CharacterFootStateFrame frame)
+        {
+            state.HasCorrectionResponseLineage = true;
+            state.CorrectionResponseSourceLineage = frame.SourceLineage;
+            state.CorrectionResponseProfileRevision = frame.ProfileRevision;
+            state.CorrectionResponseWorldRevision = frame.WorldRevision;
+        }
+
+        static void ClearCorrectionResponse(
+            ref CharacterFootInterpolationState state,
+            CharacterFootCorrectionResponseInitializationReason reason)
+        {
+            state.HasCorrectionResponse = false;
+            state.CorrectionResponseAlongUp = 0f;
+            state.HasPreviousResponseOutputPoint = false;
+            state.PreviousResponseOutputPoint = default;
+            state.PendingCorrectionResponseInitializationReason = reason;
+        }
+
+        static void ResetInterpolation(
+            ref CharacterFootInterpolationState state,
+            in CharacterFootStateFrame frame,
+            CharacterFootCorrectionResponseInitializationReason reason)
+        {
+            state = default;
+            SetCorrectionResponseLineage(ref state, in frame);
+            state.PendingCorrectionResponseInitializationReason = reason;
+        }
+
+        static CharacterFootCorrectionResponseInitializationReason
+            ResolveSuppressedInitializationReason(
+                CharacterFootCorrectionResponseInitializationReason pending,
+                CharacterFootCorrectionResponseInitializationReason current)
+        {
+            if (pending !=
+                    CharacterFootCorrectionResponseInitializationReason.None &&
+                pending != CharacterFootCorrectionResponseInitializationReason
+                    .FirstLegalInput &&
+                pending != CharacterFootCorrectionResponseInitializationReason
+                    .PolicyExited)
+            {
+                return pending;
+            }
+            if (current == CharacterFootCorrectionResponseInitializationReason
+                    .SourceLineageInvalidated)
+            {
+                return current;
+            }
+            return pending !=
+                   CharacterFootCorrectionResponseInitializationReason.None
+                ? pending
+                : current;
         }
 
         static Vector3 Advance(

@@ -265,22 +265,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 up) + up * state.FilteredTargetHeightAlongUp;
             if (!sameTarget)
                 state.PlantBlendWeight = 0f;
-            if (sameTarget &&
-                target.PlantTakeoverProgress < previousBlendWeight)
-            {
-                throw new System.InvalidOperationException(
-                    "Foot Plant takeover progress regressed.");
-            }
-            state.PlantBlendWeight = target.PlantTakeoverProgress;
-            bool takeoverWeightAdvanced = sameTarget &&
-                                           state.PlantBlendWeight >
-                                           previousBlendWeight;
-            bool retainTakeoverTracking = sameTarget &&
-                                          previousTargetKind == CharacterFootPlantTargetKind
-                                              .PreparedPrediction &&
-                                          target.PlantTargetKind == CharacterFootPlantTargetKind
-                                              .PreparedPrediction &&
-                                          state.PlantWorldResidualTakeoverTrackingActive;
+            state.PlantBlendWeight = Mathf.Max(
+                state.PlantBlendWeight,
+                Mathf.Clamp01(target.Progress));
             Vector3 swingWorldTarget = originalSole + swing.Correction;
             Vector3 mixedWorldTarget = Vector3.LerpUnclamped(
                 swingWorldTarget,
@@ -321,25 +308,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (target.ResponseEntered)
                 captureReason |=
                     CharacterFootPlantResidualCaptureReason.ResponseEntered;
-            bool takeoverStarted = sameTarget &&
-                                   previousBlendWeight <=
-                                   CharacterFootConstraintMath.GeometryEpsilon &&
-                                   state.PlantBlendWeight >
-                                   CharacterFootConstraintMath.GeometryEpsilon;
-            bool takeoverCompleted = sameTarget &&
-                                     previousBlendWeight <
-                                     1f - CharacterFootConstraintMath.GeometryEpsilon &&
-                                     state.PlantBlendWeight >=
-                                     1f - CharacterFootConstraintMath.GeometryEpsilon;
-            if (takeoverStarted)
+            bool weightStarted = sameTarget &&
+                                 previousBlendWeight <=
+                                 CharacterFootConstraintMath.GeometryEpsilon &&
+                                 state.PlantBlendWeight >
+                                 CharacterFootConstraintMath.GeometryEpsilon;
+            bool weightCompleted = sameTarget &&
+                                   previousBlendWeight <
+                                   1f - CharacterFootConstraintMath.GeometryEpsilon &&
+                                   state.PlantBlendWeight >=
+                                   1f - CharacterFootConstraintMath.GeometryEpsilon;
+            if (weightStarted)
                 captureReason |=
-                    CharacterFootPlantResidualCaptureReason.TakeoverStarted;
-            if (takeoverCompleted)
+                    CharacterFootPlantResidualCaptureReason.WeightStarted;
+            if (weightCompleted)
                 captureReason |=
-                    CharacterFootPlantResidualCaptureReason.TakeoverCompleted;
-            if (takeoverWeightAdvanced)
-                captureReason |= CharacterFootPlantResidualCaptureReason
-                    .TakeoverWeightAdvanced;
+                    CharacterFootPlantResidualCaptureReason.WeightCompleted;
             if (targetRevised)
                 captureReason |= CharacterFootPlantResidualCaptureReason
                     .TargetPointRevised;
@@ -358,9 +342,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootConstraintMath.GeometryEpsilon *
                     CharacterFootConstraintMath.GeometryEpsilon;
             }
-            state.PlantWorldResidualTakeoverTrackingActive =
-                state.PlantWorldResidualTransitionActive &&
-                (takeoverWeightAdvanced || retainTakeoverTracking);
             Vector3 residualCapturedBeforeDecay = state.PlantWorldResidual;
             bool residualDecayApplied = false;
             float residualBaseHalfLifeSeconds =
@@ -372,15 +353,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (state.PlantWorldResidualTransitionActive &&
                 frame.DeltaSeconds > 0f)
             {
-                residualAppliedHalfLifeSeconds =
-                    state.PlantWorldResidualTakeoverTrackingActive
-                    ? residualBaseHalfLifeSeconds
-                    : ResolveSwingResidualHalfLife(
-                        state.PlantWorldResidual,
-                        target.TimeToLandingSeconds,
-                        frame.Settings,
-                        out residualDeadlineHalfLifeAvailable,
-                        out residualDeadlineHalfLifeSeconds);
+                residualAppliedHalfLifeSeconds = ResolveSwingResidualHalfLife(
+                    state.PlantWorldResidual,
+                    target.TimeToLandingSeconds,
+                    frame.Settings,
+                    out residualDeadlineHalfLifeAvailable,
+                    out residualDeadlineHalfLifeSeconds);
                 residualDecayApplied = true;
                 state.PlantWorldResidual = Advance(
                     state.PlantWorldResidual,
@@ -392,7 +370,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     state.PlantWorldResidual = default;
                     state.PlantWorldResidualTransitionActive = false;
-                    state.PlantWorldResidualTakeoverTrackingActive = false;
                     residualClearedAtCompletionTolerance = true;
                 }
             }
@@ -529,10 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     target.PlantTargetPoint - responseOutputPoint,
                     up));
             state.Completed = target.PlantTargetVerified &&
-                              frame.LockRequest.RequestsLock &&
-                              frame.LockRequest.EventIdentity ==
-                              target.PlantTargetEventIdentity &&
-                              frame.LockRequest.Weight >=
+                              state.PlantBlendWeight >=
                               1f - CharacterFootConstraintMath.GeometryEpsilon &&
                               outputDistance <=
                               frame.Settings.LandingLockCompletionTolerance &&
@@ -959,7 +933,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.PreviousPlantMixedWorldTarget = default;
             state.PlantWorldResidual = default;
             state.PlantWorldResidualTransitionActive = false;
-            state.PlantWorldResidualTakeoverTrackingActive = false;
             state.PlantFact = default;
             if (exitCorrectionResponse && state.HasCorrectionResponse)
             {

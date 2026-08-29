@@ -60,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in context,
                         in transition,
                         swingCorrection,
+                        frame.LockRequest.Weight,
                         timeToLandingSeconds,
                         in frame,
                         in supportIntent);
@@ -107,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootPlantTargetKind.PreparedPrediction,
                 CharacterFootLockResponse.None,
                 transition,
-                frame.PreparedPlantTakeoverProgress,
+                frame.PreparedPlantWeight,
                 timeToLandingSeconds,
                 false,
                 in supportIntent);
@@ -117,6 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
+            float progress,
             float timeToLandingSeconds,
             in CharacterFootStateFrame frame,
             in CharacterFootSupportIntent supportIntent)
@@ -134,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootPlantTargetKind.VerifiedAnchor,
                 CharacterFootLockResponse.None,
                 transition,
-                1f,
+                progress,
                 timeToLandingSeconds,
                 false,
                 in supportIntent);
@@ -253,7 +255,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootTransitionReason.LockResponseChanged,
                 directPlantFollow,
                 false,
-                progress,
+                Mathf.Clamp01(progress),
                 timeToLandingSeconds,
                 in supportIntent);
 

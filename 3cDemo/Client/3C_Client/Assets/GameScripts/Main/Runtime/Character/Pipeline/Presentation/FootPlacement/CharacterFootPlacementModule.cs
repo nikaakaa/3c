@@ -407,12 +407,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftPreparedPlantActive ? leftLanding.PlantTarget : default;
             CharacterFootGroundPathLanding rightPreparedPlantTarget =
                 rightPreparedPlantActive ? rightLanding.PlantTarget : default;
-            float leftPreparedPlantTakeoverProgress =
-                ResolvePreparedPlantTakeoverProgress(
+            float leftPreparedPlantWeight = ResolvePreparedPlantWeight(
+                in bank.LeftFoot,
                 in leftCurrentStep,
                 leftPreparedPlantActive);
-            float rightPreparedPlantTakeoverProgress =
-                ResolvePreparedPlantTakeoverProgress(
+            float rightPreparedPlantWeight = ResolvePreparedPlantWeight(
+                in bank.RightFoot,
                 in rightCurrentStep,
                 rightPreparedPlantActive);
             CharacterFootGroundPathResult leftGroundPath = PrepareGroundPath(
@@ -486,7 +486,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftContactLanding,
                 leftPreparedPlantActive,
                 in leftPreparedPlantTarget,
-                leftPreparedPlantTakeoverProgress,
+                leftPreparedPlantWeight,
                 in leftLockRequest,
                 leftCurrentStep.Support,
                 leftLockRequest.EventIdentity,
@@ -513,7 +513,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightContactLanding,
                 rightPreparedPlantActive,
                 in rightPreparedPlantTarget,
-                rightPreparedPlantTakeoverProgress,
+                rightPreparedPlantWeight,
                 in rightLockRequest,
                 rightCurrentStep.Support,
                 rightLockRequest.EventIdentity,
@@ -997,19 +997,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool approachMatches = events.InApproachContactToLanding &&
                                    events.NextLanding.IsBound &&
                                    events.NextLanding.Identity == eventIdentity;
-            return approachMatches;
+            bool currentMatches = events.CurrentContact.IsBound &&
+                                  events.CurrentContact.Identity == eventIdentity;
+            return approachMatches || currentMatches;
         }
 
-        static float ResolvePreparedPlantTakeoverProgress(
+        static float ResolvePreparedPlantWeight(
+            in CharacterFootLifecycleContext context,
             in AnimationFootMotionRuntimeSample footMotion,
             bool active)
         {
             if (!active)
                 return 0f;
-            if (!footMotion.Events.InApproachContactToLanding)
-                throw new InvalidOperationException(
-                    "Prepared Plant target is outside Approach Contact.");
-            return footMotion.ApproachContactToLandingProgress;
+            return footMotion.Events.InApproachContactToLanding
+                ? footMotion.Contact
+                : context.Interpolation.PlantBlendWeight;
         }
 
         CharacterFootLandingPredictionPair PredictFootPair(

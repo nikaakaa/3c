@@ -90,10 +90,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             HasPredictiveLanding ? Events.NextLanding.RootLocalLanding : default;
         public float SwingProgress =>
             HasPredictiveLanding ? Events.SwingProgress : 0f;
-        public float ApproachContactToLandingProgress =>
-            Events.InApproachContactToLanding
-                ? Events.ApproachContactToLandingProgress
-                : 0f;
         public int EventOrdinal =>
             HasPredictiveLanding ? Events.NextLanding.Ordinal : 0;
         public int SourceSampleCycle =>

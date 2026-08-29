@@ -251,8 +251,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantDesiredOutputPointX,FootMotionPlantDesiredOutputPointY,FootMotionPlantDesiredOutputPointZ," +
             "FootMotionPlantResponseOutputPointX,FootMotionPlantResponseOutputPointY,FootMotionPlantResponseOutputPointZ,FootMotionPlantResidualCaptureReason," +
             "FootMotionPlantWorldResidualBeforeCaptureX,FootMotionPlantWorldResidualBeforeCaptureY,FootMotionPlantWorldResidualBeforeCaptureZ," +
-            "FootMotionPlantWorldResidualAfterCaptureX,FootMotionPlantWorldResidualAfterCaptureY,FootMotionPlantWorldResidualAfterCaptureZ," +
+            "FootMotionPlantWorldResidualCapturedBeforeDecayX,FootMotionPlantWorldResidualCapturedBeforeDecayY,FootMotionPlantWorldResidualCapturedBeforeDecayZ," +
+            "FootMotionPlantWorldResidualDecayApplied,FootMotionPlantWorldResidualBaseHalfLifeSeconds,FootMotionPlantWorldResidualDeadlineHalfLifeAvailable,FootMotionPlantWorldResidualDeadlineHalfLifeSeconds,FootMotionPlantWorldResidualAppliedHalfLifeSeconds," +
             "FootMotionPlantWorldResidualAfterDecayX,FootMotionPlantWorldResidualAfterDecayY,FootMotionPlantWorldResidualAfterDecayZ," +
+            "FootMotionPlantWorldResidualCompletionTolerance,FootMotionPlantWorldResidualClearedAtCompletionTolerance," +
             "FootMotionPlantCorrectionResponseEvaluated,FootMotionPlantCorrectionResponseInitializedBefore,FootMotionPlantCorrectionResponseInitializedThisFrame,FootMotionPlantCorrectionResponseInitializationReason," +
             "FootMotionPlantCorrectionResponseDesired,FootMotionPlantCorrectionResponsePrevious,FootMotionPlantCorrectionResponseCurrent,FootMotionPlantCorrectionResponseDirection,FootMotionPlantCorrectionResponseSelectedSpeed,FootMotionPlantCorrectionResponseAppliedDelta," +
             "FootMotionPlantVerticalContinuityOwners," +
@@ -2210,8 +2212,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantResponseOutputPoint);
             Add(row, motion.PlantResidualCaptureReason);
             Add(row, motion.PlantWorldResidualBeforeCapture);
-            Add(row, motion.PlantWorldResidualAfterCapture);
+            Add(row, motion.PlantWorldResidualCapturedBeforeDecay);
+            Add(row, motion.PlantWorldResidualDecayApplied);
+            Add(row, motion.PlantWorldResidualBaseHalfLifeSeconds);
+            Add(row, motion.PlantWorldResidualDeadlineHalfLifeAvailable);
+            Add(row, motion.PlantWorldResidualDeadlineHalfLifeSeconds);
+            Add(row, motion.PlantWorldResidualAppliedHalfLifeSeconds);
             Add(row, motion.PlantWorldResidualAfterDecay);
+            Add(row, motion.PlantWorldResidualCompletionTolerance);
+            Add(row, motion.PlantWorldResidualClearedAtCompletionTolerance);
             Add(row, motion.PlantCorrectionResponseEvaluated);
             Add(row, motion.PlantCorrectionResponseInitializedBefore);
             Add(row, motion.PlantCorrectionResponseInitializedThisFrame);

@@ -265,9 +265,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 up) + up * state.FilteredTargetHeightAlongUp;
             if (!sameTarget)
                 state.PlantBlendWeight = 0f;
-            state.PlantBlendWeight = Mathf.Max(
-                state.PlantBlendWeight,
-                Mathf.Clamp01(target.Progress));
+            if (sameTarget &&
+                target.PlantTakeoverProgress +
+                CharacterFootConstraintMath.GeometryEpsilon <
+                previousBlendWeight)
+            {
+                throw new System.InvalidOperationException(
+                    "Foot Plant takeover progress regressed.");
+            }
+            state.PlantBlendWeight = target.PlantTakeoverProgress;
             Vector3 swingWorldTarget = originalSole + swing.Correction;
             Vector3 mixedWorldTarget = Vector3.LerpUnclamped(
                 swingWorldTarget,
@@ -308,22 +314,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (target.ResponseEntered)
                 captureReason |=
                     CharacterFootPlantResidualCaptureReason.ResponseEntered;
-            bool weightStarted = sameTarget &&
-                                 previousBlendWeight <=
-                                 CharacterFootConstraintMath.GeometryEpsilon &&
-                                 state.PlantBlendWeight >
-                                 CharacterFootConstraintMath.GeometryEpsilon;
-            bool weightCompleted = sameTarget &&
-                                   previousBlendWeight <
-                                   1f - CharacterFootConstraintMath.GeometryEpsilon &&
-                                   state.PlantBlendWeight >=
-                                   1f - CharacterFootConstraintMath.GeometryEpsilon;
-            if (weightStarted)
+            bool takeoverStarted = sameTarget &&
+                                   previousBlendWeight <=
+                                   CharacterFootConstraintMath.GeometryEpsilon &&
+                                   state.PlantBlendWeight >
+                                   CharacterFootConstraintMath.GeometryEpsilon;
+            bool takeoverCompleted = sameTarget &&
+                                     previousBlendWeight <
+                                     1f - CharacterFootConstraintMath.GeometryEpsilon &&
+                                     state.PlantBlendWeight >=
+                                     1f - CharacterFootConstraintMath.GeometryEpsilon;
+            if (takeoverStarted)
                 captureReason |=
-                    CharacterFootPlantResidualCaptureReason.WeightStarted;
-            if (weightCompleted)
+                    CharacterFootPlantResidualCaptureReason.TakeoverStarted;
+            if (takeoverCompleted)
                 captureReason |=
-                    CharacterFootPlantResidualCaptureReason.WeightCompleted;
+                    CharacterFootPlantResidualCaptureReason.TakeoverCompleted;
             if (targetRevised)
                 captureReason |= CharacterFootPlantResidualCaptureReason
                     .TargetPointRevised;
@@ -506,7 +512,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     target.PlantTargetPoint - responseOutputPoint,
                     up));
             state.Completed = target.PlantTargetVerified &&
-                              state.PlantBlendWeight >=
+                              frame.LockRequest.RequestsLock &&
+                              frame.LockRequest.EventIdentity ==
+                              target.PlantTargetEventIdentity &&
+                              frame.LockRequest.Weight >=
                               1f - CharacterFootConstraintMath.GeometryEpsilon &&
                               outputDistance <=
                               frame.Settings.LandingLockCompletionTolerance &&

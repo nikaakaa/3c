@@ -23,7 +23,7 @@ MonoBehaviour:
     m_CastBelow: 0.75
     m_MaximumSurfaceSlopeDegrees: 55
     m_MaximumPredictionTimeSeconds: 2
-    m_PredictionVelocityDeltaThreshold: 0.1
+    m_PredictionVelocityDeltaThreshold: 0.02
     m_PredictionVelocitySmoothSpeed: 60
     m_PredictionMaximumSpeed: 8
     m_PredictionInputAccumulationDistance: 0.05

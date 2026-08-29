@@ -76,7 +76,7 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 
 每只脚 MUST在同一Landing Context中维护可并存的`NextSwing Empty/Tracking`与`Verified LastLanding`两个typed槽位，不得把Prediction Event与已接触Plant Event压成互斥状态或形成第二状态机。PreSwing、Swing与Approach Contact MUST保持NextSwing Tracking并重新投影Raw Landing Candidate；只有累计输入或强制lineage触发Query Admission时 MUST执行一次正式Landing SphereCast，其余帧 MUST复用Committed Observation。Tracking中新Observation命中不同Surface时 MUST无条件提交新的NextSwingLanding；同Surface新点与NextSwingLanding的距离小于正式`LandingAcceptanceDistance`时 MUST保留原落点并复用Ground Path，达到阈值时 MUST提交新点。
 
-正式Foot Motion进入`ApproachContactToLanding`后 MUST继续Tracking同Event Accepted NextSwingLanding并更新诊断Ground Path，同时建立同Event持久Plant Target；Prediction换代只可更新Plant Desired Point，不得把每次Ground Path Revision直接写入可见Correction。唯一Interpolation MUST为每脚分别保存Plant Target Height、完整Vector `PlantWorldResidual`、Component Up `CorrectionResponseHistory`、上一`MixedWorldTarget`与上一实际`ResponseOutputPoint`，并固定执行`目标高度采用政策 -> typed状态/Contact权重混合形成MixedWorldTarget -> 正式换代时捕获并衰减WorldResidual形成DesiredOutputPoint -> Correction Response双档限速形成ResponseOutputPoint`。Residual Capture MUST只由Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response边沿、Weight Started/Completed、Target Point Revision或Target Height Force Refresh触发；普通逐帧Weight推进 MUST不Capture。Runtime MUST不恢复旧单档`MaximumVerticalCorrectionSpeed`、上一世界输出重表达或无条件全Plant限速链，最终只由既有Foot Goal/Position Weight把唯一Response Output与动画基线混合一次。该Event首次产生正式Contact Rising且Lock Mode请求Sliding或Locked时，Runtime MUST以`CurrentContactVerification`目的和`ForcedPlantVerification`模式恰好执行一次Current Contact Plant Verification；即使canonical Key与上次输入相同，该首次强制查询也 MUST不被诊断记为duplicate。只有Verified Landing可建立LastLanding、Promoted Contact Landing与唯一Anchor，并且Verification MUST继续三份正式连续状态而不得重置Interpolation。稳定Plant及同EventReentry期间 MUST冻结Anchor并停止查询或重定位。
+正式Foot Motion进入`ApproachContactToLanding`后 MUST继续Tracking同Event Accepted NextSwingLanding并更新诊断Ground Path，同时建立同Event持久Plant Target；Prediction换代只可更新Plant Desired Point，不得把每次Ground Path Revision直接写入可见Correction。唯一Interpolation MUST为每脚分别保存Plant Target Height、完整Vector `PlantWorldResidual`、Component Up `CorrectionResponseHistory`、上一`MixedWorldTarget`与上一实际`ResponseOutputPoint`，并固定执行`目标高度采用政策 -> 正式Approach接管进度混合形成MixedWorldTarget -> 正式换代时捕获并衰减WorldResidual形成DesiredOutputPoint -> Correction Response双档限速形成ResponseOutputPoint`。PlantBlend MUST直接消费Foot Motion Runtime Frame发布的同Event归一化`ApproachContactToLandingProgress`，不得读取raw Contact或累计`max(previous, Contact)`；同Event正式进度下降 MUST作为typed不一致拒绝。Contact只负责接触证据与边沿，Lock Weight只负责Contact后的Lock响应与完成资格。Contact Rising把同EventPlant Target晋升为Verified Anchor时，PlantBlend MUST延续为完成值1且不得切回Lock Weight零值。Residual Capture MUST只由Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response边沿、Takeover Started/Completed、Target Point Revision或Target Height Force Refresh触发；普通逐帧Takeover推进 MUST不Capture。Runtime MUST不恢复旧单档`MaximumVerticalCorrectionSpeed`、上一世界输出重表达或无条件全Plant限速链，最终只由既有Foot Goal/Position Weight把唯一Response Output与动画基线混合一次。该Event首次产生正式Contact Rising且Lock Mode请求Sliding或Locked时，Runtime MUST以`CurrentContactVerification`目的和`ForcedPlantVerification`模式恰好执行一次Current Contact Plant Verification；即使canonical Key与上次输入相同，该首次强制查询也 MUST不被诊断记为duplicate。只有Verified Landing可建立LastLanding、Promoted Contact Landing与唯一Anchor，并且Verification MUST继续三份正式连续状态而不得重置Interpolation。稳定Plant及同EventReentry期间 MUST冻结Anchor并停止查询或重定位。
 
 Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没有LastLanding时 MUST发布`CurrentLandingUnavailable`；不得用Animated Sole、Transform、固定高度或默认地面补起点。
 
@@ -108,14 +108,20 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 
 - **WHEN** 正式Foot Motion进入`ApproachContactToLanding`且Tracking已经持有同Event Accepted NextSwingLanding
 - **THEN** Runtime MUST继续按Query Admission更新Observation、NextSwingLanding与Ground Path，并由唯一Interpolation准备Plant目标
-- **AND** Prediction Observation MUST只更新持久Plant Desired Point；可见输出 MUST经过目标高度采用、正式Contact/Lock权重混合、World Residual和Correction Response
+- **AND** Prediction Observation MUST只更新持久Plant Desired Point；可见输出 MUST经过目标高度采用、正式`ApproachContactToLandingProgress`混合、World Residual和Correction Response
 - **AND** MUST不在实际Contact Rising前冻结Surface、世界点或把Prediction Observation直接作为Anchor
 
 #### Scenario: 同Event Plant目标持续换代
 
-- **WHEN** Approach、Landing或Locked期间同Event Plant Desired Point、正式状态权重或Contact权重连续变化
-- **THEN** Runtime MUST先更新Plant Target Height并形成Mixed World Target，只在正式Target/Response或Weight边沿换代时以持久上一实际Response Output捕获完整World Residual
-- **AND** 普通逐帧Weight推进 MUST不Capture；`MixedWorldTarget + ResidualAfterDecay` MUST只形成Desired Output，再由独立Correction Response History生成Response Output，不得恢复旧单档Correction链或在Response之前通过Goal权重提前混回动画基线
+- **WHEN** Approach、Landing或Locked期间同Event Plant Desired Point或正式Approach接管进度连续变化
+- **THEN** Runtime MUST先更新Plant Target Height并形成Mixed World Target，只在正式Target/Response或Takeover边沿换代时以持久上一实际Response Output捕获完整World Residual
+- **AND** 普通逐帧Takeover推进 MUST不Capture；`MixedWorldTarget + ResidualAfterDecay` MUST只形成Desired Output，再由独立Correction Response History生成Response Output，不得恢复旧单档Correction链或在Response之前通过Goal权重提前混回动画基线
+
+#### Scenario: Formal Contact曲线在Approach内回落
+
+- **WHEN** 同Event `ApproachContactToLandingProgress`继续单调推进，但raw Contact Curve因动画采样从上一帧回落
+- **THEN** PlantBlend MUST采用本帧正式Approach进度继续推进，不得保持上一Contact最大值形成单帧Hold
+- **AND** Diagnostics MUST分别记录Contact变化、正式Approach进度、PlantBlend变化及相对动画Source新增的物理脚加速度
 
 #### Scenario: Approach Contact暂时没有可用Prediction Landing
 
@@ -162,7 +168,7 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 
 Swing MUST先以`Runtime Ground Envelope + Formal Foot Height`生成Raw Target Height；Target Height History MUST保存Accepted Landing沿Component Up的世界高度，Swing输出 MUST为`Raw Target Height + Filtered Landing Height - Current Landing Height`。同一Ground Path只因动画Phase推进时 MUST直接通过Raw Height，不得应用目标采用政策或触发Path Revision。Profile显式`TargetHeightAdoptionMode=Direct`时，合法Landing Height换代 MUST直接更新History且不得发布Held；`RateLimited`时，同Event累计差不超过`PathRevisionDistance` MUST发布`HeldWithinRevisionDistance`并保持Applied Delta为0，超过该距离且小于`TargetHeightForceRefreshDistance`才 MUST按`MaximumVerticalTargetSpeed × Presentation Delta`更新，累计差达到Force Refresh Distance或Event换代 MUST直接刷新History并由后级连续状态接管。Approach/Plant取得Interpolation所有权后，Swing更新 MUST发布typed Held；Held期间Next Swing Event MUST只提供本帧Raw Swing Target，不得改写或用Current Plant拥有的Target Height identity/value解释自己的目标。Plant Target沿同Event继续该History。
 
-Runtime MUST以正式状态/Contact权重形成Mixed World Target，并只在Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response边沿、Weight Started/Completed、Target Point Revision或Target Height Force Refresh时，以持久上一实际Response Output Point为基准捕获完整World Residual。普通逐帧Weight推进 MUST不Capture，稳定且Target Height delta为0的Locked帧 MUST发布`TargetHeightUpdateReason=None`。`DesiredOutputPoint` MUST等于`MixedWorldTarget + ResidualAfterDecay`。
+Runtime MUST以正式Approach接管进度形成Mixed World Target，并只在Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response边沿、Takeover Started/Completed、Target Point Revision或Target Height Force Refresh时，以持久上一实际Response Output Point为基准捕获完整WorldResidual。普通逐帧Takeover推进 MUST不Capture，稳定且Target Height delta为0的Locked帧 MUST发布`TargetHeightUpdateReason=None`。`DesiredOutputPoint` MUST等于`MixedWorldTarget + ResidualAfterDecay`。
 
 Correction Response Stage MUST计算`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, ComponentUp)`并为每脚保存Previous Response、初始化事实与typed增减方向。首次合法输入以及Reset、Retarget、Source/Profile/World lineage失效后的首次合法输入 MUST直接同步；普通动画目标变化、同Event Prediction换点、Contact Verification、攻击、Lock Response换代和Same-Event Reentry MUST继续上一History。已初始化时 MUST按Desired Response相对Previous Response的增减方向选择Profile显式`CorrectionResponseIncreaseSpeed`或`CorrectionResponseDecreaseSpeed`，把单帧变化限制在所选速率乘Presentation Delta内，并以`ResponseOutputPoint = DesiredOutputPoint + ComponentUp × (CurrentResponse - DesiredResponse)`生成唯一Response Output。Effective Correction MUST等于`ResponseOutputPoint - OriginalSole`。
 
@@ -174,7 +180,7 @@ Ground Path Envelope、Contact Anchor与Reach MUST在Interpolation之后由唯�
 
 Swing Target MUST只使用Last Landing、Next Landing、Runtime Ground Envelope与正式Foot Height。Accepted Swing Motion MUST携带同Ground Path Event的typed Swing Path Landing Reference；Promoted Contact Landing MUST只服务Contact与Anchor。Path Residual Revision MUST只由Event、可用性或Accepted Landing端点变化触发；Ground Path identity单独变化和同一Path内的Phase目标推进 MUST不发布Path Revision。正式Swing目标的有效变化 MAY通过独立typed Target Tracking事实连续接管，但 MUST不伪装成Path Residual重建。Diagnostics MUST分别发布原始Builder Swing Target、State Target、Path Revision与Target Tracking，不得互相改名覆盖。
 
-Landing Anchor MUST在正式Contact有效、同Event Lock Mode首次从Unlocked进入Sliding或Locked、一次Plant Verification成功且该Event没有Active或Retained Anchor时由唯一Transition Runtime建立。正式Lock Weight MUST通过Interpolation Policy Request渐进接管Anchor。Landing MUST只有在Lock Weight完成、Effective Correction与Anchor目标距离不超过`LandingLockCompletionTolerance`、Ground穿透不超过`GroundPenetrationTolerance`且Reach允许时才进入Locked；未满足时必须保留Landing和同一Anchor继续连续追赶，不得把Weight完成当成瞬移许可。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing、记录Contact Falling与最近释放Event并继续Retain原Anchor；只有Releasing完成进入Swing后该Event才闭合并清除Anchor。完成帧 MUST先应用Post-Interpolation Transition，再按新State执行Post Constraint和最终输出分类，不得重跑State Target或Interpolation。
+Landing Anchor MUST在正式Contact有效、同Event Lock Mode首次从Unlocked进入Sliding或Locked、一次Plant Verification成功且该Event没有Active或Retained Anchor时由唯一Transition Runtime建立。Contact晋升时正式Approach接管进度 MUST为1，Anchor换点连续性 MUST由既有Plant World Residual与Correction Response继续承担。正式Lock Weight MUST只通过Interpolation Policy Request提供Contact后Lock响应与完成资格，不得重新驱动PlantBlend。Landing MUST只有在Lock Weight完成、Effective Correction与Anchor目标距离不超过`LandingLockCompletionTolerance`、Ground穿透不超过`GroundPenetrationTolerance`且Reach允许时才进入Locked；未满足时必须保留Landing和同一Anchor继续连续追赶，不得把Weight完成当成瞬移许可。正式Contact退出或Mode回到Unlocked时 MUST进入Releasing、记录Contact Falling与最近释放Event并继续Retain原Anchor；只有Releasing完成进入Swing后该Event才闭合并清除Anchor。完成帧 MUST先应用Post-Interpolation Transition，再按新State执行Post Constraint和最终输出分类，不得重跑State Target或Interpolation。
 
 Releasing期间同Event再次出现Sliding或Locked请求，且原Verified Anchor仍保留、Lock距离和Reach继续合法时，Resolver MUST发布typed `SameEventContactReentryRefresh`并在Pre-Interpolation阶段执行`Releasing -> Landing`。Transition Runtime MUST只Retain原Anchor，State Target MUST立即重新计算同Anchor目标，Interpolation Runtime MUST从当前Effective Correction连续接管；系统 MUST不创建Anchor、不执行Landing Query、不移动Verified Landing，也不得把Interpolation清零。Release已经完成或Anchor已经清除时，旧Event MUST不复活；不同Event即使紧接上一Contact边沿也 MUST先执行自己的Plant Verification。Contact Transition Context MUST只由唯一Transition Runtime随根Pending Bank更新；Pending失败或Discard MUST保持上一Committed边沿历史不变。迁移完成后全部阶段 MUST不读取旧PlantConfidence、PlantCycleConsumed布尔或旧Constraint Weight决定Landing、Lock与Release。
 
@@ -190,11 +196,11 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Verified Ancho
 - **THEN** Transition与State Target MUST让旧Landing只服务Contact与Anchor，并让新Swing Path Landing继续服务Swing Target与Interpolation
 - **AND** MUST不因两者Event不同把Swing Path发布为一帧不可用
 
-#### Scenario: 正式Lock渐进接管
+#### Scenario: Approach接管与正式Lock完成分权
 
-- **WHEN** 同Event Lock Mode从Unlocked进入Sliding且Lock Weight从0连续增加
-- **THEN** Transition Runtime MUST建立一次Anchor，State Target MUST发布Anchor目标，Interpolation Runtime MUST按Weight连续接管
-- **AND** Weight完成后仍 MUST等待位置与穿透容差满足才进入Locked，不得新增固定Duration、第二Landing状态、第二Anchor或状态私有Residual
+- **WHEN** 同Event Approach目标已经按正式进度接管，随后Contact Rising建立Verified Anchor且Lock Weight仍为0
+- **THEN** Transition Runtime MUST建立一次Anchor，State Target MUST发布Anchor目标，PlantBlend MUST为1，并由既有World Residual与Correction Response连续响应Anchor差值
+- **AND** 后续Lock Weight完成只可提供Lock完成资格；Runtime仍 MUST等待位置与穿透容差满足才进入Locked，不得新增固定Duration、第二Landing状态、第二Anchor或状态私有Residual
 
 #### Scenario: Releasing期间同Event Contact重新请求Lock
 
@@ -309,7 +315,7 @@ Current与Target `CharacterFootSupportTarget` MUST在State Target阶段使用同
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Verified Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Purpose、Refresh Mode、Query Reason、Landing Tracking状态、Approach Plant Target Preparation、Contact Verification Frame/Reason、稳定Plant候选忽略原因、Path Revision原因、Raw Landing/Path Target、Heel/Toe Pose输入与各自Current Support Observation、唯一Support Position/Normal及Rotation Goal、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Completion、Plant Target Kind与Lock Response、Previous/Current Weight、Target Height Mode/Before/Target/Applied/After与Update Reason、Previous/Current Mixed World Target、Previous/Current Response Output Point、Residual Capture Reason、World Residual捕获前/后/衰减后、Desired/Previous/Current Correction Response、Response Direction、Selected Rate、Applied Delta、初始化/重置原因、Continuity Owner、Effective Correction前后、既有Goal基准混合权重、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。诊断 MUST先以`DesiredOutputPoint = MixedWorldTarget + ResidualAfterDecay`，再以`ResponseOutputPoint = DesiredOutputPoint + ComponentUp × (CurrentResponse - DesiredResponse)`和`EffectiveCorrection = ResponseOutputPoint - OriginalSole`对账唯一Plant输出；不得读取旧单档`MaximumVerticalCorrectionSpeed`或发布“World Residual取代Correction历史”的旧Disposition。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、正式`ApproachContactToLandingProgress`、上一与当前PlantBlend、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Verified Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Purpose、Refresh Mode、Query Reason、Landing Tracking状态、Approach Plant Target Preparation、Contact Verification Frame/Reason、稳定Plant候选忽略原因、Path Revision原因、Raw Landing/Path Target、Heel/Toe Pose输入与各自Current Support Observation、唯一Support Position/Normal及Rotation Goal、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Completion、Plant Target Kind与Lock Response、Target Height Mode/Before/Target/Applied/After与Update Reason、Previous/Current Mixed World Target、Previous/Current Response Output Point、Residual Capture Reason、World Residual捕获前/后/衰减后、Desired/Previous/Current Correction Response、Response Direction、Selected Rate、Applied Delta、初始化/重置原因、Continuity Owner、Effective Correction前后、既有Goal基准混合权重、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。诊断 MUST先以`DesiredOutputPoint = MixedWorldTarget + ResidualAfterDecay`，再以`ResponseOutputPoint = DesiredOutputPoint + ComponentUp × (CurrentResponse - DesiredResponse)`和`EffectiveCorrection = ResponseOutputPoint - OriginalSole`对账唯一Plant输出；不得读取旧单档`MaximumVerticalCorrectionSpeed`或发布“World Residual取代Correction历史”的旧Disposition。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 

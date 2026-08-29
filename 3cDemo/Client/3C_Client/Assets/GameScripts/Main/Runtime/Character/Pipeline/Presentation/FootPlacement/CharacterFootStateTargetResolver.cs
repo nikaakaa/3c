@@ -152,7 +152,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootSupportNormalSource.RetainedContactAnchor,
                     context.Contact.AcquiredFrameSequence,
                     context.Contact.AcquiredCompletionIdentity,
-                    context.Contact.EventIdentity)
+                    context.Contact.EventIdentity,
+                    default)
                 : default;
             return Target(
                 swingCorrection,
@@ -204,7 +205,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootSupportNormalSource.ContactAnchor,
                     context.Contact.AcquiredFrameSequence,
                     context.Contact.AcquiredCompletionIdentity,
-                    context.Contact.EventIdentity),
+                    context.Contact.EventIdentity,
+                    default),
                 transition,
                 timeToLandingSeconds,
                 false,
@@ -284,7 +286,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootSupportNormalSource.ContactAnchor,
                     context.Contact.AcquiredFrameSequence,
                     context.Contact.AcquiredCompletionIdentity,
-                    context.Contact.EventIdentity),
+                    context.Contact.EventIdentity,
+                    default),
                 transition,
                 timeToLandingSeconds,
                 true,
@@ -390,7 +393,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSupportNormalSource.CurrentSupport,
                 current.NormalFrameSequence,
                 current.NormalCompletionIdentity,
-                current.NormalEventIdentity);
+                current.NormalEventIdentity,
+                current.CurrentSupportProbeKind);
             return true;
         }
 

@@ -37,16 +37,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementFootCalibration(
             Vector3 heelContactLocalOffset,
             Vector3 toeContactLocalOffset,
-            Quaternion soleFrameLocalRotation)
+            Quaternion soleFrameLocalRotation,
+            float rearProbeExtension,
+            float lateralProbeExtent,
+            float toeProbeExtension)
         {
             HeelContactLocalOffset = heelContactLocalOffset;
             ToeContactLocalOffset = toeContactLocalOffset;
             SoleFrameLocalRotation = soleFrameLocalRotation;
+            RearProbeExtension = rearProbeExtension;
+            LateralProbeExtent = lateralProbeExtent;
+            ToeProbeExtension = toeProbeExtension;
         }
 
         public Vector3 HeelContactLocalOffset { get; }
         public Vector3 ToeContactLocalOffset { get; }
         public Quaternion SoleFrameLocalRotation { get; }
+        public float RearProbeExtension { get; }
+        public float LateralProbeExtent { get; }
+        public float ToeProbeExtension { get; }
         public Vector3 SoleForwardLocalAxis => SoleFrameLocalRotation * Vector3.forward;
         public Vector3 SoleUpLocalAxis => SoleFrameLocalRotation * Vector3.up;
         public Vector3 SoleRightLocalAxis => SoleFrameLocalRotation * Vector3.right;
@@ -57,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "3C/Presentation/Foot Placement Rig Calibration")]
     public sealed class CharacterFootPlacementRigCalibration : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 4;
+        public const int CurrentSchemaVersion = 5;
 
         [SerializeField] string m_CalibrationId = string.Empty;
         [SerializeField] int m_SchemaVersion = CurrentSchemaVersion;
@@ -67,9 +76,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] Vector3 m_LeftHeelContactLocalOffset;
         [SerializeField] Vector3 m_LeftToeContactLocalOffset;
         [SerializeField] Quaternion m_LeftSoleFrameLocalRotation;
+        [SerializeField] float m_LeftRearProbeExtension;
+        [SerializeField] float m_LeftLateralProbeExtent;
+        [SerializeField] float m_LeftToeProbeExtension;
         [SerializeField] Vector3 m_RightHeelContactLocalOffset;
         [SerializeField] Vector3 m_RightToeContactLocalOffset;
         [SerializeField] Quaternion m_RightSoleFrameLocalRotation;
+        [SerializeField] float m_RightRearProbeExtension;
+        [SerializeField] float m_RightLateralProbeExtent;
+        [SerializeField] float m_RightToeProbeExtension;
         [SerializeField] CharacterFootPlacementRigGeometryValidationIdentity m_GeometryValidation;
 
         public CharacterFootPlacementRigCalibrationId CalibrationId =>
@@ -82,11 +97,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementFootCalibration Left => new CharacterFootPlacementFootCalibration(
             m_LeftHeelContactLocalOffset,
             m_LeftToeContactLocalOffset,
-            m_LeftSoleFrameLocalRotation);
+            m_LeftSoleFrameLocalRotation,
+            m_LeftRearProbeExtension,
+            m_LeftLateralProbeExtent,
+            m_LeftToeProbeExtension);
         public CharacterFootPlacementFootCalibration Right => new CharacterFootPlacementFootCalibration(
             m_RightHeelContactLocalOffset,
             m_RightToeContactLocalOffset,
-            m_RightSoleFrameLocalRotation);
+            m_RightSoleFrameLocalRotation,
+            m_RightRearProbeExtension,
+            m_RightLateralProbeExtent,
+            m_RightToeProbeExtension);
 
         public CharacterFootPlacementFootCalibration GetFoot(CharacterFootSide side)
         {
@@ -114,9 +135,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_LeftHeelContactLocalOffset = left.HeelContactLocalOffset;
             m_LeftToeContactLocalOffset = left.ToeContactLocalOffset;
             m_LeftSoleFrameLocalRotation = Normalize(left.SoleFrameLocalRotation);
+            m_LeftRearProbeExtension = left.RearProbeExtension;
+            m_LeftLateralProbeExtent = left.LateralProbeExtent;
+            m_LeftToeProbeExtension = left.ToeProbeExtension;
             m_RightHeelContactLocalOffset = right.HeelContactLocalOffset;
             m_RightToeContactLocalOffset = right.ToeContactLocalOffset;
             m_RightSoleFrameLocalRotation = Normalize(right.SoleFrameLocalRotation);
+            m_RightRearProbeExtension = right.RearProbeExtension;
+            m_RightLateralProbeExtent = right.LateralProbeExtent;
+            m_RightToeProbeExtension = right.ToeProbeExtension;
             m_ContentRevision = ComputeContentRevision();
             m_GeometryValidation = null;
             RequireConfiguredForAuthoring();
@@ -196,7 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public string ComputeContentRevision()
         {
             return StableHash.Compute(
-                "character-foot-placement-rig-calibration/v4",
+                "character-foot-placement-rig-calibration/v5",
                 m_CalibrationId ?? string.Empty,
                 m_SchemaVersion.ToString(CultureInfo.InvariantCulture),
                 RigId,
@@ -204,9 +231,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Format(m_LeftHeelContactLocalOffset),
                 Format(m_LeftToeContactLocalOffset),
                 Format(m_LeftSoleFrameLocalRotation),
+                Format(m_LeftRearProbeExtension),
+                Format(m_LeftLateralProbeExtent),
+                Format(m_LeftToeProbeExtension),
                 Format(m_RightHeelContactLocalOffset),
                 Format(m_RightToeContactLocalOffset),
-                Format(m_RightSoleFrameLocalRotation)).ToString();
+                Format(m_RightSoleFrameLocalRotation),
+                Format(m_RightRearProbeExtension),
+                Format(m_RightLateralProbeExtent),
+                Format(m_RightToeProbeExtension)).ToString();
         }
 
         void OnValidate()
@@ -224,6 +257,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 value.ToeContactLocalOffset.sqrMagnitude <= 0.00000001f)
                 throw new InvalidOperationException($"Foot Placement calibration '{side}' contact offsets are not configured.");
             RequireUnit(value.SoleFrameLocalRotation, $"{side}SoleFrameLocalRotation");
+            RequirePositive(value.RearProbeExtension, $"{side}RearProbeExtension");
+            RequirePositive(value.LateralProbeExtent, $"{side}LateralProbeExtent");
+            RequirePositive(value.ToeProbeExtension, $"{side}ToeProbeExtension");
         }
 
         static Quaternion Normalize(Quaternion value)
@@ -258,6 +294,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException($"Foot Placement calibration '{field}' is not finite.");
         }
 
+        static void RequirePositive(float value, string field)
+        {
+            if (!float.IsFinite(value) || value <= 0f)
+                throw new InvalidOperationException($"Foot Placement calibration '{field}' must be positive.");
+        }
+
         static string Format(Vector3 value)
         {
             return string.Concat(
@@ -274,5 +316,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 value.z.ToString("R", CultureInfo.InvariantCulture), "|",
                 value.w.ToString("R", CultureInfo.InvariantCulture));
         }
+
+        static string Format(float value) =>
+            value.ToString("R", CultureInfo.InvariantCulture);
     }
 }

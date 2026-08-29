@@ -302,6 +302,18 @@ Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、S
 - **THEN** 诊断 MUST记录两侧区间、最小压缩余量、Goal夹紧量和`LandingReachUnavailable`
 - **AND** MUST能区分动画Source已伸直、Foot Placement引入超长目标与FBBIK最终夹紧
 
+#### Scenario: 诊断分数保持事实可解释
+
+- **WHEN** Analyzer与Publisher为某个Foot诊断Target生成直观分数
+- **THEN** 输出 MUST分别发布0到100的Health Score与Evidence Score，并保留eligible、matched、发生率、严重度档位、扣分构成和代表帧
+- **AND** eligible为0、必需阶段事实缺失或纯候选比较 MUST发布typed Unavailable，不得写0分、100分、Pass、Fail或用文件平均值掩盖严重尾部
+
+#### Scenario: 现有阶段事实进入正式诊断Target
+
+- **WHEN** facts已经包含Swing到Landing交接、Actual Foot Envelope反事实、Plant Interpolation或表现采样节奏事实
+- **THEN** 唯一Publisher MUST分别发布对应Target，并区分可见输出变化、阶段责任、走廊/歧义资格、低表现采样与速度异常
+- **AND** Sampler MUST只消费正式Runtime已发布事实，不得为了补诊断执行第二次World Query或建立第二Reporter
+
 ### Requirement: Foot诊断采样必须正规化并由后台唯一封口
 
 Foot诊断Recorder MUST为每个Frame、Completion与Side只写一条包含Source、Path、State、Goal、Solved和Physical阶段事实的`samples.csv`主行。一对多Ground Contact与Envelope顶点 MUST写入同目录唯一`ground-path-geometry.csv`，并通过Sample、Frame、Completion、Side与Ground Path identity连接主行；不得为每个几何项重复整套主行列。

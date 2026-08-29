@@ -222,6 +222,10 @@ Target/Solved Extension Ratio与Compression Reserve
 
 Diagnostics不得创建Anchor、选择Support、改变Reach、Clamp Goal或执行第二次Query。
 
+诊断Publisher统一为每个可判定Target发布`Health Score`与`Evidence Score`。Health Score只由该Target已经公开的eligible总体、互斥严重度档位、发生率和严重尾部计算，100表示观察到的问题负担低；Evidence Score只表达样本量与必需阶段事实覆盖率，两者不得相乘，也不得让低证据提高Health Score。eligible为0、事实阶段缺失或Target只表达候选比较时必须发布typed Unavailable，不得用100或0冒充结论。文件级分数只聚合明确可判定Target，并受最差Target严重尾部封顶；每个Target原分、扣分构成、次数、分母、阈值和代表帧必须保留，不发布掩盖细节的全Foot总分，也不把分数命名为Pass或Fail。
+
+现有facts中已经生成但尚未进入正式Target的Swing到Landing Floor交接、实际脚位置Envelope反事实与Plant Interpolation必须进入同一Analyzer/Publisher链。可见Swing跳变必须同时按Presentation Delta、跨Body Tick数与米每秒分类为正常采样、低表现采样或速度异常；Actual Foot Envelope反事实只在有限Path走廊内且交点唯一时形成候选Correction，歧义、走廊外与无交点只发布事实。FutureLanding候选仍只消费正式World Query已经发布的canonical选择事实，不得由Sampler重查世界或复制QueryAll。
+
 Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuation -> Stable Prediction Velocity -> KCC Future Translation -> Raw Landing -> Observation -> Tracking -> Approach Plant Target Preparation -> Contact Verification`，并把移动计划Current作为对照列记录，连同速度差、阈值、EMA响应、最大速度Clamp、状态初始化/重置原因、Tracking状态、Verification Frame/Reason和稳定Plant候选忽略事实。这样实现阶段必须先证明Prediction稳定，再判断Interpolation或Post Constraint，不得把所有抖动归到最终Pose。
 
 采样包固定由同一Recorder发布`每Frame/Side一行的samples.csv + 只保存Ground Contact/Envelope数组项的ground-path-geometry.csv`。几何表必须按Sample、Frame、Completion、Side与Ground Path identity连接主表，不得为每个几何项重复整套Source、State、Goal和Solver列。

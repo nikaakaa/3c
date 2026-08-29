@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -7,6 +8,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterFootLandingStateConsistencyDiagnosis : ICharacterFootDiagnosis
     {
         const double ExitJumpMeters = 0.01d;
+        const double PrimaryOutputJumpMeters = 0.02d;
+        static readonly double[] s_OutputThresholds =
+        {
+            0.01d,
+            0.02d,
+            0.05d,
+            0.10d
+        };
         public string DiagnosticId => "landing-state-consistency";
         public string FileName => "landing-state-consistency.json";
 
@@ -15,6 +24,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             List<JObject> boundaries = context.Events("LandingStateBoundary");
             List<JObject> spans = context.Events("LandingStateSpan");
             List<JObject> releases = context.Events("Release");
+            List<JObject> handoffs = context.Events(
+                "SwingToLandingFloorHandoff");
+            List<JObject> plantInterpolation = context.Events(
+                "PlantInterpolationOutputJump");
             CharacterFootDiagnosisTarget releaseTarget = context.Target(
                 "release-flyback",
                 "Releasing阶段是否出现Correction突跳后反向回拉",
@@ -46,6 +59,120 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "correctionStepMaximumMeters",
                 "correctionExcursionMeters",
                 "velocityDirectionReversalCount");
+            CharacterFootDiagnosisTarget handoffTarget = context.Target(
+                "swing-to-landing-floor-handoff",
+                "Swing进入Landing时，上一帧Ground Envelope补偿、Residual截止与Floor所有权切换是否伴随可见Correction跳变",
+                new[] { "SwingToLandingFloorHandoff" },
+                new[] { "entryCorrectionStepMeters>0.02" },
+                handoffs,
+                value => CharacterFootDiagnosisContext.Metric(
+                             value,
+                             "entryCorrectionStepMeters") >
+                         PrimaryOutputJumpMeters
+                    ? new List<string>
+                    {
+                        "entryCorrectionStepMeters>0.02"
+                    }
+                    : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "entryCorrectionStepMeters"),
+                "entryCorrectionStepMeters",
+                "entryCorrectionAlongUpMeters",
+                "entryPhysicalAnkleStepMeters",
+                "entryPhysicalSoleStepMeters",
+                "previousSafetyFloorClampMeters",
+                "previousSafetyFloorCompensationMeters",
+                "previousResidualAfterDecayMeters",
+                "swingResidualToleranceMeters",
+                "stepHeightMeters",
+                "previousFormalFootHeightMeters",
+                "formalFootHeightMeters",
+                "previousProgress",
+                "progress",
+                "previousTimeToLandingSeconds",
+                "timeToLandingSeconds");
+            handoffTarget.occurrence = context.Occurrence(
+                "ContinuousSwingToLandingFramePair",
+                "entryCorrectionStepMeters",
+                "Meters",
+                handoffs,
+                PrimaryOutputJumpMeters,
+                s_OutputThresholds);
+            handoffTarget.supplementalOccurrences = new List<
+                CharacterFootDiagnosisOccurrenceProfile>
+            {
+                context.Occurrence(
+                    "ContinuousSwingToLandingFramePair",
+                    "entryPhysicalAnkleStepMeters",
+                    "Meters",
+                    handoffs,
+                    PrimaryOutputJumpMeters,
+                    s_OutputThresholds),
+                context.Occurrence(
+                    "ContinuousSwingToLandingFramePair",
+                    "entryPhysicalSoleStepMeters",
+                    "Meters",
+                    handoffs,
+                    PrimaryOutputJumpMeters,
+                    s_OutputThresholds)
+            };
+            handoffTarget.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["HandoffEvidence"] = CategoryCounts(
+                        handoffs,
+                        HandoffEvidence)
+                };
+            CharacterFootDiagnosisTarget plantTarget = context.Target(
+                "plant-interpolation-output-jump",
+                "Plant目标、Blend或Correction限速阶段是否伴随Foot Placement最终可见输出跳变",
+                new[] { "PlantInterpolationOutputJump" },
+                new[] { "footPlacementOutputOffsetStepMeters>0.02" },
+                plantInterpolation,
+                value => CharacterFootDiagnosisContext.Metric(
+                             value,
+                             "FootPlacementOutputOffsetStep") >
+                         PrimaryOutputJumpMeters
+                    ? new List<string>
+                    {
+                        "footPlacementOutputOffsetStepMeters>0.02"
+                    }
+                    : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "FootPlacementOutputOffsetStep"),
+                "FootPlacementOutputOffsetStep",
+                "FootPlacementOutputOffsetSpeed",
+                "PlantTargetPointStep",
+                "PlantCorrectionStep",
+                "PlantTargetAppliedVerticalDelta",
+                "PlantCorrectionAppliedVerticalDelta",
+                "PlantBlendWeightDelta",
+                "PlantOutputDistance",
+                "PlantPenetrationDepth",
+                "PresentationDeltaSeconds",
+                "BodyTickSpan");
+            plantTarget.occurrence = context.Occurrence(
+                "ContinuousPlantInterpolationFramePair",
+                "FootPlacementOutputOffsetStep",
+                "Meters",
+                plantInterpolation,
+                PrimaryOutputJumpMeters,
+                s_OutputThresholds);
+            plantTarget.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["PlantDriver"] = CategoryCounts(
+                        plantInterpolation,
+                        PlantDriver)
+                };
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -182,7 +309,76 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "formalUnlockedFrameCount"),
                     "formalUnlockedFrameCount",
                     "frameCount"),
-                releaseTarget);
+                releaseTarget,
+                handoffTarget,
+                plantTarget);
+        }
+
+        static List<CharacterFootDiagnosisCategoryCount> CategoryCounts(
+            List<JObject> events,
+            Func<JObject, string> selector) => events
+            .GroupBy(selector, StringComparer.Ordinal)
+            .OrderBy(value => value.Key, StringComparer.Ordinal)
+            .Select(value => new CharacterFootDiagnosisCategoryCount
+            {
+                value = value.Key,
+                count = value.Count()
+            })
+            .ToList();
+
+        static string HandoffEvidence(JObject value)
+        {
+            bool floor = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "previousSafetyFloorOwned");
+            bool residual = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "residualWithinDeadline");
+            bool dropped = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "floorCompensationDroppedAtLanding");
+            if (floor && residual && dropped)
+                return "FloorCompensationDroppedAfterResidualDeadline";
+            if (floor && dropped)
+                return "FloorCompensationDropped";
+            if (floor)
+                return "PreviousGroundEnvelopeOwned";
+            return "NoPreviousGroundEnvelopeOwnership";
+        }
+
+        static string PlantDriver(JObject value)
+        {
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantTargetEventChanged"))
+            {
+                return "TargetEventChanged";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantTargetForceRefreshed"))
+            {
+                return "TargetForceRefresh";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantTargetVerticalClamped"))
+            {
+                return "TargetRateClamp";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "plantCorrectionVerticalClamped"))
+            {
+                return "CorrectionRateClamp";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "directLockedFollow"))
+            {
+                return "DirectLockedFollow";
+            }
+            return "ContinuousPlantBlend";
         }
     }
 

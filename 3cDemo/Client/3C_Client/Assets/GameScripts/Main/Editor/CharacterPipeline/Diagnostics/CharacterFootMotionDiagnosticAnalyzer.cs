@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/34";
+        const string Schema = "character-foot-motion-facts/35";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 34;
+        const int AnalyzerVersion = 35;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 800;
         const float PositionNoiseFloor = 0.001f;
@@ -130,6 +130,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"stableSwingOutputJumps={document.coverage.stableSwingOutputJumpCount} " +
                 $"swingToLandingOutputJumps={document.coverage.swingToLandingOutputJumpCount} " +
                 $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
+                $"plantInterpolationJumps={document.coverage.plantInterpolationOutputJumpCount} " +
+                $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
@@ -173,8 +175,210 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeContactPlanePenetration(frames, events);
             AnalyzeReleaseEvents(frames, events);
             AnalyzeLateApproachLandingRevisions(frames, events);
+            AnalyzePlantInterpolationOutputJumps(frames, events);
+            AnalyzeActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
+        }
+
+        static void AnalyzePlantInterpolationOutputJumps(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(previous, current) ||
+                    !current.PlantInterpolationEvaluated ||
+                    !current.FinalPhysicalWriteAvailable ||
+                    !previous.FinalPhysicalWriteAvailable)
+                {
+                    continue;
+                }
+                CharacterFootVisibleOutputKinematics kinematics =
+                    ResolveVisibleOutputKinematics(frames, i);
+                double visibleStep = Math.Max(
+                    kinematics.Ankle.StepMeters,
+                    Math.Max(
+                        kinematics.Heel.StepMeters,
+                        kinematics.Toe.StepMeters));
+                double visibleSpeed = Math.Max(
+                    kinematics.Ankle.SpeedMetersPerSecond,
+                    Math.Max(
+                        kinematics.Heel.SpeedMetersPerSecond,
+                        kinematics.Toe.SpeedMetersPerSecond));
+                bool eventChanged = previous.PlantTargetEventIdentity !=
+                                    current.PlantTargetEventIdentity;
+                bool ownerChanged = !string.Equals(
+                    previous.SafetyFloorOwner,
+                    current.SafetyFloorOwner,
+                    StringComparison.Ordinal);
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["FootPlacementOutputOffsetStep"] = visibleStep,
+                    ["FootPlacementOutputOffsetSpeed"] = visibleSpeed,
+                    ["PlantTargetPointStep"] = Vector3.Distance(
+                        previous.PlantFilteredPoint,
+                        current.PlantFilteredPoint),
+                    ["PlantCorrectionStep"] = Vector3.Distance(
+                        previous.PlantBlendedCorrection,
+                        current.PlantBlendedCorrection),
+                    ["PlantTargetAppliedVerticalDelta"] = Math.Abs(
+                        current.PlantTargetAppliedVerticalDelta),
+                    ["PlantCorrectionAppliedVerticalDelta"] = Math.Abs(
+                        current.PlantCorrectionAppliedVerticalDelta),
+                    ["PlantBlendWeightDelta"] = Math.Abs(
+                        current.PlantBlendWeight -
+                        previous.PlantBlendWeight),
+                    ["PlantOutputDistance"] =
+                        current.PlantOutputDistance,
+                    ["PlantPenetrationDepth"] =
+                        current.PlantPenetrationDepth,
+                    ["PresentationDeltaSeconds"] = current.DeltaSeconds,
+                    ["BodyTickSpan"] = current.CurrentBodyTick >=
+                                       previous.CurrentBodyTick
+                        ? current.CurrentBodyTick - previous.CurrentBodyTick
+                        : 0d
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["plantTargetEventChanged"] = eventChanged,
+                    ["plantTargetForceRefreshed"] =
+                        current.PlantTargetForceRefreshed,
+                    ["plantTargetVerticalClamped"] =
+                        current.PlantTargetVerticalClamped,
+                    ["plantCorrectionVerticalClamped"] =
+                        current.PlantCorrectionVerticalClamped,
+                    ["directLockedFollow"] =
+                        current.ConstraintStateBefore == "Locked",
+                    ["safetyFloorOwnerChanged"] = ownerChanged,
+                    ["physicalOutputAvailable"] = true
+                };
+                events.Add(new EventFact(
+                    "PlantInterpolationOutputJump",
+                    current.Side,
+                    previous.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.PlantTargetEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence));
+            }
+        }
+
+        static void AnalyzeActualFootEnvelopeCounterfactuals(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(previous, current) ||
+                    previous.FootMotionState != "Accepted" ||
+                    current.FootMotionState != "Accepted" ||
+                    previous.ConstraintState != "Swing" ||
+                    current.ConstraintState != "Swing" ||
+                    previous.HasAnchor || current.HasAnchor ||
+                    !previous.FinalPhysicalWriteAvailable ||
+                    !current.FinalPhysicalWriteAvailable ||
+                    previous.FootMotionEventIdentity == 0 ||
+                    previous.FootMotionEventIdentity !=
+                    current.FootMotionEventIdentity ||
+                    !string.Equals(
+                        previous.SourceIdentity,
+                        current.SourceIdentity,
+                        StringComparison.Ordinal) ||
+                    previous.SourceCycle != current.SourceCycle ||
+                    previous.GroundPathInputIdentity !=
+                    current.GroundPathInputIdentity ||
+                    current.PathResidualRebuilt ||
+                    !previous.PathAvailableAfter ||
+                    !current.PathAvailableAfter ||
+                    previous.GroundPathState != "Accepted" ||
+                    current.GroundPathState != "Accepted")
+                {
+                    continue;
+                }
+                CharacterFootVisibleOutputKinematics kinematics =
+                    ResolveVisibleOutputKinematics(frames, i);
+                double visibleStep = Math.Max(
+                    kinematics.Ankle.StepMeters,
+                    Math.Max(
+                        kinematics.Heel.StepMeters,
+                        kinematics.Toe.StepMeters));
+                bool uniqueInCorridor =
+                    current.ActualEnvelopeCounterfactualState ==
+                    "UniqueInCorridor";
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["ActualProgressEnvelopeAdvanceAboveBuilderTarget"] =
+                        current.ActualProgressEnvelopeAdvanceAboveBuilderTarget,
+                    ["ActualProgressEnvelopeMinimumCorrection"] =
+                        current.ActualProgressEnvelopeMinimumCorrection,
+                    ["BuilderSwingTargetAlongUp"] =
+                        current.ComponentUp.sqrMagnitude >
+                        TimeEpsilon * TimeEpsilon
+                            ? Vector3.Dot(
+                                current.BuilderSwingTargetCorrection,
+                                current.ComponentUp.normalized)
+                            : 0d,
+                    ["ActualFootCrossTrackDistance"] =
+                        current.ActualFootCrossTrackDistance,
+                    ["ActualEnvelopeCandidateCount"] =
+                        current.ActualEnvelopeCandidateCount,
+                    ["ActualEnvelopeHeightSpan"] =
+                        current.ActualEnvelopeHeightSpan,
+                    ["GroundEnvelopeHardClamp"] =
+                        current.SafetyFloorOwner == "GroundPathEnvelope"
+                            ? current.SafetyFloorClampMeters
+                            : 0d,
+                    ["FootPlacementOutputOffsetStep"] = visibleStep,
+                    ["PresentationDeltaSeconds"] = current.DeltaSeconds
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["uniqueInCorridor"] = uniqueInCorridor,
+                    ["ambiguousInCorridor"] =
+                        current.ActualEnvelopeCounterfactualState ==
+                        "AmbiguousInCorridor",
+                    ["outsideGroundPathCorridor"] =
+                        current.ActualEnvelopeCounterfactualState ==
+                        "OutsideGroundPathCorridor",
+                    ["noIntersection"] =
+                        current.ActualEnvelopeCounterfactualState ==
+                        "NoIntersection",
+                    ["counterfactualUnavailable"] =
+                        current.ActualEnvelopeCounterfactualState ==
+                        "Unavailable",
+                    ["groundEnvelopeOwner"] =
+                        current.SafetyFloorOwner == "GroundPathEnvelope",
+                    ["actualProgressCorrectionAvailable"] =
+                        current.ActualProgressEnvelopeCorrectionAvailable,
+                    ["visibleOutputAboveTwoCentimeters"] =
+                        visibleStep > 0.02d
+                };
+                events.Add(new EventFact(
+                    "ActualFootEnvelopeCounterfactual",
+                    current.Side,
+                    previous.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.FootMotionEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence));
+            }
         }
 
         static void AnalyzeVisibleOutputJumps(
@@ -285,6 +489,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Math.Max(
                         kinematics.Heel.SpeedMetersPerSecond,
                         kinematics.Toe.SpeedMetersPerSecond));
+                ulong bodyTickSpan = current.CurrentBodyTick >=
+                                     previous.CurrentBodyTick
+                    ? current.CurrentBodyTick - previous.CurrentBodyTick
+                    : 0;
+                bool lowPresentationCadence =
+                    current.DeltaSeconds >=
+                    LowPresentationSamplingDeltaSeconds ||
+                    bodyTickSpan > 1;
+                bool outputSpeedAnomaly =
+                    primarySpeed > SwingSpeedAnomalyMetersPerSecond;
+                string presentationSamplingClassification =
+                    outputSpeedAnomaly
+                        ? lowPresentationCadence
+                            ? "LowCadenceSpeedAnomaly"
+                            : "RegularCadenceSpeedAnomaly"
+                        : lowPresentationCadence
+                            ? "LowCadenceNormalSpeed"
+                            : "RegularCadenceNormalSpeed";
                 bool accelerationAvailable =
                     kinematics.Ankle.AccelerationAvailable &&
                     kinematics.Heel.AccelerationAvailable &&
@@ -371,10 +593,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     plantOutputDistance = current.PlantOutputDistance,
                     plantPenetrationDepth = current.PlantPenetrationDepth,
                     presentationDeltaSeconds = current.DeltaSeconds,
-                    bodyTickSpan = current.CurrentBodyTick >=
-                                   previous.CurrentBodyTick
-                        ? current.CurrentBodyTick - previous.CurrentBodyTick
-                        : 0,
+                    bodyTickSpan = bodyTickSpan,
+                    presentationSamplingClassification =
+                        presentationSamplingClassification,
+                    lowPresentationCadence = lowPresentationCadence,
+                    outputSpeedAnomaly = outputSpeedAnomaly,
                     primaryProbe = primaryProbe,
                     footPlacementOutputOffsetStepMeters = primaryStep,
                     footPlacementOutputOffsetSpeedMetersPerSecond =
@@ -448,6 +671,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["visibleOutputAvailable"] = true,
                     ["accelerationAvailable"] = accelerationAvailable,
                     ["jerkAvailable"] = jerkAvailable,
+                    ["lowPresentationCadence"] =
+                        lowPresentationCadence,
+                    ["outputSpeedAnomaly"] = outputSpeedAnomaly,
                     ["stableSwing"] =
                         category == "StableSwingOutputJump",
                     ["pathRevision"] =
@@ -2992,6 +3218,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     swingToLandingFloorHandoffCount = events.Count(
                         value => value.kind ==
                                  "SwingToLandingFloorHandoff"),
+                    plantInterpolationOutputJumpCount = events.Count(
+                        value => value.kind ==
+                                 "PlantInterpolationOutputJump"),
+                    actualFootEnvelopeCounterfactualCount = events.Count(
+                        value => value.kind ==
+                                 "ActualFootEnvelopeCounterfactual"),
                     lateApproachLandingRevisionCount = events.Count(
                         value => value.kind ==
                                  "LateApproachLandingRevision"),
@@ -6420,6 +6652,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int stableSwingOutputJumpCount;
             public int swingToLandingOutputJumpCount;
             public int swingToLandingFloorHandoffCount;
+            public int plantInterpolationOutputJumpCount;
+            public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;
             public int supportChangeCount;
             public int contactPlanePenetrationEventCount;

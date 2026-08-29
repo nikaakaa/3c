@@ -54,7 +54,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new CharacterFootLandingStateConsistencyDiagnosis().Build(
                     new CharacterFootDiagnosisContext(facts));
             CharacterFootDiagnosisTarget release =
-                document.targets[^1];
+                document.targets.Find(value =>
+                    value.id == "release-flyback");
             Assert.That(
                 release.id,
                 Is.EqualTo("release-flyback"));

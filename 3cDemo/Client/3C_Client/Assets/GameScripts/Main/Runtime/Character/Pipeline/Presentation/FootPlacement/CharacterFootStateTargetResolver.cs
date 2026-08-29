@@ -90,11 +90,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
             Vector3 correction = swingCorrection;
-            if (!frame.SwingMotion.Accepted && frame.CurrentSupport.Available)
+            bool currentContactOwnsTarget =
+                frame.PreparedPlantActive &&
+                frame.PreparedPlantTarget.LandingEventIdentity != 0 &&
+                frame.SwingMotion.Accepted &&
+                frame.SwingMotion.LandingEventIdentity !=
+                frame.PreparedPlantTarget.LandingEventIdentity;
+            if ((!frame.SwingMotion.Accepted || currentContactOwnsTarget) &&
+                frame.CurrentSupport.Available)
+            {
                 correction = frame.CurrentSupport.Target.Position - originalSole;
+            }
             bool targetAvailable = TryResolveSupportTarget(
                 in frame,
                 originalSole + correction,
+                currentContactOwnsTarget,
                 out CharacterFootSupportTarget supportTarget);
             return Target(
                 correction,
@@ -341,6 +351,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static bool TryResolveSupportTarget(
             in CharacterFootStateFrame frame,
             Vector3 position,
+            bool currentContactOwnsTarget,
             out CharacterFootSupportTarget target)
         {
             if (!frame.CurrentSupport.Available)
@@ -349,7 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             }
             CharacterFootSupportTarget current = frame.CurrentSupport.Target;
-            if (!frame.SwingMotion.Accepted)
+            if (!frame.SwingMotion.Accepted || currentContactOwnsTarget)
             {
                 target = current;
                 return true;

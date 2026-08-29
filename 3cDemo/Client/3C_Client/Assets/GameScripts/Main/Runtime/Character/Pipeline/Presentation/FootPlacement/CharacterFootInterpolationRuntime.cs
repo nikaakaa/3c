@@ -606,7 +606,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSwingMotionResult swing = frame.SwingMotion;
             CharacterFootSwingPathReference swingPath =
                 swing.SwingPathReference;
-            bool hasPath = swing.Accepted &&
+            bool hasPath = target.SupportTarget.Kind ==
+                           CharacterFootSupportTargetKind.SwingGround &&
+                           swing.Accepted &&
                            swingPath.IsAvailable &&
                            swingPath.LandingEventIdentity ==
                            swing.LandingEventIdentity;

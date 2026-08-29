@@ -26,7 +26,7 @@ MonoBehaviour:
     m_PredictionVelocityDeltaThreshold: 0.001
     m_PredictionVelocitySmoothSpeed: 60
     m_PredictionMaximumSpeed: 8
-    m_PredictionInputAccumulationDistance: 0.02
+    m_PredictionInputAccumulationDistance: 0.05
     m_ComponentUpChangeAngleDegrees: 1
   m_GroundDetection:
     m_GroundLayerMask:

@@ -120,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float swingFilteredTargetHeightBefore,
             float swingTargetHeightDelta,
             float swingTargetHeightAppliedDelta,
+            bool swingTargetHeightUpdateHeld,
             bool swingTargetHeightRateLimited,
             bool swingTargetHeightClamped,
             float swingTargetMaximumVerticalSpeed,
@@ -154,6 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 swingFilteredTargetHeightBefore;
             SwingTargetHeightDelta = swingTargetHeightDelta;
             SwingTargetHeightAppliedDelta = swingTargetHeightAppliedDelta;
+            SwingTargetHeightUpdateHeld = swingTargetHeightUpdateHeld;
             SwingTargetHeightRateLimited = swingTargetHeightRateLimited;
             SwingTargetHeightClamped = swingTargetHeightClamped;
             SwingTargetMaximumVerticalSpeed =
@@ -263,6 +265,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingTargetHeightDelta = source.SwingTargetHeightDelta;
             SwingTargetHeightAppliedDelta =
                 source.SwingTargetHeightAppliedDelta;
+            SwingTargetHeightUpdateHeld =
+                source.SwingTargetHeightUpdateHeld;
             SwingTargetHeightRateLimited =
                 source.SwingTargetHeightRateLimited;
             SwingTargetHeightClamped = source.SwingTargetHeightClamped;
@@ -355,6 +359,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SwingFilteredTargetHeightBefore { get; }
         internal float SwingTargetHeightDelta { get; }
         internal float SwingTargetHeightAppliedDelta { get; }
+        internal bool SwingTargetHeightUpdateHeld { get; }
         internal bool SwingTargetHeightRateLimited { get; }
         internal bool SwingTargetHeightClamped { get; }
         internal float SwingTargetMaximumVerticalSpeed { get; }
@@ -482,6 +487,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 0f,
                 0f,
+                false,
                 false,
                 false,
                 settings.MaximumVerticalTargetSpeed,

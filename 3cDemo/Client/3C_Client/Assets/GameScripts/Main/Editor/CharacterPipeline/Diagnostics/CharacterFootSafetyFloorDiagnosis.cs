@@ -166,8 +166,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string contributionContinuityIdentity;
         public string stateBefore;
         public string stateAfter;
-        public double entryCorrectionStepMeters;
-        public double entryCorrectionAlongUpMeters;
+        public double entryCorrectionReexpressionStepMeters;
+        public double entryCorrectionReexpressionAlongUpMeters;
+        public double entryCorrectedSoleStepMeters;
+        public double entryAnimatedSoleStepMeters;
+        public double entryStateAdditionalOutputStepMeters;
+        public double entryOutputBlendParameter;
         public bool entryPhysicalAnkleAvailable;
         public double entryPhysicalAnkleStepMeters;
         public double entryPhysicalAnkleAlongUpMeters;

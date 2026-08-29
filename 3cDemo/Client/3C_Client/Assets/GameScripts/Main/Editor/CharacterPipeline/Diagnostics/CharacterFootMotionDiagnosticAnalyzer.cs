@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/39";
+        const string Schema = "character-foot-motion-facts/40";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 39;
+        const int AnalyzerVersion = 40;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -1809,17 +1809,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 double finalExitDistance = Vector3.Distance(
                     FinalSole(window[^1]),
                     window[^1].Anchor);
-                double entryStep = hasEntry
-                    ? Vector3.Distance(
-                        entryPrevious.EffectiveCorrection,
-                        window[0].EffectiveCorrection)
-                    : 0d;
-                double exitStep = hasExit
-                    ? Vector3.Distance(
-                        window[^1].EffectiveCorrection,
-                        exitNext.EffectiveCorrection)
-                    : 0d;
-                int peakFrame = entryStep >= exitStep
+                CharacterFootOutputBoundaryMotion entryMotion = hasEntry
+                    ? ResolveOutputBoundaryMotion(entryPrevious, window[0])
+                    : default;
+                CharacterFootOutputBoundaryMotion exitMotion = hasExit
+                    ? ResolveOutputBoundaryMotion(window[^1], exitNext)
+                    : default;
+                int peakFrame = entryMotion.StateAdditionalOutputStepMeters >=
+                                exitMotion.StateAdditionalOutputStepMeters
                     ? window[0].Frame
                     : hasExit
                         ? exitNext.Frame
@@ -1838,8 +1835,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["finalSoleAnchorDistanceExitMeters"] = finalExitDistance,
                     ["finalSoleAnchorClosureMeters"] =
                         finalEntryDistance - finalExitDistance,
-                    ["entryCorrectionStepMeters"] = entryStep,
-                    ["exitCorrectionStepMeters"] = exitStep,
+                    ["entryCorrectionReexpressionStepMeters"] =
+                        entryMotion.CorrectionReexpressionStepMeters,
+                    ["exitCorrectionReexpressionStepMeters"] =
+                        exitMotion.CorrectionReexpressionStepMeters,
+                    ["entryCorrectedSoleStepMeters"] =
+                        entryMotion.CorrectedSoleStepMeters,
+                    ["exitCorrectedSoleStepMeters"] =
+                        exitMotion.CorrectedSoleStepMeters,
+                    ["entryAnimatedSoleStepMeters"] =
+                        entryMotion.AnimatedSoleStepMeters,
+                    ["exitAnimatedSoleStepMeters"] =
+                        exitMotion.AnimatedSoleStepMeters,
+                    ["entryStateAdditionalOutputStepMeters"] =
+                        entryMotion.StateAdditionalOutputStepMeters,
+                    ["exitStateAdditionalOutputStepMeters"] =
+                        exitMotion.StateAdditionalOutputStepMeters,
+                    ["entryOutputBlendParameter"] =
+                        entryMotion.OutputBlendParameter,
+                    ["exitOutputBlendParameter"] =
+                        exitMotion.OutputBlendParameter,
+                    ["entryFinalPhysicalAnkleStepMeters"] =
+                        entryMotion.FinalPhysicalAnkleStepMeters,
+                    ["exitFinalPhysicalAnkleStepMeters"] =
+                        exitMotion.FinalPhysicalAnkleStepMeters,
+                    ["entryFinalPhysicalSoleStepMeters"] =
+                        entryMotion.FinalPhysicalSoleStepMeters,
+                    ["exitFinalPhysicalSoleStepMeters"] =
+                        exitMotion.FinalPhysicalSoleStepMeters,
                     ["formalUnlockedFrameCount"] = window.Count(
                         value => value.FormalLockMode == "Unlocked")
                 };
@@ -1854,6 +1877,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters <
                         correctedEntryDistance,
                     ["hasContinuousExit"] = hasExit,
+                    ["entryPhysicalOutputAvailable"] =
+                        entryMotion.PhysicalOutputAvailable,
+                    ["exitPhysicalOutputAvailable"] =
+                        exitMotion.PhysicalOutputAvailable,
                     ["exitedToLocked"] = hasExit &&
                         exitNext.ConstraintState == "Locked",
                     ["exitedToReleasing"] = hasExit &&
@@ -1887,6 +1914,47 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             previous.FormalLockMode == "Unlocked" &&
             current.FormalLockMode != "Unlocked";
 
+        static CharacterFootOutputBoundaryMotion ResolveOutputBoundaryMotion(
+            FootFrame previous,
+            FootFrame current)
+        {
+            Vector3 correctedDelta =
+                current.CorrectedSole - previous.CorrectedSole;
+            Vector3 animatedDelta =
+                current.OriginalSole - previous.OriginalSole;
+            float animatedMagnitudeSquared = animatedDelta.sqrMagnitude;
+            float blend = animatedMagnitudeSquared >
+                          RuntimeGeometryEpsilon * RuntimeGeometryEpsilon
+                ? Mathf.Clamp01(
+                    Vector3.Dot(correctedDelta, animatedDelta) /
+                    animatedMagnitudeSquared)
+                : 0f;
+            Vector3 stateAdditionalDelta =
+                correctedDelta - animatedDelta * blend;
+            bool physicalAvailable =
+                previous.FinalPhysicalWriteAvailable &&
+                current.FinalPhysicalWriteAvailable;
+            return new CharacterFootOutputBoundaryMotion(
+                Vector3.Distance(
+                    previous.EffectiveCorrection,
+                    current.EffectiveCorrection),
+                correctedDelta.magnitude,
+                animatedDelta.magnitude,
+                stateAdditionalDelta.magnitude,
+                blend,
+                physicalAvailable,
+                physicalAvailable
+                    ? Vector3.Distance(
+                        FinalPhysicalAnkleWorld(previous),
+                        FinalPhysicalAnkleWorld(current))
+                    : 0d,
+                physicalAvailable
+                    ? Vector3.Distance(
+                        FinalSole(previous),
+                        FinalSole(current))
+                    : 0d);
+        }
+
         static void AnalyzeSwingToLandingFloorHandoffs(
             List<FootFrame> frames,
             List<EventFact> events)
@@ -1910,7 +1978,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Vector3 correctionDelta =
                     current.FinalEffectiveCorrection -
                     previous.FinalEffectiveCorrection;
-                double correctionStep = correctionDelta.magnitude;
+                CharacterFootOutputBoundaryMotion outputMotion =
+                    ResolveOutputBoundaryMotion(previous, current);
                 double correctionAlongUp = upAvailable
                     ? Vector3.Dot(correctionDelta, up)
                     : 0d;
@@ -1979,8 +2048,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 CultureInfo.InvariantCulture),
                         stateBefore = previous.ConstraintState,
                         stateAfter = current.ConstraintState,
-                        entryCorrectionStepMeters = correctionStep,
-                        entryCorrectionAlongUpMeters = correctionAlongUp,
+                        entryCorrectionReexpressionStepMeters =
+                            outputMotion.CorrectionReexpressionStepMeters,
+                        entryCorrectionReexpressionAlongUpMeters =
+                            correctionAlongUp,
+                        entryCorrectedSoleStepMeters =
+                            outputMotion.CorrectedSoleStepMeters,
+                        entryAnimatedSoleStepMeters =
+                            outputMotion.AnimatedSoleStepMeters,
+                        entryStateAdditionalOutputStepMeters =
+                            outputMotion.StateAdditionalOutputStepMeters,
+                        entryOutputBlendParameter =
+                            outputMotion.OutputBlendParameter,
                         entryPhysicalAnkleAvailable = physicalAvailable,
                         entryPhysicalAnkleStepMeters =
                             physicalAnkleDelta.magnitude,
@@ -2065,9 +2144,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
-                    ["entryCorrectionStepMeters"] = correctionStep,
-                    ["entryCorrectionAlongUpMeters"] =
+                    ["entryCorrectionReexpressionStepMeters"] =
+                        outputMotion.CorrectionReexpressionStepMeters,
+                    ["entryCorrectionReexpressionAlongUpMeters"] =
                         correctionAlongUp,
+                    ["entryCorrectedSoleStepMeters"] =
+                        outputMotion.CorrectedSoleStepMeters,
+                    ["entryAnimatedSoleStepMeters"] =
+                        outputMotion.AnimatedSoleStepMeters,
+                    ["entryStateAdditionalOutputStepMeters"] =
+                        outputMotion.StateAdditionalOutputStepMeters,
+                    ["entryOutputBlendParameter"] =
+                        outputMotion.OutputBlendParameter,
                     ["entryPhysicalAnkleStepMeters"] =
                         physicalAnkleDelta.magnitude,
                     ["entryPhysicalAnkleAlongUpMeters"] =
@@ -6361,6 +6449,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Foot Motion Foot row {field} '{value}' is invalid.");
             }
             return result;
+        }
+
+        readonly struct CharacterFootOutputBoundaryMotion
+        {
+            internal CharacterFootOutputBoundaryMotion(
+                double correctionReexpressionStepMeters,
+                double correctedSoleStepMeters,
+                double animatedSoleStepMeters,
+                double stateAdditionalOutputStepMeters,
+                double outputBlendParameter,
+                bool physicalOutputAvailable,
+                double finalPhysicalAnkleStepMeters,
+                double finalPhysicalSoleStepMeters)
+            {
+                CorrectionReexpressionStepMeters =
+                    correctionReexpressionStepMeters;
+                CorrectedSoleStepMeters = correctedSoleStepMeters;
+                AnimatedSoleStepMeters = animatedSoleStepMeters;
+                StateAdditionalOutputStepMeters =
+                    stateAdditionalOutputStepMeters;
+                OutputBlendParameter = outputBlendParameter;
+                PhysicalOutputAvailable = physicalOutputAvailable;
+                FinalPhysicalAnkleStepMeters =
+                    finalPhysicalAnkleStepMeters;
+                FinalPhysicalSoleStepMeters = finalPhysicalSoleStepMeters;
+            }
+
+            internal double CorrectionReexpressionStepMeters { get; }
+            internal double CorrectedSoleStepMeters { get; }
+            internal double AnimatedSoleStepMeters { get; }
+            internal double StateAdditionalOutputStepMeters { get; }
+            internal double OutputBlendParameter { get; }
+            internal bool PhysicalOutputAvailable { get; }
+            internal double FinalPhysicalAnkleStepMeters { get; }
+            internal double FinalPhysicalSoleStepMeters { get; }
         }
 
         sealed class CsvCapture

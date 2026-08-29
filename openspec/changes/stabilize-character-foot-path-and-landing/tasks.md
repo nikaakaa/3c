@@ -75,8 +75,8 @@
 - [ ] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼
 - [ ] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策和对应旧输入
 - [ ] 6.8 发布Formal Foot Height、目标高度、限速前后Correction、竖直速率、Envelope/Anchor穿透、Ground Catchup、Full Lock门控和最终Correction诊断事实，删除把同帧抬升描述为Safety Floor成功的旧口径
-- [ ] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只控制Plant Target高度历史，现有`MaximumVerticalCorrectionSpeed`只控制状态混合后的Effective Correction历史，不提供共享默认值
-- [ ] 6.10 按ZZZ精确主链把Plant Target高度历史与Effective Correction历史拆成两个持久通道，固定执行`目标高度限速 -> typed状态权重混合 -> Correction限速 -> 既有Foot Goal权重基准混合`；同Event换点、Contact Verification与Same-Event Reentry不得同时清零两份历史
+- [x] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只控制Plant Target高度历史，现有`MaximumVerticalCorrectionSpeed`只控制状态混合后的Effective Correction历史，不提供共享默认值
+- [x] 6.10 按ZZZ精确主链把Plant Target高度历史与Effective Correction历史拆成两个持久通道，固定执行`目标高度限速 -> typed状态权重混合 -> Correction限速 -> 既有Foot Goal权重基准混合`；同Event换点、Contact Verification与Same-Event Reentry不得同时清零两份历史
 - [ ] 6.11 删除Correction限速之前或之后重复修改可见Correction的Plant、Ground或Goal混合路径，确认基准混合只由既有Foot Goal/Position Weight执行一次，并把两次限速的输入、历史、输出、Clamp与Reset原因纳入6.8诊断
 
 ## 7. 单独接入Support与Pelvis

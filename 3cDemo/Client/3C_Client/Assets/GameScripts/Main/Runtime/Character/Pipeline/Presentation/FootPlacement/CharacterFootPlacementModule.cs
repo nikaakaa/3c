@@ -284,6 +284,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootLandingRuntime.ProjectBeforePrediction(
                     in bank.RightFoot,
                     in rightCurrentStep);
+            bool leftPlantVerificationRequired =
+                CharacterFootTransitionResolver.RequiresPlantVerification(
+                    in bank.LeftFoot,
+                    in leftLockRequest);
+            bool rightPlantVerificationRequired =
+                CharacterFootTransitionResolver.RequiresPlantVerification(
+                    in bank.RightFoot,
+                    in rightLockRequest);
             CharacterFootLandingPredictionPair leftPair = PredictFootPair(
                 CharacterFootSide.Left,
                 leftCurrentStep,
@@ -294,6 +302,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bodyTrajectory,
                 in frame,
                 in leftLanding,
+                leftPlantVerificationRequired,
                 m_LeftLandingObservation,
                 committedBank?.LeftLandingObservation,
                 out bank.LeftLandingObservation);
@@ -307,6 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bodyTrajectory,
                 in frame,
                 in rightLanding,
+                rightPlantVerificationRequired,
                 m_RightLandingObservation,
                 committedBank?.RightLandingObservation,
                 out bank.RightLandingObservation);
@@ -334,34 +344,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathLanding rightNextSwingLanding = rightLanding.NextSwingLanding;
             CharacterFootGroundPathLanding leftContactLanding = default;
             bool hasLeftContactLanding = leftLockRequest.RequestsLock &&
-                leftLanding.TryResolveVerifiedLanding(
-                    leftLockRequest.EventIdentity,
-                    out leftContactLanding);
+                (leftLanding.TryResolveVerifiedLanding(
+                     leftLockRequest.EventIdentity,
+                     out leftContactLanding) ||
+                 CharacterFootLandingRuntime.TryResolveCurrentContactCandidate(
+                     in leftCurrentStep,
+                     in left,
+                     out leftContactLanding));
             CharacterFootGroundPathLanding rightContactLanding = default;
             bool hasRightContactLanding = rightLockRequest.RequestsLock &&
-                rightLanding.TryResolveVerifiedLanding(
-                    rightLockRequest.EventIdentity,
-                    out rightContactLanding);
-            bool leftApproachPlantActive =
-                leftCurrentStep.Events.InApproachContactToLanding &&
-                leftLanding.PlantTargetState ==
-                    CharacterFootPlantTargetState.Tracking &&
-                leftLanding.HasPlantTarget &&
-                leftCurrentStep.Events.NextLanding.IsBound &&
-                leftLanding.PlantTarget.LandingEventIdentity ==
-                    leftCurrentStep.Events.NextLanding.Identity;
-            bool rightApproachPlantActive =
-                rightCurrentStep.Events.InApproachContactToLanding &&
-                rightLanding.PlantTargetState ==
-                    CharacterFootPlantTargetState.Tracking &&
-                rightLanding.HasPlantTarget &&
-                rightCurrentStep.Events.NextLanding.IsBound &&
-                rightLanding.PlantTarget.LandingEventIdentity ==
-                    rightCurrentStep.Events.NextLanding.Identity;
-            CharacterFootGroundPathLanding leftApproachPlantTarget =
-                leftApproachPlantActive ? leftLanding.PlantTarget : default;
-            CharacterFootGroundPathLanding rightApproachPlantTarget =
-                rightApproachPlantActive ? rightLanding.PlantTarget : default;
+                (rightLanding.TryResolveVerifiedLanding(
+                     rightLockRequest.EventIdentity,
+                     out rightContactLanding) ||
+                 CharacterFootLandingRuntime.TryResolveCurrentContactCandidate(
+                     in rightCurrentStep,
+                     in right,
+                     out rightContactLanding));
+            bool leftPreparedPlantActive = IsPreparedPlantTargetActive(
+                in leftCurrentStep,
+                in leftLanding);
+            bool rightPreparedPlantActive = IsPreparedPlantTargetActive(
+                in rightCurrentStep,
+                in rightLanding);
+            CharacterFootGroundPathLanding leftPreparedPlantTarget =
+                leftPreparedPlantActive ? leftLanding.PlantTarget : default;
+            CharacterFootGroundPathLanding rightPreparedPlantTarget =
+                rightPreparedPlantActive ? rightLanding.PlantTarget : default;
+            float leftPreparedPlantWeight = ResolvePreparedPlantWeight(
+                in bank.LeftFoot,
+                in leftCurrentStep,
+                leftPreparedPlantActive);
+            float rightPreparedPlantWeight = ResolvePreparedPlantWeight(
+                in bank.RightFoot,
+                in rightCurrentStep,
+                rightPreparedPlantActive);
             CharacterFootGroundPathResult leftGroundPath = PrepareGroundPath(
                 CharacterFootSide.Left,
                 hasLeftLastLanding,
@@ -426,8 +442,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftSwingMotion,
                 hasLeftContactLanding,
                 in leftContactLanding,
-                leftApproachPlantActive,
-                in leftApproachPlantTarget,
+                leftPreparedPlantActive,
+                in leftPreparedPlantTarget,
+                leftPreparedPlantWeight,
                 in leftLockRequest,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in leftAction),
                 footPlacementWeight,
@@ -443,8 +460,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightSwingMotion,
                 hasRightContactLanding,
                 in rightContactLanding,
-                rightApproachPlantActive,
-                in rightApproachPlantTarget,
+                rightPreparedPlantActive,
+                in rightPreparedPlantTarget,
+                rightPreparedPlantWeight,
                 in rightLockRequest,
                 IsHardFootGoalOwnershipLoss(facts.Grounded, in rightAction),
                 footPlacementWeight,
@@ -831,6 +849,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return new CharacterFootGroundPathResult(pendingPage, true);
         }
 
+        static bool IsPreparedPlantTargetActive(
+            in AnimationFootMotionRuntimeSample footMotion,
+            in CharacterFootLandingSnapshot landing)
+        {
+            if (landing.PlantTargetState !=
+                    CharacterFootPlantTargetState.Tracking ||
+                !landing.HasPlantTarget)
+            {
+                return false;
+            }
+            ulong eventIdentity = landing.PlantTarget.LandingEventIdentity;
+            AnimationFootMotionEventFrame events = footMotion.Events;
+            bool approachMatches = events.InApproachContactToLanding &&
+                                   events.NextLanding.IsBound &&
+                                   events.NextLanding.Identity == eventIdentity;
+            bool currentMatches = events.CurrentContact.IsBound &&
+                                  events.CurrentContact.Identity == eventIdentity;
+            return approachMatches || currentMatches;
+        }
+
+        static float ResolvePreparedPlantWeight(
+            in CharacterFootLifecycleContext context,
+            in AnimationFootMotionRuntimeSample footMotion,
+            bool active)
+        {
+            if (!active)
+                return 0f;
+            return footMotion.Events.InApproachContactToLanding
+                ? footMotion.Contact
+                : context.Interpolation.PlantBlendWeight;
+        }
+
         CharacterFootLandingPredictionPair PredictFootPair(
             CharacterFootSide side,
             AnimationFootMotionRuntimeSample footMotion,
@@ -841,6 +891,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFutureBodyTranslation bodyTrajectory,
             in CharacterFootPlacementFrameInput frame,
             in CharacterFootLandingSnapshot landingSnapshot,
+            bool plantVerificationRequired,
             CharacterFootLandingObservationPagePool observationPool,
             CharacterFootLandingObservationPage committedObservation,
             out CharacterFootLandingObservationPage pendingObservation)
@@ -850,12 +901,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
             AnimationFootMotionEventFrame events = footMotion.Events;
             AnimationFootMotionEventOccurrence current = events.CurrentContact;
-            bool hasCurrentLanding = current.IsBound &&
-                landingSnapshot.TryResolveVerifiedLanding(current.Identity, out _);
-            bool needsCurrentContact = footMotion.Contact > 0f &&
-                footMotion.LockMode != AnimationFootStepObservationLockMode.Unlocked &&
-                current.IsBound &&
-                !hasCurrentLanding;
             AnimationFootMotionEventOccurrence next = events.NextLanding;
             bool hasNextCandidate = IsPredictiveLanding(
                 in footMotion,
@@ -864,7 +909,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Settings.LandingPrediction.MaximumPredictionTimeSeconds);
             CharacterFootLandingStepSource selectedSource;
             CharacterFootLandingPredictionResult selected;
-            if (needsCurrentContact)
+            if (plantVerificationRequired)
             {
                 selectedSource = CharacterFootLandingStepSource.FormalCurrentContact;
                 selected = PredictEvent(

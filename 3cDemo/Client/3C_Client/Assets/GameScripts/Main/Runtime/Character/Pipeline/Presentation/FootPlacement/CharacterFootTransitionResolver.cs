@@ -4,6 +4,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootTransitionResolver
     {
+        internal static bool RequiresPlantVerification(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootLockRequest request)
+        {
+            if (!request.RequestsLock || request.EventIdentity == 0 ||
+                context.LandingSnapshot.TryResolveVerifiedLanding(
+                    request.EventIdentity,
+                    out _))
+            {
+                return false;
+            }
+            CharacterFootContactEdge edge = ResolveContactEdge(
+                in context.ContactTransition,
+                in request);
+            bool acquisitionEdge = edge == CharacterFootContactEdge.Rising ||
+                                   edge == CharacterFootContactEdge.EventChanged;
+            if (!acquisitionEdge)
+                return false;
+            return context.Discrete.State switch
+            {
+                CharacterFootConstraintState.Swing => true,
+                CharacterFootConstraintState.UnlockedSupport => true,
+                CharacterFootConstraintState.Releasing =>
+                    request.EventIdentity != context.Contact.EventIdentity &&
+                    request.EventIdentity != context.ContactTransition
+                        .LatestReleasedContactEventIdentity,
+                _ => false
+            };
+        }
+
         internal static CharacterFootTransitionDecision ResolvePreInterpolation(
             in CharacterFootLifecycleContext context,
             in CharacterFootStateFrame frame)

@@ -177,9 +177,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantDesiredPoint = default;
             PlantFilteredPoint = default;
             PlantBlendWeight = 0f;
-            PlantVerticalDelta = 0f;
-            PlantAppliedVerticalDelta = 0f;
-            PlantVerticalClamped = false;
+            PlantTargetMaximumVerticalSpeed = 0f;
+            PlantTargetVerticalDelta = 0f;
+            PlantTargetAppliedVerticalDelta = 0f;
+            PlantTargetVerticalClamped = false;
+            PlantBlendedCorrection = default;
+            PlantCorrectionMaximumVerticalSpeed = 0f;
+            PlantCorrectionVerticalDelta = 0f;
+            PlantCorrectionAppliedVerticalDelta = 0f;
+            PlantCorrectionVerticalClamped = false;
             PlantOutputDistance = 0f;
             PlantPenetrationDepth = 0f;
         }
@@ -270,9 +276,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantDesiredPoint = plant.DesiredPoint;
             PlantFilteredPoint = plant.FilteredPoint;
             PlantBlendWeight = plant.BlendWeight;
-            PlantVerticalDelta = plant.VerticalDelta;
-            PlantAppliedVerticalDelta = plant.AppliedVerticalDelta;
-            PlantVerticalClamped = plant.VerticalClamped;
+            PlantTargetMaximumVerticalSpeed =
+                plant.TargetMaximumVerticalSpeed;
+            PlantTargetVerticalDelta = plant.TargetVerticalDelta;
+            PlantTargetAppliedVerticalDelta =
+                plant.TargetAppliedVerticalDelta;
+            PlantTargetVerticalClamped = plant.TargetVerticalClamped;
+            PlantBlendedCorrection = plant.BlendedCorrection;
+            PlantCorrectionMaximumVerticalSpeed =
+                plant.CorrectionMaximumVerticalSpeed;
+            PlantCorrectionVerticalDelta = plant.CorrectionVerticalDelta;
+            PlantCorrectionAppliedVerticalDelta =
+                plant.CorrectionAppliedVerticalDelta;
+            PlantCorrectionVerticalClamped =
+                plant.CorrectionVerticalClamped;
             PlantOutputDistance = plant.OutputDistance;
             PlantPenetrationDepth = plant.PenetrationDepth;
         }
@@ -337,9 +354,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantDesiredPoint { get; }
         internal Vector3 PlantFilteredPoint { get; }
         internal float PlantBlendWeight { get; }
-        internal float PlantVerticalDelta { get; }
-        internal float PlantAppliedVerticalDelta { get; }
-        internal bool PlantVerticalClamped { get; }
+        internal float PlantTargetMaximumVerticalSpeed { get; }
+        internal float PlantTargetVerticalDelta { get; }
+        internal float PlantTargetAppliedVerticalDelta { get; }
+        internal bool PlantTargetVerticalClamped { get; }
+        internal Vector3 PlantBlendedCorrection { get; }
+        internal float PlantCorrectionMaximumVerticalSpeed { get; }
+        internal float PlantCorrectionVerticalDelta { get; }
+        internal float PlantCorrectionAppliedVerticalDelta { get; }
+        internal bool PlantCorrectionVerticalClamped { get; }
         internal float PlantOutputDistance { get; }
         internal float PlantPenetrationDepth { get; }
 
@@ -721,9 +744,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 desiredPoint,
             Vector3 filteredPoint,
             float blendWeight,
-            float verticalDelta,
-            float appliedVerticalDelta,
-            bool verticalClamped,
+            float targetMaximumVerticalSpeed,
+            float targetVerticalDelta,
+            float targetAppliedVerticalDelta,
+            bool targetVerticalClamped,
+            Vector3 blendedCorrection,
+            float correctionMaximumVerticalSpeed,
+            float correctionVerticalDelta,
+            float correctionAppliedVerticalDelta,
+            bool correctionVerticalClamped,
             float outputDistance,
             float penetrationDepth)
         {
@@ -733,9 +762,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DesiredPoint = desiredPoint;
             FilteredPoint = filteredPoint;
             BlendWeight = blendWeight;
-            VerticalDelta = verticalDelta;
-            AppliedVerticalDelta = appliedVerticalDelta;
-            VerticalClamped = verticalClamped;
+            TargetMaximumVerticalSpeed = targetMaximumVerticalSpeed;
+            TargetVerticalDelta = targetVerticalDelta;
+            TargetAppliedVerticalDelta = targetAppliedVerticalDelta;
+            TargetVerticalClamped = targetVerticalClamped;
+            BlendedCorrection = blendedCorrection;
+            CorrectionMaximumVerticalSpeed = correctionMaximumVerticalSpeed;
+            CorrectionVerticalDelta = correctionVerticalDelta;
+            CorrectionAppliedVerticalDelta = correctionAppliedVerticalDelta;
+            CorrectionVerticalClamped = correctionVerticalClamped;
             OutputDistance = outputDistance;
             PenetrationDepth = penetrationDepth;
         }
@@ -746,9 +781,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 DesiredPoint { get; }
         internal Vector3 FilteredPoint { get; }
         internal float BlendWeight { get; }
-        internal float VerticalDelta { get; }
-        internal float AppliedVerticalDelta { get; }
-        internal bool VerticalClamped { get; }
+        internal float TargetMaximumVerticalSpeed { get; }
+        internal float TargetVerticalDelta { get; }
+        internal float TargetAppliedVerticalDelta { get; }
+        internal bool TargetVerticalClamped { get; }
+        internal Vector3 BlendedCorrection { get; }
+        internal float CorrectionMaximumVerticalSpeed { get; }
+        internal float CorrectionVerticalDelta { get; }
+        internal float CorrectionAppliedVerticalDelta { get; }
+        internal bool CorrectionVerticalClamped { get; }
         internal float OutputDistance { get; }
         internal float PenetrationDepth { get; }
     }
@@ -798,8 +839,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult swingMotion,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
-            bool approachPlantActive,
-            in CharacterFootGroundPathLanding approachPlantTarget,
+            bool preparedPlantActive,
+            in CharacterFootGroundPathLanding preparedPlantTarget,
+            float preparedPlantWeight,
             in CharacterFootLockRequest lockRequest,
             bool hardOwnershipLoss,
             float footPlacementWeight,
@@ -815,8 +857,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingMotion = swingMotion;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
-            ApproachPlantActive = approachPlantActive;
-            ApproachPlantTarget = approachPlantTarget;
+            PreparedPlantActive = preparedPlantActive;
+            PreparedPlantTarget = preparedPlantTarget;
+            PreparedPlantWeight = preparedPlantWeight;
             LockRequest = lockRequest;
             HardOwnershipLoss = hardOwnershipLoss;
             FootPlacementWeight = footPlacementWeight;
@@ -833,8 +876,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSwingMotionResult SwingMotion { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
-        internal bool ApproachPlantActive { get; }
-        internal CharacterFootGroundPathLanding ApproachPlantTarget { get; }
+        internal bool PreparedPlantActive { get; }
+        internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
+        internal float PreparedPlantWeight { get; }
         internal CharacterFootLockRequest LockRequest { get; }
         internal bool HardOwnershipLoss { get; }
         internal float FootPlacementWeight { get; }

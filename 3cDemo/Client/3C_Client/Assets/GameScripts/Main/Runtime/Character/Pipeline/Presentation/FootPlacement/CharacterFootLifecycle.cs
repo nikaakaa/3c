@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -25,6 +26,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 formalFootMotion.HasPredictiveLanding
                     ? formalFootMotion.TimeToLandingSeconds
                     : 0f,
+                in formalFootMotion,
+                in landingPrediction,
                 in frame,
                 out result);
         }
@@ -33,6 +36,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootLifecycleContext context,
             CharacterFootSide side,
             float timeToLandingSeconds,
+            in AnimationFootMotionRuntimeSample formalFootMotion,
+            in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootStateFrame frame,
             out CharacterFootSwingMotionResult result)
         {
@@ -44,6 +49,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootTransitionResolver.ResolvePreInterpolation(
                     in context,
                     in frame);
+            CharacterFootLandingRuntime.CommitCurrentContactVerification(
+                ref context.Landing,
+                in formalFootMotion,
+                in landingPrediction,
+                in preTransition);
             CharacterFootTransitionRuntime.Apply(
                 ref context,
                 in preTransition,
@@ -364,12 +374,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.SwingMotion.LandingEventIdentity ||
                 frame.HasContactLanding &&
                 frame.ContactLanding.LandingEventIdentity == 0 ||
-                frame.ApproachPlantActive &&
-                (frame.ApproachPlantTarget.LandingEventIdentity == 0 ||
+                frame.PreparedPlantActive &&
+                (frame.PreparedPlantTarget.LandingEventIdentity == 0 ||
                  !CharacterFootConstraintMath.Finite(
-                     frame.ApproachPlantTarget.Point) ||
+                     frame.PreparedPlantTarget.Point) ||
                  !CharacterFootConstraintMath.Finite(
-                     frame.ApproachPlantTarget.Normal)))
+                     frame.PreparedPlantTarget.Normal) ||
+                 !float.IsFinite(frame.PreparedPlantWeight) ||
+                 frame.PreparedPlantWeight < 0f ||
+                 frame.PreparedPlantWeight > 1f))
             {
                 throw new InvalidOperationException(
                     "Foot lifecycle frame is invalid.");

@@ -185,6 +185,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.TextField("Forward Z Error", $"{geometry.SoleForwardErrorDegrees:F2} degrees / 15 max");
                 EditorGUILayout.TextField("Up Y Error", $"{geometry.SoleUpErrorDegrees:F2} degrees / 15 max");
             }
+            CharacterFootPlacementFootCalibration footprint =
+                s_Side == CharacterFootSide.Left ? s_Left : s_Right;
+            EditorGUI.BeginChangeCheck();
+            float rearProbeExtension = EditorGUILayout.FloatField(
+                "Rear Probe Extension",
+                footprint.RearProbeExtension);
+            float lateralProbeExtent = EditorGUILayout.FloatField(
+                "Lateral Probe Extent",
+                footprint.LateralProbeExtent);
+            float toeProbeExtension = EditorGUILayout.FloatField(
+                "Toe Probe Extension",
+                footprint.ToeProbeExtension);
+            if (EditorGUI.EndChangeCheck())
+            {
+                footprint = new CharacterFootPlacementFootCalibration(
+                    footprint.HeelContactLocalOffset,
+                    footprint.ToeContactLocalOffset,
+                    footprint.SoleFrameLocalRotation,
+                    rearProbeExtension,
+                    lateralProbeExtent,
+                    toeProbeExtension);
+                if (s_Side == CharacterFootSide.Left)
+                    s_Left = footprint;
+                else
+                    s_Right = footprint;
+                EvaluateDraft();
+                SceneView.RepaintAll();
+            }
             if (!string.IsNullOrEmpty(s_Error))
                 EditorGUILayout.HelpBox(s_Error, MessageType.Error);
             else if (s_Report != null)
@@ -200,7 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             EditorGUILayout.HelpBox(
-                "Apply writes Calibration v4 Heel, Toe and Sole geometry only. Foot-analysis artifacts and Presentation Projection are rebuilt by their explicit Build commands.",
+                "Apply writes Calibration v5 Heel, Toe, Sole and Footprint geometry only. Foot-analysis artifacts and Presentation Projection are rebuilt by their explicit Build commands.",
                 MessageType.None);
         }
 
@@ -306,7 +334,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             EditorGUILayout.HelpBox(
-                "Apply updates Rig v3 and Calibration identity in one Undo group. Foot-analysis artifacts and Presentation Projection remain stale until their explicit Build commands run.",
+                "Apply updates Rig v3 and Calibration v5 identity in one Undo group. Foot-analysis artifacts and Presentation Projection remain stale until their explicit Build commands run.",
                 MessageType.None);
         }
 
@@ -671,10 +699,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawContact(heelPosition, s_EditMode == CalibrationEditMode.HeelContact, color);
             DrawContact(toePosition, s_EditMode == CalibrationEditMode.ToeContact, color);
             Vector3 soleCenter = (heelPosition + toePosition) * 0.5f;
+            Vector3 soleForward = soleRotation * Vector3.forward;
+            Vector3 soleRight = soleRotation * Vector3.right;
             DrawReferenceGround(soleCenter);
-            DrawAxis(soleCenter, soleRotation * Vector3.forward, Color.blue, "Z");
+            DrawAxis(soleCenter, soleForward, Color.blue, "Z");
             DrawAxis(soleCenter, soleRotation * Vector3.up, Color.green, "Y");
-            DrawAxis(soleCenter, soleRotation * Vector3.right, Color.red, "X");
+            DrawAxis(soleCenter, soleRight, Color.red, "X");
+            DrawContact(
+                heelPosition - soleForward * draft.RearProbeExtension,
+                false,
+                color);
+            DrawContact(
+                heelPosition + soleRight * draft.LateralProbeExtent,
+                false,
+                color);
+            DrawContact(
+                heelPosition - soleRight * draft.LateralProbeExtent,
+                false,
+                color);
+            DrawContact(
+                toePosition + soleForward * draft.ToeProbeExtension,
+                false,
+                color);
 
             EditorGUI.BeginChangeCheck();
             Vector3 nextHeel = heelPosition;

@@ -32,6 +32,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string correctionResponseInitializationReason;
     }
 
+    [Serializable]
+    internal sealed class CharacterFootLockWeightCompletionAnalysis
+    {
+        public string outcome;
+        public string eventIdentity;
+        public int firstFrame;
+        public int lastFrame;
+        public int? firstFullWeightFrame;
+        public int? landingCompletedFrame;
+        public string sourceIdentity;
+        public int sourceCycle;
+        public string completionState;
+        public string completionPlantTargetKind;
+    }
+
     internal sealed class CharacterFootLandingStateConsistencyDiagnosis : ICharacterFootDiagnosis
     {
         const double ExitJumpMeters = 0.01d;
@@ -57,6 +72,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PlantInterpolationOutputJump");
             List<JObject> contactAcquisitions = context.Events(
                 "ContactAcquisitionContinuity");
+            List<JObject> lockWeightEvents = context.Events(
+                "LockWeightCompletionEvent");
             CharacterFootDiagnosisTarget releaseTarget = context.Target(
                 "release-flyback",
                 "Releasing阶段是否出现Correction突跳后反向回拉",
@@ -315,6 +332,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         contactAcquisitions,
                         ContactAcquisitionEvidence)
                 };
+            CharacterFootDiagnosisTarget lockWeightTarget = context.Target(
+                "lock-weight-completion-by-contact-event",
+                "每个正式Contact Event达到满Lock Weight后是否保留完成资格直到几何闭合进入Locked，且未满权Event不得进入Locked",
+                new[] { "LockWeightCompletionEvent" },
+                new[]
+                {
+                    "reachedFullWeight=true&&geometryClosedAndLocked=false",
+                    "reachedFullWeight=false&&enteredLocked=true"
+                },
+                lockWeightEvents,
+                value =>
+                {
+                    var rules = new List<string>();
+                    if (CharacterFootDiagnosisContext.Evidence(
+                            value,
+                            "fullWeightNotClosedInWindow"))
+                    {
+                        rules.Add(
+                            "reachedFullWeight=true&&geometryClosedAndLocked=false");
+                    }
+                    if (CharacterFootDiagnosisContext.Evidence(
+                            value,
+                            "lockedWithoutFullWeight"))
+                    {
+                        rules.Add(
+                            "reachedFullWeight=false&&enteredLocked=true");
+                    }
+                    return rules;
+                },
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "PlantOutputDistanceAtCompletion"),
+                "WindowFrameCount",
+                "RequestFrameCount",
+                "LockWeightMaximum",
+                "LockWeightCompletionThreshold",
+                "FirstFullWeightFrame",
+                "LandingCompletedFrame",
+                "PlantOutputDistanceAtCompletion",
+                "PlantPenetrationDepthAtCompletion",
+                "LandingLockCompletionTolerance",
+                "GroundPenetrationTolerance");
+            lockWeightTarget.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["CompletionOutcome"] = CategoryCounts(
+                        lockWeightEvents,
+                        LockWeightCompletionOutcome)
+                };
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -474,7 +543,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 releaseTarget,
                 handoffTarget,
                 plantTarget,
-                contactAcquisitionTarget);
+                contactAcquisitionTarget,
+                lockWeightTarget);
         }
 
         static List<CharacterFootDiagnosisCategoryCount> CategoryCounts(
@@ -613,6 +683,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return capture
                 ? "AnchorTargetMismatch"
                 : "CaptureContinuityMismatch";
+        }
+
+        static string LockWeightCompletionOutcome(JObject value)
+        {
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "lockedWithoutFullWeight"))
+            {
+                return "LockedWithoutFullWeight";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "geometryClosedAndLocked"))
+            {
+                return "FullWeightClosedAndLocked";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "reachedFullWeight"))
+            {
+                return "FullWeightNotClosedInWindow";
+            }
+            return "NoFullWeightNoLock";
         }
 
     }

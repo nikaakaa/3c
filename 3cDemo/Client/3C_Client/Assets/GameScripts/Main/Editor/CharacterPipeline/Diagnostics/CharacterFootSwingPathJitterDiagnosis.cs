@@ -524,6 +524,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool plantTargetVerified;
         public string plantTargetKind;
         public string plantLockResponse;
+        public bool plantLockWeightCompleted;
         public CharacterFootVectorFact plantDesiredPoint;
         public CharacterFootVectorFact plantFilteredPoint;
         public string swingTargetHeightAdoptionMode;

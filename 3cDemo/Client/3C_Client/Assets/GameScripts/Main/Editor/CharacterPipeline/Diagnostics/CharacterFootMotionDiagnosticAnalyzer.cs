@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/46";
+        const string Schema = "character-foot-motion-facts/47";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 46;
+        const int AnalyzerVersion = 47;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -69,6 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const double SwingSpeedAnomalyMetersPerSecond = 5d;
         const float CorrectionHoldMaximumMeters = 0.005f;
         const float CorrectionAdvanceMinimumMeters = 0.02f;
+        const float ExpectedGroundPenetrationToleranceMeters = 0.01f;
 
         internal static CharacterFootMotionDiagnosticAnalysis Analyze(
             string samplesPath)
@@ -142,6 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
                 $"plantInterpolationJumps={document.coverage.plantInterpolationOutputJumpCount} " +
                 $"contactAcquisitions={document.coverage.contactAcquisitionContinuityCount} " +
+                $"lockWeightEvents={document.coverage.lockWeightCompletionEventCount} " +
                 $"stableSwingCorrectionCadence={document.coverage.stableSwingCorrectionResponseCadenceCount} " +
                 $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
@@ -186,6 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeCurrentSupportQueries(frames, events);
             AnalyzeLandingEvents(frames, events);
             AnalyzeLandingStateConsistency(frames, events);
+            AnalyzeLockWeightCompletionEvents(frames, events);
             AnalyzeSwingToLandingFloorHandoffs(frames, events);
             AnalyzeLockedEvents(frames, events);
             AnalyzeContactPlanePenetration(frames, events);
@@ -198,6 +201,230 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
         }
+
+        static void AnalyzeLockWeightCompletionEvents(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            ulong expectedCompletedEvent = 0;
+            bool releaseAppliedOnPreviousFrame = false;
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame frame = frames[i];
+                if (releaseAppliedOnPreviousFrame ||
+                    frame.PreTransitionAnchorCommand == "Release")
+                {
+                    expectedCompletedEvent = 0;
+                }
+                ulong requestEvent = frame.FormalCurrentContactEventIdentity;
+                if (requestEvent != 0 &&
+                    expectedCompletedEvent != 0 &&
+                    requestEvent != expectedCompletedEvent)
+                {
+                    expectedCompletedEvent = 0;
+                }
+                bool requestsLock = RequestsFormalLock(frame);
+                if (requestsLock &&
+                    frame.FormalLockWeight >=
+                    1f - RuntimeGeometryEpsilon)
+                {
+                    expectedCompletedEvent = requestEvent;
+                }
+                bool expectedPublishedLatch =
+                    frame.PlantInterpolationEvaluated &&
+                    frame.PlantTargetEventIdentity != 0 &&
+                    frame.PlantTargetEventIdentity == expectedCompletedEvent;
+                if (frame.PlantLockWeightCompleted !=
+                    expectedPublishedLatch)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Plant lock weight completion latch is inconsistent " +
+                        $"Frame={frame.Frame} Side={frame.Side} " +
+                        $"RequestEvent={requestEvent} PlantEvent={frame.PlantTargetEventIdentity} " +
+                        $"Weight={frame.FormalLockWeight:R} Expected={expectedPublishedLatch} " +
+                        $"Actual={frame.PlantLockWeightCompleted}.");
+                }
+                if (frame.PostTransitionReason == "LandingCompleted")
+                {
+                    bool completionConsistent =
+                        frame.PlantLockWeightCompleted &&
+                        frame.PlantOutputDistance <=
+                        frame.PlantWorldResidualCompletionTolerance +
+                        PositionNoiseFloor &&
+                        frame.PlantPenetrationDepth <=
+                        ExpectedGroundPenetrationToleranceMeters +
+                        PositionNoiseFloor &&
+                        frame.LandingReachAvailable;
+                    if (!completionConsistent)
+                    {
+                        throw new InvalidDataException(
+                            $"Foot Motion Landing completion eligibility is inconsistent " +
+                            $"Frame={frame.Frame} Side={frame.Side} " +
+                            $"Latch={frame.PlantLockWeightCompleted} " +
+                            $"OutputDistance={frame.PlantOutputDistance:R} " +
+                            $"Penetration={frame.PlantPenetrationDepth:R} " +
+                            $"Tolerance={frame.PlantWorldResidualCompletionTolerance:R} " +
+                            $"LandingReach={frame.LandingReachAvailable}.");
+                    }
+                }
+                releaseAppliedOnPreviousFrame =
+                    frame.PostTransitionAnchorCommand == "Release";
+            }
+
+            var eventIdentities = new HashSet<ulong>();
+            for (int i = 0; i < frames.Count; i++)
+            {
+                if (RequestsFormalLock(frames[i]))
+                {
+                    eventIdentities.Add(
+                        frames[i].FormalCurrentContactEventIdentity);
+                }
+            }
+            foreach (ulong eventIdentity in eventIdentities.OrderBy(value => value))
+            {
+                List<FootFrame> window = frames.Where(frame =>
+                        frame.FormalCurrentContactEventIdentity == eventIdentity ||
+                        frame.PlantTargetEventIdentity == eventIdentity ||
+                        frame.FootMotionEventIdentity == eventIdentity)
+                    .OrderBy(frame => frame.Frame)
+                    .ToList();
+                List<FootFrame> requestFrames = window
+                    .Where(frame =>
+                        RequestsFormalLock(frame) &&
+                        frame.FormalCurrentContactEventIdentity == eventIdentity)
+                    .ToList();
+                if (requestFrames.Count == 0)
+                    continue;
+                FootFrame firstFullWeight = requestFrames.FirstOrDefault(
+                    frame => frame.FormalLockWeight >=
+                             1f - RuntimeGeometryEpsilon);
+                bool reachedFullWeight = firstFullWeight != null;
+                FootFrame completion = window.FirstOrDefault(frame =>
+                    frame.PostTransitionReason == "LandingCompleted" &&
+                    frame.PlantTargetEventIdentity == eventIdentity);
+                bool enteredLocked = window.Any(frame =>
+                    frame.ConstraintState == "Locked" &&
+                    (frame.FootMotionEventIdentity == eventIdentity ||
+                     frame.PlantTargetEventIdentity == eventIdentity));
+                bool completionLatch =
+                    completion?.PlantLockWeightCompleted == true;
+                bool completionReach =
+                    completion?.LandingReachAvailable == true;
+                bool completionOutputClosed = completion != null &&
+                    completion.PlantOutputDistance <=
+                    completion.PlantWorldResidualCompletionTolerance +
+                    PositionNoiseFloor;
+                bool completionPenetrationClosed = completion != null &&
+                    completion.PlantPenetrationDepth <=
+                    ExpectedGroundPenetrationToleranceMeters +
+                    PositionNoiseFloor;
+                bool geometryClosedAndLocked = completion != null &&
+                    enteredLocked &&
+                    completionLatch &&
+                    completionReach &&
+                    completionOutputClosed &&
+                    completionPenetrationClosed;
+                bool latchPersistedAfterWeightDrop = reachedFullWeight &&
+                    window.Any(frame =>
+                        frame.Frame > firstFullWeight.Frame &&
+                        frame.PlantTargetEventIdentity == eventIdentity &&
+                        frame.PlantInterpolationEvaluated &&
+                        frame.FormalLockWeight <
+                        1f - RuntimeGeometryEpsilon &&
+                        frame.PlantLockWeightCompleted);
+                string outcome = reachedFullWeight
+                    ? geometryClosedAndLocked
+                        ? "FullWeightClosedAndLocked"
+                        : "FullWeightNotClosedInWindow"
+                    : enteredLocked
+                        ? "LockedWithoutFullWeight"
+                        : "NoFullWeightNoLock";
+                FootFrame peak = completion ?? firstFullWeight ?? window[^1];
+                float tolerance = completion != null
+                    ? completion.PlantWorldResidualCompletionTolerance
+                    : window.Where(frame => frame.PlantInterpolationEvaluated)
+                        .Select(frame => frame.PlantWorldResidualCompletionTolerance)
+                        .DefaultIfEmpty(0f)
+                        .Last();
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["WindowFrameCount"] = window.Count,
+                    ["RequestFrameCount"] = requestFrames.Count,
+                    ["LockWeightMaximum"] = requestFrames.Max(
+                        frame => frame.FormalLockWeight),
+                    ["LockWeightCompletionThreshold"] =
+                        1f - RuntimeGeometryEpsilon,
+                    ["FirstFullWeightFrame"] =
+                        firstFullWeight?.Frame ?? -1,
+                    ["LandingCompletedFrame"] = completion?.Frame ?? -1,
+                    ["PlantOutputDistanceAtCompletion"] =
+                        completion?.PlantOutputDistance ?? 0f,
+                    ["PlantPenetrationDepthAtCompletion"] =
+                        completion?.PlantPenetrationDepth ?? 0f,
+                    ["LandingLockCompletionTolerance"] = tolerance,
+                    ["GroundPenetrationTolerance"] =
+                        ExpectedGroundPenetrationToleranceMeters
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["reachedFullWeight"] = reachedFullWeight,
+                    ["latchObserved"] = window.Any(frame =>
+                        frame.PlantTargetEventIdentity == eventIdentity &&
+                        frame.PlantLockWeightCompleted),
+                    ["latchPersistedAfterWeightDrop"] =
+                        latchPersistedAfterWeightDrop,
+                    ["enteredLocked"] = enteredLocked,
+                    ["landingCompleted"] = completion != null,
+                    ["geometryClosedAndLocked"] =
+                        geometryClosedAndLocked,
+                    ["fullWeightNotClosedInWindow"] =
+                        reachedFullWeight && !geometryClosedAndLocked,
+                    ["lockedWithoutFullWeight"] =
+                        !reachedFullWeight && enteredLocked,
+                    ["completionLatch"] = completionLatch,
+                    ["completionLandingReachAvailable"] = completionReach,
+                    ["completionOutputClosed"] = completionOutputClosed,
+                    ["completionPenetrationClosed"] =
+                        completionPenetrationClosed
+                };
+                var detail = new CharacterFootLockWeightCompletionAnalysis
+                {
+                    outcome = outcome,
+                    eventIdentity = eventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                    firstFrame = window[0].Frame,
+                    lastFrame = window[^1].Frame,
+                    firstFullWeightFrame = firstFullWeight?.Frame,
+                    landingCompletedFrame = completion?.Frame,
+                    sourceIdentity = peak.SourceIdentity,
+                    sourceCycle = peak.SourceCycle,
+                    completionState = completion?.ConstraintState ??
+                                      window[^1].ConstraintState,
+                    completionPlantTargetKind =
+                        completion?.PlantTargetKind ?? "None"
+                };
+                events.Add(new EventFact(
+                    "LockWeightCompletionEvent",
+                    peak.Side,
+                    window[0].Frame,
+                    window[^1].Frame,
+                    peak.Frame,
+                    eventIdentity,
+                    peak.SourceIdentity,
+                    peak.SourceCycle,
+                    Duration(window),
+                    metrics,
+                    evidence,
+                    lockWeightCompletion: detail));
+            }
+        }
+
+        static bool RequestsFormalLock(FootFrame frame) =>
+            frame.FormalCurrentContactEventIdentity != 0 &&
+            frame.FormalRequestContact > 0f &&
+            frame.FormalLockMode != "Unlocked";
 
         static void AnalyzePlantInterpolationOutputJumps(
             List<FootFrame> frames,
@@ -1156,6 +1383,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     plantTargetVerified = current.PlantTargetVerified,
                     plantTargetKind = current.PlantTargetKind,
                     plantLockResponse = current.PlantLockResponse,
+                    plantLockWeightCompleted =
+                        current.PlantLockWeightCompleted,
                     plantDesiredPoint = CharacterFootVectorFact.From(
                         current.PlantDesiredPoint),
                     plantFilteredPoint = CharacterFootVectorFact.From(
@@ -4296,6 +4525,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     segmentationPositionEpsilonMeters = PositionNoiseFloor,
                     landingReachCandidateCompressionReserveMeters =
                         LandingReachCompressionReserveMeters,
+                    groundPenetrationToleranceMeters =
+                        ExpectedGroundPenetrationToleranceMeters,
                     penetrationGeometryEpsilonMeters =
                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters
                 },
@@ -4332,6 +4563,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     contactAcquisitionContinuityCount = events.Count(
                         value => value.kind ==
                                  "ContactAcquisitionContinuity"),
+                    lockWeightCompletionEventCount = events.Count(
+                        value => value.kind ==
+                                 "LockWeightCompletionEvent"),
                     stableSwingCorrectionResponseCadenceCount = events.Count(
                         value => value.kind ==
                                  "StableSwingCorrectionResponseCadence"),
@@ -5207,6 +5441,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FormalNormalizedTime = Float("InputFormalStepSourceNormalizedTime"),
                 FormalStepTime = Float("InputFormalStepTimeSeconds"),
                 FormalContact = Float("FormalContact"),
+                FormalRequestContact = Float("InputFormalContact"),
                 FormalLockMode = Cell("InputFormalLockMode"),
                 FormalLockWeight = Float("InputFormalLockWeight"),
                 FormalSupport = Float("InputFormalSupport"),
@@ -5505,6 +5740,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionPlantTargetVerified") != 0,
                 PlantTargetKind = Cell("FootMotionPlantTargetKind"),
                 PlantLockResponse = Cell("FootMotionPlantLockResponse"),
+                PlantLockWeightCompleted =
+                    Int("FootMotionPlantLockWeightCompleted") != 0,
                 PlantDesiredPoint = Vector("FootMotionPlantDesiredPoint"),
                 PlantFilteredPoint = Vector("FootMotionPlantFilteredPoint"),
                 SelectedSupportTarget =
@@ -7695,7 +7932,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
                 "InputFormalStepObservationAvailable",
                 "InputFormalStepCompletionIdentity",
-                "FormalContact", "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
+                "FormalContact", "InputFormalContact", "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
                 "StepSelectionMaximumPredictionTimeSeconds",
                 "StepSelectionLastLandingEventIdentity",
                 "SelectedStepSource", "SelectedLandingEventIdentity",
@@ -7986,6 +8223,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantEffectiveCorrectionAfterZ",
                 "FootMotionPlantOutputDistance",
                 "FootMotionPlantPenetrationDepth",
+                "FootMotionPlantLockWeightCompleted",
                 "FootMotionEncodedGoalAvailable",
                 "FootMotionEncodedGoalCorrectionX",
                 "FootMotionEncodedGoalCorrectionY",
@@ -8602,6 +8840,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float FormalNormalizedTime;
             internal float FormalStepTime;
             internal float FormalContact;
+            internal float FormalRequestContact;
             internal string FormalLockMode;
             internal float FormalLockWeight;
             internal float FormalSupport;
@@ -8782,6 +9021,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool PlantTargetVerified;
             internal string PlantTargetKind;
             internal string PlantLockResponse;
+            internal bool PlantLockWeightCompleted;
             internal Vector3 PlantDesiredPoint;
             internal Vector3 PlantFilteredPoint;
             internal SupportTargetFrame SelectedSupportTarget;
@@ -9566,6 +9806,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int version;
             public double segmentationPositionEpsilonMeters;
             public double landingReachCandidateCompressionReserveMeters;
+            public double groundPenetrationToleranceMeters;
             public double penetrationGeometryEpsilonMeters;
         }
 
@@ -9586,6 +9827,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int swingToLandingFloorHandoffCount;
             public int plantInterpolationOutputJumpCount;
             public int contactAcquisitionContinuityCount;
+            public int lockWeightCompletionEventCount;
             public int stableSwingCorrectionResponseCadenceCount;
             public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;
@@ -9643,7 +9885,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootCorrectionResponseCadenceAnalysis
                     correctionResponseCadence = null,
                 CharacterFootContactAcquisitionContinuityAnalysis
-                    contactAcquisitionContinuity = null)
+                    contactAcquisitionContinuity = null,
+                CharacterFootLockWeightCompletionAnalysis
+                    lockWeightCompletion = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -9666,6 +9910,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 this.correctionResponseCadence = correctionResponseCadence;
                 this.contactAcquisitionContinuity =
                     contactAcquisitionContinuity;
+                this.lockWeightCompletion = lockWeightCompletion;
             }
 
             public string kind;
@@ -9690,6 +9935,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 correctionResponseCadence;
             public CharacterFootContactAcquisitionContinuityAnalysis
                 contactAcquisitionContinuity;
+            public CharacterFootLockWeightCompletionAnalysis
+                lockWeightCompletion;
 
             internal static int Compare(EventFact left, EventFact right)
             {

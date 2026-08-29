@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/5",
+                schema = "character-foot-diagnosis-file/6",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {

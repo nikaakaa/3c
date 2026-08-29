@@ -148,9 +148,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootPlacementOutputOffsetStep",
                 "FootPlacementOutputOffsetSpeed",
                 "PlantMixedWorldTargetStep",
-                "PlantOutputPointStep",
+                "PlantDesiredOutputPointStep",
+                "PlantResponseOutputPointStep",
                 "PlantWorldResidualCaptureDelta",
                 "PlantWorldResidualAfterDecay",
+                "PlantCorrectionResponseDesired",
+                "PlantCorrectionResponsePrevious",
+                "PlantCorrectionResponseCurrent",
+                "PlantCorrectionResponseSelectedSpeed",
+                "PlantCorrectionResponseAppliedDelta",
                 "PlantEffectiveCorrectionStep",
                 "PlantTargetAppliedVerticalDelta",
                 "PlantBlendWeightDelta",
@@ -406,6 +412,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
+                    "correctionResponseOwned"))
+            {
+                return "CorrectionResponseContinuity";
+            }
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
                     "targetHeightOwned"))
             {
                 return "TargetHeightContinuity";
@@ -418,9 +430,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "plantTargetSynchronized"))
+                    "plantTargetOwned"))
             {
-                return "PlantTargetSynchronized";
+                return "PlantTargetContinuity";
             }
             return "ContinuousPlantBlend";
         }

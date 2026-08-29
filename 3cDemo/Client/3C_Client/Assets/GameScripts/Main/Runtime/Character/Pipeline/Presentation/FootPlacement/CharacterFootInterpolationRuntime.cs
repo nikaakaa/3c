@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return new CharacterFootInterpolationResult(
                     default,
                     false,
+                    default,
                     default);
             }
             if (!state.HasOutput)
@@ -28,39 +29,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (target.InterpolationPolicy)
             {
                 case CharacterFootInterpolationPolicy.SwingResidual:
+                    ClearPlant(ref state);
                     return EvaluateSwing(ref state, in target, in frame);
-                case CharacterFootInterpolationPolicy.AcquireByWeight:
-                    return EvaluateAcquire(ref state, in target, in frame);
-                case CharacterFootInterpolationPolicy.Direct:
-                    state.PreviousTargetCorrection = target.Correction;
-                    state.Residual = default;
-                    state.Progress = 1f;
-                    state.StartResidual = 0f;
-                    state.Completed = false;
-                    state.EffectiveCorrection = target.Correction;
-                    return Result(
-                        in state,
-                        false,
-                        Unevaluated(in target, in frame));
-                case CharacterFootInterpolationPolicy.HalfLife:
-                    if (!target.ResponseEntered)
-                    {
-                        state.EffectiveCorrection = Advance(
-                            state.EffectiveCorrection,
-                            target.Correction,
-                            frame.DeltaSeconds,
-                            frame.Settings.EffectiveCorrectionHalfLifeSeconds);
-                    }
-                    state.PreviousTargetCorrection = target.Correction;
-                    state.Residual =
-                        state.EffectiveCorrection - target.Correction;
-                    state.Progress = 1f;
-                    state.StartResidual = 0f;
-                    state.Completed = false;
-                    return Result(
-                        in state,
-                        false,
-                        Unevaluated(in target, in frame));
+                case CharacterFootInterpolationPolicy.PlantBlend:
+                    return EvaluatePlant(ref state, in target, in frame);
                 case CharacterFootInterpolationPolicy.ReleaseResidual:
                     return EvaluateRelease(ref state, in target, in frame);
                 default:
@@ -85,56 +57,116 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.EffectiveCorrection = correction;
         }
 
-        static CharacterFootInterpolationResult EvaluateAcquire(
+        static CharacterFootInterpolationResult EvaluatePlant(
             ref CharacterFootInterpolationState state,
             in CharacterFootStateTarget target,
             in CharacterFootStateFrame frame)
         {
-            CharacterFootPathContinuityFact continuityFact =
-                Unevaluated(in target, in frame);
-            if (target.StateEntered)
+            if (!target.PlantTargetAvailable ||
+                target.PlantTargetEventIdentity == 0 ||
+                !CharacterFootConstraintMath.Finite(target.PlantTargetPoint))
             {
-                CharacterFootInterpolationResult swing = EvaluateSwing(
-                    ref state,
-                    new CharacterFootStateTarget(
-                        target.SwingCorrection,
-                        target.SwingCorrection,
-                        CharacterFootInterpolationPolicy.SwingResidual,
-                        false,
-                        false,
-                        false,
-                        0f,
-                        target.TimeToLandingSeconds),
-                    in frame);
-                continuityFact = swing.ContinuityFact;
-                state.EffectiveCorrection =
-                    CharacterFootConstraintMath.RaiseToMinimum(
-                        state.EffectiveCorrection,
-                        target.Correction,
-                        frame.ComponentUp);
-                state.Residual =
-                    state.EffectiveCorrection - target.Correction;
-                state.PreviousTargetCorrection = target.Correction;
-                state.Progress = 0f;
-                state.StartResidual = 0f;
-                state.Completed = false;
-                state.Policy = CharacterFootInterpolationPolicy.AcquireByWeight;
-                return Result(in state, false, in continuityFact);
+                throw new System.InvalidOperationException(
+                    "Foot Plant target is invalid.");
             }
-            state.Progress = Mathf.Max(state.Progress, target.Progress);
+            CharacterFootInterpolationResult swing = EvaluateSwing(
+                ref state,
+                new CharacterFootStateTarget(
+                    target.SwingCorrection,
+                    target.SwingCorrection,
+                    CharacterFootInterpolationPolicy.SwingResidual,
+                    false,
+                    0,
+                    false,
+                    default,
+                    false,
+                    false,
+                    false,
+                    0f,
+                    target.TimeToLandingSeconds),
+                in frame);
+            Vector3 up = frame.ComponentUp.normalized;
+            bool sameTarget = state.HasPlantTarget &&
+                              state.PlantTargetEventIdentity ==
+                              target.PlantTargetEventIdentity;
+            float verticalDelta = 0f;
+            float appliedVerticalDelta = 0f;
+            bool verticalClamped = false;
+            if (!sameTarget)
+            {
+                state.HasPlantTarget = true;
+                state.PlantTargetEventIdentity =
+                    target.PlantTargetEventIdentity;
+                state.PlantDesiredPoint = target.PlantTargetPoint;
+                state.PlantFilteredPoint = target.PlantTargetPoint;
+                state.PlantBlendWeight = Mathf.Clamp01(target.Progress);
+            }
+            else
+            {
+                Vector3 targetDelta =
+                    target.PlantTargetPoint - state.PlantFilteredPoint;
+                verticalDelta = Vector3.Dot(targetDelta, up);
+                float maximumDelta =
+                    frame.Settings.MaximumVerticalCorrectionSpeed *
+                    frame.DeltaSeconds;
+                appliedVerticalDelta = Mathf.Clamp(
+                    verticalDelta,
+                    -maximumDelta,
+                    maximumDelta);
+                verticalClamped = !Mathf.Approximately(
+                    verticalDelta,
+                    appliedVerticalDelta);
+                state.PlantFilteredPoint +=
+                    Vector3.ProjectOnPlane(targetDelta, up) +
+                    up * appliedVerticalDelta;
+                state.PlantDesiredPoint = target.PlantTargetPoint;
+                state.PlantBlendWeight = Mathf.Max(
+                    state.PlantBlendWeight,
+                    Mathf.Clamp01(target.Progress));
+            }
+            Vector3 originalSole =
+                CharacterFootConstraintMath.ResolveOriginalSole(
+                    frame.AnimatedFoot);
+            Vector3 filteredCorrection =
+                state.PlantFilteredPoint - originalSole;
+            state.EffectiveCorrection = Vector3.LerpUnclamped(
+                swing.Correction,
+                filteredCorrection,
+                state.PlantBlendWeight);
             state.PreviousTargetCorrection = target.Correction;
-            state.EffectiveCorrection = target.Correction +
-                                        state.Residual *
-                                        (1f - state.Progress);
-            state.Completed = state.Progress >=
-                              1f - CharacterFootConstraintMath.GeometryEpsilon;
-            if (state.Completed)
-            {
-                state.EffectiveCorrection = target.Correction;
-                state.Residual = default;
-                state.Progress = 1f;
-            }
-            return Result(in state, state.Completed, in continuityFact);
+            state.Residual = state.EffectiveCorrection - target.Correction;
+            state.Progress = state.PlantBlendWeight;
+            state.StartResidual = 0f;
+            Vector3 outputPoint = originalSole + state.EffectiveCorrection;
+            float outputDistance = Vector3.Distance(
+                outputPoint,
+                target.PlantTargetPoint);
+            float penetrationDepth = Mathf.Max(
+                0f,
+                Vector3.Dot(target.PlantTargetPoint - outputPoint, up));
+            state.Completed = target.PlantTargetVerified &&
+                              state.PlantBlendWeight >=
+                              1f - CharacterFootConstraintMath.GeometryEpsilon &&
+                              outputDistance <=
+                              frame.Settings.LandingLockCompletionTolerance &&
+                              penetrationDepth <=
+                              frame.Settings.GroundPenetrationTolerance;
+            state.PlantFact = new CharacterFootPlantInterpolationFact(
+                true,
+                target.PlantTargetEventIdentity,
+                target.PlantTargetVerified,
+                target.PlantTargetPoint,
+                state.PlantFilteredPoint,
+                state.PlantBlendWeight,
+                verticalDelta,
+                appliedVerticalDelta,
+                verticalClamped,
+                outputDistance,
+                penetrationDepth);
+            return Result(
+                in state,
+                state.Completed,
+                swing.ContinuityFact);
         }
 
         static CharacterFootInterpolationResult EvaluateRelease(
@@ -142,6 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateTarget target,
             in CharacterFootStateFrame frame)
         {
+            state.PlantFact = default;
             if (target.StateEntered)
             {
                 state.PreviousTargetCorrection = target.Correction;
@@ -186,7 +219,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 previousLandingPoint = state.SwingLandingPoint;
             Vector3 previousTargetCorrection =
                 state.PreviousSwingTargetCorrection;
-            Vector3 residualBeforeRevision = state.Residual;
+            Vector3 residualBeforeRevision = state.SwingResidual;
             CharacterFootSwingMotionResult swing = frame.SwingMotion;
             CharacterFootSwingPathReference swingPath =
                 swing.SwingPathReference;
@@ -230,10 +263,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 targetDelta > frame.Settings.PathRevisionDistance;
             if (revised || targetTrackingApplied)
             {
-                state.Residual =
+                state.SwingResidual =
                     state.EffectiveCorrection - target.Correction;
             }
-            Vector3 residualBeforeDecay = state.Residual;
+            Vector3 residualBeforeDecay = state.SwingResidual;
             state.HasSwingPath = hasPath;
             state.SwingLandingEventIdentity = hasPath
                 ? swing.LandingEventIdentity
@@ -248,19 +281,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? target.SwingCorrection
                 : default;
             float halfLifeSeconds = ResolveSwingResidualHalfLife(
-                state.Residual,
+                state.SwingResidual,
                 target.TimeToLandingSeconds,
                 frame.Settings,
                 out bool deadlineHalfLifeAvailable,
                 out float deadlineHalfLifeSeconds);
-            state.Residual = Advance(
-                state.Residual,
+            state.SwingResidual = Advance(
+                state.SwingResidual,
                 default,
                 frame.DeltaSeconds,
                 halfLifeSeconds);
-            state.EffectiveCorrection = target.Correction + state.Residual;
-            state.Residual =
-                state.EffectiveCorrection - target.Correction;
+            Vector3 swingCorrection = target.Correction + state.SwingResidual;
+            if (state.Policy == CharacterFootInterpolationPolicy.SwingResidual)
+            {
+                state.EffectiveCorrection = swingCorrection;
+                state.Residual = state.SwingResidual;
+            }
             state.Progress = 0f;
             state.StartResidual = 0f;
             state.Completed = false;
@@ -279,7 +315,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 targetDelta,
                 residualBeforeRevision,
                 residualBeforeDecay,
-                state.Residual,
+                state.SwingResidual,
                 frame.Settings.LandingAcceptanceDistance,
                 frame.Settings.PathRevisionDistance,
                 frame.Settings.SwingResidualTolerance,
@@ -288,7 +324,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 deadlineHalfLifeAvailable,
                 deadlineHalfLifeSeconds,
                 halfLifeSeconds);
-            return Result(in state, false, in continuityFact);
+            return new CharacterFootInterpolationResult(
+                swingCorrection,
+                false,
+                in continuityFact,
+                in state.PlantFact);
         }
 
         static CharacterFootInterpolationResult Result(
@@ -298,7 +338,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootInterpolationResult(
                 state.EffectiveCorrection,
                 completed,
-                in continuityFact);
+                in continuityFact,
+                in state.PlantFact);
 
         static CharacterFootPathContinuityFact Unevaluated(
             in CharacterFootStateTarget target,
@@ -306,6 +347,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPathContinuityFact.CreateUnevaluated(
                 target.TimeToLandingSeconds,
                 frame.Settings);
+
+        static void ClearPlant(ref CharacterFootInterpolationState state)
+        {
+            state.HasPlantTarget = false;
+            state.PlantTargetEventIdentity = 0;
+            state.PlantDesiredPoint = default;
+            state.PlantFilteredPoint = default;
+            state.PlantBlendWeight = 0f;
+            state.PlantFact = default;
+        }
 
         static Vector3 Advance(
             Vector3 current,

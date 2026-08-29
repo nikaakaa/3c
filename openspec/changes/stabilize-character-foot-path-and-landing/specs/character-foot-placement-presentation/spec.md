@@ -76,7 +76,7 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 
 每只脚 MUST在同一Landing Context中维护可并存的`NextSwing Empty/Tracking`与`Verified LastLanding`两个typed槽位，不得把Prediction Event与已接触Plant Event压成互斥状态或形成第二状态机。PreSwing、Swing与Approach Contact MUST保持NextSwing Tracking并重新投影Raw Landing Candidate；只有累计输入或强制lineage触发Query Admission时 MUST执行一次正式Landing SphereCast，其余帧 MUST复用Committed Observation。Tracking中新Observation命中不同Surface时 MUST无条件提交新的NextSwingLanding；同Surface新点与NextSwingLanding的距离小于正式`LandingAcceptanceDistance`时 MUST保留原落点并复用Ground Path，达到阈值时 MUST提交新点。
 
-正式Foot Motion进入`ApproachContactToLanding`后 MUST继续Tracking同Event Accepted NextSwingLanding并更新Ground Path，同时把该阶段交给唯一Interpolation准备Plant目标；不得在实际Contact Rising前冻结Observation、Surface或世界点。该Event首次产生正式Contact Rising且Lock Mode请求Sliding或Locked时，Runtime MUST恰好执行一次Current Contact Plant Verification；只有Verified Landing可建立LastLanding、Promoted Contact Landing与唯一Anchor。稳定Plant期间 MUST冻结Anchor并停止查询或重定位。
+正式Foot Motion进入`ApproachContactToLanding`后 MUST继续Tracking同Event Accepted NextSwingLanding并更新诊断Ground Path，同时建立同Event持久Plant Target；Prediction换代只可更新Plant Desired Point，不得把每次Ground Path Revision直接写入可见Correction。唯一Interpolation MUST先按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制Plant Target的Component Up历史变化，再用单调不回退的正式Contact/Lock权重在Swing输出与过滤后Plant Target之间混合。该Event首次产生正式Contact Rising且Lock Mode请求Sliding或Locked时，Runtime MUST恰好执行一次Current Contact Plant Verification；只有Verified Landing可建立LastLanding、Promoted Contact Landing与唯一Anchor，并且Verification MUST继续同一Plant目标历史而不得重置Interpolation。稳定Plant及同EventReentry期间 MUST冻结Anchor并停止查询或重定位。
 
 Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没有LastLanding时 MUST发布`CurrentLandingUnavailable`；不得用Animated Sole、Transform、固定高度或默认地面补起点。
 
@@ -108,6 +108,7 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 
 - **WHEN** 正式Foot Motion进入`ApproachContactToLanding`且Tracking已经持有同Event Accepted NextSwingLanding
 - **THEN** Runtime MUST继续按Query Admission更新Observation、NextSwingLanding与Ground Path，并由唯一Interpolation准备Plant目标
+- **AND** Prediction Observation MUST只更新持久Plant Desired Point；可见输出 MUST经过目标高度历史限速与正式Contact/Lock权重混合
 - **AND** MUST不在实际Contact Rising前冻结Surface、世界点或把Prediction Observation直接作为Anchor
 
 #### Scenario: Approach Contact暂时没有可用Prediction Landing

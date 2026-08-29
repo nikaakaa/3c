@@ -401,6 +401,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.SafetyFloorClearanceBeforeMeters;
             SafetyFloorClearanceAfterMeters =
                 path.SafetyFloorClearanceAfterMeters;
+            PlantInterpolationEvaluated = path.PlantInterpolationEvaluated;
+            PlantTargetEventIdentity = path.PlantTargetEventIdentity;
+            PlantTargetVerified = path.PlantTargetVerified;
+            PlantDesiredPoint = path.PlantDesiredPoint;
+            PlantFilteredPoint = path.PlantFilteredPoint;
+            PlantBlendWeight = path.PlantBlendWeight;
+            PlantVerticalDelta = path.PlantVerticalDelta;
+            PlantAppliedVerticalDelta = path.PlantAppliedVerticalDelta;
+            PlantVerticalClamped = path.PlantVerticalClamped;
+            PlantOutputDistance = path.PlantOutputDistance;
+            PlantPenetrationDepth = path.PlantPenetrationDepth;
         }
 
         public CharacterFootSwingMotionState State { get; }
@@ -482,6 +493,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SafetyFloorClampMeters { get; }
         public float SafetyFloorClearanceBeforeMeters { get; }
         public float SafetyFloorClearanceAfterMeters { get; }
+        public bool PlantInterpolationEvaluated { get; }
+        public ulong PlantTargetEventIdentity { get; }
+        public bool PlantTargetVerified { get; }
+        public Vector3 PlantDesiredPoint { get; }
+        public Vector3 PlantFilteredPoint { get; }
+        public float PlantBlendWeight { get; }
+        public float PlantVerticalDelta { get; }
+        public float PlantAppliedVerticalDelta { get; }
+        public bool PlantVerticalClamped { get; }
+        public float PlantOutputDistance { get; }
+        public float PlantPenetrationDepth { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 

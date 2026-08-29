@@ -1264,6 +1264,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PreviousResponseOutputPoint;
         internal Vector3 PlantWorldResidual;
         internal bool PlantWorldResidualTransitionActive;
+        internal bool PlantWorldResidualTakeoverTrackingActive;
         internal bool HasCorrectionResponse;
         internal float CorrectionResponseAlongUp;
         internal bool HasCorrectionResponseLineage;

@@ -59,7 +59,7 @@
 - [ ] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
 - [x] 5.6 在Foot根Bank增加左右脚共享的Prediction Motion State，保存稳定当前/Continuation速度、初始化事实、移动计划Generation、Body Reset与Prediction Source lineage，并随同一事务Seal或Discard
 - [x] 5.7 在Foot Motion Profile增加必须显式序列化的`PredictionVelocityDeltaThreshold`、`PredictionVelocitySmoothSpeed`与`PredictionMaximumSpeed`，纳入Profile Revision并严格拒绝缺失、非有限和非正值
-- [x] 5.8 参照ZZZ PIK已确认的阈值、EMA与上限控制顺序分别稳定committed Body Target当前世界速度与移动计划Continuation，只把稳定速度交给唯一KCC Future Body Translation，不增加移动计划Current替代路径、普通/预测双路径或KCC后位置低通
+- [x] 5.8 按本项目Replay已经证明的阈值、EMA与上限控制顺序分别稳定committed Body Target当前世界速度与移动计划Continuation，只把稳定速度交给唯一KCC Future Body Translation；ZZZ主求解的未命名标量响应不得作为世界速度算法证据，不增加移动计划Current替代路径、普通/预测双路径或KCC后位置低通
 - [x] 5.9 让Body Reset、Retarget、移动计划Generation与Prediction Source变化重置Prediction Motion State，普通Landing Event、Animation Source、Source Sample与左右脚Step换代不得重置角色级稳定速度
 - [x] 5.10 发布Raw/Stable当前与Continuation速度、速度差、EMA响应、最大速度Clamp、Prediction初始化/重置原因、KCC Future Translation与晚期Candidate消费结果诊断
 - [x] 5.11 对Prediction输入执行有限值和lineage接纳；非法或缺失移动计划时发布typed unavailable、不得推进稳定状态或生成Future Translation，合法急转只进入同一EMA控制，不套用语义未确认的PIK相对突变公式；停止边界的正式零速度计划生产后续单独处理
@@ -69,12 +69,15 @@
 
 - [x] 6.1 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选分别使用`0.6m/s`、`0.01m`与`0.01m`
 - [x] 6.2 在3.17持续准备Plant目标、3.20建立Verified Anchor后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留普通Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
-- [x] 6.3 直接采用ZZZ实际`持久目标态 -> Component Up高度历史限速 -> 正式Contact/Lock权重混合`顺序，让Approach、Landing与Locked共用单一`PlantBlend` Policy并按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制目标高度；普通Swing继续由正式轨迹和Envelope决定高度，Release继续使用统一Residual
+- [x] 6.3 在唯一Interpolation内建立同Event持久Plant Target高度历史与单调`PlantBlend`权重，让Approach、Landing与Locked共用同一Policy；当前实现只完成ZZZ分层链的目标高度历史和状态权重混合，不把它描述成已经具备独立Correction历史限速
 - [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
 - [ ] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；未满足时保留同Anchor Landing继续接管
 - [ ] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼
 - [ ] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策和对应旧输入
 - [ ] 6.8 发布Formal Foot Height、目标高度、限速前后Correction、竖直速率、Envelope/Anchor穿透、Ground Catchup、Full Lock门控和最终Correction诊断事实，删除把同帧抬升描述为Safety Floor成功的旧口径
+- [ ] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只控制Plant Target高度历史，现有`MaximumVerticalCorrectionSpeed`只控制状态混合后的Effective Correction历史，不提供共享默认值
+- [ ] 6.10 按ZZZ精确主链把Plant Target高度历史与Effective Correction历史拆成两个持久通道，固定执行`目标高度限速 -> typed状态权重混合 -> Correction限速 -> 既有Foot Goal权重基准混合`；同Event换点、Contact Verification与Same-Event Reentry不得同时清零两份历史
+- [ ] 6.11 删除Correction限速之前或之后重复修改可见Correction的Plant、Ground或Goal混合路径，确认基准混合只由既有Foot Goal/Position Weight执行一次，并把两次限速的输入、历史、输出、Clamp与Reset原因纳入6.8诊断
 
 ## 7. 单独接入Support与Pelvis
 
@@ -83,7 +86,7 @@
 - [ ] 7.3 让Pelvis消费正式Support Presence/Share并保持双脚都无Support时的typed Release
 - [ ] 7.4 删除由旧Lock状态推导Support Weight、Intent和Eligibility的消费者，不把弱单侧Support归一成1
 - [ ] 7.5 在Foot Motion Profile增加必须显式序列化的`PelvisMaximumUpVelocity`与`PelvisMaximumDownVelocity`，纳入Profile Revision并拒绝默认值或旧配置补全
-- [ ] 7.6 参照ZZZ Pelvis最大上下速度政策，在唯一Critical Spring积分后限制非对称Velocity、再限制Reach Output，并在撞到区间边界时清除继续向外的速度
+- [ ] 7.6 按本项目Landing Reach业务在唯一Critical Spring积分后限制非对称Velocity、再限制Reach Output，并在撞到区间边界时清除继续向外的速度；ZZZ Pelvis字段与上下速度语义未闭合，不作为公式或参数来源
 - [ ] 7.7 发布Pelvis原始Target、Spring输入/输出/Velocity、上下速度上限、Reach边界Clamp与向外Velocity清除诊断
 
 ## 8. 闭合Landing腿可达
@@ -114,6 +117,6 @@
 - [ ] 10.3 使用规定参数编译Runtime与Editor工程，并在每次构建后立即关闭dotnet build server
 - [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Raw/Stable Prediction速度、KCC Future Translation、NextSwing Tracking、Approach Plant目标准备、Contact Verification、Contact边沿、同EventReentry Refresh/Unavailable、Transition、Interpolation、竖直限速、Ground穿透与Catchup、Full Lock门控、Path、Envelope、Pelvis速度边界、Landing Reach、Support、Goal、Solved和Physical阶段责任
 - [ ] 10.5 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验，清除旧spec冲突和失效任务引用
-- [ ] 10.6 按design中的ZZZ最新证据等级与成熟结论对账表逐项核对实现，分别记录直接采用、现有更强等价、后续change和明确不照搬，不把匿名B/D输入、推断名词或未激活实例参数写成正式算法与默认值
+- [ ] 10.6 按design中的ZZZ P0/P1精确结论与P2/P3边界逐项核对实现，分别记录直接采用、项目输入差异、Replay否决、后续补证和明确不照搬，不把匿名B/D输入、推断名词或未激活实例参数写成正式算法与默认值
 - [ ] 10.7 确认新增Prediction、Observation、Landing、Interpolation与Pelvis路径具有固定容量、有限值校验、数组边界、确定性tie-break和typed容量失败，且热路径没有每帧托管分配
 - [ ] 10.8 确认不存在独立PIK组件、预测/普通fallback、全局Foot缓存、第二Landing生命周期、第二Interpolation、第二IK、第二Writer、LateUpdate骨骼旁路或常驻Final Pose低通

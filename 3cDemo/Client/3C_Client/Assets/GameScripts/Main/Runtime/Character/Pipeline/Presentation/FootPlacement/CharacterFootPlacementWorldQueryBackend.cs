@@ -10,7 +10,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public enum CharacterFootPlacementQueryPurpose : byte
     {
-        FutureLanding = 1
+        FutureLanding = 1,
+        CurrentContactVerification = 2
     }
 
     public readonly struct CharacterFootPlacementQueryRequest
@@ -311,7 +312,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static bool IsGroundRequestValid(in CharacterFootPlacementQueryRequest request) =>
             request.Shape == CharacterFootPlacementQueryShape.Sphere &&
-            request.Purpose == CharacterFootPlacementQueryPurpose.FutureLanding &&
+            (request.Purpose == CharacterFootPlacementQueryPurpose.FutureLanding ||
+             request.Purpose ==
+             CharacterFootPlacementQueryPurpose.CurrentContactVerification) &&
             request.FootIndex >= 0 && request.FootIndex < 2 &&
             request.LayerMask != 0 &&
             IsFinite(request.Origin) &&

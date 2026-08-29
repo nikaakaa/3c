@@ -219,7 +219,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_MaximumVerticalTargetSpeed;
         [SerializeField] float m_TargetHeightForceRefreshDistance;
-        [SerializeField] float m_MaximumVerticalCorrectionSpeed;
         [SerializeField] float m_GroundPenetrationTolerance;
         [SerializeField] float m_LandingLockCompletionTolerance;
         [SerializeField] float m_LockDistance = 0.08f;
@@ -236,7 +235,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_EffectiveCorrectionHalfLifeSeconds,
                 m_MaximumVerticalTargetSpeed,
                 m_TargetHeightForceRefreshDistance,
-                m_MaximumVerticalCorrectionSpeed,
                 m_GroundPenetrationTolerance,
                 m_LandingLockCompletionTolerance,
                 m_LockDistance,
@@ -255,7 +253,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float effectiveCorrectionHalfLifeSeconds,
             float maximumVerticalTargetSpeed,
             float targetHeightForceRefreshDistance,
-            float maximumVerticalCorrectionSpeed,
             float groundPenetrationTolerance,
             float landingLockCompletionTolerance,
             float lockDistance,
@@ -271,7 +268,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             MaximumVerticalTargetSpeed = maximumVerticalTargetSpeed;
             TargetHeightForceRefreshDistance =
                 targetHeightForceRefreshDistance;
-            MaximumVerticalCorrectionSpeed = maximumVerticalCorrectionSpeed;
             GroundPenetrationTolerance = groundPenetrationTolerance;
             LandingLockCompletionTolerance = landingLockCompletionTolerance;
             LockDistance = lockDistance;
@@ -289,7 +285,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float EffectiveCorrectionHalfLifeSeconds { get; }
         internal float MaximumVerticalTargetSpeed { get; }
         internal float TargetHeightForceRefreshDistance { get; }
-        internal float MaximumVerticalCorrectionSpeed { get; }
         internal float GroundPenetrationTolerance { get; }
         internal float LandingLockCompletionTolerance { get; }
         internal float LockDistance { get; }
@@ -313,8 +308,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 MaximumVerticalTargetSpeed <= 0f ||
                 !float.IsFinite(TargetHeightForceRefreshDistance) ||
                 TargetHeightForceRefreshDistance <= PathRevisionDistance ||
-                !float.IsFinite(MaximumVerticalCorrectionSpeed) ||
-                MaximumVerticalCorrectionSpeed <= 0f ||
                 !float.IsFinite(GroundPenetrationTolerance) ||
                 GroundPenetrationTolerance <= 0f ||
                 !float.IsFinite(LandingLockCompletionTolerance) ||

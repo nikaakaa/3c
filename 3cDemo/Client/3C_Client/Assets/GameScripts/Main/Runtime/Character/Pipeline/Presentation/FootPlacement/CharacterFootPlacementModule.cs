@@ -1189,9 +1189,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in bodyTranslation,
                     landingEvent.RootLocalLanding);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
-            bool contactAcquisitionRefresh = !currentContact &&
-                footMotion.LockMode ==
-                AnimationFootStepObservationLockMode.Sliding;
+            CharacterFootLandingObservationRefreshMode refreshMode =
+                currentContact
+                    ? CharacterFootLandingObservationRefreshMode
+                        .ForcedPlantVerification
+                    : footMotion.LockMode ==
+                      AnimationFootStepObservationLockMode.Sliding
+                        ? CharacterFootLandingObservationRefreshMode
+                            .ChangedSlidingAdmissionInput
+                        : CharacterFootLandingObservationRefreshMode.Thresholded;
             CharacterFootLandingObservationResult observation =
                 CharacterFootLandingPredictor.ResolveObservation(
                     side,
@@ -1200,7 +1206,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     landingEvent.LandingCycle,
                     rawLanding,
                     componentUp,
-                    contactAcquisitionRefresh,
+                    refreshMode,
                     m_Settings.ProfileRevision,
                     in settings,
                     m_WorldQuery,

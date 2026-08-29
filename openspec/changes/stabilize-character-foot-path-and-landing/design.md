@@ -21,9 +21,9 @@ ZZZ资料必须按分析包的正式证据等级使用：
 | 等级 | 可采信内容 | 本项目使用方式 |
 |---|---|---|
 | P0 原始证据 | 当前DLL精确函数边界、指令、字段访问、分支、数组步长和直接调用 | 可定位实现和验证数学；不得从地址直接推导业务名 |
-| P1 直接结构 | 当前态到目标态线性混合、边沿/驻留/一次性事件、两份独立速率限制、权重基准混合、固定容量与有限值保护 | 本change默认照搬控制顺序和状态职责，并翻译为typed Event、Profile与根Bank合同 |
+| P1 直接结构 | Foot/Toe脚掌几何到单一位置+法线、当前态到目标态线性混合、边沿/驻留/一次性事件、两份独立速率限制、权重基准混合、固定容量与有限值保护 | 本change默认照搬控制顺序和状态职责，并翻译为typed Event、Profile与根Bank合同 |
 | P2 结构推断 | 候选位置、接触状态、旋转参考、组件过滤等中性职责 | 只能帮助决定现有Owner，不直接产生业务字段、状态或默认值 |
-| P3 业务猜测 | Plant、Lock、Grounded、Pelvis、Heel/Toe、Stride、Moving Platform等具体名字 | 不作为本change实现合同；必须由项目正式输入和Replay重新定义 |
+| P3 业务猜测 | Plant、Lock、Grounded、Pelvis进阶参数、Stride、Moving Platform等具体名字；Foot/Toe对象绑定已经由静态实例升级为P0/P1 | 不作为本change实现合同；必须由项目正式输入和Replay重新定义 |
 | X 错误或冲突 | 固定步到渲染帧相位、世界速度EMA精确公式、候选稳定tie-break、PIK直连tbik/通用Solver等旧结论 | 从Change删除，不得继续作为采用理由 |
 
 ### 成熟结论逐项对账
@@ -31,10 +31,12 @@ ZZZ资料必须按分析包的正式证据等级使用：
 | ZZZ精确结论 | 本项目采用结论 | 当前归属 |
 |---|---|---|
 | `f`来自当前/下一状态ID和过渡量，执行`current + (target-current) × clamp01(f)` | 使用正式Contact/Lock或Transition提供的typed权重混合当前脚态与目标脚态；不把`f`解释为固定步到渲染帧相位 | Transition、Interpolation Runtime |
-| `0x171D6920`为每脚目标高度保存历史并执行`delta=clamp(target-history, ±rate×dt)`，同时由历史到目标距离、事件位控制更新、冻结与强制刷新 | 每脚唯一Target Height历史保存Accepted Landing沿Up高度；Swing输出为`正式Raw Height + Filtered Landing Height - Current Landing Height`，正常Phase直接通过；Current Landing或Plant Target与历史的累计差大于等于`TargetHeightForceRefreshDistance`时刷新内部目标并由Residual/Correction连续接管，中等变化才按`MaximumVerticalTargetSpeed`限速 | Interpolation Runtime Target Height Stage |
-| `0x171D7910`为每脚修正标量保存另一份历史并执行第二次`±rate×dt`限制 | 项目Replay已经否决把该标量直接翻译为第二`MaximumVerticalCorrectionSpeed`链；正式实现改为在Target Kind、Lock Response、Verification、Weight或目标点换代时捕获完整世界Vector Residual，并以现有Residual Half-Life连续衰减，不再保留第二速度参数或标量历史 | Interpolation Runtime Plant World Residual Stage |
-| `0x171D8A00`把修正结果按`k=clamp01((1-weight)×globalWeight)`与基准混合，同时让缓存量回归 | 项目先形成`MixedWorldTarget + PlantWorldResidual`的唯一输出，再通过现有Foot Goal/Position Weight与动画基线混合一次；不新增第三历史或Goal后处理器 | Resolved Foot、Goal Contribution |
+| `0x171D6920`为每脚目标高度保存历史并执行`delta=clamp(target-history, ±rate×dt)`，同时由历史到目标距离、事件位与Profile模式控制直接采用、限速、冻结与强制刷新 | 每脚唯一Target Height历史保存Accepted Landing沿Up高度；Swing输出为`正式Raw Height + Filtered Landing Height - Current Landing Height`，正常Phase直接通过；Profile显式选择`Direct`时立即采用Landing高度，选择`RateLimited`时中等变化按`MaximumVerticalTargetSpeed`推进，大变化和正式Force刷新内部目标并由后级连续化 | Interpolation Runtime Target Height Stage |
+| `0x171D7910`为每脚修正标量保存另一份历史并由`0x199`选择`0x2A0/0x2A4`执行第二次`±rate×dt`限制；可琳Idle与攻击Trace证明该历史持续驱动写回前缓存 | 在完整Vector World Residual负责换代连续后，继续保存独立Component Up `CorrectionResponseHistory`，以项目typed Desired Response增减方向选择Profile两档速率。旧Replay只否决单档`0.6m/s`、上一世界输出重表达和无条件全Plant限速，不再用于删除这份成熟历史 | Interpolation Runtime Correction Response Stage |
+| `0x171D8A00`把修正结果按`k=clamp01((1-weight)×globalWeight)`与基准混合，同时让缓存量回归 | 项目让`MixedWorldTarget + PlantWorldResidual`先形成Desired Output，再由Correction Response形成唯一Response Output，最后通过现有Foot Goal/Position Weight与动画基线混合一次；不新增Goal后处理器 | Interpolation Runtime、Resolved Foot、Goal Contribution |
 | B边沿、D组合位、驻留计时和一次性事件分开，快速重入事件会绕过普通门强制刷新 | 使用正式Contact Event表达Rising/Falling与Same-Event Reentry Refresh；顶层五态不增加匿名B/D业务状态 | Contact Transition Context、Resolver/Runtime |
+| `0x252`读取后立即清零，只旁路主标量慢响应并回到共同输出尾段；`0x274`向`0x278`限速且目标关闭后维持Owner直到权重归零 | 采用“一次性Force只影响所属响应层、Current Weight淡出完成前不提前释放Owner”的结构；当前没有可证明项目触发业务，不新增匿名开关，也不把它们命名为Contact/Lock/Landing | typed Policy、Interpolation ownership |
+| Foot与Toe世界姿态生成脚掌多点查询，先解析唯一`FootTargetPosition + SupportNormal`；只有FootL/FootR与Pelvis writer，没有Toe writer | 使用Final Animation Pose与Rig Calibration的Heel/Toe接触几何，在现有World Query Backend内生成固定容量Current Support Observation，解析唯一Position+Normal并只写现有Foot Goal；不照搬六次调用、半径、宽度或无稳定tie-break的候选顺序 | Current Support Observation、State Target、Resolved Foot |
 | 无有效候选只跳过本次新候选调整，通用输出尾段仍继续 | Rejected Observation不提交新Landing，但不得把整帧Foot状态冻结；既有Accepted Landing、Interpolation和输出仍按正式合同推进 | Observation、Landing Context、Interpolation |
 | 候选分支严格选择更高Y，但等高候选没有稳定tie-break证据 | 项目继续使用canonical最近合法Surface和稳定identity；不复制“最高Y”候选政策 | World Query Adapter、Observation |
 | 主求解存在标量死区、有界响应和带符号速率限制，但输入不是已证明的世界速度Vector | Prediction Motion继续采用本项目Replay已经证明的`Body Current + Timeline Continuation`合同；不得再声称它是照搬ZZZ世界速度EMA | shared Prediction Motion State |
@@ -45,14 +47,27 @@ ZZZ资料必须按分析包的正式证据等级使用：
 ```text
 Accepted Candidate / Verified Anchor
 -> typed状态与过渡权重
--> 每脚目标高度历史限速
+-> 每脚目标高度采用政策
 -> current/target状态混合
 -> 换代时捕获并衰减完整Plant World Residual
+-> 每脚Correction Response双向限速
 -> 既有Foot Goal权重混回动画基线
 -> 唯一Goal Assembler与FBBIK
 ```
 
-当前正式实现已经具备持久Plant Target、目标高度限速、PlantBlend权重和完整世界Vector Residual。`VerticalContinuityOwner`固定为`TargetHeightHistory / PlantWorldResidual / PlantWeightBlend / PlantTarget`，`CorrectionStageDisposition`分别固定为`BypassedByTargetHeightOwner / BypassedByWorldResidualOwner / BypassedByWeightBlendOwner / SynchronizedToPlantTarget`，用来明确旧第二Correction阶段由哪个正式Owner取代。Prediction、Pelvis、Knee、旋转、Heel/Toe、Moving Platform和PIK到tbik/通用Solver的连接不属于这条已确认主链；除本change已有项目证据支持的能力外，不用这些未闭合推断扩大范围。
+当前正式实现已经具备持久Plant Target、目标高度限速、PlantBlend权重和完整世界Vector Residual，但尚未具备最新一手Trace证明的Correction Response历史、Target Height显式采用模式，以及Foot/Toe Current Support到单一Position+Normal目标。原`CorrectionStageDisposition`中“由World Residual取代第二历史”的口径必须删除，改为并列发布`TargetHeightHistory / PlantWorldResidual / CorrectionResponseHistory / PlantWeightBlend / PlantTarget`实际Owner。Prediction、Pelvis进阶字段、Knee、Moving Platform和PIK到tbik/通用Solver的连接仍不属于已确认主链；除本change已有项目证据支持的能力外，不用未闭合推断扩大范围。
+
+### 实施就绪边界
+
+| 结论 | 证据 | 实施裁决 |
+|---|---|---|
+| Foot/Toe世界姿态生成脚掌查询，解析单一Position+SupportNormal，只写Foot与Pelvis | P0/P1静态闭环 | 可以开始；翻译进现有Pose Input、World Query、Resolved Foot和唯一Writer |
+| 可琳Target Height可直接换代，`0x128`独立历史以双档速率连续追赶，楼梯与攻击共用 | P1运行时Trace + P0数学 | 可以开始；Corin显式Direct模式、两档候选`1.8/1.5m/s`、同一Correction Response链 |
+| 当前态/目标态Position+Normal按Transition Weight混合，随后Correction与基准权重混合 | P0/P1静态闭环 | 可以开始；使用现有typed Transition、Interpolation与Goal Weight，不创建通用Tween |
+| Heel/Toe精确Probe形状、数量、半径、宽度与等高顺序 | 外部查询调用P0，typed方法和稳定tie-break未知 | 不能照抄常量；使用项目正式Support Probe/Profile和稳定identity政策 |
+| `0x199`采样对象业务名、D/B/`0x54`/`0x58`具体业务含义 | 数学与活数据流P1，业务映射P2/P3 | 不能照抄字段/状态；项目只使用明确Desired Response增减、Contact Event和Profile政策 |
+| `0x252`外部触发、非零`0x274/0x278`候选模式 | setter/数学P0，激活运行样本缺失 | 本change不实现匿名开关；待项目出现明确业务需求和一手触发证据再扩展同一Owner |
+| Foot Normal进阶角度限制、Plant冻结、移动平台、Knee和最终Animator/Playable权重 | P2/P3或调用尾未闭合 | 不阻塞当前主链；不得借此增加第二Rotation Writer、第二Solver或Final Pose低通 |
 
 ## Decision 1: 唯一正式Foot Motion Runtime Frame
 
@@ -117,11 +132,28 @@ Contact边沿事实 MUST由同一Resolver按上一Committed Contact Transition C
 
 `CharacterFootInterpolationRuntime`是Foot连续链的唯一所有者。它只接受`Previous Interpolation State + State Target + typed Policy + Delta Time`，持有一份统一Interpolation State并发布Output、Residual和Completion。现有Swing Residual、Acquire Residual、Release Residual、Contact Progress与散落的HalfLife推进必须迁入这里；政策固定为直接跟随、Residual Half-Life与正式Weight接管等有业务含义的typed策略，不提供string key、字典注册、任意曲线回调或项目级通用Tween。
 
-Interpolation State内部必须把每脚唯一`Target Height History`与完整Vector `Plant World Residual`分开。Target Height History保存Accepted Landing沿Component Up的世界高度，不保存包含动画Phase的完整Swing Raw Height。Swing Raw Height仍由`Ground Envelope + Formal Foot Height`产生，过滤后输出固定为`Raw Height + Filtered Landing Height - Current Landing Height`；因此同一Ground Path只因动画Phase推进时直接通过正式曲线。Foot Motion Profile新增必须显式序列化的`TargetHeightForceRefreshDistance`并纳入Revision；它必须为有限正值且大于`PathRevisionDistance`，Corin首个候选为`0.30m`。同Event Ground Path Input换代时，Current Landing与Filtered Landing Height的累计沿Up差达到该值必须刷新内部历史并让既有Swing Residual捕获可见连续性；累计差小于该值但本次换代超过`PathRevisionDistance`才以`MaximumVerticalTargetSpeed × Delta Time`追赶。Event换代同样直接刷新Landing Height并由Residual接管。Approach/Plant取得Interpolation所有权后，Swing Target Height更新必须发布typed Held，Held期间Next Swing Event只能提供本帧Raw Swing Target，不得改写或解释Current Plant拥有的Target Height identity/value；Plant Target沿同Event继续这份Landing高度历史。Runtime以正式PlantBlend在Swing世界目标和Filtered Plant Target之间形成`MixedWorldTarget`；Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response、Weight Started/Completed、目标点或强制高度刷新发生正式换代时，以持久`PreviousPlantOutputPoint - NewMixedWorldTarget`捕获完整Vector Residual，普通逐帧Weight推进不得Capture，并按既有Residual Half-Life衰减到`LandingLockCompletionTolerance`。最终输出固定为`MixedWorldTarget + PlantWorldResidual`，不得再经过第二`MaximumVerticalCorrectionSpeed`或标量Correction限速链。`20260829-144901`已经否决“按上一世界输出重表达Correction后继续使用0.6m/s单档限速”：该方案把Landing P95误差扩大到`0.444362283m`并显著增加Swing/Landing跳变，因此不得作为基准补偿层保留。最后的动画基准混合只由既有Foot Goal/Position Weight执行一次，不再建立有历史的第三平滑层。Target Height与World Residual只可由各自明确的Reset、Retarget、Event失效或Policy退出规则清理；同Event Prediction换点、Contact Verification和Same-Event Reentry不得无类型清零。Swing/UnlockedSupport继续以Accepted Ground Envelope作为不可延迟的硬下界，Release继续使用统一Residual。`AcquireByWeight`进入帧不得对Contact Anchor调用`RaiseToMinimum`，Lock Weight达到1也不得把未收敛Residual清零。
+Interpolation State内部必须把每脚唯一`Target Height History`、完整Vector `Plant World Residual`与Component Up `Correction Response History`分开。Target Height History保存Accepted Landing沿Component Up的世界高度，不保存包含动画Phase的完整Swing Raw Height。Swing Raw Height仍由`Ground Envelope + Formal Foot Height`产生，过滤后输出固定为`Raw Height + Filtered Landing Height - Current Landing Height`；因此同一Ground Path只因动画Phase推进时直接通过正式曲线。
 
-根`CharacterFootStateContext`收敛为一组分型数据块：`Discrete State Context`只存当前State与最近Transition，`Contact Context`只存Anchor和Lock响应，`Contact Transition Context`只存边沿与已消费Event历史，`Interpolation State`只存上一目标、Effective Correction、统一Residual与完成事实，Landing与Observation继续使用各自typed Page。所有数据块仍由同一个Pending/Committed根事务一次Seal或Discard，不建立独立生命周期。
+Foot Motion Profile必须显式序列化`TargetHeightAdoptionMode`、`MaximumVerticalTargetSpeed`与`TargetHeightForceRefreshDistance`并纳入Revision。`Direct`模式在合法Landing Height换代时立即更新History，由后级World Residual和Correction Response保持可见连续；`RateLimited`模式只在同Event中等变化时以`MaximumVerticalTargetSpeed × Delta Time`追赶，累计差达到Force Refresh Distance或Event正式换代时立即更新History并由后级接管。Corin迁移首先使用可琳激活实例已经实测的`Direct`模式；不得把匿名D位、`0x54`或`0x58`复制成顶层状态。Approach/Plant取得Interpolation所有权后，Swing Target Height更新必须发布typed Held，Held期间Next Swing Event只能提供本帧Raw Swing Target，不得改写或解释Current Plant拥有的Target Height identity/value；Plant Target沿同Event继续这份Landing高度历史。
 
-Post Constraint只在插值后消费结果，但按状态承担两种明确责任。Swing/UnlockedSupport必须继续把Accepted Ground Path Envelope作为硬最低约束，防止一个仍可到达的Swing因为Residual或目标限速落到地形下；这项约束不参与Landing/Lock垂直接管。Landing/Locked的Verified Anchor部分只测量连续输出的穿透深度、判断是否位于`GroundPenetrationTolerance`内并发布`GroundCatchup`与Full Lock门控，不得调用`RaiseToMinimum`、修改Effective Correction或写回Interpolation历史。Contact接管允许不超过容差的轻微穿透；若状态交接继承超预算Contact误差，输出必须继续受Contact竖直速率限制并向同一Verified Anchor收敛，期间不得Full Lock。Landing Reach和有限值边界仍可硬夹紧不可达Goal。Ground测量与Reach夹紧都不得回写State Target、Residual或Transition。
+Runtime以正式PlantBlend在Swing世界目标和Filtered Plant Target之间形成`MixedWorldTarget`；Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response、Weight Started/Completed、目标点或强制高度刷新发生正式换代时，以持久上一实际Response Output和新Mixed World Target捕获完整Vector Residual，普通逐帧Weight推进不得Capture，并按既有Residual Half-Life衰减。`DesiredOutputPoint = MixedWorldTarget + PlantWorldResidualAfterDecay`只表示本帧内部期望，不再直接当成最终Foot输出。
+
+Correction Response Stage从Desired Output计算`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, ComponentUp)`，每脚持久保存上一Committed Response、初始化事实和typed增减方向。未初始化、Reset、Retarget、Source/Profile/World lineage失效后首次合法输入必须直接同步到Desired Response；普通动画目标变化、同Event Prediction换点、Contact Verification、攻击、Lock Response换代和Same-Event Reentry不得清零。已初始化时固定执行：
+
+```text
+delta = DesiredResponse - PreviousResponse
+rate = delta >= 0 ? CorrectionResponseIncreaseSpeed : CorrectionResponseDecreaseSpeed
+CurrentResponse = PreviousResponse + clamp(delta, -rate * PresentationDelta, rate * PresentationDelta)
+ResponseOutputPoint = DesiredOutputPoint + ComponentUp * (CurrentResponse - DesiredResponse)
+```
+
+两档速度必须由Profile显式序列化、有限、为正并进入Revision；Corin首个项目候选采用激活实例的`1.8m/s`与`1.5m/s`。以Desired Response增减选择速率是项目typed映射，只继承`0x199`已证明的双档结构，不声称复原其匿名采样对象业务身份。旧`MaximumVerticalCorrectionSpeed`、上一世界输出重表达和对全部Plant帧使用单档`0.6m/s`的链继续保持删除；`20260829-144901`否决的是该错误输入、参数与作用域，不得再用它否定一手Trace已经证明的独立Correction历史。当前没有正式项目业务可触发`0x252`或非零`0x274`等价政策，因此不得增加匿名Force或候选模式开关。
+
+最后的动画基准混合只由既有Foot Goal/Position Weight对`ResponseOutputPoint`执行一次，不再建立有历史的第三平滑层，也不在FBBIK或Final Pose之后低通。三份连续状态只可由各自明确的Reset、Retarget、lineage失效或Policy退出规则清理；同Event业务更新不得用一个无类型Reset同时清空。Swing/UnlockedSupport继续以Accepted Ground Envelope作为不可延迟的硬下界，Release继续使用统一Residual。`AcquireByWeight`进入帧不得对Contact Anchor调用`RaiseToMinimum`，Lock Weight达到1也不得把未收敛Residual或Correction Response清零。
+
+根`CharacterFootStateContext`收敛为一组分型数据块：`Discrete State Context`只存当前State与最近Transition，`Contact Context`只存Anchor和Lock响应，`Contact Transition Context`只存边沿与已消费Event历史，`Interpolation State`只存上一目标、Target Height、换代Residual、Correction Response、Effective Correction与完成事实，Landing与Observation继续使用各自typed Page。所有数据块仍由同一个Pending/Committed根事务一次Seal或Discard，不建立独立生命周期。
+
+Post Constraint只在插值后消费结果，但按状态承担两种明确责任。Swing/UnlockedSupport必须继续把Accepted Ground Path Envelope作为硬最低约束，防止一个仍可到达的Swing因为Residual或目标采用政策落到地形下；这项约束不参与Landing/Lock垂直接管。Landing/Locked的Verified Anchor部分只测量连续输出的穿透深度、判断是否位于`GroundPenetrationTolerance`内并发布`GroundCatchup`与Full Lock门控，不得调用`RaiseToMinimum`、修改Effective Correction或写回Interpolation历史。Contact接管允许不超过容差的轻微穿透；若状态交接继承超预算Contact误差，输出必须继续由同一Correction Response向Verified Anchor收敛，期间不得Full Lock。Landing Reach和有限值边界仍可硬夹紧不可达Goal。Ground测量与Reach夹紧都不得回写State Target、Residual或Transition。
 
 ## Decision 4: 先定位Path同帧放大，再分离连续目标与Envelope安全
 
@@ -139,7 +171,7 @@ Corin显式使用5厘米累计位移和1度Up角度。距离配置必须为正�
 
 Landing Context在现有唯一生命周期内保存三个可并存的typed槽位：`NextSwing Empty / Tracking`、`Plant Target Tracking / Verified`与`Verified LastLanding`。NextSwing属于Prediction Event，Plant Target是项目对ZZZ独立目标历史结构的typed映射，LastLanding属于已经真实接触的Plant事实；三者不是互斥状态，也不构成第二状态机。PreSwing、Swing和Approach Contact都保持NextSwing Tracking；首次Accepted Observation建立NextSwingLanding，后续可信Observation继续按Query Admission和Landing接受规则换代并重建Ground Path。`ApproachContactToLanding`只声明Plant目标准备区：每次Accepted Prediction可以更新Plant Target的Desired Point与诊断Ground Path，但不得直接把Path Revision写入可见Correction。
 
-唯一Interpolation按项目Replay确认的Owner顺序执行。PreSwing/Swing用正式Envelope与Foot Height生成Raw Height，以Accepted Landing沿Up高度作为唯一Target Height历史，并按`Raw Height + Filtered Landing Height - Current Landing Height`形成Swing目标；正常Phase不积分历史，同Event Ground Path Input换代时以Current Landing到Filtered Landing Height的累计沿Up差判断强制刷新，累计差达到`TargetHeightForceRefreshDistance`时刷新内部Landing高度并由Residual连续接管，累计差小于该值但本次换代超过`PathRevisionDistance`才进入`±MaximumVerticalTargetSpeed × Presentation Delta`限速。Approach进入时冻结Swing对该历史的更新，并沿同Event由持久Plant Target继续推进；Plant Target到历史的累计差使用同一强制刷新门。Runtime随后用单调不回退的正式Contact/Lock权重在Swing世界目标与过滤后Plant Target之间形成`MixedWorldTarget`，只在Target Kind、Lock Response、Verification、Weight Started/Completed或目标点换代时捕获完整Vector `PlantWorldResidual`，普通逐帧Weight推进不得Capture；稳定且高度delta为0的Locked帧必须发布`TargetHeightUpdateReason=None`。输出固定为`MixedWorldTarget + PlantWorldResidual`。`VerticalContinuityOwner`和`CorrectionStageDisposition`必须按`TargetHeightHistory/PlantWorldResidual/PlantWeightBlend/PlantTarget`四个Owner发布对应typed处置；不得再执行第二`MaximumVerticalCorrectionSpeed`链。Resolved Foot之后只通过既有Foot Goal/Position Weight把该结果与动画基线混合一次。Landing与Locked继续使用同一`PlantBlend` Policy，稳定Plant冻结Desired Point。普通PreSwing/Swing仍由Ground Envelope硬保护；Approach Plant、Landing和Locked只测量过滤目标或Anchor穿透，不用Post Constraint抬升可见输出。
+唯一Interpolation按`Target Height Adoption -> PlantBlend -> Plant World Residual -> Correction Response -> Existing Goal Baseline Mix`顺序执行。PreSwing/Swing用正式Envelope与Foot Height生成Raw Height，以Accepted Landing沿Up高度作为唯一Target Height历史，并按`Raw Height + Filtered Landing Height - Current Landing Height`形成Swing目标；正常Phase不积分历史。`TargetHeightAdoptionMode=Direct`时合法Landing换代直接进入History，`RateLimited`时中等变化才使用`MaximumVerticalTargetSpeed`，大变化和正式Force Refresh直接更新History。Approach进入时冻结Swing对该历史的更新，并沿同Event由持久Plant Target继续推进。Runtime随后用正式Contact/Lock权重在Swing世界目标与过滤后Plant Target之间形成`MixedWorldTarget`，只在Target Kind、Lock Response、Verification、Weight Started/Completed或目标点换代时捕获完整Vector `PlantWorldResidual`，普通逐帧Weight推进不得Capture；稳定且高度delta为0的Locked帧必须发布`TargetHeightUpdateReason=None`。`MixedWorldTarget + PlantWorldResidual`形成Desired Output，再由独立Correction Response History按Profile两档速率产生Response Output。Owner诊断必须并列发布`TargetHeightHistory / PlantWorldResidual / CorrectionResponseHistory / PlantWeightBlend / PlantTarget`，不得把Correction Response伪装成World Residual，也不得恢复旧单档`MaximumVerticalCorrectionSpeed`实现。Resolved Foot之后只通过既有Foot Goal/Position Weight把Response Output与动画基线混合一次。Landing与Locked继续使用同一`PlantBlend` Policy，稳定Plant冻结Desired Point。普通PreSwing/Swing仍由Ground Envelope硬保护；Approach Plant、Landing和Locked只测量过滤目标或Anchor穿透，不用Post Constraint抬升可见输出。
 
 该Event首次产生正式Contact Rising且Lock Mode请求Sliding或Locked时，Runtime必须执行一次typed Current Contact Plant Verification。Verification使用当前Animated Sole生成唯一Current Contact查询输入，但查询结果只可在同一Transition事务中建立一次LastLanding、Promoted Contact Landing与Anchor；它不得作为第二Prediction、第二Anchor或逐帧Ground路径。稳定Plant期间Anchor冻结，普通Contact、速度、Surface候选和Prediction变化不得再次查询或重定位。Verification缺失、拒绝、与Event lineage不一致或超过Lock准入时保持没有Anchor并发布typed unavailable，不使用早期Prediction点冒充真实Plant。
 
@@ -177,6 +209,24 @@ Resolved Foot把正式Support写入`SupportIntentWeight`。Primary Support的Acq
 `ContactReference`继续只属于脚锁；`PelvisReachReference`可以来自同Event已经Accepted的Landing/Ground事实。这样Sliding或暂时不可锁的承重脚可以协调Pelvis，但不能因此把脚固定到世界Anchor。
 
 Primary Support只消费Resolved字段，不读取Foot State、Lock Mode或Context。Support的Pelvis Reach Reference按同Event冻结Anchor、Verified Landing、Prepared Plant Landing、Accepted Swing Landing的正式优先级取得，Contact Anchor不可用时不得把Formal Support强制清零。Support曲线为0时不得由相对大小归一成1；双脚都无正式Support时Pelvis进入现有typed Release，而不是猜一只脚承重。
+
+### Current Support由Foot/Toe脚掌几何解析唯一位置与法线
+
+ZZZ静态链已经P0/P1闭合：真实Foot与Toe世界姿态生成脚掌多点空间查询，查询结果先解析为单一`FootTargetPosition + SupportNormal`，随后按状态权重混合、归一化Normal并只写FootL/FootR；Toe没有独立Goal、Writer或Pose低通。本项目直接采用该职责分层，但不复制未恢复typed名称的Unity查询重载、固定六次调用、硬编码宽度/半径、最高Y无稳定tie-break或对象偏移。
+
+每个表现帧从同一`FinalAnimationPoseFrame`和Rig Calibration取得Heel、Toe接触点、Foot Rotation、Component Up与Foot尺寸。Current Support Builder在现有World Query Backend内为Heel与Toe生成固定容量Observation，使用同一Profile坡度、距离、Layer、自身Collider排除、有限值与World Revision合同；不得从Foot Motion Toe曲线、另一Pose Source或LateUpdate骨骼读取建立第二输入。每个Probe分别保留Accepted/Rejected、命中位置、法线、距离、Surface identity和拒绝原因，再按固定Probe顺序、合法Surface identity与Component Up几何规则解析一个`CharacterFootSupportTarget`：
+
+```text
+CharacterFootSupportTarget
+  Position
+  SupportNormal
+  SurfaceIdentity
+  ObservationLineage
+```
+
+Heel与Toe都合法且满足正式Surface关系时，Position必须满足两点脚掌支撑而不是只取单点最高Y；法线由两点命中法线和脚掌前后方向生成、有限检查并归一化。任一Probe无合法命中、两点Surface关系不满足正式准入或容量溢出时发布typed unavailable，不复用旧Support、Animated Up、单点降级或默认地面冒充本帧成功。等价候选必须使用稳定Surface identity与固定Probe顺序确定，不依赖物理查询返回顺序。
+
+Current Support Target在State Target阶段与位置目标一同进入现有状态/过渡权重混合；SupportNormal在生成Rotation Target前归一化，并以Rig Calibration声明的Sole Forward构造唯一Foot Rotation Goal。位置与旋转共享同一Foot State、Observation lineage、Goal Weight和Writer，Toe不生成第二Goal。Support Normal的状态换代只通过现有状态权重与Correction Response输出链连续化，不在FBBIK或Final Pose之后增加Rotation低通。Pelvis仍只消费Resolved Foot Pair，不读取Heel/Toe原始命中。
 
 ## Decision 7: Landing Reach先协调Pelvis，再限制Foot Goal
 
@@ -224,7 +274,7 @@ Diagnostics不得创建Anchor、选择Support、改变Reach、Clamp Goal或执�
 
 诊断Publisher统一为每个可判定Target发布`Health Score`与`Evidence Score`。Health Score只由该Target已经公开的eligible总体、互斥严重度档位、发生率和严重尾部计算，100表示观察到的问题负担低；Evidence Score只表达样本量与必需阶段事实覆盖率，两者不得相乘，也不得让低证据提高Health Score。eligible为0、事实阶段缺失或Target只表达候选比较时必须发布typed Unavailable，不得用100或0冒充结论。文件级分数只聚合明确可判定Target，并受最差Target严重尾部封顶；每个Target原分、扣分构成、次数、分母、阈值和代表帧必须保留，不发布掩盖细节的全Foot总分，也不把分数命名为Pass或Fail。
 
-现有facts中已经生成但尚未进入正式Target的Swing到Landing Floor交接、实际脚位置Envelope反事实与Plant Interpolation必须进入同一Analyzer/Publisher链。Plant诊断必须记录Target Kind、Lock Response、Previous/Current Weight、Target Height前后与Update Reason、Previous/Current Mixed World Target、Previous/Current实际World Output Point、Residual Capture Reason、World Residual捕获前/后/衰减后、Vertical Continuity Owner、Correction Stage Disposition及Effective Correction前后；Residual必须以持久上一帧实际World Output为换代基准，Weight只在从零开始或到达完成边界时发布`WeightStarted`或`WeightCompleted`，普通逐帧推进不得伪装成Capture。旧`WeightChanged`、`PlantBlendedCorrection`和第二`MaximumVerticalCorrectionSpeed`相关列不得保留。可见Swing跳变必须同时按Presentation Delta、跨Body Tick数与米每秒分类为正常采样、低表现采样或速度异常；Actual Foot Envelope反事实只在有限Path走廊内且交点唯一时形成候选Correction，歧义、走廊外与无交点只发布事实。FutureLanding候选仍只消费正式World Query已经发布的canonical选择事实，不得由Sampler重查世界或复制QueryAll。Observation诊断必须同时记录Query Purpose与Refresh Mode；首次`ForcedPlantVerification + CurrentContactVerification`允许同Key正式查询一次且不得记为duplicate，同Event后续重复Verification必须记为typed不一致。
+现有facts中已经生成但尚未进入正式Target的Swing到Landing Floor交接、实际脚位置Envelope反事实与Plant Interpolation必须进入同一Analyzer/Publisher链。Plant诊断必须记录Target Kind、Lock Response、Previous/Current Weight、Target Height模式/前后与Update Reason、Previous/Current Mixed World Target、Previous/Current实际Response Output Point、Residual Capture Reason、World Residual捕获前/后/衰减后、Desired/Previous/Current Correction Response、Response Direction、Selected Rate、Applied Delta、初始化/重置原因、Continuity Owner及Effective Correction前后；Residual必须以持久上一帧实际Response Output为换代基准，Weight只在从零开始或到达完成边界时发布`WeightStarted`或`WeightCompleted`，普通逐帧推进不得伪装成Capture。旧`WeightChanged`、`PlantBlendedCorrection`、旧单档`MaximumVerticalCorrectionSpeed`及“World Residual已取代Correction历史”的Disposition列不得保留。Current Support诊断必须记录Heel/Toe Pose输入、各自Observation、Surface关系、唯一Position/SupportNormal、归一化与Foot Rotation Goal，不得由Sampler重查世界。可见Swing跳变必须同时按Presentation Delta、跨Body Tick数与米每秒分类为正常采样、低表现采样或速度异常；Actual Foot Envelope反事实只在有限Path走廊内且交点唯一时形成候选Correction，歧义、走廊外与无交点只发布事实。FutureLanding候选仍只消费正式World Query已经发布的canonical选择事实，不得由Sampler重查世界或复制QueryAll。Observation诊断必须同时记录Query Purpose与Refresh Mode；首次`ForcedPlantVerification + CurrentContactVerification`允许同Key正式查询一次且不得记为duplicate，同Event后续重复Verification必须记为typed不一致。
 
 Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuation -> Stable Prediction Velocity -> KCC Future Translation -> Raw Landing -> Observation -> Tracking -> Approach Plant Target Preparation -> Contact Verification`，并把移动计划Current作为对照列记录，连同速度差、阈值、EMA响应、最大速度Clamp、状态初始化/重置原因、Tracking状态、Verification Frame/Reason和稳定Plant候选忽略事实。这样实现阶段必须先证明Prediction稳定，再判断Interpolation或Post Constraint，不得把所有抖动归到最终Pose。
 
@@ -240,8 +290,7 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 
 | 后续能力 | ZZZ当前证据状态 | 项目唯一归属与限制 |
 |---|---|---|
-| Foot Pitch/Roll与Ground Normal | 大型姿态/几何合成函数存在，具体Normal、Plant冻结和角速度政策仍是P2/P3 | 动态补证后才扩展现有State Target、Resolved Foot与同一Foot Goal Rotation Weight；不得先增加第二Rotation Writer |
-| Heel/Toe双点与Sole几何 | 只确认两组三维量按同一状态权重混合，Heel/Toe业务名未证实 | 动态骨骼绑定补证后进入现有Rig Calibration与唯一Foot Goal，不新增LegIK或Toe Writer |
+| Foot Normal进阶角度与冻结政策 | Foot/Toe输入、位置+法线中间量和单一Foot writer已经P0/P1闭合；具体角度限制、Plant冻结、角速度与移动平台政策仍是P2/P3 | 本change只实现Current Support Normal驱动的唯一Foot Rotation Goal；进阶限制补证后仍扩展同一State Target与Goal，不增加第二Rotation Writer |
 | Knee方向稳定 | tbik批处理、通道和权重组合存在，但没有直接call证明PIK当前帧调用它 | 若后续补出运行连接，只进入现有FBBIK Bend History和唯一Solver，不做Solver后骨骼修正 |
 | Pelvis进阶响应与旋转 | 存在Pelvis词汇与主标量响应，字段级PD、上下速度和旋转参数映射未闭合 | 继续保留项目自己的Pelvis Reach与Critical Spring；除非动态证据闭合，不以ZZZ字段改写现有控制器 |
 | Stride Wrapping | min/max变体和若干缓存存在，Stride业务映射仍为P3 | 后续先补证，再决定是否进入正式Foot Motion/Stride意图与Pelvis |
@@ -283,8 +332,9 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 6. 发布唯一Foot Motion Runtime Frame，用正式Step Time/Distance替换旧Prediction时域并删除旧Step消费者。
 7. 在同一根Bank增加左右脚共享Prediction Motion State，以本项目Replay证明的阈值、EMA和最大速度分别稳定committed Body Target当前速度与移动计划Continuation；只把稳定速度交给唯一KCC Future Body Translation，并补齐Raw/Stable/Translation及移动计划Current对照诊断。
 8. 让PreSwing、Swing与Approach Contact保持Landing Tracking，并由统一Interpolation持续准备Plant目标；首次正式Contact Rising执行一次Plant Verification并建立冻结Anchor。
-9. 在唯一Interpolation中分离Plant Target高度历史与完整Vector Plant World Residual，增加`MaximumVerticalTargetSpeed`并删除已被Replay否决的第二`MaximumVerticalCorrectionSpeed`链；Target、Response、Verification与Weight换代通过Residual Capture保持`MixedWorldTarget + Residual`连续，既有Goal权重只在该唯一输出后混回动画基线。删除Acquire进入帧和Post Constraint的立即抬升，安装Ground穿透预算与Landing Lock完成门控后，再让Foot Height进入Swing并删除旧Baseline Height Error政策。
-10. 让Support进入Resolved Foot、Primary Support和Pelvis，但保持Lock生命周期不变；为唯一Pelvis Spring增加非对称速度边界。
-11. 增加双腿Reach交集、最小Landing压缩余量、Goal夹紧与typed拒绝。
-12. 用Contact、Lock Mode与Lock Weight替换旧PlantConfidence生命周期并删除旧字段。
-13. 显式重建Corin Projection、Float32与Fixed产品，完成编译、诊断重放和严格OpenSpec校验。
+9. 保留已经完成的旧`MaximumVerticalCorrectionSpeed`单档后置链删除，在同一Interpolation中分离Plant Target Height、完整Vector Plant World Residual与新的Component Up Correction Response History；安装显式Target Height采用模式、双档Correction速率、初始化/重置和攻击/同Event不清零政策，使`Desired Output -> Response Output -> Existing Goal Baseline Mix`只有一条正式链。
+10. 从Final Animation Pose与Rig Calibration取得Heel/Toe脚掌几何，在现有World Query Backend内生成固定容量Current Support Observation，解析唯一Position+SupportNormal并生成同一Foot Goal Rotation；删除任何单点降级、Toe Goal、第二Writer或Pose后Rotation低通。
+11. 让Support进入Resolved Foot、Primary Support和Pelvis，但保持Lock生命周期不变；为唯一Pelvis Spring增加非对称速度边界。
+12. 增加双腿Reach交集、最小Landing压缩余量、Goal夹紧与typed拒绝。
+13. 用Contact、Lock Mode与Lock Weight替换旧PlantConfidence生命周期并删除旧字段。
+14. 显式重建Corin Projection、Float32与Fixed产品，完成编译、诊断重放和严格OpenSpec校验。

@@ -256,7 +256,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantWorldResidualAfterDecayX,FootMotionPlantWorldResidualAfterDecayY,FootMotionPlantWorldResidualAfterDecayZ," +
             "FootMotionPlantWorldResidualCompletionTolerance,FootMotionPlantWorldResidualClearedAtCompletionTolerance," +
             "FootMotionCorrectionResponseEvaluated,FootMotionCorrectionResponseInitializedBefore,FootMotionCorrectionResponseInitializedThisFrame,FootMotionCorrectionResponseInitializationReason," +
-            "FootMotionCorrectionResponseDesired,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseBasisTransferred,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
+            "FootMotionCorrectionResponseDesired,FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
             "FootMotionPlantVerticalContinuityOwners," +
             "FootMotionPlantEffectiveCorrectionBeforeX,FootMotionPlantEffectiveCorrectionBeforeY,FootMotionPlantEffectiveCorrectionBeforeZ," +
             "FootMotionPlantEffectiveCorrectionAfterX,FootMotionPlantEffectiveCorrectionAfterY,FootMotionPlantEffectiveCorrectionAfterZ," +
@@ -2239,8 +2239,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.CorrectionResponseInitializedThisFrame);
             Add(row, motion.CorrectionResponseInitializationReason);
             Add(row, motion.CorrectionResponseDesired);
+            Add(row, motion.CorrectionResponseRequestedDirection);
             Add(row, motion.CorrectionResponsePreviousDirection);
-            Add(row, motion.CorrectionResponseBasisTransferred);
+            Add(row, motion.CorrectionResponseDirectionLimited);
+            Add(row, motion.CorrectionResponseMaximumDirectionChangeDegrees);
+            Add(row, motion.CorrectionResponseAppliedDirectionChangeDegrees);
             Add(row, motion.CorrectionResponseVisibleOutputTransferred);
             Add(row, motion.CorrectionResponseBeforeRebase);
             Add(row, motion.CorrectionResponsePrevious);

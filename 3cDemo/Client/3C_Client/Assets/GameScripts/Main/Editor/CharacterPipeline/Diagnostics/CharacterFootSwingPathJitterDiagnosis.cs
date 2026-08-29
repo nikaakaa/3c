@@ -403,8 +403,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool correctionResponseInitializedThisFrame;
         public string correctionResponseInitializationReason;
         public double correctionResponseDesired;
+        public CharacterFootVectorFact correctionResponseRequestedDirection;
         public CharacterFootVectorFact correctionResponsePreviousDirection;
-        public bool correctionResponseBasisTransferred;
+        public bool correctionResponseDirectionLimited;
+        public double correctionResponseMaximumDirectionChangeDegrees;
+        public double correctionResponseAppliedDirectionChangeDegrees;
         public bool correctionResponseVisibleOutputTransferred;
         public double correctionResponseBeforeRebase;
         public double correctionResponsePrevious;

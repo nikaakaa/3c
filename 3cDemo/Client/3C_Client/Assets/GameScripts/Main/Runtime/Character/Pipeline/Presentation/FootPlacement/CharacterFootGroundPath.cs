@@ -208,7 +208,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal interface ICharacterFootPlacementWorldQuery :
         ICharacterFootLandingWorldQuery,
-        ICharacterFootGroundPathWorldQuery
+        ICharacterFootGroundPathWorldQuery,
+        ICharacterFootCurrentSupportWorldQuery
     {
     }
 

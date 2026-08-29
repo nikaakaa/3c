@@ -35,6 +35,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathPage RightGroundPath;
         internal CharacterFootLandingObservationPage LeftLandingObservation;
         internal CharacterFootLandingObservationPage RightLandingObservation;
+        internal CharacterFootCurrentSupportObservationPage LeftCurrentSupport;
+        internal CharacterFootCurrentSupportObservationPage RightCurrentSupport;
         internal CharacterFootPredictionMotionState PredictionMotion;
         internal CharacterFootPredictionMotionResult PredictionMotionResult;
         internal readonly CharacterFutureBodyTranslation BodyTrajectory =
@@ -76,6 +78,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RightGroundPath = null;
                 LeftLandingObservation = null;
                 RightLandingObservation = null;
+                LeftCurrentSupport = null;
+                RightCurrentSupport = null;
                 PredictionMotion = committed.PredictionMotion;
                 PredictionMotionResult = default;
                 BodyTrajectory.CopyFrom(committed.BodyTrajectory);
@@ -101,6 +105,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RightGroundPath = null;
             LeftLandingObservation = null;
             RightLandingObservation = null;
+            LeftCurrentSupport = null;
+            RightCurrentSupport = null;
             PredictionMotionResult = default;
             ResolvedFeet = default;
             StrideHips = default;
@@ -166,6 +172,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RightGroundPath = null;
             LeftLandingObservation = null;
             RightLandingObservation = null;
+            LeftCurrentSupport = null;
+            RightCurrentSupport = null;
             PredictionMotion.Clear();
             PredictionMotionResult = default;
             BodyTrajectory.Clear();
@@ -222,6 +230,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootGroundPathPagePool m_RightGroundPath;
         readonly CharacterFootLandingObservationPagePool m_LeftLandingObservation;
         readonly CharacterFootLandingObservationPagePool m_RightLandingObservation;
+        readonly CharacterFootCurrentSupportObservationPagePool m_LeftCurrentSupport;
+        readonly CharacterFootCurrentSupportObservationPagePool m_RightCurrentSupport;
 
         bool m_Disposed;
 
@@ -247,6 +257,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.GroundDetection.ContactCapacity);
             m_LeftLandingObservation = new CharacterFootLandingObservationPagePool();
             m_RightLandingObservation = new CharacterFootLandingObservationPagePool();
+            m_LeftCurrentSupport =
+                new CharacterFootCurrentSupportObservationPagePool();
+            m_RightCurrentSupport =
+                new CharacterFootCurrentSupportObservationPagePool();
         }
 
         internal CharacterFootPlacementBank CreateBank() =>
@@ -312,6 +326,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.PresentationDeltaSeconds,
                 frame.Body);
             Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
+            bank.LeftCurrentSupport = PrepareCurrentSupport(
+                CharacterFootSide.Left,
+                pose.Left,
+                componentUp,
+                facts.Grounded,
+                frame.RenderFrame,
+                frame.Pose.CompletionIdentity,
+                m_LeftCurrentSupport,
+                committedBank?.LeftCurrentSupport);
+            bank.RightCurrentSupport = PrepareCurrentSupport(
+                CharacterFootSide.Right,
+                pose.Right,
+                componentUp,
+                facts.Grounded,
+                frame.RenderFrame,
+                frame.Pose.CompletionIdentity,
+                m_RightCurrentSupport,
+                committedBank?.RightCurrentSupport);
 
             CharacterFootLandingSnapshot leftLanding =
                 CharacterFootLandingRuntime.ProjectBeforePrediction(
@@ -844,6 +876,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingObservationPagePool.Discard(
                 pending?.RightLandingObservation,
                 committed?.RightLandingObservation);
+            CharacterFootCurrentSupportObservationPagePool.Discard(
+                pending?.LeftCurrentSupport,
+                committed?.LeftCurrentSupport);
+            CharacterFootCurrentSupportObservationPagePool.Discard(
+                pending?.RightCurrentSupport,
+                committed?.RightCurrentSupport);
         }
 
         internal void ResetShared(in CharacterFootPlacementReset reset)
@@ -855,6 +893,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RightGroundPath.Reset();
             m_LeftLandingObservation.Reset();
             m_RightLandingObservation.Reset();
+            m_LeftCurrentSupport.Reset();
+            m_RightCurrentSupport.Reset();
             CharacterFootLandingPredictionDebugRegistry.Remove(
                 m_Rig.VisualRoot.GetInstanceID());
         }
@@ -868,6 +908,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RightGroundPath.Reset();
             m_LeftLandingObservation.Reset();
             m_RightLandingObservation.Reset();
+            m_LeftCurrentSupport.Reset();
+            m_RightCurrentSupport.Reset();
             CharacterFootLandingPredictionDebugRegistry.Remove(
                 m_Rig.VisualRoot.GetInstanceID());
         }
@@ -880,6 +922,69 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (layout == null || block == null)
                 return "Foot Placement tuning payload is missing.";
             return string.Empty;
+        }
+
+        CharacterFootCurrentSupportObservationPage PrepareCurrentSupport(
+            CharacterFootSide side,
+            CharacterFootPlacementAnimatedFootPose foot,
+            Vector3 componentUp,
+            bool grounded,
+            ulong frameSequence,
+            ulong completionIdentity,
+            CharacterFootCurrentSupportObservationPagePool pool,
+            CharacterFootCurrentSupportObservationPage committed)
+        {
+            CharacterFootCurrentSupportObservationPage pending =
+                pool.AcquireWritable(committed);
+            CharacterFootCurrentSupportObservation observation;
+            if (!grounded)
+            {
+                observation = CharacterFootCurrentSupportObservation.Unavailable(
+                    frameSequence,
+                    completionIdentity,
+                    side,
+                    CharacterFootCurrentSupportRejectReason.NotGrounded);
+                pending.Set(in observation);
+                return pending;
+            }
+            CharacterFootLandingPredictionSettings settings =
+                m_Settings.LandingPrediction;
+            var heelRequest = new CharacterFootCurrentSupportProbeRequest(
+                side,
+                CharacterFootCurrentSupportProbeKind.Heel,
+                foot.HeelPosition,
+                componentUp,
+                settings.CastAbove,
+                settings.CastBelow,
+                settings.SphereRadius,
+                settings.GroundLayerMask,
+                settings.MinimumGroundNormalDot);
+            var toeRequest = new CharacterFootCurrentSupportProbeRequest(
+                side,
+                CharacterFootCurrentSupportProbeKind.Toe,
+                foot.ToePosition,
+                componentUp,
+                settings.CastAbove,
+                settings.CastBelow,
+                settings.SphereRadius,
+                settings.GroundLayerMask,
+                settings.MinimumGroundNormalDot);
+            CharacterFootCurrentSupportProbeResult heel =
+                m_WorldQuery.Query(in heelRequest);
+            CharacterFootCurrentSupportProbeResult toe =
+                m_WorldQuery.Query(in toeRequest);
+            observation = CharacterFootCurrentSupportObservation.Resolve(
+                frameSequence,
+                completionIdentity,
+                side,
+                foot.HeelPosition,
+                foot.ToePosition,
+                componentUp,
+                m_WorldQuery.WorldRevision,
+                in heel,
+                in toe);
+            pending.Set(in observation);
+            return pending;
         }
 
         CharacterFootGroundPathResult PrepareGroundPath(
@@ -1771,6 +1876,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RightGroundPath.Reset();
             m_LeftLandingObservation.Reset();
             m_RightLandingObservation.Reset();
+            m_LeftCurrentSupport.Reset();
+            m_RightCurrentSupport.Reset();
         }
     }
 }

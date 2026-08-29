@@ -451,9 +451,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PlantTakeoverWeightAdvanced,
                     ["plantTakeoverTrackingActive"] =
                         current.PlantTakeoverTrackingActive,
-                    ["plantTakeoverPathRevisionAbsent"] =
-                        current.PathRevisionReason == "None" &&
-                        !current.PathResidualRebuilt,
+                    ["plantTakeoverPathRevisionIndependentlyProven"] =
+                        PathRevisionIndependentlyProven(current),
                     ["targetHeightOwned"] = HasRevisionReason(
                         current.PlantVerticalContinuityOwners,
                         "TargetHeightHistory"),
@@ -2353,9 +2352,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             current
                                 .PlantWorldResidualBaseHalfLifeSeconds) <=
                         TimeEpsilon,
-                    ["takeoverPathRevisionAbsent"] =
-                        current.PathRevisionReason == "None" &&
-                        !current.PathResidualRebuilt,
+                    ["takeoverPathRevisionIndependentlyProven"] =
+                        PathRevisionIndependentlyProven(current),
                     ["plantBlendHeld"] =
                         currentBlendDelta == 0d,
                     ["rawContactChanged"] =
@@ -5343,8 +5341,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                          frame.PlantWorldResidualAppliedHalfLifeSeconds -
                          frame.PlantWorldResidualBaseHalfLifeSeconds) <=
                      TimeEpsilon &&
-                     frame.PathRevisionReason == "None" &&
-                     !frame.PathResidualRebuilt);
+                     PathRevisionIndependentlyProven(frame));
                 bool responseInitializedThisFrame =
                     frame.PlantCorrectionResponseInitializedThisFrame;
                 float responseDelta =
@@ -6369,6 +6366,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(
                     $"Foot Motion Foot row PathRevisionReason '{value}' is invalid.");
             }
+        }
+
+        static bool PathRevisionIndependentlyProven(FootFrame frame)
+        {
+            bool availabilityChanged =
+                frame.PathAvailableBefore != frame.PathAvailableAfter;
+            bool comparablePath = frame.PathAvailableBefore &&
+                                  frame.PathAvailableAfter;
+            bool eventChanged = comparablePath &&
+                frame.PathPreviousLandingEventIdentity !=
+                frame.PathCurrentLandingEventIdentity;
+            bool landingPointChanged = comparablePath &&
+                frame.PathLandingPointDelta > frame.PathRevisionDistance;
+            bool revisionExpected = availabilityChanged ||
+                                    eventChanged ||
+                                    landingPointChanged;
+            bool reasonMatches =
+                HasRevisionReason(
+                    frame.PathRevisionReason,
+                    "PathAvailabilityChanged") == availabilityChanged &&
+                HasRevisionReason(
+                    frame.PathRevisionReason,
+                    "LandingEventChanged") == eventChanged &&
+                HasRevisionReason(
+                    frame.PathRevisionReason,
+                    "LandingPointChanged") == landingPointChanged;
+            return frame.PathContinuityEvaluated &&
+                   reasonMatches &&
+                   frame.PathResidualRebuilt == revisionExpected;
         }
 
         static void RequireColumns(Dictionary<string, int> indices)

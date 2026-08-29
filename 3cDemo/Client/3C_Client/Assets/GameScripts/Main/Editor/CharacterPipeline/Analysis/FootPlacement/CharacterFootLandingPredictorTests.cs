@@ -49,6 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Vector3 raw = new Vector3(1f, 2f, 3f);
             var key = new CharacterFootLandingObservationKey(
                 CharacterFootSide.Right,
+                CharacterFootPlacementQueryPurpose.FutureLanding,
                 1UL,
                 1UL,
                 0,
@@ -96,7 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0,
                 Vector3.zero,
                 Vector3.up,
-                false,
+                CharacterFootLandingObservationRefreshMode.Thresholded,
                 "test-profile",
                 in settings,
                 world,

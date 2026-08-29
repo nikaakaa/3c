@@ -479,30 +479,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantInterpolationEvaluated = path.PlantInterpolationEvaluated;
             PlantTargetEventIdentity = path.PlantTargetEventIdentity;
             PlantTargetVerified = path.PlantTargetVerified;
+            PlantTargetKind = path.PlantTargetKind.ToString();
+            PlantLockResponse = path.PlantLockResponse;
             PlantDesiredPoint = path.PlantDesiredPoint;
             PlantFilteredPoint = path.PlantFilteredPoint;
+            PlantPreviousBlendWeight = path.PlantPreviousBlendWeight;
             PlantBlendWeight = path.PlantBlendWeight;
             PlantTargetMaximumVerticalSpeed =
                 path.PlantTargetMaximumVerticalSpeed;
+            PlantTargetHeightBefore = path.PlantTargetHeightBefore;
             PlantTargetVerticalDelta = path.PlantTargetVerticalDelta;
             PlantTargetAppliedVerticalDelta =
                 path.PlantTargetAppliedVerticalDelta;
+            PlantTargetHeightAfter = path.PlantTargetHeightAfter;
             PlantTargetHeightEventIdentity =
                 path.PlantTargetHeightEventIdentity;
+            PlantTargetHeightUpdateReason =
+                path.PlantTargetHeightUpdateReason.ToString();
             PlantTargetForceRefreshed =
                 path.PlantTargetForceRefreshed;
             PlantTargetForceRefreshDistance =
                 path.PlantTargetForceRefreshDistance;
             PlantTargetVerticalClamped = path.PlantTargetVerticalClamped;
-            PlantBlendedCorrection = path.PlantBlendedCorrection;
-            PlantCorrectionMaximumVerticalSpeed =
-                path.PlantCorrectionMaximumVerticalSpeed;
-            PlantCorrectionVerticalDelta =
-                path.PlantCorrectionVerticalDelta;
-            PlantCorrectionAppliedVerticalDelta =
-                path.PlantCorrectionAppliedVerticalDelta;
-            PlantCorrectionVerticalClamped =
-                path.PlantCorrectionVerticalClamped;
+            PlantPreviousMixedWorldTarget =
+                path.PlantPreviousMixedWorldTarget;
+            PlantMixedWorldTarget = path.PlantMixedWorldTarget;
+            PlantResidualCaptureReason =
+                path.PlantResidualCaptureReason.ToString();
+            PlantWorldResidualBeforeCapture =
+                path.PlantWorldResidualBeforeCapture;
+            PlantWorldResidualAfterCapture =
+                path.PlantWorldResidualAfterCapture;
+            PlantWorldResidualAfterDecay =
+                path.PlantWorldResidualAfterDecay;
+            PlantVerticalContinuityOwner =
+                path.PlantVerticalContinuityOwner.ToString();
+            PlantCorrectionStageDisposition =
+                path.PlantCorrectionStageDisposition.ToString();
+            PlantEffectiveCorrectionBefore =
+                path.PlantEffectiveCorrectionBefore;
+            PlantEffectiveCorrectionAfter =
+                path.PlantEffectiveCorrectionAfter;
             PlantOutputDistance = path.PlantOutputDistance;
             PlantPenetrationDepth = path.PlantPenetrationDepth;
         }
@@ -604,21 +621,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantInterpolationEvaluated { get; }
         public ulong PlantTargetEventIdentity { get; }
         public bool PlantTargetVerified { get; }
+        public string PlantTargetKind { get; }
+        public CharacterFootLockResponse PlantLockResponse { get; }
         public Vector3 PlantDesiredPoint { get; }
         public Vector3 PlantFilteredPoint { get; }
+        public float PlantPreviousBlendWeight { get; }
         public float PlantBlendWeight { get; }
         public float PlantTargetMaximumVerticalSpeed { get; }
+        public float PlantTargetHeightBefore { get; }
         public float PlantTargetVerticalDelta { get; }
         public float PlantTargetAppliedVerticalDelta { get; }
+        public float PlantTargetHeightAfter { get; }
         public ulong PlantTargetHeightEventIdentity { get; }
+        public string PlantTargetHeightUpdateReason { get; }
         public bool PlantTargetForceRefreshed { get; }
         public float PlantTargetForceRefreshDistance { get; }
         public bool PlantTargetVerticalClamped { get; }
-        public Vector3 PlantBlendedCorrection { get; }
-        public float PlantCorrectionMaximumVerticalSpeed { get; }
-        public float PlantCorrectionVerticalDelta { get; }
-        public float PlantCorrectionAppliedVerticalDelta { get; }
-        public bool PlantCorrectionVerticalClamped { get; }
+        public Vector3 PlantPreviousMixedWorldTarget { get; }
+        public Vector3 PlantMixedWorldTarget { get; }
+        public string PlantResidualCaptureReason { get; }
+        public Vector3 PlantWorldResidualBeforeCapture { get; }
+        public Vector3 PlantWorldResidualAfterCapture { get; }
+        public Vector3 PlantWorldResidualAfterDecay { get; }
+        public string PlantVerticalContinuityOwner { get; }
+        public string PlantCorrectionStageDisposition { get; }
+        public Vector3 PlantEffectiveCorrectionBefore { get; }
+        public Vector3 PlantEffectiveCorrectionAfter { get; }
         public float PlantOutputDistance { get; }
         public float PlantPenetrationDepth { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;

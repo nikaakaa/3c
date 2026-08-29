@@ -47,7 +47,6 @@ MonoBehaviour:
     m_EffectiveCorrectionHalfLifeSeconds: 0.03
     m_MaximumVerticalTargetSpeed: 0.6
     m_TargetHeightForceRefreshDistance: 0.3
-    m_MaximumVerticalCorrectionSpeed: 0.6
     m_GroundPenetrationTolerance: 0.01
     m_LandingLockCompletionTolerance: 0.01
     m_LockDistance: 0.08

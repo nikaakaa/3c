@@ -168,9 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PlantCorrectionResponseAppliedDelta",
                 "PlantEffectiveCorrectionStep",
                 "PlantTargetAppliedVerticalDelta",
-                "PlantTakeoverWeightPrevious",
-                "PlantTakeoverWeightCurrent",
-                "PlantTakeoverWeightDelta",
+                "PlantBlendWeightDelta",
                 "PlantOutputDistance",
                 "PlantPenetrationDepth",
                 "PresentationDeltaSeconds",
@@ -190,15 +188,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     ["PlantDriver"] = CategoryCounts(
                         plantInterpolation,
-                        PlantDriver),
-                    ["TakeoverWeightAdvance"] = CategoryCounts(
-                        plantInterpolation,
-                        TakeoverWeightAdvance)
+                        PlantDriver)
                 };
             CharacterFootDiagnosisTarget plantBlendStutterTarget =
                 context.Target(
                     "stable-swing-plant-blend-stutter",
-                    "同Event、同Source、稳定Path的PreparedPrediction Swing中，正式Approach进度推进是否被Plant Blend单帧Hold，并给物理脚引入相对动画Source的额外加速度",
+                    "同Event、同Source、稳定Path的Swing中，Formal Contact推进是否被Plant Blend单帧Hold，并给物理脚引入相对动画Source的额外加速度",
                     new[] { "StableSwingPlantBlendKinematics" },
                     new[] { "advanceToHold=true" },
                     stableSwingPlantBlend,
@@ -210,28 +205,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value => CharacterFootDiagnosisContext.Metric(
                         value,
                         "FootPlacementAddedAccelerationMetersPerFrameSquared"),
-                    "FormalProgressPrevious",
-                    "FormalProgressCurrent",
-                    "FormalProgressDelta",
                     "FormalContactPrevious",
                     "FormalContactCurrent",
                     "FormalContactDelta",
-                    "TakeoverWeightPrevious",
-                    "TakeoverWeightCurrent",
-                    "TakeoverWeightDelta",
-                    "TakeoverMixedWorldTargetStepMeters",
-                    "TakeoverPreviousResponseToMixedDistanceMeters",
-                    "TakeoverCapturedResidualMeters",
-                    "TakeoverCaptureContinuityErrorMeters",
-                    "TakeoverResidualDecayStepMeters",
-                    "TakeoverResidualAfterDecayMeters",
-                    "TakeoverDesiredFromPreviousResponseStepMeters",
-                    "TakeoverResponseFromPreviousResponseStepMeters",
-                    "TakeoverResidualBaseHalfLifeSeconds",
-                    "TakeoverResidualAppliedHalfLifeSeconds",
-                    "LockWeightPrevious",
-                    "LockWeightCurrent",
-                    "LockWeightDelta",
+                    "PlantBlendPrevious",
+                    "PlantBlendCurrent",
+                    "PlantBlendDelta",
                     "SourceAnkleStepMeters",
                     "PhysicalAnkleStepMeters",
                     "FootPlacementOffsetStepMeters",
@@ -497,15 +476,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "plantTakeoverStarted"))
+                    "plantWeightStarted"))
             {
-                return "TakeoverStartedResidualCapture";
+                return "WeightStartedResidualCapture";
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "plantTakeoverCompleted"))
+                    "plantWeightCompleted"))
             {
-                return "TakeoverCompletedResidualCapture";
+                return "WeightCompletedResidualCapture";
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
@@ -574,13 +553,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             return "Stable";
         }
-
-        static string TakeoverWeightAdvance(JObject value) =>
-            CharacterFootDiagnosisContext.Evidence(
-                value,
-                "plantTakeoverWeightAdvanced")
-                ? "Advanced"
-                : "NotAdvanced";
 
         static string TrajectoryResponse(JObject value)
         {

@@ -107,14 +107,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
             "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
             "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
-            "FormalEventPhase,FormalEventTimeToLandingSeconds,FormalInApproachContactToLanding,FormalApproachContactToLandingProgress," +
+            "FormalEventPhase,FormalEventTimeToLandingSeconds,FormalInApproachContactToLanding," +
             "FormalCurrentContactEventAvailable,FormalCurrentContactEventIdentity,FormalCurrentContactEventOrdinal,FormalCurrentContactEventCycle,FormalCurrentContactEventDistance,FormalCurrentContactRootLocalLandingX,FormalCurrentContactRootLocalLandingY,FormalCurrentContactRootLocalLandingZ," +
             "FormalNextLandingEventAvailable,FormalNextLandingEventIdentity,FormalNextLandingEventOrdinal,FormalNextLandingEventCycle,FormalNextLandingEventDistance,FormalNextRootLocalLandingX,FormalNextRootLocalLandingY,FormalNextRootLocalLandingZ," +
             "InputFormalStepObservationAvailable,InputFormalStepSourceId,InputFormalStepSourceIdentity,InputFormalStepSourceWeight,InputFormalStepSourceNormalizedTime," +
             "InputFormalStepClipBindingIndex,InputFormalStepSourceCycle,InputFormalStepContributionContinuityIdentity,InputFormalStepCompletionIdentity,InputFormalStepTimeSeconds,InputFormalStepDistance," +
             "InputFormalFootHeight,InputFormalToeHeight,InputFormalToeSpeed,InputFormalPositionError,InputFormalRotationError," +
             "InputFormalContact,InputFormalLockMode,InputFormalLockWeight,InputFormalSupport," +
-            "InputFormalEventPhase,InputFormalEventTimeToLandingSeconds,InputFormalInApproachContactToLanding,InputFormalApproachContactToLandingProgress," +
+            "InputFormalEventPhase,InputFormalEventTimeToLandingSeconds,InputFormalInApproachContactToLanding," +
             "InputFormalCurrentContactEventAvailable,InputFormalCurrentContactEventIdentity,InputFormalCurrentContactEventOrdinal,InputFormalCurrentContactEventCycle,InputFormalCurrentContactEventDistance,InputFormalCurrentContactRootLocalLandingX,InputFormalCurrentContactRootLocalLandingY,InputFormalCurrentContactRootLocalLandingZ," +
             "InputFormalNextLandingEventAvailable,InputFormalNextLandingEventIdentity,InputFormalNextLandingEventOrdinal,InputFormalNextLandingEventCycle,InputFormalNextLandingEventDistance,InputFormalNextRootLocalLandingX,InputFormalNextRootLocalLandingY,InputFormalNextRootLocalLandingZ," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
@@ -243,7 +243,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified,FootMotionPlantTargetKind,FootMotionPlantLockResponse," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
-            "FootMotionPlantTakeoverWeightPrevious,FootMotionPlantTakeoverWeightCurrent,FootMotionPlantTakeoverWeightDelta,FootMotionPlantTakeoverWeightAdvanced,FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
+            "FootMotionPlantPreviousBlendWeight,FootMotionPlantBlendWeight,FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
             "FootMotionPlantTargetHeightBefore,FootMotionPlantTargetHeightTarget,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightAfter,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetHeightUpdateReason,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
             "FootMotionPlantPreviousMixedWorldTargetX,FootMotionPlantPreviousMixedWorldTargetY,FootMotionPlantPreviousMixedWorldTargetZ," +
             "FootMotionPlantMixedWorldTargetX,FootMotionPlantMixedWorldTargetY,FootMotionPlantMixedWorldTargetZ," +
@@ -2190,23 +2190,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantLockResponse.ToString());
             Add(row, motion.PlantDesiredPoint);
             Add(row, motion.PlantFilteredPoint);
-            if (!Enum.TryParse(
-                    motion.PlantResidualCaptureReason,
-                    out CharacterFootPlantResidualCaptureReason
-                        plantResidualCaptureReason))
-            {
-                throw new InvalidDataException(
-                    "Foot Motion Plant residual capture reason is invalid.");
-            }
             Add(row, motion.PlantPreviousBlendWeight);
             Add(row, motion.PlantBlendWeight);
-            Add(row,
-                motion.PlantBlendWeight -
-                motion.PlantPreviousBlendWeight);
-            Add(row,
-                (plantResidualCaptureReason &
-                 CharacterFootPlantResidualCaptureReason
-                     .TakeoverWeightAdvanced) != 0);
             Add(row, motion.PlantTargetHeightAdoptionMode);
             Add(row, motion.PlantTargetMaximumVerticalSpeed);
             Add(row, motion.PlantTargetHeightBefore);
@@ -2767,9 +2752,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, valid ? events.Phase.ToString() : string.Empty);
             Add(row, valid ? events.TimeToLandingSeconds : 0f);
             Add(row, valid && events.InApproachContactToLanding);
-            Add(row, valid
-                ? events.ApproachContactToLandingProgress
-                : 0f);
             Add(row, current.IsValid);
             Add(row, current.IsBound ? current.Identity : 0UL);
             Add(row, current.IsValid ? current.Ordinal : 0);

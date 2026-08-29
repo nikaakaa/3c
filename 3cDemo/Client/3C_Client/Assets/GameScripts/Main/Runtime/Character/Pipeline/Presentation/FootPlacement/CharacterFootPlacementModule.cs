@@ -344,6 +344,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Pose.CompletionIdentity,
                 m_RightCurrentSupport,
                 committedBank?.RightCurrentSupport);
+            CharacterFootCurrentSupportObservation leftCurrentSupport =
+                bank.LeftCurrentSupport.Observation;
+            CharacterFootCurrentSupportObservation rightCurrentSupport =
+                bank.RightCurrentSupport.Observation;
 
             CharacterFootLandingSnapshot leftLanding =
                 CharacterFootLandingRuntime.ProjectBeforePrediction(
@@ -439,14 +443,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftPreparedPlantActive ? leftLanding.PlantTarget : default;
             CharacterFootGroundPathLanding rightPreparedPlantTarget =
                 rightPreparedPlantActive ? rightLanding.PlantTarget : default;
-            float leftPreparedPlantWeight = ResolvePreparedPlantWeight(
-                in bank.LeftFoot,
-                in leftCurrentStep,
-                leftPreparedPlantActive);
-            float rightPreparedPlantWeight = ResolvePreparedPlantWeight(
-                in bank.RightFoot,
-                in rightCurrentStep,
-                rightPreparedPlantActive);
             CharacterFootGroundPathResult leftGroundPath = PrepareGroundPath(
                 CharacterFootSide.Left,
                 hasLeftLastLanding,
@@ -510,6 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Pose.CompletionIdentity,
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
+                CharacterFootSide.Left,
                 pose.Left,
                 pose.Left.HipPosition,
                 m_Rig.LeftLegLength,
@@ -518,7 +515,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftContactLanding,
                 leftPreparedPlantActive,
                 in leftPreparedPlantTarget,
-                leftPreparedPlantWeight,
+                in leftCurrentSupport,
                 in leftLockRequest,
                 leftCurrentStep.Support,
                 leftLockRequest.EventIdentity,
@@ -537,6 +534,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Pose.CompletionIdentity,
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
+                CharacterFootSide.Right,
                 pose.Right,
                 pose.Right.HipPosition,
                 m_Rig.RightLegLength,
@@ -545,7 +543,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightContactLanding,
                 rightPreparedPlantActive,
                 in rightPreparedPlantTarget,
-                rightPreparedPlantWeight,
+                in rightCurrentSupport,
                 in rightLockRequest,
                 rightCurrentStep.Support,
                 rightLockRequest.EventIdentity,
@@ -1105,18 +1103,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool currentMatches = events.CurrentContact.IsBound &&
                                   events.CurrentContact.Identity == eventIdentity;
             return approachMatches || currentMatches;
-        }
-
-        static float ResolvePreparedPlantWeight(
-            in CharacterFootLifecycleContext context,
-            in AnimationFootMotionRuntimeSample footMotion,
-            bool active)
-        {
-            if (!active)
-                return 0f;
-            return footMotion.Events.InApproachContactToLanding
-                ? footMotion.Contact
-                : context.Interpolation.PlantBlendWeight;
         }
 
         CharacterFootLandingPredictionPair PredictFootPair(

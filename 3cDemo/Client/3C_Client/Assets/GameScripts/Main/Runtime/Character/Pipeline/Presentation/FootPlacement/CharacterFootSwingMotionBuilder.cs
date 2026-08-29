@@ -486,8 +486,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockResponse = path.PlantLockResponse;
             PlantDesiredPoint = path.PlantDesiredPoint;
             PlantFilteredPoint = path.PlantFilteredPoint;
-            PlantPreviousBlendWeight = path.PlantPreviousBlendWeight;
-            PlantBlendWeight = path.PlantBlendWeight;
+            SelectedSupportTargetAvailable = path.SelectedSupportTargetAvailable;
+            SelectedSupportPosition = path.SelectedSupportPosition;
+            SelectedSupportNormal = path.SelectedSupportNormal;
+            SelectedSupportSurfaceIdentity =
+                path.SelectedSupportSurfaceIdentity;
             PlantTargetHeightAdoptionMode =
                 path.PlantTargetHeightAdoptionMode.ToString();
             PlantTargetMaximumVerticalSpeed =
@@ -507,9 +510,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetForceRefreshDistance =
                 path.PlantTargetForceRefreshDistance;
             PlantTargetVerticalClamped = path.PlantTargetVerticalClamped;
-            PlantPreviousMixedWorldTarget =
-                path.PlantPreviousMixedWorldTarget;
-            PlantMixedWorldTarget = path.PlantMixedWorldTarget;
+            PlantPreviousSelectedWorldTarget =
+                path.PlantPreviousSelectedWorldTarget;
+            PlantSelectedWorldTarget = path.PlantSelectedWorldTarget;
             PlantPreviousResponseOutputAvailable =
                 path.PlantPreviousResponseOutputAvailable;
             PlantPreviousResponseOutputPoint =
@@ -671,8 +674,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootLockResponse PlantLockResponse { get; }
         public Vector3 PlantDesiredPoint { get; }
         public Vector3 PlantFilteredPoint { get; }
-        public float PlantPreviousBlendWeight { get; }
-        public float PlantBlendWeight { get; }
+        public bool SelectedSupportTargetAvailable { get; }
+        public Vector3 SelectedSupportPosition { get; }
+        public Vector3 SelectedSupportNormal { get; }
+        public int SelectedSupportSurfaceIdentity { get; }
         public string PlantTargetHeightAdoptionMode { get; }
         public float PlantTargetMaximumVerticalSpeed { get; }
         public float PlantTargetHeightBefore { get; }
@@ -685,8 +690,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantTargetForceRefreshed { get; }
         public float PlantTargetForceRefreshDistance { get; }
         public bool PlantTargetVerticalClamped { get; }
-        public Vector3 PlantPreviousMixedWorldTarget { get; }
-        public Vector3 PlantMixedWorldTarget { get; }
+        public Vector3 PlantPreviousSelectedWorldTarget { get; }
+        public Vector3 PlantSelectedWorldTarget { get; }
         public bool PlantPreviousResponseOutputAvailable { get; }
         public Vector3 PlantPreviousResponseOutputPoint { get; }
         public Vector3 PlantDesiredOutputPoint { get; }

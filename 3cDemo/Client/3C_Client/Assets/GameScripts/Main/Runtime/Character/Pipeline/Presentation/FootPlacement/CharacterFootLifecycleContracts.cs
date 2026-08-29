@@ -124,10 +124,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         DirectFollowChanged = 1 << 4,
         StateEntered = 1 << 5,
         ResponseEntered = 1 << 6,
-        WeightStarted = 1 << 7,
-        WeightCompleted = 1 << 8,
-        TargetPointRevised = 1 << 9,
-        TargetHeightForceRefreshed = 1 << 10
+        TargetPointRevised = 1 << 7,
+        TargetHeightForceRefreshed = 1 << 8
     }
 
     [Flags]
@@ -137,8 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         TargetHeightHistory = 1 << 0,
         PlantWorldResidual = 1 << 1,
         CorrectionResponseHistory = 1 << 2,
-        PlantWeightBlend = 1 << 3,
-        PlantTarget = 1 << 4
+        PlantTarget = 1 << 3
     }
 
     internal enum CharacterFootCorrectionResponseDirection : byte
@@ -287,8 +284,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockResponse = CharacterFootLockResponse.None;
             PlantDesiredPoint = default;
             PlantFilteredPoint = default;
-            PlantPreviousBlendWeight = 0f;
-            PlantBlendWeight = 0f;
+            SelectedSupportTargetAvailable = false;
+            SelectedSupportPosition = default;
+            SelectedSupportNormal = default;
+            SelectedSupportSurfaceIdentity = 0;
             PlantTargetHeightAdoptionMode = swingTargetHeightAdoptionMode;
             PlantTargetMaximumVerticalSpeed = 0f;
             PlantTargetHeightBefore = 0f;
@@ -302,8 +301,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetForceRefreshed = false;
             PlantTargetForceRefreshDistance = 0f;
             PlantTargetVerticalClamped = false;
-            PlantPreviousMixedWorldTarget = default;
-            PlantMixedWorldTarget = default;
+            PlantPreviousSelectedWorldTarget = default;
+            PlantSelectedWorldTarget = default;
             PlantPreviousResponseOutputAvailable = false;
             PlantPreviousResponseOutputPoint = default;
             PlantDesiredOutputPoint = default;
@@ -450,8 +449,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockResponse = plant.LockResponse;
             PlantDesiredPoint = plant.DesiredPoint;
             PlantFilteredPoint = plant.FilteredPoint;
-            PlantPreviousBlendWeight = plant.PreviousBlendWeight;
-            PlantBlendWeight = plant.BlendWeight;
+            CharacterFootSupportTarget selectedSupport =
+                interpolation.SupportTarget;
+            SelectedSupportTargetAvailable = selectedSupport.IsValid;
+            SelectedSupportPosition = selectedSupport.Position;
+            SelectedSupportNormal = selectedSupport.SupportNormal;
+            SelectedSupportSurfaceIdentity = selectedSupport.SurfaceIdentity;
             PlantTargetHeightAdoptionMode = plant.Evaluated
                 ? plant.TargetHeightAdoptionMode
                 : source.PlantTargetHeightAdoptionMode;
@@ -471,9 +474,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetForceRefreshDistance =
                 plant.TargetForceRefreshDistance;
             PlantTargetVerticalClamped = plant.TargetVerticalClamped;
-            PlantPreviousMixedWorldTarget =
-                plant.PreviousMixedWorldTarget;
-            PlantMixedWorldTarget = plant.MixedWorldTarget;
+            PlantPreviousSelectedWorldTarget =
+                plant.PreviousSelectedWorldTarget;
+            PlantSelectedWorldTarget = plant.SelectedWorldTarget;
             CharacterFootCorrectionResponseFact correctionResponse =
                 plant.CorrectionResponse;
             PlantPreviousResponseOutputAvailable =
@@ -603,8 +606,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockResponse PlantLockResponse { get; }
         internal Vector3 PlantDesiredPoint { get; }
         internal Vector3 PlantFilteredPoint { get; }
-        internal float PlantPreviousBlendWeight { get; }
-        internal float PlantBlendWeight { get; }
+        internal bool SelectedSupportTargetAvailable { get; }
+        internal Vector3 SelectedSupportPosition { get; }
+        internal Vector3 SelectedSupportNormal { get; }
+        internal int SelectedSupportSurfaceIdentity { get; }
         internal CharacterFootTargetHeightAdoptionMode PlantTargetHeightAdoptionMode { get; }
         internal float PlantTargetMaximumVerticalSpeed { get; }
         internal float PlantTargetHeightBefore { get; }
@@ -617,8 +622,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantTargetForceRefreshed { get; }
         internal float PlantTargetForceRefreshDistance { get; }
         internal bool PlantTargetVerticalClamped { get; }
-        internal Vector3 PlantPreviousMixedWorldTarget { get; }
-        internal Vector3 PlantMixedWorldTarget { get; }
+        internal Vector3 PlantPreviousSelectedWorldTarget { get; }
+        internal Vector3 PlantSelectedWorldTarget { get; }
         internal bool PlantPreviousResponseOutputAvailable { get; }
         internal Vector3 PlantPreviousResponseOutputPoint { get; }
         internal Vector3 PlantDesiredOutputPoint { get; }
@@ -1104,8 +1109,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLockResponse lockResponse,
             Vector3 desiredPoint,
             Vector3 filteredPoint,
-            float previousBlendWeight,
-            float blendWeight,
             CharacterFootTargetHeightAdoptionMode targetHeightAdoptionMode,
             float targetMaximumVerticalSpeed,
             float targetHeightBefore,
@@ -1118,8 +1121,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool targetForceRefreshed,
             float targetForceRefreshDistance,
             bool targetVerticalClamped,
-            Vector3 previousMixedWorldTarget,
-            Vector3 mixedWorldTarget,
+            Vector3 previousSelectedWorldTarget,
+            Vector3 selectedWorldTarget,
             CharacterFootPlantResidualCaptureReason residualCaptureReason,
             Vector3 worldResidualBeforeCapture,
             Vector3 worldResidualCapturedBeforeDecay,
@@ -1145,8 +1148,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockResponse = lockResponse;
             DesiredPoint = desiredPoint;
             FilteredPoint = filteredPoint;
-            PreviousBlendWeight = previousBlendWeight;
-            BlendWeight = blendWeight;
             TargetHeightAdoptionMode = targetHeightAdoptionMode;
             TargetMaximumVerticalSpeed = targetMaximumVerticalSpeed;
             TargetHeightBefore = targetHeightBefore;
@@ -1159,8 +1160,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TargetForceRefreshed = targetForceRefreshed;
             TargetForceRefreshDistance = targetForceRefreshDistance;
             TargetVerticalClamped = targetVerticalClamped;
-            PreviousMixedWorldTarget = previousMixedWorldTarget;
-            MixedWorldTarget = mixedWorldTarget;
+            PreviousSelectedWorldTarget = previousSelectedWorldTarget;
+            SelectedWorldTarget = selectedWorldTarget;
             ResidualCaptureReason = residualCaptureReason;
             WorldResidualBeforeCapture = worldResidualBeforeCapture;
             WorldResidualCapturedBeforeDecay =
@@ -1194,8 +1195,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockResponse LockResponse { get; }
         internal Vector3 DesiredPoint { get; }
         internal Vector3 FilteredPoint { get; }
-        internal float PreviousBlendWeight { get; }
-        internal float BlendWeight { get; }
         internal CharacterFootTargetHeightAdoptionMode TargetHeightAdoptionMode { get; }
         internal float TargetMaximumVerticalSpeed { get; }
         internal float TargetHeightBefore { get; }
@@ -1208,8 +1207,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool TargetForceRefreshed { get; }
         internal float TargetForceRefreshDistance { get; }
         internal bool TargetVerticalClamped { get; }
-        internal Vector3 PreviousMixedWorldTarget { get; }
-        internal Vector3 MixedWorldTarget { get; }
+        internal Vector3 PreviousSelectedWorldTarget { get; }
+        internal Vector3 SelectedWorldTarget { get; }
         internal CharacterFootPlantResidualCaptureReason ResidualCaptureReason { get; }
         internal Vector3 WorldResidualBeforeCapture { get; }
         internal Vector3 WorldResidualCapturedBeforeDecay { get; }
@@ -1257,14 +1256,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantDirectFollow;
         internal Vector3 PlantDesiredPoint;
         internal Vector3 PlantFilteredPoint;
-        internal float PlantBlendWeight;
-        internal Vector3 PreviousPlantMixedWorldTarget;
+        internal Vector3 PreviousPlantSelectedWorldTarget;
+        internal CharacterFootSupportTarget SelectedSupportTarget;
         internal bool HasPreviousResponseOutputPoint;
         internal Vector3 PreviousResponseOutputPoint;
         internal Vector3 PlantWorldResidual;
         internal bool PlantWorldResidualTransitionActive;
         internal bool HasCorrectionResponse;
-        internal float CorrectionResponseAlongUp;
+        internal float CorrectionResponse;
         internal bool HasCorrectionResponseLineage;
         internal FixedString128Bytes CorrectionResponseSourceLineage;
         internal FixedString128Bytes CorrectionResponseProfileRevision;
@@ -1292,6 +1291,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong completionIdentity,
             FixedString64Bytes rigId,
             FixedString64Bytes rigRevision,
+            CharacterFootSide side,
             CharacterFootPlacementAnimatedFootPose animatedFoot,
             Vector3 animatedHip,
             float legLength,
@@ -1300,7 +1300,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGroundPathLanding contactLanding,
             bool preparedPlantActive,
             in CharacterFootGroundPathLanding preparedPlantTarget,
-            float preparedPlantWeight,
+            in CharacterFootCurrentSupportObservation currentSupport,
             in CharacterFootLockRequest lockRequest,
             float formalSupport,
             ulong formalSupportEventIdentity,
@@ -1317,6 +1317,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = completionIdentity;
             RigId = rigId;
             RigRevision = rigRevision;
+            Side = side;
             AnimatedFoot = animatedFoot;
             AnimatedHip = animatedHip;
             LegLength = legLength;
@@ -1325,7 +1326,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactLanding = contactLanding;
             PreparedPlantActive = preparedPlantActive;
             PreparedPlantTarget = preparedPlantTarget;
-            PreparedPlantWeight = preparedPlantWeight;
+            CurrentSupport = currentSupport;
             LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
@@ -1343,6 +1344,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong CompletionIdentity { get; }
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
+        internal CharacterFootSide Side { get; }
         internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
         internal Vector3 AnimatedHip { get; }
         internal float LegLength { get; }
@@ -1351,7 +1353,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool PreparedPlantActive { get; }
         internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
-        internal float PreparedPlantWeight { get; }
+        internal CharacterFootCurrentSupportObservation CurrentSupport { get; }
         internal CharacterFootLockRequest LockRequest { get; }
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }
@@ -1473,11 +1475,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 plantTargetPoint,
             CharacterFootPlantTargetKind plantTargetKind,
             CharacterFootLockResponse plantLockResponse,
+            bool supportTargetAvailable,
+            in CharacterFootSupportTarget supportTarget,
             bool stateEntered,
             bool responseEntered,
             bool directPlantFollow,
             bool suppressOutput,
-            float progress,
             float timeToLandingSeconds,
             in CharacterFootSupportIntent supportIntent)
         {
@@ -1490,11 +1493,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetPoint = plantTargetPoint;
             PlantTargetKind = plantTargetKind;
             PlantLockResponse = plantLockResponse;
+            SupportTargetAvailable = supportTargetAvailable;
+            SupportTarget = supportTarget;
             StateEntered = stateEntered;
             ResponseEntered = responseEntered;
             DirectPlantFollow = directPlantFollow;
             SuppressOutput = suppressOutput;
-            Progress = progress;
             TimeToLandingSeconds = timeToLandingSeconds;
             SupportIntent = supportIntent;
         }
@@ -1508,11 +1512,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantTargetPoint { get; }
         internal CharacterFootPlantTargetKind PlantTargetKind { get; }
         internal CharacterFootLockResponse PlantLockResponse { get; }
+        internal bool SupportTargetAvailable { get; }
+        internal CharacterFootSupportTarget SupportTarget { get; }
         internal bool StateEntered { get; }
         internal bool ResponseEntered { get; }
         internal bool DirectPlantFollow { get; }
         internal bool SuppressOutput { get; }
-        internal float Progress { get; }
         internal float TimeToLandingSeconds { get; }
         internal CharacterFootSupportIntent SupportIntent { get; }
     }
@@ -1522,17 +1527,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootInterpolationResult(
             Vector3 correction,
             bool completed,
+            in CharacterFootSupportTarget supportTarget,
             in CharacterFootPathContinuityFact continuityFact,
             in CharacterFootPlantInterpolationFact plantFact)
         {
             Correction = correction;
             Completed = completed;
+            SupportTarget = supportTarget;
             ContinuityFact = continuityFact;
             PlantFact = plantFact;
         }
 
         internal Vector3 Correction { get; }
         internal bool Completed { get; }
+        internal CharacterFootSupportTarget SupportTarget { get; }
         internal CharacterFootPathContinuityFact ContinuityFact { get; }
         internal CharacterFootPlantInterpolationFact PlantFact { get; }
     }

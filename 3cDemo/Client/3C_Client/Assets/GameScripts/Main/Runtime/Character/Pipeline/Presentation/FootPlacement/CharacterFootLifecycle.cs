@@ -565,15 +565,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.SwingMotion.FormalTargetHeightAlongUp) ||
                 frame.HasContactLanding &&
                 frame.ContactLanding.LandingEventIdentity == 0 ||
+                !frame.CurrentSupport.IsSpecified ||
+                frame.CurrentSupport.FrameSequence != frame.FrameSequence ||
+                frame.CurrentSupport.CompletionIdentity != frame.CompletionIdentity ||
+                frame.CurrentSupport.Side != frame.Side ||
+                frame.CurrentSupport.Available &&
+                frame.CurrentSupport.Target.WorldRevision != frame.WorldRevision ||
                 frame.PreparedPlantActive &&
                 (frame.PreparedPlantTarget.LandingEventIdentity == 0 ||
                  !CharacterFootConstraintMath.Finite(
                      frame.PreparedPlantTarget.Point) ||
                  !CharacterFootConstraintMath.Finite(
-                     frame.PreparedPlantTarget.Normal) ||
-                 !float.IsFinite(frame.PreparedPlantWeight) ||
-                 frame.PreparedPlantWeight < 0f ||
-                 frame.PreparedPlantWeight > 1f))
+                     frame.PreparedPlantTarget.Normal)))
             {
                 throw new InvalidOperationException(
                     "Foot lifecycle frame is invalid.");

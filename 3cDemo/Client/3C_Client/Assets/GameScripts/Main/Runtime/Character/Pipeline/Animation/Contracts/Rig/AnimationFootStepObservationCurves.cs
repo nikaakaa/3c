@@ -100,7 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             HasPredictiveLanding
                 ? Events.NextLanding.ContributionContinuityIdentity
                 : 0;
-        public bool IsAuthoritative => HasPredictiveLanding;
+        public bool IsAuthoritative => IsValid;
         public bool HasConsistentLandingEventIdentity =>
             HasPredictiveLanding && LandingEventIdentity != 0;
         public bool HasCurrentContactEvent =>

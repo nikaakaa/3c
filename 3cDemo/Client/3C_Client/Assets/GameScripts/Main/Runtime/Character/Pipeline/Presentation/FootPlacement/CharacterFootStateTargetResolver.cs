@@ -28,11 +28,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     CharacterFootPlantTargetKind.None,
                     CharacterFootLockResponse.None,
+                    false,
+                    default,
                     transition.StateChanged,
                     false,
                     false,
                     true,
-                    0f,
                     timeToLandingSeconds,
                     in supportIntent);
             }
@@ -40,27 +41,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterFootConstraintState.Swing:
                 case CharacterFootConstraintState.UnlockedSupport:
-                    return frame.PreparedPlantActive
-                        ? ResolvePreparedPlant(
-                            in transition,
-                            swingCorrection,
-                            timeToLandingSeconds,
-                            in frame,
-                            in supportIntent)
-                        : Target(
-                            swingCorrection,
-                            swingCorrection,
-                            CharacterFootInterpolationPolicy.SwingResidual,
-                            transition,
-                            0f,
-                            timeToLandingSeconds,
-                            in supportIntent);
+                    return ResolveSwingTarget(
+                        in transition,
+                        swingCorrection,
+                        CharacterFootInterpolationPolicy.SwingResidual,
+                        timeToLandingSeconds,
+                        in frame,
+                        in supportIntent);
                 case CharacterFootConstraintState.Landing:
                     return ResolveContactPlant(
                         in context,
                         in transition,
                         swingCorrection,
-                        frame.LockRequest.Weight,
                         timeToLandingSeconds,
                         in frame,
                         in supportIntent);
@@ -73,13 +65,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in frame,
                         in supportIntent);
                 case CharacterFootConstraintState.Releasing:
-                    return Target(
-                        swingCorrection,
+                    return ResolveSwingTarget(
+                        in transition,
                         swingCorrection,
                         CharacterFootInterpolationPolicy.ReleaseResidual,
-                        transition,
-                        0f,
                         timeToLandingSeconds,
+                        in frame,
                         in supportIntent);
                 default:
                     throw new System.InvalidOperationException(
@@ -87,30 +78,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static CharacterFootStateTarget ResolvePreparedPlant(
+        static CharacterFootStateTarget ResolveSwingTarget(
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
+            CharacterFootInterpolationPolicy policy,
             float timeToLandingSeconds,
             in CharacterFootStateFrame frame,
             in CharacterFootSupportIntent supportIntent)
         {
-            CharacterFootGroundPathLanding plant = frame.PreparedPlantTarget;
-            Vector3 correction =
-                CharacterFootConstraintMath.ResolveContactCorrection(
-                    frame.AnimatedFoot,
-                    plant.Point);
-            return PlantTarget(
+            Vector3 originalSole =
+                CharacterFootConstraintMath.ResolveOriginalSole(
+                    frame.AnimatedFoot);
+            Vector3 correction = swingCorrection;
+            if (!frame.SwingMotion.Accepted && frame.CurrentSupport.Available)
+                correction = frame.CurrentSupport.Target.Position - originalSole;
+            bool targetAvailable = TryResolveSupportTarget(
+                in frame,
+                originalSole + correction,
+                out CharacterFootSupportTarget supportTarget);
+            return Target(
                 correction,
                 swingCorrection,
-                plant.LandingEventIdentity,
-                false,
-                plant.Point,
-                CharacterFootPlantTargetKind.PreparedPrediction,
-                CharacterFootLockResponse.None,
-                transition,
-                frame.PreparedPlantWeight,
+                policy,
+                in transition,
+                targetAvailable,
+                in supportTarget,
                 timeToLandingSeconds,
-                false,
                 in supportIntent);
         }
 
@@ -118,7 +111,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
-            float progress,
             float timeToLandingSeconds,
             in CharacterFootStateFrame frame,
             in CharacterFootSupportIntent supportIntent)
@@ -135,8 +127,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.Contact.Anchor,
                 CharacterFootPlantTargetKind.VerifiedAnchor,
                 CharacterFootLockResponse.None,
+                new CharacterFootSupportTarget(
+                    frame.FrameSequence,
+                    frame.CompletionIdentity,
+                    frame.Side,
+                    context.Contact.Anchor,
+                    context.Contact.Normal,
+                    context.Contact.SurfaceIdentity,
+                    frame.WorldRevision),
                 transition,
-                progress,
                 timeToLandingSeconds,
                 false,
                 in supportIntent);
@@ -193,8 +192,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? CharacterFootPlantTargetKind.LockedFullAnchor
                     : CharacterFootPlantTargetKind.LockedSliding,
                 context.Discrete.LockResponse,
+                new CharacterFootSupportTarget(
+                    frame.FrameSequence,
+                    frame.CompletionIdentity,
+                    frame.Side,
+                    originalSole + correction,
+                    context.Contact.Normal,
+                    context.Contact.SurfaceIdentity,
+                    frame.WorldRevision),
                 transition,
-                1f,
                 timeToLandingSeconds,
                 true,
                 in supportIntent);
@@ -205,7 +211,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 swingCorrection,
             CharacterFootInterpolationPolicy policy,
             in CharacterFootTransitionDecision transition,
-            float progress,
+            bool supportTargetAvailable,
+            in CharacterFootSupportTarget supportTarget,
             float timeToLandingSeconds,
             in CharacterFootSupportIntent supportIntent) =>
             new CharacterFootStateTarget(
@@ -218,12 +225,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 CharacterFootPlantTargetKind.None,
                 CharacterFootLockResponse.None,
+                supportTargetAvailable,
+                in supportTarget,
                 transition.StateChanged,
                 transition.Reason ==
                 CharacterFootTransitionReason.LockResponseChanged,
                 false,
                 false,
-                progress,
                 timeToLandingSeconds,
                 in supportIntent);
 
@@ -235,8 +243,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 point,
             CharacterFootPlantTargetKind targetKind,
             CharacterFootLockResponse lockResponse,
+            CharacterFootSupportTarget supportTarget,
             in CharacterFootTransitionDecision transition,
-            float progress,
             float timeToLandingSeconds,
             bool directPlantFollow,
             in CharacterFootSupportIntent supportIntent) =>
@@ -250,14 +258,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 point,
                 targetKind,
                 lockResponse,
+                true,
+                in supportTarget,
                 transition.StateChanged,
                 transition.Reason ==
                 CharacterFootTransitionReason.LockResponseChanged,
                 directPlantFollow,
                 false,
-                Mathf.Clamp01(progress),
                 timeToLandingSeconds,
                 in supportIntent);
+
+        static bool TryResolveSupportTarget(
+            in CharacterFootStateFrame frame,
+            Vector3 position,
+            out CharacterFootSupportTarget target)
+        {
+            if (!frame.CurrentSupport.Available)
+            {
+                target = default;
+                return false;
+            }
+            CharacterFootSupportTarget current = frame.CurrentSupport.Target;
+            target = new CharacterFootSupportTarget(
+                frame.FrameSequence,
+                frame.CompletionIdentity,
+                frame.Side,
+                position,
+                current.SupportNormal,
+                current.SurfaceIdentity,
+                frame.WorldRevision);
+            return true;
+        }
 
         static CharacterFootSupportIntent ResolveSupportIntent(
             in CharacterFootStateFrame frame)

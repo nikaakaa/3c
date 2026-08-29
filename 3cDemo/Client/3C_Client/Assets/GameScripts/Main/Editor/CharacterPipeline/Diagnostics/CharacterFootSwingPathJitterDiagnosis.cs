@@ -260,9 +260,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact plantDesiredPoint;
         public CharacterFootVectorFact plantFilteredPoint;
         public double plantBlendWeight;
-        public double plantVerticalDelta;
-        public double plantAppliedVerticalDelta;
-        public bool plantVerticalClamped;
+        public double plantTargetMaximumVerticalSpeed;
+        public double plantTargetVerticalDelta;
+        public double plantTargetAppliedVerticalDelta;
+        public bool plantTargetVerticalClamped;
+        public CharacterFootVectorFact plantBlendedCorrection;
+        public double plantCorrectionMaximumVerticalSpeed;
+        public double plantCorrectionVerticalDelta;
+        public double plantCorrectionAppliedVerticalDelta;
+        public bool plantCorrectionVerticalClamped;
         public double plantOutputDistance;
         public double plantPenetrationDepth;
         public double presentationDeltaSeconds;

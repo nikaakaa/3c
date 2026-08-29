@@ -407,9 +407,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantDesiredPoint = path.PlantDesiredPoint;
             PlantFilteredPoint = path.PlantFilteredPoint;
             PlantBlendWeight = path.PlantBlendWeight;
-            PlantVerticalDelta = path.PlantVerticalDelta;
-            PlantAppliedVerticalDelta = path.PlantAppliedVerticalDelta;
-            PlantVerticalClamped = path.PlantVerticalClamped;
+            PlantTargetMaximumVerticalSpeed =
+                path.PlantTargetMaximumVerticalSpeed;
+            PlantTargetVerticalDelta = path.PlantTargetVerticalDelta;
+            PlantTargetAppliedVerticalDelta =
+                path.PlantTargetAppliedVerticalDelta;
+            PlantTargetVerticalClamped = path.PlantTargetVerticalClamped;
+            PlantBlendedCorrection = path.PlantBlendedCorrection;
+            PlantCorrectionMaximumVerticalSpeed =
+                path.PlantCorrectionMaximumVerticalSpeed;
+            PlantCorrectionVerticalDelta =
+                path.PlantCorrectionVerticalDelta;
+            PlantCorrectionAppliedVerticalDelta =
+                path.PlantCorrectionAppliedVerticalDelta;
+            PlantCorrectionVerticalClamped =
+                path.PlantCorrectionVerticalClamped;
             PlantOutputDistance = path.PlantOutputDistance;
             PlantPenetrationDepth = path.PlantPenetrationDepth;
         }
@@ -499,9 +511,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PlantDesiredPoint { get; }
         public Vector3 PlantFilteredPoint { get; }
         public float PlantBlendWeight { get; }
-        public float PlantVerticalDelta { get; }
-        public float PlantAppliedVerticalDelta { get; }
-        public bool PlantVerticalClamped { get; }
+        public float PlantTargetMaximumVerticalSpeed { get; }
+        public float PlantTargetVerticalDelta { get; }
+        public float PlantTargetAppliedVerticalDelta { get; }
+        public bool PlantTargetVerticalClamped { get; }
+        public Vector3 PlantBlendedCorrection { get; }
+        public float PlantCorrectionMaximumVerticalSpeed { get; }
+        public float PlantCorrectionVerticalDelta { get; }
+        public float PlantCorrectionAppliedVerticalDelta { get; }
+        public bool PlantCorrectionVerticalClamped { get; }
         public float PlantOutputDistance { get; }
         public float PlantPenetrationDepth { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;

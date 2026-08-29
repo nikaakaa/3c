@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/25";
+        const string Schema = "character-foot-motion-facts/26";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
         const int AnalyzerVersion = 25;
         const string GeometryFileName = "ground-path-geometry.csv";
@@ -347,10 +347,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     plantFilteredPoint = CharacterFootVectorFact.From(
                         current.PlantFilteredPoint),
                     plantBlendWeight = current.PlantBlendWeight,
-                    plantVerticalDelta = current.PlantVerticalDelta,
-                    plantAppliedVerticalDelta =
-                        current.PlantAppliedVerticalDelta,
-                    plantVerticalClamped = current.PlantVerticalClamped,
+                    plantTargetMaximumVerticalSpeed =
+                        current.PlantTargetMaximumVerticalSpeed,
+                    plantTargetVerticalDelta =
+                        current.PlantTargetVerticalDelta,
+                    plantTargetAppliedVerticalDelta =
+                        current.PlantTargetAppliedVerticalDelta,
+                    plantTargetVerticalClamped =
+                        current.PlantTargetVerticalClamped,
+                    plantBlendedCorrection = CharacterFootVectorFact.From(
+                        current.PlantBlendedCorrection),
+                    plantCorrectionMaximumVerticalSpeed =
+                        current.PlantCorrectionMaximumVerticalSpeed,
+                    plantCorrectionVerticalDelta =
+                        current.PlantCorrectionVerticalDelta,
+                    plantCorrectionAppliedVerticalDelta =
+                        current.PlantCorrectionAppliedVerticalDelta,
+                    plantCorrectionVerticalClamped =
+                        current.PlantCorrectionVerticalClamped,
                     plantOutputDistance = current.PlantOutputDistance,
                     plantPenetrationDepth = current.PlantPenetrationDepth,
                     presentationDeltaSeconds = current.DeltaSeconds,
@@ -3764,11 +3778,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PlantDesiredPoint = Vector("FootMotionPlantDesiredPoint"),
                 PlantFilteredPoint = Vector("FootMotionPlantFilteredPoint"),
                 PlantBlendWeight = Float("FootMotionPlantBlendWeight"),
-                PlantVerticalDelta = Float("FootMotionPlantVerticalDelta"),
-                PlantAppliedVerticalDelta =
-                    Float("FootMotionPlantAppliedVerticalDelta"),
-                PlantVerticalClamped =
-                    Int("FootMotionPlantVerticalClamped") != 0,
+                PlantTargetMaximumVerticalSpeed =
+                    Float("FootMotionPlantTargetMaximumVerticalSpeed"),
+                PlantTargetVerticalDelta =
+                    Float("FootMotionPlantTargetVerticalDelta"),
+                PlantTargetAppliedVerticalDelta =
+                    Float("FootMotionPlantTargetAppliedVerticalDelta"),
+                PlantTargetVerticalClamped =
+                    Int("FootMotionPlantTargetVerticalClamped") != 0,
+                PlantBlendedCorrection =
+                    Vector("FootMotionPlantBlendedCorrection"),
+                PlantCorrectionMaximumVerticalSpeed =
+                    Float("FootMotionPlantCorrectionMaximumVerticalSpeed"),
+                PlantCorrectionVerticalDelta =
+                    Float("FootMotionPlantCorrectionVerticalDelta"),
+                PlantCorrectionAppliedVerticalDelta =
+                    Float("FootMotionPlantCorrectionAppliedVerticalDelta"),
+                PlantCorrectionVerticalClamped =
+                    Int("FootMotionPlantCorrectionVerticalClamped") != 0,
                 PlantOutputDistance =
                     Float("FootMotionPlantOutputDistance"),
                 PlantPenetrationDepth =
@@ -3910,17 +3937,66 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "GroundPathEnvelope" => frame.SafetyFloorAvailable &&
                                         frame.SafetyFloorOwnerSurfaceIdentity == 0 &&
                                         frame.SafetyFloorOwnerPathIdentity != 0,
-                "ContactAnchor" => !frame.SafetyFloorAvailable &&
+                "ContactAnchor" => frame.SafetyFloorAvailable &&
                                    frame.SafetyFloorOwnerSurfaceIdentity != 0 &&
                                    frame.SafetyFloorOwnerPathIdentity == 0 &&
                                    (frame.ConstraintState == "Landing" ||
-                                    frame.ConstraintState == "Locked"),
+                                     frame.ConstraintState == "Locked"),
+                "PlantTarget" => frame.SafetyFloorAvailable &&
+                                 frame.SafetyFloorOwnerSurfaceIdentity != 0 &&
+                                 frame.SafetyFloorOwnerPathIdentity == 0 &&
+                                 frame.PlantInterpolationEvaluated &&
+                                 !frame.PlantTargetVerified &&
+                                 (frame.ConstraintState == "Swing" ||
+                                  frame.ConstraintState == "UnlockedSupport"),
                 _ => false
             };
             if (!floorOwnerValid)
             {
                 throw new InvalidDataException(
                     "Foot Motion Safety Floor owner facts are inconsistent.");
+            }
+            if (frame.PlantInterpolationEvaluated)
+            {
+                float targetBudget =
+                    frame.PlantTargetMaximumVerticalSpeed *
+                    frame.DeltaSeconds;
+                float correctionBudget =
+                    frame.PlantCorrectionMaximumVerticalSpeed *
+                    frame.DeltaSeconds;
+                bool targetClampExpected = Math.Abs(
+                    frame.PlantTargetVerticalDelta -
+                    frame.PlantTargetAppliedVerticalDelta) >
+                    PositionNoiseFloor;
+                bool correctionClampExpected = Math.Abs(
+                    frame.PlantCorrectionVerticalDelta -
+                    frame.PlantCorrectionAppliedVerticalDelta) >
+                    PositionNoiseFloor;
+                if (frame.PlantTargetEventIdentity == 0 ||
+                    !FiniteVector(frame.PlantDesiredPoint) ||
+                    !FiniteVector(frame.PlantFilteredPoint) ||
+                    !FiniteVector(frame.PlantBlendedCorrection) ||
+                    frame.PlantBlendWeight < 0f ||
+                    frame.PlantBlendWeight > 1f ||
+                    !float.IsFinite(frame.PlantTargetMaximumVerticalSpeed) ||
+                    frame.PlantTargetMaximumVerticalSpeed <= 0f ||
+                    !float.IsFinite(frame.PlantCorrectionMaximumVerticalSpeed) ||
+                    frame.PlantCorrectionMaximumVerticalSpeed <= 0f ||
+                    !float.IsFinite(frame.PlantTargetVerticalDelta) ||
+                    !float.IsFinite(frame.PlantTargetAppliedVerticalDelta) ||
+                    !float.IsFinite(frame.PlantCorrectionVerticalDelta) ||
+                    !float.IsFinite(frame.PlantCorrectionAppliedVerticalDelta) ||
+                    Math.Abs(frame.PlantTargetAppliedVerticalDelta) >
+                    targetBudget + PositionNoiseFloor ||
+                    Math.Abs(frame.PlantCorrectionAppliedVerticalDelta) >
+                    correctionBudget + PositionNoiseFloor ||
+                    frame.PlantTargetVerticalClamped != targetClampExpected ||
+                    frame.PlantCorrectionVerticalClamped !=
+                    correctionClampExpected)
+                {
+                    throw new InvalidDataException(
+                        "Foot Motion Plant interpolation facts are inconsistent.");
+                }
             }
             RequireEnum<CharacterFootSwingPathHorizontalAxisState>(
                 frame.SwingPathHorizontalAxisState,
@@ -4855,9 +4931,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantFilteredPointY",
                 "FootMotionPlantFilteredPointZ",
                 "FootMotionPlantBlendWeight",
-                "FootMotionPlantVerticalDelta",
-                "FootMotionPlantAppliedVerticalDelta",
-                "FootMotionPlantVerticalClamped",
+                "FootMotionPlantTargetMaximumVerticalSpeed",
+                "FootMotionPlantTargetVerticalDelta",
+                "FootMotionPlantTargetAppliedVerticalDelta",
+                "FootMotionPlantTargetVerticalClamped",
+                "FootMotionPlantBlendedCorrectionX",
+                "FootMotionPlantBlendedCorrectionY",
+                "FootMotionPlantBlendedCorrectionZ",
+                "FootMotionPlantCorrectionMaximumVerticalSpeed",
+                "FootMotionPlantCorrectionVerticalDelta",
+                "FootMotionPlantCorrectionAppliedVerticalDelta",
+                "FootMotionPlantCorrectionVerticalClamped",
                 "FootMotionPlantOutputDistance",
                 "FootMotionPlantPenetrationDepth",
                 "FootMotionEncodedGoalAvailable",
@@ -5489,9 +5573,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 PlantDesiredPoint;
             internal Vector3 PlantFilteredPoint;
             internal float PlantBlendWeight;
-            internal float PlantVerticalDelta;
-            internal float PlantAppliedVerticalDelta;
-            internal bool PlantVerticalClamped;
+            internal float PlantTargetMaximumVerticalSpeed;
+            internal float PlantTargetVerticalDelta;
+            internal float PlantTargetAppliedVerticalDelta;
+            internal bool PlantTargetVerticalClamped;
+            internal Vector3 PlantBlendedCorrection;
+            internal float PlantCorrectionMaximumVerticalSpeed;
+            internal float PlantCorrectionVerticalDelta;
+            internal float PlantCorrectionAppliedVerticalDelta;
+            internal bool PlantCorrectionVerticalClamped;
             internal float PlantOutputDistance;
             internal float PlantPenetrationDepth;
             internal bool EncodedGoalAvailable;

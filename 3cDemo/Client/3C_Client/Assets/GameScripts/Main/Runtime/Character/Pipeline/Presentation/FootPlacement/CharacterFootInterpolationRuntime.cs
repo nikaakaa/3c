@@ -86,53 +86,64 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     target.TimeToLandingSeconds),
                 in frame);
             Vector3 up = frame.ComponentUp.normalized;
+            Vector3 originalSole =
+                CharacterFootConstraintMath.ResolveOriginalSole(
+                    frame.AnimatedFoot);
             bool sameTarget = state.HasPlantTarget &&
                               state.PlantTargetEventIdentity ==
                               target.PlantTargetEventIdentity;
-            float verticalDelta = 0f;
-            float appliedVerticalDelta = 0f;
-            bool verticalClamped = false;
             if (!sameTarget)
             {
                 state.HasPlantTarget = true;
                 state.PlantTargetEventIdentity =
                     target.PlantTargetEventIdentity;
-                state.PlantDesiredPoint = target.PlantTargetPoint;
-                state.PlantFilteredPoint = target.PlantTargetPoint;
-                state.PlantBlendWeight = Mathf.Clamp01(target.Progress);
+                state.PlantFilteredPoint =
+                    originalSole + state.EffectiveCorrection;
+                state.PlantBlendWeight = 0f;
             }
-            else
-            {
-                Vector3 targetDelta =
-                    target.PlantTargetPoint - state.PlantFilteredPoint;
-                verticalDelta = Vector3.Dot(targetDelta, up);
-                float maximumDelta =
-                    frame.Settings.MaximumVerticalCorrectionSpeed *
-                    frame.DeltaSeconds;
-                appliedVerticalDelta = Mathf.Clamp(
-                    verticalDelta,
-                    -maximumDelta,
-                    maximumDelta);
-                verticalClamped = !Mathf.Approximately(
-                    verticalDelta,
-                    appliedVerticalDelta);
-                state.PlantFilteredPoint +=
-                    Vector3.ProjectOnPlane(targetDelta, up) +
-                    up * appliedVerticalDelta;
-                state.PlantDesiredPoint = target.PlantTargetPoint;
-                state.PlantBlendWeight = Mathf.Max(
-                    state.PlantBlendWeight,
-                    Mathf.Clamp01(target.Progress));
-            }
-            Vector3 originalSole =
-                CharacterFootConstraintMath.ResolveOriginalSole(
-                    frame.AnimatedFoot);
+            Vector3 targetDelta =
+                target.PlantTargetPoint - state.PlantFilteredPoint;
+            float targetVerticalDelta = Vector3.Dot(targetDelta, up);
+            float maximumTargetDelta =
+                frame.Settings.MaximumVerticalTargetSpeed *
+                frame.DeltaSeconds;
+            float targetAppliedVerticalDelta = Mathf.Clamp(
+                targetVerticalDelta,
+                -maximumTargetDelta,
+                maximumTargetDelta);
+            bool targetVerticalClamped = !Mathf.Approximately(
+                targetVerticalDelta,
+                targetAppliedVerticalDelta);
+            state.PlantFilteredPoint +=
+                Vector3.ProjectOnPlane(targetDelta, up) +
+                up * targetAppliedVerticalDelta;
+            state.PlantDesiredPoint = target.PlantTargetPoint;
+            state.PlantBlendWeight = Mathf.Max(
+                state.PlantBlendWeight,
+                Mathf.Clamp01(target.Progress));
             Vector3 filteredCorrection =
                 state.PlantFilteredPoint - originalSole;
-            state.EffectiveCorrection = Vector3.LerpUnclamped(
+            Vector3 blendedCorrection = Vector3.LerpUnclamped(
                 swing.Correction,
                 filteredCorrection,
                 state.PlantBlendWeight);
+            Vector3 correctionDelta =
+                blendedCorrection - state.EffectiveCorrection;
+            float correctionVerticalDelta =
+                Vector3.Dot(correctionDelta, up);
+            float maximumCorrectionDelta =
+                frame.Settings.MaximumVerticalCorrectionSpeed *
+                frame.DeltaSeconds;
+            float correctionAppliedVerticalDelta = Mathf.Clamp(
+                correctionVerticalDelta,
+                -maximumCorrectionDelta,
+                maximumCorrectionDelta);
+            bool correctionVerticalClamped = !Mathf.Approximately(
+                correctionVerticalDelta,
+                correctionAppliedVerticalDelta);
+            state.EffectiveCorrection +=
+                Vector3.ProjectOnPlane(correctionDelta, up) +
+                up * correctionAppliedVerticalDelta;
             state.PreviousTargetCorrection = target.Correction;
             state.Residual = state.EffectiveCorrection - target.Correction;
             state.Progress = state.PlantBlendWeight;
@@ -158,9 +169,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.PlantTargetPoint,
                 state.PlantFilteredPoint,
                 state.PlantBlendWeight,
-                verticalDelta,
-                appliedVerticalDelta,
-                verticalClamped,
+                frame.Settings.MaximumVerticalTargetSpeed,
+                targetVerticalDelta,
+                targetAppliedVerticalDelta,
+                targetVerticalClamped,
+                blendedCorrection,
+                frame.Settings.MaximumVerticalCorrectionSpeed,
+                correctionVerticalDelta,
+                correctionAppliedVerticalDelta,
+                correctionVerticalClamped,
                 outputDistance,
                 penetrationDepth);
             return Result(

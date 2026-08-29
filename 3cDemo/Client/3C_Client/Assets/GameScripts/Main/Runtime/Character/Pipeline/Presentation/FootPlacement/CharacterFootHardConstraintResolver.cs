@@ -45,10 +45,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (context.Discrete.State)
             {
                 case CharacterFootConstraintState.Swing
-                    when frame.ApproachPlantActive &&
+                    when frame.PreparedPlantActive &&
                          context.Interpolation.HasPlantTarget:
                 case CharacterFootConstraintState.UnlockedSupport
-                    when frame.ApproachPlantActive &&
+                    when frame.PreparedPlantActive &&
                          context.Interpolation.HasPlantTarget:
                 {
                     Vector3 minimum =
@@ -60,7 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         true,
                         true,
                         CharacterFootSafetyFloorOwner.PlantTarget,
-                        frame.ApproachPlantTarget.SurfaceIdentity,
+                        frame.PreparedPlantTarget.SurfaceIdentity,
                         0,
                         correction,
                         minimum,

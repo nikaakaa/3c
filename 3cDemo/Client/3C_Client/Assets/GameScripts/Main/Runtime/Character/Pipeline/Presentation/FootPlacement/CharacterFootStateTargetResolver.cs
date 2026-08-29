@@ -34,8 +34,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterFootConstraintState.Swing:
                 case CharacterFootConstraintState.UnlockedSupport:
-                    return frame.ApproachPlantActive
-                        ? ResolveApproachPlant(
+                    return frame.PreparedPlantActive
+                        ? ResolvePreparedPlant(
                             in transition,
                             swingCorrection,
                             timeToLandingSeconds,
@@ -52,9 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in context,
                         in transition,
                         swingCorrection,
-                        Mathf.Max(
-                            frame.LockRequest.Contact,
-                            frame.LockRequest.Weight),
+                        frame.LockRequest.Weight,
                         timeToLandingSeconds,
                         in frame);
                 case CharacterFootConstraintState.Locked:
@@ -78,13 +76,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static CharacterFootStateTarget ResolveApproachPlant(
+        static CharacterFootStateTarget ResolvePreparedPlant(
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
             float timeToLandingSeconds,
             in CharacterFootStateFrame frame)
         {
-            CharacterFootGroundPathLanding plant = frame.ApproachPlantTarget;
+            CharacterFootGroundPathLanding plant = frame.PreparedPlantTarget;
             Vector3 correction =
                 CharacterFootConstraintMath.ResolveContactCorrection(
                     frame.AnimatedFoot,
@@ -96,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 false,
                 plant.Point,
                 transition,
-                frame.LockRequest.Contact,
+                frame.PreparedPlantWeight,
                 timeToLandingSeconds);
         }
 

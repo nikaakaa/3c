@@ -239,7 +239,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
-            "FootMotionPlantBlendWeight,FootMotionPlantVerticalDelta,FootMotionPlantAppliedVerticalDelta,FootMotionPlantVerticalClamped,FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
+            "FootMotionPlantBlendWeight,FootMotionPlantTargetMaximumVerticalSpeed,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetVerticalClamped," +
+            "FootMotionPlantBlendedCorrectionX,FootMotionPlantBlendedCorrectionY,FootMotionPlantBlendedCorrectionZ," +
+            "FootMotionPlantCorrectionMaximumVerticalSpeed,FootMotionPlantCorrectionVerticalDelta,FootMotionPlantCorrectionAppliedVerticalDelta,FootMotionPlantCorrectionVerticalClamped,FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -2152,9 +2154,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantDesiredPoint);
             Add(row, motion.PlantFilteredPoint);
             Add(row, motion.PlantBlendWeight);
-            Add(row, motion.PlantVerticalDelta);
-            Add(row, motion.PlantAppliedVerticalDelta);
-            Add(row, motion.PlantVerticalClamped);
+            Add(row, motion.PlantTargetMaximumVerticalSpeed);
+            Add(row, motion.PlantTargetVerticalDelta);
+            Add(row, motion.PlantTargetAppliedVerticalDelta);
+            Add(row, motion.PlantTargetVerticalClamped);
+            Add(row, motion.PlantBlendedCorrection);
+            Add(row, motion.PlantCorrectionMaximumVerticalSpeed);
+            Add(row, motion.PlantCorrectionVerticalDelta);
+            Add(row, motion.PlantCorrectionAppliedVerticalDelta);
+            Add(row, motion.PlantCorrectionVerticalClamped);
             Add(row, motion.PlantOutputDistance);
             Add(row, motion.PlantPenetrationDepth);
             Add(row, footGoal.IsValid);

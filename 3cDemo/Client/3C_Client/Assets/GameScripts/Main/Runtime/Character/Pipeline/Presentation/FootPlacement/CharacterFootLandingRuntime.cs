@@ -24,10 +24,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingContext projected = context.Landing;
             projected.BeginFrame();
             PrepareCurrentContact(ref projected, in formalFootMotion);
-            CaptureCurrentContact(
-                ref projected,
-                in formalFootMotion,
-                in landingPrediction);
             CaptureNextSwing(
                 ref projected,
                 in formalFootMotion,
@@ -45,10 +41,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             context.BeginFrame();
             PrepareCurrentContact(ref context, in formalFootMotion);
-            CaptureCurrentContact(
-                ref context,
-                in formalFootMotion,
-                in landingPrediction);
             CaptureNextSwing(
                 ref context,
                 in formalFootMotion,
@@ -80,10 +72,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static void CaptureCurrentContact(
+        internal static bool TryResolveCurrentContactCandidate(
+            in AnimationFootMotionRuntimeSample formalFootMotion,
+            in CharacterFootLandingPredictionResult diagnostics,
+            out CharacterFootGroundPathLanding landing)
+        {
+            landing = default;
+            if (diagnostics.StepSource !=
+                CharacterFootLandingStepSource.FormalCurrentContact ||
+                !diagnostics.Accepted)
+            {
+                return false;
+            }
+            AnimationFootMotionEventOccurrence current =
+                formalFootMotion.Events.CurrentContact;
+            if (!current.IsBound ||
+                diagnostics.LandingEventIdentity != current.Identity)
+            {
+                return false;
+            }
+            landing = CharacterFootLandingFact.Create(
+                current.Identity,
+                in diagnostics).Resolve();
+            return true;
+        }
+
+        internal static void CommitCurrentContactVerification(
             ref CharacterFootLandingContext context,
             in AnimationFootMotionRuntimeSample formalFootMotion,
-            in CharacterFootLandingPredictionResult diagnostics)
+            in CharacterFootLandingPredictionResult diagnostics,
+            in CharacterFootTransitionDecision transition)
         {
             if (diagnostics.StepSource !=
                 CharacterFootLandingStepSource.FormalCurrentContact)
@@ -97,6 +115,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             context.PlantVerificationAttempted = true;
             if (!diagnostics.Accepted)
+            {
+                context.PlantVerificationUnavailable = true;
+                return;
+            }
+            bool createsAnchor = transition.Phase ==
+                                     CharacterFootTransitionPhase.PreInterpolation &&
+                                 transition.AnchorCommand ==
+                                     CharacterFootAnchorCommand.Create &&
+                                 (transition.Reason ==
+                                      CharacterFootTransitionReason.ContactAcquired ||
+                                  transition.Reason ==
+                                      CharacterFootTransitionReason.NewEventContactAcquired);
+            if (!createsAnchor)
             {
                 context.PlantVerificationUnavailable = true;
                 return;
@@ -193,6 +224,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootMotionEventFrame events = formalFootMotion.Events;
             if (!events.InApproachContactToLanding)
             {
+                AnimationFootMotionEventOccurrence current =
+                    events.CurrentContact;
+                bool retainsCurrentPlant =
+                    context.PlantTargetState ==
+                        CharacterFootPlantTargetState.Tracking &&
+                    context.PlantTarget.HasValue &&
+                    current.IsBound &&
+                    context.PlantTarget.LandingEventIdentity ==
+                        current.Identity;
+                if (retainsCurrentPlant)
+                    return;
                 context.ClearTrackingPlantTarget();
                 return;
             }

@@ -342,30 +342,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootConstraintMath.GeometryEpsilon *
                     CharacterFootConstraintMath.GeometryEpsilon;
             }
-            Vector3 residualAfterCapture = state.PlantWorldResidual;
+            Vector3 residualCapturedBeforeDecay = state.PlantWorldResidual;
+            bool residualDecayApplied = false;
+            float residualBaseHalfLifeSeconds =
+                frame.Settings.EffectiveCorrectionHalfLifeSeconds;
+            bool residualDeadlineHalfLifeAvailable = false;
+            float residualDeadlineHalfLifeSeconds = 0f;
+            float residualAppliedHalfLifeSeconds = 0f;
+            bool residualClearedAtCompletionTolerance = false;
             if (!captureTransition &&
                 state.PlantWorldResidualTransitionActive)
             {
-                float halfLifeSeconds = ResolveSwingResidualHalfLife(
+                residualAppliedHalfLifeSeconds = ResolveSwingResidualHalfLife(
                     state.PlantWorldResidual,
                     target.TimeToLandingSeconds,
                     frame.Settings,
-                    out _,
-                    out _);
+                    out residualDeadlineHalfLifeAvailable,
+                    out residualDeadlineHalfLifeSeconds);
+                residualDecayApplied = true;
                 state.PlantWorldResidual = Advance(
                     state.PlantWorldResidual,
                     default,
                     frame.DeltaSeconds,
-                    halfLifeSeconds);
+                    residualAppliedHalfLifeSeconds);
                 if (state.PlantWorldResidual.magnitude <=
                     frame.Settings.LandingLockCompletionTolerance)
                 {
                     state.PlantWorldResidual = default;
                     state.PlantWorldResidualTransitionActive = false;
+                    residualClearedAtCompletionTolerance = true;
                 }
             }
+            Vector3 residualAfterDecay = state.PlantWorldResidual;
             Vector3 desiredOutputPoint =
-                mixedWorldTarget + state.PlantWorldResidual;
+                mixedWorldTarget + residualAfterDecay;
             float desiredResponse = Vector3.Dot(
                 desiredOutputPoint - originalSole,
                 up);
@@ -450,10 +460,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootVerticalContinuityOwner.TargetHeightHistory;
             }
             if (captureTransition ||
-                residualAfterCapture.sqrMagnitude >
+                residualCapturedBeforeDecay.sqrMagnitude >
                 CharacterFootConstraintMath.GeometryEpsilon *
                 CharacterFootConstraintMath.GeometryEpsilon ||
-                state.PlantWorldResidual.sqrMagnitude >
+                residualAfterDecay.sqrMagnitude >
                 CharacterFootConstraintMath.GeometryEpsilon *
                 CharacterFootConstraintMath.GeometryEpsilon)
             {
@@ -528,8 +538,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 mixedWorldTarget,
                 captureReason,
                 residualBeforeCapture,
-                residualAfterCapture,
-                state.PlantWorldResidual,
+                residualCapturedBeforeDecay,
+                residualDecayApplied,
+                residualBaseHalfLifeSeconds,
+                residualDeadlineHalfLifeAvailable,
+                residualDeadlineHalfLifeSeconds,
+                residualAppliedHalfLifeSeconds,
+                residualAfterDecay,
+                frame.Settings.LandingLockCompletionTolerance,
+                residualClearedAtCompletionTolerance,
                 in correctionResponseFact,
                 verticalContinuityOwners,
                 effectiveCorrectionBefore,

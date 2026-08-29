@@ -311,8 +311,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantResidualCaptureReason =
                 CharacterFootPlantResidualCaptureReason.None;
             PlantWorldResidualBeforeCapture = default;
-            PlantWorldResidualAfterCapture = default;
+            PlantWorldResidualCapturedBeforeDecay = default;
+            PlantWorldResidualDecayApplied = false;
+            PlantWorldResidualBaseHalfLifeSeconds = 0f;
+            PlantWorldResidualDeadlineHalfLifeAvailable = false;
+            PlantWorldResidualDeadlineHalfLifeSeconds = 0f;
+            PlantWorldResidualAppliedHalfLifeSeconds = 0f;
             PlantWorldResidualAfterDecay = default;
+            PlantWorldResidualCompletionTolerance = 0f;
+            PlantWorldResidualClearedAtCompletionTolerance = false;
             PlantCorrectionResponseEvaluated = false;
             PlantCorrectionResponseInitializedBefore = false;
             PlantCorrectionResponseInitializedThisFrame = false;
@@ -478,9 +485,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantResidualCaptureReason = plant.ResidualCaptureReason;
             PlantWorldResidualBeforeCapture =
                 plant.WorldResidualBeforeCapture;
-            PlantWorldResidualAfterCapture =
-                plant.WorldResidualAfterCapture;
+            PlantWorldResidualCapturedBeforeDecay =
+                plant.WorldResidualCapturedBeforeDecay;
+            PlantWorldResidualDecayApplied =
+                plant.WorldResidualDecayApplied;
+            PlantWorldResidualBaseHalfLifeSeconds =
+                plant.WorldResidualBaseHalfLifeSeconds;
+            PlantWorldResidualDeadlineHalfLifeAvailable =
+                plant.WorldResidualDeadlineHalfLifeAvailable;
+            PlantWorldResidualDeadlineHalfLifeSeconds =
+                plant.WorldResidualDeadlineHalfLifeSeconds;
+            PlantWorldResidualAppliedHalfLifeSeconds =
+                plant.WorldResidualAppliedHalfLifeSeconds;
             PlantWorldResidualAfterDecay = plant.WorldResidualAfterDecay;
+            PlantWorldResidualCompletionTolerance =
+                plant.WorldResidualCompletionTolerance;
+            PlantWorldResidualClearedAtCompletionTolerance =
+                plant.WorldResidualClearedAtCompletionTolerance;
             PlantCorrectionResponseEvaluated = correctionResponse.Evaluated;
             PlantCorrectionResponseInitializedBefore =
                 correctionResponse.InitializedBefore;
@@ -604,8 +625,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantResponseOutputPoint { get; }
         internal CharacterFootPlantResidualCaptureReason PlantResidualCaptureReason { get; }
         internal Vector3 PlantWorldResidualBeforeCapture { get; }
-        internal Vector3 PlantWorldResidualAfterCapture { get; }
+        internal Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
+        internal bool PlantWorldResidualDecayApplied { get; }
+        internal float PlantWorldResidualBaseHalfLifeSeconds { get; }
+        internal bool PlantWorldResidualDeadlineHalfLifeAvailable { get; }
+        internal float PlantWorldResidualDeadlineHalfLifeSeconds { get; }
+        internal float PlantWorldResidualAppliedHalfLifeSeconds { get; }
         internal Vector3 PlantWorldResidualAfterDecay { get; }
+        internal float PlantWorldResidualCompletionTolerance { get; }
+        internal bool PlantWorldResidualClearedAtCompletionTolerance { get; }
         internal bool PlantCorrectionResponseEvaluated { get; }
         internal bool PlantCorrectionResponseInitializedBefore { get; }
         internal bool PlantCorrectionResponseInitializedThisFrame { get; }
@@ -1094,8 +1122,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 mixedWorldTarget,
             CharacterFootPlantResidualCaptureReason residualCaptureReason,
             Vector3 worldResidualBeforeCapture,
-            Vector3 worldResidualAfterCapture,
+            Vector3 worldResidualCapturedBeforeDecay,
+            bool worldResidualDecayApplied,
+            float worldResidualBaseHalfLifeSeconds,
+            bool worldResidualDeadlineHalfLifeAvailable,
+            float worldResidualDeadlineHalfLifeSeconds,
+            float worldResidualAppliedHalfLifeSeconds,
             Vector3 worldResidualAfterDecay,
+            float worldResidualCompletionTolerance,
+            bool worldResidualClearedAtCompletionTolerance,
             in CharacterFootCorrectionResponseFact correctionResponse,
             CharacterFootVerticalContinuityOwner verticalContinuityOwners,
             Vector3 effectiveCorrectionBefore,
@@ -1128,8 +1163,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             MixedWorldTarget = mixedWorldTarget;
             ResidualCaptureReason = residualCaptureReason;
             WorldResidualBeforeCapture = worldResidualBeforeCapture;
-            WorldResidualAfterCapture = worldResidualAfterCapture;
+            WorldResidualCapturedBeforeDecay =
+                worldResidualCapturedBeforeDecay;
+            WorldResidualDecayApplied = worldResidualDecayApplied;
+            WorldResidualBaseHalfLifeSeconds =
+                worldResidualBaseHalfLifeSeconds;
+            WorldResidualDeadlineHalfLifeAvailable =
+                worldResidualDeadlineHalfLifeAvailable;
+            WorldResidualDeadlineHalfLifeSeconds =
+                worldResidualDeadlineHalfLifeSeconds;
+            WorldResidualAppliedHalfLifeSeconds =
+                worldResidualAppliedHalfLifeSeconds;
             WorldResidualAfterDecay = worldResidualAfterDecay;
+            WorldResidualCompletionTolerance =
+                worldResidualCompletionTolerance;
+            WorldResidualClearedAtCompletionTolerance =
+                worldResidualClearedAtCompletionTolerance;
             CorrectionResponse = correctionResponse;
             VerticalContinuityOwners = verticalContinuityOwners;
             EffectiveCorrectionBefore = effectiveCorrectionBefore;
@@ -1163,8 +1212,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 MixedWorldTarget { get; }
         internal CharacterFootPlantResidualCaptureReason ResidualCaptureReason { get; }
         internal Vector3 WorldResidualBeforeCapture { get; }
-        internal Vector3 WorldResidualAfterCapture { get; }
+        internal Vector3 WorldResidualCapturedBeforeDecay { get; }
+        internal bool WorldResidualDecayApplied { get; }
+        internal float WorldResidualBaseHalfLifeSeconds { get; }
+        internal bool WorldResidualDeadlineHalfLifeAvailable { get; }
+        internal float WorldResidualDeadlineHalfLifeSeconds { get; }
+        internal float WorldResidualAppliedHalfLifeSeconds { get; }
         internal Vector3 WorldResidualAfterDecay { get; }
+        internal float WorldResidualCompletionTolerance { get; }
+        internal bool WorldResidualClearedAtCompletionTolerance { get; }
         internal CharacterFootCorrectionResponseFact CorrectionResponse { get; }
         internal CharacterFootVerticalContinuityOwner VerticalContinuityOwners { get; }
         internal Vector3 EffectiveCorrectionBefore { get; }

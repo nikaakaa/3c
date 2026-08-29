@@ -5,8 +5,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     public enum CharacterFootCurrentSupportProbeKind : byte
     {
-        Heel = 1,
-        Toe = 2
+        Base = 1,
+        Rear = 2,
+        PositiveLateral = 3,
+        NegativeLateral = 4,
+        Toe = 5
     }
 
     public enum CharacterFootCurrentSupportProbeState : byte
@@ -28,21 +31,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootCurrentSupportRejectReason : byte
     {
         None = 0,
-        HeelUnavailable = 1,
+        BaseUnavailable = 1,
         ToeUnavailable = 2,
-        HeelAndToeUnavailable = 3,
+        BaseAndToeUnavailable = 3,
         InvalidSupportNormal = 4,
         NotGrounded = 5,
-        WorldRevisionMismatch = 6
+        WorldRevisionMismatch = 6,
+        CapacityExceeded = 7
     }
 
     public enum CharacterFootCurrentSupportSelectionReason : byte
     {
         None = 0,
-        HeelHigherRequiredDisplacement = 1,
-        ToeHigherRequiredDisplacement = 2,
-        EquivalentDisplacementSurfaceIdentity = 3,
-        EquivalentDisplacementHeelOrder = 4
+        HigherAlongComponentUp = 1,
+        EquivalentHeightSurfaceIdentity = 2,
+        EquivalentHeightProbeOrder = 3
     }
 
     internal readonly struct CharacterFootCurrentSupportProbeRequest
@@ -88,8 +91,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float MaximumDistance => CastAbove + CastBelow;
         internal bool IsValid =>
             (Side == CharacterFootSide.Left || Side == CharacterFootSide.Right) &&
-            (Kind == CharacterFootCurrentSupportProbeKind.Heel ||
-             Kind == CharacterFootCurrentSupportProbeKind.Toe) &&
+            Kind >= CharacterFootCurrentSupportProbeKind.Base &&
+            Kind <= CharacterFootCurrentSupportProbeKind.Toe &&
             Finite(ProbePosition) && Finite(ComponentUp) &&
             ComponentUp.sqrMagnitude > 0.000001f &&
             float.IsFinite(CastAbove) && CastAbove > Radius &&
@@ -224,7 +227,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSupportNormalSource normalSource,
             ulong normalFrameSequence,
             ulong normalCompletionIdentity,
-            ulong normalEventIdentity)
+            ulong normalEventIdentity,
+            CharacterFootCurrentSupportProbeKind currentSupportProbeKind)
         {
             if (frameSequence == 0 || completionIdentity == 0 ||
                 (side != CharacterFootSide.Left && side != CharacterFootSide.Right) ||
@@ -235,7 +239,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 positionFrameSequence == 0 ||
                 positionCompletionIdentity == 0 ||
                 normalFrameSequence == 0 ||
-                normalCompletionIdentity == 0)
+                normalCompletionIdentity == 0 ||
+                (positionSource == CharacterFootSupportPositionSource.CurrentSupport ||
+                 normalSource == CharacterFootSupportNormalSource.CurrentSupport) &&
+                (currentSupportProbeKind <
+                     CharacterFootCurrentSupportProbeKind.Base ||
+                 currentSupportProbeKind >
+                     CharacterFootCurrentSupportProbeKind.Toe) ||
+                positionSource != CharacterFootSupportPositionSource.CurrentSupport &&
+                normalSource != CharacterFootSupportNormalSource.CurrentSupport &&
+                currentSupportProbeKind != 0)
             {
                 throw new ArgumentException("Current Support target is invalid.");
             }
@@ -256,6 +269,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NormalFrameSequence = normalFrameSequence;
             NormalCompletionIdentity = normalCompletionIdentity;
             NormalEventIdentity = normalEventIdentity;
+            CurrentSupportProbeKind = currentSupportProbeKind;
             m_IsSpecified = 1;
         }
 
@@ -277,6 +291,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong NormalFrameSequence { get; }
         internal ulong NormalCompletionIdentity { get; }
         internal ulong NormalEventIdentity { get; }
+        internal CharacterFootCurrentSupportProbeKind CurrentSupportProbeKind { get; }
         internal bool IsValid => m_IsSpecified != 0;
 
         internal CharacterFootSupportTarget WithSupportNormal(
@@ -298,7 +313,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NormalSource,
                 NormalFrameSequence,
                 NormalCompletionIdentity,
-                NormalEventIdentity);
+                NormalEventIdentity,
+                CurrentSupportProbeKind);
 
         static bool Finite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) &&
@@ -328,6 +344,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NormalFrameSequence = target.NormalFrameSequence;
             NormalCompletionIdentity = target.NormalCompletionIdentity;
             NormalEventIdentity = target.NormalEventIdentity;
+            CurrentSupportProbeKind = target.CurrentSupportProbeKind;
         }
 
         public bool Available { get; }
@@ -348,6 +365,58 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong NormalFrameSequence { get; }
         public ulong NormalCompletionIdentity { get; }
         public ulong NormalEventIdentity { get; }
+        public CharacterFootCurrentSupportProbeKind CurrentSupportProbeKind { get; }
+    }
+
+    internal readonly struct CharacterFootCurrentSupportCandidate
+    {
+        internal CharacterFootCurrentSupportCandidate(
+            CharacterFootCurrentSupportProbeKind kind,
+            Vector3 solePosition,
+            float heightAlongUp,
+            Vector3 direction,
+            int surfaceIdentity,
+            ulong worldRevision)
+        {
+            Kind = kind;
+            SolePosition = solePosition;
+            HeightAlongUp = heightAlongUp;
+            Direction = direction;
+            SurfaceIdentity = surfaceIdentity;
+            WorldRevision = worldRevision;
+            m_IsSpecified = 1;
+        }
+
+        readonly byte m_IsSpecified;
+        internal CharacterFootCurrentSupportProbeKind Kind { get; }
+        internal Vector3 SolePosition { get; }
+        internal float HeightAlongUp { get; }
+        internal Vector3 Direction { get; }
+        internal int SurfaceIdentity { get; }
+        internal ulong WorldRevision { get; }
+        internal bool Available => m_IsSpecified != 0;
+
+        internal static CharacterFootCurrentSupportCandidate Resolve(
+            Vector3 originalSole,
+            Vector3 componentUp,
+            in CharacterFootCurrentSupportProbeRequest request,
+            in CharacterFootCurrentSupportProbeResult result)
+        {
+            if (!result.Accepted)
+                return default;
+            Vector3 direction = result.Normal.normalized;
+            Vector3 translation = direction * Vector3.Dot(
+                result.Point - request.ProbePosition,
+                direction);
+            Vector3 solePosition = originalSole + translation;
+            return new CharacterFootCurrentSupportCandidate(
+                request.Kind,
+                solePosition,
+                Vector3.Dot(solePosition, componentUp.normalized),
+                direction,
+                result.SurfaceIdentity,
+                result.WorldRevision);
+        }
     }
 
     internal readonly struct CharacterFootCurrentSupportObservation
@@ -357,33 +426,50 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong completionIdentity,
             CharacterFootSide side,
             ulong worldRevision,
-            in CharacterFootCurrentSupportProbeRequest heelRequest,
+            in CharacterFootCurrentSupportProbeRequest baseRequest,
+            in CharacterFootCurrentSupportProbeRequest rearRequest,
+            in CharacterFootCurrentSupportProbeRequest positiveLateralRequest,
+            in CharacterFootCurrentSupportProbeRequest negativeLateralRequest,
             in CharacterFootCurrentSupportProbeRequest toeRequest,
-            in CharacterFootCurrentSupportProbeResult heel,
-            in CharacterFootCurrentSupportProbeResult toe,
+            in CharacterFootCurrentSupportProbeResult baseResult,
+            in CharacterFootCurrentSupportProbeResult rearResult,
+            in CharacterFootCurrentSupportProbeResult positiveLateralResult,
+            in CharacterFootCurrentSupportProbeResult negativeLateralResult,
+            in CharacterFootCurrentSupportProbeResult toeResult,
+            in CharacterFootCurrentSupportCandidate baseCandidate,
+            in CharacterFootCurrentSupportCandidate rearCandidate,
+            in CharacterFootCurrentSupportCandidate positiveLateralCandidate,
+            in CharacterFootCurrentSupportCandidate negativeLateralCandidate,
+            in CharacterFootCurrentSupportCandidate toeCandidate,
             CharacterFootCurrentSupportRejectReason rejectReason,
-            float heelRequiredDisplacement,
-            float toeRequiredDisplacement,
             CharacterFootCurrentSupportProbeKind selectedProbe,
             CharacterFootCurrentSupportSelectionReason selectionReason,
-            Vector3 selectedSupportNormalBeforeNormalization,
+            Vector3 selectedDirectionBeforeNormalization,
             in CharacterFootSupportTarget target)
         {
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
             Side = side;
             WorldRevision = worldRevision;
-            HeelRequest = heelRequest;
+            BaseRequest = baseRequest;
+            RearRequest = rearRequest;
+            PositiveLateralRequest = positiveLateralRequest;
+            NegativeLateralRequest = negativeLateralRequest;
             ToeRequest = toeRequest;
-            Heel = heel;
-            Toe = toe;
+            BaseResult = baseResult;
+            RearResult = rearResult;
+            PositiveLateralResult = positiveLateralResult;
+            NegativeLateralResult = negativeLateralResult;
+            ToeResult = toeResult;
+            BaseCandidate = baseCandidate;
+            RearCandidate = rearCandidate;
+            PositiveLateralCandidate = positiveLateralCandidate;
+            NegativeLateralCandidate = negativeLateralCandidate;
+            ToeCandidate = toeCandidate;
             RejectReason = rejectReason;
-            HeelRequiredDisplacement = heelRequiredDisplacement;
-            ToeRequiredDisplacement = toeRequiredDisplacement;
             SelectedProbe = selectedProbe;
             SelectionReason = selectionReason;
-            SelectedSupportNormalBeforeNormalization =
-                selectedSupportNormalBeforeNormalization;
+            SelectedDirectionBeforeNormalization = selectedDirectionBeforeNormalization;
             Target = target;
             m_IsSpecified = 1;
         }
@@ -393,20 +479,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong CompletionIdentity { get; }
         internal CharacterFootSide Side { get; }
         internal ulong WorldRevision { get; }
-        internal CharacterFootCurrentSupportProbeRequest HeelRequest { get; }
+        internal CharacterFootCurrentSupportProbeRequest BaseRequest { get; }
+        internal CharacterFootCurrentSupportProbeRequest RearRequest { get; }
+        internal CharacterFootCurrentSupportProbeRequest PositiveLateralRequest { get; }
+        internal CharacterFootCurrentSupportProbeRequest NegativeLateralRequest { get; }
         internal CharacterFootCurrentSupportProbeRequest ToeRequest { get; }
-        internal CharacterFootCurrentSupportProbeResult Heel { get; }
-        internal CharacterFootCurrentSupportProbeResult Toe { get; }
+        internal CharacterFootCurrentSupportProbeResult BaseResult { get; }
+        internal CharacterFootCurrentSupportProbeResult RearResult { get; }
+        internal CharacterFootCurrentSupportProbeResult PositiveLateralResult { get; }
+        internal CharacterFootCurrentSupportProbeResult NegativeLateralResult { get; }
+        internal CharacterFootCurrentSupportProbeResult ToeResult { get; }
+        internal CharacterFootCurrentSupportCandidate BaseCandidate { get; }
+        internal CharacterFootCurrentSupportCandidate RearCandidate { get; }
+        internal CharacterFootCurrentSupportCandidate PositiveLateralCandidate { get; }
+        internal CharacterFootCurrentSupportCandidate NegativeLateralCandidate { get; }
+        internal CharacterFootCurrentSupportCandidate ToeCandidate { get; }
         internal CharacterFootCurrentSupportRejectReason RejectReason { get; }
-        internal float HeelRequiredDisplacement { get; }
-        internal float ToeRequiredDisplacement { get; }
         internal CharacterFootCurrentSupportProbeKind SelectedProbe { get; }
-        internal CharacterFootCurrentSupportSelectionReason SelectionReason
-        {
-            get;
-        }
+        internal CharacterFootCurrentSupportSelectionReason SelectionReason { get; }
         internal float SelectionEpsilon => 0.0001f;
-        internal Vector3 SelectedSupportNormalBeforeNormalization { get; }
+        internal Vector3 SelectedDirectionBeforeNormalization { get; }
         internal CharacterFootSupportTarget Target { get; }
         internal bool IsSpecified => m_IsSpecified != 0;
         internal bool Available =>
@@ -417,103 +509,153 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong frameSequence,
             ulong completionIdentity,
             ulong worldRevision,
-            in CharacterFootCurrentSupportProbeRequest heelRequest,
+            Vector3 originalSole,
+            in CharacterFootCurrentSupportProbeRequest baseRequest,
+            in CharacterFootCurrentSupportProbeRequest rearRequest,
+            in CharacterFootCurrentSupportProbeRequest positiveLateralRequest,
+            in CharacterFootCurrentSupportProbeRequest negativeLateralRequest,
             in CharacterFootCurrentSupportProbeRequest toeRequest,
-            in CharacterFootCurrentSupportProbeResult heel,
-            in CharacterFootCurrentSupportProbeResult toe)
+            in CharacterFootCurrentSupportProbeResult baseResult,
+            in CharacterFootCurrentSupportProbeResult rearResult,
+            in CharacterFootCurrentSupportProbeResult positiveLateralResult,
+            in CharacterFootCurrentSupportProbeResult negativeLateralResult,
+            in CharacterFootCurrentSupportProbeResult toeResult)
         {
-            CharacterFootSide side = heelRequest.Side;
-            if (worldRevision == 0 || heel.WorldRevision != worldRevision ||
-                toe.WorldRevision != worldRevision)
+            CharacterFootSide side = baseRequest.Side;
+            if (!WorldMatches(
+                    worldRevision,
+                    in baseResult,
+                    in rearResult,
+                    in positiveLateralResult,
+                    in negativeLateralResult,
+                    in toeResult))
             {
-                return new CharacterFootCurrentSupportObservation(
+                return Rejected(
                     frameSequence,
                     completionIdentity,
                     side,
                     worldRevision,
-                    in heelRequest,
+                    in baseRequest,
+                    in rearRequest,
+                    in positiveLateralRequest,
+                    in negativeLateralRequest,
                     in toeRequest,
-                    in heel,
-                    in toe,
-                    CharacterFootCurrentSupportRejectReason
-                        .WorldRevisionMismatch,
-                    0f,
-                    0f,
-                    default,
-                    CharacterFootCurrentSupportSelectionReason.None,
-                    default,
-                    default);
+                    in baseResult,
+                    in rearResult,
+                    in positiveLateralResult,
+                    in negativeLateralResult,
+                    in toeResult,
+                    CharacterFootCurrentSupportRejectReason.WorldRevisionMismatch);
             }
-            CharacterFootCurrentSupportRejectReason rejectReason =
-                ResolveRejectReason(heel.Accepted, toe.Accepted);
-            if (rejectReason != CharacterFootCurrentSupportRejectReason.None)
+            if (CapacityExceeded(
+                    in baseResult,
+                    in rearResult,
+                    in positiveLateralResult,
+                    in negativeLateralResult,
+                    in toeResult))
             {
-                return new CharacterFootCurrentSupportObservation(
+                return Rejected(
                     frameSequence,
                     completionIdentity,
                     side,
                     worldRevision,
-                    in heelRequest,
+                    in baseRequest,
+                    in rearRequest,
+                    in positiveLateralRequest,
+                    in negativeLateralRequest,
                     in toeRequest,
-                    in heel,
-                    in toe,
-                    rejectReason,
-                    0f,
-                    0f,
-                    default,
-                    CharacterFootCurrentSupportSelectionReason.None,
-                    default,
-                    default);
+                    in baseResult,
+                    in rearResult,
+                    in positiveLateralResult,
+                    in negativeLateralResult,
+                    in toeResult,
+                    CharacterFootCurrentSupportRejectReason.CapacityExceeded);
             }
-            Vector3 animatedHeel = heelRequest.ProbePosition;
-            Vector3 animatedToe = toeRequest.ProbePosition;
-            Vector3 up = heelRequest.ComponentUp.normalized;
-            float heelDisplacement = Vector3.Dot(heel.Point - animatedHeel, up);
-            float toeDisplacement = Vector3.Dot(toe.Point - animatedToe, up);
-            CharacterFootCurrentSupportProbeKind selected = SelectProbe(
-                heelDisplacement,
-                toeDisplacement,
-                heel.SurfaceIdentity,
-                toe.SurfaceIdentity,
-                out CharacterFootCurrentSupportSelectionReason
-                    selectionReason);
-            Vector3 selectedNormal = selected ==
-                                     CharacterFootCurrentSupportProbeKind.Heel
-                ? heel.Normal
-                : toe.Normal;
-            if (!Finite(selectedNormal) ||
-                selectedNormal.sqrMagnitude <= 0.000001f)
+            CharacterFootCurrentSupportRejectReason requiredRejectReason =
+                ResolveRequiredRejectReason(baseResult.Accepted, toeResult.Accepted);
+            if (requiredRejectReason != CharacterFootCurrentSupportRejectReason.None)
             {
-                return new CharacterFootCurrentSupportObservation(
+                return Rejected(
                     frameSequence,
                     completionIdentity,
                     side,
                     worldRevision,
-                    in heelRequest,
+                    in baseRequest,
+                    in rearRequest,
+                    in positiveLateralRequest,
+                    in negativeLateralRequest,
                     in toeRequest,
-                    in heel,
-                    in toe,
-                    CharacterFootCurrentSupportRejectReason.InvalidSupportNormal,
-                    heelDisplacement,
-                    toeDisplacement,
-                    selected,
-                    selectionReason,
-                    selectedNormal,
-                    default);
+                    in baseResult,
+                    in rearResult,
+                    in positiveLateralResult,
+                    in negativeLateralResult,
+                    in toeResult,
+                    requiredRejectReason);
             }
-            float displacement = Mathf.Max(heelDisplacement, toeDisplacement);
-            Vector3 originalSole = (animatedHeel + animatedToe) * 0.5f;
-            int surfaceIdentity = selected ==
-                                  CharacterFootCurrentSupportProbeKind.Heel
-                ? heel.SurfaceIdentity
-                : toe.SurfaceIdentity;
+            Vector3 up = baseRequest.ComponentUp.normalized;
+            CharacterFootCurrentSupportCandidate baseCandidate =
+                CharacterFootCurrentSupportCandidate.Resolve(
+                    originalSole,
+                    up,
+                    in baseRequest,
+                    in baseResult);
+            CharacterFootCurrentSupportCandidate rearCandidate =
+                CharacterFootCurrentSupportCandidate.Resolve(
+                    originalSole,
+                    up,
+                    in rearRequest,
+                    in rearResult);
+            CharacterFootCurrentSupportCandidate positiveLateralCandidate =
+                CharacterFootCurrentSupportCandidate.Resolve(
+                    originalSole,
+                    up,
+                    in positiveLateralRequest,
+                    in positiveLateralResult);
+            CharacterFootCurrentSupportCandidate negativeLateralCandidate =
+                CharacterFootCurrentSupportCandidate.Resolve(
+                    originalSole,
+                    up,
+                    in negativeLateralRequest,
+                    in negativeLateralResult);
+            CharacterFootCurrentSupportCandidate toeCandidate =
+                CharacterFootCurrentSupportCandidate.Resolve(
+                    originalSole,
+                    up,
+                    in toeRequest,
+                    in toeResult);
+            if (!baseCandidate.Available || !toeCandidate.Available)
+            {
+                return Rejected(
+                    frameSequence,
+                    completionIdentity,
+                    side,
+                    worldRevision,
+                    in baseRequest,
+                    in rearRequest,
+                    in positiveLateralRequest,
+                    in negativeLateralRequest,
+                    in toeRequest,
+                    in baseResult,
+                    in rearResult,
+                    in positiveLateralResult,
+                    in negativeLateralResult,
+                    in toeResult,
+                    CharacterFootCurrentSupportRejectReason.InvalidSupportNormal);
+            }
+            CharacterFootCurrentSupportCandidate selected = baseCandidate;
+            CharacterFootCurrentSupportSelectionReason selectionReason =
+                CharacterFootCurrentSupportSelectionReason.None;
+            SelectCandidate(ref selected, in rearCandidate, ref selectionReason);
+            SelectCandidate(ref selected, in positiveLateralCandidate, ref selectionReason);
+            SelectCandidate(ref selected, in negativeLateralCandidate, ref selectionReason);
+            SelectCandidate(ref selected, in toeCandidate, ref selectionReason);
             var target = new CharacterFootSupportTarget(
                 frameSequence,
                 completionIdentity,
                 side,
-                originalSole + up * displacement,
-                selectedNormal,
-                surfaceIdentity,
+                selected.SolePosition,
+                selected.Direction,
+                selected.SurfaceIdentity,
                 worldRevision,
                 CharacterFootSupportTargetKind.CurrentSupport,
                 CharacterFootSupportPositionSource.CurrentSupport,
@@ -524,22 +666,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSupportNormalSource.CurrentSupport,
                 frameSequence,
                 completionIdentity,
-                0);
+                0,
+                selected.Kind);
             return new CharacterFootCurrentSupportObservation(
                 frameSequence,
                 completionIdentity,
                 side,
                 worldRevision,
-                in heelRequest,
+                in baseRequest,
+                in rearRequest,
+                in positiveLateralRequest,
+                in negativeLateralRequest,
                 in toeRequest,
-                in heel,
-                in toe,
+                in baseResult,
+                in rearResult,
+                in positiveLateralResult,
+                in negativeLateralResult,
+                in toeResult,
+                in baseCandidate,
+                in rearCandidate,
+                in positiveLateralCandidate,
+                in negativeLateralCandidate,
+                in toeCandidate,
                 CharacterFootCurrentSupportRejectReason.None,
-                heelDisplacement,
-                toeDisplacement,
-                selected,
+                selected.Kind,
                 selectionReason,
-                selectedNormal,
+                selected.Direction,
                 in target);
         }
 
@@ -547,87 +699,174 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong frameSequence,
             ulong completionIdentity,
             ulong worldRevision,
-            in CharacterFootCurrentSupportProbeRequest heelRequest,
+            in CharacterFootCurrentSupportProbeRequest baseRequest,
+            in CharacterFootCurrentSupportProbeRequest rearRequest,
+            in CharacterFootCurrentSupportProbeRequest positiveLateralRequest,
+            in CharacterFootCurrentSupportProbeRequest negativeLateralRequest,
             in CharacterFootCurrentSupportProbeRequest toeRequest,
             CharacterFootCurrentSupportRejectReason reason)
         {
             if (reason == CharacterFootCurrentSupportRejectReason.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
-            CharacterFootCurrentSupportProbeResult heel =
-                CharacterFootCurrentSupportProbeResult.NotExecuted(
-                    CharacterFootCurrentSupportProbeKind.Heel,
-                    CharacterFootCurrentSupportProbeRejectReason.NotGrounded,
-                    worldRevision);
-            CharacterFootCurrentSupportProbeResult toe =
-                CharacterFootCurrentSupportProbeResult.NotExecuted(
-                    CharacterFootCurrentSupportProbeKind.Toe,
-                    CharacterFootCurrentSupportProbeRejectReason.NotGrounded,
-                    worldRevision);
-            return new CharacterFootCurrentSupportObservation(
+            CharacterFootCurrentSupportProbeResult baseResult = NotExecuted(
+                CharacterFootCurrentSupportProbeKind.Base,
+                worldRevision);
+            CharacterFootCurrentSupportProbeResult rearResult = NotExecuted(
+                CharacterFootCurrentSupportProbeKind.Rear,
+                worldRevision);
+            CharacterFootCurrentSupportProbeResult positiveLateralResult = NotExecuted(
+                CharacterFootCurrentSupportProbeKind.PositiveLateral,
+                worldRevision);
+            CharacterFootCurrentSupportProbeResult negativeLateralResult = NotExecuted(
+                CharacterFootCurrentSupportProbeKind.NegativeLateral,
+                worldRevision);
+            CharacterFootCurrentSupportProbeResult toeResult = NotExecuted(
+                CharacterFootCurrentSupportProbeKind.Toe,
+                worldRevision);
+            return Rejected(
                 frameSequence,
                 completionIdentity,
-                heelRequest.Side,
+                baseRequest.Side,
                 worldRevision,
-                in heelRequest,
+                in baseRequest,
+                in rearRequest,
+                in positiveLateralRequest,
+                in negativeLateralRequest,
                 in toeRequest,
-                in heel,
-                in toe,
+                in baseResult,
+                in rearResult,
+                in positiveLateralResult,
+                in negativeLateralResult,
+                in toeResult,
+                reason);
+        }
+
+        static CharacterFootCurrentSupportObservation Rejected(
+            ulong frameSequence,
+            ulong completionIdentity,
+            CharacterFootSide side,
+            ulong worldRevision,
+            in CharacterFootCurrentSupportProbeRequest baseRequest,
+            in CharacterFootCurrentSupportProbeRequest rearRequest,
+            in CharacterFootCurrentSupportProbeRequest positiveLateralRequest,
+            in CharacterFootCurrentSupportProbeRequest negativeLateralRequest,
+            in CharacterFootCurrentSupportProbeRequest toeRequest,
+            in CharacterFootCurrentSupportProbeResult baseResult,
+            in CharacterFootCurrentSupportProbeResult rearResult,
+            in CharacterFootCurrentSupportProbeResult positiveLateralResult,
+            in CharacterFootCurrentSupportProbeResult negativeLateralResult,
+            in CharacterFootCurrentSupportProbeResult toeResult,
+            CharacterFootCurrentSupportRejectReason reason) =>
+            new CharacterFootCurrentSupportObservation(
+                frameSequence,
+                completionIdentity,
+                side,
+                worldRevision,
+                in baseRequest,
+                in rearRequest,
+                in positiveLateralRequest,
+                in negativeLateralRequest,
+                in toeRequest,
+                in baseResult,
+                in rearResult,
+                in positiveLateralResult,
+                in negativeLateralResult,
+                in toeResult,
+                default,
+                default,
+                default,
+                default,
+                default,
                 reason,
-                0f,
-                0f,
                 default,
                 CharacterFootCurrentSupportSelectionReason.None,
                 default,
                 default);
-        }
 
-        static CharacterFootCurrentSupportRejectReason ResolveRejectReason(
-            bool heelAccepted,
+        static CharacterFootCurrentSupportProbeResult NotExecuted(
+            CharacterFootCurrentSupportProbeKind kind,
+            ulong worldRevision) =>
+            CharacterFootCurrentSupportProbeResult.NotExecuted(
+                kind,
+                CharacterFootCurrentSupportProbeRejectReason.NotGrounded,
+                worldRevision);
+
+        static CharacterFootCurrentSupportRejectReason ResolveRequiredRejectReason(
+            bool baseAccepted,
             bool toeAccepted)
         {
-            if (heelAccepted && toeAccepted)
+            if (baseAccepted && toeAccepted)
                 return CharacterFootCurrentSupportRejectReason.None;
-            if (!heelAccepted && !toeAccepted)
-                return CharacterFootCurrentSupportRejectReason.HeelAndToeUnavailable;
-            return heelAccepted
+            if (!baseAccepted && !toeAccepted)
+                return CharacterFootCurrentSupportRejectReason.BaseAndToeUnavailable;
+            return baseAccepted
                 ? CharacterFootCurrentSupportRejectReason.ToeUnavailable
-                : CharacterFootCurrentSupportRejectReason.HeelUnavailable;
+                : CharacterFootCurrentSupportRejectReason.BaseUnavailable;
         }
 
-        static CharacterFootCurrentSupportProbeKind SelectProbe(
-            float heelDisplacement,
-            float toeDisplacement,
-            int heelSurfaceIdentity,
-            int toeSurfaceIdentity,
-            out CharacterFootCurrentSupportSelectionReason reason)
+        static bool WorldMatches(
+            ulong worldRevision,
+            in CharacterFootCurrentSupportProbeResult baseResult,
+            in CharacterFootCurrentSupportProbeResult rearResult,
+            in CharacterFootCurrentSupportProbeResult positiveLateralResult,
+            in CharacterFootCurrentSupportProbeResult negativeLateralResult,
+            in CharacterFootCurrentSupportProbeResult toeResult) =>
+            worldRevision != 0 &&
+            baseResult.WorldRevision == worldRevision &&
+            rearResult.WorldRevision == worldRevision &&
+            positiveLateralResult.WorldRevision == worldRevision &&
+            negativeLateralResult.WorldRevision == worldRevision &&
+            toeResult.WorldRevision == worldRevision;
+
+        static bool CapacityExceeded(
+            in CharacterFootCurrentSupportProbeResult baseResult,
+            in CharacterFootCurrentSupportProbeResult rearResult,
+            in CharacterFootCurrentSupportProbeResult positiveLateralResult,
+            in CharacterFootCurrentSupportProbeResult negativeLateralResult,
+            in CharacterFootCurrentSupportProbeResult toeResult) =>
+            IsCapacityExceeded(in baseResult) ||
+            IsCapacityExceeded(in rearResult) ||
+            IsCapacityExceeded(in positiveLateralResult) ||
+            IsCapacityExceeded(in negativeLateralResult) ||
+            IsCapacityExceeded(in toeResult);
+
+        static bool IsCapacityExceeded(
+            in CharacterFootCurrentSupportProbeResult result) =>
+            result.RejectReason ==
+            CharacterFootCurrentSupportProbeRejectReason.CapacityExceeded;
+
+        static void SelectCandidate(
+            ref CharacterFootCurrentSupportCandidate selected,
+            in CharacterFootCurrentSupportCandidate candidate,
+            ref CharacterFootCurrentSupportSelectionReason reason)
         {
-            float displacement = heelDisplacement - toeDisplacement;
-            if (displacement > 0.0001f)
+            if (!candidate.Available)
+                return;
+            float delta = candidate.HeightAlongUp - selected.HeightAlongUp;
+            if (delta > 0.0001f)
             {
-                reason = CharacterFootCurrentSupportSelectionReason
-                    .HeelHigherRequiredDisplacement;
-                return CharacterFootCurrentSupportProbeKind.Heel;
+                selected = candidate;
+                reason = CharacterFootCurrentSupportSelectionReason.HigherAlongComponentUp;
+                return;
             }
-            if (displacement < -0.0001f)
+            if (delta < -0.0001f)
+                return;
+            int identity = candidate.SurfaceIdentity.CompareTo(
+                selected.SurfaceIdentity);
+            if (identity < 0)
             {
+                selected = candidate;
                 reason = CharacterFootCurrentSupportSelectionReason
-                    .ToeHigherRequiredDisplacement;
-                return CharacterFootCurrentSupportProbeKind.Toe;
+                    .EquivalentHeightSurfaceIdentity;
+                return;
             }
-            int identity = heelSurfaceIdentity.CompareTo(toeSurfaceIdentity);
-            reason = identity == 0
-                ? CharacterFootCurrentSupportSelectionReason
-                    .EquivalentDisplacementHeelOrder
-                : CharacterFootCurrentSupportSelectionReason
-                    .EquivalentDisplacementSurfaceIdentity;
-            return identity <= 0
-                ? CharacterFootCurrentSupportProbeKind.Heel
-                : CharacterFootCurrentSupportProbeKind.Toe;
+            if (identity == 0 && candidate.Kind < selected.Kind)
+            {
+                selected = candidate;
+                reason = CharacterFootCurrentSupportSelectionReason
+                    .EquivalentHeightProbeOrder;
+            }
         }
-
-        static bool Finite(Vector3 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) &&
-            float.IsFinite(value.z);
     }
 
     public readonly struct CharacterFootCurrentSupportProbeDiagnostics
@@ -682,6 +921,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool Accepted { get; }
     }
 
+    public readonly struct CharacterFootCurrentSupportCandidateDiagnostics
+    {
+        internal CharacterFootCurrentSupportCandidateDiagnostics(
+            in CharacterFootCurrentSupportCandidate candidate)
+        {
+            Available = candidate.Available;
+            Kind = candidate.Kind;
+            SolePosition = candidate.SolePosition;
+            HeightAlongUp = candidate.HeightAlongUp;
+            Direction = candidate.Direction;
+            SurfaceIdentity = candidate.SurfaceIdentity;
+            WorldRevision = candidate.WorldRevision;
+        }
+
+        public bool Available { get; }
+        public CharacterFootCurrentSupportProbeKind Kind { get; }
+        public Vector3 SolePosition { get; }
+        public float HeightAlongUp { get; }
+        public Vector3 Direction { get; }
+        public int SurfaceIdentity { get; }
+        public ulong WorldRevision { get; }
+    }
+
     public readonly struct CharacterFootCurrentSupportDiagnostics
     {
         internal CharacterFootCurrentSupportDiagnostics(
@@ -694,29 +956,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             IsSpecified = observation.IsSpecified;
             Available = observation.Available;
             RejectReason = observation.RejectReason;
-            CharacterFootCurrentSupportProbeRequest heelRequest =
-                observation.HeelRequest;
-            CharacterFootCurrentSupportProbeResult heel = observation.Heel;
-            Heel = new CharacterFootCurrentSupportProbeDiagnostics(
-                in heelRequest,
-                in heel);
-            CharacterFootCurrentSupportProbeRequest toeRequest =
-                observation.ToeRequest;
-            CharacterFootCurrentSupportProbeResult toe = observation.Toe;
-            Toe = new CharacterFootCurrentSupportProbeDiagnostics(
-                in toeRequest,
-                in toe);
-            HeelRequiredDisplacement = observation.HeelRequiredDisplacement;
-            ToeRequiredDisplacement = observation.ToeRequiredDisplacement;
+            Base = Probe(
+                observation.BaseRequest,
+                observation.BaseResult);
+            Rear = Probe(
+                observation.RearRequest,
+                observation.RearResult);
+            PositiveLateral = Probe(
+                observation.PositiveLateralRequest,
+                observation.PositiveLateralResult);
+            NegativeLateral = Probe(
+                observation.NegativeLateralRequest,
+                observation.NegativeLateralResult);
+            Toe = Probe(
+                observation.ToeRequest,
+                observation.ToeResult);
+            BaseCandidate = Candidate(observation.BaseCandidate);
+            RearCandidate = Candidate(observation.RearCandidate);
+            PositiveLateralCandidate = Candidate(
+                observation.PositiveLateralCandidate);
+            NegativeLateralCandidate = Candidate(
+                observation.NegativeLateralCandidate);
+            ToeCandidate = Candidate(observation.ToeCandidate);
             SelectedProbe = observation.SelectedProbe;
             SelectionReason = observation.SelectionReason;
             SelectionEpsilon = observation.SelectionEpsilon;
-            SelectedSupportNormalBeforeNormalization =
-                observation.SelectedSupportNormalBeforeNormalization;
+            SelectedDirectionBeforeNormalization =
+                observation.SelectedDirectionBeforeNormalization;
             CharacterFootSupportTarget target = observation.Target;
             Target = new CharacterFootSupportTargetDiagnostics(
                 in target);
         }
+
+        static CharacterFootCurrentSupportProbeDiagnostics Probe(
+            CharacterFootCurrentSupportProbeRequest request,
+            CharacterFootCurrentSupportProbeResult result) =>
+            new CharacterFootCurrentSupportProbeDiagnostics(
+                in request,
+                in result);
+
+        static CharacterFootCurrentSupportCandidateDiagnostics Candidate(
+            CharacterFootCurrentSupportCandidate candidate) =>
+            new CharacterFootCurrentSupportCandidateDiagnostics(in candidate);
 
         public ulong FrameSequence { get; }
         public ulong CompletionIdentity { get; }
@@ -725,17 +1006,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool IsSpecified { get; }
         public bool Available { get; }
         public CharacterFootCurrentSupportRejectReason RejectReason { get; }
-        public CharacterFootCurrentSupportProbeDiagnostics Heel { get; }
+        public CharacterFootCurrentSupportProbeDiagnostics Base { get; }
+        public CharacterFootCurrentSupportProbeDiagnostics Rear { get; }
+        public CharacterFootCurrentSupportProbeDiagnostics PositiveLateral { get; }
+        public CharacterFootCurrentSupportProbeDiagnostics NegativeLateral { get; }
         public CharacterFootCurrentSupportProbeDiagnostics Toe { get; }
-        public float HeelRequiredDisplacement { get; }
-        public float ToeRequiredDisplacement { get; }
+        public CharacterFootCurrentSupportCandidateDiagnostics BaseCandidate { get; }
+        public CharacterFootCurrentSupportCandidateDiagnostics RearCandidate { get; }
+        public CharacterFootCurrentSupportCandidateDiagnostics PositiveLateralCandidate { get; }
+        public CharacterFootCurrentSupportCandidateDiagnostics NegativeLateralCandidate { get; }
+        public CharacterFootCurrentSupportCandidateDiagnostics ToeCandidate { get; }
         public CharacterFootCurrentSupportProbeKind SelectedProbe { get; }
         public CharacterFootCurrentSupportSelectionReason SelectionReason
         {
             get;
         }
         public float SelectionEpsilon { get; }
-        public Vector3 SelectedSupportNormalBeforeNormalization { get; }
+        public Vector3 SelectedDirectionBeforeNormalization { get; }
         public CharacterFootSupportTargetDiagnostics Target { get; }
     }
 

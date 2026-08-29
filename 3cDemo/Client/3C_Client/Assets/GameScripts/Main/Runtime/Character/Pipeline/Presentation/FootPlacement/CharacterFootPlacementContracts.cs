@@ -21,8 +21,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 heelPosition,
             Vector3 soleForward,
             Vector3 soleUp,
+            Vector3 soleRight,
             Quaternion semanticRotation,
-            Quaternion soleFrameLocalRotation)
+            Quaternion soleFrameLocalRotation,
+            float rearProbeExtension,
+            float lateralProbeExtent,
+            float toeProbeExtension)
         {
             HipPosition = hipPosition;
             KneePosition = kneePosition;
@@ -33,8 +37,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HeelPosition = heelPosition;
             SoleForward = soleForward;
             SoleUp = soleUp;
+            SoleRight = soleRight;
             SemanticRotation = semanticRotation;
             SoleFrameLocalRotation = soleFrameLocalRotation;
+            RearProbeExtension = rearProbeExtension;
+            LateralProbeExtent = lateralProbeExtent;
+            ToeProbeExtension = toeProbeExtension;
         }
 
         public Vector3 HipPosition { get; }
@@ -46,8 +54,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 HeelPosition { get; }
         public Vector3 SoleForward { get; }
         public Vector3 SoleUp { get; }
+        public Vector3 SoleRight { get; }
         public Quaternion SemanticRotation { get; }
         public Quaternion SoleFrameLocalRotation { get; }
+        public float RearProbeExtension { get; }
+        public float LateralProbeExtent { get; }
+        public float ToeProbeExtension { get; }
 
         internal CharacterFootPlacementSoleContactPose ResolveSoleContacts(
             Vector3 anklePosition,

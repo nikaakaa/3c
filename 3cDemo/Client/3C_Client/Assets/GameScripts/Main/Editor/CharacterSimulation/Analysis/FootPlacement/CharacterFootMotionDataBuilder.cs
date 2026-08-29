@@ -663,6 +663,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     foot.SolePositions[i],
                     foot.SoleRotations[i]));
             }
+            if (input.Loop && result.Count == 0 && activeCount > 0)
+            {
+                bool contactOnly = true;
+                for (int i = 0; i < activeCount; i++)
+                    contactOnly &= contact[i] >= 0.5f;
+                if (contactOnly)
+                {
+                    result.Add(new AnimationFootMotionEvent(
+                        AnimationFootMotionEventKind.Landing,
+                        0,
+                        1,
+                        0,
+                        foot.TargetRootLocalSolePositions[0],
+                        foot.SolePositions[0],
+                        foot.SoleRotations[0]));
+                }
+            }
             return result.OrderBy(value => value.SampleIndex).ThenBy(value => value.Kind).ToArray();
         }
 

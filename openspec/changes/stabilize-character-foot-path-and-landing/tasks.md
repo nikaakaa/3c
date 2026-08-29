@@ -69,14 +69,14 @@
 
 - [x] 6.1 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选分别使用`0.6m/s`、`0.01m`与`0.01m`
 - [x] 6.2 在3.17持续准备Plant目标、3.20建立Verified Anchor后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留普通Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
-- [x] 6.3 在唯一Interpolation内建立同Event持久Plant Target高度历史与单调`PlantBlend`权重，让Approach、Landing与Locked共用同一Policy；当前实现只完成ZZZ分层链的目标高度历史和状态权重混合，不把它描述成已经具备独立Correction历史限速
+- [x] 6.3 在唯一Interpolation内建立同Event持久Plant Target高度历史与单调`PlantBlend`权重，让Approach、Landing与Locked共用同一Policy；该步骤只确认持久槽、目标高度历史和单调权重已经进入唯一Owner，不代表状态切换混合、门控、Correction历史与完成条件已经闭合
 - [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
 - [ ] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；未满足时保留同Anchor Landing继续接管
 - [ ] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼
 - [ ] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策和对应旧输入
 - [ ] 6.8 发布Formal Foot Height、目标高度、限速前后Correction、竖直速率、Envelope/Anchor穿透、Ground Catchup、Full Lock门控和最终Correction诊断事实，删除把同帧抬升描述为Safety Floor成功的旧口径
 - [x] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只控制Plant Target高度历史，现有`MaximumVerticalCorrectionSpeed`只控制状态混合后的Effective Correction历史，不提供共享默认值
-- [x] 6.10 按ZZZ精确主链把Plant Target高度历史与Effective Correction历史拆成两个持久通道，固定执行`目标高度限速 -> typed状态权重混合 -> Correction限速 -> 既有Foot Goal权重基准混合`；同Event换点、Contact Verification与Same-Event Reentry不得同时清零两份历史
+- [ ] 6.10 按ZZZ已确认顺序闭合`当前态到目标态混合 -> 目标高度历史限速 -> typed状态权重混合 -> Correction历史限速 -> 既有Foot Goal权重基准混合`，并用项目正式State、Response、Event与边沿定义各历史的更新、冻结、强制刷新和Reset门；同Event换点、Contact Verification、Lock Response切换与Same-Event Reentry不得跳过状态混合或同时清零两份历史
 - [ ] 6.11 删除Correction限速之前或之后重复修改可见Correction的Plant、Ground或Goal混合路径，确认基准混合只由既有Foot Goal/Position Weight执行一次，并把两次限速的输入、历史、输出、Clamp与Reset原因纳入6.8诊断
 
 ## 7. 单独接入Support与Pelvis

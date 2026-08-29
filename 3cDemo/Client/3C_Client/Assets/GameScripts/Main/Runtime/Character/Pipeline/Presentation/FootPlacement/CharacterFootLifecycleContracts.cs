@@ -5,10 +5,11 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    internal enum CharacterFootNextLandingTrackingState : byte
+    internal enum CharacterFootLandingTrackingState : byte
     {
         Empty = 0,
-        Tracking = 1
+        Tracking = 1,
+        Committed = 2
     }
 
     [Flags]
@@ -427,7 +428,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct CharacterFootLandingSnapshot
     {
         internal CharacterFootLandingSnapshot(
-            CharacterFootNextLandingTrackingState nextTrackingState,
+            CharacterFootLandingTrackingState state,
             ulong eventIdentity,
             bool hasLastLanding,
             CharacterFootGroundPathLanding lastLanding,
@@ -437,11 +438,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float nextSwingConstraintWeight,
             bool hasPromotedLanding,
             CharacterFootGroundPathLanding promotedLanding,
-            bool plantVerificationAttempted,
-            bool plantVerificationUnavailable)
+            bool commitAttempted,
+            bool commitUnavailable)
         {
-            NextTrackingState = nextTrackingState;
-            NextTrackingEventIdentity = eventIdentity;
+            State = state;
+            EventIdentity = eventIdentity;
             HasLastLanding = hasLastLanding;
             LastLanding = lastLanding;
             HasNextSwingLanding = hasNextSwingLanding;
@@ -450,18 +451,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingConstraintWeight = nextSwingConstraintWeight;
             HasPromotedLanding = hasPromotedLanding;
             PromotedLanding = promotedLanding;
-            PlantVerificationAttempted = plantVerificationAttempted;
-            PlantVerificationUnavailable = plantVerificationUnavailable;
+            CommitAttempted = commitAttempted;
+            CommitUnavailable = commitUnavailable;
         }
 
-        internal CharacterFootNextLandingTrackingState NextTrackingState { get; }
-        internal ulong NextTrackingEventIdentity { get; }
+        internal CharacterFootLandingTrackingState State { get; }
+        internal ulong EventIdentity { get; }
         internal bool HasLastLanding { get; }
         internal CharacterFootGroundPathLanding LastLanding { get; }
         internal ulong LastLandingEventIdentity =>
-            HasLastLanding ? LastLanding.LandingEventIdentity : 0;
-        internal bool HasVerifiedLastLanding => HasLastLanding;
-        internal ulong VerifiedLastLandingEventIdentity =>
             HasLastLanding ? LastLanding.LandingEventIdentity : 0;
         internal bool HasNextSwingLanding { get; }
         internal CharacterFootGroundPathLanding NextSwingLanding { get; }
@@ -469,8 +467,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float NextSwingConstraintWeight { get; }
         internal bool HasPromotedLanding { get; }
         internal CharacterFootGroundPathLanding PromotedLanding { get; }
-        internal bool PlantVerificationAttempted { get; }
-        internal bool PlantVerificationUnavailable { get; }
+        internal bool CommitAttempted { get; }
+        internal bool CommitUnavailable { get; }
+        internal bool IsCommitted =>
+            State == CharacterFootLandingTrackingState.Committed;
 
         internal bool TryResolveLanding(
             ulong landingEventIdentity,
@@ -505,13 +505,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float NextSwingConstraintWeight;
         internal ulong ObservedCurrentEventIdentity;
         internal ulong TrackedEventIdentity;
-        internal CharacterFootNextLandingTrackingState NextTrackingState;
-        internal bool PlantVerificationAttempted;
-        internal bool PlantVerificationUnavailable;
+        internal CharacterFootLandingTrackingState TrackingState;
+        internal bool CommitAttempted;
+        internal bool CommitUnavailable;
 
         internal CharacterFootLandingSnapshot Snapshot =>
             new CharacterFootLandingSnapshot(
-                NextTrackingState,
+                TrackingState,
                 TrackedEventIdentity,
                 LastLanding.HasValue,
                 LastLanding.HasValue ? LastLanding.Resolve() : default,
@@ -521,18 +521,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextSwingLanding.HasValue ? NextSwingConstraintWeight : 0f,
                 PromotedLanding.HasValue,
                 PromotedLanding.HasValue ? PromotedLanding.Resolve() : default,
-                PlantVerificationAttempted,
-                PlantVerificationUnavailable);
+                CommitAttempted,
+                CommitUnavailable);
 
         internal void BeginFrame()
         {
             PromotedLanding = default;
-            PlantVerificationAttempted = false;
-            PlantVerificationUnavailable = false;
+            CommitAttempted = false;
+            CommitUnavailable = false;
         }
 
         internal void RetainTracking()
         {
+            if (TrackingState == CharacterFootLandingTrackingState.Committed)
+                return;
             bool retainsLanding = NextSwingLanding.HasValue &&
                                   NextSwingLanding.LandingEventIdentity ==
                                   TrackedEventIdentity;
@@ -542,9 +544,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NextSwingPredictionError = 0f;
                 NextSwingConstraintWeight = 0f;
             }
-            NextTrackingState = TrackedEventIdentity != 0
-                ? CharacterFootNextLandingTrackingState.Tracking
-                : CharacterFootNextLandingTrackingState.Empty;
+            CommitAttempted = false;
+            CommitUnavailable = false;
+            TrackingState = TrackedEventIdentity != 0
+                ? CharacterFootLandingTrackingState.Tracking
+                : CharacterFootLandingTrackingState.Empty;
         }
 
         internal void ClearNextSwing()
@@ -553,9 +557,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingReferencePoint = default;
             NextSwingPredictionError = 0f;
             NextSwingConstraintWeight = 0f;
-            NextTrackingState = TrackedEventIdentity != 0
-                ? CharacterFootNextLandingTrackingState.Tracking
-                : CharacterFootNextLandingTrackingState.Empty;
+            TrackingState = TrackedEventIdentity != 0
+                ? CharacterFootLandingTrackingState.Tracking
+                : CharacterFootLandingTrackingState.Empty;
         }
     }
 

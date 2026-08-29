@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             CharacterFootLandingContext projected = context.Landing;
             projected.BeginFrame();
-            PrepareCurrentContact(ref projected, in formalFootMotion);
+            PromoteLanded(ref projected, in formalFootMotion);
             return projected.Snapshot;
         }
 
@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             CharacterFootLandingContext projected = context.Landing;
             projected.BeginFrame();
-            PrepareCurrentContact(ref projected, in formalFootMotion);
+            PromoteLanded(ref projected, in formalFootMotion);
             CaptureCurrentContact(
                 ref projected,
                 in formalFootMotion,
@@ -33,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in formalFootMotion,
                 in landingPrediction,
                 in settings);
+            CommitApproach(ref projected, in formalFootMotion);
             return projected.Snapshot;
         }
 
@@ -43,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootMotionSettings settings)
         {
             context.BeginFrame();
-            PrepareCurrentContact(ref context, in formalFootMotion);
+            PromoteLanded(ref context, in formalFootMotion);
             CaptureCurrentContact(
                 ref context,
                 in formalFootMotion,
@@ -53,9 +54,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in formalFootMotion,
                 in landingPrediction,
                 in settings);
+            CommitApproach(ref context, in formalFootMotion);
         }
 
-        static void PrepareCurrentContact(
+        static void PromoteLanded(
             ref CharacterFootLandingContext context,
             in AnimationFootMotionRuntimeSample formalFootMotion)
         {
@@ -64,7 +66,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasCurrentEvent = current.IsBound;
             ulong currentEventIdentity = hasCurrentEvent ? current.Identity : 0;
             if (hasCurrentEvent &&
-                context.TrackedEventIdentity == currentEventIdentity)
+                context.TrackingState ==
+                    CharacterFootLandingTrackingState.Committed &&
+                context.NextSwingLanding.HasValue &&
+                context.NextSwingLanding.LandingEventIdentity ==
+                    currentEventIdentity)
+            {
+                context.LastLanding = context.NextSwingLanding;
+                context.PromotedLanding = context.LastLanding;
+                context.TrackedEventIdentity = 0;
+                context.ClearNextSwing();
+            }
+            else if (hasCurrentEvent &&
+                     context.TrackingState !=
+                         CharacterFootLandingTrackingState.Committed &&
+                     context.TrackedEventIdentity == currentEventIdentity)
             {
                 context.TrackedEventIdentity = 0;
                 context.ClearNextSwing();
@@ -79,19 +95,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLandingPredictionResult diagnostics)
         {
             if (diagnostics.StepSource !=
-                CharacterFootLandingStepSource.FormalCurrentContact)
+                    CharacterFootLandingStepSource.FormalCurrentContact ||
+                !diagnostics.Accepted)
+            {
                 return;
+            }
             AnimationFootMotionEventOccurrence current =
                 formalFootMotion.Events.CurrentContact;
             if (!current.IsBound ||
                 diagnostics.LandingEventIdentity != current.Identity)
             {
-                return;
-            }
-            context.PlantVerificationAttempted = true;
-            if (!diagnostics.Accepted)
-            {
-                context.PlantVerificationUnavailable = true;
                 return;
             }
             context.LastLanding = CharacterFootLandingFact.Create(
@@ -108,6 +121,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             AnimationFootMotionEventFrame events = formalFootMotion.Events;
             AnimationFootMotionEventOccurrence next = events.NextLanding;
+            if (context.TrackingState ==
+                CharacterFootLandingTrackingState.Committed)
+            {
+                bool retainsCommittedNext = next.IsBound &&
+                    context.TrackedEventIdentity == next.Identity &&
+                    context.NextSwingLanding.HasValue &&
+                    context.NextSwingLanding.LandingEventIdentity == next.Identity;
+                if (retainsCommittedNext)
+                    return;
+                context.TrackedEventIdentity = 0;
+                context.ClearNextSwing();
+            }
             bool predictivePhase =
                 events.Phase == AnimationFootMotionEventPhase.PreSwing ||
                 events.Phase == AnimationFootMotionEventPhase.Swing ||
@@ -139,8 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.ClearNextSwing();
             }
             context.TrackedEventIdentity = next.Identity;
-            context.NextTrackingState =
-                CharacterFootNextLandingTrackingState.Tracking;
+            context.TrackingState = CharacterFootLandingTrackingState.Tracking;
             if (!diagnostics.Accepted ||
                 diagnostics.LandingEventIdentity != next.Identity)
             {
@@ -177,5 +201,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             context.NextSwingConstraintWeight = 1f;
         }
 
+        static void CommitApproach(
+            ref CharacterFootLandingContext context,
+            in AnimationFootMotionRuntimeSample formalFootMotion)
+        {
+            AnimationFootMotionEventFrame events = formalFootMotion.Events;
+            if (!events.InApproachContactToLanding)
+                return;
+            AnimationFootMotionEventOccurrence next = events.NextLanding;
+            if (context.TrackingState ==
+                    CharacterFootLandingTrackingState.Committed &&
+                next.IsBound &&
+                context.TrackedEventIdentity == next.Identity &&
+                context.NextSwingLanding.HasValue &&
+                context.NextSwingLanding.LandingEventIdentity == next.Identity)
+            {
+                return;
+            }
+            context.CommitAttempted = true;
+            bool canCommit = next.IsBound &&
+                             context.TrackedEventIdentity == next.Identity &&
+                             context.NextSwingLanding.HasValue &&
+                             context.NextSwingLanding.LandingEventIdentity ==
+                                 next.Identity;
+            if (!canCommit)
+            {
+                context.CommitUnavailable = true;
+                return;
+            }
+            context.TrackingState =
+                CharacterFootLandingTrackingState.Committed;
+        }
     }
 }

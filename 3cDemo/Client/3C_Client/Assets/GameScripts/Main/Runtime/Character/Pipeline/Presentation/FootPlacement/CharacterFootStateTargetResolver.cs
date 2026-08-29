@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.AnimatedFoot,
                     frame.SwingMotion);
             CharacterFootSupportIntent supportIntent =
-                ResolveSupportIntent(in context, in frame);
+                ResolveSupportIntent(in frame);
             if (transition.SuppressOutput)
             {
                 return new CharacterFootStateTarget(
@@ -243,13 +243,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in supportIntent);
 
         static CharacterFootSupportIntent ResolveSupportIntent(
-            in CharacterFootLifecycleContext context,
             in CharacterFootStateFrame frame)
         {
-            bool available = context.Contact.HasContact &&
-                             frame.FormalSupportEventIdentity != 0 &&
-                             frame.FormalSupportEventIdentity ==
-                             context.Contact.EventIdentity;
+            bool available = frame.FormalSupportEventIdentity != 0;
             return new CharacterFootSupportIntent(
                 available,
                 available ? frame.FormalSupportEventIdentity : 0,

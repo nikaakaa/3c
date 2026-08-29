@@ -328,15 +328,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.ComponentUp.normalized).magnitude
                 : 0f;
             float contactOwnership = ResolveContactOwnership(in context);
+            bool hasSupportReachReference =
+                TryResolveSupportReachReference(
+                    in context,
+                    in frame,
+                    in swing,
+                    supportIntent.EventIdentity,
+                    out Vector3 supportReachPoint);
             bool ownsSupport = supportIntent.Available &&
                                supportIntent.Weight > 0f &&
-                               hasContact &&
-                               supportIntent.EventIdentity ==
-                               context.Contact.EventIdentity;
+                               hasSupportReachReference;
             CharacterFootSupportEligibility supportEligibility = ownsSupport
                 ? CharacterFootSupportEligibility.AcquireAndRetain
                 : CharacterFootSupportEligibility.None;
             float supportWeight = ownsSupport ? supportIntent.Weight : 0f;
+            if (ownsSupport)
+            {
+                horizontalError = Vector3.ProjectOnPlane(
+                    supportReachPoint - originalSole,
+                    frame.ComponentUp.normalized).magnitude;
+            }
             float positionWeight = outputCorrection.sqrMagnitude >
                                    CharacterFootConstraintMath.GeometryEpsilon *
                                    CharacterFootConstraintMath.GeometryEpsilon
@@ -377,7 +388,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 horizontalError,
                 contactOwnership,
                 supportWeight,
-                hasContact ? context.Contact.Anchor : default,
+                ownsSupport ? supportReachPoint : default,
                 desiredCorrection,
                 hasContact,
                 hasContact ? context.Contact.SurfaceIdentity : 0,
@@ -389,11 +400,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.Contact.Anchor)
                 : default;
             var pelvisReachReference =
-                hasContact &&
                 supportEligibility != CharacterFootSupportEligibility.None
                     ? new CharacterFootPelvisReachReference(
-                        context.Contact.EventIdentity,
-                        context.Contact.Anchor)
+                        supportIntent.EventIdentity,
+                        supportReachPoint)
                     : default;
             bool constrainedContactReach = hasContact &&
                                            (context.Discrete.State ==
@@ -440,6 +450,58 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ownsSupport ? supportIntent.EventIdentity : 0,
                 in pelvisReachReference,
                 in landingReachRequest);
+        }
+
+        static bool TryResolveSupportReachReference(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateFrame frame,
+            in CharacterFootSwingMotionResult swing,
+            ulong supportEventIdentity,
+            out Vector3 point)
+        {
+            if (supportEventIdentity != 0 &&
+                context.Contact.HasContact &&
+                context.Contact.EventIdentity == supportEventIdentity)
+            {
+                point = context.Contact.Anchor;
+                return true;
+            }
+            if (supportEventIdentity != 0 &&
+                context.LandingSnapshot.TryResolveVerifiedLanding(
+                    supportEventIdentity,
+                    out CharacterFootGroundPathLanding verifiedLanding))
+            {
+                point = verifiedLanding.Point;
+                return true;
+            }
+            if (supportEventIdentity != 0 &&
+                frame.HasContactLanding &&
+                frame.ContactLanding.LandingEventIdentity ==
+                supportEventIdentity)
+            {
+                point = frame.ContactLanding.Point;
+                return true;
+            }
+            if (supportEventIdentity != 0 &&
+                frame.PreparedPlantActive &&
+                frame.PreparedPlantTarget.LandingEventIdentity ==
+                supportEventIdentity)
+            {
+                point = frame.PreparedPlantTarget.Point;
+                return true;
+            }
+            CharacterFootSwingPathReference swingPath =
+                swing.SwingPathReference;
+            if (supportEventIdentity != 0 &&
+                swing.Accepted &&
+                swingPath.IsAvailable &&
+                swingPath.LandingEventIdentity == supportEventIdentity)
+            {
+                point = swingPath.LandingPoint;
+                return true;
+            }
+            point = default;
+            return false;
         }
 
         static float ResolveContactOwnership(

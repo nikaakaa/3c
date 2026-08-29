@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/32";
+        const string Schema = "character-foot-motion-facts/33";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 32;
+        const int AnalyzerVersion = 33;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 800;
         const float PositionNoiseFloor = 0.001f;
@@ -353,12 +353,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PlantTargetVerticalDelta,
                     plantTargetAppliedVerticalDelta =
                         current.PlantTargetAppliedVerticalDelta,
+                    plantTargetHeightEventIdentity =
+                        current.PlantTargetHeightEventIdentity.ToString(
+                            CultureInfo.InvariantCulture),
                     plantTargetVerticalClamped =
                         current.PlantTargetVerticalClamped,
                     plantBlendedCorrection = CharacterFootVectorFact.From(
                         current.PlantBlendedCorrection),
                     plantCorrectionMaximumVerticalSpeed =
                         current.PlantCorrectionMaximumVerticalSpeed,
+                    plantCorrectionHistoryRebased =
+                        current.PlantCorrectionHistoryRebased,
+                    plantCorrectionBaselineDeltaAlongUp =
+                        current.PlantCorrectionBaselineDeltaAlongUp,
                     plantCorrectionVerticalDelta =
                         current.PlantCorrectionVerticalDelta,
                     plantCorrectionAppliedVerticalDelta =
@@ -3821,6 +3828,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionPlantTargetVerticalDelta"),
                 PlantTargetAppliedVerticalDelta =
                     Float("FootMotionPlantTargetAppliedVerticalDelta"),
+                PlantTargetHeightEventIdentity =
+                    Ulong("FootMotionPlantTargetHeightEventIdentity"),
                 PlantTargetForceRefreshed =
                     Int("FootMotionPlantTargetForceRefreshed") != 0,
                 PlantTargetForceRefreshDistance =
@@ -3831,6 +3840,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("FootMotionPlantBlendedCorrection"),
                 PlantCorrectionMaximumVerticalSpeed =
                     Float("FootMotionPlantCorrectionMaximumVerticalSpeed"),
+                PlantCorrectionHistoryRebased =
+                    Int("FootMotionPlantCorrectionHistoryRebased") != 0,
+                PlantCorrectionBaselineDeltaAlongUp =
+                    Float(
+                        "FootMotionPlantCorrectionBaselineDeltaAlongUp"),
                 PlantCorrectionVerticalDelta =
                     Float("FootMotionPlantCorrectionVerticalDelta"),
                 PlantCorrectionAppliedVerticalDelta =
@@ -4029,6 +4043,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PlantCorrectionVerticalDelta,
                     frame.PlantCorrectionAppliedVerticalDelta);
                 if (frame.PlantTargetEventIdentity == 0 ||
+                    frame.PlantTargetHeightEventIdentity !=
+                    frame.PlantTargetEventIdentity ||
                     !FiniteVector(frame.PlantDesiredPoint) ||
                     !FiniteVector(frame.PlantFilteredPoint) ||
                     !FiniteVector(frame.PlantBlendedCorrection) ||
@@ -4047,6 +4063,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Math.Abs(frame.PlantTargetVerticalDelta) <
                         frame.PlantTargetForceRefreshDistance -
                         PositionNoiseFloor ||
+                    !float.IsFinite(
+                        frame.PlantCorrectionBaselineDeltaAlongUp) ||
                     !float.IsFinite(frame.PlantCorrectionVerticalDelta) ||
                     !float.IsFinite(frame.PlantCorrectionAppliedVerticalDelta) ||
                     !directTargetFollow &&
@@ -5057,6 +5075,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantTargetMaximumVerticalSpeed",
                 "FootMotionPlantTargetVerticalDelta",
                 "FootMotionPlantTargetAppliedVerticalDelta",
+                "FootMotionPlantTargetHeightEventIdentity",
                 "FootMotionPlantTargetForceRefreshed",
                 "FootMotionPlantTargetForceRefreshDistance",
                 "FootMotionPlantTargetVerticalClamped",
@@ -5064,6 +5083,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantBlendedCorrectionY",
                 "FootMotionPlantBlendedCorrectionZ",
                 "FootMotionPlantCorrectionMaximumVerticalSpeed",
+                "FootMotionPlantCorrectionHistoryRebased",
+                "FootMotionPlantCorrectionBaselineDeltaAlongUp",
                 "FootMotionPlantCorrectionVerticalDelta",
                 "FootMotionPlantCorrectionAppliedVerticalDelta",
                 "FootMotionPlantCorrectionVerticalClamped",
@@ -5714,11 +5735,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float PlantTargetMaximumVerticalSpeed;
             internal float PlantTargetVerticalDelta;
             internal float PlantTargetAppliedVerticalDelta;
+            internal ulong PlantTargetHeightEventIdentity;
             internal bool PlantTargetForceRefreshed;
             internal float PlantTargetForceRefreshDistance;
             internal bool PlantTargetVerticalClamped;
             internal Vector3 PlantBlendedCorrection;
             internal float PlantCorrectionMaximumVerticalSpeed;
+            internal bool PlantCorrectionHistoryRebased;
+            internal float PlantCorrectionBaselineDeltaAlongUp;
             internal float PlantCorrectionVerticalDelta;
             internal float PlantCorrectionAppliedVerticalDelta;
             internal bool PlantCorrectionVerticalClamped;

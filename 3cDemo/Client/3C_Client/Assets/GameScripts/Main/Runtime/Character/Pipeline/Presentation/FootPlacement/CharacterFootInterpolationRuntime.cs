@@ -52,9 +52,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             }
             Vector3 correction = state.EffectiveCorrection;
+            bool hasOutputPoint = state.HasOutputPoint;
+            Vector3 previousOutputPoint = state.PreviousOutputPoint;
             state = default;
             state.HasOutput = true;
             state.EffectiveCorrection = correction;
+            state.HasOutputPoint = hasOutputPoint;
+            state.PreviousOutputPoint = previousOutputPoint;
         }
 
         static CharacterFootInterpolationResult EvaluatePlant(
@@ -69,6 +73,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new System.InvalidOperationException(
                     "Foot Plant target is invalid.");
             }
+            Vector3 up = frame.ComponentUp.normalized;
+            Vector3 originalSole =
+                CharacterFootConstraintMath.ResolveOriginalSole(
+                    frame.AnimatedFoot);
+            float correctionBaselineDeltaAlongUp =
+                RebaseEffectiveCorrectionAlongUp(
+                    ref state,
+                    originalSole,
+                    up);
+            bool correctionHistoryRebased = Mathf.Abs(
+                correctionBaselineDeltaAlongUp) >
+                CharacterFootConstraintMath.GeometryEpsilon;
             CharacterFootSupportIntent supportIntent = target.SupportIntent;
             CharacterFootInterpolationResult swing = EvaluateSwing(
                 ref state,
@@ -88,10 +104,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     target.TimeToLandingSeconds,
                     in supportIntent),
                 in frame);
-            Vector3 up = frame.ComponentUp.normalized;
-            Vector3 originalSole =
-                CharacterFootConstraintMath.ResolveOriginalSole(
-                    frame.AnimatedFoot);
             bool sameTarget = state.HasPlantTarget &&
                               state.PlantTargetEventIdentity ==
                               target.PlantTargetEventIdentity;
@@ -114,6 +126,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 state.PlantBlendWeight = 0f;
                 state.PlantResponseTransitionActive = false;
+            }
+            if (!state.HasTargetHeight ||
+                state.TargetHeightEventIdentity !=
+                target.PlantTargetEventIdentity)
+            {
+                state.HasTargetHeight = true;
+                state.TargetHeightEventIdentity =
+                    target.PlantTargetEventIdentity;
+                state.FilteredTargetHeightAlongUp = Vector3.Dot(
+                    originalSole + state.EffectiveCorrection,
+                    up);
+                state.TargetHeightRetargetActive = false;
             }
             float desiredTargetHeightAlongUp = Vector3.Dot(
                 target.PlantTargetPoint,
@@ -219,6 +243,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.Progress = state.PlantBlendWeight;
             state.StartResidual = 0f;
             Vector3 outputPoint = originalSole + state.EffectiveCorrection;
+            state.HasOutputPoint = true;
+            state.PreviousOutputPoint = outputPoint;
             float outputDistance = Vector3.Distance(
                 outputPoint,
                 target.PlantTargetPoint);
@@ -242,11 +268,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Settings.MaximumVerticalTargetSpeed,
                 targetVerticalDelta,
                 targetAppliedVerticalDelta,
+                state.TargetHeightEventIdentity,
                 targetForceRefreshed,
                 frame.Settings.TargetHeightForceRefreshDistance,
                 targetVerticalClamped,
                 blendedCorrection,
                 frame.Settings.MaximumVerticalCorrectionSpeed,
+                correctionHistoryRebased,
+                correctionBaselineDeltaAlongUp,
                 correctionVerticalDelta,
                 correctionAppliedVerticalDelta,
                 correctionVerticalClamped,
@@ -264,6 +293,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             state.PlantFact = default;
+            Vector3 up = frame.ComponentUp.normalized;
+            Vector3 originalSole =
+                CharacterFootConstraintMath.ResolveOriginalSole(
+                    frame.AnimatedFoot);
+            RebaseEffectiveCorrectionAlongUp(
+                ref state,
+                originalSole,
+                up);
             if (target.StateEntered)
             {
                 state.PreviousTargetCorrection = target.Correction;
@@ -291,6 +328,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                   state.EffectiveCorrection,
                                   target.SwingCorrection) <=
                               frame.Settings.ReleaseCompletionTolerance;
+            state.HasOutputPoint = true;
+            state.PreviousOutputPoint =
+                originalSole + state.EffectiveCorrection;
             return Result(
                 in state,
                 state.Completed,
@@ -362,7 +402,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                           state.Policy !=
                                           CharacterFootInterpolationPolicy
                                               .SwingResidual;
-            if (hasPath && !sameHeightTarget)
+            bool ownsSwingTargetHeight = state.Policy ==
+                                         CharacterFootInterpolationPolicy
+                                             .SwingResidual;
+            if (hasPath && ownsSwingTargetHeight && !sameHeightTarget)
             {
                 state.HasTargetHeight = true;
                 state.TargetHeightEventIdentity =
@@ -371,15 +414,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     currentLandingHeightAlongUp;
                 state.TargetHeightRetargetActive = false;
             }
-            if (hasPath)
+            if (hasPath && ownsSwingTargetHeight)
             {
                 filteredTargetHeightBefore = rawTargetHeightAlongUp +
                                              state
                                                  .FilteredTargetHeightAlongUp -
                                              currentLandingHeightAlongUp;
             }
-            if (hasPath && state.Policy ==
-                CharacterFootInterpolationPolicy.SwingResidual)
+            else if (hasPath)
+            {
+                filteredTargetHeightBefore = rawTargetHeightAlongUp;
+            }
+            if (hasPath && ownsSwingTargetHeight)
             {
                 float targetHeightDelta = currentLandingHeightAlongUp -
                                           state.FilteredTargetHeightAlongUp;
@@ -426,8 +472,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         currentLandingHeightAlongUp;
                 }
             }
-            else if (state.Policy ==
-                     CharacterFootInterpolationPolicy.SwingResidual)
+            else if (ownsSwingTargetHeight)
             {
                 state.HasTargetHeight = false;
                 state.TargetHeightEventIdentity = 0;
@@ -435,9 +480,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.TargetHeightRetargetActive = false;
             }
             float filteredTargetHeightAlongUp = hasPath
-                ? rawTargetHeightAlongUp +
-                  state.FilteredTargetHeightAlongUp -
-                  currentLandingHeightAlongUp
+                ? ownsSwingTargetHeight
+                    ? rawTargetHeightAlongUp +
+                      state.FilteredTargetHeightAlongUp -
+                      currentLandingHeightAlongUp
+                    : rawTargetHeightAlongUp
                 : 0f;
             Vector3 swingTargetCorrection = hasPath
                 ? up * Mathf.Max(
@@ -511,6 +558,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 state.EffectiveCorrection = swingCorrection;
                 state.Residual = state.SwingResidual;
+                state.HasOutputPoint = true;
+                state.PreviousOutputPoint =
+                    originalSole + state.EffectiveCorrection;
             }
             state.Progress = 0f;
             state.StartResidual = 0f;
@@ -644,6 +694,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (deltaSeconds <= 0f)
                 return 0f;
             return maximumSpeed * deltaSeconds;
+        }
+
+        static float RebaseEffectiveCorrectionAlongUp(
+            ref CharacterFootInterpolationState state,
+            Vector3 originalSole,
+            Vector3 up)
+        {
+            if (!state.HasOutputPoint)
+                return 0f;
+            float delta = Vector3.Dot(
+                state.PreviousOutputPoint -
+                (originalSole + state.EffectiveCorrection),
+                up);
+            state.EffectiveCorrection += up * delta;
+            return delta;
         }
     }
 }

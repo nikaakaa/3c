@@ -1559,7 +1559,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return resolved.ContactReference.IsAvailable;
             return step.IsAuthoritative &&
                    step.HasConsistentLandingEventIdentity &&
-                   step.IsSwing &&
+                   step.HasPredictiveLanding &&
                    motion.Accepted &&
                    motion.LandingEventIdentity == step.LandingEventIdentity;
         }

@@ -1108,7 +1108,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? source.State
                 : CharacterFootStrideState.LandingReach;
             Vector3 pelvisDelta = up * output;
-            float positionWeight = Mathf.Abs(output) > EndpointTolerance
+            float positionWeight = Mathf.Abs(output) > GeometryEpsilon
                 ? footPlacementWeight
                 : 0f;
             return source.WithLandingReachOutput(
@@ -1285,7 +1285,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static bool IsRetainablePrimarySupport(
             in CharacterResolvedFootResult motion) =>
             motion.Outcome == CharacterFootResolvedOutcome.Ready &&
-            motion.ContactReference.IsAvailable &&
+            motion.PelvisReachReference.IsAvailable &&
             motion.SupportEventIdentity != 0 &&
             motion.SupportWeight > GeometryEpsilon &&
             motion.SupportEligibility != CharacterFootSupportEligibility.None;

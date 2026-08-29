@@ -4419,6 +4419,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PlantTargetHeightBefore +
                     frame.PlantTargetAppliedVerticalDelta -
                     frame.PlantTargetHeightAfter) <= PositionNoiseFloor;
+                bool distanceForceRefresh =
+                    frame.PlantTargetHeightUpdateReason ==
+                    "ForceRefreshDistanceExceeded";
+                bool verificationRefresh =
+                    frame.PlantTargetHeightUpdateReason ==
+                    "VerificationRefresh";
+                bool refreshCaptured = HasRevisionReason(
+                    frame.PlantResidualCaptureReason,
+                    "TargetHeightForceRefreshed");
+                bool zeroDeltaVerificationRefresh =
+                    frame.PlantTargetHeightUpdateReason == "None" &&
+                    Math.Abs(frame.PlantTargetVerticalDelta) <=
+                    PositionNoiseFloor &&
+                    HasRevisionReason(
+                        frame.PlantResidualCaptureReason,
+                        "VerificationChanged");
+                bool refreshReasonConsistent =
+                    frame.PlantTargetForceRefreshed == refreshCaptured &&
+                    (frame.PlantTargetForceRefreshed
+                        ? distanceForceRefresh ||
+                          verificationRefresh ||
+                          zeroDeltaVerificationRefresh
+                        : !distanceForceRefresh && !verificationRefresh);
                 bool correctionOwnerConsistent =
                     frame.PlantVerticalContinuityOwner switch
                     {
@@ -4464,7 +4487,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !float.IsFinite(frame.PlantTargetForceRefreshDistance) ||
                     frame.PlantTargetForceRefreshDistance <=
                         frame.PathRevisionDistance ||
-                    frame.PlantTargetForceRefreshed &&
+                    !refreshReasonConsistent ||
+                    distanceForceRefresh &&
                         Math.Abs(frame.PlantTargetVerticalDelta) <
                         frame.PlantTargetForceRefreshDistance -
                         PositionNoiseFloor ||
@@ -4497,7 +4521,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PlantPenetrationDepth < 0f)
                 {
                     throw new InvalidDataException(
-                        "Foot Motion Plant interpolation facts are inconsistent.");
+                        $"Foot Motion Plant interpolation facts are inconsistent " +
+                        $"Frame={frame.Frame} Side={frame.Side} " +
+                        $"TargetHeightUpdateReason={frame.PlantTargetHeightUpdateReason}.");
                 }
             }
             RequireEnum<CharacterFootSwingPathHorizontalAxisState>(

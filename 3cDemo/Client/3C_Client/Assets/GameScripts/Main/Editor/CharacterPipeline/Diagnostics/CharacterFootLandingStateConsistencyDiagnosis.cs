@@ -193,7 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisTarget plantBlendStutterTarget =
                 context.Target(
                     "stable-swing-plant-blend-stutter",
-                    "同Event、同Source、稳定Path的Swing中，Formal Contact推进是否被Plant Blend单帧Hold，并给物理脚引入相对动画Source的额外加速度",
+                    "同Event、同Source、稳定Path的PreparedPrediction Swing中，正式Approach进度推进是否被Plant Blend单帧Hold，并给物理脚引入相对动画Source的额外加速度",
                     new[] { "StableSwingPlantBlendKinematics" },
                     new[] { "advanceToHold=true" },
                     stableSwingPlantBlend,
@@ -205,12 +205,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value => CharacterFootDiagnosisContext.Metric(
                         value,
                         "FootPlacementAddedAccelerationMetersPerFrameSquared"),
+                    "FormalProgressPrevious",
+                    "FormalProgressCurrent",
+                    "FormalProgressDelta",
                     "FormalContactPrevious",
                     "FormalContactCurrent",
                     "FormalContactDelta",
                     "PlantBlendPrevious",
                     "PlantBlendCurrent",
                     "PlantBlendDelta",
+                    "LockWeightPrevious",
+                    "LockWeightCurrent",
+                    "LockWeightDelta",
                     "SourceAnkleStepMeters",
                     "PhysicalAnkleStepMeters",
                     "FootPlacementOffsetStepMeters",
@@ -476,15 +482,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "plantWeightStarted"))
+                    "plantTakeoverStarted"))
             {
-                return "WeightStartedResidualCapture";
+                return "TakeoverStartedResidualCapture";
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,
-                    "plantWeightCompleted"))
+                    "plantTakeoverCompleted"))
             {
-                return "WeightCompletedResidualCapture";
+                return "TakeoverCompletedResidualCapture";
             }
             if (CharacterFootDiagnosisContext.Evidence(
                     value,

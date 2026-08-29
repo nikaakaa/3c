@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
 
@@ -51,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/42";
+        const string Schema = "character-foot-motion-facts/43";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 42;
+        const int AnalyzerVersion = 43;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -169,6 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (frames.Count == 0)
                 return;
+            RequireFormalTakeoverContinuity(frames);
             AnalyzeStepTimeCandidateSelections(
                 frames,
                 events,
@@ -186,6 +188,73 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
+        }
+
+        static void RequireFormalTakeoverContinuity(
+            IReadOnlyList<FootFrame> frames)
+        {
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame frame = frames[i];
+                if (!frame.PlantInterpolationEvaluated)
+                    continue;
+                bool prepared = frame.PlantTargetKind ==
+                                "PreparedPrediction";
+                bool completed = frame.PlantTargetKind ==
+                                 "VerifiedAnchor" ||
+                                 frame.PlantTargetKind ==
+                                 "LockedFullAnchor" ||
+                                 frame.PlantTargetKind ==
+                                 "LockedSliding";
+                if (prepared &&
+                    (!frame.FormalObservationAvailable ||
+                     !frame.FormalInApproach ||
+                     frame.FormalEventPhase != "ApproachContact" ||
+                     frame.FormalNextLandingEventIdentity !=
+                     frame.PlantTargetEventIdentity ||
+                     Math.Abs(
+                         frame.PlantBlendWeight -
+                         frame.FormalApproachProgress) >
+                     RuntimeGeometryEpsilon))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Prepared Prediction takeover facts are inconsistent Frame={frame.Frame} Side={frame.Side}.");
+                }
+                if (completed &&
+                    Math.Abs(frame.PlantBlendWeight - 1f) >
+                    RuntimeGeometryEpsilon)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Verified or Locked takeover is incomplete Frame={frame.Frame} Side={frame.Side}.");
+                }
+                if (i == 0)
+                    continue;
+                FootFrame previous = frames[i - 1];
+                if (!Continuous(previous, frame) ||
+                    !previous.PlantInterpolationEvaluated ||
+                    previous.PlantTargetEventIdentity !=
+                    frame.PlantTargetEventIdentity)
+                {
+                    continue;
+                }
+                if (Math.Abs(
+                        frame.PlantPreviousBlendWeight -
+                        previous.PlantBlendWeight) >
+                    RuntimeGeometryEpsilon)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Plant previous takeover facts are inconsistent Frame={frame.Frame} Side={frame.Side}.");
+                }
+                if (prepared &&
+                    previous.PlantTargetKind == "PreparedPrediction" &&
+                    frame.FormalApproachProgress +
+                    RuntimeGeometryEpsilon <
+                    previous.FormalApproachProgress)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion formal Approach progress retreated Frame={frame.Frame} Side={frame.Side}.");
+                }
+            }
         }
 
         static void AnalyzePlantInterpolationOutputJumps(
@@ -319,12 +388,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["plantWorldResidualClearedAtCompletionTolerance"] =
                         current
                             .PlantWorldResidualClearedAtCompletionTolerance,
-                    ["plantWeightStarted"] = HasRevisionReason(
+                    ["plantTakeoverStarted"] = HasRevisionReason(
                         current.PlantResidualCaptureReason,
-                        "WeightStarted"),
-                    ["plantWeightCompleted"] = HasRevisionReason(
+                        "TakeoverStarted"),
+                    ["plantTakeoverCompleted"] = HasRevisionReason(
                         current.PlantResidualCaptureReason,
-                        "WeightCompleted"),
+                        "TakeoverCompleted"),
                     ["targetHeightOwned"] = HasRevisionReason(
                         current.PlantVerticalContinuityOwners,
                         "TargetHeightHistory"),
@@ -1976,6 +2045,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !first.PlantInterpolationEvaluated ||
                     !previous.PlantInterpolationEvaluated ||
                     !current.PlantInterpolationEvaluated ||
+                    first.PlantTargetKind != "PreparedPrediction" ||
+                    previous.PlantTargetKind != "PreparedPrediction" ||
+                    current.PlantTargetKind != "PreparedPrediction" ||
+                    !first.FormalInApproach ||
+                    !previous.FormalInApproach ||
+                    !current.FormalInApproach ||
                     !first.FinalPhysicalWriteAvailable ||
                     !previous.FinalPhysicalWriteAvailable ||
                     !current.FinalPhysicalWriteAvailable ||
@@ -2047,20 +2122,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.FormalContact - first.FormalContact;
                 double currentContactDelta =
                     current.FormalContact - previous.FormalContact;
+                double previousProgressDelta =
+                    previous.FormalApproachProgress -
+                    first.FormalApproachProgress;
+                double currentProgressDelta =
+                    current.FormalApproachProgress -
+                    previous.FormalApproachProgress;
                 double previousBlendDelta =
                     previous.PlantBlendWeight -
                     previous.PlantPreviousBlendWeight;
                 double currentBlendDelta =
                     current.PlantBlendWeight -
                     current.PlantPreviousBlendWeight;
-                bool previousContactChanged =
-                    Math.Abs(previousContactDelta) > RuntimeGeometryEpsilon;
-                bool currentContactChanged =
-                    Math.Abs(currentContactDelta) > RuntimeGeometryEpsilon;
-                bool previousHeld = previousContactChanged &&
+                bool previousProgressAdvanced = previousProgressDelta >
+                                                RuntimeGeometryEpsilon;
+                bool currentProgressAdvanced = currentProgressDelta >
+                                               RuntimeGeometryEpsilon;
+                bool previousHeld = previousProgressAdvanced &&
                                     Math.Abs(previousBlendDelta) <=
                                     RuntimeGeometryEpsilon;
-                bool currentHeld = currentContactChanged &&
+                bool currentHeld = currentProgressAdvanced &&
                                    Math.Abs(currentBlendDelta) <=
                                    RuntimeGeometryEpsilon;
                 bool blendAdvanced = Math.Abs(currentBlendDelta) >
@@ -2081,6 +2162,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
+                    ["FormalProgressPrevious"] =
+                        previous.FormalApproachProgress,
+                    ["FormalProgressCurrent"] =
+                        current.FormalApproachProgress,
+                    ["FormalProgressDelta"] = currentProgressDelta,
                     ["FormalContactPrevious"] = previous.FormalContact,
                     ["FormalContactCurrent"] = current.FormalContact,
                     ["FormalContactDelta"] = currentContactDelta,
@@ -2088,6 +2174,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PlantPreviousBlendWeight,
                     ["PlantBlendCurrent"] = current.PlantBlendWeight,
                     ["PlantBlendDelta"] = currentBlendDelta,
+                    ["LockWeightPrevious"] = previous.FormalLockWeight,
+                    ["LockWeightCurrent"] = current.FormalLockWeight,
+                    ["LockWeightDelta"] =
+                        current.FormalLockWeight -
+                        previous.FormalLockWeight,
                     ["SourceAnkleStepMeters"] = sourceCurrentStep.magnitude,
                     ["PhysicalAnkleStepMeters"] =
                         physicalCurrentStep.magnitude,
@@ -2129,6 +2220,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["continuousHold"] = continuousHold,
                     ["holdToAdvance"] = holdToAdvance,
                     ["pathStable"] = true,
+                    ["formalProgressAdvanced"] =
+                        currentProgressAdvanced,
+                    ["plantBlendHeld"] =
+                        Math.Abs(currentBlendDelta) <=
+                        RuntimeGeometryEpsilon,
+                    ["rawContactChanged"] =
+                        Math.Abs(currentContactDelta) >
+                        RuntimeGeometryEpsilon,
                     ["plantPreviousBlendMatchesPreviousFrame"] =
                         Math.Abs(
                             current.PlantPreviousBlendWeight -
@@ -4284,6 +4383,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FormalOutputObservationAvailable =
                     Int("FormalStepObservationAvailable") != 0,
                 FormalFootHeight = Float("FormalFootHeight"),
+                ObservedFormalContact = Float("FormalContact"),
+                ObservedFormalEventPhase = Cell("FormalEventPhase"),
+                ObservedFormalInApproach =
+                    Int("FormalInApproachContactToLanding") != 0,
+                ObservedFormalApproachProgress =
+                    Float("FormalApproachContactToLandingProgress"),
                 PoseRootWorldPosition = Vector("PoseRootWorldPosition"),
                 PoseRootWorldRotation = Rotation("PoseRootWorldRotation"),
                 StepSelectionMaximumPredictionTimeSeconds =
@@ -4314,10 +4419,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Ulong("InputFormalStepCompletionIdentity"),
                 FormalNormalizedTime = Float("InputFormalStepSourceNormalizedTime"),
                 FormalStepTime = Float("InputFormalStepTimeSeconds"),
-                FormalContact = Float("FormalContact"),
+                FormalContact = Float("InputFormalContact"),
                 FormalLockMode = Cell("InputFormalLockMode"),
                 FormalLockWeight = Float("InputFormalLockWeight"),
                 FormalSupport = Float("InputFormalSupport"),
+                FormalEventPhase = Cell("InputFormalEventPhase"),
+                FormalInApproach =
+                    Int("InputFormalInApproachContactToLanding") != 0,
+                FormalApproachProgress =
+                    Float("InputFormalApproachContactToLandingProgress"),
                 FormalCurrentContactEventIdentity =
                     Ulong("InputFormalCurrentContactEventIdentity"),
                 FormalNextLandingEventIdentity =
@@ -4761,6 +4871,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(
                     $"Foot Motion Foot row Side '{frame.Side}' is invalid.");
             RequirePredictionMotion(frame);
+            RequireFormalEventFrame(
+                frame.FormalOutputObservationAvailable,
+                frame.ObservedFormalEventPhase,
+                frame.ObservedFormalInApproach,
+                frame.ObservedFormalApproachProgress,
+                "Formal");
+            RequireFormalEventFrame(
+                frame.FormalObservationAvailable,
+                frame.FormalEventPhase,
+                frame.FormalInApproach,
+                frame.FormalApproachProgress,
+                "InputFormal");
+            if (frame.FormalObservationAvailable)
+            {
+                RequireEnum<AnimationFootStepObservationLockMode>(
+                    frame.FormalLockMode,
+                    "InputFormalLockMode");
+                if (!Normalized(frame.FormalContact) ||
+                    !Normalized(frame.FormalLockWeight) ||
+                    !Normalized(frame.FormalSupport))
+                {
+                    throw new InvalidDataException(
+                        "Foot Motion formal Contact, Lock Weight or Support facts are inconsistent.");
+                }
+            }
+            if (frame.FormalOutputObservationAvailable &&
+                frame.FormalObservationAvailable &&
+                (frame.ObservedFormalEventPhase != frame.FormalEventPhase ||
+                 frame.ObservedFormalInApproach != frame.FormalInApproach ||
+                 Math.Abs(
+                     frame.ObservedFormalApproachProgress -
+                     frame.FormalApproachProgress) > TimeEpsilon))
+            {
+                throw new InvalidDataException(
+                    "Foot Motion observed and input Event Frame facts are inconsistent.");
+            }
             RequireEnum<CharacterFootLandingStepSource>(
                 frame.SelectedStepSource,
                 "SelectedStepSource");
@@ -5531,6 +5677,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void RequireFormalEventFrame(
+            bool available,
+            string phase,
+            bool inApproach,
+            float progress,
+            string prefix)
+        {
+            if (!available)
+            {
+                if (!string.IsNullOrEmpty(phase) ||
+                    inApproach ||
+                    Math.Abs(progress) > TimeEpsilon)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion {prefix} Event Frame unavailable facts are inconsistent.");
+                }
+                return;
+            }
+            RequireEnum<AnimationFootMotionEventPhase>(
+                phase,
+                $"{prefix}EventPhase");
+            bool expectedInApproach = phase == "ApproachContact";
+            if (!float.IsFinite(progress) ||
+                progress < 0f ||
+                progress > 1f ||
+                inApproach != expectedInApproach ||
+                !expectedInApproach &&
+                Math.Abs(progress) > TimeEpsilon)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion {prefix} Approach progress facts are inconsistent.");
+            }
+        }
+
+        static bool Normalized(float value) =>
+            float.IsFinite(value) && value >= 0f && value <= 1f;
+
         static void RequireLandingObservation(FootFrame frame)
         {
             bool observationAvailable =
@@ -6057,7 +6240,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "TargetBodyVelocityX", "TargetBodyVelocityY",
                 "TargetBodyVelocityZ",
                 "TimeToLandingSeconds", "FormalStepObservationAvailable",
-                "FormalFootHeight",
+                "FormalFootHeight", "FormalContact", "FormalEventPhase",
+                "FormalInApproachContactToLanding",
+                "FormalApproachContactToLandingProgress",
                 "PoseRootWorldPositionX", "PoseRootWorldPositionY",
                 "PoseRootWorldPositionZ", "PoseRootWorldRotationX",
                 "PoseRootWorldRotationY", "PoseRootWorldRotationZ",
@@ -6067,7 +6252,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
                 "InputFormalStepObservationAvailable",
                 "InputFormalStepCompletionIdentity",
-                "FormalContact", "InputFormalLockMode", "InputFormalLockWeight", "InputFormalSupport",
+                "InputFormalContact", "InputFormalLockMode",
+                "InputFormalLockWeight", "InputFormalSupport",
+                "InputFormalEventPhase",
+                "InputFormalInApproachContactToLanding",
+                "InputFormalApproachContactToLandingProgress",
                 "StepSelectionMaximumPredictionTimeSeconds",
                 "StepSelectionLastLandingEventIdentity",
                 "SelectedStepSource", "SelectedLandingEventIdentity",
@@ -6857,6 +7046,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float TimeToLandingSeconds;
             internal bool FormalOutputObservationAvailable;
             internal float FormalFootHeight;
+            internal float ObservedFormalContact;
+            internal string ObservedFormalEventPhase;
+            internal bool ObservedFormalInApproach;
+            internal float ObservedFormalApproachProgress;
             internal Vector3 PoseRootWorldPosition;
             internal Quaternion PoseRootWorldRotation;
             internal float StepSelectionMaximumPredictionTimeSeconds;
@@ -6881,6 +7074,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string FormalLockMode;
             internal float FormalLockWeight;
             internal float FormalSupport;
+            internal string FormalEventPhase;
+            internal bool FormalInApproach;
+            internal float FormalApproachProgress;
             internal ulong FormalCurrentContactEventIdentity;
             internal ulong FormalNextLandingEventIdentity;
             internal string LandingPredictionState;

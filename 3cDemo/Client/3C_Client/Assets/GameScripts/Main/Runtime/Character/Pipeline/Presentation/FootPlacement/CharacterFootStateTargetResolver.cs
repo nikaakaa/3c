@@ -65,10 +65,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in frame,
                         in supportIntent);
                 case CharacterFootConstraintState.Releasing:
-                    return ResolveSwingTarget(
+                    return ResolveReleaseTarget(
+                        in context,
                         in transition,
                         swingCorrection,
-                        CharacterFootInterpolationPolicy.ReleaseResidual,
                         timeToLandingSeconds,
                         in frame,
                         in supportIntent);
@@ -107,6 +107,53 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in supportIntent);
         }
 
+        static CharacterFootStateTarget ResolveReleaseTarget(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootTransitionDecision transition,
+            Vector3 swingCorrection,
+            float timeToLandingSeconds,
+            in CharacterFootStateFrame frame,
+            in CharacterFootSupportIntent supportIntent)
+        {
+            bool targetAvailable = context.Contact.HasContact;
+            Vector3 originalSole =
+                CharacterFootConstraintMath.ResolveOriginalSole(
+                    frame.AnimatedFoot);
+            CharacterFootSupportTarget target = targetAvailable
+                ? new CharacterFootSupportTarget(
+                    frame.FrameSequence,
+                    frame.CompletionIdentity,
+                    frame.Side,
+                    originalSole + swingCorrection,
+                    context.Contact.Normal,
+                    context.Contact.SurfaceIdentity,
+                    context.Contact.WorldRevision,
+                    CharacterFootSupportTargetKind.Releasing,
+                    CharacterFootSupportPositionSource.ReleasingSwing,
+                    frame.FrameSequence,
+                    frame.CompletionIdentity,
+                    frame.SwingMotion.Accepted
+                        ? frame.SwingMotion.LandingEventIdentity
+                        : 0,
+                    frame.SwingMotion.Accepted
+                        ? frame.SwingMotion.GroundPathInputIdentity
+                        : 0,
+                    CharacterFootSupportNormalSource.RetainedContactAnchor,
+                    context.Contact.AcquiredFrameSequence,
+                    context.Contact.AcquiredCompletionIdentity,
+                    context.Contact.EventIdentity)
+                : default;
+            return Target(
+                swingCorrection,
+                swingCorrection,
+                CharacterFootInterpolationPolicy.ReleaseResidual,
+                in transition,
+                targetAvailable,
+                in target,
+                timeToLandingSeconds,
+                in supportIntent);
+        }
+
         static CharacterFootStateTarget ResolveContactPlant(
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,
@@ -134,7 +181,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.Contact.Anchor,
                     context.Contact.Normal,
                     context.Contact.SurfaceIdentity,
-                    frame.WorldRevision),
+                    context.Contact.WorldRevision,
+                    CharacterFootSupportTargetKind.VerifiedAnchor,
+                    CharacterFootSupportPositionSource.ContactAnchor,
+                    context.Contact.AcquiredFrameSequence,
+                    context.Contact.AcquiredCompletionIdentity,
+                    context.Contact.EventIdentity,
+                    0,
+                    CharacterFootSupportNormalSource.ContactAnchor,
+                    context.Contact.AcquiredFrameSequence,
+                    context.Contact.AcquiredCompletionIdentity,
+                    context.Contact.EventIdentity),
                 transition,
                 timeToLandingSeconds,
                 false,
@@ -199,7 +256,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     originalSole + correction,
                     context.Contact.Normal,
                     context.Contact.SurfaceIdentity,
-                    frame.WorldRevision),
+                    context.Contact.WorldRevision,
+                    context.Discrete.LockResponse ==
+                    CharacterFootLockResponse.FullAnchor
+                        ? CharacterFootSupportTargetKind.LockedFullAnchor
+                        : CharacterFootSupportTargetKind.LockedSliding,
+                    CharacterFootSupportPositionSource.ContactAnchor,
+                    context.Contact.AcquiredFrameSequence,
+                    context.Contact.AcquiredCompletionIdentity,
+                    context.Contact.EventIdentity,
+                    0,
+                    CharacterFootSupportNormalSource.ContactAnchor,
+                    context.Contact.AcquiredFrameSequence,
+                    context.Contact.AcquiredCompletionIdentity,
+                    context.Contact.EventIdentity),
                 transition,
                 timeToLandingSeconds,
                 true,
@@ -251,7 +321,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootStateTarget(
                 correction,
                 swingCorrection,
-                CharacterFootInterpolationPolicy.PlantBlend,
+                CharacterFootInterpolationPolicy.VerifiedSupport,
                 true,
                 eventIdentity,
                 verified,
@@ -279,6 +349,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             }
             CharacterFootSupportTarget current = frame.CurrentSupport.Target;
+            if (!frame.SwingMotion.Accepted)
+            {
+                target = current;
+                return true;
+            }
             target = new CharacterFootSupportTarget(
                 frame.FrameSequence,
                 frame.CompletionIdentity,
@@ -286,7 +361,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 position,
                 current.SupportNormal,
                 current.SurfaceIdentity,
-                frame.WorldRevision);
+                current.WorldRevision,
+                CharacterFootSupportTargetKind.SwingGround,
+                CharacterFootSupportPositionSource.SwingMotion,
+                frame.FrameSequence,
+                frame.CompletionIdentity,
+                frame.SwingMotion.LandingEventIdentity,
+                frame.SwingMotion.GroundPathInputIdentity,
+                CharacterFootSupportNormalSource.CurrentSupport,
+                current.NormalFrameSequence,
+                current.NormalCompletionIdentity,
+                current.NormalEventIdentity);
             return true;
         }
 

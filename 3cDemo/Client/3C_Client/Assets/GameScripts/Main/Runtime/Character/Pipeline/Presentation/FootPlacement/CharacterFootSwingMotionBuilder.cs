@@ -28,10 +28,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         AcquireAndRetain = 2
     }
 
-    internal enum CharacterFootResolvedOutcome : byte
+    public enum CharacterFootResolvedOutcome : byte
     {
         Ready = 1,
-        CurrentSupportUnavailable = 2
+        CurrentSupportUnavailable = 2,
+        SupportTargetUnavailable = 3,
+        RotationProjectionUnavailable = 4
     }
 
     internal readonly struct CharacterFootContactReference
@@ -111,9 +113,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigRevision,
             CharacterFootSide side,
             Vector3 finalSole,
+            Vector3 effectiveSole,
             Vector3 finalAnkle,
             Quaternion finalRotation,
-            Vector3 effectiveCorrection,
+            Vector3 effectiveAnkle,
+            Quaternion effectiveRotation,
+            Vector3 goalTargetCorrection,
             float goalWeight,
             float rotationWeight,
             in CharacterFootSupportTarget supportTarget,
@@ -133,9 +138,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigRevision = rigRevision;
             Side = side;
             FinalSole = finalSole;
+            EffectiveSole = effectiveSole;
             FinalAnkle = finalAnkle;
             FinalRotation = finalRotation;
-            EffectiveCorrection = effectiveCorrection;
+            EffectiveAnkle = effectiveAnkle;
+            EffectiveRotation = effectiveRotation;
+            GoalTargetCorrection = goalTargetCorrection;
             GoalWeight = goalWeight;
             RotationWeight = rotationWeight;
             SupportTarget = supportTarget;
@@ -157,9 +165,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootSide Side { get; }
         internal Vector3 FinalSole { get; }
+        internal Vector3 EffectiveSole { get; }
         internal Vector3 FinalAnkle { get; }
         internal Quaternion FinalRotation { get; }
-        internal Vector3 EffectiveCorrection { get; }
+        internal Vector3 EffectiveAnkle { get; }
+        internal Quaternion EffectiveRotation { get; }
+        internal Vector3 GoalTargetCorrection { get; }
         internal float GoalWeight { get; }
         internal float RotationWeight { get; }
         internal CharacterFootSupportTarget SupportTarget { get; }
@@ -180,7 +191,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigId,
             FixedString64Bytes rigRevision,
             CharacterFootSide side,
-            in CharacterFootPlacementAnimatedFootPose foot)
+            in CharacterFootPlacementAnimatedFootPose foot) =>
+            Unavailable(
+                frameSequence,
+                completionIdentity,
+                rigId,
+                rigRevision,
+                side,
+                in foot,
+                CharacterFootResolvedOutcome.CurrentSupportUnavailable);
+
+        internal static CharacterResolvedFootResult Unavailable(
+            ulong frameSequence,
+            ulong completionIdentity,
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
+            CharacterFootSide side,
+            in CharacterFootPlacementAnimatedFootPose foot,
+            CharacterFootResolvedOutcome outcome)
         {
             CharacterResolvedFootResult result = new CharacterResolvedFootResult(
                 frameSequence,
@@ -189,6 +217,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rigRevision,
                 side,
                 (foot.HeelPosition + foot.ToePosition) * 0.5f,
+                (foot.HeelPosition + foot.ToePosition) * 0.5f,
+                foot.AnklePosition,
+                foot.AnkleRotation,
                 foot.AnklePosition,
                 foot.AnkleRotation,
                 default,
@@ -206,7 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default);
             return new CharacterResolvedFootResult(
                 in result,
-                CharacterFootResolvedOutcome.CurrentSupportUnavailable);
+                outcome);
         }
 
         CharacterResolvedFootResult(
@@ -245,7 +276,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static bool ValidOutcome(CharacterFootResolvedOutcome outcome) =>
             outcome == CharacterFootResolvedOutcome.Ready ||
-            outcome == CharacterFootResolvedOutcome.CurrentSupportUnavailable;
+            outcome == CharacterFootResolvedOutcome.CurrentSupportUnavailable ||
+            outcome == CharacterFootResolvedOutcome.SupportTargetUnavailable ||
+            outcome ==
+            CharacterFootResolvedOutcome.RotationProjectionUnavailable;
 
         internal ulong FrameSequence { get; }
         internal ulong CompletionIdentity { get; }
@@ -253,6 +287,111 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterResolvedFootResult Left { get; }
         internal CharacterResolvedFootResult Right { get; }
+    }
+
+    public readonly struct CharacterResolvedFootDiagnostics
+    {
+        internal CharacterResolvedFootDiagnostics(
+            in CharacterResolvedFootResult result,
+            in CharacterFootPlacementAnimatedFootPose source)
+        {
+            FrameSequence = result.FrameSequence;
+            CompletionIdentity = result.CompletionIdentity;
+            RigId = result.RigId.ToString();
+            RigRevision = result.RigRevision.ToString();
+            Side = result.Side;
+            Outcome = result.Outcome;
+            FinalSole = result.FinalSole;
+            EffectiveSole = result.EffectiveSole;
+            GoalTargetAnkle = result.FinalAnkle;
+            GoalTargetRotation = result.FinalRotation;
+            EffectiveAnkle = result.EffectiveAnkle;
+            EffectiveRotation = result.EffectiveRotation;
+            Vector3 effectiveAnkle = result.EffectiveAnkle;
+            Quaternion effectiveRotation = result.EffectiveRotation;
+            CharacterFootPlacementSoleContactPose contacts =
+                source.ResolveSoleContacts(
+                    effectiveAnkle,
+                    effectiveRotation);
+            EffectiveHeel = contacts.HeelPosition;
+            EffectiveToe = contacts.ToePosition;
+            EffectiveSoleFromContacts =
+                (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
+            SourceSoleForward = source.SoleForward;
+            SourceSoleFrameLocalRotation =
+                source.SoleFrameLocalRotation;
+            GoalTargetCorrection = result.GoalTargetCorrection;
+            EffectiveSoleCorrection =
+                EffectiveSoleFromContacts -
+                (source.HeelPosition + source.ToePosition) * 0.5f;
+            PositionWeight = result.GoalWeight;
+            RotationWeight = result.RotationWeight;
+            CharacterFootSupportTarget supportTarget = result.SupportTarget;
+            SupportTarget = new CharacterFootSupportTargetDiagnostics(
+                in supportTarget);
+            ContactAvailable = result.ContactReference.IsAvailable;
+            ContactEventIdentity = result.ContactReference.EventIdentity;
+            ContactPoint = result.ContactReference.Point;
+            ContactOwnership = result.ContactOwnership;
+            SupportEligibility = result.SupportEligibility;
+            SupportWeight = result.SupportWeight;
+            SupportIntentWeight = result.SupportIntentWeight;
+            SupportHorizontalError = result.SupportHorizontalError;
+            SupportEventIdentity = result.SupportEventIdentity;
+            PelvisReachAvailable = result.PelvisReachReference.IsAvailable;
+            PelvisReachEventIdentity =
+                result.PelvisReachReference.EventIdentity;
+            PelvisReachPoint = result.PelvisReachReference.Point;
+            LandingReachAvailable = result.LandingReachRequest.IsAvailable;
+            LandingReachEventIdentity =
+                result.LandingReachRequest.EventIdentity;
+            LandingReachHip = result.LandingReachRequest.Hip;
+            LandingReachTargetAnkle = result.LandingReachRequest.TargetAnkle;
+            LandingReachLegLength = result.LandingReachRequest.LegLength;
+            LandingReachMinimumCompressionReserve =
+                result.LandingReachRequest.MinimumCompressionReserve;
+        }
+
+        public ulong FrameSequence { get; }
+        public ulong CompletionIdentity { get; }
+        public string RigId { get; }
+        public string RigRevision { get; }
+        public CharacterFootSide Side { get; }
+        public CharacterFootResolvedOutcome Outcome { get; }
+        public Vector3 FinalSole { get; }
+        public Vector3 EffectiveSole { get; }
+        public Vector3 GoalTargetAnkle { get; }
+        public Quaternion GoalTargetRotation { get; }
+        public Vector3 EffectiveAnkle { get; }
+        public Quaternion EffectiveRotation { get; }
+        public Vector3 EffectiveHeel { get; }
+        public Vector3 EffectiveToe { get; }
+        public Vector3 EffectiveSoleFromContacts { get; }
+        public Vector3 SourceSoleForward { get; }
+        public Quaternion SourceSoleFrameLocalRotation { get; }
+        public Vector3 GoalTargetCorrection { get; }
+        public Vector3 EffectiveSoleCorrection { get; }
+        public float PositionWeight { get; }
+        public float RotationWeight { get; }
+        public CharacterFootSupportTargetDiagnostics SupportTarget { get; }
+        public bool ContactAvailable { get; }
+        public ulong ContactEventIdentity { get; }
+        public Vector3 ContactPoint { get; }
+        public float ContactOwnership { get; }
+        public CharacterFootSupportEligibility SupportEligibility { get; }
+        public float SupportWeight { get; }
+        public float SupportIntentWeight { get; }
+        public float SupportHorizontalError { get; }
+        public ulong SupportEventIdentity { get; }
+        public bool PelvisReachAvailable { get; }
+        public ulong PelvisReachEventIdentity { get; }
+        public Vector3 PelvisReachPoint { get; }
+        public bool LandingReachAvailable { get; }
+        public ulong LandingReachEventIdentity { get; }
+        public Vector3 LandingReachHip { get; }
+        public Vector3 LandingReachTargetAnkle { get; }
+        public float LandingReachLegLength { get; }
+        public float LandingReachMinimumCompressionReserve { get; }
     }
 
     public enum CharacterFootSwingMotionState : byte
@@ -498,7 +637,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.SwingTargetHeightAdoptionMode.ToString();
             SwingFilteredTargetHeightAlongUp =
                 path.SwingFilteredTargetHeightAlongUp;
-            InterpolationComponentUp = path.InterpolationComponentUp;
+            TargetHeightComponentUp = path.TargetHeightComponentUp;
             PreTransitionReason = path.PreTransitionReason.ToString();
             PreTransitionSource = path.PreTransitionSource;
             PreTransitionTarget = path.PreTransitionTarget;
@@ -542,11 +681,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockResponse = path.PlantLockResponse;
             PlantDesiredPoint = path.PlantDesiredPoint;
             PlantFilteredPoint = path.PlantFilteredPoint;
-            SelectedSupportTargetAvailable = path.SelectedSupportTargetAvailable;
-            SelectedSupportPosition = path.SelectedSupportPosition;
-            SelectedSupportNormal = path.SelectedSupportNormal;
-            SelectedSupportSurfaceIdentity =
-                path.SelectedSupportSurfaceIdentity;
+            CharacterFootSupportTarget selectedSupportTarget =
+                path.SelectedSupportTarget;
+            SelectedSupportTarget =
+                new CharacterFootSupportTargetDiagnostics(
+                    in selectedSupportTarget);
             PlantTargetHeightAdoptionMode =
                 path.PlantTargetHeightAdoptionMode.ToString();
             PlantTargetMaximumVerticalSpeed =
@@ -569,12 +708,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPreviousSelectedWorldTarget =
                 path.PlantPreviousSelectedWorldTarget;
             PlantSelectedWorldTarget = path.PlantSelectedWorldTarget;
-            PlantPreviousResponseOutputAvailable =
-                path.PlantPreviousResponseOutputAvailable;
-            PlantPreviousResponseOutputPoint =
-                path.PlantPreviousResponseOutputPoint;
-            PlantDesiredOutputPoint = path.PlantDesiredOutputPoint;
-            PlantResponseOutputPoint = path.PlantResponseOutputPoint;
+            PreviousResponseOutputAvailable =
+                path.PreviousResponseOutputAvailable;
+            PreviousResponseOutputPoint =
+                path.PreviousResponseOutputPoint;
+            DesiredOutputPoint = path.DesiredOutputPoint;
+            ResponseOutputPoint = path.ResponseOutputPoint;
             PlantResidualCaptureReason =
                 path.PlantResidualCaptureReason.ToString();
             PlantWorldResidualBeforeCapture =
@@ -597,26 +736,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.PlantWorldResidualCompletionTolerance;
             PlantWorldResidualClearedAtCompletionTolerance =
                 path.PlantWorldResidualClearedAtCompletionTolerance;
-            PlantCorrectionResponseEvaluated =
-                path.PlantCorrectionResponseEvaluated;
-            PlantCorrectionResponseInitializedBefore =
-                path.PlantCorrectionResponseInitializedBefore;
-            PlantCorrectionResponseInitializedThisFrame =
-                path.PlantCorrectionResponseInitializedThisFrame;
-            PlantCorrectionResponseInitializationReason =
-                path.PlantCorrectionResponseInitializationReason.ToString();
-            PlantCorrectionResponseDesired =
-                path.PlantCorrectionResponseDesired;
-            PlantCorrectionResponsePrevious =
-                path.PlantCorrectionResponsePrevious;
-            PlantCorrectionResponseCurrent =
-                path.PlantCorrectionResponseCurrent;
-            PlantCorrectionResponseDirection =
-                path.PlantCorrectionResponseDirection.ToString();
-            PlantCorrectionResponseSelectedSpeed =
-                path.PlantCorrectionResponseSelectedSpeed;
-            PlantCorrectionResponseAppliedDelta =
-                path.PlantCorrectionResponseAppliedDelta;
+            CorrectionResponseEvaluated =
+                path.CorrectionResponseEvaluated;
+            CorrectionResponseInitializedBefore =
+                path.CorrectionResponseInitializedBefore;
+            CorrectionResponseInitializedThisFrame =
+                path.CorrectionResponseInitializedThisFrame;
+            CorrectionResponseInitializationReason =
+                path.CorrectionResponseInitializationReason.ToString();
+            CorrectionResponseDesired =
+                path.CorrectionResponseDesired;
+            CorrectionResponsePreviousDirection =
+                path.CorrectionResponsePreviousDirection;
+            CorrectionResponseBasisTransferred =
+                path.CorrectionResponseBasisTransferred;
+            CorrectionResponseVisibleOutputTransferred =
+                path.CorrectionResponseVisibleOutputTransferred;
+            CorrectionResponseBeforeRebase =
+                path.CorrectionResponseBeforeRebase;
+            CorrectionResponsePrevious =
+                path.CorrectionResponsePrevious;
+            CorrectionResponseCurrent =
+                path.CorrectionResponseCurrent;
+            CorrectionResponseDirection =
+                path.CorrectionResponseDirection;
+            CorrectionResponseDeltaDirection =
+                path.CorrectionResponseDeltaDirection.ToString();
+            CorrectionResponseSelectedSpeed =
+                path.CorrectionResponseSelectedSpeed;
+            CorrectionResponseAppliedDelta =
+                path.CorrectionResponseAppliedDelta;
             PlantVerticalContinuityOwners =
                 path.PlantVerticalContinuityOwners.ToString();
             PlantEffectiveCorrectionBefore =
@@ -694,7 +843,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SwingTargetMaximumVerticalSpeed { get; }
         public string SwingTargetHeightAdoptionMode { get; }
         public float SwingFilteredTargetHeightAlongUp { get; }
-        public Vector3 InterpolationComponentUp { get; }
+        public Vector3 TargetHeightComponentUp { get; }
         public string PreTransitionReason { get; }
         public CharacterFootConstraintState PreTransitionSource { get; }
         public CharacterFootConstraintState PreTransitionTarget { get; }
@@ -730,10 +879,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootLockResponse PlantLockResponse { get; }
         public Vector3 PlantDesiredPoint { get; }
         public Vector3 PlantFilteredPoint { get; }
-        public bool SelectedSupportTargetAvailable { get; }
-        public Vector3 SelectedSupportPosition { get; }
-        public Vector3 SelectedSupportNormal { get; }
-        public int SelectedSupportSurfaceIdentity { get; }
+        public CharacterFootSupportTargetDiagnostics SelectedSupportTarget
+        {
+            get;
+        }
         public string PlantTargetHeightAdoptionMode { get; }
         public float PlantTargetMaximumVerticalSpeed { get; }
         public float PlantTargetHeightBefore { get; }
@@ -748,10 +897,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantTargetVerticalClamped { get; }
         public Vector3 PlantPreviousSelectedWorldTarget { get; }
         public Vector3 PlantSelectedWorldTarget { get; }
-        public bool PlantPreviousResponseOutputAvailable { get; }
-        public Vector3 PlantPreviousResponseOutputPoint { get; }
-        public Vector3 PlantDesiredOutputPoint { get; }
-        public Vector3 PlantResponseOutputPoint { get; }
+        public bool PreviousResponseOutputAvailable { get; }
+        public Vector3 PreviousResponseOutputPoint { get; }
+        public Vector3 DesiredOutputPoint { get; }
+        public Vector3 ResponseOutputPoint { get; }
         public string PlantResidualCaptureReason { get; }
         public Vector3 PlantWorldResidualBeforeCapture { get; }
         public Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
@@ -763,16 +912,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PlantWorldResidualAfterDecay { get; }
         public float PlantWorldResidualCompletionTolerance { get; }
         public bool PlantWorldResidualClearedAtCompletionTolerance { get; }
-        public bool PlantCorrectionResponseEvaluated { get; }
-        public bool PlantCorrectionResponseInitializedBefore { get; }
-        public bool PlantCorrectionResponseInitializedThisFrame { get; }
-        public string PlantCorrectionResponseInitializationReason { get; }
-        public float PlantCorrectionResponseDesired { get; }
-        public float PlantCorrectionResponsePrevious { get; }
-        public float PlantCorrectionResponseCurrent { get; }
-        public string PlantCorrectionResponseDirection { get; }
-        public float PlantCorrectionResponseSelectedSpeed { get; }
-        public float PlantCorrectionResponseAppliedDelta { get; }
+        public bool CorrectionResponseEvaluated { get; }
+        public bool CorrectionResponseInitializedBefore { get; }
+        public bool CorrectionResponseInitializedThisFrame { get; }
+        public string CorrectionResponseInitializationReason { get; }
+        public float CorrectionResponseDesired { get; }
+        public Vector3 CorrectionResponsePreviousDirection { get; }
+        public bool CorrectionResponseBasisTransferred { get; }
+        public bool CorrectionResponseVisibleOutputTransferred { get; }
+        public float CorrectionResponseBeforeRebase { get; }
+        public float CorrectionResponsePrevious { get; }
+        public float CorrectionResponseCurrent { get; }
+        public Vector3 CorrectionResponseDirection { get; }
+        public string CorrectionResponseDeltaDirection { get; }
+        public float CorrectionResponseSelectedSpeed { get; }
+        public float CorrectionResponseAppliedDelta { get; }
         public string PlantVerticalContinuityOwners { get; }
         public Vector3 PlantEffectiveCorrectionBefore { get; }
         public Vector3 PlantEffectiveCorrectionAfter { get; }
@@ -1071,6 +1225,44 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 available,
                 goalClamped,
                 goalClampDistance);
+
+        internal static CharacterFootSwingMotionResult WithPathContinuity(
+            in CharacterFootSwingMotionResult motion,
+            in CharacterFootPathContinuityFact continuity) =>
+            new CharacterFootSwingMotionResult(
+                motion.State,
+                motion.RejectReason,
+                motion.LandingEventIdentity,
+                motion.GroundPathInputIdentity,
+                motion.SwingPathReference,
+                motion.OriginalSole,
+                motion.OriginalAnkle,
+                motion.Distance,
+                motion.Progress,
+                motion.BaselineSample,
+                motion.EnvelopeSample,
+                motion.FormalTargetHeightAlongUp,
+                motion.VerticalCorrection,
+                motion.LandingPredictionError,
+                motion.CorrectedSole,
+                motion.CorrectedAnkle,
+                motion.PositionWeight,
+                motion.RotationWeight,
+                motion.ConstraintState,
+                motion.LockResponse,
+                motion.SupportHorizontalError,
+                motion.ContactOwnership,
+                motion.SupportWeight,
+                motion.SupportContactAnchor,
+                motion.DesiredCorrection,
+                motion.ContactPlaneAvailable,
+                motion.ContactSurfaceIdentity,
+                motion.ContactPlaneNormal,
+                continuity,
+                motion.LandingReachEvaluated,
+                motion.LandingReachAvailable,
+                motion.LandingReachGoalClamped,
+                motion.LandingReachGoalClampDistance);
 
         static bool TryResolveSwingPhaseWeight(
             in AnimationFootMotionRuntimeSample step,

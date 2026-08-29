@@ -31,6 +31,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFullBodyIkGoal PelvisGoal;
         internal CharacterFullBodyIkGoal LeftGoal;
         internal CharacterFullBodyIkGoal RightGoal;
+        internal bool HasVisibleFootOutputs;
+        internal Vector3 LeftVisibleSole;
+        internal Vector3 RightVisibleSole;
         internal CharacterFootGroundPathPage LeftGroundPath;
         internal CharacterFootGroundPathPage RightGroundPath;
         internal CharacterFootLandingObservationPage LeftLandingObservation;
@@ -74,6 +77,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PelvisGoal = default;
                 LeftGoal = default;
                 RightGoal = default;
+                HasVisibleFootOutputs = false;
+                LeftVisibleSole = default;
+                RightVisibleSole = default;
                 LeftGroundPath = null;
                 RightGroundPath = null;
                 LeftLandingObservation = null;
@@ -113,6 +119,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PelvisGoal = default;
             LeftGoal = default;
             RightGoal = default;
+            HasVisibleFootOutputs = false;
+            LeftVisibleSole = default;
+            RightVisibleSole = default;
             Diagnostics.Clear();
             FrameSequence = 0;
             CompletionIdentity = 0;
@@ -168,6 +177,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PelvisGoal = default;
             LeftGoal = default;
             RightGoal = default;
+            HasVisibleFootOutputs = false;
+            LeftVisibleSole = default;
+            RightVisibleSole = default;
             LeftGroundPath = null;
             RightGroundPath = null;
             LeftLandingObservation = null;
@@ -500,6 +512,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var profileRevision = new FixedString128Bytes(
                 m_Settings.ProfileRevision);
             ulong worldRevision = m_WorldQuery.WorldRevision;
+            bool leftPreviousVisibleOutputAvailable =
+                TryResolvePreviousVisibleOutput(
+                    committedBank,
+                    CharacterFootSide.Left,
+                    out Vector3 leftPreviousVisibleOutputPoint);
+            bool rightPreviousVisibleOutputAvailable =
+                TryResolvePreviousVisibleOutput(
+                    committedBank,
+                    CharacterFootSide.Right,
+                    out Vector3 rightPreviousVisibleOutputPoint);
             var leftConstraintFrame = new CharacterFootStateFrame(
                 frame.RenderFrame,
                 frame.Pose.CompletionIdentity,
@@ -515,6 +537,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftPreparedPlantActive,
                 in leftPreparedPlantTarget,
                 in leftCurrentSupport,
+                leftPreviousVisibleOutputAvailable,
+                leftPreviousVisibleOutputPoint,
                 in leftLockRequest,
                 leftCurrentStep.Support,
                 leftLockRequest.EventIdentity,
@@ -543,6 +567,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightPreparedPlantActive,
                 in rightPreparedPlantTarget,
                 in rightCurrentSupport,
+                rightPreviousVisibleOutputAvailable,
+                rightPreviousVisibleOutputPoint,
                 in rightLockRequest,
                 rightCurrentStep.Support,
                 rightLockRequest.EventIdentity,
@@ -755,6 +781,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bank.PelvisGoal = pelvisGoal;
             bank.LeftGoal = leftGoal;
             bank.RightGoal = rightGoal;
+            bank.LeftVisibleSole = ResolveWeightedGoalSole(
+                pose.Left,
+                in leftGoal,
+                goalRoot);
+            bank.RightVisibleSole = ResolveWeightedGoalSole(
+                pose.Right,
+                in rightGoal,
+                goalRoot);
+            bank.HasVisibleFootOutputs = true;
             bank.FrameSequence = frame.RenderFrame;
             bank.CompletionIdentity = frame.Pose.CompletionIdentity;
             if (bank.RecordDiagnostics)
@@ -783,7 +818,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             left.LandingEventIdentity,
                             m_Settings.LandingPrediction
                                 .MaximumPredictionTimeSeconds),
-                        bank.LeftFoot.LandingSnapshot);
+                        bank.LeftFoot.LandingSnapshot,
+                        leftPreparedPlantActive,
+                        in leftCurrentSupport,
+                        in leftResolved);
                 var rightDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
@@ -795,7 +833,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             right.LandingEventIdentity,
                             m_Settings.LandingPrediction
                                 .MaximumPredictionTimeSeconds),
-                        bank.RightFoot.LandingSnapshot);
+                        bank.RightFoot.LandingSnapshot,
+                        rightPreparedPlantActive,
+                        in rightCurrentSupport,
+                        in rightResolved);
                 var primarySupportDiagnostics =
                     new CharacterFootPrimarySupportDiagnostics(in primarySupport);
                 var strideDiagnostics =
@@ -804,6 +845,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.RenderFrame,
                     frame.Pose.CompletionIdentity,
                     m_Rig.VisualRoot.GetInstanceID(),
+                    m_Settings.ProfileId,
+                    m_Settings.ProfileRevision,
                     inputDiagnostics,
                     in primarySupportDiagnostics,
                     pelvisGoal,
@@ -932,17 +975,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             CharacterFootCurrentSupportObservationPage pending =
                 pool.AcquireWritable(committed);
-            CharacterFootCurrentSupportObservation observation;
-            if (!grounded)
-            {
-                observation = CharacterFootCurrentSupportObservation.Unavailable(
-                    frameSequence,
-                    completionIdentity,
-                    side,
-                    CharacterFootCurrentSupportRejectReason.NotGrounded);
-                pending.Set(in observation);
-                return pending;
-            }
             CharacterFootLandingPredictionSettings settings =
                 m_Settings.LandingPrediction;
             var heelRequest = new CharacterFootCurrentSupportProbeRequest(
@@ -954,7 +986,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.CastBelow,
                 settings.SphereRadius,
                 settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot);
+                settings.MinimumGroundNormalDot,
+                settings.HitCapacity);
             var toeRequest = new CharacterFootCurrentSupportProbeRequest(
                 side,
                 CharacterFootCurrentSupportProbeKind.Toe,
@@ -964,7 +997,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.CastBelow,
                 settings.SphereRadius,
                 settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot);
+                settings.MinimumGroundNormalDot,
+                settings.HitCapacity);
+            CharacterFootCurrentSupportObservation observation;
+            if (!grounded)
+            {
+                observation = CharacterFootCurrentSupportObservation.Unavailable(
+                    frameSequence,
+                    completionIdentity,
+                    m_WorldQuery.WorldRevision,
+                    in heelRequest,
+                    in toeRequest,
+                    CharacterFootCurrentSupportRejectReason.NotGrounded);
+                pending.Set(in observation);
+                return pending;
+            }
             CharacterFootCurrentSupportProbeResult heel =
                 m_WorldQuery.Query(in heelRequest);
             CharacterFootCurrentSupportProbeResult toe =
@@ -972,11 +1019,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             observation = CharacterFootCurrentSupportObservation.Resolve(
                 frameSequence,
                 completionIdentity,
-                side,
-                foot.HeelPosition,
-                foot.ToePosition,
-                componentUp,
                 m_WorldQuery.WorldRevision,
+                in heelRequest,
+                in toeRequest,
                 in heel,
                 in toe);
             pending.Set(in observation);
@@ -1650,7 +1695,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.AnimatedPelvis,
                 frame.AnimatedPelvisComponentPosition,
                 supportHip,
-                supportMotion.FinalAnkle,
+                supportMotion.EffectiveAnkle,
                 supportLegLength,
                 supportLegCompressionReserve,
                 frame.Pose.Left.HeelPosition * 0.5f +
@@ -1675,8 +1720,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (poseRoot == null || goal.PositionWeight <= 0f)
                 return originalSole;
             Vector3 targetAnkle = poseRoot.TransformPoint(goal.ComponentPosition);
-            return originalSole +
-                   (targetAnkle - foot.AnklePosition) * goal.PositionWeight;
+            Vector3 effectiveAnkle = Vector3.LerpUnclamped(
+                foot.AnklePosition,
+                targetAnkle,
+                goal.PositionWeight);
+            Quaternion targetRotation =
+                (poseRoot.rotation * goal.ComponentRotation).normalized;
+            Quaternion effectiveRotation = Quaternion.Slerp(
+                foot.AnkleRotation,
+                targetRotation,
+                goal.RotationWeight).normalized;
+            CharacterFootPlacementSoleContactPose contacts =
+                foot.ResolveSoleContacts(
+                    effectiveAnkle,
+                    effectiveRotation);
+            return (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
         }
 
         static CharacterFootGoalOwnershipLossReason ResolveFootGoalOwnershipLoss(
@@ -1693,6 +1751,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     .SourceLineageInvalidated;
             }
             return reason;
+        }
+
+        static bool TryResolvePreviousVisibleOutput(
+            CharacterFootPlacementBank committed,
+            CharacterFootSide side,
+            out Vector3 point)
+        {
+            point = default;
+            if (committed == null || !committed.HasFrame ||
+                !committed.HasVisibleFootOutputs)
+                return false;
+            point = side == CharacterFootSide.Left
+                ? committed.LeftVisibleSole
+                : committed.RightVisibleSole;
+            if (!CharacterPoseConstraintMath.IsFinite(point))
+            {
+                point = default;
+                return false;
+            }
+            return true;
         }
 
         static bool IsLandingReachCandidate(

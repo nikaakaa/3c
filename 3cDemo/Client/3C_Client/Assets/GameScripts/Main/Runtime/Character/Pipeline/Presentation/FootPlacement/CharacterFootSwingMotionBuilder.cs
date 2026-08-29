@@ -520,10 +520,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.PlantResidualCaptureReason.ToString();
             PlantWorldResidualBeforeCapture =
                 path.PlantWorldResidualBeforeCapture;
-            PlantWorldResidualAfterCapture =
-                path.PlantWorldResidualAfterCapture;
+            PlantWorldResidualCapturedBeforeDecay =
+                path.PlantWorldResidualCapturedBeforeDecay;
+            PlantWorldResidualDecayApplied =
+                path.PlantWorldResidualDecayApplied;
+            PlantWorldResidualBaseHalfLifeSeconds =
+                path.PlantWorldResidualBaseHalfLifeSeconds;
+            PlantWorldResidualDeadlineHalfLifeAvailable =
+                path.PlantWorldResidualDeadlineHalfLifeAvailable;
+            PlantWorldResidualDeadlineHalfLifeSeconds =
+                path.PlantWorldResidualDeadlineHalfLifeSeconds;
+            PlantWorldResidualAppliedHalfLifeSeconds =
+                path.PlantWorldResidualAppliedHalfLifeSeconds;
             PlantWorldResidualAfterDecay =
                 path.PlantWorldResidualAfterDecay;
+            PlantWorldResidualCompletionTolerance =
+                path.PlantWorldResidualCompletionTolerance;
+            PlantWorldResidualClearedAtCompletionTolerance =
+                path.PlantWorldResidualClearedAtCompletionTolerance;
             PlantCorrectionResponseEvaluated =
                 path.PlantCorrectionResponseEvaluated;
             PlantCorrectionResponseInitializedBefore =
@@ -679,8 +693,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PlantResponseOutputPoint { get; }
         public string PlantResidualCaptureReason { get; }
         public Vector3 PlantWorldResidualBeforeCapture { get; }
-        public Vector3 PlantWorldResidualAfterCapture { get; }
+        public Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
+        public bool PlantWorldResidualDecayApplied { get; }
+        public float PlantWorldResidualBaseHalfLifeSeconds { get; }
+        public bool PlantWorldResidualDeadlineHalfLifeAvailable { get; }
+        public float PlantWorldResidualDeadlineHalfLifeSeconds { get; }
+        public float PlantWorldResidualAppliedHalfLifeSeconds { get; }
         public Vector3 PlantWorldResidualAfterDecay { get; }
+        public float PlantWorldResidualCompletionTolerance { get; }
+        public bool PlantWorldResidualClearedAtCompletionTolerance { get; }
         public bool PlantCorrectionResponseEvaluated { get; }
         public bool PlantCorrectionResponseInitializedBefore { get; }
         public bool PlantCorrectionResponseInitializedThisFrame { get; }

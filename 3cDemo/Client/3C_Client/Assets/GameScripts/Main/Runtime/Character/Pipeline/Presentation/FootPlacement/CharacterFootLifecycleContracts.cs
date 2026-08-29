@@ -205,7 +205,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float swingTargetHeightForceRefreshDistance,
             float swingTargetMaximumVerticalSpeed,
             CharacterFootTargetHeightAdoptionMode swingTargetHeightAdoptionMode,
-            float swingFilteredTargetHeightAlongUp)
+            float swingFilteredTargetHeightAlongUp,
+            Vector3 interpolationComponentUp)
         {
             Evaluated = evaluated;
             RevisionReason = revisionReason;
@@ -248,6 +249,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingTargetHeightAdoptionMode = swingTargetHeightAdoptionMode;
             SwingFilteredTargetHeightAlongUp =
                 swingFilteredTargetHeightAlongUp;
+            InterpolationComponentUp = interpolationComponentUp;
             PreTransitionReason = CharacterFootTransitionReason.None;
             PreTransitionSource = default;
             PreTransitionTarget = default;
@@ -400,6 +402,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 source.SwingTargetHeightAdoptionMode;
             SwingFilteredTargetHeightAlongUp =
                 source.SwingFilteredTargetHeightAlongUp;
+            InterpolationComponentUp = source.InterpolationComponentUp;
             PreTransitionReason = preTransition.Reason;
             PreTransitionSource = preTransition.SourceState;
             PreTransitionTarget = preTransition.TargetState;
@@ -541,6 +544,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SwingTargetMaximumVerticalSpeed { get; }
         internal CharacterFootTargetHeightAdoptionMode SwingTargetHeightAdoptionMode { get; }
         internal float SwingFilteredTargetHeightAlongUp { get; }
+        internal Vector3 InterpolationComponentUp { get; }
         internal CharacterFootTransitionReason PreTransitionReason { get; }
         internal CharacterFootConstraintState PreTransitionSource { get; }
         internal CharacterFootConstraintState PreTransitionTarget { get; }
@@ -665,7 +669,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootPathContinuityFact CreateUnevaluated(
             float timeToLandingSeconds,
-            CharacterFootMotionSettings settings) =>
+            CharacterFootMotionSettings settings,
+            Vector3 interpolationComponentUp) =>
             new CharacterFootPathContinuityFact(
                 false,
                 CharacterFootPathRevisionReason.None,
@@ -701,7 +706,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.TargetHeightForceRefreshDistance,
                 settings.MaximumVerticalTargetSpeed,
                 settings.TargetHeightAdoptionMode,
-                0f);
+                0f,
+                interpolationComponentUp);
     }
 
     internal readonly struct CharacterFootLandingFact

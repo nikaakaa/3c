@@ -62,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const int HeaderColumnCapacity = 1200;
         const float PositionNoiseFloor = 0.001f;
         const float RotationNoiseFloorDegrees = 0.1f;
+        const float DirectionComparisonEpsilonDegrees = 0.0001f;
         const float TimeEpsilon = 0.000001f;
         const double LandingReachCompressionReserveMeters = 0.02d;
         const double LowPresentationSamplingDeltaSeconds = 1d / 30d;
@@ -1114,6 +1115,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 string forcedVerificationKey = string.Concat(
                     current.Side,
                     ":",
+                    current.SourceIdentity,
+                    ":",
                     current.ObservedLandingEventIdentity.ToString(
                         CultureInfo.InvariantCulture));
                 bool firstForcedVerification = forcedVerification &&
@@ -1131,15 +1134,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.FormalCurrentContactEventIdentity != 0 &&
                     previousCommitted.FormalCurrentContactEventIdentity !=
                     current.FormalCurrentContactEventIdentity;
+                bool contactEventAcquisitionConsistent =
+                    !contactEventChanged ||
+                    forcedVerification && firstForcedVerification &&
+                    current.LandingObservationQueryExecuted &&
+                    current.PreTransitionReason ==
+                    "NewEventContactAcquired" &&
+                    current.PreTransitionSource ==
+                    previousCommitted.ConstraintState &&
+                    current.PreTransitionTarget == "Landing" &&
+                    current.PreTransitionAnchorCommand == "Create" &&
+                    current.ConstraintState == "Landing" &&
+                    current.ResolvedSupportTarget.Available &&
+                    current.ResolvedSupportTarget.PositionEvent ==
+                    current.FormalCurrentContactEventIdentity &&
+                    current.ResolvedSupportTarget.NormalEvent ==
+                    current.FormalCurrentContactEventIdentity &&
+                    current.SelectedSupportTarget.Available &&
+                    current.SelectedSupportTarget.PositionEvent ==
+                    current.FormalCurrentContactEventIdentity &&
+                    current.SelectedSupportTarget.NormalEvent ==
+                    current.FormalCurrentContactEventIdentity &&
+                    current.ResolvedContactAvailable &&
+                    current.ResolvedContactEventIdentity ==
+                    current.FormalCurrentContactEventIdentity &&
+                    current.PlantTargetEventIdentity ==
+                    current.FormalCurrentContactEventIdentity;
                 if (contactEventChanged &&
-                    (!forcedVerification || !firstForcedVerification ||
-                     !current.LandingObservationQueryExecuted ||
-                     current.PostTransitionReason !=
-                     "NewEventContactAcquired" ||
-                     current.ConstraintState == "Releasing" ||
-                     !current.ResolvedSupportTarget.Available ||
-                     current.ResolvedSupportTarget.NormalEvent !=
-                     current.FormalCurrentContactEventIdentity))
+                    !contactEventAcquisitionConsistent)
                 {
                     throw new InvalidDataException(
                         $"Foot Motion Contact EventChanged acquisition is inconsistent " +
@@ -5535,9 +5557,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             requestedResponseDirection)
                         : 0f;
                 bool expectedDirectionLimited =
-                    frame.CorrectionResponseInitializedBefore &&
-                    requestedDirectionChangeDegrees >
-                    frame.CorrectionResponseMaximumDirectionChangeDegrees;
+                    frame.CorrectionResponseDirectionLimited;
+                bool directionLimitFlagConsistent =
+                    frame.CorrectionResponseInitializedBefore
+                        ? expectedDirectionLimited
+                            ? requestedDirectionChangeDegrees >=
+                              frame.CorrectionResponseMaximumDirectionChangeDegrees -
+                              DirectionComparisonEpsilonDegrees
+                            : requestedDirectionChangeDegrees <=
+                              frame.CorrectionResponseMaximumDirectionChangeDegrees +
+                              DirectionComparisonEpsilonDegrees
+                        : !expectedDirectionLimited;
                 Vector3 expectedResponseDirection = expectedDirectionLimited
                     ? RotateDirectionTowards(
                         frame.CorrectionResponsePreviousDirection,
@@ -5581,8 +5611,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool responseInitializationConsistent =
                     responseInitializedThisFrame ==
                     !frame.CorrectionResponseInitializedBefore &&
-                    frame.CorrectionResponseDirectionLimited ==
-                    expectedDirectionLimited &&
+                    directionLimitFlagConsistent &&
                     Math.Abs(
                         frame.CorrectionResponseAppliedDirectionChangeDegrees -
                         expectedAppliedDirectionChangeDegrees) <=
@@ -6792,9 +6821,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.CorrectionResponsePreviousDirection,
                     requested)
                 : 0f;
-            bool limited = initialized &&
-                           rawAngle >
-                           frame.CorrectionResponseMaximumDirectionChangeDegrees;
+            bool limited = frame.CorrectionResponseDirectionLimited;
+            bool directionLimitFlagConsistent = initialized
+                ? limited
+                    ? rawAngle >=
+                      frame.CorrectionResponseMaximumDirectionChangeDegrees -
+                      DirectionComparisonEpsilonDegrees
+                    : rawAngle <=
+                      frame.CorrectionResponseMaximumDirectionChangeDegrees +
+                      DirectionComparisonEpsilonDegrees
+                : !limited;
             Vector3 applied = limited
                 ? RotateDirectionTowards(
                     frame.CorrectionResponsePreviousDirection,
@@ -6851,7 +6887,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.CorrectionResponseMaximumDirectionChangeDegrees) ||
                 frame.CorrectionResponseMaximumDirectionChangeDegrees <= 0f ||
                 frame.CorrectionResponseMaximumDirectionChangeDegrees > 180f ||
-                frame.CorrectionResponseDirectionLimited != limited ||
+                !directionLimitFlagConsistent ||
                 Vector3.Distance(
                     frame.CorrectionResponseDirection,
                     applied) > RuntimeGeometryEpsilon ||

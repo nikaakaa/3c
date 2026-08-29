@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/45";
+        const string Schema = "character-foot-motion-facts/46";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 45;
+        const int AnalyzerVersion = 46;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -141,6 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"swingToLandingOutputJumps={document.coverage.swingToLandingOutputJumpCount} " +
                 $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
                 $"plantInterpolationJumps={document.coverage.plantInterpolationOutputJumpCount} " +
+                $"contactAcquisitions={document.coverage.contactAcquisitionContinuityCount} " +
                 $"stableSwingCorrectionCadence={document.coverage.stableSwingCorrectionResponseCadenceCount} " +
                 $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
@@ -191,6 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeReleaseEvents(frames, events);
             AnalyzeLateApproachLandingRevisions(frames, events);
             AnalyzePlantInterpolationOutputJumps(frames, events);
+            AnalyzeContactAcquisitionContinuity(frames, events);
             AnalyzeStableSwingCorrectionResponseCadence(frames, events);
             AnalyzeActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
@@ -369,6 +371,239 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     DeltaSeconds(current),
                     metrics,
                     evidence));
+            }
+        }
+
+        static void AnalyzeContactAcquisitionContinuity(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                bool contactAcquired =
+                    current.PreTransitionReason == "ContactAcquired" ||
+                    current.PreTransitionReason == "NewEventContactAcquired";
+                bool previousContactOnly =
+                    previous.CurrentStep.IsValid &&
+                    !previous.CurrentStep.IsSwing &&
+                    previous.FormalContact >= 1f - RuntimeGeometryEpsilon;
+                if (!Continuous(previous, current) ||
+                    !contactAcquired ||
+                    previousContactOnly ||
+                    !current.HasAnchor ||
+                    !current.PlantInterpolationEvaluated ||
+                    !current.PreviousResponseOutputAvailable ||
+                    previous.ResolvedOutcome != "Ready" ||
+                    current.ResolvedOutcome != "Ready" ||
+                    current.ComponentUp.sqrMagnitude <=
+                    RuntimeGeometryEpsilon * RuntimeGeometryEpsilon)
+                {
+                    continue;
+                }
+                Vector3 up = current.ComponentUp.normalized;
+                Vector3 animationBaselineStep =
+                    current.OriginalSole - previous.OriginalSole;
+                Vector3 originalSoleToAnchor =
+                    current.Anchor - current.OriginalSole;
+                Vector3 previousVisibleToAnchor =
+                    current.Anchor - previous.ResolvedFinalSole;
+                Vector3 previousResponseToAnchor =
+                    current.Anchor - current.PreviousResponseOutputPoint;
+                Vector3 desiredToResponse =
+                    current.ResponseOutputPoint - current.DesiredOutputPoint;
+                Vector3 previousVisibleToFinalOutput =
+                    current.ResolvedFinalSole - previous.ResolvedFinalSole;
+                Vector3 responseOutputToAnchor =
+                    current.Anchor - current.ResponseOutputPoint;
+                Vector3 finalOutputToAnchor =
+                    current.Anchor - current.ResolvedFinalSole;
+                Vector3 expectedCapturedResidual =
+                    current.PreviousResponseOutputPoint -
+                    current.PlantSelectedWorldTarget;
+                bool sourceContinuous = string.Equals(
+                    previous.SourceIdentity,
+                    current.SourceIdentity,
+                    StringComparison.Ordinal) &&
+                    previous.SourceCycle == current.SourceCycle;
+                bool contributionContinuous =
+                    previous.ContributionContinuityIdentity ==
+                    current.ContributionContinuityIdentity;
+                string lineageClassification = sourceContinuous
+                    ? contributionContinuous
+                        ? "SourceAndContributionContinuous"
+                        : "ContributionChanged"
+                    : contributionContinuous
+                        ? "SourceChanged"
+                        : "SourceAndContributionChanged";
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["AnimationBaselineStepMeters"] =
+                        animationBaselineStep.magnitude,
+                    ["AnimationBaselineHorizontalStepMeters"] =
+                        Vector3.ProjectOnPlane(
+                            animationBaselineStep,
+                            up).magnitude,
+                    ["AnimationBaselineAlongUpStepMeters"] =
+                        Vector3.Dot(animationBaselineStep, up),
+                    ["OriginalSoleToAnchorMeters"] =
+                        originalSoleToAnchor.magnitude,
+                    ["OriginalSoleToAnchorHorizontalMeters"] =
+                        Vector3.ProjectOnPlane(
+                            originalSoleToAnchor,
+                            up).magnitude,
+                    ["OriginalSoleToAnchorAlongUpMeters"] =
+                        Vector3.Dot(originalSoleToAnchor, up),
+                    ["PreviousVisibleOutputToAnchorMeters"] =
+                        previousVisibleToAnchor.magnitude,
+                    ["PreviousVisibleOutputToAnchorHorizontalMeters"] =
+                        Vector3.ProjectOnPlane(
+                            previousVisibleToAnchor,
+                            up).magnitude,
+                    ["PreviousVisibleOutputToAnchorAlongUpMeters"] =
+                        Vector3.Dot(previousVisibleToAnchor, up),
+                    ["PreviousResponseOutputToAnchorMeters"] =
+                        previousResponseToAnchor.magnitude,
+                    ["PreviousResponseOutputToAnchorHorizontalMeters"] =
+                        Vector3.ProjectOnPlane(
+                            previousResponseToAnchor,
+                            up).magnitude,
+                    ["PreviousResponseOutputToAnchorAlongUpMeters"] =
+                        Vector3.Dot(previousResponseToAnchor, up),
+                    ["CapturedResidualMeters"] =
+                        current.PlantWorldResidualCapturedBeforeDecay.magnitude,
+                    ["ResidualAfterDecayMeters"] =
+                        current.PlantWorldResidualAfterDecay.magnitude,
+                    ["ResidualDecayStepMeters"] = Vector3.Distance(
+                        current.PlantWorldResidualCapturedBeforeDecay,
+                        current.PlantWorldResidualAfterDecay),
+                    ["ResidualCaptureContinuityErrorMeters"] =
+                        Vector3.Distance(
+                            expectedCapturedResidual,
+                            current.PlantWorldResidualCapturedBeforeDecay),
+                    ["DesiredToResponseMeters"] =
+                        desiredToResponse.magnitude,
+                    ["DesiredToResponseHorizontalMeters"] =
+                        Vector3.ProjectOnPlane(
+                            desiredToResponse,
+                            up).magnitude,
+                    ["DesiredToResponseAlongUpMeters"] =
+                        Vector3.Dot(desiredToResponse, up),
+                    ["PreviousVisibleToFinalOutputStepMeters"] =
+                        previousVisibleToFinalOutput.magnitude,
+                    ["PreviousVisibleToFinalOutputHorizontalStepMeters"] =
+                        Vector3.ProjectOnPlane(
+                            previousVisibleToFinalOutput,
+                            up).magnitude,
+                    ["PreviousVisibleToFinalOutputAlongUpStepMeters"] =
+                        Vector3.Dot(previousVisibleToFinalOutput, up),
+                    ["ResponseOutputToAnchorMeters"] =
+                        responseOutputToAnchor.magnitude,
+                    ["ResponseOutputToAnchorHorizontalMeters"] =
+                        Vector3.ProjectOnPlane(
+                            responseOutputToAnchor,
+                            up).magnitude,
+                    ["ResponseOutputToAnchorAlongUpMeters"] =
+                        Vector3.Dot(responseOutputToAnchor, up),
+                    ["FinalOutputToAnchorMeters"] =
+                        finalOutputToAnchor.magnitude,
+                    ["FinalOutputToAnchorHorizontalMeters"] =
+                        Vector3.ProjectOnPlane(
+                            finalOutputToAnchor,
+                            up).magnitude,
+                    ["FinalOutputToAnchorAlongUpMeters"] =
+                        Vector3.Dot(finalOutputToAnchor, up),
+                    ["AnchorToSelectedTargetErrorMeters"] =
+                        Vector3.Distance(
+                            current.Anchor,
+                            current.PlantSelectedWorldTarget),
+                    ["CorrectionResponseDesired"] =
+                        current.CorrectionResponseDesired,
+                    ["CorrectionResponsePrevious"] =
+                        current.CorrectionResponsePrevious,
+                    ["CorrectionResponseCurrent"] =
+                        current.CorrectionResponseCurrent,
+                    ["CorrectionResponseAppliedDelta"] =
+                        current.CorrectionResponseAppliedDelta
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["contactAcquired"] =
+                        current.PreTransitionReason == "ContactAcquired",
+                    ["newEventContactAcquired"] =
+                        current.PreTransitionReason ==
+                        "NewEventContactAcquired",
+                    ["sourceContinuous"] = sourceContinuous,
+                    ["contributionContinuous"] = contributionContinuous,
+                    ["residualCaptured"] =
+                        current.PlantResidualCaptureReason != "None",
+                    ["residualDecayApplied"] =
+                        current.PlantWorldResidualDecayApplied,
+                    ["captureContinuitySatisfied"] =
+                        metrics["ResidualCaptureContinuityErrorMeters"] <=
+                        PositionNoiseFloor,
+                    ["anchorMatchesSelectedTarget"] =
+                        metrics["AnchorToSelectedTargetErrorMeters"] <=
+                        PositionNoiseFloor
+                };
+                var detail = new CharacterFootContactAcquisitionContinuityAnalysis
+                {
+                    acquisitionReason = current.PreTransitionReason,
+                    lineageClassification = lineageClassification,
+                    previousSourceIdentity = previous.SourceIdentity,
+                    sourceIdentity = current.SourceIdentity,
+                    previousSourceCycle = previous.SourceCycle,
+                    sourceCycle = current.SourceCycle,
+                    previousContributionContinuityIdentity =
+                        previous.ContributionContinuityIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    contributionContinuityIdentity =
+                        current.ContributionContinuityIdentity.ToString(
+                            CultureInfo.InvariantCulture),
+                    previousEventIdentity = ResolveEventIdentity(previous)
+                        .ToString(CultureInfo.InvariantCulture),
+                    eventIdentity = ResolveEventIdentity(current)
+                        .ToString(CultureInfo.InvariantCulture),
+                    anchor = CharacterFootVectorFact.From(current.Anchor),
+                    previousOriginalSole = CharacterFootVectorFact.From(
+                        previous.OriginalSole),
+                    originalSole = CharacterFootVectorFact.From(
+                        current.OriginalSole),
+                    previousVisibleOutput = CharacterFootVectorFact.From(
+                        previous.ResolvedFinalSole),
+                    previousResponseOutput = CharacterFootVectorFact.From(
+                        current.PreviousResponseOutputPoint),
+                    capturedBeforeDecay = CharacterFootVectorFact.From(
+                        current.PlantWorldResidualCapturedBeforeDecay),
+                    afterDecay = CharacterFootVectorFact.From(
+                        current.PlantWorldResidualAfterDecay),
+                    desiredOutput = CharacterFootVectorFact.From(
+                        current.DesiredOutputPoint),
+                    responseOutput = CharacterFootVectorFact.From(
+                        current.ResponseOutputPoint),
+                    finalOutput = CharacterFootVectorFact.From(
+                        current.ResolvedFinalSole),
+                    plantResidualCaptureReason =
+                        current.PlantResidualCaptureReason,
+                    correctionResponseInitializationReason =
+                        current.CorrectionResponseInitializationReason
+                };
+                events.Add(new EventFact(
+                    "ContactAcquisitionContinuity",
+                    current.Side,
+                    previous.Frame,
+                    current.Frame,
+                    current.Frame,
+                    ResolveEventIdentity(current),
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    metrics,
+                    evidence,
+                    contactAcquisitionContinuity: detail));
             }
         }
 
@@ -4094,6 +4329,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     plantInterpolationOutputJumpCount = events.Count(
                         value => value.kind ==
                                  "PlantInterpolationOutputJump"),
+                    contactAcquisitionContinuityCount = events.Count(
+                        value => value.kind ==
+                                 "ContactAcquisitionContinuity"),
                     stableSwingCorrectionResponseCadenceCount = events.Count(
                         value => value.kind ==
                                  "StableSwingCorrectionResponseCadence"),
@@ -9347,6 +9585,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int swingToLandingOutputJumpCount;
             public int swingToLandingFloorHandoffCount;
             public int plantInterpolationOutputJumpCount;
+            public int contactAcquisitionContinuityCount;
             public int stableSwingCorrectionResponseCadenceCount;
             public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;
@@ -9402,7 +9641,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootVisibleOutputJumpAnalysis
                     visibleOutputJump = null,
                 CharacterFootCorrectionResponseCadenceAnalysis
-                    correctionResponseCadence = null)
+                    correctionResponseCadence = null,
+                CharacterFootContactAcquisitionContinuityAnalysis
+                    contactAcquisitionContinuity = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -9423,6 +9664,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 this.landingObservation = landingObservation;
                 this.visibleOutputJump = visibleOutputJump;
                 this.correctionResponseCadence = correctionResponseCadence;
+                this.contactAcquisitionContinuity =
+                    contactAcquisitionContinuity;
             }
 
             public string kind;
@@ -9445,6 +9688,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public CharacterFootVisibleOutputJumpAnalysis visibleOutputJump;
             public CharacterFootCorrectionResponseCadenceAnalysis
                 correctionResponseCadence;
+            public CharacterFootContactAcquisitionContinuityAnalysis
+                contactAcquisitionContinuity;
 
             internal static int Compare(EventFact left, EventFact right)
             {

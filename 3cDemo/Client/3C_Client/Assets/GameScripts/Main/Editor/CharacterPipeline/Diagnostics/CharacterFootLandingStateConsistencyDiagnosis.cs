@@ -5,6 +5,33 @@ using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
+    [Serializable]
+    internal sealed class CharacterFootContactAcquisitionContinuityAnalysis
+    {
+        public string acquisitionReason;
+        public string lineageClassification;
+        public string previousSourceIdentity;
+        public string sourceIdentity;
+        public int previousSourceCycle;
+        public int sourceCycle;
+        public string previousContributionContinuityIdentity;
+        public string contributionContinuityIdentity;
+        public string previousEventIdentity;
+        public string eventIdentity;
+        public CharacterFootVectorFact anchor;
+        public CharacterFootVectorFact previousOriginalSole;
+        public CharacterFootVectorFact originalSole;
+        public CharacterFootVectorFact previousVisibleOutput;
+        public CharacterFootVectorFact previousResponseOutput;
+        public CharacterFootVectorFact capturedBeforeDecay;
+        public CharacterFootVectorFact afterDecay;
+        public CharacterFootVectorFact desiredOutput;
+        public CharacterFootVectorFact responseOutput;
+        public CharacterFootVectorFact finalOutput;
+        public string plantResidualCaptureReason;
+        public string correctionResponseInitializationReason;
+    }
+
     internal sealed class CharacterFootLandingStateConsistencyDiagnosis : ICharacterFootDiagnosis
     {
         const double ExitJumpMeters = 0.01d;
@@ -28,6 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "SwingToLandingFloorHandoff");
             List<JObject> plantInterpolation = context.Events(
                 "PlantInterpolationOutputJump");
+            List<JObject> contactAcquisitions = context.Events(
+                "ContactAcquisitionContinuity");
             CharacterFootDiagnosisTarget releaseTarget = context.Target(
                 "release-flyback",
                 "Releasing阶段是否出现Correction突跳后反向回拉",
@@ -190,6 +219,102 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         plantInterpolation,
                         PlantDriver)
                 };
+            CharacterFootDiagnosisTarget contactAcquisitionTarget =
+                context.Target(
+                    "contact-acquisition-continuity",
+                    "非Idle正式接触建锚首帧，上一可见输出经World Residual与Correction Response接管后是否产生超过2厘米的世界输出步长",
+                    new[] { "ContactAcquisitionContinuity" },
+                    new[]
+                    {
+                        "previousVisibleToFinalOutputStepMeters>0.02"
+                    },
+                    contactAcquisitions,
+                    value => CharacterFootDiagnosisContext.Metric(
+                                 value,
+                                 "PreviousVisibleToFinalOutputStepMeters") >
+                             PrimaryOutputJumpMeters
+                        ? new List<string>
+                        {
+                            "previousVisibleToFinalOutputStepMeters>0.02"
+                        }
+                        : new List<string>(),
+                    value => CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "PreviousVisibleToFinalOutputStepMeters"),
+                    "AnimationBaselineStepMeters",
+                    "AnimationBaselineHorizontalStepMeters",
+                    "AnimationBaselineAlongUpStepMeters",
+                    "OriginalSoleToAnchorMeters",
+                    "OriginalSoleToAnchorHorizontalMeters",
+                    "OriginalSoleToAnchorAlongUpMeters",
+                    "PreviousVisibleOutputToAnchorMeters",
+                    "PreviousVisibleOutputToAnchorHorizontalMeters",
+                    "PreviousVisibleOutputToAnchorAlongUpMeters",
+                    "PreviousResponseOutputToAnchorMeters",
+                    "PreviousResponseOutputToAnchorHorizontalMeters",
+                    "PreviousResponseOutputToAnchorAlongUpMeters",
+                    "CapturedResidualMeters",
+                    "ResidualAfterDecayMeters",
+                    "ResidualDecayStepMeters",
+                    "ResidualCaptureContinuityErrorMeters",
+                    "DesiredToResponseMeters",
+                    "DesiredToResponseHorizontalMeters",
+                    "DesiredToResponseAlongUpMeters",
+                    "PreviousVisibleToFinalOutputStepMeters",
+                    "PreviousVisibleToFinalOutputHorizontalStepMeters",
+                    "PreviousVisibleToFinalOutputAlongUpStepMeters",
+                    "ResponseOutputToAnchorMeters",
+                    "ResponseOutputToAnchorHorizontalMeters",
+                    "ResponseOutputToAnchorAlongUpMeters",
+                    "FinalOutputToAnchorMeters",
+                    "FinalOutputToAnchorHorizontalMeters",
+                    "FinalOutputToAnchorAlongUpMeters",
+                    "AnchorToSelectedTargetErrorMeters",
+                    "CorrectionResponseDesired",
+                    "CorrectionResponsePrevious",
+                    "CorrectionResponseCurrent",
+                    "CorrectionResponseAppliedDelta");
+            contactAcquisitionTarget.occurrence = context.Occurrence(
+                "NonIdleFormalContactAcquisitionFramePair",
+                "PreviousVisibleToFinalOutputStepMeters",
+                "Meters",
+                contactAcquisitions,
+                PrimaryOutputJumpMeters,
+                s_OutputThresholds);
+            contactAcquisitionTarget.supplementalOccurrences = new List<
+                CharacterFootDiagnosisOccurrenceProfile>
+            {
+                context.Occurrence(
+                    "NonIdleFormalContactAcquisitionFramePair",
+                    "PreviousVisibleOutputToAnchorHorizontalMeters",
+                    "Meters",
+                    contactAcquisitions,
+                    PrimaryOutputJumpMeters,
+                    s_OutputThresholds),
+                context.Occurrence(
+                    "NonIdleFormalContactAcquisitionFramePair",
+                    "FinalOutputToAnchorHorizontalMeters",
+                    "Meters",
+                    contactAcquisitions,
+                    PrimaryOutputJumpMeters,
+                    s_OutputThresholds)
+            };
+            contactAcquisitionTarget.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["AcquisitionReason"] = CategoryCounts(
+                        contactAcquisitions,
+                        ContactAcquisitionReason),
+                    ["SourceContributionLineage"] = CategoryCounts(
+                        contactAcquisitions,
+                        ContactAcquisitionLineage),
+                    ["ContinuityEvidence"] = CategoryCounts(
+                        contactAcquisitions,
+                        ContactAcquisitionEvidence)
+                };
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -348,7 +473,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "frameCount"),
                 releaseTarget,
                 handoffTarget,
-                plantTarget);
+                plantTarget,
+                contactAcquisitionTarget);
         }
 
         static List<CharacterFootDiagnosisCategoryCount> CategoryCounts(
@@ -446,6 +572,47 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return "PlantTargetContinuity";
             }
             return "PlantTargetTracking";
+        }
+
+        static string ContactAcquisitionReason(JObject value) =>
+            CharacterFootDiagnosisContext.Evidence(
+                value,
+                "newEventContactAcquired")
+                ? "NewEventContactAcquired"
+                : "ContactAcquired";
+
+        static string ContactAcquisitionLineage(JObject value)
+        {
+            bool source = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "sourceContinuous");
+            bool contribution = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "contributionContinuous");
+            if (source && contribution)
+                return "SourceAndContributionContinuous";
+            if (source)
+                return "ContributionChanged";
+            if (contribution)
+                return "SourceChanged";
+            return "SourceAndContributionChanged";
+        }
+
+        static string ContactAcquisitionEvidence(JObject value)
+        {
+            bool capture = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "captureContinuitySatisfied");
+            bool target = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "anchorMatchesSelectedTarget");
+            if (capture && target)
+                return "CaptureAndAnchorConsistent";
+            if (!capture && !target)
+                return "CaptureAndAnchorMismatch";
+            return capture
+                ? "AnchorTargetMismatch"
+                : "CaptureContinuityMismatch";
         }
 
     }

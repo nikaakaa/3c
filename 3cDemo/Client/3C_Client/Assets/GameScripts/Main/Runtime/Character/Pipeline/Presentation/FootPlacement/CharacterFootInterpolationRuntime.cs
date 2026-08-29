@@ -32,7 +32,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     CharacterFootPathContinuityFact.CreateUnevaluated(
                         target.TimeToLandingSeconds,
-                        frame.Settings),
+                        frame.Settings,
+                        frame.ComponentUp.normalized),
                     default);
             }
             if (!state.HasOutput)
@@ -872,7 +873,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Settings.TargetHeightAdoptionMode,
                 hasPath
                     ? filteredTargetHeightAlongUp
-                    : 0f);
+                    : 0f,
+                up);
             return new CharacterFootInterpolationResult(
                 swingCorrection,
                 false,
@@ -895,7 +897,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame) =>
             CharacterFootPathContinuityFact.CreateUnevaluated(
                 target.TimeToLandingSeconds,
-                frame.Settings);
+                frame.Settings,
+                frame.ComponentUp.normalized);
 
         static void ClearPlant(
             ref CharacterFootInterpolationState state,

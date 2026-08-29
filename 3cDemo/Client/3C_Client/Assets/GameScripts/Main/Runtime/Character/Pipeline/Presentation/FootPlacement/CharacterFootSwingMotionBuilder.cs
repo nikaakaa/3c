@@ -442,6 +442,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.SwingTargetHeightAdoptionMode.ToString();
             SwingFilteredTargetHeightAlongUp =
                 path.SwingFilteredTargetHeightAlongUp;
+            InterpolationComponentUp = path.InterpolationComponentUp;
             PreTransitionReason = path.PreTransitionReason.ToString();
             PreTransitionSource = path.PreTransitionSource;
             PreTransitionTarget = path.PreTransitionTarget;
@@ -620,6 +621,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SwingTargetMaximumVerticalSpeed { get; }
         public string SwingTargetHeightAdoptionMode { get; }
         public float SwingFilteredTargetHeightAlongUp { get; }
+        public Vector3 InterpolationComponentUp { get; }
         public string PreTransitionReason { get; }
         public CharacterFootConstraintState PreTransitionSource { get; }
         public CharacterFootConstraintState PreTransitionTarget { get; }

@@ -45,16 +45,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (context.Discrete.State)
             {
                 case CharacterFootConstraintState.Swing
-                    when frame.PreparedPlantActive &&
-                         context.Interpolation.HasPlantTarget:
+                    when frame.PreparedPlantActive:
                 case CharacterFootConstraintState.UnlockedSupport
-                    when frame.PreparedPlantActive &&
-                         context.Interpolation.HasPlantTarget:
+                    when frame.PreparedPlantActive:
                 {
                     Vector3 minimum =
                         CharacterFootConstraintMath.ResolvePointMinimumCorrection(
                             frame.AnimatedFoot,
-                            context.Interpolation.PlantFilteredPoint,
+                            frame.PreparedPlantTarget.Point,
                             frame.ComponentUp);
                     return Result(
                         true,

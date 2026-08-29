@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/30";
+        const string Schema = "character-foot-motion-facts/31";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 30;
+        const int AnalyzerVersion = 31;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 800;
         const float PositionNoiseFloor = 0.001f;
@@ -2445,6 +2445,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 currentState.SwingFilteredTargetHeightBefore +
                 (currentState.SwingTargetHeightUpdateHeld
                     ? 0f
+                    : currentState.SwingTargetHeightForceRefreshed
+                    ? targetHeightDelta
                     : currentState.SwingTargetHeightRateLimited
                     ? Mathf.Clamp(
                         targetHeightDelta,
@@ -3747,10 +3749,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionSwingTargetHeightAppliedDelta"),
                 SwingTargetHeightUpdateHeld =
                     Int("FootMotionSwingTargetHeightUpdateHeld") != 0,
+                SwingTargetHeightForceRefreshed =
+                    Int("FootMotionSwingTargetHeightForceRefreshed") != 0,
                 SwingTargetHeightRateLimited =
                     Int("FootMotionSwingTargetHeightRateLimited") != 0,
                 SwingTargetHeightClamped =
                     Int("FootMotionSwingTargetHeightClamped") != 0,
+                SwingTargetHeightForceRefreshDistance =
+                    Float("FootMotionSwingTargetHeightForceRefreshDistance"),
                 SwingTargetMaximumVerticalSpeed =
                     Float("FootMotionSwingTargetMaximumVerticalSpeed"),
                 SwingFilteredTargetHeightAlongUp =
@@ -4112,6 +4118,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     float expectedAppliedHeightDelta =
                         frame.SwingTargetHeightUpdateHeld
                             ? 0f
+                            : frame.SwingTargetHeightForceRefreshed
+                            ? expectedHeightDelta
                             : frame.SwingTargetHeightRateLimited
                             ? Mathf.Clamp(
                                 expectedHeightDelta,
@@ -4123,6 +4131,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         expectedAppliedHeightDelta;
                     bool expectedHeightClamp =
                         !frame.SwingTargetHeightUpdateHeld &&
+                        !frame.SwingTargetHeightForceRefreshed &&
                         frame.SwingTargetHeightRateLimited &&
                         !Mathf.Approximately(
                             expectedHeightDelta,
@@ -4147,6 +4156,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             expectedAppliedHeightDelta) >
                         PositionNoiseFloor ||
                         frame.SwingTargetHeightClamped != expectedHeightClamp ||
+                        !float.IsFinite(
+                            frame.SwingTargetHeightForceRefreshDistance) ||
+                        frame.SwingTargetHeightForceRefreshDistance <=
+                            frame.PathRevisionDistance ||
+                        frame.SwingTargetHeightUpdateHeld &&
+                            (frame.SwingTargetHeightForceRefreshed ||
+                             frame.SwingTargetHeightRateLimited) ||
+                        frame.SwingTargetHeightForceRefreshed &&
+                            (frame.SwingTargetHeightRateLimited ||
+                             frame.SwingTargetHeightClamped) ||
                         Math.Abs(
                             frame.SwingFilteredTargetHeightAlongUp -
                             expectedFilteredTargetHeight) >
@@ -4984,8 +5003,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionSwingTargetHeightDelta",
                 "FootMotionSwingTargetHeightAppliedDelta",
                 "FootMotionSwingTargetHeightUpdateHeld",
+                "FootMotionSwingTargetHeightForceRefreshed",
                 "FootMotionSwingTargetHeightRateLimited",
                 "FootMotionSwingTargetHeightClamped",
+                "FootMotionSwingTargetHeightForceRefreshDistance",
                 "FootMotionSwingTargetMaximumVerticalSpeed",
                 "FootMotionSwingFilteredTargetHeightAlongUp",
                 "FootMotionConstraintStateBefore", "FootMotionLockResponseBefore",
@@ -5635,8 +5656,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float SwingTargetHeightDelta;
             internal float SwingTargetHeightAppliedDelta;
             internal bool SwingTargetHeightUpdateHeld;
+            internal bool SwingTargetHeightForceRefreshed;
             internal bool SwingTargetHeightRateLimited;
             internal bool SwingTargetHeightClamped;
+            internal float SwingTargetHeightForceRefreshDistance;
             internal float SwingTargetMaximumVerticalSpeed;
             internal float SwingFilteredTargetHeightAlongUp;
             internal string PreTransitionReason;

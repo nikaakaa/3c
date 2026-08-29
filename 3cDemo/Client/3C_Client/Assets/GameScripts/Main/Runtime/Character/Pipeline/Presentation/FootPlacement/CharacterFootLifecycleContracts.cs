@@ -121,8 +121,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float swingTargetHeightDelta,
             float swingTargetHeightAppliedDelta,
             bool swingTargetHeightUpdateHeld,
+            bool swingTargetHeightForceRefreshed,
             bool swingTargetHeightRateLimited,
             bool swingTargetHeightClamped,
+            float swingTargetHeightForceRefreshDistance,
             float swingTargetMaximumVerticalSpeed,
             float swingFilteredTargetHeightAlongUp)
         {
@@ -156,8 +158,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingTargetHeightDelta = swingTargetHeightDelta;
             SwingTargetHeightAppliedDelta = swingTargetHeightAppliedDelta;
             SwingTargetHeightUpdateHeld = swingTargetHeightUpdateHeld;
+            SwingTargetHeightForceRefreshed =
+                swingTargetHeightForceRefreshed;
             SwingTargetHeightRateLimited = swingTargetHeightRateLimited;
             SwingTargetHeightClamped = swingTargetHeightClamped;
+            SwingTargetHeightForceRefreshDistance =
+                swingTargetHeightForceRefreshDistance;
             SwingTargetMaximumVerticalSpeed =
                 swingTargetMaximumVerticalSpeed;
             SwingFilteredTargetHeightAlongUp =
@@ -267,9 +273,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 source.SwingTargetHeightAppliedDelta;
             SwingTargetHeightUpdateHeld =
                 source.SwingTargetHeightUpdateHeld;
+            SwingTargetHeightForceRefreshed =
+                source.SwingTargetHeightForceRefreshed;
             SwingTargetHeightRateLimited =
                 source.SwingTargetHeightRateLimited;
             SwingTargetHeightClamped = source.SwingTargetHeightClamped;
+            SwingTargetHeightForceRefreshDistance =
+                source.SwingTargetHeightForceRefreshDistance;
             SwingTargetMaximumVerticalSpeed =
                 source.SwingTargetMaximumVerticalSpeed;
             SwingFilteredTargetHeightAlongUp =
@@ -360,8 +370,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SwingTargetHeightDelta { get; }
         internal float SwingTargetHeightAppliedDelta { get; }
         internal bool SwingTargetHeightUpdateHeld { get; }
+        internal bool SwingTargetHeightForceRefreshed { get; }
         internal bool SwingTargetHeightRateLimited { get; }
         internal bool SwingTargetHeightClamped { get; }
+        internal float SwingTargetHeightForceRefreshDistance { get; }
         internal float SwingTargetMaximumVerticalSpeed { get; }
         internal float SwingFilteredTargetHeightAlongUp { get; }
         internal CharacterFootTransitionReason PreTransitionReason { get; }
@@ -490,6 +502,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 false,
                 false,
                 false,
+                false,
+                settings.TargetHeightForceRefreshDistance,
                 settings.MaximumVerticalTargetSpeed,
                 0f);
     }

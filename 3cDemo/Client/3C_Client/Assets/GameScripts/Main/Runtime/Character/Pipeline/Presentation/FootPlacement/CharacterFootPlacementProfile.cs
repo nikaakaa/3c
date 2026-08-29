@@ -218,6 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_ReleaseCompletionTolerance;
         [SerializeField] float m_EffectiveCorrectionHalfLifeSeconds = 0.03f;
         [SerializeField] float m_MaximumVerticalTargetSpeed;
+        [SerializeField] float m_TargetHeightForceRefreshDistance;
         [SerializeField] float m_MaximumVerticalCorrectionSpeed;
         [SerializeField] float m_GroundPenetrationTolerance;
         [SerializeField] float m_LandingLockCompletionTolerance;
@@ -234,6 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_ReleaseCompletionTolerance,
                 m_EffectiveCorrectionHalfLifeSeconds,
                 m_MaximumVerticalTargetSpeed,
+                m_TargetHeightForceRefreshDistance,
                 m_MaximumVerticalCorrectionSpeed,
                 m_GroundPenetrationTolerance,
                 m_LandingLockCompletionTolerance,
@@ -252,6 +254,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float releaseCompletionTolerance,
             float effectiveCorrectionHalfLifeSeconds,
             float maximumVerticalTargetSpeed,
+            float targetHeightForceRefreshDistance,
             float maximumVerticalCorrectionSpeed,
             float groundPenetrationTolerance,
             float landingLockCompletionTolerance,
@@ -266,6 +269,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ReleaseCompletionTolerance = releaseCompletionTolerance;
             EffectiveCorrectionHalfLifeSeconds = effectiveCorrectionHalfLifeSeconds;
             MaximumVerticalTargetSpeed = maximumVerticalTargetSpeed;
+            TargetHeightForceRefreshDistance =
+                targetHeightForceRefreshDistance;
             MaximumVerticalCorrectionSpeed = maximumVerticalCorrectionSpeed;
             GroundPenetrationTolerance = groundPenetrationTolerance;
             LandingLockCompletionTolerance = landingLockCompletionTolerance;
@@ -283,6 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float ReleaseCompletionTolerance { get; }
         internal float EffectiveCorrectionHalfLifeSeconds { get; }
         internal float MaximumVerticalTargetSpeed { get; }
+        internal float TargetHeightForceRefreshDistance { get; }
         internal float MaximumVerticalCorrectionSpeed { get; }
         internal float GroundPenetrationTolerance { get; }
         internal float LandingLockCompletionTolerance { get; }
@@ -305,6 +311,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 EffectiveCorrectionHalfLifeSeconds <= 0f ||
                 !float.IsFinite(MaximumVerticalTargetSpeed) ||
                 MaximumVerticalTargetSpeed <= 0f ||
+                !float.IsFinite(TargetHeightForceRefreshDistance) ||
+                TargetHeightForceRefreshDistance <= PathRevisionDistance ||
                 !float.IsFinite(MaximumVerticalCorrectionSpeed) ||
                 MaximumVerticalCorrectionSpeed <= 0f ||
                 !float.IsFinite(GroundPenetrationTolerance) ||
@@ -335,7 +343,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v31-plant-continuity";
+        public const string SchemaVersion = "character-foot-placement-profile/v32-target-height-refresh";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

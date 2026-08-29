@@ -76,6 +76,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "LockWeightCompletionEvent");
             List<JObject> approachProgressOwnership = context.Events(
                 "ApproachProgressOwnership");
+            List<JObject> actionHardOwnership = context.Events(
+                "ActionHardOwnership");
+            List<JObject> contactTransitions = context.Events(
+                "ContactTransitionContext");
             CharacterFootDiagnosisTarget releaseTarget = context.Target(
                 "release-flyback",
                 "Releasing阶段是否出现Correction突跳后反向回拉",
@@ -431,6 +435,68 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "FinalEffectiveCorrectionStep",
                     "PositionWeightDelta",
                     "RotationWeightDelta");
+            CharacterFootDiagnosisTarget actionOwnershipTarget =
+                context.Target(
+                    "action-hard-ownership",
+                    "Action Pose占用期间，Hard Ownership Loss是否仍只由Grounded与Current Step Authority决定",
+                    new[] { "ActionHardOwnership" },
+                    new[] { "actionIndependentOwnership=false" },
+                    actionHardOwnership,
+                    value => CharacterFootDiagnosisContext.Evidence(
+                                 value,
+                                 "actionIndependentOwnership")
+                        ? new List<string>()
+                        : new List<string>
+                        {
+                            "actionIndependentOwnership=false"
+                        },
+                    value => CharacterFootDiagnosisContext.Evidence(
+                        value,
+                        "hardOwnershipLoss")
+                            ? 1d
+                            : 0d,
+                    "ActionFootWeight",
+                    "MotionPositionWeight",
+                    "MotionRotationWeight",
+                    "ResolvedPositionWeight",
+                    "ResolvedRotationWeight");
+            CharacterFootDiagnosisTarget contactTransitionTarget =
+                context.Target(
+                    "contact-transition-context",
+                    "上一与当前Lock请求、Contact边沿计时、Event历史及Verified Anchor是否沿唯一Committed Context连续推进",
+                    new[] { "ContactTransitionContext" },
+                    new[]
+                    {
+                        "transitionContractConsistent=false",
+                        "contextMatchesPreviousFrame=false"
+                    },
+                    contactTransitions,
+                    value =>
+                    {
+                        var rules = new List<string>();
+                        if (!CharacterFootDiagnosisContext.Evidence(
+                                value,
+                                "transitionContractConsistent"))
+                        {
+                            rules.Add(
+                                "transitionContractConsistent=false");
+                        }
+                        if (!CharacterFootDiagnosisContext.Evidence(
+                                value,
+                                "contextMatchesPreviousFrame"))
+                        {
+                            rules.Add(
+                                "contextMatchesPreviousFrame=false");
+                        }
+                        return rules;
+                    },
+                    value => CharacterFootDiagnosisContext.Metric(
+                        value,
+                        "CurrentContactEdgeSeconds"),
+                    "PreviousLockRequestWeight",
+                    "CurrentLockRequestWeight",
+                    "PreviousContactEdgeSeconds",
+                    "CurrentContactEdgeSeconds");
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -592,7 +658,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 plantTarget,
                 contactAcquisitionTarget,
                 lockWeightTarget,
-                approachOwnershipTarget);
+                approachOwnershipTarget,
+                actionOwnershipTarget,
+                contactTransitionTarget);
         }
 
         static List<CharacterFootDiagnosisCategoryCount> CategoryCounts(

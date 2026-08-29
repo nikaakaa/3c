@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/48";
+        const string Schema = "character-foot-motion-facts/49";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 48;
+        const int AnalyzerVersion = 49;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -145,6 +145,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"contactAcquisitions={document.coverage.contactAcquisitionContinuityCount} " +
                 $"lockWeightEvents={document.coverage.lockWeightCompletionEventCount} " +
                 $"approachOwnership={document.coverage.approachProgressOwnershipCount} " +
+                $"actionHardOwnership={document.coverage.actionHardOwnershipCount} " +
+                $"contactTransitions={document.coverage.contactTransitionContextCount} " +
                 $"stableSwingCorrectionCadence={document.coverage.stableSwingCorrectionResponseCadenceCount} " +
                 $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
@@ -189,6 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeCurrentSupportQueries(frames, events);
             AnalyzeLandingEvents(frames, events);
             AnalyzeLandingStateConsistency(frames, events);
+            AnalyzeLifecycleTransitions(frames, events);
             AnalyzeApproachProgressOwnership(frames, events);
             AnalyzeLockWeightCompletionEvents(frames, events);
             AnalyzeSwingToLandingFloorHandoffs(frames, events);
@@ -202,6 +205,185 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
+        }
+
+        static void AnalyzeLifecycleTransitions(
+            List<FootFrame> frames,
+            List<EventFact> events)
+        {
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame current = frames[i];
+                FootFrame previous = i > 0 &&
+                                     Continuous(frames[i - 1], current) &&
+                                     frames[i - 1].BodyResetSequence ==
+                                     current.BodyResetSequence &&
+                                     frames[i - 1].ProgramIdentity ==
+                                     current.ProgramIdentity &&
+                                     frames[i - 1].ProjectionRevision ==
+                                     current.ProjectionRevision &&
+                                     frames[i - 1].PoseGraphRevision ==
+                                     current.PoseGraphRevision &&
+                                     frames[i - 1].ProfileRevision ==
+                                     current.ProfileRevision
+                    ? frames[i - 1]
+                    : null;
+                bool contextMatchesPreviousFrame = previous == null ||
+                    current.PreviousLockRequestAvailable &&
+                    current.PreviousLockRequested ==
+                        previous.CurrentLockRequested &&
+                    current.PreviousLockRequestEventIdentity ==
+                        previous.CurrentLockRequestEventIdentity &&
+                    current.PreviousLockRequestMode ==
+                        previous.CurrentLockRequestMode &&
+                    Math.Abs(
+                        current.PreviousLockRequestWeight -
+                        previous.CurrentLockRequestWeight) <= TimeEpsilon &&
+                    Math.Abs(
+                        current.PreviousContactEdgeSeconds -
+                        previous.CurrentContactEdgeSeconds) <= TimeEpsilon &&
+                    current.PreviousLatestContactEventIdentity ==
+                        previous.CurrentLatestContactEventIdentity &&
+                    current.PreviousLatestReleasedContactEventIdentity ==
+                        previous.CurrentLatestReleasedContactEventIdentity &&
+                    current.PreviousCompletedLockWeightEventIdentity ==
+                        previous.CurrentCompletedLockWeightEventIdentity &&
+                    current.PreviousContactAnchorAvailable ==
+                        previous.CurrentContactAnchorAvailable &&
+                    current.PreviousContactAnchorEventIdentity ==
+                        previous.CurrentContactAnchorEventIdentity;
+                if (!contextMatchesPreviousFrame)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion committed Lifecycle Transition context did not continue " +
+                        $"Frame={current.Frame} Side={current.Side}.");
+                }
+                bool actionOccupied = current.ActionInstanceIdentity != 0 ||
+                                      current.ActionFootWeight >
+                                      RuntimeGeometryEpsilon;
+                bool groundedAuthoritative = current.Grounded &&
+                                             current.CurrentStep.IsAuthoritative;
+                bool actionIndependentOwnership =
+                    !actionOccupied || !groundedAuthoritative ||
+                    !current.HardOwnershipLoss &&
+                    current.PreTransitionReason != "OwnershipLost" &&
+                    !current.PreTransitionSuppressOutput &&
+                    !current.PreTransitionResetInterpolation;
+                if (!actionIndependentOwnership)
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Action occupancy incorrectly produced Hard Ownership Loss " +
+                        $"Frame={current.Frame} Side={current.Side}.");
+                }
+                if (actionOccupied)
+                {
+                    events.Add(new EventFact(
+                        "ActionHardOwnership",
+                        current.Side,
+                        current.Frame,
+                        current.Frame,
+                        current.Frame,
+                        ResolveEventIdentity(current),
+                        current.SourceIdentity,
+                        current.SourceCycle,
+                        DeltaSeconds(current),
+                        new SortedDictionary<string, double>(
+                            StringComparer.Ordinal)
+                        {
+                            ["ActionFootWeight"] = current.ActionFootWeight,
+                            ["MotionPositionWeight"] =
+                                current.MotionPositionWeight,
+                            ["MotionRotationWeight"] =
+                                current.MotionRotationWeight,
+                            ["ResolvedPositionWeight"] =
+                                current.ResolvedPositionWeight,
+                            ["ResolvedRotationWeight"] =
+                                current.ResolvedRotationWeight
+                        },
+                        new SortedDictionary<string, bool>(
+                            StringComparer.Ordinal)
+                        {
+                            ["actionOccupied"] = true,
+                            ["grounded"] = current.Grounded,
+                            ["currentStepAuthoritative"] =
+                                current.CurrentStep.IsAuthoritative,
+                            ["hardOwnershipLoss"] =
+                                current.HardOwnershipLoss,
+                            ["preTransitionSuppressOutput"] =
+                                current.PreTransitionSuppressOutput,
+                            ["preTransitionResetInterpolation"] =
+                                current.PreTransitionResetInterpolation,
+                            ["postTransitionSuppressOutput"] =
+                                current.PostTransitionSuppressOutput,
+                            ["postTransitionResetInterpolation"] =
+                                current.PostTransitionResetInterpolation,
+                            ["actionIndependentOwnership"] =
+                                actionIndependentOwnership
+                        }));
+                }
+                bool contactRelevant = current.ContactEdge != "None" ||
+                    current.PreviousContactAnchorAvailable ||
+                    current.CurrentContactAnchorAvailable ||
+                    current.PreviousLatestContactEventIdentity != 0 ||
+                    current.CurrentLatestContactEventIdentity != 0 ||
+                    current.PreviousLatestReleasedContactEventIdentity != 0 ||
+                    current.CurrentLatestReleasedContactEventIdentity != 0 ||
+                    current.SameEventContactReentryRefreshed ||
+                    current.SameEventContactReentryUnavailable;
+                if (!contactRelevant)
+                    continue;
+                events.Add(new EventFact(
+                    "ContactTransitionContext",
+                    current.Side,
+                    previous?.Frame ?? current.Frame,
+                    current.Frame,
+                    current.Frame,
+                    current.CurrentLockRequestEventIdentity,
+                    current.SourceIdentity,
+                    current.SourceCycle,
+                    DeltaSeconds(current),
+                    new SortedDictionary<string, double>(
+                        StringComparer.Ordinal)
+                    {
+                        ["PreviousLockRequestWeight"] =
+                            current.PreviousLockRequestWeight,
+                        ["CurrentLockRequestWeight"] =
+                            current.CurrentLockRequestWeight,
+                        ["PreviousContactEdgeSeconds"] =
+                            current.PreviousContactEdgeSeconds,
+                        ["CurrentContactEdgeSeconds"] =
+                            current.CurrentContactEdgeSeconds
+                    },
+                    new SortedDictionary<string, bool>(
+                        StringComparer.Ordinal)
+                    {
+                        ["transitionContractConsistent"] = true,
+                        ["contextMatchesPreviousFrame"] =
+                            contextMatchesPreviousFrame,
+                        ["previousLockRequested"] =
+                            current.PreviousLockRequested,
+                        ["currentLockRequested"] =
+                            current.CurrentLockRequested,
+                        ["contactEdgeRising"] =
+                            current.ContactEdge == "Rising",
+                        ["contactEdgeFalling"] =
+                            current.ContactEdge == "Falling",
+                        ["contactEdgeEventChanged"] =
+                            current.ContactEdge == "EventChanged",
+                        ["sameEventContactReentryRefreshed"] =
+                            current.SameEventContactReentryRefreshed,
+                        ["sameEventContactReentryUnavailable"] =
+                            current.SameEventContactReentryUnavailable,
+                        ["retainedVerifiedAnchor"] =
+                            current.RetainedVerifiedAnchor,
+                        ["continuousReentryTakeover"] =
+                            current.ContinuousReentryTakeover,
+                        ["previousAnchorAvailable"] =
+                            current.PreviousContactAnchorAvailable,
+                        ["currentAnchorAvailable"] =
+                            current.CurrentContactAnchorAvailable
+                    }));
+            }
         }
 
         static void AnalyzeApproachProgressOwnership(
@@ -4737,6 +4919,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     approachProgressOwnershipCount = events.Count(
                         value => value.kind ==
                                  "ApproachProgressOwnership"),
+                    actionHardOwnershipCount = events.Count(
+                        value => value.kind == "ActionHardOwnership"),
+                    contactTransitionContextCount = events.Count(
+                        value => value.kind == "ContactTransitionContext"),
                     stableSwingCorrectionResponseCadenceCount = events.Count(
                         value => value.kind ==
                                  "StableSwingCorrectionResponseCadence"),
@@ -4833,6 +5019,84 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 inputPhase = frame.InputFormalEventPhase,
                 inputProgress =
                     frame.InputFormalApproachContactToLandingProgress
+            },
+            actionOwnership = new
+            {
+                instanceIdentity = frame.ActionInstanceIdentity.ToString(
+                    CultureInfo.InvariantCulture),
+                footWeight = frame.ActionFootWeight,
+                grounded = frame.Grounded,
+                currentStepAuthoritative =
+                    frame.CurrentStep.IsAuthoritative,
+                hardOwnershipLoss = frame.HardOwnershipLoss,
+                hardOwnershipLossReason =
+                    frame.HardOwnershipLossReason,
+                preTransitionSuppressOutput =
+                    frame.PreTransitionSuppressOutput,
+                preTransitionResetInterpolation =
+                    frame.PreTransitionResetInterpolation,
+                postTransitionSuppressOutput =
+                    frame.PostTransitionSuppressOutput,
+                postTransitionResetInterpolation =
+                    frame.PostTransitionResetInterpolation
+            },
+            contactTransition = new
+            {
+                evaluated = frame.LifecycleTransitionEvaluated,
+                previousRequestAvailable =
+                    frame.PreviousLockRequestAvailable,
+                previousRequestedLock = frame.PreviousLockRequested,
+                previousRequestEventIdentity =
+                    frame.PreviousLockRequestEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                previousRequestMode = frame.PreviousLockRequestMode,
+                previousRequestWeight = frame.PreviousLockRequestWeight,
+                previousEdgeSeconds = frame.PreviousContactEdgeSeconds,
+                previousLatestContactEventIdentity =
+                    frame.PreviousLatestContactEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                previousLatestReleasedContactEventIdentity =
+                    frame.PreviousLatestReleasedContactEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                previousCompletedLockWeightEventIdentity =
+                    frame.PreviousCompletedLockWeightEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                previousAnchorAvailable =
+                    frame.PreviousContactAnchorAvailable,
+                previousAnchorEventIdentity =
+                    frame.PreviousContactAnchorEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                currentRequestedLock = frame.CurrentLockRequested,
+                currentRequestEventIdentity =
+                    frame.CurrentLockRequestEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                currentRequestMode = frame.CurrentLockRequestMode,
+                currentRequestWeight = frame.CurrentLockRequestWeight,
+                currentRequestAvailability =
+                    frame.CurrentLockRequestAvailability,
+                edge = frame.ContactEdge,
+                currentEdgeSeconds = frame.CurrentContactEdgeSeconds,
+                currentLatestContactEventIdentity =
+                    frame.CurrentLatestContactEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                currentLatestReleasedContactEventIdentity =
+                    frame.CurrentLatestReleasedContactEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                currentCompletedLockWeightEventIdentity =
+                    frame.CurrentCompletedLockWeightEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                currentAnchorAvailable =
+                    frame.CurrentContactAnchorAvailable,
+                currentAnchorEventIdentity =
+                    frame.CurrentContactAnchorEventIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                sameEventReentryRefreshed =
+                    frame.SameEventContactReentryRefreshed,
+                sameEventReentryUnavailable =
+                    frame.SameEventContactReentryUnavailable,
+                retainedVerifiedAnchor = frame.RetainedVerifiedAnchor,
+                continuousReentryTakeover =
+                    frame.ContinuousReentryTakeover
             },
             preparedTarget = new
             {
@@ -5482,6 +5746,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Int(prefix + "SphereCastExecuted") != 0,
                     Accepted = Int(prefix + "Accepted") != 0
                 };
+            string side = Cell("Side");
             var frame = new FootFrame
             {
                 SampleIdentity = Cell("SampleIdentity"),
@@ -5494,7 +5759,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CompletionIdentity = Ulong("CompletionIdentity"),
                 ProfileId = Cell("FootProfileId"),
                 ProfileRevision = Cell("FootProfileRevision"),
-                Side = Cell("Side"),
+                Side = side,
                 ApproachPlantTargetPrepared =
                     Int("ApproachPlantTargetPrepared") != 0,
                 PreparedTargetAvailable = Int("PlantTargetAvailable") != 0,
@@ -5567,6 +5832,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("PredictionContinuationMaximumSpeedClamped") != 0,
                 PredictionMotionRevision = Ulong("PredictionMotionRevision"),
                 Grounded = Int("Grounded") != 0,
+                ActionInstanceIdentity = Ulong(
+                    side == "Left"
+                        ? "LeftActionInstanceIdentity"
+                        : "RightActionInstanceIdentity"),
+                ActionFootWeight = Float(
+                    side == "Left"
+                        ? "LeftActionFootWeight"
+                        : "RightActionFootWeight"),
                 TimeToLandingSeconds = Float("TimeToLandingSeconds"),
                 FormalOutputObservationAvailable =
                     Int("FormalStepObservationAvailable") != 0,
@@ -5868,6 +6141,77 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PostTransitionTarget = Cell("FootMotionPostTransitionTarget"),
                 PostTransitionAnchorCommand =
                     Cell("FootMotionPostTransitionAnchorCommand"),
+                LifecycleTransitionEvaluated =
+                    Int("FootMotionLifecycleTransitionEvaluated") != 0,
+                PreviousLockRequestAvailable =
+                    Int("FootMotionPreviousLockRequestAvailable") != 0,
+                PreviousLockRequested =
+                    Int("FootMotionPreviousLockRequested") != 0,
+                PreviousLockRequestEventIdentity =
+                    Ulong("FootMotionPreviousLockRequestEventIdentity"),
+                PreviousLockRequestMode =
+                    Cell("FootMotionPreviousLockRequestMode"),
+                PreviousLockRequestWeight =
+                    Float("FootMotionPreviousLockRequestWeight"),
+                PreviousContactEdgeSeconds =
+                    Float("FootMotionPreviousContactEdgeSeconds"),
+                PreviousLatestContactEventIdentity =
+                    Ulong("FootMotionPreviousLatestContactEventIdentity"),
+                PreviousLatestReleasedContactEventIdentity =
+                    Ulong(
+                        "FootMotionPreviousLatestReleasedContactEventIdentity"),
+                PreviousCompletedLockWeightEventIdentity =
+                    Ulong(
+                        "FootMotionPreviousCompletedLockWeightEventIdentity"),
+                PreviousContactAnchorAvailable =
+                    Int("FootMotionPreviousContactAnchorAvailable") != 0,
+                PreviousContactAnchorEventIdentity =
+                    Ulong("FootMotionPreviousContactAnchorEventIdentity"),
+                CurrentLockRequested =
+                    Int("FootMotionCurrentLockRequested") != 0,
+                CurrentLockRequestEventIdentity =
+                    Ulong("FootMotionCurrentLockRequestEventIdentity"),
+                CurrentLockRequestMode =
+                    Cell("FootMotionCurrentLockRequestMode"),
+                CurrentLockRequestWeight =
+                    Float("FootMotionCurrentLockRequestWeight"),
+                CurrentLockRequestAvailability =
+                    Cell("FootMotionCurrentLockRequestAvailability"),
+                ContactEdge = Cell("FootMotionContactEdge"),
+                CurrentContactEdgeSeconds =
+                    Float("FootMotionCurrentContactEdgeSeconds"),
+                CurrentLatestContactEventIdentity =
+                    Ulong("FootMotionCurrentLatestContactEventIdentity"),
+                CurrentLatestReleasedContactEventIdentity =
+                    Ulong(
+                        "FootMotionCurrentLatestReleasedContactEventIdentity"),
+                CurrentCompletedLockWeightEventIdentity =
+                    Ulong(
+                        "FootMotionCurrentCompletedLockWeightEventIdentity"),
+                CurrentContactAnchorAvailable =
+                    Int("FootMotionCurrentContactAnchorAvailable") != 0,
+                CurrentContactAnchorEventIdentity =
+                    Ulong("FootMotionCurrentContactAnchorEventIdentity"),
+                SameEventContactReentryRefreshed =
+                    Int("FootMotionSameEventContactReentryRefreshed") != 0,
+                SameEventContactReentryUnavailable =
+                    Int("FootMotionSameEventContactReentryUnavailable") != 0,
+                RetainedVerifiedAnchor =
+                    Int("FootMotionRetainedVerifiedAnchor") != 0,
+                ContinuousReentryTakeover =
+                    Int("FootMotionContinuousReentryTakeover") != 0,
+                HardOwnershipLoss =
+                    Int("FootMotionHardOwnershipLoss") != 0,
+                HardOwnershipLossReason =
+                    Cell("FootMotionHardOwnershipLossReason"),
+                PreTransitionSuppressOutput =
+                    Int("FootMotionPreTransitionSuppressOutput") != 0,
+                PreTransitionResetInterpolation =
+                    Int("FootMotionPreTransitionResetInterpolation") != 0,
+                PostTransitionSuppressOutput =
+                    Int("FootMotionPostTransitionSuppressOutput") != 0,
+                PostTransitionResetInterpolation =
+                    Int("FootMotionPostTransitionResetInterpolation") != 0,
                 StateTargetCorrection =
                     Vector("FootMotionStateTargetCorrection"),
                 InterpolationPolicy = Cell("FootMotionInterpolationPolicy"),
@@ -6285,6 +6629,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireFlags<CharacterFootVerticalContinuityOwner>(
                 frame.PlantVerticalContinuityOwners,
                 "FootMotionPlantVerticalContinuityOwners");
+            RequireLifecycleTransitionFacts(frame);
             RequireCurrentSupport(frame);
             RequirePreparedAndSelectedTarget(frame);
             RequireCorrectionResponseDirectionHistory(frame);
@@ -7857,6 +8202,250 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void RequireLifecycleTransitionFacts(FootFrame frame)
+        {
+            RequireEnum<AnimationFootStepObservationLockMode>(
+                frame.PreviousLockRequestMode,
+                "FootMotionPreviousLockRequestMode");
+            RequireEnum<AnimationFootStepObservationLockMode>(
+                frame.CurrentLockRequestMode,
+                "FootMotionCurrentLockRequestMode");
+            RequireEnum<CharacterFootLockRequestAvailability>(
+                frame.CurrentLockRequestAvailability,
+                "FootMotionCurrentLockRequestAvailability");
+            RequireEnum<CharacterFootContactEdge>(
+                frame.ContactEdge,
+                "FootMotionContactEdge");
+            RequireFlags<CharacterFootGoalOwnershipLossReason>(
+                frame.HardOwnershipLossReason,
+                "FootMotionHardOwnershipLossReason");
+            Enum.TryParse(
+                frame.CurrentLockRequestMode,
+                out AnimationFootStepObservationLockMode currentMode);
+            Enum.TryParse(
+                frame.CurrentLockRequestAvailability,
+                out CharacterFootLockRequestAvailability availability);
+            Enum.TryParse(
+                frame.ContactEdge,
+                out CharacterFootContactEdge edge);
+            Enum.TryParse(
+                frame.HardOwnershipLossReason,
+                out CharacterFootGoalOwnershipLossReason ownershipReason);
+            bool formalRequestsLock = frame.FormalRequestContact > 0f &&
+                frame.FormalLockMode !=
+                AnimationFootStepObservationLockMode.Unlocked.ToString();
+            CharacterFootLockRequestAvailability expectedAvailability =
+                formalRequestsLock &&
+                frame.FormalCurrentContactEventIdentity == 0
+                    ? CharacterFootLockRequestAvailability
+                        .ContactEventUnavailable
+                    : CharacterFootLockRequestAvailability.Ready;
+            bool expectedCurrentRequested =
+                expectedAvailability ==
+                    CharacterFootLockRequestAvailability.Ready &&
+                formalRequestsLock;
+            CharacterFootContactEdge expectedEdge =
+                !frame.PreviousLockRequestAvailable
+                    ? expectedCurrentRequested
+                        ? CharacterFootContactEdge.Rising
+                        : CharacterFootContactEdge.None
+                    : expectedCurrentRequested
+                        ? !frame.PreviousLockRequested
+                            ? CharacterFootContactEdge.Rising
+                            : frame.CurrentLockRequestEventIdentity !=
+                              frame.PreviousLockRequestEventIdentity
+                                ? CharacterFootContactEdge.EventChanged
+                                : CharacterFootContactEdge.None
+                        : frame.PreviousLockRequested
+                            ? CharacterFootContactEdge.Falling
+                            : CharacterFootContactEdge.None;
+            float expectedSeconds = expectedEdge ==
+                                    CharacterFootContactEdge.None
+                ? frame.PreviousContactEdgeSeconds + frame.DeltaSeconds
+                : 0f;
+            ulong expectedLatestContact =
+                frame.PreviousLatestContactEventIdentity;
+            ulong expectedLatestReleased =
+                frame.PreviousLatestReleasedContactEventIdentity;
+            if (expectedEdge == CharacterFootContactEdge.Falling ||
+                expectedEdge == CharacterFootContactEdge.EventChanged)
+            {
+                expectedLatestReleased =
+                    frame.PreviousLockRequestEventIdentity;
+            }
+            if (expectedEdge == CharacterFootContactEdge.Rising ||
+                expectedEdge == CharacterFootContactEdge.EventChanged)
+            {
+                expectedLatestContact =
+                    frame.CurrentLockRequestEventIdentity;
+            }
+            ulong expectedCompleted =
+                frame.PreviousCompletedLockWeightEventIdentity;
+            if (frame.CurrentLockRequestEventIdentity != 0 &&
+                expectedCompleted != 0 &&
+                expectedCompleted != frame.CurrentLockRequestEventIdentity)
+            {
+                expectedCompleted = 0;
+            }
+            if (expectedCurrentRequested &&
+                frame.CurrentLockRequestEventIdentity != 0 &&
+                frame.CurrentLockRequestWeight >=
+                1f - RuntimeGeometryEpsilon)
+            {
+                expectedCompleted = frame.CurrentLockRequestEventIdentity;
+            }
+            bool expectedAnchorAvailable =
+                frame.PreviousContactAnchorAvailable;
+            ulong expectedAnchorEvent =
+                frame.PreviousContactAnchorEventIdentity;
+            ApplyAnchorCommand(
+                frame.PreTransitionAnchorCommand,
+                frame.CurrentLockRequestEventIdentity,
+                ref expectedAnchorAvailable,
+                ref expectedAnchorEvent,
+                ref expectedCompleted);
+            ApplyAnchorCommand(
+                frame.PostTransitionAnchorCommand,
+                frame.CurrentLockRequestEventIdentity,
+                ref expectedAnchorAvailable,
+                ref expectedAnchorEvent,
+                ref expectedCompleted);
+            bool expectedReentryRefreshed =
+                frame.PreTransitionReason ==
+                "SameEventContactReentryRefresh";
+            bool expectedReentryUnavailable =
+                frame.PreTransitionReason == "ContactUnavailable" &&
+                expectedCurrentRequested &&
+                frame.CurrentLockRequestEventIdentity != 0 &&
+                frame.CurrentLockRequestEventIdentity ==
+                    frame.PreviousLatestReleasedContactEventIdentity &&
+                !frame.PreviousContactAnchorAvailable;
+            bool expectedRetained =
+                frame.PreviousContactAnchorAvailable &&
+                frame.CurrentContactAnchorAvailable &&
+                frame.PreviousContactAnchorEventIdentity ==
+                    frame.CurrentContactAnchorEventIdentity &&
+                frame.PreTransitionAnchorCommand != "Release" &&
+                frame.PostTransitionAnchorCommand != "Release";
+            bool expectedContinuousTakeover =
+                expectedReentryRefreshed && expectedRetained &&
+                !frame.PreTransitionSuppressOutput &&
+                !frame.PreTransitionResetInterpolation &&
+                !frame.PostTransitionSuppressOutput &&
+                !frame.PostTransitionResetInterpolation;
+            CharacterFootGoalOwnershipLossReason expectedOwnershipReason =
+                CharacterFootGoalOwnershipLossReason.None;
+            if (!frame.Grounded)
+            {
+                expectedOwnershipReason |=
+                    CharacterFootGoalOwnershipLossReason.Ungrounded;
+            }
+            if (!frame.CurrentStep.IsAuthoritative)
+            {
+                expectedOwnershipReason |= CharacterFootGoalOwnershipLossReason
+                    .SourceLineageInvalidated;
+            }
+            bool expectedHardOwnershipLoss = expectedOwnershipReason !=
+                CharacterFootGoalOwnershipLossReason.None;
+            bool preOwnershipTransition = frame.PreTransitionReason ==
+                "OwnershipLost";
+            bool actionFactsValid =
+                float.IsFinite(frame.ActionFootWeight) &&
+                frame.ActionFootWeight >= 0f &&
+                frame.ActionFootWeight <= 1f &&
+                (frame.ActionInstanceIdentity == 0
+                    ? frame.ActionFootWeight == 0f
+                    : frame.ActionFootWeight > RuntimeGeometryEpsilon);
+            bool consistent =
+                frame.LifecycleTransitionEvaluated &&
+                float.IsFinite(frame.PreviousLockRequestWeight) &&
+                frame.PreviousLockRequestWeight >= 0f &&
+                frame.PreviousLockRequestWeight <= 1f &&
+                float.IsFinite(frame.CurrentLockRequestWeight) &&
+                frame.CurrentLockRequestWeight >= 0f &&
+                frame.CurrentLockRequestWeight <= 1f &&
+                float.IsFinite(frame.PreviousContactEdgeSeconds) &&
+                frame.PreviousContactEdgeSeconds >= 0f &&
+                float.IsFinite(frame.CurrentContactEdgeSeconds) &&
+                frame.CurrentContactEdgeSeconds >= 0f &&
+                actionFactsValid &&
+                currentMode.ToString() == frame.FormalLockMode &&
+                Math.Abs(
+                    frame.CurrentLockRequestWeight -
+                    frame.FormalLockWeight) <= TimeEpsilon &&
+                frame.CurrentLockRequestEventIdentity ==
+                    frame.FormalCurrentContactEventIdentity &&
+                availability == expectedAvailability &&
+                frame.CurrentLockRequested == expectedCurrentRequested &&
+                edge == expectedEdge &&
+                Math.Abs(
+                    frame.CurrentContactEdgeSeconds - expectedSeconds) <=
+                    TimeEpsilon &&
+                frame.CurrentLatestContactEventIdentity ==
+                    expectedLatestContact &&
+                frame.CurrentLatestReleasedContactEventIdentity ==
+                    expectedLatestReleased &&
+                frame.CurrentCompletedLockWeightEventIdentity ==
+                    expectedCompleted &&
+                frame.CurrentContactAnchorAvailable ==
+                    expectedAnchorAvailable &&
+                frame.CurrentContactAnchorEventIdentity ==
+                    expectedAnchorEvent &&
+                frame.SameEventContactReentryRefreshed ==
+                    expectedReentryRefreshed &&
+                frame.SameEventContactReentryUnavailable ==
+                    expectedReentryUnavailable &&
+                frame.RetainedVerifiedAnchor == expectedRetained &&
+                frame.ContinuousReentryTakeover ==
+                    expectedContinuousTakeover &&
+                ownershipReason == expectedOwnershipReason &&
+                frame.HardOwnershipLoss == expectedHardOwnershipLoss &&
+                preOwnershipTransition == expectedHardOwnershipLoss &&
+                frame.PreTransitionSuppressOutput ==
+                    expectedHardOwnershipLoss &&
+                frame.PreTransitionResetInterpolation ==
+                    expectedHardOwnershipLoss &&
+                !frame.PostTransitionSuppressOutput &&
+                frame.PostTransitionResetInterpolation ==
+                    (frame.PostTransitionReason == "ReleaseCompleted");
+            if (!consistent)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Lifecycle Transition facts are inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side} " +
+                    $"Edge={frame.ContactEdge}/{expectedEdge} " +
+                    $"Ownership={frame.HardOwnershipLossReason}/" +
+                    $"{expectedOwnershipReason}.");
+            }
+        }
+
+        static void ApplyAnchorCommand(
+            string command,
+            ulong eventIdentity,
+            ref bool available,
+            ref ulong anchorEventIdentity,
+            ref ulong completedLockWeightEventIdentity)
+        {
+            switch (command)
+            {
+                case "None":
+                case "Retain":
+                    return;
+                case "Create":
+                    available = true;
+                    anchorEventIdentity = eventIdentity;
+                    return;
+                case "Release":
+                    available = false;
+                    anchorEventIdentity = 0;
+                    completedLockWeightEventIdentity = 0;
+                    return;
+                default:
+                    throw new InvalidDataException(
+                        $"Foot Motion Anchor command '{command}' is invalid.");
+            }
+        }
+
         static void RequireResolvedFoot(FootFrame frame)
         {
             RequireEnum<CharacterFootResolvedOutcome>(
@@ -8167,6 +8756,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PoseGraphId", "PoseGraphRevision", "PosePlanHash",
                 "FrameSequence", "CompletionIdentity", "Side",
                 "PresentationDeltaSeconds", "BodyResetSequence", "Grounded",
+                "LeftActionInstanceIdentity", "LeftActionFootWeight",
+                "RightActionInstanceIdentity", "RightActionFootWeight",
                 "CurrentBodyTick",
                 "TimelineCurrentVelocityX", "TimelineCurrentVelocityZ",
                 "TimelineContinuationVelocityX",
@@ -8306,6 +8897,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionTargetHeightComponentUpX",
                 "FootMotionTargetHeightComponentUpY",
                 "FootMotionTargetHeightComponentUpZ",
+                "FootMotionLifecycleTransitionEvaluated",
+                "FootMotionPreviousLockRequestAvailable",
+                "FootMotionPreviousLockRequested",
+                "FootMotionPreviousLockRequestEventIdentity",
+                "FootMotionPreviousLockRequestMode",
+                "FootMotionPreviousLockRequestWeight",
+                "FootMotionPreviousContactEdgeSeconds",
+                "FootMotionPreviousLatestContactEventIdentity",
+                "FootMotionPreviousLatestReleasedContactEventIdentity",
+                "FootMotionPreviousCompletedLockWeightEventIdentity",
+                "FootMotionPreviousContactAnchorAvailable",
+                "FootMotionPreviousContactAnchorEventIdentity",
+                "FootMotionCurrentLockRequested",
+                "FootMotionCurrentLockRequestEventIdentity",
+                "FootMotionCurrentLockRequestMode",
+                "FootMotionCurrentLockRequestWeight",
+                "FootMotionCurrentLockRequestAvailability",
+                "FootMotionContactEdge",
+                "FootMotionCurrentContactEdgeSeconds",
+                "FootMotionCurrentLatestContactEventIdentity",
+                "FootMotionCurrentLatestReleasedContactEventIdentity",
+                "FootMotionCurrentCompletedLockWeightEventIdentity",
+                "FootMotionCurrentContactAnchorAvailable",
+                "FootMotionCurrentContactAnchorEventIdentity",
+                "FootMotionSameEventContactReentryRefreshed",
+                "FootMotionSameEventContactReentryUnavailable",
+                "FootMotionRetainedVerifiedAnchor",
+                "FootMotionContinuousReentryTakeover",
+                "FootMotionHardOwnershipLoss",
+                "FootMotionHardOwnershipLossReason",
+                "FootMotionPreTransitionSuppressOutput",
+                "FootMotionPreTransitionResetInterpolation",
+                "FootMotionPostTransitionSuppressOutput",
+                "FootMotionPostTransitionResetInterpolation",
                 "FootMotionState", "FootMotionConstraintState",
                 "FootMotionLockResponse",
                 "FootMotionOriginalSoleX", "FootMotionOriginalSoleY", "FootMotionOriginalSoleZ",
@@ -9094,6 +9719,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool PredictionContinuationMaximumSpeedClamped;
             internal ulong PredictionMotionRevision;
             internal bool Grounded;
+            internal ulong ActionInstanceIdentity;
+            internal float ActionFootWeight;
             internal float TimeToLandingSeconds;
             internal bool FormalOutputObservationAvailable;
             internal string FormalEventPhase;
@@ -9280,6 +9907,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string PostTransitionSource;
             internal string PostTransitionTarget;
             internal string PostTransitionAnchorCommand;
+            internal bool LifecycleTransitionEvaluated;
+            internal bool PreviousLockRequestAvailable;
+            internal bool PreviousLockRequested;
+            internal ulong PreviousLockRequestEventIdentity;
+            internal string PreviousLockRequestMode;
+            internal float PreviousLockRequestWeight;
+            internal float PreviousContactEdgeSeconds;
+            internal ulong PreviousLatestContactEventIdentity;
+            internal ulong PreviousLatestReleasedContactEventIdentity;
+            internal ulong PreviousCompletedLockWeightEventIdentity;
+            internal bool PreviousContactAnchorAvailable;
+            internal ulong PreviousContactAnchorEventIdentity;
+            internal bool CurrentLockRequested;
+            internal ulong CurrentLockRequestEventIdentity;
+            internal string CurrentLockRequestMode;
+            internal float CurrentLockRequestWeight;
+            internal string CurrentLockRequestAvailability;
+            internal string ContactEdge;
+            internal float CurrentContactEdgeSeconds;
+            internal ulong CurrentLatestContactEventIdentity;
+            internal ulong CurrentLatestReleasedContactEventIdentity;
+            internal ulong CurrentCompletedLockWeightEventIdentity;
+            internal bool CurrentContactAnchorAvailable;
+            internal ulong CurrentContactAnchorEventIdentity;
+            internal bool SameEventContactReentryRefreshed;
+            internal bool SameEventContactReentryUnavailable;
+            internal bool RetainedVerifiedAnchor;
+            internal bool ContinuousReentryTakeover;
+            internal bool HardOwnershipLoss;
+            internal string HardOwnershipLossReason;
+            internal bool PreTransitionSuppressOutput;
+            internal bool PreTransitionResetInterpolation;
+            internal bool PostTransitionSuppressOutput;
+            internal bool PostTransitionResetInterpolation;
             internal Vector3 StateTargetCorrection;
             internal string InterpolationPolicy;
             internal Vector3 InterpolationOutputCorrection;
@@ -10153,6 +10814,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int contactAcquisitionContinuityCount;
             public int lockWeightCompletionEventCount;
             public int approachProgressOwnershipCount;
+            public int actionHardOwnershipCount;
+            public int contactTransitionContextCount;
             public int stableSwingCorrectionResponseCadenceCount;
             public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;

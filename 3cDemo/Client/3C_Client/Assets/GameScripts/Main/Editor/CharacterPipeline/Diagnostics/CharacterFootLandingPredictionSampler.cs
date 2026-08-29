@@ -230,6 +230,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSwingFilteredTargetHeightAlongUp,FootMotionTargetHeightComponentUpX,FootMotionTargetHeightComponentUpY,FootMotionTargetHeightComponentUpZ," +
             "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
             "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
+            "FootMotionLifecycleTransitionEvaluated,FootMotionPreviousLockRequestAvailable,FootMotionPreviousLockRequested,FootMotionPreviousLockRequestEventIdentity,FootMotionPreviousLockRequestMode,FootMotionPreviousLockRequestWeight," +
+            "FootMotionPreviousContactEdgeSeconds,FootMotionPreviousLatestContactEventIdentity,FootMotionPreviousLatestReleasedContactEventIdentity,FootMotionPreviousCompletedLockWeightEventIdentity,FootMotionPreviousContactAnchorAvailable,FootMotionPreviousContactAnchorEventIdentity," +
+            "FootMotionCurrentLockRequested,FootMotionCurrentLockRequestEventIdentity,FootMotionCurrentLockRequestMode,FootMotionCurrentLockRequestWeight,FootMotionCurrentLockRequestAvailability,FootMotionContactEdge,FootMotionCurrentContactEdgeSeconds," +
+            "FootMotionCurrentLatestContactEventIdentity,FootMotionCurrentLatestReleasedContactEventIdentity,FootMotionCurrentCompletedLockWeightEventIdentity,FootMotionCurrentContactAnchorAvailable,FootMotionCurrentContactAnchorEventIdentity," +
+            "FootMotionSameEventContactReentryRefreshed,FootMotionSameEventContactReentryUnavailable,FootMotionRetainedVerifiedAnchor,FootMotionContinuousReentryTakeover,FootMotionHardOwnershipLoss,FootMotionHardOwnershipLossReason," +
+            "FootMotionPreTransitionSuppressOutput,FootMotionPreTransitionResetInterpolation,FootMotionPostTransitionSuppressOutput,FootMotionPostTransitionResetInterpolation," +
             "FootMotionStateTargetCorrectionX,FootMotionStateTargetCorrectionY,FootMotionStateTargetCorrectionZ,FootMotionInterpolationPolicy," +
             "FootMotionInterpolationOutputCorrectionX,FootMotionInterpolationOutputCorrectionY,FootMotionInterpolationOutputCorrectionZ,FootMotionInterpolationCompleted," +
             "FootMotionConstraintStateBefore,FootMotionLockResponseBefore,FootMotionOutputStagesAvailable,FootMotionReleasingCompletedToSwing,FootMotionSafetyFloorAvailable," +
@@ -2177,6 +2183,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PostTransitionSource.ToString());
             Add(row, motion.PostTransitionTarget.ToString());
             Add(row, motion.PostTransitionAnchorCommand);
+            Add(row, motion.LifecycleTransitionEvaluated);
+            Add(row, motion.PreviousLockRequestAvailable);
+            Add(row, motion.PreviousLockRequested);
+            Add(row, motion.PreviousLockRequestEventIdentity);
+            Add(row, motion.PreviousLockRequestMode);
+            Add(row, motion.PreviousLockRequestWeight);
+            Add(row, motion.PreviousContactEdgeSeconds);
+            Add(row, motion.PreviousLatestContactEventIdentity);
+            Add(row, motion.PreviousLatestReleasedContactEventIdentity);
+            Add(row, motion.PreviousCompletedLockWeightEventIdentity);
+            Add(row, motion.PreviousContactAnchorAvailable);
+            Add(row, motion.PreviousContactAnchorEventIdentity);
+            Add(row, motion.CurrentLockRequested);
+            Add(row, motion.CurrentLockRequestEventIdentity);
+            Add(row, motion.CurrentLockRequestMode);
+            Add(row, motion.CurrentLockRequestWeight);
+            Add(row, motion.CurrentLockRequestAvailability);
+            Add(row, motion.ContactEdge);
+            Add(row, motion.CurrentContactEdgeSeconds);
+            Add(row, motion.CurrentLatestContactEventIdentity);
+            Add(row, motion.CurrentLatestReleasedContactEventIdentity);
+            Add(row, motion.CurrentCompletedLockWeightEventIdentity);
+            Add(row, motion.CurrentContactAnchorAvailable);
+            Add(row, motion.CurrentContactAnchorEventIdentity);
+            Add(row, motion.SameEventContactReentryRefreshed);
+            Add(row, motion.SameEventContactReentryUnavailable);
+            Add(row, motion.RetainedVerifiedAnchor);
+            Add(row, motion.ContinuousReentryTakeover);
+            Add(row, motion.HardOwnershipLoss);
+            Add(row, motion.HardOwnershipLossReason);
+            Add(row, motion.PreTransitionSuppressOutput);
+            Add(row, motion.PreTransitionResetInterpolation);
+            Add(row, motion.PostTransitionSuppressOutput);
+            Add(row, motion.PostTransitionResetInterpolation);
             Add(row, motion.StateTargetCorrection);
             Add(row, motion.InterpolationPolicy);
             Add(row, motion.InterpolationOutputCorrection);

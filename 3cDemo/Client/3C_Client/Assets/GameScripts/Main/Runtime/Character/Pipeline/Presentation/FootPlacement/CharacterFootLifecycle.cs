@@ -506,10 +506,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                                 CharacterFootConstraintState.Releasing);
             bool predictedLandingReach =
                 (context.Discrete.State ==
-                     CharacterFootConstraintState.Swing ||
-                 context.Discrete.State ==
-                     CharacterFootConstraintState.UnlockedSupport) &&
-                swing.Accepted;
+                      CharacterFootConstraintState.Swing ||
+                  context.Discrete.State ==
+                      CharacterFootConstraintState.UnlockedSupport) &&
+                swing.Accepted &&
+                supportTarget.Kind ==
+                CharacterFootSupportTargetKind.SwingGround &&
+                supportTarget.PositionEventIdentity ==
+                swing.LandingEventIdentity;
             bool landingReachRequested = positionWeight >
                                          CharacterFootConstraintMath
                                              .GeometryEpsilon &&

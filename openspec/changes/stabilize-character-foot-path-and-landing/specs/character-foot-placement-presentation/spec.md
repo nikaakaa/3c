@@ -116,6 +116,12 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 - **THEN** Runtime MUST发布typed unavailable并保持该Event没有Committed Landing
 - **AND** MUST不使用Animated Sole、旧Event、默认Surface或Rejected Observation建立承诺
 
+#### Scenario: Current Contact晋级已提交Landing
+
+- **WHEN** 已Committed的Landing Event成为同脚Current Contact Event
+- **THEN** Runtime MUST把原Committed Landing原子晋级为Last Landing与Promoted Contact Landing
+- **AND** 同帧Current Contact预测与Capture MUST直接消费该Promoted Landing，不得因Contact Rising、Sliding或Animated Sole变化执行`ContactAcquisitionRefresh`、创建新Observation或覆盖其点、Surface、法线与lineage
+
 #### Scenario: Committed阶段出现晚期Candidate变化
 
 - **WHEN** Landing已经Committed且后续Raw Candidate因急转、速度或Source Sample变化超过查询阈值
@@ -144,9 +150,9 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 
 纯`CharacterFootStateTargetResolver` MUST按Transition后的离散State生成Correction Target、Contact Reference、Goal与Ownership目标及typed Interpolation Policy Request。Swing与UnlockedSupport的Target MUST只使用正式Ground Path、Envelope与Foot Height；Landing与Locked MUST只使用冻结的同Event Contact Anchor；Releasing MUST只回到原始Swing Target。Resolver MUST不保存跨帧时间状态、不推进Residual、不改写State、不得执行World Query，也不得执行Post Constraint。
 
-唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。所有Policy写回Effective Correction前 MUST把Component Up变化限制到Profile显式`MaximumVerticalCorrectionSpeed × Presentation Delta`；`AcquireByWeight`进入帧不得立即`RaiseToMinimum`，正式Weight达到1时也不得清除尚未收敛的Residual。Residual大于`SwingResidualTolerance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Releasing完成 MUST只读取独立`ReleaseCompletionTolerance`。Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
+唯一typed `CharacterFootInterpolationRuntime` MUST拥有上一Target、Effective Correction、唯一Residual与Completion。Swing Path换代、Landing Acquire和Release MUST只通过固定typed Policy Request连续化；迁移完成后 MUST删除分散的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`和重复Advance数学。Landing/Locked的Contact接管Policy写回Effective Correction前 MUST把Component Up变化限制到Profile显式`MaximumVerticalCorrectionSpeed × Presentation Delta`；Swing/UnlockedSupport MUST继续消费正式轨迹和Accepted Ground Envelope，Release MUST继续使用统一Residual。`AcquireByWeight`进入帧不得对Contact Anchor立即`RaiseToMinimum`，正式Weight达到1时也不得清除尚未收敛的Residual。Residual大于`SwingResidualTolerance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Releasing完成 MUST只读取独立`ReleaseCompletionTolerance`。Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。
 
-Ground Path Envelope、Contact Anchor与Reach MUST在Interpolation之后由唯一Post Constraint消费。Ground部分 MUST复用本帧Accepted Swing Motion已经采样的同一Envelope Point或冻结的同Event Anchor，不得执行Raycast、SphereCast或读取另一Surface；它 MUST只测量穿透、分类`GroundPenetrationTolerance`内外并发布Ground Catchup与Full Lock门控，不得立即Clamp、修改Effective Correction、触发Residual Revision或写回Interpolation历史。某次交接继承的超预算穿透 MUST继续受同一竖直速率限制并向可信目标收敛，期间 MUST禁止Full Lock。Reach部分 MAY硬夹紧已知不可达Goal，但 MUST不反向修改State、Transition Decision、Target或Residual。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
+Ground Path Envelope、Contact Anchor与Reach MUST在Interpolation之后由唯一Post Constraint消费。Ground部分 MUST复用本帧Accepted Swing Motion已经采样的同一Envelope Point或冻结的同Event Anchor，不得执行Raycast、SphereCast或读取另一Surface。Swing/UnlockedSupport MUST继续把Accepted Ground Envelope作为硬最低约束，防止可达Swing穿入地形；Landing/Locked的Contact Anchor部分 MUST只测量穿透、分类`GroundPenetrationTolerance`内外并发布Ground Catchup与Full Lock门控，不得立即Clamp、修改Effective Correction、触发Residual Revision或写回Interpolation历史。某次交接继承的超预算Contact穿透 MUST继续受Contact竖直速率限制并向同一Anchor收敛，期间 MUST禁止Full Lock。Reach部分 MAY硬夹紧已知不可达Goal，但 MUST不反向修改State、Transition Decision、Target或Residual。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
 
 `MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance` MUST为有限正值、由Corin Profile显式序列化并进入Profile Revision，不得使用代码默认值或复用Landing接受、Path Revision、Swing Residual、Release完成与Lock准入距离。Corin首个Replay候选分别使用`0.6m/s`、`0.01m`与`0.01m`，后续只可按同一1044帧诊断调整正式资产值，不得硬编码。
 
@@ -160,7 +166,7 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Anchor仍保�
 
 - **WHEN** 同一Swing Event的Landing或Envelope Target发生正式Revision
 - **THEN** State Target Resolver MUST发布新Target，Interpolation Runtime MUST从上一Effective Correction连续接管并按Step Time在SwingResidualTolerance内收敛
-- **AND** Post Constraint MUST只记录同一Accepted Ground Path的穿透与追赶事实，不得绕过Interpolation向上Clamp
+- **AND** Post Constraint MUST继续执行同一Accepted Ground Path的Swing硬最低约束并记录Clamp事实，不得把该约束扩展为Landing/Locked Contact Anchor的同帧抬升
 
 #### Scenario: 旧Contact Event与新Swing Event同帧交接
 

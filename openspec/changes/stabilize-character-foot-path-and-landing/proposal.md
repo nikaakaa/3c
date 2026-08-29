@@ -58,6 +58,8 @@
 - 对上述运行包进一步按Animation Foot Motion与移动计划拆分后，99个`TimelineUnavailable`角色Frame中93帧没有任何Landing预测请求，真正同时具有正式Landing Event的只有958帧与1031至1035帧。它们的Animation Foot Motion Source、Event与Time均有效，缺失的是停止/回放尾部的Locomotion Plan；该问题不是动画烘焙缺失，也不是本轮Landing/Lock跳变主因。按用户决定，本change不修改移动系统或动画转换，保持typed unavailable与Prediction状态不推进；“静止也发布正式零速度计划”的生产侧生命周期闭合后续单独处理，不在Foot Placement内把缺失计划猜成零速度。
 - `20260829-091311-812-2dfd6298af224b52a2d2c304c3a03f9c`完成垂直连续配置的零行为落地。Foot Placement Profile升级为v30并新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`；Corin首候选分别为`0.6m/s`、`0.01m`与`0.01m`，三项均进入Revision和严格有限正值校验但尚未接入运行行为。Unity强制Refresh、Runtime与Editor编译后，同一1044帧Record的25个正式诊断target与`20260829-084258-427-2e96ab5155fd4730a74be4732c90493f`逐项一致，Observation查询1164次、旧Safety Floor Clamp235行、FBBIK`2086/2086`成功且最大物理脚踝目标残差4.35085967毫米全部不变。下一候选只删除Acquire与Post Constraint的同帧抬升并接入统一Interpolation竖直速率，不能同时迁移Foot Height或Contact/Lock来源。
 - `20260829-092655-760-f46e8d62579847579d705f0f6b07fc9b`否定了“所有Interpolation Policy统一竖直限速并完全删除Post Constraint抬升”的首个行为候选。稳定Swing大于2厘米从`101/548`降为`1/529`、Path Revision大于2厘米从`94/555`降为`2/527`、Swing到Landing大于2厘米从`27/54`降为`0/54`，但这是以破坏原有Swing可达性换来的：具有Envelope的Swing行中`272/1116`下穿，`257`行穿透超过正式1厘米预算，最大穿透`0.301356018m`，而零行为基线为`0/1164`；Releasing到Swing Envelope违反由`0/51`增为`5/52`。接触后的最终Heel最大穿透由`0.027661584m`恶化到`0.266309738m`，Locked相对稳定Anchor最大漂移由`0.131628081m`增到`0.218255788m`并新增`0.115850925m`下陷，用户在画面中确认穿模显著且原本可到达的Swing丢失。失败说明“允许小范围穿模”不能解释成撤销Swing Envelope可达约束，也不能仅凭文档里的高度限速把ZZZ政策扩展到全部状态；候选代码必须回退。下一次实现前必须对照ZZZ实际反编译调用链，明确Swing路径构造、Plant目标冻结、位置混合、垂直速度限制与最终碰撞约束的先后及状态作用域，再修订6.2至6.5的设计。
+- `20260829-094058-210-985f84f5729e4b51a6e9b51220faab3c`是上述全状态竖直限速失败候选的回退复验。Unity Editor未重启，显式Refresh、Runtime与Editor编译后重新进入Play Mode；同一Record的输入Proof为`matched:1044`。八份诊断共25个target的eligible与matched逐项完全回到`20260829-091311-812-2dfd6298af224b52a2d2c304c3a03f9c`，Observation查询1164次、Swing Envelope Clamp235行、具有Envelope的Swing下穿`0/1164`、FBBIK`2086/2086`成功且最大物理脚踝目标残差4.35085967毫米全部一致，证明失败代码无残留。
+- 对`091311`与失败包逐帧对账进一步定位到更早的Landing所有权违规：左脚277帧仍在Approach Contact并持有Event `3668124746302094023`的Committed Landing `Y=2.70m`，Swing Envelope输出脚底约`Y=2.715m`；278帧同Event成为Current Contact时，Promotion先把承诺晋级，但`RequiresCurrentContactRefresh`仍强制按Animated Sole重查，`CaptureCurrentContact`随即用`Y=2.88m`覆盖Promoted Landing，Anchor因此单帧抬高18厘米。类似台阶边界反复出现约18厘米换点。ZZZ实际汇编则按`地面候选/当前态 -> 状态门控的每脚目标高度历史限速 -> 当前态与目标态权重混合 -> 骨骼调整`执行，Plant稳定期冻结目标；它没有对最终脚输出做全状态限速，也没有在Plant边界重查后覆盖冻结目标。因此下一小步必须先修复Promoted Landing的唯一所有权，禁止同Event晚期Contact Refresh覆盖承诺；Swing硬Envelope继续保留，Landing/Locked竖直接管随后再评估。
 
 ## What Changes
 
@@ -70,8 +72,8 @@
 - 把每脚约束执行固定为`不可变输入与Observation -> Pre-Interpolation Transition -> State Target -> 统一Interpolation -> Post-Interpolation Transition -> Post Constraint -> Resolved Foot`。同一根事务按固定顺序执行一次，不建立第二状态机或第二输出路径。
 - 用独立typed `CharacterFootTransitionResolver`声明固定Transition边、判定阶段和优先级。Resolver只生成不可变Decision；唯一Transition Runtime应用State与Anchor命令，不执行插值、不查询世界、不写Goal。
 - 用纯`CharacterFootStateTargetResolver`按Transition后的离散State生成Correction Target、接触引用、Goal/Ownership目标和Interpolation Policy Request。State Target不得保存时间状态、推进Residual或跳转到另一State。
-- 用唯一typed `CharacterFootInterpolationRuntime`拥有Effective Correction、唯一Residual、上一Target与Completion。Swing Path换代、Landing Acquire和Release都提交固定Policy Request给它执行；所有可见Foot Correction的Component Up变化统一受Profile显式`MaximumVerticalCorrectionSpeed`限制，删除分散在State分支中的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`与重复`Advance`数学。
-- Swing/UnlockedSupport的State Target只使用正式Ground Path、Envelope与Foot Height；Landing/Locked只使用冻结的同Event Anchor。删除`AcquireByWeight`进入帧的立即`RaiseToMinimum`，Post-Interpolation Ground Constraint只测量Envelope/Anchor穿透、发布追赶与Full Lock门控事实，不得再次改写可见Correction。Profile显式`GroundPenetrationTolerance`定义普通帧允许的小范围穿透预算；超过预算时继续由唯一Interpolation限速追赶，不建立Floor旁路。Landing只有在正式Lock Weight完成、位置残差不超过独立`LandingLockCompletionTolerance`且穿透不超过预算后才可进入Full Lock。Reach夹紧仍为不可延迟的硬限制。
+- 用唯一typed `CharacterFootInterpolationRuntime`拥有Effective Correction、唯一Residual、上一Target与Completion。Swing Path换代、Landing Acquire和Release都提交固定Policy Request给它执行；参照ZZZ实际目标态高度历史先限速、再按权重混合的顺序，只让Landing/Locked Contact接管的Component Up变化受Profile显式`MaximumVerticalCorrectionSpeed`限制，删除分散在State分支中的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`与重复`Advance`数学。
+- Swing/UnlockedSupport的State Target只使用正式Ground Path、Envelope与Foot Height，并继续以Accepted Ground Envelope作为硬最低约束；Landing/Locked只使用冻结的同Event Anchor。删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`，Landing/Locked的Post-Interpolation Ground Constraint只测量Anchor穿透、发布追赶与Full Lock门控事实，不得再次改写可见Correction。Profile显式`GroundPenetrationTolerance`定义Contact接管允许的小范围穿透预算；超过预算时继续由唯一Interpolation限速追赶，不建立第二Floor旁路。Landing只有在正式Lock Weight完成、位置残差不超过独立`LandingLockCompletionTolerance`且穿透不超过预算后才可进入Full Lock。Reach夹紧仍为不可延迟的硬限制。
 - 只把Foot Height接入Swing，使动画抬脚高度叠加到Runtime Ground Envelope，删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`提前改脚目标的旧政策。
 - 只把Support接入Resolved Foot、Primary Support与Pelvis，使承重意图不再依赖Lock资格，并为Landing腿提供独立Reach请求。
 - 增加必须显式序列化的米制最小Landing腿压缩余量；缺失即typed invalid，不提供默认值。Pelvis优先求双腿可达交集，无法同时满足时夹紧Foot Goal并发布typed不可达结果，不允许完全伸直后继续进入Full Lock。
@@ -145,9 +147,9 @@ Releasing期间同Event重入只可Retain原Anchor并连续执行Releasing到Lan
 State Target不拥有Transition、Residual、HalfLife、时间推进或Post Constraint
 Swing、Landing Acquire与Release只通过一个Interpolation State、一个Residual和一个Effective Correction Owner连续化
 Landing/Lock附近单帧可见Foot Correction不得因进入State、Lock Weight完成或Post Constraint产生十厘米级跳变
-所有Component Up Correction变化受同一Profile竖直速率限制，Landing只有在位置与穿透达到独立容差后才进入Full Lock
+Landing/Locked Contact Correction的Component Up变化受同一Profile竖直速率限制，Swing/UnlockedSupport保持Accepted Ground Envelope可达，Landing只有在位置与穿透达到独立容差后才进入Full Lock
 Pre/Post Transition、Interpolation与Post Constraint顺序固定且每帧各执行一次
-Ground Path Envelope只形成目标与Post Constraint测量，不得绕过Interpolation改写可见Correction；Reach仍可硬夹紧不可达Goal
+Ground Path Envelope形成Swing目标并继续执行硬最低约束；Contact Anchor不得绕过Interpolation改写可见Correction，Reach仍可硬夹紧不可达Goal
 Post Constraint只消费已接受预测Path；预测输入不变时不得执行实时地面查询或逐踏面切换输出
 旧隐藏Step、Constraint、PlantConfidence、PlantCycleConsumed布尔和Support消费者被删除
 不存在fallback、旧新双读、第二状态机、第二Goal链或TrainingEnemy变化

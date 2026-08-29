@@ -107,14 +107,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return;
             }
-            if ((context.PromotedLanding.HasValue &&
-                 context.PromotedLanding.LandingEventIdentity ==
-                     current.Identity) ||
-                (context.LastLanding.HasValue &&
-                 context.LastLanding.LandingEventIdentity == current.Identity))
-            {
-                return;
-            }
             context.LastLanding = CharacterFootLandingFact.Create(
                 current.Identity,
                 in diagnostics);

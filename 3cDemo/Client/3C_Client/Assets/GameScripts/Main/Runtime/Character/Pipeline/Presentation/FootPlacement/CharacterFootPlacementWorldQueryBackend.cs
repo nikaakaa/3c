@@ -56,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootPlacementPoseRig m_Rig;
         readonly RaycastHit[] m_LandingHits;
         readonly RaycastHit[] m_GroundPathHits;
+        readonly RaycastHit[] m_CurrentSupportHits;
 
         internal CharacterFootPlacementWorldQueryBackend(
             PhysicsScene physicsScene,
@@ -73,6 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             m_LandingHits = new RaycastHit[landingHitCapacity];
             m_GroundPathHits = new RaycastHit[groundPathSegmentHitCapacity];
+            m_CurrentSupportHits = new RaycastHit[landingHitCapacity];
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;
@@ -283,6 +285,80 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return new CharacterFootGroundPathQueryResult(
                 CharacterFootGroundPathRejectReason.None,
                 segmentCount);
+        }
+
+        public CharacterFootCurrentSupportProbeResult Query(
+            in CharacterFootCurrentSupportProbeRequest request)
+        {
+            if (!request.IsValid)
+            {
+                return CharacterFootCurrentSupportProbeResult.Rejected(
+                    request.Kind,
+                    CharacterFootCurrentSupportProbeRejectReason.InvalidRequest);
+            }
+            int count = m_PhysicsScene.SphereCast(
+                request.Origin,
+                request.Radius,
+                request.Direction,
+                m_CurrentSupportHits,
+                request.MaximumDistance,
+                request.LayerMask,
+                QueryTriggerInteraction.Ignore);
+            if (count >= m_CurrentSupportHits.Length)
+            {
+                return CharacterFootCurrentSupportProbeResult.Rejected(
+                    request.Kind,
+                    CharacterFootCurrentSupportProbeRejectReason.CapacityExceeded);
+            }
+            Vector3 up = request.ComponentUp.normalized;
+            int validCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit candidate = m_CurrentSupportHits[i];
+                if (!candidate.collider ||
+                    m_Rig.IsSelfCollider(candidate.collider) ||
+                    IsInitialOverlap(in candidate) ||
+                    !IsFinite(candidate.point) ||
+                    !IsFinite(candidate.normal) ||
+                    candidate.normal.sqrMagnitude <= 0.000001f ||
+                    Vector3.Dot(candidate.normal.normalized, up) <
+                    request.MinimumGroundNormalDot ||
+                    !float.IsFinite(candidate.distance) ||
+                    candidate.distance < 0f)
+                {
+                    continue;
+                }
+                m_CurrentSupportHits[validCount++] = candidate;
+            }
+            for (int i = 1; i < validCount; i++)
+            {
+                RaycastHit value = m_CurrentSupportHits[i];
+                int insertion = i;
+                while (insertion > 0 &&
+                       CompareLanding(value, m_CurrentSupportHits[insertion - 1]) < 0)
+                {
+                    m_CurrentSupportHits[insertion] =
+                        m_CurrentSupportHits[insertion - 1];
+                    insertion--;
+                }
+                m_CurrentSupportHits[insertion] = value;
+            }
+            if (validCount == 0)
+            {
+                return CharacterFootCurrentSupportProbeResult.Rejected(
+                    request.Kind,
+                    CharacterFootCurrentSupportProbeRejectReason.NoHit);
+            }
+            RaycastHit selected = m_CurrentSupportHits[0];
+            return new CharacterFootCurrentSupportProbeResult(
+                request.Kind,
+                CharacterFootCurrentSupportProbeState.Accepted,
+                CharacterFootCurrentSupportProbeRejectReason.None,
+                validCount,
+                selected.collider.GetInstanceID(),
+                selected.point,
+                selected.normal.normalized,
+                selected.distance);
         }
 
         static int CompareLanding(RaycastHit left, RaycastHit right)

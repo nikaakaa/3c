@@ -228,6 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_TargetHeightForceRefreshDistance;
         [SerializeField] float m_CorrectionResponseIncreaseSpeed;
         [SerializeField] float m_CorrectionResponseDecreaseSpeed;
+        [SerializeField] float m_CorrectionResponseMaximumDirectionChangeDegrees;
         [SerializeField] float m_GroundPenetrationTolerance;
         [SerializeField] float m_LandingLockCompletionTolerance;
         [SerializeField] float m_LockDistance = 0.08f;
@@ -247,6 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_TargetHeightForceRefreshDistance,
                 m_CorrectionResponseIncreaseSpeed,
                 m_CorrectionResponseDecreaseSpeed,
+                m_CorrectionResponseMaximumDirectionChangeDegrees,
                 m_GroundPenetrationTolerance,
                 m_LandingLockCompletionTolerance,
                 m_LockDistance,
@@ -268,6 +270,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float targetHeightForceRefreshDistance,
             float correctionResponseIncreaseSpeed,
             float correctionResponseDecreaseSpeed,
+            float correctionResponseMaximumDirectionChangeDegrees,
             float groundPenetrationTolerance,
             float landingLockCompletionTolerance,
             float lockDistance,
@@ -286,6 +289,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 targetHeightForceRefreshDistance;
             CorrectionResponseIncreaseSpeed = correctionResponseIncreaseSpeed;
             CorrectionResponseDecreaseSpeed = correctionResponseDecreaseSpeed;
+            CorrectionResponseMaximumDirectionChangeDegrees =
+                correctionResponseMaximumDirectionChangeDegrees;
             GroundPenetrationTolerance = groundPenetrationTolerance;
             LandingLockCompletionTolerance = landingLockCompletionTolerance;
             LockDistance = lockDistance;
@@ -306,6 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float TargetHeightForceRefreshDistance { get; }
         internal float CorrectionResponseIncreaseSpeed { get; }
         internal float CorrectionResponseDecreaseSpeed { get; }
+        internal float CorrectionResponseMaximumDirectionChangeDegrees { get; }
         internal float GroundPenetrationTolerance { get; }
         internal float LandingLockCompletionTolerance { get; }
         internal float LockDistance { get; }
@@ -336,6 +342,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CorrectionResponseIncreaseSpeed <= 0f ||
                 !float.IsFinite(CorrectionResponseDecreaseSpeed) ||
                 CorrectionResponseDecreaseSpeed <= 0f ||
+                !float.IsFinite(
+                    CorrectionResponseMaximumDirectionChangeDegrees) ||
+                CorrectionResponseMaximumDirectionChangeDegrees <= 0f ||
+                CorrectionResponseMaximumDirectionChangeDegrees > 180f ||
                 !float.IsFinite(GroundPenetrationTolerance) ||
                 GroundPenetrationTolerance <= 0f ||
                 !float.IsFinite(LandingLockCompletionTolerance) ||
@@ -364,7 +374,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v34-correction-response";
+        public const string SchemaVersion = "character-foot-placement-profile/v35-direction-history";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

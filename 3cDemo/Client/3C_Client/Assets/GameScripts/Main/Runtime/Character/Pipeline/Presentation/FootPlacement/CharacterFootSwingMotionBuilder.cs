@@ -746,10 +746,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.CorrectionResponseInitializationReason.ToString();
             CorrectionResponseDesired =
                 path.CorrectionResponseDesired;
+            CorrectionResponseRequestedDirection =
+                path.CorrectionResponseRequestedDirection;
             CorrectionResponsePreviousDirection =
                 path.CorrectionResponsePreviousDirection;
-            CorrectionResponseBasisTransferred =
-                path.CorrectionResponseBasisTransferred;
+            CorrectionResponseDirectionLimited =
+                path.CorrectionResponseDirectionLimited;
+            CorrectionResponseMaximumDirectionChangeDegrees =
+                path.CorrectionResponseMaximumDirectionChangeDegrees;
+            CorrectionResponseAppliedDirectionChangeDegrees =
+                path.CorrectionResponseAppliedDirectionChangeDegrees;
             CorrectionResponseVisibleOutputTransferred =
                 path.CorrectionResponseVisibleOutputTransferred;
             CorrectionResponseBeforeRebase =
@@ -917,8 +923,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool CorrectionResponseInitializedThisFrame { get; }
         public string CorrectionResponseInitializationReason { get; }
         public float CorrectionResponseDesired { get; }
+        public Vector3 CorrectionResponseRequestedDirection { get; }
         public Vector3 CorrectionResponsePreviousDirection { get; }
-        public bool CorrectionResponseBasisTransferred { get; }
+        public bool CorrectionResponseDirectionLimited { get; }
+        public float CorrectionResponseMaximumDirectionChangeDegrees { get; }
+        public float CorrectionResponseAppliedDirectionChangeDegrees { get; }
         public bool CorrectionResponseVisibleOutputTransferred { get; }
         public float CorrectionResponseBeforeRebase { get; }
         public float CorrectionResponsePrevious { get; }

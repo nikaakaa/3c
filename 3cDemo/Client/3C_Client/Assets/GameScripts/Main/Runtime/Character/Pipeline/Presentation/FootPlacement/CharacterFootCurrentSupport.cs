@@ -279,6 +279,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong NormalEventIdentity { get; }
         internal bool IsValid => m_IsSpecified != 0;
 
+        internal CharacterFootSupportTarget WithSupportNormal(
+            Vector3 supportNormal) =>
+            new CharacterFootSupportTarget(
+                FrameSequence,
+                CompletionIdentity,
+                Side,
+                Position,
+                supportNormal,
+                SurfaceIdentity,
+                WorldRevision,
+                Kind,
+                PositionSource,
+                PositionFrameSequence,
+                PositionCompletionIdentity,
+                PositionEventIdentity,
+                PositionPathIdentity,
+                NormalSource,
+                NormalFrameSequence,
+                NormalCompletionIdentity,
+                NormalEventIdentity);
+
         static bool Finite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) &&
             float.IsFinite(value.z);

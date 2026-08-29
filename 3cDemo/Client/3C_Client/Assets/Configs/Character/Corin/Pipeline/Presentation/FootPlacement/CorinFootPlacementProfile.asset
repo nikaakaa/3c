@@ -45,6 +45,9 @@ MonoBehaviour:
     m_SwingResidualTolerance: 0.02
     m_ReleaseCompletionTolerance: 0.02
     m_EffectiveCorrectionHalfLifeSeconds: 0.03
+    m_MaximumVerticalCorrectionSpeed: 0.6
+    m_GroundPenetrationTolerance: 0.01
+    m_LandingLockCompletionTolerance: 0.01
     m_LockDistance: 0.08
     m_SlideDistance: 0.2
     m_PelvisSpringFrequency: 3

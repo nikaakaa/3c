@@ -504,6 +504,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPreviousMixedWorldTarget =
                 path.PlantPreviousMixedWorldTarget;
             PlantMixedWorldTarget = path.PlantMixedWorldTarget;
+            PlantPreviousOutputPoint = path.PlantPreviousOutputPoint;
+            PlantOutputPoint = path.PlantOutputPoint;
             PlantResidualCaptureReason =
                 path.PlantResidualCaptureReason.ToString();
             PlantWorldResidualBeforeCapture =
@@ -639,6 +641,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantTargetVerticalClamped { get; }
         public Vector3 PlantPreviousMixedWorldTarget { get; }
         public Vector3 PlantMixedWorldTarget { get; }
+        public Vector3 PlantPreviousOutputPoint { get; }
+        public Vector3 PlantOutputPoint { get; }
         public string PlantResidualCaptureReason { get; }
         public Vector3 PlantWorldResidualBeforeCapture { get; }
         public Vector3 PlantWorldResidualAfterCapture { get; }

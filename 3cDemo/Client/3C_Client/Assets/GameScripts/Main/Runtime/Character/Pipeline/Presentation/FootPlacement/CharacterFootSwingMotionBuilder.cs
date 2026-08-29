@@ -716,26 +716,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResponseOutputPoint = path.ResponseOutputPoint;
             PlantResidualCaptureReason =
                 path.PlantResidualCaptureReason.ToString();
-            PlantCorrectionResidualBeforeCapture =
-                path.PlantCorrectionResidualBeforeCapture;
-            PlantCorrectionResidualCapturedBeforeDecay =
-                path.PlantCorrectionResidualCapturedBeforeDecay;
-            PlantCorrectionResidualDecayApplied =
-                path.PlantCorrectionResidualDecayApplied;
-            PlantCorrectionResidualBaseHalfLifeSeconds =
-                path.PlantCorrectionResidualBaseHalfLifeSeconds;
-            PlantCorrectionResidualDeadlineHalfLifeAvailable =
-                path.PlantCorrectionResidualDeadlineHalfLifeAvailable;
-            PlantCorrectionResidualDeadlineHalfLifeSeconds =
-                path.PlantCorrectionResidualDeadlineHalfLifeSeconds;
-            PlantCorrectionResidualAppliedHalfLifeSeconds =
-                path.PlantCorrectionResidualAppliedHalfLifeSeconds;
-            PlantCorrectionResidualAfterDecay =
-                path.PlantCorrectionResidualAfterDecay;
-            PlantCorrectionResidualCompletionTolerance =
-                path.PlantCorrectionResidualCompletionTolerance;
-            PlantCorrectionResidualClearedAtCompletionTolerance =
-                path.PlantCorrectionResidualClearedAtCompletionTolerance;
+            PlantWorldResidualBeforeCapture =
+                path.PlantWorldResidualBeforeCapture;
+            PlantWorldResidualCapturedBeforeDecay =
+                path.PlantWorldResidualCapturedBeforeDecay;
+            PlantWorldResidualDecayApplied =
+                path.PlantWorldResidualDecayApplied;
+            PlantWorldResidualBaseHalfLifeSeconds =
+                path.PlantWorldResidualBaseHalfLifeSeconds;
+            PlantWorldResidualDeadlineHalfLifeAvailable =
+                path.PlantWorldResidualDeadlineHalfLifeAvailable;
+            PlantWorldResidualDeadlineHalfLifeSeconds =
+                path.PlantWorldResidualDeadlineHalfLifeSeconds;
+            PlantWorldResidualAppliedHalfLifeSeconds =
+                path.PlantWorldResidualAppliedHalfLifeSeconds;
+            PlantWorldResidualAfterDecay =
+                path.PlantWorldResidualAfterDecay;
+            PlantWorldResidualCompletionTolerance =
+                path.PlantWorldResidualCompletionTolerance;
+            PlantWorldResidualClearedAtCompletionTolerance =
+                path.PlantWorldResidualClearedAtCompletionTolerance;
             CorrectionResponseEvaluated =
                 path.CorrectionResponseEvaluated;
             CorrectionResponseInitializedBefore =
@@ -756,6 +756,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.CorrectionResponseMaximumDirectionChangeDegrees;
             CorrectionResponseAppliedDirectionChangeDegrees =
                 path.CorrectionResponseAppliedDirectionChangeDegrees;
+            CorrectionResponseVisibleOutputTransferred =
+                path.CorrectionResponseVisibleOutputTransferred;
+            CorrectionResponseBeforeRebase =
+                path.CorrectionResponseBeforeRebase;
             CorrectionResponsePrevious =
                 path.CorrectionResponsePrevious;
             CorrectionResponseCurrent =
@@ -904,19 +908,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 DesiredOutputPoint { get; }
         public Vector3 ResponseOutputPoint { get; }
         public string PlantResidualCaptureReason { get; }
-        public Vector3 PlantCorrectionResidualBeforeCapture { get; }
-        public Vector3 PlantCorrectionResidualCapturedBeforeDecay { get; }
-        public bool PlantCorrectionResidualDecayApplied { get; }
-        public float PlantCorrectionResidualBaseHalfLifeSeconds { get; }
-        public bool PlantCorrectionResidualDeadlineHalfLifeAvailable { get; }
-        public float PlantCorrectionResidualDeadlineHalfLifeSeconds { get; }
-        public float PlantCorrectionResidualAppliedHalfLifeSeconds { get; }
-        public Vector3 PlantCorrectionResidualAfterDecay { get; }
-        public float PlantCorrectionResidualCompletionTolerance { get; }
-        public bool PlantCorrectionResidualClearedAtCompletionTolerance
-        {
-            get;
-        }
+        public Vector3 PlantWorldResidualBeforeCapture { get; }
+        public Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
+        public bool PlantWorldResidualDecayApplied { get; }
+        public float PlantWorldResidualBaseHalfLifeSeconds { get; }
+        public bool PlantWorldResidualDeadlineHalfLifeAvailable { get; }
+        public float PlantWorldResidualDeadlineHalfLifeSeconds { get; }
+        public float PlantWorldResidualAppliedHalfLifeSeconds { get; }
+        public Vector3 PlantWorldResidualAfterDecay { get; }
+        public float PlantWorldResidualCompletionTolerance { get; }
+        public bool PlantWorldResidualClearedAtCompletionTolerance { get; }
         public bool CorrectionResponseEvaluated { get; }
         public bool CorrectionResponseInitializedBefore { get; }
         public bool CorrectionResponseInitializedThisFrame { get; }
@@ -927,6 +928,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool CorrectionResponseDirectionLimited { get; }
         public float CorrectionResponseMaximumDirectionChangeDegrees { get; }
         public float CorrectionResponseAppliedDirectionChangeDegrees { get; }
+        public bool CorrectionResponseVisibleOutputTransferred { get; }
+        public float CorrectionResponseBeforeRebase { get; }
         public float CorrectionResponsePrevious { get; }
         public float CorrectionResponseCurrent { get; }
         public Vector3 CorrectionResponseDirection { get; }

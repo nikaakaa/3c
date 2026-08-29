@@ -176,7 +176,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in supportIntent),
                 in frame,
                 false);
-            Vector3 effectiveCorrectionBefore = state.EffectiveCorrection;
+            bool previousResponseOutputAvailable =
+                state.HasPreviousResponseOutputPoint;
+            Vector3 currentOutputBefore = previousResponseOutputAvailable
+                ? state.PreviousResponseOutputPoint
+                : originalSole + swing.Correction;
+            Vector3 effectiveCorrectionBefore =
+                currentOutputBefore - originalSole;
             bool hadPlantTarget = state.HasPlantTarget;
             bool sameTarget = hadPlantTarget &&
                               state.PlantTargetEventIdentity ==
@@ -347,22 +353,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (targetForceRefreshed)
                 captureReason |= CharacterFootPlantResidualCaptureReason
                     .TargetHeightForceRefreshed;
-            Vector3 selectedTargetCorrection =
-                selectedWorldTarget - originalSole;
-            Vector3 residualBeforeCapture = state.PlantCorrectionResidual;
+            Vector3 residualBeforeCapture = state.PlantWorldResidual;
             bool captureTransition = captureReason !=
                                      CharacterFootPlantResidualCaptureReason.None;
+            Vector3 continuityOutputBefore = captureTransition &&
+                                              frame
+                                                  .PreviousVisibleOutputAvailable
+                ? frame.PreviousVisibleOutputPoint
+                : currentOutputBefore;
+            if (captureTransition && frame.PreviousVisibleOutputAvailable)
+                effectiveCorrectionBefore = continuityOutputBefore - originalSole;
             if (captureTransition)
             {
-                state.PlantCorrectionResidual =
-                    effectiveCorrectionBefore - selectedTargetCorrection;
-                state.PlantCorrectionResidualTransitionActive =
-                    state.PlantCorrectionResidual.sqrMagnitude >
+                state.PlantWorldResidual =
+                    continuityOutputBefore - selectedWorldTarget;
+                state.PlantWorldResidualTransitionActive =
+                    state.PlantWorldResidual.sqrMagnitude >
                     CharacterFootConstraintMath.GeometryEpsilon *
                     CharacterFootConstraintMath.GeometryEpsilon;
             }
-            Vector3 residualCapturedBeforeDecay =
-                state.PlantCorrectionResidual;
+            Vector3 residualCapturedBeforeDecay = state.PlantWorldResidual;
             bool residualDecayApplied = false;
             float residualBaseHalfLifeSeconds =
                 frame.Settings.EffectiveCorrectionHalfLifeSeconds;
@@ -370,37 +380,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float residualDeadlineHalfLifeSeconds = 0f;
             float residualAppliedHalfLifeSeconds = 0f;
             bool residualClearedAtCompletionTolerance = false;
-            if (state.PlantCorrectionResidualTransitionActive &&
+            if (state.PlantWorldResidualTransitionActive &&
                 frame.DeltaSeconds > 0f)
             {
                 residualAppliedHalfLifeSeconds = ResolveSwingResidualHalfLife(
-                    state.PlantCorrectionResidual,
+                    state.PlantWorldResidual,
                     target.TimeToLandingSeconds,
                     frame.Settings,
                     out residualDeadlineHalfLifeAvailable,
                     out residualDeadlineHalfLifeSeconds);
                 residualDecayApplied = true;
-                state.PlantCorrectionResidual = Advance(
-                    state.PlantCorrectionResidual,
+                state.PlantWorldResidual = Advance(
+                    state.PlantWorldResidual,
                     default,
                     frame.DeltaSeconds,
                     residualAppliedHalfLifeSeconds);
-                if (state.PlantCorrectionResidual.magnitude <=
+                if (state.PlantWorldResidual.magnitude <=
                     frame.Settings.LandingLockCompletionTolerance)
                 {
-                    state.PlantCorrectionResidual = default;
-                    state.PlantCorrectionResidualTransitionActive = false;
+                    state.PlantWorldResidual = default;
+                    state.PlantWorldResidualTransitionActive = false;
                     residualClearedAtCompletionTolerance = true;
                 }
             }
-            Vector3 residualAfterDecay = state.PlantCorrectionResidual;
-            Vector3 desiredOutputPoint = originalSole +
-                                         selectedTargetCorrection +
-                                         residualAfterDecay;
+            Vector3 residualAfterDecay = state.PlantWorldResidual;
+            Vector3 desiredOutputPoint =
+                selectedWorldTarget + residualAfterDecay;
             Vector3 responseOutputPoint = ApplyCorrectionResponse(
                 ref state,
                 desiredOutputPoint,
                 supportNormal,
+                captureTransition && frame.PreviousVisibleOutputAvailable,
+                frame.PreviousVisibleOutputPoint,
                 in frame,
                 out CharacterFootCorrectionResponseFact
                     correctionResponseFact);
@@ -423,8 +434,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.GeometryEpsilon)
             {
                 verticalContinuityOwners |=
-                    CharacterFootVerticalContinuityOwner
-                        .PlantCorrectionResidual;
+                    CharacterFootVerticalContinuityOwner.PlantWorldResidual;
             }
             if (correctionResponseFact.InitializedThisFrame ||
                 !Mathf.Approximately(
@@ -528,6 +538,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.AnimatedFoot);
             if (target.StateEntered)
             {
+                if (state.HasPreviousResponseOutputPoint)
+                {
+                    state.EffectiveCorrection =
+                        state.PreviousResponseOutputPoint - originalSole;
+                }
                 state.PreviousTargetCorrection = target.Correction;
                 state.Residual =
                     state.EffectiveCorrection - target.Correction;
@@ -550,6 +565,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref state,
                 originalSole + desiredCorrection,
                 target.SupportTarget.SupportNormal,
+                false,
+                default,
                 in frame,
                 out CharacterFootCorrectionResponseFact
                     correctionResponseFact);
@@ -800,6 +817,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref state,
                     originalSole + swingCorrection,
                     target.SupportTarget.SupportNormal,
+                    false,
+                    default,
                     in frame,
                     out CharacterFootCorrectionResponseFact
                         correctionResponseFact);
@@ -891,6 +910,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootInterpolationState state,
             Vector3 desiredOutputPoint,
             Vector3 responseDirection,
+            bool visibleOutputTransferAvailable,
+            Vector3 visibleOutputTransferPoint,
             in CharacterFootStateFrame frame,
             out CharacterFootCorrectionResponseFact fact)
         {
@@ -907,11 +928,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
-            bool previousOutputAvailable =
-                state.HasPreviousResponseOutputPoint;
-            Vector3 previousOutputPoint = previousOutputAvailable
-                ? state.PreviousResponseOutputPoint
-                : desiredOutputPoint;
+            bool previousOutputAvailable = visibleOutputTransferAvailable ||
+                                           state.HasPreviousResponseOutputPoint;
+            Vector3 previousOutputPoint = visibleOutputTransferAvailable
+                ? visibleOutputTransferPoint
+                : state.HasPreviousResponseOutputPoint
+                    ? state.PreviousResponseOutputPoint
+                    : desiredOutputPoint;
             float desiredResponse = Vector3.Dot(
                 desiredOutputPoint - originalSole,
                 requestedDirection);
@@ -946,9 +969,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             desiredResponse = Vector3.Dot(
                 desiredOutputPoint - originalSole,
                 direction);
-            float previousResponse = initializedBefore
+            if (visibleOutputTransferAvailable && !previousOutputAvailable)
+            {
+                throw new System.InvalidOperationException(
+                    "Foot Correction Response target transfer has no committed output.");
+            }
+            float responseBeforeRebase = initializedBefore
                 ? state.CorrectionResponse
                 : desiredResponse;
+            float previousResponse = visibleOutputTransferAvailable
+                ? Vector3.Dot(
+                    previousOutputPoint - originalSole,
+                    direction)
+                : responseBeforeRebase;
             float currentResponse = previousResponse;
             CharacterFootCorrectionResponseDeltaDirection deltaDirection =
                 CharacterFootCorrectionResponseDeltaDirection.None;
@@ -999,6 +1032,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 directionLimited,
                 maximumDirectionChangeDegrees,
                 appliedDirectionChangeDegrees,
+                visibleOutputTransferAvailable,
+                responseBeforeRebase,
                 previousResponse,
                 currentResponse,
                 direction,
@@ -1026,8 +1061,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.PlantDesiredPoint = default;
             state.PlantFilteredPoint = default;
             state.PreviousPlantSelectedWorldTarget = default;
-            state.PlantCorrectionResidual = default;
-            state.PlantCorrectionResidualTransitionActive = false;
+            state.PlantWorldResidual = default;
+            state.PlantWorldResidualTransitionActive = false;
             state.PlantFact = default;
         }
 

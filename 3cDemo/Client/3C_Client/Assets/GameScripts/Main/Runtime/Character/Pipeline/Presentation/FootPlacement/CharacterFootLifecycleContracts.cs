@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         None = 0,
         TargetHeightHistory = 1 << 0,
-        PlantCorrectionResidual = 1 << 1,
+        PlantWorldResidual = 1 << 1,
         CorrectionResponseHistory = 1 << 2,
         PlantTarget = 1 << 3
     }
@@ -306,16 +306,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResponseOutputPoint = default;
             PlantResidualCaptureReason =
                 CharacterFootPlantResidualCaptureReason.None;
-            PlantCorrectionResidualBeforeCapture = default;
-            PlantCorrectionResidualCapturedBeforeDecay = default;
-            PlantCorrectionResidualDecayApplied = false;
-            PlantCorrectionResidualBaseHalfLifeSeconds = 0f;
-            PlantCorrectionResidualDeadlineHalfLifeAvailable = false;
-            PlantCorrectionResidualDeadlineHalfLifeSeconds = 0f;
-            PlantCorrectionResidualAppliedHalfLifeSeconds = 0f;
-            PlantCorrectionResidualAfterDecay = default;
-            PlantCorrectionResidualCompletionTolerance = 0f;
-            PlantCorrectionResidualClearedAtCompletionTolerance = false;
+            PlantWorldResidualBeforeCapture = default;
+            PlantWorldResidualCapturedBeforeDecay = default;
+            PlantWorldResidualDecayApplied = false;
+            PlantWorldResidualBaseHalfLifeSeconds = 0f;
+            PlantWorldResidualDeadlineHalfLifeAvailable = false;
+            PlantWorldResidualDeadlineHalfLifeSeconds = 0f;
+            PlantWorldResidualAppliedHalfLifeSeconds = 0f;
+            PlantWorldResidualAfterDecay = default;
+            PlantWorldResidualCompletionTolerance = 0f;
+            PlantWorldResidualClearedAtCompletionTolerance = false;
             CorrectionResponseEvaluated = false;
             CorrectionResponseInitializedBefore = false;
             CorrectionResponseInitializedThisFrame = false;
@@ -327,6 +327,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CorrectionResponseDirectionLimited = false;
             CorrectionResponseMaximumDirectionChangeDegrees = 0f;
             CorrectionResponseAppliedDirectionChangeDegrees = 0f;
+            CorrectionResponseVisibleOutputTransferred = false;
+            CorrectionResponseBeforeRebase = 0f;
             CorrectionResponsePrevious = 0f;
             CorrectionResponseCurrent = 0f;
             CorrectionResponseDirection = default;
@@ -486,26 +488,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DesiredOutputPoint = correctionResponse.DesiredOutputPoint;
             ResponseOutputPoint = correctionResponse.ResponseOutputPoint;
             PlantResidualCaptureReason = plant.ResidualCaptureReason;
-            PlantCorrectionResidualBeforeCapture =
-                plant.CorrectionResidualBeforeCapture;
-            PlantCorrectionResidualCapturedBeforeDecay =
-                plant.CorrectionResidualCapturedBeforeDecay;
-            PlantCorrectionResidualDecayApplied =
-                plant.CorrectionResidualDecayApplied;
-            PlantCorrectionResidualBaseHalfLifeSeconds =
-                plant.CorrectionResidualBaseHalfLifeSeconds;
-            PlantCorrectionResidualDeadlineHalfLifeAvailable =
-                plant.CorrectionResidualDeadlineHalfLifeAvailable;
-            PlantCorrectionResidualDeadlineHalfLifeSeconds =
-                plant.CorrectionResidualDeadlineHalfLifeSeconds;
-            PlantCorrectionResidualAppliedHalfLifeSeconds =
-                plant.CorrectionResidualAppliedHalfLifeSeconds;
-            PlantCorrectionResidualAfterDecay =
-                plant.CorrectionResidualAfterDecay;
-            PlantCorrectionResidualCompletionTolerance =
-                plant.CorrectionResidualCompletionTolerance;
-            PlantCorrectionResidualClearedAtCompletionTolerance =
-                plant.CorrectionResidualClearedAtCompletionTolerance;
+            PlantWorldResidualBeforeCapture =
+                plant.WorldResidualBeforeCapture;
+            PlantWorldResidualCapturedBeforeDecay =
+                plant.WorldResidualCapturedBeforeDecay;
+            PlantWorldResidualDecayApplied =
+                plant.WorldResidualDecayApplied;
+            PlantWorldResidualBaseHalfLifeSeconds =
+                plant.WorldResidualBaseHalfLifeSeconds;
+            PlantWorldResidualDeadlineHalfLifeAvailable =
+                plant.WorldResidualDeadlineHalfLifeAvailable;
+            PlantWorldResidualDeadlineHalfLifeSeconds =
+                plant.WorldResidualDeadlineHalfLifeSeconds;
+            PlantWorldResidualAppliedHalfLifeSeconds =
+                plant.WorldResidualAppliedHalfLifeSeconds;
+            PlantWorldResidualAfterDecay = plant.WorldResidualAfterDecay;
+            PlantWorldResidualCompletionTolerance =
+                plant.WorldResidualCompletionTolerance;
+            PlantWorldResidualClearedAtCompletionTolerance =
+                plant.WorldResidualClearedAtCompletionTolerance;
             CorrectionResponseEvaluated = correctionResponse.Evaluated;
             CorrectionResponseInitializedBefore =
                 correctionResponse.InitializedBefore;
@@ -525,6 +526,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctionResponse.MaximumDirectionChangeDegrees;
             CorrectionResponseAppliedDirectionChangeDegrees =
                 correctionResponse.AppliedDirectionChangeDegrees;
+            CorrectionResponseVisibleOutputTransferred =
+                correctionResponse.VisibleOutputTransferred;
+            CorrectionResponseBeforeRebase =
+                correctionResponse.ResponseBeforeRebase;
             CorrectionResponsePrevious =
                 correctionResponse.PreviousResponse;
             CorrectionResponseCurrent =
@@ -640,19 +645,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 DesiredOutputPoint { get; }
         internal Vector3 ResponseOutputPoint { get; }
         internal CharacterFootPlantResidualCaptureReason PlantResidualCaptureReason { get; }
-        internal Vector3 PlantCorrectionResidualBeforeCapture { get; }
-        internal Vector3 PlantCorrectionResidualCapturedBeforeDecay { get; }
-        internal bool PlantCorrectionResidualDecayApplied { get; }
-        internal float PlantCorrectionResidualBaseHalfLifeSeconds { get; }
-        internal bool PlantCorrectionResidualDeadlineHalfLifeAvailable { get; }
-        internal float PlantCorrectionResidualDeadlineHalfLifeSeconds { get; }
-        internal float PlantCorrectionResidualAppliedHalfLifeSeconds { get; }
-        internal Vector3 PlantCorrectionResidualAfterDecay { get; }
-        internal float PlantCorrectionResidualCompletionTolerance { get; }
-        internal bool PlantCorrectionResidualClearedAtCompletionTolerance
-        {
-            get;
-        }
+        internal Vector3 PlantWorldResidualBeforeCapture { get; }
+        internal Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
+        internal bool PlantWorldResidualDecayApplied { get; }
+        internal float PlantWorldResidualBaseHalfLifeSeconds { get; }
+        internal bool PlantWorldResidualDeadlineHalfLifeAvailable { get; }
+        internal float PlantWorldResidualDeadlineHalfLifeSeconds { get; }
+        internal float PlantWorldResidualAppliedHalfLifeSeconds { get; }
+        internal Vector3 PlantWorldResidualAfterDecay { get; }
+        internal float PlantWorldResidualCompletionTolerance { get; }
+        internal bool PlantWorldResidualClearedAtCompletionTolerance { get; }
         internal bool CorrectionResponseEvaluated { get; }
         internal bool CorrectionResponseInitializedBefore { get; }
         internal bool CorrectionResponseInitializedThisFrame { get; }
@@ -664,6 +666,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool CorrectionResponseDirectionLimited { get; }
         internal float CorrectionResponseMaximumDirectionChangeDegrees { get; }
         internal float CorrectionResponseAppliedDirectionChangeDegrees { get; }
+        internal bool CorrectionResponseVisibleOutputTransferred { get; }
+        internal float CorrectionResponseBeforeRebase { get; }
         internal float CorrectionResponsePrevious { get; }
         internal float CorrectionResponseCurrent { get; }
         internal Vector3 CorrectionResponseDirection { get; }
@@ -1090,6 +1094,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool directionLimited,
             float maximumDirectionChangeDegrees,
             float appliedDirectionChangeDegrees,
+            bool visibleOutputTransferred,
+            float responseBeforeRebase,
             float previousResponse,
             float currentResponse,
             Vector3 responseDirection,
@@ -1111,6 +1117,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DirectionLimited = directionLimited;
             MaximumDirectionChangeDegrees = maximumDirectionChangeDegrees;
             AppliedDirectionChangeDegrees = appliedDirectionChangeDegrees;
+            VisibleOutputTransferred = visibleOutputTransferred;
+            ResponseBeforeRebase = responseBeforeRebase;
             PreviousResponse = previousResponse;
             CurrentResponse = currentResponse;
             ResponseDirection = responseDirection;
@@ -1133,6 +1141,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool DirectionLimited { get; }
         internal float MaximumDirectionChangeDegrees { get; }
         internal float AppliedDirectionChangeDegrees { get; }
+        internal bool VisibleOutputTransferred { get; }
+        internal float ResponseBeforeRebase { get; }
         internal float PreviousResponse { get; }
         internal float CurrentResponse { get; }
         internal Vector3 ResponseDirection { get; }
@@ -1169,16 +1179,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 previousSelectedWorldTarget,
             Vector3 selectedWorldTarget,
             CharacterFootPlantResidualCaptureReason residualCaptureReason,
-            Vector3 correctionResidualBeforeCapture,
-            Vector3 correctionResidualCapturedBeforeDecay,
-            bool correctionResidualDecayApplied,
-            float correctionResidualBaseHalfLifeSeconds,
-            bool correctionResidualDeadlineHalfLifeAvailable,
-            float correctionResidualDeadlineHalfLifeSeconds,
-            float correctionResidualAppliedHalfLifeSeconds,
-            Vector3 correctionResidualAfterDecay,
-            float correctionResidualCompletionTolerance,
-            bool correctionResidualClearedAtCompletionTolerance,
+            Vector3 worldResidualBeforeCapture,
+            Vector3 worldResidualCapturedBeforeDecay,
+            bool worldResidualDecayApplied,
+            float worldResidualBaseHalfLifeSeconds,
+            bool worldResidualDeadlineHalfLifeAvailable,
+            float worldResidualDeadlineHalfLifeSeconds,
+            float worldResidualAppliedHalfLifeSeconds,
+            Vector3 worldResidualAfterDecay,
+            float worldResidualCompletionTolerance,
+            bool worldResidualClearedAtCompletionTolerance,
             CharacterFootVerticalContinuityOwner verticalContinuityOwners,
             Vector3 effectiveCorrectionBefore,
             Vector3 effectiveCorrectionAfter,
@@ -1207,24 +1217,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreviousSelectedWorldTarget = previousSelectedWorldTarget;
             SelectedWorldTarget = selectedWorldTarget;
             ResidualCaptureReason = residualCaptureReason;
-            CorrectionResidualBeforeCapture =
-                correctionResidualBeforeCapture;
-            CorrectionResidualCapturedBeforeDecay =
-                correctionResidualCapturedBeforeDecay;
-            CorrectionResidualDecayApplied = correctionResidualDecayApplied;
-            CorrectionResidualBaseHalfLifeSeconds =
-                correctionResidualBaseHalfLifeSeconds;
-            CorrectionResidualDeadlineHalfLifeAvailable =
-                correctionResidualDeadlineHalfLifeAvailable;
-            CorrectionResidualDeadlineHalfLifeSeconds =
-                correctionResidualDeadlineHalfLifeSeconds;
-            CorrectionResidualAppliedHalfLifeSeconds =
-                correctionResidualAppliedHalfLifeSeconds;
-            CorrectionResidualAfterDecay = correctionResidualAfterDecay;
-            CorrectionResidualCompletionTolerance =
-                correctionResidualCompletionTolerance;
-            CorrectionResidualClearedAtCompletionTolerance =
-                correctionResidualClearedAtCompletionTolerance;
+            WorldResidualBeforeCapture = worldResidualBeforeCapture;
+            WorldResidualCapturedBeforeDecay =
+                worldResidualCapturedBeforeDecay;
+            WorldResidualDecayApplied = worldResidualDecayApplied;
+            WorldResidualBaseHalfLifeSeconds =
+                worldResidualBaseHalfLifeSeconds;
+            WorldResidualDeadlineHalfLifeAvailable =
+                worldResidualDeadlineHalfLifeAvailable;
+            WorldResidualDeadlineHalfLifeSeconds =
+                worldResidualDeadlineHalfLifeSeconds;
+            WorldResidualAppliedHalfLifeSeconds =
+                worldResidualAppliedHalfLifeSeconds;
+            WorldResidualAfterDecay = worldResidualAfterDecay;
+            WorldResidualCompletionTolerance =
+                worldResidualCompletionTolerance;
+            WorldResidualClearedAtCompletionTolerance =
+                worldResidualClearedAtCompletionTolerance;
             VerticalContinuityOwners = verticalContinuityOwners;
             EffectiveCorrectionBefore = effectiveCorrectionBefore;
             EffectiveCorrectionAfter = effectiveCorrectionAfter;
@@ -1254,16 +1263,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PreviousSelectedWorldTarget { get; }
         internal Vector3 SelectedWorldTarget { get; }
         internal CharacterFootPlantResidualCaptureReason ResidualCaptureReason { get; }
-        internal Vector3 CorrectionResidualBeforeCapture { get; }
-        internal Vector3 CorrectionResidualCapturedBeforeDecay { get; }
-        internal bool CorrectionResidualDecayApplied { get; }
-        internal float CorrectionResidualBaseHalfLifeSeconds { get; }
-        internal bool CorrectionResidualDeadlineHalfLifeAvailable { get; }
-        internal float CorrectionResidualDeadlineHalfLifeSeconds { get; }
-        internal float CorrectionResidualAppliedHalfLifeSeconds { get; }
-        internal Vector3 CorrectionResidualAfterDecay { get; }
-        internal float CorrectionResidualCompletionTolerance { get; }
-        internal bool CorrectionResidualClearedAtCompletionTolerance { get; }
+        internal Vector3 WorldResidualBeforeCapture { get; }
+        internal Vector3 WorldResidualCapturedBeforeDecay { get; }
+        internal bool WorldResidualDecayApplied { get; }
+        internal float WorldResidualBaseHalfLifeSeconds { get; }
+        internal bool WorldResidualDeadlineHalfLifeAvailable { get; }
+        internal float WorldResidualDeadlineHalfLifeSeconds { get; }
+        internal float WorldResidualAppliedHalfLifeSeconds { get; }
+        internal Vector3 WorldResidualAfterDecay { get; }
+        internal float WorldResidualCompletionTolerance { get; }
+        internal bool WorldResidualClearedAtCompletionTolerance { get; }
         internal CharacterFootVerticalContinuityOwner VerticalContinuityOwners { get; }
         internal Vector3 EffectiveCorrectionBefore { get; }
         internal Vector3 EffectiveCorrectionAfter { get; }
@@ -1303,8 +1312,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSupportTarget SelectedSupportTarget;
         internal bool HasPreviousResponseOutputPoint;
         internal Vector3 PreviousResponseOutputPoint;
-        internal Vector3 PlantCorrectionResidual;
-        internal bool PlantCorrectionResidualTransitionActive;
+        internal Vector3 PlantWorldResidual;
+        internal bool PlantWorldResidualTransitionActive;
         internal bool HasCorrectionResponse;
         internal float CorrectionResponse;
         internal CharacterFootCorrectionResponseFact CorrectionResponseFact;
@@ -1345,6 +1354,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool preparedPlantActive,
             in CharacterFootGroundPathLanding preparedPlantTarget,
             in CharacterFootCurrentSupportObservation currentSupport,
+            bool previousVisibleOutputAvailable,
+            Vector3 previousVisibleOutputPoint,
             in CharacterFootLockRequest lockRequest,
             float formalSupport,
             ulong formalSupportEventIdentity,
@@ -1371,6 +1382,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreparedPlantActive = preparedPlantActive;
             PreparedPlantTarget = preparedPlantTarget;
             CurrentSupport = currentSupport;
+            PreviousVisibleOutputAvailable = previousVisibleOutputAvailable;
+            PreviousVisibleOutputPoint = previousVisibleOutputPoint;
             LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
@@ -1398,6 +1411,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PreparedPlantActive { get; }
         internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
         internal CharacterFootCurrentSupportObservation CurrentSupport { get; }
+        internal bool PreviousVisibleOutputAvailable { get; }
+        internal Vector3 PreviousVisibleOutputPoint { get; }
         internal CharacterFootLockRequest LockRequest { get; }
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }

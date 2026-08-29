@@ -72,10 +72,10 @@
 - [x] 6.3 在唯一Interpolation内建立同Event持久Plant Target高度历史与单调`PlantBlend`权重，让Approach、Landing与Locked共用同一Policy；该步骤只确认持久槽、目标高度历史和单调权重已经进入唯一Owner，不代表状态切换混合、门控、Correction历史与完成条件已经闭合
 - [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
 - [x] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；Landing完成Decision延后到双脚/Pelvis Reach求解之后，未满足时保留同Anchor Landing继续接管
-- [x] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼；Swing进入与Plant同属每脚唯一Target Height历史，并记录Raw、History Before、Delta、Applied Delta、Clamp与Filtered Height
+- [x] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼；Swing进入与Plant同属每脚唯一Target Height历史，正常Phase直接刷新正式Height，同Event Ground Path换代且Landing沿Up有效变化才限速，并记录Raw、History Before、Delta、Applied Delta、Rate Limited、Clamp与Filtered Height
 - [x] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策、`NextSwingConstraintWeight`状态及对应代码和诊断列
 - [ ] 6.8 发布Formal Foot Height、目标高度、限速前后Correction、竖直速率、Envelope/Anchor穿透、Ground Catchup、Full Lock门控和最终Correction诊断事实，删除把同帧抬升描述为Safety Floor成功的旧口径
-- [x] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只控制同一每脚Target Height语义在Swing、Approach与Plant间连续演进，现有`MaximumVerticalCorrectionSpeed`只控制状态混合后的Effective Correction历史，不提供共享默认值
+- [x] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只控制同Event Ground Path换代且Landing沿Up有效变化及Approach/Plant目标接管，不限制正常动画Phase，现有`MaximumVerticalCorrectionSpeed`只控制状态混合后的Effective Correction历史，不提供共享默认值
 - [ ] 6.10 按ZZZ已确认顺序闭合`当前态到目标态混合 -> 目标高度历史限速 -> typed状态权重混合 -> Correction历史限速 -> 既有Foot Goal权重基准混合`，并用项目正式State、Response、Event与边沿定义各历史的更新、冻结、强制刷新和Reset门；同Event换点、Contact Verification、Lock Response切换与Same-Event Reentry不得跳过状态混合或同时清零两份历史
 - [ ] 6.11 删除Correction限速之前或之后重复修改可见Correction的Plant、Ground或Goal混合路径，确认基准混合只由既有Foot Goal/Position Weight执行一次，并把两次限速的输入、历史、输出、Clamp与Reset原因纳入6.8诊断
 

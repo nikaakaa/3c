@@ -1553,7 +1553,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return false;
             }
-            if (motion.ConstraintState == CharacterFootConstraintState.Landing)
+            if (motion.ConstraintState == CharacterFootConstraintState.Landing ||
+                motion.ConstraintState == CharacterFootConstraintState.Locked ||
+                motion.ConstraintState == CharacterFootConstraintState.Releasing)
                 return resolved.ContactReference.IsAvailable;
             return step.IsAuthoritative &&
                    step.HasConsistentLandingEventIdentity &&

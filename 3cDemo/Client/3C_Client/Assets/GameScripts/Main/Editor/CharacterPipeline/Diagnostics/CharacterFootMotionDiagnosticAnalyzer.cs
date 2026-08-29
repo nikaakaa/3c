@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/28";
+        const string Schema = "character-foot-motion-facts/29";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 28;
+        const int AnalyzerVersion = 29;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 800;
         const float PositionNoiseFloor = 0.001f;
@@ -2443,20 +2443,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 currentState.SwingTargetMaximumVerticalSpeed);
             float filteredTargetHeight =
                 currentState.SwingFilteredTargetHeightBefore +
-                Mathf.Clamp(
-                    targetHeightDelta,
-                    -maximumHeightDelta,
-                    maximumHeightDelta);
+                (currentState.SwingTargetHeightRateLimited
+                    ? Mathf.Clamp(
+                        targetHeightDelta,
+                        -maximumHeightDelta,
+                        maximumHeightDelta)
+                    : targetHeightDelta);
             if (!float.IsFinite(rawTargetHeight) ||
                 !float.IsFinite(filteredTargetHeight) ||
                 !float.IsFinite(originalSoleHeight))
             {
                 return false;
             }
-            float verticalCorrection = Mathf.Max(
+            target = up * Mathf.Max(
                 0f,
                 filteredTargetHeight - originalSoleHeight);
-            target = up * verticalCorrection;
             return FiniteVector(target);
         }
 
@@ -3742,6 +3743,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionSwingTargetHeightDelta"),
                 SwingTargetHeightAppliedDelta =
                     Float("FootMotionSwingTargetHeightAppliedDelta"),
+                SwingTargetHeightRateLimited =
+                    Int("FootMotionSwingTargetHeightRateLimited") != 0,
                 SwingTargetHeightClamped =
                     Int("FootMotionSwingTargetHeightClamped") != 0,
                 SwingTargetMaximumVerticalSpeed =
@@ -3995,6 +3998,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (frame.PlantInterpolationEvaluated)
             {
+                bool directLockedFollow =
+                    frame.ConstraintStateBefore == "Locked";
                 float targetBudget =
                     frame.PlantTargetMaximumVerticalSpeed *
                     frame.DeltaSeconds;
@@ -4021,8 +4026,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !float.IsFinite(frame.PlantTargetAppliedVerticalDelta) ||
                     !float.IsFinite(frame.PlantCorrectionVerticalDelta) ||
                     !float.IsFinite(frame.PlantCorrectionAppliedVerticalDelta) ||
+                    !directLockedFollow &&
                     Math.Abs(frame.PlantTargetAppliedVerticalDelta) >
                     targetBudget + PositionNoiseFloor ||
+                    !directLockedFollow &&
                     Math.Abs(frame.PlantCorrectionAppliedVerticalDelta) >
                     correctionBudget + PositionNoiseFloor ||
                     frame.PlantTargetVerticalClamped != targetClampExpected ||
@@ -4098,16 +4105,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     float maximumHeightDelta = ResolveVerticalHistoryDelta(
                         frame.DeltaSeconds,
                         frame.SwingTargetMaximumVerticalSpeed);
-                    float expectedAppliedHeightDelta = Mathf.Clamp(
-                        expectedHeightDelta,
-                        -maximumHeightDelta,
-                        maximumHeightDelta);
+                    float expectedAppliedHeightDelta =
+                        frame.SwingTargetHeightRateLimited
+                            ? Mathf.Clamp(
+                                expectedHeightDelta,
+                                -maximumHeightDelta,
+                                maximumHeightDelta)
+                            : expectedHeightDelta;
                     float expectedFilteredTargetHeight =
                         frame.SwingFilteredTargetHeightBefore +
                         expectedAppliedHeightDelta;
-                    bool expectedHeightClamp = !Mathf.Approximately(
-                        expectedHeightDelta,
-                        expectedAppliedHeightDelta);
+                    bool expectedHeightClamp =
+                        frame.SwingTargetHeightRateLimited &&
+                        !Mathf.Approximately(
+                            expectedHeightDelta,
+                            expectedAppliedHeightDelta);
+                    float expectedFilteredCorrection = Mathf.Max(
+                        0f,
+                        expectedFilteredTargetHeight - originalSoleAlongUp);
                     if (!frame.PathContinuityEvaluated ||
                         !frame.PathAvailableAfter ||
                         frame.PathCurrentLandingEventIdentity !=
@@ -4124,18 +4139,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             frame.SwingTargetHeightAppliedDelta -
                             expectedAppliedHeightDelta) >
                         PositionNoiseFloor ||
-                        frame.SwingTargetHeightClamped !=
-                        expectedHeightClamp ||
+                        frame.SwingTargetHeightClamped != expectedHeightClamp ||
                         Math.Abs(
                             frame.SwingFilteredTargetHeightAlongUp -
                             expectedFilteredTargetHeight) >
                         PositionNoiseFloor ||
                         Vector3.Distance(
                             frame.BuilderSwingTargetCorrection,
-                            up * Mathf.Max(
-                                0f,
-                                expectedFilteredTargetHeight -
-                                originalSoleAlongUp)) >
+                            up * expectedFilteredCorrection) >
                         PositionNoiseFloor)
                     {
                         throw new InvalidDataException(
@@ -4965,6 +4976,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionSwingFilteredTargetHeightBefore",
                 "FootMotionSwingTargetHeightDelta",
                 "FootMotionSwingTargetHeightAppliedDelta",
+                "FootMotionSwingTargetHeightRateLimited",
                 "FootMotionSwingTargetHeightClamped",
                 "FootMotionSwingTargetMaximumVerticalSpeed",
                 "FootMotionSwingFilteredTargetHeightAlongUp",
@@ -5614,6 +5626,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float SwingFilteredTargetHeightBefore;
             internal float SwingTargetHeightDelta;
             internal float SwingTargetHeightAppliedDelta;
+            internal bool SwingTargetHeightRateLimited;
             internal bool SwingTargetHeightClamped;
             internal float SwingTargetMaximumVerticalSpeed;
             internal float SwingFilteredTargetHeightAlongUp;

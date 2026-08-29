@@ -5318,8 +5318,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PlantTarget" => frame.SafetyFloorAvailable &&
                                  frame.SafetyFloorOwnerSurfaceIdentity != 0 &&
                                  frame.SafetyFloorOwnerPathIdentity == 0 &&
-                                 frame.PlantInterpolationEvaluated &&
-                                 !frame.PlantTargetVerified &&
+                                 frame.ApproachPlantTargetPrepared &&
+                                 !frame.PlantInterpolationEvaluated &&
                                  (frame.ConstraintState == "Swing" ||
                                   frame.ConstraintState == "UnlockedSupport"),
                 _ => false

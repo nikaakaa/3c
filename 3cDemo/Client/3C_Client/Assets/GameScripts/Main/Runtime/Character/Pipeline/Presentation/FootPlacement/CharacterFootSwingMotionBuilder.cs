@@ -679,6 +679,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerified = path.PlantTargetVerified;
             PlantTargetKind = path.PlantTargetKind.ToString();
             PlantLockResponse = path.PlantLockResponse;
+            PlantLockWeightCompleted = path.PlantLockWeightCompleted;
             PlantDesiredPoint = path.PlantDesiredPoint;
             PlantFilteredPoint = path.PlantFilteredPoint;
             CharacterFootSupportTarget selectedSupportTarget =
@@ -883,6 +884,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantTargetVerified { get; }
         public string PlantTargetKind { get; }
         public CharacterFootLockResponse PlantLockResponse { get; }
+        public bool PlantLockWeightCompleted { get; }
         public Vector3 PlantDesiredPoint { get; }
         public Vector3 PlantFilteredPoint { get; }
         public CharacterFootSupportTargetDiagnostics SelectedSupportTarget

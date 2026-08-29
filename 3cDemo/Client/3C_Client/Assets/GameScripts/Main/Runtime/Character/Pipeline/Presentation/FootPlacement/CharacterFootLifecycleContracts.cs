@@ -282,6 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerified = false;
             PlantTargetKind = CharacterFootPlantTargetKind.None;
             PlantLockResponse = CharacterFootLockResponse.None;
+            PlantLockWeightCompleted = false;
             PlantDesiredPoint = default;
             PlantFilteredPoint = default;
             SelectedSupportTarget = default;
@@ -452,6 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerified = plant.Verified;
             PlantTargetKind = plant.TargetKind;
             PlantLockResponse = plant.LockResponse;
+            PlantLockWeightCompleted = stateTarget.LockWeightCompleted;
             PlantDesiredPoint = plant.DesiredPoint;
             PlantFilteredPoint = plant.FilteredPoint;
             CharacterFootSupportTarget selectedSupport =
@@ -623,6 +625,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantTargetVerified { get; }
         internal CharacterFootPlantTargetKind PlantTargetKind { get; }
         internal CharacterFootLockResponse PlantLockResponse { get; }
+        internal bool PlantLockWeightCompleted { get; }
         internal Vector3 PlantDesiredPoint { get; }
         internal Vector3 PlantFilteredPoint { get; }
         internal CharacterFootSupportTarget SelectedSupportTarget { get; }
@@ -1043,7 +1046,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float SecondsSinceEdge;
         internal ulong LatestContactEventIdentity;
         internal ulong LatestReleasedContactEventIdentity;
+        internal ulong CompletedLockWeightEventIdentity;
         internal CharacterFootContactEdge LastEdge;
+
+        internal bool HasCompletedLockWeight(ulong eventIdentity) =>
+            eventIdentity != 0 &&
+            CompletedLockWeightEventIdentity == eventIdentity;
     }
 
     internal struct CharacterFootContactContext
@@ -1534,6 +1542,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 plantTargetPoint,
             CharacterFootPlantTargetKind plantTargetKind,
             CharacterFootLockResponse plantLockResponse,
+            bool lockWeightCompleted,
             bool supportTargetAvailable,
             in CharacterFootSupportTarget supportTarget,
             bool stateEntered,
@@ -1552,6 +1561,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetPoint = plantTargetPoint;
             PlantTargetKind = plantTargetKind;
             PlantLockResponse = plantLockResponse;
+            LockWeightCompleted = lockWeightCompleted;
             SupportTargetAvailable = supportTargetAvailable;
             SupportTarget = supportTarget;
             StateEntered = stateEntered;
@@ -1571,6 +1581,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantTargetPoint { get; }
         internal CharacterFootPlantTargetKind PlantTargetKind { get; }
         internal CharacterFootLockResponse PlantLockResponse { get; }
+        internal bool LockWeightCompleted { get; }
         internal bool SupportTargetAvailable { get; }
         internal CharacterFootSupportTarget SupportTarget { get; }
         internal bool StateEntered { get; }

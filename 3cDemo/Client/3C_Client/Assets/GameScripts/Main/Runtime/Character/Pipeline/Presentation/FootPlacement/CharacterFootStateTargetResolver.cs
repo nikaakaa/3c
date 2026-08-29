@@ -29,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootPlantTargetKind.None,
                     CharacterFootLockResponse.None,
                     false,
+                    false,
                     default,
                     transition.StateChanged,
                     false,
@@ -184,6 +185,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.Contact.Anchor,
                 CharacterFootPlantTargetKind.VerifiedAnchor,
                 CharacterFootLockResponse.None,
+                context.ContactTransition.HasCompletedLockWeight(
+                    context.Contact.EventIdentity),
                 new CharacterFootSupportTarget(
                     frame.FrameSequence,
                     frame.CompletionIdentity,
@@ -259,6 +262,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? CharacterFootPlantTargetKind.LockedFullAnchor
                     : CharacterFootPlantTargetKind.LockedSliding,
                 context.Discrete.LockResponse,
+                context.ContactTransition.HasCompletedLockWeight(
+                    context.Contact.EventIdentity),
                 new CharacterFootSupportTarget(
                     frame.FrameSequence,
                     frame.CompletionIdentity,
@@ -305,6 +310,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 CharacterFootPlantTargetKind.None,
                 CharacterFootLockResponse.None,
+                false,
                 supportTargetAvailable,
                 in supportTarget,
                 transition.StateChanged,
@@ -323,6 +329,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 point,
             CharacterFootPlantTargetKind targetKind,
             CharacterFootLockResponse lockResponse,
+            bool lockWeightCompleted,
             CharacterFootSupportTarget supportTarget,
             in CharacterFootTransitionDecision transition,
             float timeToLandingSeconds,
@@ -338,6 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 point,
                 targetKind,
                 lockResponse,
+                lockWeightCompleted,
                 true,
                 in supportTarget,
                 transition.StateChanged,

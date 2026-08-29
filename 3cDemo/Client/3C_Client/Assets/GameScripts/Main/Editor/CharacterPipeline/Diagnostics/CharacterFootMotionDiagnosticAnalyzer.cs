@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/35";
+        const string Schema = "character-foot-motion-facts/36";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 35;
+        const int AnalyzerVersion = 36;
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 800;
         const float PositionNoiseFloor = 0.001f;
@@ -219,16 +219,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     ["FootPlacementOutputOffsetStep"] = visibleStep,
                     ["FootPlacementOutputOffsetSpeed"] = visibleSpeed,
-                    ["PlantTargetPointStep"] = Vector3.Distance(
-                        previous.PlantFilteredPoint,
-                        current.PlantFilteredPoint),
-                    ["PlantCorrectionStep"] = Vector3.Distance(
-                        previous.PlantBlendedCorrection,
-                        current.PlantBlendedCorrection),
+                    ["PlantMixedWorldTargetStep"] = Vector3.Distance(
+                        previous.PlantMixedWorldTarget,
+                        current.PlantMixedWorldTarget),
+                    ["PlantOutputPointStep"] = Vector3.Distance(
+                        current.PlantPreviousOutputPoint,
+                        current.PlantOutputPoint),
+                    ["PlantWorldResidualCaptureDelta"] = Vector3.Distance(
+                        current.PlantWorldResidualBeforeCapture,
+                        current.PlantWorldResidualAfterCapture),
+                    ["PlantWorldResidualAfterDecay"] =
+                        current.PlantWorldResidualAfterDecay.magnitude,
+                    ["PlantEffectiveCorrectionStep"] = Vector3.Distance(
+                        previous.PlantEffectiveCorrectionAfter,
+                        current.PlantEffectiveCorrectionAfter),
                     ["PlantTargetAppliedVerticalDelta"] = Math.Abs(
                         current.PlantTargetAppliedVerticalDelta),
-                    ["PlantCorrectionAppliedVerticalDelta"] = Math.Abs(
-                        current.PlantCorrectionAppliedVerticalDelta),
                     ["PlantBlendWeightDelta"] = Math.Abs(
                         current.PlantBlendWeight -
                         previous.PlantBlendWeight),
@@ -246,14 +252,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     StringComparer.Ordinal)
                 {
                     ["plantTargetEventChanged"] = eventChanged,
+                    ["plantTargetKindChanged"] = !string.Equals(
+                        previous.PlantTargetKind,
+                        current.PlantTargetKind,
+                        StringComparison.Ordinal),
+                    ["plantLockResponseChanged"] = !string.Equals(
+                        previous.PlantLockResponse,
+                        current.PlantLockResponse,
+                        StringComparison.Ordinal),
                     ["plantTargetForceRefreshed"] =
                         current.PlantTargetForceRefreshed,
                     ["plantTargetVerticalClamped"] =
                         current.PlantTargetVerticalClamped,
-                    ["plantCorrectionVerticalClamped"] =
-                        current.PlantCorrectionVerticalClamped,
-                    ["directLockedFollow"] =
-                        current.ConstraintStateBefore == "Locked",
+                    ["plantResidualCaptured"] =
+                        current.PlantResidualCaptureReason != "None",
+                    ["plantWeightStarted"] = HasRevisionReason(
+                        current.PlantResidualCaptureReason,
+                        "WeightStarted"),
+                    ["plantWeightCompleted"] = HasRevisionReason(
+                        current.PlantResidualCaptureReason,
+                        "WeightCompleted"),
+                    ["targetHeightOwned"] =
+                        current.PlantVerticalContinuityOwner ==
+                        "TargetHeightHistory",
+                    ["plantWorldResidualOwned"] =
+                        current.PlantVerticalContinuityOwner ==
+                        "PlantWorldResidual",
+                    ["plantWeightBlendOwned"] =
+                        current.PlantVerticalContinuityOwner ==
+                        "PlantWeightBlend",
+                    ["plantTargetOwned"] =
+                        current.PlantVerticalContinuityOwner ==
+                        "PlantTarget",
+                    ["correctionStageBypassed"] =
+                        current.PlantCorrectionStageDisposition ==
+                        "BypassedByTargetHeightOwner" ||
+                        current.PlantCorrectionStageDisposition ==
+                        "BypassedByWorldResidualOwner" ||
+                        current.PlantCorrectionStageDisposition ==
+                        "BypassedByWeightBlendOwner",
+                    ["plantTargetSynchronized"] =
+                        current.PlantCorrectionStageDisposition ==
+                        "SynchronizedToPlantTarget",
                     ["safetyFloorOwnerChanged"] = ownerChanged,
                     ["physicalOutputAvailable"] = true
                 };
@@ -564,32 +604,62 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PlantTargetEventIdentity.ToString(
                             CultureInfo.InvariantCulture),
                     plantTargetVerified = current.PlantTargetVerified,
+                    plantTargetKind = current.PlantTargetKind,
+                    plantLockResponse = current.PlantLockResponse,
                     plantDesiredPoint = CharacterFootVectorFact.From(
                         current.PlantDesiredPoint),
                     plantFilteredPoint = CharacterFootVectorFact.From(
                         current.PlantFilteredPoint),
+                    plantPreviousBlendWeight =
+                        current.PlantPreviousBlendWeight,
                     plantBlendWeight = current.PlantBlendWeight,
                     plantTargetMaximumVerticalSpeed =
                         current.PlantTargetMaximumVerticalSpeed,
+                    plantTargetHeightBefore =
+                        current.PlantTargetHeightBefore,
                     plantTargetVerticalDelta =
                         current.PlantTargetVerticalDelta,
                     plantTargetAppliedVerticalDelta =
                         current.PlantTargetAppliedVerticalDelta,
+                    plantTargetHeightAfter =
+                        current.PlantTargetHeightAfter,
                     plantTargetHeightEventIdentity =
                         current.PlantTargetHeightEventIdentity.ToString(
                             CultureInfo.InvariantCulture),
+                    plantTargetHeightUpdateReason =
+                        current.PlantTargetHeightUpdateReason,
                     plantTargetVerticalClamped =
                         current.PlantTargetVerticalClamped,
-                    plantBlendedCorrection = CharacterFootVectorFact.From(
-                        current.PlantBlendedCorrection),
-                    plantCorrectionMaximumVerticalSpeed =
-                        current.PlantCorrectionMaximumVerticalSpeed,
-                    plantCorrectionVerticalDelta =
-                        current.PlantCorrectionVerticalDelta,
-                    plantCorrectionAppliedVerticalDelta =
-                        current.PlantCorrectionAppliedVerticalDelta,
-                    plantCorrectionVerticalClamped =
-                        current.PlantCorrectionVerticalClamped,
+                    plantPreviousMixedWorldTarget =
+                        CharacterFootVectorFact.From(
+                            current.PlantPreviousMixedWorldTarget),
+                    plantMixedWorldTarget = CharacterFootVectorFact.From(
+                        current.PlantMixedWorldTarget),
+                    plantPreviousOutputPoint = CharacterFootVectorFact.From(
+                        current.PlantPreviousOutputPoint),
+                    plantOutputPoint = CharacterFootVectorFact.From(
+                        current.PlantOutputPoint),
+                    plantResidualCaptureReason =
+                        current.PlantResidualCaptureReason,
+                    plantWorldResidualBeforeCapture =
+                        CharacterFootVectorFact.From(
+                            current.PlantWorldResidualBeforeCapture),
+                    plantWorldResidualAfterCapture =
+                        CharacterFootVectorFact.From(
+                            current.PlantWorldResidualAfterCapture),
+                    plantWorldResidualAfterDecay =
+                        CharacterFootVectorFact.From(
+                            current.PlantWorldResidualAfterDecay),
+                    plantVerticalContinuityOwner =
+                        current.PlantVerticalContinuityOwner,
+                    plantCorrectionStageDisposition =
+                        current.PlantCorrectionStageDisposition,
+                    plantEffectiveCorrectionBefore =
+                        CharacterFootVectorFact.From(
+                            current.PlantEffectiveCorrectionBefore),
+                    plantEffectiveCorrectionAfter =
+                        CharacterFootVectorFact.From(
+                            current.PlantEffectiveCorrectionAfter),
                     plantOutputDistance = current.PlantOutputDistance,
                     plantPenetrationDepth = current.PlantPenetrationDepth,
                     presentationDeltaSeconds = current.DeltaSeconds,
@@ -893,6 +963,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             List<EventFact> events)
         {
             var firstByIdentity = new Dictionary<ulong, FootFrame>();
+            var forcedVerificationByEvent = new HashSet<string>(
+                StringComparer.Ordinal);
             for (int i = 0; i < frames.Count; i++)
             {
                 FootFrame current = frames[i];
@@ -917,8 +989,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                "Queried";
                 bool reused = current.LandingObservationCacheState ==
                               "Reused";
-                bool duplicateQuery = identitySeenBefore &&
-                                      current.LandingObservationQueryExecuted;
+                bool forcedVerification =
+                    current.LandingObservationQueryPurpose ==
+                    "CurrentContactVerification" &&
+                    current.LandingObservationRefreshMode ==
+                    "ForcedPlantVerification";
+                string forcedVerificationKey = string.Concat(
+                    current.Side,
+                    ":",
+                    current.ObservedLandingEventIdentity.ToString(
+                        CultureInfo.InvariantCulture));
+                bool firstForcedVerification = forcedVerification &&
+                    forcedVerificationByEvent.Add(forcedVerificationKey);
+                bool duplicateQuery =
+                    current.LandingObservationQueryExecuted &&
+                    (forcedVerification && !firstForcedVerification ||
+                     identitySeenBefore && !forcedVerification);
                 bool distanceExceeded =
                     current.LandingObservationQueryInputDistance >
                     current.LandingObservationPredictionInputAccumulationDistance;
@@ -933,10 +1019,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "ComponentUpAngleExceeded");
                 bool hasQueryReason = current.LandingObservationQueryReason !=
                                       "None";
+                bool purposeMatchesRefresh = forcedVerification ||
+                    current.LandingObservationQueryPurpose ==
+                    "FutureLanding" &&
+                    (current.LandingObservationRefreshMode == "Thresholded" ||
+                     current.LandingObservationRefreshMode ==
+                     "ChangedSlidingAdmissionInput");
                 bool queryThresholdContractConsistent =
                     distanceExceeded == distanceReason &&
                     angleExceeded == angleReason &&
                     queried == hasQueryReason &&
+                    purposeMatchesRefresh &&
+                    (!forcedVerification || queried) &&
                     (!reused || !distanceExceeded && !angleExceeded);
                 bool cacheStateConsistent =
                     (queried && current.LandingObservationQueryExecuted ||
@@ -963,6 +1057,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     cacheState = current.LandingObservationCacheState,
                     queryExecutedThisFrame =
                         current.LandingObservationQueryExecuted,
+                    queryPurpose =
+                        current.LandingObservationQueryPurpose,
+                    refreshMode = current.LandingObservationRefreshMode,
                     queryReason = current.LandingObservationQueryReason,
                     canonicalRawLanding = CharacterFootVectorFact.From(
                         current.LandingObservationCanonicalRaw),
@@ -995,6 +1092,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             current.FutureLandingSelectedDistance
                     },
                     identitySeenBefore = identitySeenBefore,
+                    forcedPlantVerification = forcedVerification,
+                    firstForcedPlantVerification =
+                        firstForcedVerification,
+                    duplicateQuery = duplicateQuery,
                     resultMatchesPrevious = resultMatchesPrevious,
                     cacheStateConsistent = cacheStateConsistent,
                     queryThresholdContractConsistent =
@@ -1021,6 +1122,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["reused"] = reused,
                     ["queryExecutedThisFrame"] =
                         current.LandingObservationQueryExecuted,
+                    ["forcedPlantVerification"] = forcedVerification,
+                    ["firstForcedPlantVerification"] =
+                        firstForcedVerification,
+                    ["duplicateQuery"] = duplicateQuery,
+                    ["purposeMatchesRefresh"] = purposeMatchesRefresh,
                     ["identitySeenBefore"] = identitySeenBefore,
                     ["resultMatchesPrevious"] = resultMatchesPrevious,
                     ["cacheStateConsistent"] = cacheStateConsistent,
@@ -3788,6 +3894,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Cell("LandingObservationCacheState"),
                 LandingObservationQueryExecuted =
                     Int("LandingObservationQueryExecuted") != 0,
+                LandingObservationQueryPurpose =
+                    Cell("LandingObservationQueryPurpose"),
+                LandingObservationRefreshMode =
+                    Cell("LandingObservationRefreshMode"),
                 LandingObservationQueryReason =
                     Cell("LandingObservationQueryReason"),
                 LandingObservationCanonicalRaw =
@@ -3806,6 +3916,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("LandingObservationPredictionInputAccumulationDistance"),
                 LandingObservationComponentUpChangeAngleDegrees =
                     Float("LandingObservationComponentUpChangeAngleDegrees"),
+                FutureLandingQueryPurpose = Cell("QueryPurpose"),
                 FutureLandingQueryDirection = Vector("QueryDirection"),
                 FutureLandingCandidateSelectionState =
                     Cell("QueryCandidateSelectionState"),
@@ -4047,33 +4158,57 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Ulong("FootMotionPlantTargetEventIdentity"),
                 PlantTargetVerified =
                     Int("FootMotionPlantTargetVerified") != 0,
+                PlantTargetKind = Cell("FootMotionPlantTargetKind"),
+                PlantLockResponse = Cell("FootMotionPlantLockResponse"),
                 PlantDesiredPoint = Vector("FootMotionPlantDesiredPoint"),
                 PlantFilteredPoint = Vector("FootMotionPlantFilteredPoint"),
+                PlantPreviousBlendWeight =
+                    Float("FootMotionPlantPreviousBlendWeight"),
                 PlantBlendWeight = Float("FootMotionPlantBlendWeight"),
                 PlantTargetMaximumVerticalSpeed =
                     Float("FootMotionPlantTargetMaximumVerticalSpeed"),
+                PlantTargetHeightBefore =
+                    Float("FootMotionPlantTargetHeightBefore"),
                 PlantTargetVerticalDelta =
                     Float("FootMotionPlantTargetVerticalDelta"),
                 PlantTargetAppliedVerticalDelta =
                     Float("FootMotionPlantTargetAppliedVerticalDelta"),
+                PlantTargetHeightAfter =
+                    Float("FootMotionPlantTargetHeightAfter"),
                 PlantTargetHeightEventIdentity =
                     Ulong("FootMotionPlantTargetHeightEventIdentity"),
+                PlantTargetHeightUpdateReason =
+                    Cell("FootMotionPlantTargetHeightUpdateReason"),
                 PlantTargetForceRefreshed =
                     Int("FootMotionPlantTargetForceRefreshed") != 0,
                 PlantTargetForceRefreshDistance =
                     Float("FootMotionPlantTargetForceRefreshDistance"),
                 PlantTargetVerticalClamped =
                     Int("FootMotionPlantTargetVerticalClamped") != 0,
-                PlantBlendedCorrection =
-                    Vector("FootMotionPlantBlendedCorrection"),
-                PlantCorrectionMaximumVerticalSpeed =
-                    Float("FootMotionPlantCorrectionMaximumVerticalSpeed"),
-                PlantCorrectionVerticalDelta =
-                    Float("FootMotionPlantCorrectionVerticalDelta"),
-                PlantCorrectionAppliedVerticalDelta =
-                    Float("FootMotionPlantCorrectionAppliedVerticalDelta"),
-                PlantCorrectionVerticalClamped =
-                    Int("FootMotionPlantCorrectionVerticalClamped") != 0,
+                PlantPreviousMixedWorldTarget =
+                    Vector("FootMotionPlantPreviousMixedWorldTarget"),
+                PlantMixedWorldTarget =
+                    Vector("FootMotionPlantMixedWorldTarget"),
+                PlantPreviousOutputPoint =
+                    Vector("FootMotionPlantPreviousOutputPoint"),
+                PlantOutputPoint =
+                    Vector("FootMotionPlantOutputPoint"),
+                PlantResidualCaptureReason =
+                    Cell("FootMotionPlantResidualCaptureReason"),
+                PlantWorldResidualBeforeCapture =
+                    Vector("FootMotionPlantWorldResidualBeforeCapture"),
+                PlantWorldResidualAfterCapture =
+                    Vector("FootMotionPlantWorldResidualAfterCapture"),
+                PlantWorldResidualAfterDecay =
+                    Vector("FootMotionPlantWorldResidualAfterDecay"),
+                PlantVerticalContinuityOwner =
+                    Cell("FootMotionPlantVerticalContinuityOwner"),
+                PlantCorrectionStageDisposition =
+                    Cell("FootMotionPlantCorrectionStageDisposition"),
+                PlantEffectiveCorrectionBefore =
+                    Vector("FootMotionPlantEffectiveCorrectionBefore"),
+                PlantEffectiveCorrectionAfter =
+                    Vector("FootMotionPlantEffectiveCorrectionAfter"),
                 PlantOutputDistance =
                     Float("FootMotionPlantOutputDistance"),
                 PlantPenetrationDepth =
@@ -4207,6 +4342,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootSafetyFloorOwner>(
                 frame.SafetyFloorOwner,
                 "FootMotionSafetyFloorOwner");
+            RequireEnum<CharacterFootPlantTargetKind>(
+                frame.PlantTargetKind,
+                "FootMotionPlantTargetKind");
+            RequireEnum<CharacterFootLockResponse>(
+                frame.PlantLockResponse,
+                "FootMotionPlantLockResponse");
+            RequireEnum<CharacterFootPlantTargetHeightUpdateReason>(
+                frame.PlantTargetHeightUpdateReason,
+                "FootMotionPlantTargetHeightUpdateReason");
+            RequireFlags<CharacterFootPlantResidualCaptureReason>(
+                frame.PlantResidualCaptureReason,
+                "FootMotionPlantResidualCaptureReason");
+            RequireEnum<CharacterFootVerticalContinuityOwner>(
+                frame.PlantVerticalContinuityOwner,
+                "FootMotionPlantVerticalContinuityOwner");
+            RequireEnum<CharacterFootCorrectionStageDisposition>(
+                frame.PlantCorrectionStageDisposition,
+                "FootMotionPlantCorrectionStageDisposition");
             if (!float.IsFinite(frame.LandingReachGoalClampDistance) ||
                 frame.LandingReachGoalClampDistance < 0f ||
                 frame.LandingReachGoalClamped !=
@@ -4249,36 +4402,65 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (frame.PlantInterpolationEvaluated)
             {
-                bool directLockedFollow =
-                    frame.ConstraintStateBefore == "Locked";
-                bool directTargetFollow = directLockedFollow ||
-                                          frame.PlantTargetForceRefreshed;
+                bool directTargetFollow =
+                    frame.PlantTargetHeightUpdateReason == "Initialized" ||
+                    frame.PlantTargetHeightUpdateReason ==
+                    "VerificationRefresh" ||
+                    frame.PlantTargetHeightUpdateReason == "DirectFollow" ||
+                    frame.PlantTargetHeightUpdateReason ==
+                    "ForceRefreshDistanceExceeded";
                 float targetBudget =
                     frame.PlantTargetMaximumVerticalSpeed *
-                    frame.DeltaSeconds;
-                float correctionBudget =
-                    frame.PlantCorrectionMaximumVerticalSpeed *
                     frame.DeltaSeconds;
                 bool targetClampExpected = !Mathf.Approximately(
                     frame.PlantTargetVerticalDelta,
                     frame.PlantTargetAppliedVerticalDelta);
-                bool correctionClampExpected = !Mathf.Approximately(
-                    frame.PlantCorrectionVerticalDelta,
-                    frame.PlantCorrectionAppliedVerticalDelta);
+                bool targetHeightConsistent = Math.Abs(
+                    frame.PlantTargetHeightBefore +
+                    frame.PlantTargetAppliedVerticalDelta -
+                    frame.PlantTargetHeightAfter) <= PositionNoiseFloor;
+                bool correctionOwnerConsistent =
+                    frame.PlantVerticalContinuityOwner switch
+                    {
+                        "TargetHeightHistory" =>
+                            frame.PlantCorrectionStageDisposition ==
+                            "BypassedByTargetHeightOwner",
+                        "PlantWorldResidual" =>
+                            frame.PlantCorrectionStageDisposition ==
+                            "BypassedByWorldResidualOwner",
+                        "PlantWeightBlend" =>
+                            frame.PlantCorrectionStageDisposition ==
+                            "BypassedByWeightBlendOwner",
+                        "PlantTarget" =>
+                            frame.PlantCorrectionStageDisposition ==
+                            "SynchronizedToPlantTarget",
+                        _ => false
+                    };
                 if (frame.PlantTargetEventIdentity == 0 ||
+                    frame.PlantTargetKind == "None" ||
                     frame.PlantTargetHeightEventIdentity !=
                     frame.PlantTargetEventIdentity ||
                     !FiniteVector(frame.PlantDesiredPoint) ||
                     !FiniteVector(frame.PlantFilteredPoint) ||
-                    !FiniteVector(frame.PlantBlendedCorrection) ||
+                    !FiniteVector(frame.PlantPreviousMixedWorldTarget) ||
+                    !FiniteVector(frame.PlantMixedWorldTarget) ||
+                    !FiniteVector(frame.PlantPreviousOutputPoint) ||
+                    !FiniteVector(frame.PlantOutputPoint) ||
+                    !FiniteVector(frame.PlantWorldResidualBeforeCapture) ||
+                    !FiniteVector(frame.PlantWorldResidualAfterCapture) ||
+                    !FiniteVector(frame.PlantWorldResidualAfterDecay) ||
+                    !FiniteVector(frame.PlantEffectiveCorrectionBefore) ||
+                    !FiniteVector(frame.PlantEffectiveCorrectionAfter) ||
+                    frame.PlantPreviousBlendWeight < 0f ||
+                    frame.PlantPreviousBlendWeight > 1f ||
                     frame.PlantBlendWeight < 0f ||
                     frame.PlantBlendWeight > 1f ||
                     !float.IsFinite(frame.PlantTargetMaximumVerticalSpeed) ||
                     frame.PlantTargetMaximumVerticalSpeed <= 0f ||
-                    !float.IsFinite(frame.PlantCorrectionMaximumVerticalSpeed) ||
-                    frame.PlantCorrectionMaximumVerticalSpeed <= 0f ||
+                    !float.IsFinite(frame.PlantTargetHeightBefore) ||
                     !float.IsFinite(frame.PlantTargetVerticalDelta) ||
                     !float.IsFinite(frame.PlantTargetAppliedVerticalDelta) ||
+                    !float.IsFinite(frame.PlantTargetHeightAfter) ||
                     !float.IsFinite(frame.PlantTargetForceRefreshDistance) ||
                     frame.PlantTargetForceRefreshDistance <=
                         frame.PathRevisionDistance ||
@@ -4286,17 +4468,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Math.Abs(frame.PlantTargetVerticalDelta) <
                         frame.PlantTargetForceRefreshDistance -
                         PositionNoiseFloor ||
-                    !float.IsFinite(frame.PlantCorrectionVerticalDelta) ||
-                    !float.IsFinite(frame.PlantCorrectionAppliedVerticalDelta) ||
                     !directTargetFollow &&
                     Math.Abs(frame.PlantTargetAppliedVerticalDelta) >
                     targetBudget + PositionNoiseFloor ||
-                    !directLockedFollow &&
-                    Math.Abs(frame.PlantCorrectionAppliedVerticalDelta) >
-                    correctionBudget + PositionNoiseFloor ||
                     frame.PlantTargetVerticalClamped != targetClampExpected ||
-                    frame.PlantCorrectionVerticalClamped !=
-                    correctionClampExpected)
+                    !targetHeightConsistent ||
+                    !correctionOwnerConsistent ||
+                    Vector3.Distance(
+                        frame.PlantOutputPoint,
+                        frame.PlantMixedWorldTarget +
+                        frame.PlantWorldResidualAfterDecay) >
+                    PositionNoiseFloor ||
+                    Vector3.Distance(
+                        frame.PlantEffectiveCorrectionBefore,
+                        frame.PlantPreviousOutputPoint -
+                        frame.OriginalSole) > PositionNoiseFloor ||
+                    Vector3.Distance(
+                        frame.PlantEffectiveCorrectionAfter,
+                        frame.PlantOutputPoint - frame.OriginalSole) >
+                    PositionNoiseFloor ||
+                    Vector3.Distance(
+                        frame.PlantEffectiveCorrectionAfter,
+                        frame.InterpolationOutputCorrection) >
+                    PositionNoiseFloor ||
+                    !float.IsFinite(frame.PlantOutputDistance) ||
+                    frame.PlantOutputDistance < 0f ||
+                    !float.IsFinite(frame.PlantPenetrationDepth) ||
+                    frame.PlantPenetrationDepth < 0f)
                 {
                     throw new InvalidDataException(
                         "Foot Motion Plant interpolation facts are inconsistent.");
@@ -4582,6 +4780,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.LandingObservationSourceSampleIdentity != 0 ||
                     frame.LandingObservationCacheState != "Unavailable" ||
                     frame.LandingObservationQueryExecuted ||
+                    frame.LandingObservationQueryPurpose != "0" ||
+                    frame.LandingObservationRefreshMode != "0" ||
                     frame.LandingObservationQueryReason != "None" ||
                     frame.FutureLandingValidCandidateCount != 0 ||
                     frame.FutureLandingSelectedAvailable)
@@ -4594,9 +4794,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             bool queried = frame.LandingObservationCacheState == "Queried";
             bool reused = frame.LandingObservationCacheState == "Reused";
+            bool forcedVerification =
+                frame.LandingObservationRefreshMode ==
+                "ForcedPlantVerification";
+            bool purposeMatchesRefresh = forcedVerification
+                ? frame.LandingObservationQueryPurpose ==
+                  "CurrentContactVerification"
+                : frame.LandingObservationQueryPurpose == "FutureLanding" &&
+                  (frame.LandingObservationRefreshMode == "Thresholded" ||
+                   frame.LandingObservationRefreshMode ==
+                   "ChangedSlidingAdmissionInput");
             if (frame.LandingObservationWorldRevision == 0 ||
                 frame.LandingObservationSourceSampleIdentity == 0 ||
                 !queried && !reused ||
+                !purposeMatchesRefresh ||
+                frame.FutureLandingQueryPurpose !=
+                frame.LandingObservationQueryPurpose ||
+                forcedVerification && !queried ||
                 queried != frame.LandingObservationQueryExecuted ||
                 queried == (frame.LandingObservationQueryReason == "None") ||
                 frame.LandingObservationCanonicalComponentUp.sqrMagnitude <=
@@ -4996,6 +5210,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void RequireFlags<T>(string value, string field)
+            where T : struct, Enum
+        {
+            if (!Enum.TryParse(value, false, out T parsed))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+            ulong allowed = 0;
+            foreach (T candidate in Enum.GetValues(typeof(T)))
+                allowed |= Convert.ToUInt64(candidate);
+            ulong actual = Convert.ToUInt64(parsed);
+            if ((actual & ~allowed) != 0)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+        }
+
         static void RequireRevisionReason(string value)
         {
             string[] values = value.Split(',');
@@ -5125,6 +5358,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "LandingObservationSourceSampleCycle",
                 "LandingObservationCacheState",
                 "LandingObservationQueryExecuted",
+                "LandingObservationQueryPurpose",
+                "LandingObservationRefreshMode",
                 "LandingObservationQueryReason",
                 "LandingObservationCanonicalRawX",
                 "LandingObservationCanonicalRawY",
@@ -5286,27 +5521,56 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantInterpolationEvaluated",
                 "FootMotionPlantTargetEventIdentity",
                 "FootMotionPlantTargetVerified",
+                "FootMotionPlantTargetKind",
+                "FootMotionPlantLockResponse",
                 "FootMotionPlantDesiredPointX",
                 "FootMotionPlantDesiredPointY",
                 "FootMotionPlantDesiredPointZ",
                 "FootMotionPlantFilteredPointX",
                 "FootMotionPlantFilteredPointY",
                 "FootMotionPlantFilteredPointZ",
+                "FootMotionPlantPreviousBlendWeight",
                 "FootMotionPlantBlendWeight",
                 "FootMotionPlantTargetMaximumVerticalSpeed",
+                "FootMotionPlantTargetHeightBefore",
                 "FootMotionPlantTargetVerticalDelta",
                 "FootMotionPlantTargetAppliedVerticalDelta",
+                "FootMotionPlantTargetHeightAfter",
                 "FootMotionPlantTargetHeightEventIdentity",
+                "FootMotionPlantTargetHeightUpdateReason",
                 "FootMotionPlantTargetForceRefreshed",
                 "FootMotionPlantTargetForceRefreshDistance",
                 "FootMotionPlantTargetVerticalClamped",
-                "FootMotionPlantBlendedCorrectionX",
-                "FootMotionPlantBlendedCorrectionY",
-                "FootMotionPlantBlendedCorrectionZ",
-                "FootMotionPlantCorrectionMaximumVerticalSpeed",
-                "FootMotionPlantCorrectionVerticalDelta",
-                "FootMotionPlantCorrectionAppliedVerticalDelta",
-                "FootMotionPlantCorrectionVerticalClamped",
+                "FootMotionPlantPreviousMixedWorldTargetX",
+                "FootMotionPlantPreviousMixedWorldTargetY",
+                "FootMotionPlantPreviousMixedWorldTargetZ",
+                "FootMotionPlantMixedWorldTargetX",
+                "FootMotionPlantMixedWorldTargetY",
+                "FootMotionPlantMixedWorldTargetZ",
+                "FootMotionPlantPreviousOutputPointX",
+                "FootMotionPlantPreviousOutputPointY",
+                "FootMotionPlantPreviousOutputPointZ",
+                "FootMotionPlantOutputPointX",
+                "FootMotionPlantOutputPointY",
+                "FootMotionPlantOutputPointZ",
+                "FootMotionPlantResidualCaptureReason",
+                "FootMotionPlantWorldResidualBeforeCaptureX",
+                "FootMotionPlantWorldResidualBeforeCaptureY",
+                "FootMotionPlantWorldResidualBeforeCaptureZ",
+                "FootMotionPlantWorldResidualAfterCaptureX",
+                "FootMotionPlantWorldResidualAfterCaptureY",
+                "FootMotionPlantWorldResidualAfterCaptureZ",
+                "FootMotionPlantWorldResidualAfterDecayX",
+                "FootMotionPlantWorldResidualAfterDecayY",
+                "FootMotionPlantWorldResidualAfterDecayZ",
+                "FootMotionPlantVerticalContinuityOwner",
+                "FootMotionPlantCorrectionStageDisposition",
+                "FootMotionPlantEffectiveCorrectionBeforeX",
+                "FootMotionPlantEffectiveCorrectionBeforeY",
+                "FootMotionPlantEffectiveCorrectionBeforeZ",
+                "FootMotionPlantEffectiveCorrectionAfterX",
+                "FootMotionPlantEffectiveCorrectionAfterY",
+                "FootMotionPlantEffectiveCorrectionAfterZ",
                 "FootMotionPlantOutputDistance",
                 "FootMotionPlantPenetrationDepth",
                 "FootMotionEncodedGoalAvailable",
@@ -5795,6 +6059,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal int LandingObservationSourceSampleCycle;
             internal string LandingObservationCacheState;
             internal bool LandingObservationQueryExecuted;
+            internal string LandingObservationQueryPurpose;
+            internal string LandingObservationRefreshMode;
             internal string LandingObservationQueryReason;
             internal Vector3 LandingObservationCanonicalRaw;
             internal Vector3 LandingObservationCanonicalComponentUp;
@@ -5804,6 +6070,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float LandingObservationQueryComponentUpAngleDegrees;
             internal float LandingObservationPredictionInputAccumulationDistance;
             internal float LandingObservationComponentUpChangeAngleDegrees;
+            internal string FutureLandingQueryPurpose;
             internal Vector3 FutureLandingQueryDirection;
             internal string FutureLandingCandidateSelectionState;
             internal int FutureLandingValidCandidateCount;
@@ -5948,21 +6215,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool PlantInterpolationEvaluated;
             internal ulong PlantTargetEventIdentity;
             internal bool PlantTargetVerified;
+            internal string PlantTargetKind;
+            internal string PlantLockResponse;
             internal Vector3 PlantDesiredPoint;
             internal Vector3 PlantFilteredPoint;
+            internal float PlantPreviousBlendWeight;
             internal float PlantBlendWeight;
             internal float PlantTargetMaximumVerticalSpeed;
+            internal float PlantTargetHeightBefore;
             internal float PlantTargetVerticalDelta;
             internal float PlantTargetAppliedVerticalDelta;
+            internal float PlantTargetHeightAfter;
             internal ulong PlantTargetHeightEventIdentity;
+            internal string PlantTargetHeightUpdateReason;
             internal bool PlantTargetForceRefreshed;
             internal float PlantTargetForceRefreshDistance;
             internal bool PlantTargetVerticalClamped;
-            internal Vector3 PlantBlendedCorrection;
-            internal float PlantCorrectionMaximumVerticalSpeed;
-            internal float PlantCorrectionVerticalDelta;
-            internal float PlantCorrectionAppliedVerticalDelta;
-            internal bool PlantCorrectionVerticalClamped;
+            internal Vector3 PlantPreviousMixedWorldTarget;
+            internal Vector3 PlantMixedWorldTarget;
+            internal Vector3 PlantPreviousOutputPoint;
+            internal Vector3 PlantOutputPoint;
+            internal string PlantResidualCaptureReason;
+            internal Vector3 PlantWorldResidualBeforeCapture;
+            internal Vector3 PlantWorldResidualAfterCapture;
+            internal Vector3 PlantWorldResidualAfterDecay;
+            internal string PlantVerticalContinuityOwner;
+            internal string PlantCorrectionStageDisposition;
+            internal Vector3 PlantEffectiveCorrectionBefore;
+            internal Vector3 PlantEffectiveCorrectionAfter;
             internal float PlantOutputDistance;
             internal float PlantPenetrationDepth;
             internal bool EncodedGoalAvailable;

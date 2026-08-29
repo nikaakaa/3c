@@ -24,6 +24,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     rules.Add("cacheStateConsistent=false");
                 if (CharacterFootDiagnosisContext.Evidence(
                         value,
+                        "duplicateQuery"))
+                    rules.Add("duplicateQuery=true");
+                if (CharacterFootDiagnosisContext.Evidence(
+                        value,
                         "identitySeenBefore") &&
                     !CharacterFootDiagnosisContext.Evidence(
                         value,
@@ -39,11 +43,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
             CharacterFootDiagnosisTarget target = context.Target(
                 "landing-observation-reuse-contract",
-                "FutureLanding是否只在累计输入或强制lineage变化时查询，并让复用Observation保持不可变结果",
+                "FutureLanding按阈值复用且首次Current Contact Verification允许同Key强制查询一次，后续不得重复",
                 new[] { "LandingObservation" },
                 new[]
                 {
                     "cacheStateConsistent=false",
+                    "duplicateQuery=true",
                     "sameKeyResultChanged=true",
                     "queryThresholdContractConsistent=false"
                 },
@@ -123,6 +128,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int sourceSampleCycle;
         public string cacheState;
         public bool queryExecutedThisFrame;
+        public string queryPurpose;
+        public string refreshMode;
         public string queryReason;
         public CharacterFootVectorFact canonicalRawLanding;
         public CharacterFootVectorFact canonicalComponentUp;
@@ -136,6 +143,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int validCandidateCount;
         public CharacterFootLandingQueryCandidateFact selected;
         public bool identitySeenBefore;
+        public bool forcedPlantVerification;
+        public bool firstForcedPlantVerification;
+        public bool duplicateQuery;
         public bool resultMatchesPrevious;
         public bool cacheStateConsistent;
         public bool queryThresholdContractConsistent;

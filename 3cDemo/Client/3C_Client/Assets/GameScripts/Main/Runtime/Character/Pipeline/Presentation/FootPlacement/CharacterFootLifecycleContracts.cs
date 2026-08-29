@@ -103,11 +103,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         None = 0,
         Initialized = 1,
-        VerificationRefresh = 2,
-        DirectFollow = 3,
-        ForceRefreshDistanceExceeded = 4,
-        RateLimited = 5,
-        WithinRate = 6
+        EventChanged = 2,
+        VerificationRefresh = 3,
+        DirectAdoption = 4,
+        DirectFollow = 5,
+        ForceRefreshDistanceExceeded = 6,
+        HeldWithinRevisionDistance = 7,
+        RateLimited = 8,
+        WithinRate = 9
     }
 
     [Flags]
@@ -127,22 +130,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         TargetHeightForceRefreshed = 1 << 10
     }
 
+    [Flags]
     internal enum CharacterFootVerticalContinuityOwner : byte
     {
         None = 0,
-        TargetHeightHistory = 1,
-        PlantWorldResidual = 2,
-        PlantWeightBlend = 3,
-        PlantTarget = 4
+        TargetHeightHistory = 1 << 0,
+        PlantWorldResidual = 1 << 1,
+        CorrectionResponseHistory = 1 << 2,
+        PlantWeightBlend = 1 << 3,
+        PlantTarget = 1 << 4
     }
 
-    internal enum CharacterFootCorrectionStageDisposition : byte
+    internal enum CharacterFootCorrectionResponseDirection : byte
     {
         None = 0,
-        BypassedByTargetHeightOwner = 1,
-        BypassedByWorldResidualOwner = 2,
-        BypassedByWeightBlendOwner = 3,
-        SynchronizedToPlantTarget = 4
+        Increase = 1,
+        Decrease = 2
+    }
+
+    internal enum CharacterFootCorrectionResponseInitializationReason : byte
+    {
+        None = 0,
+        FirstLegalInput = 1,
+        FootPlacementReset = 2,
+        Retarget = 3,
+        SourceLineageInvalidated = 4,
+        ProfileLineageInvalidated = 5,
+        WorldLineageInvalidated = 6,
+        PolicyExited = 7
+    }
+
+    [Flags]
+    internal enum CharacterFootGoalOwnershipLossReason : byte
+    {
+        None = 0,
+        Ungrounded = 1 << 0,
+        SourceLineageInvalidated = 1 << 1
     }
 
     internal readonly struct CharacterFootPathContinuityFact
@@ -181,6 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool swingTargetHeightClamped,
             float swingTargetHeightForceRefreshDistance,
             float swingTargetMaximumVerticalSpeed,
+            CharacterFootTargetHeightAdoptionMode swingTargetHeightAdoptionMode,
             float swingFilteredTargetHeightAlongUp)
         {
             Evaluated = evaluated;
@@ -221,6 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 swingTargetHeightForceRefreshDistance;
             SwingTargetMaximumVerticalSpeed =
                 swingTargetMaximumVerticalSpeed;
+            SwingTargetHeightAdoptionMode = swingTargetHeightAdoptionMode;
             SwingFilteredTargetHeightAlongUp =
                 swingFilteredTargetHeightAlongUp;
             PreTransitionReason = CharacterFootTransitionReason.None;
@@ -262,8 +287,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantFilteredPoint = default;
             PlantPreviousBlendWeight = 0f;
             PlantBlendWeight = 0f;
+            PlantTargetHeightAdoptionMode = swingTargetHeightAdoptionMode;
             PlantTargetMaximumVerticalSpeed = 0f;
             PlantTargetHeightBefore = 0f;
+            PlantTargetHeightTarget = 0f;
             PlantTargetVerticalDelta = 0f;
             PlantTargetAppliedVerticalDelta = 0f;
             PlantTargetHeightAfter = 0f;
@@ -275,17 +302,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerticalClamped = false;
             PlantPreviousMixedWorldTarget = default;
             PlantMixedWorldTarget = default;
-            PlantPreviousOutputPoint = default;
-            PlantOutputPoint = default;
+            PlantPreviousResponseOutputAvailable = false;
+            PlantPreviousResponseOutputPoint = default;
+            PlantDesiredOutputPoint = default;
+            PlantResponseOutputPoint = default;
             PlantResidualCaptureReason =
                 CharacterFootPlantResidualCaptureReason.None;
             PlantWorldResidualBeforeCapture = default;
             PlantWorldResidualAfterCapture = default;
             PlantWorldResidualAfterDecay = default;
-            PlantVerticalContinuityOwner =
+            PlantCorrectionResponseEvaluated = false;
+            PlantCorrectionResponseInitializedBefore = false;
+            PlantCorrectionResponseInitializedThisFrame = false;
+            PlantCorrectionResponseInitializationReason =
+                CharacterFootCorrectionResponseInitializationReason.None;
+            PlantCorrectionResponseDesired = 0f;
+            PlantCorrectionResponsePrevious = 0f;
+            PlantCorrectionResponseCurrent = 0f;
+            PlantCorrectionResponseDirection =
+                CharacterFootCorrectionResponseDirection.None;
+            PlantCorrectionResponseSelectedSpeed = 0f;
+            PlantCorrectionResponseAppliedDelta = 0f;
+            PlantVerticalContinuityOwners =
                 CharacterFootVerticalContinuityOwner.None;
-            PlantCorrectionStageDisposition =
-                CharacterFootCorrectionStageDisposition.None;
             PlantEffectiveCorrectionBefore = default;
             PlantEffectiveCorrectionAfter = default;
             PlantOutputDistance = 0f;
@@ -357,6 +396,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 source.SwingTargetHeightForceRefreshDistance;
             SwingTargetMaximumVerticalSpeed =
                 source.SwingTargetMaximumVerticalSpeed;
+            SwingTargetHeightAdoptionMode =
+                source.SwingTargetHeightAdoptionMode;
             SwingFilteredTargetHeightAlongUp =
                 source.SwingFilteredTargetHeightAlongUp;
             PreTransitionReason = preTransition.Reason;
@@ -401,9 +442,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantFilteredPoint = plant.FilteredPoint;
             PlantPreviousBlendWeight = plant.PreviousBlendWeight;
             PlantBlendWeight = plant.BlendWeight;
+            PlantTargetHeightAdoptionMode = plant.Evaluated
+                ? plant.TargetHeightAdoptionMode
+                : source.PlantTargetHeightAdoptionMode;
             PlantTargetMaximumVerticalSpeed =
                 plant.TargetMaximumVerticalSpeed;
             PlantTargetHeightBefore = plant.TargetHeightBefore;
+            PlantTargetHeightTarget = plant.TargetHeightTarget;
             PlantTargetVerticalDelta = plant.TargetVerticalDelta;
             PlantTargetAppliedVerticalDelta =
                 plant.TargetAppliedVerticalDelta;
@@ -419,17 +464,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPreviousMixedWorldTarget =
                 plant.PreviousMixedWorldTarget;
             PlantMixedWorldTarget = plant.MixedWorldTarget;
-            PlantPreviousOutputPoint = plant.PreviousOutputPoint;
-            PlantOutputPoint = plant.OutputPoint;
+            CharacterFootCorrectionResponseFact correctionResponse =
+                plant.CorrectionResponse;
+            PlantPreviousResponseOutputAvailable =
+                correctionResponse.PreviousOutputAvailable;
+            PlantPreviousResponseOutputPoint =
+                correctionResponse.PreviousOutputPoint;
+            PlantDesiredOutputPoint = correctionResponse.DesiredOutputPoint;
+            PlantResponseOutputPoint = correctionResponse.ResponseOutputPoint;
             PlantResidualCaptureReason = plant.ResidualCaptureReason;
             PlantWorldResidualBeforeCapture =
                 plant.WorldResidualBeforeCapture;
             PlantWorldResidualAfterCapture =
                 plant.WorldResidualAfterCapture;
             PlantWorldResidualAfterDecay = plant.WorldResidualAfterDecay;
-            PlantVerticalContinuityOwner = plant.VerticalContinuityOwner;
-            PlantCorrectionStageDisposition =
-                plant.CorrectionStageDisposition;
+            PlantCorrectionResponseEvaluated = correctionResponse.Evaluated;
+            PlantCorrectionResponseInitializedBefore =
+                correctionResponse.InitializedBefore;
+            PlantCorrectionResponseInitializedThisFrame =
+                correctionResponse.InitializedThisFrame;
+            PlantCorrectionResponseInitializationReason =
+                correctionResponse.InitializationReason;
+            PlantCorrectionResponseDesired =
+                correctionResponse.DesiredResponse;
+            PlantCorrectionResponsePrevious =
+                correctionResponse.PreviousResponse;
+            PlantCorrectionResponseCurrent =
+                correctionResponse.CurrentResponse;
+            PlantCorrectionResponseDirection = correctionResponse.Direction;
+            PlantCorrectionResponseSelectedSpeed =
+                correctionResponse.SelectedSpeed;
+            PlantCorrectionResponseAppliedDelta =
+                correctionResponse.AppliedDelta;
+            PlantVerticalContinuityOwners =
+                plant.VerticalContinuityOwners;
             PlantEffectiveCorrectionBefore =
                 plant.EffectiveCorrectionBefore;
             PlantEffectiveCorrectionAfter = plant.EffectiveCorrectionAfter;
@@ -471,6 +539,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool SwingTargetHeightClamped { get; }
         internal float SwingTargetHeightForceRefreshDistance { get; }
         internal float SwingTargetMaximumVerticalSpeed { get; }
+        internal CharacterFootTargetHeightAdoptionMode SwingTargetHeightAdoptionMode { get; }
         internal float SwingFilteredTargetHeightAlongUp { get; }
         internal CharacterFootTransitionReason PreTransitionReason { get; }
         internal CharacterFootConstraintState PreTransitionSource { get; }
@@ -511,8 +580,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantFilteredPoint { get; }
         internal float PlantPreviousBlendWeight { get; }
         internal float PlantBlendWeight { get; }
+        internal CharacterFootTargetHeightAdoptionMode PlantTargetHeightAdoptionMode { get; }
         internal float PlantTargetMaximumVerticalSpeed { get; }
         internal float PlantTargetHeightBefore { get; }
+        internal float PlantTargetHeightTarget { get; }
         internal float PlantTargetVerticalDelta { get; }
         internal float PlantTargetAppliedVerticalDelta { get; }
         internal float PlantTargetHeightAfter { get; }
@@ -523,14 +594,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantTargetVerticalClamped { get; }
         internal Vector3 PlantPreviousMixedWorldTarget { get; }
         internal Vector3 PlantMixedWorldTarget { get; }
-        internal Vector3 PlantPreviousOutputPoint { get; }
-        internal Vector3 PlantOutputPoint { get; }
+        internal bool PlantPreviousResponseOutputAvailable { get; }
+        internal Vector3 PlantPreviousResponseOutputPoint { get; }
+        internal Vector3 PlantDesiredOutputPoint { get; }
+        internal Vector3 PlantResponseOutputPoint { get; }
         internal CharacterFootPlantResidualCaptureReason PlantResidualCaptureReason { get; }
         internal Vector3 PlantWorldResidualBeforeCapture { get; }
         internal Vector3 PlantWorldResidualAfterCapture { get; }
         internal Vector3 PlantWorldResidualAfterDecay { get; }
-        internal CharacterFootVerticalContinuityOwner PlantVerticalContinuityOwner { get; }
-        internal CharacterFootCorrectionStageDisposition PlantCorrectionStageDisposition { get; }
+        internal bool PlantCorrectionResponseEvaluated { get; }
+        internal bool PlantCorrectionResponseInitializedBefore { get; }
+        internal bool PlantCorrectionResponseInitializedThisFrame { get; }
+        internal CharacterFootCorrectionResponseInitializationReason
+            PlantCorrectionResponseInitializationReason { get; }
+        internal float PlantCorrectionResponseDesired { get; }
+        internal float PlantCorrectionResponsePrevious { get; }
+        internal float PlantCorrectionResponseCurrent { get; }
+        internal CharacterFootCorrectionResponseDirection PlantCorrectionResponseDirection { get; }
+        internal float PlantCorrectionResponseSelectedSpeed { get; }
+        internal float PlantCorrectionResponseAppliedDelta { get; }
+        internal CharacterFootVerticalContinuityOwner PlantVerticalContinuityOwners { get; }
         internal Vector3 PlantEffectiveCorrectionBefore { get; }
         internal Vector3 PlantEffectiveCorrectionAfter { get; }
         internal float PlantOutputDistance { get; }
@@ -617,6 +700,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 false,
                 settings.TargetHeightForceRefreshDistance,
                 settings.MaximumVerticalTargetSpeed,
+                settings.TargetHeightAdoptionMode,
                 0f);
     }
 
@@ -926,6 +1010,56 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float Weight { get; }
     }
 
+    internal readonly struct CharacterFootCorrectionResponseFact
+    {
+        internal CharacterFootCorrectionResponseFact(
+            bool evaluated,
+            bool initializedBefore,
+            bool initializedThisFrame,
+            CharacterFootCorrectionResponseInitializationReason initializationReason,
+            bool previousOutputAvailable,
+            Vector3 previousOutputPoint,
+            Vector3 desiredOutputPoint,
+            Vector3 responseOutputPoint,
+            float desiredResponse,
+            float previousResponse,
+            float currentResponse,
+            CharacterFootCorrectionResponseDirection direction,
+            float selectedSpeed,
+            float appliedDelta)
+        {
+            Evaluated = evaluated;
+            InitializedBefore = initializedBefore;
+            InitializedThisFrame = initializedThisFrame;
+            InitializationReason = initializationReason;
+            PreviousOutputAvailable = previousOutputAvailable;
+            PreviousOutputPoint = previousOutputPoint;
+            DesiredOutputPoint = desiredOutputPoint;
+            ResponseOutputPoint = responseOutputPoint;
+            DesiredResponse = desiredResponse;
+            PreviousResponse = previousResponse;
+            CurrentResponse = currentResponse;
+            Direction = direction;
+            SelectedSpeed = selectedSpeed;
+            AppliedDelta = appliedDelta;
+        }
+
+        internal bool Evaluated { get; }
+        internal bool InitializedBefore { get; }
+        internal bool InitializedThisFrame { get; }
+        internal CharacterFootCorrectionResponseInitializationReason InitializationReason { get; }
+        internal bool PreviousOutputAvailable { get; }
+        internal Vector3 PreviousOutputPoint { get; }
+        internal Vector3 DesiredOutputPoint { get; }
+        internal Vector3 ResponseOutputPoint { get; }
+        internal float DesiredResponse { get; }
+        internal float PreviousResponse { get; }
+        internal float CurrentResponse { get; }
+        internal CharacterFootCorrectionResponseDirection Direction { get; }
+        internal float SelectedSpeed { get; }
+        internal float AppliedDelta { get; }
+    }
+
     internal readonly struct CharacterFootPlantInterpolationFact
     {
         internal CharacterFootPlantInterpolationFact(
@@ -938,8 +1072,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 filteredPoint,
             float previousBlendWeight,
             float blendWeight,
+            CharacterFootTargetHeightAdoptionMode targetHeightAdoptionMode,
             float targetMaximumVerticalSpeed,
             float targetHeightBefore,
+            float targetHeightTarget,
             float targetVerticalDelta,
             float targetAppliedVerticalDelta,
             float targetHeightAfter,
@@ -950,14 +1086,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool targetVerticalClamped,
             Vector3 previousMixedWorldTarget,
             Vector3 mixedWorldTarget,
-            Vector3 previousOutputPoint,
-            Vector3 outputPoint,
             CharacterFootPlantResidualCaptureReason residualCaptureReason,
             Vector3 worldResidualBeforeCapture,
             Vector3 worldResidualAfterCapture,
             Vector3 worldResidualAfterDecay,
-            CharacterFootVerticalContinuityOwner verticalContinuityOwner,
-            CharacterFootCorrectionStageDisposition correctionStageDisposition,
+            in CharacterFootCorrectionResponseFact correctionResponse,
+            CharacterFootVerticalContinuityOwner verticalContinuityOwners,
             Vector3 effectiveCorrectionBefore,
             Vector3 effectiveCorrectionAfter,
             float outputDistance,
@@ -972,8 +1106,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FilteredPoint = filteredPoint;
             PreviousBlendWeight = previousBlendWeight;
             BlendWeight = blendWeight;
+            TargetHeightAdoptionMode = targetHeightAdoptionMode;
             TargetMaximumVerticalSpeed = targetMaximumVerticalSpeed;
             TargetHeightBefore = targetHeightBefore;
+            TargetHeightTarget = targetHeightTarget;
             TargetVerticalDelta = targetVerticalDelta;
             TargetAppliedVerticalDelta = targetAppliedVerticalDelta;
             TargetHeightAfter = targetHeightAfter;
@@ -984,14 +1120,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TargetVerticalClamped = targetVerticalClamped;
             PreviousMixedWorldTarget = previousMixedWorldTarget;
             MixedWorldTarget = mixedWorldTarget;
-            PreviousOutputPoint = previousOutputPoint;
-            OutputPoint = outputPoint;
             ResidualCaptureReason = residualCaptureReason;
             WorldResidualBeforeCapture = worldResidualBeforeCapture;
             WorldResidualAfterCapture = worldResidualAfterCapture;
             WorldResidualAfterDecay = worldResidualAfterDecay;
-            VerticalContinuityOwner = verticalContinuityOwner;
-            CorrectionStageDisposition = correctionStageDisposition;
+            CorrectionResponse = correctionResponse;
+            VerticalContinuityOwners = verticalContinuityOwners;
             EffectiveCorrectionBefore = effectiveCorrectionBefore;
             EffectiveCorrectionAfter = effectiveCorrectionAfter;
             OutputDistance = outputDistance;
@@ -1007,8 +1141,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 FilteredPoint { get; }
         internal float PreviousBlendWeight { get; }
         internal float BlendWeight { get; }
+        internal CharacterFootTargetHeightAdoptionMode TargetHeightAdoptionMode { get; }
         internal float TargetMaximumVerticalSpeed { get; }
         internal float TargetHeightBefore { get; }
+        internal float TargetHeightTarget { get; }
         internal float TargetVerticalDelta { get; }
         internal float TargetAppliedVerticalDelta { get; }
         internal float TargetHeightAfter { get; }
@@ -1019,14 +1155,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool TargetVerticalClamped { get; }
         internal Vector3 PreviousMixedWorldTarget { get; }
         internal Vector3 MixedWorldTarget { get; }
-        internal Vector3 PreviousOutputPoint { get; }
-        internal Vector3 OutputPoint { get; }
         internal CharacterFootPlantResidualCaptureReason ResidualCaptureReason { get; }
         internal Vector3 WorldResidualBeforeCapture { get; }
         internal Vector3 WorldResidualAfterCapture { get; }
         internal Vector3 WorldResidualAfterDecay { get; }
-        internal CharacterFootVerticalContinuityOwner VerticalContinuityOwner { get; }
-        internal CharacterFootCorrectionStageDisposition CorrectionStageDisposition { get; }
+        internal CharacterFootCorrectionResponseFact CorrectionResponse { get; }
+        internal CharacterFootVerticalContinuityOwner VerticalContinuityOwners { get; }
         internal Vector3 EffectiveCorrectionBefore { get; }
         internal Vector3 EffectiveCorrectionAfter { get; }
         internal float OutputDistance { get; }
@@ -1063,10 +1197,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantFilteredPoint;
         internal float PlantBlendWeight;
         internal Vector3 PreviousPlantMixedWorldTarget;
-        internal bool HasPlantOutputPoint;
-        internal Vector3 PreviousPlantOutputPoint;
+        internal bool HasPreviousResponseOutputPoint;
+        internal Vector3 PreviousResponseOutputPoint;
         internal Vector3 PlantWorldResidual;
-        internal bool PlantResponseTransitionActive;
+        internal bool PlantWorldResidualTransitionActive;
+        internal bool HasCorrectionResponse;
+        internal float CorrectionResponseAlongUp;
+        internal bool HasCorrectionResponseLineage;
+        internal FixedString128Bytes CorrectionResponseSourceLineage;
+        internal FixedString128Bytes CorrectionResponseProfileRevision;
+        internal ulong CorrectionResponseWorldRevision;
+        internal CharacterFootCorrectionResponseInitializationReason
+            PendingCorrectionResponseInitializationReason;
         internal CharacterFootPlantInterpolationFact PlantFact;
     }
 
@@ -1100,10 +1242,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLockRequest lockRequest,
             float formalSupport,
             ulong formalSupportEventIdentity,
-            bool hardOwnershipLoss,
+            CharacterFootGoalOwnershipLossReason ownershipLossReason,
             float footPlacementWeight,
             Vector3 componentUp,
             float deltaSeconds,
+            FixedString128Bytes sourceLineage,
+            FixedString128Bytes profileRevision,
+            ulong worldRevision,
             in CharacterFootMotionSettings settings)
         {
             FrameSequence = frameSequence;
@@ -1122,10 +1267,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
-            HardOwnershipLoss = hardOwnershipLoss;
+            OwnershipLossReason = ownershipLossReason;
             FootPlacementWeight = footPlacementWeight;
             ComponentUp = componentUp;
             DeltaSeconds = deltaSeconds;
+            SourceLineage = sourceLineage;
+            ProfileRevision = profileRevision;
+            WorldRevision = worldRevision;
             Settings = settings;
         }
 
@@ -1145,10 +1293,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockRequest LockRequest { get; }
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }
-        internal bool HardOwnershipLoss { get; }
+        internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }
+        internal bool HardOwnershipLoss =>
+            OwnershipLossReason != CharacterFootGoalOwnershipLossReason.None;
         internal float FootPlacementWeight { get; }
         internal Vector3 ComponentUp { get; }
         internal float DeltaSeconds { get; }
+        internal FixedString128Bytes SourceLineage { get; }
+        internal FixedString128Bytes ProfileRevision { get; }
+        internal ulong WorldRevision { get; }
         internal CharacterFootMotionSettings Settings { get; }
     }
 

@@ -617,8 +617,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             if (m_HasPending)
                 DiscardFrame();
-            m_First.FootPlacement.Reset();
-            m_Second.FootPlacement.Reset();
+            m_First.FootPlacement.Reset(
+                CharacterFootCorrectionResponseInitializationReason
+                    .FootPlacementReset);
+            m_Second.FootPlacement.Reset(
+                CharacterFootCorrectionResponseInitializationReason
+                    .FootPlacementReset);
             m_FootPlacement.ResetShared(in reset);
         }
 
@@ -629,8 +633,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             if (m_HasPending)
                 DiscardFrame();
-            m_First.FootPlacement.Reset();
-            m_Second.FootPlacement.Reset();
+            m_First.FootPlacement.Reset(
+                CharacterFootCorrectionResponseInitializationReason.Retarget);
+            m_Second.FootPlacement.Reset(
+                CharacterFootCorrectionResponseInitializationReason.Retarget);
             m_FootPlacement.RetargetShared(resetSequence);
         }
 

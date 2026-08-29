@@ -221,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         EnvelopeUnordered = 10,
         DegeneratePath = 11,
         EnvelopeSampleUnavailable = 12,
-        NegativeVerticalCorrection = 13,
+        NonFiniteVerticalCorrection = 13,
         InvalidSwingPhase = 14,
         UnselectedSwing = 15,
         FormalFootHeightUnavailable = 16
@@ -810,7 +810,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!float.IsFinite(envelopeMinimumCorrection) ||
                 !float.IsFinite(formalTargetCorrection))
                 return Rejected(
-                    CharacterFootSwingMotionRejectReason.NegativeVerticalCorrection,
+                    CharacterFootSwingMotionRejectReason.NonFiniteVerticalCorrection,
                     landingEventIdentity,
                     groundPath.InputIdentity,
                     originalSole,
@@ -819,9 +819,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     progress,
                     baselineSample,
                     envelopeSample);
-            float verticalCorrection = Mathf.Max(
-                0f,
-                formalTargetCorrection);
+            float verticalCorrection = formalTargetCorrection;
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = footPlacementWeight;

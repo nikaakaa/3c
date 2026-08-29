@@ -8,7 +8,9 @@
 
 `build-character-foot-motion-data-foundation`已经由用户验收并归档，现行spec已经安装可审查的Step Time/Distance、Foot Height、Contact、Lock Mode/Weight与Support作者数据，并继续禁止没有正式行为change时的Runtime消费。本change建立唯一正式消费者，按独立小步迁移行为，不恢复旧隐藏Foot Feature、旧PlantConfidence政策、第二状态机或Goal后处理器。
 
-本change已经把旧`CharacterFootStateMachine`拆成唯一Transition Resolver/Runtime、纯State Target Resolver、统一Interpolation Runtime与Post-Interpolation Hard Constraint，并删除分散Residual与兼容入口。最新诊断证明这套分层能精确定位首次放大阶段，但结构清晰不等于控制政策已经完整：Prediction仍直接消费每帧瞬时世界速度，Observation阈值只控制查询频率，Landing接受只有小变化死区，Approach Contact以后没有正式提交语义。后续实施必须在现有Owner内补齐成熟政策，不得恢复中央状态机或增加第二Prediction、第二Interpolation、Goal后处理器。
+本change已经把旧`CharacterFootStateMachine`拆成唯一Transition Resolver/Runtime、纯State Target Resolver、统一Interpolation Runtime与Post-Interpolation Constraint阶段，并删除分散Residual与兼容入口。最新诊断证明这套分层能精确定位首次放大阶段，但结构清晰不等于控制政策已经完整：Prediction、Landing所有权与垂直接管政策仍需逐项闭合。后续实施必须在现有Owner内补齐成熟政策，不得恢复中央状态机或增加第二Prediction、第二Interpolation、Goal后处理器。
+
+`20260829-084258-427-2e96ab5155fd4730a74be4732c90493f`已经让共享Prediction Motion State以零诊断回归进入唯一运行链，证明当前1044帧Record中的业务量级Swing与Landing跳变不再来自Prediction速度滤波。当前更直接的剩余断点是Landing/Lock附近的垂直接管：`AcquireByWeight`进入帧和Post-Interpolation Ground Constraint都可以把连续输出同帧抬到Anchor或Envelope，用户仍能观察到十厘米以上跳变。ZZZ PIK代码证据显示Plant期间冻结目标，但高度更新使用`±高度变化率 × dt`限幅并继续混合，而不是把最终脚位无条件瞬移到地面。本change据此把视觉连续优先级提升到绝对零穿透之前：普通帧允许Profile显式的小范围穿透预算，超预算时保持同一可信目标并由唯一Interpolation限速追赶；Reach不可达仍是硬边界，Full Lock则必须等待位置与穿透都收敛到正式容差。
 
 ## Current Diagnostic Record
 
@@ -52,21 +54,22 @@
 - `20260829-081911-285-e556c53066a544ecadc2b5b8be975010`否定了以`0.02m/s`死区、`60/s`响应和`8m/s`上限接管Body Target当前速度与Timeline Continuation。Raw与Stable当前速度差中位数为0、P90仅`7.75e-7m/s`、P99为0.0123米/秒、最大0.0199米/秒，Continuation差P99为0、最大0.0195米/秒；Observation查询由1164降到1163，Path Revision大于2厘米仍为`94`，其余24个target的matched不变。但Stable Swing大于2厘米仍由`101/548`增到`102/549`，Safety Floor Clamp由235增到236。唯一新增Swing跳变位于右脚810到811帧，当时稳定当前速度与正式Body Target仍相差约0.0123米/秒；818帧新增0.579毫米Safety Floor Clamp则是此前稳定历史累积的后果。该结果证明业务量级速度死区会改变既有Current轨迹，而本change的路径防抖应由5厘米Raw Landing累计Query Admission负责；运行候选必须回退，速度差阈值下一步只过滤数值噪声，不再承担路径冻结。
 - `20260829-082848-750-d7926217fbf447c58fbb3195d296aa72`是上述`0.02m/s`运行链接管的回退复验。Unity未重启，只在现有Gameplay Launcher中对同一1044帧Record执行一次`Replay Last + Sample`；25个正式诊断target的eligible与matched均和`20260829-080820-509-c7d5f821e35e40509b447597f8860b48`逐项一致，Observation查询1164次、Safety Floor Clamp235行、FBBIK`2086/2086`成功且最大物理脚踝目标残差4.35085967毫米全部恢复。失败运行代码和facts v24行为诊断无残留，保留的Profile `0.02m/s`配置仍未接入运行链。
 - `20260829-083616-849-22a0556fd7714184816f0671a6671fa8`把Corin正式`PredictionVelocityDeltaThreshold`从`0.02m/s`收敛为只过滤数值噪声的`0.001m/s`，`PredictionVelocitySmoothSpeed`保持`60/s`、`PredictionMaximumSpeed`保持`8m/s`，运行链仍未接管共享Prediction状态。Unity通过MCP自行重连并在不重启Editor的情况下完成强制Refresh；Runtime与Editor编译通过。同一1044帧Record的25个正式诊断target与`20260829-080820-509-c7d5f821e35e40509b447597f8860b48`逐项一致，Observation查询1164次、Safety Floor Clamp235行、FBBIK`2086/2086`成功且最大物理脚踝目标残差4.35085967毫米。该零行为边界确认速度死区只承担浮点噪声过滤；5厘米Raw Landing累计阈值继续独立承担查询准入。
-- `20260829-084258-427-2e96ab5155fd4730a74be4732c90493f`以`0.001m/s`死区、`60/s`响应和`8m/s`上限正式接管根Bank共享Prediction Motion State；当前速度唯一来自committed Body Target，Continuation唯一来自Timeline下一段速度，稳定结果唯一进入KCC Future Body Translation，Timeline Current仍只用于对照诊断。1043个角色Frame中944帧Prediction有效，99帧明确拒绝为`TimelineUnavailable`；当前与Continuation分别在846帧和106帧执行响应，最大速度Clamp均为0。初始化重置1次、Timeline Generation重置1次，其余1041帧无重置；Current Raw到Stable误差P90为`1.18e-7m/s`、P99为`0.00075483m/s`、最大`0.00093818m/s`，Continuation最大误差`2.4e-7m/s`，均不超过正式死区。与配置零行为边界`20260829-083616-849-22a0556fd7714184816f0671a6671fa8`相比，25个正式诊断target逐项一致，Observation查询1164次、Safety Floor Clamp235行、FBBIK`2086/2086`成功且最大物理脚踝目标残差4.35085967毫米完全不变。该结果完成合法输入的Prediction Motion唯一运行链接管并证明没有可见或诊断回归；5厘米Raw Landing累计阈值继续独立承担地面查询复用。非法输入已经typed拒绝且不推进稳定状态，但当前Module只停止本帧Future Translation，尚未显式使整个Pending Foot事务失败，因此5.11继续保持未完成。
+- `20260829-084258-427-2e96ab5155fd4730a74be4732c90493f`以`0.001m/s`死区、`60/s`响应和`8m/s`上限正式接管根Bank共享Prediction Motion State；当前速度唯一来自committed Body Target，Continuation唯一来自移动计划下一段速度，稳定结果唯一进入KCC Future Body Translation，移动计划Current仍只用于对照诊断。1043个角色Frame中944帧Prediction有效，99帧明确拒绝为`TimelineUnavailable`；当前与Continuation分别在846帧和106帧执行响应，最大速度Clamp均为0。初始化重置1次、移动计划Generation重置1次，其余1041帧无重置；Current Raw到Stable误差P90为`1.18e-7m/s`、P99为`0.00075483m/s`、最大`0.00093818m/s`，Continuation最大误差`2.4e-7m/s`，均不超过正式死区。与配置零行为边界`20260829-083616-849-22a0556fd7714184816f0671a6671fa8`相比，25个正式诊断target逐项一致，Observation查询1164次、Safety Floor Clamp235行、FBBIK`2086/2086`成功且最大物理脚踝目标残差4.35085967毫米完全不变。该结果完成Prediction Motion唯一运行链接管并证明没有可见或诊断回归；5厘米Raw Landing累计阈值继续独立承担地面查询复用。非法或缺失输入已经typed unavailable、不推进稳定状态且不生成Future Translation，5.11按当前范围完成；停止边界显式静止计划的生产侧闭合后续单独处理。
+- 对上述运行包进一步按Animation Foot Motion与移动计划拆分后，99个`TimelineUnavailable`角色Frame中93帧没有任何Landing预测请求，真正同时具有正式Landing Event的只有958帧与1031至1035帧。它们的Animation Foot Motion Source、Event与Time均有效，缺失的是停止/回放尾部的Locomotion Plan；该问题不是动画烘焙缺失，也不是本轮Landing/Lock跳变主因。按用户决定，本change不修改移动系统或动画转换，保持typed unavailable与Prediction状态不推进；“静止也发布正式零速度计划”的生产侧生命周期闭合后续单独处理，不在Foot Placement内把缺失计划猜成零速度。
 
 ## What Changes
 
 - 从当前选中动画Source的原生Foot Motion Curve生成唯一typed Runtime Foot Motion Frame，并保持Source、Cycle、Contribution、Completion、Clip与Landing Event lineage。
 - 保留已经完成的`Releasing -> Swing`顺序修正和identity触发清理，先对Ground Path到Encoded Goal的逐阶段Correction做同帧归因，修复首个已证明的不连续阶段；之后才接入Residual截止收敛与真实Envelope安全边界。
 - 只把Step Time/Distance接入Landing Prediction，保持世界落点仍由正式Future Body Translation、RootLocalLanding与唯一SphereCast生成。
-- 在现有Foot根Bank内增加左右脚共享的Prediction Motion State。当前速度只消费committed Body Target世界速度，Continuation只消费committed Timeline下一段世界速度，同时接收正式Step Time、Presentation Delta、Timeline Generation与Body Reset，并按ZZZ同型的速度差阈值、EMA响应和最大预测速度分别生成稳定当前/Continuation速度，再由唯一KCC Future Body Translation同时服务左右脚；不建立低速回退路径、Timeline Current替代路径或第二Trajectory Source。
+- 在现有Foot根Bank内增加左右脚共享的Prediction Motion State。当前速度只消费committed Body Target世界速度，Continuation只消费committed移动计划下一段世界速度，同时接收正式Step Time、Presentation Delta、移动计划Generation与Body Reset，并按ZZZ同型的速度差阈值、EMA响应和最大预测速度分别生成稳定当前/Continuation速度，再由唯一KCC Future Body Translation同时服务左右脚；不建立低速回退路径、移动计划Current替代路径或第二Trajectory Source。
 - 为每脚FutureLanding建立根事务所有的Committed/Pending Observation Page；每帧继续重新投影Raw Landing，但只在相对上次真实查询输入累计超过正式距离/Up角度阈值、Source/Cycle/Event/Profile/World lineage变化或正式`Sliding`接触准入输入identity变化时执行一次SphereCast，其余帧复用Committed Observation。新查询始终选择canonical最近合法Surface并删除历史Surface偏好。
 - 把每脚Landing所有权收敛为同一Context中的`Tracking -> Committed -> Promoted`：PreSwing与早期Swing允许稳定Prediction更新NextSwingLanding；正式Foot Motion进入Approach Contact后，最新Accepted Landing成为该Event的Committed承诺，普通预测只保留诊断而不得重查或换点；成为Current Contact Event后再晋级Contact Landing。新Rejected Observation不得伪装成Accepted，但Tracking可以保留同Event已经Accepted的事件Landing，不把它改名为Rejected Key的结果。
-- 把每脚约束执行固定为`不可变输入与Observation -> Pre-Interpolation Transition -> State Target -> 统一Interpolation -> Post-Interpolation Transition -> Hard Constraint -> Resolved Foot`。同一根事务按固定顺序执行一次，不建立第二状态机或第二输出路径。
+- 把每脚约束执行固定为`不可变输入与Observation -> Pre-Interpolation Transition -> State Target -> 统一Interpolation -> Post-Interpolation Transition -> Post Constraint -> Resolved Foot`。同一根事务按固定顺序执行一次，不建立第二状态机或第二输出路径。
 - 用独立typed `CharacterFootTransitionResolver`声明固定Transition边、判定阶段和优先级。Resolver只生成不可变Decision；唯一Transition Runtime应用State与Anchor命令，不执行插值、不查询世界、不写Goal。
 - 用纯`CharacterFootStateTargetResolver`按Transition后的离散State生成Correction Target、接触引用、Goal/Ownership目标和Interpolation Policy Request。State Target不得保存时间状态、推进Residual或跳转到另一State。
-- 用唯一typed `CharacterFootInterpolationRuntime`拥有Effective Correction、唯一Residual、上一Target与Completion。Swing Path换代、Landing Acquire和Release都提交固定Policy Request给它执行；删除分散在State分支中的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`与重复`Advance`数学。
-- Swing/UnlockedSupport的State Target只使用正式Ground Path、Envelope与Foot Height；插值后的Hard Constraint复用同一Ground Path Envelope作为安全下界。删除逐帧CurrentSwingFloor Query及全部结果、诊断和Owner语义。Releasing继续只回到原始Swing目标。
+- 用唯一typed `CharacterFootInterpolationRuntime`拥有Effective Correction、唯一Residual、上一Target与Completion。Swing Path换代、Landing Acquire和Release都提交固定Policy Request给它执行；所有可见Foot Correction的Component Up变化统一受Profile显式`MaximumVerticalCorrectionSpeed`限制，删除分散在State分支中的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`与重复`Advance`数学。
+- Swing/UnlockedSupport的State Target只使用正式Ground Path、Envelope与Foot Height；Landing/Locked只使用冻结的同Event Anchor。删除`AcquireByWeight`进入帧的立即`RaiseToMinimum`，Post-Interpolation Ground Constraint只测量Envelope/Anchor穿透、发布追赶与Full Lock门控事实，不得再次改写可见Correction。Profile显式`GroundPenetrationTolerance`定义普通帧允许的小范围穿透预算；超过预算时继续由唯一Interpolation限速追赶，不建立Floor旁路。Landing只有在正式Lock Weight完成、位置残差不超过独立`LandingLockCompletionTolerance`且穿透不超过预算后才可进入Full Lock。Reach夹紧仍为不可延迟的硬限制。
 - 只把Foot Height接入Swing，使动画抬脚高度叠加到Runtime Ground Envelope，删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`提前改脚目标的旧政策。
 - 只把Support接入Resolved Foot、Primary Support与Pelvis，使承重意图不再依赖Lock资格，并为Landing腿提供独立Reach请求。
 - 增加必须显式序列化的米制最小Landing腿压缩余量；缺失即typed invalid，不提供默认值。Pelvis优先求双腿可达交集，无法同时满足时夹紧Foot Goal并发布typed不可达结果，不允许完全伸直后继续进入Full Lock。
@@ -80,21 +83,21 @@
 
 - `build-character-foot-motion-data-foundation`已经由用户验收并归档；本change不得反向修改Analyzer候选、Motion Reference或AnimationClip作者数据。
 - `refactor-character-pose-graph-architecture`只改变Program Operation、Constraint Bank与Final Publication所有权；本change先固定Foot模块的typed输入、唯一Result和根事务边界，Pose Graph重构把Foot视为不透明Constraint能力，不规定其内部Transition与Interpolation布局。
-- 行为迁移固定按`Path逐阶段归因 -> 首个不连续阶段修复 -> 拆分State/Transition/Interpolation/Hard Constraint -> Step Time/Distance -> 共享Prediction Motion稳定 -> Landing提交 -> Foot Height -> Support/Pelvis与非对称速度边界 -> Landing Reach -> Contact/Lock`执行。Step Time不得用来掩盖同帧Correction放大；后一步不得在前一步仍有双主线时开始。
+- 行为迁移固定按`Path逐阶段归因 -> 首个不连续阶段修复 -> 拆分State/Transition/Interpolation/Post Constraint -> Step Time/Distance -> 共享Prediction Motion稳定 -> Landing/Lock垂直连续接管与穿透预算 -> Landing提交 -> Foot Height -> Support/Pelvis与非对称速度边界 -> Landing Reach -> Contact/Lock`执行。Step Time不得用来掩盖同帧Correction放大；后一步不得在前一步仍有双主线时开始。
 
 ## Impact
 
 - Affected specs: `character-foot-placement-presentation`、`character-animation-pipeline`
-- Affected runtime: AnimationClip/Source Foot Motion采样、Presentation Projection、Foot Placement Pose Input、共享Prediction Motion State、Landing Prediction/Tracking/Commit、Ground Path、Foot Discrete State、内部Contact Transition Context、Transition/State Target/Interpolation/Hard Constraint、Resolved Foot、Primary Support、Pelvis与Goal编码
-- Affected profile: Prediction速度差阈值、EMA响应速度、最大预测速度、Pelvis最大上升速度与最大下降速度必须正式序列化、严格校验并进入Profile Revision；不提供默认值或旧配置补全
+- Affected runtime: AnimationClip/Source Foot Motion采样、Presentation Projection、Foot Placement Pose Input、共享Prediction Motion State、Landing Prediction/Tracking/Commit、Ground Path、Foot Discrete State、内部Contact Transition Context、Transition/State Target/Interpolation/Post Constraint、Resolved Foot、Primary Support、Pelvis与Goal编码
+- Affected profile: Prediction速度差阈值、EMA响应速度、最大预测速度、Foot最大竖直Correction速度、Ground穿透容差、Landing Lock完成容差、Pelvis最大上升速度与最大下降速度必须正式序列化、严格校验并进入Profile Revision；不提供默认值或旧配置补全
 - Affected editor/build: Projection Compiler、正式Curve/Event lineage校验、Corin Float32/Fixed产品显式重建
-- Affected diagnostics: 正规化采样包、后台Finalizing生命周期、Raw Landing/Path Target、Swing Target、Residual Capture、State Output、Safety Floor、Encoded Goal、Envelope clearance、Landing Reach、Support来源、Solved/Physical结果与typed拒绝原因
+- Affected diagnostics: 正规化采样包、后台Finalizing生命周期、Raw Landing/Path Target、Swing Target、Residual Capture、State Output、每帧竖直Correction变化与速率限制、Envelope/Anchor穿透深度、Ground追赶、Full Lock门控、Encoded Goal、Landing Reach、Support来源、Solved/Physical结果与typed拒绝原因
 - 不改变Gameplay State、World State、KCC、网络packet、rollback snapshot或Simulation Program行为
 
 ## Current Spec Comparison
 
-- current `character-foot-placement-presentation`已经删除`8fc704a`公式、PlantConfidence生命周期和单体`CharacterFootStateMachine/Context`实现约束，只保留一个权威Foot结果、typed状态单一写入、根事务和下游隔离边界。本change通过delta把内部实现收紧为独立Transition、纯State Target、统一Interpolation与Hard Constraint固定顺序。
-- current spec只要求时间连续化、Transition和Hard Constraint不能互相越权，不规定具体策略。本change安装正式Foot Motion输入、Transition边、Interpolation Policy和迁移完成后的旧字段删除要求。
+- current `character-foot-placement-presentation`已经删除`8fc704a`公式、PlantConfidence生命周期和单体`CharacterFootStateMachine/Context`实现约束，只保留一个权威Foot结果、typed状态单一写入、根事务和下游隔离边界。本change通过delta把内部实现收紧为独立Transition、纯State Target、统一Interpolation与Post Constraint固定顺序。
+- current spec只要求时间连续化、Transition和Constraint不能互相越权，不规定具体策略。本change安装正式Foot Motion输入、Transition边、Interpolation Policy、受控Ground穿透和迁移完成后的旧字段删除要求。
 - current Resolved Foot与Pelvis合同只规定下游不得读取Foot内部状态。本change进一步安装与Lock分离的正式Support Intent、Landing Reach和无交集时的Goal夹紧政策。
 - current `character-animation-pipeline`规定新增22条Curve在没有正式消费者时不进入Runtime；本change通过新的Animation Pipeline requirement建立唯一Runtime Frame，并在消费者迁移时取代对应的旧Runtime输入。
 - active `refactor-character-pose-graph-architecture`对Foot的delta只调整Constraint/Final Publication所有权，与本change不矛盾；实施时仍需按其最终Program lineage重新对账。
@@ -111,6 +114,7 @@
 - 不用膝盖最小角度直接覆盖FBBIK结果，不用降低Goal Weight掩盖不可达。
 - 不修改Foot Motion Analyzer算法、正式AnimationClip曲线或Motion Reference绑定。
 - 不处理TrainingEnemy，不顺手迁移其Pose Graph、曲线、Projection或Foot配置。
+- 不在本change修改停止/动画转换边界的Locomotion Plan生产生命周期；缺失计划继续typed unavailable且不得推进Prediction状态，也不得在Foot Placement内补零或建立Fallback。静止零速度计划由后续移动系统change处理。
 - 不新增自动测试；实施只复用现有编译、严格OpenSpec校验和封口诊断重放。
 
 ## Success Criteria
@@ -120,11 +124,11 @@
 Step、Foot Height、Support、Contact/Lock各自只有一个正式消费者
 Releasing完成并回到Swing的同一帧执行新Swing Envelope保护
 普通Path Revision保持Correction连续且向上/向下响应使用同一Residual政策
-Raw Landing或Swing Target的小变化不得在State Output、Safety Floor或Encoded Goal阶段被无依据放大
+Raw Landing或Swing Target的小变化不得在State Output、竖直限速、Post Constraint或Encoded Goal阶段被无依据放大
 720度/秒急转等高角速度输入下，KCC Future Body Translation必须消费同一根Bank提交的稳定Prediction速度，不得直接把单帧瞬时速度方向变化变成大幅Landing换点
 PreSwing与早期Swing只在Tracking阶段允许更新NextSwingLanding；Approach Contact后同Event Landing必须Committed且普通预测不得重查、切Surface或重建Ground Path
 Rejected Observation不得冒充Accepted；Tracking保留的同Event已接受Landing必须继续保持自身原始Observation lineage
-真实Ground Envelope最低安全高度不被平滑穿过
+普通帧允许的Ground穿透不超过Profile显式预算；继承的超预算误差必须连续减小且不得触发同帧抬升
 首个同帧不连续阶段修复后，Landing前Residual才按剩余时间收敛到SwingResidualTolerance以内或发布明确不可达
 Swing目标使用Runtime Envelope加正式Foot Height
 Support Intent不由Contact或Lock门控且Pelvis不出现无依据支撑空洞
@@ -136,11 +140,13 @@ Contact/Lock生命周期只读取正式Contact、Lock Mode与Lock Weight
 Contact Rising/Falling与Same-Event Reentry Refresh只存在于同一根Bank内部Transition Context和Decision事实
 Releasing期间同Event重入只可Retain原Anchor并连续执行Releasing到Landing；Release完成后不得复活旧Event，新Event必须正常准入
 每条Foot Transition只由唯一typed Resolver判定并由唯一Transition Runtime应用
-State Target不拥有Transition、Residual、HalfLife、时间推进或Hard Constraint
+State Target不拥有Transition、Residual、HalfLife、时间推进或Post Constraint
 Swing、Landing Acquire与Release只通过一个Interpolation State、一个Residual和一个Effective Correction Owner连续化
-Pre/Post Transition、Interpolation与Hard Constraint顺序固定且每帧各执行一次
-Ground Path Envelope与Reach只约束插值后的结果，不反向修改State、Transition、Target或Residual
-Swing Hard Constraint只消费已接受预测Path；预测输入不变时不得执行实时地面查询或逐踏面切换输出
+Landing/Lock附近单帧可见Foot Correction不得因进入State、Lock Weight完成或Post Constraint产生十厘米级跳变
+所有Component Up Correction变化受同一Profile竖直速率限制，Landing只有在位置与穿透达到独立容差后才进入Full Lock
+Pre/Post Transition、Interpolation与Post Constraint顺序固定且每帧各执行一次
+Ground Path Envelope只形成目标与Post Constraint测量，不得绕过Interpolation改写可见Correction；Reach仍可硬夹紧不可达Goal
+Post Constraint只消费已接受预测Path；预测输入不变时不得执行实时地面查询或逐踏面切换输出
 旧隐藏Step、Constraint、PlantConfidence、PlantCycleConsumed布尔和Support消费者被删除
 不存在fallback、旧新双读、第二状态机、第二Goal链或TrainingEnemy变化
 ```

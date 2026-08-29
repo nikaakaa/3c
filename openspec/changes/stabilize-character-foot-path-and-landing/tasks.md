@@ -34,15 +34,15 @@
 - [x] 3.18 在Approach Contact没有同Event Accepted Landing时发布typed unavailable，不用Animated Sole、旧Event、Rejected Observation或默认Surface建立承诺
 - [x] 3.19 让Tracking的新Rejected Observation保持自身Key和拒绝结果，同时允许既有同Event Accepted Landing继续保留原始lineage，禁止把保留Landing改名成本次查询命中
 
-## 4. 拆分State、Transition、Interpolation与Hard Constraint
+## 4. 拆分State、Transition、Interpolation与Post Constraint
 
-- [x] 4.1 对账当前每个Foot State、合法Transition边、Anchor命令、目标Correction、Residual/Progress、完成条件与Hard Constraint，固定迁移前业务映射
+- [x] 4.1 对账当前每个Foot State、合法Transition边、Anchor命令、目标Correction、Residual/Progress、完成条件与Post Constraint，固定迁移前业务映射
 - [x] 4.2 把根Context拆成离散State、Contact/Anchor、统一Interpolation、Landing与Observation分型数据块，并保持一次Begin、Seal或Discard的唯一根事务
 - [x] 4.3 实现纯`CharacterFootTransitionResolver`与固定typed Decision，显式区分输入驱动的Pre-Interpolation边和完成驱动的Post-Interpolation边
 - [x] 4.4 实现唯一Transition Runtime，只允许它应用Decision、写离散State、执行Anchor Create/Retain/Release并发布Transition事实
 - [x] 4.5 实现纯`CharacterFootStateTargetResolver`，按已确定State生成目标Correction、Reference、Contact/Support/Reach意图与typed Interpolation Request，不推进时间和Context
 - [x] 4.6 实现唯一`CharacterFootInterpolationRuntime`，迁移Swing/Acquire/Release Residual、Contact Progress、HalfLife与Effective Correction，只保留一份统一Interpolation State和固定typed Policy
-- [x] 4.7 把Ground Path Envelope与Landing Reach放在Interpolation之后执行，禁止Hard Constraint回写State Target、Residual或Transition
+- [x] 4.7 把Ground Path Envelope与Landing Reach放在Interpolation之后执行，禁止Post Constraint回写State Target、Residual或Transition
 - [x] 4.8 让Resolved Foot只消费Post-Transition、Post-Interpolation和Post-Constraint结果，并补齐Transition、Target、Interpolation与Constraint逐阶段事实
 - [x] 4.9 删除旧`CharacterFootStateMachine`、旧分散Residual/Progress字段、重复Advance方法和全部兼容入口，确认State/Anchor与Effective Correction各自只有一个写入者
 - [x] 4.10 把查询后Landing接受距离剥离为独立`LandingAcceptanceDistance`正式配置，保持Corin现行2厘米行为不变
@@ -56,20 +56,24 @@
 - [ ] 5.3 用正式Step Distance与Event table校验RootLocalLanding的同脚相邻事件和水平步长，不改变世界速度或地形查询数学
 - [ ] 5.4 删除旧隐藏Step Time/Distance/Event消费者及其Projection字段，不保留双读或fallback
 - [ ] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
-- [x] 5.6 在Foot根Bank增加左右脚共享的Prediction Motion State，保存稳定当前/Continuation速度、初始化事实、Timeline Generation、Body Reset与Prediction Source lineage，并随同一事务Seal或Discard
+- [x] 5.6 在Foot根Bank增加左右脚共享的Prediction Motion State，保存稳定当前/Continuation速度、初始化事实、移动计划Generation、Body Reset与Prediction Source lineage，并随同一事务Seal或Discard
 - [x] 5.7 在Foot Motion Profile增加必须显式序列化的`PredictionVelocityDeltaThreshold`、`PredictionVelocitySmoothSpeed`与`PredictionMaximumSpeed`，纳入Profile Revision并严格拒绝缺失、非有限和非正值
-- [x] 5.8 参照ZZZ PIK已确认的阈值、EMA与上限控制顺序分别稳定committed Body Target当前世界速度与Timeline Continuation，只把稳定速度交给唯一KCC Future Body Translation，不增加Timeline Current替代路径、普通/预测双路径或KCC后位置低通
-- [x] 5.9 让Body Reset、Retarget、Timeline Generation与Prediction Source变化重置Prediction Motion State，普通Landing Event、Animation Source、Source Sample与左右脚Step换代不得重置角色级稳定速度
+- [x] 5.8 参照ZZZ PIK已确认的阈值、EMA与上限控制顺序分别稳定committed Body Target当前世界速度与移动计划Continuation，只把稳定速度交给唯一KCC Future Body Translation，不增加移动计划Current替代路径、普通/预测双路径或KCC后位置低通
+- [x] 5.9 让Body Reset、Retarget、移动计划Generation与Prediction Source变化重置Prediction Motion State，普通Landing Event、Animation Source、Source Sample与左右脚Step换代不得重置角色级稳定速度
 - [x] 5.10 发布Raw/Stable当前与Continuation速度、速度差、EMA响应、最大速度Clamp、Prediction初始化/重置原因、KCC Future Translation与晚期Candidate消费结果诊断
-- [ ] 5.11 对Prediction输入执行有限值和lineage接纳；非法输入必须使Pending事务失败且不得推进稳定状态，合法急转只进入同一EMA控制，不套用语义未确认的PIK相对突变公式
+- [x] 5.11 对Prediction输入执行有限值和lineage接纳；非法或缺失移动计划时发布typed unavailable、不得推进稳定状态或生成Future Translation，合法急转只进入同一EMA控制，不套用语义未确认的PIK相对突变公式；停止边界的正式零速度计划生产后续单独处理
 - [x] 5.12 让Prediction Motion State与Future Translation Workspace保持根Bank预分配固定布局，热路径不创建Trajectory对象、临时Sample数组或托管集合
 
-## 6. 单独接入Foot Height
+## 6. 连续接管Foot Height与Landing/Lock垂直误差
 
-- [ ] 6.1 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼
-- [ ] 6.2 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策和对应旧输入
-- [ ] 6.3 保持真实Envelope安全Clamp只由Hard Constraint负责，Path Residual和Landing截止收敛只由Interpolation Runtime负责
-- [ ] 6.4 发布Formal Foot Height、目标高度、最终Correction和Envelope clearance诊断事实
+- [ ] 6.1 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选分别使用`0.6m/s`、`0.01m`与`0.01m`
+- [ ] 6.2 删除`AcquireByWeight`进入帧的立即`RaiseToMinimum`和Post Constraint对Envelope/Anchor的可见Correction抬升，确认Effective Correction仍只有唯一Interpolation Owner
+- [ ] 6.3 让唯一Interpolation Runtime在所有Policy写回前按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制Component Up变化，不限制Foot XZ，也不建立第二高度状态或Floor旁路
+- [ ] 6.4 让Post Constraint只测量Envelope/Anchor穿透并发布容差内、Ground Catchup与Full Lock门控；继承的超预算误差连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
+- [ ] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；未满足时保留同Anchor Landing继续接管
+- [ ] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼
+- [ ] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策和对应旧输入
+- [ ] 6.8 发布Formal Foot Height、目标高度、限速前后Correction、竖直速率、Envelope/Anchor穿透、Ground Catchup、Full Lock门控和最终Correction诊断事实，删除把同帧抬升描述为Safety Floor成功的旧口径
 
 ## 7. 单独接入Support与Pelvis
 
@@ -92,7 +96,7 @@
 ## 9. 单独接入Contact与Lock
 
 - [ ] 9.1 用正式Contact与Lock Mode通过Pre-Interpolation Transition建立同Event唯一Anchor并进入Landing
-- [ ] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target
+- [ ] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target；Weight完成不得绕过6.5的位置、穿透与Reach门控
 - [ ] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition；同Event合法重入在Pre-Interpolation执行`Releasing -> Landing`，Interpolation Completion只在Post-Interpolation执行`Releasing -> Swing`
 - [ ] 9.4 删除旧PlantConfidence、无identity的PlantCycleConsumed布尔和Constraint Weight状态准入消费者及其Projection字段
 - [ ] 9.5 让Contact Anchor只消费同Event Committed/Promoted Landing；Committed阶段Sliding误差超出LockDistance或Reach不可用时拒绝Lock，不以晚期重查移动承诺落点
@@ -107,7 +111,7 @@
 - [ ] 10.1 删除全部旧Foot Motion Runtime payload、旧隐藏Feature reader、旧配置字段和失去消费者的诊断列
 - [ ] 10.2 使用精确Corin Definition显式重建Presentation Projection、Float32 Program与Fixed Program，不修改TrainingEnemy
 - [ ] 10.3 使用规定参数编译Runtime与Editor工程，并在每次构建后立即关闭dotnet build server
-- [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Raw/Stable Prediction速度、KCC Future Translation、Landing Tracking/Commit、Contact边沿、同EventReentry Refresh/Unavailable、Transition、Interpolation、Path、Envelope、Pelvis速度边界、Landing Reach、Support、Goal、Solved和Physical阶段责任
+- [ ] 10.4 对封口诊断包重新生成facts/diagnosis，对账Raw/Stable Prediction速度、KCC Future Translation、Landing Tracking/Commit、Contact边沿、同EventReentry Refresh/Unavailable、Transition、Interpolation、竖直限速、Ground穿透与Catchup、Full Lock门控、Path、Envelope、Pelvis速度边界、Landing Reach、Support、Goal、Solved和Physical阶段责任
 - [ ] 10.5 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验，清除旧spec冲突和失效任务引用
 - [ ] 10.6 按design中的ZZZ最新证据等级与成熟结论对账表逐项核对实现，分别记录直接采用、现有更强等价、后续change和明确不照搬，不把匿名B/D输入、推断名词或未激活实例参数写成正式算法与默认值
 - [ ] 10.7 确认新增Prediction、Observation、Landing、Interpolation与Pelvis路径具有固定容量、有限值校验、数组边界、确定性tie-break和typed容量失败，且热路径没有每帧托管分配

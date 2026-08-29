@@ -1990,9 +1990,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 envelopeSampleAlongUp + motionFormalFootHeight;
             float envelopeMinimumCorrection =
                 envelopeSampleAlongUp - originalSoleAlongUp;
-            float builderSelectedCorrection = Mathf.Max(
-                0f,
-                rawFormalTargetHeight - originalSoleAlongUp);
+            float builderSelectedCorrection =
+                rawFormalTargetHeight - originalSoleAlongUp;
             bool builderSwingTargetAvailable =
                 motion.PathContinuityEvaluated &&
                 motion.PathAvailableAfter &&

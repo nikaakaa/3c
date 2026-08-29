@@ -14,8 +14,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public readonly struct AnimationFootMotionRuntimeSample
     {
         internal AnimationFootMotionRuntimeSample(
-            float timeToLandingSeconds,
-            float distance,
             float footHeight,
             float toeHeight,
             float toeSpeed,
@@ -27,9 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float support,
             in AnimationFootMotionEventFrame events)
         {
-            if (!float.IsFinite(timeToLandingSeconds) || timeToLandingSeconds < 0f ||
-                !float.IsFinite(distance) || distance < 0f ||
-                !float.IsFinite(footHeight) || footHeight < 0f ||
+            if (!float.IsFinite(footHeight) || footHeight < 0f ||
                 !float.IsFinite(toeHeight) ||
                 !float.IsFinite(toeSpeed) || toeSpeed < 0f ||
                 !float.IsFinite(positionError) || positionError < 0f ||
@@ -38,10 +34,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !Normalized(lockWeight) || !Normalized(support) ||
                 !events.IsValid)
             {
-                throw new ArgumentOutOfRangeException(nameof(timeToLandingSeconds));
+                throw new ArgumentOutOfRangeException(nameof(footHeight));
             }
-            ObservedTimeToLandingSeconds = timeToLandingSeconds;
-            ObservedDistance = distance;
             FootHeight = footHeight;
             ToeHeight = toeHeight;
             ToeSpeed = toeSpeed;
@@ -56,8 +50,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly byte m_IsSpecified;
-        public float ObservedTimeToLandingSeconds { get; }
-        public float ObservedDistance { get; }
         public float FootHeight { get; }
         public float ToeHeight { get; }
         public float ToeSpeed { get; }
@@ -117,8 +109,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong contributionContinuityIdentity,
             CharacterFootSide side) =>
             new AnimationFootMotionRuntimeSample(
-                ObservedTimeToLandingSeconds,
-                ObservedDistance,
                 FootHeight,
                 ToeHeight,
                 ToeSpeed,
@@ -203,8 +193,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class AnimationFootStepObservationCurveSet
     {
-        [SerializeField] AnimationCurve m_TimeToLandingSeconds;
-        [SerializeField] AnimationCurve m_Distance;
         [SerializeField] AnimationCurve m_FootHeight;
         [SerializeField] AnimationCurve m_ToeHeight;
         [SerializeField] AnimationCurve m_ToeSpeed;
@@ -217,8 +205,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationFootStepLandingEventTable m_LandingEvents;
 
         public AnimationFootStepObservationCurveSet(
-            AnimationCurve timeToLandingSeconds,
-            AnimationCurve distance,
             AnimationCurve footHeight,
             AnimationCurve toeHeight,
             AnimationCurve toeSpeed,
@@ -230,8 +216,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve support,
             AnimationFootStepLandingEventTable landingEvents)
         {
-            m_TimeToLandingSeconds = AnimationPredictedFootStepCurveSet.Copy(timeToLandingSeconds);
-            m_Distance = AnimationPredictedFootStepCurveSet.Copy(distance);
             m_FootHeight = AnimationPredictedFootStepCurveSet.Copy(footHeight);
             m_ToeHeight = AnimationPredictedFootStepCurveSet.Copy(toeHeight);
             m_ToeSpeed = AnimationPredictedFootStepCurveSet.Copy(toeSpeed);
@@ -246,8 +230,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireValid();
         }
 
-        public AnimationCurve TimeToLandingSeconds => m_TimeToLandingSeconds;
-        public AnimationCurve Distance => m_Distance;
         public AnimationCurve FootHeight => m_FootHeight;
         public AnimationCurve ToeHeight => m_ToeHeight;
         public AnimationCurve ToeSpeed => m_ToeSpeed;
@@ -273,8 +255,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 sourceDurationSeconds,
                 looping);
             return new AnimationFootMotionRuntimeSample(
-                m_TimeToLandingSeconds.Evaluate(time),
-                m_Distance.Evaluate(time),
                 m_FootHeight.Evaluate(time),
                 m_ToeHeight.Evaluate(time),
                 m_ToeSpeed.Evaluate(time),
@@ -289,16 +269,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void RequireValid()
         {
-            AnimationPredictedFootStepCurveSet.RequireCurve(
-                m_TimeToLandingSeconds,
-                nameof(m_TimeToLandingSeconds),
-                false,
-                true);
-            AnimationPredictedFootStepCurveSet.RequireCurve(
-                m_Distance,
-                nameof(m_Distance),
-                false,
-                true);
             AnimationPredictedFootStepCurveSet.RequireCurve(
                 m_FootHeight,
                 nameof(m_FootHeight),

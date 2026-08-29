@@ -792,16 +792,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     NormalizeRegisteredCurve(
                         CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                             clip,
-                            CharacterAnimationClipRegisteredCurveChannels.LeftStepTime),
-                        sourceDurationSeconds),
-                    NormalizeRegisteredCurve(
-                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
-                            clip,
-                            CharacterAnimationClipRegisteredCurveChannels.LeftStepDistance),
-                        sourceDurationSeconds),
-                    NormalizeRegisteredCurve(
-                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
-                            clip,
                             CharacterAnimationClipRegisteredCurveChannels.LeftFootHeight),
                         sourceDurationSeconds),
                     NormalizeRegisteredCurve(
@@ -851,16 +841,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         sourceDurationSeconds,
                         $"{clip.name}/Left")),
                 new AnimationFootStepObservationCurveSet(
-                    NormalizeRegisteredCurve(
-                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
-                            clip,
-                            CharacterAnimationClipRegisteredCurveChannels.RightStepTime),
-                        sourceDurationSeconds),
-                    NormalizeRegisteredCurve(
-                        CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
-                            clip,
-                            CharacterAnimationClipRegisteredCurveChannels.RightStepDistance),
-                        sourceDurationSeconds),
                     NormalizeRegisteredCurve(
                         CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                             clip,

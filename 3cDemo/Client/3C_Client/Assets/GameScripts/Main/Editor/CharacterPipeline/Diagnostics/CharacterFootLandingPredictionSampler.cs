@@ -225,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionLandingAcceptanceDistance,FootMotionPathRevisionDistance,FootMotionSwingResidualTolerance," +
             "FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
             "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
-            "FootMotionSwingRawTargetHeightAlongUp,FootMotionSwingFilteredTargetHeightBefore,FootMotionSwingTargetHeightDelta," +
+            "FootMotionSwingTargetHeightAdoptionMode,FootMotionSwingRawTargetHeightAlongUp,FootMotionSwingFilteredTargetHeightBefore,FootMotionSwingTargetHeightDelta," +
             "FootMotionSwingTargetHeightAppliedDelta,FootMotionSwingTargetHeightUpdateHeld,FootMotionSwingTargetHeightForceRefreshed,FootMotionSwingTargetHeightRateLimited,FootMotionSwingTargetHeightClamped,FootMotionSwingTargetHeightForceRefreshDistance,FootMotionSwingTargetMaximumVerticalSpeed," +
             "FootMotionSwingFilteredTargetHeightAlongUp," +
             "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
@@ -242,16 +242,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified,FootMotionPlantTargetKind,FootMotionPlantLockResponse," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
-            "FootMotionPlantPreviousBlendWeight,FootMotionPlantBlendWeight,FootMotionPlantTargetMaximumVerticalSpeed," +
-            "FootMotionPlantTargetHeightBefore,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightAfter,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetHeightUpdateReason,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
+            "FootMotionPlantPreviousBlendWeight,FootMotionPlantBlendWeight,FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
+            "FootMotionPlantTargetHeightBefore,FootMotionPlantTargetHeightTarget,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightAfter,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetHeightUpdateReason,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
             "FootMotionPlantPreviousMixedWorldTargetX,FootMotionPlantPreviousMixedWorldTargetY,FootMotionPlantPreviousMixedWorldTargetZ," +
             "FootMotionPlantMixedWorldTargetX,FootMotionPlantMixedWorldTargetY,FootMotionPlantMixedWorldTargetZ," +
-            "FootMotionPlantPreviousOutputPointX,FootMotionPlantPreviousOutputPointY,FootMotionPlantPreviousOutputPointZ," +
-            "FootMotionPlantOutputPointX,FootMotionPlantOutputPointY,FootMotionPlantOutputPointZ,FootMotionPlantResidualCaptureReason," +
+            "FootMotionPlantPreviousResponseOutputAvailable,FootMotionPlantPreviousResponseOutputPointX,FootMotionPlantPreviousResponseOutputPointY,FootMotionPlantPreviousResponseOutputPointZ," +
+            "FootMotionPlantDesiredOutputPointX,FootMotionPlantDesiredOutputPointY,FootMotionPlantDesiredOutputPointZ," +
+            "FootMotionPlantResponseOutputPointX,FootMotionPlantResponseOutputPointY,FootMotionPlantResponseOutputPointZ,FootMotionPlantResidualCaptureReason," +
             "FootMotionPlantWorldResidualBeforeCaptureX,FootMotionPlantWorldResidualBeforeCaptureY,FootMotionPlantWorldResidualBeforeCaptureZ," +
             "FootMotionPlantWorldResidualAfterCaptureX,FootMotionPlantWorldResidualAfterCaptureY,FootMotionPlantWorldResidualAfterCaptureZ," +
             "FootMotionPlantWorldResidualAfterDecayX,FootMotionPlantWorldResidualAfterDecayY,FootMotionPlantWorldResidualAfterDecayZ," +
-            "FootMotionPlantVerticalContinuityOwner,FootMotionPlantCorrectionStageDisposition," +
+            "FootMotionPlantCorrectionResponseEvaluated,FootMotionPlantCorrectionResponseInitializedBefore,FootMotionPlantCorrectionResponseInitializedThisFrame,FootMotionPlantCorrectionResponseInitializationReason," +
+            "FootMotionPlantCorrectionResponseDesired,FootMotionPlantCorrectionResponsePrevious,FootMotionPlantCorrectionResponseCurrent,FootMotionPlantCorrectionResponseDirection,FootMotionPlantCorrectionResponseSelectedSpeed,FootMotionPlantCorrectionResponseAppliedDelta," +
+            "FootMotionPlantVerticalContinuityOwners," +
             "FootMotionPlantEffectiveCorrectionBeforeX,FootMotionPlantEffectiveCorrectionBeforeY,FootMotionPlantEffectiveCorrectionBeforeZ," +
             "FootMotionPlantEffectiveCorrectionAfterX,FootMotionPlantEffectiveCorrectionAfterY,FootMotionPlantEffectiveCorrectionAfterZ," +
             "FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
@@ -2132,6 +2135,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.ResidualDeadlineHalfLifeAvailable);
             Add(row, motion.ResidualDeadlineHalfLifeSeconds);
             Add(row, motion.ResidualAppliedHalfLifeSeconds);
+            Add(row, motion.SwingTargetHeightAdoptionMode);
             Add(row, motion.SwingRawTargetHeightAlongUp);
             Add(row, motion.SwingFilteredTargetHeightBefore);
             Add(row, motion.SwingTargetHeightDelta);
@@ -2180,8 +2184,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantFilteredPoint);
             Add(row, motion.PlantPreviousBlendWeight);
             Add(row, motion.PlantBlendWeight);
+            Add(row, motion.PlantTargetHeightAdoptionMode);
             Add(row, motion.PlantTargetMaximumVerticalSpeed);
             Add(row, motion.PlantTargetHeightBefore);
+            Add(row, motion.PlantTargetHeightTarget);
             Add(row, motion.PlantTargetVerticalDelta);
             Add(row, motion.PlantTargetAppliedVerticalDelta);
             Add(row, motion.PlantTargetHeightAfter);
@@ -2192,14 +2198,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantTargetVerticalClamped);
             Add(row, motion.PlantPreviousMixedWorldTarget);
             Add(row, motion.PlantMixedWorldTarget);
-            Add(row, motion.PlantPreviousOutputPoint);
-            Add(row, motion.PlantOutputPoint);
+            Add(row, motion.PlantPreviousResponseOutputAvailable);
+            Add(row, motion.PlantPreviousResponseOutputPoint);
+            Add(row, motion.PlantDesiredOutputPoint);
+            Add(row, motion.PlantResponseOutputPoint);
             Add(row, motion.PlantResidualCaptureReason);
             Add(row, motion.PlantWorldResidualBeforeCapture);
             Add(row, motion.PlantWorldResidualAfterCapture);
             Add(row, motion.PlantWorldResidualAfterDecay);
-            Add(row, motion.PlantVerticalContinuityOwner);
-            Add(row, motion.PlantCorrectionStageDisposition);
+            Add(row, motion.PlantCorrectionResponseEvaluated);
+            Add(row, motion.PlantCorrectionResponseInitializedBefore);
+            Add(row, motion.PlantCorrectionResponseInitializedThisFrame);
+            Add(row, motion.PlantCorrectionResponseInitializationReason);
+            Add(row, motion.PlantCorrectionResponseDesired);
+            Add(row, motion.PlantCorrectionResponsePrevious);
+            Add(row, motion.PlantCorrectionResponseCurrent);
+            Add(row, motion.PlantCorrectionResponseDirection);
+            Add(row, motion.PlantCorrectionResponseSelectedSpeed);
+            Add(row, motion.PlantCorrectionResponseAppliedDelta);
+            Add(row, motion.PlantVerticalContinuityOwners);
             Add(row, motion.PlantEffectiveCorrectionBefore);
             Add(row, motion.PlantEffectiveCorrectionAfter);
             Add(row, motion.PlantOutputDistance);

@@ -86,7 +86,7 @@
 - [ ] 6.17 在唯一`CharacterFootInterpolationState/Runtime`增加每脚Component Up Correction Response History、初始化事实、增减方向与上一Committed Response Output；保持现有Target Height、Plant World Residual和Correction Response三个typed Owner分离，不新建第二Interpolation或组件
 - [ ] 6.18 固定实现`Target Height Adoption -> PlantBlend -> Plant World Residual -> Desired Output -> Correction Response -> Existing Goal Baseline Mix`，按Desired Response相对Previous Response的增减方向选择Profile速率并只替换Component Up响应；禁止恢复上一世界输出重表达、无条件全Plant单档限速、Goal后处理或Final Pose低通
 - [ ] 6.19 让首次合法输入及Reset、Retarget、Source/Profile/World lineage失效后的首次输入同步Correction Response；普通动画目标变化、同Event换点、Contact Verification、攻击、Lock Response换代和Same-Event Reentry继续上一History，不按动作类型切换路径或清零
-- [ ] 6.20 升级唯一facts/Analyzer/Publisher，发布Target Height Mode、Desired/Previous/Current Correction Response、增减方向、选中速率、Applied Delta、初始化/重置原因、Desired/Response Output和五类连续Owner，删除“World Residual取代Correction历史”的旧Disposition口径
+- [x] 6.20 升级唯一facts/Analyzer/Publisher，发布Target Height Mode、Desired/Previous/Current Correction Response、增减方向、选中速率、Applied Delta、初始化/重置原因、Desired/Response Output和五类连续Owner，删除“World Residual取代Correction历史”的旧Disposition口径
 - [ ] 6.21 从同一`FinalAnimationPoseFrame`和Rig Calibration读取每脚Heel/Toe接触点、Foot Rotation、Sole Forward、Component Up与脚掌尺寸，作为Current Support唯一Pose输入；不得读取Foot Motion Toe曲线、另一Source或LateUpdate骨骼
 - [ ] 6.22 在现有World Query Backend内为Heel/Toe建立固定容量Current Support Observation，复用正式距离、半径、坡度、Layer、自身Collider排除、有限值与World Revision合同，并分别保存Accepted/Rejected、位置、法线、距离、Surface identity和拒绝原因
 - [ ] 6.23 以Heel/Toe相对动画脚掌沿Component Up的较大所需位移解析唯一Foot Target Position；使用稳定Surface identity和固定Probe顺序处理等价候选，并由两点命中与脚掌方向生成有限归一化Support Normal。任一Probe无效或容量溢出时typed unavailable，不建立单点降级、旧结果或默认Up路径

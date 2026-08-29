@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/47";
+        const string Schema = "character-foot-motion-facts/46";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 47;
+        const int AnalyzerVersion = 46;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -178,7 +178,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (frames.Count == 0)
                 return;
-            RequireCorrectionResponsePersistentHistory(frames);
             AnalyzeStepTimeCandidateSelections(
                 frames,
                 events,
@@ -198,36 +197,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeActualFootEnvelopeCounterfactuals(frames, events);
             AnalyzeVisibleOutputJumps(frames, events);
             AnalyzePathContinuity(frames, events);
-        }
-
-        static void RequireCorrectionResponsePersistentHistory(
-            List<FootFrame> frames)
-        {
-            for (int i = 1; i < frames.Count; i++)
-            {
-                FootFrame previous = frames[i - 1];
-                FootFrame current = frames[i];
-                if (!Continuous(previous, current) ||
-                    !previous.CorrectionResponseEvaluated ||
-                    !current.CorrectionResponseEvaluated ||
-                    !current.CorrectionResponseInitializedBefore)
-                {
-                    continue;
-                }
-                if (Math.Abs(
-                        current.CorrectionResponsePrevious -
-                        previous.CorrectionResponseCurrent) >
-                    PositionNoiseFloor ||
-                    Vector3.Distance(
-                        current.CorrectionResponsePreviousDirection,
-                        previous.CorrectionResponseDirection) >
-                    RuntimeGeometryEpsilon)
-                {
-                    throw new InvalidDataException(
-                        $"Foot Motion Correction Response persistent history is inconsistent " +
-                        $"Frame={current.Frame} Side={current.Side}.");
-                }
-            }
         }
 
         static void AnalyzePlantInterpolationOutputJumps(
@@ -287,26 +256,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 current.PreviousResponseOutputPoint,
                                 current.ResponseOutputPoint)
                             : 0d,
-                    ["PlantCorrectionResidualCaptureDelta"] = Vector3.Distance(
-                        current.PlantCorrectionResidualBeforeCapture,
-                        current.PlantCorrectionResidualCapturedBeforeDecay),
-                    ["PlantCorrectionResidualCaptureContinuityError"] =
+                    ["PlantWorldResidualCaptureDelta"] = Vector3.Distance(
+                        current.PlantWorldResidualBeforeCapture,
+                        current.PlantWorldResidualCapturedBeforeDecay),
+                    ["PlantWorldResidualCaptureContinuityError"] =
                         current.PlantResidualCaptureReason != "None"
                             ? Vector3.Distance(
-                                current.PlantCorrectionResidualCapturedBeforeDecay,
+                                current.PlantWorldResidualCapturedBeforeDecay,
                                 current.OriginalSole +
                                 current.PlantEffectiveCorrectionBefore -
                                 current.PlantSelectedWorldTarget)
                             : Vector3.Distance(
-                                current.PlantCorrectionResidualCapturedBeforeDecay,
-                                current.PlantCorrectionResidualBeforeCapture),
-                    ["PlantCorrectionResidualDecayStep"] = Vector3.Distance(
-                        current.PlantCorrectionResidualCapturedBeforeDecay,
-                        current.PlantCorrectionResidualAfterDecay),
-                    ["PlantCorrectionResidualAfterDecay"] =
-                        current.PlantCorrectionResidualAfterDecay.magnitude,
-                    ["PlantCorrectionResidualAppliedHalfLifeSeconds"] =
-                        current.PlantCorrectionResidualAppliedHalfLifeSeconds,
+                                current.PlantWorldResidualCapturedBeforeDecay,
+                                current.PlantWorldResidualBeforeCapture),
+                    ["PlantWorldResidualDecayStep"] = Vector3.Distance(
+                        current.PlantWorldResidualCapturedBeforeDecay,
+                        current.PlantWorldResidualAfterDecay),
+                    ["PlantWorldResidualAfterDecay"] =
+                        current.PlantWorldResidualAfterDecay.magnitude,
+                    ["PlantWorldResidualAppliedHalfLifeSeconds"] =
+                        current.PlantWorldResidualAppliedHalfLifeSeconds,
                     ["CorrectionResponseDesired"] =
                         current.CorrectionResponseDesired,
                     ["CorrectionResponsePrevious"] =
@@ -358,21 +327,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PlantTargetVerticalClamped,
                     ["plantResidualCaptured"] =
                         current.PlantResidualCaptureReason != "None",
-                    ["plantCorrectionResidualDecayApplied"] =
-                        current.PlantCorrectionResidualDecayApplied,
-                    ["plantCorrectionResidualDecayedOnCapture"] =
+                    ["plantWorldResidualDecayApplied"] =
+                        current.PlantWorldResidualDecayApplied,
+                    ["plantWorldResidualDecayedOnCapture"] =
                         current.PlantResidualCaptureReason != "None" &&
-                        current.PlantCorrectionResidualDecayApplied,
-                    ["plantCorrectionResidualClearedAtCompletionTolerance"] =
+                        current.PlantWorldResidualDecayApplied,
+                    ["plantWorldResidualClearedAtCompletionTolerance"] =
                         current
-                            .PlantCorrectionResidualClearedAtCompletionTolerance,
+                            .PlantWorldResidualClearedAtCompletionTolerance,
                     ["targetHeightOwned"] = HasRevisionReason(
                         current.PlantVerticalContinuityOwners,
                         "TargetHeightHistory"),
-                    ["plantCorrectionResidualOwned"] =
+                    ["plantWorldResidualOwned"] =
                         HasRevisionReason(
                             current.PlantVerticalContinuityOwners,
-                            "PlantCorrectionResidual"),
+                            "PlantWorldResidual"),
                     ["correctionResponseOwned"] = HasRevisionReason(
                         current.PlantVerticalContinuityOwners,
                         "CorrectionResponseHistory"),
@@ -450,11 +419,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.Anchor - current.ResponseOutputPoint;
                 Vector3 finalOutputToAnchor =
                     current.Anchor - current.ResolvedFinalSole;
-                Vector3 selectedTargetCorrection =
-                    current.PlantSelectedWorldTarget - current.OriginalSole;
-                Vector3 expectedCapturedCorrectionResidual =
-                    current.PlantEffectiveCorrectionBefore -
-                    selectedTargetCorrection;
+                Vector3 expectedCapturedResidual =
+                    current.PreviousResponseOutputPoint -
+                    current.PlantSelectedWorldTarget;
                 bool sourceContinuous = string.Equals(
                     previous.SourceIdentity,
                     current.SourceIdentity,
@@ -505,35 +472,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             up).magnitude,
                     ["PreviousResponseOutputToAnchorAlongUpMeters"] =
                         Vector3.Dot(previousResponseToAnchor, up),
-                    ["SelectedTargetCorrectionMeters"] =
-                        selectedTargetCorrection.magnitude,
-                    ["SelectedTargetCorrectionHorizontalMeters"] =
-                        Vector3.ProjectOnPlane(
-                            selectedTargetCorrection,
-                            up).magnitude,
-                    ["SelectedTargetCorrectionAlongUpMeters"] =
-                        Vector3.Dot(selectedTargetCorrection, up),
-                    ["EffectiveCorrectionBeforeMeters"] =
-                        current.PlantEffectiveCorrectionBefore.magnitude,
-                    ["EffectiveCorrectionBeforeHorizontalMeters"] =
-                        Vector3.ProjectOnPlane(
-                            current.PlantEffectiveCorrectionBefore,
-                            up).magnitude,
-                    ["EffectiveCorrectionBeforeAlongUpMeters"] =
-                        Vector3.Dot(
-                            current.PlantEffectiveCorrectionBefore,
-                            up),
-                    ["CorrectionResidualCapturedBeforeDecayMeters"] =
-                        current.PlantCorrectionResidualCapturedBeforeDecay.magnitude,
-                    ["CorrectionResidualAfterDecayMeters"] =
-                        current.PlantCorrectionResidualAfterDecay.magnitude,
-                    ["CorrectionResidualDecayStepMeters"] = Vector3.Distance(
-                        current.PlantCorrectionResidualCapturedBeforeDecay,
-                        current.PlantCorrectionResidualAfterDecay),
-                    ["CorrectionResidualCaptureErrorMeters"] =
+                    ["CapturedResidualMeters"] =
+                        current.PlantWorldResidualCapturedBeforeDecay.magnitude,
+                    ["ResidualAfterDecayMeters"] =
+                        current.PlantWorldResidualAfterDecay.magnitude,
+                    ["ResidualDecayStepMeters"] = Vector3.Distance(
+                        current.PlantWorldResidualCapturedBeforeDecay,
+                        current.PlantWorldResidualAfterDecay),
+                    ["ResidualCaptureContinuityErrorMeters"] =
                         Vector3.Distance(
-                            expectedCapturedCorrectionResidual,
-                            current.PlantCorrectionResidualCapturedBeforeDecay),
+                            expectedCapturedResidual,
+                            current.PlantWorldResidualCapturedBeforeDecay),
                     ["DesiredToResponseMeters"] =
                         desiredToResponse.magnitude,
                     ["DesiredToResponseHorizontalMeters"] =
@@ -589,12 +538,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "NewEventContactAcquired",
                     ["sourceContinuous"] = sourceContinuous,
                     ["contributionContinuous"] = contributionContinuous,
-                    ["correctionResidualCaptured"] =
+                    ["residualCaptured"] =
                         current.PlantResidualCaptureReason != "None",
-                    ["correctionResidualDecayApplied"] =
-                        current.PlantCorrectionResidualDecayApplied,
-                    ["relativeCorrectionCaptureSatisfied"] =
-                        metrics["CorrectionResidualCaptureErrorMeters"] <=
+                    ["residualDecayApplied"] =
+                        current.PlantWorldResidualDecayApplied,
+                    ["captureContinuitySatisfied"] =
+                        metrics["ResidualCaptureContinuityErrorMeters"] <=
                         PositionNoiseFloor,
                     ["anchorMatchesSelectedTarget"] =
                         metrics["AnchorToSelectedTargetErrorMeters"] <=
@@ -627,15 +576,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         previous.ResolvedFinalSole),
                     previousResponseOutput = CharacterFootVectorFact.From(
                         current.PreviousResponseOutputPoint),
-                    selectedTargetCorrection = CharacterFootVectorFact.From(
-                        selectedTargetCorrection),
-                    effectiveCorrectionBefore = CharacterFootVectorFact.From(
-                        current.PlantEffectiveCorrectionBefore),
-                    correctionResidualCapturedBeforeDecay =
-                        CharacterFootVectorFact.From(
-                        current.PlantCorrectionResidualCapturedBeforeDecay),
-                    correctionResidualAfterDecay = CharacterFootVectorFact.From(
-                        current.PlantCorrectionResidualAfterDecay),
+                    capturedBeforeDecay = CharacterFootVectorFact.From(
+                        current.PlantWorldResidualCapturedBeforeDecay),
+                    afterDecay = CharacterFootVectorFact.From(
+                        current.PlantWorldResidualAfterDecay),
                     desiredOutput = CharacterFootVectorFact.From(
                         current.DesiredOutputPoint),
                     responseOutput = CharacterFootVectorFact.From(
@@ -1255,30 +1199,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.ResponseOutputPoint),
                     plantResidualCaptureReason =
                         current.PlantResidualCaptureReason,
-                    plantCorrectionResidualBeforeCapture =
+                    plantWorldResidualBeforeCapture =
                         CharacterFootVectorFact.From(
-                            current.PlantCorrectionResidualBeforeCapture),
-                    plantCorrectionResidualCapturedBeforeDecay =
+                            current.PlantWorldResidualBeforeCapture),
+                    plantWorldResidualCapturedBeforeDecay =
                         CharacterFootVectorFact.From(
-                            current.PlantCorrectionResidualCapturedBeforeDecay),
-                    plantCorrectionResidualDecayApplied =
-                        current.PlantCorrectionResidualDecayApplied,
-                    plantCorrectionResidualBaseHalfLifeSeconds =
-                        current.PlantCorrectionResidualBaseHalfLifeSeconds,
-                    plantCorrectionResidualDeadlineHalfLifeAvailable =
-                        current.PlantCorrectionResidualDeadlineHalfLifeAvailable,
-                    plantCorrectionResidualDeadlineHalfLifeSeconds =
-                        current.PlantCorrectionResidualDeadlineHalfLifeSeconds,
-                    plantCorrectionResidualAppliedHalfLifeSeconds =
-                        current.PlantCorrectionResidualAppliedHalfLifeSeconds,
-                    plantCorrectionResidualAfterDecay =
+                            current.PlantWorldResidualCapturedBeforeDecay),
+                    plantWorldResidualDecayApplied =
+                        current.PlantWorldResidualDecayApplied,
+                    plantWorldResidualBaseHalfLifeSeconds =
+                        current.PlantWorldResidualBaseHalfLifeSeconds,
+                    plantWorldResidualDeadlineHalfLifeAvailable =
+                        current.PlantWorldResidualDeadlineHalfLifeAvailable,
+                    plantWorldResidualDeadlineHalfLifeSeconds =
+                        current.PlantWorldResidualDeadlineHalfLifeSeconds,
+                    plantWorldResidualAppliedHalfLifeSeconds =
+                        current.PlantWorldResidualAppliedHalfLifeSeconds,
+                    plantWorldResidualAfterDecay =
                         CharacterFootVectorFact.From(
-                            current.PlantCorrectionResidualAfterDecay),
-                    plantCorrectionResidualCompletionTolerance =
-                        current.PlantCorrectionResidualCompletionTolerance,
-                    plantCorrectionResidualClearedAtCompletionTolerance =
+                            current.PlantWorldResidualAfterDecay),
+                    plantWorldResidualCompletionTolerance =
+                        current.PlantWorldResidualCompletionTolerance,
+                    plantWorldResidualClearedAtCompletionTolerance =
                         current
-                            .PlantCorrectionResidualClearedAtCompletionTolerance,
+                            .PlantWorldResidualClearedAtCompletionTolerance,
                     correctionResponseEvaluated =
                         current.CorrectionResponseEvaluated,
                     correctionResponseInitializedBefore =
@@ -1301,6 +1245,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.CorrectionResponseMaximumDirectionChangeDegrees,
                     correctionResponseAppliedDirectionChangeDegrees =
                         current.CorrectionResponseAppliedDirectionChangeDegrees,
+                    correctionResponseVisibleOutputTransferred =
+                        current.CorrectionResponseVisibleOutputTransferred,
+                    correctionResponseBeforeRebase =
+                        current.CorrectionResponseBeforeRebase,
                     correctionResponsePrevious =
                         current.CorrectionResponsePrevious,
                     correctionResponseCurrent =
@@ -4555,6 +4503,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.CorrectionResponseMaximumDirectionChangeDegrees,
                 appliedDirectionChangeDegrees =
                     frame.CorrectionResponseAppliedDirectionChangeDegrees,
+                visibleOutputTransferred =
+                    frame.CorrectionResponseVisibleOutputTransferred,
+                beforeRebase = frame.CorrectionResponseBeforeRebase,
                 previous = frame.CorrectionResponsePrevious,
                 current = frame.CorrectionResponseCurrent,
                 direction = CharacterFootVectorFact.From(
@@ -5596,26 +5547,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("FootMotionResponseOutputPoint"),
                 PlantResidualCaptureReason =
                     Cell("FootMotionPlantResidualCaptureReason"),
-                PlantCorrectionResidualBeforeCapture =
-                    Vector("FootMotionPlantCorrectionResidualBeforeCapture"),
-                PlantCorrectionResidualCapturedBeforeDecay =
-                    Vector("FootMotionPlantCorrectionResidualCapturedBeforeDecay"),
-                PlantCorrectionResidualDecayApplied =
-                    Int("FootMotionPlantCorrectionResidualDecayApplied") != 0,
-                PlantCorrectionResidualBaseHalfLifeSeconds =
-                    Float("FootMotionPlantCorrectionResidualBaseHalfLifeSeconds"),
-                PlantCorrectionResidualDeadlineHalfLifeAvailable =
-                    Int("FootMotionPlantCorrectionResidualDeadlineHalfLifeAvailable") != 0,
-                PlantCorrectionResidualDeadlineHalfLifeSeconds =
-                    Float("FootMotionPlantCorrectionResidualDeadlineHalfLifeSeconds"),
-                PlantCorrectionResidualAppliedHalfLifeSeconds =
-                    Float("FootMotionPlantCorrectionResidualAppliedHalfLifeSeconds"),
-                PlantCorrectionResidualAfterDecay =
-                    Vector("FootMotionPlantCorrectionResidualAfterDecay"),
-                PlantCorrectionResidualCompletionTolerance =
-                    Float("FootMotionPlantCorrectionResidualCompletionTolerance"),
-                PlantCorrectionResidualClearedAtCompletionTolerance =
-                    Int("FootMotionPlantCorrectionResidualClearedAtCompletionTolerance") != 0,
+                PlantWorldResidualBeforeCapture =
+                    Vector("FootMotionPlantWorldResidualBeforeCapture"),
+                PlantWorldResidualCapturedBeforeDecay =
+                    Vector("FootMotionPlantWorldResidualCapturedBeforeDecay"),
+                PlantWorldResidualDecayApplied =
+                    Int("FootMotionPlantWorldResidualDecayApplied") != 0,
+                PlantWorldResidualBaseHalfLifeSeconds =
+                    Float("FootMotionPlantWorldResidualBaseHalfLifeSeconds"),
+                PlantWorldResidualDeadlineHalfLifeAvailable =
+                    Int("FootMotionPlantWorldResidualDeadlineHalfLifeAvailable") != 0,
+                PlantWorldResidualDeadlineHalfLifeSeconds =
+                    Float("FootMotionPlantWorldResidualDeadlineHalfLifeSeconds"),
+                PlantWorldResidualAppliedHalfLifeSeconds =
+                    Float("FootMotionPlantWorldResidualAppliedHalfLifeSeconds"),
+                PlantWorldResidualAfterDecay =
+                    Vector("FootMotionPlantWorldResidualAfterDecay"),
+                PlantWorldResidualCompletionTolerance =
+                    Float("FootMotionPlantWorldResidualCompletionTolerance"),
+                PlantWorldResidualClearedAtCompletionTolerance =
+                    Int("FootMotionPlantWorldResidualClearedAtCompletionTolerance") != 0,
                 CorrectionResponseEvaluated =
                     Int("FootMotionCorrectionResponseEvaluated") != 0,
                 CorrectionResponseInitializedBefore =
@@ -5636,6 +5587,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionCorrectionResponseMaximumDirectionChangeDegrees"),
                 CorrectionResponseAppliedDirectionChangeDegrees =
                     Float("FootMotionCorrectionResponseAppliedDirectionChangeDegrees"),
+                CorrectionResponseVisibleOutputTransferred =
+                    Int("FootMotionCorrectionResponseVisibleOutputTransferred") != 0,
+                CorrectionResponseBeforeRebase =
+                    Float("FootMotionCorrectionResponseBeforeRebase"),
                 CorrectionResponsePrevious =
                     Float("FootMotionCorrectionResponsePrevious"),
                 CorrectionResponseCurrent =
@@ -6020,74 +5975,73 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         : !distanceForceRefresh && !verificationRefresh);
                 bool residualCaptured =
                     frame.PlantResidualCaptureReason != "None";
-                Vector3 selectedTargetCorrection =
-                    frame.PlantSelectedWorldTarget - frame.OriginalSole;
+                Vector3 outputBefore = frame.OriginalSole +
+                                       frame.PlantEffectiveCorrectionBefore;
                 Vector3 expectedCapturedBeforeDecay = residualCaptured
-                    ? frame.PlantEffectiveCorrectionBefore -
-                      selectedTargetCorrection
-                    : frame.PlantCorrectionResidualBeforeCapture;
+                    ? outputBefore - frame.PlantSelectedWorldTarget
+                    : frame.PlantWorldResidualBeforeCapture;
                 bool residualCaptureConsistent = Vector3.Distance(
-                    frame.PlantCorrectionResidualCapturedBeforeDecay,
+                    frame.PlantWorldResidualCapturedBeforeDecay,
                     expectedCapturedBeforeDecay) <= RuntimeGeometryEpsilon;
                 bool residualActiveBeforeDecay =
-                    frame.PlantCorrectionResidualCapturedBeforeDecay.sqrMagnitude >
+                    frame.PlantWorldResidualCapturedBeforeDecay.sqrMagnitude >
                     RuntimeGeometryEpsilon * RuntimeGeometryEpsilon;
                 bool residualDecayRequired = residualActiveBeforeDecay &&
                                              frame.DeltaSeconds > 0f;
                 bool residualDeadlineConsistent =
-                    frame.PlantCorrectionResidualDeadlineHalfLifeAvailable
+                    frame.PlantWorldResidualDeadlineHalfLifeAvailable
                     ? float.IsFinite(
-                          frame.PlantCorrectionResidualDeadlineHalfLifeSeconds) &&
-                      frame.PlantCorrectionResidualDeadlineHalfLifeSeconds > 0f
+                          frame.PlantWorldResidualDeadlineHalfLifeSeconds) &&
+                      frame.PlantWorldResidualDeadlineHalfLifeSeconds > 0f
                     : Math.Abs(
-                          frame.PlantCorrectionResidualDeadlineHalfLifeSeconds) <=
+                          frame.PlantWorldResidualDeadlineHalfLifeSeconds) <=
                       TimeEpsilon;
                 float expectedAppliedHalfLife =
-                    frame.PlantCorrectionResidualDeadlineHalfLifeAvailable
+                    frame.PlantWorldResidualDeadlineHalfLifeAvailable
                         ? Math.Min(
-                            frame.PlantCorrectionResidualBaseHalfLifeSeconds,
-                            frame.PlantCorrectionResidualDeadlineHalfLifeSeconds)
-                        : frame.PlantCorrectionResidualBaseHalfLifeSeconds;
+                            frame.PlantWorldResidualBaseHalfLifeSeconds,
+                            frame.PlantWorldResidualDeadlineHalfLifeSeconds)
+                        : frame.PlantWorldResidualBaseHalfLifeSeconds;
                 bool residualHalfLifeConsistent =
                     float.IsFinite(
-                        frame.PlantCorrectionResidualBaseHalfLifeSeconds) &&
-                    frame.PlantCorrectionResidualBaseHalfLifeSeconds > 0f &&
+                        frame.PlantWorldResidualBaseHalfLifeSeconds) &&
+                    frame.PlantWorldResidualBaseHalfLifeSeconds > 0f &&
                     residualDeadlineConsistent &&
-                    (frame.PlantCorrectionResidualDecayApplied
+                    (frame.PlantWorldResidualDecayApplied
                         ? float.IsFinite(
-                              frame.PlantCorrectionResidualAppliedHalfLifeSeconds) &&
-                          frame.PlantCorrectionResidualAppliedHalfLifeSeconds > 0f &&
+                              frame.PlantWorldResidualAppliedHalfLifeSeconds) &&
+                          frame.PlantWorldResidualAppliedHalfLifeSeconds > 0f &&
                           Math.Abs(
-                              frame.PlantCorrectionResidualAppliedHalfLifeSeconds -
+                              frame.PlantWorldResidualAppliedHalfLifeSeconds -
                               expectedAppliedHalfLife) <= TimeEpsilon &&
                           residualActiveBeforeDecay &&
                           frame.DeltaSeconds > 0f
                         : Math.Abs(
-                              frame.PlantCorrectionResidualAppliedHalfLifeSeconds) <=
+                              frame.PlantWorldResidualAppliedHalfLifeSeconds) <=
                           TimeEpsilon);
                 Vector3 expectedAdvancedResidual =
-                    frame.PlantCorrectionResidualDecayApplied
+                    frame.PlantWorldResidualDecayApplied
                         ? AdvanceResidual(
-                            frame.PlantCorrectionResidualCapturedBeforeDecay,
+                            frame.PlantWorldResidualCapturedBeforeDecay,
                             frame.DeltaSeconds,
-                            frame.PlantCorrectionResidualAppliedHalfLifeSeconds)
-                        : frame.PlantCorrectionResidualCapturedBeforeDecay;
+                            frame.PlantWorldResidualAppliedHalfLifeSeconds)
+                        : frame.PlantWorldResidualCapturedBeforeDecay;
                 bool expectedClearedAtCompletionTolerance =
-                    frame.PlantCorrectionResidualDecayApplied &&
+                    frame.PlantWorldResidualDecayApplied &&
                     expectedAdvancedResidual.magnitude <=
-                    frame.PlantCorrectionResidualCompletionTolerance;
+                    frame.PlantWorldResidualCompletionTolerance;
                 Vector3 expectedResidualAfterDecay =
                     expectedClearedAtCompletionTolerance
                         ? default
                         : expectedAdvancedResidual;
                 bool residualDecayConsistent =
                     float.IsFinite(
-                        frame.PlantCorrectionResidualCompletionTolerance) &&
-                    frame.PlantCorrectionResidualCompletionTolerance > 0f &&
-                    frame.PlantCorrectionResidualClearedAtCompletionTolerance ==
+                        frame.PlantWorldResidualCompletionTolerance) &&
+                    frame.PlantWorldResidualCompletionTolerance > 0f &&
+                    frame.PlantWorldResidualClearedAtCompletionTolerance ==
                     expectedClearedAtCompletionTolerance &&
                     Vector3.Distance(
-                        frame.PlantCorrectionResidualAfterDecay,
+                        frame.PlantWorldResidualAfterDecay,
                         expectedResidualAfterDecay) <=
                     RuntimeGeometryEpsilon;
                 bool responseInitializedThisFrame =
@@ -6125,9 +6079,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             expectedResponseDirection)
                         : 0f;
                 float expectedResponsePrevious =
-                    responseInitializedThisFrame
-                        ? frame.CorrectionResponseDesired
-                        : frame.CorrectionResponsePrevious;
+                    frame.CorrectionResponseVisibleOutputTransferred
+                    ? Vector3.Dot(
+                        frame.PreviousResponseOutputPoint -
+                        frame.OriginalSole,
+                        expectedResponseDirection)
+                    : frame.CorrectionResponseBeforeRebase;
                 float responseDelta =
                     frame.CorrectionResponseDesired -
                     frame.CorrectionResponsePrevious;
@@ -6171,10 +6128,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                               frame.CorrectionResponseCurrent -
                               frame.CorrectionResponsePrevious) <=
                           PositionNoiseFloor &&
-                          Math.Abs(
-                              frame.CorrectionResponsePrevious -
-                              frame.CorrectionResponseDesired) <=
-                          PositionNoiseFloor &&
+                          (!frame.CorrectionResponseVisibleOutputTransferred
+                              ? Math.Abs(
+                                  frame.CorrectionResponsePrevious -
+                                  frame.CorrectionResponseDesired) <=
+                                PositionNoiseFloor
+                              : frame.PreviousResponseOutputAvailable) &&
                           frame.CorrectionResponseDeltaDirection == "None" &&
                           Math.Abs(
                               frame.CorrectionResponseSelectedSpeed) <=
@@ -6209,13 +6168,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterFootVerticalContinuityOwner.TargetHeightHistory;
                 }
                 if (residualCaptured ||
-                    frame.PlantCorrectionResidualCapturedBeforeDecay.sqrMagnitude >
+                    frame.PlantWorldResidualCapturedBeforeDecay.sqrMagnitude >
                     RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
-                    frame.PlantCorrectionResidualAfterDecay.sqrMagnitude >
+                    frame.PlantWorldResidualAfterDecay.sqrMagnitude >
                     RuntimeGeometryEpsilon * RuntimeGeometryEpsilon)
                 {
                     expectedOwners |=
-                        CharacterFootVerticalContinuityOwner.PlantCorrectionResidual;
+                        CharacterFootVerticalContinuityOwner.PlantWorldResidual;
                 }
                 if (responseInitializedThisFrame ||
                     !Mathf.Approximately(
@@ -6232,15 +6191,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PlantVerticalContinuityOwners,
                     out CharacterFootVerticalContinuityOwner actualOwners) &&
                     actualOwners == expectedOwners;
-                if (frame.PlantCorrectionResidualDecayApplied !=
+                if (frame.PlantWorldResidualDecayApplied !=
                     residualDecayRequired)
                 {
                     throw new InvalidDataException(
-                        $"Foot Motion Plant Correction Residual decay application is inconsistent " +
+                        $"Foot Motion Plant World Residual decay application is inconsistent " +
                         $"Frame={frame.Frame} Side={frame.Side} " +
                         $"CaptureReason={frame.PlantResidualCaptureReason} " +
                         $"ResidualActive={residualActiveBeforeDecay} " +
-                        $"DecayApplied={frame.PlantCorrectionResidualDecayApplied}.");
+                        $"DecayApplied={frame.PlantWorldResidualDecayApplied}.");
                 }
                 if (frame.PlantTargetEventIdentity == 0 ||
                     frame.PlantTargetKind == "None" ||
@@ -6257,10 +6216,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.PreviousResponseOutputPoint) ||
                     !FiniteVector(frame.DesiredOutputPoint) ||
                     !FiniteVector(frame.ResponseOutputPoint) ||
-                    !FiniteVector(frame.PlantCorrectionResidualBeforeCapture) ||
+                    !FiniteVector(frame.PlantWorldResidualBeforeCapture) ||
                     !FiniteVector(
-                        frame.PlantCorrectionResidualCapturedBeforeDecay) ||
-                    !FiniteVector(frame.PlantCorrectionResidualAfterDecay) ||
+                        frame.PlantWorldResidualCapturedBeforeDecay) ||
+                    !FiniteVector(frame.PlantWorldResidualAfterDecay) ||
                     !FiniteVector(frame.PlantEffectiveCorrectionBefore) ||
                     !FiniteVector(frame.PlantEffectiveCorrectionAfter) ||
                     !FiniteVector(frame.CorrectionResponseRequestedDirection) ||
@@ -6346,8 +6305,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         RuntimeGeometryEpsilon ||
                     Vector3.Distance(
                         frame.DesiredOutputPoint,
-                        frame.OriginalSole + selectedTargetCorrection +
-                        frame.PlantCorrectionResidualAfterDecay) >
+                        frame.PlantSelectedWorldTarget +
+                        frame.PlantWorldResidualAfterDecay) >
                     PositionNoiseFloor ||
                     Math.Abs(
                         frame.CorrectionResponseDesired -
@@ -6363,6 +6322,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         (frame.CorrectionResponseCurrent -
                          frame.CorrectionResponseDesired)) >
                     PositionNoiseFloor ||
+                    frame.PreviousResponseOutputAvailable &&
+                        Vector3.Distance(
+                            frame.PreviousResponseOutputPoint,
+                            outputBefore) > PositionNoiseFloor ||
                     Vector3.Distance(
                         frame.PlantEffectiveCorrectionAfter,
                         frame.ResponseOutputPoint -
@@ -6388,8 +6351,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"ResidualDecay={residualDecayConsistent} " +
                         $"Response={responseInitializationConsistent} " +
                         $"Owners={ownersConsistent} " +
-                        $"DesiredOutputError={Vector3.Distance(frame.DesiredOutputPoint, frame.OriginalSole + selectedTargetCorrection + frame.PlantCorrectionResidualAfterDecay):R} " +
+                        $"DesiredOutputError={Vector3.Distance(frame.DesiredOutputPoint, frame.PlantSelectedWorldTarget + frame.PlantWorldResidualAfterDecay):R} " +
                         $"ResponseOutputError={Vector3.Distance(frame.ResponseOutputPoint, frame.DesiredOutputPoint + frame.CorrectionResponseDirection * (frame.CorrectionResponseCurrent - frame.CorrectionResponseDesired)):R} " +
+                        $"PreviousOutputError={Vector3.Distance(frame.PreviousResponseOutputPoint, outputBefore):R} " +
                         $"EffectiveResponseError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.ResponseOutputPoint - frame.OriginalSole):R} " +
                         $"InterpolationError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.InterpolationOutputCorrection):R} " +
                         $"DirectionMagnitude={frame.CorrectionResponseDirection.magnitude:R} " +
@@ -7379,9 +7343,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             float desired = Vector3.Dot(
                 frame.DesiredOutputPoint - frame.OriginalSole,
                 applied);
-            float previous = initialized
-                ? frame.CorrectionResponsePrevious
-                : desired;
+            float previous = frame.CorrectionResponseVisibleOutputTransferred
+                ? Vector3.Dot(
+                    frame.PreviousResponseOutputPoint - frame.OriginalSole,
+                    applied)
+                : frame.CorrectionResponseBeforeRebase;
             float delta = desired - previous;
             string deltaDirection = delta == 0f
                 ? "None"
@@ -7432,9 +7398,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     (frame.CorrectionResponseInitializationReason == "None" ||
                      Vector3.Distance(
                          frame.CorrectionResponsePreviousDirection,
-                         requested) > RuntimeGeometryEpsilon) ||
+                         requested) > RuntimeGeometryEpsilon ||
+                     Math.Abs(
+                         frame.CorrectionResponseBeforeRebase - desired) >
+                     PositionNoiseFloor) ||
                 !initializedThisFrame &&
                     frame.CorrectionResponseInitializationReason != "None" ||
+                frame.CorrectionResponseVisibleOutputTransferred &&
+                    !frame.PreviousResponseOutputAvailable ||
                 Math.Abs(
                     frame.CorrectionResponsePrevious - previous) >
                     PositionNoiseFloor ||
@@ -7980,22 +7951,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionResponseOutputPointY",
                 "FootMotionResponseOutputPointZ",
                 "FootMotionPlantResidualCaptureReason",
-                "FootMotionPlantCorrectionResidualBeforeCaptureX",
-                "FootMotionPlantCorrectionResidualBeforeCaptureY",
-                "FootMotionPlantCorrectionResidualBeforeCaptureZ",
-                "FootMotionPlantCorrectionResidualCapturedBeforeDecayX",
-                "FootMotionPlantCorrectionResidualCapturedBeforeDecayY",
-                "FootMotionPlantCorrectionResidualCapturedBeforeDecayZ",
-                "FootMotionPlantCorrectionResidualDecayApplied",
-                "FootMotionPlantCorrectionResidualBaseHalfLifeSeconds",
-                "FootMotionPlantCorrectionResidualDeadlineHalfLifeAvailable",
-                "FootMotionPlantCorrectionResidualDeadlineHalfLifeSeconds",
-                "FootMotionPlantCorrectionResidualAppliedHalfLifeSeconds",
-                "FootMotionPlantCorrectionResidualAfterDecayX",
-                "FootMotionPlantCorrectionResidualAfterDecayY",
-                "FootMotionPlantCorrectionResidualAfterDecayZ",
-                "FootMotionPlantCorrectionResidualCompletionTolerance",
-                "FootMotionPlantCorrectionResidualClearedAtCompletionTolerance",
+                "FootMotionPlantWorldResidualBeforeCaptureX",
+                "FootMotionPlantWorldResidualBeforeCaptureY",
+                "FootMotionPlantWorldResidualBeforeCaptureZ",
+                "FootMotionPlantWorldResidualCapturedBeforeDecayX",
+                "FootMotionPlantWorldResidualCapturedBeforeDecayY",
+                "FootMotionPlantWorldResidualCapturedBeforeDecayZ",
+                "FootMotionPlantWorldResidualDecayApplied",
+                "FootMotionPlantWorldResidualBaseHalfLifeSeconds",
+                "FootMotionPlantWorldResidualDeadlineHalfLifeAvailable",
+                "FootMotionPlantWorldResidualDeadlineHalfLifeSeconds",
+                "FootMotionPlantWorldResidualAppliedHalfLifeSeconds",
+                "FootMotionPlantWorldResidualAfterDecayX",
+                "FootMotionPlantWorldResidualAfterDecayY",
+                "FootMotionPlantWorldResidualAfterDecayZ",
+                "FootMotionPlantWorldResidualCompletionTolerance",
+                "FootMotionPlantWorldResidualClearedAtCompletionTolerance",
                 "FootMotionCorrectionResponseEvaluated",
                 "FootMotionCorrectionResponseInitializedBefore",
                 "FootMotionCorrectionResponseInitializedThisFrame",
@@ -8068,7 +8039,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionSelectedSupportTargetAvailable,FootMotionSelectedSupportTargetFrameSequence,FootMotionSelectedSupportTargetCompletionIdentity,FootMotionSelectedSupportTargetSide,FootMotionSelectedSupportTargetPositionX,FootMotionSelectedSupportTargetPositionY,FootMotionSelectedSupportTargetPositionZ,FootMotionSelectedSupportTargetNormalX,FootMotionSelectedSupportTargetNormalY,FootMotionSelectedSupportTargetNormalZ,FootMotionSelectedSupportTargetSurfaceIdentity,FootMotionSelectedSupportTargetWorldRevision,FootMotionSelectedSupportTargetKind,FootMotionSelectedSupportTargetPositionSource,FootMotionSelectedSupportTargetPositionFrameSequence,FootMotionSelectedSupportTargetPositionCompletionIdentity,FootMotionSelectedSupportTargetPositionEventIdentity,FootMotionSelectedSupportTargetPositionPathIdentity,FootMotionSelectedSupportTargetNormalSource,FootMotionSelectedSupportTargetNormalFrameSequence,FootMotionSelectedSupportTargetNormalCompletionIdentity,FootMotionSelectedSupportTargetNormalEventIdentity");
             RequireColumnGroup(
                 indices,
-                "FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ");
+                "FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ");
             RequireColumnGroup(
                 indices,
                 "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason,CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted,CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted,CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ");
@@ -8833,16 +8804,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 DesiredOutputPoint;
             internal Vector3 ResponseOutputPoint;
             internal string PlantResidualCaptureReason;
-            internal Vector3 PlantCorrectionResidualBeforeCapture;
-            internal Vector3 PlantCorrectionResidualCapturedBeforeDecay;
-            internal bool PlantCorrectionResidualDecayApplied;
-            internal float PlantCorrectionResidualBaseHalfLifeSeconds;
-            internal bool PlantCorrectionResidualDeadlineHalfLifeAvailable;
-            internal float PlantCorrectionResidualDeadlineHalfLifeSeconds;
-            internal float PlantCorrectionResidualAppliedHalfLifeSeconds;
-            internal Vector3 PlantCorrectionResidualAfterDecay;
-            internal float PlantCorrectionResidualCompletionTolerance;
-            internal bool PlantCorrectionResidualClearedAtCompletionTolerance;
+            internal Vector3 PlantWorldResidualBeforeCapture;
+            internal Vector3 PlantWorldResidualCapturedBeforeDecay;
+            internal bool PlantWorldResidualDecayApplied;
+            internal float PlantWorldResidualBaseHalfLifeSeconds;
+            internal bool PlantWorldResidualDeadlineHalfLifeAvailable;
+            internal float PlantWorldResidualDeadlineHalfLifeSeconds;
+            internal float PlantWorldResidualAppliedHalfLifeSeconds;
+            internal Vector3 PlantWorldResidualAfterDecay;
+            internal float PlantWorldResidualCompletionTolerance;
+            internal bool PlantWorldResidualClearedAtCompletionTolerance;
             internal bool CorrectionResponseEvaluated;
             internal bool CorrectionResponseInitializedBefore;
             internal bool CorrectionResponseInitializedThisFrame;
@@ -8853,6 +8824,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool CorrectionResponseDirectionLimited;
             internal float CorrectionResponseMaximumDirectionChangeDegrees;
             internal float CorrectionResponseAppliedDirectionChangeDegrees;
+            internal bool CorrectionResponseVisibleOutputTransferred;
+            internal float CorrectionResponseBeforeRebase;
             internal float CorrectionResponsePrevious;
             internal float CorrectionResponseCurrent;
             internal Vector3 CorrectionResponseDirection;

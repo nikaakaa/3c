@@ -51,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/40";
+        const string Schema = "character-foot-motion-facts/41";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 40;
+        const int AnalyzerVersion = 41;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -127,6 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"landingStateBoundaries={document.coverage.landingStateBoundaryCount} " +
                 $"landingStateSpans={document.coverage.landingStateSpanCount} " +
                 $"lockedEvents={document.coverage.lockedEventCount} " +
+                $"lockedFullAnchorEvents={document.coverage.lockedFullAnchorEventCount} " +
+                $"lockedSlidingEvents={document.coverage.lockedSlidingEventCount} " +
                 $"releaseEvents={document.coverage.releaseEventCount} " +
                 $"pathRevisionOutputJumps={document.coverage.pathRevisionOutputJumpCount} " +
                 $"pathContinuityEvents={document.coverage.pathContinuityEventCount} " +
@@ -2254,10 +2256,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 int start = index;
                 ulong eventIdentity = frames[index].FootMotionEventIdentity;
+                string lockResponse = frames[index].LockResponse;
+                if (lockResponse != "FullAnchor" &&
+                    lockResponse != "Sliding")
+                {
+                    throw new InvalidDataException(
+                        $"Locked Foot response is invalid Frame={frames[index].Frame} Side={frames[index].Side} Response={lockResponse}.");
+                }
                 while (index + 1 < frames.Count &&
                        Continuous(frames[index], frames[index + 1]) &&
                        frames[index + 1].ConstraintState == "Locked" &&
-                       frames[index + 1].FootMotionEventIdentity == eventIdentity)
+                       frames[index + 1].FootMotionEventIdentity == eventIdentity &&
+                       frames[index + 1].LockResponse == lockResponse)
                 {
                     index++;
                 }
@@ -2273,7 +2283,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.CorrectedSole - frame.Anchor,
                         frame.ComponentUp.normalized))
                     .ToList();
-                double sink = alongUp[0] - alongUp.Min();
+                List<double> horizontalAnchorDistances = window
+                    .Select(frame => (double)Vector3.ProjectOnPlane(
+                        frame.CorrectedSole - frame.Anchor,
+                        frame.ComponentUp.normalized).magnitude)
+                    .ToList();
+                double sink = Math.Max(0d, -alongUp.Min());
                 double drift = anchorDistances[^1] - anchorDistances[0];
                 double visibleStep = MaximumVectorStep(
                     window.Select(frame => frame.CorrectedSole).ToList());
@@ -2285,11 +2300,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["correctedSoleAnchorDistanceMaximumMeters"] = anchorDistances.Max(),
                     ["correctedSoleAnchorDistanceMinimumMeters"] = anchorDistances.Min(),
                     ["correctedSoleAnchorDistanceChangeMeters"] = drift,
+                    ["correctedSoleAnchorHorizontalDistanceEntryMeters"] =
+                        horizontalAnchorDistances[0],
+                    ["correctedSoleAnchorHorizontalDistanceExitMeters"] =
+                        horizontalAnchorDistances[^1],
+                    ["correctedSoleAnchorHorizontalDistanceMaximumMeters"] =
+                        horizontalAnchorDistances.Max(),
                     ["lockWeightEntry"] = window[0].FormalLockWeight,
                     ["lockWeightExit"] = window[^1].FormalLockWeight,
                     ["lockWeightMinimum"] = window.Min(frame => frame.FormalLockWeight),
                     ["soleAlongUpEntryMeters"] = alongUp[0],
                     ["soleAlongUpMinimumMeters"] = alongUp.Min(),
+                    ["soleAlongUpAbsoluteMaximumMeters"] =
+                        alongUp.Max(value => Math.Abs(value)),
                     ["soleDownwardExcursionMeters"] = sink,
                     ["supportEntry"] = window[0].FormalSupport,
                     ["supportExit"] = window[^1].FormalSupport,
@@ -2298,12 +2321,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var evidence = new SortedDictionary<string, bool>(StringComparer.Ordinal)
                 {
                     ["anchorStable"] = anchorDisplacement <= PositionNoiseFloor,
+                    ["fullAnchorResponse"] = lockResponse == "FullAnchor",
                     ["groundedThroughout"] = window.All(frame => frame.Grounded),
                     ["lockWeightDecreased"] = window[^1].FormalLockWeight < window[0].FormalLockWeight,
+                    ["slidingContinuityContractAvailable"] = false,
+                    ["slideDistanceLimitAvailable"] = false,
+                    ["slidingResponse"] = lockResponse == "Sliding",
                     ["supportStayedPositive"] = window.All(frame => frame.FormalSupport > 0f)
                 };
                 EventFact fact = new EventFact(
-                    "Locked",
+                    lockResponse == "FullAnchor"
+                        ? "LockedFullAnchor"
+                        : "LockedSliding",
                     window[0].Side,
                     window[0].Frame,
                     window[^1].Frame,
@@ -3517,7 +3546,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => value.kind == "LandingStateBoundary"),
                     landingStateSpanCount = events.Count(
                         value => value.kind == "LandingStateSpan"),
-                    lockedEventCount = events.Count(value => value.kind == "Locked"),
+                    lockedFullAnchorEventCount = events.Count(
+                        value => value.kind == "LockedFullAnchor"),
+                    lockedSlidingEventCount = events.Count(
+                        value => value.kind == "LockedSliding"),
+                    lockedEventCount = events.Count(
+                        value => value.kind == "LockedFullAnchor" ||
+                                 value.kind == "LockedSliding"),
                     releaseEventCount = events.Count(value => value.kind == "Release"),
                     pathRevisionOutputJumpCount = events.Count(
                         value => value.kind == "PathRevisionOutputJump"),
@@ -7531,6 +7566,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int landingStateBoundaryCount;
             public int landingStateSpanCount;
             public int lockedEventCount;
+            public int lockedFullAnchorEventCount;
+            public int lockedSlidingEventCount;
             public int releaseEventCount;
             public int pathRevisionOutputJumpCount;
             public int pathContinuityEventCount;

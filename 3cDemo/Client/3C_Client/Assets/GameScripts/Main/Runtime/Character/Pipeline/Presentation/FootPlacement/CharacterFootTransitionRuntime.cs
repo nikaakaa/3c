@@ -39,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     break;
                 case CharacterFootAnchorCommand.Release:
                     context.Contact.Clear();
+                    context.ContactTransition.CompletedLockWeightEventIdentity = 0;
                     break;
                 default:
                     throw new System.InvalidOperationException(
@@ -51,6 +52,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootTransitionDecision decision,
             in CharacterFootStateFrame frame)
         {
+            ulong eventIdentity = frame.LockRequest.EventIdentity;
+            if (eventIdentity != 0 &&
+                context.CompletedLockWeightEventIdentity != 0 &&
+                context.CompletedLockWeightEventIdentity != eventIdentity)
+            {
+                context.CompletedLockWeightEventIdentity = 0;
+            }
             if (decision.ContactEdge == CharacterFootContactEdge.None)
             {
                 context.SecondsSinceEdge += frame.DeltaSeconds;
@@ -77,6 +85,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             context.PreviousMode = frame.LockRequest.Mode;
             context.PreviousWeight = frame.LockRequest.Weight;
             context.LastEdge = decision.ContactEdge;
+            if (frame.LockRequest.RequestsLock && eventIdentity != 0 &&
+                frame.LockRequest.Weight >=
+                1f - CharacterFootConstraintMath.GeometryEpsilon)
+            {
+                context.CompletedLockWeightEventIdentity = eventIdentity;
+            }
         }
     }
 }

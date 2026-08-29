@@ -167,6 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootPlantTargetKind.None,
                     CharacterFootLockResponse.None,
                     false,
+                    false,
                     default,
                     false,
                     false,
@@ -471,11 +472,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     target.PlantTargetPoint - responseOutputPoint,
                     up));
             state.Completed = target.PlantTargetVerified &&
+                              target.LockWeightCompleted &&
                               frame.LockRequest.RequestsLock &&
                               frame.LockRequest.EventIdentity ==
                               target.PlantTargetEventIdentity &&
-                              frame.LockRequest.Weight >=
-                              1f - CharacterFootConstraintMath.GeometryEpsilon &&
                               outputDistance <=
                               frame.Settings.LandingLockCompletionTolerance &&
                               penetrationDepth <=

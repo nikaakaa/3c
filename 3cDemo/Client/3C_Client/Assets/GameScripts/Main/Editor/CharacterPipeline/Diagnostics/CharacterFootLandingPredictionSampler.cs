@@ -242,9 +242,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified," +
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
-            "FootMotionPlantBlendWeight,FootMotionPlantTargetMaximumVerticalSpeed,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
+            "FootMotionPlantBlendWeight,FootMotionPlantTargetMaximumVerticalSpeed,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
             "FootMotionPlantBlendedCorrectionX,FootMotionPlantBlendedCorrectionY,FootMotionPlantBlendedCorrectionZ," +
-            "FootMotionPlantCorrectionMaximumVerticalSpeed,FootMotionPlantCorrectionVerticalDelta,FootMotionPlantCorrectionAppliedVerticalDelta,FootMotionPlantCorrectionVerticalClamped,FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
+            "FootMotionPlantCorrectionMaximumVerticalSpeed,FootMotionPlantCorrectionHistoryRebased,FootMotionPlantCorrectionBaselineDeltaAlongUp,FootMotionPlantCorrectionVerticalDelta,FootMotionPlantCorrectionAppliedVerticalDelta,FootMotionPlantCorrectionVerticalClamped,FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -2168,11 +2168,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantTargetMaximumVerticalSpeed);
             Add(row, motion.PlantTargetVerticalDelta);
             Add(row, motion.PlantTargetAppliedVerticalDelta);
+            Add(row, motion.PlantTargetHeightEventIdentity);
             Add(row, motion.PlantTargetForceRefreshed);
             Add(row, motion.PlantTargetForceRefreshDistance);
             Add(row, motion.PlantTargetVerticalClamped);
             Add(row, motion.PlantBlendedCorrection);
             Add(row, motion.PlantCorrectionMaximumVerticalSpeed);
+            Add(row, motion.PlantCorrectionHistoryRebased);
+            Add(row, motion.PlantCorrectionBaselineDeltaAlongUp);
             Add(row, motion.PlantCorrectionVerticalDelta);
             Add(row, motion.PlantCorrectionAppliedVerticalDelta);
             Add(row, motion.PlantCorrectionVerticalClamped);

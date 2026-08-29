@@ -32,7 +32,7 @@ ZZZ资料必须按分析包的正式证据等级使用：
 |---|---|---|
 | `f`来自当前/下一状态ID和过渡量，执行`current + (target-current) × clamp01(f)` | 使用正式Contact/Lock或Transition提供的typed权重混合当前脚态与目标脚态；不把`f`解释为固定步到渲染帧相位 | Transition、Interpolation Runtime |
 | `0x171D6920`为每脚目标高度保存历史并执行`delta=clamp(target-history, ±rate×dt)`，同时由历史到目标距离、事件位控制更新、冻结与强制刷新 | 每脚唯一Target Height历史保存Accepted Landing沿Up高度；Swing输出为`正式Raw Height + Filtered Landing Height - Current Landing Height`，正常Phase直接通过；Current Landing或Plant Target与历史的累计差大于等于`TargetHeightForceRefreshDistance`时刷新内部目标并由Residual/Correction连续接管，中等变化才按`MaximumVerticalTargetSpeed`限速 | Interpolation Runtime Target Height Stage |
-| `0x171D7910`为每脚修正标量保存另一份历史并执行第二次`±rate×dt`限制 | `EffectiveCorrection`必须在状态权重混合后再受`MaximumVerticalCorrectionSpeed`限制；不得用Plant Target历史替代这一层 | Interpolation Runtime Correction Stage |
+| `0x171D7910`为每脚修正标量保存另一份历史并执行第二次`±rate×dt`限制 | `EffectiveCorrection`必须在状态权重混合后形成独立历史；每帧先把上一Interpolation世界输出按当前Animated Sole重表达，再以`MaximumVerticalCorrectionSpeed`限制其向本帧Desired Correction的沿Up变化，禁止动画基线位移绕过限速；不得用Plant Target历史替代这一层 | Interpolation Runtime Correction Stage |
 | `0x171D8A00`把修正结果按`k=clamp01((1-weight)×globalWeight)`与基准混合，同时让缓存量回归 | 项目只在Correction限速后通过现有Foot Goal/Position Weight与动画基线混合一次；不新增第三历史或Goal后处理器 | Resolved Foot、Goal Contribution |
 | B边沿、D组合位、驻留计时和一次性事件分开，快速重入事件会绕过普通门强制刷新 | 使用正式Contact Event表达Rising/Falling与Same-Event Reentry Refresh；顶层五态不增加匿名B/D业务状态 | Contact Transition Context、Resolver/Runtime |
 | 无有效候选只跳过本次新候选调整，通用输出尾段仍继续 | Rejected Observation不提交新Landing，但不得把整帧Foot状态冻结；既有Accepted Landing、Interpolation和输出仍按正式合同推进 | Observation、Landing Context、Interpolation |
@@ -117,7 +117,7 @@ Contact边沿事实 MUST由同一Resolver按上一Committed Contact Transition C
 
 `CharacterFootInterpolationRuntime`是Foot连续链的唯一所有者。它只接受`Previous Interpolation State + State Target + typed Policy + Delta Time`，持有一份统一Interpolation State并发布Output、Residual和Completion。现有Swing Residual、Acquire Residual、Release Residual、Contact Progress与散落的HalfLife推进必须迁入这里；政策固定为直接跟随、Residual Half-Life与正式Weight接管等有业务含义的typed策略，不提供string key、字典注册、任意曲线回调或项目级通用Tween。
 
-Interpolation State内部必须把每脚唯一`Target Height History`与`Effective Correction History`分开。Target Height History保存Accepted Landing沿Component Up的世界高度，不保存包含动画Phase的完整Swing Raw Height。Swing Raw Height仍由`Ground Envelope + Formal Foot Height`产生，过滤后输出固定为`Raw Height + Filtered Landing Height - Current Landing Height`；因此同一Ground Path只因动画Phase推进时直接通过正式曲线。Foot Motion Profile新增必须显式序列化的`TargetHeightForceRefreshDistance`并纳入Revision；它必须为有限正值且大于`PathRevisionDistance`，Corin首个候选为`0.30m`。同Event Ground Path Input换代时，Current Landing与Filtered Landing Height的累计沿Up差达到该值必须刷新内部历史并让既有Swing Residual捕获可见连续性；累计差小于该值但本次换代超过`PathRevisionDistance`才以`MaximumVerticalTargetSpeed × Delta Time`追赶。Event换代同样直接刷新Landing Height并由Residual接管。Approach/Plant取得Interpolation所有权后，Swing Target Height更新必须发布typed Held并停止积分，由Plant Target沿同Event继续这份Landing高度历史；Plant Target与历史的累计差达到该值时刷新内部高度并由Plant Residual与独立Correction历史连续接管，禁止同帧双重限速。随后以typed状态/Contact权重混合当前脚态和目标脚态；混合结果写回前，再以`MaximumVerticalCorrectionSpeed × Delta Time`限制Effective Correction沿Component Up的变化。最后的动画基准混合只由既有Foot Goal/Position Weight执行一次，不再建立有历史的第三平滑层。两份历史只可由各自明确的Reset、Retarget、Event失效或Policy退出规则清理；同Event Prediction换点、Contact Verification和Same-Event Reentry不得同时清零。Swing/UnlockedSupport继续以Accepted Ground Envelope作为不可延迟的硬下界，Release继续使用统一Residual。`AcquireByWeight`进入帧不得对Contact Anchor调用`RaiseToMinimum`，Lock Weight达到1也不得把未收敛Residual清零。
+Interpolation State内部必须把每脚唯一`Target Height History`与`Effective Correction History`分开。Target Height History保存Accepted Landing沿Component Up的世界高度，不保存包含动画Phase的完整Swing Raw Height。Swing Raw Height仍由`Ground Envelope + Formal Foot Height`产生，过滤后输出固定为`Raw Height + Filtered Landing Height - Current Landing Height`；因此同一Ground Path只因动画Phase推进时直接通过正式曲线。Foot Motion Profile新增必须显式序列化的`TargetHeightForceRefreshDistance`并纳入Revision；它必须为有限正值且大于`PathRevisionDistance`，Corin首个候选为`0.30m`。同Event Ground Path Input换代时，Current Landing与Filtered Landing Height的累计沿Up差达到该值必须刷新内部历史并让既有Swing Residual捕获可见连续性；累计差小于该值但本次换代超过`PathRevisionDistance`才以`MaximumVerticalTargetSpeed × Delta Time`追赶。Event换代同样直接刷新Landing Height并由Residual接管。Approach/Plant取得Interpolation所有权后，Swing Target Height更新必须发布typed Held，Held期间Next Swing Event只能提供本帧Raw Swing Target，不得改写或解释Current Plant拥有的Target Height identity/value；Plant Target沿同Event继续这份Landing高度历史，Plant Target与历史的累计差达到该值时刷新内部高度并由Plant Residual与独立Correction历史连续接管，禁止同帧双重限速。随后以typed状态/Contact权重混合当前脚态和目标脚态；Effective Correction历史在写回前必须先把上一Interpolation世界输出按当前Animated Sole沿Component Up重表达，抵消动画基线自身位移，再以`MaximumVerticalCorrectionSpeed × Delta Time`限制它向本帧Desired Correction的沿Up变化。最后的动画基准混合只由既有Foot Goal/Position Weight执行一次，不再建立有历史的第三平滑层。两份历史只可由各自明确的Reset、Retarget、Event失效或Policy退出规则清理；同Event Prediction换点、Contact Verification和Same-Event Reentry不得同时清零。Swing/UnlockedSupport继续以Accepted Ground Envelope作为不可延迟的硬下界，Release继续使用统一Residual。`AcquireByWeight`进入帧不得对Contact Anchor调用`RaiseToMinimum`，Lock Weight达到1也不得把未收敛Residual清零。
 
 根`CharacterFootStateContext`收敛为一组分型数据块：`Discrete State Context`只存当前State与最近Transition，`Contact Context`只存Anchor和Lock响应，`Contact Transition Context`只存边沿与已消费Event历史，`Interpolation State`只存上一目标、Effective Correction、统一Residual与完成事实，Landing与Observation继续使用各自typed Page。所有数据块仍由同一个Pending/Committed根事务一次Seal或Discard，不建立独立生命周期。
 
@@ -176,7 +176,7 @@ Resolved Foot把正式Support写入`SupportIntentWeight`。Primary Support的Acq
 
 `ContactReference`继续只属于脚锁；`PelvisReachReference`可以来自同Event已经Accepted的Landing/Ground事实。这样Sliding或暂时不可锁的承重脚可以协调Pelvis，但不能因此把脚固定到世界Anchor。
 
-Primary Support只消费Resolved字段，不读取Foot State、Lock Mode或Context。Support曲线为0时不得由相对大小归一成1；双脚都无正式Support时Pelvis进入现有typed Release，而不是猜一只脚承重。
+Primary Support只消费Resolved字段，不读取Foot State、Lock Mode或Context。Support的Pelvis Reach Reference按同Event冻结Anchor、Verified Landing、Prepared Plant Landing、Accepted Swing Landing的正式优先级取得，Contact Anchor不可用时不得把Formal Support强制清零。Support曲线为0时不得由相对大小归一成1；双脚都无正式Support时Pelvis进入现有typed Release，而不是猜一只脚承重。
 
 ## Decision 7: Landing Reach先协调Pelvis，再限制Foot Goal
 
@@ -188,7 +188,7 @@ Pelvis Builder同时计算Primary Support腿和Landing腿允许的Pelvis沿Up区
 FeasiblePelvisInterval = SupportReachInterval ∩ LandingReachInterval
 ```
 
-交集存在时，Pelvis Target与Spring必须限制在交集内。现有Critical Spring继续是唯一Pelvis连续状态，并增加Profile必须显式序列化的`PelvisMaximumUpVelocity`与`PelvisMaximumDownVelocity`。Spring积分后先把Velocity限制在`[-MaximumDownVelocity, MaximumUpVelocity]`，再推进Output并限制在Reach交集；Output撞到上/下边界且Velocity继续朝外时必须清除对应方向速度。Support换代、坡度变化和Target跨越Output继续使用现有显式Handoff与Velocity Reset，不增加第二Pelvis平滑器。
+交集存在时，Pelvis Target与Spring必须限制在交集内。现有Critical Spring继续是唯一Pelvis连续状态，并增加Profile必须显式序列化的`PelvisMaximumUpVelocity`与`PelvisMaximumDownVelocity`。Spring积分后先把Velocity限制在`[-MaximumDownVelocity, MaximumUpVelocity]`，再推进Output并限制在Reach交集；Output撞到上/下边界且Velocity继续朝外时必须清除对应方向速度。只要非零Pelvis Output是满足最小压缩余量所必需，即使小于现有5毫米Endpoint Tolerance也必须以正式Goal Weight写出，不得一边发布Reach Available一边把实际Pelvis Goal权重清零。Support换代、坡度变化和Target跨越Output继续使用现有显式Handoff与Velocity Reset，不增加第二Pelvis平滑器。
 
 交集不存在时，系统先保持Primary Support安全，再把Landing Foot Goal夹紧到保留最小压缩余量的最大可达点，发布`LandingReachUnavailable`，并禁止该脚进入Full Lock。它可以保持Landing、Sliding或进入Releasing，但不得把超长目标交给FBBIK后仅靠腿伸直夹紧。
 

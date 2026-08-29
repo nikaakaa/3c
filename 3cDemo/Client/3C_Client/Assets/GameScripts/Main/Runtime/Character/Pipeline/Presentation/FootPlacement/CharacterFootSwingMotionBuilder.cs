@@ -487,6 +487,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerticalDelta = path.PlantTargetVerticalDelta;
             PlantTargetAppliedVerticalDelta =
                 path.PlantTargetAppliedVerticalDelta;
+            PlantTargetHeightEventIdentity =
+                path.PlantTargetHeightEventIdentity;
             PlantTargetForceRefreshed =
                 path.PlantTargetForceRefreshed;
             PlantTargetForceRefreshDistance =
@@ -495,6 +497,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantBlendedCorrection = path.PlantBlendedCorrection;
             PlantCorrectionMaximumVerticalSpeed =
                 path.PlantCorrectionMaximumVerticalSpeed;
+            PlantCorrectionHistoryRebased =
+                path.PlantCorrectionHistoryRebased;
+            PlantCorrectionBaselineDeltaAlongUp =
+                path.PlantCorrectionBaselineDeltaAlongUp;
             PlantCorrectionVerticalDelta =
                 path.PlantCorrectionVerticalDelta;
             PlantCorrectionAppliedVerticalDelta =
@@ -608,11 +614,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float PlantTargetMaximumVerticalSpeed { get; }
         public float PlantTargetVerticalDelta { get; }
         public float PlantTargetAppliedVerticalDelta { get; }
+        public ulong PlantTargetHeightEventIdentity { get; }
         public bool PlantTargetForceRefreshed { get; }
         public float PlantTargetForceRefreshDistance { get; }
         public bool PlantTargetVerticalClamped { get; }
         public Vector3 PlantBlendedCorrection { get; }
         public float PlantCorrectionMaximumVerticalSpeed { get; }
+        public bool PlantCorrectionHistoryRebased { get; }
+        public float PlantCorrectionBaselineDeltaAlongUp { get; }
         public float PlantCorrectionVerticalDelta { get; }
         public float PlantCorrectionAppliedVerticalDelta { get; }
         public bool PlantCorrectionVerticalClamped { get; }

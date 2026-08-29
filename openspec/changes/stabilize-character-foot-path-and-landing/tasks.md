@@ -11,6 +11,7 @@
 - [ ] 2.3 把唯一typed Foot Motion Frame接入Foot Placement Pose Input，并严格校验Source与Contribution lineage
 - [ ] 2.4 对缺失、重复、旧binding、Event不一致和非有限值发布typed invalid，不读取旧Artifact或默认值补全
 - [ ] 2.5 让稳定Landing Event table正式保存PreSwing、Swing、Approach Contact与Landing边界，并由同Source/Cycle/Side/ordinal的Runtime Frame发布`InApproachContactToLanding`供Plant目标准备消费
+- [ ] 2.6 由同一Event table边界发布归一化`ApproachContactToLandingProgress`，以Approach Contact为0、Landing为1且同Event单调；不得从Contact Curve、Lock Weight或运行时累计值重算
 
 ## 3. 收口Path换代与Floor顺序
 
@@ -42,7 +43,7 @@
 - [x] 4.3 实现纯`CharacterFootTransitionResolver`与固定typed Decision，显式区分输入驱动的Pre-Interpolation边和完成驱动的Post-Interpolation边
 - [x] 4.4 实现唯一Transition Runtime，只允许它应用Decision、写离散State、执行Anchor Create/Retain/Release并发布Transition事实
 - [x] 4.5 实现纯`CharacterFootStateTargetResolver`，按已确定State生成目标Correction、Reference、Contact/Support/Reach意图与typed Interpolation Request，不推进时间和Context
-- [x] 4.6 实现唯一`CharacterFootInterpolationRuntime`，迁移Swing/Acquire/Release Residual、Contact Progress、HalfLife与Effective Correction，只保留一份统一Interpolation State和固定typed Policy
+- [x] 4.6 实现唯一`CharacterFootInterpolationRuntime`，迁移Swing/Acquire/Release Residual、旧Contact Progress、HalfLife与Effective Correction，只保留一份统一Interpolation State和固定typed Policy
 - [x] 4.7 把Ground Path Envelope与Landing Reach放在Interpolation之后执行，禁止Post Constraint回写State Target、Residual或Transition
 - [x] 4.8 让Resolved Foot只消费Post-Transition、Post-Interpolation和Post-Constraint结果，并补齐Transition、Target、Interpolation与Constraint逐阶段事实
 - [x] 4.9 删除旧`CharacterFootStateMachine`、旧分散Residual/Progress字段、重复Advance方法和全部兼容入口，确认State/Anchor与Effective Correction各自只有一个写入者
@@ -69,14 +70,14 @@
 
 - [x] 6.1 在Foot Motion Profile新增必须显式序列化的`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选均使用`0.01m`
 - [x] 6.2 在3.17持续准备Plant目标、3.20建立Verified Anchor后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留普通Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
-- [x] 6.3 在唯一Interpolation内建立同Event持久Plant Target高度历史、单调`PlantBlend`权重、上一Mixed World Target、上一实际World Output Point与完整Vector Plant World Residual，让Approach、Landing与Locked共用同一Policy
+- [ ] 6.3 在唯一Interpolation内建立同Event持久Plant Target高度历史、正式Approach接管进度、上一Mixed World Target、上一实际World Output Point与完整Vector Plant World Residual，让Approach、Landing与Locked共用同一Policy；删除raw Contact加累计max的可见接管
 - [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
 - [x] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；Landing完成Decision延后到双脚/Pelvis Reach求解之后，未满足时保留同Anchor Landing继续接管
 - [x] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing Raw Height，保持Foot XZ来自动画骨骼；唯一Target Height历史保存Accepted Landing沿Up高度，Swing按`Raw Height + Filtered Landing Height - Current Landing Height`输出，正常Phase直接通过，同Event Landing高度有效换代才限速，Plant接管时Swing发布Held并由Plant继续同一历史；记录Raw、History Before、Delta、Applied Delta、Held、Rate Limited、Clamp与Filtered Height
 - [x] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策、`NextSwingConstraintWeight`状态及对应代码和诊断列
 - [x] 6.8 发布Formal Foot Height、Target Height前后与Update Reason、Plant Mixed World Target、World Residual捕获前后与衰减、当时Output Point、Vertical Continuity Owner、Correction Stage Disposition、Effective Correction前后、Envelope/Anchor穿透、Ground Catchup、Full Lock门控和最终Correction诊断事实，删除把同帧抬升描述为Safety Floor成功的旧口径；最新Correction Response事实和旧Disposition替换由6.20完成
 - [x] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只供6.16显式`RateLimited` Target Height模式控制同Event Landing高度换代，不限制正常动画Phase、不影响`Direct`模式且不提供共享默认值
-- [x] 6.10 按当时项目Replay先闭合到Desired Output的`目标高度历史 -> typed状态权重形成Mixed World Target -> 正式换代捕获完整WorldResidual -> Residual衰减`，并用Target Kind、Lock Response、Verification、State/Response、Weight Started/Completed与Target Revision定义Capture；普通逐帧Weight推进不得Capture。最新ZZZ一手Trace证明后续仍需6.16至6.20的独立Correction Response，不能再把本项解释为最终输出已经完成
+- [x] 6.10 按当时项目Replay先闭合到Desired Output的`目标高度历史 -> typed接管进度形成Mixed World Target -> 正式换代捕获完整WorldResidual -> Residual衰减`，并用Target Kind、Lock Response、Verification、State/Response、Takeover Started/Completed与Target Revision定义Capture；普通逐帧Takeover推进不得Capture。最新ZZZ一手Trace证明后续仍需6.16至6.20的独立Correction Response，不能再把本项解释为最终输出已经完成
 - [x] 6.11 删除已经被Replay否决的旧单档`MaximumVerticalCorrectionSpeed`、上一世界输出重表达链及全部旧CSV/Analyzer字段；`MixedWorldTarget + ResidualAfterDecay`作为Desired Output的现状保留，最新一手Trace证明的独立Correction Response由6.16至6.20在同一Interpolation内正式补回，不能复用本项已删除实现
 - [x] 6.12 在Foot Motion Profile新增独立`TargetHeightForceRefreshDistance`并纳入Revision与严格校验；首个候选为`0.30m`。`RateLimited`模式下同Event Current Landing或Plant Target与Filtered Landing历史的累计沿Up差达到该值时强制刷新内部高度，小于该值且超过`PathRevisionDistance`的换代才走`MaximumVerticalTargetSpeed`；`Direct`模式不以该阈值拖延合法目标采用，后级连续性由6.17至6.19承担
 - [x] 6.13 把既有Swing到Landing Floor交接、Actual Foot Envelope反事实、Plant Interpolation和表现采样节奏事实接入唯一Analyzer/Publisher正式Target，不执行第二次World Query
@@ -92,6 +93,7 @@
 - [ ] 6.23 以Heel/Toe相对动画脚掌沿Component Up的较大所需位移解析唯一Foot Target Position；使用稳定Surface identity和固定Probe顺序处理等价候选，并由两点命中与脚掌方向生成有限归一化Support Normal。任一Probe无效或容量溢出时typed unavailable，不建立单点降级、旧结果或默认Up路径
 - [ ] 6.24 让Current与Target Position+SupportNormal进入同一State/Transition权重混合，并由Rig Sole Forward生成同一Foot Goal Rotation；Position、Rotation、Goal Weight、lineage与Writer保持单一，删除或拒绝Toe Goal、Toe Writer、第二Grounder和Pose后Rotation低通
 - [ ] 6.25 把Heel/Toe Pose输入、双Probe Observation、解析所需位移、tie-break、唯一Position/Normal、Normal归一化与Rotation Goal接入唯一诊断链，不为诊断执行第二次World Query
+- [x] 6.26 在同Event、同Source/Cycle、稳定Ground Path的Swing三帧域发布Contact、PlantBlend、Source/Physical/Offset速度与新增加速度，结构化识别AdvanceToHold、HoldToAdvance和连续推进；旧202551包确认19个AdvanceToHold
 
 ## 7. 单独接入Support与Pelvis
 
@@ -114,7 +116,7 @@
 ## 9. 单独接入Contact与Lock
 
 - [x] 9.1 用正式Contact与Lock Mode通过Pre-Interpolation Transition建立同Event唯一Anchor并进入Landing
-- [x] 9.2 用正式Lock Weight选择typed接管政策并驱动统一Interpolation State，用Locked/Sliding Mode选择FullAnchor或Sliding State Target；Weight完成不得绕过6.5的位置、穿透与Reach门控
+- [ ] 9.2 让正式Lock Weight只负责Contact后的Lock响应与完成资格，用Locked/Sliding Mode选择FullAnchor或Sliding State Target；Contact晋升Anchor时PlantBlend保持完成值1，Weight完成不得绕过6.5的位置、穿透与Reach门控
 - [x] 9.3 用正式Contact退出、Lock Mode与Weight产生Releasing Transition；同Event合法重入在Pre-Interpolation执行`Releasing -> Landing`，Interpolation Completion只在Post-Interpolation执行`Releasing -> Swing`
 - [ ] 9.4 删除旧PlantConfidence、无identity的PlantCycleConsumed布尔和Constraint Weight状态准入消费者及其Projection字段
 - [x] 9.5 让Contact Anchor只消费同Event首次Contact Rising产生的Verified Plant Landing；稳定Plant阶段LockDistance或Reach不可用时拒绝Full Lock，不以重复查询移动Anchor

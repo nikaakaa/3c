@@ -455,7 +455,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.PlantDirectFollow = target.DirectPlantFollow;
             state.PlantDesiredPoint = target.PlantTargetPoint;
             state.PreviousPlantSelectedWorldTarget = selectedWorldTarget;
-            state.SelectedSupportTarget = target.SupportTarget;
+            state.SelectedSupportTarget = target.SupportTarget.WithSupportNormal(
+                correctionResponseFact.ResponseDirection);
             state.HasPreviousResponseOutputPoint = true;
             state.PreviousResponseOutputPoint = responseOutputPoint;
             state.PreviousTargetCorrection = selectedWorldTarget - originalSole;
@@ -567,7 +568,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 false,
                 default,
                 in frame,
-                out _);
+                out CharacterFootCorrectionResponseFact
+                    correctionResponseFact);
+            state.SelectedSupportTarget = target.SupportTarget.WithSupportNormal(
+                correctionResponseFact.ResponseDirection);
             state.EffectiveCorrection = releaseOutputPoint - originalSole;
             state.Completed = frame.LockRequest.Weight <=
                               CharacterFootConstraintMath.GeometryEpsilon &&
@@ -814,7 +818,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     default,
                     in frame,
-                    out _);
+                    out CharacterFootCorrectionResponseFact
+                        correctionResponseFact);
+                state.SelectedSupportTarget =
+                    target.SupportTarget.WithSupportNormal(
+                        correctionResponseFact.ResponseDirection);
                 state.EffectiveCorrection = responseOutputPoint - originalSole;
                 state.Residual = state.SwingResidual;
             }
@@ -914,7 +922,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new System.InvalidOperationException(
                     "Foot Correction Response input is invalid.");
             }
-            Vector3 direction = responseDirection.normalized;
+            Vector3 requestedDirection = responseDirection.normalized;
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
@@ -927,7 +935,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : desiredOutputPoint;
             float desiredResponse = Vector3.Dot(
                 desiredOutputPoint - originalSole,
-                direction);
+                requestedDirection);
             bool initializedBefore = state.HasCorrectionResponse;
             bool initializedThisFrame = !initializedBefore;
             CharacterFootCorrectionResponseInitializationReason reason =
@@ -935,23 +943,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 previousResponseDirection =
                 state.CorrectionResponseFact.Evaluated
                     ? state.CorrectionResponseFact.ResponseDirection
-                    : direction;
-            bool basisTransferred = initializedBefore &&
-                                    Vector3.SqrMagnitude(
-                                        previousResponseDirection - direction) >
-                                    CharacterFootConstraintMath.GeometryEpsilon *
-                                    CharacterFootConstraintMath.GeometryEpsilon;
-            if ((basisTransferred || visibleOutputTransferAvailable) &&
-                !previousOutputAvailable)
+                    : requestedDirection;
+            float maximumDirectionChangeDegrees = frame.Settings
+                .CorrectionResponseMaximumDirectionChangeDegrees;
+            float requestedDirectionChangeDegrees = initializedBefore
+                ? Vector3.Angle(
+                    previousResponseDirection,
+                    requestedDirection)
+                : 0f;
+            bool directionLimited = initializedBefore &&
+                                    requestedDirectionChangeDegrees >
+                                    maximumDirectionChangeDegrees;
+            Vector3 direction = directionLimited
+                ? Vector3.RotateTowards(
+                    previousResponseDirection,
+                    requestedDirection,
+                    maximumDirectionChangeDegrees * Mathf.Deg2Rad,
+                    0f).normalized
+                : requestedDirection;
+            float appliedDirectionChangeDegrees = initializedBefore
+                ? Vector3.Angle(previousResponseDirection, direction)
+                : 0f;
+            desiredResponse = Vector3.Dot(
+                desiredOutputPoint - originalSole,
+                direction);
+            if (visibleOutputTransferAvailable && !previousOutputAvailable)
             {
                 throw new System.InvalidOperationException(
-                    "Foot Correction Response basis transfer has no committed output.");
+                    "Foot Correction Response target transfer has no committed output.");
             }
             float responseBeforeRebase = initializedBefore
                 ? state.CorrectionResponse
                 : desiredResponse;
-            float previousResponse = basisTransferred ||
-                                     visibleOutputTransferAvailable
+            float previousResponse = visibleOutputTransferAvailable
                 ? Vector3.Dot(
                     previousOutputPoint - originalSole,
                     direction)
@@ -1001,8 +1025,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 desiredOutputPoint,
                 responseOutputPoint,
                 desiredResponse,
+                requestedDirection,
                 previousResponseDirection,
-                basisTransferred,
+                directionLimited,
+                maximumDirectionChangeDegrees,
+                appliedDirectionChangeDegrees,
                 visibleOutputTransferAvailable,
                 responseBeforeRebase,
                 previousResponse,

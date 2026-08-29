@@ -322,8 +322,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CorrectionResponseInitializationReason =
                 CharacterFootCorrectionResponseInitializationReason.None;
             CorrectionResponseDesired = 0f;
+            CorrectionResponseRequestedDirection = default;
             CorrectionResponsePreviousDirection = default;
-            CorrectionResponseBasisTransferred = false;
+            CorrectionResponseDirectionLimited = false;
+            CorrectionResponseMaximumDirectionChangeDegrees = 0f;
+            CorrectionResponseAppliedDirectionChangeDegrees = 0f;
             CorrectionResponseVisibleOutputTransferred = false;
             CorrectionResponseBeforeRebase = 0f;
             CorrectionResponsePrevious = 0f;
@@ -513,10 +516,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctionResponse.InitializationReason;
             CorrectionResponseDesired =
                 correctionResponse.DesiredResponse;
+            CorrectionResponseRequestedDirection =
+                correctionResponse.RequestedResponseDirection;
             CorrectionResponsePreviousDirection =
                 correctionResponse.PreviousResponseDirection;
-            CorrectionResponseBasisTransferred =
-                correctionResponse.BasisTransferred;
+            CorrectionResponseDirectionLimited =
+                correctionResponse.DirectionLimited;
+            CorrectionResponseMaximumDirectionChangeDegrees =
+                correctionResponse.MaximumDirectionChangeDegrees;
+            CorrectionResponseAppliedDirectionChangeDegrees =
+                correctionResponse.AppliedDirectionChangeDegrees;
             CorrectionResponseVisibleOutputTransferred =
                 correctionResponse.VisibleOutputTransferred;
             CorrectionResponseBeforeRebase =
@@ -652,8 +661,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootCorrectionResponseInitializationReason
             CorrectionResponseInitializationReason { get; }
         internal float CorrectionResponseDesired { get; }
+        internal Vector3 CorrectionResponseRequestedDirection { get; }
         internal Vector3 CorrectionResponsePreviousDirection { get; }
-        internal bool CorrectionResponseBasisTransferred { get; }
+        internal bool CorrectionResponseDirectionLimited { get; }
+        internal float CorrectionResponseMaximumDirectionChangeDegrees { get; }
+        internal float CorrectionResponseAppliedDirectionChangeDegrees { get; }
         internal bool CorrectionResponseVisibleOutputTransferred { get; }
         internal float CorrectionResponseBeforeRebase { get; }
         internal float CorrectionResponsePrevious { get; }
@@ -1077,8 +1089,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 desiredOutputPoint,
             Vector3 responseOutputPoint,
             float desiredResponse,
+            Vector3 requestedResponseDirection,
             Vector3 previousResponseDirection,
-            bool basisTransferred,
+            bool directionLimited,
+            float maximumDirectionChangeDegrees,
+            float appliedDirectionChangeDegrees,
             bool visibleOutputTransferred,
             float responseBeforeRebase,
             float previousResponse,
@@ -1097,8 +1112,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DesiredOutputPoint = desiredOutputPoint;
             ResponseOutputPoint = responseOutputPoint;
             DesiredResponse = desiredResponse;
+            RequestedResponseDirection = requestedResponseDirection;
             PreviousResponseDirection = previousResponseDirection;
-            BasisTransferred = basisTransferred;
+            DirectionLimited = directionLimited;
+            MaximumDirectionChangeDegrees = maximumDirectionChangeDegrees;
+            AppliedDirectionChangeDegrees = appliedDirectionChangeDegrees;
             VisibleOutputTransferred = visibleOutputTransferred;
             ResponseBeforeRebase = responseBeforeRebase;
             PreviousResponse = previousResponse;
@@ -1118,8 +1136,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 DesiredOutputPoint { get; }
         internal Vector3 ResponseOutputPoint { get; }
         internal float DesiredResponse { get; }
+        internal Vector3 RequestedResponseDirection { get; }
         internal Vector3 PreviousResponseDirection { get; }
-        internal bool BasisTransferred { get; }
+        internal bool DirectionLimited { get; }
+        internal float MaximumDirectionChangeDegrees { get; }
+        internal float AppliedDirectionChangeDegrees { get; }
         internal bool VisibleOutputTransferred { get; }
         internal float ResponseBeforeRebase { get; }
         internal float PreviousResponse { get; }

@@ -33,6 +33,7 @@
 - [x] 3.17 用正式`ApproachContactToLanding`把同Event最新Accepted NextSwingLanding提交为Committed，并禁止后续普通Prediction查询、换点、切Surface或重建Ground Path
 - [x] 3.18 在Approach Contact没有同Event Accepted Landing时发布typed unavailable，不用Animated Sole、旧Event、Rejected Observation或默认Surface建立承诺
 - [x] 3.19 让Tracking的新Rejected Observation保持自身Key和拒绝结果，同时允许既有同Event Accepted Landing继续保留原始lineage，禁止把保留Landing改名成本次查询命中
+- [ ] 3.20 让Current Contact命中同Event Promoted Landing时直接消费该承诺并禁止`ContactAcquisitionRefresh`重查；`CaptureCurrentContact`不得在Promotion同帧用Animated Sole查询结果覆盖Committed Landing
 
 ## 4. 拆分State、Transition、Interpolation与Post Constraint
 
@@ -67,9 +68,9 @@
 ## 6. 连续接管Foot Height与Landing/Lock垂直误差
 
 - [x] 6.1 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalCorrectionSpeed`、`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选分别使用`0.6m/s`、`0.01m`与`0.01m`
-- [ ] 6.2 删除`AcquireByWeight`进入帧的立即`RaiseToMinimum`和Post Constraint对Envelope/Anchor的可见Correction抬升，确认Effective Correction仍只有唯一Interpolation Owner
-- [ ] 6.3 让唯一Interpolation Runtime在所有Policy写回前按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制Component Up变化，不限制Foot XZ，也不建立第二高度状态或Floor旁路
-- [ ] 6.4 让Post Constraint只测量Envelope/Anchor穿透并发布容差内、Ground Catchup与Full Lock门控；继承的超预算误差连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
+- [ ] 6.2 在3.20保证同Event Anchor连续后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
+- [ ] 6.3 参照ZZZ实际`目标态高度历史限速 -> 权重混合`顺序，只让Landing/Locked的Contact接管Policy按`MaximumVerticalCorrectionSpeed × Presentation Delta`限制Component Up变化；Swing/UnlockedSupport继续由正式轨迹和Envelope决定高度，Release继续使用统一Residual，不建立第二高度状态或Floor旁路
+- [ ] 6.4 让Post Constraint对Swing/UnlockedSupport继续执行Accepted Ground Envelope硬最低约束，对Landing/Locked Contact Anchor只测量穿透并发布容差内、Ground Catchup与Full Lock门控；继承的超预算Contact误差连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
 - [ ] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；未满足时保留同Anchor Landing继续接管
 - [ ] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing沿Up目标，保持Foot XZ来自动画骨骼
 - [ ] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策和对应旧输入

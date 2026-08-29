@@ -391,8 +391,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact plantResponseOutputPoint;
         public string plantResidualCaptureReason;
         public CharacterFootVectorFact plantWorldResidualBeforeCapture;
-        public CharacterFootVectorFact plantWorldResidualAfterCapture;
+        public CharacterFootVectorFact plantWorldResidualCapturedBeforeDecay;
+        public bool plantWorldResidualDecayApplied;
+        public double plantWorldResidualBaseHalfLifeSeconds;
+        public bool plantWorldResidualDeadlineHalfLifeAvailable;
+        public double plantWorldResidualDeadlineHalfLifeSeconds;
+        public double plantWorldResidualAppliedHalfLifeSeconds;
         public CharacterFootVectorFact plantWorldResidualAfterDecay;
+        public double plantWorldResidualCompletionTolerance;
+        public bool plantWorldResidualClearedAtCompletionTolerance;
         public bool plantCorrectionResponseEvaluated;
         public bool plantCorrectionResponseInitializedBefore;
         public bool plantCorrectionResponseInitializedThisFrame;

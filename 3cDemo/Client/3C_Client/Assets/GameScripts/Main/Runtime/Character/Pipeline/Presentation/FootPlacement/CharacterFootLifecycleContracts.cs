@@ -213,8 +213,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerticalClamped = false;
             PlantBlendedCorrection = default;
             PlantCorrectionMaximumVerticalSpeed = 0f;
-            PlantCorrectionHistoryRebased = false;
-            PlantCorrectionBaselineDeltaAlongUp = 0f;
             PlantCorrectionVerticalDelta = 0f;
             PlantCorrectionAppliedVerticalDelta = 0f;
             PlantCorrectionVerticalClamped = false;
@@ -342,10 +340,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantBlendedCorrection = plant.BlendedCorrection;
             PlantCorrectionMaximumVerticalSpeed =
                 plant.CorrectionMaximumVerticalSpeed;
-            PlantCorrectionHistoryRebased =
-                plant.CorrectionHistoryRebased;
-            PlantCorrectionBaselineDeltaAlongUp =
-                plant.CorrectionBaselineDeltaAlongUp;
             PlantCorrectionVerticalDelta = plant.CorrectionVerticalDelta;
             PlantCorrectionAppliedVerticalDelta =
                 plant.CorrectionAppliedVerticalDelta;
@@ -435,8 +429,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantTargetVerticalClamped { get; }
         internal Vector3 PlantBlendedCorrection { get; }
         internal float PlantCorrectionMaximumVerticalSpeed { get; }
-        internal bool PlantCorrectionHistoryRebased { get; }
-        internal float PlantCorrectionBaselineDeltaAlongUp { get; }
         internal float PlantCorrectionVerticalDelta { get; }
         internal float PlantCorrectionAppliedVerticalDelta { get; }
         internal bool PlantCorrectionVerticalClamped { get; }
@@ -851,8 +843,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool targetVerticalClamped,
             Vector3 blendedCorrection,
             float correctionMaximumVerticalSpeed,
-            bool correctionHistoryRebased,
-            float correctionBaselineDeltaAlongUp,
             float correctionVerticalDelta,
             float correctionAppliedVerticalDelta,
             bool correctionVerticalClamped,
@@ -874,9 +864,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TargetVerticalClamped = targetVerticalClamped;
             BlendedCorrection = blendedCorrection;
             CorrectionMaximumVerticalSpeed = correctionMaximumVerticalSpeed;
-            CorrectionHistoryRebased = correctionHistoryRebased;
-            CorrectionBaselineDeltaAlongUp =
-                correctionBaselineDeltaAlongUp;
             CorrectionVerticalDelta = correctionVerticalDelta;
             CorrectionAppliedVerticalDelta = correctionAppliedVerticalDelta;
             CorrectionVerticalClamped = correctionVerticalClamped;
@@ -899,8 +886,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool TargetVerticalClamped { get; }
         internal Vector3 BlendedCorrection { get; }
         internal float CorrectionMaximumVerticalSpeed { get; }
-        internal bool CorrectionHistoryRebased { get; }
-        internal float CorrectionBaselineDeltaAlongUp { get; }
         internal float CorrectionVerticalDelta { get; }
         internal float CorrectionAppliedVerticalDelta { get; }
         internal bool CorrectionVerticalClamped { get; }
@@ -911,8 +896,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal struct CharacterFootInterpolationState
     {
         internal bool HasOutput;
-        internal bool HasOutputPoint;
-        internal Vector3 PreviousOutputPoint;
         internal bool HasSwingPath;
         internal ulong SwingLandingEventIdentity;
         internal ulong SwingGroundPathInputIdentity;

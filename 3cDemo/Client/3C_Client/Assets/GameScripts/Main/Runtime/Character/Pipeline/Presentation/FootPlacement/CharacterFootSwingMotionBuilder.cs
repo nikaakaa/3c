@@ -497,10 +497,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantBlendedCorrection = path.PlantBlendedCorrection;
             PlantCorrectionMaximumVerticalSpeed =
                 path.PlantCorrectionMaximumVerticalSpeed;
-            PlantCorrectionHistoryRebased =
-                path.PlantCorrectionHistoryRebased;
-            PlantCorrectionBaselineDeltaAlongUp =
-                path.PlantCorrectionBaselineDeltaAlongUp;
             PlantCorrectionVerticalDelta =
                 path.PlantCorrectionVerticalDelta;
             PlantCorrectionAppliedVerticalDelta =
@@ -620,8 +616,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantTargetVerticalClamped { get; }
         public Vector3 PlantBlendedCorrection { get; }
         public float PlantCorrectionMaximumVerticalSpeed { get; }
-        public bool PlantCorrectionHistoryRebased { get; }
-        public float PlantCorrectionBaselineDeltaAlongUp { get; }
         public float PlantCorrectionVerticalDelta { get; }
         public float PlantCorrectionAppliedVerticalDelta { get; }
         public bool PlantCorrectionVerticalClamped { get; }

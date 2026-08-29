@@ -22,8 +22,8 @@ Foot Placement MUST只消费这一份Frame。缺失完整Curve、Event table、C
 - **THEN** Projection Build或Runtime准备 MUST拒绝该Source
 - **AND** MUST不回退旧Foot Analysis Feature、PlantConfidence、默认值或另一Source
 
-#### Scenario: Approach Contact边界驱动Landing提交
+#### Scenario: Approach Contact边界驱动Plant目标准备
 
 - **WHEN** 选中Source的同一Landing Event从Swing进入Event table声明的Approach Contact区间
 - **THEN** Foot Motion Runtime Frame MUST发布同Source、Cycle、Side、ordinal与Event identity的`InApproachContactToLanding`
-- **AND** Runtime MUST不按固定秒数、脚高、PlantConfidence或另一Source推断Landing提交时机
+- **AND** Runtime MUST用该事实进入持续Plant目标准备，不得按固定秒数、脚高、PlantConfidence或另一Source提前冻结世界落点

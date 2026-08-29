@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
-            "NextLandingTrackingState,NextLandingTrackingEventIdentity,VerifiedLastLandingAvailable,VerifiedLastLandingEventIdentity,PlantVerificationAttempted,PlantVerificationUnavailable," +
+            "LandingTrackingState,LandingTrackingEventIdentity,LandingCommitted,LandingCommitAttempted,LandingCommitUnavailable," +
             "StepSelectionMaximumPredictionTimeSeconds,StepSelectionLastLandingEventIdentity,SelectedStepSource,SelectedLandingEventIdentity," +
             "SelectedStepEventPhase,SelectedStepApproachContactPhase,SelectedStepLandingPhase,SelectedStepAtOrAfterApproachContact,SelectedStepInApproachContactToLanding," +
             "CurrentStepIsValid,CurrentStepIsAuthoritative,CurrentStepHasConsistentLandingEventIdentity,CurrentStepIsPreSwing,CurrentStepIsSwing," +
@@ -1697,12 +1697,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.TrajectoryGeneration);
             Add(row, foot.LandingConfidence);
             Add(row, foot.TimeToLandingSeconds);
-            Add(row, foot.NextLandingTrackingState);
-            Add(row, foot.NextLandingTrackingEventIdentity);
-            Add(row, foot.VerifiedLastLandingAvailable);
-            Add(row, foot.VerifiedLastLandingEventIdentity);
-            Add(row, foot.PlantVerificationAttempted);
-            Add(row, foot.PlantVerificationUnavailable);
+            Add(row, foot.LandingTrackingState);
+            Add(row, foot.LandingTrackingEventIdentity);
+            Add(row, foot.LandingCommitted);
+            Add(row, foot.LandingCommitAttempted);
+            Add(row, foot.LandingCommitUnavailable);
             CharacterFootStepCandidateSelectionDiagnostics stepSelection =
                 foot.StepCandidateSelection;
             Add(row, stepSelection.MaximumPredictionTimeSeconds);

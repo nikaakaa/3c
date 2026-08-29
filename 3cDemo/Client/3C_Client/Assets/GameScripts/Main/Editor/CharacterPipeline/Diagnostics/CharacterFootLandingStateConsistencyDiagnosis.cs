@@ -61,24 +61,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "velocityDirectionReversalCount");
             CharacterFootDiagnosisTarget handoffTarget = context.Target(
                 "swing-to-landing-floor-handoff",
-                "Swing进入Landing时，上一帧Ground Envelope补偿、Residual截止与Floor所有权切换是否伴随可见Correction跳变",
+                "Swing进入Landing时，上一帧Ground Envelope补偿、Residual截止与Floor所有权切换是否造成正式Sole世界输出额外跳变",
                 new[] { "SwingToLandingFloorHandoff" },
-                new[] { "entryCorrectionStepMeters>0.02" },
+                new[] { "entryStateAdditionalOutputStepMeters>0.02" },
                 handoffs,
                 value => CharacterFootDiagnosisContext.Metric(
                              value,
-                             "entryCorrectionStepMeters") >
+                             "entryStateAdditionalOutputStepMeters") >
                          PrimaryOutputJumpMeters
                     ? new List<string>
                     {
-                        "entryCorrectionStepMeters>0.02"
+                        "entryStateAdditionalOutputStepMeters>0.02"
                     }
                     : new List<string>(),
                 value => CharacterFootDiagnosisContext.Metric(
                     value,
-                    "entryCorrectionStepMeters"),
-                "entryCorrectionStepMeters",
-                "entryCorrectionAlongUpMeters",
+                    "entryStateAdditionalOutputStepMeters"),
+                "entryStateAdditionalOutputStepMeters",
+                "entryCorrectedSoleStepMeters",
+                "entryAnimatedSoleStepMeters",
+                "entryOutputBlendParameter",
+                "entryCorrectionReexpressionStepMeters",
+                "entryCorrectionReexpressionAlongUpMeters",
                 "entryPhysicalAnkleStepMeters",
                 "entryPhysicalSoleStepMeters",
                 "previousSafetyFloorClampMeters",
@@ -94,7 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "timeToLandingSeconds");
             handoffTarget.occurrence = context.Occurrence(
                 "ContinuousSwingToLandingFramePair",
-                "entryCorrectionStepMeters",
+                "entryStateAdditionalOutputStepMeters",
                 "Meters",
                 handoffs,
                 PrimaryOutputJumpMeters,
@@ -222,8 +226,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         : new List<string>(),
                     value => CharacterFootDiagnosisContext.Metric(
                         value,
-                        "entryCorrectionStepMeters"),
-                    "entryCorrectionStepMeters",
+                        "entryStateAdditionalOutputStepMeters"),
+                    "entryStateAdditionalOutputStepMeters",
+                    "entryCorrectedSoleStepMeters",
+                    "entryCorrectionReexpressionStepMeters",
                     "frameCount"),
                 context.Target(
                     "landing-without-contact-plane",
@@ -285,25 +291,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         : new List<string>(),
                     value => CharacterFootDiagnosisContext.Metric(
                         value,
-                        "exitCorrectionStepMeters"),
-                    "exitCorrectionStepMeters",
+                        "exitStateAdditionalOutputStepMeters"),
+                    "exitStateAdditionalOutputStepMeters",
+                    "exitCorrectedSoleStepMeters",
+                    "exitCorrectionReexpressionStepMeters",
                     "frameCount"),
                 context.Target(
                     "landing-exit-jump",
-                    "Landing退出边界是否出现超过1厘米的Correction跳变",
+                    "Landing退出边界是否出现超过1厘米、且不能由Anchor保持到Animated Sole正常位移混合解释的正式世界输出跳变",
                     new[] { "LandingStateSpan" },
-                    new[] { "exitCorrectionStepMeters>0.01" },
+                    new[] { "exitStateAdditionalOutputStepMeters>0.01" },
                     spans,
                     value => CharacterFootDiagnosisContext.Metric(
                                  value,
-                                 "exitCorrectionStepMeters") > ExitJumpMeters
-                        ? new List<string> { "exitCorrectionStepMeters>0.01" }
+                                 "exitStateAdditionalOutputStepMeters") >
+                             ExitJumpMeters
+                        ? new List<string>
+                        {
+                            "exitStateAdditionalOutputStepMeters>0.01"
+                        }
                         : new List<string>(),
                     value => CharacterFootDiagnosisContext.Metric(
                         value,
-                        "exitCorrectionStepMeters"),
-                    "entryCorrectionStepMeters",
-                    "exitCorrectionStepMeters"),
+                        "exitStateAdditionalOutputStepMeters"),
+                    "entryStateAdditionalOutputStepMeters",
+                    "exitStateAdditionalOutputStepMeters",
+                    "entryCorrectedSoleStepMeters",
+                    "exitCorrectedSoleStepMeters",
+                    "entryAnimatedSoleStepMeters",
+                    "exitAnimatedSoleStepMeters",
+                    "entryOutputBlendParameter",
+                    "exitOutputBlendParameter",
+                    "entryCorrectionReexpressionStepMeters",
+                    "exitCorrectionReexpressionStepMeters",
+                    "entryFinalPhysicalAnkleStepMeters",
+                    "exitFinalPhysicalAnkleStepMeters",
+                    "entryFinalPhysicalSoleStepMeters",
+                    "exitFinalPhysicalSoleStepMeters"),
                 context.Target(
                     "landing-persists-after-formal-unlock",
                     "Runtime Landing期间是否已经出现Formal Unlocked",

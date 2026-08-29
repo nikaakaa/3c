@@ -121,9 +121,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         DirectFollowChanged = 1 << 4,
         StateEntered = 1 << 5,
         ResponseEntered = 1 << 6,
-        WeightChanged = 1 << 7,
-        TargetPointRevised = 1 << 8,
-        TargetHeightForceRefreshed = 1 << 9
+        WeightStarted = 1 << 7,
+        WeightCompleted = 1 << 8,
+        TargetPointRevised = 1 << 9,
+        TargetHeightForceRefreshed = 1 << 10
     }
 
     internal enum CharacterFootVerticalContinuityOwner : byte
@@ -131,7 +132,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         TargetHeightHistory = 1,
         PlantWorldResidual = 2,
-        DirectPlantTarget = 3
+        PlantWeightBlend = 3,
+        PlantTarget = 4
     }
 
     internal enum CharacterFootCorrectionStageDisposition : byte
@@ -139,7 +141,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         BypassedByTargetHeightOwner = 1,
         BypassedByWorldResidualOwner = 2,
-        DirectFollow = 3
+        BypassedByWeightBlendOwner = 3,
+        SynchronizedToPlantTarget = 4
     }
 
     internal readonly struct CharacterFootPathContinuityFact
@@ -272,6 +275,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerticalClamped = false;
             PlantPreviousMixedWorldTarget = default;
             PlantMixedWorldTarget = default;
+            PlantPreviousOutputPoint = default;
+            PlantOutputPoint = default;
             PlantResidualCaptureReason =
                 CharacterFootPlantResidualCaptureReason.None;
             PlantWorldResidualBeforeCapture = default;
@@ -414,6 +419,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPreviousMixedWorldTarget =
                 plant.PreviousMixedWorldTarget;
             PlantMixedWorldTarget = plant.MixedWorldTarget;
+            PlantPreviousOutputPoint = plant.PreviousOutputPoint;
+            PlantOutputPoint = plant.OutputPoint;
             PlantResidualCaptureReason = plant.ResidualCaptureReason;
             PlantWorldResidualBeforeCapture =
                 plant.WorldResidualBeforeCapture;
@@ -516,6 +523,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantTargetVerticalClamped { get; }
         internal Vector3 PlantPreviousMixedWorldTarget { get; }
         internal Vector3 PlantMixedWorldTarget { get; }
+        internal Vector3 PlantPreviousOutputPoint { get; }
+        internal Vector3 PlantOutputPoint { get; }
         internal CharacterFootPlantResidualCaptureReason PlantResidualCaptureReason { get; }
         internal Vector3 PlantWorldResidualBeforeCapture { get; }
         internal Vector3 PlantWorldResidualAfterCapture { get; }
@@ -941,6 +950,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool targetVerticalClamped,
             Vector3 previousMixedWorldTarget,
             Vector3 mixedWorldTarget,
+            Vector3 previousOutputPoint,
+            Vector3 outputPoint,
             CharacterFootPlantResidualCaptureReason residualCaptureReason,
             Vector3 worldResidualBeforeCapture,
             Vector3 worldResidualAfterCapture,
@@ -973,6 +984,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TargetVerticalClamped = targetVerticalClamped;
             PreviousMixedWorldTarget = previousMixedWorldTarget;
             MixedWorldTarget = mixedWorldTarget;
+            PreviousOutputPoint = previousOutputPoint;
+            OutputPoint = outputPoint;
             ResidualCaptureReason = residualCaptureReason;
             WorldResidualBeforeCapture = worldResidualBeforeCapture;
             WorldResidualAfterCapture = worldResidualAfterCapture;
@@ -1006,6 +1019,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool TargetVerticalClamped { get; }
         internal Vector3 PreviousMixedWorldTarget { get; }
         internal Vector3 MixedWorldTarget { get; }
+        internal Vector3 PreviousOutputPoint { get; }
+        internal Vector3 OutputPoint { get; }
         internal CharacterFootPlantResidualCaptureReason ResidualCaptureReason { get; }
         internal Vector3 WorldResidualBeforeCapture { get; }
         internal Vector3 WorldResidualAfterCapture { get; }
@@ -1048,6 +1063,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PlantFilteredPoint;
         internal float PlantBlendWeight;
         internal Vector3 PreviousPlantMixedWorldTarget;
+        internal bool HasPlantOutputPoint;
+        internal Vector3 PreviousPlantOutputPoint;
         internal Vector3 PlantWorldResidual;
         internal bool PlantResponseTransitionActive;
         internal CharacterFootPlantInterpolationFact PlantFact;

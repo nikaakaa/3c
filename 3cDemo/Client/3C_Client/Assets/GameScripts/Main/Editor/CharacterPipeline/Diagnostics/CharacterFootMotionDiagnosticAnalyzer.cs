@@ -7408,13 +7408,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.CurrentSupportNegativeLateral.ProbePosition),
                     ["ToeProbeExtension"] = Vector3.Distance(
                         frame.SourceToe,
-                        frame.CurrentSupportToe.ProbePosition),
-                    ["RearAxisErrorMeters"] =
-                        CurrentSupportRearAxisError(frame),
-                    ["LateralAxisErrorMeters"] =
-                        CurrentSupportLateralAxisError(frame),
-                    ["LateralSymmetryErrorMeters"] =
-                        CurrentSupportLateralSymmetryError(frame)
+                        frame.CurrentSupportToe.ProbePosition)
                 };
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
@@ -7756,49 +7750,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return false;
             }
             Vector3 forward = toeOffset.normalized;
-            return Vector3.Dot(rearOffset, forward) < 0f &&
-                   Vector3.ProjectOnPlane(
-                       rearOffset,
-                       forward).magnitude <= PositionNoiseFloor &&
+            return Vector3.Dot(rearOffset.normalized, forward) <=
+                       -1f + RuntimeGeometryEpsilon &&
                    Vector3.Distance(
                        positiveOffset,
                        -negativeOffset) <= PositionNoiseFloor &&
                    Math.Abs(Vector3.Dot(
-                       positiveOffset,
-                       forward)) <= PositionNoiseFloor;
-        }
-
-        static float CurrentSupportRearAxisError(FootFrame frame)
-        {
-            Vector3 forward = (
-                frame.CurrentSupportToe.ProbePosition -
-                frame.SourceToe).normalized;
-            Vector3 rearOffset =
-                frame.CurrentSupportRear.ProbePosition -
-                frame.CurrentSupportBase.ProbePosition;
-            return Vector3.ProjectOnPlane(rearOffset, forward).magnitude;
-        }
-
-        static float CurrentSupportLateralAxisError(FootFrame frame)
-        {
-            Vector3 forward = (
-                frame.CurrentSupportToe.ProbePosition -
-                frame.SourceToe).normalized;
-            Vector3 lateralOffset =
-                frame.CurrentSupportPositiveLateral.ProbePosition -
-                frame.CurrentSupportBase.ProbePosition;
-            return Math.Abs(Vector3.Dot(lateralOffset, forward));
-        }
-
-        static float CurrentSupportLateralSymmetryError(FootFrame frame)
-        {
-            Vector3 positiveOffset =
-                frame.CurrentSupportPositiveLateral.ProbePosition -
-                frame.CurrentSupportBase.ProbePosition;
-            Vector3 negativeOffset =
-                frame.CurrentSupportNegativeLateral.ProbePosition -
-                frame.CurrentSupportBase.ProbePosition;
-            return Vector3.Distance(positiveOffset, -negativeOffset);
+                       positiveOffset.normalized,
+                       forward)) <= RuntimeGeometryEpsilon;
         }
 
         static void RequireCurrentSupport(FootFrame frame)
@@ -7907,45 +7866,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !probe.SphereCastExecuted &&
                     probe.State == "NotExecuted")
                 : probes.All(probe => probe.SphereCastExecuted);
-            bool identityConsistent =
-                frame.CurrentSupportFrame == (ulong)frame.Frame &&
-                frame.CurrentSupportCompletion == frame.CompletionIdentity &&
-                frame.CurrentSupportWorldRevision != 0;
-            bool availabilityConsistent =
-                frame.CurrentSupportAvailable == available;
-            bool rejectReasonConsistent =
-                frame.CurrentSupportRejectReason == expectedRejectReason;
-            bool layoutConsistent = CurrentSupportLayoutConsistent(frame);
-            bool selectionEpsilonConsistent =
-                float.IsFinite(frame.CurrentSupportSelectionEpsilon) &&
-                Math.Abs(
-                    frame.CurrentSupportSelectionEpsilon - 0.0001f) <=
-                TimeEpsilon;
-            bool selectedDirectionFinite = !available ||
-                FiniteVector(
-                    frame.CurrentSupportSelectedDirectionBeforeNormalization);
-            bool selectionConsistent = !available ||
-                CurrentSupportSelectionConsistent(frame);
-            if (!identityConsistent ||
-                !availabilityConsistent ||
-                !rejectReasonConsistent ||
+            if (frame.CurrentSupportFrame != (ulong)frame.Frame ||
+                frame.CurrentSupportCompletion != frame.CompletionIdentity ||
+                frame.CurrentSupportWorldRevision == 0 ||
+                frame.CurrentSupportAvailable != available ||
+                frame.CurrentSupportRejectReason != expectedRejectReason ||
                 !probesExecutedConsistently ||
-                !layoutConsistent ||
-                !selectionEpsilonConsistent ||
-                !selectedDirectionFinite ||
-                !selectionConsistent)
+                !CurrentSupportLayoutConsistent(frame) ||
+                !float.IsFinite(frame.CurrentSupportSelectionEpsilon) ||
+                Math.Abs(
+                    frame.CurrentSupportSelectionEpsilon - 0.0001f) >
+                TimeEpsilon ||
+                available &&
+                    (!FiniteVector(
+                         frame.CurrentSupportSelectedDirectionBeforeNormalization) ||
+                     !CurrentSupportSelectionConsistent(frame)))
             {
                 throw new InvalidDataException(
-                    $"Foot Motion Current Support facts are inconsistent " +
-                    $"Frame={frame.Frame} Side={frame.Side} " +
-                    $"Identity={identityConsistent} " +
-                    $"Availability={availabilityConsistent} " +
-                    $"RejectReason={rejectReasonConsistent} " +
-                    $"Execution={probesExecutedConsistently} " +
-                    $"Layout={layoutConsistent} " +
-                    $"SelectionEpsilon={selectionEpsilonConsistent} " +
-                    $"SelectedDirection={selectedDirectionFinite} " +
-                    $"Selection={selectionConsistent}.");
+                    "Foot Motion Current Support facts are inconsistent.");
             }
             if (available)
             {

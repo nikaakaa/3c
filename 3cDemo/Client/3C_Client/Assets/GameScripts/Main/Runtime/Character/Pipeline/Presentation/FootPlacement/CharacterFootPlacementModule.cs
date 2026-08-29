@@ -977,93 +977,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pool.AcquireWritable(committed);
             CharacterFootLandingPredictionSettings settings =
                 m_Settings.LandingPrediction;
-            Vector3 forward = foot.SoleForward.normalized;
-            Vector3 right = foot.SoleRight.normalized;
-            var baseRequest = CreateCurrentSupportRequest(
+            var heelRequest = new CharacterFootCurrentSupportProbeRequest(
                 side,
-                CharacterFootCurrentSupportProbeKind.Base,
+                CharacterFootCurrentSupportProbeKind.Heel,
                 foot.HeelPosition,
-                componentUp,
-                in settings);
-            var rearRequest = CreateCurrentSupportRequest(
-                side,
-                CharacterFootCurrentSupportProbeKind.Rear,
-                foot.HeelPosition - forward * foot.RearProbeExtension,
-                componentUp,
-                in settings);
-            var positiveLateralRequest = CreateCurrentSupportRequest(
-                side,
-                CharacterFootCurrentSupportProbeKind.PositiveLateral,
-                foot.HeelPosition + right * foot.LateralProbeExtent,
-                componentUp,
-                in settings);
-            var negativeLateralRequest = CreateCurrentSupportRequest(
-                side,
-                CharacterFootCurrentSupportProbeKind.NegativeLateral,
-                foot.HeelPosition - right * foot.LateralProbeExtent,
-                componentUp,
-                in settings);
-            var toeRequest = CreateCurrentSupportRequest(
-                side,
-                CharacterFootCurrentSupportProbeKind.Toe,
-                foot.ToePosition + forward * foot.ToeProbeExtension,
-                componentUp,
-                in settings);
-            CharacterFootCurrentSupportObservation observation;
-            if (!grounded)
-            {
-                observation = CharacterFootCurrentSupportObservation.Unavailable(
-                    frameSequence,
-                    completionIdentity,
-                    m_WorldQuery.WorldRevision,
-                    in baseRequest,
-                    in rearRequest,
-                    in positiveLateralRequest,
-                    in negativeLateralRequest,
-                    in toeRequest,
-                    CharacterFootCurrentSupportRejectReason.NotGrounded);
-                pending.Set(in observation);
-                return pending;
-            }
-            CharacterFootCurrentSupportProbeResult baseResult =
-                m_WorldQuery.Query(in baseRequest);
-            CharacterFootCurrentSupportProbeResult rearResult =
-                m_WorldQuery.Query(in rearRequest);
-            CharacterFootCurrentSupportProbeResult positiveLateralResult =
-                m_WorldQuery.Query(in positiveLateralRequest);
-            CharacterFootCurrentSupportProbeResult negativeLateralResult =
-                m_WorldQuery.Query(in negativeLateralRequest);
-            CharacterFootCurrentSupportProbeResult toeResult =
-                m_WorldQuery.Query(in toeRequest);
-            observation = CharacterFootCurrentSupportObservation.Resolve(
-                frameSequence,
-                completionIdentity,
-                m_WorldQuery.WorldRevision,
-                (foot.HeelPosition + foot.ToePosition) * 0.5f,
-                in baseRequest,
-                in rearRequest,
-                in positiveLateralRequest,
-                in negativeLateralRequest,
-                in toeRequest,
-                in baseResult,
-                in rearResult,
-                in positiveLateralResult,
-                in negativeLateralResult,
-                in toeResult);
-            pending.Set(in observation);
-            return pending;
-        }
-
-        static CharacterFootCurrentSupportProbeRequest CreateCurrentSupportRequest(
-            CharacterFootSide side,
-            CharacterFootCurrentSupportProbeKind kind,
-            Vector3 position,
-            Vector3 componentUp,
-            in CharacterFootLandingPredictionSettings settings) =>
-            new CharacterFootCurrentSupportProbeRequest(
-                side,
-                kind,
-                position,
                 componentUp,
                 settings.CastAbove,
                 settings.CastBelow,
@@ -1071,6 +988,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.GroundLayerMask,
                 settings.MinimumGroundNormalDot,
                 settings.HitCapacity);
+            var toeRequest = new CharacterFootCurrentSupportProbeRequest(
+                side,
+                CharacterFootCurrentSupportProbeKind.Toe,
+                foot.ToePosition,
+                componentUp,
+                settings.CastAbove,
+                settings.CastBelow,
+                settings.SphereRadius,
+                settings.GroundLayerMask,
+                settings.MinimumGroundNormalDot,
+                settings.HitCapacity);
+            CharacterFootCurrentSupportObservation observation;
+            if (!grounded)
+            {
+                observation = CharacterFootCurrentSupportObservation.Unavailable(
+                    frameSequence,
+                    completionIdentity,
+                    m_WorldQuery.WorldRevision,
+                    in heelRequest,
+                    in toeRequest,
+                    CharacterFootCurrentSupportRejectReason.NotGrounded);
+                pending.Set(in observation);
+                return pending;
+            }
+            CharacterFootCurrentSupportProbeResult heel =
+                m_WorldQuery.Query(in heelRequest);
+            CharacterFootCurrentSupportProbeResult toe =
+                m_WorldQuery.Query(in toeRequest);
+            observation = CharacterFootCurrentSupportObservation.Resolve(
+                frameSequence,
+                completionIdentity,
+                m_WorldQuery.WorldRevision,
+                in heelRequest,
+                in toeRequest,
+                in heel,
+                in toe);
+            pending.Set(in observation);
+            return pending;
+        }
 
         CharacterFootGroundPathResult PrepareGroundPath(
             CharacterFootSide side,

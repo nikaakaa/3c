@@ -67,12 +67,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RightToeContactOffset = right.ToeContactLocalOffset;
             LeftSoleFrameLocalRotation = left.SoleFrameLocalRotation;
             RightSoleFrameLocalRotation = right.SoleFrameLocalRotation;
-            LeftRearProbeExtension = left.RearProbeExtension;
-            LeftLateralProbeExtent = left.LateralProbeExtent;
-            LeftToeProbeExtension = left.ToeProbeExtension;
-            RightRearProbeExtension = right.RearProbeExtension;
-            RightLateralProbeExtent = right.LateralProbeExtent;
-            RightToeProbeExtension = right.ToeProbeExtension;
         }
 
         public static CharacterFootPlacementPoseRig CreateCalibrationAuthoringRig(
@@ -120,12 +114,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 RightToeContactOffset { get; }
         public Quaternion LeftSoleFrameLocalRotation { get; }
         public Quaternion RightSoleFrameLocalRotation { get; }
-        public float LeftRearProbeExtension { get; }
-        public float LeftLateralProbeExtent { get; }
-        public float LeftToeProbeExtension { get; }
-        public float RightRearProbeExtension { get; }
-        public float RightLateralProbeExtent { get; }
-        public float RightToeProbeExtension { get; }
         public float LeftLegLength { get; }
         public float RightLegLength { get; }
 
@@ -147,10 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentPoses[Rig.LeftLeg.ToePhysicalBoneIndex],
                     LeftHeelContactOffset,
                     LeftToeContactOffset,
-                    LeftSoleFrameLocalRotation,
-                    LeftRearProbeExtension,
-                    LeftLateralProbeExtent,
-                    LeftToeProbeExtension),
+                    LeftSoleFrameLocalRotation),
                 CaptureFoot(
                     PoseRoot,
                     componentPoses[Rig.RightLeg.HipPhysicalBoneIndex],
@@ -159,10 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentPoses[Rig.RightLeg.ToePhysicalBoneIndex],
                     RightHeelContactOffset,
                     RightToeContactOffset,
-                    RightSoleFrameLocalRotation,
-                    RightRearProbeExtension,
-                    RightLateralProbeExtent,
-                    RightToeProbeExtension));
+                    RightSoleFrameLocalRotation));
             RequireFinite(pose.Left.HipPosition);
             RequireFinite(pose.Left.KneePosition);
             RequireFinite(pose.Left.AnklePosition);
@@ -204,10 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationLocalBonePose toe,
             Vector3 heelContactOffset,
             Vector3 toeContactOffset,
-            Quaternion soleFrameLocalRotation,
-            float rearProbeExtension,
-            float lateralProbeExtent,
-            float toeProbeExtension)
+            Quaternion soleFrameLocalRotation)
         {
             if (!hip.IsValid || !knee.IsValid ||
                 !ankle.IsValid || !toe.IsValid)
@@ -236,12 +215,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     heelContactOffset),
                 semanticRotation * Vector3.forward,
                 semanticRotation * Vector3.up,
-                semanticRotation * Vector3.right,
                 semanticRotation,
-                soleFrameLocalRotation,
-                rearProbeExtension,
-                lateralProbeExtent,
-                toeProbeExtension);
+                soleFrameLocalRotation);
         }
 
         static Vector3 TransformPoint(

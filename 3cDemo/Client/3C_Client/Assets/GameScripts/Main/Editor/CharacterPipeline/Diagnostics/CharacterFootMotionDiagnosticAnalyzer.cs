@@ -2462,8 +2462,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return false;
             }
-            target = up *
-                     (filteredTargetHeight - originalSoleHeight);
+            target = up * Mathf.Max(
+                0f,
+                filteredTargetHeight - originalSoleHeight);
             return FiniteVector(target);
         }
 
@@ -4099,8 +4100,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     envelopeAlongUp + frame.SwingFormalFootHeight;
                 float expectedEnvelopeMinimumCorrection =
                     envelopeAlongUp - originalSoleAlongUp;
-                float expectedBuilderSelectedCorrection =
-                    expectedRawFormalTargetHeight - originalSoleAlongUp;
+                float expectedBuilderSelectedCorrection = Mathf.Max(
+                    0f,
+                    expectedRawFormalTargetHeight - originalSoleAlongUp);
                 if (Math.Abs(
                         baselineAlongUp -
                         frame.SwingBaselineSampleAlongUp) >
@@ -4154,8 +4156,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         !Mathf.Approximately(
                             expectedHeightDelta,
                             expectedAppliedHeightDelta);
-                    float expectedFilteredCorrection =
-                        expectedFilteredTargetHeight - originalSoleAlongUp;
+                    float expectedFilteredCorrection = Mathf.Max(
+                        0f,
+                        expectedFilteredTargetHeight - originalSoleAlongUp);
                     if (!frame.PathContinuityEvaluated ||
                         !frame.PathAvailableAfter ||
                         frame.PathCurrentLandingEventIdentity !=

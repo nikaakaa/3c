@@ -24,7 +24,7 @@ MonoBehaviour:
     m_MaximumSurfaceSlopeDegrees: 55
     m_MaximumPredictionTimeSeconds: 2
     m_PredictionVelocityDeltaThreshold: 0.001
-    m_PredictionVelocitySmoothSpeed: 4
+    m_PredictionVelocitySmoothSpeed: 60
     m_PredictionMaximumSpeed: 8
     m_PredictionInputAccumulationDistance: 0.05
     m_ComponentUpChangeAngleDegrees: 1
@@ -46,6 +46,7 @@ MonoBehaviour:
     m_ReleaseCompletionTolerance: 0.02
     m_EffectiveCorrectionHalfLifeSeconds: 0.03
     m_MaximumVerticalTargetSpeed: 0.6
+    m_TargetHeightForceRefreshDistance: 0.3
     m_MaximumVerticalCorrectionSpeed: 0.6
     m_GroundPenetrationTolerance: 0.01
     m_LandingLockCompletionTolerance: 0.01

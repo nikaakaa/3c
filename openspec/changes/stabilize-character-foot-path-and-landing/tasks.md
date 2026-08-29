@@ -59,7 +59,7 @@
 - [ ] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
 - [x] 5.6 在Foot根Bank增加左右脚共享的Prediction Motion State，保存稳定当前/Continuation速度、初始化事实、移动计划Generation、Body Reset与Prediction Source lineage，并随同一事务Seal或Discard
 - [x] 5.7 在Foot Motion Profile增加必须显式序列化的`PredictionVelocityDeltaThreshold`、`PredictionVelocitySmoothSpeed`与`PredictionMaximumSpeed`，纳入Profile Revision并严格拒绝缺失、非有限和非正值
-- [ ] 5.8 按本项目Replay证明的阈值、EMA与上限控制顺序分别稳定committed Body Target当前世界速度与移动计划Continuation，只把稳定速度交给唯一KCC Future Body Translation；`60/s`在60FPS下等于业务级变化直通，Corin新候选`4/s`必须证明转向时Prediction Landing连续且不增加稳定Swing、Landing或穿透回归；ZZZ主求解的未命名标量响应不得作为世界速度算法证据，不增加移动计划Current替代路径、普通/预测双路径或KCC后位置低通
+- [x] 5.8 按本项目Replay证明的阈值、EMA与上限控制顺序分别稳定committed Body Target当前世界速度与移动计划Continuation，只把稳定速度交给唯一KCC Future Body Translation；Corin保持已证明零回归的`60/s`，`4/s`因增加Query与Path Revision已由134944 Replay否决；ZZZ主求解的未命名标量响应不得作为世界速度算法证据，不增加移动计划Current替代路径、普通/预测双路径或KCC后位置低通
 - [x] 5.9 让Body Reset、Retarget、移动计划Generation与Prediction Source变化重置Prediction Motion State，普通Landing Event、Animation Source、Source Sample与左右脚Step换代不得重置角色级稳定速度
 - [x] 5.10 发布Raw/Stable当前与Continuation速度、速度差、EMA响应、最大速度Clamp、Prediction初始化/重置原因、KCC Future Translation与晚期Candidate消费结果诊断
 - [x] 5.11 对Prediction输入执行有限值和lineage接纳；非法或缺失移动计划时发布typed unavailable、不得推进稳定状态或生成Future Translation，合法急转只进入同一EMA控制，不套用语义未确认的PIK相对突变公式；停止边界的正式零速度计划生产后续单独处理
@@ -78,6 +78,7 @@
 - [x] 6.9 在Foot Motion Profile新增必须显式序列化的`MaximumVerticalTargetSpeed`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；它只控制同Event Ground Path换代且Landing沿Up有效变化及Approach/Plant目标接管，不限制正常动画Phase，现有`MaximumVerticalCorrectionSpeed`只控制状态混合后的Effective Correction历史，不提供共享默认值
 - [ ] 6.10 按ZZZ已确认顺序闭合`当前态到目标态混合 -> 目标高度历史限速 -> typed状态权重混合 -> Correction历史限速 -> 既有Foot Goal权重基准混合`，并用项目正式State、Response、Event与边沿定义各历史的更新、冻结、强制刷新和Reset门；同Event换点、Contact Verification、Lock Response切换与Same-Event Reentry不得跳过状态混合或同时清零两份历史
 - [ ] 6.11 删除Correction限速之前或之后重复修改可见Correction的Plant、Ground或Goal混合路径，确认基准混合只由既有Foot Goal/Position Weight执行一次，并把两次限速的输入、历史、输出、Clamp与Reset原因纳入6.8诊断
+- [x] 6.12 在Foot Motion Profile新增独立`TargetHeightForceRefreshDistance`并纳入Revision与严格校验；Corin显式使用`0.30m`。同Event Landing沿Up换代达到该值时强制刷新内部Landing高度、取消Target Height限速欠账并由Swing Residual保持可见连续，小于该值且超过`PathRevisionDistance`的换代才走`MaximumVerticalTargetSpeed`；记录Force Refresh与正式阈值
 
 ## 7. 单独接入Support与Pelvis
 

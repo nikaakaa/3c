@@ -226,7 +226,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
             "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
             "FootMotionSwingRawTargetHeightAlongUp,FootMotionSwingFilteredTargetHeightBefore,FootMotionSwingTargetHeightDelta," +
-            "FootMotionSwingTargetHeightAppliedDelta,FootMotionSwingTargetHeightUpdateHeld,FootMotionSwingTargetHeightRateLimited,FootMotionSwingTargetHeightClamped,FootMotionSwingTargetMaximumVerticalSpeed," +
+            "FootMotionSwingTargetHeightAppliedDelta,FootMotionSwingTargetHeightUpdateHeld,FootMotionSwingTargetHeightForceRefreshed,FootMotionSwingTargetHeightRateLimited,FootMotionSwingTargetHeightClamped,FootMotionSwingTargetHeightForceRefreshDistance,FootMotionSwingTargetMaximumVerticalSpeed," +
             "FootMotionSwingFilteredTargetHeightAlongUp," +
             "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
             "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
@@ -2125,8 +2125,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SwingTargetHeightDelta);
             Add(row, motion.SwingTargetHeightAppliedDelta);
             Add(row, motion.SwingTargetHeightUpdateHeld);
+            Add(row, motion.SwingTargetHeightForceRefreshed);
             Add(row, motion.SwingTargetHeightRateLimited);
             Add(row, motion.SwingTargetHeightClamped);
+            Add(row, motion.SwingTargetHeightForceRefreshDistance);
             Add(row, motion.SwingTargetMaximumVerticalSpeed);
             Add(row, motion.SwingFilteredTargetHeightAlongUp);
             Add(row, motion.PreTransitionReason);

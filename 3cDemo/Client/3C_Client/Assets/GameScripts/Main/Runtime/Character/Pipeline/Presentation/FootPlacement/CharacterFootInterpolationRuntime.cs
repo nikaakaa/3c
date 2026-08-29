@@ -349,6 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.FilteredTargetHeightAlongUp;
             bool targetCorrectionRateLimited = false;
             bool targetCorrectionClamped = false;
+            bool targetHeightForceRefreshed = false;
             bool targetHeightUpdateHeld = hasPath &&
                                           state.Policy !=
                                           CharacterFootInterpolationPolicy
@@ -377,8 +378,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool retargetRequested = groundPathInputChanged &&
                                          landingHeightDelta >
                                          frame.Settings.PathRevisionDistance;
-                if (retargetRequested)
+                if (retargetRequested &&
+                    landingHeightDelta >=
+                    frame.Settings.TargetHeightForceRefreshDistance)
+                {
+                    state.FilteredTargetHeightAlongUp =
+                        currentLandingHeightAlongUp;
+                    state.TargetHeightRetargetActive = false;
+                    targetHeightForceRefreshed = true;
+                }
+                else if (retargetRequested)
+                {
                     state.TargetHeightRetargetActive = true;
+                }
                 float maximumHeightDelta = ResolveVerticalHistoryDelta(
                     frame.DeltaSeconds,
                     frame.Settings.MaximumVerticalTargetSpeed);
@@ -529,8 +541,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                       filteredTargetHeightBefore
                     : 0f,
                 hasPath && targetHeightUpdateHeld,
+                hasPath && targetHeightForceRefreshed,
                 hasPath && targetCorrectionRateLimited,
                 hasPath && targetCorrectionClamped,
+                frame.Settings.TargetHeightForceRefreshDistance,
                 frame.Settings.MaximumVerticalTargetSpeed,
                 hasPath
                     ? filteredTargetHeightAlongUp

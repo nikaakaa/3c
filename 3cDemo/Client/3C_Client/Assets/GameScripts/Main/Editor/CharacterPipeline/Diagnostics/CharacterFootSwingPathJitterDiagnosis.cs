@@ -552,7 +552,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string plantResidualCaptureReason;
         public CharacterFootVectorFact plantWorldResidualBeforeCapture;
         public CharacterFootVectorFact plantWorldResidualCapturedBeforeDecay;
-        public CharacterFootContactHeightAdvanceAnalysis plantContactHeightAdvance;
         public bool plantWorldResidualDecayApplied;
         public double plantWorldResidualBaseHalfLifeSeconds;
         public bool plantWorldResidualDeadlineHalfLifeAvailable;

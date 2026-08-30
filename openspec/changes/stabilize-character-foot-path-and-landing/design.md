@@ -344,15 +344,15 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 13. 用Contact、Lock Mode与Lock Weight替换旧PlantConfidence生命周期并删除旧字段。
 14. 显式重建Corin Projection、Float32与Fixed产品，完成编译、诊断重放和严格OpenSpec校验。
 
-## 接触交接正式脚高候选（2026-08-30）
+## 已否决的接触交接正式脚高候选（2026-08-30）
 
-本候选只研究085503中Right 475→476的直接输入变化：正式Foot Height从28.555毫米变为0，但原World Residual捕获把上一世界输出中这份抬脚量一并保留。478–480的Correction Response已经追上Desired，不得把它称为两级响应重复拖延；483是独立的Response限速欠账，不保证由本候选解决。
+`9bce6c2`只研究085503中Right 475→476的输入变化：正式Foot Height从28.555毫米变为0，实验尝试在Contact捕获前继续这个高度变化。478–480的Correction Response已经追上Desired，不得把它称为两级响应重复拖延；483是独立的Response限速欠账，候选实际没有改善。
 
-唯一Interpolation只记录实际消费Swing Ground的相邻帧Formal Foot Height及正式Next Landing Event。同Event首次Verified Anchor交接时，捕获参考改为上一世界输出加本帧沿Component Up的正式脚高变化，再减Selected Target；随后仍执行一次现有Residual Advance与一次现有Correction Response。Releasing重入、无预测Event、无效Support、非相邻帧和lineage失效不具有该资格。不增加参数、时间常量、作者开关、另一Goal或第二滤波层，不修改世界Anchor、查询与Swing XZ。
+`da438fa`接入精确诊断后，124922同输入Replay成功完成并与085623 Proof逐1044帧匹配；46个准入和Capture公式全部成立。但穿透异常段19/78变为27/81，接触跳变405/1036变为428/1038，接触未贴合异常12/60变为13/60，故拒绝候选。Right476中心间隙25.286降到5.857毫米的同时Heel已由面上11.335变为面下8.094毫米。Left746的负Swing Residual已经抵消20毫米正式脚高，再扣完整37.673毫米直接形成面下目标。原始Foot Height相对作者落点路径定义，不是一份可从实际输出中无条件减去的独立位移。
 
-业务取舍是让正式落脚输入在接触边界继续推进，可能缩短悬空，也可能增加单帧落脚位移或穿透；不得只凭代表帧改善接受。其精确捕获公式是项目实验，不是ZZZ一一对应迁移。新ZZZ证据已经区分Owner Transform、Foot pivot与Sole，并证明位置标量沿Owner局部Up推进、末端W在当前原生分支参与旋转；本候选不借旧`arr230=arr228+arr130×arr128`特例声称Normal就是ZZZ位移轴，也不迁移未知writer权重。
+本实验没有修改任何查询或Profile，但实际出现20条State变化及约2.17厘米骨盆输出差，说明首帧只沿Up改变捕获不能推出后续XZ、锁定时间和腿姿态不变。七维总分60.4升到61.9全部来自Stable Swing子项74升到84，不能替代恶化项的直接数据。恢复原完整世界输出捕获，删除候选快照、DTO及其诊断字段，不保留零值兼容路径。
 
-基线、公式、哈希和候选结论记在[本轮实验记录](experiments/20260830-contact-height-advance.md)。只有完整Replay数据支持且无新增已知回归时保留；否则只撤销候选Runtime/合同，原始失败样本和中文提交历史保留。
+这不是ZZZ一一对应迁移。新ZZZ证据已经区分Owner Transform、Foot pivot与Sole，并证明位置标量沿Owner局部Up推进、末端W在当前原生分支参与旋转；不能再用旧`arr230=arr228+arr130×arr128`特例证明Normal就是位移轴。基线、完整37项对比、失败数据及恢复结果见[本轮实验记录](experiments/20260830-contact-height-advance.md)。既有评分系统、原始失败样本和中文提交历史保留，用户proposal/project修改不纳入撤销。
 
 ## 已实施切片对账
 

@@ -540,10 +540,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftPreviousVisibleOutputAvailable,
                 leftPreviousVisibleOutputPoint,
                 in leftLockRequest,
-                leftCurrentStep.FootHeight,
-                leftCurrentStep.HasPredictiveLanding
-                    ? leftCurrentStep.LandingEventIdentity
-                    : 0,
                 leftCurrentStep.Support,
                 leftLockRequest.EventIdentity,
                 ResolveFootGoalOwnershipLoss(
@@ -574,10 +570,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightPreviousVisibleOutputAvailable,
                 rightPreviousVisibleOutputPoint,
                 in rightLockRequest,
-                rightCurrentStep.FootHeight,
-                rightCurrentStep.HasPredictiveLanding
-                    ? rightCurrentStep.LandingEventIdentity
-                    : 0,
                 rightCurrentStep.Support,
                 rightLockRequest.EventIdentity,
                 ResolveFootGoalOwnershipLoss(

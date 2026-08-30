@@ -795,18 +795,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResponseOutputPoint = path.ResponseOutputPoint;
             PlantResidualCaptureReason =
                 path.PlantResidualCaptureReason.ToString();
-            PlantContactHeightAdvanceEligible =
-                path.PlantContactHeightAdvance.Eligible;
-            PlantContactHeightPreviousFrameSequence =
-                path.PlantContactHeightAdvance.PreviousFrameSequence;
-            PlantContactHeightPreviousEventIdentity =
-                path.PlantContactHeightAdvance.PreviousLandingEventIdentity;
-            PlantContactHeightPreviousFormalFootHeight =
-                path.PlantContactHeightAdvance.PreviousFormalFootHeight;
-            PlantContactHeightCurrentFormalFootHeight =
-                path.PlantContactHeightAdvance.CurrentFormalFootHeight;
-            PlantContactHeightWorldAdvance =
-                path.PlantContactHeightAdvance.WorldAdvance;
             PlantWorldResidualBeforeCapture =
                 path.PlantWorldResidualBeforeCapture;
             PlantWorldResidualCapturedBeforeDecay =
@@ -1048,12 +1036,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 DesiredOutputPoint { get; }
         public Vector3 ResponseOutputPoint { get; }
         public string PlantResidualCaptureReason { get; }
-        public bool PlantContactHeightAdvanceEligible { get; }
-        public ulong PlantContactHeightPreviousFrameSequence { get; }
-        public ulong PlantContactHeightPreviousEventIdentity { get; }
-        public float PlantContactHeightPreviousFormalFootHeight { get; }
-        public float PlantContactHeightCurrentFormalFootHeight { get; }
-        public Vector3 PlantContactHeightWorldAdvance { get; }
         public Vector3 PlantWorldResidualBeforeCapture { get; }
         public Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
         public bool PlantWorldResidualDecayApplied { get; }

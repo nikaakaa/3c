@@ -98,9 +98,6 @@
 - [x] 6.27 把正式`ApproachContactToLandingProgress`、Approach Target Preparation、Selected Target Kind与Lock Weight分列接入唯一Sampler/Analyzer/Publisher，删除PlantBlend、Takeover Weight Delta/Advanced及旧`WeightStarted/WeightCompleted`；强校验Approach Progress变化不改变可见Position/Normal/Residual/Goal权重，首次Contact Verification换代才Capture完整Vector Residual并同帧Advance
 - [x] 6.28 删除Action occupancy对Foot Hard Ownership Loss、Anchor Release、Suppress+Reset与Landing Reach的参与；Hard Ownership Loss只保留`!Grounded || !CurrentStep.IsAuthoritative`，`animation.foot-placement-weight`只控制Goal可见权重，Action Pose贡献期间继续同一Interpolation与Reach链
 
-- [x] 6.29 在唯一Interpolation实现同Event相邻Swing到首次Verified Anchor的正式脚高输入推进候选，只改本次World Residual捕获参考，发布准入、Frame/Event、前后正式脚高与世界推进量，保留Anchor、XZ、Response与既有参数
-- [ ] 6.30 把6.29事实接入唯一Sampler/Analyzer/Publisher并按实际捕获公式严格对账；通过既有Replay完整比较接触间隙、交接位移、穿透、Swing/Path、骨盆、脚锁与求解，独立保存候选和失败对账
-
 ## 7. 单独接入Support与Pelvis
 
 - [x] 7.1 把正式Support写入Resolved Foot的Support Intent，并建立与Lock分离的Pelvis Reach Reference

@@ -295,7 +295,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResponseOutputPoint = default;
             PlantResidualCaptureReason =
                 CharacterFootPlantResidualCaptureReason.None;
-            PlantContactHeightAdvance = default;
             PlantWorldResidualBeforeCapture = default;
             PlantWorldResidualCapturedBeforeDecay = default;
             PlantWorldResidualDecayApplied = false;
@@ -463,7 +462,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DesiredOutputPoint = correctionResponse.DesiredOutputPoint;
             ResponseOutputPoint = correctionResponse.ResponseOutputPoint;
             PlantResidualCaptureReason = plant.ResidualCaptureReason;
-            PlantContactHeightAdvance = plant.ContactHeightAdvance;
             PlantWorldResidualBeforeCapture =
                 plant.WorldResidualBeforeCapture;
             PlantWorldResidualCapturedBeforeDecay =
@@ -610,7 +608,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 DesiredOutputPoint { get; }
         internal Vector3 ResponseOutputPoint { get; }
         internal CharacterFootPlantResidualCaptureReason PlantResidualCaptureReason { get; }
-        internal CharacterFootContactHeightAdvanceFact PlantContactHeightAdvance { get; }
         internal Vector3 PlantWorldResidualBeforeCapture { get; }
         internal Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
         internal bool PlantWorldResidualDecayApplied { get; }
@@ -1284,32 +1281,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float AppliedDelta { get; }
     }
 
-    internal readonly struct CharacterFootContactHeightAdvanceFact
-    {
-        internal CharacterFootContactHeightAdvanceFact(
-            bool eligible,
-            ulong previousFrameSequence,
-            ulong previousLandingEventIdentity,
-            float previousFormalFootHeight,
-            float currentFormalFootHeight,
-            Vector3 worldAdvance)
-        {
-            Eligible = eligible;
-            PreviousFrameSequence = previousFrameSequence;
-            PreviousLandingEventIdentity = previousLandingEventIdentity;
-            PreviousFormalFootHeight = previousFormalFootHeight;
-            CurrentFormalFootHeight = currentFormalFootHeight;
-            WorldAdvance = worldAdvance;
-        }
-
-        internal bool Eligible { get; }
-        internal ulong PreviousFrameSequence { get; }
-        internal ulong PreviousLandingEventIdentity { get; }
-        internal float PreviousFormalFootHeight { get; }
-        internal float CurrentFormalFootHeight { get; }
-        internal Vector3 WorldAdvance { get; }
-    }
-
     internal readonly struct CharacterFootPlantInterpolationFact
     {
         internal CharacterFootPlantInterpolationFact(
@@ -1335,7 +1306,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 previousSelectedWorldTarget,
             Vector3 selectedWorldTarget,
             CharacterFootPlantResidualCaptureReason residualCaptureReason,
-            in CharacterFootContactHeightAdvanceFact contactHeightAdvance,
             Vector3 worldResidualBeforeCapture,
             Vector3 worldResidualCapturedBeforeDecay,
             bool worldResidualDecayApplied,
@@ -1374,7 +1344,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreviousSelectedWorldTarget = previousSelectedWorldTarget;
             SelectedWorldTarget = selectedWorldTarget;
             ResidualCaptureReason = residualCaptureReason;
-            ContactHeightAdvance = contactHeightAdvance;
             WorldResidualBeforeCapture = worldResidualBeforeCapture;
             WorldResidualCapturedBeforeDecay =
                 worldResidualCapturedBeforeDecay;
@@ -1421,7 +1390,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PreviousSelectedWorldTarget { get; }
         internal Vector3 SelectedWorldTarget { get; }
         internal CharacterFootPlantResidualCaptureReason ResidualCaptureReason { get; }
-        internal CharacterFootContactHeightAdvanceFact ContactHeightAdvance { get; }
         internal Vector3 WorldResidualBeforeCapture { get; }
         internal Vector3 WorldResidualCapturedBeforeDecay { get; }
         internal bool WorldResidualDecayApplied { get; }
@@ -1446,9 +1414,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong SwingLandingEventIdentity;
         internal ulong SwingGroundPathInputIdentity;
         internal Vector3 SwingLandingPoint;
-        internal ulong PreviousSwingHeightFrameSequence;
-        internal ulong PreviousSwingHeightEventIdentity;
-        internal float PreviousSwingFormalFootHeight;
         internal Vector3 PreviousTargetCorrection;
         internal Vector3 PreviousSwingTargetCorrection;
         internal Vector3 EffectiveCorrection;
@@ -1519,8 +1484,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool previousVisibleOutputAvailable,
             Vector3 previousVisibleOutputPoint,
             in CharacterFootLockRequest lockRequest,
-            float formalFootHeight,
-            ulong formalNextLandingEventIdentity,
             float formalSupport,
             ulong formalSupportEventIdentity,
             CharacterFootGoalOwnershipLossReason ownershipLossReason,
@@ -1549,8 +1512,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreviousVisibleOutputAvailable = previousVisibleOutputAvailable;
             PreviousVisibleOutputPoint = previousVisibleOutputPoint;
             LockRequest = lockRequest;
-            FormalFootHeight = formalFootHeight;
-            FormalNextLandingEventIdentity = formalNextLandingEventIdentity;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
             OwnershipLossReason = ownershipLossReason;
@@ -1580,8 +1541,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PreviousVisibleOutputAvailable { get; }
         internal Vector3 PreviousVisibleOutputPoint { get; }
         internal CharacterFootLockRequest LockRequest { get; }
-        internal float FormalFootHeight { get; }
-        internal ulong FormalNextLandingEventIdentity { get; }
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }
         internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }

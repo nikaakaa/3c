@@ -610,6 +610,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootTransitionDecision postTransition =
                 lifecycle.PostTransition;
             LifecycleTransitionEvaluated = lifecycle.Evaluated;
+            UnloadingLockDistance = lifecycle.UnloadingLockDistance;
+            UnloadingSlideDistance = lifecycle.UnloadingSlideDistance;
+            UnloadingCurrentContactNormalizedTime =
+                lifecycle.UnloadingCurrentContactNormalizedTime;
+            UnloadingNextLandingNormalizedTime =
+                lifecycle.UnloadingNextLandingNormalizedTime;
             PreviousLockRequestAvailable = previousContext.RequestAvailable;
             PreviousLockRequested = previousContext.RequestedLock;
             PreviousLockRequestEventIdentity =
@@ -911,6 +917,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong PreviousLatestContactEventIdentity { get; }
         public ulong PreviousLatestReleasedContactEventIdentity { get; }
         public ulong PreviousCompletedLockWeightEventIdentity { get; }
+        public float UnloadingLockDistance { get; }
+        public float UnloadingSlideDistance { get; }
+        public float UnloadingCurrentContactNormalizedTime { get; }
+        public float UnloadingNextLandingNormalizedTime { get; }
         public ulong PreviousUnloadingEventIdentity { get; }
         public ulong PreviousUnloadingReentryProtectedEventIdentity { get; }
         public bool PreviousContactAnchorAvailable { get; }

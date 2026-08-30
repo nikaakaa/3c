@@ -343,3 +343,9 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 12. 增加双腿Reach交集、最小Landing压缩余量、Goal夹紧与typed拒绝。
 13. 用Contact、Lock Mode与Lock Weight替换旧PlantConfidence生命周期并删除旧字段。
 14. 显式重建Corin Projection、Float32与Fixed产品，完成编译、诊断重放和严格OpenSpec校验。
+
+## 已实施切片对账
+
+- `5c0922c`与`f47e35a`把Contact Transition与Hard Ownership的只读事实接入唯一Runtime/Diagnostics链。`20260830-074303-966-872089e73a3e4c138fb6fc1924e7e3e2`使用既有1044帧Record完成Replay并发布facts49/diagnosis18；Contact Transition Context为2086 eligible、0失败。与064530相比，744个共同正式行为列只有Surface/Path运行identity换号，数值差均不超过1微米；原有34个Target的次数、比率、Health与Evidence完全一致。该Record没有Action脚贡献，`action-hard-ownership`为0 eligible与typed Unavailable，不作为Action动态证明。
+- `9425d32`删除未消费的`ObservedTimeToLandingSeconds`、`ObservedDistance`及Projection单值时距曲线副本；正式Time、Distance与RootLocalLanding继续由Current/Next Event Frame发布，作者Clip Catalog完整曲线组校验保留。`0ed8fb7`经正式Editor入口重建Corin Float32与Fixed产品，两个Program的全部行为hash不变；Projection删除69360行旧曲线块，剩余文本只变更10个派生identity/hash。该切片不等于全部Biomechanical Step旧投影与reader已经清理，5.4其余消费者仍须逐项删除。
+- 对应`20260830-080619-740-9c9e3f8afa8c4cc0ab803457aa544eeb`保留了Replay proof的身份失败经验：唯一Aggregate差异是`projection_revision`，DivergentFrameCount为0。与074303相比，2086行的778个共同正式行为列仍只有14个Surface/Path identity列不同，全部行为数值差不超过1微米；36个Target、coverage与10927个事件总数完全一致。不得把身份门失败改写成完整proof通过，也不得修改比较器放行；原始包继续保存在本地`Diagnostics/FootPlacementRuns`，没有自动归档或加入版本控制。

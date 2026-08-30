@@ -4,7 +4,7 @@
 
 ### 2026-08-30位置响应坐标候选
 
-当前处置：141256位置轴候选与150516加权Goal参考组合均未通过完整质量约束。代码、Profile及Corin生成产物已精确恢复c519865内容，Diagnostics经1a81927、8812436恢复facts52/diagnosis21，尚待本次恢复Replay封口。下述位置basis和Committed参考是已验证部分机制、但尚未接纳的设计方向，不代表当前运行实现。原13:05:45基线仍有踏空与反弯，恢复不等于修复，更不是认定它优于20:43历史版本。
+当前处置：141256位置轴候选与150516加权Goal参考组合均未通过完整质量约束。34c9974将代码、Profile及Corin生成产物精确恢复c519865内容，Diagnostics经1a81927、8812436恢复facts52/diagnosis21。155326恢复Replay已封口：2086行1140列中1116列与130545逐值相同，24列只为运行/Surface/Path身份；全部物理输出、状态、37个Target及60.4分恢复。官方Proof对上一候选保留7个版本身份差异、帧分歧0，直接对130545则Runtime身份和1044条frames一致。下述位置basis和Committed参考是已验证部分机制、但尚未接纳的设计方向，不代表当前运行实现。原13:05:45基线仍有踏空与反弯，恢复不等于修复，更不是认定它优于20:43历史版本。
 
 本轮以c519865与130545恢复Replay为基线，只替换Correction Response的位置坐标合同。纯稳定Left412–414中，Applied Support Direction为Up→10°斜向→Up，标量欠账被旧`O=D+N(c-q)`变成0→-10.315毫米→0的额外Z；三帧无Path Revision、Target Tracking或Rotation Goal Weight。新ZZZ exact证据表明位置在PIK组件所属坐标系执行`F+LocalY*c`，N另参与目标几何与旋转；原先由Up特例推导位置沿N的结论撤销。
 

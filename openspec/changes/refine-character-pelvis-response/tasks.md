@@ -30,5 +30,5 @@
 ## 6. 持续Goal：真实骨盆观测闭合
 
 - [x] 6.1 在原Physical Writer同Completion冻结最终World Pelvis点，并补齐合法Pelvis Goal的源Pose有效性，不修改运动；3个Runtime文件完成，规定flags构建27既有警告0错误并shutdown，实际零行为待6.3
-- [ ] 6.2 唯一Diagnostics迁移真实World点和Goal残差有效性，删除默认零原Pose的假误差，不改变既有质量规则
-- [ ] 6.3 同Record回放证明观测修复的零行为变化，保留新包/Proof及原始世界与相对修正对照，继续真实质量改进目标
+- [x] 6.2 唯一Diagnostics迁移真实World点和Goal残差有效性，删除默认零原Pose的假误差，不改变既有质量规则；928a7be发布facts62/d31，5新列/1221列，Editor57既有警告0错误并shutdown，strict95/95
+- [x] 6.3 同Record回放证明观测修复的零行为变化，保留新包/Proof及原始世界与相对修正对照；020243官方matched1044，1184个非身份/非预期观测共同列逐值相同，37质量Target不变，ZIP/Proof独立保存，详见experiments/20260831-pelvis-world-observation.md；持续质量Goal未完成

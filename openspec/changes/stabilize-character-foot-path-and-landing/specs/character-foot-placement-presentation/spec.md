@@ -2,7 +2,7 @@
 
 ### Requirement: Landing Prediction必须形成独立世界事实
 
-每只脚 MUST按`正式Foot Motion Step Event -> committed Body Target世界速度 + 移动计划段边界/Continuation -> 根Bank共享Prediction Motion State -> KCC Future Body Translation -> Raw Landing -> Future Landing SphereCast -> Accepted/Rejected Observation -> Landing Tracking -> Approach Plant Target Preparation -> Contact Verification`执行。Step Event MUST携带同Source、Cycle、Side与ordinal的稳定Landing Event identity，并使用正式Step Time作为预测时域、正式Step Distance作为相邻同脚Event与RootLocalLanding水平步长一致性证据。
+每只脚 MUST按`正式Foot Motion Step Event -> committed Body Target世界速度 + 移动计划段边界/Continuation -> 根Bank共享Prediction Motion State -> KCC Future Body Translation -> Raw Landing -> Future Landing SphereCast -> Accepted/Rejected Observation -> Landing Tracking -> Approach Plant Target Preparation -> Contact Verification`执行。Step Event MUST携带同Source、Cycle、Side与ordinal的稳定Landing Event identity，并使用正式Step Time作为预测时域。Projection Build MUST把正式Step Distance与同脚相邻Motion-space Landing的水平距离对账，循环首个Event MUST先展开上一周期，有限Clip首个Event MUST使用素材起点；RootLocalLanding MUST保留同一Event ordinal与sample的Target VisualRoot-local落点身份。系统 MUST不把不同时刻的RootLocalLanding直接相减当Step Distance，也不得保留未消费的单值Step Time/Distance Projection曲线副本。
 
 Raw Landing MUST继续按`VisiblePosition + FutureBodyTranslation + VisibleRotation * RootLocalLanding`从本帧输入重新投影。Step Distance MUST不替代committed Body世界速度、Future Body Translation或世界地形；RootLocalLanding MUST只乘本帧Visible Rotation，不外推Future Body Yaw。
 
@@ -68,7 +68,7 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 
 #### Scenario: Step Event与RootLocalLanding不一致
 
-- **WHEN** 正式Step Distance、Event table与RootLocalLanding水平位移不满足编译容差或lineage不匹配
+- **WHEN** 正式Step Distance与规范相邻Motion-space Landing水平距离不满足编译容差，或Event table与RootLocalLanding的同脚ordinal/sample lineage不匹配
 - **THEN** Projection Build或当前Foot帧 MUST发布typed invalid
 - **AND** MUST不读取旧隐藏Step Event或重新编号继续预测
 

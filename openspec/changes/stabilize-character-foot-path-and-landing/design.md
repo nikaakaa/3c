@@ -77,7 +77,7 @@ Projection Compiler在`build-character-foot-motion-data-foundation`归档后，�
 
 Foot Placement Pose Input只接受这一个Frame。缺失完整Curve、Event table、Source lineage或Contribution归属时整帧typed invalid，不读取旧Artifact字段、旧隐藏Feature、默认值或另一动画Source补全。
 
-Step Event table由正式Step Time边界、Step Distance、匹配Artifact中的RootLocalLanding与稳定source/cycle/side ordinal共同编译。Runtime不读取Library Artifact；Editor Build只把已经严格对账的结果发布进Projection。
+Step Event table由正式Step Time边界、Step Distance、匹配Artifact中的RootLocalLanding与稳定source/cycle/side ordinal共同编译。Step Distance只与同脚相邻Motion-space Landing的水平距离对账：循环首个Event展开上一周期，有限Clip首个Event使用素材起点。RootLocalLanding来自同一Event ordinal/sample的Target VisualRoot-local落点，不能跨时刻直接相减代替素材步长。编译器以0.1毫米几何与0.1毫秒Landing边界容差验证Artifact重建，不作为作者运行调参。Runtime不读取Library Artifact；Editor Build只把已经严格对账的结果发布进Projection，不再保存未消费的单值时距曲线副本。
 
 ## Decision 2: 消费者按依赖顺序迁移
 

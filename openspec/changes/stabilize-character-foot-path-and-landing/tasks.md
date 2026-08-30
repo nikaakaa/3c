@@ -56,7 +56,7 @@
 
 - [x] 5.1 用正式Step Time替换Landing Prediction时域、Current/Incoming选择和Future Body Translation请求时长
 - [x] 5.2 在Path瞬时Correction链连续后，用正式Step Time、SwingResidualTolerance和基础HalfLife计算统一Interpolation State中Swing政策的Landing截止收敛
-- [ ] 5.3 用正式Step Distance与Event table校验RootLocalLanding的同脚相邻事件和水平步长，不改变世界速度或地形查询数学
+- [ ] 5.3 用正式Step Distance对账同脚相邻Motion-space Landing水平距离，并校验RootLocalLanding的同Event ordinal/sample lineage；循环展开上一周期，有限首段使用素材起点，不改变世界速度或地形查询数学
 - [ ] 5.4 删除旧隐藏Step Time/Distance/Event消费者及其Projection字段，不保留双读或fallback
 - [x] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
 - [x] 5.6 在Foot根Bank增加左右脚共享的Prediction Motion State，保存稳定当前/Continuation速度、初始化事实、移动计划Generation、Body Reset与Prediction Source lineage，并随同一事务Seal或Discard

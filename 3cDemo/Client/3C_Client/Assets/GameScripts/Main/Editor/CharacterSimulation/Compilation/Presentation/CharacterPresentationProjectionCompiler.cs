@@ -837,6 +837,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CompileLandingEvents(
                         motionData,
                         motionData?.Left,
+                        motionData?.Raw.Left,
                         clip.isLooping,
                         sourceDurationSeconds,
                         $"{clip.name}/Left")),
@@ -889,6 +890,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CompileLandingEvents(
                         motionData,
                         motionData?.Right,
+                        motionData?.Raw.Right,
                         clip.isLooping,
                         sourceDurationSeconds,
                         $"{clip.name}/Right")));
@@ -896,13 +898,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static AnimationFootStepLandingEventTable CompileLandingEvents(
             AnimationFootMotionDataDescriptor motionData,
             AnimationFootMotionFootPage foot,
+            AnimationFootMotionRawFootPage rawFoot,
             bool looping,
             float sourceDurationSeconds,
             string sourceLabel)
         {
-            if (motionData == null || foot == null ||
+            if (motionData == null || foot == null || rawFoot == null ||
                 !float.IsFinite(sourceDurationSeconds) ||
                 sourceDurationSeconds <= 0f ||
+                rawFoot.Samples.Count != foot.Samples.Count ||
                 Mathf.Abs(
                     motionData.Raw.DurationSeconds -
                     sourceDurationSeconds) > 0.0001f)
@@ -911,6 +915,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     "Foot Step Landing Event source timing is invalid.");
             }
             var result = new List<AnimationFootStepLandingEvent>();
+            int landingOrdinal = 0;
             for (int i = 0; i < foot.Events.Count; i++)
             {
                 AnimationFootMotionEvent footEvent = foot.Events[i];
@@ -929,11 +934,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     sourceDurationSeconds;
                 AnimationFootMotionStepEvidence step =
                     foot.Samples[footEvent.SampleIndex].Step;
-                if (!step.Available || step.LandingOrdinal != footEvent.Ordinal)
+                if (!step.Available ||
+                    step.LandingOrdinal != footEvent.Ordinal ||
+                    footEvent.Ordinal != ++landingOrdinal)
                 {
                     throw new InvalidOperationException(
                         "Foot Step Landing Event has no matching Step evidence.");
                 }
+                RequireLandingStepDistanceConsistency(
+                    motionData.Raw,
+                    rawFoot,
+                    foot,
+                    i,
+                    in footEvent,
+                    in step,
+                    looping,
+                    sourceLabel);
                 bool hasSwingBoundaries = ResolveLandingEventPhaseLeads(
                     motionData,
                     foot,
@@ -956,6 +972,76 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     approachContactLeadSeconds));
             }
             return new AnimationFootStepLandingEventTable(result.ToArray());
+        }
+
+        static void RequireLandingStepDistanceConsistency(
+            AnimationFootMotionRawPage raw,
+            AnimationFootMotionRawFootPage rawFoot,
+            AnimationFootMotionFootPage foot,
+            int eventIndex,
+            in AnimationFootMotionEvent landing,
+            in AnimationFootMotionStepEvidence step,
+            bool looping,
+            string sourceLabel)
+        {
+            const float geometryToleranceMeters = 0.0001f;
+            const float timeToleranceSeconds = 0.0001f;
+            Vector3 currentPosition =
+                rawFoot.Samples[landing.SampleIndex].Sole.MotionPosition;
+            if (Vector3.Distance(currentPosition, landing.MotionSolePosition) >
+                    geometryToleranceMeters ||
+                step.TimeSeconds > timeToleranceSeconds)
+            {
+                throw new InvalidOperationException(
+                    $"Foot Motion '{sourceLabel}' Landing #{landing.Ordinal} " +
+                    "does not match its canonical motion sample or time boundary.");
+            }
+            int previousEventIndex = -1;
+            for (int i = eventIndex - 1; i >= 0; i--)
+            {
+                if (foot.Events[i].Kind != AnimationFootMotionEventKind.Landing)
+                    continue;
+                previousEventIndex = i;
+                break;
+            }
+            bool previousCycle = previousEventIndex < 0 && looping;
+            if (previousCycle)
+            {
+                for (int i = foot.Events.Count - 1; i >= 0; i--)
+                {
+                    if (foot.Events[i].Kind != AnimationFootMotionEventKind.Landing)
+                        continue;
+                    previousEventIndex = i;
+                    break;
+                }
+            }
+            Vector3 previousPosition = previousEventIndex >= 0
+                ? foot.Events[previousEventIndex].MotionSolePosition
+                : rawFoot.Samples[0].Sole.MotionPosition;
+            if (previousCycle)
+            {
+                AnimationFootMotionRootSample first = raw.RootSamples[0];
+                AnimationFootMotionRootSample last =
+                    raw.RootSamples[raw.RootSamples.Count - 1];
+                Quaternion cycleRotation =
+                    (last.Rotation * Quaternion.Inverse(first.Rotation)).normalized;
+                Vector3 cycleTranslation =
+                    last.Position - cycleRotation * first.Position;
+                previousPosition = Quaternion.Inverse(cycleRotation) *
+                                   (previousPosition - cycleTranslation);
+            }
+            float expectedDistance = Vector3.ProjectOnPlane(
+                currentPosition - previousPosition,
+                Vector3.up).magnitude;
+            if (!float.IsFinite(expectedDistance) ||
+                Mathf.Abs(step.Distance - expectedDistance) >
+                    geometryToleranceMeters)
+            {
+                throw new InvalidOperationException(
+                    $"Foot Motion '{sourceLabel}' Landing #{landing.Ordinal} " +
+                    $"Step Distance mismatch: expected={expectedDistance:R}, " +
+                    $"actual={step.Distance:R}.");
+            }
         }
 
         static bool ResolveLandingEventPhaseLeads(

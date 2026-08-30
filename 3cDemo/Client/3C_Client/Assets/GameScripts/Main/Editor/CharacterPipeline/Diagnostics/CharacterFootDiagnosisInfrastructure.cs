@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 
@@ -54,6 +55,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 value => value.Value<string>("side"),
                 StringComparer.Ordinal)
             .ToList();
+
+        internal List<CharacterFootPelvisHeightTargetObservation> PelvisHeightTargets()
+        {
+            if (!(m_Facts["pelvisHeightTargets"] is JArray values))
+                throw new InvalidDataException("Foot Motion Pelvis height target facts are missing.");
+            return values.ToObject<List<CharacterFootPelvisHeightTargetObservation>>() ??
+                throw new InvalidDataException("Foot Motion Pelvis height target facts are invalid.");
+        }
 
         internal CharacterFootDiagnosisTarget Target(
             string id,
@@ -214,7 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/28",
+                schema = "character-foot-diagnosis-file/29",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
@@ -378,6 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootStepTimeCandidateSelectionReport
             stepTimeCandidateSelection;
         public CharacterFootLandingReachReport landingReach;
+        public List<CharacterFootPelvisHeightTargetObservation> pelvisHeightTargets;
         public CharacterFootContactSupportGapCoverage contactSupportGapCoverage;
     }
 

@@ -354,6 +354,8 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 
 这不是ZZZ一一对应迁移。新ZZZ证据已经区分Owner Transform、Foot pivot与Sole，并证明位置标量沿Owner局部Up推进、末端W在当前原生分支参与旋转；不能再用旧`arr230=arr228+arr130×arr128`特例证明Normal就是位移轴。基线、完整37项对比、失败数据及恢复结果见[本轮实验记录](experiments/20260830-contact-height-advance.md)。既有评分系统、原始失败样本和中文提交历史保留，用户proposal/project修改不纳入撤销。
 
+`811dacb`撤销专属Diagnostics，`4be1f51`恢复Runtime。130545恢复Replay的2086行、1140列中1116列与085503逐值完全相同，24列只为身份；50195行geometry只有4身份列变化。全部原始物理数值与状态恢复，37个Target规则/计数及七维分数回到基线，总分60.4。1044条Proof帧及原基线输入/Body身份独立只读对账一致；恢复已验证，不等于原有IK质量问题已经完成。
+
 ## 已实施切片对账
 
 - `5c0922c`与`f47e35a`把Contact Transition与Hard Ownership的只读事实接入唯一Runtime/Diagnostics链。`20260830-074303-966-872089e73a3e4c138fb6fc1924e7e3e2`使用既有1044帧Record完成Replay并发布facts49/diagnosis18；Contact Transition Context为2086 eligible、0失败。与064530相比，744个共同正式行为列只有Surface/Path运行identity换号，数值差均不超过1微米；原有34个Target的次数、比率、Health与Evidence完全一致。该Record没有Action脚贡献，`action-hard-ownership`为0 eligible与typed Unavailable，不作为Action动态证明。

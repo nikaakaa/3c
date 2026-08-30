@@ -2,7 +2,7 @@
 
 ## 状态与授权
 
-用户要求根据现有ZZZ材料自行实验、分小步可回退并完成Replay，不再等待新的ZZZ活体同步证据。本记录只覆盖接触交接候选；Runtime由主任务负责，Editor Diagnostics由既有诊断任务独立提交。当前状态：候选已被完整Replay否决，Runtime已精确恢复到b8ed3c8相同内容；专属诊断已经由811dacb独立撤销，恢复版Replay待完成。没有把该候选交付为修复。
+用户要求根据现有ZZZ材料自行实验、分小步可回退并完成Replay，不再等待新的ZZZ活体同步证据。本记录只覆盖接触交接候选；Runtime由主任务负责，Editor Diagnostics由既有诊断任务独立提交。当前状态：候选已被完整Replay否决，Runtime由4be1f51恢复，专属诊断由811dacb恢复，130545恢复Replay完成且全部原始行为字段与085503基线一致。没有把该候选交付为修复；原有踏空和反弯问题仍未宣称解决。
 
 ## 被否决候选的唯一变量
 
@@ -59,7 +59,7 @@
 
 525个Plant行，46个准入（Left24、Right22）；50个上一Swing历史匹配，473个清除/无历史匹配，2个采样起点明确Unavailable。facts捕获误差最大3.73e-9米，CSV独立复算最大3.64e-6米；没有通过修改实际位移公式或放宽阈值隐藏主动下降。
 
-Body Tick、Presentation Delta和采样Alpha完全一致，动画Sole输入在1微米内一致。Landing Observation查询1349、Ground Path查询1787、Heel/Toe查询各2086，两包完全相同。两包全部2086行FBBIK成功，候选最终脚踝Goal残差最大6.801e-7米，基线7.153e-7米。因此面下结果来自交给Solver的目标，而不是Solver失准。
+Body Tick、Presentation Delta和采样Alpha完全一致，动画Sole输入在1微米内一致。主表Landing Observation的QueryExecuted行数1349、Ground Path为1787、Heel/Toe SphereCastExecuted各2086，两包完全相同，不将这些出口行数冒称全部底层API调用总数。两包全部2086行FBBIK成功，候选最终脚踝Goal残差最大6.801e-7米，基线7.153e-7米。因此面下结果来自交给Solver的目标，而不是Solver失准。
 
 | 真实接触帧 | 基线中心净空mm | 候选中心净空mm | 基线Heel净空mm | 候选Heel净空mm |
 | --- | ---: | ---: | ---: | ---: |
@@ -127,6 +127,21 @@ Body Tick、Presentation Delta和采样Alpha完全一致，动画Sole输入在1�
 
 裁决：拒绝，不加clamp、不清Residual.Y、不调Tolerance或Response速率补救同一失败候选。删除本次快照、DTO和诊断字段，恢复原`Captured = previousWorldOutput - selectedTarget`，保留b8ed3c8评分、a407368接触间隙诊断及全部历史样本。
 
-Runtime已经逐文件恢复且对b8ed3c8无差异；没有修改Profile、Projection、Program、输入Record、TrainingEnemy或用户proposal/project。撤销提交、恢复后构建/Refresh/Replay与全表对账结果将在封口后补入本节。
+Runtime撤销提交为`4be1f51cf6d40936d850994982ec79fae4eb25fa`，逐文件恢复且对b8ed3c8无差异；没有修改Profile、Projection、Program、输入Record、TrainingEnemy或用户proposal/project。恢复版Runtime另行用规定flags构建27个既有警告、0错误并立即shutdown。
 
 Diagnostics撤销提交：`811dacb256090ebd49b7cc4d349e13ad96c19d49`，精确撤销da438fa六个诊断文件及6.30描述，目录对b8ed3c8无diff；facts52/diagnosis21、原Capture公式和七维评分恢复，不保留53兼容字段。已用规定flags构建恢复版Editor，57个既有警告、0错误并立即shutdown，strict94/94。已否决6.29/6.30从实施清单移除，失败结论仅在本记录与design保留。
+
+## 恢复Replay封口
+
+- 恢复后在Edit Mode执行完整Refresh，域重载恢复、Console为0错误后才启动同一trace，未在Play刷新。
+- 包：`3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260830-130545-894-26a85534e5e4427dbd2d7d7979d5c585`，1043输出帧、2086脚行、1140列、facts52/diagnosis21；8个失败候选列均已删除，无兼容补值。
+- 工具生成Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260830-130717-764-ca1ff10436ca4f7191456305cdbb1286.json`。正式工具自动对上一125110候选Proof给出`matched:1044`，此结果原样保留。
+- 另只读比较085623原始Proof与恢复Proof：runtime_identity、trace/input/start-body/body-trajectory hash、驱动模式、起始Tick和1044条逐帧数组全部一致；没有修改比较器或Proof比较对象。
+- 恢复Proof持久副本：`3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-contact-height-advance/restored-proof.json`，原件与副本SHA256均`584A432A59A1C7C2315250F1FDC0A2CA37C8E1D901A2735A1F75CCE6D116286B`。
+- 恢复samples.csv SHA256：`715ED3920773E76234B749956A919C6D9B0C85A848F83BDC0BFDC52957C2E978`。
+- 恢复geometry SHA256：`0C332A69F27E9350F3450AFD7624AE7A72F55F21AF94C11C3260C263306F9922`。
+- 恢复facts.json SHA256：`7FEFEB9E66D6102784A173591E9D586CB89F6C029E8E034C8263FB9BBB14F75B`。
+
+按FrameSequence+Side对085503原始主表逐列比较：2086行全部一一对应，1140共同列中1116列逐值完全相同，24个差异列仅为5个采样/实例元数据和19个Surface/Path身份字段。Body、正式Foot输入、原动画Sole、Interpolation、State、Pelvis、Goal、物理Heel/Toe、Solver成功与残差全部回到原值；没有任何State变化。恢复最大脚踝残差回到7.15255737e-7米，BendWeight为0的行数恢复1439。50195行、20列geometry只有SampleIdentity、GroundPathInputIdentity、GroundContactSurfaceIdentity、GroundContactCandidateIdentity四身份列变化，几何数值全部一致。
+
+全部37个Target的规则、eligible、matched、rate与scorePolicy回到表中基线值，七维分数恢复49/49/74/49/49/100/100，总分60.4；接触可测525帧、60段与基线一致。离线.NET基线报告和Editor报告仍有既有统计舍入细差（包括速度/加速度/jerk派生量），没有把这些统计浮点写成逐值完全相等；原始物理数据的逐值一致独立证明本轮行为恢复。候选和恢复均已退出Play，当前Assets相对b8ed3c8无diff，实验只留下失败/恢复证据和明确禁止重复采用的合同说明。

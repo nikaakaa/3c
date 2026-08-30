@@ -231,10 +231,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
             "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
             "FootMotionLifecycleTransitionEvaluated,FootMotionPreviousLockRequestAvailable,FootMotionPreviousLockRequested,FootMotionPreviousLockRequestEventIdentity,FootMotionPreviousLockRequestMode,FootMotionPreviousLockRequestWeight," +
-            "FootMotionPreviousContactEdgeSeconds,FootMotionPreviousLatestContactEventIdentity,FootMotionPreviousLatestReleasedContactEventIdentity,FootMotionPreviousCompletedLockWeightEventIdentity,FootMotionPreviousContactAnchorAvailable,FootMotionPreviousContactAnchorEventIdentity," +
+            "FootMotionPreviousContactEdgeSeconds,FootMotionPreviousLatestContactEventIdentity,FootMotionPreviousLatestReleasedContactEventIdentity,FootMotionPreviousCompletedLockWeightEventIdentity,FootMotionPreviousUnloadingEventIdentity,FootMotionPreviousUnloadingReentryProtectedEventIdentity,FootMotionPreviousContactAnchorAvailable,FootMotionPreviousContactAnchorEventIdentity," +
             "FootMotionPreviousContactAnchorAcquiredFrameSequence,FootMotionPreviousContactAnchorAcquiredCompletionIdentity,FootMotionPreviousContactAnchorWorldRevision,FootMotionPreviousContactAnchorSurfaceIdentity,FootMotionPreviousContactAnchorPointX,FootMotionPreviousContactAnchorPointY,FootMotionPreviousContactAnchorPointZ,FootMotionPreviousContactAnchorNormalX,FootMotionPreviousContactAnchorNormalY,FootMotionPreviousContactAnchorNormalZ," +
             "FootMotionCurrentLockRequested,FootMotionCurrentLockRequestEventIdentity,FootMotionCurrentLockRequestMode,FootMotionCurrentLockRequestWeight,FootMotionCurrentLockRequestAvailability,FootMotionContactEdge,FootMotionCurrentContactEdgeSeconds," +
-            "FootMotionCurrentLatestContactEventIdentity,FootMotionCurrentLatestReleasedContactEventIdentity,FootMotionCurrentCompletedLockWeightEventIdentity,FootMotionCurrentContactAnchorAvailable,FootMotionCurrentContactAnchorEventIdentity," +
+            "FootMotionCurrentLatestContactEventIdentity,FootMotionCurrentLatestReleasedContactEventIdentity,FootMotionCurrentCompletedLockWeightEventIdentity,FootMotionCurrentUnloadingEventIdentity,FootMotionCurrentUnloadingReentryProtectedEventIdentity,FootMotionCurrentContactAnchorAvailable,FootMotionCurrentContactAnchorEventIdentity," +
+            "FootMotionUnloadingLockDistance,FootMotionUnloadingSlideDistance,FootMotionUnloadingCurrentContactNormalizedTime,FootMotionUnloadingNextLandingNormalizedTime," +
             "FootMotionCurrentContactAnchorAcquiredFrameSequence,FootMotionCurrentContactAnchorAcquiredCompletionIdentity,FootMotionCurrentContactAnchorWorldRevision,FootMotionCurrentContactAnchorSurfaceIdentity,FootMotionCurrentContactAnchorPointX,FootMotionCurrentContactAnchorPointY,FootMotionCurrentContactAnchorPointZ,FootMotionCurrentContactAnchorNormalX,FootMotionCurrentContactAnchorNormalY,FootMotionCurrentContactAnchorNormalZ," +
             "FootMotionSameEventContactReentryRefreshed,FootMotionSameEventContactReentryUnavailable,FootMotionRetainedVerifiedAnchor,FootMotionReentryInterpolationHistoryRetained,FootMotionFormalFootPlacementWeight,FootMotionHardOwnershipLoss,FootMotionHardOwnershipLossReason," +
             "FootMotionPreTransitionSuppressOutput,FootMotionPreTransitionResetInterpolation,FootMotionPostTransitionEvaluated,FootMotionPostTransitionSuppressOutput,FootMotionPostTransitionResetInterpolation," +
@@ -2196,6 +2197,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PreviousLatestContactEventIdentity);
             Add(row, motion.PreviousLatestReleasedContactEventIdentity);
             Add(row, motion.PreviousCompletedLockWeightEventIdentity);
+            Add(row, motion.PreviousUnloadingEventIdentity);
+            Add(row, motion.PreviousUnloadingReentryProtectedEventIdentity);
             Add(row, motion.PreviousContactAnchorAvailable);
             Add(row, motion.PreviousContactAnchorEventIdentity);
             Add(row, motion.PreviousContactAnchorAcquiredFrameSequence);
@@ -2214,8 +2217,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.CurrentLatestContactEventIdentity);
             Add(row, motion.CurrentLatestReleasedContactEventIdentity);
             Add(row, motion.CurrentCompletedLockWeightEventIdentity);
+            Add(row, motion.CurrentUnloadingEventIdentity);
+            Add(row, motion.CurrentUnloadingReentryProtectedEventIdentity);
             Add(row, motion.CurrentContactAnchorAvailable);
             Add(row, motion.CurrentContactAnchorEventIdentity);
+            Add(row, motion.UnloadingLockDistance);
+            Add(row, motion.UnloadingSlideDistance);
+            Add(row, motion.UnloadingCurrentContactNormalizedTime);
+            Add(row, motion.UnloadingNextLandingNormalizedTime);
             Add(row, motion.CurrentContactAnchorAcquiredFrameSequence);
             Add(row, motion.CurrentContactAnchorAcquiredCompletionIdentity);
             Add(row, motion.CurrentContactAnchorWorldRevision);

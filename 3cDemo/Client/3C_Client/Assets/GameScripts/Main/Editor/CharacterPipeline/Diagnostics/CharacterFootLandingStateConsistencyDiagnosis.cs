@@ -588,7 +588,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         contactTransitions,
                         value => CharacterFootDiagnosisContext.Evidence(
                             value, "postTransitionEvaluated")
-                            ? "Executed" : "NotExecuted")
+                            ? "Executed" : "NotExecuted"),
+                    ["UnloadingTransition"] = CategoryCounts(
+                        contactTransitions,
+                        value => CharacterFootDiagnosisContext.Evidence(value, "sourceLiftUnloading")
+                            ? "SourceLiftUnloading"
+                            : CharacterFootDiagnosisContext.Evidence(value, "unloadingLockRestored")
+                                ? "UnloadingLockRestored" : "None"),
+                    ["UnloadingHistory"] = CategoryCounts(
+                        contactTransitions,
+                        value => CharacterFootDiagnosisContext.Evidence(value, "unloadingEventActive")
+                            ? "UnloadingActive"
+                            : CharacterFootDiagnosisContext.Evidence(value, "unloadingReentryProtected")
+                                ? "ReentryProtected" : "Inactive")
                 };
             CharacterFootDiagnosisTarget formalGoalWeightTarget = context.Target(
                 "formal-goal-weight-policy",

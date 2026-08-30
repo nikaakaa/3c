@@ -292,8 +292,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "PelvisHeightTargetAnimatedMinimumAlongUp,PelvisHeightTargetMinimumAlongUp,PelvisRequestedOffsetAlongUp,StrideHadPreviousState,StrideSupportChanged," +
             "StridePreviousSlope,StrideSpringHandoffReason,StrideSpringVelocityReset," +
             "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput,StrideSpringInputVelocity,StrideSpringFrequency," +
-            "StrideSupportReachAvailable,StrideSupportLegCompressionReserve,StrideSupportReachUsableLegLength,StrideSupportReachMinimumAlongUp,StrideSupportReachMaximumAlongUp," +
-            "StrideSupportReachTargetClamped,StrideSupportReachOutputClamped," +
+            "PelvisPosturePreferenceEvaluated,PelvisPosturePreferenceAvailable,PelvisPosturePreferenceHipX,PelvisPosturePreferenceHipY,PelvisPosturePreferenceHipZ,PelvisPosturePreferenceAnimatedAnkleX,PelvisPosturePreferenceAnimatedAnkleY,PelvisPosturePreferenceAnimatedAnkleZ,PelvisPosturePreferenceTargetAnkleX,PelvisPosturePreferenceTargetAnkleY,PelvisPosturePreferenceTargetAnkleZ,PelvisPosturePreferenceLegLength,PelvisPosturePreferenceCompressionReserve,PelvisPosturePreferenceUsableLegLength,PelvisPosturePreferenceMinimumAlongUp,PelvisPosturePreferenceMaximumAlongUp,PelvisPosturePreferenceOffsetAlongUp,PelvisPosturePreferenceTargetAdjusted," +
+            "PelvisReachComponentUpX,PelvisReachComponentUpY,PelvisReachComponentUpZ,PelvisReachStatus,PelvisReachSelection,PelvisReachIntersectionEvaluated,PelvisReachIntersectionMinimumAlongUp,PelvisReachIntersectionMaximumAlongUp,PelvisReachAvailable,PelvisReachMinimumAlongUp,PelvisReachMaximumAlongUp," +
+            "PelvisReachLeftRole,PelvisReachLeftStatus,PelvisReachLeftEventIdentity,PelvisReachLeftHipX,PelvisReachLeftHipY,PelvisReachLeftHipZ,PelvisReachLeftTargetAnkleX,PelvisReachLeftTargetAnkleY,PelvisReachLeftTargetAnkleZ,PelvisReachLeftLegLength,PelvisReachLeftMinimumCompressionReserve,PelvisReachLeftUsableLegLength,PelvisReachLeftMinimumAlongUp,PelvisReachLeftMaximumAlongUp,PelvisReachLeftRequested,PelvisReachLeftAvailable," +
+            "PelvisReachRightRole,PelvisReachRightStatus,PelvisReachRightEventIdentity,PelvisReachRightHipX,PelvisReachRightHipY,PelvisReachRightHipZ,PelvisReachRightTargetAnkleX,PelvisReachRightTargetAnkleY,PelvisReachRightTargetAnkleZ,PelvisReachRightLegLength,PelvisReachRightMinimumCompressionReserve,PelvisReachRightUsableLegLength,PelvisReachRightMinimumAlongUp,PelvisReachRightMaximumAlongUp,PelvisReachRightRequested,PelvisReachRightAvailable," +
+            "PelvisResponseEvaluated,PelvisSpringCompleted,PelvisSpringUnconstrainedOutput,PelvisHardReachTargetClamped,PelvisHardReachOutputClamped,PelvisHardReachVelocityCleared," +
             "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
             "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
             "FinalPelvisGoalX,FinalPelvisGoalY,FinalPelvisGoalZ," +
@@ -2367,13 +2370,57 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.SpringInput);
             Add(row, stride.SpringInputVelocity);
             Add(row, stride.SpringFrequency);
-            Add(row, stride.SupportReachAvailable);
-            Add(row, stride.SupportLegCompressionReserve);
-            Add(row, stride.SupportReachUsableLegLength);
-            Add(row, stride.SupportReachMinimumAlongUp);
-            Add(row, stride.SupportReachMaximumAlongUp);
-            Add(row, stride.SupportReachTargetClamped);
-            Add(row, stride.SupportReachOutputClamped);
+            Add(row, stride.PosturePreferenceEvaluated);
+            Add(row, stride.PosturePreferenceAvailable);
+            Add(row, stride.PosturePreferenceHip);
+            Add(row, stride.PosturePreferenceAnimatedAnkle);
+            Add(row, stride.PosturePreferenceTargetAnkle);
+            Add(row, stride.PosturePreferenceLegLength);
+            Add(row, stride.PosturePreferenceCompressionReserve);
+            Add(row, stride.PosturePreferenceUsableLegLength);
+            Add(row, stride.PosturePreferenceMinimumAlongUp);
+            Add(row, stride.PosturePreferenceMaximumAlongUp);
+            Add(row, stride.PosturePreferenceOffsetAlongUp);
+            Add(row, stride.PosturePreferenceTargetAdjusted);
+            Add(row, stride.Reach.ComponentUp);
+            Add(row, stride.Reach.Status.ToString());
+            Add(row, stride.Reach.Selection.ToString());
+            Add(row, stride.Reach.IntersectionEvaluated);
+            Add(row, stride.Reach.IntersectionMinimumAlongUp);
+            Add(row, stride.Reach.IntersectionMaximumAlongUp);
+            Add(row, stride.Reach.Available);
+            Add(row, stride.Reach.MinimumAlongUp);
+            Add(row, stride.Reach.MaximumAlongUp);
+            Add(row, stride.Reach.Left.Role.ToString());
+            Add(row, stride.Reach.Left.Status.ToString());
+            Add(row, stride.Reach.Left.EventIdentity);
+            Add(row, stride.Reach.Left.Hip);
+            Add(row, stride.Reach.Left.TargetAnkle);
+            Add(row, stride.Reach.Left.LegLength);
+            Add(row, stride.Reach.Left.MinimumCompressionReserve);
+            Add(row, stride.Reach.Left.UsableLegLength);
+            Add(row, stride.Reach.Left.MinimumAlongUp);
+            Add(row, stride.Reach.Left.MaximumAlongUp);
+            Add(row, stride.Reach.Left.Requested);
+            Add(row, stride.Reach.Left.Available);
+            Add(row, stride.Reach.Right.Role.ToString());
+            Add(row, stride.Reach.Right.Status.ToString());
+            Add(row, stride.Reach.Right.EventIdentity);
+            Add(row, stride.Reach.Right.Hip);
+            Add(row, stride.Reach.Right.TargetAnkle);
+            Add(row, stride.Reach.Right.LegLength);
+            Add(row, stride.Reach.Right.MinimumCompressionReserve);
+            Add(row, stride.Reach.Right.UsableLegLength);
+            Add(row, stride.Reach.Right.MinimumAlongUp);
+            Add(row, stride.Reach.Right.MaximumAlongUp);
+            Add(row, stride.Reach.Right.Requested);
+            Add(row, stride.Reach.Right.Available);
+            Add(row, stride.ResponseEvaluated);
+            Add(row, stride.SpringCompleted);
+            Add(row, stride.SpringUnconstrainedOutput);
+            Add(row, stride.HardReachTargetClamped);
+            Add(row, stride.HardReachOutputClamped);
+            Add(row, stride.HardReachVelocityCleared);
             Add(row, stride.SpringTarget);
             Add(row, stride.SpringOutput);
             Add(row, stride.SpringVelocity);

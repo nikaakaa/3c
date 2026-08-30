@@ -56,12 +56,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 StringComparer.Ordinal)
             .ToList();
 
-        internal List<CharacterFootPelvisHeightTargetObservation> PelvisHeightTargets()
+        internal List<CharacterFootPelvisFrameObservation> PelvisFrames()
         {
-            if (!(m_Facts["pelvisHeightTargets"] is JArray values))
-                throw new InvalidDataException("Foot Motion Pelvis height target facts are missing.");
-            return values.ToObject<List<CharacterFootPelvisHeightTargetObservation>>() ??
-                throw new InvalidDataException("Foot Motion Pelvis height target facts are invalid.");
+            if (!(m_Facts["pelvisFrames"] is JArray values))
+                throw new InvalidDataException("Foot Motion Pelvis frame facts are missing.");
+            return values.ToObject<List<CharacterFootPelvisFrameObservation>>() ??
+                throw new InvalidDataException("Foot Motion Pelvis frame facts are invalid.");
         }
 
         internal CharacterFootDiagnosisTarget Target(
@@ -223,7 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/29",
+                schema = "character-foot-diagnosis-file/30",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
@@ -387,7 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootStepTimeCandidateSelectionReport
             stepTimeCandidateSelection;
         public CharacterFootLandingReachReport landingReach;
-        public List<CharacterFootPelvisHeightTargetObservation> pelvisHeightTargets;
+        public List<CharacterFootPelvisFrameObservation> pelvisFrames;
         public CharacterFootContactSupportGapCoverage contactSupportGapCoverage;
     }
 

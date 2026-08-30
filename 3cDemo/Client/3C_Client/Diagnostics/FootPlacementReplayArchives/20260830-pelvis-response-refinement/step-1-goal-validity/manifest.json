@@ -1,0 +1,183 @@
+{
+  "run": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86",
+  "sourceDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86",
+  "archiveFile": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementReplayArchives\\20260830-pelvis-response-refinement\\step-1-goal-validity\\20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86.zip",
+  "archiveBytes": 15347866,
+  "archiveSha256": "ACFD272F6B2D1E5A1038C864883C19DBF966F7DFAC19E73DAE734C4BF2122257",
+  "verifiedFileCount": 12,
+  "sourceFileCount": 12,
+  "files": [
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/facts.json",
+      "bytes": 115459535,
+      "sha256": "6634D7476FEA921D43FA809E0B0BC434D1AF93017CAE27D8CB278A5233E807C1"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/ground-path-geometry.csv",
+      "bytes": 7839263,
+      "sha256": "6FBD85A49D77A0D1FE9777274FC352A6FF64A887DC1BC24D21BAA25069EC3E5F"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/samples.csv",
+      "bytes": 17966312,
+      "sha256": "7F1AD5B6BA5CA9F3C402DB2570DB17C7EE1ED53AF9A49F82ED666E61A84B4AD6"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/contact-plane-penetration.json",
+      "bytes": 51396,
+      "sha256": "0375215A14E7B109BDEF79B8A05C03BFC46F1DC1695C12D00B8851BF9F12C0F0"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/landing-leg-extension.json",
+      "bytes": 16006,
+      "sha256": "0F1468EAB287AB04D0E7853DE3463F9D1A52A3A37EED7D8087FCC16E94A41A1B"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "D6C8F88434543BA90BE3088D34D0A00A4BEBDB3FE645C7B7008D88CA50C63E2C"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/landing-path-continuity.json",
+      "bytes": 60969,
+      "sha256": "88A7616E098062566D320E3306F93522A34CA8540697854A3F57F8FBB69F97CF"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/landing-state-consistency.json",
+      "bytes": 733676,
+      "sha256": "97FA9DE92015E4003F2E11A0DCC94D667BE18B731238FF41E414312EC4021C29"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "034E20B0E2E629B700A3E0D04EA628014334A38521D02F8AAD2E883E226112EA"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/quality-score.json",
+      "bytes": 24818,
+      "sha256": "959AAADE05E0DF72809E32100595D05EBF7E8B7C8D4F62532D98CE6A4EA050DA"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "E405C8A72F99348170840FCFA163799EB45EE7CA915EE02A97CD104960D8C8BD"
+    },
+    {
+      "path": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86/diagnoses/swing-path-jitter.json",
+      "bytes": 1745043,
+      "sha256": "0A99C78F9ED7EE3D8D980CA01D3364B25EF57CD9DEE5ABE54DD5CE55D932FB72"
+    }
+  ],
+  "proofSource": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260830-230552-157-9f3332ada35e4e87b2bd67d4ab2f5856.json",
+  "proofFile": "replay-proof.json",
+  "proofSha256": "FC307EB57BFFD11C3E3B3BE27B1F1234ECA4C0036FE7455AF2B1B370FB48484D",
+  "runtimeCommit": "df0c956ae1d1e13e0fde483819b339b4d0bc7f4d",
+  "diagnosticsCommit": "055030877d17bc36fdb42f7aee2f4f8b2cdec936",
+  "factsSchema": "character-foot-motion-facts/59",
+  "diagnosisSchema": "character-foot-diagnosis-file/28",
+  "referenceRun": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "restoredReferenceRun": "20260830-221050-949-065a20d3944f47f29c256606e801ad57",
+  "recordId": "43357ff3cd384e5cba75d2c31175b116",
+  "recordSha256": "24D97232F35246C0B85A003B5980AC8F199D6FF63E9F74A0001B082F57EB89A6",
+  "officialComparison": "matched1044 against221238 restoration proof; not a fabricated193957 official proof",
+  "scope": "只修改有效目标的正式位置权重；第二、三步骨盆公式与统一Reach尚未实施",
+  "result": {
+    "goalValidity": [
+      {
+        "count": 71,
+        "zeroPosition": 71,
+        "positionEqualsFormal": 0,
+        "maxPhysicalGoalDistance": 0.18494085500472454
+      },
+      {
+        "count": 71,
+        "zeroPosition": 0,
+        "positionEqualsFormal": 71,
+        "maxPhysicalGoalDistance": 0.0000037033854858857955
+      }
+    ],
+    "contact": [
+      {
+        "frames": 525,
+        "gapOver10": 178,
+        "depthOver10": 77,
+        "depthOver50": 6,
+        "maxGap": 0.3493782200000002,
+        "maxDepth": 0.14281487000000004
+      },
+      {
+        "frames": 525,
+        "gapOver10": 178,
+        "depthOver10": 77,
+        "depthOver50": 6,
+        "maxGap": 0.3493782200000002,
+        "maxDepth": 0.14281487000000004
+      }
+    ],
+    "pelvis": [
+      {
+        "pairs": 1042,
+        "over20": 162,
+        "over50": 30,
+        "max": 0.0893616679,
+        "worst": [
+          {
+            "f": 322,
+            "step": -0.0893616679
+          },
+          {
+            "f": 214,
+            "step": -0.0805159233
+          },
+          {
+            "f": 484,
+            "step": -0.08008641
+          },
+          {
+            "f": 466,
+            "step": -0.07974189999999999
+          },
+          {
+            "f": 501,
+            "step": -0.07964038849999999
+          }
+        ]
+      },
+      {
+        "pairs": 1042,
+        "over20": 169,
+        "over50": 31,
+        "max": 0.0893616679,
+        "worst": [
+          {
+            "f": 322,
+            "step": -0.0893616679
+          },
+          {
+            "f": 214,
+            "step": -0.0805159233
+          },
+          {
+            "f": 484,
+            "step": -0.08008641
+          },
+          {
+            "f": 466,
+            "step": -0.07974189999999999
+          },
+          {
+            "f": 501,
+            "step": -0.07964038849999999
+          }
+        ]
+      }
+    ],
+    "qualityScore": [
+      61.9,
+      61.9
+    ],
+    "overallQualityAccepted": false,
+    "note": "71个目标恢复；接触保护项保持。新增Reach带来348/852约40mm下拉，711步长增加2.938mm，Knee翻侧时序仍变化。正式权重业务成立不等于骨盆或整体通过。"
+  },
+  "retention": "原始样本不删不覆盖；ZIP逐项SHA256核对；评分规则不改。"
+}

@@ -1,0 +1,77 @@
+{
+  "run": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "sourceDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "archiveFile": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-contact-world-residual/20260830-193957-489-9f55422ed479473682fc01f0583625db.zip",
+  "archiveBytes": 15319435,
+  "archiveSha256": "6CCDF54422D07B7257DED3021A3019EC355011E0D99CBE0C104863EBBF0C2F7E",
+  "verifiedFileCount": 12,
+  "files": [
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/facts.json",
+      "bytes": 115423932,
+      "sha256": "22E55A9C68F661942342FF6ECE9A410EC988F1BBD2A6A707F13CE34A3DC9D586"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/ground-path-geometry.csv",
+      "bytes": 7839878,
+      "sha256": "F36F2AB6BEB2C81021296B66DF045D3931F377FDD7A5DF307D4EF797F82C5A0F"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/samples.csv",
+      "bytes": 17956357,
+      "sha256": "1ABC005FCEB5EF9D57175C9CF499A7E5ACDF5274C01CD111ACF0579D6650AC8A"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/contact-plane-penetration.json",
+      "bytes": 51389,
+      "sha256": "D7FFB6EAFAB7899D9AC21E5F18ADCA773F9413512C759535C0C46975BF31E949"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/landing-leg-extension.json",
+      "bytes": 16010,
+      "sha256": "C8CD64726824B8AD45C4756988220569F6C08086CEAE67C9EC47E48425299ED7"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "E6A2C7E01DFE5BF64A1F3EF15478EE3FDAA315387522C309232255C34AA90024"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/landing-path-continuity.json",
+      "bytes": 60968,
+      "sha256": "5EED7DAADE8CCC54664B594E489D3E52FCA0001F9F4661AA4D30F9FD3892D855"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/landing-state-consistency.json",
+      "bytes": 733574,
+      "sha256": "4A82D008C6E0F3BDE2384B92B95257AC65D267F39028A2DDB746DA0CAD1E373D"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "190CE8DB4AC431161F19447DCE97847850882FD4A0BAD3800984AF4934B66E55"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/quality-score.json",
+      "bytes": 24806,
+      "sha256": "8F3AC7A386D11245BFD00AE6E3CD5F5BCD7D31116DD743DB6583FD4EA83BB9A4"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "C84A6E59361F774382CB7DEA1E19ADEAA5083425E82D166ADC61CD6964F5D04B"
+    },
+    {
+      "path": "20260830-193957-489-9f55422ed479473682fc01f0583625db/diagnoses/swing-path-jitter.json",
+      "bytes": 1739669,
+      "sha256": "D2FE72A52E178FA8F3AC334E0B400BB73884F71193DDD74C0B87E1C020EDC06F"
+    }
+  ],
+  "runtimeCommit": "eb5fb05",
+  "diagnosticsCommit": "5d858bc",
+  "factsSchema": "character-foot-motion-facts/57",
+  "diagnosisSchema": "character-foot-diagnosis-file/26",
+  "userSelectedAsComparisonVersion": true,
+  "officialReplayProofAvailable": false,
+  "retention": "原始目录不删除、不覆盖；归档为本地证据副本，不参与Runtime配置或采样生产。"
+}

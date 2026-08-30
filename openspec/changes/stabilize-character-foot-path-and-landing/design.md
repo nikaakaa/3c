@@ -248,6 +248,10 @@ Current Support Target进入State Target选择，但当前Final Component Pose�
 
 ## Decision 7: Landing Reach先协调Pelvis，再限制Foot Goal
 
+### 有效动画Bend方向的独立实验
+
+e6ca016已证明155326恢复到c519865/130545。接下来只处理现有FBBIK中可靠动画方向被历史取反的问题：方向d与-d会选到不同膝盖侧，不是等价平面表示。有效动画直接更新Stable方向，Target投影后的方向不再被Applied历史翻号；动画几何退化时仍使用既有历史政策，全部权重与Foot位置链保持不变。原327行请求倒置是靶点，不等于327次物理镜像；6个大腿轴角下投影与旋转运输反向的旧样本不在本次修复承诺内。现行current spec要求唯一Goal/Solver与根Bank归属，没有要求有效方向与历史dot非负；本修正不改变该架构。具体假设、业务取舍与Replay门见[有符号动画Bend实验](experiments/20260830-signed-animation-bend.md)。
+
 Foot Motion Profile新增必须显式序列化的米制`MinimumLandingLegCompressionReserve`并纳入Profile Revision。缺失、非有限或越界时整项typed invalid，不提供代码默认值或旧配置补全。State Target Resolver与Resolved Foot为预测Landing脚，以及仍持有同Event Contact Goal的Landing、Locked、Releasing脚发布typed Reach Request：Hip、目标Ankle、Leg Length、最小压缩余量、Landing Event和有效世界Reference。Releasing必须继续参与直到其Goal权重归零，避免Pelvis在释放期间单独上提并把接触腿拉到近伸直奇异区。它不是第二Support、第二Anchor或第二状态机。
 
 Pelvis Builder同时计算Primary Support腿和Landing腿允许的Pelvis沿Up区间：

@@ -122,6 +122,8 @@
 - [x] 8.3 让Pelvis Builder求Primary Support腿与Landing腿Reach区间交集，并限制Target与Spring Output
 - [x] 8.4 在Reach无交集时保持支撑腿安全、按最小压缩余量夹紧Landing Foot Goal、发布`LandingReachUnavailable`并禁止Full Lock
 - [x] 8.5 发布Target/Solved Extension Ratio、Compression Reserve、Reach区间、交集和Goal夹紧量诊断事实
+- [ ] 8.6 在唯一FBBIK中让可靠的本帧动画弯曲向量保留符号，历史只在现有动画退化分支接管；保持Target投影、权重、根Bank、Goal与Vendor算法，发布真实相邻方向dot
+- [ ] 8.7 用既有Record对账有符号动画方向候选、Solved Knee与全部Foot质量，单列大腿轴角投影/运输差异、零权重和退化输入，记录保留或拒绝结论
 
 ## 9. 单独接入Contact与Lock
 

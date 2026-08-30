@@ -48,14 +48,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterFootInterpolationPolicy.SwingResidual:
                     ClearPlant(ref state);
-                    return EvaluateSwing(
+                    CharacterFootInterpolationResult swing = EvaluateSwing(
                         ref state,
                         in target,
                         in frame,
                         true);
+                    CaptureSwingHeightInput(ref state, in frame);
+                    return swing;
                 case CharacterFootInterpolationPolicy.VerifiedSupport:
-                    return EvaluatePlant(ref state, in target, in frame);
+                    CharacterFootInterpolationResult plant = EvaluatePlant(
+                        ref state,
+                        in target,
+                        in frame);
+                    ClearSwingHeightInput(ref state);
+                    return plant;
                 case CharacterFootInterpolationPolicy.ReleaseResidual:
+                    ClearSwingHeightInput(ref state);
                     return EvaluateRelease(ref state, in target, in frame);
                 default:
                     throw new System.InvalidOperationException(
@@ -83,6 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             state.Policy = CharacterFootInterpolationPolicy.SwingResidual;
             ClearPlant(ref state);
+            ClearSwingHeightInput(ref state);
             return EvaluateSwing(
                 ref state,
                 in target,
@@ -153,6 +162,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
+            CharacterFootContactHeightAdvanceFact contactHeightAdvance =
+                ResolveContactHeightAdvance(in state, in target, in frame);
             CharacterFootSupportIntent supportIntent = target.SupportIntent;
             CharacterFootInterpolationResult swing = EvaluateSwing(
                 ref state,
@@ -367,7 +378,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (captureTransition)
             {
                 state.PlantWorldResidual =
-                    continuityOutputBefore - selectedWorldTarget;
+                    continuityOutputBefore + contactHeightAdvance.WorldAdvance -
+                    selectedWorldTarget;
                 state.PlantWorldResidualTransitionActive =
                     state.PlantWorldResidual.sqrMagnitude >
                     CharacterFootConstraintMath.GeometryEpsilon *
@@ -503,6 +515,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 previousSelectedWorldTarget,
                 selectedWorldTarget,
                 captureReason,
+                in contactHeightAdvance,
                 residualBeforeCapture,
                 residualCapturedBeforeDecay,
                 residualDecayApplied,
@@ -1050,6 +1063,71 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return responseOutputPoint;
         }
 
+        static void CaptureSwingHeightInput(
+            ref CharacterFootInterpolationState state,
+            in CharacterFootStateFrame frame)
+        {
+            if (!state.HasSwingPath ||
+                frame.FormalNextLandingEventIdentity == 0 ||
+                frame.FormalNextLandingEventIdentity !=
+                state.SwingLandingEventIdentity)
+            {
+                ClearSwingHeightInput(ref state);
+                return;
+            }
+            if (!float.IsFinite(frame.FormalFootHeight))
+            {
+                throw new System.InvalidOperationException(
+                    "Swing formal Foot Height is invalid.");
+            }
+            state.PreviousSwingHeightFrameSequence = frame.FrameSequence;
+            state.PreviousSwingHeightEventIdentity =
+                frame.FormalNextLandingEventIdentity;
+            state.PreviousSwingFormalFootHeight = frame.FormalFootHeight;
+        }
+
+        static CharacterFootContactHeightAdvanceFact ResolveContactHeightAdvance(
+            in CharacterFootInterpolationState state,
+            in CharacterFootStateTarget target,
+            in CharacterFootStateFrame frame)
+        {
+            bool eligible = target.StateEntered &&
+                            target.PlantTargetVerified &&
+                            target.PlantTargetKind ==
+                            CharacterFootPlantTargetKind.VerifiedAnchor &&
+                            state.HasPreviousResponseOutputPoint &&
+                            state.HasCorrectionResponse &&
+                            state.PreviousSwingHeightEventIdentity != 0 &&
+                            state.PreviousSwingHeightEventIdentity ==
+                            target.PlantTargetEventIdentity &&
+                            frame.FrameSequence > 0 &&
+                            state.PreviousSwingHeightFrameSequence ==
+                            frame.FrameSequence - 1;
+            if (!float.IsFinite(frame.FormalFootHeight))
+            {
+                throw new System.InvalidOperationException(
+                    "Contact formal Foot Height is invalid.");
+            }
+            Vector3 worldAdvance = eligible
+                ? frame.ComponentUp.normalized *
+                  (frame.FormalFootHeight - state.PreviousSwingFormalFootHeight)
+                : default;
+            return new CharacterFootContactHeightAdvanceFact(
+                eligible,
+                state.PreviousSwingHeightFrameSequence,
+                state.PreviousSwingHeightEventIdentity,
+                state.PreviousSwingFormalFootHeight,
+                frame.FormalFootHeight,
+                worldAdvance);
+        }
+
+        static void ClearSwingHeightInput(ref CharacterFootInterpolationState state)
+        {
+            state.PreviousSwingHeightFrameSequence = 0;
+            state.PreviousSwingHeightEventIdentity = 0;
+            state.PreviousSwingFormalFootHeight = 0f;
+        }
+
         static void ClearPlant(ref CharacterFootInterpolationState state)
         {
             state.HasPlantTarget = false;
@@ -1123,6 +1201,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.CorrectionResponseFact = default;
             state.HasPreviousResponseOutputPoint = false;
             state.PreviousResponseOutputPoint = default;
+            ClearSwingHeightInput(ref state);
             state.PendingCorrectionResponseInitializationReason = reason;
         }
 

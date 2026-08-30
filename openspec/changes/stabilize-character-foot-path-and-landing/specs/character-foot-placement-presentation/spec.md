@@ -417,6 +417,28 @@ Diagnostics MUST保留当前/上一域、移交、完整Plant Capture/Decay/Comp
 - **THEN** 完整误差 MUST由Release残差承接，scalar只在本帧D上同步，DomainTransferred为true
 - **AND** 零dt时Response输出 MUST保持完整上一O，不得只保持法向分量
 
+### Requirement: 满锁后的Source抬脚滑动必须使用明确卸载交接
+
+本条为项目卸载政策，不得命名为ZZZ已恢复的LoadEnded。唯一Transition Resolver MUST只在Landing/Locked持有匹配的Verified Anchor及有效请求、同Event已达到满锁资格、正式Motion处于同Source/Contribution下一Predictive Landing之前PreSwing、CurrentContact匹配Anchor且NextOccurrence更晚、LockMode为Sliding、FootHeight大于现有GeometryEpsilon、该Event无卸载重入保护时发布SourceLiftUnloading并进入既有Releasing。不得单凭PreSwing、零LockWeight、Support回落、Toe曲线或未绑定Event卸载。
+
+该Pre转场 MUST Retain完整Anchor且不Suppress/Reset，原Release MUST承接完整上一输出并按原规则推进。请求与ContactEdge MUST保持真实输入：同一请求仍有效时不得伪造Falling或重置计时。每Event卸载标记 MUST仅阻止原请求未结束时的ReleaseCompleted，不冻结插值或重复捕获。
+
+真实SameEvent Rising恢复Landing时，若来源为本政策卸载，MUST清卸载标记并保护该Event不再次组合卸载。无Falling而恢复Locked请求时，只有原CanAcquire与LockDistance合法才可发布UnloadingLockRestored恢复Landing/Retain并设置同Event保护，不冒用Rising。CompletedLockWeight MUST不因此清除。新Event/Create、Anchor Release与整体Reset MUST清相应卸载历史，不能阻挡新EventVerification。
+
+Diagnostics MUST发布卸载标记与重入保护的前后Event identity，验证组合、历史carry、Anchor、请求边沿和完整Release移交。原质量规则 MUST保持，同时对固定对照Contact帧测量实际脚输出，不能因提前Releasing缩小eligible而声明通过。
+
+#### Scenario: 正常满锁后的抬脚滑动准备
+
+- **WHEN** 同一有效Contact满足全部组合条件但正式请求尚未Falling
+- **THEN** Pre阶段 MUST进入Releasing并持续推进原Release，Anchor保持同一获取身份
+- **AND** ContactEdge与请求 MUST不被改写，尚未结束原请求时不得提前完成并重新Acquire
+
+#### Scenario: 卸载后同Event恢复接触
+
+- **WHEN** 原Reentry准入成立，或本卸载Event在原Acquire范围内恢复Locked请求
+- **THEN** MUST恢复Landing/Retain并设置本Event保护，保留完整连续性
+- **AND** MUST不清满锁资格、不假造边沿、不在下一帧重新触发同一组合
+
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
 封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、正式`ApproachContactToLandingProgress`、Approach Target Preparation与Selected Target Kind、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Verified Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Purpose、Refresh Mode、Query Reason、Landing Tracking状态、Approach Plant Target Preparation、Contact Verification Frame/Reason、稳定Plant候选忽略原因、Path Revision原因、Raw Landing/Path Target、Foot/Toe多点Pose输入与Current Support记录、唯一Support Position/Requested Direction及Rotation Goal、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Completion、Plant Target Kind与Lock Response、Target Height Component Up、Requested/Previous/Applied Direction、是否受限、最大/实际变化角、Target Height Mode/Before/Target/Applied/After与Update Reason、Previous/Current Selected World Target、Previous/Current Response Output Point、Residual Capture Reason、World Residual捕获前/后/衰减后、Desired/Previous/Current Correction Response、Selected Rate、Applied Delta、初始化/重置原因、Continuity Owner、Effective Correction前后、Action occupancy、实际Goal Weight与Hard Ownership Loss原因、Ground Path Component Up、既有Goal基准混合权重、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。Ground Path Component Up、Target Height Component Up、Requested Direction与Applied Direction MUST分列且不得互相补值。诊断 MUST先重算Direction History，再以`DesiredOutputPoint = SelectedWorldTarget + ResidualAfterDecay`、`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`、`ResponseOutputPoint = DesiredOutputPoint + PositionResponseWorldAxis × (CurrentResponse - DesiredResponse)`和`EffectiveCorrection = ResponseOutputPoint - OriginalSole`对账唯一输出；旧`BasisTransferred`、旧单档`MaximumVerticalCorrectionSpeed`和“World Residual取代Correction历史”的Disposition MUST不存在。

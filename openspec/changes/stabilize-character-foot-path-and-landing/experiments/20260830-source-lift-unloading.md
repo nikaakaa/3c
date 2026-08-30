@@ -1,0 +1,35 @@
+# 满锁后Source抬脚滑动的卸载交接实验
+
+## 授权与对照
+
+用户已授权把组合规则作为可撤销的小步实验处理骨盆下陷。固定193957（Runtime eb5fb05、Diagnostics 5d858bc、归档7f7b66d）作为对照，全部本地采样不删、不覆盖。不是ZZZ卸载开关复刻，不把新规则称为现有LoadEnded事实。
+
+## 输入边界与业务取舍
+
+正式LiftOff位于323/467，现版同帧已Release，不能通过接通LiftOff提前修复322/466。PreSwing从上一Landing开始，包含承重阶段。CompletedLockWeight只证明同Event曾满锁，Sliding可由位移或角度误差触发；FootHeight来自Source Sole相对作者Landing基线的非负高度，不是世界输出的一份独立位移。
+
+本实验明确采用新的项目政策：Landing/Locked持有同Event Verified Anchor且请求仍有效、同Event曾完成满锁，正式Motion处于同一Source/Contribution的下一次Predictive Landing之前PreSwing，当前Contact与Anchor相同、下一Occurrence时序更晚，Mode为Sliding，FootHeight超过现有GeometryEpsilon（0.0001米，过滤零值浮点尾差），且本Event没有卸载重入保护时，进入已有Releasing。组合在193957命中40帧/26事件，第一次命中均比请求Falling早1或2帧；未发现Falling前回到Locked、脚高归零或Source换代，但这不保证所有滑动仍承重的场景正确。
+
+政策代价是卸载段离地时机改变，不以FootHeight数值扣除输出，不修改Contact曲线或请求、边沿、满锁资格，不清Y、不增加参数。承重阶段的ContactWorldResidual、Swing目标、旋转权重、膝盖、两腿Reach与Pelvis弹簧全部不改。
+
+## 唯一状态交接
+
+组合由唯一Transition Resolver消费同一FormalFootMotion Runtime Sample，发布SourceLiftUnloading原因。Pre阶段Landing/Locked→Releasing，Retain原Anchor、无Suppress/Reset，原Release入口承接完整上一O并按现有半衰期推进。当前RequestsLock仍为true时ContactEdge仍None，计时正常递增，不伪造Contact Falling。
+
+旧HardOwnership、请求/Event换代及超过SlideDistance的释放优先级保持；组合不得把原本已经超滑动范围的Release改名并额外延迟完成。
+
+ContactTransition仅增加本Event的UnloadingEventIdentity和UnloadingReentryProtectedEventIdentity。前者阻止同一原请求仍有效时过早ReleaseCompleted后又立即Acquire；它不停止Release逐帧推进，不重复StateEntered或重复Capture。真实请求结束（包括Mode变Unlocked）后恢复原完成逻辑。
+
+真正SameEvent Rising仍按原Reentry准入恢复Landing；若该Event曾因本政策卸载，清卸载标记并保护本Event不再因组合卸载。没有Falling却恢复Locked请求时，仅在原CanAcquire及LockDistance合法且本卸载标记匹配的范围内，用独立UnloadingLockRestored原因恢复Landing/Retain并保护本Event。恢复不冒用Contact Rising，不更改CompletedLockWeight。新Event/Create、Anchor Release及整体Reset清除卸载记录；旧标记不得阻止新Event正常Verification。
+
+## 规格与诊断
+
+这是一条明确新增的卸载政策，补充现有请求丢失或超滑动范围的Release原因；不是放宽HardOwnership、WorldAnchor或唯一Interpolation合同。FootHeight仍只由正式Motion Frame生产，Transition只将其用作本政策离散准入，不建立第二高度插值。
+
+Runtime发布两项卸载历史的Before/After共4个标量；现有InputFormal、Pre/Post Reason、Anchor、请求、边沿和输出直接复用。唯一Diagnostics核对组合准入、清除、重入保护及跨帧carry；原37项质量规则和阈值不改。提前Release会缩短原Contact诊断域，必须另对原193957固定525个Contact Frame/Side比较真实Heel/Toe/世界输出，不用分母缩水声称改善。
+
+## 验证目标
+
+固定320–323、464–467及全包：骨盆目标/自由弹簧/两次硬夹紧/最终物理输出、Foot目标与最终Heel/Toe、Release交接、膝盖外溢。保留193957 Landing/Swing收益；不只比较总分，也不把Source抬脚组合准入成立当作视觉通过。同Event重入、无Falling恢复Locked等本包无动态覆盖的分支单列。
+
+Runtime候选已实现并通过规定flags构建（27个既有依赖/项目警告、0错误，随后shutdown成功）。公开字段为Previous/Current UnloadingEventIdentity和Previous/Current UnloadingReentryProtectedEventIdentity，共4标量；事实直接来自同一ContactTransition Context。正常Requested/Edge/计时/CompletedWeight及所有Anchor几何不改。未加载或采样，尚无行为通过结论。

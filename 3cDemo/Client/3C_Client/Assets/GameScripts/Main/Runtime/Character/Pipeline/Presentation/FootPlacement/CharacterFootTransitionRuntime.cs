@@ -24,6 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootAnchorCommand.Retain:
                     break;
                 case CharacterFootAnchorCommand.Create:
+                    context.ContactTransition.UnloadingEventIdentity = 0;
+                    context.ContactTransition.UnloadingReentryProtectedEventIdentity = 0;
                     context.Contact.HasContact = true;
                     context.Contact.EventIdentity =
                         frame.ContactLanding.LandingEventIdentity;
@@ -40,6 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterFootAnchorCommand.Release:
                     context.Contact.Clear();
                     context.ContactTransition.CompletedLockWeightEventIdentity = 0;
+                    context.ContactTransition.UnloadingEventIdentity = 0;
+                    context.ContactTransition.UnloadingReentryProtectedEventIdentity = 0;
                     break;
                 default:
                     throw new System.InvalidOperationException(
@@ -53,6 +57,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             ulong eventIdentity = frame.LockRequest.EventIdentity;
+            if (eventIdentity != 0 &&
+                context.UnloadingEventIdentity != eventIdentity)
+            {
+                context.UnloadingEventIdentity = 0;
+            }
+            if (eventIdentity != 0 &&
+                context.UnloadingReentryProtectedEventIdentity != eventIdentity)
+            {
+                context.UnloadingReentryProtectedEventIdentity = 0;
+            }
+            if (decision.Reason == CharacterFootTransitionReason.SourceLiftUnloading)
+            {
+                context.UnloadingEventIdentity = eventIdentity;
+            }
+            else if (context.UnloadingEventIdentity == eventIdentity &&
+                     eventIdentity != 0 &&
+                     (decision.Reason == CharacterFootTransitionReason.SameEventContactReentryRefresh ||
+                      decision.Reason == CharacterFootTransitionReason.UnloadingLockRestored))
+            {
+                context.UnloadingEventIdentity = 0;
+                context.UnloadingReentryProtectedEventIdentity = eventIdentity;
+            }
             if (eventIdentity != 0 &&
                 context.CompletedLockWeightEventIdentity != 0 &&
                 context.CompletedLockWeightEventIdentity != eventIdentity)

@@ -623,6 +623,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 previousContext.LatestReleasedContactEventIdentity;
             PreviousCompletedLockWeightEventIdentity =
                 previousContext.CompletedLockWeightEventIdentity;
+            PreviousUnloadingEventIdentity = previousContext.UnloadingEventIdentity;
+            PreviousUnloadingReentryProtectedEventIdentity =
+                previousContext.UnloadingReentryProtectedEventIdentity;
             PreviousContactAnchorAvailable = previousAnchor.Available;
             PreviousContactAnchorEventIdentity = previousAnchor.EventIdentity;
             PreviousContactAnchorAcquiredFrameSequence =
@@ -646,6 +649,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentContext.LatestReleasedContactEventIdentity;
             CurrentCompletedLockWeightEventIdentity =
                 currentContext.CompletedLockWeightEventIdentity;
+            CurrentUnloadingEventIdentity = currentContext.UnloadingEventIdentity;
+            CurrentUnloadingReentryProtectedEventIdentity =
+                currentContext.UnloadingReentryProtectedEventIdentity;
             CurrentContactAnchorAvailable = currentAnchor.Available;
             CurrentContactAnchorEventIdentity = currentAnchor.EventIdentity;
             CurrentContactAnchorAcquiredFrameSequence =
@@ -905,6 +911,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong PreviousLatestContactEventIdentity { get; }
         public ulong PreviousLatestReleasedContactEventIdentity { get; }
         public ulong PreviousCompletedLockWeightEventIdentity { get; }
+        public ulong PreviousUnloadingEventIdentity { get; }
+        public ulong PreviousUnloadingReentryProtectedEventIdentity { get; }
         public bool PreviousContactAnchorAvailable { get; }
         public ulong PreviousContactAnchorEventIdentity { get; }
         public ulong PreviousContactAnchorAcquiredFrameSequence { get; }
@@ -923,6 +931,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong CurrentLatestContactEventIdentity { get; }
         public ulong CurrentLatestReleasedContactEventIdentity { get; }
         public ulong CurrentCompletedLockWeightEventIdentity { get; }
+        public ulong CurrentUnloadingEventIdentity { get; }
+        public ulong CurrentUnloadingReentryProtectedEventIdentity { get; }
         public bool CurrentContactAnchorAvailable { get; }
         public ulong CurrentContactAnchorEventIdentity { get; }
         public ulong CurrentContactAnchorAcquiredFrameSequence { get; }

@@ -1198,7 +1198,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Settings.SlideDistance,
                 formalFootMotion.HasCurrentContactEvent
                     ? formalFootMotion.Events.CurrentContact.NormalizedTime : 0f,
-                formalFootMotion.HasPredictiveLanding
+                formalFootMotion.IsValid && formalFootMotion.Events.NextLanding.IsBound
                     ? formalFootMotion.Events.NextLanding.NormalizedTime : 0f,
                 in decision,
                 in decision);

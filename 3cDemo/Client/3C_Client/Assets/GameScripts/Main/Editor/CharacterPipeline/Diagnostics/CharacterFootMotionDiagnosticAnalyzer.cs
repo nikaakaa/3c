@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/52";
+        const string Schema = "character-foot-motion-facts/53";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 52;
+        const int AnalyzerVersion = 53;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -187,6 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (frames.Count == 0)
                 return;
+            RequireContactHeightAdvanceHistory(frames);
             AnalyzeStepTimeCandidateSelections(
                 frames,
                 events,
@@ -376,6 +377,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             ["CapturedTargetToPreviousResponseDistanceMeters"] =
                                 Vector3.Distance(capturedOutput,
                                     current.PreviousResponseOutputPoint),
+                            ["CaptureContinuityErrorMeters"] = Vector3.Distance(
+                                current.PlantWorldResidualCapturedBeforeDecay,
+                                ExpectedPlantCapturedResidual(current)),
+                            ["ContactHeightWorldAdvanceMeters"] =
+                                current.PlantContactHeightWorldAdvance.magnitude,
                             ["ResidualDecayStepMeters"] = Vector3.Distance(
                                 current.PlantWorldResidualCapturedBeforeDecay,
                                 current.PlantWorldResidualAfterDecay),
@@ -467,6 +473,105 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["currentAnchorAvailable"] =
                             current.CurrentContactAnchorAvailable
                     }));
+            }
+        }
+
+        static Vector3 ExpectedPlantCapturedResidual(FootFrame frame) =>
+            frame.PlantResidualCaptureReason != "None"
+                ? frame.OriginalSole + frame.PlantEffectiveCorrectionBefore +
+                    frame.PlantContactHeightWorldAdvance - frame.PlantSelectedWorldTarget
+                : frame.PlantWorldResidualBeforeCapture;
+
+        static void RequireContactHeightAdvanceFacts(FootFrame frame)
+        {
+            bool hasHistory = frame.PlantContactHeightPreviousEventIdentity != 0;
+            bool stateEntered = RevisionReasonIncludes(frame.PlantResidualCaptureReason, "StateEntered");
+            bool eligible = frame.PlantInterpolationEvaluated && stateEntered &&
+                frame.PlantTargetVerified && frame.PlantTargetKind == "VerifiedAnchor" &&
+                frame.PreviousResponseOutputAvailable && frame.CorrectionResponseInitializedBefore &&
+                hasHistory && frame.PlantContactHeightPreviousEventIdentity == frame.PlantTargetEventIdentity &&
+                frame.Frame > 0 && frame.PlantContactHeightPreviousFrameSequence == (ulong)(frame.Frame - 1);
+            bool finite = float.IsFinite(frame.PlantContactHeightPreviousFormalFootHeight) &&
+                float.IsFinite(frame.PlantContactHeightCurrentFormalFootHeight) &&
+                float.IsFinite(frame.InputFormalFootHeight) &&
+                FiniteVector(frame.PlantContactHeightWorldAdvance);
+            bool metadata = hasHistory
+                ? frame.PlantContactHeightPreviousFrameSequence > 0 &&
+                    frame.PlantContactHeightPreviousFrameSequence < (ulong)frame.Frame
+                : frame.PlantContactHeightPreviousFrameSequence == 0 &&
+                    frame.PlantContactHeightPreviousFormalFootHeight == 0f;
+            Vector3 expectedAdvance = eligible
+                ? frame.ComponentUp.normalized * (frame.PlantContactHeightCurrentFormalFootHeight -
+                    frame.PlantContactHeightPreviousFormalFootHeight) : default;
+            bool consistent = finite && metadata &&
+                frame.PlantContactHeightAdvanceEligible == eligible &&
+                (eligible
+                    ? Vector3.Distance(frame.PlantContactHeightWorldAdvance, expectedAdvance) <= RuntimeGeometryEpsilon
+                    : frame.PlantContactHeightWorldAdvance.Equals(Vector3.zero)) &&
+                (frame.PlantInterpolationEvaluated
+                    ? frame.PlantContactHeightCurrentFormalFootHeight == frame.InputFormalFootHeight &&
+                        (frame.CorrectionResponseInitializedBefore || !hasHistory)
+                    : !hasHistory && frame.PlantContactHeightCurrentFormalFootHeight == 0f);
+            if (!consistent)
+                throw new InvalidDataException(
+                    $"Foot Motion Plant contact height advance facts are inconsistent Frame={frame.Frame} " +
+                    $"Side={frame.Side} Eligible={frame.PlantContactHeightAdvanceEligible} Expected={eligible}.");
+            frame.ContactHeightAdvance = new CharacterFootContactHeightAdvanceAnalysis
+            {
+                plantEvaluated = frame.PlantInterpolationEvaluated,
+                eligible = eligible,
+                previousFrameSequence = frame.PlantContactHeightPreviousFrameSequence.ToString(CultureInfo.InvariantCulture),
+                previousEventIdentity = frame.PlantContactHeightPreviousEventIdentity.ToString(CultureInfo.InvariantCulture),
+                previousFormalFootHeight = frame.PlantContactHeightPreviousFormalFootHeight,
+                currentFormalFootHeight = frame.PlantContactHeightCurrentFormalFootHeight,
+                inputFormalFootHeight = frame.InputFormalFootHeight,
+                worldAdvance = CharacterFootVectorFact.From(frame.PlantContactHeightWorldAdvance),
+                continuityOutputBefore = frame.PlantInterpolationEvaluated
+                    ? CharacterFootVectorFact.From(frame.OriginalSole + frame.PlantEffectiveCorrectionBefore) : null,
+                captureContinuityErrorMeters = frame.PlantInterpolationEvaluated
+                    ? Vector3.Distance(frame.PlantWorldResidualCapturedBeforeDecay, ExpectedPlantCapturedResidual(frame)) : 0d,
+                previousSampleCheck = frame.PlantInterpolationEvaluated
+                    ? "PreviousSampleUnavailable" : "NotPlant",
+                correctionResponseInitializationReason = frame.CorrectionResponseInitializationReason
+            };
+        }
+
+        static void RequireContactHeightAdvanceHistory(List<FootFrame> frames)
+        {
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame current = frames[i];
+                if (!current.PlantInterpolationEvaluated)
+                    continue;
+                if (i == 0 || !Continuous(frames[i - 1], current))
+                    continue;
+                FootFrame previous = frames[i - 1];
+                bool recorded = (previous.ConstraintState == "Swing" ||
+                        previous.ConstraintState == "UnlockedSupport") &&
+                    previous.ResolvedOutcome == "Ready" && !previous.PlantInterpolationEvaluated &&
+                    previous.OutputStagesAvailable && previous.CorrectionResponseEvaluated &&
+                    !previous.PreTransitionSuppressOutput && !previous.PostTransitionResetInterpolation &&
+                    previous.SelectedSupportTarget.Kind == "SwingGround" && previous.PathAvailableAfter &&
+                    previous.FormalNextLandingEventIdentity != 0 &&
+                    previous.FormalNextLandingEventIdentity == previous.PathCurrentLandingEventIdentity;
+                bool retained = recorded && !current.PreTransitionResetInterpolation &&
+                    current.CorrectionResponseInitializedBefore;
+                bool consistent = retained
+                    ? current.PlantContactHeightPreviousFrameSequence == (ulong)previous.Frame &&
+                        current.PlantContactHeightPreviousEventIdentity == previous.FormalNextLandingEventIdentity &&
+                        current.PlantContactHeightPreviousFormalFootHeight == previous.InputFormalFootHeight
+                    : current.PlantContactHeightPreviousFrameSequence == 0 &&
+                        current.PlantContactHeightPreviousEventIdentity == 0 &&
+                        current.PlantContactHeightPreviousFormalFootHeight == 0f;
+                if (!consistent)
+                    throw new InvalidDataException(
+                        $"Foot Motion Plant contact height history is inconsistent Frame={current.Frame} " +
+                        $"Side={current.Side} PreviousFrame={previous.Frame} PreviousState={previous.ConstraintState} " +
+                        $"Recorded={recorded} Retained={retained} PublishedFrame={current.PlantContactHeightPreviousFrameSequence}.");
+                current.ContactHeightAdvance.previousSampleCheckAvailable = true;
+                current.ContactHeightAdvance.previousSampleCheck = retained
+                    ? "RecordedSwingInputMatched" : "ClearedOrUnrecordedHistoryMatched";
+                current.ContactHeightAdvance.previousSwingInputRecorded = recorded;
             }
         }
 
@@ -1155,15 +1260,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PlantWorldResidualBeforeCapture,
                         current.PlantWorldResidualCapturedBeforeDecay),
                     ["PlantWorldResidualCaptureContinuityError"] =
-                        current.PlantResidualCaptureReason != "None"
-                            ? Vector3.Distance(
-                                current.PlantWorldResidualCapturedBeforeDecay,
-                                current.OriginalSole +
-                                current.PlantEffectiveCorrectionBefore -
-                                current.PlantSelectedWorldTarget)
-                            : Vector3.Distance(
-                                current.PlantWorldResidualCapturedBeforeDecay,
-                                current.PlantWorldResidualBeforeCapture),
+                        Vector3.Distance(current.PlantWorldResidualCapturedBeforeDecay,
+                            ExpectedPlantCapturedResidual(current)),
+                    ["PlantContactHeightWorldAdvanceMeters"] =
+                        current.PlantContactHeightWorldAdvance.magnitude,
                     ["PlantWorldResidualDecayStep"] = Vector3.Distance(
                         current.PlantWorldResidualCapturedBeforeDecay,
                         current.PlantWorldResidualAfterDecay),
@@ -1315,8 +1415,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Vector3 finalOutputToAnchor =
                     current.Anchor - current.ResolvedFinalSole;
                 Vector3 expectedCapturedResidual =
-                    current.PreviousResponseOutputPoint -
-                    current.PlantSelectedWorldTarget;
+                    ExpectedPlantCapturedResidual(current);
                 bool sourceContinuous = string.Equals(
                     previous.SourceIdentity,
                     current.SourceIdentity,
@@ -1378,6 +1477,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Vector3.Distance(
                             expectedCapturedResidual,
                             current.PlantWorldResidualCapturedBeforeDecay),
+                    ["ContactHeightWorldAdvanceMeters"] =
+                        current.PlantContactHeightWorldAdvance.magnitude,
+                    ["ContactHeightWorldAdvanceAlongUpMeters"] =
+                        Vector3.Dot(current.PlantContactHeightWorldAdvance, up),
+                    ["ContactHeightPreviousFormalMeters"] =
+                        current.PlantContactHeightPreviousFormalFootHeight,
+                    ["ContactHeightCurrentFormalMeters"] =
+                        current.PlantContactHeightCurrentFormalFootHeight,
                     ["DesiredToResponseMeters"] =
                         desiredToResponse.magnitude,
                     ["DesiredToResponseHorizontalMeters"] =
@@ -1484,7 +1591,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     plantResidualCaptureReason =
                         current.PlantResidualCaptureReason,
                     correctionResponseInitializationReason =
-                        current.CorrectionResponseInitializationReason
+                        current.CorrectionResponseInitializationReason,
+                    contactHeightAdvance = current.ContactHeightAdvance
                 };
                 events.Add(new EventFact(
                     "ContactAcquisitionContinuity",
@@ -2109,6 +2217,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     plantWorldResidualCapturedBeforeDecay =
                         CharacterFootVectorFact.From(
                             current.PlantWorldResidualCapturedBeforeDecay),
+                    plantContactHeightAdvance = current.ContactHeightAdvance,
                     plantWorldResidualDecayApplied =
                         current.PlantWorldResidualDecayApplied,
                     plantWorldResidualBaseHalfLifeSeconds =
@@ -5428,6 +5537,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CultureInfo.InvariantCulture),
             profileId = frame.ProfileId,
             profileRevision = frame.ProfileRevision,
+            plantContactHeightAdvance = frame.ContactHeightAdvance,
             contactSupportGap = frame.ContactSupportGap,
             formalApproach = new
             {
@@ -6306,6 +6416,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 InputFormalInApproachContactToLanding =
                     Int("InputFormalInApproachContactToLanding") != 0,
                 FormalFootHeight = Float("FormalFootHeight"),
+                InputFormalFootHeight = Float("InputFormalFootHeight"),
                 PoseRootWorldPosition = Vector("PoseRootWorldPosition"),
                 PoseRootWorldRotation = Rotation("PoseRootWorldRotation"),
                 StepSelectionMaximumPredictionTimeSeconds =
@@ -6781,6 +6892,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("FootMotionResponseOutputPoint"),
                 PlantResidualCaptureReason =
                     Cell("FootMotionPlantResidualCaptureReason"),
+                PlantContactHeightAdvanceEligible =
+                    Int("FootMotionPlantContactHeightAdvanceEligible") switch
+                    {
+                        0 => false,
+                        1 => true,
+                        _ => throw new InvalidDataException("Foot Motion contact height Eligible is not a canonical boolean.")
+                    },
+                PlantContactHeightPreviousFrameSequence =
+                    Ulong("FootMotionPlantContactHeightPreviousFrameSequence"),
+                PlantContactHeightPreviousEventIdentity =
+                    Ulong("FootMotionPlantContactHeightPreviousEventIdentity"),
+                PlantContactHeightPreviousFormalFootHeight =
+                    Float("FootMotionPlantContactHeightPreviousFormalFootHeight"),
+                PlantContactHeightCurrentFormalFootHeight =
+                    Float("FootMotionPlantContactHeightCurrentFormalFootHeight"),
+                PlantContactHeightWorldAdvance =
+                    Vector("FootMotionPlantContactHeightWorldAdvance"),
                 PlantWorldResidualBeforeCapture =
                     Vector("FootMotionPlantWorldResidualBeforeCapture"),
                 PlantWorldResidualCapturedBeforeDecay =
@@ -7121,6 +7249,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireResolvedFoot(frame);
             RequireFormalGoalWeights(frame);
             RequireLegReachFacts(frame);
+            RequireContactHeightAdvanceFacts(frame);
             if (!float.IsFinite(frame.LandingReachGoalClampDistance) ||
                 frame.LandingReachGoalClampDistance < 0f ||
                 frame.LandingReachGoalClamped !=
@@ -7227,9 +7356,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PlantResidualCaptureReason != "None";
                 Vector3 outputBefore = frame.OriginalSole +
                                        frame.PlantEffectiveCorrectionBefore;
-                Vector3 expectedCapturedBeforeDecay = residualCaptured
-                    ? outputBefore - frame.PlantSelectedWorldTarget
-                    : frame.PlantWorldResidualBeforeCapture;
+                Vector3 expectedCapturedBeforeDecay = ExpectedPlantCapturedResidual(frame);
                 bool residualCaptureConsistent = Vector3.Distance(
                     frame.PlantWorldResidualCapturedBeforeDecay,
                     expectedCapturedBeforeDecay) <= RuntimeGeometryEpsilon;
@@ -9435,6 +9562,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "TargetBodyVelocityZ",
                 "TimeToLandingSeconds", "FormalStepObservationAvailable",
                 "FormalFootHeight",
+                "InputFormalFootHeight",
                 "PoseRootWorldPositionX", "PoseRootWorldPositionY",
                 "PoseRootWorldPositionZ", "PoseRootWorldRotationX",
                 "PoseRootWorldRotationY", "PoseRootWorldRotationZ",
@@ -9761,6 +9889,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionResponseOutputPointY",
                 "FootMotionResponseOutputPointZ",
                 "FootMotionPlantResidualCaptureReason",
+                "FootMotionPlantContactHeightAdvanceEligible",
+                "FootMotionPlantContactHeightPreviousFrameSequence",
+                "FootMotionPlantContactHeightPreviousEventIdentity",
+                "FootMotionPlantContactHeightPreviousFormalFootHeight",
+                "FootMotionPlantContactHeightCurrentFormalFootHeight",
+                "FootMotionPlantContactHeightWorldAdvanceX",
+                "FootMotionPlantContactHeightWorldAdvanceY",
+                "FootMotionPlantContactHeightWorldAdvanceZ",
                 "FootMotionPlantWorldResidualBeforeCaptureX",
                 "FootMotionPlantWorldResidualBeforeCaptureY",
                 "FootMotionPlantWorldResidualBeforeCaptureZ",
@@ -10400,6 +10536,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float InputFormalApproachContactToLandingProgress;
             internal bool InputFormalInApproachContactToLanding;
             internal float FormalFootHeight;
+            internal float InputFormalFootHeight;
             internal Vector3 PoseRootWorldPosition;
             internal Quaternion PoseRootWorldRotation;
             internal float StepSelectionMaximumPredictionTimeSeconds;
@@ -10675,6 +10812,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 DesiredOutputPoint;
             internal Vector3 ResponseOutputPoint;
             internal string PlantResidualCaptureReason;
+            internal bool PlantContactHeightAdvanceEligible;
+            internal ulong PlantContactHeightPreviousFrameSequence;
+            internal ulong PlantContactHeightPreviousEventIdentity;
+            internal float PlantContactHeightPreviousFormalFootHeight;
+            internal float PlantContactHeightCurrentFormalFootHeight;
+            internal Vector3 PlantContactHeightWorldAdvance;
+            internal CharacterFootContactHeightAdvanceAnalysis ContactHeightAdvance;
             internal Vector3 PlantWorldResidualBeforeCapture;
             internal Vector3 PlantWorldResidualCapturedBeforeDecay;
             internal bool PlantWorldResidualDecayApplied;

@@ -81,6 +81,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     }
 
     [Serializable]
+    internal sealed class CharacterFootContactHeightAdvanceAnalysis
+    {
+        public bool plantEvaluated;
+        public bool eligible;
+        public string previousFrameSequence;
+        public string previousEventIdentity;
+        public double previousFormalFootHeight;
+        public double currentFormalFootHeight;
+        public double inputFormalFootHeight;
+        public CharacterFootVectorFact worldAdvance;
+        public CharacterFootVectorFact continuityOutputBefore;
+        public double captureContinuityErrorMeters;
+        public bool previousSampleCheckAvailable;
+        public string previousSampleCheck;
+        public bool? previousSwingInputRecorded;
+        public string correctionResponseInitializationReason;
+    }
+
+    [Serializable]
     internal sealed class CharacterFootContactAcquisitionContinuityAnalysis
     {
         public string acquisitionReason;
@@ -105,6 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact finalOutput;
         public string plantResidualCaptureReason;
         public string correctionResponseInitializationReason;
+        public CharacterFootContactHeightAdvanceAnalysis contactHeightAdvance;
     }
 
     [Serializable]
@@ -287,6 +307,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "ResponseOutputPointStep",
                 "PlantWorldResidualCaptureDelta",
                 "PlantWorldResidualCaptureContinuityError",
+                "PlantContactHeightWorldAdvanceMeters",
                 "PlantWorldResidualDecayStep",
                 "PlantWorldResidualAfterDecay",
                 "PlantWorldResidualAppliedHalfLifeSeconds",
@@ -358,7 +379,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "CapturedResidualMeters",
                     "ResidualAfterDecayMeters",
                     "ResidualDecayStepMeters",
-                    "ResidualCaptureContinuityErrorMeters",
+                "ResidualCaptureContinuityErrorMeters",
+                "ContactHeightWorldAdvanceMeters",
+                "ContactHeightWorldAdvanceAlongUpMeters",
+                "ContactHeightPreviousFormalMeters",
+                "ContactHeightCurrentFormalMeters",
                     "DesiredToResponseMeters",
                     "DesiredToResponseHorizontalMeters",
                     "DesiredToResponseAlongUpMeters",
@@ -618,6 +643,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 value => CharacterFootDiagnosisContext.Metric(
                     value, "PreviousResponseToResponseStepMeters"),
                 "CapturedTargetToPreviousResponseDistanceMeters",
+                "CaptureContinuityErrorMeters", "ContactHeightWorldAdvanceMeters",
                 "ResidualDecayStepMeters", "CapturedTargetToDesiredStepMeters",
                 "DesiredToResponseStepMeters", "PreviousResponseToResponseStepMeters",
                 "ResponseToFinalSoleStepMeters");

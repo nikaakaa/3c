@@ -1,0 +1,21 @@
+# Committed Weighted Goal Sole读取实验
+
+## 状态与范围
+
+前驱为dd792d3记录的141256位置basis候选；该候选靶点有效，但出现Right404–412新下陷，尚未作为可用修复接纳。原质量基线仍为c519865/130545。本实验只接通已有但始终不可读的上一加权Goal脚底参考，先落地合同，不宣称效果。
+
+`HasFrame`是Pending开放标志，SealFrame清它是正确行为。旧TryResolvePreviousVisibleOutput把它当Committed结果可读条件，导致085503、130545、141256的VisibleOutputTransferred均为0。新实现将用参考本身的Frame、Completion、Side、世界点、Position/Rotation Weight及Bank/Resolved Pair身份；没有历史明确Unavailable，已有历史却不合法直接拒绝。
+
+保存的点是最终Foot Goal经Constraint/Reach与权重之后推算的Sole，不是最终物理骨骼点。零权重时仍是动画基准：130545 Left349/853的实际物理Sole分别比该参考高约25.607/27.755毫米，随后350/854发生Capture。因此必须分别测量参考连续与真实Physical跳变，不能称为零风险布尔修正。
+
+## 唯一行为变量
+
+正式Plant Target Capture时，原来不可达的合法上一Weighted Goal Sole输入首次参与完整XYZ Residual捕获和既有dual scalar重基。非Capture帧不重基；Residual仍同帧推进一次。位置basis、Support角历史、脚高、Target Height模式、半衰期、两档速率、Goal权重、Contact/Lock规则、查询几何均不改。
+
+不把这叫作ZZZ直接复刻。保留项目WorldAnchor/Sole政策，不引入g/k/W/199、最终Pose低通、清Residual.Y、相对动画Capture、单scalar替代XYZ或第二输出路径。
+
+## 对账
+
+同时比较本轮与141256、130545。先验证输入/Body/原动画与查询几何一致，再验证参考身份、上一/当前值、实际Capture来源与scalar/Residual公式。重点包括Right404–412下陷、Right476–484原有悬空、Left349→350及853→854零权重后Capture、12组稳定ABA、所有37Target、Solved Knee翻侧时点、Reach与Pelvis。
+
+141256已产生的好处不能抵消接触新坏点；只比有回归的前驱提高分数也不能算通过。代码、Runtime/Diagnostics独立提交和原始Replay包都保留，失败后不覆盖样本。

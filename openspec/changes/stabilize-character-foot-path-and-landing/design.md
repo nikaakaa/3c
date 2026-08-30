@@ -152,7 +152,7 @@ Foot Motion Profile必须显式序列化`TargetHeightAdoptionMode`、`MaximumVer
 
 Formal `ApproachContactToLandingProgress`只记录Prediction准备进度，不进入Position、Direction、Residual、Correction或Goal权重。正式Contact Curve只提供接触证据与边沿；旧运行时累计`max(previous, Contact)`和Prepared Plant可见混合整体删除。Approach期间普通Swing继续消费202551动画XZ、Ground Path Envelope与Formal Foot Height，Prediction只更新同Event Prepared Target及lineage。旧Current Contact Event的Prepared Target与下一Swing Event已经同帧并存时，下一Event仍可更新Prediction、Observation、Landing Context与Ground Path，但不得成为当前State Target、Interpolation、Rotation、Reach Goal或Ground硬最低约束；当前输出改为本帧Current Support完整Target，Prepared Target只拥有Post Constraint的当前接触测量。两者都不得把未验证Prepared Landing变成可见Plant目标。Contact Rising完成Current Contact Verification后，State Target才一次换为Verified Anchor的Position+RequestedDirection；Runtime以持久上一实际Response Output和新Target捕获一次完整Vector Residual，并在同帧继续Advance。Verification失败不得消费未验证Prediction，Lock Weight只负责Contact后的Rotation可见响应、Full Lock完成资格与Release边界，不驱动Position Target。Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response、目标点或强制高度刷新发生正式换代时允许Residual Capture。`DesiredOutputPoint = SelectedWorldTarget + PlantWorldResidualAfterDecay`只表示本帧内部期望，不再直接当成最终Foot输出。
 
-Correction Response Stage每个合法可见帧先读取Requested Support Direction与上一Applied Direction。首次合法输入直接采用Requested Direction；其后计算夹角并用Profile显式`SupportDirectionMaximumChangeDegrees`把本次Applied Direction限制为最多朝目标转该角度。Corin值采用可琳活体实例实测的每次10度。Runtime随后以`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`计算标量目标，并持久保存上一Committed Response、初始化事实和typed增减方向。它在Swing、UnlockedSupport、Landing、Locked与Releasing每帧恰好执行一次；Applied Direction同时服务本帧Foot Rotation，不得以Component Up、Animated Up、上一法线或默认Up补全无效Current Support。Direction变化只推进Direction History并保持原Correction scalar，严禁恢复`BasisTransferred = dot(previousWorldOutput - currentOriginalSole, newDirection)`；该投影会丢失切向世界差，已由022607 Replay否决。只有正式Position Target Capture且根Bank已有上一Post Constraint/Post Reach可见Sole时，完整Vector Residual与标量Response才执行一次`VisibleOutputTransferred`。未初始化、Reset、Retarget、Source/Profile/World lineage失效后的首次合法输入直接同步；普通动画目标变化、同Event Prediction换点、Contact Verification、Action Pose Contribution、攻击、Lock Response换代、Release完成和Same-Event Reentry不得清零。已初始化时固定执行：
+Correction Response Stage每个合法可见帧先读取Requested Support Direction与上一Applied Direction。首次合法输入直接采用Requested Direction；其后计算夹角并用Profile显式`SupportDirectionMaximumChangeDegrees`把本次Applied Direction限制为最多朝目标转该角度。Corin值采用可琳活体实例实测的每次10度。Runtime随后以`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`计算标量目标，并持久保存上一Committed Response、初始化事实和typed增减方向。它在Swing、UnlockedSupport、Landing、Locked与Releasing每帧恰好执行一次；Applied Direction同时服务本帧Foot Rotation，不得以Component Up、Animated Up、上一法线或默认Up补全无效Current Support。Direction变化只推进Direction History并保持原Correction scalar，严禁恢复`BasisTransferred = dot(previousWorldOutput - currentOriginalSole, newDirection)`；该投影会丢失切向世界差，已由022607 Replay否决。只有正式Position Target Capture且根Bank已有上一Post Constraint/Post Reach的Weighted Goal Sole参考时，完整Vector Residual与标量Response才执行一次`WeightedGoalSoleTransferred`。该参考在Solver之前由最终Goal权重推算，不是最终物理Sole，零权重时尤其不能混同。未初始化、Reset、Retarget、Source/Profile/World lineage失效后的首次合法输入直接同步；普通动画目标变化、同Event Prediction换点、Contact Verification、Action Pose Contribution、攻击、Lock Response换代、Release完成和Same-Event Reentry不得清零。已初始化时固定执行：
 
 ```text
 delta = DesiredResponse - PreviousResponse
@@ -367,6 +367,16 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 这不是ZZZ一一对应迁移。新ZZZ证据已经区分Owner Transform、Foot pivot与Sole，并证明位置标量沿Owner局部Up推进、末端W在当前原生分支参与旋转；不能再用旧`arr230=arr228+arr130×arr128`特例证明Normal就是位移轴。基线、完整37项对比、失败数据及恢复结果见[本轮实验记录](experiments/20260830-contact-height-advance.md)。既有评分系统、原始失败样本和中文提交历史保留，用户proposal/project修改不纳入撤销。
 
 `811dacb`撤销专属Diagnostics，`4be1f51`恢复Runtime。130545恢复Replay的2086行、1140列中1116列与085503逐值完全相同，24列只为身份；50195行geometry只有4身份列变化。全部原始物理数值与状态恢复，37个Target规则/计数及七维分数回到基线，总分60.4。1044条Proof帧及原基线输入/Body身份独立只读对账一致；恢复已验证，不等于原有IK质量问题已经完成。
+
+## 决策补充：Committed Weighted Goal Sole参考
+
+141256证明位置basis消除了稳定Swing的N×debt轴外摆动，但单独候选仍新增Right404–412接触穿透与下陷，不作为无回归版本交付。新的独立实验仅接通已有根Bank目标参考，不改位置basis、Target Height、Residual推进、速率、权重或查询。
+
+现行`SealFrame`会清除Foot Bank的`HasFrame`开放标志；旧读取门却要求该标记为true，导致旧包的`VisibleOutputTransferred`始终为0。关闭事务与已有输出必须分开：删除三个松散的HasVisible/左右Visible字段，保存每脚带Frame、Completion、Side、WorldSole和Goal权重的不可变Weighted Goal Sole参考；读取时核对Committed Bank与Resolved Pair身份，不保留开放标志来绕过事务。
+
+参考的唯一生产者仍是Foot Module的最终Goal编码后阶段，它按已有Goal权重和动画Foot Pose推算Sole，不读取最终骨骼，也不是新Physical反馈路径。旧`Visible`名称改为`WeightedGoalSole`；连续性参考点区分于实际上一物理输出。零权重时参考可能与Physical Sole相差数厘米甚至更多，该差异必须保留在原始对账中，不能以非零Goal样本的微米级残差推断二者恒等。
+
+正式Capture采用合法上一参考时，以完整XYZ捕获Residual、同帧衰减，并以同一dual重基scalar；稳定帧保持原scalar，不增加新的历史或滤波。这个实验首次激活既有但不可达的重基分支，不是恢复曾经动态验证过的路径；必须同时对照141256和130545，尤其覆盖Right404–412及Left349→350、853→854的零权重后Capture。
 
 ## 已实施切片对账
 

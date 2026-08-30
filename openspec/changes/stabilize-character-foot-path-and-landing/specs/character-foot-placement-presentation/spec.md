@@ -170,7 +170,7 @@ Swing MUST先以`Runtime Ground Envelope + Formal Foot Height`生成Raw Target H
 
 State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一个同时携带Position、SupportNormal及分型来源lineage的正式Target；Swing Ground的Position可以来自Ground Path/Foot Height而Normal来自本帧Current Support，但Target MUST分别发布Position Source与Normal Source，不得伪装成同一Observation。两路来源 MUST属于同Frame、Side与World Revision。Support Normal MUST在有限检查后归一化为同Frame唯一Requested Support Direction。当前Final Component Pose已经完成Pose Graph动画混合；没有Pose Graph明确发布的同一StandardBlend source/target Foot骨骼实际贡献与双Support lineage时，Runtime MUST不再执行第二次Current/Target状态混合。Runtime在Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response边沿、Target Point Revision或Target Height Force Refresh时，以持久上一实际Response Output Point为基准捕获完整WorldResidual。Approach Progress变化 MUST不Capture。稳定且Target Height delta为0的Locked帧 MUST发布`TargetHeightUpdateReason=None`。`DesiredOutputPoint` MUST等于`SelectedWorldTarget + ResidualAfterDecay`。
 
-Correction Response Stage MUST在Swing、UnlockedSupport、Landing、Locked与Releasing每个合法可见帧恰好执行一次。每脚 MUST分别保存Applied Direction History与标量Previous Response。Requested Direction MUST来自本帧归一化Selected Support Direction；无效、缺失或lineage不匹配时当前Foot结果 MUST typed unavailable，不得回退Component Up、Animated Up、上一法线或默认Up。首次合法输入 MUST直接采用Requested Direction；后续 MUST计算Previous Applied到Requested的夹角，并以Profile显式`SupportDirectionMaximumChangeDegrees`让本次Applied Direction最多朝Requested转该角度。Runtime MUST发布Requested、Previous、Applied、是否受限、角上限和实际变化角。Direction变化 MUST保留上一Correction scalar，严禁把上一世界输出相对当前Original Sole投影到新Direction；旧`BasisTransferred`及其投影事实 MUST删除。随后 MUST计算`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`；首次合法输入以及Reset、Retarget、Source/Profile/World lineage失效后的首次合法输入 MUST同步标量，普通动画目标变化、同Event Prediction换点、Contact Verification、Action Pose Contribution、攻击、Lock Response换代、Direction变化、Release完成和Same-Event Reentry MUST继续上一标量History。只有正式Position Target Capture且上一根Bank存在最终可见Sole时，完整Vector Residual与标量Response MAY以该Post Constraint/Post Reach Sole发布一次`VisibleOutputTransferred`。已初始化时 MUST按Desired Response相对Previous Response的增减方向选择Profile显式`CorrectionResponseIncreaseSpeed`或`CorrectionResponseDecreaseSpeed`，把单帧标量变化限制在所选速率乘Presentation Delta内，并以`ResponseOutputPoint = DesiredOutputPoint + PositionResponseWorldAxis × (CurrentResponse - DesiredResponse)`生成唯一Response Output。Effective Correction MUST等于`ResponseOutputPoint - OriginalSole`，同一Applied Direction MUST生成Foot Rotation。
+Correction Response Stage MUST在Swing、UnlockedSupport、Landing、Locked与Releasing每个合法可见帧恰好执行一次。每脚 MUST分别保存Applied Direction History与标量Previous Response。Requested Direction MUST来自本帧归一化Selected Support Direction；无效、缺失或lineage不匹配时当前Foot结果 MUST typed unavailable，不得回退Component Up、Animated Up、上一法线或默认Up。首次合法输入 MUST直接采用Requested Direction；后续 MUST计算Previous Applied到Requested的夹角，并以Profile显式`SupportDirectionMaximumChangeDegrees`让本次Applied Direction最多朝Requested转该角度。Runtime MUST发布Requested、Previous、Applied、是否受限、角上限和实际变化角。Direction变化 MUST保留上一Correction scalar，严禁把上一世界输出相对当前Original Sole投影到新Direction；旧`BasisTransferred`及其投影事实 MUST删除。随后 MUST计算`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`；首次合法输入以及Reset、Retarget、Source/Profile/World lineage失效后的首次合法输入 MUST同步标量，普通动画目标变化、同Event Prediction换点、Contact Verification、Action Pose Contribution、攻击、Lock Response换代、Direction变化、Release完成和Same-Event Reentry MUST继续上一标量History。只有正式Position Target Capture且上一Committed根Bank存在有效Weighted Goal Sole参考时，完整Vector Residual与标量Response MUST以该Post Constraint/Post Reach加权Goal参考发布一次`WeightedGoalSoleTransferred`；该参考不是最终物理Sole，零Goal权重不得据此推断最终骨骼位置。已初始化时 MUST按Desired Response相对Previous Response的增减方向选择Profile显式`CorrectionResponseIncreaseSpeed`或`CorrectionResponseDecreaseSpeed`，把单帧标量变化限制在所选速率乘Presentation Delta内，并以`ResponseOutputPoint = DesiredOutputPoint + PositionResponseWorldAxis × (CurrentResponse - DesiredResponse)`生成唯一Response Output。Effective Correction MUST等于`ResponseOutputPoint - OriginalSole`，同一Applied Direction MUST生成Foot Rotation。
 
 Target Height、Plant World Residual与Correction Response MUST分别发布Owner、Before、Target、Applied Delta、After和Reset Reason，不得合并、互相覆盖或由同一无类型Reset清空。旧单档`MaximumVerticalCorrectionSpeed`、稳定帧逐帧上一世界输出重表达、无条件全Plant限速、“World Residual取代Correction历史”的Disposition与“上一Animated Sole + Previous Correction”伪基准 MUST保持删除；173条所述正式换代一次性重基不属于旧链。Swing/UnlockedSupport MUST继续以Accepted Ground Envelope作为硬下界，Release MUST继续使用统一Residual。`AcquireByWeight`进入帧不得对Contact Anchor立即`RaiseToMinimum`，正式Weight达到1时也不得清除尚未收敛的Residual或Correction Response。Residual大于`SwingResidualTolerance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Releasing完成 MUST只读取独立`ReleaseCompletionTolerance`。Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。既有Foot Goal/Position Weight MUST只在Response Output之后与动画基线混合一次；FBBIK与Final Pose之后 MUST没有常驻Foot低通。
 
@@ -311,7 +311,7 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 
 Foot Placement MUST从CaptureAnimatedPose和最终Goal编码共同使用的实际PoseRoot，在同一表现事务中捕获不可变`CharacterFootPositionResponseBasis`。设L为owner到world的线性部分，G为world到owner，s=`|L*LocalY|`；WorldAxis MUST为`L*LocalY/s`，HeightProjection MUST为`rowY(G).xyz*s`。矩阵 MUST有限且可逆，s MUST有限且为正，WorldAxis MUST为单位向量，`dot(WorldAxis,HeightProjection)` MUST在既有几何数值容差内等于1。缺失或非法basis MUST typed拒绝，不得回退Body Up、Support Normal、GroundPath Up或默认Up；HeightProjection MUST不归一化。
 
-位置标量 MUST以世界米为单位，以本帧Original Sole B和完整Desired Output D计算`q=dot(D-B,HeightProjection)`。既有Correction Response History MUST继续按正式增减速率推进c，唯一Response Output MUST为`D+WorldAxis*(c-q)`。正式Position Target Capture的可见输出scalar重基 MUST同样用HeightProjection，完整XYZ WorldResidual捕获、同帧Advance与完成容差 MUST保持独立且不得被标量重基替代。Support Direction角历史 MUST只服务脚掌朝向；两档位置速率、Target Height Component Up、完整Target选择、Anchor、Contact与Lock权重 MUST不得借本次坐标迁移混成新策略。
+位置标量 MUST以世界米为单位，以本帧Original Sole B和完整Desired Output D计算`q=dot(D-B,HeightProjection)`。既有Correction Response History MUST继续按正式增减速率推进c，唯一Response Output MUST为`D+WorldAxis*(c-q)`。正式Position Target Capture的Weighted Goal Sole scalar重基 MUST同样用HeightProjection，完整XYZ WorldResidual捕获、同帧Advance与完成容差 MUST保持独立且不得被标量重基替代。Support Direction角历史 MUST只服务脚掌朝向；两档位置速率、Target Height Component Up、完整Target选择、Anchor、Contact与Lock权重 MUST不得借本次坐标迁移混成新策略。
 
 Lifecycle MUST继续以实际Position/Rotation Weight反解唯一Ankle Goal，不能把Sole Center直接改名为Ankle pivot。Diagnostics MUST分列PositionResponseBasisAvailable、WorldAxis、未归一化HeightProjection、WorldUnitsPerPoseUnit与Requested/Previous/Applied Support Direction，并分别重算坐标投影、标量响应、可见重基和最终输出。旧CorrectionResponseDirection字段及角配置旧名 MUST删除，不保留兼容列；角配置唯一名为`SupportDirectionMaximumChangeDegrees`。
 
@@ -325,7 +325,7 @@ Lifecycle MUST继续以实际Position/Rotation Weight反解唯一Ankle Goal，�
 
 #### Scenario: 正式Contact可见输出转移
 
-- **WHEN** 正式Position Target Capture使用上一可见世界Sole作为连续性参考
+- **WHEN** 正式Position Target Capture使用上一已提交的Weighted Goal Sole作为连续性参考
 - **THEN** 完整WorldResidual MUST保留旧XYZ捕获方式，scalar重基 MUST使用同一HeightProjection
 - **AND** MUST不移除Residual.Y、不用相对新动画Correction替代上一世界输出，也不自动使Rotation满权
 
@@ -334,6 +334,32 @@ Lifecycle MUST继续以实际Position/Rotation Weight反解唯一Ankle Goal，�
 - **WHEN** PoseRoot矩阵非有限、不可逆、尺度退化或WorldAxis与HeightProjection不满足dual关系
 - **THEN** 当前Foot准备 MUST以typed合同错误拒绝
 - **AND** MUST不发布默认basis成功、使用上一basis或沿Support Normal继续输出
+
+### Requirement: Committed Goal脚底参考必须具有独立有效性
+
+Foot根Bank MUST在最终Foot Goal完成Constraint、Reach与Position/Rotation Weight编码后，按同一动画Foot Pose及PoseRoot计算每脚唯一Weighted Goal Sole参考。该参考 MUST携带Available、Frame、Completion、Side、世界Sole点与两种Goal权重；Frame、Completion必须非零，几何和权重必须有限，权重必须在[0,1]。它 MUST不是最终Solver或Physical Writer的骨骼测量，零权重时的动画基准点 MUST不被标成最终物理脚底。
+
+`HasFrame` MUST只表示Pending事务开放；SealFrame MUST继续关闭该标记。下一帧 MUST从已提交参考本身和Committed Bank/Resolved Pair的Frame、Completion、Rig、Side一致性确认可读，不得用`HasFrame=true`判断已有输出。没有历史时 MUST发布typed unavailable；宣称有参考但身份或有限值错误时 MUST拒绝，不以内部历史或动画点掩盖错误。
+
+正式Plant Target Capture且上一参考合法时，唯一Interpolation MUST以完整Weighted Goal Sole点捕获XYZ Residual，并用同一位置basis的dual对该点执行一次scalar重基；Residual本帧仍 MUST恰好Advance一次。稳定非Capture帧 MUST不重基，不能借修复读取门恢复逐帧世界输出重表达。上一参考、当前参考、实际采用标志及连续性参考点 MUST进入现有诊断链，原真实Physical位移、穿透与间隙公式 MUST不扣除参考差。
+
+#### Scenario: 提交关闭事务后继续读取上一Goal参考
+
+- **WHEN** 上一Foot事务已成功Seal且保存了两脚Weighted Goal Sole参考
+- **THEN** 下一帧 MUST能读取其Frame、Completion与点，即使上一Bank的HasFrame已经为false
+- **AND** 正式Capture MUST采用该参考，非Capture帧 MUST继续既有scalar历史
+
+#### Scenario: 零Goal权重时区分参考和真实脚底
+
+- **WHEN** 上一Goal两种权重为零且FBBIK或Pelvis使最终物理脚底不同于动画基准
+- **THEN** Weighted Goal Sole MUST如实保存其Goal推算值和零权重
+- **AND** Diagnostics MUST独立保留实际Physical Sole，不将两者相等作为默认值或通过条件
+
+#### Scenario: 丢弃未提交的参考
+
+- **WHEN** 当前Pending事务失败或Discard
+- **THEN** 当前Goal参考 MUST随Pending清除，上一Committed参考 MUST保持不变
+- **AND** Reset或没有已提交Foot结果时 MUST没有可用参考，不从当前动画或另一Bank补历史
 
 ### Requirement: Current Support必须由Foot/Toe脚掌查询解析唯一位置与法线
 

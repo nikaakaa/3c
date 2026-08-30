@@ -425,7 +425,7 @@ Diagnostics MUST保留当前/上一域、移交、完整Plant Capture/Decay/Comp
 
 真实SameEvent Rising恢复Landing时，若来源为本政策卸载，MUST清卸载标记并保护该Event不再次组合卸载。无Falling而恢复Locked请求时，只有原CanAcquire与LockDistance合法才可发布UnloadingLockRestored恢复Landing/Retain并设置同Event保护，不冒用Rising。CompletedLockWeight MUST不因此清除。新Event/Create、Anchor Release与整体Reset MUST清相应卸载历史，不能阻挡新EventVerification。
 
-Diagnostics MUST发布卸载标记与重入保护的前后Event identity，验证组合、历史carry、Anchor、请求边沿和完整Release移交。原质量规则 MUST保持，同时对固定对照Contact帧测量实际脚输出，不能因提前Releasing缩小eligible而声明通过。
+Diagnostics MUST发布卸载标记与重入保护的前后Event identity、当前实际LockDistance/SlideDistance及两个Occurrence的NormalizedTime，验证组合、历史carry、Anchor、请求边沿和完整Release移交；不得硬编码距离或用ordinal猜时间。原质量规则 MUST保持，同时对固定对照Contact帧测量实际脚输出，不能因提前Releasing缩小eligible而声明通过。
 
 #### Scenario: 正常满锁后的抬脚滑动准备
 

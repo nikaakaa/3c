@@ -33,3 +33,5 @@ Runtime发布两项卸载历史的Before/After共4个标量；现有InputFormal�
 固定320–323、464–467及全包：骨盆目标/自由弹簧/两次硬夹紧/最终物理输出、Foot目标与最终Heel/Toe、Release交接、膝盖外溢。保留193957 Landing/Swing收益；不只比较总分，也不把Source抬脚组合准入成立当作视觉通过。同Event重入、无Falling恢复Locked等本包无动态覆盖的分支单列。
 
 Runtime候选已实现并通过规定flags构建（27个既有依赖/项目警告、0错误，随后shutdown成功）。公开字段为Previous/Current UnloadingEventIdentity和Previous/Current UnloadingReentryProtectedEventIdentity，共4标量；事实直接来自同一ContactTransition Context。正常Requested/Edge/计时/CompletedWeight及所有Anchor几何不改。未加载或采样，尚无行为通过结论。
+
+诊断闭合追加4个纯事实：本帧实际LockDistance、SlideDistance、CurrentContact.NormalizedTime、NextLanding.NormalizedTime。前两项来自Settings，后两项来自同一FormalFootMotion，适用性使用现有Current/Next Available事实；不得由ordinal猜时间或硬编码Corin距离。连同4项历史共8个新标量，不改变运行行为或配置。

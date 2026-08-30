@@ -1,0 +1,31 @@
+# 接触位置仅由完整世界残差接管实验
+
+## 用户范围与对照
+
+用户要求先处理贴出的历史回溯：Contact目标已在地面，但世界残差保留旧高位，随后相对动画scalar又把输出抬高。只修改这条位置历史链，不改Swing目标、脚掌倾斜、Rotation Weight、膝盖、查询、Anchor、作者曲线或数值配置。
+
+历史效果参照为`23578bb61d823939368df0940d7efb75b03f0bd6`（2026-08-29 03:53:49 +0800）之后的`20260829-035426-702-d8d0a4fd8b48434db82470bfd5308625`采样；提交时间接近不是独立的产物身份证明，仍须核对Program/Projection及共同原始输入。155326恢复包只作近期同输入控制，不称质量合格；173423为未通过的Sliding实验前驱，不把它的收益当作已验收基础。
+
+## 单变量
+
+VerifiedSupport的VerifiedAnchor、LockedFullAnchor和LockedSliding统一采用`ContactWorldResidual`域。位置只由已有PlantWorldResidual保存完整世界误差：正式换代捕获`R=O_previous-SelectedWorldTarget`，本帧按原HalfLife推进一次并按原完整向量完成容差清零，输出`O=SelectedWorldTarget+R_after`。不再把这个D串联到动画相对scalar，不再保留173423的另一份SlidingWorldError。
+
+保留原Target Height政策、HalfLife、Capture reason、Completion、Direction角历史与最终Goal权重。Contact不执行scalar，scalar事实为分域未执行；输出与Desired相同不是伪造scalar已到位。Swing及Release仍使用AnimationRelativeScalar。Contact正常退出Release时，原Release入口先以完整上一O捕获并推进，再令scalar同步本帧q，退出帧不加第二个响应步长。硬失权、Source/Profile/World失效仍按原Reset处理。
+
+## 取舍与失败边界
+
+这一小步直接去除1031样例中D到O的额外约93毫米抬高，不承诺所有踏空立刻消失。478–480若只有Plant残差，原尾差仍可能保留。959的旧scalar曾向下抵消Plant残差，取消它可能使离面增加；必须真实记录，不把所有旧scalar贡献都称为坏误差。保留完整世界捕获，不扣FormalFootHeight、不使用当前动画基准重建旧世界输出、不清Y、不硬贴地、不恢复WeightedGoal转移实验。
+
+173423已测得Sliding中心回到平面时倾斜脚尖产生新的负距离；用户将旋转几何列为低优先级，本轮保持旋转不动，但穿透与Release大步仍原样计入结果，不改评分掩盖。
+
+## 规格对账
+
+本切片替换active spec的Sliding双世界历史要求。其它scalar速度/位置轴公式只适用于AnimationRelativeScalar，Contact域位置Owner为PlantWorldResidual；Direction仍同帧执行。current spec要求唯一Interpolation/Resolved/Goal/Writer，没有要求Contact必须串联两份位置历史，本切片不增加Owner。旧失败位置basis/WeightedGoal要求仍属未实施任务，不能因本切片误称恢复。
+
+## 证据要求
+
+使用原Record `43357ff3cd384e5cba75d2c31175b116`，核对完整输入及表现时钟，再比较1031、476–484、959及全部Contact间隙、穿透、真实位移、Release、Pelvis、Reach和原37项规则。历史旧schema只比较语义一致的原始值，不补列、不伪造新facts、不把不同规则总分作改善证据。
+
+Runtime与唯一公开DTO已经完成：Contact位置不再消费scalar，原Plant Capture/Decay不变，Support Direction保持原10度历史，退出Release按实际DomainTransferred同步q。删除Sliding误差状态、12标量出口及Tangential枚举；只保留三个分域事实。Runtime规定flags构建27个既有依赖/项目警告、0错误，build-server shutdown完成；Editor迁移和Replay尚未完成，不声明效果。
+
+03:54包的2086行按Frame/Side与155326一一对应，OriginalSole XYZ逐值完全相同；1031右脚原状态UnlockedSupport，物理Heel/Toe中心距1.44平面32.547毫米。旧samples SHA256为`A5EB967B9FEDEB5953DEDB2CB98814326A275CFDB1E57C9BD137E2617D655A8E`。旧包ProjectionRevision=`808cf24fefe613e5e9ef8944cb3e671720efa52b7d64c0b8bef0331cb72489df`；完整提交产物对应仍单独核对，不用采样时间代替身份。

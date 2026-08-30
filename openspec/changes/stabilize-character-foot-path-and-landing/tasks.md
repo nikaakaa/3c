@@ -107,6 +107,8 @@
 - [x] 6.37 在唯一Correction Response内实现LockedSliding完整世界误差域，闭合进入、正常推进、退出到原Plant/Release残差与Reset，不改变五态/目标/旋转/查询/权重
 - [ ] 6.38 发布分域响应的唯一Runtime事实并迁移Sampler/Analyzer/Publisher，严格区分未执行scalar与WorldError推进，保留原质量规则
 - [ ] 6.39 用原Record验证Sliding再离地、完整交接、水平轨迹、Heel/Toe穿透、Release、Pelvis与Reach，独立记录保留或拒绝及恢复证据
+- [x] 6.40 将VerifiedSupport统一为ContactWorldResidual单一位置历史，删除Sliding第二世界误差与Contact动画相对scalar消费，保留原XYZ Capture/Decay和退出Release的完整移交
+- [ ] 6.41 迁移唯一Diagnostics到ContactWorldResidual分域合同，删除废弃Sliding误差字段，保持原37项质量公式并用原Record记录与03:54历史及近期控制的可比结果
 
 ## 7. 单独接入Support与Pelvis
 

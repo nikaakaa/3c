@@ -105,7 +105,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float correctionResponse = state.CorrectionResponse;
             CharacterFootCorrectionResponseDomain responseDomain =
                 state.CorrectionResponseDomain;
-            Vector3 slidingWorldError = state.SlidingResponseWorldError;
             CharacterFootCorrectionResponseFact correctionResponseFact =
                 state.CorrectionResponseFact;
             bool hasPreviousResponseOutputPoint =
@@ -126,7 +125,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.HasCorrectionResponse = hasCorrectionResponse;
             state.CorrectionResponse = correctionResponse;
             state.CorrectionResponseDomain = responseDomain;
-            state.SlidingResponseWorldError = slidingWorldError;
             state.CorrectionResponseFact = correctionResponseFact;
             state.HasPreviousResponseOutputPoint =
                 hasPreviousResponseOutputPoint;
@@ -144,8 +142,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             if (!target.PlantTargetAvailable ||
+                !target.PlantTargetVerified ||
                 target.PlantTargetEventIdentity == 0 ||
-                target.PlantTargetKind == CharacterFootPlantTargetKind.None ||
+                (target.PlantTargetKind != CharacterFootPlantTargetKind.VerifiedAnchor &&
+                 target.PlantTargetKind != CharacterFootPlantTargetKind.LockedFullAnchor &&
+                 target.PlantTargetKind != CharacterFootPlantTargetKind.LockedSliding) ||
                 !CharacterFootConstraintMath.Finite(target.PlantTargetPoint) ||
                 !target.SupportTargetAvailable ||
                 !target.SupportTarget.IsValid)
@@ -362,18 +363,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 residualBeforeCapture = state.PlantWorldResidual;
             bool captureTransition = captureReason !=
                                      CharacterFootPlantResidualCaptureReason.None;
-            bool slidingWorldResponse = target.PlantTargetKind ==
-                CharacterFootPlantTargetKind.LockedSliding;
-            bool scalarVisibleTransfer = captureTransition &&
-                frame.PreviousVisibleOutputAvailable &&
-                !slidingWorldResponse &&
-                state.CorrectionResponseDomain !=
-                    CharacterFootCorrectionResponseDomain.SlidingWorldError;
-            Vector3 continuityOutputBefore = scalarVisibleTransfer
-                ? frame.PreviousVisibleOutputPoint
-                : currentOutputBefore;
-            if (scalarVisibleTransfer)
-                effectiveCorrectionBefore = continuityOutputBefore - originalSole;
+            Vector3 continuityOutputBefore = currentOutputBefore;
             if (captureTransition)
             {
                 state.PlantWorldResidual =
@@ -421,12 +411,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref state,
                 desiredOutputPoint,
                 supportNormal,
-                slidingWorldResponse
-                    ? CharacterFootCorrectionResponseDomain.SlidingWorldError
-                    : CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
+                CharacterFootCorrectionResponseDomain.ContactWorldResidual,
                 captureTransition,
-                scalarVisibleTransfer,
-                frame.PreviousVisibleOutputPoint,
+                false,
+                default,
                 in frame,
                 out CharacterFootCorrectionResponseFact
                     correctionResponseFact);
@@ -450,19 +438,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 verticalContinuityOwners |=
                     CharacterFootVerticalContinuityOwner.PlantWorldResidual;
-            }
-            if (correctionResponseFact.InitializedThisFrame ||
-                correctionResponseFact.WorldErrorAdvanced ||
-                correctionResponseFact.WorldErrorAfterAdvance != Vector3.zero ||
-                !Mathf.Approximately(
-                    correctionResponseFact.CurrentResponse,
-                    correctionResponseFact.DesiredResponse) ||
-                !Mathf.Approximately(
-                    correctionResponseFact.AppliedDelta,
-                    0f))
-            {
-                verticalContinuityOwners |= CharacterFootVerticalContinuityOwner
-                    .CorrectionResponseHistory;
             }
             state.HasPlantTarget = true;
             state.PlantTargetEventIdentity = target.PlantTargetEventIdentity;
@@ -938,7 +913,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out CharacterFootCorrectionResponseFact fact)
         {
             if ((domain != CharacterFootCorrectionResponseDomain.AnimationRelativeScalar &&
-                 domain != CharacterFootCorrectionResponseDomain.SlidingWorldError) ||
+                 domain != CharacterFootCorrectionResponseDomain.ContactWorldResidual) ||
                 !CharacterFootConstraintMath.Finite(desiredOutputPoint) ||
                 !CharacterFootConstraintMath.Finite(responseDirection) ||
                 responseDirection.sqrMagnitude <=
@@ -975,14 +950,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     "Foot Correction Response history has no coordinate domain.");
             }
             bool domainTransferred = initializedBefore && previousDomain != domain;
-            bool slidingWorldResponse = domain ==
-                CharacterFootCorrectionResponseDomain.SlidingWorldError;
-            bool exitingSliding = domainTransferred && !slidingWorldResponse;
-            if (exitingSliding && (!targetContinuityCaptured ||
+            bool contactWorldResidual = domain ==
+                CharacterFootCorrectionResponseDomain.ContactWorldResidual;
+            bool exitingContact = domainTransferred && !contactWorldResidual;
+            if (exitingContact && (!targetContinuityCaptured ||
                                    !state.HasPreviousResponseOutputPoint))
             {
                 throw new System.InvalidOperationException(
-                    "Sliding response exit has no complete target residual capture.");
+                    "Contact response exit has no complete target residual capture.");
             }
             CharacterFootCorrectionResponseInitializationReason reason =
                 CharacterFootCorrectionResponseInitializationReason.None;
@@ -1018,14 +993,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new System.InvalidOperationException(
                     "Foot Correction Response target transfer has no committed output.");
             }
-            float responseBeforeRebase = slidingWorldResponse || exitingSliding
+            float responseBeforeRebase = contactWorldResidual || exitingContact
                 ? 0f
                 : initializedBefore
                     ? state.CorrectionResponse
                     : desiredResponse;
-            float previousResponse = slidingWorldResponse
+            float previousResponse = contactWorldResidual
                 ? 0f
-                : exitingSliding
+                : exitingContact
                     ? desiredResponse
                     : visibleOutputTransferAvailable
                         ? Vector3.Dot(
@@ -1037,13 +1012,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootCorrectionResponseDeltaDirection.None;
             float selectedSpeed = 0f;
             float appliedDelta = 0f;
-            Vector3 worldErrorBeforeTransfer = state.SlidingResponseWorldError;
-            Vector3 worldErrorBeforeAdvance = default;
-            Vector3 worldErrorAfterAdvance = default;
-            bool worldErrorAdvanced = false;
-            float worldErrorMaximumStep = 0f;
-            CharacterFootSlidingResponseCaptureReason worldErrorCaptureReason =
-                CharacterFootSlidingResponseCaptureReason.None;
             if (initializedThisFrame)
             {
                 reason = state.PendingCorrectionResponseInitializationReason !=
@@ -1052,73 +1020,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CharacterFootCorrectionResponseInitializationReason
                         .FirstLegalInput;
             }
-            if (slidingWorldResponse)
+            if (contactWorldResidual)
             {
-                if (initializedThisFrame)
-                {
-                    worldErrorCaptureReason =
-                        CharacterFootSlidingResponseCaptureReason.Initialized;
-                }
-                else
-                {
-                    if (domainTransferred)
-                        worldErrorCaptureReason |=
-                            CharacterFootSlidingResponseCaptureReason.DomainEntered;
-                    if (targetContinuityCaptured)
-                        worldErrorCaptureReason |=
-                            CharacterFootSlidingResponseCaptureReason.TargetCaptured;
-                    if (worldErrorCaptureReason !=
-                        CharacterFootSlidingResponseCaptureReason.None)
-                    {
-                        if (!state.HasPreviousResponseOutputPoint)
-                            throw new System.InvalidOperationException(
-                                "Sliding response capture has no previous world output.");
-                        worldErrorBeforeAdvance =
-                            state.PreviousResponseOutputPoint - desiredOutputPoint;
-                    }
-                    else
-                    {
-                        worldErrorBeforeAdvance = worldErrorBeforeTransfer;
-                    }
-                }
-                worldErrorAfterAdvance = worldErrorBeforeAdvance;
-                float distance = worldErrorBeforeAdvance.magnitude;
-                if (!CharacterFootConstraintMath.Finite(worldErrorBeforeAdvance) ||
-                    !float.IsFinite(distance))
-                {
-                    throw new System.InvalidOperationException(
-                        "Sliding response world error is invalid.");
-                }
-                if (distance > 0f)
-                {
-                    float upDisplacement = Vector3.Dot(
-                        -worldErrorBeforeAdvance,
-                        frame.ComponentUp.normalized);
-                    deltaDirection = upDisplacement > 0f
-                        ? CharacterFootCorrectionResponseDeltaDirection.Increase
-                        : upDisplacement < 0f
-                            ? CharacterFootCorrectionResponseDeltaDirection.Decrease
-                            : CharacterFootCorrectionResponseDeltaDirection.Tangential;
-                    selectedSpeed = upDisplacement > 0f
-                        ? frame.Settings.CorrectionResponseIncreaseSpeed
-                        : upDisplacement < 0f
-                            ? frame.Settings.CorrectionResponseDecreaseSpeed
-                            : Mathf.Min(
-                                frame.Settings.CorrectionResponseIncreaseSpeed,
-                                frame.Settings.CorrectionResponseDecreaseSpeed);
-                    worldErrorMaximumStep = selectedSpeed * frame.DeltaSeconds;
-                    if (frame.DeltaSeconds > 0f)
-                    {
-                        worldErrorAfterAdvance = Vector3.MoveTowards(
-                            worldErrorBeforeAdvance,
-                            Vector3.zero,
-                            worldErrorMaximumStep);
-                        worldErrorAdvanced = true;
-                    }
-                }
                 desiredResponse = 0f;
             }
-            else if (!initializedThisFrame && !exitingSliding)
+            else if (!initializedThisFrame && !exitingContact)
             {
                 float delta = desiredResponse - previousResponse;
                 if (delta != 0f)
@@ -1137,8 +1043,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     currentResponse = previousResponse + appliedDelta;
                 }
             }
-            Vector3 responseOutputPoint = slidingWorldResponse
-                ? desiredOutputPoint + worldErrorAfterAdvance
+            Vector3 responseOutputPoint = contactWorldResidual
+                ? desiredOutputPoint
                 : desiredOutputPoint + direction *
                   (currentResponse - desiredResponse);
             fact = new CharacterFootCorrectionResponseFact(
@@ -1166,17 +1072,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 appliedDelta,
                 domain,
                 previousDomain,
-                domainTransferred,
-                worldErrorCaptureReason,
-                worldErrorBeforeTransfer,
-                worldErrorBeforeAdvance,
-                worldErrorAfterAdvance,
-                worldErrorAdvanced,
-                worldErrorMaximumStep);
+                domainTransferred);
             state.HasCorrectionResponse = true;
             state.CorrectionResponse = currentResponse;
             state.CorrectionResponseDomain = domain;
-            state.SlidingResponseWorldError = worldErrorAfterAdvance;
             state.CorrectionResponseFact = fact;
             state.HasPreviousResponseOutputPoint = true;
             state.PreviousResponseOutputPoint = responseOutputPoint;
@@ -1256,7 +1155,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.HasCorrectionResponse = false;
             state.CorrectionResponse = 0f;
             state.CorrectionResponseDomain = CharacterFootCorrectionResponseDomain.None;
-            state.SlidingResponseWorldError = default;
             state.CorrectionResponseFact = default;
             state.HasPreviousResponseOutputPoint = false;
             state.PreviousResponseOutputPoint = default;

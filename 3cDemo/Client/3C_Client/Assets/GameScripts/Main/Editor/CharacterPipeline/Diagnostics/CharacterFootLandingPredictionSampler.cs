@@ -257,10 +257,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantTargetHeightBefore,FootMotionPlantTargetHeightTarget,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightAfter,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetHeightUpdateReason,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
             "FootMotionPlantPreviousSelectedWorldTargetX,FootMotionPlantPreviousSelectedWorldTargetY,FootMotionPlantPreviousSelectedWorldTargetZ," +
             "FootMotionPlantSelectedWorldTargetX,FootMotionPlantSelectedWorldTargetY,FootMotionPlantSelectedWorldTargetZ," +
-            "FootMotionPreviousWeightedGoalSoleAvailable,FootMotionPreviousWeightedGoalSoleFrameSequence,FootMotionPreviousWeightedGoalSoleCompletionIdentity,FootMotionPreviousWeightedGoalSoleSide,FootMotionPreviousWeightedGoalSoleWorldSoleX,FootMotionPreviousWeightedGoalSoleWorldSoleY," +
-            "FootMotionPreviousWeightedGoalSoleWorldSoleZ,FootMotionPreviousWeightedGoalSolePositionWeight,FootMotionPreviousWeightedGoalSoleRotationWeight," +
-            "FootMotionCurrentWeightedGoalSoleAvailable,FootMotionCurrentWeightedGoalSoleFrameSequence,FootMotionCurrentWeightedGoalSoleCompletionIdentity,FootMotionCurrentWeightedGoalSoleSide,FootMotionCurrentWeightedGoalSoleWorldSoleX,FootMotionCurrentWeightedGoalSoleWorldSoleY,FootMotionCurrentWeightedGoalSoleWorldSoleZ,FootMotionCurrentWeightedGoalSolePositionWeight,FootMotionCurrentWeightedGoalSoleRotationWeight," +
-            "FootMotionContinuityReferenceAvailable,FootMotionContinuityReferencePointX,FootMotionContinuityReferencePointY,FootMotionContinuityReferencePointZ," +
+            "FootMotionPreviousResponseOutputAvailable,FootMotionPreviousResponseOutputPointX,FootMotionPreviousResponseOutputPointY,FootMotionPreviousResponseOutputPointZ," +
             "FootMotionDesiredOutputPointX,FootMotionDesiredOutputPointY,FootMotionDesiredOutputPointZ," +
             "FootMotionResponseOutputPointX,FootMotionResponseOutputPointY,FootMotionResponseOutputPointZ,FootMotionPlantResidualCaptureReason," +
             "FootMotionPlantWorldResidualBeforeCaptureX,FootMotionPlantWorldResidualBeforeCaptureY,FootMotionPlantWorldResidualBeforeCaptureZ," +
@@ -269,7 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantWorldResidualAfterDecayX,FootMotionPlantWorldResidualAfterDecayY,FootMotionPlantWorldResidualAfterDecayZ," +
             "FootMotionPlantWorldResidualCompletionTolerance,FootMotionPlantWorldResidualClearedAtCompletionTolerance," +
             "FootMotionCorrectionResponseEvaluated,FootMotionCorrectionResponseInitializedBefore,FootMotionCorrectionResponseInitializedThisFrame,FootMotionCorrectionResponseInitializationReason," +
-            "FootMotionCorrectionResponseDesired,FootMotionSupportDirectionRequestedX,FootMotionSupportDirectionRequestedY,FootMotionSupportDirectionRequestedZ,FootMotionSupportDirectionPreviousX,FootMotionSupportDirectionPreviousY,FootMotionSupportDirectionPreviousZ,FootMotionSupportDirectionLimited,FootMotionSupportDirectionMaximumChangeDegrees,FootMotionSupportDirectionAppliedChangeDegrees,FootMotionCorrectionResponseWeightedGoalSoleTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionSupportDirectionAppliedX,FootMotionSupportDirectionAppliedY,FootMotionSupportDirectionAppliedZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
+            "FootMotionCorrectionResponseDesired,FootMotionSupportDirectionRequestedX,FootMotionSupportDirectionRequestedY,FootMotionSupportDirectionRequestedZ,FootMotionSupportDirectionPreviousX,FootMotionSupportDirectionPreviousY,FootMotionSupportDirectionPreviousZ,FootMotionSupportDirectionLimited,FootMotionSupportDirectionMaximumChangeDegrees,FootMotionSupportDirectionAppliedChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionSupportDirectionAppliedX,FootMotionSupportDirectionAppliedY,FootMotionSupportDirectionAppliedZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
             "FootMotionPlantVerticalContinuityOwners," +
             "FootMotionPlantEffectiveCorrectionBeforeX,FootMotionPlantEffectiveCorrectionBeforeY,FootMotionPlantEffectiveCorrectionBeforeZ," +
             "FootMotionPlantEffectiveCorrectionAfterX,FootMotionPlantEffectiveCorrectionAfterY,FootMotionPlantEffectiveCorrectionAfterZ," +
@@ -2285,10 +2282,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantTargetVerticalClamped);
             Add(row, motion.PlantPreviousSelectedWorldTarget);
             Add(row, motion.PlantSelectedWorldTarget);
-            AddWeightedGoalSole(row, motion.PreviousWeightedGoalSole);
-            AddWeightedGoalSole(row, motion.CurrentWeightedGoalSole);
-            Add(row, motion.ContinuityReferenceAvailable);
-            Add(row, motion.ContinuityReferencePoint);
+            Add(row, motion.PreviousResponseOutputAvailable);
+            Add(row, motion.PreviousResponseOutputPoint);
             Add(row, motion.DesiredOutputPoint);
             Add(row, motion.ResponseOutputPoint);
             Add(row, motion.PlantResidualCaptureReason);
@@ -2312,7 +2307,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SupportDirectionLimited);
             Add(row, motion.SupportDirectionMaximumChangeDegrees);
             Add(row, motion.SupportDirectionAppliedChangeDegrees);
-            Add(row, motion.CorrectionResponseWeightedGoalSoleTransferred);
+            Add(row, motion.CorrectionResponseVisibleOutputTransferred);
             Add(row, motion.CorrectionResponseBeforeRebase);
             Add(row, motion.CorrectionResponsePrevious);
             Add(row, motion.CorrectionResponseCurrent);
@@ -2826,19 +2821,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, value.y);
             Add(row, value.z);
             Add(row, value.w);
-        }
-
-        static void AddWeightedGoalSole(
-            StringBuilder row,
-            CharacterFootWeightedGoalSoleReference reference)
-        {
-            Add(row, reference.Available);
-            Add(row, reference.FrameSequence);
-            Add(row, reference.CompletionIdentity);
-            Add(row, reference.Side.ToString());
-            Add(row, reference.WorldSole);
-            Add(row, reference.PositionWeight);
-            Add(row, reference.RotationWeight);
         }
 
         static void AddSupportTarget(

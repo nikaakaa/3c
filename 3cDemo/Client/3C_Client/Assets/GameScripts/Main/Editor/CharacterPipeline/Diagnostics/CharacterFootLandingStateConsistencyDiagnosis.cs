@@ -97,8 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact previousOriginalSole;
         public CharacterFootVectorFact originalSole;
         public CharacterFootVectorFact previousVisibleOutput;
-        public CharacterFootVectorFact continuityReferencePoint;
-        public CharacterFootWeightedGoalSoleContinuityFact weightedGoalSole;
+        public CharacterFootVectorFact previousResponseOutput;
         public CharacterFootVectorFact capturedBeforeDecay;
         public CharacterFootVectorFact afterDecay;
         public CharacterFootVectorFact desiredOutput;
@@ -286,7 +285,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PlantSelectedWorldTargetStep",
                 "DesiredOutputPointStep",
                 "ResponseOutputPointStep",
-                "ContinuityReferenceToResponseStepMeters",
                 "PlantWorldResidualCaptureDelta",
                 "PlantWorldResidualCaptureContinuityError",
                 "PlantWorldResidualDecayStep",
@@ -354,9 +352,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "PreviousVisibleOutputToAnchorMeters",
                     "PreviousVisibleOutputToAnchorHorizontalMeters",
                     "PreviousVisibleOutputToAnchorAlongUpMeters",
-                    "ContinuityReferenceToAnchorMeters",
-                    "ContinuityReferenceToAnchorHorizontalMeters",
-                    "ContinuityReferenceToAnchorAlongUpMeters",
+                    "PreviousResponseOutputToAnchorMeters",
+                    "PreviousResponseOutputToAnchorHorizontalMeters",
+                    "PreviousResponseOutputToAnchorAlongUpMeters",
                     "CapturedResidualMeters",
                     "ResidualAfterDecayMeters",
                     "ResidualDecayStepMeters",
@@ -609,7 +607,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FinalGoalPositionWeight", "FinalGoalRotationWeight");
             CharacterFootDiagnosisTarget reentryGeometryTarget = context.Target(
                 "contact-reentry-output-geometry",
-                "同Event重入帧的正式连续性参考、Residual捕获与衰减、Desired、Response及最终Sole之间距离；Goal参考不是Physical Sole，历史保留不代表几何连续",
+                "同Event重入帧的上一Response、Residual捕获与衰减、Desired、Response及最终Sole之间实际移动多少；历史保留不代表几何连续",
                 new[] { "ContactReentryOutputGeometry" },
                 new[] { "sameEventReentryGeometryAvailable=true" },
                 reentryGeometry,
@@ -618,10 +616,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? new List<string> { "sameEventReentryGeometryAvailable=true" }
                     : new List<string>(),
                 value => CharacterFootDiagnosisContext.Metric(
-                    value, "ContinuityReferenceToResponseStepMeters"),
-                "CapturedTargetToContinuityReferenceDistanceMeters",
+                    value, "PreviousResponseToResponseStepMeters"),
+                "CapturedTargetToPreviousResponseDistanceMeters",
                 "ResidualDecayStepMeters", "CapturedTargetToDesiredStepMeters",
-                "DesiredToResponseStepMeters", "ContinuityReferenceToResponseStepMeters",
+                "DesiredToResponseStepMeters", "PreviousResponseToResponseStepMeters",
                 "ResponseToFinalSoleStepMeters");
             reentryGeometryTarget.scorePolicy = "Informational";
             List<JObject> contactGapObservations = context.Events(

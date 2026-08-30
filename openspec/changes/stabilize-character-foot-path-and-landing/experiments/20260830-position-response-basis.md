@@ -1,0 +1,54 @@
+# 位置响应与支撑朝向分责实验
+
+## 当前状态
+
+用户要求持续实验。基线为c519865及130545恢复包；前一轮9bce6c2脚高扣除候选已经否决并完整恢复，本轮不复活该Capture改动。当前位置basis候选Runtime已经实现并规定flags构建27个既有警告、0错误，build server已关闭；Diagnostics、Corin产物重建和新Replay尚未完成，不宣称修复成功。
+
+## 可证伪靶点
+
+按同Source/Cycle/Event、三帧NoRevision、NoTargetTracking且Path两端完全稳定筛选，恢复基线有12组Support Direction A-B-A；这些帧Rotation Weight均为0。Left412–414的旧Response相对Desired额外Z为0/-10.315188/0毫米，Right360–362为0/-5.084044/0毫米，Right857–859为0/-6.028007/0毫米。来源是`O=D+N*(c-q)`把尚未消除的位置scalar欠账随Support Normal转向，并非Foot Rotation、Contact Capture或Body输入反切。
+
+本轮预期消除这项直接XZ来源，但不承诺全部Swing速度阶梯消失，也不承诺Sliding的相对动画高度欠账同时解决。任何新增穿透、Contact跳变、Reach/膝盖问题或世界Anchor漂移仍须否决或修正同一步。
+
+## 业务输入与数学
+
+CaptureFoot从同帧Component Pose经`Binding.Animator.transform`（PoseRoot）取得世界Foot/Heel/Toe；OriginalSole是Heel/Toe中点。State Target/WorldResidual发布完整世界Sole目标D。Lifecycle在响应后按正式Position/Rotation Weight反解Ankle，Module再经同一PoseRoot的逆变换编码唯一Goal。PoseRoot不是VisualRoot，不能由Body Up或查询Normal代替。
+
+从真实owner矩阵取：
+
+```text
+s = |ownerToWorld.Linear * LocalY|
+a = ownerToWorld.Linear * LocalY / s
+h = worldToOwner.RowY.xyz * s
+q = dot(DesiredSole - OriginalSole, h)
+c = MoveTowards(previousC, q, existingSelectedSpeed * PresentationDelta)
+ResponseSole = DesiredSole + a * (c - q)
+```
+
+c、q及速度继续使用世界米与米/秒。h是dual，不得归一化；它与a满足`h·a=1`。等价式为`G(O).xz=G(D).xz`与`G(O).y=G(B).y+c/s`。正式可见输出转移的PreviousScalar也用h，完整世界Residual仍保留原XYZ捕获、同帧一次Advance和完整向量完成容差。
+
+Support Direction的请求、上一值、角限制和Applied值只继续供Foot Rotation，数值10°不改。配置由`CorrectionResponseMaximumDirectionChangeDegrees`改名为`SupportDirectionMaximumChangeDegrees`，Profile由v35升级v36；旧配置/公开Direction名不保留兼容。两档速率1.8/1.5、目标Height模式、查询参数、Contact/Lock/RotationWeight政策均保持原值。
+
+## ZZZ对应与限制
+
+- 已闭合采用：7910在owner局部Y推进位置，Support Direction不是直接的位置位移轴；同一owner点变换与Foot pivot输入身份已由只读专项确认。
+- 项目适配：这里的B/D是正式Sole，而ZZZ的F是预处理Foot pivot，原`desiredRaw=G(P+WorldUp*(S.y*F.y/N.y)).y-F.y`不是上述q；不把本候选称为原样复刻。
+- 不混入：ZZZ owner-Y选速率、g响应后高度缩放、k晚期基准混合、writer W旋转权重和幅度折返。
+- 不夸大：basis数学允许有限可逆非均匀矩阵，不表示现有Heel/Toe Quaternion重建已验证非均匀父级；Owner自身Up/尺度变化时保留c也不保证绝对世界连续。本记录的PoseRoot Up稳定，验收只对真实覆盖范围下结论。
+- SourceFrame、World、矩阵有限性/可逆性或dual关系失败直接拒绝，不补默认Up/旧basis，不创建第二Interpolation、Solver、Writer或Pose低通。
+
+## 基线证据
+
+- Input：`Diagnostics/CharacterInputTraces/20260827-183705-081-43357ff3cd384e5cba75d2c31175b116.json`，SHA256 `24D97232F35246C0B85A003B5980AC8F199D6FF63E9F74A0001B082F57EB89A6`，1044帧。
+- 基线包：`Diagnostics/FootPlacementRuns/20260830-130545-894-26a85534e5e4427dbd2d7d7979d5c585`，2086脚行、facts52/diagnosis21。
+- 主表SHA256：`715ED3920773E76234B749956A919C6D9B0C85A848F83BDC0BFDC52957C2E978`。
+- 几何表SHA256：`0C332A69F27E9350F3450AFD7624AE7A72F55F21AF94C11C3260C263306F9922`。
+- facts SHA256：`7FEFEB9E66D6102784A173591E9D586CB89F6C029E8E034C8263FB9BBB14F75B`。
+- 已持久保存的基线Proof：`Diagnostics/FootPlacementReplayArchives/20260830-contact-height-advance/restored-proof.json`，SHA256 `584A432A59A1C7C2315250F1FDC0A2CA37C8E1D901A2735A1F75CCE6D116286B`，不依赖Temp。
+- 7维基线为49/49/74/49/49/100/100，总分60.4。穿透19/78、接触未贴合12/60、Stable Swing145/347、Path206/680、Contact405/1036、腿部0/2、FullAnchor水平漂移0/8；弱样本不升级为全场景证明。
+
+## 对账规则
+
+Profile身份改名/升级后必须显式重建Corin Float32与Fixed产物，身份变化原样记录，不修改Proof比较器；先核对同一输入与逐帧Body轨迹，再判断Foot行为。全部原始采样继续由唯一Recorder/Analyzer/Publisher生成。新basis字段与Support Direction字段缺失必须typed拒绝，不为旧CSV补列。
+
+逐项检查12个稳定ABA窗口、额外XZ、Y跳变、同Event完整Anchor、Landing/Locked/Release变化、Heel/Toe穿透与接触间隙、Source/Desired/Response/Resolved/Goal/Physical首次差异、Support/Pelvis、Reach与膝盖、FBBIK残差及QueryExecuted行数。候选接受前不把g、Contact时限、旋转权重或其它修复叠入；拒绝时只撤销本轮代码/资产/产物并再次回放，保留失败记录。

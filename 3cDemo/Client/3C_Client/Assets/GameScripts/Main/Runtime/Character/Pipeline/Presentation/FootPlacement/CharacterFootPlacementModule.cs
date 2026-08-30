@@ -300,6 +300,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
                 frame.RenderFrame,
                 frame.Pose.DenseComponentPoses);
+            CharacterFootPositionResponseBasis positionResponseBasis =
+                m_Rig.CapturePositionResponseBasis();
             CharacterFullBodyIkGoal pelvisGoal = CreatePelvisGoal();
             CharacterFullBodyIkGoal leftGoal = CreateFootGoal(
                 CharacterFootSide.Left,
@@ -547,6 +549,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     leftCurrentStep.IsAuthoritative),
                 footPlacementWeight,
                 componentUp,
+                in positionResponseBasis,
                 frame.PresentationDeltaSeconds,
                 sourceLineage,
                 profileRevision,
@@ -577,6 +580,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rightCurrentStep.IsAuthoritative),
                 footPlacementWeight,
                 componentUp,
+                in positionResponseBasis,
                 frame.PresentationDeltaSeconds,
                 sourceLineage,
                 profileRevision,

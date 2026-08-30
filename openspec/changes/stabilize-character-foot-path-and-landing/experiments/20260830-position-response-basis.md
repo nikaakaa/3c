@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-用户要求持续实验。基线为c519865及130545恢复包；前一轮9bce6c2脚高扣除候选已经否决并完整恢复，本轮不复活该Capture改动。位置basis候选Runtime提交05889f6，规定flags构建27个既有警告、0错误；Diagnostics提交335ac60，Editor构建57个既有警告、0错误，两次build server均已关闭。已在Edit模式Refresh并显式重建Corin Float32、Fixed和Projection，Console错误为0；新Replay尚未完成，不宣称修复成功。
+用户要求持续实验。基线为c519865及130545恢复包；前一轮9bce6c2脚高扣除候选已经否决并完整恢复，本轮不复活该Capture改动。位置basis候选Runtime提交05889f6，规定flags构建27个既有警告、0错误；Diagnostics提交335ac60，Editor构建57个既有警告、0错误，两次build server均已关闭。Corin正式产物重建提交a6ba64f；141256 Replay已完整产生facts54、诊断和Proof。稳定Swing的轴外摆动靶点改善，但出现真实接触穿透和FullAnchor下陷，因此该单变量不能独立作为无回归版本交付；保留实验提交及原始包，继续核对并闭合接管链，不用总分掩盖失败。
 
 ## 可证伪靶点
 
@@ -65,6 +65,44 @@ Support Direction的请求、上一值、角限制和Applied值只继续供Foot 
 - Projection Revision=`c7b236184b7bc77ed30604aa446b627f7aa33546eef4793be2e66a2c31d1a895`，Contract Hash=`16ef87e562a46b4a82fcfceb35c6b425b155dbb148fc15fcba7db1f237b0a8b1`，资产SHA256=`c1ff93c5918e50a214c9b27c327763ee70d4fe08f127e8dec6ee67931a81ab4f`。
 
 相对c519865的只读字节核对：Float32/Fixed canonical artifact长度分别保持3079259/3234949字节，每份各301字节变化，仅位于Source Revision、Semantic Hash及Program Hash字符串；执行payload其余字节相同。最终Projection diff仅10处身份/布局hash，Curve/Event数值及引用数据未变。上述静态身份对账不代替逐帧Replay Proof，不修改比较器放行身份变化。
+
+## 141256实际Replay与单变量失败边界
+
+输入仍为同一1044帧trace。新包位于`Diagnostics/FootPlacementRuns/20260830-141256-745-93a37614463d410fbfe1e547c9c969ae`，1043输出帧、2086脚行、50195几何行。文件保存如下，旧包不覆盖：
+
+| 文件 | SHA256 |
+| --- | --- |
+| samples.csv | 71ea1500b459ad489a91db381b3a896e79b082300399bb5917ae133e5850d54f |
+| ground-path-geometry.csv | ceeff88912b36749fbc2a3ac565d3a1d358548f72bcbae316a142ea71ebed515 |
+| facts.json | daf352be72bbcb0dd5f7a275d6651f17ce68bb6ce7828d29e54f9d356eeca80c |
+| diagnoses/quality-score.json | 310bf3bc60d05569464271c4e7ddaf8f439142d691f5db74347e253519f77164 |
+| 已持久复制的candidate-proof.json | dec5d7851bd9b131642d93baaf231c59a2e9db924977f002cdfeb1f5344a7099 |
+
+Proof副本位于`Diagnostics/FootPlacementReplayArchives/20260830-position-response-basis/candidate-proof.json`。官方`matched=false`原样保留：7个Program/Source/Semantic/Projection身份字段变化，逐帧分歧0。主任务直接比较两个Proof的1044条frames，逐字段完全相同；start body、input sequence、body trajectory hash均相同。Raw中的Body、正式Foot Motion输入及原动画Sole均未变；50195行Geometry除4个实例/Surface/Path身份列外逐值相同。查询Executed标记保持1349/1787/2086/2086，分别对应Landing Observation、Ground Path、Heel、Toe，不把Observation行数冒充SphereCast次数。
+
+2086行basis和Response均有效，本记录中`a=h=(0,1,0),s=1`；按CSV独立重算q和O的最大误差分别0.312/0.278微米，正式facts发布的输出公式误差及轴外量均为0。`VisibleOutputTransferred`仍为0，上一节的未覆盖边界不变。
+
+91个严格稳定三帧窗口中的12组Support Direction往返保持不变，但Response相对Desired的额外XZ全部为0。Left412–414中间帧旧Z=-10.315毫米，新Z=0；物理Sole相对动画的二阶位置差由20.630毫米降到约0.006毫米。Right360–362对应10.052降到0.006毫米，Right857–859对应12.696降到0.050毫米。此处是位置差，不冒称毫米/秒加速度。
+
+37个Target的规则与评分政策均未变；七维Health仍49/49/74/49/49/100/100，总分仍60.4。主要全包结果：
+
+| 指标 | 130545基线 | 141256候选 |
+| --- | --- | --- |
+| 最终接触平面穿透 | 19/78 | 20/78 |
+| 接触未贴合 | 12/60 | 12/60 |
+| Stable Swing输出扰动大于2cm | 145/347 | 147/348 |
+| Path Revision输出扰动大于2cm | 206/680 | 208/680 |
+| Contact状态附加位移大于2cm | 405/1036 | 405/1035 |
+| Landing exit大于1cm | 49/60 | 49/60 |
+| Release flyback | 2/59 | 2/59 |
+| FullAnchor水平漂移 | 0/8 | 0/8 |
+| Locked垂直下陷证据 | 1/25 | 2/25 |
+
+具体失败不是只跨评分阈值：Right404–407最终穿透峰值由7.299毫米加深到24.733毫米；Right408–409 FullAnchor沿Up下陷由0.364毫米到11.320毫米；Right410–412 Sliding沿Up下陷由5.609毫米到14.123毫米。该段Anchor、正式输入、Support Direction及其旋转权重都不变，新q需要追赶更大的正位置修正，原1.8m/s相对动画修正预算未能追上向下移动的动画基准；不能把这称为查询错误或FBBIK误差。
+
+State仅两行变化：Right770由基线Landing变为Locked，Right775由Releasing变为Swing，因而Stable/Contact质量域各增减一个样本，不能只对比总计数。全部2086行FBBIK成功，最大Ankle Goal残差仍0.715微米。腿姿态官方只有2个Landing样本，Evidence=4；另按连续Swing的Knee相对Hip位移减去原动画同量只读复算，超过2/5/10厘米分别为236/101/36到236/101/39，不能用腿部Health100宣称膝盖无回归。
+
+保留的经验：支撑法线不应旋转位置scalar欠账这一靶点已被实际Replay验证，但单独换位置坐标轴不能闭合Contact时的基准运输、位置到位及脚掌朝向。下一项实验必须单独记录历史输入的实际来源和激活范围，与本包及130545同时对账；不得直接硬贴地、调大速率、清Residual.Y或恢复旧Normal位置轴以隐藏问题。
 
 ## 对账规则
 

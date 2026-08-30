@@ -101,7 +101,7 @@
 - [x] 6.31 从CaptureFoot与Goal编码共同使用的实际PoseRoot矩阵捕获不可变PositionResponseBasis，发布单位WorldAxis、未归一化dual HeightProjection和WorldUnitsPerPoseUnit，拒绝非有限、不可逆与退化矩阵
 - [x] 6.32 在唯一Interpolation以位置basis处理Desired scalar与正式VisibleOutputTransfer，并沿WorldAxis输出；Support Direction只保留现有角历史和Rotation职责，保持完整XYZ Capture/Decay、权重、Anchor、Goal和两档速率，角配置激进改名且不兼容旧名
 - [ ] 6.33 完成上述坐标候选的唯一Diagnostics迁移与Corin正式产物重建，用既有Replay核对稳定Swing的额外XZ及全包接触/穿透/Reach/骨盆/脚锁；记录身份差异和失败经验，不以局部靶点通过或总分上涨代替完整结果
-- [ ] 6.34 用带Frame/Completion/Side/WorldSole与Goal权重的唯一Committed Weighted Goal Sole参考替换旧Visible松散字段，修正把Pending开放标志当历史有效性的读取门；不修改SealFrame事务语义，不把Goal参考叫作Final Physical Sole
+- [x] 6.34 用带Frame/Completion/Side/WorldSole与Goal权重的唯一Committed Weighted Goal Sole参考替换旧Visible松散字段，修正把Pending开放标志当历史有效性的读取门；不修改SealFrame事务语义，不把Goal参考叫作Final Physical Sole
 - [ ] 6.35 正式Capture接入合法上一Goal参考和同一dual重基，公开上一/当前参考与采用事实并迁移唯一Diagnostics；保持完整XYZ Capture、同帧Advance及所有既有质量公式
 - [ ] 6.36 使用既有Replay同时对比141256实验前驱与130545原基线，核对Contact穿透/FullAnchor、零权重后Capture、Swing与全部诊断，记录失败或可保留结论而不替换原质量门
 

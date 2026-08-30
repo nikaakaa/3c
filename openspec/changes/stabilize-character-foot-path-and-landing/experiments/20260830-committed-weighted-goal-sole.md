@@ -2,7 +2,7 @@
 
 ## 状态与范围
 
-前驱为dd792d3记录的141256位置basis候选；该候选靶点有效，但出现Right404–412新下陷，尚未作为可用修复接纳。原质量基线仍为c519865/130545。本实验只接通已有但始终不可读的上一加权Goal脚底参考，先落地合同，不宣称效果。
+前驱为dd792d3记录的141256位置basis候选；该候选靶点有效，但出现Right404–412新下陷，尚未作为可用修复接纳。原质量基线仍为c519865/130545。本实验只接通已有但始终不可读的上一加权Goal脚底参考。Runtime已实现，最后规定flags构建1个既有警告、0错误，build server已shutdown；Diagnostics和新Replay尚未完成，不宣称效果。
 
 `HasFrame`是Pending开放标志，SealFrame清它是正确行为。旧TryResolvePreviousVisibleOutput把它当Committed结果可读条件，导致085503、130545、141256的VisibleOutputTransferred均为0。新实现将用参考本身的Frame、Completion、Side、世界点、Position/Rotation Weight及Bank/Resolved Pair身份；没有历史明确Unavailable，已有历史却不合法直接拒绝。
 
@@ -13,6 +13,14 @@
 正式Plant Target Capture时，原来不可达的合法上一Weighted Goal Sole输入首次参与完整XYZ Residual捕获和既有dual scalar重基。非Capture帧不重基；Residual仍同帧推进一次。位置basis、Support角历史、脚高、Target Height模式、半衰期、两档速率、Goal权重、Contact/Lock规则、查询几何均不改。
 
 不把这叫作ZZZ直接复刻。保留项目WorldAnchor/Sole政策，不引入g/k/W/199、最终Pose低通、清Residual.Y、相对动画Capture、单scalar替代XYZ或第二输出路径。
+
+## Runtime接口与清理
+
+`CharacterFootWeightedGoalSoleReference`为唯一不可变参考，公开Available、FrameSequence、CompletionIdentity、Side、WorldSole、PositionWeight和RotationWeight。Bank仅保存左右两份该值，移除HasVisibleFootOutputs及左右VisibleSole；Begin、Discard和Reset清空Pending参考，SealFrame仍关闭HasFrame。读取会拒绝开放Bank、非有限参考、Frame/Completion/Side/Rig不匹配及未来帧；已发布Foot结果却缺参考也直接拒绝，不静默补值。
+
+Frame消费上一参考，Lifecycle Fact保留该输入；最终Goal编码后将当前参考加入同一Foot Motion结果。Diagnostics公开PreviousWeightedGoalSole与CurrentWeightedGoalSole。原PreviousResponseOutputAvailable/Point诊断名改为ContinuityReferenceAvailable/Point，表示本次连续化实际使用的点；内部持久PreviousResponseOutput仍保留真实Response历史。原VisibleOutputTransferred改为CorrectionResponseWeightedGoalSoleTransferred，没有旧别名。
+
+正式Capture把完整参考传入唯一ApplyCorrectionResponse，不再传拆开的bool与Vector3。普通Swing/Release传Unavailable，不激活重基。加权Goal Sole的原纯几何解析同时服务既有Pelvis输入与最终引用封装，未重复加权；实现期首次构建暴露2处前置消费者仍需该纯函数，已恢复统一复用并通过构建，未把编译失败当作Replay结果。
 
 ## 对账
 

@@ -518,7 +518,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingReachGoalClamped = landingReachGoalClamped;
             LandingReachGoalClampDistance = landingReachGoalClampDistance;
             LifecycleTransition = lifecycleTransition;
+            CurrentWeightedGoalSole = default;
         }
+
+        CharacterFootSwingMotionResult(
+            in CharacterFootSwingMotionResult source,
+            CharacterFootWeightedGoalSoleReference reference)
+        {
+            this = source;
+            if (!reference.IsValid)
+            {
+                throw new ArgumentException(
+                    "Foot motion requires a valid weighted Goal Sole reference.");
+            }
+            CurrentWeightedGoalSole = reference;
+        }
+
+        internal CharacterFootSwingMotionResult WithWeightedGoalSole(
+            CharacterFootWeightedGoalSoleReference reference) =>
+            new CharacterFootSwingMotionResult(in this, reference);
 
         public CharacterFootSwingMotionState State { get; }
         public CharacterFootSwingMotionRejectReason RejectReason { get; }
@@ -554,6 +572,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float LandingReachGoalClampDistance { get; }
         internal CharacterFootPathContinuityFact PathContinuity { get; }
         internal CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
+        internal CharacterFootWeightedGoalSoleReference CurrentWeightedGoalSole { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 
@@ -599,6 +618,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPositionResponseBasis positionBasis =
                 lifecycle.PositionResponseBasis;
             PositionResponseBasisAvailable = positionBasis.IsValid;
+            PreviousWeightedGoalSole = lifecycle.PreviousWeightedGoalSole;
+            CurrentWeightedGoalSole = result.CurrentWeightedGoalSole;
             PositionResponseWorldAxis = positionBasis.WorldAxis;
             PositionResponseHeightProjection = positionBasis.HeightProjection;
             PositionResponseWorldUnitsPerPoseUnit =
@@ -794,10 +815,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPreviousSelectedWorldTarget =
                 path.PlantPreviousSelectedWorldTarget;
             PlantSelectedWorldTarget = path.PlantSelectedWorldTarget;
-            PreviousResponseOutputAvailable =
-                path.PreviousResponseOutputAvailable;
-            PreviousResponseOutputPoint =
-                path.PreviousResponseOutputPoint;
+            ContinuityReferenceAvailable =
+                path.ContinuityReferenceAvailable;
+            ContinuityReferencePoint =
+                path.ContinuityReferencePoint;
             DesiredOutputPoint = path.DesiredOutputPoint;
             ResponseOutputPoint = path.ResponseOutputPoint;
             PlantResidualCaptureReason =
@@ -842,8 +863,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.SupportDirectionMaximumChangeDegrees;
             SupportDirectionAppliedChangeDegrees =
                 path.SupportDirectionAppliedChangeDegrees;
-            CorrectionResponseVisibleOutputTransferred =
-                path.CorrectionResponseVisibleOutputTransferred;
+            CorrectionResponseWeightedGoalSoleTransferred =
+                path.CorrectionResponseWeightedGoalSoleTransferred;
             CorrectionResponseBeforeRebase =
                 path.CorrectionResponseBeforeRebase;
             CorrectionResponsePrevious =
@@ -903,6 +924,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PositionResponseWorldAxis { get; }
         public Vector3 PositionResponseHeightProjection { get; }
         public float PositionResponseWorldUnitsPerPoseUnit { get; }
+        public CharacterFootWeightedGoalSoleReference PreviousWeightedGoalSole { get; }
+        public CharacterFootWeightedGoalSoleReference CurrentWeightedGoalSole { get; }
         public bool LifecycleTransitionEvaluated { get; }
         public bool PreviousLockRequestAvailable { get; }
         public bool PreviousLockRequested { get; }
@@ -1042,8 +1065,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantTargetVerticalClamped { get; }
         public Vector3 PlantPreviousSelectedWorldTarget { get; }
         public Vector3 PlantSelectedWorldTarget { get; }
-        public bool PreviousResponseOutputAvailable { get; }
-        public Vector3 PreviousResponseOutputPoint { get; }
+        public bool ContinuityReferenceAvailable { get; }
+        public Vector3 ContinuityReferencePoint { get; }
         public Vector3 DesiredOutputPoint { get; }
         public Vector3 ResponseOutputPoint { get; }
         public string PlantResidualCaptureReason { get; }
@@ -1067,7 +1090,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool SupportDirectionLimited { get; }
         public float SupportDirectionMaximumChangeDegrees { get; }
         public float SupportDirectionAppliedChangeDegrees { get; }
-        public bool CorrectionResponseVisibleOutputTransferred { get; }
+        public bool CorrectionResponseWeightedGoalSoleTransferred { get; }
         public float CorrectionResponseBeforeRebase { get; }
         public float CorrectionResponsePrevious { get; }
         public float CorrectionResponseCurrent { get; }

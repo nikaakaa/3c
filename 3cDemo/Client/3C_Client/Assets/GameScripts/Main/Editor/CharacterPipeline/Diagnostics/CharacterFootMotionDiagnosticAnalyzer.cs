@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/62";
+        const string Schema = "character-foot-motion-facts/63";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 62;
+        const int AnalyzerVersion = 63;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -9535,8 +9535,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (response.SupportChanged) handoff |= CharacterFootPelvisSpringHandoffReason.SupportChanged;
             if (slopeChanged) handoff |= CharacterFootPelvisSpringHandoffReason.SlopeChanged;
             if (crossed) handoff |= CharacterFootPelvisSpringHandoffReason.TargetCrossedOutput;
-            bool reset = handoff != CharacterFootPelvisSpringHandoffReason.None &&
-                Math.Abs(direction) > RuntimeGeometryEpsilon && response.PreviousVelocity * direction < 0f;
+            bool reset = Math.Abs(direction) > RuntimeGeometryEpsilon &&
+                response.PreviousVelocity * direction < 0f;
             float inputVelocity = reset ? 0f : response.PreviousVelocity;
             float output = response.PreviousOutput, velocity = inputVelocity;
             if (frame.DeltaSeconds > 0f)

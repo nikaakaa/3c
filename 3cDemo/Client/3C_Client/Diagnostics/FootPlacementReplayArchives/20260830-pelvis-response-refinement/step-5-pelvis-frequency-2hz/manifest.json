@@ -1,0 +1,81 @@
+{
+  "candidateCommit": "ae103485704c171a910ccf7079e42aefd3b60c64",
+  "frequency": 2,
+  "baselineFrequency": 3,
+  "baselineRun": "20260831-020243-204-ff9828180a164a88bfcdfe4c59a37215",
+  "fixedQualityBaseline": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "run": "20260831-023618-000-a5928c1f85c3409f80d7e5258e3d2fb1",
+  "record": "43357ff3cd384e5cba75d2c31175b116",
+  "archive": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-5-pelvis-frequency-2hz",
+  "zipBytes": 16731316,
+  "zipSha256": "60DA29C5C8A3EF4B69B0212C3A173F23CF3624D045716FE6363DE82781D32AC2",
+  "proofSha256": "F28F3F054B085CA37805399BC8B9ACF0AEE7CAE907EF0508964E5241F09585E9",
+  "files": [
+    {
+      "path": "facts.json",
+      "bytes": 122120016,
+      "sha256": "709F2FC710BF4C489C76A03A65B32E43FD9A059FF6844599C11403194001C9A4"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 7887421,
+      "sha256": "DC3FED5484B4A665533F62EF6C3BA7E0C3FA7511CAFE72626CB59644C390B127"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19298930,
+      "sha256": "DF9D67ED159FE2926BDE874FAE14A6544D465AAA3A569FF92674110FEEB36DA5"
+    },
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 51386,
+      "sha256": "353BCB7C16842BABF7D8061F89DAD330AEC71FA254A96BE5A7F28FC74DCCCC81"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 6509448,
+      "sha256": "F2531E5404DAC891F34F52828FAD66A9115CE9A2C969152E195A11C44158CF9C"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "614AF2F8981A51E0B62D863B39E1C7777A06F9D3241D70E05F70515B1A82EC27"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 61001,
+      "sha256": "DBFBC13AC35DCED4158C738B04C7FC2575CCB87861BC332BB195A8E0CFA65A4C"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 733820,
+      "sha256": "E1DB7057DDD144BBC6EA155DBCEEA637C17E95DBAC2D886311439F9C44B8500E"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "3F5CAE3A45D5A8E633D26AAA8FDF58DD34FB89D98484EB54B1DAF70AA4E8C66B"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24821,
+      "sha256": "59818B5442FC066A36692D4C343531CAE8E5013D9E93EB645CD9B026DC375258"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "D28C3AE4BA749E86190EACFEE367848EB2C3B41C6518DCB05A10BA2116656C33"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 1745050,
+      "sha256": "F2EE1906DEDEA3199F83587EBA960DA44FEAA6D65615CF804C8373173376585C"
+    }
+  ],
+  "factsVersion": 62,
+  "diagnosisVersion": 31,
+  "officialProofMatched": false,
+  "officialAggregateMismatches": 7,
+  "independentlyEqualProofFrames": 1044,
+  "qualityDecision": "拒绝2Hz；回正迟滞208→270、实际Solved Knee超过10cm的单步160→174；不以总分不变采纳"
+}

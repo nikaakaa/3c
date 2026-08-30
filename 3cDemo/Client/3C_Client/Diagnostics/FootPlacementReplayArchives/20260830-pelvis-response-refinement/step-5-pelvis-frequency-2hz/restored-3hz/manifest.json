@@ -1,0 +1,85 @@
+{
+  "restoreCommit": "8833b4cde3811bd43a5927ec0961a6511dd2373f",
+  "frequency": 3,
+  "run": "20260831-025450-166-8db33f64db784e89b406d332ce778ab8",
+  "comparisonRun": "20260831-020243-204-ff9828180a164a88bfcdfe4c59a37215",
+  "record": "43357ff3cd384e5cba75d2c31175b116",
+  "zipBytes": 16731191,
+  "zipSha256": "FCFF8AC366DCFEFDC7DF22A34490F6F32497468281F6355B34D784440CEB9539",
+  "proofSha256": "3EC5B05976651BAB0410648251F52051F5A5139705DC5F9FDF842B77C35F99AA",
+  "files": [
+    {
+      "path": "facts.json",
+      "bytes": 122120470,
+      "sha256": "1C210C166B7204350D7B682C5CC8CA284635A69F2570EEC9623DE330976CA177"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 7888737,
+      "sha256": "1934A40DB7C846DF331025C114B3486DB4ED63B158FB63CF267C43C5489982A9"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19298016,
+      "sha256": "669562DE894822D3FBCBDDBBC7CA65A6568A50AB44A867E793F11A66A44EBACC"
+    },
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 51390,
+      "sha256": "151C5F80FB75A1C1FF31804B12A85BFF02041C6F6CC72B57B03DDAA3603C6BCA"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 6508067,
+      "sha256": "A671A74DD04894B1BDEAC2DAF080D08E78CD86EB9B0A68750EC66A6ABF707789"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "1093333BFB8D289C04C8A7A95DE5077226FA01D3FC09021A420DD85E14A5FBA6"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 61001,
+      "sha256": "2623F237D5F38F55CB401C539CCC2CC38A2384985EAC314BD4935143B4B91472"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 733803,
+      "sha256": "4A7B5EC184C99DAE781150B9D2B1F26B7A8F7EE3864D26FAC7B4FDF13D7A69A6"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "F87A50B778B3D69F99A8B351298B60C4321097D90CDAFE6BFAA8C30A40201C9D"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24821,
+      "sha256": "F737E6A020A6EAA47AC67214B7EC56DD3CE85E35F49930055A2B0783200C198A"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "27A473A1EA429BF69D3D9E7D9F4667D11692E5606728703C4DCE1ED65704D67A"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 1745275,
+      "sha256": "0F55AF59154F644CDDC9EA7B0D05FED617B0C3737EC5AA80ECB5557BCBF3A1D1"
+    }
+  ],
+  "factsVersion": 62,
+  "diagnosisVersion": 31,
+  "csvColumns": 1221,
+  "sampleRows": 2086,
+  "officialComparison": "对2Hz的7身份mismatch，Divergent0，保留matched=false",
+  "independentRestoration": {
+    "reference": "020243/020417",
+    "runtimeIdentityEqual": true,
+    "proofFramesEqual": 1044,
+    "exactNonIdentityColumns": 1197,
+    "identityColumnsWithBijectiveMapping": 24,
+    "qualityTargetsUnchanged": 37
+  }
+}

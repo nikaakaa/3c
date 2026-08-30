@@ -37,4 +37,4 @@
 
 - [x] 7.1 以ae10348独立试验Corin正式频率3→2并重建Float32/Fixed产品，保持算法、Foot、Bend与TrainingEnemy不变；Runtime27既有警告0错误并shutdown
 - [x] 7.2 完成023618同Record回放与原facts62/diagnosis31封口，确认1043帧实际消费2Hz；官方Proof因7个产品身份字段不同保持matched=false，1044完整输入/Body帧逐值相同
-- [ ] 7.3 2Hz因回正迟滞208→270及实际Solved Knee超过10厘米160→174被拒绝，保留原包/Proof并只撤销ae10348；恢复3Hz后同Record回放确认尚待完成
+- [x] 7.3 2Hz因回正迟滞208→270及实际Solved Knee超过10厘米160→174被拒绝，8833b4c只撤销该参数/产品；恢复包025450实际3Hz，对020243有1197个非身份列逐值相同、37质量项不变，Runtime identity及1044完整Proof帧一致，原始失败/恢复ZIP和Proof均保存，详见experiments/20260831-pelvis-frequency-2hz.md

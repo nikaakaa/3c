@@ -37,6 +37,14 @@ Support Direction的请求、上一值、角限制和Applied值只继续供Foot 
 - 不夸大：basis数学允许有限可逆非均匀矩阵，不表示现有Heel/Toe Quaternion重建已验证非均匀父级；Owner自身Up/尺度变化时保留c也不保证绝对世界连续。本记录的PoseRoot Up稳定，验收只对真实覆盖范围下结论。
 - SourceFrame、World、矩阵有限性/可逆性或dual关系失败直接拒绝，不补默认Up/旧basis，不创建第二Interpolation、Solver、Writer或Pose低通。
 
+## 既有可见输出读取缺陷与本轮覆盖边界
+
+只读专项及主任务直接代码复核确认：`CharacterPoseConstraintRuntime.SealFrame`在提交bank前清除`FootPlacement.HasFrame`，该字段表示Pending事务开放；下一帧`TryResolvePreviousVisibleOutput`却要求Committed bank的`HasFrame`为true。因此虽然`EvaluateFrame`已保存加权/Reach后Goal对应的左右可见Sole及`HasVisibleFootOutputs`，正式读取一直被拒绝。此问题在7ed6522/c519865已存在，不是05889位置basis候选引入。
+
+085503、124922和130545均2086脚行，`CorrectionResponseVisibleOutputTransferred`均为0。当前完整WorldResidual实际使用Interpolation内部上一ResponseOutput，而不是bank保存的上一加权/Reach后Goal Sole。本轮把正式VisibleTransfer分支改为同一dual投影只是静态合同闭合；没有实际覆盖时，不得用本轮Replay宣称验证了该分支。
+
+本轮不修改该读取门。其修复会首次激活另一份历史输入及scalar重基，必须在位置basis实验封口后单独提交、单独Replay。不得保留SealFrame.HasFrame为true以绕过事务，也不得新增替代历史或用单标量替换完整世界Residual。
+
 ## 基线证据
 
 - Input：`Diagnostics/CharacterInputTraces/20260827-183705-081-43357ff3cd384e5cba75d2c31175b116.json`，SHA256 `24D97232F35246C0B85A003B5980AC8F199D6FF63E9F74A0001B082F57EB89A6`，1044帧。

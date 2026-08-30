@@ -105,8 +105,8 @@
 - [ ] 6.35 正式Capture接入合法上一Goal参考和同一dual重基，公开上一/当前参考与采用事实并迁移唯一Diagnostics；保持完整XYZ Capture、同帧Advance及所有既有质量公式
 - [ ] 6.36 使用既有Replay同时对比141256实验前驱与130545原基线，核对Contact穿透/FullAnchor、零权重后Capture、Swing与全部诊断，记录失败或可保留结论而不替换原质量门
 - [x] 6.37 在唯一Correction Response内实现LockedSliding完整世界误差域，闭合进入、正常推进、退出到原Plant/Release残差与Reset，不改变五态/目标/旋转/查询/权重
-- [ ] 6.38 发布分域响应的唯一Runtime事实并迁移Sampler/Analyzer/Publisher，严格区分未执行scalar与WorldError推进，保留原质量规则
-- [ ] 6.39 用原Record验证Sliding再离地、完整交接、水平轨迹、Heel/Toe穿透、Release、Pelvis与Reach，独立记录保留或拒绝及恢复证据
+- [x] 6.38 发布分域响应的唯一Runtime事实并迁移Sampler/Analyzer/Publisher，严格区分未执行scalar与WorldError推进，保留原质量规则；9f5b539/facts56完成，后续由6.40替换位置域
+- [x] 6.39 用原Record验证Sliding再离地、完整交接、水平轨迹、Heel/Toe穿透、Release、Pelvis与Reach；173423靶点成立但新增穿透及Release大步，拒绝质量通过，原始包与持久Proof保留，后续改同一实验而不视作好基线
 - [x] 6.40 将VerifiedSupport统一为ContactWorldResidual单一位置历史，删除Sliding第二世界误差与Contact动画相对scalar消费，保留原XYZ Capture/Decay和退出Release的完整移交
 - [ ] 6.41 迁移唯一Diagnostics到ContactWorldResidual分域合同，删除废弃Sliding误差字段，保持原37项质量公式并用原Record记录与03:54历史及近期控制的可比结果
 

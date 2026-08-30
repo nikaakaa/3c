@@ -37,3 +37,11 @@ Runtime公开当前/上一Response Domain、DomainTransferred、WorldError Captu
 World域的CorrectionResponseEvaluated仍为true，表示整层完成；Support Direction始终按既有10度合同推进，SelectedSupport旋转方向仍取这一输出。Parent Continuity Owner用World Error实际推进/未归零事实识别响应所有权，不能由未执行scalar的0反推无响应。退出域保留WorldErrorBeforeTransfer并清活动E，本帧scalar Current/Previous同步Desired，DomainTransferred=true且InitializedThisFrame=false。
 
 静态复核确认正常Sliding退出没有绕过Release或Suppressed直接进入Swing的路径；后处理RotationProjectionUnavailable仍可能在Sliding内部产生Unavailable结果，但不改变实际响应域。本包原数据没有该Unavailable分支或Slide到新Plant/FullAnchor的动态覆盖，不能提前宣称它们已验证。
+
+## 173423封口结果：未通过，位置域由后续Contact实验替换
+
+Runtime=`9a24148`，Diagnostics=`9f5b539`。采样`20260830-173423-446-c78a7881826143bc84bd4f27d39ee169`为facts56/d25，1043采样帧、2086脚行；32个World域样本、16次进入及16次退出，退出全部Release，12次实际推进。所有原始输入/动画Sole/时钟与155326相同，50195行查询几何只变四项实例身份。官方Proof为baseline-created，独立比较155326的持久Proof则1044条frames与所有Runtime/输入/Body哈希完全一致，不改写官方结果。
+
+原37规则与七维分数均未变，总分仍60.4。Contact Gap为12/60→10/60，但接触面穿透19/78→21/78，Contact额外输出405/1036→411/1038。R483/484中心11.557/75.076毫米→约0，Toe却由面上0.905/51.875毫米变为面下10.652/23.201毫米；L573/574同型，原RotationWeight=0未变。R485→486的物理Sole步111.017→144.812毫米，L575→576为114.929→145.883毫米。测量只证明对已验证ContactPlane的距离，不宣称实体Collider交集。
+
+该候选没有解决Landing原残差尾差，不能以两个Gap事件消失或总分不变通过。用户要求优先修接触位置历史，未授权把这些退化隐藏为评分变化。候选原包不覆盖，持久Proof在`Diagnostics/FootPlacementReplayArchives/20260830-sliding-world-response/candidate-proof.json`，SHA256=`B2BF78FA9E97941C40716AC25AAB10BBA8A8D66766E685972612D3F2CB3BB9E7`。后续单一Contact残差实验删除第二Sliding世界误差，仍必须同时对照本失败前驱与155326，不声称本版本已验收。

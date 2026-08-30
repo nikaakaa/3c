@@ -631,37 +631,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "ContactSupportGapInterval");
             CharacterFootDiagnosisTarget contactGapTarget = context.Target(
                 "contact-support-gap",
-                "正式要求接触的Landing/Locked且同Event已验证Anchor可用时，最终物理Heel与Toe是否同时离开该接触平面；包含Landing收敛，不含Releasing，不证明有限Surface下方存在支撑",
-                new[] { "ContactSupportGapObservation" },
-                new[] { "WholeFootGapMeters>0.01" },
-                contactGapFrames,
-                value => CharacterFootDiagnosisContext.Metric(
-                    value, "WholeFootGapMeters") >
-                    CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters
-                    ? new List<string> { "WholeFootGapMeters>0.01" }
-                    : new List<string>(),
-                value => CharacterFootDiagnosisContext.Metric(
-                    value, "WholeFootGapMeters"),
-                "WholeFootGapMeters", "HeelClearanceMeters", "ToeClearanceMeters",
-                "SoleClearanceMeters", "InPlaneAnchorDistanceMeters");
-            contactGapTarget.scorePolicy = "Informational";
-            contactGapTarget.occurrence = context.Occurrence(
-                "LandingOrLockedSameEventVerifiedContactPlanePhysicalFootFrame",
-                "WholeFootGapMeters", "Meters", contactGapFrames,
-                CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
-                s_OutputThresholds);
-            contactGapTarget.categoricalMeasurements =
-                new SortedDictionary<string, List<CharacterFootDiagnosisCategoryCount>>(
-                    StringComparer.Ordinal)
-                {
-                    ["GapMotion"] = CategoryCounts(contactGapFrames,
-                        value => value["contactSupportGap"].Value<string>("classification")),
-                    ["ConstraintState"] = CategoryCounts(contactGapFrames,
-                        value => value["contactSupportGap"]["frames"][0]
-                            .Value<string>("constraintState"))
-                };
-            CharacterFootDiagnosisTarget persistentContactGapTarget = context.Target(
-                "persistent-contact-support-gap",
                 "连续Landing/Locked同Event同已验证Anchor接触段是否整脚离面超过1厘米持续至少100毫秒，或Locked帧离面超过1厘米；Releasing不适用，100毫秒仅为诊断阈值",
                 new[] { "ContactSupportGapInterval" },
                 new[]
@@ -681,17 +650,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 },
                 value => CharacterFootDiagnosisContext.Metric(
                     value, "MaximumWholeFootGapMeters"),
-                "MaximumWholeFootGapMeters", "EntryWholeFootGapMeters",
+                "ScoredGapMaximumMeters", "MaximumWholeFootGapMeters", "EntryWholeFootGapMeters",
                 "ExitWholeFootGapMeters", "LongestGapDurationSeconds",
                 "ObservedDurationSeconds", "FrameCount", "GapFrameCount",
                 "ClosingFrameCount");
-            persistentContactGapTarget.categoricalMeasurements =
+            contactGapTarget.scorePolicy = "Health";
+            contactGapTarget.occurrence = context.Occurrence(
+                "ContinuousLandingOrLockedSameEventVerifiedContactAnchorInterval",
+                "ScoredGapMaximumMeters", "Meters", contactGapIntervals,
+                CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
+                s_OutputThresholds);
+            contactGapTarget.supplementalOccurrences =
+                new List<CharacterFootDiagnosisOccurrenceProfile>
+                {
+                    context.Occurrence(
+                        "LandingOrLockedSameEventVerifiedContactPlanePhysicalFootFrame",
+                        "WholeFootGapMeters", "Meters", contactGapFrames,
+                        CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
+                        s_OutputThresholds)
+                };
+            foreach (string metric in new[]
+                { "WholeFootGapMeters", "HeelClearanceMeters", "ToeClearanceMeters",
+                  "SoleClearanceMeters", "InPlaneAnchorDistanceMeters" })
+                contactGapTarget.measurements[metric] =
+                    CharacterFootDiagnosisDistribution.Create(contactGapFrames
+                        .Select(value => CharacterFootDiagnosisContext.Metric(value, metric))
+                        .ToList());
+            contactGapTarget.categoricalMeasurements =
                 new SortedDictionary<string, List<CharacterFootDiagnosisCategoryCount>>(
                     StringComparer.Ordinal)
                 {
                     ["GapClassification"] = CategoryCounts(contactGapIntervals,
+                        value => value["contactSupportGap"].Value<string>("classification")),
+                    ["PhysicalFootFrameGapMotion"] = CategoryCounts(contactGapFrames,
                         value => value["contactSupportGap"].Value<string>("classification"))
                 };
+            CharacterFootDiagnosisTarget contactOutput =
+                CharacterFootSwingPathJitterDiagnosis.BuildTarget(
+                    context, "contact-state-output-jump",
+                    "涉及Landing/Locked/Releasing的连续帧对中，最终物理脚是否出现不能由世界保持至正常动画位移解释的额外跳变；Plant/Floor/Acquisition不重复计分",
+                    "ContactStateOutputJump", "ContinuousContactStatePhysicalFootFramePair",
+                    "ContactStateAdditionalOutputStep");
+            contactOutput.categoricalMeasurements["StateBoundary"] = CategoryCounts(
+                context.Events("ContactStateOutputJump"),
+                value => value["visibleOutputJump"].Value<string>("previousConstraintState") +
+                    "->" + value["visibleOutputJump"].Value<string>("constraintState"));
+            foreach (string metric in new[]
+                { "ContactStateAdditionalOutputSpeed", "ContactAnkleAdditionalOutputStep",
+                  "ContactHeelAdditionalOutputStep", "ContactToeAdditionalOutputStep",
+                  "ContactAnkleMotionBlendParameter", "ContactHeelMotionBlendParameter",
+                  "ContactToeMotionBlendParameter" })
+                contactOutput.measurements[metric] =
+                    CharacterFootDiagnosisDistribution.Create(context.Events("ContactStateOutputJump")
+                        .Select(value => CharacterFootDiagnosisContext.Metric(value, metric)).ToList());
             CharacterFootDiagnosisDocument document = context.Document(
                 DiagnosticId,
                 context.Target(
@@ -859,7 +870,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 formalGoalWeightTarget,
                 reentryGeometryTarget,
                 contactGapTarget,
-                persistentContactGapTarget);
+                contactOutput);
             document.contactSupportGapCoverage = new CharacterFootContactSupportGapCoverage
             {
                 primaryGapThresholdMeters =

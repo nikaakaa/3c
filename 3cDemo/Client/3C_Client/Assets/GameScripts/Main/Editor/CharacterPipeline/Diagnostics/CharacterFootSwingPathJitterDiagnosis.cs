@@ -56,15 +56,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Path语义修订当帧，Foot Placement相对原动画新增的最终可见输出是否跳变",
                 "PathRevisionOutputJump",
                 "ContinuousAcceptedUnanchoredPathRevisionSwingFramePair");
-            CharacterFootPathStageDiagnosisProjection.Apply(
-                revision,
-                context.Events("PathRevisionOutputJump"));
-            CharacterFootDiagnosisTarget handoff = BuildTarget(
+            CharacterFootDiagnosisTarget revisionEvidence = BuildTarget(
                 context,
-                "swing-to-landing-output-jump",
-                "Swing进入Landing当帧，Foot Placement相对原动画新增的最终可见输出是否跳变",
-                "SwingToLandingOutputJump",
-                "ContinuousSwingToLandingFramePair");
+                "path-revision-amplification-evidence",
+                "Path修订可见跳变的首个放大阶段证据是否齐全；不重复计质量分",
+                "PathRevisionOutputJump",
+                "ContinuousAcceptedUnanchoredPathRevisionSwingFramePair");
+            revisionEvidence.scorePolicy = "Informational";
+            CharacterFootPathStageDiagnosisProjection.Apply(
+                revisionEvidence,
+                context.Events("PathRevisionOutputJump"));
             CharacterFootDiagnosisTarget actualEnvelope =
                 BuildActualFootEnvelopeCounterfactual(context);
             CharacterFootDiagnosisTarget correctionCadence =
@@ -73,7 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 DiagnosticId,
                 stable,
                 revision,
-                handoff,
+                revisionEvidence,
                 actualEnvelope,
                 correctionCadence);
         }
@@ -242,32 +243,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return target;
         }
 
-        static CharacterFootDiagnosisTarget BuildTarget(
+        internal static CharacterFootDiagnosisTarget BuildTarget(
             CharacterFootDiagnosisContext context,
             string targetId,
             string description,
             string eventKind,
-            string sampleUnit)
+            string sampleUnit,
+            string metricName = "FootPlacementOutputOffsetStep")
         {
             List<JObject> events = context.Events(eventKind);
             CharacterFootDiagnosisTarget target = context.Target(
                 targetId,
                 description,
                 new[] { eventKind },
-                new[] { "footPlacementOutputOffsetStepMeters>0.02" },
+                new[] { metricName + ">0.02" },
                 events,
                 value => CharacterFootDiagnosisContext.Metric(
                              value,
-                             "FootPlacementOutputOffsetStep") >
+                             metricName) >
                          PrimaryThresholdMeters
                     ? new List<string>
                     {
-                        "footPlacementOutputOffsetStepMeters>0.02"
+                        metricName + ">0.02"
                     }
                     : new List<string>(),
                 value => CharacterFootDiagnosisContext.Metric(
                     value,
-                    "FootPlacementOutputOffsetStep"),
+                    metricName),
+                metricName,
                 "FootPlacementOutputOffsetStep",
                 "FootPlacementOutputOffsetSpeed",
                 "AnkleOutputOffsetStep",
@@ -286,11 +289,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "BodyTickSpan");
             target.occurrence = context.Occurrence(
                 sampleUnit,
-                "FootPlacementOutputOffsetStep",
+                metricName,
                 "Meters",
                 events,
                 PrimaryThresholdMeters,
                 s_Thresholds);
+            target.scorePolicy = "Health";
             target.supplementalOccurrences = new List<
                 CharacterFootDiagnosisOccurrenceProfile>
             {
@@ -358,16 +362,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 events,
                 value => CharacterFootDiagnosisContext.Metric(
                              value,
-                             "FootPlacementOutputOffsetStep") >
+                             metricName) >
                          PrimaryThresholdMeters
                     ? new List<string>
                     {
-                        "footPlacementOutputOffsetStepMeters>0.02"
+                        metricName + ">0.02"
                     }
                     : new List<string>(),
                 value => CharacterFootDiagnosisContext.Metric(
                     value,
-                    "FootPlacementOutputOffsetStep"),
+                    metricName),
                 24);
             target.representativeEventCount =
                 target.representativeEvents.Count;

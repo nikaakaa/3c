@@ -1,96 +1,59 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
     internal sealed class CharacterFootLockedSoleMotionDiagnosis : ICharacterFootDiagnosis
     {
-        const double SinkMeters = 0.005d;
-        const double DriftMeters = 0.01d;
-
         public string DiagnosticId => "locked-sole-motion";
         public string FileName => "locked-sole-motion.json";
 
         public CharacterFootDiagnosisDocument Build(CharacterFootDiagnosisContext context)
         {
-            List<JObject> fullAnchorEvents = context.Events("LockedFullAnchor");
-            CharacterFootDiagnosisTarget fullAnchorTarget = context.Target(
-                "locked-sole-sink-or-drift",
-                "FullAnchor子段脚底是否相对稳定Anchor下陷或水平漂移",
-                new[] { "LockedFullAnchor" },
-                new[]
-                {
-                    "soleDownwardExcursionMeters>0.005",
-                    "anchorStable=true&&correctedSoleAnchorHorizontalDistanceMaximumMeters>0.01"
-                },
-                fullAnchorEvents,
-                value =>
-                {
-                    var rules = new List<string>(2);
-                    if (CharacterFootDiagnosisContext.Metric(
-                            value,
-                            "soleDownwardExcursionMeters") > SinkMeters)
-                    {
-                        rules.Add("soleDownwardExcursionMeters>0.005");
-                    }
-                    if (CharacterFootDiagnosisContext.Evidence(
-                            value,
-                            "anchorStable") &&
-                        CharacterFootDiagnosisContext.Metric(
-                            value,
-                            "correctedSoleAnchorHorizontalDistanceMaximumMeters") > DriftMeters)
-                    {
-                        rules.Add(
-                            "anchorStable=true&&correctedSoleAnchorHorizontalDistanceMaximumMeters>0.01");
-                    }
-                    return rules;
-                },
-                value => Math.Max(
-                    CharacterFootDiagnosisContext.Metric(
-                        value,
-                        "soleDownwardExcursionMeters") / SinkMeters,
-                    CharacterFootDiagnosisContext.Metric(
-                        value,
-                        "correctedSoleAnchorHorizontalDistanceMaximumMeters") / DriftMeters),
-                "soleDownwardExcursionMeters",
+            List<JObject> fullAnchor = context.Events("LockedFullAnchor");
+            List<JObject> physical = fullAnchor.Where(value =>
+                CharacterFootDiagnosisContext.Evidence(value, "physicalAnchorAvailable") &&
+                CharacterFootDiagnosisContext.Evidence(value, "anchorStable")).ToList();
+            const string metric = "physicalSoleAnchorHorizontalDistanceMaximumMeters";
+            CharacterFootDiagnosisTarget horizontal = context.Target(
+                "locked-horizontal-drift",
+                "FullAnchor子段最终物理Sole是否相对稳定Anchor水平漂移；不把Sliding正常移动或垂直穿透重复计入",
+                new[] { "LockedFullAnchor" }, new[] { metric + ">0.01" }, physical,
+                value => CharacterFootDiagnosisContext.Metric(value, metric) > 0.01d
+                    ? new List<string> { metric + ">0.01" } : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(value, metric),
+                metric, "correctedSoleAnchorHorizontalDistanceMaximumMeters",
+                "visibleSoleStepMaximumMeters", "anchorDisplacementMeters");
+            horizontal.scorePolicy = "Health";
+            horizontal.occurrence = context.Occurrence(
+                "ContinuousFullAnchorPhysicalSoleInterval", metric, "Meters", physical,
+                0.01d, 0.01d, 0.02d, 0.05d, 0.1d);
+            var locked = new List<JObject>(fullAnchor);
+            locked.AddRange(context.Events("LockedSliding"));
+            CharacterFootDiagnosisTarget vertical = context.Target(
+                "locked-vertical-anchor-evidence",
+                "FullAnchor与Sliding沿Up的Anchor下陷及响应类型证据；最终穿透由统一穿透Target计分",
+                new[] { "LockedFullAnchor", "LockedSliding" },
+                new[] { "soleDownwardExcursionMeters>0.005" }, locked,
+                value => CharacterFootDiagnosisContext.Metric(value,
+                    "soleDownwardExcursionMeters") > 0.005d
+                    ? new List<string> { "soleDownwardExcursionMeters>0.005" }
+                    : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(value, "soleDownwardExcursionMeters"),
+                "soleDownwardExcursionMeters", "soleAlongUpAbsoluteMaximumMeters",
                 "correctedSoleAnchorHorizontalDistanceMaximumMeters",
-                "visibleSoleStepMaximumMeters",
-                "anchorDisplacementMeters");
-            List<JObject> slidingEvents = context.Events("LockedSliding");
-            CharacterFootDiagnosisTarget slidingTarget = context.Target(
-                "locked-sliding-vertical-anchor",
-                "Sliding子段是否向垂直Anchor下方下陷；水平离锚距离与输出步长只发布事实，不在缺少正式距离政策时判定",
-                new[] { "LockedSliding" },
-                new[]
+                "physicalSoleAnchorHorizontalDistanceMaximumMeters",
+                "visibleSoleStepMaximumMeters", "anchorDisplacementMeters");
+            vertical.categoricalMeasurements =
+                new SortedDictionary<string, List<CharacterFootDiagnosisCategoryCount>>
                 {
-                    "soleDownwardExcursionMeters>0.005"
-                },
-                slidingEvents,
-                value =>
-                {
-                    var rules = new List<string>(1);
-                    if (CharacterFootDiagnosisContext.Metric(
-                            value,
-                            "soleDownwardExcursionMeters") > SinkMeters)
-                    {
-                        rules.Add(
-                            "soleDownwardExcursionMeters>0.005");
-                    }
-                    return rules;
-                },
-                value => CharacterFootDiagnosisContext.Metric(
-                    value,
-                    "soleDownwardExcursionMeters") / SinkMeters,
-                "soleAlongUpAbsoluteMaximumMeters",
-                "soleDownwardExcursionMeters",
-                "correctedSoleAnchorHorizontalDistanceMaximumMeters",
-                "visibleSoleStepMaximumMeters",
-                "anchorDisplacementMeters");
-            return context.Document(
-                DiagnosticId,
-                fullAnchorTarget,
-                slidingTarget);
+                    ["LockResponse"] = locked.GroupBy(value => value.Value<string>("kind"))
+                        .OrderBy(group => group.Key)
+                        .Select(group => new CharacterFootDiagnosisCategoryCount
+                            { value = group.Key, count = group.Count() }).ToList()
+                };
+            return context.Document(DiagnosticId, horizontal, vertical);
         }
     }
 }

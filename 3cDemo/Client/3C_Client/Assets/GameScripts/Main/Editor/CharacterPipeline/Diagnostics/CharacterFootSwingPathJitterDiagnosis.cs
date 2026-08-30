@@ -6,6 +6,20 @@ using Newtonsoft.Json.Linq;
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
     [Serializable]
+    internal sealed class CharacterFootPositionResponseBasisFact
+    {
+        public bool available;
+        public CharacterFootVectorFact worldAxis;
+        public CharacterFootVectorFact heightProjection;
+        public double worldUnitsPerPoseUnit;
+        public double? axisSquaredLength;
+        public double? axisProjectionDot;
+        public bool responseEvaluated;
+        public double? responseEquationErrorMeters;
+        public double? adjustmentOutsideAxisMeters;
+    }
+
+    [Serializable]
     internal sealed class CharacterFootCorrectionResponseCadenceAnalysis
     {
         public string classification;
@@ -140,10 +154,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "CurrentEnvelopeSampleAlongUpDelta",
                 "PreviousOriginalSoleStep",
                 "CurrentOriginalSoleStep",
-                "PreviousEnvelopeDirectionContribution",
-                "CurrentEnvelopeDirectionContribution",
-                "PreviousOriginalSoleDirectionContribution",
-                "CurrentOriginalSoleDirectionContribution");
+                "PreviousEnvelopeHeightProjectionContribution",
+                "CurrentEnvelopeHeightProjectionContribution",
+                "PreviousOriginalSoleHeightProjectionContribution",
+                "CurrentOriginalSoleHeightProjectionContribution",
+                "PreviousDesiredOutputHeightContribution", "CurrentDesiredOutputHeightContribution",
+                "PreviousHeightProjectionChangeContribution", "CurrentHeightProjectionChangeContribution",
+                "PreviousFormalHeightProjectionContribution", "CurrentFormalHeightProjectionContribution",
+                "PreviousDesiredScalarDecompositionError", "CurrentDesiredScalarDecompositionError");
             target.scorePolicy = "Informational";
             target.occurrence = context.Occurrence(
                 "ContinuousAcceptedSameSourceCycleEventPathSwingFrameTriple",
@@ -565,16 +583,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool correctionResponseInitializedThisFrame;
         public string correctionResponseInitializationReason;
         public double correctionResponseDesired;
-        public CharacterFootVectorFact correctionResponseRequestedDirection;
-        public CharacterFootVectorFact correctionResponsePreviousDirection;
-        public bool correctionResponseDirectionLimited;
-        public double correctionResponseMaximumDirectionChangeDegrees;
-        public double correctionResponseAppliedDirectionChangeDegrees;
+        public CharacterFootVectorFact supportDirectionRequested;
+        public CharacterFootVectorFact supportDirectionPrevious;
+        public bool supportDirectionLimited;
+        public double supportDirectionMaximumChangeDegrees;
+        public double supportDirectionAppliedChangeDegrees;
         public bool correctionResponseVisibleOutputTransferred;
         public double correctionResponseBeforeRebase;
         public double correctionResponsePrevious;
         public double correctionResponseCurrent;
-        public CharacterFootVectorFact correctionResponseDirection;
+        public CharacterFootVectorFact supportDirectionApplied;
+        public CharacterFootPositionResponseBasisFact positionResponseBasis;
         public string correctionResponseDeltaDirection;
         public double correctionResponseSelectedSpeed;
         public double correctionResponseAppliedDelta;

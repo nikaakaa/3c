@@ -2,6 +2,10 @@
 
 ## Context
 
+### 当前单步：Locked Sliding世界误差响应
+
+用户已停止膝盖实验，并批准仅修正Locked内部Sliding的再次离地。以155326已恢复行为为对照，Response在实际TargetKind为LockedSliding时持久保存完整E=O-D；其余状态保留原scalar。进入/正式Target Capture接住完整上一O并同帧推进，持续Sliding不随动画或法线重捕；退出由原Plant/Release完整残差接管后同步scalar，不以单scalar投影丢失XYZ。两域属于同一Interpolation、同一活动历史与根Bank，不新增状态机或输出路径。速度数值不调，世界误差按ComponentUp正/负/纯横向选择既有Increase/Decrease/较小预算，所有分支公开事实。当前Pending位置basis设计和已拒绝Goal参考不在本实验恢复。具体合同见[Sliding世界误差实验](experiments/20260830-sliding-world-response.md)。
+
 ### 2026-08-30位置响应坐标候选
 
 当前处置：141256位置轴候选与150516加权Goal参考组合均未通过完整质量约束。34c9974将代码、Profile及Corin生成产物精确恢复c519865内容，Diagnostics经1a81927、8812436恢复facts52/diagnosis21。155326恢复Replay已封口：2086行1140列中1116列与130545逐值相同，24列只为运行/Surface/Path身份；全部物理输出、状态、37个Target及60.4分恢复。官方Proof对上一候选保留7个版本身份差异、帧分歧0，直接对130545则Runtime身份和1044条frames一致。下述位置basis和Committed参考是已验证部分机制、但尚未接纳的设计方向，不代表当前运行实现。原13:05:45基线仍有踏空与反弯，恢复不等于修复，更不是认定它优于20:43历史版本。

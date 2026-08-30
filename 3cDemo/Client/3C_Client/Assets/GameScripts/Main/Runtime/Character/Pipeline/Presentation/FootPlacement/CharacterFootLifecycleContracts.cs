@@ -142,7 +142,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         None = 0,
         Increase = 1,
-        Decrease = 2
+        Decrease = 2,
+        Tangential = 3
+    }
+
+    internal enum CharacterFootCorrectionResponseDomain : byte
+    {
+        None = 0,
+        AnimationRelativeScalar = 1,
+        SlidingWorldError = 2
+    }
+
+    [Flags]
+    internal enum CharacterFootSlidingResponseCaptureReason : byte
+    {
+        None = 0,
+        Initialized = 1,
+        DomainEntered = 2,
+        TargetCaptured = 4
     }
 
     internal enum CharacterFootCorrectionResponseInitializationReason : byte
@@ -325,6 +342,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootCorrectionResponseDeltaDirection.None;
             CorrectionResponseSelectedSpeed = 0f;
             CorrectionResponseAppliedDelta = 0f;
+            CorrectionResponseDomain = CharacterFootCorrectionResponseDomain.None;
+            CorrectionResponsePreviousDomain = CharacterFootCorrectionResponseDomain.None;
+            CorrectionResponseDomainTransferred = false;
+            SlidingResponseErrorCaptureReason = CharacterFootSlidingResponseCaptureReason.None;
+            SlidingResponseErrorBeforeTransfer = default;
+            SlidingResponseErrorBeforeAdvance = default;
+            SlidingResponseErrorAfterAdvance = default;
+            SlidingResponseErrorAdvanced = false;
+            SlidingResponseMaximumStep = 0f;
             PlantVerticalContinuityOwners =
                 CharacterFootVerticalContinuityOwner.None;
             PlantEffectiveCorrectionBefore = default;
@@ -516,6 +542,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctionResponse.SelectedSpeed;
             CorrectionResponseAppliedDelta =
                 correctionResponse.AppliedDelta;
+            CorrectionResponseDomain = correctionResponse.Domain;
+            CorrectionResponsePreviousDomain = correctionResponse.PreviousDomain;
+            CorrectionResponseDomainTransferred = correctionResponse.DomainTransferred;
+            SlidingResponseErrorCaptureReason = correctionResponse.WorldErrorCaptureReason;
+            SlidingResponseErrorBeforeTransfer = correctionResponse.WorldErrorBeforeTransfer;
+            SlidingResponseErrorBeforeAdvance = correctionResponse.WorldErrorBeforeAdvance;
+            SlidingResponseErrorAfterAdvance = correctionResponse.WorldErrorAfterAdvance;
+            SlidingResponseErrorAdvanced = correctionResponse.WorldErrorAdvanced;
+            SlidingResponseMaximumStep = correctionResponse.WorldErrorMaximumStep;
             PlantVerticalContinuityOwners =
                 plant.VerticalContinuityOwners;
             PlantEffectiveCorrectionBefore =
@@ -638,6 +673,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CorrectionResponseDeltaDirection { get; }
         internal float CorrectionResponseSelectedSpeed { get; }
         internal float CorrectionResponseAppliedDelta { get; }
+        internal CharacterFootCorrectionResponseDomain CorrectionResponseDomain { get; }
+        internal CharacterFootCorrectionResponseDomain CorrectionResponsePreviousDomain { get; }
+        internal bool CorrectionResponseDomainTransferred { get; }
+        internal CharacterFootSlidingResponseCaptureReason SlidingResponseErrorCaptureReason { get; }
+        internal Vector3 SlidingResponseErrorBeforeTransfer { get; }
+        internal Vector3 SlidingResponseErrorBeforeAdvance { get; }
+        internal Vector3 SlidingResponseErrorAfterAdvance { get; }
+        internal bool SlidingResponseErrorAdvanced { get; }
+        internal float SlidingResponseMaximumStep { get; }
         internal CharacterFootVerticalContinuityOwner PlantVerticalContinuityOwners { get; }
         internal Vector3 PlantEffectiveCorrectionBefore { get; }
         internal Vector3 PlantEffectiveCorrectionAfter { get; }
@@ -1228,7 +1272,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 responseDirection,
             CharacterFootCorrectionResponseDeltaDirection deltaDirection,
             float selectedSpeed,
-            float appliedDelta)
+            float appliedDelta,
+            CharacterFootCorrectionResponseDomain domain,
+            CharacterFootCorrectionResponseDomain previousDomain,
+            bool domainTransferred,
+            CharacterFootSlidingResponseCaptureReason worldErrorCaptureReason,
+            Vector3 worldErrorBeforeTransfer,
+            Vector3 worldErrorBeforeAdvance,
+            Vector3 worldErrorAfterAdvance,
+            bool worldErrorAdvanced,
+            float worldErrorMaximumStep)
         {
             Evaluated = evaluated;
             InitializedBefore = initializedBefore;
@@ -1252,6 +1305,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DeltaDirection = deltaDirection;
             SelectedSpeed = selectedSpeed;
             AppliedDelta = appliedDelta;
+            Domain = domain;
+            PreviousDomain = previousDomain;
+            DomainTransferred = domainTransferred;
+            WorldErrorCaptureReason = worldErrorCaptureReason;
+            WorldErrorBeforeTransfer = worldErrorBeforeTransfer;
+            WorldErrorBeforeAdvance = worldErrorBeforeAdvance;
+            WorldErrorAfterAdvance = worldErrorAfterAdvance;
+            WorldErrorAdvanced = worldErrorAdvanced;
+            WorldErrorMaximumStep = worldErrorMaximumStep;
         }
 
         internal bool Evaluated { get; }
@@ -1279,6 +1341,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
         internal float SelectedSpeed { get; }
         internal float AppliedDelta { get; }
+        internal CharacterFootCorrectionResponseDomain Domain { get; }
+        internal CharacterFootCorrectionResponseDomain PreviousDomain { get; }
+        internal bool DomainTransferred { get; }
+        internal CharacterFootSlidingResponseCaptureReason WorldErrorCaptureReason { get; }
+        internal Vector3 WorldErrorBeforeTransfer { get; }
+        internal Vector3 WorldErrorBeforeAdvance { get; }
+        internal Vector3 WorldErrorAfterAdvance { get; }
+        internal bool WorldErrorAdvanced { get; }
+        internal float WorldErrorMaximumStep { get; }
     }
 
     internal readonly struct CharacterFootPlantInterpolationFact
@@ -1443,6 +1514,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantWorldResidualTransitionActive;
         internal bool HasCorrectionResponse;
         internal float CorrectionResponse;
+        internal CharacterFootCorrectionResponseDomain CorrectionResponseDomain;
+        internal Vector3 SlidingResponseWorldError;
         internal CharacterFootCorrectionResponseFact CorrectionResponseFact;
         internal bool HasCorrectionResponseLineage;
         internal FixedString128Bytes CorrectionResponseSourceLineage;

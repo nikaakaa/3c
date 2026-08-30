@@ -395,6 +395,28 @@ State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一�
 - **THEN** Current Support MUST继续进入与Locomotion相同的Selected Target、Target Height、World Residual、Correction Response与Goal链
 - **AND** MUST不关闭Foot Placement、清零Correction Response、切换攻击专用平滑器或在Final Pose后增加低通
 
+### Requirement: Locked Sliding必须按世界目标误差推进位置响应
+
+Correction Response MUST仍为唯一Owner，但位置History MUST显式区分`AnimationRelativeScalar`与`SlidingWorldError`，同帧只可消费一个域。本spec其它关于标量History、q、c与位置轴的响应公式仅适用于AnimationRelativeScalar；本帧实际Plant Target Kind为LockedSliding时 MUST使用SlidingWorldError，不能从Post后顶层State推断。五种状态、转场、Anchor、Sliding目标生成、Target Height、Plant World Residual、Support Direction角历史与旋转权重 MUST不因此改变。
+
+Sliding期望D MUST仍等于SelectedWorldTarget加本帧原Plant残差。进入域或已有正式Plant Capture时，E MUST从上一实际Interpolation Output减D取得完整XYZ；稳定帧 MUST沿用持久E，不得按动画基准或法线变化重新捕获。正dt且E非零时 MUST恰好一次MoveTowards(E,zero,speed×dt)，输出O MUST等于D加推进后的E。速度 MUST按待修正位移在ComponentUp上的正/负/纯横向选择正式Increase/Decrease/两档较小预算；数值配置不变。达到零后D保持不变时O MUST保持不变，不再受动画B的上下变化影响。
+
+正常退出到其它Plant或Releasing时，Runtime MUST先确认上一完整O已由原有Plant/Release目标残差捕获并同帧推进，再同步scalar为本帧q，不额外推进scalar一步。该行为 MUST发布DomainTransferred而非伪造初始化；缺少完整捕获 MUST typed拒绝，不以投影一个scalar丢弃其余位移。未初始化和Hard Ownership Loss MUST继续原有初始化/Reset合同；新域及历史 MUST随同一根Bank保留或清除。
+
+Diagnostics MUST公开当前/上一域、移交、E捕获原因、转移前/推进前/推进后、实际推进与最大步长。World域的scalar字段 MUST标为未执行占位，不能代入旧公式或当成零响应样本；Direction History、D、完整Residual、O与EffectiveCorrection公式仍须核对。真实Physical、Gap、穿透、质量规则与评分 MUST不因域迁移改变。
+
+#### Scenario: Sliding目标高度不变且世界误差已归零
+
+- **WHEN** 实际TargetKind为LockedSliding、D高度不变且E为零，而原动画Sole升高
+- **THEN** O MUST继续保持D高度，不因动画相对修正速度不足再次离地
+- **AND** 水平目标、Anchor身份与Support旋转输入 MUST保持既有规则
+
+#### Scenario: Sliding退出并交接到Release
+
+- **WHEN** Sliding进入Releasing且原Release入口捕获上一完整Interpolation Output
+- **THEN** 完整误差 MUST由Release残差承接，scalar只在本帧D上同步，DomainTransferred为true
+- **AND** 零dt时Response输出 MUST保持完整上一O，不得只保持法向分量
+
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
 封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、正式`ApproachContactToLandingProgress`、Approach Target Preparation与Selected Target Kind、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Verified Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Purpose、Refresh Mode、Query Reason、Landing Tracking状态、Approach Plant Target Preparation、Contact Verification Frame/Reason、稳定Plant候选忽略原因、Path Revision原因、Raw Landing/Path Target、Foot/Toe多点Pose输入与Current Support记录、唯一Support Position/Requested Direction及Rotation Goal、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Completion、Plant Target Kind与Lock Response、Target Height Component Up、Requested/Previous/Applied Direction、是否受限、最大/实际变化角、Target Height Mode/Before/Target/Applied/After与Update Reason、Previous/Current Selected World Target、Previous/Current Response Output Point、Residual Capture Reason、World Residual捕获前/后/衰减后、Desired/Previous/Current Correction Response、Selected Rate、Applied Delta、初始化/重置原因、Continuity Owner、Effective Correction前后、Action occupancy、实际Goal Weight与Hard Ownership Loss原因、Ground Path Component Up、既有Goal基准混合权重、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。Ground Path Component Up、Target Height Component Up、Requested Direction与Applied Direction MUST分列且不得互相补值。诊断 MUST先重算Direction History，再以`DesiredOutputPoint = SelectedWorldTarget + ResidualAfterDecay`、`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`、`ResponseOutputPoint = DesiredOutputPoint + PositionResponseWorldAxis × (CurrentResponse - DesiredResponse)`和`EffectiveCorrection = ResponseOutputPoint - OriginalSole`对账唯一输出；旧`BasisTransferred`、旧单档`MaximumVerticalCorrectionSpeed`和“World Residual取代Correction历史”的Disposition MUST不存在。

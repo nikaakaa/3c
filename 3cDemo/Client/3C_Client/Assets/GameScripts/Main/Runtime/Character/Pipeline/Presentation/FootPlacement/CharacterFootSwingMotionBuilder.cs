@@ -851,6 +851,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.CorrectionResponseSelectedSpeed;
             CorrectionResponseAppliedDelta =
                 path.CorrectionResponseAppliedDelta;
+            CorrectionResponseDomain = path.CorrectionResponseDomain.ToString();
+            CorrectionResponsePreviousDomain = path.CorrectionResponsePreviousDomain.ToString();
+            CorrectionResponseDomainTransferred = path.CorrectionResponseDomainTransferred;
+            SlidingResponseErrorCaptureReason = path.SlidingResponseErrorCaptureReason.ToString();
+            SlidingResponseErrorBeforeTransfer = path.SlidingResponseErrorBeforeTransfer;
+            SlidingResponseErrorBeforeAdvance = path.SlidingResponseErrorBeforeAdvance;
+            SlidingResponseErrorAfterAdvance = path.SlidingResponseErrorAfterAdvance;
+            SlidingResponseErrorAdvanced = path.SlidingResponseErrorAdvanced;
+            SlidingResponseMaximumStep = path.SlidingResponseMaximumStep;
             PlantVerticalContinuityOwners =
                 path.PlantVerticalContinuityOwners.ToString();
             PlantEffectiveCorrectionBefore =
@@ -1064,6 +1073,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public string CorrectionResponseDeltaDirection { get; }
         public float CorrectionResponseSelectedSpeed { get; }
         public float CorrectionResponseAppliedDelta { get; }
+        public string CorrectionResponseDomain { get; }
+        public string CorrectionResponsePreviousDomain { get; }
+        public bool CorrectionResponseDomainTransferred { get; }
+        public string SlidingResponseErrorCaptureReason { get; }
+        public Vector3 SlidingResponseErrorBeforeTransfer { get; }
+        public Vector3 SlidingResponseErrorBeforeAdvance { get; }
+        public Vector3 SlidingResponseErrorAfterAdvance { get; }
+        public bool SlidingResponseErrorAdvanced { get; }
+        public float SlidingResponseMaximumStep { get; }
         public string PlantVerticalContinuityOwners { get; }
         public Vector3 PlantEffectiveCorrectionBefore { get; }
         public Vector3 PlantEffectiveCorrectionAfter { get; }

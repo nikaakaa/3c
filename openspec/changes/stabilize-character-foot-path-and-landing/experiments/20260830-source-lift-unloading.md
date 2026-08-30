@@ -123,3 +123,13 @@ Stable最大额外单步36.401→103.360毫米。Path共同665帧对命中205→
 骨盆目标窗口改善、正式卸载合同已得到本Replay支持；但仍有15次超过50毫米的骨盆强制下降，用户也明确反馈骨盆不合格，且“保持193957 Landing/Swing收益”的整体约束未通过。候选不升格为后续已通过基线。
 
 截至此记录，只保存实验代码与证据，没有回退候选，也没有调整Goal权重、旋转、Reach、膝盖、曲线或参数。继续修正0.1毫米位置约束门会改变现有Goal权重政策，必须作为明确的下一独立行为决策；不能悄悄叠加后把组合效果算成本次单变量通过。用户指定193957保持为正式比较版本。
+
+## 用户裁决：撤销候选并独立调研
+
+用户随后明确要求回退本候选，并由主任务自行调研骨盆方案；新研究仅限只读，不实施提前规划、修改弯曲余量或Goal权重等下一变量。
+
+Diagnostics已由原作者以`27dbef4`精确撤销`d8da442`，整个Diagnostics目录恢复至`5d858bc`、facts57/diagnosis26。主任务仅将本步5个Runtime文件及卸载delta恢复到`7f7b66d`的对应内容；该版本Runtime与193957的`eb5fb05`一致，不回退用户已有Solver换行标记及proposal/project修改。
+
+SourceLiftUnloading、UnloadingLockRestored、卸载Event历史/重入保护和8个相关发布字段不保留兼容别名或开关。原ContactWorldResidual、正常Release、Goal权重、Reach与Pelvis弹簧保持193957内容。212054原始采样、ZIP、Proof、拒绝记录和193957全部保留；当前归档manifest描述的是保存候选时状态，不重写历史证据。
+
+源码恢复后仍需统一Editor构建、显式Refresh与原Record恢复Replay；未完成之前不以diff为空宣布表现已经恢复。

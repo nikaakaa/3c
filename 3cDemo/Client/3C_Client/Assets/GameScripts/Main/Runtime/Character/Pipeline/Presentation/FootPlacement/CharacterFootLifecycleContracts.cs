@@ -57,9 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         LandingCompleted = 10,
         ReleaseCompleted = 11,
         SameEventContactReentryRefresh = 12,
-        NewEventContactAcquired = 13,
-        SourceLiftUnloading = 14,
-        UnloadingLockRestored = 15
+        NewEventContactAcquired = 13
     }
 
     internal enum CharacterFootContactEdge : byte
@@ -1017,8 +1015,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong LatestContactEventIdentity;
         internal ulong LatestReleasedContactEventIdentity;
         internal ulong CompletedLockWeightEventIdentity;
-        internal ulong UnloadingEventIdentity;
-        internal ulong UnloadingReentryProtectedEventIdentity;
         internal CharacterFootContactEdge LastEdge;
 
         internal bool HasCompletedLockWeight(ulong eventIdentity) =>
@@ -1056,9 +1052,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.LatestReleasedContactEventIdentity;
             CompletedLockWeightEventIdentity =
                 context.CompletedLockWeightEventIdentity;
-            UnloadingEventIdentity = context.UnloadingEventIdentity;
-            UnloadingReentryProtectedEventIdentity =
-                context.UnloadingReentryProtectedEventIdentity;
         }
 
         internal bool RequestAvailable { get; }
@@ -1070,8 +1063,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong LatestContactEventIdentity { get; }
         internal ulong LatestReleasedContactEventIdentity { get; }
         internal ulong CompletedLockWeightEventIdentity { get; }
-        internal ulong UnloadingEventIdentity { get; }
-        internal ulong UnloadingReentryProtectedEventIdentity { get; }
     }
 
     internal readonly struct CharacterFootContactAnchorFact
@@ -1111,10 +1102,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLockResponse lockResponseBefore,
             CharacterFootGoalOwnershipLossReason ownershipLossReason,
             float formalFootPlacementWeight,
-            float unloadingLockDistance,
-            float unloadingSlideDistance,
-            float unloadingCurrentContactNormalizedTime,
-            float unloadingNextLandingNormalizedTime,
             in CharacterFootTransitionDecision preTransition,
             in CharacterFootTransitionDecision postTransition)
         {
@@ -1127,10 +1114,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockResponseBefore = lockResponseBefore;
             OwnershipLossReason = ownershipLossReason;
             FormalFootPlacementWeight = formalFootPlacementWeight;
-            UnloadingLockDistance = unloadingLockDistance;
-            UnloadingSlideDistance = unloadingSlideDistance;
-            UnloadingCurrentContactNormalizedTime = unloadingCurrentContactNormalizedTime;
-            UnloadingNextLandingNormalizedTime = unloadingNextLandingNormalizedTime;
             PreTransition = preTransition;
             PostTransition = postTransition;
         }
@@ -1144,10 +1127,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockResponse LockResponseBefore { get; }
         internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }
         internal float FormalFootPlacementWeight { get; }
-        internal float UnloadingLockDistance { get; }
-        internal float UnloadingSlideDistance { get; }
-        internal float UnloadingCurrentContactNormalizedTime { get; }
-        internal float UnloadingNextLandingNormalizedTime { get; }
         internal CharacterFootTransitionDecision PreTransition { get; }
         internal CharacterFootTransitionDecision PostTransition { get; }
         internal bool PostTransitionEvaluated =>
@@ -1176,7 +1155,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootLifecycleTransitionFact Begin(
             in CharacterFootLifecycleContext context,
-            in AnimationFootMotionRuntimeSample formalFootMotion,
             in CharacterFootStateFrame frame)
         {
             var history = new CharacterFootContactHistoryFact(
@@ -1194,12 +1172,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.Discrete.LockResponse,
                 frame.OwnershipLossReason,
                 frame.FootPlacementWeight,
-                frame.Settings.LockDistance,
-                frame.Settings.SlideDistance,
-                formalFootMotion.HasCurrentContactEvent
-                    ? formalFootMotion.Events.CurrentContact.NormalizedTime : 0f,
-                formalFootMotion.IsValid && formalFootMotion.Events.NextLanding.IsBound
-                    ? formalFootMotion.Events.NextLanding.NormalizedTime : 0f,
                 in decision,
                 in decision);
         }
@@ -1226,10 +1198,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LockResponseBefore,
                 OwnershipLossReason,
                 FormalFootPlacementWeight,
-                UnloadingLockDistance,
-                UnloadingSlideDistance,
-                UnloadingCurrentContactNormalizedTime,
-                UnloadingNextLandingNormalizedTime,
                 in preTransition,
                 in postTransition);
         }

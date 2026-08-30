@@ -42,7 +42,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootTransitionDecision ResolvePreInterpolation(
             in CharacterFootLifecycleContext context,
-            in AnimationFootMotionRuntimeSample formalFootMotion,
             in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
@@ -61,19 +60,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootAnchorCommand.Release,
                     true,
                     true);
-            }
-
-            if (RequestsSourceLiftUnloading(in context, in formalFootMotion, in frame))
-            {
-                return Decision(
-                    CharacterFootTransitionReason.SourceLiftUnloading,
-                    discrete.State,
-                    CharacterFootConstraintState.Releasing,
-                    CharacterFootLockResponse.None,
-                    edge,
-                    CharacterFootAnchorCommand.Retain,
-                    false,
-                    false);
             }
 
             return discrete.State switch
@@ -127,14 +113,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (discrete.State == CharacterFootConstraintState.Releasing)
             {
-                if (context.Contact.HasContact && frame.LockRequest.RequestsLock &&
-                    frame.LockRequest.EventIdentity == context.Contact.EventIdentity &&
-                    context.ContactTransition.UnloadingEventIdentity ==
-                    context.Contact.EventIdentity)
-                {
-                    return NoChange(in discrete, CharacterFootContactEdge.None,
-                        CharacterFootTransitionPhase.PostInterpolation);
-                }
                 return Decision(
                     CharacterFootTransitionReason.ReleaseCompleted,
                     discrete.State,
@@ -148,42 +126,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             return NoChange(in discrete, CharacterFootContactEdge.None,
                 CharacterFootTransitionPhase.PostInterpolation);
-        }
-
-        static bool RequestsSourceLiftUnloading(
-            in CharacterFootLifecycleContext context,
-            in AnimationFootMotionRuntimeSample motion,
-            in CharacterFootStateFrame frame)
-        {
-            if ((context.Discrete.State != CharacterFootConstraintState.Landing &&
-                 context.Discrete.State != CharacterFootConstraintState.Locked) ||
-                !OwnsRequest(in context, in frame) ||
-                !context.ContactTransition.HasCompletedLockWeight(
-                    context.Contact.EventIdentity) ||
-                context.ContactTransition.UnloadingReentryProtectedEventIdentity ==
-                    context.Contact.EventIdentity ||
-                !motion.IsAuthoritative || !motion.HasPredictiveLanding ||
-                !motion.IsPreSwing || !motion.HasCurrentContactEvent ||
-                motion.CurrentContactEventIdentity != context.Contact.EventIdentity ||
-                motion.LockMode != AnimationFootStepObservationLockMode.Sliding ||
-                frame.LockRequest.Mode != AnimationFootStepObservationLockMode.Sliding ||
-                motion.FootHeight <= CharacterFootConstraintMath.GeometryEpsilon)
-            {
-                return false;
-            }
-            if (ResolveAnchorHorizontalError(in context, in frame) >
-                frame.Settings.SlideDistance)
-            {
-                return false;
-            }
-            AnimationFootMotionEventOccurrence current = motion.Events.CurrentContact;
-            AnimationFootMotionEventOccurrence next = motion.Events.NextLanding;
-            return next.IsBound && next.Identity != current.Identity &&
-                   next.SourceSampleIdentity == current.SourceSampleIdentity &&
-                   next.ContributionContinuityIdentity == current.ContributionContinuityIdentity &&
-                   (next.LandingCycle > current.LandingCycle ||
-                    next.LandingCycle == current.LandingCycle &&
-                    next.NormalizedTime > current.NormalizedTime);
         }
 
         static CharacterFootTransitionDecision ResolveUnconstrained(
@@ -418,21 +360,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootLockResponse.None,
                     edge,
                     CharacterFootAnchorCommand.Create,
-                    false,
-                    false);
-            }
-            if (context.Contact.HasContact &&
-                context.Contact.EventIdentity == request.EventIdentity &&
-                context.ContactTransition.UnloadingEventIdentity == request.EventIdentity &&
-                request.Mode == AnimationFootStepObservationLockMode.Locked)
-            {
-                return Decision(
-                    CharacterFootTransitionReason.UnloadingLockRestored,
-                    discrete.State,
-                    CharacterFootConstraintState.Landing,
-                    CharacterFootLockResponse.None,
-                    edge,
-                    CharacterFootAnchorCommand.Retain,
                     false,
                     false);
             }

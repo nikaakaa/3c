@@ -56,7 +56,7 @@
 
 - [x] 5.1 用正式Step Time替换Landing Prediction时域、Current/Incoming选择和Future Body Translation请求时长
 - [x] 5.2 在Path瞬时Correction链连续后，用正式Step Time、SwingResidualTolerance和基础HalfLife计算统一Interpolation State中Swing政策的Landing截止收敛
-- [ ] 5.3 用正式Step Distance对账同脚相邻Motion-space Landing水平距离，并校验RootLocalLanding的同Event ordinal/sample lineage；循环展开上一周期，有限首段使用素材起点，不改变世界速度或地形查询数学
+- [x] 5.3 用正式Step Distance对账同脚相邻Motion-space Landing水平距离，并校验RootLocalLanding的同Event ordinal/sample lineage；循环展开上一周期，有限首段使用素材起点，不改变世界速度或地形查询数学
 - [ ] 5.4 删除旧隐藏Step Time/Distance/Event消费者及其Projection字段，不保留双读或fallback
 - [x] 5.5 对账Raw Landing、Future Translation、Landing Event和Surface lineage诊断，阻止事件边界造成水平偏移
 - [x] 5.6 在Foot根Bank增加左右脚共享的Prediction Motion State，保存稳定当前/Continuation速度、初始化事实、移动计划Generation、Body Reset与Prediction Source lineage，并随同一事务Seal或Discard
@@ -127,7 +127,7 @@
 - [x] 9.7 让唯一Transition Resolver生成Contact Rising/Falling/Same-Event Reentry Refresh Decision事实，唯一Transition Runtime随根事务更新Context；Pending失败或Discard不得推进边沿历史
 - [x] 9.8 Releasing期间同Event合法重入时发布`SameEventContactReentryRefresh`并执行`Releasing -> Landing`，只Retain原Verified Anchor并从当前Effective Correction连续接管，不查询、不Create、不清零Interpolation
 - [x] 9.9 Release完成或Anchor清除后阻止旧Event复活；新Event紧接上一边沿时必须执行自己的首次Plant Verification
-- [x] 9.10 发布上一/当前Lock请求、边沿、距边沿秒数、最近/最近释放Event、Reentry Refresh/Unavailable、Retained Anchor与连续接管诊断，确认下游Resolved Foot、Pelvis和Goal不读取内部Context
+- [ ] 9.10 发布上一/当前Lock请求、边沿、距边沿秒数、最近/最近释放Event、Reentry Refresh/Unavailable、Retained Anchor完整几何/获取身份与连续接管诊断；Suppress帧同样发布真实Pre/Post Decision和正式FootPlacementWeight，确认下游Resolved Foot、Pelvis和Goal不读取内部Context
 
 ## 10. 清理、构建与严格校验
 

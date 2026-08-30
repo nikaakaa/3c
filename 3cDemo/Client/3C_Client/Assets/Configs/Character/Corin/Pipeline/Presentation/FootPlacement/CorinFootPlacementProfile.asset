@@ -55,5 +55,5 @@ MonoBehaviour:
     m_LandingLockCompletionTolerance: 0.01
     m_LockDistance: 0.08
     m_SlideDistance: 0.2
-    m_PelvisSpringFrequency: 2
+    m_PelvisSpringFrequency: 3
     m_MinimumLandingLegCompressionReserve: 0.02

@@ -16,3 +16,5 @@
 完整处理链、可比性、指标与覆盖边界见`openspec/changes/stabilize-character-foot-path-and-landing/experiments/20260830-source-lift-unloading.md`。这份归档不参与Runtime配置、输入选择或正式诊断生产。
 
 保存时的处置：候选代码仍在当前工作区，没有改Goal权重、没有回退。它仅是待处置的实验状态，不是已经通过的下一基线。
+
+后续用户已明确要求回退：`3436cf6`恢复Runtime，`27dbef4`恢复Diagnostics。`20260830-221050-949-065a20d3944f47f29c256606e801ad57.zip`、`restored-proof.json`、`restored-manifest.json`记录恢复验证；2086脚行中1119列逐值恢复193957，其余24列仅运行/Surface/Path身份一一换代，37项诊断规则和结果恢复。候选manifest保持保存时原貌，历史证据不重写。

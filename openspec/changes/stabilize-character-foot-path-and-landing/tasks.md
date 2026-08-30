@@ -108,7 +108,8 @@
 - [x] 6.38 发布分域响应的唯一Runtime事实并迁移Sampler/Analyzer/Publisher，严格区分未执行scalar与WorldError推进，保留原质量规则；9f5b539/facts56完成，后续由6.40替换位置域
 - [x] 6.39 用原Record验证Sliding再离地、完整交接、水平轨迹、Heel/Toe穿透、Release、Pelvis与Reach；173423靶点成立但新增穿透及Release大步，拒绝质量通过，原始包与持久Proof保留，后续改同一实验而不视作好基线
 - [x] 6.40 将VerifiedSupport统一为ContactWorldResidual单一位置历史，删除Sliding第二世界误差与Contact动画相对scalar消费，保留原XYZ Capture/Decay和退出Release的完整移交
-- [ ] 6.41 迁移唯一Diagnostics到ContactWorldResidual分域合同，删除废弃Sliding误差字段，保持原37项质量公式并用原Record记录与03:54历史及近期控制的可比结果
+- [x] 6.41 迁移唯一Diagnostics到ContactWorldResidual分域合同，删除废弃Sliding误差字段，保持原37项质量公式；5d858bc完成facts57/d26，Editor构建0错误
+- [ ] 6.42 加载ContactWorldResidual候选并使用原Record采样，记录与03:54历史效果及155326同输入控制的可比结果，保留173423失败前驱，不以编译通过代替效果
 
 ## 7. 单独接入Support与Pelvis
 

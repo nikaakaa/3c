@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/52";
+        const string Schema = "character-foot-motion-facts/56";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 52;
+        const int AnalyzerVersion = 56;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -1204,9 +1204,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ? current.CurrentBodyTick - previous.CurrentBodyTick
                         : 0d
                 };
+                ApplyResponseDomainMetrics(current, metrics);
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
                 {
+                    ["scalarResponseEvaluated"] = ScalarResponseEvaluated(current),
+                    ["worldErrorResponseEvaluated"] = SlidingWorldResponse(current),
+                    ["responseDomainTransferred"] = current.CorrectionResponseDomainTransferred,
                     ["plantTargetEventChanged"] = eventChanged,
                     ["plantTargetKindChanged"] = !string.Equals(
                         previous.PlantTargetKind,
@@ -1423,9 +1427,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["CorrectionResponseAppliedDelta"] =
                         current.CorrectionResponseAppliedDelta
                 };
+                ApplyResponseDomainMetrics(current, metrics);
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
                 {
+                    ["scalarResponseEvaluated"] = ScalarResponseEvaluated(current),
+                    ["worldErrorResponseEvaluated"] = SlidingWorldResponse(current),
                     ["contactAcquired"] =
                         current.PreTransitionReason == "ContactAcquired",
                     ["newEventContactAcquired"] =
@@ -1483,6 +1490,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.ResolvedFinalSole),
                     plantResidualCaptureReason =
                         current.PlantResidualCaptureReason,
+                    responseDomain = ResponseDomainFact(current),
                     correctionResponseInitializationReason =
                         current.CorrectionResponseInitializationReason
                 };
@@ -2129,6 +2137,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             .PlantWorldResidualClearedAtCompletionTolerance,
                     correctionResponseEvaluated =
                         current.CorrectionResponseEvaluated,
+                    responseDomain = ResponseDomainFact(current),
                     correctionResponseInitializedBefore =
                         current.CorrectionResponseInitializedBefore,
                     correctionResponseInitializedThisFrame =
@@ -2136,7 +2145,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     correctionResponseInitializationReason =
                         current.CorrectionResponseInitializationReason,
                     correctionResponseDesired =
-                        current.CorrectionResponseDesired,
+                        ScalarResponseValue(current, current.CorrectionResponseDesired),
                     correctionResponseRequestedDirection =
                         CharacterFootVectorFact.From(
                             current.CorrectionResponseRequestedDirection),
@@ -2152,11 +2161,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     correctionResponseVisibleOutputTransferred =
                         current.CorrectionResponseVisibleOutputTransferred,
                     correctionResponseBeforeRebase =
-                        current.CorrectionResponseBeforeRebase,
+                        ScalarResponseValue(current, current.CorrectionResponseBeforeRebase),
                     correctionResponsePrevious =
-                        current.CorrectionResponsePrevious,
+                        ScalarResponseValue(current, current.CorrectionResponsePrevious),
                     correctionResponseCurrent =
-                        current.CorrectionResponseCurrent,
+                        ScalarResponseValue(current, current.CorrectionResponseCurrent),
                     correctionResponseDirection =
                         CharacterFootVectorFact.From(
                             current.CorrectionResponseDirection),
@@ -2165,7 +2174,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     correctionResponseSelectedSpeed =
                         current.CorrectionResponseSelectedSpeed,
                     correctionResponseAppliedDelta =
-                        current.CorrectionResponseAppliedDelta,
+                        ScalarResponseValue(current, current.CorrectionResponseAppliedDelta),
                     plantVerticalContinuityOwners =
                         current.PlantVerticalContinuityOwners,
                     plantEffectiveCorrectionBefore =
@@ -5573,6 +5582,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             correctionResponse = new
             {
                 evaluated = frame.CorrectionResponseEvaluated,
+                responseDomain = ResponseDomainFact(frame),
                 initializedBefore =
                     frame.CorrectionResponseInitializedBefore,
                 initializedThisFrame =
@@ -5587,7 +5597,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.DesiredOutputPoint),
                 responseOutput = CharacterFootVectorFact.From(
                     frame.ResponseOutputPoint),
-                desired = frame.CorrectionResponseDesired,
+                desired = ScalarResponseValue(frame, frame.CorrectionResponseDesired),
                 requestedDirection = CharacterFootVectorFact.From(
                     frame.CorrectionResponseRequestedDirection),
                 previousDirection = CharacterFootVectorFact.From(
@@ -5599,14 +5609,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.CorrectionResponseAppliedDirectionChangeDegrees,
                 visibleOutputTransferred =
                     frame.CorrectionResponseVisibleOutputTransferred,
-                beforeRebase = frame.CorrectionResponseBeforeRebase,
-                previous = frame.CorrectionResponsePrevious,
-                current = frame.CorrectionResponseCurrent,
+                beforeRebase = ScalarResponseValue(frame, frame.CorrectionResponseBeforeRebase),
+                previous = ScalarResponseValue(frame, frame.CorrectionResponsePrevious),
+                current = ScalarResponseValue(frame, frame.CorrectionResponseCurrent),
                 direction = CharacterFootVectorFact.From(
                     frame.CorrectionResponseDirection),
                 deltaDirection = frame.CorrectionResponseDeltaDirection,
                 selectedSpeed = frame.CorrectionResponseSelectedSpeed,
-                appliedDelta = frame.CorrectionResponseAppliedDelta
+                appliedDelta = ScalarResponseValue(frame, frame.CorrectionResponseAppliedDelta)
             },
             resolved = new
             {
@@ -5825,6 +5835,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             for (int i = 0; i < left.Count; i++)
                 RequirePredictionMotionPair(left[i], right[i]);
+            RequireResponseDomainHistory(left);
+            RequireResponseDomainHistory(right);
             FootFrame first = footRows[0];
             int geometryRowCount = ReadGeometry(
                 geometryPath,
@@ -6803,6 +6815,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionPlantWorldResidualClearedAtCompletionTolerance") != 0,
                 CorrectionResponseEvaluated =
                     Int("FootMotionCorrectionResponseEvaluated") != 0,
+                CorrectionResponseDomain = Cell("FootMotionCorrectionResponseDomain"),
+                CorrectionResponsePreviousDomain = Cell("FootMotionCorrectionResponsePreviousDomain"),
+                CorrectionResponseDomainTransferred = Int("FootMotionCorrectionResponseDomainTransferred") != 0,
+                SlidingResponseErrorCaptureReason = Cell("FootMotionSlidingResponseErrorCaptureReason"),
+                SlidingResponseErrorBeforeTransfer = Vector("FootMotionSlidingResponseErrorBeforeTransfer"),
+                SlidingResponseErrorBeforeAdvance = Vector("FootMotionSlidingResponseErrorBeforeAdvance"),
+                SlidingResponseErrorAfterAdvance = Vector("FootMotionSlidingResponseErrorAfterAdvance"),
+                SlidingResponseErrorAdvanced = Int("FootMotionSlidingResponseErrorAdvanced") != 0,
+                SlidingResponseMaximumStep = Float("FootMotionSlidingResponseMaximumStep"),
                 CorrectionResponseInitializedBefore =
                     Int("FootMotionCorrectionResponseInitializedBefore") != 0,
                 CorrectionResponseInitializedThisFrame =
@@ -7118,6 +7139,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireCurrentSupport(frame);
             RequirePreparedAndSelectedTarget(frame);
             RequireCorrectionResponseDirectionHistory(frame);
+            RequireResponseDomain(frame);
             RequireResolvedFoot(frame);
             RequireFormalGoalWeights(frame);
             RequireLegReachFacts(frame);
@@ -7296,118 +7318,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     RuntimeGeometryEpsilon;
                 bool responseInitializedThisFrame =
                     frame.CorrectionResponseInitializedThisFrame;
-                Vector3 requestedResponseDirection =
-                    frame.CorrectionResponseRequestedDirection.normalized;
-                float requestedDirectionChangeDegrees =
-                    frame.CorrectionResponseInitializedBefore
-                        ? DirectionAngleDegrees(
-                            frame.CorrectionResponsePreviousDirection,
-                            requestedResponseDirection)
-                        : 0f;
-                bool expectedDirectionLimited =
-                    frame.CorrectionResponseDirectionLimited;
-                bool directionLimitFlagConsistent =
-                    frame.CorrectionResponseInitializedBefore
-                        ? expectedDirectionLimited
-                            ? requestedDirectionChangeDegrees >=
-                              frame.CorrectionResponseMaximumDirectionChangeDegrees -
-                              DirectionComparisonEpsilonDegrees
-                            : requestedDirectionChangeDegrees <=
-                              frame.CorrectionResponseMaximumDirectionChangeDegrees +
-                              DirectionComparisonEpsilonDegrees
-                        : !expectedDirectionLimited;
-                Vector3 expectedResponseDirection = expectedDirectionLimited
-                    ? RotateDirectionTowards(
-                        frame.CorrectionResponsePreviousDirection,
-                        requestedResponseDirection,
-                        frame.CorrectionResponseMaximumDirectionChangeDegrees)
-                    : requestedResponseDirection;
-                float expectedAppliedDirectionChangeDegrees =
-                    frame.CorrectionResponseInitializedBefore
-                        ? DirectionAngleDegrees(
-                            frame.CorrectionResponsePreviousDirection,
-                            expectedResponseDirection)
-                        : 0f;
-                float expectedResponsePrevious =
-                    frame.CorrectionResponseVisibleOutputTransferred
-                    ? Vector3.Dot(
-                        frame.PreviousResponseOutputPoint -
-                        frame.OriginalSole,
-                        expectedResponseDirection)
-                    : frame.CorrectionResponseBeforeRebase;
-                float responseDelta =
-                    frame.CorrectionResponseDesired -
-                    frame.CorrectionResponsePrevious;
-                string expectedResponseDeltaDirection = responseDelta == 0f
-                    ? "None"
-                    : responseDelta > 0f
-                        ? "Increase"
-                        : "Decrease";
-                float expectedResponseSpeed =
-                    expectedResponseDeltaDirection switch
-                {
-                    "Increase" => ExpectedCorrectionResponseIncreaseSpeed,
-                    "Decrease" => ExpectedCorrectionResponseDecreaseSpeed,
-                    _ => 0f
-                };
-                float expectedResponseAppliedDelta = responseInitializedThisFrame
-                    ? 0f
-                    : Mathf.Clamp(
-                        responseDelta,
-                        -expectedResponseSpeed * frame.DeltaSeconds,
-                        expectedResponseSpeed * frame.DeltaSeconds);
-                bool responseInitializationConsistent =
-                    responseInitializedThisFrame ==
-                    !frame.CorrectionResponseInitializedBefore &&
-                    directionLimitFlagConsistent &&
-                    Math.Abs(
-                        frame.CorrectionResponseAppliedDirectionChangeDegrees -
-                        expectedAppliedDirectionChangeDegrees) <=
-                    RotationNoiseFloorDegrees &&
-                    Vector3.Distance(
-                        frame.CorrectionResponseDirection,
-                        expectedResponseDirection) <=
-                    RuntimeGeometryEpsilon &&
-                    Math.Abs(
-                        frame.CorrectionResponsePrevious -
-                        expectedResponsePrevious) <= PositionNoiseFloor &&
-                    (responseInitializedThisFrame
-                        ? frame.CorrectionResponseInitializationReason !=
-                          "None" &&
-                          Math.Abs(
-                              frame.CorrectionResponseCurrent -
-                              frame.CorrectionResponsePrevious) <=
-                          PositionNoiseFloor &&
-                          (!frame.CorrectionResponseVisibleOutputTransferred
-                              ? Math.Abs(
-                                  frame.CorrectionResponsePrevious -
-                                  frame.CorrectionResponseDesired) <=
-                                PositionNoiseFloor
-                              : frame.PreviousResponseOutputAvailable) &&
-                          frame.CorrectionResponseDeltaDirection == "None" &&
-                          Math.Abs(
-                              frame.CorrectionResponseSelectedSpeed) <=
-                          PositionNoiseFloor &&
-                          Math.Abs(
-                              frame.CorrectionResponseAppliedDelta) <=
-                          PositionNoiseFloor
-                        : frame.CorrectionResponseInitializationReason ==
-                          "None" &&
-                          frame.PreviousResponseOutputAvailable &&
-                          frame.CorrectionResponseDeltaDirection ==
-                          expectedResponseDeltaDirection &&
-                          Math.Abs(
-                              frame.CorrectionResponseSelectedSpeed -
-                              expectedResponseSpeed) <= TimeEpsilon &&
-                          Math.Abs(
-                              frame.CorrectionResponseAppliedDelta -
-                              expectedResponseAppliedDelta) <=
-                          PositionNoiseFloor &&
-                          Math.Abs(
-                              frame.CorrectionResponseCurrent -
-                              (frame.CorrectionResponsePrevious +
-                               expectedResponseAppliedDelta)) <=
-                          PositionNoiseFloor);
                 CharacterFootVerticalContinuityOwner expectedOwners =
                     CharacterFootVerticalContinuityOwner.PlantTarget;
                 if (frame.PlantTargetHeightUpdateReason != "None" ||
@@ -7427,6 +7337,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterFootVerticalContinuityOwner.PlantWorldResidual;
                 }
                 if (responseInitializedThisFrame ||
+                    frame.SlidingResponseErrorAdvanced ||
+                    frame.SlidingResponseErrorAfterAdvance != Vector3.zero ||
                     !Mathf.Approximately(
                         frame.CorrectionResponseCurrent,
                         frame.CorrectionResponseDesired) ||
@@ -7546,7 +7458,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.CorrectionResponseSelectedSpeed) ||
                     !float.IsFinite(
                         frame.CorrectionResponseAppliedDelta) ||
-                    !responseInitializationConsistent ||
                     !ownersConsistent ||
                     frame.SelectedSupportTarget.Available &&
                         Vector3.Distance(
@@ -7558,19 +7469,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.PlantSelectedWorldTarget +
                         frame.PlantWorldResidualAfterDecay) >
                     PositionNoiseFloor ||
-                    Math.Abs(
-                        frame.CorrectionResponseDesired -
-                        Vector3.Dot(
-                            frame.DesiredOutputPoint -
-                            frame.OriginalSole,
-                            frame.CorrectionResponseDirection)) >
-                    PositionNoiseFloor ||
-                    Vector3.Distance(
-                        frame.ResponseOutputPoint,
-                        frame.DesiredOutputPoint +
-                        frame.CorrectionResponseDirection *
-                        (frame.CorrectionResponseCurrent -
-                         frame.CorrectionResponseDesired)) >
+                    Vector3.Distance(frame.ResponseOutputPoint, ExpectedResponseOutput(frame)) >
                     PositionNoiseFloor ||
                     frame.PreviousResponseOutputAvailable &&
                         Vector3.Distance(
@@ -7599,10 +7498,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"ResidualCapture={residualCaptureConsistent} " +
                         $"ResidualHalfLife={residualHalfLifeConsistent} " +
                         $"ResidualDecay={residualDecayConsistent} " +
-                        $"Response={responseInitializationConsistent} " +
+                        $"ResponseDomain={frame.CorrectionResponseDomain} " +
                         $"Owners={ownersConsistent} " +
                         $"DesiredOutputError={Vector3.Distance(frame.DesiredOutputPoint, frame.PlantSelectedWorldTarget + frame.PlantWorldResidualAfterDecay):R} " +
-                        $"ResponseOutputError={Vector3.Distance(frame.ResponseOutputPoint, frame.DesiredOutputPoint + frame.CorrectionResponseDirection * (frame.CorrectionResponseCurrent - frame.CorrectionResponseDesired)):R} " +
+                        $"ResponseOutputError={Vector3.Distance(frame.ResponseOutputPoint, ExpectedResponseOutput(frame)):R} " +
                         $"PreviousOutputError={Vector3.Distance(frame.PreviousResponseOutputPoint, outputBefore):R} " +
                         $"EffectiveResponseError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.ResponseOutputPoint - frame.OriginalSole):R} " +
                         $"InterpolationError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.InterpolationOutputCorrection):R} " +
@@ -8557,6 +8456,218 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static bool SlidingWorldResponse(FootFrame frame) =>
+            frame.CorrectionResponseEvaluated && frame.CorrectionResponseDomain == "SlidingWorldError";
+
+        static bool ScalarResponseEvaluated(FootFrame frame) =>
+            frame.CorrectionResponseEvaluated && frame.CorrectionResponseDomain == "AnimationRelativeScalar";
+
+        static bool ExitingSlidingResponse(FootFrame frame) =>
+            ScalarResponseEvaluated(frame) && frame.CorrectionResponseDomainTransferred &&
+            frame.CorrectionResponsePreviousDomain == "SlidingWorldError";
+
+        static double? ScalarResponseValue(FootFrame frame, float value) =>
+            ScalarResponseEvaluated(frame) ? (double?)value : null;
+
+        static Vector3 ExpectedResponseOutput(FootFrame frame) =>
+            frame.DesiredOutputPoint + (SlidingWorldResponse(frame)
+                ? frame.SlidingResponseErrorAfterAdvance
+                : frame.CorrectionResponseDirection *
+                  (frame.CorrectionResponseCurrent - frame.CorrectionResponseDesired));
+
+        static CharacterFootResponseDomainFact ResponseDomainFact(FootFrame frame) => new
+            CharacterFootResponseDomainFact
+            {
+                domain = frame.CorrectionResponseDomain,
+                previousDomain = frame.CorrectionResponsePreviousDomain,
+                transferred = frame.CorrectionResponseDomainTransferred,
+                scalarEvaluated = ScalarResponseEvaluated(frame),
+                worldErrorEvaluated = SlidingWorldResponse(frame),
+                worldErrorCaptureReason = frame.SlidingResponseErrorCaptureReason,
+                worldErrorBeforeTransfer = CharacterFootVectorFact.From(frame.SlidingResponseErrorBeforeTransfer),
+                worldErrorBeforeAdvance = SlidingWorldResponse(frame)
+                    ? CharacterFootVectorFact.From(frame.SlidingResponseErrorBeforeAdvance) : null,
+                worldErrorAfterAdvance = SlidingWorldResponse(frame)
+                    ? CharacterFootVectorFact.From(frame.SlidingResponseErrorAfterAdvance) : null,
+                worldErrorAdvanced = frame.SlidingResponseErrorAdvanced,
+                worldErrorMaximumStepMeters = SlidingWorldResponse(frame)
+                    ? (double?)frame.SlidingResponseMaximumStep : null
+            };
+
+        static void ApplyResponseDomainMetrics(
+            FootFrame frame, SortedDictionary<string, double> metrics)
+        {
+            if (!ScalarResponseEvaluated(frame))
+            {
+                metrics.Remove("CorrectionResponseDesired");
+                metrics.Remove("CorrectionResponsePrevious");
+                metrics.Remove("CorrectionResponseCurrent");
+                metrics.Remove("CorrectionResponseAppliedDelta");
+            }
+            if (!SlidingWorldResponse(frame))
+                return;
+            metrics["SlidingResponseErrorBeforeAdvanceMeters"] = frame.SlidingResponseErrorBeforeAdvance.magnitude;
+            metrics["SlidingResponseErrorAfterAdvanceMeters"] = frame.SlidingResponseErrorAfterAdvance.magnitude;
+            metrics["SlidingResponseErrorAdvanceMeters"] = Vector3.Distance(
+                frame.SlidingResponseErrorBeforeAdvance, frame.SlidingResponseErrorAfterAdvance);
+            metrics["SlidingResponseMaximumStepMeters"] = frame.SlidingResponseMaximumStep;
+        }
+
+        static void RequireResponseDomain(FootFrame frame)
+        {
+            RequireEnum<CharacterFootCorrectionResponseDomain>(frame.CorrectionResponseDomain,
+                "FootMotionCorrectionResponseDomain");
+            RequireEnum<CharacterFootCorrectionResponseDomain>(frame.CorrectionResponsePreviousDomain,
+                "FootMotionCorrectionResponsePreviousDomain");
+            RequireFlags<CharacterFootSlidingResponseCaptureReason>(frame.SlidingResponseErrorCaptureReason,
+                "FootMotionSlidingResponseErrorCaptureReason");
+            bool evaluated = frame.CorrectionResponseEvaluated;
+            bool initialized = frame.CorrectionResponseInitializedBefore;
+            bool world = SlidingWorldResponse(frame);
+            bool exiting = ExitingSlidingResponse(frame);
+            bool transferExpected = evaluated && initialized &&
+                frame.CorrectionResponsePreviousDomain != frame.CorrectionResponseDomain;
+            bool targetCaptured = frame.PlantInterpolationEvaluated && frame.PlantResidualCaptureReason != "None";
+            bool valid = FiniteVector(frame.SlidingResponseErrorBeforeTransfer) &&
+                FiniteVector(frame.SlidingResponseErrorBeforeAdvance) &&
+                FiniteVector(frame.SlidingResponseErrorAfterAdvance) &&
+                float.IsFinite(frame.SlidingResponseMaximumStep) && frame.SlidingResponseMaximumStep >= 0f &&
+                frame.CorrectionResponseDomainTransferred == transferExpected &&
+                (evaluated ? frame.CorrectionResponseDomain != "None" : frame.CorrectionResponseDomain == "None") &&
+                ((evaluated && initialized) == (frame.CorrectionResponsePreviousDomain != "None"));
+            if (evaluated)
+            {
+                valid &= world == (frame.PlantInterpolationEvaluated && frame.PlantTargetKind == "LockedSliding");
+                valid &= !initialized || frame.PreviousResponseOutputAvailable;
+                valid &= FiniteVector(frame.DesiredOutputPoint) && FiniteVector(frame.ResponseOutputPoint) &&
+                    FiniteVector(frame.PreviousResponseOutputPoint) &&
+                    Vector3.Distance(frame.ResponseOutputPoint, ExpectedResponseOutput(frame)) <= PositionNoiseFloor;
+            }
+            if (world)
+            {
+                CharacterFootSlidingResponseCaptureReason reason = CharacterFootSlidingResponseCaptureReason.None;
+                if (!initialized)
+                    reason = CharacterFootSlidingResponseCaptureReason.Initialized;
+                else
+                {
+                    if (transferExpected)
+                        reason |= CharacterFootSlidingResponseCaptureReason.DomainEntered;
+                    if (targetCaptured)
+                        reason |= CharacterFootSlidingResponseCaptureReason.TargetCaptured;
+                }
+                Vector3 expectedBefore = !initialized ? Vector3.zero
+                    : reason != CharacterFootSlidingResponseCaptureReason.None
+                        ? frame.PreviousResponseOutputPoint - frame.DesiredOutputPoint
+                        : frame.SlidingResponseErrorBeforeTransfer;
+                float distance = expectedBefore.magnitude;
+                float upDisplacement = Vector3.Dot(-expectedBefore, frame.ComponentUp.normalized);
+                string direction = distance == 0f ? "None"
+                    : upDisplacement > 0f ? "Increase" : upDisplacement < 0f ? "Decrease" : "Tangential";
+                float speed = direction == "None" ? 0f
+                    : direction == "Increase" ? ExpectedCorrectionResponseIncreaseSpeed
+                    : direction == "Decrease" ? ExpectedCorrectionResponseDecreaseSpeed
+                    : Math.Min(ExpectedCorrectionResponseIncreaseSpeed, ExpectedCorrectionResponseDecreaseSpeed);
+                float maximum = speed * frame.DeltaSeconds;
+                bool advanced = distance > 0f && frame.DeltaSeconds > 0f;
+                Vector3 expectedAfter = advanced ? Vector3.MoveTowards(expectedBefore, Vector3.zero, maximum) : expectedBefore;
+                valid &= !frame.CorrectionResponseVisibleOutputTransferred &&
+                    frame.CorrectionResponseDesired == 0f && frame.CorrectionResponseBeforeRebase == 0f &&
+                    frame.CorrectionResponsePrevious == 0f && frame.CorrectionResponseCurrent == 0f &&
+                    frame.CorrectionResponseAppliedDelta == 0f &&
+                    (!initialized || frame.PreviousResponseOutputAvailable) &&
+                    Enum.Parse<CharacterFootSlidingResponseCaptureReason>(frame.SlidingResponseErrorCaptureReason) == reason &&
+                    Vector3.Distance(frame.SlidingResponseErrorBeforeAdvance, expectedBefore) <= RuntimeGeometryEpsilon &&
+                    Vector3.Distance(frame.SlidingResponseErrorAfterAdvance, expectedAfter) <= RuntimeGeometryEpsilon &&
+                    frame.SlidingResponseErrorAdvanced == advanced &&
+                    frame.CorrectionResponseDeltaDirection == direction &&
+                    Math.Abs(frame.CorrectionResponseSelectedSpeed - speed) <= TimeEpsilon &&
+                    Math.Abs(frame.SlidingResponseMaximumStep - maximum) <= TimeEpsilon;
+            }
+            else
+            {
+                valid &= frame.SlidingResponseErrorCaptureReason == "None" &&
+                    frame.SlidingResponseErrorBeforeAdvance.Equals(Vector3.zero) &&
+                    frame.SlidingResponseErrorAfterAdvance.Equals(Vector3.zero) &&
+                    !frame.SlidingResponseErrorAdvanced && frame.SlidingResponseMaximumStep == 0f;
+                if (evaluated)
+                {
+                    float desired = Vector3.Dot(frame.DesiredOutputPoint - frame.OriginalSole,
+                        frame.CorrectionResponseDirection);
+                    float previous = exiting ? desired : frame.CorrectionResponseVisibleOutputTransferred
+                        ? Vector3.Dot(frame.PreviousResponseOutputPoint - frame.OriginalSole,
+                            frame.CorrectionResponseDirection) : frame.CorrectionResponseBeforeRebase;
+                    float delta = desired - previous;
+                    bool advance = initialized && !exiting;
+                    string direction = !advance || delta == 0f ? "None" : delta > 0f ? "Increase" : "Decrease";
+                    float speed = direction == "None" ? 0f : direction == "Increase"
+                        ? ExpectedCorrectionResponseIncreaseSpeed : ExpectedCorrectionResponseDecreaseSpeed;
+                    float applied = advance ? Mathf.Clamp(delta, -speed * frame.DeltaSeconds,
+                        speed * frame.DeltaSeconds) : 0f;
+                    valid &= (!frame.CorrectionResponseVisibleOutputTransferred || frame.PreviousResponseOutputAvailable) &&
+                        Math.Abs(frame.CorrectionResponseDesired - desired) <= PositionNoiseFloor &&
+                        Math.Abs(frame.CorrectionResponsePrevious - previous) <= PositionNoiseFloor &&
+                        Math.Abs(frame.CorrectionResponseCurrent - previous - applied) <= PositionNoiseFloor &&
+                        frame.CorrectionResponseDeltaDirection == direction &&
+                        Math.Abs(frame.CorrectionResponseSelectedSpeed - speed) <= TimeEpsilon &&
+                        Math.Abs(frame.CorrectionResponseAppliedDelta - applied) <= PositionNoiseFloor &&
+                        (initialized || Math.Abs(frame.CorrectionResponseBeforeRebase - desired) <= PositionNoiseFloor);
+                    if (exiting)
+                    {
+                        valid &= frame.PreviousResponseOutputAvailable && !frame.CorrectionResponseVisibleOutputTransferred &&
+                            frame.CorrectionResponseBeforeRebase == 0f && frame.CorrectionResponseAppliedDelta == 0f &&
+                            frame.CorrectionResponseSelectedSpeed == 0f;
+                        if (frame.PlantInterpolationEvaluated)
+                        {
+                            valid &= targetCaptured && Vector3.Distance(frame.PlantWorldResidualCapturedBeforeDecay,
+                                frame.PreviousResponseOutputPoint - frame.PlantSelectedWorldTarget) <= RuntimeGeometryEpsilon;
+                        }
+                        else
+                        {
+                            Vector3 captured = frame.PreviousResponseOutputPoint - frame.OriginalSole - frame.StateTargetCorrection;
+                            Vector3 expectedDesired = frame.OriginalSole + frame.StateTargetCorrection +
+                                AdvanceResidual(captured, frame.DeltaSeconds, frame.ResidualBaseHalfLifeSeconds);
+                            valid &= frame.InterpolationPolicy == "ReleaseResidual" &&
+                                frame.PreTransitionTarget == "Releasing" && frame.PreTransitionSource != "Releasing" &&
+                                frame.ResidualBaseHalfLifeSeconds > 0f &&
+                                Vector3.Distance(frame.DesiredOutputPoint, expectedDesired) <= RuntimeGeometryEpsilon;
+                        }
+                    }
+                }
+            }
+            if (frame.CorrectionResponsePreviousDomain != "SlidingWorldError")
+                valid &= frame.SlidingResponseErrorBeforeTransfer.Equals(Vector3.zero);
+            if (!valid)
+                throw new InvalidDataException(
+                    $"Foot Motion Correction Response domain is inconsistent Frame={frame.Frame} Side={frame.Side} " +
+                    $"Domain={frame.CorrectionResponseDomain} Previous={frame.CorrectionResponsePreviousDomain} " +
+                    $"Transferred={frame.CorrectionResponseDomainTransferred} Capture={frame.SlidingResponseErrorCaptureReason}.");
+        }
+
+        static void RequireResponseDomainHistory(List<FootFrame> frames)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1];
+                FootFrame current = frames[i];
+                if (!Continuous(previous, current) || previous.ProfileRevision != current.ProfileRevision ||
+                    previous.ProgramIdentity != current.ProgramIdentity || previous.ProjectionRevision != current.ProjectionRevision ||
+                    !previous.CorrectionResponseEvaluated || !current.CorrectionResponseEvaluated ||
+                    !current.CorrectionResponseInitializedBefore)
+                    continue;
+                Vector3 previousError = SlidingWorldResponse(previous) ? previous.SlidingResponseErrorAfterAdvance : Vector3.zero;
+                bool valid = current.CorrectionResponsePreviousDomain == previous.CorrectionResponseDomain &&
+                    Vector3.Distance(current.SlidingResponseErrorBeforeTransfer, previousError) <= RuntimeGeometryEpsilon;
+                if (!current.CorrectionResponseVisibleOutputTransferred)
+                    valid &= current.PreviousResponseOutputAvailable && Vector3.Distance(
+                        current.PreviousResponseOutputPoint, previous.ResponseOutputPoint) <= RuntimeGeometryEpsilon;
+                if (ScalarResponseEvaluated(current) && !ExitingSlidingResponse(current))
+                    valid &= Math.Abs(current.CorrectionResponseBeforeRebase - previous.CorrectionResponseCurrent) <= PositionNoiseFloor;
+                if (!valid)
+                    throw new InvalidDataException(
+                        $"Foot Motion committed Response domain history is inconsistent Frame={current.Frame} Side={current.Side}.");
+            }
+        }
+
         static void RequireCorrectionResponseDirectionHistory(FootFrame frame)
         {
             if (!frame.CorrectionResponseEvaluated)
@@ -8590,34 +8701,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.CorrectionResponsePreviousDirection,
                     applied)
                 : 0f;
-            float desired = Vector3.Dot(
-                frame.DesiredOutputPoint - frame.OriginalSole,
-                applied);
-            float previous = frame.CorrectionResponseVisibleOutputTransferred
-                ? Vector3.Dot(
-                    frame.PreviousResponseOutputPoint - frame.OriginalSole,
-                    applied)
-                : frame.CorrectionResponseBeforeRebase;
-            float delta = desired - previous;
-            string deltaDirection = delta == 0f
-                ? "None"
-                : delta > 0f
-                    ? "Increase"
-                    : "Decrease";
-            float speed = deltaDirection switch
-            {
-                "Increase" => ExpectedCorrectionResponseIncreaseSpeed,
-                "Decrease" => ExpectedCorrectionResponseDecreaseSpeed,
-                _ => 0f
-            };
             bool initializedThisFrame = !initialized;
-            float appliedDelta = initializedThisFrame
-                ? 0f
-                : Mathf.Clamp(
-                    delta,
-                    -speed * frame.DeltaSeconds,
-                    speed * frame.DeltaSeconds);
-            float current = previous + appliedDelta;
             if (!FiniteVector(frame.CorrectionResponseRequestedDirection) ||
                 !FiniteVector(frame.CorrectionResponsePreviousDirection) ||
                 !FiniteVector(frame.CorrectionResponseDirection) ||
@@ -8648,33 +8732,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     (frame.CorrectionResponseInitializationReason == "None" ||
                      Vector3.Distance(
                          frame.CorrectionResponsePreviousDirection,
-                         requested) > RuntimeGeometryEpsilon ||
-                     Math.Abs(
-                         frame.CorrectionResponseBeforeRebase - desired) >
-                     PositionNoiseFloor) ||
+                         requested) > RuntimeGeometryEpsilon) ||
                 !initializedThisFrame &&
                     frame.CorrectionResponseInitializationReason != "None" ||
-                frame.CorrectionResponseVisibleOutputTransferred &&
-                    !frame.PreviousResponseOutputAvailable ||
-                Math.Abs(
-                    frame.CorrectionResponsePrevious - previous) >
-                    PositionNoiseFloor ||
-                Math.Abs(frame.CorrectionResponseDesired - desired) >
-                    PositionNoiseFloor ||
-                Math.Abs(frame.CorrectionResponseCurrent - current) >
-                    PositionNoiseFloor ||
-                frame.CorrectionResponseDeltaDirection !=
-                    (initializedThisFrame ? "None" : deltaDirection) ||
-                Math.Abs(
-                    frame.CorrectionResponseSelectedSpeed -
-                    (initializedThisFrame ? 0f : speed)) > TimeEpsilon ||
-                Math.Abs(
-                    frame.CorrectionResponseAppliedDelta - appliedDelta) >
-                    PositionNoiseFloor ||
-                Vector3.Distance(
-                    frame.ResponseOutputPoint,
-                    frame.DesiredOutputPoint + applied *
-                    (current - desired)) > PositionNoiseFloor ||
                 frame.SelectedSupportTarget.Available &&
                     Vector3.Distance(
                         frame.SelectedSupportTarget.Normal,
@@ -9392,6 +9452,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequireColumns(Dictionary<string, int> indices)
         {
+            RequireColumnGroup(indices,
+                "FootMotionCorrectionResponseDomain,FootMotionCorrectionResponsePreviousDomain,FootMotionCorrectionResponseDomainTransferred,FootMotionSlidingResponseErrorCaptureReason,FootMotionSlidingResponseErrorBeforeTransferX,FootMotionSlidingResponseErrorBeforeTransferY,FootMotionSlidingResponseErrorBeforeTransferZ,FootMotionSlidingResponseErrorBeforeAdvanceX,FootMotionSlidingResponseErrorBeforeAdvanceY,FootMotionSlidingResponseErrorBeforeAdvanceZ,FootMotionSlidingResponseErrorAfterAdvanceX,FootMotionSlidingResponseErrorAfterAdvanceY,FootMotionSlidingResponseErrorAfterAdvanceZ,FootMotionSlidingResponseErrorAdvanced,FootMotionSlidingResponseMaximumStep");
             string[] required =
             {
                 "SampleIdentity", "ProgramIdentity", "ProjectionRevision",
@@ -10686,6 +10748,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float PlantWorldResidualCompletionTolerance;
             internal bool PlantWorldResidualClearedAtCompletionTolerance;
             internal bool CorrectionResponseEvaluated;
+            internal string CorrectionResponseDomain;
+            internal string CorrectionResponsePreviousDomain;
+            internal bool CorrectionResponseDomainTransferred;
+            internal string SlidingResponseErrorCaptureReason;
+            internal Vector3 SlidingResponseErrorBeforeTransfer;
+            internal Vector3 SlidingResponseErrorBeforeAdvance;
+            internal Vector3 SlidingResponseErrorAfterAdvance;
+            internal bool SlidingResponseErrorAdvanced;
+            internal float SlidingResponseMaximumStep;
             internal bool CorrectionResponseInitializedBefore;
             internal bool CorrectionResponseInitializedThisFrame;
             internal string CorrectionResponseInitializationReason;

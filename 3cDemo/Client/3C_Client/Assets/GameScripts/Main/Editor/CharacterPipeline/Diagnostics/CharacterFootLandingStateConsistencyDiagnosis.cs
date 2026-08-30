@@ -105,6 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootVectorFact finalOutput;
         public string plantResidualCaptureReason;
         public string correctionResponseInitializationReason;
+        public CharacterFootResponseDomainFact responseDomain;
     }
 
     [Serializable]
@@ -295,6 +296,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "CorrectionResponseCurrent",
                 "CorrectionResponseSelectedSpeed",
                 "CorrectionResponseAppliedDelta",
+                "SlidingResponseErrorBeforeAdvanceMeters",
+                "SlidingResponseErrorAfterAdvanceMeters",
+                "SlidingResponseErrorAdvanceMeters",
+                "SlidingResponseMaximumStepMeters",
                 "CorrectionResponseRequestedDirectionChangeDegrees",
                 "CorrectionResponseMaximumDirectionChangeDegrees",
                 "CorrectionResponseAppliedDirectionChangeDegrees",

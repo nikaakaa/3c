@@ -1,0 +1,81 @@
+{
+  "record": "43357ff3cd384e5cba75d2c31175b116",
+  "recordSha256": "24D97232F35246C0B85A003B5980AC8F199D6FF63E9F74A0001B082F57EB89A6",
+  "runtimeCommit": "d98db03577e7bad0dda45fca8ee47a44c83081a8",
+  "diagnosticsCommit": "928a7be18c4a12ac7a22993d5c9d7503b4ab13c4",
+  "fixedQualityBaseline": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "directBaseline": "20260831-010821-653-84292890c54d430181d20701b714d3be",
+  "run": "20260831-020243-204-ff9828180a164a88bfcdfe4c59a37215",
+  "factsVersion": 62,
+  "diagnosisVersion": 31,
+  "csvColumns": 1221,
+  "sampleRows": 2086,
+  "zip": "20260831-020243-204-ff9828180a164a88bfcdfe4c59a37215.zip",
+  "zipBytes": 16727927,
+  "zipSha256": "C07778263250B9C13909B156AACC2EE99210AE177AED2D8D8A67C254DCA552A1",
+  "proofFile": "replay-proof.json",
+  "proofSha256": "BB0F44A9D139471D3E0D04DCE6483CAFD74CB87DE29F739383022E7BCC713983",
+  "files": [
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 51385,
+      "sha256": "E8CBB76293E729417753711FD0E4986341740B4DBC8467FBCD767ADD23C81C3F"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 6508067,
+      "sha256": "23D193C4CC9EF562500134C1BE2CFE87D06AD743A90FC6F17A0E32B04B6539B1"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "12C5E520A626385B8D7F4CAFDB1B4CA25D650BE45CC010DB584804EA8FF480DF"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 60997,
+      "sha256": "AECD286ECBDECC27C7A6DE797D4AB48BEB5833D5CA4120E71FD211A5A3890931"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 733760,
+      "sha256": "FCE0942C61387778F65BF8311E9B50520A58B6888582CF7804FBA7207B2D6B34"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "664FC488FFFDE5C943DB234FA0AEFCB6D17A147945A95ECF909D7BFCBBFC55F1"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24819,
+      "sha256": "E81930B79AAD9866ADC91A6A189D5AE1E6F6ABFA196A54A26757E21C1CA9254A"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "3B485837540D5349CF491ECF42941166D728A8D967A7BD335F22A61F45F67D94"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 1745257,
+      "sha256": "C376A8C051E9708124D106C3C1D086BBF0A16CE87702742C7C77DD7EA8320900"
+    },
+    {
+      "path": "facts.json",
+      "bytes": 122112679,
+      "sha256": "2345A7657C96593F9786D7C9B5E9CAF4ABF441D396CB4FE693A47185162CFBF8"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 7880735,
+      "sha256": "58E05C5540A53CD1220582B31E4E2599B71BB958B562ABC59428821FC0C8F3B4"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19291069,
+      "sha256": "AFD739C194E446EBDD9E842F164E80366674EDB7034ABD0D5CBE089BD3BDF5CF"
+    }
+  ],
+  "conclusion": "观测修复在该Record上零行为变化；骨盆和Knee既有质量问题未解决，不替换193957固定质量基线"
+}

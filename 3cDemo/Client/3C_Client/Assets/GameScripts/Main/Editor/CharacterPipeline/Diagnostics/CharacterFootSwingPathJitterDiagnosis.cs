@@ -511,6 +511,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string preTransitionTarget;
         public string preTransitionAnchorCommand;
         public string postTransitionReason;
+        public bool postTransitionEvaluated;
         public string postTransitionSource;
         public string postTransitionTarget;
         public string postTransitionAnchorCommand;

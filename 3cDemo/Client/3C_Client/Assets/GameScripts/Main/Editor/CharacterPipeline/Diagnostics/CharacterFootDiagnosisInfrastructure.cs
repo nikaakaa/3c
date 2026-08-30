@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/21",
+                schema = "character-foot-diagnosis-file/25",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
@@ -987,6 +987,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public string value;
         public int count;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootResponseDomainFact
+    {
+        public string domain;
+        public string previousDomain;
+        public bool transferred;
+        public bool scalarEvaluated;
+        public bool worldErrorEvaluated;
+        public string worldErrorCaptureReason;
+        public CharacterFootVectorFact worldErrorBeforeTransfer;
+        public CharacterFootVectorFact worldErrorBeforeAdvance;
+        public CharacterFootVectorFact worldErrorAfterAdvance;
+        public bool worldErrorAdvanced;
+        public double? worldErrorMaximumStepMeters;
     }
 
     [Serializable]

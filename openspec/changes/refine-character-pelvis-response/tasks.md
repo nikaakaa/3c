@@ -32,3 +32,9 @@
 - [x] 6.1 在原Physical Writer同Completion冻结最终World Pelvis点，并补齐合法Pelvis Goal的源Pose有效性，不修改运动；3个Runtime文件完成，规定flags构建27既有警告0错误并shutdown，实际零行为待6.3
 - [x] 6.2 唯一Diagnostics迁移真实World点和Goal残差有效性，删除默认零原Pose的假误差，不改变既有质量规则；928a7be发布facts62/d31，5新列/1221列，Editor57既有警告0错误并shutdown，strict95/95
 - [x] 6.3 同Record回放证明观测修复的零行为变化，保留新包/Proof及原始世界与相对修正对照；020243官方matched1044，1184个非身份/非预期观测共同列逐值相同，37质量Target不变，ZIP/Proof独立保存，详见experiments/20260831-pelvis-world-observation.md；持续质量Goal未完成
+
+## 7. 持续Goal：Corin正式频率独立实验
+
+- [x] 7.1 只将Corin现有PelvisSpringFrequency从3改2，保持Runtime/Foot/Bend/TrainingEnemy不动；Runtime规定flags构建27既有警告0错误并shutdown，Float32/Fixed显式顺序构建共享SourceRevision/Projection完成，实际2Hz消费与质量待7.2/7.3
+- [ ] 7.2 同Record自动Replay并等待原facts62/diagnosis31封口，核对实际频率、产品身份和输入/Body帧关系
+- [ ] 7.3 与020243和193957逐帧检查骨盆世界运动、修正、下压持续、指定窗口、Foot保护和Knee外溢，按结果保留或精确撤销并保存完整证据

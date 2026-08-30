@@ -276,7 +276,7 @@ Contact Reference MUST只属于脚锁；Pelvis Reach Reference MUST只属于Supp
 
 Primary Support MUST只读取Resolved Pair中的Support Eligibility、Support Intent Weight、Support Event lineage、Support Horizontal Error和Pelvis Reach Reference。Selector MUST不读取Foot State、Lock Mode、Contact Ownership或Context；正式Support为0时不得按相对大小生成支撑。Resolved Foot MUST按同Event Anchor、Verified Landing、Prepared Plant Landing、Accepted Swing Landing的正式优先级解析Pelvis Reach Reference；Contact Anchor缺失 MUST不自动抹掉仍有正式Event与Ground Reference的Support。
 
-Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request，并使用Foot Motion Profile中必须显式序列化的米制最小Landing腿压缩余量计算沿Component Up的可行交集。预测Landing脚以及仍持有同Event Contact Goal且Position Weight非零的Landing、Locked、Releasing脚 MUST发布Reach Request；Releasing MUST持续参与到Goal权重归零，禁止Pelvis在释放期间单独上提后把接触腿拉到近伸直奇异区。Profile还 MUST显式序列化有限正值`PelvisMaximumUpVelocity`与`PelvisMaximumDownVelocity`并纳入Revision；任一配置缺失、非有限或越界时 MUST发布typed invalid，不得使用代码默认值或旧配置补全。交集存在时，Pelvis Target与Spring Output MUST限制在交集内；唯一Critical Spring积分后的Velocity MUST限制在`[-PelvisMaximumDownVelocity, PelvisMaximumUpVelocity]`，Output撞到Reach边界且Velocity继续朝外时 MUST清除对应方向速度。Support换代、坡度变化和目标跨越仍必须保持现有显式Handoff与Velocity Reset事实。
+Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request，并严格使用真实腿长减Foot Motion Profile显式米制最小压缩余量形成沿Component Up的硬区间。预测Landing脚以及仍持有同Event Contact Goal且Position Weight非零的Landing、Locked、Releasing脚 MUST发布Reach Request；Releasing MUST持续参与到Goal权重归零。原动画额外弯曲余量 MUST只影响PosturePreference目标，不得另行硬夹紧输出。完整双腿边界 MUST在唯一Critical Spring求值前形成，目标先受硬边界约束，原频率积分后仅对硬区间夹紧一次；Output在边界且Velocity继续朝外时 MUST清除对应方向速度。Module MUST不在其后再次改写Pelvis。Support换代、坡度变化和目标跨越 MUST保持显式Handoff与Velocity Reset事实。本轮不引入旧草案的PelvisMaximumUpVelocity/DownVelocity，缺失或非法的现有正式配置仍 MUST typed拒绝，无默认参数补全。
 
 交集不存在时，系统 MUST优先保持Primary Support腿安全，把Landing Foot Goal夹紧到保留最小压缩余量的最大可达点，发布`LandingReachUnavailable`并禁止该脚进入Full Lock。PreSwing、Swing、Approach、UnlockedSupport、Landing、Locked与仍有非零Goal Weight的Releasing只要发布同Event typed Landing Reach Request，均 MUST进入同一Reach准入，不得再由`IsSwing`或内部State旁路。FBBIK MUST不接收已知超出可达区间的Landing目标后仅靠膝盖完全伸直夹紧。
 
@@ -293,11 +293,11 @@ Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request�
 - **THEN** Runtime MUST夹紧Landing Foot Goal并发布`LandingReachUnavailable`
 - **AND** 该脚 MUST保持Landing、Sliding或进入Releasing，不得进入Full Lock或输出已知超长Goal
 
-#### Scenario: Pelvis非对称速度边界
+#### Scenario: 动画姿态偏好不强压骨盆输出
 
-- **WHEN** 合法Pelvis Target要求Spring分别向上或向下移动
-- **THEN** Runtime MUST使用Profile对应方向的最大速度限制Spring Velocity，并把Output保持在双腿Reach交集内
-- **AND** MUST不以单一共享速度、隐藏默认值或Final Pose低通替代正式上下行边界
+- **WHEN** 原动画额外弯曲余量要求比真实安全边界更低的骨盆
+- **THEN** 该余量 MUST只生成姿态偏好目标，不直接把最终Output压到姿态区间
+- **AND** 唯一Spring MUST使用现有频率响应，最终只能由真实腿长与正式安全余量硬夹紧，不新增后置低通或速度配置
 
 #### Scenario: Pelvis撞到Reach边界
 

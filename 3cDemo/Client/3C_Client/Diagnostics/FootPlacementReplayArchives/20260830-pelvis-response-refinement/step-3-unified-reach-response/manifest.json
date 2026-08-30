@@ -1,0 +1,90 @@
+{
+  "schema": "character-foot-replay-stage-archive/1",
+  "stage": "3-unified-pelvis-reach-response",
+  "runtimeCommit": "c4eb68b1dcaf1384c63f3f62c37fe68ea36c5e75",
+  "diagnosticsCommit": "725d79595d38f729a96c2b1c52ff1a307bdd9d14",
+  "run": "20260831-010821-653-84292890c54d430181d20701b714d3be",
+  "fixedReference": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "immediateReference": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62",
+  "recordId": "43357ff3cd384e5cba75d2c31175b116",
+  "recordSha256": "24D97232F35246C0B85A003B5980AC8F199D6FF63E9F74A0001B082F57EB89A6",
+  "factsSchema": "character-foot-motion-facts/61",
+  "diagnosisSchema": "character-foot-diagnosis-file/30",
+  "archiveFile": "20260831-010821-653-84292890c54d430181d20701b714d3be.zip",
+  "archiveBytes": 16291965,
+  "archiveSha256": "27AC93361C7AB352F7B47D444B2E1FD93AB650B4557FAD0CC104176142738036",
+  "proofFile": "replay-proof.json",
+  "proofSha256": "789D49A398851F248E7931FCD4C32FAF421AEC857677491C277C8DAB3797C8D2",
+  "proofSource": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260831-011000-624-d49b2c1617814483950ee4d854f6c718.json",
+  "proofComparison": {
+    "matched": true,
+    "comparedFrameCount": 1044,
+    "divergentFrameCount": 0,
+    "baseline": "235246 Step2 proof; no fabricated direct official Proof against193957"
+  },
+  "verifiedFileCount": 12,
+  "files": [
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/facts.json",
+      "bytes": 119969012,
+      "sha256": "DA1DB85A0F7B69FF29396ACCFF1050DBB436D5ECB843BD3B079BEAE2D63A18AD"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/ground-path-geometry.csv",
+      "bytes": 7839348,
+      "sha256": "646DC1DBBB83E58D7C0478728FFDEE7E8B27A5BFD3407A31282DF2556A4E918A"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/samples.csv",
+      "bytes": 19127084,
+      "sha256": "5635F04BACDB60B13853A4DC6DB232421978511300E9FDC419480A4A35BB1EE9"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/contact-plane-penetration.json",
+      "bytes": 51374,
+      "sha256": "73DA854FA56E9FB3C53C8106690226BCD2063DBA6C2A36EDAD2274C0D2D3B1E9"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/landing-leg-extension.json",
+      "bytes": 4380979,
+      "sha256": "6D22DDC2D8ECDD0791FED5859D7D3FFD870FEE0974F72396DFFBBF9AC8188F51"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "AE9F164E86E3B4246DDDD7F6D72E0595C058435BDE39A3A9DCE3576D62537A3A"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/landing-path-continuity.json",
+      "bytes": 60969,
+      "sha256": "42D8DF2FF822457A29A0909132B898AE91589ED8CDF9C2B716B57A33BF56E649"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/landing-state-consistency.json",
+      "bytes": 733716,
+      "sha256": "0D7820319E44F4FD9F3532F5D97B7641EBFED41EE2AB210189F7B3F582194A24"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "F3CB2B490E2B57D0351641D429619C9803B40A57B7F0CF13911A63EA2B22FA7C"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/quality-score.json",
+      "bytes": 24818,
+      "sha256": "85E7C523E4EEBF281BB08DDDB671B04DCE8F535BA649BE9B6DCFE417EE9E8EC9"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "50E7C286D61DFDEBC5AE0A5998CB6FE5965B0363067A70DFAEC7180445EB283A"
+    },
+    {
+      "path": "20260831-010821-653-84292890c54d430181d20701b714d3be/diagnoses/swing-path-jitter.json",
+      "bytes": 1745231,
+      "sha256": "7E34666F808505CA6BA4819B9C6369FA711914562E9DDC96E2841A841FFC50A8"
+    }
+  ],
+  "originalsPreserved": true,
+  "qualityVerdict": "candidate_with_known_pelvis_and_solved_knee_tradeoffs_not_global_pass"
+}

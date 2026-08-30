@@ -40,6 +40,8 @@ Module只把原有IsLandingReachCandidate准入结果、Resolved的左右typed R
 
 每腿硬半径严格为`LegLength-MinimumCompressionReserve`，不沿用旧辅助函数按水平距离放宽安全余量的做法。令`v=Hip-TargetAnkle`、`y=dot(v,up)`、`h2=|v-up*y|²`，若`radius²-h2<0`则为HorizontalUnreachable，否则沿Up的合法平移区间为`[-y-sqrt(radius²-h2), -y+sqrt(radius²-h2)]`。Primary只在原Accepted资格且Goal有效时参与；有同侧正式Foot Request则复用其几何，无第二份同腿硬区间。
 
+Reach Role可同时为FootTarget与PrimarySupport，后者只标该腿的优先角色，不改写输入来源。复用Foot Request时EventIdentity属于该Request，公共Primary Event独立保留；两者不能强制同值。只有独立Primary输入才以其正式Event构造几何，不能把它反报成Foot Motion已请求的Landing Reach。
+
 所有已请求腿可达且交集非空时选择AllRequestedLegs；否则明确发布LegUnreachable或NoCommonInterval，在原Primary存在且硬几何合法时选择PrimarySupportOnly。不存在合法Primary时不造可达区间；相关Foot Request继续Unavailable并走原Goal Reach保护。它是既有支撑优先政策的显式裁决，不是默认点/旧缓存或另一响应。正常交集Available后还核对实际加权Pelvis位移，不能只检查未乘权重的数值。
 
 原动画压缩量仍为`LegLength-distance(AnimatedHip,AnimatedAnkle)`，原姿态区间计算只生成PosturePreference目标。它不可达时发布Evaluated=true/Available=false，共同HeightTarget仍是独立合法需求；不产生另一份输出夹紧。未消费姿态偏好的Release/Rejected帧为Evaluated=false，零字段不是测量。

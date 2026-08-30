@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/58";
+        const string Schema = "character-foot-motion-facts/57";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 58;
+        const int AnalyzerVersion = 57;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -253,10 +253,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         previous.CurrentLatestReleasedContactEventIdentity &&
                     current.PreviousCompletedLockWeightEventIdentity ==
                         previous.CurrentCompletedLockWeightEventIdentity &&
-                    current.PreviousUnloadingEventIdentity ==
-                        previous.CurrentUnloadingEventIdentity &&
-                    current.PreviousUnloadingReentryProtectedEventIdentity ==
-                        previous.CurrentUnloadingReentryProtectedEventIdentity &&
                     current.PreviousContactAnchorAvailable ==
                         previous.CurrentContactAnchorAvailable &&
                     current.PreviousContactAnchorEventIdentity ==
@@ -436,11 +432,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["PreviousContactEdgeSeconds"] =
                             current.PreviousContactEdgeSeconds,
                         ["CurrentContactEdgeSeconds"] =
-                            current.CurrentContactEdgeSeconds,
-                        ["UnloadingLockDistanceMeters"] = current.UnloadingLockDistance,
-                        ["UnloadingSlideDistanceMeters"] = current.UnloadingSlideDistance,
-                        ["UnloadingAnchorHorizontalErrorMeters"] = UnloadingAnchorHorizontalError(current),
-                        ["UnloadingFormalFootHeightMeters"] = current.InputFormalFootHeight
+                            current.CurrentContactEdgeSeconds
                     },
                     new SortedDictionary<string, bool>(
                         StringComparer.Ordinal)
@@ -473,18 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["previousAnchorAvailable"] =
                             current.PreviousContactAnchorAvailable,
                         ["currentAnchorAvailable"] =
-                            current.CurrentContactAnchorAvailable,
-                        ["sourceLiftUnloading"] =
-                            current.PreTransitionReason == "SourceLiftUnloading",
-                        ["unloadingLockRestored"] =
-                            current.PreTransitionReason == "UnloadingLockRestored",
-                        ["unloadingEventActive"] = current.CurrentUnloadingEventIdentity != 0,
-                        ["unloadingReentryProtected"] =
-                            current.CurrentUnloadingReentryProtectedEventIdentity != 0,
-                        ["unloadingDistanceAdmissionFactsAvailable"] = current.LifecycleTransitionEvaluated,
-                        ["unloadingOccurrenceOrderAvailable"] =
-                            current.FormalNextLandingEventAvailable &&
-                            current.FormalCurrentContactEventAvailable
+                            current.CurrentContactAnchorAvailable
                     }));
             }
         }
@@ -5509,10 +5490,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 previousCompletedLockWeightEventIdentity =
                     frame.PreviousCompletedLockWeightEventIdentity.ToString(
                         CultureInfo.InvariantCulture),
-                previousUnloadingEventIdentity = frame.PreviousUnloadingEventIdentity.ToString(
-                    CultureInfo.InvariantCulture),
-                previousUnloadingReentryProtectedEventIdentity =
-                    frame.PreviousUnloadingReentryProtectedEventIdentity.ToString(CultureInfo.InvariantCulture),
                 previousAnchor = BuildContactAnchorFact(
                     ContactAnchorFrame.From(frame, true)),
                 currentRequestedLock = frame.CurrentLockRequested,
@@ -5534,32 +5511,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 currentCompletedLockWeightEventIdentity =
                     frame.CurrentCompletedLockWeightEventIdentity.ToString(
                         CultureInfo.InvariantCulture),
-                currentUnloadingEventIdentity = frame.CurrentUnloadingEventIdentity.ToString(
-                    CultureInfo.InvariantCulture),
-                currentUnloadingReentryProtectedEventIdentity =
-                    frame.CurrentUnloadingReentryProtectedEventIdentity.ToString(CultureInfo.InvariantCulture),
-                unloadingAdmission = new
-                {
-                    formalPhase = frame.InputFormalEventPhase,
-                    formalFootHeight = frame.InputFormalFootHeight,
-                    currentOccurrenceAvailable = frame.FormalCurrentContactEventAvailable,
-                    currentOccurrenceOrdinal = frame.FormalCurrentContactEventOrdinal,
-                    currentOccurrenceCycle = frame.FormalCurrentContactEventCycle,
-                    nextOccurrenceAvailable = frame.FormalNextLandingEventAvailable,
-                    nextOccurrenceOrdinal = frame.FormalNextLandingEventOrdinal,
-                    nextOccurrenceCycle = frame.FormalNextLandingEventCycle,
-                    lockDistance = frame.UnloadingLockDistance,
-                    slideDistance = frame.UnloadingSlideDistance,
-                    anchorHorizontalError = frame.PreviousContactAnchorAvailable
-                        ? (float?)UnloadingAnchorHorizontalError(frame) : null,
-                    currentContactNormalizedTime = frame.FormalCurrentContactEventAvailable
-                        ? (float?)frame.UnloadingCurrentContactNormalizedTime : null,
-                    nextLandingNormalizedTime = frame.FormalNextLandingEventAvailable
-                        ? (float?)frame.UnloadingNextLandingNormalizedTime : null,
-                    occurrenceTimeOrder = !frame.FormalCurrentContactEventAvailable ||
-                        !frame.FormalNextLandingEventAvailable ? "Unavailable" :
-                        LaterUnloadingOccurrence(frame) ? "LaterOccurrence" : "NotLaterOccurrence"
-                },
                 currentAnchor = BuildContactAnchorFact(
                     ContactAnchorFrame.From(frame, false)),
                 preTransition = new
@@ -6402,13 +6353,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FormalLockMode = Cell("InputFormalLockMode"),
                 FormalLockWeight = Float("InputFormalLockWeight"),
                 FormalSupport = Float("InputFormalSupport"),
-                InputFormalFootHeight = Float("InputFormalFootHeight"),
-                FormalCurrentContactEventAvailable = Int("InputFormalCurrentContactEventAvailable") != 0,
-                FormalCurrentContactEventOrdinal = Int("InputFormalCurrentContactEventOrdinal"),
-                FormalCurrentContactEventCycle = Int("InputFormalCurrentContactEventCycle"),
-                FormalNextLandingEventAvailable = Int("InputFormalNextLandingEventAvailable") != 0,
-                FormalNextLandingEventOrdinal = Int("InputFormalNextLandingEventOrdinal"),
-                FormalNextLandingEventCycle = Int("InputFormalNextLandingEventCycle"),
                 FormalCurrentContactEventIdentity =
                     Ulong("InputFormalCurrentContactEventIdentity"),
                 FormalNextLandingEventIdentity =
@@ -6679,9 +6623,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionPreviousContactEdgeSeconds"),
                 PreviousLatestContactEventIdentity =
                     Ulong("FootMotionPreviousLatestContactEventIdentity"),
-                PreviousUnloadingEventIdentity = Ulong("FootMotionPreviousUnloadingEventIdentity"),
-                PreviousUnloadingReentryProtectedEventIdentity =
-                    Ulong("FootMotionPreviousUnloadingReentryProtectedEventIdentity"),
                 PreviousLatestReleasedContactEventIdentity =
                     Ulong(
                         "FootMotionPreviousLatestReleasedContactEventIdentity"),
@@ -6722,13 +6663,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CurrentLatestReleasedContactEventIdentity =
                     Ulong(
                         "FootMotionCurrentLatestReleasedContactEventIdentity"),
-                CurrentUnloadingEventIdentity = Ulong("FootMotionCurrentUnloadingEventIdentity"),
-                CurrentUnloadingReentryProtectedEventIdentity =
-                    Ulong("FootMotionCurrentUnloadingReentryProtectedEventIdentity"),
-                UnloadingLockDistance = Float("FootMotionUnloadingLockDistance"),
-                UnloadingSlideDistance = Float("FootMotionUnloadingSlideDistance"),
-                UnloadingCurrentContactNormalizedTime = Float("FootMotionUnloadingCurrentContactNormalizedTime"),
-                UnloadingNextLandingNormalizedTime = Float("FootMotionUnloadingNextLandingNormalizedTime"),
                 CurrentCompletedLockWeightEventIdentity =
                     Ulong(
                         "FootMotionCurrentCompletedLockWeightEventIdentity"),
@@ -8995,128 +8929,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Ownership={frame.HardOwnershipLossReason}/" +
                     $"{expectedOwnershipReason}.");
             }
-            RequireUnloadingTransitionFacts(frame);
         }
-
-        static void RequireUnloadingTransitionFacts(FootFrame frame)
-        {
-            ulong eventIdentity = frame.CurrentLockRequestEventIdentity;
-            ulong unloading = frame.PreviousUnloadingEventIdentity;
-            ulong protectedEvent = frame.PreviousUnloadingReentryProtectedEventIdentity;
-            if (eventIdentity != 0 && unloading != eventIdentity)
-                unloading = 0;
-            if (eventIdentity != 0 && protectedEvent != eventIdentity)
-                protectedEvent = 0;
-            bool startsUnloading = frame.PreTransitionReason == "SourceLiftUnloading";
-            bool restoresLock = frame.PreTransitionReason == "UnloadingLockRestored";
-            if (startsUnloading)
-                unloading = eventIdentity;
-            else if (unloading == eventIdentity && eventIdentity != 0 &&
-                     (restoresLock || frame.SameEventContactReentryRefreshed))
-            {
-                unloading = 0;
-                protectedEvent = eventIdentity;
-            }
-            bool preClearsHistory = frame.PreTransitionAnchorCommand == "Create" ||
-                frame.PreTransitionAnchorCommand == "Release";
-            ulong unloadingBeforePost = preClearsHistory ? 0 : unloading;
-            bool clearsHistory = preClearsHistory || frame.PostTransitionEvaluated &&
-                (frame.PostTransitionAnchorCommand == "Create" ||
-                 frame.PostTransitionAnchorCommand == "Release");
-            if (clearsHistory)
-            {
-                unloading = 0;
-                protectedEvent = 0;
-            }
-            bool valid = frame.CurrentUnloadingEventIdentity == unloading &&
-                frame.CurrentUnloadingReentryProtectedEventIdentity == protectedEvent &&
-                float.IsFinite(frame.UnloadingLockDistance) && frame.UnloadingLockDistance >= 0f &&
-                float.IsFinite(frame.UnloadingSlideDistance) &&
-                frame.UnloadingSlideDistance > frame.UnloadingLockDistance &&
-                NormalizedUnloadingTime(frame.UnloadingCurrentContactNormalizedTime) &&
-                NormalizedUnloadingTime(frame.UnloadingNextLandingNormalizedTime) &&
-                (frame.FormalCurrentContactEventAvailable || frame.UnloadingCurrentContactNormalizedTime == 0f) &&
-                (frame.FormalNextLandingEventAvailable || frame.UnloadingNextLandingNormalizedTime == 0f) &&
-                (unloading == 0 || protectedEvent == 0) &&
-                (unloading == 0 || frame.CurrentContactAnchorAvailable &&
-                    unloading == frame.CurrentContactAnchorEventIdentity) &&
-                (protectedEvent == 0 || frame.CurrentContactAnchorAvailable &&
-                    protectedEvent == frame.CurrentContactAnchorEventIdentity);
-            bool retainsAnchorWithoutReset = frame.PreTransitionAnchorCommand == "Retain" &&
-                frame.RetainedVerifiedAnchor && !frame.PreTransitionSuppressOutput &&
-                !frame.PreTransitionResetInterpolation && !frame.PostTransitionResetInterpolation;
-            bool unloadingEligible = !frame.HardOwnershipLoss &&
-                    (frame.PreTransitionSource == "Landing" || frame.PreTransitionSource == "Locked") &&
-                    frame.CurrentLockRequested && eventIdentity != 0 &&
-                    frame.PreviousContactAnchorAvailable &&
-                    frame.PreviousContactAnchorEventIdentity == eventIdentity &&
-                    frame.PreviousCompletedLockWeightEventIdentity == eventIdentity &&
-                    frame.PreviousUnloadingReentryProtectedEventIdentity != eventIdentity &&
-                    frame.FormalObservationAvailable && frame.CurrentStep.IsAuthoritative &&
-                    frame.CurrentStep.IsPreSwing && frame.InputFormalEventPhase == "PreSwing" &&
-                    frame.FormalCurrentContactEventAvailable && frame.FormalNextLandingEventAvailable &&
-                    frame.FormalCurrentContactEventIdentity == eventIdentity &&
-                    frame.FormalNextLandingEventIdentity != 0 &&
-                    frame.FormalNextLandingEventIdentity != eventIdentity &&
-                    frame.CurrentStep.LandingEventIdentity == frame.FormalNextLandingEventIdentity &&
-                    frame.CurrentStep.ContributionContinuityIdentity == frame.ContributionContinuityIdentity &&
-                    frame.ContributionContinuityIdentity != 0 &&
-                    !string.IsNullOrWhiteSpace(frame.SourceIdentity) &&
-                    frame.FormalCurrentContactEventOrdinal > 0 && frame.FormalNextLandingEventOrdinal > 0 &&
-                    LaterUnloadingOccurrence(frame) &&
-                    UnloadingAnchorHorizontalError(frame) <= frame.UnloadingSlideDistance &&
-                    frame.FormalLockMode == "Sliding" && frame.CurrentLockRequestMode == "Sliding" &&
-                    float.IsFinite(frame.InputFormalFootHeight) && frame.InputFormalFootHeight > RuntimeGeometryEpsilon;
-            valid &= startsUnloading == unloadingEligible;
-            if (startsUnloading)
-            {
-                valid &= frame.PreTransitionTarget == "Releasing" && retainsAnchorWithoutReset &&
-                    (!frame.CorrectionResponseEvaluated || frame.InterpolationPolicy == "ReleaseResidual");
-            }
-            if (restoresLock)
-            {
-                valid &= !frame.HardOwnershipLoss && frame.PreTransitionSource == "Releasing" &&
-                    frame.PreTransitionTarget == "Landing" && retainsAnchorWithoutReset &&
-                    frame.CurrentLockRequested && eventIdentity != 0 &&
-                    frame.PreviousContactAnchorAvailable && frame.PreviousContactAnchorEventIdentity == eventIdentity &&
-                    frame.PreviousUnloadingEventIdentity == eventIdentity && frame.CurrentLockRequestMode == "Locked" &&
-                    UnloadingAnchorHorizontalError(frame) <= frame.UnloadingLockDistance + RuntimeGeometryEpsilon &&
-                    frame.ContactEdge != "Rising" && !frame.SameEventContactReentryRefreshed &&
-                    frame.CurrentUnloadingEventIdentity == 0 &&
-                    frame.CurrentUnloadingReentryProtectedEventIdentity == eventIdentity;
-            }
-            bool requestHeldDuringUnloading = frame.PreTransitionTarget == "Releasing" &&
-                frame.CurrentLockRequested && eventIdentity != 0 && unloadingBeforePost == eventIdentity;
-            if (requestHeldDuringUnloading && frame.PostTransitionEvaluated)
-            {
-                valid &= frame.PostTransitionReason == "None" && frame.PostTransitionSource == "Releasing" &&
-                    frame.PostTransitionTarget == "Releasing" && frame.PostTransitionAnchorCommand == "None" &&
-                    !frame.PostTransitionResetInterpolation;
-            }
-            if (frame.PostTransitionEvaluated)
-                valid &= frame.PostTransitionReason != "SourceLiftUnloading" &&
-                    frame.PostTransitionReason != "UnloadingLockRestored";
-            if (!valid)
-                throw new InvalidDataException(
-                    $"Foot Motion Unloading transition facts are inconsistent Frame={frame.Frame} Side={frame.Side} " +
-                    $"Reason={frame.PreTransitionReason} Eligible={unloadingEligible} " +
-                    $"Horizontal={UnloadingAnchorHorizontalError(frame):R} Lock={frame.UnloadingLockDistance:R} " +
-                    $"Slide={frame.UnloadingSlideDistance:R} Unloading={frame.CurrentUnloadingEventIdentity}/{unloading} " +
-                    $"Protected={frame.CurrentUnloadingReentryProtectedEventIdentity}/{protectedEvent}.");
-        }
-
-        static bool NormalizedUnloadingTime(float value) =>
-            float.IsFinite(value) && value >= 0f && value <= 1f;
-
-        static bool LaterUnloadingOccurrence(FootFrame frame) =>
-            frame.FormalNextLandingEventCycle > frame.FormalCurrentContactEventCycle ||
-            frame.FormalNextLandingEventCycle == frame.FormalCurrentContactEventCycle &&
-            frame.UnloadingNextLandingNormalizedTime > frame.UnloadingCurrentContactNormalizedTime;
-
-        static float UnloadingAnchorHorizontalError(FootFrame frame) =>
-            frame.PreviousContactAnchorAvailable
-                ? Vector3.ProjectOnPlane(frame.PreviousContactAnchorPoint - frame.OriginalSole,
-                    frame.ComponentUp.normalized).magnitude : 0f;
 
         static void RequireTransitionExecution(FootFrame frame)
         {
@@ -9718,8 +9531,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPreviousLockRequestWeight",
                 "FootMotionPreviousContactEdgeSeconds",
                 "FootMotionPreviousLatestContactEventIdentity",
-                "FootMotionPreviousUnloadingEventIdentity",
-                "FootMotionPreviousUnloadingReentryProtectedEventIdentity",
                 "FootMotionPreviousLatestReleasedContactEventIdentity",
                 "FootMotionPreviousCompletedLockWeightEventIdentity",
                 "FootMotionPreviousContactAnchorAvailable",
@@ -9743,12 +9554,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionCurrentContactEdgeSeconds",
                 "FootMotionCurrentLatestContactEventIdentity",
                 "FootMotionCurrentLatestReleasedContactEventIdentity",
-                "FootMotionCurrentUnloadingEventIdentity",
-                "FootMotionCurrentUnloadingReentryProtectedEventIdentity",
-                "FootMotionUnloadingLockDistance",
-                "FootMotionUnloadingSlideDistance",
-                "FootMotionUnloadingCurrentContactNormalizedTime",
-                "FootMotionUnloadingNextLandingNormalizedTime",
                 "FootMotionCurrentCompletedLockWeightEventIdentity",
                 "FootMotionCurrentContactAnchorAvailable",
                 "FootMotionCurrentContactAnchorEventIdentity",
@@ -10604,13 +10409,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string FormalLockMode;
             internal float FormalLockWeight;
             internal float FormalSupport;
-            internal float InputFormalFootHeight;
-            internal bool FormalCurrentContactEventAvailable;
-            internal int FormalCurrentContactEventOrdinal;
-            internal int FormalCurrentContactEventCycle;
-            internal bool FormalNextLandingEventAvailable;
-            internal int FormalNextLandingEventOrdinal;
-            internal int FormalNextLandingEventCycle;
             internal ulong FormalCurrentContactEventIdentity;
             internal ulong FormalNextLandingEventIdentity;
             internal string LandingPredictionState;
@@ -10773,8 +10571,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float PreviousLockRequestWeight;
             internal float PreviousContactEdgeSeconds;
             internal ulong PreviousLatestContactEventIdentity;
-            internal ulong PreviousUnloadingEventIdentity;
-            internal ulong PreviousUnloadingReentryProtectedEventIdentity;
             internal ulong PreviousLatestReleasedContactEventIdentity;
             internal ulong PreviousCompletedLockWeightEventIdentity;
             internal bool PreviousContactAnchorAvailable;
@@ -10794,12 +10590,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float CurrentContactEdgeSeconds;
             internal ulong CurrentLatestContactEventIdentity;
             internal ulong CurrentLatestReleasedContactEventIdentity;
-            internal ulong CurrentUnloadingEventIdentity;
-            internal ulong CurrentUnloadingReentryProtectedEventIdentity;
-            internal float UnloadingLockDistance;
-            internal float UnloadingSlideDistance;
-            internal float UnloadingCurrentContactNormalizedTime;
-            internal float UnloadingNextLandingNormalizedTime;
             internal ulong CurrentCompletedLockWeightEventIdentity;
             internal bool CurrentContactAnchorAvailable;
             internal ulong CurrentContactAnchorEventIdentity;

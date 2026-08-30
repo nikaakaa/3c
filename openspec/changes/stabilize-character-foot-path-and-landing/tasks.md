@@ -99,7 +99,7 @@
 - [x] 6.28 删除Action occupancy对Foot Hard Ownership Loss、Anchor Release、Suppress+Reset与Landing Reach的参与；Hard Ownership Loss只保留`!Grounded || !CurrentStep.IsAuthoritative`，`animation.foot-placement-weight`只控制Goal可见权重，Action Pose贡献期间继续同一Interpolation与Reach链
 
 - [x] 6.29 在唯一Interpolation实现同Event相邻Swing到首次Verified Anchor的正式脚高输入推进候选，只改本次World Residual捕获参考，发布准入、Frame/Event、前后正式脚高与世界推进量，保留Anchor、XZ、Response与既有参数
-- [ ] 6.30 把6.29事实接入唯一Sampler/Analyzer/Publisher并按实际捕获公式严格对账；通过既有Replay完整比较接触间隙、交接位移、穿透、Swing/Path、骨盆、脚锁与求解，独立保存候选和失败对账
+- [ ] 6.30 把6.29事实接入唯一Sampler/Analyzer/Publisher并按实际捕获公式严格对账（Diagnostics接入8列正式ContactHeightAdvance事实与facts53/diagnosis22；Capture校验包含WorldAdvance，实际输出位移和7维计分不扣除主动位移）；通过既有Replay完整比较接触间隙、交接位移、穿透、Swing/Path、骨盆、脚锁与求解，独立保存候选和失败对账；未取得新Replay前不完成本项
 
 ## 7. 单独接入Support与Pelvis
 

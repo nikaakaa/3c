@@ -258,6 +258,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPreviousResponseOutputAvailable,FootMotionPreviousResponseOutputPointX,FootMotionPreviousResponseOutputPointY,FootMotionPreviousResponseOutputPointZ," +
             "FootMotionDesiredOutputPointX,FootMotionDesiredOutputPointY,FootMotionDesiredOutputPointZ," +
             "FootMotionResponseOutputPointX,FootMotionResponseOutputPointY,FootMotionResponseOutputPointZ,FootMotionPlantResidualCaptureReason," +
+            "FootMotionPlantContactHeightAdvanceEligible,FootMotionPlantContactHeightPreviousFrameSequence,FootMotionPlantContactHeightPreviousEventIdentity,FootMotionPlantContactHeightPreviousFormalFootHeight,FootMotionPlantContactHeightCurrentFormalFootHeight,FootMotionPlantContactHeightWorldAdvanceX,FootMotionPlantContactHeightWorldAdvanceY,FootMotionPlantContactHeightWorldAdvanceZ," +
             "FootMotionPlantWorldResidualBeforeCaptureX,FootMotionPlantWorldResidualBeforeCaptureY,FootMotionPlantWorldResidualBeforeCaptureZ," +
             "FootMotionPlantWorldResidualCapturedBeforeDecayX,FootMotionPlantWorldResidualCapturedBeforeDecayY,FootMotionPlantWorldResidualCapturedBeforeDecayZ," +
             "FootMotionPlantWorldResidualDecayApplied,FootMotionPlantWorldResidualBaseHalfLifeSeconds,FootMotionPlantWorldResidualDeadlineHalfLifeAvailable,FootMotionPlantWorldResidualDeadlineHalfLifeSeconds,FootMotionPlantWorldResidualAppliedHalfLifeSeconds," +
@@ -2281,6 +2282,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.DesiredOutputPoint);
             Add(row, motion.ResponseOutputPoint);
             Add(row, motion.PlantResidualCaptureReason);
+            Add(row, motion.PlantContactHeightAdvanceEligible);
+            Add(row, motion.PlantContactHeightPreviousFrameSequence);
+            Add(row, motion.PlantContactHeightPreviousEventIdentity);
+            Add(row, motion.PlantContactHeightPreviousFormalFootHeight);
+            Add(row, motion.PlantContactHeightCurrentFormalFootHeight);
+            Add(row, motion.PlantContactHeightWorldAdvance);
             Add(row, motion.PlantWorldResidualBeforeCapture);
             Add(row, motion.PlantWorldResidualCapturedBeforeDecay);
             Add(row, motion.PlantWorldResidualDecayApplied);

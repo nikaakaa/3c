@@ -73,14 +73,6 @@ Runtime发布完整左右Reach角色/输入/区间、公共交集与选择、Pos
 
 唯一Sampler/Analyzer新增最终世界骨盆点、源Pose有效性及PhysicalPelvisGoalResidual有效性。只有同Completion最终写回、真实源Pose与非零Pelvis Goal都成立才测该误差；缺失时标Unavailable，不把零占位算成零缺陷。世界运动、组件运动和相对修正量并列作为事实，不改原37个质量Target/阈值/分母或七维评分。旧61不得补新字段重发62；新录制必须证明实际Foot、Pelvis、Knee、Goal和Body与010821保持，仅观测字段修正。
 
-## 持续Goal第二轮：正式骨盆频率的独立实验
+## 持续Goal第二轮：2Hz参数实验已拒绝
 
-第3步建立统一Reach时保持3Hz以隔离结构变量，该轮合同不回写成已经使用其它参数。020243补齐真实世界观察后，本轮只对Corin现有正式PelvisSpringFrequency进行3Hz到2Hz的独立实验；它是项目参数试验，不是ZZZ参数复原。Runtime算法、共同高度公式、Handoff、硬边界、Foot目标和Bend均不改，TrainingEnemy资产与运行范围不动，不增加配置开关或新配置项。
-
-假设是短暂的正向骨盆需求被3Hz较快采用，在下一段真实Reach上界下降时形成较晚的强制下压；较低频率可能减少这段提前上抬。反面是响应和Release回正更慢，可能在不需要下压时保持更低骨盆，并改变膝盖深压缩窗口。不能只看Correction大步变少就采纳。
-
-修改前冻结020243的Foot/Pose/Reach输入，原频率模型复现Output最大差约5.04e-8米。2Hz反事实预期Correction超过50毫米30→23、WorldY超过50毫米33→30、P90约42.947→39.853毫米；但平均偏移约+6.915→-4.639毫米，R826输出下降约6.552毫米。该模型不是Replay，不模拟FinalIK/Pelvis反馈，不预先认定实测质量改善。另行复算的World/Root基准运输、取消Handoff清速度和触界全清速度没有足够改善，因此不混入本轮。
-
-正式Profile revision必须自然换代，按精确Corin Definition顺序重建受影响的Float32/Fixed Program与Projection，重新加载后读取实际消费频率。facts62/diagnosis31不迁移；由已有公开Frequency字段复算同一响应。Proof身份变化与1044输入/Body帧关系分别检查，不强行保持旧产品或改Proof。
-
-验收固定193957和直接前驱020243；保住已认可Landing/Swing及全37项原质量规则，逐项检查231/266/267/303/591/789、675/711和R826等Knee峰。最终世界运动、额外Correction、下压幅度与连续持续时间并列比较，额外检查硬Reach、Goal夹紧和真实Foot位置。若新增Foot/Knee回归，或收益主要来自更长的不必要下压，先拒绝这一步而不叠加其它变量；原包与失败证据完整保留。
+ae10348只将Corin现有正式频率从3Hz改2Hz，并显式重建匹配的Float32/Fixed产品。023618按facts62/d31独立回放确认Foot保护保持、Correction超过50毫米30→23，但目标和硬边界允许回正时仍低于-5毫米的帧数208→270，实际Solved Knee超过10厘米的单步160→174。因此不按七维总分不变或R826单峰降低采纳，原参数3Hz和匹配产品恢复，失败原包/Proof保留。该实验不构成新默认值、分支、配置开关或ZZZ参数复原，完整结果见experiments/20260831-pelvis-frequency-2hz.md。

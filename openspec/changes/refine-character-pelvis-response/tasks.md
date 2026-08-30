@@ -35,6 +35,6 @@
 
 ## 7. 持续Goal：Corin正式频率独立实验
 
-- [x] 7.1 只将Corin现有PelvisSpringFrequency从3改2，保持Runtime/Foot/Bend/TrainingEnemy不动；Runtime规定flags构建27既有警告0错误并shutdown，Float32/Fixed显式顺序构建共享SourceRevision/Projection完成，实际2Hz消费与质量待7.2/7.3
-- [ ] 7.2 同Record自动Replay并等待原facts62/diagnosis31封口，核对实际频率、产品身份和输入/Body帧关系
-- [ ] 7.3 与020243和193957逐帧检查骨盆世界运动、修正、下压持续、指定窗口、Foot保护和Knee外溢，按结果保留或精确撤销并保存完整证据
+- [x] 7.1 以ae10348独立试验Corin正式频率3→2并重建Float32/Fixed产品，保持算法、Foot、Bend与TrainingEnemy不变；Runtime27既有警告0错误并shutdown
+- [x] 7.2 完成023618同Record回放与原facts62/diagnosis31封口，确认1043帧实际消费2Hz；官方Proof因7个产品身份字段不同保持matched=false，1044完整输入/Body帧逐值相同
+- [ ] 7.3 2Hz因回正迟滞208→270及实际Solved Knee超过10厘米160→174被拒绝，保留原包/Proof并只撤销ae10348；恢复3Hz后同Record回放确认尚待完成

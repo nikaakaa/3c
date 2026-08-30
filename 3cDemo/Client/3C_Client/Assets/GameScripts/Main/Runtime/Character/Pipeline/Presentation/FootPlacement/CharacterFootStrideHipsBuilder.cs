@@ -1279,8 +1279,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 handoff |= CharacterFootPelvisSpringHandoffReason.SlopeChanged;
             if (targetCrossedOutput)
                 handoff |= CharacterFootPelvisSpringHandoffReason.TargetCrossedOutput;
-            bool velocityReset = handoff != CharacterFootPelvisSpringHandoffReason.None &&
-                Mathf.Abs(nextTargetDirection) > GeometryEpsilon &&
+            bool velocityReset = Mathf.Abs(nextTargetDirection) > GeometryEpsilon &&
                 previousVelocity * nextTargetDirection < 0f;
             float inputVelocity = velocityReset ? 0f : previousVelocity;
             float output = previousOutput;

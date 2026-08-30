@@ -79,6 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "landingReachUsableLegLengthMeters",
                 "landingReachMinimumAlongUpMeters",
                 "landingReachMaximumAlongUpMeters");
+            target.scorePolicy = "Health";
             CharacterFootDiagnosisDocument document = context.Document(
                 DiagnosticId,
                 target);

@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/51";
+        const string Schema = "character-foot-motion-facts/52";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 51;
+        const int AnalyzerVersion = 52;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -141,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"pathRevisionOutputJumps={document.coverage.pathRevisionOutputJumpCount} " +
                 $"pathContinuityEvents={document.coverage.pathContinuityEventCount} " +
                 $"stableSwingOutputJumps={document.coverage.stableSwingOutputJumpCount} " +
-                $"swingToLandingOutputJumps={document.coverage.swingToLandingOutputJumpCount} " +
+                $"contactStateOutputJumps={document.coverage.contactStateOutputJumpCount} " +
                 $"swingToLandingHandoffs={document.coverage.swingToLandingFloorHandoffCount} " +
                 $"plantInterpolationJumps={document.coverage.plantInterpolationOutputJumpCount} " +
                 $"contactAcquisitions={document.coverage.contactAcquisitionContinuityCount} " +
@@ -647,6 +647,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 double duration = 0d;
                 bool previousAbove = false;
                 bool lockedGap = false;
+                double lockedMaximumGap = 0d;
                 bool gapOnlyInLanding = true;
                 for (int i = start; i <= end; i++)
                 {
@@ -666,6 +667,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     gapFrameCount++;
                     closingFrameCount += fact.gapMotion == "Closing" ? 1 : 0;
                     lockedGap |= frames[i].ConstraintState == "Locked";
+                    if (frames[i].ConstraintState == "Locked")
+                        lockedMaximumGap = Math.Max(lockedMaximumGap, gap);
                     gapOnlyInLanding &= frames[i].ConstraintState == "Landing";
                 }
                 bool persistent = longestGap + TimeEpsilon >=
@@ -694,6 +697,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["LongestGapDurationSeconds"] = longestGap,
                         ["MaximumWholeFootGapMeters"] =
                             frames[peak].ContactSupportGap.wholeFootGapMeters.Value,
+                        ["ScoredGapMaximumMeters"] = persistent
+                            ? frames[peak].ContactSupportGap.wholeFootGapMeters.Value
+                            : lockedMaximumGap,
                         ["EntryWholeFootGapMeters"] =
                             frames[start].ContactSupportGap.wholeFootGapMeters.Value,
                         ["ExitWholeFootGapMeters"] =
@@ -1875,13 +1881,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool swingToLanding =
                     current.ConstraintStateBefore == "Swing" &&
                     current.ConstraintState == "Landing";
+                bool contactOutputPair = IsContactOutputState(previous.ConstraintState) ||
+                    IsContactOutputState(current.ConstraintState);
                 bool acceptedUnanchoredSwingPair =
                     previous.ConstraintState == "Swing" &&
                     current.ConstraintState == "Swing" &&
                     previous.FootMotionState == "Accepted" &&
                     current.FootMotionState == "Accepted" &&
                     !previous.HasAnchor && !current.HasAnchor;
-                if (!swingToLanding && !acceptedUnanchoredSwingPair)
+                if (!contactOutputPair && !acceptedUnanchoredSwingPair)
                     continue;
                 double pathNoiseFloor = Math.Max(
                     PositionNoiseFloor,
@@ -1929,9 +1937,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     StringComparison.Ordinal) &&
                     previous.SourceCycle == current.SourceCycle;
                 string category;
-                if (swingToLanding)
+                if (contactOutputPair)
                 {
-                    category = "SwingToLandingOutputJump";
+                    category = "ContactStateOutputJump";
                 }
                 else if (semanticPathRevision)
                 {
@@ -2241,6 +2249,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.DeltaSeconds,
                     ["BodyTickSpan"] = detail.bodyTickSpan
                 };
+                if (contactOutputPair)
+                {
+                    double ankleAdditional = ContactAdditionalStep(in kinematics.Ankle, out float ankleBlend);
+                    double heelAdditional = ContactAdditionalStep(in kinematics.Heel, out float heelBlend);
+                    double toeAdditional = ContactAdditionalStep(in kinematics.Toe, out float toeBlend);
+                    double additional = Math.Max(ankleAdditional, Math.Max(heelAdditional, toeAdditional));
+                    metrics["ContactStateAdditionalOutputStep"] = additional;
+                    metrics["ContactStateAdditionalOutputSpeed"] = additional / DeltaSeconds(current);
+                    metrics["ContactAnkleAdditionalOutputStep"] = ankleAdditional;
+                    metrics["ContactHeelAdditionalOutputStep"] = heelAdditional;
+                    metrics["ContactToeAdditionalOutputStep"] = toeAdditional;
+                    metrics["ContactAnkleMotionBlendParameter"] = ankleBlend;
+                    metrics["ContactHeelMotionBlendParameter"] = heelBlend;
+                    metrics["ContactToeMotionBlendParameter"] = toeBlend;
+                }
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
                 {
@@ -2254,8 +2277,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         category == "StableSwingOutputJump",
                     ["pathRevision"] =
                         category == "PathRevisionOutputJump",
-                    ["swingToLanding"] =
-                        category == "SwingToLandingOutputJump",
+                    ["swingToLanding"] = swingToLanding,
+                    ["contactStateOutput"] = contactOutputPair,
                     ["pathAvailabilityChanged"] =
                         pathAvailabilityChanged,
                     ["landingEventChanged"] = landingEventChanged,
@@ -2296,6 +2319,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Heel = ResolveOutputProbeKinematics(frames, index, 1),
                 Toe = ResolveOutputProbeKinematics(frames, index, 2)
             };
+
+        static bool IsContactOutputState(string state) =>
+            state == "Landing" || state == "Locked" || state == "Releasing";
+
+        static double ContactAdditionalStep(
+            in CharacterFootOutputProbeKinematics probe, out float blend)
+        {
+            Vector3 physical = probe.Physical - probe.PreviousPhysical;
+            Vector3 source = probe.Source - probe.PreviousSource;
+            blend = source.sqrMagnitude > RuntimeGeometryEpsilon * RuntimeGeometryEpsilon
+                ? Mathf.Clamp01(Vector3.Dot(physical, source) / source.sqrMagnitude) : 0f;
+            return (physical - source * blend).magnitude;
+        }
 
         static CharacterFootOutputProbeKinematics
             ResolveOutputProbeKinematics(
@@ -3778,6 +3814,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 double drift = anchorDistances[^1] - anchorDistances[0];
                 double visibleStep = MaximumVectorStep(
                     window.Select(frame => frame.CorrectedSole).ToList());
+                bool physicalAnchorAvailable = window.All(frame =>
+                    frame.FinalPhysicalWriteAvailable &&
+                    frame.FinalPhysicalWriteCompletionIdentity == frame.CompletionIdentity &&
+                    frame.CurrentContactAnchorAvailable &&
+                    frame.CurrentContactAnchorEventIdentity == frame.FootMotionEventIdentity);
                 var metrics = new SortedDictionary<string, double>(StringComparer.Ordinal)
                 {
                     ["anchorDisplacementMeters"] = anchorDisplacement,
@@ -3804,8 +3845,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["supportExit"] = window[^1].FormalSupport,
                     ["visibleSoleStepMaximumMeters"] = visibleStep
                 };
+                if (physicalAnchorAvailable)
+                    metrics["physicalSoleAnchorHorizontalDistanceMaximumMeters"] =
+                        window.Max(frame => (double)Vector3.ProjectOnPlane(
+                            (frame.FinalHeel + frame.FinalToe) * 0.5f -
+                            frame.CurrentContactAnchorPoint,
+                            frame.ComponentUp.normalized).magnitude);
                 var evidence = new SortedDictionary<string, bool>(StringComparer.Ordinal)
                 {
+                    ["physicalAnchorAvailable"] = physicalAnchorAvailable,
                     ["anchorStable"] = anchorDisplacement <= PositionNoiseFloor,
                     ["fullAnchorResponse"] = lockResponse == "FullAnchor",
                     ["groundedThroughout"] = window.All(frame => frame.Grounded),
@@ -5258,9 +5306,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => value.kind == "PathContinuity"),
                     stableSwingOutputJumpCount = events.Count(
                         value => value.kind == "StableSwingOutputJump"),
-                    swingToLandingOutputJumpCount = events.Count(
+                    contactStateOutputJumpCount = events.Count(
                         value => value.kind ==
-                                 "SwingToLandingOutputJump"),
+                                 "ContactStateOutputJump"),
                     swingToLandingFloorHandoffCount = events.Count(
                         value => value.kind ==
                                  "SwingToLandingFloorHandoff"),
@@ -11517,7 +11565,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int pathRevisionOutputJumpCount;
             public int pathContinuityEventCount;
             public int stableSwingOutputJumpCount;
-            public int swingToLandingOutputJumpCount;
+            public int contactStateOutputJumpCount;
             public int swingToLandingFloorHandoffCount;
             public int plantInterpolationOutputJumpCount;
             public int contactAcquisitionContinuityCount;

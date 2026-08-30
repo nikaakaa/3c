@@ -11,91 +11,44 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootDiagnosisDocument Build(CharacterFootDiagnosisContext context)
         {
             List<JObject> events = context.Events("ContactPlanePenetration");
-            return context.Document(
-                DiagnosticId,
-                BuildTarget(
-                    context,
-                    events,
-                    "source-contact-plane-penetration",
-                    "Foot Placement处理前的Heel-Toe接触线是否已进入正式接触平面",
-                    "sourceDepthMaximumMeters",
-                    "sourceDepthMaximumMeters>0.00001",
-                    "sourceHeelDepthMaximumMeters",
-                    "sourceToeDepthMaximumMeters",
-                    "sourceLengthCoefficientMaximum"),
-                BuildTarget(
-                    context,
-                    events,
-                    "foot-placement-introduced-contact-plane-penetration",
-                    "当前Foot Placement与最终IK是否新增接触平面侵入",
-                    "introducedDepthMaximumMeters",
-                    "introducedDepthMaximumMeters>0.00001",
-                    "sourceDepthMaximumMeters",
-                    "finalDepthMaximumMeters",
-                    "introducedFrameCount"),
-                context.Target(
-                    "foot-placement-amplified-contact-plane-penetration",
-                    "当前Foot Placement与最终IK是否加重动画源已有侵入",
-                    new[] { "ContactPlanePenetration" },
-                    new[] { "amplifiedFrameCount>0" },
-                    events,
-                    value => CharacterFootDiagnosisContext.Metric(
-                                 value,
-                                 "amplifiedFrameCount") > 0d
-                        ? new List<string> { "amplifiedFrameCount>0" }
-                        : new List<string>(),
-                    value => CharacterFootDiagnosisContext.Metric(
-                        value,
-                        "introducedDepthMaximumMeters"),
-                    "amplifiedFrameCount",
-                    "introducedDepthMaximumMeters",
-                    "sourceDepthMaximumMeters",
-                    "finalDepthMaximumMeters"),
-                BuildTarget(
-                    context,
-                    events,
-                    "unresolved-toe-contact-plane-penetration",
-                    "最终Toe接触探针是否仍进入接触平面，仅记录视觉残留不自动归责",
-                    "finalToeDepthMaximumMeters",
-                    "finalToeDepthMaximumMeters>0.00001",
-                    "sourceToeDepthMaximumMeters",
-                    "introducedDepthMaximumMeters",
-                    "baselineResidualFrameCount"),
-                BuildTarget(
-                    context,
-                    events,
-                    "final-heel-contact-plane-penetration",
-                    "最终Heel接触探针是否进入正式接触平面",
-                    "finalHeelDepthMaximumMeters",
-                    "finalHeelDepthMaximumMeters>0.00001",
-                    "sourceHeelDepthMaximumMeters",
-                    "finalLengthCoefficientMaximum",
-                    "finalDepthTimeIntegralMeterSeconds"));
-        }
-
-        static CharacterFootDiagnosisTarget BuildTarget(
-            CharacterFootDiagnosisContext context,
-            List<JObject> events,
-            string id,
-            string question,
-            string metric,
-            string rule,
-            params string[] additionalMetrics)
-        {
-            var measurements = new List<string> { metric };
-            measurements.AddRange(additionalMetrics);
-            return context.Target(
-                id,
-                question,
-                new[] { "ContactPlanePenetration" },
-                new[] { rule },
+            CharacterFootDiagnosisTarget final = context.Target(
+                "final-contact-plane-penetration",
+                "最终物理Heel/Toe是否穿入正式接触平面；同一接触段取最大深度只计一次，原动画及Foot贡献另作证据",
+                new[] { "ContactPlanePenetration" }, new[] { "finalDepthMaximumMeters>0.01" },
                 events,
-                value => CharacterFootDiagnosisContext.Metric(value, metric) >
-                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters
-                    ? new List<string> { rule }
-                    : new List<string>(),
-                value => CharacterFootDiagnosisContext.Metric(value, metric),
-                measurements.ToArray());
+                value => CharacterFootDiagnosisContext.Metric(value,
+                    "finalDepthMaximumMeters") > 0.01d
+                    ? new List<string> { "finalDepthMaximumMeters>0.01" } : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(value, "finalDepthMaximumMeters"),
+                "finalDepthMaximumMeters", "finalHeelDepthMaximumMeters",
+                "finalToeDepthMaximumMeters", "finalDepthTimeIntegralMeterSeconds",
+                "finalPenetratingFrameRatio", "finalLengthCoefficientMaximum",
+                "sourceDepthMaximumMeters", "introducedDepthMaximumMeters");
+            final.scorePolicy = "Health";
+            final.occurrence = context.Occurrence(
+                "ContactPlanePenetrationInterval", "finalDepthMaximumMeters", "Meters",
+                events, 0.01d, 0.01d, 0.02d, 0.05d, 0.1d);
+            CharacterFootDiagnosisTarget contribution = context.Target(
+                "contact-plane-penetration-contribution",
+                "穿透来自原动画残留、Foot新增还是Foot加重；这些证据不与最终穿透重复扣分",
+                new[] { "ContactPlanePenetration" },
+                new[] { "sourcePenetrated=true", "introduced=true", "amplified=true" },
+                events,
+                value =>
+                {
+                    var rules = new List<string>();
+                    foreach (string evidence in new[] { "sourcePenetrated", "introduced", "amplified" })
+                        if (CharacterFootDiagnosisContext.Evidence(value, evidence))
+                            rules.Add(evidence + "=true");
+                    return rules;
+                },
+                value => CharacterFootDiagnosisContext.Metric(value, "introducedDepthMaximumMeters"),
+                "sourceDepthMaximumMeters", "sourceHeelDepthMaximumMeters",
+                "sourceToeDepthMaximumMeters", "introducedDepthMaximumMeters",
+                "introducedFrameCount", "amplifiedFrameCount", "baselineResidualFrameCount",
+                "resolvedFrameCount", "finalDepthMaximumMeters", "finalHeelDepthMaximumMeters",
+                "finalToeDepthMaximumMeters");
+            return context.Document(DiagnosticId, final, contribution);
         }
     }
 }

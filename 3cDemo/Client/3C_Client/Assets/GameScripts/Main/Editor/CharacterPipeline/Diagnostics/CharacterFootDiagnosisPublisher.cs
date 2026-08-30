@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootDiagnosisPublisher
     {
-        const string FactsSchema = "character-foot-motion-facts/51";
+        const string FactsSchema = "character-foot-motion-facts/52";
         static readonly ICharacterFootDiagnosis[] s_Diagnoses =
         {
             new CharacterFootLandingLegExtensionDiagnosis(),
@@ -70,17 +70,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             try
             {
                 string factsHash = ComputeSha256(fullFactsPath);
+                var documents = new SortedDictionary<string, CharacterFootDiagnosisDocument>(
+                    StringComparer.Ordinal);
                 for (int i = 0; i < s_Diagnoses.Length; i++)
                 {
                     ICharacterFootDiagnosis diagnosis = s_Diagnoses[i];
                     CharacterFootDiagnosisDocument document = diagnosis.Build(context);
                     document.facts.sha256 = factsHash;
+                    documents.Add(diagnosis.FileName, document);
                     targetCount += document.summary.targetCount;
                     matchCount += document.summary.matchedEventCount;
                     PublishFile(
                         Path.Combine(staging, diagnosis.FileName),
                         document);
                 }
+                CharacterFootQualityScorecard quality =
+                    CharacterFootDiagnosisScoring.BuildQualityScorecard(
+                        documents, documents[s_Diagnoses[0].FileName].facts);
+                PublishFile(Path.Combine(staging, "quality-score.json"), quality);
                 if (Directory.Exists(directory))
                     Directory.Delete(directory, true);
                 Directory.Move(staging, directory);
@@ -93,14 +100,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             return new CharacterFootDiagnosisPublication(
                 directory,
-                s_Diagnoses.Length,
+                s_Diagnoses.Length + 1,
                 targetCount,
                 matchCount);
         }
 
         static void PublishFile(
             string path,
-            CharacterFootDiagnosisDocument document)
+            object document)
         {
             using var stream = new FileStream(
                 path,

@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/20",
+                schema = "character-foot-diagnosis-file/21",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
@@ -404,7 +404,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int targetCount;
         public int targetWithMatchesCount;
         public int matchedEventCount;
-        public CharacterFootDiagnosisScore score;
         public List<CharacterFootDiagnosisTargetResult> targetResults;
     }
 
@@ -430,7 +429,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public int matchedEventCount;
         public bool matchedEventRateAvailable;
         public double? matchedEventRate;
-        public string scorePolicy = "Health";
+        public string scorePolicy = "Informational";
         public CharacterFootDiagnosisScore score;
         public CharacterFootDiagnosisOccurrenceProfile occurrence;
         public List<CharacterFootDiagnosisOccurrenceProfile>
@@ -478,15 +477,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string evidenceRating;
         public string unavailableReason;
         public int evidenceFullSampleEventCount;
-        public int healthTargetCount;
-        public int evidenceTargetCount;
         public double? frequencyBurden;
         public double? frequencyHealthScore;
         public string worstSeverityBand;
         public double? tailScoreCeiling;
-        public string worstTargetId;
-        public double? targetAverageHealthScore;
-        public double? worstTargetHealthScore;
         public List<CharacterFootDiagnosisScoreBand> severityBands;
     }
 
@@ -501,8 +495,97 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double penaltyWeight;
     }
 
+    [Serializable]
+    internal sealed class CharacterFootQualityScorecard
+    {
+        public string schema = "character-foot-quality-score/1";
+        public string scoringVersion = "foot-quality-seven-dimensions/1";
+        public string purpose = "ProvisionalReference";
+        public bool isShallowReference = true;
+        public string notice = "总分仅为浅层参考，不代表通过，不替代逐项证据与用户观感。";
+        public CharacterFootDiagnosisFactsReference facts;
+        public bool totalScoreAvailable;
+        public double? totalScore;
+        public string unavailableReason;
+        public double availableWeight;
+        public double knownWeightedContribution;
+        public double minimumPossibleScore;
+        public double maximumPossibleScore;
+        public double? weightedEvidenceScore;
+        public string worstDimensionId;
+        public List<string> missingDimensions;
+        public List<string> incompleteEvidenceDimensions;
+        public List<string> incompleteAttributionTargets;
+        public List<string> limitations;
+        public List<CharacterFootQualityDimension> dimensions;
+        public List<CharacterFootQualityEvidenceReference> evidenceTargets;
+        public CharacterFootContactSupportGapCoverage contactSupportCoverage;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootQualityDimension
+    {
+        public string id;
+        public string name;
+        public double weight;
+        public string targetFile;
+        public string targetId;
+        public int eligibleEventCount;
+        public int matchedEventCount;
+        public double? matchedEventRate;
+        public double? weightedContribution;
+        public CharacterFootDiagnosisScore score;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootQualityEvidenceReference
+    {
+        public string file;
+        public string targetId;
+        public int eligibleEventCount;
+        public int matchedEventCount;
+        public double? evidenceScore;
+    }
+
     internal static class CharacterFootDiagnosisScoring
     {
+        sealed class DimensionDefinition
+        {
+            internal DimensionDefinition(string id, string name, double weight,
+                string file, string target)
+            {
+                Id = id;
+                Name = name;
+                Weight = weight;
+                File = file;
+                Target = target;
+            }
+
+            internal readonly string Id;
+            internal readonly string Name;
+            internal readonly double Weight;
+            internal readonly string File;
+            internal readonly string Target;
+        }
+
+        static readonly DimensionDefinition[] s_Dimensions =
+        {
+            new DimensionDefinition("penetration", "下陷／穿透", 0.20d,
+                "contact-plane-penetration.json", "final-contact-plane-penetration"),
+            new DimensionDefinition("contact-fit", "接触未贴合", 0.20d,
+                "landing-state-consistency.json", "contact-support-gap"),
+            new DimensionDefinition("stable-swing", "普通Swing平顺度", 0.15d,
+                "swing-path-jitter.json", "stable-swing-output-jump"),
+            new DimensionDefinition("path-revision", "Path变化连续性", 0.15d,
+                "swing-path-jitter.json", "path-revision-output-jump"),
+            new DimensionDefinition("contact-transition", "接触状态交接", 0.15d,
+                "landing-state-consistency.json", "contact-state-output-jump"),
+            new DimensionDefinition("leg-pose", "腿部姿态／可达性", 0.10d,
+                "landing-leg-extension.json", "landing-leg-extension"),
+            new DimensionDefinition("locked-horizontal", "锁脚水平稳定性", 0.05d,
+                "locked-sole-motion.json", "locked-horizontal-drift")
+        };
+
         const int FullEvidenceEventCount = 50;
         static readonly double[] s_FiveBandPenalties =
         {
@@ -520,6 +603,128 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             74d,
             49d
         };
+
+        internal static CharacterFootQualityScorecard BuildQualityScorecard(
+            IReadOnlyDictionary<string, CharacterFootDiagnosisDocument> documents,
+            CharacterFootDiagnosisFactsReference facts)
+        {
+            var result = new CharacterFootQualityScorecard
+            {
+                facts = facts,
+                dimensions = new List<CharacterFootQualityDimension>(),
+                missingDimensions = new List<string>(),
+                incompleteEvidenceDimensions = new List<string>(),
+                incompleteAttributionTargets = new List<string>(),
+                evidenceTargets = new List<CharacterFootQualityEvidenceReference>(),
+                limitations = new List<string>
+                {
+                    "权值为首版业务取舍，不宣称客观最优；不同评分版本不能直接解释成行为改善。",
+                    "总分不代替具体帧、幅度、持续时间、最差项与Evidence；没有全局Pass/Fail。",
+                    "位移按表现帧统计，比较必须使用相同输入与Presentation Schedule；速度和加速度仍在分项报告。",
+                    "接触未贴合只证明与Verified Anchor平面的间隙，不证明有限Surface脚下有地；正常Swing与Releasing不纳入。",
+                    "腿部目前只覆盖正式Landing诊断域；Sliding缺少正式水平上限时不按FullAnchor漂移计分。",
+                    "缺失维度不补0或100，不重分配权重；分数区间只表示未知项的数学上下界。"
+                },
+                contactSupportCoverage = documents["landing-state-consistency.json"]
+                    .contactSupportGapCoverage
+            };
+            if (Math.Abs(s_Dimensions.Sum(value => value.Weight) - 1d) > 1e-12d)
+                throw new InvalidOperationException("Foot quality weights do not sum to one.");
+            var expectedTargets = new HashSet<string>(
+                s_Dimensions.Select(value => value.Target), StringComparer.Ordinal);
+            var qualityTargets = documents.Values.SelectMany(value => value.targets)
+                .Where(value => value.scorePolicy == "Health").ToList();
+            if (qualityTargets.Count != s_Dimensions.Length ||
+                qualityTargets.Any(value => !expectedTargets.Contains(value.id)))
+                throw new InvalidOperationException("Foot quality target ownership is invalid.");
+            double weightedEvidence = 0d;
+            bool completeEvidence = true;
+            foreach (DimensionDefinition definition in s_Dimensions)
+            {
+                if (!documents.TryGetValue(definition.File, out CharacterFootDiagnosisDocument document))
+                    throw new InvalidOperationException("Foot quality source document is unavailable.");
+                CharacterFootDiagnosisTarget target = document.targets.Single(
+                    value => value.id == definition.Target);
+                CharacterFootDiagnosisScore score = target.score;
+                if (score == null || score.policy != "Health")
+                    throw new InvalidOperationException("Foot quality score is not finalized.");
+                var dimension = new CharacterFootQualityDimension
+                {
+                    id = definition.Id,
+                    name = definition.Name,
+                    weight = definition.Weight,
+                    targetFile = definition.File,
+                    targetId = definition.Target,
+                    eligibleEventCount = target.eligibleEventCount,
+                    matchedEventCount = target.matchedEventCount,
+                    matchedEventRate = target.matchedEventRate,
+                    score = score
+                };
+                if (score.healthAvailable)
+                {
+                    RequireScore(score.healthScore);
+                    dimension.weightedContribution = score.healthScore.Value * definition.Weight;
+                    result.knownWeightedContribution += dimension.weightedContribution.Value;
+                    result.availableWeight += definition.Weight;
+                }
+                else
+                {
+                    result.missingDimensions.Add(definition.Id);
+                }
+                if (score.evidenceAvailable)
+                {
+                    RequireScore(score.evidenceScore);
+                    weightedEvidence += score.evidenceScore.Value * definition.Weight;
+                }
+                else
+                {
+                    completeEvidence = false;
+                }
+                if (!score.evidenceAvailable || score.evidenceScore.Value < 100d)
+                    result.incompleteEvidenceDimensions.Add(definition.Id);
+                result.dimensions.Add(dimension);
+            }
+            result.totalScoreAvailable = result.missingDimensions.Count == 0;
+            result.totalScore = result.totalScoreAvailable
+                ? Round(result.knownWeightedContribution) : null;
+            result.unavailableReason = result.totalScoreAvailable ? null : "MissingQualityDimensions";
+            result.minimumPossibleScore = Round(result.knownWeightedContribution);
+            result.maximumPossibleScore = Round(result.knownWeightedContribution +
+                100d * (1d - result.availableWeight));
+            result.knownWeightedContribution = Round(result.knownWeightedContribution);
+            result.availableWeight = Math.Round(result.availableWeight, 8);
+            result.weightedEvidenceScore = completeEvidence ? Round(weightedEvidence) : null;
+            result.worstDimensionId = result.dimensions
+                .Where(value => value.score.healthAvailable)
+                .OrderBy(value => value.score.healthScore.Value)
+                .ThenBy(value => value.id, StringComparer.Ordinal)
+                .FirstOrDefault()?.id;
+            foreach (KeyValuePair<string, CharacterFootDiagnosisDocument> document in documents)
+                foreach (CharacterFootDiagnosisTarget target in document.Value.targets)
+                {
+                    if (target.pathStageAnalysis != null &&
+                        target.pathStageAnalysis.availableEventCount <
+                            target.pathStageAnalysis.eligibleEventCount)
+                        result.incompleteAttributionTargets.Add(target.id);
+                    if (target.scorePolicy != "Informational")
+                        continue;
+                    result.evidenceTargets.Add(new CharacterFootQualityEvidenceReference
+                    {
+                        file = document.Key,
+                        targetId = target.id,
+                        eligibleEventCount = target.eligibleEventCount,
+                        matchedEventCount = target.matchedEventCount,
+                        evidenceScore = target.score.evidenceScore
+                    });
+                }
+            return result;
+        }
+
+        static void RequireScore(double? score)
+        {
+            if (!score.HasValue || !double.IsFinite(score.Value) || score < 0d || score > 100d)
+                throw new InvalidOperationException("Foot quality score value is invalid.");
+        }
 
         internal static void Apply(CharacterFootDiagnosisDocument document)
         {
@@ -544,7 +749,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         StringComparison.Ordinal));
                 result.score = target?.score;
             }
-            document.summary.score = Aggregate(document.targets);
         }
 
         static CharacterFootDiagnosisScore Score(
@@ -552,9 +756,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
-            string policy = string.IsNullOrWhiteSpace(target.scorePolicy)
-                ? "Health"
-                : target.scorePolicy;
+            string policy = target.scorePolicy;
+            if (policy != "Health" && policy != "Informational")
+                throw new InvalidOperationException("Foot diagnosis score policy is invalid.");
             CharacterFootDiagnosisScore score = Evidence(
                 policy,
                 target.eligibleEventCount,
@@ -694,58 +898,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return score;
         }
 
-        static CharacterFootDiagnosisScore Aggregate(
-            List<CharacterFootDiagnosisTarget> targets)
-        {
-            List<CharacterFootDiagnosisTarget> healthTargets = targets
-                .Where(value => value.score?.healthAvailable == true)
-                .ToList();
-            List<CharacterFootDiagnosisTarget> evidenceTargets = targets
-                .Where(value => value.score?.evidenceAvailable == true)
-                .ToList();
-            var score = new CharacterFootDiagnosisScore
-            {
-                policy = "DiagnosticTargetAggregate",
-                evidenceFullSampleEventCount = FullEvidenceEventCount,
-                healthTargetCount = healthTargets.Count,
-                evidenceTargetCount = evidenceTargets.Count,
-                healthRating = "Unavailable",
-                evidenceRating = "Unavailable",
-                severityBands = new List<CharacterFootDiagnosisScoreBand>()
-            };
-            if (healthTargets.Count > 0)
-            {
-                CharacterFootDiagnosisTarget worst = healthTargets
-                    .OrderBy(value => value.score.healthScore.Value)
-                    .ThenBy(value => value.id, StringComparer.Ordinal)
-                    .First();
-                double average = healthTargets.Average(
-                    value => value.score.healthScore.Value);
-                double health = Math.Min(
-                    average,
-                    worst.score.healthScore.Value + 15d);
-                score.healthAvailable = true;
-                score.healthScore = Round(health);
-                score.healthRating = HealthRating(health);
-                score.worstTargetId = worst.id;
-                score.targetAverageHealthScore = Round(average);
-                score.worstTargetHealthScore =
-                    worst.score.healthScore;
-            }
-            else
-            {
-                score.unavailableReason = "NoHealthScoredTargets";
-            }
-            if (evidenceTargets.Count > 0)
-            {
-                double evidence = evidenceTargets.Average(
-                    value => value.score.evidenceScore.Value);
-                score.evidenceAvailable = true;
-                score.evidenceScore = Round(evidence);
-                score.evidenceRating = EvidenceRating(evidence);
-            }
-            return score;
-        }
 
         static double Penalty(int index, int bandCount)
         {

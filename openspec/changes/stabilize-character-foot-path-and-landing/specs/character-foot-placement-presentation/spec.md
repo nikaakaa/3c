@@ -368,8 +368,8 @@ Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、S
 #### Scenario: 诊断分数保持事实可解释
 
 - **WHEN** Analyzer与Publisher为某个Foot诊断Target生成直观分数
-- **THEN** 输出 MUST分别发布0到100的Health Score与Evidence Score，并保留eligible、matched、发生率、严重度档位、扣分构成和代表帧
-- **AND** eligible为0、必需阶段事实缺失或纯候选比较 MUST发布typed Unavailable，不得写0分、100分、Pass、Fail或用文件平均值掩盖严重尾部
+- **THEN** 可判定质量输出 MUST分别发布0到100的Health Score与Evidence Score，并保留eligible、matched、发生率、严重度档位、扣分构成和代表帧；原因、合同及候选比较 MUST只发布Evidence
+- **AND** eligible为0或必需可见事实缺失 MUST发布typed Unavailable；只有原因阶段缺失时 MUST与可见质量分开，不得写0分、100分、Pass或Fail。7维浅层加权摘要 MUST遵守`consolidate-foot-diagnostic-scoring`合同，不沿用文件平均值、不替代分项证据
 
 #### Scenario: 现有阶段事实进入正式诊断Target
 

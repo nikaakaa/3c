@@ -38,18 +38,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ["events"] = new JArray(
                     Event("StableSwingOutputJump", 10, 0.015d),
                     Event("PathRevisionOutputJump", 11, 0.08d),
-                    Event("SwingToLandingOutputJump", 12, 0.025d))
+                    Event("ContactStateOutputJump", 12, 0.025d))
             };
             CharacterFootDiagnosisDocument document =
                 new CharacterFootSwingPathJitterDiagnosis().Build(
                     new CharacterFootDiagnosisContext(facts));
-            Assert.That(document.targets.Count, Is.EqualTo(4));
+            Assert.That(document.targets.Count, Is.EqualTo(5));
             Assert.That(document.targets[0].eligibleEventCount, Is.EqualTo(1));
             Assert.That(document.targets[1].eligibleEventCount, Is.EqualTo(1));
             Assert.That(document.targets[2].eligibleEventCount, Is.EqualTo(1));
             Assert.That(document.targets[0].matchedEventCount, Is.EqualTo(0));
             Assert.That(document.targets[1].matchedEventCount, Is.EqualTo(1));
             Assert.That(document.targets[2].matchedEventCount, Is.EqualTo(1));
+            Assert.That(document.targets[2].id,
+                Is.EqualTo("path-revision-amplification-evidence"));
+            Assert.That(document.targets[2].score.healthAvailable, Is.False);
             Assert.That(
                 document.targets[3].id,
                 Is.EqualTo("swing-actual-foot-envelope-counterfactual"));
@@ -70,8 +73,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Assert.That(target.eligibleEventCount, Is.EqualTo(0));
                 Assert.That(target.matchedEventRateAvailable, Is.False);
                 Assert.That(target.matchedEventRate, Is.Null);
-                Assert.That(target.occurrence.available, Is.False);
-                Assert.That(target.occurrence.rates, Is.Empty);
+                if (target.id == "stable-swing-correction-response-cadence")
+                    Assert.That(target.occurrence, Is.Null);
+                else
+                {
+                    Assert.That(target.occurrence.available, Is.False);
+                    Assert.That(target.occurrence.rates, Is.Empty);
+                }
             }
         }
 

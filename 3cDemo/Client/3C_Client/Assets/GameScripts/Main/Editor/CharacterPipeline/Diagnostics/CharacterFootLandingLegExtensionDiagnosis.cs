@@ -86,9 +86,102 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             document.landingReach = CharacterFootLandingReachReport.Create(
                 context.LandingReaches(),
                 events);
-            document.pelvisHeightTargets = context.PelvisHeightTargets();
+            document.pelvisFrames = context.PelvisFrames();
             return document;
         }
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootPelvisFrameObservation
+    {
+        public int frame;
+        public string completionIdentity;
+        public string strideState;
+        public string strideRejectReason;
+        public double formalFootPlacementWeight;
+        public string primarySupportSide;
+        public string primarySupportEventIdentity;
+        public CharacterFootPelvisHeightTargetObservation heightTarget;
+        public CharacterFootPelvisPostureObservation posturePreference;
+        public CharacterFootPelvisReachObservation reach;
+        public CharacterFootPelvisResponseObservation response;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootPelvisPostureObservation
+    {
+        public bool evaluated;
+        public bool available;
+        public CharacterFootVectorFact hip;
+        public CharacterFootVectorFact animatedAnkle;
+        public CharacterFootVectorFact targetAnkle;
+        public double? legLength;
+        public double? compressionReserve;
+        public double? usableLegLength;
+        public double? minimumAlongUp;
+        public double? maximumAlongUp;
+        public double? offsetAlongUp;
+        public bool targetAdjusted;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootPelvisLegReachObservation
+    {
+        public string role;
+        public string status;
+        public string eventIdentity;
+        public CharacterFootVectorFact hip;
+        public CharacterFootVectorFact targetAnkle;
+        public double? legLength;
+        public double? minimumCompressionReserve;
+        public double? usableLegLength;
+        public double? minimumAlongUp;
+        public double? maximumAlongUp;
+        public bool requested;
+        public bool available;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootPelvisReachObservation
+    {
+        public CharacterFootVectorFact componentUp;
+        public string status;
+        public string selection;
+        public bool intersectionEvaluated;
+        public double? intersectionMinimumAlongUp;
+        public double? intersectionMaximumAlongUp;
+        public bool available;
+        public double? minimumAlongUp;
+        public double? maximumAlongUp;
+        public CharacterFootPelvisLegReachObservation left;
+        public CharacterFootPelvisLegReachObservation right;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootPelvisResponseObservation
+    {
+        public bool evaluated;
+        public bool completed;
+        public double? unconstrainedOutput;
+        public bool targetClamped;
+        public bool outputClamped;
+        public bool velocityCleared;
+        public bool hadPreviousState;
+        public bool supportChanged;
+        public bool velocityReset;
+        public double? previousTarget;
+        public double? previousOutput;
+        public double? previousVelocity;
+        public double? input;
+        public double? inputVelocity;
+        public double? frequency;
+        public double? target;
+        public double? output;
+        public double? velocity;
+        public double? positionWeight;
+        public string previousSlope;
+        public string handoff;
+        public double? appliedOffsetAlongUp;
     }
 
     [Serializable]
@@ -325,13 +418,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string primarySupportLandingEventIdentity;
         public string strideState;
         public string strideSupportSide;
-        public bool supportReachAvailable;
-        public double supportReachMinimumAlongUpMeters;
-        public double supportReachMaximumAlongUpMeters;
-        public bool supportIntersectionExists;
+        public bool pelvisHardReachAvailable;
+        public double pelvisHardReachMinimumAlongUpMeters;
+        public double pelvisHardReachMaximumAlongUpMeters;
+        public bool pelvisHardReachIntersectionExists;
         public double intersectionMinimumAlongUpMeters;
         public double intersectionMaximumAlongUpMeters;
-        public double supportConflictGapMeters;
+        public double pelvisHardReachConflictGapMeters;
 
         internal static CharacterFootLandingReachObservation From(
             JObject value) =>
@@ -444,24 +537,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 strideSupportSide =
                     value.Value<string>("strideSupportSide") ??
                     string.Empty,
-                supportReachAvailable =
-                    value.Value<bool>("supportReachAvailable"),
-                supportReachMinimumAlongUpMeters =
+                pelvisHardReachAvailable =
+                    value.Value<bool>("pelvisHardReachAvailable"),
+                pelvisHardReachMinimumAlongUpMeters =
                     value.Value<double>(
-                        "supportReachMinimumAlongUpMeters"),
-                supportReachMaximumAlongUpMeters =
+                        "pelvisHardReachMinimumAlongUpMeters"),
+                pelvisHardReachMaximumAlongUpMeters =
                     value.Value<double>(
-                        "supportReachMaximumAlongUpMeters"),
-                supportIntersectionExists =
-                    value.Value<bool>("supportIntersectionExists"),
+                        "pelvisHardReachMaximumAlongUpMeters"),
+                pelvisHardReachIntersectionExists =
+                    value.Value<bool>("pelvisHardReachIntersectionExists"),
                 intersectionMinimumAlongUpMeters =
                     value.Value<double>(
                         "intersectionMinimumAlongUpMeters"),
                 intersectionMaximumAlongUpMeters =
                     value.Value<double>(
                         "intersectionMaximumAlongUpMeters"),
-                supportConflictGapMeters =
-                    value.Value<double>("supportConflictGapMeters")
+                pelvisHardReachConflictGapMeters =
+                    value.Value<double>("pelvisHardReachConflictGapMeters")
             };
     }
 

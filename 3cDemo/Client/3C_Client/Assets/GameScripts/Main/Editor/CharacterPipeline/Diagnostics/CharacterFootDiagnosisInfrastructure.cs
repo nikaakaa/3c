@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/19",
+                schema = "character-foot-diagnosis-file/20",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
@@ -307,7 +307,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .ToObject<CharacterFootLandingObservationAnalysis>(),
                     visibleOutputJump =
                         value["visibleOutputJump"]?
-                            .ToObject<CharacterFootVisibleOutputJumpAnalysis>()
+                            .ToObject<CharacterFootVisibleOutputJumpAnalysis>(),
+                    contactSupportGap = value["contactSupportGap"]?
+                        .ToObject<CharacterFootContactSupportGapSequence>()
                 });
             }
             return result;
@@ -376,6 +378,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootStepTimeCandidateSelectionReport
             stepTimeCandidateSelection;
         public CharacterFootLandingReachReport landingReach;
+        public CharacterFootContactSupportGapCoverage contactSupportGapCoverage;
     }
 
     [Serializable]
@@ -824,6 +827,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             lateApproachLandingRevision;
         public CharacterFootLandingObservationAnalysis landingObservation;
         public CharacterFootVisibleOutputJumpAnalysis visibleOutputJump;
+        public CharacterFootContactSupportGapSequence contactSupportGap;
     }
 
     [Serializable]

@@ -5,6 +5,81 @@ using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
+    internal enum CharacterFootContactSupportGapAvailability
+    {
+        NotRequested,
+        ReleasingNotContactHolding,
+        OwnershipUnavailable,
+        PlacementWeightZero,
+        PhysicalPoseUnavailable,
+        SameEventAnchorUnavailable,
+        ContactHoldingStateUnavailable,
+        Available
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootContactSupportGapFrame
+    {
+        public int frame;
+        public string side;
+        public string availability;
+        public bool requested;
+        public bool applicable;
+        public string constraintState;
+        public string requestEventIdentity;
+        public string anchorEventIdentity;
+        public int anchorSurfaceIdentity;
+        public string anchorWorldRevision;
+        public string anchorAcquiredFrame;
+        public string anchorAcquiredCompletion;
+        public CharacterFootVectorFact anchorPoint;
+        public CharacterFootVectorFact anchorNormal;
+        public CharacterFootVectorFact physicalHeel;
+        public CharacterFootVectorFact physicalToe;
+        public double formalFootPlacementWeight;
+        public double lockWeight;
+        public double deltaSeconds;
+        public bool currentSupportAvailable;
+        public string currentSupportRejectReason;
+        public int currentSupportSurfaceIdentity;
+        public bool landingReachAvailable;
+        public bool landingReachGoalClamped;
+        public double? heelClearanceMeters;
+        public double? toeClearanceMeters;
+        public double? soleClearanceMeters;
+        public double? wholeFootGapMeters;
+        public double? inPlaneAnchorDistanceMeters;
+        public double? previousGapDeltaMeters;
+        public string gapMotion;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootContactSupportGapSequence
+    {
+        public string referenceKind = "VerifiedContactAnchorPlane";
+        public string classification;
+        public List<CharacterFootContactSupportGapFrame> frames;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootContactSupportGapCoverage
+    {
+        public string measurementDomain = "VerifiedContactAnchorPlane";
+        public string durationTimeDomain = "PresentationDeltaSeconds";
+        public bool provesFiniteSurfaceSupportUnderPhysicalFoot = false;
+        public double primaryGapThresholdMeters;
+        public double persistentMinimumSeconds;
+        public int requestedFrameCount;
+        public int applicableFrameCount;
+        public int notApplicableFrameCount;
+        public int availableFrameCount;
+        public int unavailableFrameCount;
+        public double? availableFrameRate;
+        public int intervalCount;
+        public List<CharacterFootDiagnosisCategoryCount> availabilityCounts;
+        public List<CharacterFootContactSupportGapFrame> unavailableExamples;
+    }
+
     [Serializable]
     internal sealed class CharacterFootContactAcquisitionContinuityAnalysis
     {
@@ -547,7 +622,77 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "DesiredToResponseStepMeters", "PreviousResponseToResponseStepMeters",
                 "ResponseToFinalSoleStepMeters");
             reentryGeometryTarget.scorePolicy = "Informational";
-            return context.Document(
+            List<JObject> contactGapObservations = context.Events(
+                "ContactSupportGapObservation");
+            List<JObject> contactGapFrames = contactGapObservations.Where(
+                value => CharacterFootDiagnosisContext.Evidence(
+                    value, "referenceAvailable")).ToList();
+            List<JObject> contactGapIntervals = context.Events(
+                "ContactSupportGapInterval");
+            CharacterFootDiagnosisTarget contactGapTarget = context.Target(
+                "contact-support-gap",
+                "正式要求接触的Landing/Locked且同Event已验证Anchor可用时，最终物理Heel与Toe是否同时离开该接触平面；包含Landing收敛，不含Releasing，不证明有限Surface下方存在支撑",
+                new[] { "ContactSupportGapObservation" },
+                new[] { "WholeFootGapMeters>0.01" },
+                contactGapFrames,
+                value => CharacterFootDiagnosisContext.Metric(
+                    value, "WholeFootGapMeters") >
+                    CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters
+                    ? new List<string> { "WholeFootGapMeters>0.01" }
+                    : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(
+                    value, "WholeFootGapMeters"),
+                "WholeFootGapMeters", "HeelClearanceMeters", "ToeClearanceMeters",
+                "SoleClearanceMeters", "InPlaneAnchorDistanceMeters");
+            contactGapTarget.scorePolicy = "Informational";
+            contactGapTarget.occurrence = context.Occurrence(
+                "LandingOrLockedSameEventVerifiedContactPlanePhysicalFootFrame",
+                "WholeFootGapMeters", "Meters", contactGapFrames,
+                CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
+                s_OutputThresholds);
+            contactGapTarget.categoricalMeasurements =
+                new SortedDictionary<string, List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["GapMotion"] = CategoryCounts(contactGapFrames,
+                        value => value["contactSupportGap"].Value<string>("classification")),
+                    ["ConstraintState"] = CategoryCounts(contactGapFrames,
+                        value => value["contactSupportGap"]["frames"][0]
+                            .Value<string>("constraintState"))
+                };
+            CharacterFootDiagnosisTarget persistentContactGapTarget = context.Target(
+                "persistent-contact-support-gap",
+                "连续Landing/Locked同Event同已验证Anchor接触段是否整脚离面超过1厘米持续至少100毫秒，或Locked帧离面超过1厘米；Releasing不适用，100毫秒仅为诊断阈值",
+                new[] { "ContactSupportGapInterval" },
+                new[]
+                {
+                    "WholeFootGapMeters>0.01&&LongestGapDurationSeconds>=0.1",
+                    "Locked&&WholeFootGapMeters>0.01"
+                },
+                contactGapIntervals,
+                value =>
+                {
+                    var rules = new List<string>();
+                    if (CharacterFootDiagnosisContext.Evidence(value, "persistentGap"))
+                        rules.Add("WholeFootGapMeters>0.01&&LongestGapDurationSeconds>=0.1");
+                    if (CharacterFootDiagnosisContext.Evidence(value, "lockedGap"))
+                        rules.Add("Locked&&WholeFootGapMeters>0.01");
+                    return rules;
+                },
+                value => CharacterFootDiagnosisContext.Metric(
+                    value, "MaximumWholeFootGapMeters"),
+                "MaximumWholeFootGapMeters", "EntryWholeFootGapMeters",
+                "ExitWholeFootGapMeters", "LongestGapDurationSeconds",
+                "ObservedDurationSeconds", "FrameCount", "GapFrameCount",
+                "ClosingFrameCount");
+            persistentContactGapTarget.categoricalMeasurements =
+                new SortedDictionary<string, List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["GapClassification"] = CategoryCounts(contactGapIntervals,
+                        value => value["contactSupportGap"].Value<string>("classification"))
+                };
+            CharacterFootDiagnosisDocument document = context.Document(
                 DiagnosticId,
                 context.Target(
                     "missed-landing-entry",
@@ -712,7 +857,49 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 actionOwnershipTarget,
                 contactTransitionTarget,
                 formalGoalWeightTarget,
-                reentryGeometryTarget);
+                reentryGeometryTarget,
+                contactGapTarget,
+                persistentContactGapTarget);
+            document.contactSupportGapCoverage = new CharacterFootContactSupportGapCoverage
+            {
+                primaryGapThresholdMeters =
+                    CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
+                persistentMinimumSeconds =
+                    CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapPersistentSeconds,
+                requestedFrameCount = contactGapObservations.Count,
+                applicableFrameCount = contactGapObservations.Count(
+                    value => CharacterFootDiagnosisContext.Evidence(
+                        value, "measurementApplicable")),
+                notApplicableFrameCount = contactGapObservations.Count(
+                    value => !CharacterFootDiagnosisContext.Evidence(
+                        value, "measurementApplicable")),
+                availableFrameCount = contactGapFrames.Count,
+                unavailableFrameCount = contactGapObservations.Count(
+                    value => CharacterFootDiagnosisContext.Evidence(
+                        value, "measurementApplicable") &&
+                        !CharacterFootDiagnosisContext.Evidence(
+                            value, "referenceAvailable")),
+                intervalCount = contactGapIntervals.Count,
+                availabilityCounts = CategoryCounts(contactGapObservations,
+                    value => value["contactSupportGap"]["frames"][0]
+                        .Value<string>("availability")),
+                unavailableExamples = contactGapObservations.Where(
+                        value => CharacterFootDiagnosisContext.Evidence(
+                            value, "measurementApplicable") &&
+                            !CharacterFootDiagnosisContext.Evidence(
+                            value, "referenceAvailable"))
+                    .GroupBy(value => value["contactSupportGap"]["frames"][0]
+                        .Value<string>("availability"), StringComparer.Ordinal)
+                    .SelectMany(group => group.Take(3))
+                    .Select(value => value["contactSupportGap"]["frames"][0]
+                        .ToObject<CharacterFootContactSupportGapFrame>())
+                    .ToList()
+            };
+            document.contactSupportGapCoverage.availableFrameRate =
+                document.contactSupportGapCoverage.applicableFrameCount > 0
+                    ? (double?)contactGapFrames.Count /
+                        document.contactSupportGapCoverage.applicableFrameCount : null;
+            return document;
         }
 
         static List<CharacterFootDiagnosisCategoryCount> CategoryCounts(

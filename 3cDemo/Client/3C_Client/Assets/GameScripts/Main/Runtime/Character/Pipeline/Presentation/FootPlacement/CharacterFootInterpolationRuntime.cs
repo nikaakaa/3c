@@ -359,10 +359,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                      CharacterFootPlantResidualCaptureReason.None;
             Vector3 continuityOutputBefore = captureTransition &&
                                               frame
-                                                  .PreviousWeightedGoalSole.Available
-                ? frame.PreviousWeightedGoalSole.WorldSole
+                                                  .PreviousVisibleOutputAvailable
+                ? frame.PreviousVisibleOutputPoint
                 : currentOutputBefore;
-            if (captureTransition && frame.PreviousWeightedGoalSole.Available)
+            if (captureTransition && frame.PreviousVisibleOutputAvailable)
                 effectiveCorrectionBefore = continuityOutputBefore - originalSole;
             if (captureTransition)
             {
@@ -411,7 +411,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref state,
                 desiredOutputPoint,
                 supportNormal,
-                captureTransition ? frame.PreviousWeightedGoalSole : default,
+                captureTransition && frame.PreviousVisibleOutputAvailable,
+                frame.PreviousVisibleOutputPoint,
                 in frame,
                 out CharacterFootCorrectionResponseFact
                     correctionResponseFact);
@@ -456,7 +457,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.PlantDesiredPoint = target.PlantTargetPoint;
             state.PreviousPlantSelectedWorldTarget = selectedWorldTarget;
             state.SelectedSupportTarget = target.SupportTarget.WithSupportNormal(
-                correctionResponseFact.AppliedSupportDirection);
+                correctionResponseFact.ResponseDirection);
             state.HasPreviousResponseOutputPoint = true;
             state.PreviousResponseOutputPoint = responseOutputPoint;
             state.PreviousTargetCorrection = selectedWorldTarget - originalSole;
@@ -564,12 +565,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref state,
                 originalSole + desiredCorrection,
                 target.SupportTarget.SupportNormal,
+                false,
                 default,
                 in frame,
                 out CharacterFootCorrectionResponseFact
                     correctionResponseFact);
             state.SelectedSupportTarget = target.SupportTarget.WithSupportNormal(
-                correctionResponseFact.AppliedSupportDirection);
+                correctionResponseFact.ResponseDirection);
             state.EffectiveCorrection = releaseOutputPoint - originalSole;
             state.Completed = frame.LockRequest.Weight <=
                               CharacterFootConstraintMath.GeometryEpsilon &&
@@ -815,13 +817,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref state,
                     originalSole + swingCorrection,
                     target.SupportTarget.SupportNormal,
+                    false,
                     default,
                     in frame,
                     out CharacterFootCorrectionResponseFact
                         correctionResponseFact);
                 state.SelectedSupportTarget =
                     target.SupportTarget.WithSupportNormal(
-                        correctionResponseFact.AppliedSupportDirection);
+                        correctionResponseFact.ResponseDirection);
                 state.EffectiveCorrection = responseOutputPoint - originalSole;
                 state.Residual = state.SwingResidual;
             }
@@ -906,76 +909,78 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static Vector3 ApplyCorrectionResponse(
             ref CharacterFootInterpolationState state,
             Vector3 desiredOutputPoint,
-            Vector3 supportDirection,
-            CharacterFootWeightedGoalSoleReference goalSoleTransfer,
+            Vector3 responseDirection,
+            bool visibleOutputTransferAvailable,
+            Vector3 visibleOutputTransferPoint,
             in CharacterFootStateFrame frame,
             out CharacterFootCorrectionResponseFact fact)
         {
             if (!CharacterFootConstraintMath.Finite(desiredOutputPoint) ||
-                !frame.PositionResponseBasis.IsValid ||
-                goalSoleTransfer.Available && !goalSoleTransfer.IsValid ||
-                !CharacterFootConstraintMath.Finite(supportDirection) ||
-                supportDirection.sqrMagnitude <=
+                !CharacterFootConstraintMath.Finite(responseDirection) ||
+                responseDirection.sqrMagnitude <=
                 CharacterFootConstraintMath.GeometryEpsilon *
                 CharacterFootConstraintMath.GeometryEpsilon)
             {
                 throw new System.InvalidOperationException(
                     "Foot Correction Response input is invalid.");
             }
-            Vector3 requestedDirection = supportDirection.normalized;
-            bool weightedGoalSoleTransferAvailable = goalSoleTransfer.Available;
+            Vector3 requestedDirection = responseDirection.normalized;
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
-            bool continuityReferenceAvailable = weightedGoalSoleTransferAvailable ||
+            bool previousOutputAvailable = visibleOutputTransferAvailable ||
                                            state.HasPreviousResponseOutputPoint;
-            Vector3 continuityReferencePoint = weightedGoalSoleTransferAvailable
-                ? goalSoleTransfer.WorldSole
+            Vector3 previousOutputPoint = visibleOutputTransferAvailable
+                ? visibleOutputTransferPoint
                 : state.HasPreviousResponseOutputPoint
                     ? state.PreviousResponseOutputPoint
                     : desiredOutputPoint;
+            float desiredResponse = Vector3.Dot(
+                desiredOutputPoint - originalSole,
+                requestedDirection);
             bool initializedBefore = state.HasCorrectionResponse;
             bool initializedThisFrame = !initializedBefore;
             CharacterFootCorrectionResponseInitializationReason reason =
                 CharacterFootCorrectionResponseInitializationReason.None;
-            Vector3 previousSupportDirection =
+            Vector3 previousResponseDirection =
                 state.CorrectionResponseFact.Evaluated
-                    ? state.CorrectionResponseFact.AppliedSupportDirection
+                    ? state.CorrectionResponseFact.ResponseDirection
                     : requestedDirection;
-            float maximumSupportDirectionChangeDegrees = frame.Settings
-                .SupportDirectionMaximumChangeDegrees;
+            float maximumDirectionChangeDegrees = frame.Settings
+                .CorrectionResponseMaximumDirectionChangeDegrees;
             float requestedDirectionChangeDegrees = initializedBefore
                 ? Vector3.Angle(
-                    previousSupportDirection,
+                    previousResponseDirection,
                     requestedDirection)
                 : 0f;
-            bool supportDirectionLimited = initializedBefore &&
+            bool directionLimited = initializedBefore &&
                                     requestedDirectionChangeDegrees >
-                                    maximumSupportDirectionChangeDegrees;
-            Vector3 direction = supportDirectionLimited
+                                    maximumDirectionChangeDegrees;
+            Vector3 direction = directionLimited
                 ? Vector3.RotateTowards(
-                    previousSupportDirection,
+                    previousResponseDirection,
                     requestedDirection,
-                    maximumSupportDirectionChangeDegrees * Mathf.Deg2Rad,
+                    maximumDirectionChangeDegrees * Mathf.Deg2Rad,
                     0f).normalized
                 : requestedDirection;
-            float appliedSupportDirectionChangeDegrees = initializedBefore
-                ? Vector3.Angle(previousSupportDirection, direction)
+            float appliedDirectionChangeDegrees = initializedBefore
+                ? Vector3.Angle(previousResponseDirection, direction)
                 : 0f;
-            CharacterFootPositionResponseBasis positionBasis =
-                frame.PositionResponseBasis;
-            float desiredResponse = positionBasis.ResolveHeight(
-                desiredOutputPoint - originalSole);
-            if (!float.IsFinite(desiredResponse))
+            desiredResponse = Vector3.Dot(
+                desiredOutputPoint - originalSole,
+                direction);
+            if (visibleOutputTransferAvailable && !previousOutputAvailable)
             {
                 throw new System.InvalidOperationException(
-                    "Foot position response height is invalid.");
+                    "Foot Correction Response target transfer has no committed output.");
             }
             float responseBeforeRebase = initializedBefore
                 ? state.CorrectionResponse
                 : desiredResponse;
-            float previousResponse = weightedGoalSoleTransferAvailable
-                ? positionBasis.ResolveHeight(continuityReferencePoint - originalSole)
+            float previousResponse = visibleOutputTransferAvailable
+                ? Vector3.Dot(
+                    previousOutputPoint - originalSole,
+                    direction)
                 : responseBeforeRebase;
             float currentResponse = previousResponse;
             CharacterFootCorrectionResponseDeltaDirection deltaDirection =
@@ -1010,24 +1015,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
             }
             Vector3 responseOutputPoint = desiredOutputPoint +
-                                          positionBasis.WorldAxis *
+                                          direction *
                                           (currentResponse - desiredResponse);
             fact = new CharacterFootCorrectionResponseFact(
                 true,
                 initializedBefore,
                 initializedThisFrame,
                 reason,
-                continuityReferenceAvailable,
-                continuityReferencePoint,
+                previousOutputAvailable,
+                previousOutputPoint,
                 desiredOutputPoint,
                 responseOutputPoint,
                 desiredResponse,
                 requestedDirection,
-                previousSupportDirection,
-                supportDirectionLimited,
-                maximumSupportDirectionChangeDegrees,
-                appliedSupportDirectionChangeDegrees,
-                weightedGoalSoleTransferAvailable,
+                previousResponseDirection,
+                directionLimited,
+                maximumDirectionChangeDegrees,
+                appliedDirectionChangeDegrees,
+                visibleOutputTransferAvailable,
                 responseBeforeRebase,
                 previousResponse,
                 currentResponse,

@@ -82,7 +82,7 @@ Proof副本位于`Diagnostics/FootPlacementReplayArchives/20260830-position-resp
 
 2086行basis和Response均有效，本记录中`a=h=(0,1,0),s=1`；按CSV独立重算q和O的最大误差分别0.312/0.278微米，正式facts发布的输出公式误差及轴外量均为0。`VisibleOutputTransferred`仍为0，上一节的未覆盖边界不变。
 
-91个严格稳定三帧窗口中的12组Support Direction往返保持不变，但Response相对Desired的额外XZ全部为0。Left412–414中间帧旧Z=-10.315毫米，新Z=0；物理Sole相对动画的二阶位置差由20.630毫米降到约0.006毫米。Right360–362对应10.052降到0.006毫米，Right857–859对应12.696降到0.050毫米。此处是位置差，不冒称毫米/秒加速度。
+91个严格稳定三帧窗口中的12组Support Direction往返保持不变，但Response相对Desired的额外XZ全部为0；其中6组原本已为0，实际消除的是另外6组非零摆动，不称消除12次可见闪动。Left412–414中间帧旧Z=-10.315毫米，新Z=0；物理Sole相对动画的二阶位置差由20.630毫米降到约0.006毫米。Right360–362对应10.052降到0.006毫米，Right857–859对应12.696降到0.050毫米。此处是位置差，不冒称毫米/秒加速度。
 
 37个Target的规则与评分政策均未变；七维Health仍49/49/74/49/49/100/100，总分仍60.4。主要全包结果：
 
@@ -109,3 +109,7 @@ State仅两行变化：Right770由基线Landing变为Locked，Right775由Releasi
 Profile身份改名/升级后必须显式重建Corin Float32与Fixed产物，身份变化原样记录，不修改Proof比较器；先核对同一输入与逐帧Body轨迹，再判断Foot行为。全部原始采样继续由唯一Recorder/Analyzer/Publisher生成。新basis字段与Support Direction字段缺失必须typed拒绝，不为旧CSV补列。
 
 逐项检查12个稳定ABA窗口、额外XZ、Y跳变、同Event完整Anchor、Landing/Locked/Release变化、Heel/Toe穿透与接触间隙、Source/Desired/Response/Resolved/Goal/Physical首次差异、Support/Pelvis、Reach与膝盖、FBBIK残差及QueryExecuted行数。候选接受前不把g、Contact时限、旋转权重或其它修复叠入；拒绝时只撤销本轮代码/资产/产物并再次回放，保留失败记录。
+
+## 组合封口后的处置
+
+随后93815d9/9979aa8的150516实验接通Committed Goal参考，已运行78次Transfer，缓解Right404–412但没有恢复原质量基线，且新增持续离面与穿透。两轮组合均拒绝；7个Runtime与4个Corin配置/产品恢复c519865，Diagnostics独立撤销并保留评分和间隙诊断，恢复Replay另行记账。恢复旧位置响应属于撤销未通过的实验，不表示旧Normal×scalar机制已经正确，也不删除本报告证实的局部收益。

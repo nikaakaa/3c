@@ -518,25 +518,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingReachGoalClamped = landingReachGoalClamped;
             LandingReachGoalClampDistance = landingReachGoalClampDistance;
             LifecycleTransition = lifecycleTransition;
-            CurrentWeightedGoalSole = default;
         }
-
-        CharacterFootSwingMotionResult(
-            in CharacterFootSwingMotionResult source,
-            CharacterFootWeightedGoalSoleReference reference)
-        {
-            this = source;
-            if (!reference.IsValid)
-            {
-                throw new ArgumentException(
-                    "Foot motion requires a valid weighted Goal Sole reference.");
-            }
-            CurrentWeightedGoalSole = reference;
-        }
-
-        internal CharacterFootSwingMotionResult WithWeightedGoalSole(
-            CharacterFootWeightedGoalSoleReference reference) =>
-            new CharacterFootSwingMotionResult(in this, reference);
 
         public CharacterFootSwingMotionState State { get; }
         public CharacterFootSwingMotionRejectReason RejectReason { get; }
@@ -572,7 +554,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float LandingReachGoalClampDistance { get; }
         internal CharacterFootPathContinuityFact PathContinuity { get; }
         internal CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
-        internal CharacterFootWeightedGoalSoleReference CurrentWeightedGoalSole { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 
@@ -615,15 +596,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 result.LandingReachGoalClampDistance;
             CharacterFootLifecycleTransitionFact lifecycle =
                 result.LifecycleTransition;
-            CharacterFootPositionResponseBasis positionBasis =
-                lifecycle.PositionResponseBasis;
-            PositionResponseBasisAvailable = positionBasis.IsValid;
-            PreviousWeightedGoalSole = lifecycle.PreviousWeightedGoalSole;
-            CurrentWeightedGoalSole = result.CurrentWeightedGoalSole;
-            PositionResponseWorldAxis = positionBasis.WorldAxis;
-            PositionResponseHeightProjection = positionBasis.HeightProjection;
-            PositionResponseWorldUnitsPerPoseUnit =
-                positionBasis.WorldUnitsPerPoseUnit;
             CharacterFootContactHistoryFact previousContext =
                 lifecycle.PreviousContext;
             CharacterFootContactHistoryFact currentContext =
@@ -815,10 +787,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPreviousSelectedWorldTarget =
                 path.PlantPreviousSelectedWorldTarget;
             PlantSelectedWorldTarget = path.PlantSelectedWorldTarget;
-            ContinuityReferenceAvailable =
-                path.ContinuityReferenceAvailable;
-            ContinuityReferencePoint =
-                path.ContinuityReferencePoint;
+            PreviousResponseOutputAvailable =
+                path.PreviousResponseOutputAvailable;
+            PreviousResponseOutputPoint =
+                path.PreviousResponseOutputPoint;
             DesiredOutputPoint = path.DesiredOutputPoint;
             ResponseOutputPoint = path.ResponseOutputPoint;
             PlantResidualCaptureReason =
@@ -853,26 +825,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.CorrectionResponseInitializationReason.ToString();
             CorrectionResponseDesired =
                 path.CorrectionResponseDesired;
-            SupportDirectionRequested =
-                path.SupportDirectionRequested;
-            SupportDirectionPrevious =
-                path.SupportDirectionPrevious;
-            SupportDirectionLimited =
-                path.SupportDirectionLimited;
-            SupportDirectionMaximumChangeDegrees =
-                path.SupportDirectionMaximumChangeDegrees;
-            SupportDirectionAppliedChangeDegrees =
-                path.SupportDirectionAppliedChangeDegrees;
-            CorrectionResponseWeightedGoalSoleTransferred =
-                path.CorrectionResponseWeightedGoalSoleTransferred;
+            CorrectionResponseRequestedDirection =
+                path.CorrectionResponseRequestedDirection;
+            CorrectionResponsePreviousDirection =
+                path.CorrectionResponsePreviousDirection;
+            CorrectionResponseDirectionLimited =
+                path.CorrectionResponseDirectionLimited;
+            CorrectionResponseMaximumDirectionChangeDegrees =
+                path.CorrectionResponseMaximumDirectionChangeDegrees;
+            CorrectionResponseAppliedDirectionChangeDegrees =
+                path.CorrectionResponseAppliedDirectionChangeDegrees;
+            CorrectionResponseVisibleOutputTransferred =
+                path.CorrectionResponseVisibleOutputTransferred;
             CorrectionResponseBeforeRebase =
                 path.CorrectionResponseBeforeRebase;
             CorrectionResponsePrevious =
                 path.CorrectionResponsePrevious;
             CorrectionResponseCurrent =
                 path.CorrectionResponseCurrent;
-            SupportDirectionApplied =
-                path.SupportDirectionApplied;
+            CorrectionResponseDirection =
+                path.CorrectionResponseDirection;
             CorrectionResponseDeltaDirection =
                 path.CorrectionResponseDeltaDirection.ToString();
             CorrectionResponseSelectedSpeed =
@@ -920,12 +892,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool LandingReachAvailable { get; }
         public bool LandingReachGoalClamped { get; }
         public float LandingReachGoalClampDistance { get; }
-        public bool PositionResponseBasisAvailable { get; }
-        public Vector3 PositionResponseWorldAxis { get; }
-        public Vector3 PositionResponseHeightProjection { get; }
-        public float PositionResponseWorldUnitsPerPoseUnit { get; }
-        public CharacterFootWeightedGoalSoleReference PreviousWeightedGoalSole { get; }
-        public CharacterFootWeightedGoalSoleReference CurrentWeightedGoalSole { get; }
         public bool LifecycleTransitionEvaluated { get; }
         public bool PreviousLockRequestAvailable { get; }
         public bool PreviousLockRequested { get; }
@@ -1065,8 +1031,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantTargetVerticalClamped { get; }
         public Vector3 PlantPreviousSelectedWorldTarget { get; }
         public Vector3 PlantSelectedWorldTarget { get; }
-        public bool ContinuityReferenceAvailable { get; }
-        public Vector3 ContinuityReferencePoint { get; }
+        public bool PreviousResponseOutputAvailable { get; }
+        public Vector3 PreviousResponseOutputPoint { get; }
         public Vector3 DesiredOutputPoint { get; }
         public Vector3 ResponseOutputPoint { get; }
         public string PlantResidualCaptureReason { get; }
@@ -1085,16 +1051,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool CorrectionResponseInitializedThisFrame { get; }
         public string CorrectionResponseInitializationReason { get; }
         public float CorrectionResponseDesired { get; }
-        public Vector3 SupportDirectionRequested { get; }
-        public Vector3 SupportDirectionPrevious { get; }
-        public bool SupportDirectionLimited { get; }
-        public float SupportDirectionMaximumChangeDegrees { get; }
-        public float SupportDirectionAppliedChangeDegrees { get; }
-        public bool CorrectionResponseWeightedGoalSoleTransferred { get; }
+        public Vector3 CorrectionResponseRequestedDirection { get; }
+        public Vector3 CorrectionResponsePreviousDirection { get; }
+        public bool CorrectionResponseDirectionLimited { get; }
+        public float CorrectionResponseMaximumDirectionChangeDegrees { get; }
+        public float CorrectionResponseAppliedDirectionChangeDegrees { get; }
+        public bool CorrectionResponseVisibleOutputTransferred { get; }
         public float CorrectionResponseBeforeRebase { get; }
         public float CorrectionResponsePrevious { get; }
         public float CorrectionResponseCurrent { get; }
-        public Vector3 SupportDirectionApplied { get; }
+        public Vector3 CorrectionResponseDirection { get; }
         public string CorrectionResponseDeltaDirection { get; }
         public float CorrectionResponseSelectedSpeed { get; }
         public float CorrectionResponseAppliedDelta { get; }

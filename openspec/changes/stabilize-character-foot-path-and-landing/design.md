@@ -4,6 +4,8 @@
 
 ### 2026-08-30位置响应坐标候选
 
+当前处置：141256位置轴候选与150516加权Goal参考组合均未通过完整质量约束。代码、Profile及Corin生成产物已精确恢复c519865内容，Diagnostics经1a81927、8812436恢复facts52/diagnosis21，尚待本次恢复Replay封口。下述位置basis和Committed参考是已验证部分机制、但尚未接纳的设计方向，不代表当前运行实现。原13:05:45基线仍有踏空与反弯，恢复不等于修复，更不是认定它优于20:43历史版本。
+
 本轮以c519865与130545恢复Replay为基线，只替换Correction Response的位置坐标合同。纯稳定Left412–414中，Applied Support Direction为Up→10°斜向→Up，标量欠账被旧`O=D+N(c-q)`变成0→-10.315毫米→0的额外Z；三帧无Path Revision、Target Tracking或Rotation Goal Weight。新ZZZ exact证据表明位置在PIK组件所属坐标系执行`F+LocalY*c`，N另参与目标几何与旋转；原先由Up特例推导位置沿N的结论撤销。
 
 3C的目标是Sole Center，不是ZZZ Foot pivot。本轮不复制其`desiredRaw`、g/k/W、幅度折返或owner-Y选速率。PoseRig从实际`Binding.Animator.transform`的同帧矩阵捕获位置basis；这个PoseRoot与CaptureFoot、最终Goal编码相同，不借Body Up、GroundPath Up或默认轴。令L为owner到world线性部分、G为world到owner，s为`|L*LocalY|`，a为`L*LocalY/s`，h为`rowY(G).xyz*s`。有限可逆矩阵、s>0、a单位长与h·a≈1为必需合同；h不是单位方向，禁止归一化。
@@ -377,6 +379,8 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 参考的唯一生产者仍是Foot Module的最终Goal编码后阶段，它按已有Goal权重和动画Foot Pose推算Sole，不读取最终骨骼，也不是新Physical反馈路径。旧`Visible`名称改为`WeightedGoalSole`；连续性参考点区分于实际上一物理输出。零权重时参考可能与Physical Sole相差数厘米甚至更多，该差异必须保留在原始对账中，不能以非零Goal样本的微米级残差推断二者恒等。
 
 正式Capture采用合法上一参考时，以完整XYZ捕获Residual、同帧衰减，并以同一dual重基scalar；稳定帧保持原scalar，不增加新的历史或滤波。这个实验首次激活既有但不可达的重基分支，不是恢复曾经动态验证过的路径；必须同时对照141256和130545，尤其覆盖Right404–412及Left349→350、853→854的零权重后Capture。
+
+150516已经完成上述双基线Replay：78/78 Capture实际采用参考，完整XYZ与dual数学一致，稳定Swing的6个原非零ABA额外XZ保持消除；但Right959世界下降350.409毫米缩成25毫米的同时，中心离面165.009毫米增到490.418毫米，后续新Event形成持续离面，另新增Left572–574穿透。Right404–412只部分修复前驱，原478–484毫米悬空及Sliding再离面未解决。因此组合拒绝，不在其上叠加新膝盖实验，先恢复原基线并同输入对账。具体提交、SHA256、37项同规则边界和失败机制见[加权Goal参考实验](experiments/20260830-committed-weighted-goal-sole.md)。
 
 ## 已实施切片对账
 

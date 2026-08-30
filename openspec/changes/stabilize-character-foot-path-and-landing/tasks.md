@@ -104,6 +104,9 @@
 - [ ] 6.34 用带Frame/Completion/Side/WorldSole与Goal权重的唯一Committed Weighted Goal Sole参考替换旧Visible松散字段，修正把Pending开放标志当历史有效性的读取门；不修改SealFrame事务语义，不把Goal参考叫作Final Physical Sole；150516组合已因持续离面与穿透回归撤销，首次激活证据保留
 - [ ] 6.35 正式Capture接入合法上一Goal参考和同一dual重基，公开上一/当前参考与采用事实并迁移唯一Diagnostics；保持完整XYZ Capture、同帧Advance及所有既有质量公式
 - [ ] 6.36 使用既有Replay同时对比141256实验前驱与130545原基线，核对Contact穿透/FullAnchor、零权重后Capture、Swing与全部诊断，记录失败或可保留结论而不替换原质量门
+- [x] 6.37 在唯一Correction Response内实现LockedSliding完整世界误差域，闭合进入、正常推进、退出到原Plant/Release残差与Reset，不改变五态/目标/旋转/查询/权重
+- [ ] 6.38 发布分域响应的唯一Runtime事实并迁移Sampler/Analyzer/Publisher，严格区分未执行scalar与WorldError推进，保留原质量规则
+- [ ] 6.39 用原Record验证Sliding再离地、完整交接、水平轨迹、Heel/Toe穿透、Release、Pelvis与Reach，独立记录保留或拒绝及恢复证据
 
 ## 7. 单独接入Support与Pelvis
 

@@ -103,6 +103,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 correction = state.EffectiveCorrection;
             bool hasCorrectionResponse = state.HasCorrectionResponse;
             float correctionResponse = state.CorrectionResponse;
+            CharacterFootCorrectionResponseDomain responseDomain =
+                state.CorrectionResponseDomain;
+            Vector3 slidingWorldError = state.SlidingResponseWorldError;
             CharacterFootCorrectionResponseFact correctionResponseFact =
                 state.CorrectionResponseFact;
             bool hasPreviousResponseOutputPoint =
@@ -122,6 +125,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.EffectiveCorrection = correction;
             state.HasCorrectionResponse = hasCorrectionResponse;
             state.CorrectionResponse = correctionResponse;
+            state.CorrectionResponseDomain = responseDomain;
+            state.SlidingResponseWorldError = slidingWorldError;
             state.CorrectionResponseFact = correctionResponseFact;
             state.HasPreviousResponseOutputPoint =
                 hasPreviousResponseOutputPoint;
@@ -357,12 +362,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 residualBeforeCapture = state.PlantWorldResidual;
             bool captureTransition = captureReason !=
                                      CharacterFootPlantResidualCaptureReason.None;
-            Vector3 continuityOutputBefore = captureTransition &&
-                                              frame
-                                                  .PreviousVisibleOutputAvailable
+            bool slidingWorldResponse = target.PlantTargetKind ==
+                CharacterFootPlantTargetKind.LockedSliding;
+            bool scalarVisibleTransfer = captureTransition &&
+                frame.PreviousVisibleOutputAvailable &&
+                !slidingWorldResponse &&
+                state.CorrectionResponseDomain !=
+                    CharacterFootCorrectionResponseDomain.SlidingWorldError;
+            Vector3 continuityOutputBefore = scalarVisibleTransfer
                 ? frame.PreviousVisibleOutputPoint
                 : currentOutputBefore;
-            if (captureTransition && frame.PreviousVisibleOutputAvailable)
+            if (scalarVisibleTransfer)
                 effectiveCorrectionBefore = continuityOutputBefore - originalSole;
             if (captureTransition)
             {
@@ -411,7 +421,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref state,
                 desiredOutputPoint,
                 supportNormal,
-                captureTransition && frame.PreviousVisibleOutputAvailable,
+                slidingWorldResponse
+                    ? CharacterFootCorrectionResponseDomain.SlidingWorldError
+                    : CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
+                captureTransition,
+                scalarVisibleTransfer,
                 frame.PreviousVisibleOutputPoint,
                 in frame,
                 out CharacterFootCorrectionResponseFact
@@ -438,6 +452,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootVerticalContinuityOwner.PlantWorldResidual;
             }
             if (correctionResponseFact.InitializedThisFrame ||
+                correctionResponseFact.WorldErrorAdvanced ||
+                correctionResponseFact.WorldErrorAfterAdvance != Vector3.zero ||
                 !Mathf.Approximately(
                     correctionResponseFact.CurrentResponse,
                     correctionResponseFact.DesiredResponse) ||
@@ -565,6 +581,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref state,
                 originalSole + desiredCorrection,
                 target.SupportTarget.SupportNormal,
+                CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
+                target.StateEntered,
                 false,
                 default,
                 in frame,
@@ -817,6 +835,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref state,
                     originalSole + swingCorrection,
                     target.SupportTarget.SupportNormal,
+                    CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
+                    false,
                     false,
                     default,
                     in frame,
@@ -910,12 +930,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootInterpolationState state,
             Vector3 desiredOutputPoint,
             Vector3 responseDirection,
+            CharacterFootCorrectionResponseDomain domain,
+            bool targetContinuityCaptured,
             bool visibleOutputTransferAvailable,
             Vector3 visibleOutputTransferPoint,
             in CharacterFootStateFrame frame,
             out CharacterFootCorrectionResponseFact fact)
         {
-            if (!CharacterFootConstraintMath.Finite(desiredOutputPoint) ||
+            if ((domain != CharacterFootCorrectionResponseDomain.AnimationRelativeScalar &&
+                 domain != CharacterFootCorrectionResponseDomain.SlidingWorldError) ||
+                !CharacterFootConstraintMath.Finite(desiredOutputPoint) ||
                 !CharacterFootConstraintMath.Finite(responseDirection) ||
                 responseDirection.sqrMagnitude <=
                 CharacterFootConstraintMath.GeometryEpsilon *
@@ -940,6 +964,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 requestedDirection);
             bool initializedBefore = state.HasCorrectionResponse;
             bool initializedThisFrame = !initializedBefore;
+            CharacterFootCorrectionResponseDomain previousDomain =
+                initializedBefore
+                    ? state.CorrectionResponseDomain
+                    : CharacterFootCorrectionResponseDomain.None;
+            if (initializedBefore && previousDomain ==
+                CharacterFootCorrectionResponseDomain.None)
+            {
+                throw new System.InvalidOperationException(
+                    "Foot Correction Response history has no coordinate domain.");
+            }
+            bool domainTransferred = initializedBefore && previousDomain != domain;
+            bool slidingWorldResponse = domain ==
+                CharacterFootCorrectionResponseDomain.SlidingWorldError;
+            bool exitingSliding = domainTransferred && !slidingWorldResponse;
+            if (exitingSliding && (!targetContinuityCaptured ||
+                                   !state.HasPreviousResponseOutputPoint))
+            {
+                throw new System.InvalidOperationException(
+                    "Sliding response exit has no complete target residual capture.");
+            }
             CharacterFootCorrectionResponseInitializationReason reason =
                 CharacterFootCorrectionResponseInitializationReason.None;
             Vector3 previousResponseDirection =
@@ -974,19 +1018,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new System.InvalidOperationException(
                     "Foot Correction Response target transfer has no committed output.");
             }
-            float responseBeforeRebase = initializedBefore
-                ? state.CorrectionResponse
-                : desiredResponse;
-            float previousResponse = visibleOutputTransferAvailable
-                ? Vector3.Dot(
-                    previousOutputPoint - originalSole,
-                    direction)
-                : responseBeforeRebase;
+            float responseBeforeRebase = slidingWorldResponse || exitingSliding
+                ? 0f
+                : initializedBefore
+                    ? state.CorrectionResponse
+                    : desiredResponse;
+            float previousResponse = slidingWorldResponse
+                ? 0f
+                : exitingSliding
+                    ? desiredResponse
+                    : visibleOutputTransferAvailable
+                        ? Vector3.Dot(
+                            previousOutputPoint - originalSole,
+                            direction)
+                        : responseBeforeRebase;
             float currentResponse = previousResponse;
             CharacterFootCorrectionResponseDeltaDirection deltaDirection =
                 CharacterFootCorrectionResponseDeltaDirection.None;
             float selectedSpeed = 0f;
             float appliedDelta = 0f;
+            Vector3 worldErrorBeforeTransfer = state.SlidingResponseWorldError;
+            Vector3 worldErrorBeforeAdvance = default;
+            Vector3 worldErrorAfterAdvance = default;
+            bool worldErrorAdvanced = false;
+            float worldErrorMaximumStep = 0f;
+            CharacterFootSlidingResponseCaptureReason worldErrorCaptureReason =
+                CharacterFootSlidingResponseCaptureReason.None;
             if (initializedThisFrame)
             {
                 reason = state.PendingCorrectionResponseInitializationReason !=
@@ -995,7 +1052,73 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CharacterFootCorrectionResponseInitializationReason
                         .FirstLegalInput;
             }
-            else
+            if (slidingWorldResponse)
+            {
+                if (initializedThisFrame)
+                {
+                    worldErrorCaptureReason =
+                        CharacterFootSlidingResponseCaptureReason.Initialized;
+                }
+                else
+                {
+                    if (domainTransferred)
+                        worldErrorCaptureReason |=
+                            CharacterFootSlidingResponseCaptureReason.DomainEntered;
+                    if (targetContinuityCaptured)
+                        worldErrorCaptureReason |=
+                            CharacterFootSlidingResponseCaptureReason.TargetCaptured;
+                    if (worldErrorCaptureReason !=
+                        CharacterFootSlidingResponseCaptureReason.None)
+                    {
+                        if (!state.HasPreviousResponseOutputPoint)
+                            throw new System.InvalidOperationException(
+                                "Sliding response capture has no previous world output.");
+                        worldErrorBeforeAdvance =
+                            state.PreviousResponseOutputPoint - desiredOutputPoint;
+                    }
+                    else
+                    {
+                        worldErrorBeforeAdvance = worldErrorBeforeTransfer;
+                    }
+                }
+                worldErrorAfterAdvance = worldErrorBeforeAdvance;
+                float distance = worldErrorBeforeAdvance.magnitude;
+                if (!CharacterFootConstraintMath.Finite(worldErrorBeforeAdvance) ||
+                    !float.IsFinite(distance))
+                {
+                    throw new System.InvalidOperationException(
+                        "Sliding response world error is invalid.");
+                }
+                if (distance > 0f)
+                {
+                    float upDisplacement = Vector3.Dot(
+                        -worldErrorBeforeAdvance,
+                        frame.ComponentUp.normalized);
+                    deltaDirection = upDisplacement > 0f
+                        ? CharacterFootCorrectionResponseDeltaDirection.Increase
+                        : upDisplacement < 0f
+                            ? CharacterFootCorrectionResponseDeltaDirection.Decrease
+                            : CharacterFootCorrectionResponseDeltaDirection.Tangential;
+                    selectedSpeed = upDisplacement > 0f
+                        ? frame.Settings.CorrectionResponseIncreaseSpeed
+                        : upDisplacement < 0f
+                            ? frame.Settings.CorrectionResponseDecreaseSpeed
+                            : Mathf.Min(
+                                frame.Settings.CorrectionResponseIncreaseSpeed,
+                                frame.Settings.CorrectionResponseDecreaseSpeed);
+                    worldErrorMaximumStep = selectedSpeed * frame.DeltaSeconds;
+                    if (frame.DeltaSeconds > 0f)
+                    {
+                        worldErrorAfterAdvance = Vector3.MoveTowards(
+                            worldErrorBeforeAdvance,
+                            Vector3.zero,
+                            worldErrorMaximumStep);
+                        worldErrorAdvanced = true;
+                    }
+                }
+                desiredResponse = 0f;
+            }
+            else if (!initializedThisFrame && !exitingSliding)
             {
                 float delta = desiredResponse - previousResponse;
                 if (delta != 0f)
@@ -1014,9 +1137,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     currentResponse = previousResponse + appliedDelta;
                 }
             }
-            Vector3 responseOutputPoint = desiredOutputPoint +
-                                          direction *
-                                          (currentResponse - desiredResponse);
+            Vector3 responseOutputPoint = slidingWorldResponse
+                ? desiredOutputPoint + worldErrorAfterAdvance
+                : desiredOutputPoint + direction *
+                  (currentResponse - desiredResponse);
             fact = new CharacterFootCorrectionResponseFact(
                 true,
                 initializedBefore,
@@ -1039,9 +1163,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 direction,
                 deltaDirection,
                 selectedSpeed,
-                appliedDelta);
+                appliedDelta,
+                domain,
+                previousDomain,
+                domainTransferred,
+                worldErrorCaptureReason,
+                worldErrorBeforeTransfer,
+                worldErrorBeforeAdvance,
+                worldErrorAfterAdvance,
+                worldErrorAdvanced,
+                worldErrorMaximumStep);
             state.HasCorrectionResponse = true;
             state.CorrectionResponse = currentResponse;
+            state.CorrectionResponseDomain = domain;
+            state.SlidingResponseWorldError = worldErrorAfterAdvance;
             state.CorrectionResponseFact = fact;
             state.HasPreviousResponseOutputPoint = true;
             state.PreviousResponseOutputPoint = responseOutputPoint;
@@ -1120,6 +1255,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             state.HasCorrectionResponse = false;
             state.CorrectionResponse = 0f;
+            state.CorrectionResponseDomain = CharacterFootCorrectionResponseDomain.None;
+            state.SlidingResponseWorldError = default;
             state.CorrectionResponseFact = default;
             state.HasPreviousResponseOutputPoint = false;
             state.PreviousResponseOutputPoint = default;

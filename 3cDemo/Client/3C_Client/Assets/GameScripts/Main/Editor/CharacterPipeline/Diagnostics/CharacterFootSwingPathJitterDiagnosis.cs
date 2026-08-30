@@ -577,7 +577,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double? correctionResponseCurrent;
         public CharacterFootVectorFact correctionResponseDirection;
         public string correctionResponseDeltaDirection;
-        public double correctionResponseSelectedSpeed;
+        public double? correctionResponseSelectedSpeed;
         public double? correctionResponseAppliedDelta;
         public string plantVerticalContinuityOwners;
         public CharacterFootVectorFact plantEffectiveCorrectionBefore;

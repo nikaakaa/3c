@@ -133,3 +133,11 @@ Diagnostics已由原作者以`27dbef4`精确撤销`d8da442`，整个Diagnostics�
 SourceLiftUnloading、UnloadingLockRestored、卸载Event历史/重入保护和8个相关发布字段不保留兼容别名或开关。原ContactWorldResidual、正常Release、Goal权重、Reach与Pelvis弹簧保持193957内容。212054原始采样、ZIP、Proof、拒绝记录和193957全部保留；当前归档manifest描述的是保存候选时状态，不重写历史证据。
 
 源码恢复后仍需统一Editor构建、显式Refresh与原Record恢复Replay；未完成之前不以diff为空宣布表现已经恢复。
+
+恢复验证现已完成：Runtime提交`3436cf6`；Editor规定flags构建57个既有警告、0错误，随后build-server shutdown成功。Unity刷新首次等候超时后没有重复刷新，后续读取确认已完成域重载、处于Edit、无编译中状态且Console错误0，再启动一次原Record。
+
+新恢复包`20260830-221050-949-065a20d3944f47f29c256606e801ad57`封口facts57/diagnosis26：2086脚行、1143列，其中1119列对193957逐字符串相同；24列为运行元数据和Surface/Path身份，双向映射无冲突。50195行geometry仅4身份列不同。37个Target的rules、eventKinds、scorePolicy、eligible/matched及score均完全一致，总分回到61.9。原骨盆大步、腿姿态风险也随对照恢复，未称其被修好。
+
+恢复Proof221238、12文件ZIP及新`restored-manifest.json`已持久保存；官方Proof匹配212302的1044帧，不把它改写为官方直接匹配193957。原候选、193957与恢复包共111个原始run目录全部保留。回放与发布完成后结束本任务的Play会话，未启动新行为实验。
+
+后续有界只读调研见`20260830-pelvis-planning-readonly-research.md`，不改变上述恢复版本。

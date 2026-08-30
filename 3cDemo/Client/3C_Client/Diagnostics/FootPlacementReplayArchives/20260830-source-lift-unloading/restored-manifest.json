@@ -1,0 +1,248 @@
+{
+  "run": "20260830-221050-949-065a20d3944f47f29c256606e801ad57",
+  "sourceDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260830-221050-949-065a20d3944f47f29c256606e801ad57",
+  "archiveFile": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-source-lift-unloading/20260830-221050-949-065a20d3944f47f29c256606e801ad57.zip",
+  "archiveBytes": 15321102,
+  "archiveSha256": "0860B58B23499652544BBBF5486E77EA0ABCA31E7EB71BFE4E25F7B4979CCD77",
+  "verifiedFileCount": 12,
+  "sourceFileCount": 12,
+  "files": [
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/contact-plane-penetration.json",
+      "bytes": 51389,
+      "sha256": "13D460D5ECC500526F0166B225685E8667D7D066757307F5438BB8E3DD4D7113"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/landing-leg-extension.json",
+      "bytes": 16010,
+      "sha256": "DA2EB4C6DF2E92DEA45473D13A768B76C28D1B62408FE436E1B267B15CA0C838"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "9B7C2FAE7174DE654D1DE099E2723281C96193229EA549CBD240010A4527EFAB"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/landing-path-continuity.json",
+      "bytes": 60968,
+      "sha256": "BFABA13B4011B11137AA968A8CDD09FB9AE913BB8645467C29C679F32DB81006"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/landing-state-consistency.json",
+      "bytes": 733574,
+      "sha256": "349A873A49A1EE1024719CD5FDE0F9F2A316669CB4D6B6D6DCEE6E1D9A69A5AA"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "90D8D07739BBF883B9056BC8AE349A241F642A56EFA5E1D95F51AA3ADE3870A9"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/quality-score.json",
+      "bytes": 24806,
+      "sha256": "ED64030DDCD483409DD775CB12B2469D5105E05BFFDDC5A1330A80499C76356E"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "01FC17728B133D6DA00F835E0931F4309DB0979D89B7C67E7A13288F75CDAC11"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/diagnoses/swing-path-jitter.json",
+      "bytes": 1739661,
+      "sha256": "864677D6E242D0D5AB088CECF10802864589042063FBBB18022F081E223D3D44"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/facts.json",
+      "bytes": 115424208,
+      "sha256": "9A68DFFD39DA82D6EF4B10B08D48B9CFE1FA14B56B1363E43631E41DEE0CB557"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/ground-path-geometry.csv",
+      "bytes": 7841756,
+      "sha256": "DF9BCE406CDD3A8CE579711C3974B1CE8DF73DFBBE19E9EBC2E0FEC1D1C540C2"
+    },
+    {
+      "path": "20260830-221050-949-065a20d3944f47f29c256606e801ad57/samples.csv",
+      "bytes": 17956657,
+      "sha256": "753EAB7D68DDBD4C5FF412644A14226BBA9951625D10190B33B892F3B0E505D5"
+    }
+  ],
+  "proofFile": "restored-proof.json",
+  "proofSha256": "1D9A56AB10163F2D69306B452DC0B2A913262B7A6AA5BA3F44BC561ACD3712B5",
+  "proofComparison": {
+    "baseline_available": true,
+    "matched": true,
+    "baseline_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260830-212302-437-65bf1c87e57343e3b8a13b0881e4ffe6.json",
+    "compared_frame_count": 1044,
+    "aggregate_mismatches": [],
+    "divergent_frame_count": 0,
+    "first_divergent_relative_frame": -1,
+    "first_frame_mismatches": []
+  },
+  "footSample": {
+    "sample_identity": "065a20d3944f47f29c256606e801ad57",
+    "samples_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260830-221050-949-065a20d3944f47f29c256606e801ad57\\samples.csv",
+    "facts_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260830-221050-949-065a20d3944f47f29c256606e801ad57\\facts.json",
+    "samples_sha256": "753eab7d68ddbd4c5ff412644a14226bba9951625d10190b33b892f3b0e505d5",
+    "sampling_relative_frame_count": 1043
+  },
+  "proofFrameCount": 1044,
+  "preservedRunDirectoryCount": 111,
+  "runtimeRollbackCommit": "3436cf6",
+  "diagnosticsRollbackCommit": "27dbef43785daf2fc299c60d47a6a2fea76f565f",
+  "factsSchema": "character-foot-motion-facts/57",
+  "diagnosisSchema": "character-foot-diagnosis-file/26",
+  "referenceRun": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "referenceRuntime": "eb5fb05",
+  "referenceDiagnostics": "5d858bc",
+  "rawComparison": {
+    "rows": 2086,
+    "headers": 1143,
+    "identicalColumns": 1119,
+    "mappings": [
+      {
+        "column": "SampleIdentity",
+        "pairs": 1,
+        "conflict": 0
+      },
+      {
+        "column": "SampleStartedUtc",
+        "pairs": 1,
+        "conflict": 0
+      },
+      {
+        "column": "TargetRuntimeInstanceId",
+        "pairs": 1,
+        "conflict": 0
+      },
+      {
+        "column": "TargetHostInstanceId",
+        "pairs": 1,
+        "conflict": 0
+      },
+      {
+        "column": "RootInstanceId",
+        "pairs": 1,
+        "conflict": 0
+      },
+      {
+        "column": "PlantTargetSurfaceIdentity",
+        "pairs": 25,
+        "conflict": 0
+      },
+      {
+        "column": "QuerySelectedSurfaceIdentity",
+        "pairs": 27,
+        "conflict": 0
+      },
+      {
+        "column": "SurfaceIdentity",
+        "pairs": 27,
+        "conflict": 0
+      },
+      {
+        "column": "GroundPathInputIdentity",
+        "pairs": 1282,
+        "conflict": 0
+      },
+      {
+        "column": "GroundPathLastLandingSurfaceIdentity",
+        "pairs": 23,
+        "conflict": 0
+      },
+      {
+        "column": "GroundPathNextSwingLandingSurfaceIdentity",
+        "pairs": 27,
+        "conflict": 0
+      },
+      {
+        "column": "FootMotionGroundPathInputIdentity",
+        "pairs": 1282,
+        "conflict": 0
+      },
+      {
+        "column": "FootMotionContactSurfaceIdentity",
+        "pairs": 24,
+        "conflict": 0
+      },
+      {
+        "column": "FootMotionPreviousContactAnchorSurfaceIdentity",
+        "pairs": 24,
+        "conflict": 0
+      },
+      {
+        "column": "FootMotionCurrentContactAnchorSurfaceIdentity",
+        "pairs": 24,
+        "conflict": 0
+      },
+      {
+        "column": "FootMotionSafetyFloorOwnerSurfaceIdentity",
+        "pairs": 26,
+        "conflict": 0
+      },
+      {
+        "column": "FootMotionSafetyFloorOwnerPathIdentity",
+        "pairs": 495,
+        "conflict": 0
+      },
+      {
+        "column": "FootMotionSelectedSupportTargetSurfaceIdentity",
+        "pairs": 25,
+        "conflict": 0
+      },
+      {
+        "column": "FootMotionSelectedSupportTargetPositionPathIdentity",
+        "pairs": 1057,
+        "conflict": 0
+      },
+      {
+        "column": "CurrentSupportHeelSurfaceIdentity",
+        "pairs": 24,
+        "conflict": 0
+      },
+      {
+        "column": "CurrentSupportToeSurfaceIdentity",
+        "pairs": 25,
+        "conflict": 0
+      },
+      {
+        "column": "CurrentSupportTargetSurfaceIdentity",
+        "pairs": 25,
+        "conflict": 0
+      },
+      {
+        "column": "ResolvedSupportTargetSurfaceIdentity",
+        "pairs": 25,
+        "conflict": 0
+      },
+      {
+        "column": "ResolvedSupportTargetPositionPathIdentity",
+        "pairs": 1057,
+        "conflict": 0
+      }
+    ],
+    "targets": [
+      37,
+      37
+    ],
+    "targetDifferences": [],
+    "totalScore": [
+      61.9,
+      61.9
+    ]
+  },
+  "geometryComparison": {
+    "rows": 50195,
+    "identicalNumericColumns": 16,
+    "changedIdentityColumns": [
+      "SampleIdentity",
+      "GroundPathInputIdentity",
+      "GroundContactSurfaceIdentity",
+      "GroundContactCandidateIdentity"
+    ]
+  },
+  "officialProofDirectlyMatches193957": false,
+  "result": "运行时和诊断代码已恢复。相同Record新Replay的脚、状态、骨盆、输入和全部37个Target逐值恢复193957；仅运行元数据和Surface/Path身份一一换代。骨盆原有质量问题未声称解决。",
+  "retention": "193957、212054、221050原始包均不覆盖、不删除；候选和恢复Proof及ZIP是持久证据副本。"
+}

@@ -5,9 +5,9 @@
 
 ## 2. 脚位置目标有效性
 
-- [x] 2.1 删除Correction米域幅度决定PositionWeight的门，保持合法目标、作者权重、Unavailable/Suppress及旋转原语义；Runtime候选已提交，效果待2.3独立Replay
-- [ ] 2.2 将唯一Diagnostics的正式权重不变量迁移到facts59/diagnosis28，不改质量评分或给旧包补字段
-- [ ] 2.3 独立构建加载并执行同Record Replay，核对近零修正、L339/L515/R611、全部脚与骨盆输出，保存结论及Proof
+- [x] 2.1 删除Correction米域幅度决定PositionWeight的门，保持合法目标、作者权重、Unavailable/Suppress及旋转原语义；df0c956按正式目标业务保留，不称整体质量已完成
+- [x] 2.2 将唯一Diagnostics的正式权重不变量迁移到facts59/diagnosis28，不改质量评分或给旧包补字段；0550308已独立提交，Editor规定flags构建0错误
+- [x] 2.3 独立构建加载并执行同Record Replay，核对近零修正、L339/L515/R611、全部脚与骨盆输出，保存结论及Proof；230331恢复71个有效目标，固定525Contact保持，骨盆711增加2.938毫米及其它外溢单列，详见experiments/20260830-step1-goal-validity.md
 
 ## 3. 双脚共同骨盆目标
 

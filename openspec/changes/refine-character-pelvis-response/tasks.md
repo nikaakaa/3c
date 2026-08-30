@@ -45,3 +45,10 @@
 - [x] 8.2 586c828将唯一Diagnostics同步为facts63/Analyzer63/diagnosis32，仅3文件6行增删；CSV1221列、Handoff/其余公式与37质量规则不变，Editor规定flags57既有警告0错误并shutdown，旧62保持原解释
 - [x] 8.3 033902同Record Replay官方matched1044，265靶点成立、Foot保护与37计数保持；因R996→997膝盖峰后移放大而不接纳组合，未以总数/总分判通过
 - [x] 8.4 663c5f9/1c0a283仅恢复本次Diagnostics/Runtime门；035643为facts62/d31、实际3Hz/旧门，对025450有1197个非身份列及37质量项逐值相同、1044完整Proof帧相同。候选和恢复ZIP/Proof均保存；完整质量Goal未完成，Bend扩展等待独立授权
+
+## 9. 持续Goal：下降需求取消旧向上速度
+
+- [x] 9.1 只增加背离下降目标的正速度清除资格，保留原Handoff/负速度政策、3Hz、目标、硬区间、Foot及Bend；规定flags增量确认0警告0错误并shutdown，效果待9.3
+- [ ] 9.2 由唯一Diagnostics迁移该公式与独立facts64/diagnosis33，保持CSV和37质量规则不变，不复用失败63或补旧包
+- [ ] 9.3 同Record正式Replay并对035643及固定193957核对真实Foot/Pelvis/Knee；特别检查266/591/789、R996/997和R826，不按模型或总分提前通过
+- [ ] 9.4 按真实结果保留或精确撤销，保存全部新旧原包/Proof与独立提交；不把本轮闭合代替持续质量Goal达成

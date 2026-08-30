@@ -25,8 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         BodyNotGrounded = 7,
         GroundPathRejected = 8,
         InvalidInput = 9,
-        SupportUnavailable = 10,
-        SupportLegUnreachable = 11
+        SupportUnavailable = 10
     }
 
     public enum CharacterFootStrideSlope : byte
@@ -222,6 +221,350 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float DeltaSeconds { get; }
     }
 
+    public enum CharacterFootPelvisLegReachStatus : byte
+    {
+        NotRequested = 0,
+        Available = 1,
+        HorizontalUnreachable = 2
+    }
+
+    [Flags]
+    public enum CharacterFootPelvisLegReachRole : byte
+    {
+        None = 0,
+        FootTarget = 1,
+        PrimarySupport = 2
+    }
+
+    public enum CharacterFootPelvisReachStatus : byte
+    {
+        NotRequested = 0,
+        Available = 1,
+        LegUnreachable = 2,
+        NoCommonInterval = 3
+    }
+
+    public enum CharacterFootPelvisBoundarySelection : byte
+    {
+        None = 0,
+        AllRequestedLegs = 1,
+        PrimarySupportOnly = 2
+    }
+
+    internal readonly struct CharacterFootPelvisReachInput
+    {
+        internal CharacterFootPelvisReachInput(
+            bool leftRequested,
+            in CharacterFootLandingReachRequest left,
+            bool rightRequested,
+            in CharacterFootLandingReachRequest right)
+        {
+            if (leftRequested && !left.IsAvailable ||
+                rightRequested && !right.IsAvailable)
+                throw new ArgumentException("Pelvis Reach requires a formal foot request.");
+            LeftRequested = leftRequested;
+            Left = leftRequested ? left : default;
+            RightRequested = rightRequested;
+            Right = rightRequested ? right : default;
+        }
+
+        internal bool LeftRequested { get; }
+        internal CharacterFootLandingReachRequest Left { get; }
+        internal bool RightRequested { get; }
+        internal CharacterFootLandingReachRequest Right { get; }
+    }
+
+    internal readonly struct CharacterFootPelvisLegReach
+    {
+        internal CharacterFootPelvisLegReach(
+            in CharacterFootLandingReachRequest request,
+            CharacterFootPelvisLegReachRole role,
+            Vector3 up)
+        {
+            if (!request.IsAvailable || role == CharacterFootPelvisLegReachRole.None)
+                throw new ArgumentException("Pelvis leg reach input is unavailable.");
+            Role = role;
+            EventIdentity = request.EventIdentity;
+            Hip = request.Hip;
+            TargetAnkle = request.TargetAnkle;
+            LegLength = request.LegLength;
+            MinimumCompressionReserve = request.MinimumCompressionReserve;
+            UsableLegLength = LegLength - MinimumCompressionReserve;
+            Vector3 hipFromTarget = Hip - TargetAnkle;
+            float vertical = Vector3.Dot(hipFromTarget, up);
+            float horizontalSquare = (hipFromTarget - up * vertical).sqrMagnitude;
+            float verticalReachSquare =
+                UsableLegLength * UsableLegLength - horizontalSquare;
+            if (!float.IsFinite(verticalReachSquare) || !float.IsFinite(vertical))
+                throw new ArgumentException("Pelvis leg reach geometry is non-finite.");
+            if (verticalReachSquare < 0f)
+            {
+                Status = CharacterFootPelvisLegReachStatus.HorizontalUnreachable;
+                MinimumAlongUp = 0f;
+                MaximumAlongUp = 0f;
+                return;
+            }
+            float verticalReach = Mathf.Sqrt(verticalReachSquare);
+            MinimumAlongUp = -vertical - verticalReach;
+            MaximumAlongUp = -vertical + verticalReach;
+            if (!float.IsFinite(MinimumAlongUp) || !float.IsFinite(MaximumAlongUp))
+                throw new ArgumentException("Pelvis leg reach interval is non-finite.");
+            Status = CharacterFootPelvisLegReachStatus.Available;
+        }
+
+        internal CharacterFootPelvisLegReachRole Role { get; }
+        internal CharacterFootPelvisLegReachStatus Status { get; }
+        internal ulong EventIdentity { get; }
+        internal Vector3 Hip { get; }
+        internal Vector3 TargetAnkle { get; }
+        internal float LegLength { get; }
+        internal float MinimumCompressionReserve { get; }
+        internal float UsableLegLength { get; }
+        internal float MinimumAlongUp { get; }
+        internal float MaximumAlongUp { get; }
+        internal bool Requested => Role != CharacterFootPelvisLegReachRole.None;
+        internal bool Available => Status == CharacterFootPelvisLegReachStatus.Available;
+        internal bool LandingRequested => (Role & CharacterFootPelvisLegReachRole.FootTarget) != 0;
+        internal bool PrimarySupport => (Role & CharacterFootPelvisLegReachRole.PrimarySupport) != 0;
+    }
+
+    internal readonly struct CharacterFootPelvisReachBoundary
+    {
+        internal CharacterFootPelvisReachBoundary(
+            Vector3 componentUp,
+            in CharacterFootPelvisLegReach left,
+            in CharacterFootPelvisLegReach right)
+        {
+            ComponentUp = componentUp;
+            Left = left;
+            Right = right;
+            Status = CharacterFootPelvisReachStatus.NotRequested;
+            Selection = CharacterFootPelvisBoundarySelection.None;
+            IntersectionEvaluated = false;
+            IntersectionMinimumAlongUp = 0f;
+            IntersectionMaximumAlongUp = 0f;
+            MinimumAlongUp = 0f;
+            MaximumAlongUp = 0f;
+            if (!left.Requested && !right.Requested)
+                return;
+            if (left.Requested && !left.Available ||
+                right.Requested && !right.Available)
+            {
+                Status = CharacterFootPelvisReachStatus.LegUnreachable;
+            }
+            else
+            {
+                float minimum = left.Requested
+                    ? left.MinimumAlongUp
+                    : right.MinimumAlongUp;
+                float maximum = left.Requested
+                    ? left.MaximumAlongUp
+                    : right.MaximumAlongUp;
+                if (left.Requested && right.Requested)
+                {
+                    minimum = Mathf.Max(minimum, right.MinimumAlongUp);
+                    maximum = Mathf.Min(maximum, right.MaximumAlongUp);
+                }
+                IntersectionEvaluated = true;
+                IntersectionMinimumAlongUp = minimum;
+                IntersectionMaximumAlongUp = maximum;
+                if (minimum <= maximum)
+                {
+                    Status = CharacterFootPelvisReachStatus.Available;
+                    Selection = CharacterFootPelvisBoundarySelection.AllRequestedLegs;
+                    MinimumAlongUp = minimum;
+                    MaximumAlongUp = maximum;
+                    return;
+                }
+                Status = CharacterFootPelvisReachStatus.NoCommonInterval;
+            }
+            CharacterFootPelvisLegReach primary = left.PrimarySupport
+                ? left
+                : right.PrimarySupport ? right : default;
+            if (primary.Available)
+            {
+                Selection = CharacterFootPelvisBoundarySelection.PrimarySupportOnly;
+                MinimumAlongUp = primary.MinimumAlongUp;
+                MaximumAlongUp = primary.MaximumAlongUp;
+            }
+        }
+
+        internal Vector3 ComponentUp { get; }
+        internal CharacterFootPelvisLegReach Left { get; }
+        internal CharacterFootPelvisLegReach Right { get; }
+        internal CharacterFootPelvisReachStatus Status { get; }
+        internal CharacterFootPelvisBoundarySelection Selection { get; }
+        internal bool IntersectionEvaluated { get; }
+        internal float IntersectionMinimumAlongUp { get; }
+        internal float IntersectionMaximumAlongUp { get; }
+        internal float MinimumAlongUp { get; }
+        internal float MaximumAlongUp { get; }
+        internal bool Available => Selection != CharacterFootPelvisBoundarySelection.None;
+        internal bool HasLandingRequests => Left.LandingRequested || Right.LandingRequested;
+
+        internal bool Contains(float output, float tolerance) =>
+            Available &&
+            output >= MinimumAlongUp - tolerance &&
+            output <= MaximumAlongUp + tolerance;
+    }
+
+    public readonly struct CharacterFootPelvisLegReachDiagnostics
+    {
+        readonly CharacterFootPelvisLegReach m_Result;
+
+        internal CharacterFootPelvisLegReachDiagnostics(
+            in CharacterFootPelvisLegReach result) => m_Result = result;
+
+        public CharacterFootPelvisLegReachRole Role => m_Result.Role;
+        public CharacterFootPelvisLegReachStatus Status => m_Result.Status;
+        public ulong EventIdentity => m_Result.EventIdentity;
+        public Vector3 Hip => m_Result.Hip;
+        public Vector3 TargetAnkle => m_Result.TargetAnkle;
+        public float LegLength => m_Result.LegLength;
+        public float MinimumCompressionReserve => m_Result.MinimumCompressionReserve;
+        public float UsableLegLength => m_Result.UsableLegLength;
+        public float MinimumAlongUp => m_Result.MinimumAlongUp;
+        public float MaximumAlongUp => m_Result.MaximumAlongUp;
+        public bool Requested => m_Result.Requested;
+        public bool Available => m_Result.Available;
+    }
+
+    public readonly struct CharacterFootPelvisReachDiagnostics
+    {
+        readonly CharacterFootPelvisReachBoundary m_Result;
+
+        internal CharacterFootPelvisReachDiagnostics(
+            in CharacterFootPelvisReachBoundary result) => m_Result = result;
+
+        public Vector3 ComponentUp => m_Result.ComponentUp;
+        public CharacterFootPelvisLegReachDiagnostics Left => new(m_Result.Left);
+        public CharacterFootPelvisLegReachDiagnostics Right => new(m_Result.Right);
+        public CharacterFootPelvisReachStatus Status => m_Result.Status;
+        public CharacterFootPelvisBoundarySelection Selection => m_Result.Selection;
+        public bool IntersectionEvaluated => m_Result.IntersectionEvaluated;
+        public float IntersectionMinimumAlongUp => m_Result.IntersectionMinimumAlongUp;
+        public float IntersectionMaximumAlongUp => m_Result.IntersectionMaximumAlongUp;
+        public bool Available => m_Result.Available;
+        public float MinimumAlongUp => m_Result.MinimumAlongUp;
+        public float MaximumAlongUp => m_Result.MaximumAlongUp;
+    }
+
+    internal readonly struct CharacterFootPelvisPosturePreference
+    {
+        internal CharacterFootPelvisPosturePreference(
+            bool available,
+            Vector3 hip,
+            Vector3 animatedAnkle,
+            Vector3 targetAnkle,
+            float legLength,
+            float compressionReserve,
+            float usableLegLength,
+            float minimumAlongUp,
+            float maximumAlongUp,
+            float offsetAlongUp,
+            bool targetAdjusted)
+        {
+            Evaluated = true;
+            Available = available;
+            Hip = hip;
+            AnimatedAnkle = animatedAnkle;
+            TargetAnkle = targetAnkle;
+            LegLength = legLength;
+            CompressionReserve = compressionReserve;
+            UsableLegLength = usableLegLength;
+            MinimumAlongUp = minimumAlongUp;
+            MaximumAlongUp = maximumAlongUp;
+            OffsetAlongUp = offsetAlongUp;
+            TargetAdjusted = targetAdjusted;
+        }
+
+        internal bool Evaluated { get; }
+        internal bool Available { get; }
+        internal Vector3 Hip { get; }
+        internal Vector3 AnimatedAnkle { get; }
+        internal Vector3 TargetAnkle { get; }
+        internal float LegLength { get; }
+        internal float CompressionReserve { get; }
+        internal float UsableLegLength { get; }
+        internal float MinimumAlongUp { get; }
+        internal float MaximumAlongUp { get; }
+        internal float OffsetAlongUp { get; }
+        internal bool TargetAdjusted { get; }
+
+    }
+
+    internal readonly struct CharacterFootPelvisSpringStep
+    {
+        internal CharacterFootPelvisSpringStep(
+            bool evaluated,
+            bool completed,
+            bool hadPreviousState,
+            bool supportChanged,
+            CharacterFootStrideSlope previousSlope,
+            CharacterFootPelvisSpringHandoffReason handoffReason,
+            bool velocityReset,
+            float previousTarget,
+            float previousOutput,
+            float previousVelocity,
+            float input,
+            float inputVelocity,
+            float frequency,
+            float unconstrainedOutput,
+            bool targetClamped,
+            bool outputClamped,
+            bool boundaryVelocityCleared,
+            float target,
+            float output,
+            float velocity,
+            float positionWeight)
+        {
+            Evaluated = evaluated;
+            Completed = completed;
+            HadPreviousState = hadPreviousState;
+            SupportChanged = supportChanged;
+            PreviousSlope = previousSlope;
+            HandoffReason = handoffReason;
+            VelocityReset = velocityReset;
+            PreviousTarget = previousTarget;
+            PreviousOutput = previousOutput;
+            PreviousVelocity = previousVelocity;
+            Input = input;
+            InputVelocity = inputVelocity;
+            Frequency = frequency;
+            UnconstrainedOutput = unconstrainedOutput;
+            TargetClamped = targetClamped;
+            OutputClamped = outputClamped;
+            BoundaryVelocityCleared = boundaryVelocityCleared;
+            Target = target;
+            Output = output;
+            Velocity = velocity;
+            PositionWeight = positionWeight;
+        }
+
+        internal bool Evaluated { get; }
+        internal bool Completed { get; }
+        internal bool HadPreviousState { get; }
+        internal bool SupportChanged { get; }
+        internal CharacterFootStrideSlope PreviousSlope { get; }
+        internal CharacterFootPelvisSpringHandoffReason HandoffReason { get; }
+        internal bool VelocityReset { get; }
+        internal float PreviousTarget { get; }
+        internal float PreviousOutput { get; }
+        internal float PreviousVelocity { get; }
+        internal float Input { get; }
+        internal float InputVelocity { get; }
+        internal float Frequency { get; }
+        internal float UnconstrainedOutput { get; }
+        internal bool TargetClamped { get; }
+        internal bool OutputClamped { get; }
+        internal bool BoundaryVelocityCleared { get; }
+        internal float Target { get; }
+        internal float Output { get; }
+        internal float Velocity { get; }
+        internal float PositionWeight { get; }
+
+    }
+
     internal readonly struct CharacterFootStrideHipsResult
     {
         internal CharacterFootStrideHipsResult(
@@ -238,29 +581,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 animatedPelvis,
             Vector3 animatedPelvisComponentPosition,
             CharacterFootPelvisHeightTarget heightTarget,
-            bool hadPreviousState,
-            bool supportChanged,
-            CharacterFootStrideSlope previousSlope,
-            CharacterFootPelvisSpringHandoffReason springHandoffReason,
-            bool springVelocityReset,
-            float previousSpringTarget,
-            float previousSpringOutput,
-            float previousSpringVelocity,
-            float springInput,
-            float springInputVelocity,
-            float springFrequency,
-            bool supportReachAvailable,
-            float supportLegCompressionReserve,
-            float supportReachUsableLegLength,
-            float supportReachMinimumAlongUp,
-            float supportReachMaximumAlongUp,
-            bool supportReachTargetClamped,
-            bool supportReachOutputClamped,
-            float springTarget,
-            float springOutput,
-            float springVelocity,
-            Vector3 pelvisDelta,
-            float positionWeight)
+            CharacterFootPelvisPosturePreference posturePreference,
+            CharacterFootPelvisReachBoundary reach,
+            CharacterFootPelvisSpringStep response)
         {
             State = state;
             RejectReason = rejectReason;
@@ -275,117 +598,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
             HeightTarget = heightTarget;
-            HadPreviousState = hadPreviousState;
-            SupportChanged = supportChanged;
-            PreviousSlope = previousSlope;
-            SpringHandoffReason = springHandoffReason;
-            SpringVelocityReset = springVelocityReset;
-            PreviousSpringTarget = previousSpringTarget;
-            PreviousSpringOutput = previousSpringOutput;
-            PreviousSpringVelocity = previousSpringVelocity;
-            SpringInput = springInput;
-            SpringInputVelocity = springInputVelocity;
-            SpringFrequency = springFrequency;
-            SupportReachAvailable = supportReachAvailable;
-            SupportLegCompressionReserve = supportLegCompressionReserve;
-            SupportReachUsableLegLength = supportReachUsableLegLength;
-            SupportReachMinimumAlongUp = supportReachMinimumAlongUp;
-            SupportReachMaximumAlongUp = supportReachMaximumAlongUp;
-            SupportReachTargetClamped = supportReachTargetClamped;
-            SupportReachOutputClamped = supportReachOutputClamped;
-            SpringTarget = springTarget;
-            SpringOutput = springOutput;
-            SpringVelocity = springVelocity;
-            PelvisDelta = pelvisDelta;
-            PositionWeight = positionWeight;
+            PosturePreference = posturePreference;
+            Reach = reach;
+            Response = response;
         }
 
-        public CharacterFootStrideState State { get; }
-        public CharacterFootStrideRejectReason RejectReason { get; }
-        public CharacterFootSide SupportSide { get; }
-        public CharacterFootSide SwingSide { get; }
-        public Vector3 StrideStart { get; }
-        public Vector3 StrideEnd { get; }
-        public float Progress { get; }
-        public CharacterFootStrideSlope Slope { get; }
-        public Vector3 SampledGround { get; }
-        public Vector3 PoseRootPosition { get; }
-        public Vector3 AnimatedPelvis { get; }
-        public Vector3 AnimatedPelvisComponentPosition { get; }
+        internal CharacterFootStrideState State { get; }
+        internal CharacterFootStrideRejectReason RejectReason { get; }
+        internal CharacterFootSide SupportSide { get; }
+        internal CharacterFootSide SwingSide { get; }
+        internal Vector3 StrideStart { get; }
+        internal Vector3 StrideEnd { get; }
+        internal float Progress { get; }
+        internal CharacterFootStrideSlope Slope { get; }
+        internal Vector3 SampledGround { get; }
+        internal Vector3 PoseRootPosition { get; }
+        internal Vector3 AnimatedPelvis { get; }
+        internal Vector3 AnimatedPelvisComponentPosition { get; }
         internal CharacterFootPelvisHeightTarget HeightTarget { get; }
-        public bool HadPreviousState { get; }
-        public bool SupportChanged { get; }
-        public CharacterFootStrideSlope PreviousSlope { get; }
-        public CharacterFootPelvisSpringHandoffReason SpringHandoffReason { get; }
-        public bool SpringVelocityReset { get; }
-        public float PreviousSpringTarget { get; }
-        public float PreviousSpringOutput { get; }
-        public float PreviousSpringVelocity { get; }
-        public float SpringInput { get; }
-        public float SpringInputVelocity { get; }
-        public float SpringFrequency { get; }
-        public bool SupportReachAvailable { get; }
-        public float SupportLegCompressionReserve { get; }
-        public float SupportReachUsableLegLength { get; }
-        public float SupportReachMinimumAlongUp { get; }
-        public float SupportReachMaximumAlongUp { get; }
-        public bool SupportReachTargetClamped { get; }
-        public bool SupportReachOutputClamped { get; }
-        public float SpringTarget { get; }
-        public float SpringOutput { get; }
-        public float SpringVelocity { get; }
-        public Vector3 PelvisDelta { get; }
-        public float PositionWeight { get; }
-        public bool Accepted => State == CharacterFootStrideState.Accepted;
-        public bool ProducesPelvisGoal =>
+        internal CharacterFootPelvisPosturePreference PosturePreference { get; }
+        internal CharacterFootPelvisReachBoundary Reach { get; }
+        internal CharacterFootPelvisSpringStep Response { get; }
+
+        internal bool Accepted => State == CharacterFootStrideState.Accepted;
+        internal bool ProducesPelvisGoal =>
             State == CharacterFootStrideState.Accepted ||
             State == CharacterFootStrideState.Releasing ||
             State == CharacterFootStrideState.LandingReach;
+        internal float SpringTarget => Response.Target;
+        internal float SpringOutput => Response.Output;
+        internal float SpringVelocity => Response.Velocity;
+        internal Vector3 PelvisDelta => Reach.ComponentUp * Response.Output;
+        internal float PositionWeight => Response.PositionWeight;
+        internal bool LeftLandingReachAvailable =>
+            Reach.Status == CharacterFootPelvisReachStatus.Available &&
+            Reach.Left.LandingRequested &&
+            Reach.Contains(Response.Output * Response.PositionWeight,
+                CharacterFootConstraintMath.GeometryEpsilon);
+        internal bool RightLandingReachAvailable =>
+            Reach.Status == CharacterFootPelvisReachStatus.Available &&
+            Reach.Right.LandingRequested &&
+            Reach.Contains(Response.Output * Response.PositionWeight,
+                CharacterFootConstraintMath.GeometryEpsilon);
 
-        internal CharacterFootStrideHipsResult WithLandingReachOutput(
-            CharacterFootStrideState state,
-            float springTarget,
-            float springOutput,
-            float springVelocity,
-            Vector3 pelvisDelta,
-            float positionWeight) =>
-            new CharacterFootStrideHipsResult(
-                state,
-                RejectReason,
-                SupportSide,
-                SwingSide,
-                StrideStart,
-                StrideEnd,
-                Progress,
-                Slope,
-                SampledGround,
-                PoseRootPosition,
-                AnimatedPelvis,
-                AnimatedPelvisComponentPosition,
-                HeightTarget,
-                HadPreviousState,
-                SupportChanged,
-                PreviousSlope,
-                SpringHandoffReason,
-                SpringVelocityReset,
-                PreviousSpringTarget,
-                PreviousSpringOutput,
-                PreviousSpringVelocity,
-                SpringInput,
-                SpringInputVelocity,
-                SpringFrequency,
-                SupportReachAvailable,
-                SupportLegCompressionReserve,
-                SupportReachUsableLegLength,
-                SupportReachMinimumAlongUp,
-                SupportReachMaximumAlongUp,
-                SupportReachTargetClamped,
-                SupportReachOutputClamped,
-                springTarget,
-                springOutput,
-                springVelocity,
-                pelvisDelta,
-                positionWeight);
     }
 
     public readonly struct CharacterFootStrideHipsDiagnostics
@@ -393,8 +648,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootStrideHipsResult m_Result;
 
         internal CharacterFootStrideHipsDiagnostics(
-            in CharacterFootStrideHipsResult result) =>
-            m_Result = result;
+            in CharacterFootStrideHipsResult result) => m_Result = result;
 
         public CharacterFootStrideState State => m_Result.State;
         public CharacterFootStrideRejectReason RejectReason => m_Result.RejectReason;
@@ -407,8 +661,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SampledGround => m_Result.SampledGround;
         public Vector3 PoseRootPosition => m_Result.PoseRootPosition;
         public Vector3 AnimatedPelvis => m_Result.AnimatedPelvis;
-        public Vector3 AnimatedPelvisComponentPosition =>
-            m_Result.AnimatedPelvisComponentPosition;
+        public Vector3 AnimatedPelvisComponentPosition => m_Result.AnimatedPelvisComponentPosition;
+        public float SpringTarget => m_Result.SpringTarget;
+        public float SpringOutput => m_Result.SpringOutput;
+        public float SpringVelocity => m_Result.SpringVelocity;
+        public Vector3 PelvisDelta => m_Result.PelvisDelta;
+        public float PositionWeight => m_Result.PositionWeight;
+        public bool Accepted => m_Result.Accepted;
+        public bool ProducesPelvisGoal => m_Result.ProducesPelvisGoal;
         public bool HeightTargetAvailable => m_Result.HeightTarget.Available;
         public Vector3 HeightTargetComponentUp => m_Result.HeightTarget.ComponentUp;
         public Vector3 HeightTargetLeftAnimatedSole => m_Result.HeightTarget.LeftAnimatedSole;
@@ -418,34 +678,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float HeightTargetAnimatedMinimumAlongUp => m_Result.HeightTarget.AnimatedMinimumAlongUp;
         public float HeightTargetMinimumAlongUp => m_Result.HeightTarget.TargetMinimumAlongUp;
         public float RequestedOffsetAlongUp => m_Result.HeightTarget.OffsetAlongUp;
-        public bool HadPreviousState => m_Result.HadPreviousState;
-        public bool SupportChanged => m_Result.SupportChanged;
-        public CharacterFootStrideSlope PreviousSlope => m_Result.PreviousSlope;
-        public CharacterFootPelvisSpringHandoffReason SpringHandoffReason =>
-            m_Result.SpringHandoffReason;
-        public bool SpringVelocityReset => m_Result.SpringVelocityReset;
-        public float PreviousSpringTarget => m_Result.PreviousSpringTarget;
-        public float PreviousSpringOutput => m_Result.PreviousSpringOutput;
-        public float PreviousSpringVelocity => m_Result.PreviousSpringVelocity;
-        public float SpringInput => m_Result.SpringInput;
-        public float SpringInputVelocity => m_Result.SpringInputVelocity;
-        public float SpringFrequency => m_Result.SpringFrequency;
-        public bool SupportReachAvailable => m_Result.SupportReachAvailable;
-        public float SupportLegCompressionReserve =>
-            m_Result.SupportLegCompressionReserve;
-        public float SupportReachUsableLegLength =>
-            m_Result.SupportReachUsableLegLength;
-        public float SupportReachMinimumAlongUp => m_Result.SupportReachMinimumAlongUp;
-        public float SupportReachMaximumAlongUp => m_Result.SupportReachMaximumAlongUp;
-        public bool SupportReachTargetClamped => m_Result.SupportReachTargetClamped;
-        public bool SupportReachOutputClamped => m_Result.SupportReachOutputClamped;
-        public float SpringTarget => m_Result.SpringTarget;
-        public float SpringOutput => m_Result.SpringOutput;
-        public float SpringVelocity => m_Result.SpringVelocity;
-        public Vector3 PelvisDelta => m_Result.PelvisDelta;
-        public float PositionWeight => m_Result.PositionWeight;
-        public bool Accepted => m_Result.Accepted;
-        public bool ProducesPelvisGoal => m_Result.ProducesPelvisGoal;
+        public CharacterFootPelvisReachDiagnostics Reach => new(m_Result.Reach);
+        public bool PosturePreferenceEvaluated => m_Result.PosturePreference.Evaluated;
+        public bool PosturePreferenceAvailable => m_Result.PosturePreference.Available;
+        public Vector3 PosturePreferenceHip => m_Result.PosturePreference.Hip;
+        public Vector3 PosturePreferenceAnimatedAnkle => m_Result.PosturePreference.AnimatedAnkle;
+        public Vector3 PosturePreferenceTargetAnkle => m_Result.PosturePreference.TargetAnkle;
+        public float PosturePreferenceLegLength => m_Result.PosturePreference.LegLength;
+        public float PosturePreferenceCompressionReserve => m_Result.PosturePreference.CompressionReserve;
+        public float PosturePreferenceUsableLegLength => m_Result.PosturePreference.UsableLegLength;
+        public float PosturePreferenceMinimumAlongUp => m_Result.PosturePreference.MinimumAlongUp;
+        public float PosturePreferenceMaximumAlongUp => m_Result.PosturePreference.MaximumAlongUp;
+        public float PosturePreferenceOffsetAlongUp => m_Result.PosturePreference.OffsetAlongUp;
+        public bool PosturePreferenceTargetAdjusted => m_Result.PosturePreference.TargetAdjusted;
+        public bool ResponseEvaluated => m_Result.Response.Evaluated;
+        public bool SpringCompleted => m_Result.Response.Completed;
+        public bool HadPreviousState => m_Result.Response.HadPreviousState;
+        public bool SupportChanged => m_Result.Response.SupportChanged;
+        public CharacterFootStrideSlope PreviousSlope => m_Result.Response.PreviousSlope;
+        public CharacterFootPelvisSpringHandoffReason SpringHandoffReason => m_Result.Response.HandoffReason;
+        public bool SpringVelocityReset => m_Result.Response.VelocityReset;
+        public float PreviousSpringTarget => m_Result.Response.PreviousTarget;
+        public float PreviousSpringOutput => m_Result.Response.PreviousOutput;
+        public float PreviousSpringVelocity => m_Result.Response.PreviousVelocity;
+        public float SpringInput => m_Result.Response.Input;
+        public float SpringInputVelocity => m_Result.Response.InputVelocity;
+        public float SpringFrequency => m_Result.Response.Frequency;
+        public float SpringUnconstrainedOutput => m_Result.Response.UnconstrainedOutput;
+        public bool HardReachTargetClamped => m_Result.Response.TargetClamped;
+        public bool HardReachOutputClamped => m_Result.Response.OutputClamped;
+        public bool HardReachVelocityCleared => m_Result.Response.BoundaryVelocityCleared;
     }
 
     internal struct CharacterFootPelvisSpringState
@@ -753,474 +1015,331 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return true;
         }
 
-        internal static CharacterFootStrideHipsResult BuildRejected(
-            CharacterFootStrideRejectReason reason) =>
-            new CharacterFootStrideHipsResult(
-                CharacterFootStrideState.Rejected,
-                reason,
-                default,
-                default,
-                default,
-                default,
-                0f,
-                CharacterFootStrideSlope.Flat,
-                default,
-                default,
-                default,
-                default,
-                default,
-                false,
-                false,
-                CharacterFootStrideSlope.Flat,
-                CharacterFootPelvisSpringHandoffReason.None,
-                false,
-                0f,
-                0f,
-                0f,
-                0f,
-                0f,
-                0f,
-                false,
-                0f,
-                0f,
-                0f,
-                0f,
-                false,
-                false,
-                0f,
-                0f,
-                0f,
-                default,
-                0f);
-
-        internal static CharacterFootStrideHipsResult BuildPelvis(
-            CharacterFootSide supportSide,
-            ulong supportLandingEventIdentity,
-            CharacterFootSide swingSide,
-            Vector3 strideStart,
-            Vector3 strideEnd,
-            Vector3 poseRootPosition,
-            Vector3 componentUp,
-            Vector3 animatedPelvis,
-            Vector3 animatedPelvisComponentPosition,
-            Vector3 supportHip,
-            Vector3 supportTargetAnkle,
-            float supportLegLength,
-            float supportLegCompressionReserve,
-            Vector3 leftOriginalSole,
-            Vector3 rightOriginalSole,
-            Vector3 leftCorrectedSole,
-            Vector3 rightCorrectedSole,
-            float footPlacementWeight,
-            float deltaSeconds,
+        internal static CharacterFootStrideHipsResult ResolvePelvis(
+            in CharacterFootStrideIntentResult intent,
+            in CharacterResolvedFootPair resolvedPair,
+            in CharacterFootPrimarySupportResult primarySupport,
+            in CharacterFootPelvisFrame frame,
+            in CharacterFootPelvisReachInput reachInput,
             in CharacterFootMotionSettings settings,
             ref CharacterFootPelvisSpringState spring)
         {
-            if (!Finite(componentUp) || componentUp.sqrMagnitude <= GeometryEpsilon ||
-                !Finite(strideStart) || !Finite(strideEnd) || !Finite(poseRootPosition) ||
-                !Finite(animatedPelvis) || !Finite(animatedPelvisComponentPosition) ||
-                !Finite(supportHip) || !Finite(supportTargetAnkle) ||
-                !float.IsFinite(supportLegLength) || supportLegLength <= EndpointTolerance ||
-                !float.IsFinite(supportLegCompressionReserve) || supportLegCompressionReserve < 0f ||
-                !Finite(leftOriginalSole) || !Finite(rightOriginalSole) ||
-                !Finite(leftCorrectedSole) || !Finite(rightCorrectedSole) ||
-                !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
-                return BuildRejected(CharacterFootStrideRejectReason.InvalidComponentUp);
-            if (supportLandingEventIdentity == 0 ||
-                !float.IsFinite(footPlacementWeight) ||
-                footPlacementWeight < 0f || footPlacementWeight > 1f)
-                return BuildRejected(CharacterFootStrideRejectReason.InvalidInput);
-            Vector3 up = componentUp.normalized;
-            Vector3 horizontal = Vector3.ProjectOnPlane(strideEnd - strideStart, up);
+            if (!intent.Accepted)
+            {
+                if (!intent.ReleasePelvis)
+                {
+                    spring.Clear();
+                    return BuildRejected(intent.RejectReason);
+                }
+                return ResolvePelvisRelease(
+                    intent.RejectReason, in frame, in reachInput, in settings, ref spring);
+            }
+            CharacterResolvedFootResult supportMotion = intent.SupportSide == CharacterFootSide.Left
+                ? resolvedPair.Left
+                : resolvedPair.Right;
+            if (supportMotion.Outcome != CharacterFootResolvedOutcome.Ready ||
+                !supportMotion.PelvisReachReference.IsAvailable ||
+                supportMotion.SupportWeight <= CharacterPoseConstraintMath.Epsilon ||
+                supportMotion.SupportEligibility == CharacterFootSupportEligibility.None ||
+                supportMotion.SupportEventIdentity != primarySupport.LandingEventIdentity)
+            {
+                return ResolvePelvisRelease(
+                    CharacterFootStrideRejectReason.SupportUnavailable,
+                    in frame, in reachInput, in settings, ref spring);
+            }
+            ValidatePelvisFrame(in frame);
+            Vector3 up = frame.ComponentUp.normalized;
+            Vector3 horizontal = Vector3.ProjectOnPlane(intent.StrideEnd - intent.StrideStart, up);
             float pathLength = horizontal.magnitude;
-            if (!float.IsFinite(pathLength) || pathLength <= GeometryEpsilon)
-                return BuildRejected(CharacterFootStrideRejectReason.DegenerateStride);
+            if (!Finite(intent.StrideStart) || !Finite(intent.StrideEnd) ||
+                !float.IsFinite(pathLength) || pathLength <= GeometryEpsilon)
+            {
+                return ResolvePelvisRelease(
+                    CharacterFootStrideRejectReason.DegenerateStride,
+                    in frame, in reachInput, in settings, ref spring);
+            }
             float progress = Mathf.Clamp01(
                 Vector3.Dot(
-                    Vector3.ProjectOnPlane(poseRootPosition - strideStart, up),
+                    Vector3.ProjectOnPlane(frame.PoseRootPosition - intent.StrideStart, up),
                     horizontal / pathLength) / pathLength);
-            Vector3 sampledGround = Vector3.Lerp(strideStart, strideEnd, progress);
-            float rise = Vector3.Dot(strideEnd - strideStart, up);
-            CharacterFootStrideSlope slope = CharacterFootStrideSlope.Flat;
-            if (rise > EndpointTolerance)
-                slope = CharacterFootStrideSlope.Ascending;
-            else if (rise < -EndpointTolerance)
-                slope = CharacterFootStrideSlope.Descending;
+            Vector3 sampledGround = Vector3.Lerp(intent.StrideStart, intent.StrideEnd, progress);
+            float rise = Vector3.Dot(intent.StrideEnd - intent.StrideStart, up);
+            CharacterFootStrideSlope slope = rise > EndpointTolerance
+                ? CharacterFootStrideSlope.Ascending
+                : rise < -EndpointTolerance
+                    ? CharacterFootStrideSlope.Descending
+                    : CharacterFootStrideSlope.Flat;
             var heightTarget = new CharacterFootPelvisHeightTarget(
                 up,
-                leftOriginalSole,
-                rightOriginalSole,
-                leftCorrectedSole,
-                rightCorrectedSole);
-            if (!TryResolveSupportReachInterval(
-                    supportHip,
-                    supportTargetAnkle,
-                    up,
+                frame.Pose.Left.HeelPosition * 0.5f + frame.Pose.Left.ToePosition * 0.5f,
+                frame.Pose.Right.HeelPosition * 0.5f + frame.Pose.Right.ToePosition * 0.5f,
+                frame.LeftCorrectedSole,
+                frame.RightCorrectedSole);
+            CharacterFootPlacementAnimatedFootPose supportPose =
+                intent.SupportSide == CharacterFootSide.Left ? frame.Pose.Left : frame.Pose.Right;
+            float supportLegLength = intent.SupportSide == CharacterFootSide.Left
+                ? frame.LeftLegLength : frame.RightLegLength;
+            if (!float.IsFinite(supportLegLength) || supportLegLength <= EndpointTolerance ||
+                !Finite(supportPose.HipPosition) || !Finite(supportPose.AnklePosition) ||
+                !Finite(supportMotion.EffectiveAnkle))
+                throw new ArgumentException("Pelvis posture input is invalid.");
+            float postureReserve = Mathf.Max(
+                0f, supportLegLength -
+                Vector3.Distance(supportPose.HipPosition, supportPose.AnklePosition));
+            bool postureAvailable = TryResolvePostureInterval(
+                supportPose.HipPosition, supportMotion.EffectiveAnkle, up,
+                supportLegLength, postureReserve,
+                out float postureUsableLength,
+                out float postureMinimum, out float postureMaximum);
+            float preferredTarget = postureAvailable
+                ? Mathf.Clamp(heightTarget.OffsetAlongUp, postureMinimum, postureMaximum)
+                : heightTarget.OffsetAlongUp;
+            var posture = new CharacterFootPelvisPosturePreference(
+                postureAvailable,
+                supportPose.HipPosition,
+                supportPose.AnklePosition,
+                supportMotion.EffectiveAnkle,
+                supportLegLength,
+                postureReserve,
+                postureUsableLength,
+                postureMinimum,
+                postureMaximum,
+                preferredTarget,
+                Mathf.Abs(preferredTarget - heightTarget.OffsetAlongUp) > GeometryEpsilon);
+            bool primaryRequired = supportMotion.GoalWeight > GeometryEpsilon;
+            CharacterFootLandingReachRequest primaryRequest = primaryRequired
+                ? new CharacterFootLandingReachRequest(
+                    primarySupport.LandingEventIdentity,
+                    supportPose.HipPosition,
+                    supportMotion.EffectiveAnkle,
                     supportLegLength,
-                    supportLegCompressionReserve,
-                    out float supportReachUsableLegLength,
-                    out float supportReachMinimum,
-                    out float supportReachMaximum))
+                    settings.MinimumLandingLegCompressionReserve)
+                : default;
+            CharacterFootPelvisReachBoundary reach = ResolveReachBoundary(
+                up, in reachInput, primaryRequired, intent.SupportSide, in primaryRequest);
+            CharacterFootPelvisSpringStep response = AdvancePelvisResponse(
+                preferredTarget, false, intent.SupportSide,
+                primarySupport.LandingEventIdentity, slope, in frame, in reach,
+                in settings, ref spring);
+            return new CharacterFootStrideHipsResult(
+                CharacterFootStrideState.Accepted,
+                CharacterFootStrideRejectReason.None,
+                intent.SupportSide, intent.SwingSide, intent.StrideStart, intent.StrideEnd,
+                progress, slope, sampledGround,
+                frame.PoseRootPosition, frame.AnimatedPelvis, frame.AnimatedPelvisComponentPosition,
+                heightTarget, posture, reach, response);
+        }
+
+        static CharacterFootStrideHipsResult BuildRejected(
+            CharacterFootStrideRejectReason reason,
+            CharacterFootPelvisReachBoundary reach = default,
+            CharacterFootPelvisSpringStep response = default) =>
+            new CharacterFootStrideHipsResult(
+                CharacterFootStrideState.Rejected, reason,
+                default, default, default, default, 0f,
+                CharacterFootStrideSlope.Flat, default, default, default, default,
+                default, default, reach, response);
+
+        static CharacterFootStrideHipsResult ResolvePelvisRelease(
+            CharacterFootStrideRejectReason reason,
+            in CharacterFootPelvisFrame frame,
+            in CharacterFootPelvisReachInput reachInput,
+            in CharacterFootMotionSettings settings,
+            ref CharacterFootPelvisSpringState spring)
+        {
+            ValidatePelvisFrame(in frame);
+            Vector3 up = frame.ComponentUp.normalized;
+            CharacterFootLandingReachRequest noPrimary = default;
+            CharacterFootPelvisReachBoundary reach = ResolveReachBoundary(
+                up, in reachInput, false, default, in noPrimary);
+            bool hadPreviousState = spring.HasValue;
+            if (!hadPreviousState && (!reach.Available || reach.Contains(0f, 0f)))
+                return BuildRejected(reason, reach);
+            CharacterFootPelvisSpringStep response = AdvancePelvisResponse(
+                0f, true, default, 0, CharacterFootStrideSlope.Flat,
+                in frame, in reach, in settings, ref spring);
+            if (response.Completed)
+                return BuildRejected(reason, reach, response);
+            return new CharacterFootStrideHipsResult(
+                hadPreviousState
+                    ? CharacterFootStrideState.Releasing
+                    : CharacterFootStrideState.LandingReach,
+                reason, default, default, default, default, 0f,
+                CharacterFootStrideSlope.Flat, default, default, default, default,
+                default, default, reach, response);
+        }
+
+        static void ValidatePelvisFrame(in CharacterFootPelvisFrame frame)
+        {
+            if (!Finite(frame.ComponentUp) ||
+                frame.ComponentUp.sqrMagnitude <= GeometryEpsilon ||
+                !Finite(frame.PoseRootPosition) ||
+                !Finite(frame.AnimatedPelvis) ||
+                !Finite(frame.AnimatedPelvisComponentPosition) ||
+                !float.IsFinite(frame.FootPlacementWeight) ||
+                frame.FootPlacementWeight < 0f || frame.FootPlacementWeight > 1f ||
+                !float.IsFinite(frame.DeltaSeconds) || frame.DeltaSeconds < 0f)
+                throw new ArgumentException("Pelvis response frame is invalid.");
+        }
+
+        static CharacterFootPelvisReachBoundary ResolveReachBoundary(
+            Vector3 up,
+            in CharacterFootPelvisReachInput input,
+            bool hasPrimary,
+            CharacterFootSide primarySide,
+            in CharacterFootLandingReachRequest primary)
+        {
+            bool leftPrimary = hasPrimary && primarySide == CharacterFootSide.Left;
+            bool rightPrimary = hasPrimary && primarySide == CharacterFootSide.Right;
+            CharacterFootPelvisLegReach left = default;
+            CharacterFootPelvisLegReach right = default;
+            if (input.LeftRequested)
             {
-                return BuildPelvisRelease(
-                    CharacterFootStrideRejectReason.SupportLegUnreachable,
-                    componentUp,
-                    footPlacementWeight,
-                    deltaSeconds,
-                    in settings,
-                    ref spring);
+                left = new CharacterFootPelvisLegReach(
+                    input.Left,
+                    CharacterFootPelvisLegReachRole.FootTarget |
+                    (leftPrimary ? CharacterFootPelvisLegReachRole.PrimarySupport : 0),
+                    up);
             }
-            float target = Mathf.Clamp(
-                heightTarget.OffsetAlongUp,
-                supportReachMinimum,
-                supportReachMaximum);
-            bool supportReachTargetClamped =
-                Mathf.Abs(target - heightTarget.OffsetAlongUp) > GeometryEpsilon;
+            else if (leftPrimary)
+            {
+                left = new CharacterFootPelvisLegReach(
+                    in primary, CharacterFootPelvisLegReachRole.PrimarySupport, up);
+            }
+            if (input.RightRequested)
+            {
+                right = new CharacterFootPelvisLegReach(
+                    input.Right,
+                    CharacterFootPelvisLegReachRole.FootTarget |
+                    (rightPrimary ? CharacterFootPelvisLegReachRole.PrimarySupport : 0),
+                    up);
+            }
+            else if (rightPrimary)
+            {
+                right = new CharacterFootPelvisLegReach(
+                    in primary, CharacterFootPelvisLegReachRole.PrimarySupport, up);
+            }
+            return new CharacterFootPelvisReachBoundary(up, in left, in right);
+        }
+
+        static CharacterFootPelvisSpringStep AdvancePelvisResponse(
+            float preferredTarget,
+            bool releasing,
+            CharacterFootSide supportSide,
+            ulong supportEventIdentity,
+            CharacterFootStrideSlope slope,
+            in CharacterFootPelvisFrame frame,
+            in CharacterFootPelvisReachBoundary reach,
+            in CharacterFootMotionSettings settings,
+            ref CharacterFootPelvisSpringState spring)
+        {
+            float target = preferredTarget;
+            if (!float.IsFinite(target) || !float.IsFinite(settings.PelvisSpringFrequency) ||
+                settings.PelvisSpringFrequency <= 0f)
+                throw new ArgumentException("Pelvis spring target or frequency is invalid.");
+            float minimum = 0f;
+            float maximum = 0f;
+            if (reach.Available)
+            {
+                if (frame.FootPlacementWeight <= 0f)
+                    throw new InvalidOperationException("Pelvis hard reach has no active position weight.");
+                minimum = reach.MinimumAlongUp / frame.FootPlacementWeight;
+                maximum = reach.MaximumAlongUp / frame.FootPlacementWeight;
+                if (!float.IsFinite(minimum) || !float.IsFinite(maximum))
+                    throw new InvalidOperationException("Pelvis weighted reach interval is non-finite.");
+                target = Mathf.Clamp(target, minimum, maximum);
+            }
+            bool targetClamped = Mathf.Abs(target - preferredTarget) > GeometryEpsilon;
             bool hadPreviousState = spring.HasValue;
             bool supportChanged = hadPreviousState &&
-                (spring.SupportSide != supportSide ||
-                 spring.SupportLandingEventIdentity != supportLandingEventIdentity);
+                (releasing || spring.SupportSide != supportSide ||
+                 spring.SupportLandingEventIdentity != supportEventIdentity);
             CharacterFootStrideSlope previousSlope = hadPreviousState
-                ? spring.Slope
-                : CharacterFootStrideSlope.Flat;
+                ? spring.Slope : CharacterFootStrideSlope.Flat;
             bool slopeChanged = hadPreviousState && previousSlope != slope;
             float previousTarget = hadPreviousState ? spring.TargetAlongUp : 0f;
             float previousOutput = hadPreviousState ? spring.OutputAlongUp : 0f;
             float previousVelocity = hadPreviousState ? spring.VelocityAlongUp : 0f;
-            float springInput = previousOutput;
             float previousTargetDirection = previousTarget - previousOutput;
             float nextTargetDirection = target - previousOutput;
-            bool targetCrossedOutput = hadPreviousState &&
+            bool targetCrossedOutput = !releasing && hadPreviousState &&
                 Mathf.Abs(previousTargetDirection) > EndpointTolerance &&
                 Mathf.Abs(nextTargetDirection) > EndpointTolerance &&
                 previousTargetDirection * nextTargetDirection < 0f;
-            CharacterFootPelvisSpringHandoffReason handoffReason =
+            CharacterFootPelvisSpringHandoffReason handoff =
                 CharacterFootPelvisSpringHandoffReason.None;
             if (supportChanged)
-                handoffReason |= CharacterFootPelvisSpringHandoffReason.SupportChanged;
+                handoff |= CharacterFootPelvisSpringHandoffReason.SupportChanged;
             if (slopeChanged)
-                handoffReason |= CharacterFootPelvisSpringHandoffReason.SlopeChanged;
+                handoff |= CharacterFootPelvisSpringHandoffReason.SlopeChanged;
             if (targetCrossedOutput)
-                handoffReason |= CharacterFootPelvisSpringHandoffReason.TargetCrossedOutput;
-            bool velocityReset =
-                handoffReason != CharacterFootPelvisSpringHandoffReason.None &&
+                handoff |= CharacterFootPelvisSpringHandoffReason.TargetCrossedOutput;
+            bool velocityReset = handoff != CharacterFootPelvisSpringHandoffReason.None &&
                 Mathf.Abs(nextTargetDirection) > GeometryEpsilon &&
                 previousVelocity * nextTargetDirection < 0f;
-            float springInputVelocity = velocityReset ? 0f : previousVelocity;
-            float springOutput = springInput;
-            float springVelocity = springInputVelocity;
-            if (deltaSeconds > 0f)
+            float inputVelocity = velocityReset ? 0f : previousVelocity;
+            float output = previousOutput;
+            float velocity = inputVelocity;
+            if (frame.DeltaSeconds > 0f)
             {
                 float omega = settings.PelvisSpringFrequency * 2f * Mathf.PI;
-                float x0 = springInput - target;
-                float j0 = springInputVelocity + omega * x0;
-                float decay = Mathf.Exp(-omega * deltaSeconds);
-                springOutput = target + (x0 + j0 * deltaSeconds) * decay;
-                springVelocity =
-                    (springInputVelocity - omega * j0 * deltaSeconds) * decay;
+                float x0 = previousOutput - target;
+                float j0 = inputVelocity + omega * x0;
+                float decay = Mathf.Exp(-omega * frame.DeltaSeconds);
+                output = target + (x0 + j0 * frame.DeltaSeconds) * decay;
+                velocity = (inputVelocity - omega * j0 * frame.DeltaSeconds) * decay;
             }
-            float unclampedSpringOutput = springOutput;
-            springOutput = Mathf.Clamp(
-                springOutput,
-                supportReachMinimum,
-                supportReachMaximum);
-            bool supportReachOutputClamped =
-                Mathf.Abs(springOutput - unclampedSpringOutput) > GeometryEpsilon;
-            if (supportReachOutputClamped &&
-                (springOutput <= supportReachMinimum && springVelocity < 0f ||
-                 springOutput >= supportReachMaximum && springVelocity > 0f))
-            {
-                springVelocity = 0f;
-            }
-            spring.HasValue = true;
-            spring.SupportSide = supportSide;
-            spring.SupportLandingEventIdentity = supportLandingEventIdentity;
-            spring.Slope = slope;
-            spring.TargetAlongUp = target;
-            spring.OutputAlongUp = springOutput;
-            spring.VelocityAlongUp = springVelocity;
-            Vector3 pelvisDelta = up * springOutput;
-            float positionWeight = Mathf.Abs(springOutput) > EndpointTolerance
-                ? footPlacementWeight
-                : 0f;
-            return new CharacterFootStrideHipsResult(
-                CharacterFootStrideState.Accepted,
-                CharacterFootStrideRejectReason.None,
-                supportSide,
-                swingSide,
-                strideStart,
-                strideEnd,
-                progress,
-                slope,
-                sampledGround,
-                poseRootPosition,
-                animatedPelvis,
-                animatedPelvisComponentPosition,
-                heightTarget,
-                hadPreviousState,
-                supportChanged,
-                previousSlope,
-                handoffReason,
-                velocityReset,
-                previousTarget,
-                previousOutput,
-                previousVelocity,
-                springInput,
-                springInputVelocity,
-                settings.PelvisSpringFrequency,
-                true,
-                supportLegCompressionReserve,
-                supportReachUsableLegLength,
-                supportReachMinimum,
-                supportReachMaximum,
-                supportReachTargetClamped,
-                supportReachOutputClamped,
-                target,
-                springOutput,
-                springVelocity,
-                pelvisDelta,
-                positionWeight);
-        }
-
-        internal static CharacterFootStrideHipsResult ApplyLandingReach(
-            in CharacterFootStrideHipsResult source,
-            bool leftAvailable,
-            Vector3 leftHip,
-            Vector3 leftTargetAnkle,
-            float leftLegLength,
-            bool rightAvailable,
-            Vector3 rightHip,
-            Vector3 rightTargetAnkle,
-            float rightLegLength,
-            Vector3 componentUp,
-            float footPlacementWeight,
-            in CharacterFootMotionSettings settings,
-            ref CharacterFootPelvisSpringState spring,
-            out bool leftReachAvailable,
-            out bool rightReachAvailable)
-        {
-            leftReachAvailable = false;
-            rightReachAvailable = false;
-            if (!Finite(componentUp) ||
-                componentUp.sqrMagnitude <= GeometryEpsilon ||
-                !leftAvailable && !rightAvailable ||
-                !float.IsFinite(footPlacementWeight) ||
-                footPlacementWeight < 0f ||
-                footPlacementWeight > 1f)
-            {
-                return source;
-            }
-            Vector3 up = componentUp.normalized;
-            float minimum = float.NegativeInfinity;
-            float maximum = float.PositiveInfinity;
-            if (leftAvailable)
-            {
-                if (!Finite(leftHip) ||
-                    !Finite(leftTargetAnkle) ||
-                    !float.IsFinite(leftLegLength) ||
-                    leftLegLength <= EndpointTolerance ||
-                    !TryResolveSupportReachInterval(
-                        leftHip,
-                        leftTargetAnkle,
-                        up,
-                        leftLegLength,
-                        settings.MinimumLandingLegCompressionReserve,
-                        out _,
-                        out float leftMinimum,
-                        out float leftMaximum))
-                {
-                    return source;
-                }
-                minimum = Mathf.Max(minimum, leftMinimum);
-                maximum = Mathf.Min(maximum, leftMaximum);
-            }
-            if (rightAvailable)
-            {
-                if (!Finite(rightHip) ||
-                    !Finite(rightTargetAnkle) ||
-                    !float.IsFinite(rightLegLength) ||
-                    rightLegLength <= EndpointTolerance ||
-                    !TryResolveSupportReachInterval(
-                        rightHip,
-                        rightTargetAnkle,
-                        up,
-                        rightLegLength,
-                        settings.MinimumLandingLegCompressionReserve,
-                        out _,
-                        out float rightMinimum,
-                        out float rightMaximum))
-                {
-                    return source;
-                }
-                minimum = Mathf.Max(minimum, rightMinimum);
-                maximum = Mathf.Min(maximum, rightMaximum);
-            }
-            if (minimum > maximum)
-                return source;
-            if (source.SupportReachAvailable)
-            {
-                minimum = Mathf.Max(
-                    minimum,
-                    source.SupportReachMinimumAlongUp);
-                maximum = Mathf.Min(
-                    maximum,
-                    source.SupportReachMaximumAlongUp);
-                if (minimum > maximum)
-                    return source;
-            }
-            leftReachAvailable = leftAvailable;
-            rightReachAvailable = rightAvailable;
-            float sourceTarget = source.ProducesPelvisGoal
-                ? source.SpringTarget
-                : 0f;
-            float sourceOutput = source.ProducesPelvisGoal
-                ? source.SpringOutput
-                : 0f;
-            float target = Mathf.Clamp(sourceTarget, minimum, maximum);
-            float output = Mathf.Clamp(sourceOutput, minimum, maximum);
-            bool targetClamped =
-                Mathf.Abs(target - sourceTarget) > GeometryEpsilon;
-            bool outputClamped =
-                Mathf.Abs(output - sourceOutput) > GeometryEpsilon;
-            if (!source.ProducesPelvisGoal && !targetClamped && !outputClamped)
-                return source;
-            float velocity = source.ProducesPelvisGoal
-                ? source.SpringVelocity
-                : 0f;
-            if (outputClamped &&
+            float unconstrainedOutput = output;
+            if (!float.IsFinite(output) || !float.IsFinite(velocity))
+                throw new InvalidOperationException("Pelvis spring response is non-finite.");
+            if (reach.Available)
+                output = Mathf.Clamp(output, minimum, maximum);
+            bool outputClamped = Mathf.Abs(output - unconstrainedOutput) > GeometryEpsilon;
+            bool boundaryVelocityCleared = reach.Available &&
                 (output <= minimum && velocity < 0f ||
-                 output >= maximum && velocity > 0f))
-            {
+                 output >= maximum && velocity > 0f);
+            if (boundaryVelocityCleared)
                 velocity = 0f;
+            bool completed = releasing &&
+                Mathf.Abs(output) <= GeometryEpsilon &&
+                Mathf.Abs(velocity) <= GeometryEpsilon &&
+                (!reach.Available || reach.Contains(0f, 0f));
+            if (completed)
+            {
+                output = 0f;
+                velocity = 0f;
+                spring.Clear();
             }
-            spring.HasValue = true;
-            spring.TargetAlongUp = target;
-            spring.OutputAlongUp = output;
-            spring.VelocityAlongUp = velocity;
-            CharacterFootStrideState state = source.ProducesPelvisGoal
-                ? source.State
-                : CharacterFootStrideState.LandingReach;
-            Vector3 pelvisDelta = up * output;
-            float positionWeight = Mathf.Abs(output) > GeometryEpsilon
-                ? footPlacementWeight
+            else
+            {
+                spring.HasValue = true;
+                spring.SupportSide = supportSide;
+                spring.SupportLandingEventIdentity = supportEventIdentity;
+                spring.Slope = slope;
+                spring.TargetAlongUp = target;
+                spring.OutputAlongUp = output;
+                spring.VelocityAlongUp = velocity;
+            }
+            bool hardTranslationRequired = reach.Available && !reach.Contains(0f, 0f);
+            float visibleTolerance = reach.HasLandingRequests ? GeometryEpsilon : EndpointTolerance;
+            float positionWeight = !completed &&
+                (hardTranslationRequired || Mathf.Abs(output) > visibleTolerance)
+                ? frame.FootPlacementWeight
                 : 0f;
-            return source.WithLandingReachOutput(
-                state,
-                target,
-                output,
-                velocity,
-                pelvisDelta,
-                positionWeight);
+            return new CharacterFootPelvisSpringStep(
+                true, completed, hadPreviousState, supportChanged, previousSlope,
+                handoff, velocityReset, previousTarget, previousOutput, previousVelocity,
+                previousOutput, inputVelocity, settings.PelvisSpringFrequency,
+                unconstrainedOutput, targetClamped, outputClamped, boundaryVelocityCleared,
+                target, output, velocity, positionWeight);
         }
 
-        internal static CharacterFootStrideHipsResult BuildPelvisRelease(
-            CharacterFootStrideRejectReason reason,
-            Vector3 componentUp,
-            float footPlacementWeight,
-            float deltaSeconds,
-            in CharacterFootMotionSettings settings,
-            ref CharacterFootPelvisSpringState spring)
-        {
-            if (!spring.HasValue)
-                return BuildRejected(reason);
-            if (!Finite(componentUp) || componentUp.sqrMagnitude <= GeometryEpsilon ||
-                !float.IsFinite(footPlacementWeight) ||
-                footPlacementWeight < 0f || footPlacementWeight > 1f ||
-                !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
-            {
-                spring.Clear();
-                return BuildRejected(CharacterFootStrideRejectReason.InvalidInput);
-            }
-
-            Vector3 up = componentUp.normalized;
-            float previousTarget = spring.TargetAlongUp;
-            float previousOutput = spring.OutputAlongUp;
-            float previousVelocity = spring.VelocityAlongUp;
-            float target = 0f;
-            float nextTargetDirection = target - previousOutput;
-            CharacterFootPelvisSpringHandoffReason handoffReason =
-                CharacterFootPelvisSpringHandoffReason.SupportChanged;
-            if (spring.Slope != CharacterFootStrideSlope.Flat)
-                handoffReason |= CharacterFootPelvisSpringHandoffReason.SlopeChanged;
-            bool velocityReset = Mathf.Abs(nextTargetDirection) > GeometryEpsilon &&
-                                 previousVelocity * nextTargetDirection < 0f;
-            float springInputVelocity = velocityReset ? 0f : previousVelocity;
-            float springOutput = previousOutput;
-            float springVelocity = springInputVelocity;
-            if (deltaSeconds > 0f)
-            {
-                float omega = settings.PelvisSpringFrequency * 2f * Mathf.PI;
-                float x0 = previousOutput;
-                float j0 = springInputVelocity + omega * x0;
-                float decay = Mathf.Exp(-omega * deltaSeconds);
-                springOutput = (x0 + j0 * deltaSeconds) * decay;
-                springVelocity =
-                    (springInputVelocity - omega * j0 * deltaSeconds) * decay;
-            }
-            if (Mathf.Abs(springOutput) <= GeometryEpsilon &&
-                Mathf.Abs(springVelocity) <= GeometryEpsilon)
-            {
-                spring.Clear();
-                return BuildRejected(reason);
-            }
-
-            CharacterFootStrideSlope previousSlope = spring.Slope;
-            spring.HasValue = true;
-            spring.SupportSide = default;
-            spring.SupportLandingEventIdentity = 0;
-            spring.Slope = CharacterFootStrideSlope.Flat;
-            spring.TargetAlongUp = 0f;
-            spring.OutputAlongUp = springOutput;
-            spring.VelocityAlongUp = springVelocity;
-            Vector3 pelvisDelta = up * springOutput;
-            float positionWeight = Mathf.Abs(springOutput) > EndpointTolerance
-                ? footPlacementWeight
-                : 0f;
-            return new CharacterFootStrideHipsResult(
-                CharacterFootStrideState.Releasing,
-                reason,
-                default,
-                default,
-                default,
-                default,
-                0f,
-                CharacterFootStrideSlope.Flat,
-                default,
-                default,
-                default,
-                default,
-                default,
-                true,
-                true,
-                previousSlope,
-                handoffReason,
-                velocityReset,
-                previousTarget,
-                previousOutput,
-                previousVelocity,
-                previousOutput,
-                springInputVelocity,
-                settings.PelvisSpringFrequency,
-                false,
-                0f,
-                0f,
-                0f,
-                0f,
-                false,
-                false,
-                target,
-                springOutput,
-                springVelocity,
-                pelvisDelta,
-                positionWeight);
-        }
-
-        static bool TryResolveSupportReachInterval(
+        static bool TryResolvePostureInterval(
             Vector3 supportHip,
             Vector3 supportTargetAnkle,
             Vector3 up,
             float supportLegLength,
-            float supportLegCompressionReserve,
+            float postureCompressionReserve,
             out float usableLegLength,
             out float minimumAlongUp,
             out float maximumAlongUp)
@@ -1243,7 +1362,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 maximumUsableLegLength,
                 Mathf.Sqrt(horizontalSquare + EndpointTolerance * EndpointTolerance));
             usableLegLength = Mathf.Clamp(
-                supportLegLength - Mathf.Max(EndpointTolerance, supportLegCompressionReserve),
+                supportLegLength - Mathf.Max(EndpointTolerance, postureCompressionReserve),
                 minimumUsableLegLength,
                 maximumUsableLegLength);
             float legSquare = usableLegLength * usableLegLength;
@@ -1256,14 +1375,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 maximumAlongUp = 0f;
                 return false;
             }
-
             float vertical = Vector3.Dot(hipFromTarget, up);
             float verticalReach = Mathf.Sqrt(legSquare - horizontalSquare);
             minimumAlongUp = -vertical - verticalReach;
             maximumAlongUp = -vertical + verticalReach;
             return float.IsFinite(minimumAlongUp) &&
-                   float.IsFinite(maximumAlongUp) &&
-                   minimumAlongUp <= maximumAlongUp;
+                float.IsFinite(maximumAlongUp) && minimumAlongUp <= maximumAlongUp;
         }
 
         static bool IsAuthoritativeSwing(in AnimationFootMotionRuntimeSample step) =>

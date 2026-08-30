@@ -258,17 +258,17 @@ e6ca016已证明155326恢复到c519865/130545。接下来只处理现有FBBIK中
 
 Foot Motion Profile新增必须显式序列化的米制`MinimumLandingLegCompressionReserve`并纳入Profile Revision。缺失、非有限或越界时整项typed invalid，不提供代码默认值或旧配置补全。State Target Resolver与Resolved Foot为预测Landing脚，以及仍持有同Event Contact Goal的Landing、Locked、Releasing脚发布typed Reach Request：Hip、目标Ankle、Leg Length、最小压缩余量、Landing Event和有效世界Reference。Releasing必须继续参与直到其Goal权重归零，避免Pelvis在释放期间单独上提并把接触腿拉到近伸直奇异区。它不是第二Support、第二Anchor或第二状态机。
 
-Pelvis Builder同时计算Primary Support腿和Landing腿允许的Pelvis沿Up区间：
+Pelvis Builder同时计算Primary Support腿和正式Foot Reach允许的Pelvis沿Up硬区间；两者都严格使用真实腿长减正式最小安全余量。原动画额外弯曲余量独立生成PosturePreference，仅影响目标：
 
 ```text
-FeasiblePelvisInterval = SupportReachInterval ∩ LandingReachInterval
+HardPelvisInterval = LeftRequestedLegHardInterval ∩ RightRequestedLegHardInterval
 ```
 
-交集存在时，Pelvis Target与Spring必须限制在交集内。现有Critical Spring继续是唯一Pelvis连续状态，并增加Profile必须显式序列化的`PelvisMaximumUpVelocity`与`PelvisMaximumDownVelocity`。Spring积分后先把Velocity限制在`[-MaximumDownVelocity, MaximumUpVelocity]`，再推进Output并限制在Reach交集；Output撞到上/下边界且Velocity继续朝外时必须清除对应方向速度。只要非零Pelvis Output是满足最小压缩余量所必需，即使小于现有5毫米Endpoint Tolerance也必须以正式Goal Weight写出，不得一边发布Reach Available一边把实际Pelvis Goal权重清零。Support换代、坡度变化和Target跨越Output继续使用现有显式Handoff与Velocity Reset，不增加第二Pelvis平滑器。
+交集存在时，preferred target先受完整硬区间约束，原Critical Spring按现有频率求值一次，积分后的Output仅对硬区间夹紧一次并清除朝外速度；Module不再调用后置ApplyLandingReach改写输出。原动画姿态余量不得作为第二份输出区间。未加权Spring区间按正式Pelvis Goal权重换算，Reach资格最终核对实际加权位移。只要非零位移是安全余量所必需，即使小于5毫米也必须写出；不得一边发布Reach Available一边把实际Goal权重清零。Support换代、坡度变化和Target跨越Output保留显式Handoff与Velocity Reset。本次用户批准的三步路线保持既有频率，不采用旧草案PelvisMaximumUpVelocity/DownVelocity，也不加另一平滑器。
 
 交集不存在时，系统先保持Primary Support安全，再把Landing Foot Goal夹紧到保留最小压缩余量的最大可达点，发布`LandingReachUnavailable`，并禁止该脚进入Full Lock。它可以保持Landing、Sliding或进入Releasing，但不得把超长目标交给FBBIK后仅靠腿伸直夹紧。
 
-该政策的业务取舍是：不可同时满足双腿时允许短暂未完全踩实，换取不出现明显直腿、骨盆瞬移或关节奇异。
+该政策的业务取舍是：不可同时满足双腿时显式保Primary安全，并用既有Foot Goal可达保护处理其余目标。必要的硬边界调整仍可能突变，不能保证不变脚目标、Body和腿长时骨盆也绝对连续；这不是允许默默撤销有效脚约束。
 
 ## Decision 8: 正式Contact与Lock驱动Transition与统一插值
 
@@ -361,7 +361,7 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 8. 让PreSwing、Swing与Approach Contact保持Landing Tracking，并由统一Interpolation持续准备Plant目标；首次正式Contact Rising执行一次Plant Verification并建立冻结Anchor。
 9. 保留已经完成的旧`MaximumVerticalCorrectionSpeed`单档后置链删除，在同一Interpolation中分离Plant Target Height、完整Vector Plant World Residual与新的标量Correction Response History；Current/Target Position与Support Normal按同一状态权重混合并归一化，Correction Response沿PoseRoot局部Y对应世界轴使用双档速率，Target Height仍沿Component Up独立处理；安装初始化/重置和Action/攻击/同Event不清零政策，使`Desired Output -> Response Output -> Existing Goal Baseline Mix`只有一条正式链。
 10. 从Final Animation Pose与Rig Calibration取得Heel/Toe脚掌几何，在现有World Query Backend内生成固定容量Current Support Observation，解析唯一Position+SupportNormal并生成同一Foot Goal Rotation；删除任何单点降级、Toe Goal、第二Writer或Pose后Rotation低通。
-11. 让Support进入Resolved Foot、Primary Support和Pelvis，但保持Lock生命周期不变；为唯一Pelvis Spring增加非对称速度边界。
+11. 让Support进入Resolved Foot、Primary Support和Pelvis，保持Lock生命周期不变；原动画弯曲余量只影响目标，完整硬Reach交给一次既有Pelvis Spring，不增非对称速度配置。
 12. 增加双腿Reach交集、最小Landing压缩余量、Goal夹紧与typed拒绝。
 13. 用Contact、Lock Mode与Lock Weight替换旧PlantConfidence生命周期并删除旧字段。
 14. 显式重建Corin Projection、Float32与Fixed产品，完成编译、诊断重放和严格OpenSpec校验。

@@ -34,6 +34,20 @@ Runtime用不可变`CharacterFootPelvisHeightTarget`保存本次真正消费的C
 
 此结构不能保证所有几何冲突都无突降；它先减少不必要目标上抬与动画姿态偏好造成的硬压，再用Replay评估剩余真实约束。
 
+### 第3步的实际输入、数学和事实
+
+Module只把原有IsLandingReachCandidate准入结果、Resolved的左右typed Reach Request、Primary Support、原Pose和第2步有效目标交给一次ResolvePelvis；不再调用ApplyLandingReach或另写Spring Output。Foot FinalizeLanding、不可达Goal夹紧、唯一Goal编码和FBBIK顺序保持。
+
+每腿硬半径严格为`LegLength-MinimumCompressionReserve`，不沿用旧辅助函数按水平距离放宽安全余量的做法。令`v=Hip-TargetAnkle`、`y=dot(v,up)`、`h2=|v-up*y|²`，若`radius²-h2<0`则为HorizontalUnreachable，否则沿Up的合法平移区间为`[-y-sqrt(radius²-h2), -y+sqrt(radius²-h2)]`。Primary只在原Accepted资格且Goal有效时参与；有同侧正式Foot Request则复用其几何，无第二份同腿硬区间。
+
+所有已请求腿可达且交集非空时选择AllRequestedLegs；否则明确发布LegUnreachable或NoCommonInterval，在原Primary存在且硬几何合法时选择PrimarySupportOnly。不存在合法Primary时不造可达区间；相关Foot Request继续Unavailable并走原Goal Reach保护。它是既有支撑优先政策的显式裁决，不是默认点/旧缓存或另一响应。正常交集Available后还核对实际加权Pelvis位移，不能只检查未乘权重的数值。
+
+原动画压缩量仍为`LegLength-distance(AnimatedHip,AnimatedAnkle)`，原姿态区间计算只生成PosturePreference目标。它不可达时发布Evaluated=true/Available=false，共同HeightTarget仍是独立合法需求；不产生另一份输出夹紧。未消费姿态偏好的Release/Rejected帧为Evaluated=false，零字段不是测量。
+
+唯一AdvancePelvisResponse先把preferred target限制到选中的硬边界，在原Handoff条件下保留或清除背离目标的旧速度，再按原频率执行一次Critical Spring，最后只对硬边界夹紧一次并清除朝外速度。区间先按正式Pelvis PositionWeight换算到Spring的未加权标量域；真正应用的位移仍为Output×PositionWeight。必须输出的安全平移不受5毫米显示门掩盖；非安全必需的小量仍保留原可见门，Release完成仍按既有GeometryEpsilon吸零。
+
+Runtime发布完整左右Reach角色/输入/区间、公共交集与选择、PosturePreference实际输入、一次响应前后和硬夹紧事实。旧SupportReach字段与WithLandingReachOutput命名删除，不以旧字段代表新硬边界。ResponseEvaluated=false只表示本帧无需推进Spring，已计算Reach不因此变成无效；对未运行公式或响应不伪造零测量。非单位作者权重、横向不可达、无交集和无上一Spring等边界需按实际Replay覆盖报告，不由本轮全权重样本冒称全覆盖。
+
 ## 不变项
 
 - Contact完整世界残差、capture同帧Advance、完成容差和Anchor不变。

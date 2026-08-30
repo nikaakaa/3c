@@ -663,46 +663,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Rig.RightLegLength,
                 footPlacementWeight,
                 frame.PresentationDeltaSeconds);
-            CharacterFootStrideHipsResult strideHips = ResolveStrideHips(
+            bool leftLandingReach = facts.Grounded && IsLandingReachCandidate(
+                in leftSelectedStep, in leftFootMotion, in leftResolved);
+            bool rightLandingReach = facts.Grounded && IsLandingReachCandidate(
+                in rightSelectedStep, in rightFootMotion, in rightResolved);
+            var pelvisReachInput = new CharacterFootPelvisReachInput(
+                leftLandingReach, in leftReachRequest,
+                rightLandingReach, in rightReachRequest);
+            CharacterFootStrideHipsResult strideHips = CharacterFootStrideHipsBuilder.ResolvePelvis(
                 in strideIntent,
                 in resolvedPair,
                 in primarySupport,
                 in pelvisFrame,
+                in pelvisReachInput,
+                m_Settings.FootMotion,
                 ref bank.PelvisSpring);
-            bool leftReachAvailable = false;
-            bool rightReachAvailable = false;
-            bool leftLandingReach = false;
-            bool rightLandingReach = false;
-            if (facts.Grounded)
-            {
-                leftLandingReach = IsLandingReachCandidate(
-                    in leftSelectedStep,
-                    in leftFootMotion,
-                    in leftResolved);
-                rightLandingReach = IsLandingReachCandidate(
-                    in rightSelectedStep,
-                    in rightFootMotion,
-                    in rightResolved);
-                if (leftLandingReach || rightLandingReach)
-                {
-                    strideHips = CharacterFootStrideHipsBuilder.ApplyLandingReach(
-                        in strideHips,
-                        leftLandingReach,
-                        leftReachRequest.Hip,
-                        leftReachRequest.TargetAnkle,
-                        leftReachRequest.LegLength,
-                        rightLandingReach,
-                        rightReachRequest.Hip,
-                        rightReachRequest.TargetAnkle,
-                        rightReachRequest.LegLength,
-                        componentUp,
-                        footPlacementWeight,
-                        m_Settings.FootMotion,
-                        ref bank.PelvisSpring,
-                        out leftReachAvailable,
-                        out rightReachAvailable);
-                }
-            }
+            bool leftReachAvailable = strideHips.LeftLandingReachAvailable;
+            bool rightReachAvailable = strideHips.RightLandingReachAvailable;
             leftResolved = CharacterFootLifecycle.FinalizeLanding(
                 ref bank.LeftFoot,
                 in leftLifecycleReceipt,
@@ -1631,85 +1608,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 selectedWeight);
         }
 
-        CharacterFootStrideHipsResult ResolveStrideHips(
-            in CharacterFootStrideIntentResult intent,
-            in CharacterResolvedFootPair resolvedPair,
-            in CharacterFootPrimarySupportResult primarySupport,
-            in CharacterFootPelvisFrame frame,
-            ref CharacterFootPelvisSpringState pelvisSpring)
-        {
-            if (!intent.Accepted)
-            {
-                if (!intent.ReleasePelvis)
-                    return CharacterFootStrideHipsBuilder.BuildRejected(
-                        intent.RejectReason);
-                return ReleaseStride(
-                    intent.RejectReason,
-                    frame.ComponentUp,
-                    frame.FootPlacementWeight,
-                    frame.DeltaSeconds,
-                    ref pelvisSpring);
-            }
-            CharacterResolvedFootResult supportMotion =
-                intent.SupportSide == CharacterFootSide.Left
-                    ? resolvedPair.Left
-                    : resolvedPair.Right;
-            bool validSupport =
-                                supportMotion.Outcome == CharacterFootResolvedOutcome.Ready &&
-                                supportMotion.PelvisReachReference.IsAvailable &&
-                                supportMotion.SupportWeight >
-                                CharacterPoseConstraintMath.Epsilon &&
-                                supportMotion.SupportEligibility !=
-                                CharacterFootSupportEligibility.None;
-            ulong supportLandingEventIdentity = primarySupport.LandingEventIdentity;
-            if (!validSupport ||
-                supportMotion.SupportEventIdentity != supportLandingEventIdentity)
-            {
-                return ReleaseStride(
-                    CharacterFootStrideRejectReason.SupportUnavailable,
-                    frame.ComponentUp,
-                    frame.FootPlacementWeight,
-                    frame.DeltaSeconds,
-                    ref pelvisSpring);
-            }
-            Vector3 supportHip = intent.SupportSide == CharacterFootSide.Left
-                ? frame.Pose.Left.HipPosition
-                : frame.Pose.Right.HipPosition;
-            float supportLegLength = intent.SupportSide == CharacterFootSide.Left
-                ? frame.LeftLegLength
-                : frame.RightLegLength;
-            Vector3 supportAnimatedAnkle = intent.SupportSide == CharacterFootSide.Left
-                ? frame.Pose.Left.AnklePosition
-                : frame.Pose.Right.AnklePosition;
-            float supportLegCompressionReserve = Mathf.Max(
-                0f,
-                supportLegLength - Vector3.Distance(supportHip, supportAnimatedAnkle));
-            return CharacterFootStrideHipsBuilder.BuildPelvis(
-                intent.SupportSide,
-                supportLandingEventIdentity,
-                intent.SwingSide,
-                intent.StrideStart,
-                intent.StrideEnd,
-                frame.PoseRootPosition,
-                frame.ComponentUp,
-                frame.AnimatedPelvis,
-                frame.AnimatedPelvisComponentPosition,
-                supportHip,
-                supportMotion.EffectiveAnkle,
-                supportLegLength,
-                supportLegCompressionReserve,
-                frame.Pose.Left.HeelPosition * 0.5f +
-                frame.Pose.Left.ToePosition * 0.5f,
-                frame.Pose.Right.HeelPosition * 0.5f +
-                frame.Pose.Right.ToePosition * 0.5f,
-                frame.LeftCorrectedSole,
-                frame.RightCorrectedSole,
-                frame.FootPlacementWeight,
-                frame.DeltaSeconds,
-                m_Settings.FootMotion,
-                ref pelvisSpring);
-        }
-
         static Vector3 ResolveWeightedGoalSole(
             CharacterFootPlacementAnimatedFootPose foot,
             in CharacterFullBodyIkGoal goal,
@@ -1843,20 +1741,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 goal.SourceKind,
                 goal.DiagnosticMetadataIndex);
         }
-
-        CharacterFootStrideHipsResult ReleaseStride(
-            CharacterFootStrideRejectReason reason,
-            Vector3 componentUp,
-            float footPlacementWeight,
-            float deltaSeconds,
-            ref CharacterFootPelvisSpringState pelvisSpring) =>
-            CharacterFootStrideHipsBuilder.BuildPelvisRelease(
-                reason,
-                componentUp,
-                footPlacementWeight,
-                deltaSeconds,
-                m_Settings.FootMotion,
-                ref pelvisSpring);
 
         static CharacterFullBodyIkGoal CreatePelvisGoal() =>
             CreatePelvisGoal(default, null);

@@ -101,10 +101,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double formalFootPlacementWeight;
         public string primarySupportSide;
         public string primarySupportEventIdentity;
+        public CharacterFootPelvisOutputObservation observation;
+        public CharacterFootPelvisMotionObservation motion;
         public CharacterFootPelvisHeightTargetObservation heightTarget;
         public CharacterFootPelvisPostureObservation posturePreference;
         public CharacterFootPelvisReachObservation reach;
         public CharacterFootPelvisResponseObservation response;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootPelvisOutputObservation
+    {
+        public bool poseInputAvailable;
+        public CharacterFootVectorFact poseRootWorldPosition;
+        public CharacterFootVectorFact animatedWorldPosition;
+        public CharacterFootVectorFact animatedComponentPosition;
+        public bool physicalWriteAvailable;
+        public string physicalWriteCompletionIdentity;
+        public CharacterFootVectorFact physicalWorldPosition;
+        public CharacterFootVectorFact physicalComponentPosition;
+        public CharacterFootVectorFact goalCorrectionComponent;
+        public double positionWeight;
+        public CharacterFootVectorFact weightedCorrectionComponent;
+        public bool goalResidualAvailable;
+        public CharacterFootVectorFact expectedPhysicalComponentPosition;
+        public double? goalResidualComponentUnits;
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootPelvisMotionObservation
+    {
+        public bool previousFrameAvailable;
+        public int? previousFrame;
+        public double presentationDeltaSeconds;
+        public bool physicalStepAvailable;
+        public CharacterFootVectorFact physicalWorldDelta;
+        public CharacterFootVectorFact physicalComponentDelta;
+        public CharacterFootVectorFact weightedCorrectionComponentDelta;
     }
 
     [Serializable]

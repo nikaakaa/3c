@@ -1,0 +1,89 @@
+{
+  "schema": "character-foot-replay-stage-archive/1",
+  "stage": "2-common-pelvis-height",
+  "runtimeCommit": "b17b335f04322c2457ac4025a93bad0c3152c9be",
+  "diagnosticsCommit": "628e293206cfa7a01a9916bd5c89a50a544a30bb",
+  "run": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62",
+  "fixedReference": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "immediateReference": "20260830-230331-636-4bb8583ea8c04db495cd6e9668ecbb86",
+  "recordId": "43357ff3cd384e5cba75d2c31175b116",
+  "recordSha256": "24D97232F35246C0B85A003B5980AC8F199D6FF63E9F74A0001B082F57EB89A6",
+  "factsSchema": "character-foot-motion-facts/60",
+  "diagnosisSchema": "character-foot-diagnosis-file/29",
+  "archiveFile": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62.zip",
+  "archiveBytes": 15492069,
+  "archiveSha256": "5A3A1D503654A15AE6EF9ED3EE2EED957C841AA49337FACA4B20904DCACBC0F5",
+  "proofFile": "replay-proof.json",
+  "proofSha256": "64A68A99A3ED2B548A844C31D454A846FE7571C5CF0EF5902A4146F3B53B520B",
+  "proofSource": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260830-235246-024-ffa53935014648f8aac7005788b94a62.json",
+  "proofComparison": {
+    "matched": true,
+    "comparedFrameCount": 1044,
+    "divergentFrameCount": 0,
+    "baseline": "230552 Stage1 proof; not a new direct official Proof against193957"
+  },
+  "verifiedFileCount": 12,
+  "files": [
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/facts.json",
+      "bytes": 116019223,
+      "sha256": "1FF971708EC909FE7D0E4DD6EF5E8B55AC39F8B0745B965A4FF544F021449996"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/ground-path-geometry.csv",
+      "bytes": 7839986,
+      "sha256": "087E6AAA1AC2B83BE18952C7A89C65253C291AD89893443CF79067751C636362"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/samples.csv",
+      "bytes": 18103281,
+      "sha256": "8F010DF542E159E19FE6D68ED1437796A90D63BE612737B1F211AF272EFEAB0B"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/contact-plane-penetration.json",
+      "bytes": 51387,
+      "sha256": "73EAF18D351A394A54EDF042248D75A1A987FB60ED792FCDAAB1D6819ED2A10E"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/landing-leg-extension.json",
+      "bytes": 575463,
+      "sha256": "13FC1B11EF242C20E99D0C63E78436B7FAE2D92FB543104EC43389DBFCB2C2EA"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "8709B5915D1920498FFCD9FA6A875E2EAFC8074F0426B94E19F5E2EA4B06EFAF"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/landing-path-continuity.json",
+      "bytes": 60971,
+      "sha256": "29B4810BE90D239F4893A54C6F00E55A88E7A884E54B42848BCBDC7184C3CE42"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/landing-state-consistency.json",
+      "bytes": 733609,
+      "sha256": "AF7AA18AAE989F3F1ECABEA75B5CC51FD9E206A3A7781BCD88C81C01C7D32F11"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "EE204F041EC8E89A8D53CA7718DCDC6360B6D02C05A413652CDFCA240D73928D"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/quality-score.json",
+      "bytes": 24818,
+      "sha256": "3DFEC948AB4EBD8EDD72934F7B2A1C051C243D53AA3CFD0C0B50E88104DDEBF3"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "0B229C6183DAFD54298BB7920A3811BB80534BBBF9101E2F26DD8F35EDC67EE3"
+    },
+    {
+      "path": "20260830-235033-005-ce6245fdb7c14d6891f32c3d36e5ca62/diagnoses/swing-path-jitter.json",
+      "bytes": 1745283,
+      "sha256": "B7CE69399C680F2EDDC1BB2A76B24936891F5AAB2221D8DC7E3EC99A07E6E68E"
+    }
+  ],
+  "originalsPreserved": true
+}

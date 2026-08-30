@@ -105,3 +105,21 @@ Right933仍约493.7毫米SolvedKnee单步；原基线大翻侧在934，候选提
 拒绝150516与141256作为无回归工作版本。Diagnostics分别用1a81927、8812436精确撤销，恢复facts52/diagnosis21，与b8ed3c8诊断目录一致，间隙诊断和七维评分保留。下一步只恢复本任务7个Runtime及4个Corin配置/生成产物到c519865，任务勾选同步撤销，再Edit Refresh和同输入Replay证明恢复；不动既有proposal/project修改，不删除任何失败包，不在候选上叠膝盖或新速率。
 
 已证实的读取缺陷与位置轴职责并不因撤销而变成正确；本次恢复是恢复实验前行为以隔离下一变量。以后重做这两层必须同时证明Contact触地时间、完整世界连续性、相对动画修正速度与脚掌旋转时序，不能仅以公式无误、首步变小、局部ABA消失或总分变化宣布完成。
+
+## 155326恢复Replay封口
+
+34c9974只恢复本轮7个Runtime与4个Corin配置/产物；全部Assets相对c519865无diff。Runtime/Editor规定flags构建27/30个既有警告、0错误，结束立即shutdown。Unity只在Edit执行Refresh，域重载断连后同一请求恢复，没有重启；Refresh后Console编译错误为0。原Record再次通过正式入口运行，发布facts52/diagnosis21后退出Play。
+
+恢复包：`Diagnostics/FootPlacementRuns/20260830-155326-409-ce7890e3f59c4551ac78f2cceef52db9`。2086行1140列按Frame/Side一一对应130545，其中1116列逐值相同；24列差异只为采样时间、实例、Surface和Path身份。OriginalSole、Desired、Response、Resolved、FinalPhysical、SolvedKnee、Pelvis与State没有差异。50195行20列geometry只有SampleIdentity、GroundPathInputIdentity、GroundContactSurfaceIdentity、GroundContactCandidateIdentity变化。
+
+37个Target的rules、scorePolicy、eligible、matched、Health/Evidence和已比数值统计全部相同，七维49/49/74/49/49/100/100与60.4分恢复；两脚2086行Solver均成功，最大Ankle残差仍0.715微米。查询Executed仍为1349/1787/2086/2086，不把这些标记称为物理查询总次数。
+
+| 恢复文件 | SHA256 |
+| --- | --- |
+| samples.csv | 5841717ca292ee161a7bfc6f77d6551d14412830b46c9e54d9c816ffe7bc8113 |
+| ground-path-geometry.csv | 19614a89ba2c606d4351a3e2dc57ffbb5ea0bb15f2f69050e94c1c51a2b9816a |
+| facts.json | 0a6009f7d4fc6b255821695bc57fb08676cca279ad40dc5093ca30abcd2e5d43 |
+| diagnoses/quality-score.json | 851f90b41977b808f50e33075033efdaa38042b2b2f9346f9cb8962835169879 |
+| 持久restored-proof.json | 149e2bf10fe89a28926fdac9c095ffd6b0fc45fe5884c7bd8b888e5b853b29f2 |
+
+恢复Proof副本保存于同一`Diagnostics/FootPlacementReplayArchives/20260830-committed-weighted-goal-sole/`。原位置为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260830-155524-689-28e4b73f53494b1ba0fd9d883d4b4f96.json`。官方最近基线为150516，因此matched=false及7个Program/Projection身份差异原样保留，DivergentFrameCount=0；直接对130545持久Proof核对Runtime identity、输入hash、起点Body、body trajectory和1044条frames均完全一致。只宣称恢复已证明，不把旧质量问题或未覆盖分支写成完成。

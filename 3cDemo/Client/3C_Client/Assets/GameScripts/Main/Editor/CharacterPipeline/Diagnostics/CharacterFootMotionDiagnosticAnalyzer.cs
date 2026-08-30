@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/52";
+        const string Schema = "character-foot-motion-facts/54";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 52;
+        const int AnalyzerVersion = 54;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -1181,14 +1181,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.CorrectionResponseSelectedSpeed,
                     ["CorrectionResponseAppliedDelta"] = Math.Abs(
                         current.CorrectionResponseAppliedDelta),
-                    ["CorrectionResponseRequestedDirectionChangeDegrees"] =
+                    ["SupportDirectionRequestedChangeDegrees"] =
                         DirectionAngleDegrees(
-                            current.CorrectionResponsePreviousDirection,
-                            current.CorrectionResponseRequestedDirection),
-                    ["CorrectionResponseMaximumDirectionChangeDegrees"] =
-                        current.CorrectionResponseMaximumDirectionChangeDegrees,
-                    ["CorrectionResponseAppliedDirectionChangeDegrees"] =
-                        current.CorrectionResponseAppliedDirectionChangeDegrees,
+                            current.SupportDirectionPrevious,
+                            current.SupportDirectionRequested),
+                    ["SupportDirectionMaximumChangeDegrees"] =
+                        current.SupportDirectionMaximumChangeDegrees,
+                    ["SupportDirectionAppliedChangeDegrees"] =
+                        current.SupportDirectionAppliedChangeDegrees,
                     ["PlantEffectiveCorrectionStep"] = Vector3.Distance(
                         previous.PlantEffectiveCorrectionAfter,
                         current.PlantEffectiveCorrectionAfter),
@@ -1245,8 +1245,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "PlantTarget"),
                     ["correctionResponseInitializedThisFrame"] =
                         current.CorrectionResponseInitializedThisFrame,
-                    ["correctionResponseDirectionLimited"] =
-                        current.CorrectionResponseDirectionLimited,
+                    ["supportDirectionLimited"] =
+                        current.SupportDirectionLimited,
                     ["plantDesiredOutputStepAvailable"] =
                         plantDesiredOutputStepAvailable,
                     ["plantResponseOutputStepAvailable"] =
@@ -1597,24 +1597,44 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 float currentOriginalSoleStep = Vector3.Distance(
                     previous.OriginalSole,
                     current.OriginalSole);
-                float previousEnvelopeDirectionContribution = Vector3.Dot(
+                float previousEnvelopeHeightProjectionContribution = Vector3.Dot(
                     previous.SwingEnvelopeSample - first.SwingEnvelopeSample,
-                    previous.CorrectionResponseDirection);
-                float currentEnvelopeDirectionContribution = Vector3.Dot(
+                    previous.PositionResponseHeightProjection);
+                float currentEnvelopeHeightProjectionContribution = Vector3.Dot(
                     current.SwingEnvelopeSample -
                     previous.SwingEnvelopeSample,
-                    current.CorrectionResponseDirection);
-                float previousOriginalSoleDirectionContribution = -Vector3.Dot(
+                    current.PositionResponseHeightProjection);
+                float previousOriginalSoleHeightProjectionContribution = -Vector3.Dot(
                     previous.OriginalSole - first.OriginalSole,
-                    previous.CorrectionResponseDirection);
-                float currentOriginalSoleDirectionContribution = -Vector3.Dot(
+                    previous.PositionResponseHeightProjection);
+                float currentOriginalSoleHeightProjectionContribution = -Vector3.Dot(
                     current.OriginalSole - previous.OriginalSole,
-                    current.CorrectionResponseDirection);
+                    current.PositionResponseHeightProjection);
+                float previousDesiredOutputHeightContribution = Vector3.Dot(
+                    previous.DesiredOutputPoint - first.DesiredOutputPoint,
+                    previous.PositionResponseHeightProjection);
+                float currentDesiredOutputHeightContribution = Vector3.Dot(
+                    current.DesiredOutputPoint - previous.DesiredOutputPoint,
+                    current.PositionResponseHeightProjection);
+                float previousProjectionChangeContribution = Vector3.Dot(
+                    first.DesiredOutputPoint - first.OriginalSole,
+                    previous.PositionResponseHeightProjection - first.PositionResponseHeightProjection);
+                float currentProjectionChangeContribution = Vector3.Dot(
+                    previous.DesiredOutputPoint - previous.OriginalSole,
+                    current.PositionResponseHeightProjection - previous.PositionResponseHeightProjection);
+                float previousFormalHeightProjectionContribution = Vector3.Dot(
+                    previous.ComponentUp.normalized * previous.SwingFormalFootHeight -
+                    first.ComponentUp.normalized * first.SwingFormalFootHeight,
+                    previous.PositionResponseHeightProjection);
+                float currentFormalHeightProjectionContribution = Vector3.Dot(
+                    current.ComponentUp.normalized * current.SwingFormalFootHeight -
+                    previous.ComponentUp.normalized * previous.SwingFormalFootHeight,
+                    current.PositionResponseHeightProjection);
                 bool useCurrentStep = holdToAdvance || !advanceToHold;
                 string firstLargeStepStage = ResolveFirstLargeCadenceStage(
                     useCurrentStep
-                        ? Math.Abs(currentFormalHeightDelta)
-                        : Math.Abs(previousFormalHeightDelta),
+                        ? Math.Abs(currentFormalHeightProjectionContribution)
+                        : Math.Abs(previousFormalHeightProjectionContribution),
                     useCurrentStep
                         ? Math.Abs(currentDesiredDelta)
                         : Math.Abs(previousDesiredDelta),
@@ -1669,14 +1689,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         currentEnvelopeAlongUpDelta,
                     ["PreviousOriginalSoleStep"] = previousOriginalSoleStep,
                     ["CurrentOriginalSoleStep"] = currentOriginalSoleStep,
-                    ["PreviousEnvelopeDirectionContribution"] =
-                        previousEnvelopeDirectionContribution,
-                    ["CurrentEnvelopeDirectionContribution"] =
-                        currentEnvelopeDirectionContribution,
-                    ["PreviousOriginalSoleDirectionContribution"] =
-                        previousOriginalSoleDirectionContribution,
-                    ["CurrentOriginalSoleDirectionContribution"] =
-                        currentOriginalSoleDirectionContribution
+                    ["PreviousEnvelopeHeightProjectionContribution"] = previousEnvelopeHeightProjectionContribution,
+                    ["CurrentEnvelopeHeightProjectionContribution"] = currentEnvelopeHeightProjectionContribution,
+                    ["PreviousOriginalSoleHeightProjectionContribution"] = previousOriginalSoleHeightProjectionContribution,
+                    ["CurrentOriginalSoleHeightProjectionContribution"] = currentOriginalSoleHeightProjectionContribution,
+                    ["PreviousDesiredOutputHeightContribution"] = previousDesiredOutputHeightContribution,
+                    ["CurrentDesiredOutputHeightContribution"] = currentDesiredOutputHeightContribution,
+                    ["PreviousHeightProjectionChangeContribution"] = previousProjectionChangeContribution,
+                    ["CurrentHeightProjectionChangeContribution"] = currentProjectionChangeContribution,
+                    ["PreviousFormalHeightProjectionContribution"] = previousFormalHeightProjectionContribution,
+                    ["CurrentFormalHeightProjectionContribution"] = currentFormalHeightProjectionContribution,
+                    ["PreviousDesiredScalarDecompositionError"] = Math.Abs(previousDesiredDelta -
+                        previousDesiredOutputHeightContribution - previousOriginalSoleHeightProjectionContribution -
+                        previousProjectionChangeContribution),
+                    ["CurrentDesiredScalarDecompositionError"] = Math.Abs(currentDesiredDelta -
+                        currentDesiredOutputHeightContribution - currentOriginalSoleHeightProjectionContribution -
+                        currentProjectionChangeContribution)
                 };
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
@@ -2137,18 +2165,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.CorrectionResponseInitializationReason,
                     correctionResponseDesired =
                         current.CorrectionResponseDesired,
-                    correctionResponseRequestedDirection =
+                    supportDirectionRequested =
                         CharacterFootVectorFact.From(
-                            current.CorrectionResponseRequestedDirection),
-                    correctionResponsePreviousDirection =
+                            current.SupportDirectionRequested),
+                    supportDirectionPrevious =
                         CharacterFootVectorFact.From(
-                            current.CorrectionResponsePreviousDirection),
-                    correctionResponseDirectionLimited =
-                        current.CorrectionResponseDirectionLimited,
-                    correctionResponseMaximumDirectionChangeDegrees =
-                        current.CorrectionResponseMaximumDirectionChangeDegrees,
-                    correctionResponseAppliedDirectionChangeDegrees =
-                        current.CorrectionResponseAppliedDirectionChangeDegrees,
+                            current.SupportDirectionPrevious),
+                    supportDirectionLimited =
+                        current.SupportDirectionLimited,
+                    supportDirectionMaximumChangeDegrees =
+                        current.SupportDirectionMaximumChangeDegrees,
+                    supportDirectionAppliedChangeDegrees =
+                        current.SupportDirectionAppliedChangeDegrees,
                     correctionResponseVisibleOutputTransferred =
                         current.CorrectionResponseVisibleOutputTransferred,
                     correctionResponseBeforeRebase =
@@ -2157,9 +2185,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.CorrectionResponsePrevious,
                     correctionResponseCurrent =
                         current.CorrectionResponseCurrent,
-                    correctionResponseDirection =
+                    supportDirectionApplied =
                         CharacterFootVectorFact.From(
-                            current.CorrectionResponseDirection),
+                            current.SupportDirectionApplied),
+                    positionResponseBasis = PositionResponseBasisFact(current),
                     correctionResponseDeltaDirection =
                         current.CorrectionResponseDeltaDirection,
                     correctionResponseSelectedSpeed =
@@ -5570,6 +5599,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.CurrentSupportSelectedNormalBeforeNormalization),
                 target = SupportTargetFact(frame.CurrentSupportTarget)
             },
+            positionResponseBasis = PositionResponseBasisFact(frame),
+            supportDirection = new
+            {
+                requested = CharacterFootVectorFact.From(frame.SupportDirectionRequested),
+                previous = CharacterFootVectorFact.From(frame.SupportDirectionPrevious),
+                applied = CharacterFootVectorFact.From(frame.SupportDirectionApplied),
+                limited = frame.SupportDirectionLimited,
+                maximumChangeDegrees = frame.SupportDirectionMaximumChangeDegrees,
+                appliedChangeDegrees = frame.SupportDirectionAppliedChangeDegrees
+            },
             correctionResponse = new
             {
                 evaluated = frame.CorrectionResponseEvaluated,
@@ -5588,22 +5627,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 responseOutput = CharacterFootVectorFact.From(
                     frame.ResponseOutputPoint),
                 desired = frame.CorrectionResponseDesired,
-                requestedDirection = CharacterFootVectorFact.From(
-                    frame.CorrectionResponseRequestedDirection),
-                previousDirection = CharacterFootVectorFact.From(
-                    frame.CorrectionResponsePreviousDirection),
-                directionLimited = frame.CorrectionResponseDirectionLimited,
-                maximumDirectionChangeDegrees =
-                    frame.CorrectionResponseMaximumDirectionChangeDegrees,
-                appliedDirectionChangeDegrees =
-                    frame.CorrectionResponseAppliedDirectionChangeDegrees,
                 visibleOutputTransferred =
                     frame.CorrectionResponseVisibleOutputTransferred,
                 beforeRebase = frame.CorrectionResponseBeforeRebase,
                 previous = frame.CorrectionResponsePrevious,
                 current = frame.CorrectionResponseCurrent,
-                direction = CharacterFootVectorFact.From(
-                    frame.CorrectionResponseDirection),
                 deltaDirection = frame.CorrectionResponseDeltaDirection,
                 selectedSpeed = frame.CorrectionResponseSelectedSpeed,
                 appliedDelta = frame.CorrectionResponseAppliedDelta
@@ -6597,6 +6625,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Cell("FootMotionPostTransitionAnchorCommand"),
                 LifecycleTransitionEvaluated =
                     Int("FootMotionLifecycleTransitionEvaluated") != 0,
+                PositionResponseBasisAvailable = Int("FootMotionPositionResponseBasisAvailable") switch
+                {
+                    0 => false,
+                    1 => true,
+                    _ => throw new InvalidDataException("Foot position response basis availability is not a canonical boolean.")
+                },
+                PositionResponseWorldAxis = Vector("FootMotionPositionResponseWorldAxis"),
+                PositionResponseHeightProjection = Vector("FootMotionPositionResponseHeightProjection"),
+                PositionResponseWorldUnitsPerPoseUnit = Float("FootMotionPositionResponseWorldUnitsPerPoseUnit"),
                 PreviousLockRequestAvailable =
                     Int("FootMotionPreviousLockRequestAvailable") != 0,
                 PreviousLockRequested =
@@ -6811,16 +6848,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Cell("FootMotionCorrectionResponseInitializationReason"),
                 CorrectionResponseDesired =
                     Float("FootMotionCorrectionResponseDesired"),
-                CorrectionResponseRequestedDirection =
-                    Vector("FootMotionCorrectionResponseRequestedDirection"),
-                CorrectionResponsePreviousDirection =
-                    Vector("FootMotionCorrectionResponsePreviousDirection"),
-                CorrectionResponseDirectionLimited =
-                    Int("FootMotionCorrectionResponseDirectionLimited") != 0,
-                CorrectionResponseMaximumDirectionChangeDegrees =
-                    Float("FootMotionCorrectionResponseMaximumDirectionChangeDegrees"),
-                CorrectionResponseAppliedDirectionChangeDegrees =
-                    Float("FootMotionCorrectionResponseAppliedDirectionChangeDegrees"),
+                SupportDirectionRequested =
+                    Vector("FootMotionSupportDirectionRequested"),
+                SupportDirectionPrevious =
+                    Vector("FootMotionSupportDirectionPrevious"),
+                SupportDirectionLimited =
+                    Int("FootMotionSupportDirectionLimited") != 0,
+                SupportDirectionMaximumChangeDegrees =
+                    Float("FootMotionSupportDirectionMaximumChangeDegrees"),
+                SupportDirectionAppliedChangeDegrees =
+                    Float("FootMotionSupportDirectionAppliedChangeDegrees"),
                 CorrectionResponseVisibleOutputTransferred =
                     Int("FootMotionCorrectionResponseVisibleOutputTransferred") != 0,
                 CorrectionResponseBeforeRebase =
@@ -6829,8 +6866,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionCorrectionResponsePrevious"),
                 CorrectionResponseCurrent =
                     Float("FootMotionCorrectionResponseCurrent"),
-                CorrectionResponseDirection =
-                    Vector("FootMotionCorrectionResponseDirection"),
+                SupportDirectionApplied =
+                    Vector("FootMotionSupportDirectionApplied"),
                 CorrectionResponseDeltaDirection =
                     Cell("FootMotionCorrectionResponseDeltaDirection"),
                 CorrectionResponseSelectedSpeed =
@@ -7115,9 +7152,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.PlantVerticalContinuityOwners,
                 "FootMotionPlantVerticalContinuityOwners");
             RequireLifecycleTransitionFacts(frame);
+            RequirePositionResponseBasis(frame);
             RequireCurrentSupport(frame);
             RequirePreparedAndSelectedTarget(frame);
-            RequireCorrectionResponseDirectionHistory(frame);
+            RequirePositionAndSupportResponse(frame);
             RequireResolvedFoot(frame);
             RequireFormalGoalWeights(frame);
             RequireLegReachFacts(frame);
@@ -7297,35 +7335,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool responseInitializedThisFrame =
                     frame.CorrectionResponseInitializedThisFrame;
                 Vector3 requestedResponseDirection =
-                    frame.CorrectionResponseRequestedDirection.normalized;
+                    frame.SupportDirectionRequested.normalized;
                 float requestedDirectionChangeDegrees =
                     frame.CorrectionResponseInitializedBefore
                         ? DirectionAngleDegrees(
-                            frame.CorrectionResponsePreviousDirection,
+                            frame.SupportDirectionPrevious,
                             requestedResponseDirection)
                         : 0f;
                 bool expectedDirectionLimited =
-                    frame.CorrectionResponseDirectionLimited;
+                    frame.SupportDirectionLimited;
                 bool directionLimitFlagConsistent =
                     frame.CorrectionResponseInitializedBefore
                         ? expectedDirectionLimited
                             ? requestedDirectionChangeDegrees >=
-                              frame.CorrectionResponseMaximumDirectionChangeDegrees -
+                              frame.SupportDirectionMaximumChangeDegrees -
                               DirectionComparisonEpsilonDegrees
                             : requestedDirectionChangeDegrees <=
-                              frame.CorrectionResponseMaximumDirectionChangeDegrees +
+                              frame.SupportDirectionMaximumChangeDegrees +
                               DirectionComparisonEpsilonDegrees
                         : !expectedDirectionLimited;
                 Vector3 expectedResponseDirection = expectedDirectionLimited
                     ? RotateDirectionTowards(
-                        frame.CorrectionResponsePreviousDirection,
+                        frame.SupportDirectionPrevious,
                         requestedResponseDirection,
-                        frame.CorrectionResponseMaximumDirectionChangeDegrees)
+                        frame.SupportDirectionMaximumChangeDegrees)
                     : requestedResponseDirection;
                 float expectedAppliedDirectionChangeDegrees =
                     frame.CorrectionResponseInitializedBefore
                         ? DirectionAngleDegrees(
-                            frame.CorrectionResponsePreviousDirection,
+                            frame.SupportDirectionPrevious,
                             expectedResponseDirection)
                         : 0f;
                 float expectedResponsePrevious =
@@ -7333,7 +7371,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? Vector3.Dot(
                         frame.PreviousResponseOutputPoint -
                         frame.OriginalSole,
-                        expectedResponseDirection)
+                        frame.PositionResponseHeightProjection)
                     : frame.CorrectionResponseBeforeRebase;
                 float responseDelta =
                     frame.CorrectionResponseDesired -
@@ -7361,11 +7399,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !frame.CorrectionResponseInitializedBefore &&
                     directionLimitFlagConsistent &&
                     Math.Abs(
-                        frame.CorrectionResponseAppliedDirectionChangeDegrees -
+                        frame.SupportDirectionAppliedChangeDegrees -
                         expectedAppliedDirectionChangeDegrees) <=
                     RotationNoiseFloorDegrees &&
                     Vector3.Distance(
-                        frame.CorrectionResponseDirection,
+                        frame.SupportDirectionApplied,
                         expectedResponseDirection) <=
                     RuntimeGeometryEpsilon &&
                     Math.Abs(
@@ -7472,32 +7510,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !FiniteVector(frame.PlantWorldResidualAfterDecay) ||
                     !FiniteVector(frame.PlantEffectiveCorrectionBefore) ||
                     !FiniteVector(frame.PlantEffectiveCorrectionAfter) ||
-                    !FiniteVector(frame.CorrectionResponseRequestedDirection) ||
-                    !FiniteVector(frame.CorrectionResponsePreviousDirection) ||
-                    !FiniteVector(frame.CorrectionResponseDirection) ||
-                    frame.CorrectionResponseRequestedDirection.sqrMagnitude <=
+                    !FiniteVector(frame.SupportDirectionRequested) ||
+                    !FiniteVector(frame.SupportDirectionPrevious) ||
+                    !FiniteVector(frame.SupportDirectionApplied) ||
+                    frame.SupportDirectionRequested.sqrMagnitude <=
                         RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
-                    frame.CorrectionResponseDirection.sqrMagnitude <=
+                    frame.SupportDirectionApplied.sqrMagnitude <=
                         RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
                     Math.Abs(
-                        frame.CorrectionResponseRequestedDirection.magnitude -
+                        frame.SupportDirectionRequested.magnitude -
                         1f) > RuntimeGeometryEpsilon ||
                     Math.Abs(
-                        frame.CorrectionResponseDirection.magnitude - 1f) >
+                        frame.SupportDirectionApplied.magnitude - 1f) >
                         RuntimeGeometryEpsilon ||
                     frame.CorrectionResponseInitializedBefore &&
                         Math.Abs(
-                            frame.CorrectionResponsePreviousDirection.magnitude -
+                            frame.SupportDirectionPrevious.magnitude -
                             1f) > RuntimeGeometryEpsilon ||
                     !float.IsFinite(
-                        frame.CorrectionResponseMaximumDirectionChangeDegrees) ||
-                    frame.CorrectionResponseMaximumDirectionChangeDegrees <= 0f ||
-                    frame.CorrectionResponseMaximumDirectionChangeDegrees > 180f ||
+                        frame.SupportDirectionMaximumChangeDegrees) ||
+                    frame.SupportDirectionMaximumChangeDegrees <= 0f ||
+                    frame.SupportDirectionMaximumChangeDegrees > 180f ||
                     !float.IsFinite(
-                        frame.CorrectionResponseAppliedDirectionChangeDegrees) ||
-                    frame.CorrectionResponseAppliedDirectionChangeDegrees < 0f ||
-                    frame.CorrectionResponseAppliedDirectionChangeDegrees >
-                        frame.CorrectionResponseMaximumDirectionChangeDegrees +
+                        frame.SupportDirectionAppliedChangeDegrees) ||
+                    frame.SupportDirectionAppliedChangeDegrees < 0f ||
+                    frame.SupportDirectionAppliedChangeDegrees >
+                        frame.SupportDirectionMaximumChangeDegrees +
                         RotationNoiseFloorDegrees ||
                     !float.IsFinite(frame.PlantTargetMaximumVerticalSpeed) ||
                     frame.PlantTargetMaximumVerticalSpeed <= 0f ||
@@ -7551,7 +7589,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.SelectedSupportTarget.Available &&
                         Vector3.Distance(
                             frame.SelectedSupportTarget.Normal,
-                            frame.CorrectionResponseDirection) >
+                            frame.SupportDirectionApplied) >
                         RuntimeGeometryEpsilon ||
                     Vector3.Distance(
                         frame.DesiredOutputPoint,
@@ -7563,12 +7601,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Vector3.Dot(
                             frame.DesiredOutputPoint -
                             frame.OriginalSole,
-                            frame.CorrectionResponseDirection)) >
+                            frame.PositionResponseHeightProjection)) >
                     PositionNoiseFloor ||
                     Vector3.Distance(
                         frame.ResponseOutputPoint,
                         frame.DesiredOutputPoint +
-                        frame.CorrectionResponseDirection *
+                        frame.PositionResponseWorldAxis *
                         (frame.CorrectionResponseCurrent -
                          frame.CorrectionResponseDesired)) >
                     PositionNoiseFloor ||
@@ -7602,12 +7640,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Response={responseInitializationConsistent} " +
                         $"Owners={ownersConsistent} " +
                         $"DesiredOutputError={Vector3.Distance(frame.DesiredOutputPoint, frame.PlantSelectedWorldTarget + frame.PlantWorldResidualAfterDecay):R} " +
-                        $"ResponseOutputError={Vector3.Distance(frame.ResponseOutputPoint, frame.DesiredOutputPoint + frame.CorrectionResponseDirection * (frame.CorrectionResponseCurrent - frame.CorrectionResponseDesired)):R} " +
+                        $"ResponseOutputError={Vector3.Distance(frame.ResponseOutputPoint, frame.DesiredOutputPoint + frame.PositionResponseWorldAxis * (frame.CorrectionResponseCurrent - frame.CorrectionResponseDesired)):R} " +
                         $"PreviousOutputError={Vector3.Distance(frame.PreviousResponseOutputPoint, outputBefore):R} " +
                         $"EffectiveResponseError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.ResponseOutputPoint - frame.OriginalSole):R} " +
                         $"InterpolationError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.InterpolationOutputCorrection):R} " +
-                        $"DirectionMagnitude={frame.CorrectionResponseDirection.magnitude:R} " +
-                        $"PreviousDirectionMagnitude={frame.CorrectionResponsePreviousDirection.magnitude:R} " +
+                        $"DirectionMagnitude={frame.SupportDirectionApplied.magnitude:R} " +
+                        $"PreviousDirectionMagnitude={frame.SupportDirectionPrevious.magnitude:R} " +
                         $"DirectMode={targetAdoptionDirect} DirectUpdate={directTargetUpdate} " +
                         $"Held={heldWithinRevisionDistance} DistanceRefresh={distanceForceRefresh} " +
                         $"ClampExpected={targetClampExpected} Clamp={frame.PlantTargetVerticalClamped} " +
@@ -8557,46 +8595,87 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static void RequireCorrectionResponseDirectionHistory(FootFrame frame)
+        static void RequirePositionResponseBasis(FootFrame frame)
+        {
+            bool available = frame.PositionResponseBasisAvailable;
+            Vector3 axis = frame.PositionResponseWorldAxis;
+            Vector3 projection = frame.PositionResponseHeightProjection;
+            float scale = frame.PositionResponseWorldUnitsPerPoseUnit;
+            bool valid = FiniteVector(axis) && FiniteVector(projection) && float.IsFinite(scale) &&
+                available == frame.LifecycleTransitionEvaluated &&
+                (available
+                    ? scale > 0f && Math.Abs(axis.sqrMagnitude - 1f) <= RuntimeGeometryEpsilon &&
+                        Math.Abs(Vector3.Dot(axis, projection) - 1f) <= RuntimeGeometryEpsilon
+                    : scale == 0f && axis.Equals(Vector3.zero) && projection.Equals(Vector3.zero) &&
+                        !frame.CorrectionResponseEvaluated);
+            if (!valid)
+                throw new InvalidDataException(
+                    $"Foot Motion position response basis is inconsistent Frame={frame.Frame} Side={frame.Side} " +
+                    $"Available={available} Lifecycle={frame.LifecycleTransitionEvaluated} " +
+                    $"AxisSquaredLength={axis.sqrMagnitude:R} DualDot={Vector3.Dot(axis, projection):R} Scale={scale:R}.");
+        }
+
+        static CharacterFootPositionResponseBasisFact PositionResponseBasisFact(FootFrame frame) => new
+            CharacterFootPositionResponseBasisFact
+            {
+                available = frame.PositionResponseBasisAvailable,
+                worldAxis = CharacterFootVectorFact.From(frame.PositionResponseWorldAxis),
+                heightProjection = CharacterFootVectorFact.From(frame.PositionResponseHeightProjection),
+                worldUnitsPerPoseUnit = frame.PositionResponseWorldUnitsPerPoseUnit,
+                axisSquaredLength = frame.PositionResponseBasisAvailable
+                    ? (double?)frame.PositionResponseWorldAxis.sqrMagnitude : null,
+                axisProjectionDot = frame.PositionResponseBasisAvailable
+                    ? (double?)Vector3.Dot(frame.PositionResponseWorldAxis, frame.PositionResponseHeightProjection) : null,
+                responseEvaluated = frame.CorrectionResponseEvaluated,
+                responseEquationErrorMeters = frame.CorrectionResponseEvaluated
+                    ? (double?)Vector3.Distance(frame.ResponseOutputPoint, frame.DesiredOutputPoint +
+                        frame.PositionResponseWorldAxis *
+                        (frame.CorrectionResponseCurrent - frame.CorrectionResponseDesired)) : null,
+                adjustmentOutsideAxisMeters = frame.CorrectionResponseEvaluated
+                    ? (double?)Vector3.ProjectOnPlane(frame.ResponseOutputPoint - frame.DesiredOutputPoint,
+                        frame.PositionResponseWorldAxis).magnitude : null
+            };
+
+        static void RequirePositionAndSupportResponse(FootFrame frame)
         {
             if (!frame.CorrectionResponseEvaluated)
                 return;
             Vector3 requested =
-                frame.CorrectionResponseRequestedDirection.normalized;
+                frame.SupportDirectionRequested.normalized;
             bool initialized = frame.CorrectionResponseInitializedBefore;
             float rawAngle = initialized
                 ? DirectionAngleDegrees(
-                    frame.CorrectionResponsePreviousDirection,
+                    frame.SupportDirectionPrevious,
                     requested)
                 : 0f;
-            bool limited = frame.CorrectionResponseDirectionLimited;
+            bool limited = frame.SupportDirectionLimited;
             bool directionLimitFlagConsistent = initialized
                 ? limited
                     ? rawAngle >=
-                      frame.CorrectionResponseMaximumDirectionChangeDegrees -
+                      frame.SupportDirectionMaximumChangeDegrees -
                       DirectionComparisonEpsilonDegrees
                     : rawAngle <=
-                      frame.CorrectionResponseMaximumDirectionChangeDegrees +
+                      frame.SupportDirectionMaximumChangeDegrees +
                       DirectionComparisonEpsilonDegrees
                 : !limited;
             Vector3 applied = limited
                 ? RotateDirectionTowards(
-                    frame.CorrectionResponsePreviousDirection,
+                    frame.SupportDirectionPrevious,
                     requested,
-                    frame.CorrectionResponseMaximumDirectionChangeDegrees)
+                    frame.SupportDirectionMaximumChangeDegrees)
                 : requested;
             float appliedAngle = initialized
                 ? DirectionAngleDegrees(
-                    frame.CorrectionResponsePreviousDirection,
+                    frame.SupportDirectionPrevious,
                     applied)
                 : 0f;
             float desired = Vector3.Dot(
                 frame.DesiredOutputPoint - frame.OriginalSole,
-                applied);
+                frame.PositionResponseHeightProjection);
             float previous = frame.CorrectionResponseVisibleOutputTransferred
                 ? Vector3.Dot(
                     frame.PreviousResponseOutputPoint - frame.OriginalSole,
-                    applied)
+                    frame.PositionResponseHeightProjection)
                 : frame.CorrectionResponseBeforeRebase;
             float delta = desired - previous;
             string deltaDirection = delta == 0f
@@ -8618,36 +8697,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     -speed * frame.DeltaSeconds,
                     speed * frame.DeltaSeconds);
             float current = previous + appliedDelta;
-            if (!FiniteVector(frame.CorrectionResponseRequestedDirection) ||
-                !FiniteVector(frame.CorrectionResponsePreviousDirection) ||
-                !FiniteVector(frame.CorrectionResponseDirection) ||
-                frame.CorrectionResponseRequestedDirection.sqrMagnitude <=
+            if (!FiniteVector(frame.SupportDirectionRequested) ||
+                !FiniteVector(frame.SupportDirectionPrevious) ||
+                !FiniteVector(frame.SupportDirectionApplied) ||
+                frame.SupportDirectionRequested.sqrMagnitude <=
                     RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
-                frame.CorrectionResponseDirection.sqrMagnitude <=
+                frame.SupportDirectionApplied.sqrMagnitude <=
                     RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
                 Math.Abs(
-                    frame.CorrectionResponseRequestedDirection.magnitude -
+                    frame.SupportDirectionRequested.magnitude -
                     1f) > RuntimeGeometryEpsilon ||
                 Math.Abs(
-                    frame.CorrectionResponseDirection.magnitude - 1f) >
+                    frame.SupportDirectionApplied.magnitude - 1f) >
                     RuntimeGeometryEpsilon ||
                 !float.IsFinite(
-                    frame.CorrectionResponseMaximumDirectionChangeDegrees) ||
-                frame.CorrectionResponseMaximumDirectionChangeDegrees <= 0f ||
-                frame.CorrectionResponseMaximumDirectionChangeDegrees > 180f ||
+                    frame.SupportDirectionMaximumChangeDegrees) ||
+                frame.SupportDirectionMaximumChangeDegrees <= 0f ||
+                frame.SupportDirectionMaximumChangeDegrees > 180f ||
                 !directionLimitFlagConsistent ||
                 Vector3.Distance(
-                    frame.CorrectionResponseDirection,
+                    frame.SupportDirectionApplied,
                     applied) > RuntimeGeometryEpsilon ||
                 Math.Abs(
-                    frame.CorrectionResponseAppliedDirectionChangeDegrees -
+                    frame.SupportDirectionAppliedChangeDegrees -
                     appliedAngle) > RotationNoiseFloorDegrees ||
                 frame.CorrectionResponseInitializedThisFrame !=
                     initializedThisFrame ||
                 initializedThisFrame &&
                     (frame.CorrectionResponseInitializationReason == "None" ||
                      Vector3.Distance(
-                         frame.CorrectionResponsePreviousDirection,
+                         frame.SupportDirectionPrevious,
                          requested) > RuntimeGeometryEpsilon ||
                      Math.Abs(
                          frame.CorrectionResponseBeforeRebase - desired) >
@@ -8673,7 +8752,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     PositionNoiseFloor ||
                 Vector3.Distance(
                     frame.ResponseOutputPoint,
-                    frame.DesiredOutputPoint + applied *
+                    frame.DesiredOutputPoint + frame.PositionResponseWorldAxis *
                     (current - desired)) > PositionNoiseFloor ||
                 frame.SelectedSupportTarget.Available &&
                     Vector3.Distance(
@@ -8684,7 +8763,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Foot Motion Correction Response Direction History is inconsistent " +
                     $"Frame={frame.Frame} Side={frame.Side} " +
                     $"RawAngle={rawAngle:R} AppliedAngle={appliedAngle:R} " +
-                    $"Maximum={frame.CorrectionResponseMaximumDirectionChangeDegrees:R}.");
+                    $"Maximum={frame.SupportDirectionMaximumChangeDegrees:R}.");
             }
         }
 
@@ -9540,6 +9619,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionTargetHeightComponentUpY",
                 "FootMotionTargetHeightComponentUpZ",
                 "FootMotionLifecycleTransitionEvaluated",
+                "FootMotionPositionResponseBasisAvailable",
+                "FootMotionPositionResponseWorldAxisX", "FootMotionPositionResponseWorldAxisY", "FootMotionPositionResponseWorldAxisZ",
+                "FootMotionPositionResponseHeightProjectionX", "FootMotionPositionResponseHeightProjectionY", "FootMotionPositionResponseHeightProjectionZ",
+                "FootMotionPositionResponseWorldUnitsPerPoseUnit",
                 "FootMotionPreviousLockRequestAvailable",
                 "FootMotionPreviousLockRequested",
                 "FootMotionPreviousLockRequestEventIdentity",
@@ -9856,7 +9939,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionSelectedSupportTargetAvailable,FootMotionSelectedSupportTargetFrameSequence,FootMotionSelectedSupportTargetCompletionIdentity,FootMotionSelectedSupportTargetSide,FootMotionSelectedSupportTargetPositionX,FootMotionSelectedSupportTargetPositionY,FootMotionSelectedSupportTargetPositionZ,FootMotionSelectedSupportTargetNormalX,FootMotionSelectedSupportTargetNormalY,FootMotionSelectedSupportTargetNormalZ,FootMotionSelectedSupportTargetSurfaceIdentity,FootMotionSelectedSupportTargetWorldRevision,FootMotionSelectedSupportTargetKind,FootMotionSelectedSupportTargetPositionSource,FootMotionSelectedSupportTargetPositionFrameSequence,FootMotionSelectedSupportTargetPositionCompletionIdentity,FootMotionSelectedSupportTargetPositionEventIdentity,FootMotionSelectedSupportTargetPositionPathIdentity,FootMotionSelectedSupportTargetNormalSource,FootMotionSelectedSupportTargetNormalFrameSequence,FootMotionSelectedSupportTargetNormalCompletionIdentity,FootMotionSelectedSupportTargetNormalEventIdentity");
             RequireColumnGroup(
                 indices,
-                "FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ");
+                "FootMotionSupportDirectionRequestedX,FootMotionSupportDirectionRequestedY,FootMotionSupportDirectionRequestedZ,FootMotionSupportDirectionPreviousX,FootMotionSupportDirectionPreviousY,FootMotionSupportDirectionPreviousZ,FootMotionSupportDirectionLimited,FootMotionSupportDirectionMaximumChangeDegrees,FootMotionSupportDirectionAppliedChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionSupportDirectionAppliedX,FootMotionSupportDirectionAppliedY,FootMotionSupportDirectionAppliedZ");
             RequireColumnGroup(
                 indices,
                 "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason,CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted,CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted,CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ");
@@ -10580,6 +10663,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string PostTransitionTarget;
             internal string PostTransitionAnchorCommand;
             internal bool LifecycleTransitionEvaluated;
+            internal bool PositionResponseBasisAvailable;
+            internal Vector3 PositionResponseWorldAxis;
+            internal Vector3 PositionResponseHeightProjection;
+            internal float PositionResponseWorldUnitsPerPoseUnit;
             internal bool PreviousLockRequestAvailable;
             internal bool PreviousLockRequested;
             internal ulong PreviousLockRequestEventIdentity;
@@ -10690,16 +10777,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool CorrectionResponseInitializedThisFrame;
             internal string CorrectionResponseInitializationReason;
             internal float CorrectionResponseDesired;
-            internal Vector3 CorrectionResponseRequestedDirection;
-            internal Vector3 CorrectionResponsePreviousDirection;
-            internal bool CorrectionResponseDirectionLimited;
-            internal float CorrectionResponseMaximumDirectionChangeDegrees;
-            internal float CorrectionResponseAppliedDirectionChangeDegrees;
+            internal Vector3 SupportDirectionRequested;
+            internal Vector3 SupportDirectionPrevious;
+            internal bool SupportDirectionLimited;
+            internal float SupportDirectionMaximumChangeDegrees;
+            internal float SupportDirectionAppliedChangeDegrees;
             internal bool CorrectionResponseVisibleOutputTransferred;
             internal float CorrectionResponseBeforeRebase;
             internal float CorrectionResponsePrevious;
             internal float CorrectionResponseCurrent;
-            internal Vector3 CorrectionResponseDirection;
+            internal Vector3 SupportDirectionApplied;
             internal string CorrectionResponseDeltaDirection;
             internal float CorrectionResponseSelectedSpeed;
             internal float CorrectionResponseAppliedDelta;

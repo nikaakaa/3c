@@ -230,7 +230,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSwingFilteredTargetHeightAlongUp,FootMotionTargetHeightComponentUpX,FootMotionTargetHeightComponentUpY,FootMotionTargetHeightComponentUpZ," +
             "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
             "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
-            "FootMotionLifecycleTransitionEvaluated,FootMotionPreviousLockRequestAvailable,FootMotionPreviousLockRequested,FootMotionPreviousLockRequestEventIdentity,FootMotionPreviousLockRequestMode,FootMotionPreviousLockRequestWeight," +
+            "FootMotionLifecycleTransitionEvaluated," +
+            "FootMotionPositionResponseBasisAvailable,FootMotionPositionResponseWorldAxisX,FootMotionPositionResponseWorldAxisY,FootMotionPositionResponseWorldAxisZ,FootMotionPositionResponseHeightProjectionX,FootMotionPositionResponseHeightProjectionY,FootMotionPositionResponseHeightProjectionZ,FootMotionPositionResponseWorldUnitsPerPoseUnit," +
+            "FootMotionPreviousLockRequestAvailable,FootMotionPreviousLockRequested,FootMotionPreviousLockRequestEventIdentity,FootMotionPreviousLockRequestMode,FootMotionPreviousLockRequestWeight," +
             "FootMotionPreviousContactEdgeSeconds,FootMotionPreviousLatestContactEventIdentity,FootMotionPreviousLatestReleasedContactEventIdentity,FootMotionPreviousCompletedLockWeightEventIdentity,FootMotionPreviousContactAnchorAvailable,FootMotionPreviousContactAnchorEventIdentity," +
             "FootMotionPreviousContactAnchorAcquiredFrameSequence,FootMotionPreviousContactAnchorAcquiredCompletionIdentity,FootMotionPreviousContactAnchorWorldRevision,FootMotionPreviousContactAnchorSurfaceIdentity,FootMotionPreviousContactAnchorPointX,FootMotionPreviousContactAnchorPointY,FootMotionPreviousContactAnchorPointZ,FootMotionPreviousContactAnchorNormalX,FootMotionPreviousContactAnchorNormalY,FootMotionPreviousContactAnchorNormalZ," +
             "FootMotionCurrentLockRequested,FootMotionCurrentLockRequestEventIdentity,FootMotionCurrentLockRequestMode,FootMotionCurrentLockRequestWeight,FootMotionCurrentLockRequestAvailability,FootMotionContactEdge,FootMotionCurrentContactEdgeSeconds," +
@@ -264,7 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantWorldResidualAfterDecayX,FootMotionPlantWorldResidualAfterDecayY,FootMotionPlantWorldResidualAfterDecayZ," +
             "FootMotionPlantWorldResidualCompletionTolerance,FootMotionPlantWorldResidualClearedAtCompletionTolerance," +
             "FootMotionCorrectionResponseEvaluated,FootMotionCorrectionResponseInitializedBefore,FootMotionCorrectionResponseInitializedThisFrame,FootMotionCorrectionResponseInitializationReason," +
-            "FootMotionCorrectionResponseDesired,FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
+            "FootMotionCorrectionResponseDesired,FootMotionSupportDirectionRequestedX,FootMotionSupportDirectionRequestedY,FootMotionSupportDirectionRequestedZ,FootMotionSupportDirectionPreviousX,FootMotionSupportDirectionPreviousY,FootMotionSupportDirectionPreviousZ,FootMotionSupportDirectionLimited,FootMotionSupportDirectionMaximumChangeDegrees,FootMotionSupportDirectionAppliedChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionSupportDirectionAppliedX,FootMotionSupportDirectionAppliedY,FootMotionSupportDirectionAppliedZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
             "FootMotionPlantVerticalContinuityOwners," +
             "FootMotionPlantEffectiveCorrectionBeforeX,FootMotionPlantEffectiveCorrectionBeforeY,FootMotionPlantEffectiveCorrectionBeforeZ," +
             "FootMotionPlantEffectiveCorrectionAfterX,FootMotionPlantEffectiveCorrectionAfterY,FootMotionPlantEffectiveCorrectionAfterZ," +
@@ -2186,6 +2188,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PostTransitionTarget.ToString());
             Add(row, motion.PostTransitionAnchorCommand);
             Add(row, motion.LifecycleTransitionEvaluated);
+            Add(row, motion.PositionResponseBasisAvailable);
+            Add(row, motion.PositionResponseWorldAxis);
+            Add(row, motion.PositionResponseHeightProjection);
+            Add(row, motion.PositionResponseWorldUnitsPerPoseUnit);
             Add(row, motion.PreviousLockRequestAvailable);
             Add(row, motion.PreviousLockRequested);
             Add(row, motion.PreviousLockRequestEventIdentity);
@@ -2296,16 +2302,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.CorrectionResponseInitializedThisFrame);
             Add(row, motion.CorrectionResponseInitializationReason);
             Add(row, motion.CorrectionResponseDesired);
-            Add(row, motion.CorrectionResponseRequestedDirection);
-            Add(row, motion.CorrectionResponsePreviousDirection);
-            Add(row, motion.CorrectionResponseDirectionLimited);
-            Add(row, motion.CorrectionResponseMaximumDirectionChangeDegrees);
-            Add(row, motion.CorrectionResponseAppliedDirectionChangeDegrees);
+            Add(row, motion.SupportDirectionRequested);
+            Add(row, motion.SupportDirectionPrevious);
+            Add(row, motion.SupportDirectionLimited);
+            Add(row, motion.SupportDirectionMaximumChangeDegrees);
+            Add(row, motion.SupportDirectionAppliedChangeDegrees);
             Add(row, motion.CorrectionResponseVisibleOutputTransferred);
             Add(row, motion.CorrectionResponseBeforeRebase);
             Add(row, motion.CorrectionResponsePrevious);
             Add(row, motion.CorrectionResponseCurrent);
-            Add(row, motion.CorrectionResponseDirection);
+            Add(row, motion.SupportDirectionApplied);
             Add(row, motion.CorrectionResponseDeltaDirection);
             Add(row, motion.CorrectionResponseSelectedSpeed);
             Add(row, motion.CorrectionResponseAppliedDelta);

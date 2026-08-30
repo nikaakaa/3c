@@ -38,3 +38,10 @@
 - [x] 7.1 以ae10348独立试验Corin正式频率3→2并重建Float32/Fixed产品，保持算法、Foot、Bend与TrainingEnemy不变；Runtime27既有警告0错误并shutdown
 - [x] 7.2 完成023618同Record回放与原facts62/diagnosis31封口，确认1043帧实际消费2Hz；官方Proof因7个产品身份字段不同保持matched=false，1044完整输入/Body帧逐值相同
 - [x] 7.3 2Hz因回正迟滞208→270及实际Solved Knee超过10厘米160→174被拒绝，8833b4c只撤销该参数/产品；恢复包025450实际3Hz，对020243有1197个非身份列逐值相同、37质量项不变，Runtime identity及1044完整Proof帧一致，原始失败/恢复ZIP和Proof均保存，详见experiments/20260831-pelvis-frequency-2hz.md
+
+## 8. 持续Goal：每帧取消背向目标的旧速度
+
+- [x] 8.1 在唯一Pelvis响应中移除清速度的Handoff前置，保留事件判定、全部配置、目标、硬边界和Foot/Bend；Runtime规定flags构建27既有警告0错误并shutdown，合同已同步，效果待8.3
+- [ ] 8.2 唯一Diagnostics同步精确速度门和下一版本，不增加CSV列或改变质量规则，保留旧62解释
+- [ ] 8.3 同Record自动Replay，核对新增清速度事实、265/266及全部既定Foot/Pelvis/Knee质量，与193957和025450对照后裁决
+- [ ] 8.4 持久保存原包/Proof、只读排除结果和保留/撤销证据，继续完整质量Goal

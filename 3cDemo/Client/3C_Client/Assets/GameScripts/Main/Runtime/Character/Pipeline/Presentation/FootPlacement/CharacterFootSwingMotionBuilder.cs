@@ -596,57 +596,91 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 result.LandingReachGoalClampDistance;
             CharacterFootLifecycleTransitionFact lifecycle =
                 result.LifecycleTransition;
+            CharacterFootContactHistoryFact previousContext =
+                lifecycle.PreviousContext;
+            CharacterFootContactHistoryFact currentContext =
+                lifecycle.CurrentContext;
+            CharacterFootContactAnchorFact previousAnchor =
+                lifecycle.PreviousAnchor;
+            CharacterFootContactAnchorFact currentAnchor =
+                lifecycle.CurrentAnchor;
+            CharacterFootLockRequest request = lifecycle.Request;
+            CharacterFootTransitionDecision preTransition =
+                lifecycle.PreTransition;
+            CharacterFootTransitionDecision postTransition =
+                lifecycle.PostTransition;
             LifecycleTransitionEvaluated = lifecycle.Evaluated;
-            PreviousLockRequestAvailable = lifecycle.PreviousRequestAvailable;
-            PreviousLockRequested = lifecycle.PreviousRequestedLock;
+            PreviousLockRequestAvailable = previousContext.RequestAvailable;
+            PreviousLockRequested = previousContext.RequestedLock;
             PreviousLockRequestEventIdentity =
-                lifecycle.PreviousRequestEventIdentity;
-            PreviousLockRequestMode = lifecycle.PreviousRequestMode.ToString();
-            PreviousLockRequestWeight = lifecycle.PreviousRequestWeight;
-            PreviousContactEdgeSeconds = lifecycle.PreviousSecondsSinceEdge;
+                previousContext.RequestEventIdentity;
+            PreviousLockRequestMode = previousContext.RequestMode.ToString();
+            PreviousLockRequestWeight = previousContext.RequestWeight;
+            PreviousContactEdgeSeconds = previousContext.SecondsSinceEdge;
             PreviousLatestContactEventIdentity =
-                lifecycle.PreviousLatestContactEventIdentity;
+                previousContext.LatestContactEventIdentity;
             PreviousLatestReleasedContactEventIdentity =
-                lifecycle.PreviousLatestReleasedContactEventIdentity;
+                previousContext.LatestReleasedContactEventIdentity;
             PreviousCompletedLockWeightEventIdentity =
-                lifecycle.PreviousCompletedLockWeightEventIdentity;
-            PreviousContactAnchorAvailable = lifecycle.PreviousAnchorAvailable;
-            PreviousContactAnchorEventIdentity =
-                lifecycle.PreviousAnchorEventIdentity;
-            CurrentLockRequested = lifecycle.CurrentRequestedLock;
-            CurrentLockRequestEventIdentity =
-                lifecycle.CurrentRequestEventIdentity;
-            CurrentLockRequestMode = lifecycle.CurrentRequestMode.ToString();
-            CurrentLockRequestWeight = lifecycle.CurrentRequestWeight;
-            CurrentLockRequestAvailability =
-                lifecycle.CurrentRequestAvailability.ToString();
-            ContactEdge = lifecycle.ContactEdge.ToString();
-            CurrentContactEdgeSeconds = lifecycle.CurrentSecondsSinceEdge;
+                previousContext.CompletedLockWeightEventIdentity;
+            PreviousContactAnchorAvailable = previousAnchor.Available;
+            PreviousContactAnchorEventIdentity = previousAnchor.EventIdentity;
+            PreviousContactAnchorAcquiredFrameSequence =
+                previousAnchor.AcquiredFrameSequence;
+            PreviousContactAnchorAcquiredCompletionIdentity =
+                previousAnchor.AcquiredCompletionIdentity;
+            PreviousContactAnchorWorldRevision = previousAnchor.WorldRevision;
+            PreviousContactAnchorSurfaceIdentity = previousAnchor.SurfaceIdentity;
+            PreviousContactAnchorPoint = previousAnchor.Point;
+            PreviousContactAnchorNormal = previousAnchor.Normal;
+            CurrentLockRequested = request.RequestsLock;
+            CurrentLockRequestEventIdentity = request.EventIdentity;
+            CurrentLockRequestMode = request.Mode.ToString();
+            CurrentLockRequestWeight = request.Weight;
+            CurrentLockRequestAvailability = request.Availability.ToString();
+            ContactEdge = preTransition.ContactEdge.ToString();
+            CurrentContactEdgeSeconds = currentContext.SecondsSinceEdge;
             CurrentLatestContactEventIdentity =
-                lifecycle.CurrentLatestContactEventIdentity;
+                currentContext.LatestContactEventIdentity;
             CurrentLatestReleasedContactEventIdentity =
-                lifecycle.CurrentLatestReleasedContactEventIdentity;
+                currentContext.LatestReleasedContactEventIdentity;
             CurrentCompletedLockWeightEventIdentity =
-                lifecycle.CurrentCompletedLockWeightEventIdentity;
-            CurrentContactAnchorAvailable = lifecycle.CurrentAnchorAvailable;
-            CurrentContactAnchorEventIdentity =
-                lifecycle.CurrentAnchorEventIdentity;
+                currentContext.CompletedLockWeightEventIdentity;
+            CurrentContactAnchorAvailable = currentAnchor.Available;
+            CurrentContactAnchorEventIdentity = currentAnchor.EventIdentity;
+            CurrentContactAnchorAcquiredFrameSequence =
+                currentAnchor.AcquiredFrameSequence;
+            CurrentContactAnchorAcquiredCompletionIdentity =
+                currentAnchor.AcquiredCompletionIdentity;
+            CurrentContactAnchorWorldRevision = currentAnchor.WorldRevision;
+            CurrentContactAnchorSurfaceIdentity = currentAnchor.SurfaceIdentity;
+            CurrentContactAnchorPoint = currentAnchor.Point;
+            CurrentContactAnchorNormal = currentAnchor.Normal;
             SameEventContactReentryRefreshed =
                 lifecycle.SameEventContactReentryRefreshed;
             SameEventContactReentryUnavailable =
                 lifecycle.SameEventContactReentryUnavailable;
             RetainedVerifiedAnchor = lifecycle.RetainedVerifiedAnchor;
-            ContinuousReentryTakeover = lifecycle.ContinuousReentryTakeover;
+            ReentryInterpolationHistoryRetained =
+                lifecycle.ReentryInterpolationHistoryRetained;
+            FormalFootPlacementWeight = lifecycle.FormalFootPlacementWeight;
             HardOwnershipLoss = lifecycle.HardOwnershipLoss;
             HardOwnershipLossReason = lifecycle.OwnershipLossReason.ToString();
-            PreTransitionSuppressOutput =
-                lifecycle.PreTransitionSuppressOutput;
-            PreTransitionResetInterpolation =
-                lifecycle.PreTransitionResetInterpolation;
-            PostTransitionSuppressOutput =
-                lifecycle.PostTransitionSuppressOutput;
-            PostTransitionResetInterpolation =
-                lifecycle.PostTransitionResetInterpolation;
+            PreTransitionReason = preTransition.Reason.ToString();
+            PreTransitionSource = preTransition.SourceState;
+            PreTransitionTarget = preTransition.TargetState;
+            PreTransitionAnchorCommand = preTransition.AnchorCommand.ToString();
+            PreTransitionSuppressOutput = preTransition.SuppressOutput;
+            PreTransitionResetInterpolation = preTransition.ResetInterpolation;
+            PostTransitionEvaluated = lifecycle.PostTransitionEvaluated;
+            PostTransitionReason = postTransition.Reason.ToString();
+            PostTransitionSource = postTransition.SourceState;
+            PostTransitionTarget = postTransition.TargetState;
+            PostTransitionAnchorCommand = postTransition.AnchorCommand.ToString();
+            PostTransitionSuppressOutput = postTransition.SuppressOutput;
+            PostTransitionResetInterpolation = postTransition.ResetInterpolation;
+            ConstraintStateBefore = preTransition.SourceState;
+            LockResponseBefore = lifecycle.LockResponseBefore;
             CharacterFootPathContinuityFact path = result.PathContinuity;
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
@@ -694,23 +728,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingFilteredTargetHeightAlongUp =
                 path.SwingFilteredTargetHeightAlongUp;
             TargetHeightComponentUp = path.TargetHeightComponentUp;
-            PreTransitionReason = path.PreTransitionReason.ToString();
-            PreTransitionSource = path.PreTransitionSource;
-            PreTransitionTarget = path.PreTransitionTarget;
-            PreTransitionAnchorCommand =
-                path.PreTransitionAnchorCommand.ToString();
-            PostTransitionReason = path.PostTransitionReason.ToString();
-            PostTransitionSource = path.PostTransitionSource;
-            PostTransitionTarget = path.PostTransitionTarget;
-            PostTransitionAnchorCommand =
-                path.PostTransitionAnchorCommand.ToString();
             StateTargetCorrection = path.StateTargetCorrection;
             InterpolationPolicy = path.InterpolationPolicy.ToString();
             InterpolationOutputCorrection =
                 path.InterpolationOutputCorrection;
             InterpolationCompleted = path.InterpolationCompleted;
-            ConstraintStateBefore = path.StateBefore;
-            LockResponseBefore = path.LockResponseBefore;
             OutputStagesAvailable = path.OutputStagesAvailable;
             ReleasingCompletedToSwing = path.ReleasingCompletedToSwing;
             SafetyFloorAvailable = path.SafetyFloorAvailable;
@@ -882,6 +904,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong PreviousCompletedLockWeightEventIdentity { get; }
         public bool PreviousContactAnchorAvailable { get; }
         public ulong PreviousContactAnchorEventIdentity { get; }
+        public ulong PreviousContactAnchorAcquiredFrameSequence { get; }
+        public ulong PreviousContactAnchorAcquiredCompletionIdentity { get; }
+        public ulong PreviousContactAnchorWorldRevision { get; }
+        public int PreviousContactAnchorSurfaceIdentity { get; }
+        public Vector3 PreviousContactAnchorPoint { get; }
+        public Vector3 PreviousContactAnchorNormal { get; }
         public bool CurrentLockRequested { get; }
         public ulong CurrentLockRequestEventIdentity { get; }
         public string CurrentLockRequestMode { get; }
@@ -894,14 +922,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong CurrentCompletedLockWeightEventIdentity { get; }
         public bool CurrentContactAnchorAvailable { get; }
         public ulong CurrentContactAnchorEventIdentity { get; }
+        public ulong CurrentContactAnchorAcquiredFrameSequence { get; }
+        public ulong CurrentContactAnchorAcquiredCompletionIdentity { get; }
+        public ulong CurrentContactAnchorWorldRevision { get; }
+        public int CurrentContactAnchorSurfaceIdentity { get; }
+        public Vector3 CurrentContactAnchorPoint { get; }
+        public Vector3 CurrentContactAnchorNormal { get; }
         public bool SameEventContactReentryRefreshed { get; }
         public bool SameEventContactReentryUnavailable { get; }
         public bool RetainedVerifiedAnchor { get; }
-        public bool ContinuousReentryTakeover { get; }
+        public bool ReentryInterpolationHistoryRetained { get; }
+        public float FormalFootPlacementWeight { get; }
         public bool HardOwnershipLoss { get; }
         public string HardOwnershipLossReason { get; }
         public bool PreTransitionSuppressOutput { get; }
         public bool PreTransitionResetInterpolation { get; }
+        public bool PostTransitionEvaluated { get; }
         public bool PostTransitionSuppressOutput { get; }
         public bool PostTransitionResetInterpolation { get; }
         public bool PathContinuityEvaluated { get; }

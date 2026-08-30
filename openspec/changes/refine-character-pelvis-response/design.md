@@ -82,3 +82,11 @@ ae10348只将Corin现有正式频率从3Hz改2Hz，并显式重建匹配的Float
 2edf9bc/586c828只移除清速度的Handoff前置，033902已实际出现30个无Handoff清速度帧，265/266靶点成立、Correction超过50毫米30→28、Foot保护与37项计数保持。但世界大步仍33个，R826仍626.929毫米，R996的168.357毫米Knee峰后移至R997的221.587毫米。全包Knee超过10厘米净减少不抵消该明确窗口代价，也不将其误报成全局新增问题类别。
 
 根任务不把这条组合交付为可用改善，恢复原Handoff前置及facts62/d31，保留原始facts63/d32失败包和实验公式。Runtime当前不采用该新门，没有旧新并列分支。完整目标时序排除、运行证据、撤销与恢复结果见experiments/20260831-pelvis-velocity-direction.md。后续Bend处理需用户独立授权，不在这次骨盆实验中混入。
+
+## 持续Goal第四轮：取消背离下降目标的旧向上速度
+
+当前候选以54979a5和035643为直接前驱，固定193957仍为效果对照。保留原Handoff判定与原清速度分支，只对`previousVelocity > 0`且`target-previousOutput < -GeometryEpsilon`增加无Handoff清速度资格。正式式为`reset = (Handoff != None || previousVelocity > 0) && abs(target-previousOutput) > GeometryEpsilon && previousVelocity*(target-previousOutput) < 0`。
+
+该区别来自业务方向，而非帧号或膝盖诊断：下降需求已明确时，不继续把骨盆抬离目标、增加之后真实腿长上界强压的幅度；目标回升时，旧向下速度仍只服从原Handoff政策。本轮不保证世界Y单调，因为原动画与Root继续运动。只改唯一响应的输入速度，不改频率、目标、硬区间、Foot、Bend或任何资产，不新增速度状态、参数或第二响应。
+
+冻结035643原输入的递推复现原Output最大误差5.04e-8米，候选预测266/789的Correction大步减小，R996/997模型不再改变；全包实际Foot、骨盆和Knee必须由新Replay判决。模型的负偏移积分略增且允许回正时低于-5毫米多一帧，是必须保留的风险，不能把模型当真实物理结果或提前通过。详见experiments/20260831-pelvis-upward-velocity.md。

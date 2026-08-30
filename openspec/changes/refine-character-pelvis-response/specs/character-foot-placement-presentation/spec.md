@@ -38,6 +38,8 @@ Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形�
 
 系统 MUST继续只持有一份根Bank内Spring状态、使用现有正式响应配置和Handoff规则。输出触界时 MUST保留腿长安全并处理朝外速度；几何不可达 MUST通过既有typed Reach/Goal保护表达，不得以悬空、默认目标、未授权降权或FBBIK完全伸直代替明确政策。
 
+当前下降响应候选 MUST保持原Handoff事件判定与原清速度分支。当旧速度沿Component Up向上且本帧合法目标低于旧输出超过GeometryEpsilon时，MUST在同一次Spring积分前清除该背向速度，不再要求Handoff。旧向下速度 MUST仍按原Handoff门处理。MUST不重置输出位置、扩大真实硬边界或修改下游Foot/Bend来补偿该变化。
+
 #### Scenario: 原动画弯曲余量大于安全余量
 
 - **WHEN** 动画姿态希望保留更多弯曲，但实际腿长与正式安全余量允许更高骨盆
@@ -49,6 +51,18 @@ Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形�
 - **WHEN** 双脚目标与身体位置使当前骨盆输出超过真实硬可达边界
 - **THEN** 唯一Pelvis响应阶段 MUST保持腿长安全并发布必要的边界调整
 - **AND** MUST不承诺在不变脚目标、身体和腿长的同时绝对连续，也不得另加后置平滑绕过限制
+
+#### Scenario: 同一支撑下目标已降低但旧速度仍向上
+
+- **WHEN** Handoff为None、target低于previousOutput超过GeometryEpsilon且previousVelocity大于零
+- **THEN** 唯一响应 MUST以零输入速度执行原频率的一次Spring，再按原真实硬边界处理结果
+- **AND** 目标、上一输出、Handoff事实和全部Foot目标 MUST不因此换代
+
+#### Scenario: 同一支撑下目标回升但旧速度仍向下
+
+- **WHEN** Handoff为None、target高于previousOutput且previousVelocity小于零
+- **THEN** 本候选 MUST保留原输入速度和Spring规律
+- **AND** MUST不复活已否决的所有方向无Handoff清速度政策
 
 ### Requirement: 骨盆观测必须区分原Pose、修正量和最终世界写回
 

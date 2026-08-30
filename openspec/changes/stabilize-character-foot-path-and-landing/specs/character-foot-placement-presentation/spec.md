@@ -210,6 +210,14 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Verified Ancho
 - **THEN** Transition Runtime MUST建立一次Anchor，State Target MUST一次发布Anchor Position+SupportNormal目标，并由既有World Residual与Correction Response从上一Swing/Current Support输出连续响应Anchor差值
 - **AND** 后续Lock Weight首次完成 MUST按同Event记住资格，即使当前Weight已经回落，Runtime仍 MUST等待位置与穿透容差满足才进入Locked；Event换代或Anchor释放 MUST清除资格，不得新增固定Duration、第二Landing状态、第二Anchor或状态私有Residual
 
+#### Scenario: 同Event首次接触交接继续正式脚高
+
+- **WHEN** 上一相邻表现帧确实消费了正式Next Landing Event的有效Swing Ground目标，本帧首次进入同Event Verified Anchor，且原Response历史未因Source、Profile或World换代失效
+- **THEN** 唯一Interpolation MUST保留上一Swing的Frame、Event与Formal Foot Height，计算`ContactHeightWorldAdvance = normalized(ComponentUp) × (CurrentFormalFootHeight - PreviousFormalFootHeight)`，并仅在这次捕获使用`CapturedBeforeDecay = PreviousWorldOutput + ContactHeightWorldAdvance - SelectedWorldTarget`
+- **AND** Runtime MUST继续在本帧对捕获残差Advance恰好一次；Correction Response历史、速度、完整世界Anchor与切平面内的目标位置 MUST保持既有职责，不得以本次输入推进清零Residual、强贴地或改变Approach可见目标
+- **AND** Diagnostics MUST独立发布准入、上一Frame/Event、前后Formal Foot Height与World Advance，并按新捕获公式对账；重入、非相邻帧、无预测Event、Support不可用及稳定Landing/Locked MUST不执行本次推进
+- **AND** 本项是待同输入Replay裁决的项目候选，不代表已恢复ZZZ同名字段或证明零悬空；与此前纯上一世界输出捕获的差异 MUST保留在实验记录，拒绝候选时恢复该捕获合同
+
 #### Scenario: Action Pose贡献不夺取Foot Goal所有权
 
 - **WHEN** Action Slot对Foot骨骼具有非零Live Pose Contribution，或作者`animation.foot-placement-weight`在动作中变化到0后再恢复

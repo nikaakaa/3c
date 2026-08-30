@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/55";
+        const string Schema = "character-foot-motion-facts/54";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 55;
+        const int AnalyzerVersion = 54;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -357,7 +357,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 bool reentryGeometryAvailable =
                     current.SameEventContactReentryRefreshed &&
-                    current.ContinuityReferenceAvailable &&
+                    current.PreviousResponseOutputAvailable &&
                     current.PlantInterpolationEvaluated &&
                     current.CorrectionResponseEvaluated &&
                     current.ResolvedOutcome == "Ready";
@@ -373,9 +373,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         DeltaSeconds(current),
                         new SortedDictionary<string, double>(StringComparer.Ordinal)
                         {
-                            ["CapturedTargetToContinuityReferenceDistanceMeters"] =
+                            ["CapturedTargetToPreviousResponseDistanceMeters"] =
                                 Vector3.Distance(capturedOutput,
-                                    current.ContinuityReferencePoint),
+                                    current.PreviousResponseOutputPoint),
                             ["ResidualDecayStepMeters"] = Vector3.Distance(
                                 current.PlantWorldResidualCapturedBeforeDecay,
                                 current.PlantWorldResidualAfterDecay),
@@ -384,8 +384,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                     current.DesiredOutputPoint),
                             ["DesiredToResponseStepMeters"] = Vector3.Distance(
                                 current.DesiredOutputPoint, current.ResponseOutputPoint),
-                            ["ContinuityReferenceToResponseStepMeters"] =
-                                Vector3.Distance(current.ContinuityReferencePoint,
+                            ["PreviousResponseToResponseStepMeters"] =
+                                Vector3.Distance(current.PreviousResponseOutputPoint,
                                     current.ResponseOutputPoint),
                             ["ResponseToFinalSoleStepMeters"] = Vector3.Distance(
                                 current.ResponseOutputPoint, current.ResolvedFinalSole)
@@ -1130,7 +1130,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool plantDesiredOutputStepAvailable =
                     previous.PlantInterpolationEvaluated;
                 bool plantResponseOutputStepAvailable =
-                    previous.CorrectionResponseEvaluated;
+                    current.PreviousResponseOutputAvailable;
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
@@ -1148,11 +1148,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["ResponseOutputPointStep"] =
                         plantResponseOutputStepAvailable
                             ? Vector3.Distance(
-                                previous.ResponseOutputPoint,
+                                current.PreviousResponseOutputPoint,
                                 current.ResponseOutputPoint)
                             : 0d,
-                    ["ContinuityReferenceToResponseStepMeters"] = Vector3.Distance(
-                        current.ContinuityReferencePoint, current.ResponseOutputPoint),
                     ["PlantWorldResidualCaptureDelta"] = Vector3.Distance(
                         current.PlantWorldResidualBeforeCapture,
                         current.PlantWorldResidualCapturedBeforeDecay),
@@ -1291,7 +1289,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previousContactOnly ||
                     !current.HasAnchor ||
                     !current.PlantInterpolationEvaluated ||
-                    !current.ContinuityReferenceAvailable ||
+                    !current.PreviousResponseOutputAvailable ||
                     previous.ResolvedOutcome != "Ready" ||
                     current.ResolvedOutcome != "Ready" ||
                     current.ComponentUp.sqrMagnitude <=
@@ -1306,8 +1304,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.Anchor - current.OriginalSole;
                 Vector3 previousVisibleToAnchor =
                     current.Anchor - previous.ResolvedFinalSole;
-                Vector3 continuityReferenceToAnchor =
-                    current.Anchor - current.ContinuityReferencePoint;
+                Vector3 previousResponseToAnchor =
+                    current.Anchor - current.PreviousResponseOutputPoint;
                 Vector3 desiredToResponse =
                     current.ResponseOutputPoint - current.DesiredOutputPoint;
                 Vector3 previousVisibleToFinalOutput =
@@ -1317,7 +1315,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Vector3 finalOutputToAnchor =
                     current.Anchor - current.ResolvedFinalSole;
                 Vector3 expectedCapturedResidual =
-                    current.ContinuityReferencePoint -
+                    current.PreviousResponseOutputPoint -
                     current.PlantSelectedWorldTarget;
                 bool sourceContinuous = string.Equals(
                     previous.SourceIdentity,
@@ -1361,14 +1359,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             up).magnitude,
                     ["PreviousVisibleOutputToAnchorAlongUpMeters"] =
                         Vector3.Dot(previousVisibleToAnchor, up),
-                    ["ContinuityReferenceToAnchorMeters"] =
-                        continuityReferenceToAnchor.magnitude,
-                    ["ContinuityReferenceToAnchorHorizontalMeters"] =
+                    ["PreviousResponseOutputToAnchorMeters"] =
+                        previousResponseToAnchor.magnitude,
+                    ["PreviousResponseOutputToAnchorHorizontalMeters"] =
                         Vector3.ProjectOnPlane(
-                            continuityReferenceToAnchor,
+                            previousResponseToAnchor,
                             up).magnitude,
-                    ["ContinuityReferenceToAnchorAlongUpMeters"] =
-                        Vector3.Dot(continuityReferenceToAnchor, up),
+                    ["PreviousResponseOutputToAnchorAlongUpMeters"] =
+                        Vector3.Dot(previousResponseToAnchor, up),
                     ["CapturedResidualMeters"] =
                         current.PlantWorldResidualCapturedBeforeDecay.magnitude,
                     ["ResidualAfterDecayMeters"] =
@@ -1471,9 +1469,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.OriginalSole),
                     previousVisibleOutput = CharacterFootVectorFact.From(
                         previous.ResolvedFinalSole),
-                    continuityReferencePoint = CharacterFootVectorFact.From(
-                        current.ContinuityReferencePoint),
-                    weightedGoalSole = WeightedGoalSoleFact(current),
+                    previousResponseOutput = CharacterFootVectorFact.From(
+                        current.PreviousResponseOutputPoint),
                     capturedBeforeDecay = CharacterFootVectorFact.From(
                         current.PlantWorldResidualCapturedBeforeDecay),
                     afterDecay = CharacterFootVectorFact.From(
@@ -2123,12 +2120,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             current.PlantPreviousSelectedWorldTarget),
                     plantSelectedWorldTarget = CharacterFootVectorFact.From(
                         current.PlantSelectedWorldTarget),
-                    continuityReferenceAvailable =
-                        current.ContinuityReferenceAvailable,
-                    continuityReferencePoint =
+                    previousResponseOutputAvailable =
+                        current.PreviousResponseOutputAvailable,
+                    previousResponseOutputPoint =
                         CharacterFootVectorFact.From(
-                            current.ContinuityReferencePoint),
-                    weightedGoalSole = WeightedGoalSoleFact(current),
+                            current.PreviousResponseOutputPoint),
                     desiredOutputPoint = CharacterFootVectorFact.From(
                         current.DesiredOutputPoint),
                     responseOutputPoint = CharacterFootVectorFact.From(
@@ -2181,8 +2177,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.SupportDirectionMaximumChangeDegrees,
                     supportDirectionAppliedChangeDegrees =
                         current.SupportDirectionAppliedChangeDegrees,
-                    correctionResponseWeightedGoalSoleTransferred =
-                        current.CorrectionResponseWeightedGoalSoleTransferred,
+                    correctionResponseVisibleOutputTransferred =
+                        current.CorrectionResponseVisibleOutputTransferred,
                     correctionResponseBeforeRebase =
                         current.CorrectionResponseBeforeRebase,
                     correctionResponsePrevious =
@@ -5369,7 +5365,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => !value.PostTransitionEvaluated),
                     reentryOutputFactsUnavailableCount = capture.FootRows.Count(
                         value => value.SameEventContactReentryRefreshed &&
-                            (!value.ContinuityReferenceAvailable ||
+                            (!value.PreviousResponseOutputAvailable ||
                              !value.PlantInterpolationEvaluated ||
                              !value.CorrectionResponseEvaluated ||
                              value.ResolvedOutcome != "Ready")),
@@ -5604,7 +5600,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 target = SupportTargetFact(frame.CurrentSupportTarget)
             },
             positionResponseBasis = PositionResponseBasisFact(frame),
-            weightedGoalSole = WeightedGoalSoleFact(frame),
             supportDirection = new
             {
                 requested = CharacterFootVectorFact.From(frame.SupportDirectionRequested),
@@ -5623,17 +5618,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.CorrectionResponseInitializedThisFrame,
                 initializationReason =
                     frame.CorrectionResponseInitializationReason,
-                continuityReferenceAvailable =
-                    frame.ContinuityReferenceAvailable,
-                continuityReferencePoint = CharacterFootVectorFact.From(
-                    frame.ContinuityReferencePoint),
+                previousOutputAvailable =
+                    frame.PreviousResponseOutputAvailable,
+                previousOutput = CharacterFootVectorFact.From(
+                    frame.PreviousResponseOutputPoint),
                 desiredOutput = CharacterFootVectorFact.From(
                     frame.DesiredOutputPoint),
                 responseOutput = CharacterFootVectorFact.From(
                     frame.ResponseOutputPoint),
                 desired = frame.CorrectionResponseDesired,
-                weightedGoalSoleTransferred =
-                    frame.CorrectionResponseWeightedGoalSoleTransferred,
+                visibleOutputTransferred =
+                    frame.CorrectionResponseVisibleOutputTransferred,
                 beforeRebase = frame.CorrectionResponseBeforeRebase,
                 previous = frame.CorrectionResponsePrevious,
                 current = frame.CorrectionResponseCurrent,
@@ -5858,8 +5853,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             for (int i = 0; i < left.Count; i++)
                 RequirePredictionMotionPair(left[i], right[i]);
-            RequireWeightedGoalSoleHistory(left);
-            RequireWeightedGoalSoleHistory(right);
             FootFrame first = footRows[0];
             int geometryRowCount = ReadGeometry(
                 geometryPath,
@@ -6148,23 +6141,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Float(prefix + "Y"),
                 Float(prefix + "Z"),
                 Float(prefix + "W"));
-            WeightedGoalSoleFrame WeightedGoalSole(string prefix)
-            {
-                int available = Int(prefix + "Available");
-                if (available != 0 && available != 1)
-                    throw new InvalidDataException(
-                        $"Foot Motion {prefix}Available is not a boolean.");
-                return new WeightedGoalSoleFrame
-                {
-                    Available = available == 1,
-                    Frame = Ulong(prefix + "FrameSequence"),
-                    Completion = Ulong(prefix + "CompletionIdentity"),
-                    Side = Cell(prefix + "Side"),
-                    WorldSole = Vector(prefix + "WorldSole"),
-                    PositionWeight = Float(prefix + "PositionWeight"),
-                    RotationWeight = Float(prefix + "RotationWeight")
-                };
-            }
             StepCandidateFrame Candidate(string prefix) =>
                 new StepCandidateFrame
                 {
@@ -6832,12 +6808,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("FootMotionPlantPreviousSelectedWorldTarget"),
                 PlantSelectedWorldTarget =
                     Vector("FootMotionPlantSelectedWorldTarget"),
-                ContinuityReferenceAvailable =
-                    Int("FootMotionContinuityReferenceAvailable") != 0,
-                PreviousWeightedGoalSole = WeightedGoalSole("FootMotionPreviousWeightedGoalSole"),
-                CurrentWeightedGoalSole = WeightedGoalSole("FootMotionCurrentWeightedGoalSole"),
-                ContinuityReferencePoint =
-                    Vector("FootMotionContinuityReferencePoint"),
+                PreviousResponseOutputAvailable =
+                    Int("FootMotionPreviousResponseOutputAvailable") != 0,
+                PreviousResponseOutputPoint =
+                    Vector("FootMotionPreviousResponseOutputPoint"),
                 DesiredOutputPoint =
                     Vector("FootMotionDesiredOutputPoint"),
                 ResponseOutputPoint =
@@ -6884,8 +6858,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionSupportDirectionMaximumChangeDegrees"),
                 SupportDirectionAppliedChangeDegrees =
                     Float("FootMotionSupportDirectionAppliedChangeDegrees"),
-                CorrectionResponseWeightedGoalSoleTransferred =
-                    Int("FootMotionCorrectionResponseWeightedGoalSoleTransferred") != 0,
+                CorrectionResponseVisibleOutputTransferred =
+                    Int("FootMotionCorrectionResponseVisibleOutputTransferred") != 0,
                 CorrectionResponseBeforeRebase =
                     Float("FootMotionCorrectionResponseBeforeRebase"),
                 CorrectionResponsePrevious =
@@ -7179,7 +7153,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantVerticalContinuityOwners");
             RequireLifecycleTransitionFacts(frame);
             RequirePositionResponseBasis(frame);
-            RequireWeightedGoalSoleReferences(frame);
             RequireCurrentSupport(frame);
             RequirePreparedAndSelectedTarget(frame);
             RequirePositionAndSupportResponse(frame);
@@ -7394,9 +7367,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             expectedResponseDirection)
                         : 0f;
                 float expectedResponsePrevious =
-                    frame.CorrectionResponseWeightedGoalSoleTransferred
+                    frame.CorrectionResponseVisibleOutputTransferred
                     ? Vector3.Dot(
-                        frame.ContinuityReferencePoint -
+                        frame.PreviousResponseOutputPoint -
                         frame.OriginalSole,
                         frame.PositionResponseHeightProjection)
                     : frame.CorrectionResponseBeforeRebase;
@@ -7443,12 +7416,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                               frame.CorrectionResponseCurrent -
                               frame.CorrectionResponsePrevious) <=
                           PositionNoiseFloor &&
-                          (!frame.CorrectionResponseWeightedGoalSoleTransferred
+                          (!frame.CorrectionResponseVisibleOutputTransferred
                               ? Math.Abs(
                                   frame.CorrectionResponsePrevious -
                                   frame.CorrectionResponseDesired) <=
                                 PositionNoiseFloor
-                              : frame.ContinuityReferenceAvailable) &&
+                              : frame.PreviousResponseOutputAvailable) &&
                           frame.CorrectionResponseDeltaDirection == "None" &&
                           Math.Abs(
                               frame.CorrectionResponseSelectedSpeed) <=
@@ -7458,7 +7431,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                           PositionNoiseFloor
                         : frame.CorrectionResponseInitializationReason ==
                           "None" &&
-                          frame.ContinuityReferenceAvailable &&
+                          frame.PreviousResponseOutputAvailable &&
                           frame.CorrectionResponseDeltaDirection ==
                           expectedResponseDeltaDirection &&
                           Math.Abs(
@@ -7528,7 +7501,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !FiniteVector(frame.PlantPreviousSelectedWorldTarget) ||
                     !FiniteVector(frame.PlantSelectedWorldTarget) ||
                     !FiniteVector(
-                        frame.ContinuityReferencePoint) ||
+                        frame.PreviousResponseOutputPoint) ||
                     !FiniteVector(frame.DesiredOutputPoint) ||
                     !FiniteVector(frame.ResponseOutputPoint) ||
                     !FiniteVector(frame.PlantWorldResidualBeforeCapture) ||
@@ -7637,9 +7610,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         (frame.CorrectionResponseCurrent -
                          frame.CorrectionResponseDesired)) >
                     PositionNoiseFloor ||
-                    frame.ContinuityReferenceAvailable &&
+                    frame.PreviousResponseOutputAvailable &&
                         Vector3.Distance(
-                            frame.ContinuityReferencePoint,
+                            frame.PreviousResponseOutputPoint,
                             outputBefore) > PositionNoiseFloor ||
                     Vector3.Distance(
                         frame.PlantEffectiveCorrectionAfter,
@@ -7668,7 +7641,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Owners={ownersConsistent} " +
                         $"DesiredOutputError={Vector3.Distance(frame.DesiredOutputPoint, frame.PlantSelectedWorldTarget + frame.PlantWorldResidualAfterDecay):R} " +
                         $"ResponseOutputError={Vector3.Distance(frame.ResponseOutputPoint, frame.DesiredOutputPoint + frame.PositionResponseWorldAxis * (frame.CorrectionResponseCurrent - frame.CorrectionResponseDesired)):R} " +
-                        $"PreviousOutputError={Vector3.Distance(frame.ContinuityReferencePoint, outputBefore):R} " +
+                        $"PreviousOutputError={Vector3.Distance(frame.PreviousResponseOutputPoint, outputBefore):R} " +
                         $"EffectiveResponseError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.ResponseOutputPoint - frame.OriginalSole):R} " +
                         $"InterpolationError={Vector3.Distance(frame.PlantEffectiveCorrectionAfter, frame.InterpolationOutputCorrection):R} " +
                         $"DirectionMagnitude={frame.SupportDirectionApplied.magnitude:R} " +
@@ -8622,118 +8595,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static void RequireWeightedGoalSoleReferences(FootFrame frame)
-        {
-            RequireWeightedGoalSoleReference(frame.PreviousWeightedGoalSole, frame, "Previous");
-            RequireWeightedGoalSoleReference(frame.CurrentWeightedGoalSole, frame, "Current");
-            WeightedGoalSoleFrame current = frame.CurrentWeightedGoalSole;
-            WeightedGoalSoleFrame previous = frame.PreviousWeightedGoalSole;
-            bool capture = frame.PlantInterpolationEvaluated && frame.PlantResidualCaptureReason != "None";
-            bool transfer = frame.CorrectionResponseWeightedGoalSoleTransferred;
-            if (!current.Available || current.Frame != (ulong)frame.Frame ||
-                current.Completion != frame.CompletionIdentity || current.Side != frame.Side ||
-                current.PositionWeight != frame.FinalGoalPositionWeight ||
-                current.RotationWeight != frame.FinalGoalRotationWeight ||
-                previous.Available && (previous.Frame >= (ulong)frame.Frame || previous.Side != frame.Side) ||
-                current.PositionWeight == 0f &&
-                    Vector3.Distance(current.WorldSole, frame.OriginalSole) > PositionNoiseFloor ||
-                transfer != (capture && previous.Available) ||
-                transfer && (!frame.CorrectionResponseEvaluated || !frame.ContinuityReferenceAvailable ||
-                    Vector3.Distance(frame.ContinuityReferencePoint, previous.WorldSole) > RuntimeGeometryEpsilon ||
-                    Vector3.Distance(frame.PlantWorldResidualCapturedBeforeDecay,
-                        previous.WorldSole - frame.PlantSelectedWorldTarget) > RuntimeGeometryEpsilon))
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion weighted Goal Sole reference contract is inconsistent Frame={frame.Frame} Side={frame.Side} " +
-                    $"CurrentAvailable={current.Available} CurrentFrame={current.Frame} " +
-                    $"PreviousAvailable={previous.Available} PreviousFrame={previous.Frame} Capture={capture} Transfer={transfer}.");
-            }
-        }
-
-        static void RequireWeightedGoalSoleReference(
-            WeightedGoalSoleFrame reference, FootFrame frame, string role)
-        {
-            RequireEnum<CharacterFootSide>(reference.Side, $"FootMotion{role}WeightedGoalSoleSide");
-            bool valid = FiniteVector(reference.WorldSole) &&
-                float.IsFinite(reference.PositionWeight) && float.IsFinite(reference.RotationWeight) &&
-                (reference.Available
-                    ? reference.Frame != 0 && reference.Completion != 0 &&
-                        reference.PositionWeight >= 0f && reference.PositionWeight <= 1f &&
-                        reference.RotationWeight >= 0f && reference.RotationWeight <= 1f
-                    : reference.Frame == 0 && reference.Completion == 0 &&
-                        reference.WorldSole.Equals(Vector3.zero) &&
-                        reference.PositionWeight == 0f && reference.RotationWeight == 0f);
-            if (!valid)
-                throw new InvalidDataException(
-                    $"Foot Motion {role} weighted Goal Sole fields are inconsistent Frame={frame.Frame} Side={frame.Side}.");
-        }
-
-        static void RequireWeightedGoalSoleHistory(List<FootFrame> frames)
-        {
-            for (int i = 0; i < frames.Count; i++)
-            {
-                FootFrame current = frames[i];
-                FootFrame previous = i > 0 && Continuous(frames[i - 1], current) &&
-                    frames[i - 1].ProgramIdentity == current.ProgramIdentity &&
-                    frames[i - 1].ProjectionRevision == current.ProjectionRevision &&
-                    frames[i - 1].ProfileRevision == current.ProfileRevision
-                    ? frames[i - 1] : null;
-                current.WeightedGoalSoleHistoryStatus = previous == null
-                    ? WeightedGoalSoleHistoryStatus.PreviousSampleUnavailable
-                    : WeightedGoalSoleHistoryStatus.MatchedPreviousCommittedSample;
-                if (previous == null)
-                    continue;
-                if (!current.PreviousWeightedGoalSole.SameAs(previous.CurrentWeightedGoalSole))
-                    throw new InvalidDataException(
-                        $"Foot Motion previous weighted Goal Sole did not match the committed sample " +
-                        $"Frame={current.Frame} Side={current.Side} PreviousSampleFrame={previous.Frame}.");
-                if (!current.CorrectionResponseEvaluated || !current.CorrectionResponseInitializedBefore ||
-                    !previous.CorrectionResponseEvaluated)
-                    continue;
-                if (Math.Abs(current.CorrectionResponseBeforeRebase - previous.CorrectionResponseCurrent) >
-                        PositionNoiseFloor ||
-                    !current.CorrectionResponseWeightedGoalSoleTransferred &&
-                        (!current.ContinuityReferenceAvailable ||
-                         Vector3.Distance(current.ContinuityReferencePoint, previous.ResponseOutputPoint) >
-                         RuntimeGeometryEpsilon))
-                {
-                    throw new InvalidDataException(
-                        $"Foot Motion persistent Correction Response history is inconsistent " +
-                        $"Frame={current.Frame} Side={current.Side} Transfer={current.CorrectionResponseWeightedGoalSoleTransferred}.");
-                }
-            }
-        }
-
-        static CharacterFootWeightedGoalSoleReferenceFact WeightedGoalSoleReferenceFact(WeightedGoalSoleFrame value) =>
-            new CharacterFootWeightedGoalSoleReferenceFact
-            {
-                available = value.Available,
-                frameSequence = value.Frame.ToString(CultureInfo.InvariantCulture),
-                completionIdentity = value.Completion.ToString(CultureInfo.InvariantCulture),
-                side = value.Side,
-                worldSole = CharacterFootVectorFact.From(value.WorldSole),
-                positionWeight = value.PositionWeight,
-                rotationWeight = value.RotationWeight
-            };
-
-        static CharacterFootWeightedGoalSoleContinuityFact WeightedGoalSoleFact(FootFrame frame) =>
-            new CharacterFootWeightedGoalSoleContinuityFact
-            {
-                previous = WeightedGoalSoleReferenceFact(frame.PreviousWeightedGoalSole),
-                current = WeightedGoalSoleReferenceFact(frame.CurrentWeightedGoalSole),
-                previousSampleStatus = frame.WeightedGoalSoleHistoryStatus.ToString(),
-                continuityReferenceSource = !frame.CorrectionResponseEvaluated
-                    ? "NotEvaluated"
-                    : frame.CorrectionResponseWeightedGoalSoleTransferred
-                        ? "PreviousWeightedGoalSole"
-                        : frame.ContinuityReferenceAvailable ? "PersistentResponseOutput" : "FirstDesiredOutput",
-                transferred = frame.CorrectionResponseWeightedGoalSoleTransferred,
-                currentToFinalPhysicalSoleDistanceMeters = frame.CurrentWeightedGoalSole.Available &&
-                    frame.FinalPhysicalWriteAvailable
-                    ? (double?)Vector3.Distance(frame.CurrentWeightedGoalSole.WorldSole,
-                        (frame.FinalHeel + frame.FinalToe) * 0.5f) : null
-            };
-
         static void RequirePositionResponseBasis(FootFrame frame)
         {
             bool available = frame.PositionResponseBasisAvailable;
@@ -8811,9 +8672,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             float desired = Vector3.Dot(
                 frame.DesiredOutputPoint - frame.OriginalSole,
                 frame.PositionResponseHeightProjection);
-            float previous = frame.CorrectionResponseWeightedGoalSoleTransferred
+            float previous = frame.CorrectionResponseVisibleOutputTransferred
                 ? Vector3.Dot(
-                    frame.ContinuityReferencePoint - frame.OriginalSole,
+                    frame.PreviousResponseOutputPoint - frame.OriginalSole,
                     frame.PositionResponseHeightProjection)
                 : frame.CorrectionResponseBeforeRebase;
             float delta = desired - previous;
@@ -8872,8 +8733,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                      PositionNoiseFloor) ||
                 !initializedThisFrame &&
                     frame.CorrectionResponseInitializationReason != "None" ||
-                frame.CorrectionResponseWeightedGoalSoleTransferred &&
-                    !frame.ContinuityReferenceAvailable ||
+                frame.CorrectionResponseVisibleOutputTransferred &&
+                    !frame.PreviousResponseOutputAvailable ||
                 Math.Abs(
                     frame.CorrectionResponsePrevious - previous) >
                     PositionNoiseFloor ||
@@ -9610,16 +9471,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequireColumns(Dictionary<string, int> indices)
         {
-            foreach (string role in new[] { "Previous", "Current" })
-            {
-                string prefix = "FootMotion" + role + "WeightedGoalSole";
-                RequireColumnGroup(indices, string.Join(",", new[]
-                {
-                    prefix + "Available", prefix + "FrameSequence", prefix + "CompletionIdentity",
-                    prefix + "Side", prefix + "WorldSoleX", prefix + "WorldSoleY", prefix + "WorldSoleZ",
-                    prefix + "PositionWeight", prefix + "RotationWeight"
-                }));
-            }
             string[] required =
             {
                 "SampleIdentity", "ProgramIdentity", "ProjectionRevision",
@@ -9982,10 +9833,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPlantSelectedWorldTargetX",
                 "FootMotionPlantSelectedWorldTargetY",
                 "FootMotionPlantSelectedWorldTargetZ",
-                "FootMotionContinuityReferenceAvailable",
-                "FootMotionContinuityReferencePointX",
-                "FootMotionContinuityReferencePointY",
-                "FootMotionContinuityReferencePointZ",
+                "FootMotionPreviousResponseOutputAvailable",
+                "FootMotionPreviousResponseOutputPointX",
+                "FootMotionPreviousResponseOutputPointY",
+                "FootMotionPreviousResponseOutputPointZ",
                 "FootMotionDesiredOutputPointX",
                 "FootMotionDesiredOutputPointY",
                 "FootMotionDesiredOutputPointZ",
@@ -10088,7 +9939,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionSelectedSupportTargetAvailable,FootMotionSelectedSupportTargetFrameSequence,FootMotionSelectedSupportTargetCompletionIdentity,FootMotionSelectedSupportTargetSide,FootMotionSelectedSupportTargetPositionX,FootMotionSelectedSupportTargetPositionY,FootMotionSelectedSupportTargetPositionZ,FootMotionSelectedSupportTargetNormalX,FootMotionSelectedSupportTargetNormalY,FootMotionSelectedSupportTargetNormalZ,FootMotionSelectedSupportTargetSurfaceIdentity,FootMotionSelectedSupportTargetWorldRevision,FootMotionSelectedSupportTargetKind,FootMotionSelectedSupportTargetPositionSource,FootMotionSelectedSupportTargetPositionFrameSequence,FootMotionSelectedSupportTargetPositionCompletionIdentity,FootMotionSelectedSupportTargetPositionEventIdentity,FootMotionSelectedSupportTargetPositionPathIdentity,FootMotionSelectedSupportTargetNormalSource,FootMotionSelectedSupportTargetNormalFrameSequence,FootMotionSelectedSupportTargetNormalCompletionIdentity,FootMotionSelectedSupportTargetNormalEventIdentity");
             RequireColumnGroup(
                 indices,
-                "FootMotionSupportDirectionRequestedX,FootMotionSupportDirectionRequestedY,FootMotionSupportDirectionRequestedZ,FootMotionSupportDirectionPreviousX,FootMotionSupportDirectionPreviousY,FootMotionSupportDirectionPreviousZ,FootMotionSupportDirectionLimited,FootMotionSupportDirectionMaximumChangeDegrees,FootMotionSupportDirectionAppliedChangeDegrees,FootMotionCorrectionResponseWeightedGoalSoleTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionSupportDirectionAppliedX,FootMotionSupportDirectionAppliedY,FootMotionSupportDirectionAppliedZ");
+                "FootMotionSupportDirectionRequestedX,FootMotionSupportDirectionRequestedY,FootMotionSupportDirectionRequestedZ,FootMotionSupportDirectionPreviousX,FootMotionSupportDirectionPreviousY,FootMotionSupportDirectionPreviousZ,FootMotionSupportDirectionLimited,FootMotionSupportDirectionMaximumChangeDegrees,FootMotionSupportDirectionAppliedChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionSupportDirectionAppliedX,FootMotionSupportDirectionAppliedY,FootMotionSupportDirectionAppliedZ");
             RequireColumnGroup(
                 indices,
                 "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason,CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted,CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted,CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ");
@@ -10572,28 +10423,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool Accepted;
         }
 
-        enum WeightedGoalSoleHistoryStatus
-        {
-            PreviousSampleUnavailable,
-            MatchedPreviousCommittedSample
-        }
-
-        struct WeightedGoalSoleFrame
-        {
-            internal bool Available;
-            internal ulong Frame;
-            internal ulong Completion;
-            internal string Side;
-            internal Vector3 WorldSole;
-            internal float PositionWeight;
-            internal float RotationWeight;
-
-            internal bool SameAs(WeightedGoalSoleFrame other) =>
-                Available == other.Available && Frame == other.Frame && Completion == other.Completion &&
-                Side == other.Side && WorldSole.Equals(other.WorldSole) &&
-                PositionWeight == other.PositionWeight && RotationWeight == other.RotationWeight;
-        }
-
         sealed class FootFrame
         {
             internal string SampleIdentity;
@@ -10928,11 +10757,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool PlantTargetVerticalClamped;
             internal Vector3 PlantPreviousSelectedWorldTarget;
             internal Vector3 PlantSelectedWorldTarget;
-            internal bool ContinuityReferenceAvailable;
-            internal Vector3 ContinuityReferencePoint;
-            internal WeightedGoalSoleFrame PreviousWeightedGoalSole;
-            internal WeightedGoalSoleFrame CurrentWeightedGoalSole;
-            internal WeightedGoalSoleHistoryStatus WeightedGoalSoleHistoryStatus;
+            internal bool PreviousResponseOutputAvailable;
+            internal Vector3 PreviousResponseOutputPoint;
             internal Vector3 DesiredOutputPoint;
             internal Vector3 ResponseOutputPoint;
             internal string PlantResidualCaptureReason;
@@ -10956,7 +10782,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool SupportDirectionLimited;
             internal float SupportDirectionMaximumChangeDegrees;
             internal float SupportDirectionAppliedChangeDegrees;
-            internal bool CorrectionResponseWeightedGoalSoleTransferred;
+            internal bool CorrectionResponseVisibleOutputTransferred;
             internal float CorrectionResponseBeforeRebase;
             internal float CorrectionResponsePrevious;
             internal float CorrectionResponseCurrent;

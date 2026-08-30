@@ -596,6 +596,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 result.LandingReachGoalClampDistance;
             CharacterFootLifecycleTransitionFact lifecycle =
                 result.LifecycleTransition;
+            CharacterFootPositionResponseBasis positionBasis =
+                lifecycle.PositionResponseBasis;
+            PositionResponseBasisAvailable = positionBasis.IsValid;
+            PositionResponseWorldAxis = positionBasis.WorldAxis;
+            PositionResponseHeightProjection = positionBasis.HeightProjection;
+            PositionResponseWorldUnitsPerPoseUnit =
+                positionBasis.WorldUnitsPerPoseUnit;
             CharacterFootContactHistoryFact previousContext =
                 lifecycle.PreviousContext;
             CharacterFootContactHistoryFact currentContext =
@@ -825,16 +832,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.CorrectionResponseInitializationReason.ToString();
             CorrectionResponseDesired =
                 path.CorrectionResponseDesired;
-            CorrectionResponseRequestedDirection =
-                path.CorrectionResponseRequestedDirection;
-            CorrectionResponsePreviousDirection =
-                path.CorrectionResponsePreviousDirection;
-            CorrectionResponseDirectionLimited =
-                path.CorrectionResponseDirectionLimited;
-            CorrectionResponseMaximumDirectionChangeDegrees =
-                path.CorrectionResponseMaximumDirectionChangeDegrees;
-            CorrectionResponseAppliedDirectionChangeDegrees =
-                path.CorrectionResponseAppliedDirectionChangeDegrees;
+            SupportDirectionRequested =
+                path.SupportDirectionRequested;
+            SupportDirectionPrevious =
+                path.SupportDirectionPrevious;
+            SupportDirectionLimited =
+                path.SupportDirectionLimited;
+            SupportDirectionMaximumChangeDegrees =
+                path.SupportDirectionMaximumChangeDegrees;
+            SupportDirectionAppliedChangeDegrees =
+                path.SupportDirectionAppliedChangeDegrees;
             CorrectionResponseVisibleOutputTransferred =
                 path.CorrectionResponseVisibleOutputTransferred;
             CorrectionResponseBeforeRebase =
@@ -843,8 +850,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.CorrectionResponsePrevious;
             CorrectionResponseCurrent =
                 path.CorrectionResponseCurrent;
-            CorrectionResponseDirection =
-                path.CorrectionResponseDirection;
+            SupportDirectionApplied =
+                path.SupportDirectionApplied;
             CorrectionResponseDeltaDirection =
                 path.CorrectionResponseDeltaDirection.ToString();
             CorrectionResponseSelectedSpeed =
@@ -892,6 +899,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool LandingReachAvailable { get; }
         public bool LandingReachGoalClamped { get; }
         public float LandingReachGoalClampDistance { get; }
+        public bool PositionResponseBasisAvailable { get; }
+        public Vector3 PositionResponseWorldAxis { get; }
+        public Vector3 PositionResponseHeightProjection { get; }
+        public float PositionResponseWorldUnitsPerPoseUnit { get; }
         public bool LifecycleTransitionEvaluated { get; }
         public bool PreviousLockRequestAvailable { get; }
         public bool PreviousLockRequested { get; }
@@ -1051,16 +1062,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool CorrectionResponseInitializedThisFrame { get; }
         public string CorrectionResponseInitializationReason { get; }
         public float CorrectionResponseDesired { get; }
-        public Vector3 CorrectionResponseRequestedDirection { get; }
-        public Vector3 CorrectionResponsePreviousDirection { get; }
-        public bool CorrectionResponseDirectionLimited { get; }
-        public float CorrectionResponseMaximumDirectionChangeDegrees { get; }
-        public float CorrectionResponseAppliedDirectionChangeDegrees { get; }
+        public Vector3 SupportDirectionRequested { get; }
+        public Vector3 SupportDirectionPrevious { get; }
+        public bool SupportDirectionLimited { get; }
+        public float SupportDirectionMaximumChangeDegrees { get; }
+        public float SupportDirectionAppliedChangeDegrees { get; }
         public bool CorrectionResponseVisibleOutputTransferred { get; }
         public float CorrectionResponseBeforeRebase { get; }
         public float CorrectionResponsePrevious { get; }
         public float CorrectionResponseCurrent { get; }
-        public Vector3 CorrectionResponseDirection { get; }
+        public Vector3 SupportDirectionApplied { get; }
         public string CorrectionResponseDeltaDirection { get; }
         public float CorrectionResponseSelectedSpeed { get; }
         public float CorrectionResponseAppliedDelta { get; }

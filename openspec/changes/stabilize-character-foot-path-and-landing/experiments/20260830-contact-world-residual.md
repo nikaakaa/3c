@@ -29,3 +29,11 @@ VerifiedSupport的VerifiedAnchor、LockedFullAnchor和LockedSliding统一采用`
 Runtime与唯一公开DTO已经完成：Contact位置不再消费scalar，原Plant Capture/Decay不变，Support Direction保持原10度历史，退出Release按实际DomainTransferred同步q。删除Sliding误差状态、12标量出口及Tangential枚举；只保留三个分域事实。Runtime规定flags构建27个既有依赖/项目警告、0错误，build-server shutdown完成；Editor迁移和Replay尚未完成，不声明效果。
 
 03:54包的2086行按Frame/Side与155326一一对应，OriginalSole XYZ逐值完全相同；1031右脚原状态UnlockedSupport，物理Heel/Toe中心距1.44平面32.547毫米。旧samples SHA256为`A5EB967B9FEDEB5953DEDB2CB98814326A275CFDB1E57C9BD137E2617D655A8E`。旧包ProjectionRevision=`808cf24fefe613e5e9ef8944cb3e671720efa52b7d64c0b8bef0331cb72489df`，已用`git grep`核对`23578bb`内`CorinCharacterPipelineDefinition.PresentationProjection.asset:27`完全相同，不只依据采样时间。
+
+历史可比性边界：03:54与155326共同Body/时钟字段相同，但Foot Motion已跨迁移；Step Time有1182行变化，Step Distance432行，Contact Event availability/ordinal/位置与Phase各206行变化，Foot Height129行变化且最大0.313毫米。不能声称历史版所有正式Foot输入与当前完全相同，也不能把旧696列/旧规则评分与当前规则直接比成单变量收益。当前候选仍须与155326同一正式输入控制核对。
+
+## 当前交付状态
+
+Runtime候选`eb5fb05`，Diagnostics独立提交`5d858bc`，唯一版本facts57/Analyzer57/diagnosis26。Editor规定flags构建57个既有警告、0错误，构建后shutdown完成；change与全量strict为94/94。删除12个SlidingResponse列，只保留3个Domain事实，旧56废弃列与旧52缺列均按typed拒绝，不覆写旧证据。原37项质量与七维评分不变。
+
+2026-08-30 18:20前后的正式工具状态仍为Unity Play、Trace Idle、无采样/Finalizing。此Play不属于本轮启动的回放，主任务没有停止、Refresh或加载新代码，已请求用户回到Edit。新Replay尚未运行，173423只是旧前驱，不能引用它宣称本次候选效果。下一步仅在Edit加载完整候选并用既有精确Record采样，不新增角色、测试或查询入口。

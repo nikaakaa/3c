@@ -36,7 +36,7 @@
 
 Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形成唯一双腿硬区间。原动画额外弯曲余量 MUST只属于目标姿态偏好，不得再形成另一份输出硬夹紧。完整边界 MUST交给同一骨盆响应阶段，外部Module不得在其后再次改写Pelvis输出。
 
-系统 MUST继续只持有一份根Bank内Spring状态、使用现有正式响应配置并保留Handoff事件判定。输出触界时 MUST保留腿长安全并处理朝外速度；几何不可达 MUST通过既有typed Reach/Goal保护表达，不得以悬空、默认目标、未授权降权或FBBIK完全伸直代替明确政策。
+系统 MUST继续只持有一份根Bank内Spring状态、使用现有正式响应配置和Handoff规则。输出触界时 MUST保留腿长安全并处理朝外速度；几何不可达 MUST通过既有typed Reach/Goal保护表达，不得以悬空、默认目标、未授权降权或FBBIK完全伸直代替明确政策。
 
 #### Scenario: 原动画弯曲余量大于安全余量
 
@@ -65,19 +65,3 @@ Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形�
 - **WHEN** Root、原动画和Pelvis修正同时变化
 - **THEN** Diagnostics MUST分别表达最终世界点、组件点和相对修正，不把其中一项直接命名成另一项的跳变
 - **AND** 必要阶段缺失 MUST标Unavailable，不改质量规则或用占位零值宣布通过
-
-### Requirement: 骨盆响应必须独立校验旧速度与当前目标方向
-
-唯一Pelvis响应 MUST先按完整正式硬Reach确定本帧target，再用target-previousOutput判断已有速度是否背向目标。当方向差绝对值超过既有GeometryEpsilon且previousVelocity与该方向差乘积小于零时，Spring输入速度 MUST清零，不得等待新的Handoff事件。Handoff事实、位置起点、频率、一次Spring积分及最终硬边界处理 MUST保持各自职责，不得借清速度重置位置或另建响应。
-
-#### Scenario: 同支撑同事件时旧速度背向新目标
-
-- **WHEN** Handoff为None，但有效本帧目标低于上一输出且旧速度仍向上，或相反
-- **THEN** 响应 MUST将本帧输入速度清零，并从原位置按正式频率向目标推进
-- **AND** MUST保留Handoff为None的事实，不伪造支撑/事件换代
-
-#### Scenario: 同向速度或小量目标差
-
-- **WHEN** 旧速度未背向本帧目标，或目标差未超过既有GeometryEpsilon
-- **THEN** 响应 MUST沿用旧速度，不新增清零阈值或目标范围夹紧
-- **AND** 没有上一状态 MUST继续按原初始化处理，不伪造历史速度

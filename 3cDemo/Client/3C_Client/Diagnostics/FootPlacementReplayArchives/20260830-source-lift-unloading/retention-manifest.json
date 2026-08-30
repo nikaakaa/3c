@@ -1,0 +1,159 @@
+{
+  "run": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526",
+  "sourceDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526",
+  "archiveFile": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-source-lift-unloading/20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526.zip",
+  "archiveBytes": 15831599,
+  "archiveSha256": "91EFECB4E2B23E5A47664208804D78440FD63E51996798AEC97F09CC1FC36FBB",
+  "verifiedFileCount": 12,
+  "sourceFileCount": 12,
+  "files": [
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/facts.json",
+      "bytes": 119039903,
+      "sha256": "33F27D6051B2161BC817232B1844E139A5678A852CECC54F224BDFDA374FFA92"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/ground-path-geometry.csv",
+      "bytes": 7840361,
+      "sha256": "49AD4A1B9BF8A82ABEB159D3EA0412C20C6CF5D71CA092B889BD9FF3A40E44AC"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/samples.csv",
+      "bytes": 18043640,
+      "sha256": "D42C4D4DF49E216342FFC38275359B6CAFF4C7FDE0BBB57A1475ABF075AE3222"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/contact-plane-penetration.json",
+      "bytes": 50958,
+      "sha256": "D1A5728E6D92358B8F57FAB83B13FAD26123931160388B8669C3B3036701DE89"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/landing-leg-extension.json",
+      "bytes": 16008,
+      "sha256": "1EF20718A6770441ACFD79371ABA6D11C79E19FAE73CF95C44AB7F2289F8EE69"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "C7A06C06218F723DFCB5166EA310A903723F5526EFD18C5246A93F2137960EA3"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/landing-path-continuity.json",
+      "bytes": 60971,
+      "sha256": "8E29CB77DBEBD98CBE345A68AD2797820143CCC9FC905C4C9B0F10080A3D8871"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/landing-state-consistency.json",
+      "bytes": 729721,
+      "sha256": "15E7C2C9C16B3AE23312CA64B54F59ADC1823C8BE3AB0F569A3580644423E4C0"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/locked-sole-motion.json",
+      "bytes": 10237,
+      "sha256": "6E9A34DFB435622D0562AFD335D9BA435F6152B3AD75E29BF5F24439F10EEDEE"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/quality-score.json",
+      "bytes": 24857,
+      "sha256": "60CF37603A939539BB71B397565C063BF02AAD81ED36D8145A911D37B2827F67"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "F921B429D4AC76F7C6283D7178B8559E93258F1C1F84081A1D8E61F0BB9B30B1"
+    },
+    {
+      "path": "20260830-212054-483-ae52b0b5bd714454adf3e69f15f29526/diagnoses/swing-path-jitter.json",
+      "bytes": 1740500,
+      "sha256": "A7E55CC4846500D4BF9B80438924C86B95C01338916722D05C1D8445A2674D7C"
+    }
+  ],
+  "proofSource": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260830-212302-437-65bf1c87e57343e3b8a13b0881e4ffe6.json",
+  "proofFile": "candidate-proof.json",
+  "proofSha256": "2DCAEAF08D5CB8CE5A993DAB3AB73488D7023BE11FCEE97383C9D48FC4452C83",
+  "preservedRunDirectoryCount": 110,
+  "runtimeCommits": [
+    "f8170e4876c5080e59e9b0e1b140bf2b699d1138",
+    "0d40ba00fccb3b03ef4c10f487380746b0ad4866",
+    "e5b8fd3b01062efc17dfd564e56e264b78073544"
+  ],
+  "diagnosticsCommit": "d8da44228f107184980fab6d5d4cfebdbde1606f",
+  "factsSchema": "character-foot-motion-facts/58",
+  "diagnosisSchema": "character-foot-diagnosis-file/27",
+  "qualityScoreSchema": "character-foot-quality-score/1",
+  "record": {
+    "traceId": "43357ff3cd384e5cba75d2c31175b116",
+    "sourcePath": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/CharacterInputTraces/20260827-183705-081-43357ff3cd384e5cba75d2c31175b116.json",
+    "sha256": "24D97232F35246C0B85A003B5980AC8F199D6FF63E9F74A0001B082F57EB89A6"
+  },
+  "comparison": {
+    "referenceRun": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+    "referenceRuntimeCommit": "eb5fb054f4482ee68b6dda4b324ce77044bc578a",
+    "referenceDiagnosticsCommit": "5d858bcab5270d939e28f358af428a58f26ad3bf",
+    "officialProofDirectlyMatchesReference": false,
+    "officialProofComparedRun": "20260830-173549-278-2457635ffa61405782c6cf9ee0ad26d9",
+    "officialProofMatchedFrames": 1044,
+    "officialProofDivergentFrames": 0,
+    "footSampleRows": 2086,
+    "footSampleFrames": 1043,
+    "candidateCsvColumns": 1151,
+    "matchedInputSourceClockProfileColumnCount": 218,
+    "geometryRows": 50195,
+    "geometryDifferences": "仅4个跨运行实例身份列，非几何数值；不据此把全部Identity忽略"
+  },
+  "decision": {
+    "status": "候选未通过保留193957脚部收益的约束；当前仅保留实验代码与证据，不替代对照版",
+    "regression": "骨盆仍有15次超过50毫米强制下降；同域Swing新增L339/L515/R611厘米级扰动；固定525 Contact帧整脚间隙增加",
+    "runtimeRolledBack": false,
+    "goalWeightPolicyChanged": false,
+    "requiresSeparateDecision": "继续处理Goal位置约束有效性会改变现有权重政策，不能计入本次卸载单变量"
+  },
+  "auditSummary": {
+    "pelvis": [
+      {
+        "pairs": 1042,
+        "over20": 162,
+        "over50": 30,
+        "max": 0.0893616679
+      },
+      {
+        "pairs": 1042,
+        "over20": 120,
+        "over50": 15,
+        "max": 0.0820103888
+      }
+    ],
+    "fixedContact": [
+      {
+        "count": 525,
+        "gapAbove10": 178,
+        "depthAbove10": 77,
+        "depthAbove50": 6,
+        "maxGap": 0.3493782200000002,
+        "maxDepth": 0.14281487000000004,
+        "release": 0
+      },
+      {
+        "count": 525,
+        "gapAbove10": 192,
+        "depthAbove10": 48,
+        "depthAbove50": 6,
+        "maxGap": 0.35338782999999996,
+        "maxDepth": 0.14281487000000004,
+        "release": 40
+      }
+    ],
+    "triggerCount": 26,
+    "stableSwingPeakExtraStepMillimeters": {
+      "reference": 36.401,
+      "candidate": 103.36
+    },
+    "unchangedRulesTargetCount": 37,
+    "qualityScore": {
+      "reference": 61.9,
+      "candidate": 56.7,
+      "usedAsSoleDecision": false
+    }
+  },
+  "retention": "原始样本、诊断、Record与193957目录不删除不覆盖；ZIP和Proof为本地证据副本，不是第二采样器、诊断器或Runtime配置。"
+}

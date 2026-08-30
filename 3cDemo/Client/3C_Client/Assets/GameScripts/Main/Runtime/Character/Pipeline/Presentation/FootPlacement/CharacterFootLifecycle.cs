@@ -389,14 +389,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float rotationWeight = hasContact
                 ? frame.FootPlacementWeight * frame.LockRequest.Weight
                 : 0f;
-            bool positionRequired = outputCorrection.sqrMagnitude >
-                                    CharacterFootConstraintMath.GeometryEpsilon *
-                                    CharacterFootConstraintMath.GeometryEpsilon ||
-                                    rotationWeight >
-                                    CharacterFootConstraintMath.GeometryEpsilon;
-            float positionWeight = positionRequired
-                ? frame.FootPlacementWeight
-                : 0f;
+            float positionWeight = frame.FootPlacementWeight;
             CharacterFootPlacementAnimatedFootPose animatedFoot =
                 frame.AnimatedFoot;
             if (!TryResolveFootGoalPose(

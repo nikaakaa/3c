@@ -395,25 +395,25 @@ State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一�
 - **THEN** Current Support MUST继续进入与Locomotion相同的Selected Target、Target Height、World Residual、Correction Response与Goal链
 - **AND** MUST不关闭Foot Placement、清零Correction Response、切换攻击专用平滑器或在Final Pose后增加低通
 
-### Requirement: Locked Sliding必须按世界目标误差推进位置响应
+### Requirement: 正式Contact必须由完整世界残差唯一接管位置
 
-Correction Response MUST仍为唯一Owner，但位置History MUST显式区分`AnimationRelativeScalar`与`SlidingWorldError`，同帧只可消费一个域。本spec其它关于标量History、q、c与位置轴的响应公式仅适用于AnimationRelativeScalar；本帧实际Plant Target Kind为LockedSliding时 MUST使用SlidingWorldError，不能从Post后顶层State推断。五种状态、转场、Anchor、Sliding目标生成、Target Height、Plant World Residual、Support Direction角历史与旋转权重 MUST不因此改变。
+唯一Interpolation的位置History MUST显式区分`AnimationRelativeScalar`与`ContactWorldResidual`。本spec其它scalar、q、c及其速度公式仅适用于AnimationRelativeScalar；实际Interpolation Policy为VerifiedSupport且目标为VerifiedAnchor、LockedFullAnchor或LockedSliding时 MUST使用ContactWorldResidual。五态、Anchor、目标几何、Target Height、Direction角历史与旋转权重 MUST保持原合同。
 
-Sliding期望D MUST仍等于SelectedWorldTarget加本帧原Plant残差。进入域或已有正式Plant Capture时，E MUST从上一实际Interpolation Output减D取得完整XYZ；稳定帧 MUST沿用持久E，不得按动画基准或法线变化重新捕获。正dt且E非零时 MUST恰好一次MoveTowards(E,zero,speed×dt)，输出O MUST等于D加推进后的E。速度 MUST按待修正位移在ComponentUp上的正/负/纯横向选择正式Increase/Decrease/两档较小预算；数值配置不变。达到零后D保持不变时O MUST保持不变，不再受动画B的上下变化影响。
+Contact的正式换代 MUST从上一实际Interpolation Output捕获完整PlantWorldResidual，本帧按原HalfLife推进一次并使用原完整向量完成容差。唯一输出 MUST为`O=D=SelectedWorldTarget+PlantWorldResidualAfterDecay`，不得再次叠加动画相对scalar或第二Sliding世界误差。禁止扣FormalFootHeight、清残差Y、把当前Animated Sole与旧Correction相加冒充上一世界输出。此域不承诺接触瞬间归零或零穿透。
 
-正常退出到其它Plant或Releasing时，Runtime MUST先确认上一完整O已由原有Plant/Release目标残差捕获并同帧推进，再同步scalar为本帧q，不额外推进scalar一步。该行为 MUST发布DomainTransferred而非伪造初始化；缺少完整捕获 MUST typed拒绝，不以投影一个scalar丢弃其余位移。未初始化和Hard Ownership Loss MUST继续原有初始化/Reset合同；新域及历史 MUST随同一根Bank保留或清除。
+Contact内部目标换代 MUST只经同一Plant残差。正常退出到Releasing时 MUST先确认上一完整O由原Release残差捕获并推进，再同步scalar为本帧q，退出帧不得额外限速；此行为 MUST发布DomainTransferred而非初始化。缺少完整捕获 MUST typed拒绝，硬失权及lineage失效继续原Reset。
 
-Diagnostics MUST公开当前/上一域、移交、E捕获原因、转移前/推进前/推进后、实际推进与最大步长。World域的scalar字段 MUST标为未执行占位，不能代入旧公式或当成零响应样本；Direction History、D、完整Residual、O与EffectiveCorrection公式仍须核对。真实Physical、Gap、穿透、质量规则与评分 MUST不因域迁移改变。
+Diagnostics MUST保留当前/上一域、移交、完整Plant Capture/Decay/Completion和真实前后输出，删除废弃Sliding误差字段和旧枚举，不保留兼容列。Contact的scalar数值 MUST为未执行占位，不能当作零响应样本；Direction History仍须校验。Physical、Gap、穿透、质量规则与评分 MUST不变。
 
-#### Scenario: Sliding目标高度不变且世界误差已归零
+#### Scenario: Contact目标与残差已到位
 
-- **WHEN** 实际TargetKind为LockedSliding、D高度不变且E为零，而原动画Sole升高
+- **WHEN** VerifiedSupport的SelectedWorldTarget不变且PlantWorldResidual为零，而原动画Sole升高
 - **THEN** O MUST继续保持D高度，不因动画相对修正速度不足再次离地
 - **AND** 水平目标、Anchor身份与Support旋转输入 MUST保持既有规则
 
-#### Scenario: Sliding退出并交接到Release
+#### Scenario: Contact退出并交接到Release
 
-- **WHEN** Sliding进入Releasing且原Release入口捕获上一完整Interpolation Output
+- **WHEN** Contact进入Releasing且原Release入口捕获上一完整Interpolation Output
 - **THEN** 完整误差 MUST由Release残差承接，scalar只在本帧D上同步，DomainTransferred为true
 - **AND** 零dt时Response输出 MUST保持完整上一O，不得只保持法向分量
 

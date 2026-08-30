@@ -563,8 +563,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool plantTargetVerticalClamped;
         public CharacterFootVectorFact plantPreviousSelectedWorldTarget;
         public CharacterFootVectorFact plantSelectedWorldTarget;
-        public bool previousResponseOutputAvailable;
-        public CharacterFootVectorFact previousResponseOutputPoint;
+        public bool continuityReferenceAvailable;
+        public CharacterFootVectorFact continuityReferencePoint;
+        public CharacterFootWeightedGoalSoleContinuityFact weightedGoalSole;
         public CharacterFootVectorFact desiredOutputPoint;
         public CharacterFootVectorFact responseOutputPoint;
         public string plantResidualCaptureReason;
@@ -588,7 +589,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool supportDirectionLimited;
         public double supportDirectionMaximumChangeDegrees;
         public double supportDirectionAppliedChangeDegrees;
-        public bool correctionResponseVisibleOutputTransferred;
+        public bool correctionResponseWeightedGoalSoleTransferred;
         public double correctionResponseBeforeRebase;
         public double correctionResponsePrevious;
         public double correctionResponseCurrent;

@@ -283,7 +283,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
             "StrideStartX,StrideStartY,StrideStartZ,StrideEndX,StrideEndY,StrideEndZ," +
             "StrideSampledGroundX,StrideSampledGroundY,StrideSampledGroundZ," +
-            "StridePoseRootPositionX,StridePoseRootPositionY,StridePoseRootPositionZ," +
+            "PelvisPoseInputAvailable,StridePoseRootPositionX,StridePoseRootPositionY,StridePoseRootPositionZ," +
             "StrideAnimatedPelvisX,StrideAnimatedPelvisY,StrideAnimatedPelvisZ," +
             "StrideAnimatedPelvisComponentPositionX,StrideAnimatedPelvisComponentPositionY,StrideAnimatedPelvisComponentPositionZ," +
             "PelvisHeightTargetAvailable,PelvisHeightTargetComponentUpX,PelvisHeightTargetComponentUpY,PelvisHeightTargetComponentUpZ," +
@@ -300,7 +300,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
             "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
             "FinalPelvisGoalX,FinalPelvisGoalY,FinalPelvisGoalZ," +
-            "FinalPhysicalPelvisComponentPositionX,FinalPhysicalPelvisComponentPositionY,FinalPhysicalPelvisComponentPositionZ,FinalPhysicalPelvisGoalResidual," +
+            "FinalPhysicalPelvisComponentPositionX,FinalPhysicalPelvisComponentPositionY,FinalPhysicalPelvisComponentPositionZ," +
+            "FinalPhysicalPelvisWorldPositionX,FinalPhysicalPelvisWorldPositionY,FinalPhysicalPelvisWorldPositionZ,FinalPhysicalPelvisGoalResidualAvailable,FinalPhysicalPelvisGoalResidual," +
             "FinalIkSolverAvailable,FinalIkSucceeded,FinalIkFrameSequence,FinalIkInputCompletionIdentity,FinalIkOutputCompletionIdentity," +
             "FinalIkBackendIdentity,FinalIkRigId,FinalIkRigRevision,FinalIkProfileId,FinalIkProfileRevision,FinalIkFailure,FinalIkAppliedGoalCount," +
             "FinalIkEffectorAvailable,FinalIkEffectorSlot,FinalIkTargetPositionX,FinalIkTargetPositionY,FinalIkTargetPositionZ," +
@@ -717,7 +718,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ulong physicalWriteCompletionIdentity,
                 Vector3 physicalAnkleComponentPosition,
                 Quaternion physicalAnkleComponentRotation,
-                Vector3 physicalPelvisComponentPosition)
+                Vector3 physicalPelvisComponentPosition,
+                Vector3 physicalPelvisWorldPosition)
             {
                 Solver = solver;
                 Pelvis = pelvis;
@@ -728,6 +730,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PhysicalAnkleComponentPosition = physicalAnkleComponentPosition;
                 PhysicalAnkleComponentRotation = physicalAnkleComponentRotation;
                 PhysicalPelvisComponentPosition = physicalPelvisComponentPosition;
+                PhysicalPelvisWorldPosition = physicalPelvisWorldPosition;
             }
 
             internal CharacterFullBodyIkSolverDiagnostics Solver { get; }
@@ -742,6 +745,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 PhysicalAnkleComponentPosition { get; }
             internal Quaternion PhysicalAnkleComponentRotation { get; }
             internal Vector3 PhysicalPelvisComponentPosition { get; }
+            internal Vector3 PhysicalPelvisWorldPosition { get; }
         }
 
         sealed class PendingFrame
@@ -1198,7 +1202,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.PhysicalWriteCompletionIdentity,
                         placement.LeftPhysicalAnkleComponentPosition,
                         placement.LeftPhysicalAnkleComponentRotation,
-                        placement.PhysicalPelvisComponentPosition),
+                        placement.PhysicalPelvisComponentPosition,
+                        placement.PhysicalPelvisWorldPosition),
                     new FootIkCapture(
                         placement.Solver,
                         placement.Pelvis,
@@ -1208,7 +1213,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         placement.PhysicalWriteCompletionIdentity,
                         placement.RightPhysicalAnkleComponentPosition,
                         placement.RightPhysicalAnkleComponentRotation,
-                        placement.PhysicalPelvisComponentPosition),
+                        placement.PhysicalPelvisComponentPosition,
+                        placement.PhysicalPelvisWorldPosition),
                     CaptureFootStepObservation(debugView.PosePlan),
                     placement.PhysicalPelvisComponentPosition,
                     new RootHierarchyCapture(s_TargetRootHierarchy),
@@ -2347,6 +2353,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.StrideStart);
             Add(row, stride.StrideEnd);
             Add(row, stride.SampledGround);
+            Add(row, stride.PoseInputAvailable);
             Add(row, stride.PoseRootPosition);
             Add(row, stride.AnimatedPelvis);
             Add(row, stride.AnimatedPelvisComponentPosition);
@@ -2428,11 +2435,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.PositionWeight);
             Add(row, frame.PelvisGoal.ComponentPosition);
             Add(row, ik.PhysicalPelvisComponentPosition);
+            Add(row, ik.PhysicalPelvisWorldPosition);
             Vector3 expectedPhysicalPelvis = stride.AnimatedPelvisComponentPosition +
                 frame.PelvisGoal.ComponentPosition * frame.PelvisGoal.PositionWeight;
+            bool pelvisGoalResidualAvailable = ik.PhysicalWriteAvailable &&
+                ik.PhysicalWriteCompletionIdentity == frame.CompletionIdentity &&
+                stride.PoseInputAvailable && frame.PelvisGoal.PositionWeight > 0f;
+            Add(row, pelvisGoalResidualAvailable);
             Add(
                 row,
-                ik.PhysicalWriteAvailable && frame.PelvisGoal.PositionWeight > 0f
+                pelvisGoalResidualAvailable
                     ? Vector3.Distance(
                         ik.PhysicalPelvisComponentPosition,
                         expectedPhysicalPelvis)

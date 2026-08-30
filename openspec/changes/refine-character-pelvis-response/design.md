@@ -24,6 +24,8 @@ Resolved有效目标与现有Goal作者权重语义一致：作者0不让不可�
 
 本步只替换目标生产，保留响应/Reach以便独立比较。下一步才改变硬边界职责。
 
+Runtime用不可变`CharacterFootPelvisHeightTarget`保存本次真正消费的Component Up、左右动画Sole、左右按正式Goal权重解析的目标Sole、两份最低高度和有符号请求。输入仍来自本帧Resolved→既有Goal编码/基线混合，不来自最后Physical Pose；保留这一输入路径也保持作者0及极小权重的原编码语义。`HeightTargetAvailable=false`明确表示该帧未消费高度公式，零字段仅为无测量占位；后续Reach不能反写这些输入。旧RawPelvisDelta、RootRelativeGroundTargetAlongUp、SoleClearanceLiftAlongUp和UnclampedSpringTarget命名删除，以HeightTarget与RequestedOffsetAlongUp表达真实用途。只被旧下降地形公式使用的Stride私有SwingTimeToLanding传递同时删除，正式Foot Motion时钟不动。
+
 ## 第3步：一次处理可达性与响应
 
 同帧typed Reach Request提供Hip、有效Ankle目标、真实腿长、正式安全余量和lineage。所有实际参与的腿先形成唯一硬区间，进入现有Pelvis模块后一次用于目标和响应合法性。原动画弯曲余量可形成目标偏好，但不再缩小另一份最终输出硬区间。

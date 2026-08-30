@@ -1,0 +1,79 @@
+{
+  "runtimeRestore": "1c0a283c7df411796440342033f372f7ca2c666e",
+  "diagnosticsRestore": "663c5f942b96acc8c2c3812c3c5c06f587a81d5e",
+  "run": "20260831-035643-027-7f16a02676e741caa94d1f3bc3c6cbd9",
+  "referenceRun": "20260831-025450-166-8db33f64db784e89b406d332ce778ab8",
+  "record": "43357ff3cd384e5cba75d2c31175b116",
+  "zipBytes": 16731393,
+  "zipSha256": "49C07E601278360CB739D6C61B99443364EFC207E80A5B4AA82258F3922D6DEA",
+  "proofSha256": "037833FC162FD8AEE7E99F51FD20CF76D53C96DF20FAE8637C5F48041F38143A",
+  "files": [
+    {
+      "path": "facts.json",
+      "bytes": 122120546,
+      "sha256": "002B08C71883028BA25778B33EADBB0A12CBF51E099DBC7E10A79C3A84473968"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 7889081,
+      "sha256": "064052BEB67AB985B125216F36CA4DF8C7B246397B83C5BFCDEFC2B12DBF17A5"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19298124,
+      "sha256": "C64FA835F925C7CDCBD0046F366DE6F61806AE2BB367F6A9F5F22CE19312CEDE"
+    },
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 51390,
+      "sha256": "9B8C89D5905642434515618ECB916A282046957E1F7BD69B523262DA7503E464"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 6508067,
+      "sha256": "2E84AF5AE62DBC5339E571E6B3348BB75752CF336D30877B39193DC0BCBA99EF"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "B8E769CB9B9F9133A167E10894D1B596C107BE7F2E263972F9A6A9DBFD06FE3E"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 61001,
+      "sha256": "D580A607B62C2741CB96E1174BC26F32F6D15866F26A300C84789449943B05FC"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 733803,
+      "sha256": "A0E10B087596F4CAE9596EE409EF3558DA4C4E768CAE519181249EECABDD7C2B"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "19315A229BF7DB266078EE1F0FF61E0C84E524B78A22F8D458A9F835A188F225"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24821,
+      "sha256": "A3942C14F1A9AFA13A1A84CE289017201B942CA646743B89E5F4E5BF7DE41EF7"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "83B30B3DE12EB00883A6BD43B811B57F553DC7D9474D197E4A52F40E4CD69D08"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 1745274,
+      "sha256": "3813711D9C3ECEA6372CC4A6DF2A28900115964E1112126E3FD4C4512AA2E995"
+    }
+  ],
+  "factsVersion": 62,
+  "diagnosisVersion": 31,
+  "officialMatchedFrames": 1044,
+  "independentReference": "025450",
+  "exactNonIdentityColumns": 1197,
+  "identityColumns": 24,
+  "restorationMotionProven": true
+}

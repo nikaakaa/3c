@@ -1,0 +1,79 @@
+{
+  "runtimeCommit": "2edf9bc344185e84eff03c523aa0d0032d8156b9",
+  "diagnosticsCommit": "586c828ab4258fa375fe6ae2689de11e77c78295",
+  "baselineRun": "20260831-025450-166-8db33f64db784e89b406d332ce778ab8",
+  "fixedQualityBaseline": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "run": "20260831-033902-719-ba011a31952443d996821aac829c05af",
+  "record": "43357ff3cd384e5cba75d2c31175b116",
+  "zipBytes": 16730366,
+  "zipSha256": "351E448137EDCC754516B9C6943B4FD9262871B8ED2C101E1FB4B5B0B475A92B",
+  "proofSha256": "9F9AAD6AEE80B952284562502FC3A9BFC0E68E57E298914D3208E229C9B6573B",
+  "files": [
+    {
+      "path": "facts.json",
+      "bytes": 122118555,
+      "sha256": "12A021DF3AFF67501928AE9435241FBDF74401592A373337C8FB9B91E59E561E"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 7889664,
+      "sha256": "D40DA4A38E44C5BF5DDA472D9768AB5DB0473B13877F56C65A811F76F2D53857"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19297007,
+      "sha256": "F7ACA2123C0688205CA7108BC6428DDD13C70C680BB130448061A0D991CCDD20"
+    },
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 51388,
+      "sha256": "56E82F4A7E73E36B8549E8A3DEA48C11142C03C20F5C6AC15A6963F8BDD79A7F"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 6507594,
+      "sha256": "E66DD28476F36F7F7CEC9C45150ECD45AEFEE9117D0898198F06EF08ACE52D55"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "046C3F7149E641B043438E720EBE63D5C905F66355F0B365FEE208C28E322101"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 60999,
+      "sha256": "76ADF1F466AEB42A8553B608B28C0BA42783CBB5EE52B0CB38D96B092BE1DA8C"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 733757,
+      "sha256": "5E487392154BC0E58EC17CA63E8CF63D412F78711BC62B7EB6268F510B557626"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "652D30CB8EC2D10E22144251BE67A223B0E309043BA99E977843F07A2637F12A"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24821,
+      "sha256": "5941D89213362FED3672B164B94004CD32A297AE72A694D2A818A00988AEFF48"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "18166B72085761F41C9D2BF8969735AD2ABEB660517C4C96035EFD43DC4F3924"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 1745271,
+      "sha256": "F42BBBF08A5AD5604084D7752BC9CC0EEB725BEF357F19A0CC473B507CEFC230"
+    }
+  ],
+  "factsVersion": 63,
+  "diagnosisVersion": 32,
+  "columns": 1221,
+  "rows": 2086,
+  "officialProofMatchedFrames": 1044,
+  "qualityDecision": "未接纳组合：265靶点成立，但R996→997既有膝盖翻侧后移放大；恢复原门，不据总分/总数抵消窗口代价"
+}

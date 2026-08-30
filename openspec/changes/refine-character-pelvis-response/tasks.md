@@ -44,4 +44,4 @@
 - [x] 8.1 在唯一Pelvis响应中移除清速度的Handoff前置，保留事件判定、全部配置、目标、硬边界和Foot/Bend；Runtime规定flags构建27既有警告0错误并shutdown，合同已同步，效果待8.3
 - [x] 8.2 586c828将唯一Diagnostics同步为facts63/Analyzer63/diagnosis32，仅3文件6行增删；CSV1221列、Handoff/其余公式与37质量规则不变，Editor规定flags57既有警告0错误并shutdown，旧62保持原解释
 - [x] 8.3 033902同Record Replay官方matched1044，265靶点成立、Foot保护与37计数保持；因R996→997膝盖峰后移放大而不接纳组合，未以总数/总分判通过
-- [ ] 8.4 已保存原始033902包/ZIP/Proof及只读排除；仅恢复本次Runtime门和Diagnostics，恢复回放待完成，完整质量Goal不缩小且Bend需独立授权
+- [x] 8.4 663c5f9/1c0a283仅恢复本次Diagnostics/Runtime门；035643为facts62/d31、实际3Hz/旧门，对025450有1197个非身份列及37质量项逐值相同、1044完整Proof帧相同。候选和恢复ZIP/Proof均保存；完整质量Goal未完成，Bend扩展等待独立授权

@@ -15,7 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Quaternion leftAnkleComponentRotation,
             Vector3 rightAnkleComponentPosition,
             Quaternion rightAnkleComponentRotation,
-            Vector3 pelvisComponentPosition)
+            Vector3 pelvisComponentPosition,
+            Vector3 pelvisWorldPosition)
         {
             CompletionIdentity = completionIdentity;
             LeftAnkleComponentPosition = leftAnkleComponentPosition;
@@ -23,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             RightAnkleComponentPosition = rightAnkleComponentPosition;
             RightAnkleComponentRotation = rightAnkleComponentRotation;
             PelvisComponentPosition = pelvisComponentPosition;
+            PelvisWorldPosition = pelvisWorldPosition;
         }
 
         internal ulong CompletionIdentity { get; }
@@ -31,13 +33,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal Vector3 RightAnkleComponentPosition { get; }
         internal Quaternion RightAnkleComponentRotation { get; }
         internal Vector3 PelvisComponentPosition { get; }
+        internal Vector3 PelvisWorldPosition { get; }
         internal bool IsAvailable =>
             CompletionIdentity != 0 &&
             IsFinite(LeftAnkleComponentPosition) &&
             IsFinite(LeftAnkleComponentRotation) &&
             IsFinite(RightAnkleComponentPosition) &&
             IsFinite(RightAnkleComponentRotation) &&
-            IsFinite(PelvisComponentPosition);
+            IsFinite(PelvisComponentPosition) &&
+            IsFinite(PelvisWorldPosition);
 
         static bool IsFinite(Vector3 value) =>
             float.IsFinite(value.x) &&
@@ -963,6 +967,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     return default;
                 RequireValid();
                 return m_Page.PhysicalWrite.PelvisComponentPosition;
+            }
+        }
+
+        public Vector3 PhysicalPelvisWorldPosition
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.PhysicalWrite.PelvisWorldPosition;
             }
         }
 

@@ -115,13 +115,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 : AnimationFinalPoseWriteOutcome.TypedInvalid;
             if (pendingValid)
             {
+                Vector3 pelvisWorldPosition = m_Bones[m_PelvisBoneIndex].position;
                 m_Diagnostics = new AnimationPhysicalBoneWriteDiagnostics(
                     pending.CompletionIdentity,
                     CaptureComponentPosition(m_LeftAnkleBoneIndex),
                     CaptureComponentRotation(m_LeftAnkleBoneIndex),
                     CaptureComponentPosition(m_RightAnkleBoneIndex),
                     CaptureComponentRotation(m_RightAnkleBoneIndex),
-                    CaptureComponentPosition(m_PelvisBoneIndex));
+                    m_ComponentRoot.InverseTransformPoint(pelvisWorldPosition),
+                    pelvisWorldPosition);
             }
         }
 

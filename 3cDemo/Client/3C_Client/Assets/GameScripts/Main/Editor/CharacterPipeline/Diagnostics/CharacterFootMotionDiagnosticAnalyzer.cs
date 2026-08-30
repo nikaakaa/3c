@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/50";
+        const string Schema = "character-foot-motion-facts/51";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 50;
+        const int AnalyzerVersion = 51;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -70,6 +70,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const float CorrectionHoldMaximumMeters = 0.005f;
         const float CorrectionAdvanceMinimumMeters = 0.02f;
         const float ExpectedGroundPenetrationToleranceMeters = 0.01f;
+        internal const double ContactSupportGapThresholdMeters = 0.01d;
+        internal const double ContactSupportGapPersistentSeconds = 0.1d;
 
         internal static CharacterFootMotionDiagnosticAnalysis Analyze(
             string samplesPath)
@@ -194,6 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnalyzeLandingEvents(frames, events);
             AnalyzeLandingStateConsistency(frames, events);
             AnalyzeLifecycleTransitions(frames, events);
+            AnalyzeContactSupportGaps(frames, events);
             AnalyzeApproachProgressOwnership(frames, events);
             AnalyzeLockWeightCompletionEvents(frames, events);
             AnalyzeSwingToLandingFloorHandoffs(frames, events);
@@ -464,6 +467,254 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["currentAnchorAvailable"] =
                             current.CurrentContactAnchorAvailable
                     }));
+            }
+        }
+
+        static CharacterFootContactSupportGapFrame ResolveContactSupportGap(
+            FootFrame frame)
+        {
+            var fact = new CharacterFootContactSupportGapFrame
+            {
+                frame = frame.Frame,
+                side = frame.Side,
+                requested = frame.CurrentLockRequested,
+                applicable = frame.CurrentLockRequested &&
+                    frame.ConstraintState != "Releasing" &&
+                    frame.Grounded && frame.CurrentStep.IsAuthoritative &&
+                    frame.FormalFootPlacementWeight > 0d,
+                constraintState = frame.ConstraintState,
+                requestEventIdentity = frame.CurrentLockRequestEventIdentity.ToString(
+                    CultureInfo.InvariantCulture),
+                anchorEventIdentity = frame.CurrentContactAnchorEventIdentity.ToString(
+                    CultureInfo.InvariantCulture),
+                anchorSurfaceIdentity = frame.CurrentContactAnchorSurfaceIdentity,
+                anchorWorldRevision = frame.CurrentContactAnchorWorldRevision.ToString(
+                    CultureInfo.InvariantCulture),
+                anchorAcquiredFrame =
+                    frame.CurrentContactAnchorAcquiredFrameSequence.ToString(
+                        CultureInfo.InvariantCulture),
+                anchorAcquiredCompletion =
+                    frame.CurrentContactAnchorAcquiredCompletionIdentity.ToString(
+                        CultureInfo.InvariantCulture),
+                anchorPoint = CharacterFootVectorFact.From(
+                    frame.CurrentContactAnchorPoint),
+                anchorNormal = CharacterFootVectorFact.From(
+                    frame.CurrentContactAnchorNormal),
+                formalFootPlacementWeight = frame.FormalFootPlacementWeight,
+                lockWeight = frame.CurrentLockRequestWeight,
+                deltaSeconds = frame.DeltaSeconds,
+                currentSupportAvailable = frame.CurrentSupportAvailable,
+                currentSupportRejectReason = frame.CurrentSupportRejectReason,
+                currentSupportSurfaceIdentity = frame.CurrentSupportTarget.Surface,
+                landingReachAvailable = frame.LandingReachAvailable,
+                landingReachGoalClamped = frame.LandingReachGoalClamped,
+                gapMotion = "Unavailable"
+            };
+            CharacterFootContactSupportGapAvailability availability =
+                !frame.CurrentLockRequested
+                    ? CharacterFootContactSupportGapAvailability.NotRequested
+                    : frame.ConstraintState == "Releasing"
+                        ? CharacterFootContactSupportGapAvailability.ReleasingNotContactHolding
+                    : !frame.Grounded || !frame.CurrentStep.IsAuthoritative
+                        ? CharacterFootContactSupportGapAvailability.OwnershipUnavailable
+                        : frame.FormalFootPlacementWeight <= 0d
+                            ? CharacterFootContactSupportGapAvailability.PlacementWeightZero
+                            : !frame.FinalPhysicalWriteAvailable ||
+                              frame.FinalPhysicalWriteCompletionIdentity !=
+                              frame.CompletionIdentity
+                                ? CharacterFootContactSupportGapAvailability.PhysicalPoseUnavailable
+                                : !frame.CurrentContactAnchorAvailable ||
+                                  frame.CurrentContactAnchorEventIdentity !=
+                                  frame.CurrentLockRequestEventIdentity
+                                    ? CharacterFootContactSupportGapAvailability.SameEventAnchorUnavailable
+                                    : frame.ConstraintState != "Landing" &&
+                                      frame.ConstraintState != "Locked"
+                                        ? CharacterFootContactSupportGapAvailability.ContactHoldingStateUnavailable
+                                        : CharacterFootContactSupportGapAvailability.Available;
+            fact.availability = availability.ToString();
+            if (availability != CharacterFootContactSupportGapAvailability.Available)
+                return fact;
+            if (!FiniteVector(frame.FinalHeel) || !FiniteVector(frame.FinalToe))
+                throw new InvalidDataException(
+                    $"Foot Motion Contact support gap physical pose is invalid " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            Vector3 normal = frame.CurrentContactAnchorNormal.normalized;
+            Vector3 point = frame.CurrentContactAnchorPoint;
+            double heel = Vector3.Dot(frame.FinalHeel - point, normal);
+            double toe = Vector3.Dot(frame.FinalToe - point, normal);
+            Vector3 sole = (frame.FinalHeel + frame.FinalToe) * 0.5f;
+            fact.physicalHeel = CharacterFootVectorFact.From(frame.FinalHeel);
+            fact.physicalToe = CharacterFootVectorFact.From(frame.FinalToe);
+            fact.heelClearanceMeters = heel;
+            fact.toeClearanceMeters = toe;
+            fact.soleClearanceMeters = Vector3.Dot(sole - point, normal);
+            fact.wholeFootGapMeters = Math.Max(0d, Math.Min(heel, toe));
+            fact.inPlaneAnchorDistanceMeters =
+                Vector3.ProjectOnPlane(sole - point, normal).magnitude;
+            fact.gapMotion = fact.wholeFootGapMeters >
+                ContactSupportGapThresholdMeters ? "FirstObservation" : "Seated";
+            return fact;
+        }
+
+        static bool ContactSupportGapAvailable(FootFrame frame) =>
+            frame.ContactSupportGap.availability ==
+            CharacterFootContactSupportGapAvailability.Available.ToString();
+
+        static bool SameContactSupportGapReference(
+            FootFrame previous, FootFrame current) =>
+            Continuous(previous, current) &&
+            ContactSupportGapAvailable(previous) &&
+            ContactSupportGapAvailable(current) &&
+            previous.CurrentLockRequestEventIdentity ==
+                current.CurrentLockRequestEventIdentity &&
+            ContactAnchorFrame.From(previous, false).SameAs(
+                ContactAnchorFrame.From(current, false));
+
+        static void AnalyzeContactSupportGaps(
+            List<FootFrame> frames, List<EventFact> events)
+        {
+            for (int i = 0; i < frames.Count; i++)
+            {
+                FootFrame frame = frames[i];
+                CharacterFootContactSupportGapFrame fact = frame.ContactSupportGap;
+                if (!fact.requested)
+                    continue;
+                bool available = ContactSupportGapAvailable(frame);
+                if (available && i > 0 &&
+                    SameContactSupportGapReference(frames[i - 1], frame))
+                {
+                    double delta = fact.wholeFootGapMeters.Value -
+                        frames[i - 1].ContactSupportGap.wholeFootGapMeters.Value;
+                    fact.previousGapDeltaMeters = delta;
+                    fact.gapMotion = fact.wholeFootGapMeters <=
+                        ContactSupportGapThresholdMeters ? "Seated" :
+                        delta < -PositionNoiseFloor ? "Closing" :
+                        delta > PositionNoiseFloor ? "Widening" : "StableGap";
+                }
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["GapThresholdMeters"] = ContactSupportGapThresholdMeters,
+                    ["PersistentMinimumSeconds"] = ContactSupportGapPersistentSeconds
+                };
+                if (available)
+                {
+                    metrics["WholeFootGapMeters"] = fact.wholeFootGapMeters.Value;
+                    metrics["HeelClearanceMeters"] = fact.heelClearanceMeters.Value;
+                    metrics["ToeClearanceMeters"] = fact.toeClearanceMeters.Value;
+                    metrics["SoleClearanceMeters"] = fact.soleClearanceMeters.Value;
+                    metrics["InPlaneAnchorDistanceMeters"] =
+                        fact.inPlaneAnchorDistanceMeters.Value;
+                }
+                events.Add(new EventFact(
+                    "ContactSupportGapObservation", frame.Side, frame.Frame,
+                    frame.Frame, frame.Frame, frame.CurrentLockRequestEventIdentity,
+                    frame.SourceIdentity, frame.SourceCycle, DeltaSeconds(frame),
+                    metrics,
+                    new SortedDictionary<string, bool>(StringComparer.Ordinal)
+                    {
+                        ["referenceAvailable"] = available,
+                        ["measurementApplicable"] = fact.applicable,
+                        ["locked"] = frame.ConstraintState == "Locked",
+                        ["landingClosing"] = frame.ConstraintState == "Landing" &&
+                            fact.gapMotion == "Closing"
+                    },
+                    contactSupportGap: new CharacterFootContactSupportGapSequence
+                    {
+                        classification = available ? fact.gapMotion : fact.availability,
+                        frames = new List<CharacterFootContactSupportGapFrame> { fact }
+                    }));
+            }
+            int index = 0;
+            while (index < frames.Count)
+            {
+                if (!ContactSupportGapAvailable(frames[index]))
+                {
+                    index++;
+                    continue;
+                }
+                int start = index;
+                while (index + 1 < frames.Count &&
+                    SameContactSupportGapReference(frames[index], frames[index + 1]))
+                    index++;
+                int end = index;
+                List<FootFrame> window = frames.GetRange(start, end - start + 1);
+                int peak = start;
+                int gapFrameCount = 0;
+                int closingFrameCount = 0;
+                double longestGap = 0d;
+                double consecutiveGap = 0d;
+                double duration = 0d;
+                bool previousAbove = false;
+                bool lockedGap = false;
+                bool gapOnlyInLanding = true;
+                for (int i = start; i <= end; i++)
+                {
+                    CharacterFootContactSupportGapFrame fact = frames[i].ContactSupportGap;
+                    double gap = fact.wholeFootGapMeters.Value;
+                    if (gap > frames[peak].ContactSupportGap.wholeFootGapMeters.Value)
+                        peak = i;
+                    if (i > start)
+                        duration += frames[i].DeltaSeconds;
+                    bool above = gap > ContactSupportGapThresholdMeters;
+                    consecutiveGap = above && previousAbove
+                        ? consecutiveGap + frames[i].DeltaSeconds : 0d;
+                    longestGap = Math.Max(longestGap, consecutiveGap);
+                    previousAbove = above;
+                    if (!above)
+                        continue;
+                    gapFrameCount++;
+                    closingFrameCount += fact.gapMotion == "Closing" ? 1 : 0;
+                    lockedGap |= frames[i].ConstraintState == "Locked";
+                    gapOnlyInLanding &= frames[i].ConstraintState == "Landing";
+                }
+                bool persistent = longestGap + TimeEpsilon >=
+                    ContactSupportGapPersistentSeconds;
+                bool closing = closingFrameCount > 0 &&
+                    frames[end].ContactSupportGap.wholeFootGapMeters.Value <
+                    frames[peak].ContactSupportGap.wholeFootGapMeters.Value -
+                    PositionNoiseFloor;
+                string classification = lockedGap ? "LockedContactGap" :
+                    persistent ? closing ? "PersistentClosingGap" :
+                        "PersistentNonClosingGap" :
+                    gapFrameCount == 0 ? "Seated" :
+                    gapOnlyInLanding && closing ? "TransientLandingClosingGap" :
+                    "TransientContactGap";
+                events.Add(new EventFact(
+                    "ContactSupportGapInterval", frames[start].Side,
+                    frames[start].Frame, frames[end].Frame, frames[peak].Frame,
+                    frames[start].CurrentLockRequestEventIdentity,
+                    frames[start].SourceIdentity, frames[start].SourceCycle, duration,
+                    new SortedDictionary<string, double>(StringComparer.Ordinal)
+                    {
+                        ["FrameCount"] = window.Count,
+                        ["GapFrameCount"] = gapFrameCount,
+                        ["ClosingFrameCount"] = closingFrameCount,
+                        ["ObservedDurationSeconds"] = duration,
+                        ["LongestGapDurationSeconds"] = longestGap,
+                        ["MaximumWholeFootGapMeters"] =
+                            frames[peak].ContactSupportGap.wholeFootGapMeters.Value,
+                        ["EntryWholeFootGapMeters"] =
+                            frames[start].ContactSupportGap.wholeFootGapMeters.Value,
+                        ["ExitWholeFootGapMeters"] =
+                            frames[end].ContactSupportGap.wholeFootGapMeters.Value,
+                        ["GapThresholdMeters"] = ContactSupportGapThresholdMeters,
+                        ["PersistentMinimumSeconds"] = ContactSupportGapPersistentSeconds
+                    },
+                    new SortedDictionary<string, bool>(StringComparer.Ordinal)
+                    {
+                        ["persistentGap"] = persistent,
+                        ["lockedGap"] = lockedGap,
+                        ["gapClosing"] = closing,
+                        ["transientLandingClosure"] =
+                            classification == "TransientLandingClosingGap"
+                    },
+                    contactSupportGap: new CharacterFootContactSupportGapSequence
+                    {
+                        classification = classification,
+                        frames = window.Select(value => value.ContactSupportGap).ToList()
+                    }));
+                index++;
             }
         }
 
@@ -4970,10 +5221,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     groundPenetrationToleranceMeters =
                         ExpectedGroundPenetrationToleranceMeters,
                     penetrationGeometryEpsilonMeters =
-                        CharacterFootContactPlanePenetration.GeometryEpsilonMeters
+                        CharacterFootContactPlanePenetration.GeometryEpsilonMeters,
+                    contactSupportGapThresholdMeters = ContactSupportGapThresholdMeters,
+                    contactSupportGapPersistentSeconds = ContactSupportGapPersistentSeconds
                 },
                 coverage = new CoverageFact
                 {
+                    contactSupportRequestedFrameCount = events.Count(
+                        value => value.kind == "ContactSupportGapObservation"),
+                    contactSupportGapAvailableFrameCount = capture.FootRows.Count(
+                        ContactSupportGapAvailable),
+                    contactSupportGapNotApplicableFrameCount = capture.FootRows.Count(
+                        value => value.ContactSupportGap.requested &&
+                            !value.ContactSupportGap.applicable),
+                    contactSupportGapUnavailableFrameCount = capture.FootRows.Count(
+                        value => value.ContactSupportGap.applicable &&
+                            !ContactSupportGapAvailable(value)),
+                    contactSupportGapIntervalCount = events.Count(
+                        value => value.kind == "ContactSupportGapInterval"),
                     landingEventCount = events.Count(value => value.kind == "Landing"),
                     landingStateBoundaryCount = events.Count(
                         value => value.kind == "LandingStateBoundary"),
@@ -5115,6 +5380,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CultureInfo.InvariantCulture),
             profileId = frame.ProfileId,
             profileRevision = frame.ProfileRevision,
+            contactSupportGap = frame.ContactSupportGap,
             formalApproach = new
             {
                 observedPhase = frame.FormalEventPhase,
@@ -6633,6 +6899,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FinalIkSolvedPosition = Vector("FinalIkSolvedPosition"),
                 FinalPhysicalWriteAvailable =
                     Int("FinalPhysicalWriteAvailable") != 0,
+                FinalPhysicalWriteCompletionIdentity =
+                    Ulong("FinalPhysicalWriteCompletionIdentity"),
                 FinalPhysicalAnkleComponentPosition =
                     Vector("FinalPhysicalAnkleComponentPosition"),
                 PenetrationAvailability = Cell("FootContactPlanePenetrationAvailability"),
@@ -6680,6 +6948,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PhysicalPelvis = Vector("FinalPhysicalPelvisComponentPosition")
             };
             RequireValidFrame(frame);
+            frame.ContactSupportGap = ResolveContactSupportGap(frame);
             return frame;
         }
 
@@ -9490,6 +9759,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FinalIkTargetPositionZ", "FinalIkSolvedPositionX",
                 "FinalIkSolvedPositionY", "FinalIkSolvedPositionZ",
                 "FinalPhysicalWriteAvailable",
+                "FinalPhysicalWriteCompletionIdentity",
                 "FinalPhysicalAnkleComponentPositionX",
                 "FinalPhysicalAnkleComponentPositionY",
                 "FinalPhysicalAnkleComponentPositionZ",
@@ -10452,6 +10722,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 FinalIkTargetPosition;
             internal Vector3 FinalIkSolvedPosition;
             internal bool FinalPhysicalWriteAvailable;
+            internal ulong FinalPhysicalWriteCompletionIdentity;
+            internal CharacterFootContactSupportGapFrame ContactSupportGap;
             internal Vector3 FinalPhysicalAnkleComponentPosition;
             internal string PenetrationAvailability;
             internal Vector3 SourceHeel;
@@ -11223,11 +11495,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public double landingReachCandidateCompressionReserveMeters;
             public double groundPenetrationToleranceMeters;
             public double penetrationGeometryEpsilonMeters;
+            public double contactSupportGapThresholdMeters;
+            public double contactSupportGapPersistentSeconds;
         }
 
         [Serializable]
         sealed class CoverageFact
         {
+            public int contactSupportRequestedFrameCount;
+            public int contactSupportGapAvailableFrameCount;
+            public int contactSupportGapNotApplicableFrameCount;
+            public int contactSupportGapUnavailableFrameCount;
+            public int contactSupportGapIntervalCount;
             public int landingEventCount;
             public int landingStateBoundaryCount;
             public int landingStateSpanCount;
@@ -11309,7 +11588,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootContactAcquisitionContinuityAnalysis
                     contactAcquisitionContinuity = null,
                 CharacterFootLockWeightCompletionAnalysis
-                    lockWeightCompletion = null)
+                    lockWeightCompletion = null,
+                CharacterFootContactSupportGapSequence contactSupportGap = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -11333,6 +11613,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 this.contactAcquisitionContinuity =
                     contactAcquisitionContinuity;
                 this.lockWeightCompletion = lockWeightCompletion;
+                this.contactSupportGap = contactSupportGap;
             }
 
             public string kind;
@@ -11359,6 +11640,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 contactAcquisitionContinuity;
             public CharacterFootLockWeightCompletionAnalysis
                 lockWeightCompletion;
+            public CharacterFootContactSupportGapSequence contactSupportGap;
 
             internal static int Compare(EventFact left, EventFact right)
             {

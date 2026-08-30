@@ -110,7 +110,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide swingSide,
             Vector3 strideStart,
             Vector3 strideEnd,
-            float swingTimeToLanding,
             bool releasePelvis)
         {
             RejectReason = rejectReason;
@@ -118,7 +117,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingSide = swingSide;
             StrideStart = strideStart;
             StrideEnd = strideEnd;
-            SwingTimeToLanding = swingTimeToLanding;
             ReleasePelvis = releasePelvis;
             Accepted = rejectReason == CharacterFootStrideRejectReason.None;
         }
@@ -129,8 +127,58 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSide SwingSide { get; }
         internal Vector3 StrideStart { get; }
         internal Vector3 StrideEnd { get; }
-        internal float SwingTimeToLanding { get; }
         internal bool ReleasePelvis { get; }
+    }
+
+    internal readonly struct CharacterFootPelvisHeightTarget
+    {
+        internal CharacterFootPelvisHeightTarget(
+            Vector3 componentUp,
+            Vector3 leftAnimatedSole,
+            Vector3 rightAnimatedSole,
+            Vector3 leftTargetSole,
+            Vector3 rightTargetSole)
+        {
+            if (!CharacterFootConstraintMath.Finite(componentUp) ||
+                Mathf.Abs(componentUp.sqrMagnitude - 1f) >
+                CharacterFootConstraintMath.GeometryEpsilon ||
+                !CharacterFootConstraintMath.Finite(leftAnimatedSole) ||
+                !CharacterFootConstraintMath.Finite(rightAnimatedSole) ||
+                !CharacterFootConstraintMath.Finite(leftTargetSole) ||
+                !CharacterFootConstraintMath.Finite(rightTargetSole))
+            {
+                throw new System.ArgumentException("Pelvis height target input is invalid.");
+            }
+            ComponentUp = componentUp;
+            LeftAnimatedSole = leftAnimatedSole;
+            RightAnimatedSole = rightAnimatedSole;
+            LeftTargetSole = leftTargetSole;
+            RightTargetSole = rightTargetSole;
+            AnimatedMinimumAlongUp = Mathf.Min(
+                Vector3.Dot(leftAnimatedSole, componentUp),
+                Vector3.Dot(rightAnimatedSole, componentUp));
+            TargetMinimumAlongUp = Mathf.Min(
+                Vector3.Dot(leftTargetSole, componentUp),
+                Vector3.Dot(rightTargetSole, componentUp));
+            OffsetAlongUp = TargetMinimumAlongUp - AnimatedMinimumAlongUp;
+            if (!float.IsFinite(AnimatedMinimumAlongUp) ||
+                !float.IsFinite(TargetMinimumAlongUp) ||
+                !float.IsFinite(OffsetAlongUp))
+            {
+                throw new System.ArgumentException("Pelvis height target result is invalid.");
+            }
+            Available = true;
+        }
+
+        internal bool Available { get; }
+        internal Vector3 ComponentUp { get; }
+        internal Vector3 LeftAnimatedSole { get; }
+        internal Vector3 RightAnimatedSole { get; }
+        internal Vector3 LeftTargetSole { get; }
+        internal Vector3 RightTargetSole { get; }
+        internal float AnimatedMinimumAlongUp { get; }
+        internal float TargetMinimumAlongUp { get; }
+        internal float OffsetAlongUp { get; }
     }
 
     internal readonly struct CharacterFootPelvisFrame
@@ -189,9 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 poseRootPosition,
             Vector3 animatedPelvis,
             Vector3 animatedPelvisComponentPosition,
-            Vector3 rawPelvisDelta,
-            float rootRelativeGroundTargetAlongUp,
-            float soleClearanceLiftAlongUp,
+            CharacterFootPelvisHeightTarget heightTarget,
             bool hadPreviousState,
             bool supportChanged,
             CharacterFootStrideSlope previousSlope,
@@ -203,7 +249,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float springInput,
             float springInputVelocity,
             float springFrequency,
-            float unclampedSpringTarget,
             bool supportReachAvailable,
             float supportLegCompressionReserve,
             float supportReachUsableLegLength,
@@ -229,9 +274,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseRootPosition = poseRootPosition;
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
-            RawPelvisDelta = rawPelvisDelta;
-            RootRelativeGroundTargetAlongUp = rootRelativeGroundTargetAlongUp;
-            SoleClearanceLiftAlongUp = soleClearanceLiftAlongUp;
+            HeightTarget = heightTarget;
             HadPreviousState = hadPreviousState;
             SupportChanged = supportChanged;
             PreviousSlope = previousSlope;
@@ -243,7 +286,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SpringInput = springInput;
             SpringInputVelocity = springInputVelocity;
             SpringFrequency = springFrequency;
-            UnclampedSpringTarget = unclampedSpringTarget;
             SupportReachAvailable = supportReachAvailable;
             SupportLegCompressionReserve = supportLegCompressionReserve;
             SupportReachUsableLegLength = supportReachUsableLegLength;
@@ -270,9 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PoseRootPosition { get; }
         public Vector3 AnimatedPelvis { get; }
         public Vector3 AnimatedPelvisComponentPosition { get; }
-        public Vector3 RawPelvisDelta { get; }
-        public float RootRelativeGroundTargetAlongUp { get; }
-        public float SoleClearanceLiftAlongUp { get; }
+        internal CharacterFootPelvisHeightTarget HeightTarget { get; }
         public bool HadPreviousState { get; }
         public bool SupportChanged { get; }
         public CharacterFootStrideSlope PreviousSlope { get; }
@@ -284,7 +324,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SpringInput { get; }
         public float SpringInputVelocity { get; }
         public float SpringFrequency { get; }
-        public float UnclampedSpringTarget { get; }
         public bool SupportReachAvailable { get; }
         public float SupportLegCompressionReserve { get; }
         public float SupportReachUsableLegLength { get; }
@@ -323,9 +362,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PoseRootPosition,
                 AnimatedPelvis,
                 AnimatedPelvisComponentPosition,
-                RawPelvisDelta,
-                RootRelativeGroundTargetAlongUp,
-                SoleClearanceLiftAlongUp,
+                HeightTarget,
                 HadPreviousState,
                 SupportChanged,
                 PreviousSlope,
@@ -337,7 +374,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 SpringInput,
                 SpringInputVelocity,
                 SpringFrequency,
-                UnclampedSpringTarget,
                 SupportReachAvailable,
                 SupportLegCompressionReserve,
                 SupportReachUsableLegLength,
@@ -373,10 +409,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 AnimatedPelvis => m_Result.AnimatedPelvis;
         public Vector3 AnimatedPelvisComponentPosition =>
             m_Result.AnimatedPelvisComponentPosition;
-        public Vector3 RawPelvisDelta => m_Result.RawPelvisDelta;
-        public float RootRelativeGroundTargetAlongUp =>
-            m_Result.RootRelativeGroundTargetAlongUp;
-        public float SoleClearanceLiftAlongUp => m_Result.SoleClearanceLiftAlongUp;
+        public bool HeightTargetAvailable => m_Result.HeightTarget.Available;
+        public Vector3 HeightTargetComponentUp => m_Result.HeightTarget.ComponentUp;
+        public Vector3 HeightTargetLeftAnimatedSole => m_Result.HeightTarget.LeftAnimatedSole;
+        public Vector3 HeightTargetRightAnimatedSole => m_Result.HeightTarget.RightAnimatedSole;
+        public Vector3 HeightTargetLeftTargetSole => m_Result.HeightTarget.LeftTargetSole;
+        public Vector3 HeightTargetRightTargetSole => m_Result.HeightTarget.RightTargetSole;
+        public float HeightTargetAnimatedMinimumAlongUp => m_Result.HeightTarget.AnimatedMinimumAlongUp;
+        public float HeightTargetMinimumAlongUp => m_Result.HeightTarget.TargetMinimumAlongUp;
+        public float RequestedOffsetAlongUp => m_Result.HeightTarget.OffsetAlongUp;
         public bool HadPreviousState => m_Result.HadPreviousState;
         public bool SupportChanged => m_Result.SupportChanged;
         public CharacterFootStrideSlope PreviousSlope => m_Result.PreviousSlope;
@@ -389,7 +430,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SpringInput => m_Result.SpringInput;
         public float SpringInputVelocity => m_Result.SpringInputVelocity;
         public float SpringFrequency => m_Result.SpringFrequency;
-        public float UnclampedSpringTarget => m_Result.UnclampedSpringTarget;
         public bool SupportReachAvailable => m_Result.SupportReachAvailable;
         public float SupportLegCompressionReserve =>
             m_Result.SupportLegCompressionReserve;
@@ -508,7 +548,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     default,
                     default,
-                    0f,
                     false);
             }
             Vector3 primarySupportContactAnchor = primarySupport.HasValue
@@ -552,7 +591,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     default,
                     default,
-                    0f,
                     true);
             }
             bool groundPathAccepted = swingSide == CharacterFootSide.Left
@@ -566,19 +604,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     default,
                     default,
-                    0f,
                     true);
             }
-            float swingTimeToLanding = swingSide == CharacterFootSide.Left
-                ? leftSwingStep.TimeToLandingSeconds
-                : rightSwingStep.TimeToLandingSeconds;
             return new CharacterFootStrideIntentResult(
                 CharacterFootStrideRejectReason.None,
                 supportSide,
                 swingSide,
                 strideStart,
                 strideEnd,
-                swingTimeToLanding,
                 false);
         }
 
@@ -736,14 +769,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 default,
                 default,
-                0f,
-                0f,
                 false,
                 false,
                 CharacterFootStrideSlope.Flat,
                 CharacterFootPelvisSpringHandoffReason.None,
                 false,
-                0f,
                 0f,
                 0f,
                 0f,
@@ -781,7 +811,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 rightOriginalSole,
             Vector3 leftCorrectedSole,
             Vector3 rightCorrectedSole,
-            float swingTimeToLandingSeconds,
             float footPlacementWeight,
             float deltaSeconds,
             in CharacterFootMotionSettings settings,
@@ -813,36 +842,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 sampledGround = Vector3.Lerp(strideStart, strideEnd, progress);
             float rise = Vector3.Dot(strideEnd - strideStart, up);
             CharacterFootStrideSlope slope = CharacterFootStrideSlope.Flat;
-            float rootRelativeGroundTarget = 0f;
             if (rise > EndpointTolerance)
-            {
                 slope = CharacterFootStrideSlope.Ascending;
-                rootRelativeGroundTarget = Vector3.Dot(
-                    sampledGround - poseRootPosition,
-                    up);
-            }
             else if (rise < -EndpointTolerance)
-            {
                 slope = CharacterFootStrideSlope.Descending;
-                if (float.IsFinite(swingTimeToLandingSeconds) &&
-                    swingTimeToLandingSeconds > GeometryEpsilon)
-                {
-                    rootRelativeGroundTarget = Vector3.Dot(
-                        sampledGround - poseRootPosition,
-                        up);
-                }
-            }
-            Vector3 rawPelvisDelta = up * rootRelativeGroundTarget;
-            float originalLowerSole = Mathf.Min(
-                Vector3.Dot(leftOriginalSole, up),
-                Vector3.Dot(rightOriginalSole, up));
-            float correctedLowerSole = Mathf.Min(
-                Vector3.Dot(leftCorrectedSole, up),
-                Vector3.Dot(rightCorrectedSole, up));
-            float soleClearanceLift = Mathf.Max(
-                0f,
-                correctedLowerSole - originalLowerSole);
-            float unclampedTarget = rootRelativeGroundTarget + soleClearanceLift;
+            var heightTarget = new CharacterFootPelvisHeightTarget(
+                up,
+                leftOriginalSole,
+                rightOriginalSole,
+                leftCorrectedSole,
+                rightCorrectedSole);
             if (!TryResolveSupportReachInterval(
                     supportHip,
                     supportTargetAnkle,
@@ -862,11 +871,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref spring);
             }
             float target = Mathf.Clamp(
-                unclampedTarget,
+                heightTarget.OffsetAlongUp,
                 supportReachMinimum,
                 supportReachMaximum);
             bool supportReachTargetClamped =
-                Mathf.Abs(target - unclampedTarget) > GeometryEpsilon;
+                Mathf.Abs(target - heightTarget.OffsetAlongUp) > GeometryEpsilon;
             bool hadPreviousState = spring.HasValue;
             bool supportChanged = hadPreviousState &&
                 (spring.SupportSide != supportSide ||
@@ -947,9 +956,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 poseRootPosition,
                 animatedPelvis,
                 animatedPelvisComponentPosition,
-                rawPelvisDelta,
-                rootRelativeGroundTarget,
-                soleClearanceLift,
+                heightTarget,
                 hadPreviousState,
                 supportChanged,
                 previousSlope,
@@ -961,7 +968,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 springInput,
                 springInputVelocity,
                 settings.PelvisSpringFrequency,
-                unclampedTarget,
                 true,
                 supportLegCompressionReserve,
                 supportReachUsableLegLength,
@@ -1184,8 +1190,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 default,
                 default,
-                0f,
-                0f,
                 true,
                 true,
                 previousSlope,
@@ -1197,7 +1201,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 previousOutput,
                 springInputVelocity,
                 settings.PelvisSpringFrequency,
-                target,
                 false,
                 0f,
                 0f,

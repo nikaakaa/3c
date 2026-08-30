@@ -1704,7 +1704,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Pose.Right.ToePosition * 0.5f,
                 frame.LeftCorrectedSole,
                 frame.RightCorrectedSole,
-                intent.SwingTimeToLanding,
                 frame.FootPlacementWeight,
                 frame.DeltaSeconds,
                 m_Settings.FootMotion,

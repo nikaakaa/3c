@@ -49,9 +49,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootLifecycleTransitionFact.Begin(
                     in context,
                     in frame);
-            CharacterFootConstraintState stateBefore = context.Discrete.State;
-            CharacterFootLockResponse lockResponseBefore =
-                context.Discrete.LockResponse;
             CharacterFootTransitionDecision preTransition =
                 CharacterFootTransitionResolver.ResolvePreInterpolation(
                     in context,
@@ -124,8 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in preTransition,
                     in target,
                     in interpolation,
-                    stateBefore,
-                    lockResponseBefore,
                     in result,
                     in unavailable,
                     in result,
@@ -186,10 +181,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in postTransition,
                     in target,
                     in interpolation,
-                    stateBefore,
-                    context.Discrete.State,
-                    lockResponseBefore,
-                    context.Discrete.LockResponse,
                     in hardConstraint,
                     frame.ComponentUp);
             }
@@ -224,8 +215,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in preTransition,
                 in target,
                 in interpolation,
-                stateBefore,
-                lockResponseBefore,
                 in outputSwing,
                 in resolved,
                 in result,
@@ -279,10 +268,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in postTransition,
                     in target,
                     in interpolation,
-                    receipt.StateBefore,
-                    context.Discrete.State,
-                    receipt.LockResponseBefore,
-                    context.Discrete.LockResponse,
                     in hardConstraint,
                     frame.ComponentUp);
             CharacterFootLifecycleTransitionFact lifecycleTransition =
@@ -336,10 +321,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootTransitionDecision postTransition,
             in CharacterFootStateTarget target,
             in CharacterFootInterpolationResult interpolation,
-            CharacterFootConstraintState stateBefore,
-            CharacterFootConstraintState stateAfter,
-            CharacterFootLockResponse lockResponseBefore,
-            CharacterFootLockResponse lockResponseAfter,
             in CharacterFootHardConstraintResult hardConstraint,
             Vector3 componentUp)
         {
@@ -370,10 +351,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in postTransition,
                 in target,
                 in interpolation,
-                stateBefore,
-                stateAfter,
-                lockResponseBefore,
-                lockResponseAfter,
                 available,
                 hardConstraint.Resolved
                     ? hardConstraint.Owner

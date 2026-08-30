@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-用户要求持续实验。基线为c519865及130545恢复包；前一轮9bce6c2脚高扣除候选已经否决并完整恢复，本轮不复活该Capture改动。当前位置basis候选Runtime已经实现并规定flags构建27个既有警告、0错误，build server已关闭；Diagnostics、Corin产物重建和新Replay尚未完成，不宣称修复成功。
+用户要求持续实验。基线为c519865及130545恢复包；前一轮9bce6c2脚高扣除候选已经否决并完整恢复，本轮不复活该Capture改动。位置basis候选Runtime提交05889f6，规定flags构建27个既有警告、0错误；Diagnostics提交335ac60，Editor构建57个既有警告、0错误，两次build server均已关闭。已在Edit模式Refresh并显式重建Corin Float32、Fixed和Projection，Console错误为0；新Replay尚未完成，不宣称修复成功。
 
 ## 可证伪靶点
 
@@ -54,6 +54,17 @@ Support Direction的请求、上一值、角限制和Applied值只继续供Foot 
 - facts SHA256：`7FEFEB9E66D6102784A173591E9D586CB89F6C029E8E034C8263FB9BBB14F75B`。
 - 已持久保存的基线Proof：`Diagnostics/FootPlacementReplayArchives/20260830-contact-height-advance/restored-proof.json`，SHA256 `584A432A59A1C7C2315250F1FDC0A2CA37C8E1D901A2735A1F75CCE6D116286B`，不依赖Temp。
 - 7维基线为49/49/74/49/49/100/100，总分60.4。穿透19/78、接触未贴合12/60、Stable Swing145/347、Path206/680、Contact405/1036、腿部0/2、FullAnchor水平漂移0/8；弱样本不升级为全场景证明。
+
+## 候选构建与产物
+
+唯一诊断版本为facts54、Analyzer54、diagnosis-file23；quality-score/1及七维质量规则保持原样。新增8个位置basis标量，删除旧CorrectionResponse方向列并以SupportDirection独立命名；不为旧facts52补字段。
+
+- Float32正式job：`90d15322b24a4d4cbe7d291a2545b86a`；Program Hash=`dc2f2e588d9ac6ff8618b329a2789ec5875162e95cd6c3df2dca612f3847d0a5`，资产SHA256=`d9851b1f08072732b505e9ec8e3615f04962cf437f3c8415f3865d24374e8cca`。
+- Fixed正式job：`1cc556e95c344dcc8178e47988fc77c6`；Program Hash=`f233be464df11ceb4bbf514bdab0242ea3a3ee50b68f6556609d74d142676f73`，资产SHA256=`d849f6b55142a5a73bdaf857a39dd618518d4505b7b8c5599d1e669d7be5b4f1`。
+- 共同Source Revision=`c546b0b3f23443c142a013dd4b37f7f2a4e27b76d07cd52d3805a8cf1deba0e3`，Semantic Hash=`dc18e2624294eb1390c209f432e7c0baeeb278c6c62307b613282ff5d097433e`。
+- Projection Revision=`c7b236184b7bc77ed30604aa446b627f7aa33546eef4793be2e66a2c31d1a895`，Contract Hash=`16ef87e562a46b4a82fcfceb35c6b425b155dbb148fc15fcba7db1f237b0a8b1`，资产SHA256=`c1ff93c5918e50a214c9b27c327763ee70d4fe08f127e8dec6ee67931a81ab4f`。
+
+相对c519865的只读字节核对：Float32/Fixed canonical artifact长度分别保持3079259/3234949字节，每份各301字节变化，仅位于Source Revision、Semantic Hash及Program Hash字符串；执行payload其余字节相同。最终Projection diff仅10处身份/布局hash，Curve/Event数值及引用数据未变。上述静态身份对账不代替逐帧Replay Proof，不修改比较器放行身份变化。
 
 ## 对账规则
 

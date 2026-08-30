@@ -64,3 +64,11 @@ Runtime发布完整左右Reach角色/输入/区间、公共交集与选择、Pos
 第2步核对两份最低高度、signed requestedOffset、被替换字段和322/466/675及全包骨盆大步。第3步再核对每腿硬区间、偏好目标、响应前后、唯一夹紧与不相交路径。
 
 每步保持原37项质量规则，只有正式合同随API改变；原始输入/时钟、固定接触帧、Ground Query、脚与骨盆/膝盖输出分别对照。没有动态样本的Action、作者极小权重、重入或退化几何明确标记未覆盖，不以编译或单个总分通过冒充效果完成。
+
+## 持续Goal第一轮：补齐真实骨盆观测
+
+010821的30条大步是相对修正量，不等于最终世界骨盆位移。旧CSV用当帧PoseRoot位置/旋转重建世界骨盆，在本组三包的单位scale条件下经跨阶段髋点微米对账成立，但Sampler没有冻结同Completion的完整变换，不能推广到任意scale/shear或采样延迟。另一个已证错误是Releasing结果没有发布实际AnimatedPelvis输入，而Sampler仍用其默认零点加Goal算PhysicalPelvisGoalResidual，制造约0.747米的假误差。
+
+该轮只修观察合同，不改变响应或质量规则。唯一Physical Writer在最终骨骼写完后读取一次真实Pelvis世界点，并用同一点反算组件点；两者随原PhysicalWrite Completion一起冻结，经既有Snapshot发布。StrideHips增加PoseInputAvailable，Accepted、Releasing与仅LandingReach的合法输入直接来自同帧PelvisFrame；无Goal的Rejected保持明确不可用。HeightTarget/Posture未求值与原Pose不可用不得混同。
+
+唯一Sampler/Analyzer新增最终世界骨盆点、源Pose有效性及PhysicalPelvisGoalResidual有效性。只有同Completion最终写回、真实源Pose与非零Pelvis Goal都成立才测该误差；缺失时标Unavailable，不把零占位算成零缺陷。世界运动、组件运动和相对修正量并列作为事实，不改原37个质量Target/阈值/分母或七维评分。旧61不得补新字段重发62；新录制必须证明实际Foot、Pelvis、Knee、Goal和Body与010821保持，仅观测字段修正。

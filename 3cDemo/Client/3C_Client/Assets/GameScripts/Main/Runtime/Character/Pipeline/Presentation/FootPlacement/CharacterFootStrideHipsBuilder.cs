@@ -577,6 +577,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float progress,
             CharacterFootStrideSlope slope,
             Vector3 sampledGround,
+            bool poseInputAvailable,
             Vector3 poseRootPosition,
             Vector3 animatedPelvis,
             Vector3 animatedPelvisComponentPosition,
@@ -594,6 +595,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Progress = progress;
             Slope = slope;
             SampledGround = sampledGround;
+            PoseInputAvailable = poseInputAvailable;
             PoseRootPosition = poseRootPosition;
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
@@ -612,6 +614,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float Progress { get; }
         internal CharacterFootStrideSlope Slope { get; }
         internal Vector3 SampledGround { get; }
+        internal bool PoseInputAvailable { get; }
         internal Vector3 PoseRootPosition { get; }
         internal Vector3 AnimatedPelvis { get; }
         internal Vector3 AnimatedPelvisComponentPosition { get; }
@@ -659,6 +662,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float Progress => m_Result.Progress;
         public CharacterFootStrideSlope Slope => m_Result.Slope;
         public Vector3 SampledGround => m_Result.SampledGround;
+        public bool PoseInputAvailable => m_Result.PoseInputAvailable;
         public Vector3 PoseRootPosition => m_Result.PoseRootPosition;
         public Vector3 AnimatedPelvis => m_Result.AnimatedPelvis;
         public Vector3 AnimatedPelvisComponentPosition => m_Result.AnimatedPelvisComponentPosition;
@@ -1125,7 +1129,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootStrideState.Accepted,
                 CharacterFootStrideRejectReason.None,
                 intent.SupportSide, intent.SwingSide, intent.StrideStart, intent.StrideEnd,
-                progress, slope, sampledGround,
+                progress, slope, sampledGround, true,
                 frame.PoseRootPosition, frame.AnimatedPelvis, frame.AnimatedPelvisComponentPosition,
                 heightTarget, posture, reach, response);
         }
@@ -1137,7 +1141,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new CharacterFootStrideHipsResult(
                 CharacterFootStrideState.Rejected, reason,
                 default, default, default, default, 0f,
-                CharacterFootStrideSlope.Flat, default, default, default, default,
+                CharacterFootStrideSlope.Flat, default, false, default, default, default,
                 default, default, reach, response);
 
         static CharacterFootStrideHipsResult ResolvePelvisRelease(
@@ -1165,7 +1169,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? CharacterFootStrideState.Releasing
                     : CharacterFootStrideState.LandingReach,
                 reason, default, default, default, default, 0f,
-                CharacterFootStrideSlope.Flat, default, default, default, default,
+                CharacterFootStrideSlope.Flat, default, true,
+                frame.PoseRootPosition, frame.AnimatedPelvis, frame.AnimatedPelvisComponentPosition,
                 default, default, reach, response);
         }
 

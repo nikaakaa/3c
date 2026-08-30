@@ -49,3 +49,19 @@ Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形�
 - **WHEN** 双脚目标与身体位置使当前骨盆输出超过真实硬可达边界
 - **THEN** 唯一Pelvis响应阶段 MUST保持腿长安全并发布必要的边界调整
 - **AND** MUST不承诺在不变脚目标、身体和腿长的同时绝对连续，也不得另加后置平滑绕过限制
+
+### Requirement: 骨盆观测必须区分原Pose、修正量和最终世界写回
+
+最终Physical Pelvis世界点 MUST由唯一Physical Writer完成本次骨骼写入后取得，并与组件点及同一Completion一起冻结。Sampler MUST只消费这份正式结果，不通过采样时live Root变换冒充同Completion世界事实。原Pose输入有效性 MUST与HeightTarget/Posture求值有效性分离；产生合法Pelvis Goal的Releasing或仅LandingReach也 MUST发布真实源Pose。
+
+#### Scenario: Release阶段检查最终骨盆Goal残差
+
+- **WHEN** Releasing仍有非零Pelvis Goal且同Completion的最终Physical写回有效
+- **THEN** 残差 MUST使用本帧真实源Pelvis组件点加正式加权Goal作为期望
+- **AND** MUST不把未执行HeightTarget的默认零点当原Pose
+
+#### Scenario: 最终世界运动与额外修正不同
+
+- **WHEN** Root、原动画和Pelvis修正同时变化
+- **THEN** Diagnostics MUST分别表达最终世界点、组件点和相对修正，不把其中一项直接命名成另一项的跳变
+- **AND** 必要阶段缺失 MUST标Unavailable，不改质量规则或用占位零值宣布通过

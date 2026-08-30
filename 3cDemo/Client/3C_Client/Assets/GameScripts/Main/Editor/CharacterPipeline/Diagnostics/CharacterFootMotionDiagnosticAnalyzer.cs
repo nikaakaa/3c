@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/59";
+        const string Schema = "character-foot-motion-facts/60";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 59;
+        const int AnalyzerVersion = 60;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -5415,6 +5415,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 predictionMotions = capture.Left
                     .Select(PredictionMotionFact.From)
                     .ToList(),
+                pelvisHeightTargets = capture.Left
+                    .Select(frame => frame.PelvisHeightTarget.ToFact(frame))
+                    .ToList(),
                 unifiedFootFrames = capture.FootRows
                     .Select(BuildUnifiedFootFact)
                     .ToList(),
@@ -5834,7 +5837,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Foot Motion samples CSV does not contain one Left and one Right Foot row per frame.");
             }
             for (int i = 0; i < left.Count; i++)
+            {
                 RequirePredictionMotionPair(left[i], right[i]);
+                if (left[i].CompletionIdentity != right[i].CompletionIdentity ||
+                    left[i].StrideState != right[i].StrideState ||
+                    !left[i].PelvisHeightTarget.SameAs(right[i].PelvisHeightTarget))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion shared Pelvis height target differs between Foot rows Frame={left[i].Frame}.");
+                }
+            }
             RequireResponseDomainHistory(left);
             RequireResponseDomainHistory(right);
             FootFrame first = footRows[0];
@@ -6998,6 +7010,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PrimarySupportSide = Cell("PrimarySupportSide"),
                 PrimarySupportEventIdentity = Ulong("PrimarySupportLandingEventIdentity"),
                 StrideState = Cell("StrideState"),
+                PelvisHeightTarget = new PelvisHeightTargetFrame
+                {
+                    Available = Int("PelvisHeightTargetAvailable") != 0,
+                    ComponentUp = Vector("PelvisHeightTargetComponentUp"),
+                    LeftAnimatedSole = Vector("PelvisHeightTargetLeftAnimatedSole"),
+                    RightAnimatedSole = Vector("PelvisHeightTargetRightAnimatedSole"),
+                    LeftTargetSole = Vector("PelvisHeightTargetLeftTargetSole"),
+                    RightTargetSole = Vector("PelvisHeightTargetRightTargetSole"),
+                    AnimatedMinimumAlongUp = Float("PelvisHeightTargetAnimatedMinimumAlongUp"),
+                    TargetMinimumAlongUp = Float("PelvisHeightTargetMinimumAlongUp"),
+                    RequestedOffsetAlongUp = Float("PelvisRequestedOffsetAlongUp")
+                },
                 StrideSupportSide = Cell("StrideSupportSide"),
                 StrideSupportReachAvailable =
                     Int("StrideSupportReachAvailable") != 0,
@@ -7137,6 +7161,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireResolvedFoot(frame);
             RequireFormalGoalWeights(frame);
             RequireLegReachFacts(frame);
+            frame.PelvisHeightTarget.RequireValid(frame);
             if (!float.IsFinite(frame.LandingReachGoalClampDistance) ||
                 frame.LandingReachGoalClampDistance < 0f ||
                 frame.LandingReachGoalClamped !=
@@ -9815,6 +9840,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PrimarySupportHasValue", "PrimarySupportSide",
                 "PrimarySupportLandingEventIdentity",
                 "StrideState", "StrideSupportSide",
+                "PelvisHeightTargetAvailable",
+                "PelvisHeightTargetComponentUpX", "PelvisHeightTargetComponentUpY", "PelvisHeightTargetComponentUpZ",
+                "PelvisHeightTargetLeftAnimatedSoleX", "PelvisHeightTargetLeftAnimatedSoleY", "PelvisHeightTargetLeftAnimatedSoleZ",
+                "PelvisHeightTargetRightAnimatedSoleX", "PelvisHeightTargetRightAnimatedSoleY", "PelvisHeightTargetRightAnimatedSoleZ",
+                "PelvisHeightTargetLeftTargetSoleX", "PelvisHeightTargetLeftTargetSoleY", "PelvisHeightTargetLeftTargetSoleZ",
+                "PelvisHeightTargetRightTargetSoleX", "PelvisHeightTargetRightTargetSoleY", "PelvisHeightTargetRightTargetSoleZ",
+                "PelvisHeightTargetAnimatedMinimumAlongUp", "PelvisHeightTargetMinimumAlongUp", "PelvisRequestedOffsetAlongUp",
                 "StrideSupportReachAvailable",
                 "StrideSupportReachMinimumAlongUp",
                 "StrideSupportReachMaximumAlongUp",
@@ -10787,6 +10819,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string PrimarySupportSide;
             internal ulong PrimarySupportEventIdentity;
             internal string StrideState;
+            internal PelvisHeightTargetFrame PelvisHeightTarget;
             internal string StrideSupportSide;
             internal bool StrideSupportReachAvailable;
             internal float StrideSupportReachMinimumAlongUp;
@@ -10796,6 +10829,74 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 FinalPelvisGoal;
             internal Vector3 PhysicalPelvis;
             internal Vector3 EffectiveCorrection => CorrectedAnkle - OriginalAnkle;
+        }
+
+        sealed class PelvisHeightTargetFrame
+        {
+            internal bool Available;
+            internal Vector3 ComponentUp;
+            internal Vector3 LeftAnimatedSole;
+            internal Vector3 RightAnimatedSole;
+            internal Vector3 LeftTargetSole;
+            internal Vector3 RightTargetSole;
+            internal float AnimatedMinimumAlongUp;
+            internal float TargetMinimumAlongUp;
+            internal float RequestedOffsetAlongUp;
+
+            internal void RequireValid(FootFrame frame)
+            {
+                if (!Available)
+                {
+                    if (!ComponentUp.Equals(Vector3.zero) ||
+                        !LeftAnimatedSole.Equals(Vector3.zero) || !RightAnimatedSole.Equals(Vector3.zero) ||
+                        !LeftTargetSole.Equals(Vector3.zero) || !RightTargetSole.Equals(Vector3.zero) ||
+                        AnimatedMinimumAlongUp != 0f || TargetMinimumAlongUp != 0f || RequestedOffsetAlongUp != 0f)
+                        throw new InvalidDataException(
+                            $"Foot Motion unavailable Pelvis height target is not default Frame={frame.Frame} Side={frame.Side}.");
+                    return;
+                }
+                float animatedMinimum = Mathf.Min(Vector3.Dot(LeftAnimatedSole, ComponentUp),
+                    Vector3.Dot(RightAnimatedSole, ComponentUp));
+                float targetMinimum = Mathf.Min(Vector3.Dot(LeftTargetSole, ComponentUp),
+                    Vector3.Dot(RightTargetSole, ComponentUp));
+                if (!FiniteVector(ComponentUp) || Math.Abs(ComponentUp.sqrMagnitude - 1f) > RuntimeGeometryEpsilon ||
+                    !FiniteVector(LeftAnimatedSole) || !FiniteVector(RightAnimatedSole) ||
+                    !FiniteVector(LeftTargetSole) || !FiniteVector(RightTargetSole) ||
+                    !float.IsFinite(AnimatedMinimumAlongUp) || !float.IsFinite(TargetMinimumAlongUp) ||
+                    !float.IsFinite(RequestedOffsetAlongUp) || !float.IsFinite(animatedMinimum) ||
+                    !float.IsFinite(targetMinimum) ||
+                    Math.Abs(AnimatedMinimumAlongUp - animatedMinimum) > RuntimeGeometryEpsilon ||
+                    Math.Abs(TargetMinimumAlongUp - targetMinimum) > RuntimeGeometryEpsilon ||
+                    Math.Abs(RequestedOffsetAlongUp - (targetMinimum - animatedMinimum)) > RuntimeGeometryEpsilon)
+                    throw new InvalidDataException(
+                        $"Foot Motion Pelvis height target is inconsistent Frame={frame.Frame} Side={frame.Side} " +
+                        $"AnimatedMinimum={AnimatedMinimumAlongUp:R}/{animatedMinimum:R} " +
+                        $"TargetMinimum={TargetMinimumAlongUp:R}/{targetMinimum:R} RequestedOffset={RequestedOffsetAlongUp:R}.");
+            }
+
+            internal bool SameAs(PelvisHeightTargetFrame other) =>
+                Available == other.Available && ComponentUp.Equals(other.ComponentUp) &&
+                LeftAnimatedSole.Equals(other.LeftAnimatedSole) && RightAnimatedSole.Equals(other.RightAnimatedSole) &&
+                LeftTargetSole.Equals(other.LeftTargetSole) && RightTargetSole.Equals(other.RightTargetSole) &&
+                AnimatedMinimumAlongUp == other.AnimatedMinimumAlongUp &&
+                TargetMinimumAlongUp == other.TargetMinimumAlongUp && RequestedOffsetAlongUp == other.RequestedOffsetAlongUp;
+
+            internal CharacterFootPelvisHeightTargetObservation ToFact(FootFrame frame) =>
+                new CharacterFootPelvisHeightTargetObservation
+                {
+                    frame = frame.Frame,
+                    completionIdentity = frame.CompletionIdentity.ToString(CultureInfo.InvariantCulture),
+                    strideState = frame.StrideState,
+                    available = Available,
+                    componentUp = Available ? CharacterFootVectorFact.From(ComponentUp) : null,
+                    leftAnimatedSole = Available ? CharacterFootVectorFact.From(LeftAnimatedSole) : null,
+                    rightAnimatedSole = Available ? CharacterFootVectorFact.From(RightAnimatedSole) : null,
+                    leftTargetSole = Available ? CharacterFootVectorFact.From(LeftTargetSole) : null,
+                    rightTargetSole = Available ? CharacterFootVectorFact.From(RightTargetSole) : null,
+                    animatedMinimumAlongUp = Available ? (double?)AnimatedMinimumAlongUp : null,
+                    targetMinimumAlongUp = Available ? (double?)TargetMinimumAlongUp : null,
+                    requestedOffsetAlongUp = Available ? (double?)RequestedOffsetAlongUp : null
+                };
         }
 
         static bool RevisionReasonIncludes(
@@ -11461,6 +11562,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public CoverageFact coverage;
             public List<LandingReachFact> landingReaches;
             public List<PredictionMotionFact> predictionMotions;
+            public List<CharacterFootPelvisHeightTargetObservation> pelvisHeightTargets;
             public List<object> unifiedFootFrames;
             public List<StepTimeCandidateSelectionFact>
                 stepTimeCandidateSelections;

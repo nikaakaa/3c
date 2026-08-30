@@ -286,11 +286,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "StridePoseRootPositionX,StridePoseRootPositionY,StridePoseRootPositionZ," +
             "StrideAnimatedPelvisX,StrideAnimatedPelvisY,StrideAnimatedPelvisZ," +
             "StrideAnimatedPelvisComponentPositionX,StrideAnimatedPelvisComponentPositionY,StrideAnimatedPelvisComponentPositionZ," +
-            "StrideRawPelvisDeltaX,StrideRawPelvisDeltaY,StrideRawPelvisDeltaZ," +
-            "StrideRootRelativeGroundTargetAlongUp,StrideSoleClearanceLiftAlongUp,StrideHadPreviousState,StrideSupportChanged," +
+            "PelvisHeightTargetAvailable,PelvisHeightTargetComponentUpX,PelvisHeightTargetComponentUpY,PelvisHeightTargetComponentUpZ," +
+            "PelvisHeightTargetLeftAnimatedSoleX,PelvisHeightTargetLeftAnimatedSoleY,PelvisHeightTargetLeftAnimatedSoleZ,PelvisHeightTargetRightAnimatedSoleX,PelvisHeightTargetRightAnimatedSoleY,PelvisHeightTargetRightAnimatedSoleZ," +
+            "PelvisHeightTargetLeftTargetSoleX,PelvisHeightTargetLeftTargetSoleY,PelvisHeightTargetLeftTargetSoleZ,PelvisHeightTargetRightTargetSoleX,PelvisHeightTargetRightTargetSoleY,PelvisHeightTargetRightTargetSoleZ," +
+            "PelvisHeightTargetAnimatedMinimumAlongUp,PelvisHeightTargetMinimumAlongUp,PelvisRequestedOffsetAlongUp,StrideHadPreviousState,StrideSupportChanged," +
             "StridePreviousSlope,StrideSpringHandoffReason,StrideSpringVelocityReset," +
             "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput,StrideSpringInputVelocity,StrideSpringFrequency," +
-            "StrideUnclampedSpringTarget,StrideSupportReachAvailable,StrideSupportLegCompressionReserve,StrideSupportReachUsableLegLength,StrideSupportReachMinimumAlongUp,StrideSupportReachMaximumAlongUp," +
+            "StrideSupportReachAvailable,StrideSupportLegCompressionReserve,StrideSupportReachUsableLegLength,StrideSupportReachMinimumAlongUp,StrideSupportReachMaximumAlongUp," +
             "StrideSupportReachTargetClamped,StrideSupportReachOutputClamped," +
             "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
             "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
@@ -2345,9 +2347,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.PoseRootPosition);
             Add(row, stride.AnimatedPelvis);
             Add(row, stride.AnimatedPelvisComponentPosition);
-            Add(row, stride.RawPelvisDelta);
-            Add(row, stride.RootRelativeGroundTargetAlongUp);
-            Add(row, stride.SoleClearanceLiftAlongUp);
+            Add(row, stride.HeightTargetAvailable);
+            Add(row, stride.HeightTargetComponentUp);
+            Add(row, stride.HeightTargetLeftAnimatedSole);
+            Add(row, stride.HeightTargetRightAnimatedSole);
+            Add(row, stride.HeightTargetLeftTargetSole);
+            Add(row, stride.HeightTargetRightTargetSole);
+            Add(row, stride.HeightTargetAnimatedMinimumAlongUp);
+            Add(row, stride.HeightTargetMinimumAlongUp);
+            Add(row, stride.RequestedOffsetAlongUp);
             Add(row, stride.HadPreviousState);
             Add(row, stride.SupportChanged);
             Add(row, stride.PreviousSlope.ToString());
@@ -2359,7 +2367,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.SpringInput);
             Add(row, stride.SpringInputVelocity);
             Add(row, stride.SpringFrequency);
-            Add(row, stride.UnclampedSpringTarget);
             Add(row, stride.SupportReachAvailable);
             Add(row, stride.SupportLegCompressionReserve);
             Add(row, stride.SupportReachUsableLegLength);

@@ -86,8 +86,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             document.landingReach = CharacterFootLandingReachReport.Create(
                 context.LandingReaches(),
                 events);
+            document.pelvisHeightTargets = context.PelvisHeightTargets();
             return document;
         }
+    }
+
+    [Serializable]
+    internal sealed class CharacterFootPelvisHeightTargetObservation
+    {
+        public int frame;
+        public string completionIdentity;
+        public string strideState;
+        public bool available;
+        public string inputStage = "PreFootReachWeightedGoalSole";
+        public CharacterFootVectorFact componentUp;
+        public CharacterFootVectorFact leftAnimatedSole;
+        public CharacterFootVectorFact rightAnimatedSole;
+        public CharacterFootVectorFact leftTargetSole;
+        public CharacterFootVectorFact rightTargetSole;
+        public double? animatedMinimumAlongUp;
+        public double? targetMinimumAlongUp;
+        public double? requestedOffsetAlongUp;
     }
 
     [Serializable]

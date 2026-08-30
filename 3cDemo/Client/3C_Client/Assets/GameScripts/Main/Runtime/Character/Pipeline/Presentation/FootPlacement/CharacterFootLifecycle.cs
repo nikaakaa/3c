@@ -48,12 +48,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLifecycleTransitionFact lifecycleTransition =
                 CharacterFootLifecycleTransitionFact.Begin(
                     in context,
-                    in formalFootMotion,
                     in frame);
             CharacterFootTransitionDecision preTransition =
                 CharacterFootTransitionResolver.ResolvePreInterpolation(
                     in context,
-                    in formalFootMotion,
                     in frame);
             CharacterFootLandingRuntime.CommitCurrentContactVerification(
                 ref context.Landing,

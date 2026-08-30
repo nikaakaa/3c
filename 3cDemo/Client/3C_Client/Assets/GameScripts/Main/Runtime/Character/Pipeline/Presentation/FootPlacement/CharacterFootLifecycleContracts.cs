@@ -57,7 +57,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         LandingCompleted = 10,
         ReleaseCompleted = 11,
         SameEventContactReentryRefresh = 12,
-        NewEventContactAcquired = 13
+        NewEventContactAcquired = 13,
+        SourceLiftUnloading = 14,
+        UnloadingLockRestored = 15
     }
 
     internal enum CharacterFootContactEdge : byte
@@ -1015,6 +1017,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong LatestContactEventIdentity;
         internal ulong LatestReleasedContactEventIdentity;
         internal ulong CompletedLockWeightEventIdentity;
+        internal ulong UnloadingEventIdentity;
+        internal ulong UnloadingReentryProtectedEventIdentity;
         internal CharacterFootContactEdge LastEdge;
 
         internal bool HasCompletedLockWeight(ulong eventIdentity) =>
@@ -1052,6 +1056,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.LatestReleasedContactEventIdentity;
             CompletedLockWeightEventIdentity =
                 context.CompletedLockWeightEventIdentity;
+            UnloadingEventIdentity = context.UnloadingEventIdentity;
+            UnloadingReentryProtectedEventIdentity =
+                context.UnloadingReentryProtectedEventIdentity;
         }
 
         internal bool RequestAvailable { get; }
@@ -1063,6 +1070,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong LatestContactEventIdentity { get; }
         internal ulong LatestReleasedContactEventIdentity { get; }
         internal ulong CompletedLockWeightEventIdentity { get; }
+        internal ulong UnloadingEventIdentity { get; }
+        internal ulong UnloadingReentryProtectedEventIdentity { get; }
     }
 
     internal readonly struct CharacterFootContactAnchorFact

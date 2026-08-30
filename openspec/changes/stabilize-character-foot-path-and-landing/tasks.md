@@ -110,6 +110,8 @@
 - [x] 6.40 将VerifiedSupport统一为ContactWorldResidual单一位置历史，删除Sliding第二世界误差与Contact动画相对scalar消费，保留原XYZ Capture/Decay和退出Release的完整移交
 - [x] 6.41 迁移唯一Diagnostics到ContactWorldResidual分域合同，删除废弃Sliding误差字段，保持原37项质量公式；5d858bc完成facts57/d26，Editor构建0错误
 - [ ] 6.42 加载ContactWorldResidual候选并使用原Record采样，记录与03:54历史效果及155326同输入控制的可比结果，保留173423失败前驱，不以编译通过代替效果
+- [x] 6.43 在现有Transition内实现满锁后Source抬脚滑动的组合卸载政策，完整移交Release并闭合请求结束、同Event重入/恢复Locked保护，不改变Contact位置响应、旋转或Reach；候选待新Replay验证
+- [ ] 6.44 发布卸载历史Before/After到唯一Diagnostics并核对原始固定Contact帧，使用同Record验证骨盆下拉与脚部收益，保留193957和候选证据
 
 ## 7. 单独接入Support与Pelvis
 

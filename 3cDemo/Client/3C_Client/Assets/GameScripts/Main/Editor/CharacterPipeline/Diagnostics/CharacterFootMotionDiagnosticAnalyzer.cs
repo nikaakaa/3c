@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/57";
+        const string Schema = "character-foot-motion-facts/59";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 57;
+        const int AnalyzerVersion = 59;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -8997,11 +8997,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 expectedRotation = frame.CurrentContactAnchorAvailable
                     ? formal * frame.CurrentLockRequestWeight
                     : 0f;
-                bool positionRequired =
-                    frame.ResolvedGoalTargetCorrection.sqrMagnitude >
-                    RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
-                    expectedRotation > RuntimeGeometryEpsilon;
-                expectedPosition = positionRequired ? formal : 0f;
+                expectedPosition = formal;
                 if (frame.ResolvedContactAvailable !=
                     frame.CurrentContactAnchorAvailable ||
                     frame.ResolvedContactAvailable &&

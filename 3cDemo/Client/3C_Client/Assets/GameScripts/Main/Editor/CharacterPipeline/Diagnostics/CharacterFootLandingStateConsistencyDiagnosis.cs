@@ -592,7 +592,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 };
             CharacterFootDiagnosisTarget formalGoalWeightTarget = context.Target(
                 "formal-goal-weight-policy",
-                "Ready与Unavailable帧的Motion、Resolved和最终Goal权重是否来自正式FootPlacementWeight及Contact/Lock政策",
+                "合法Ready目标的位置权重是否等于正式FootPlacementWeight且不因Correction趋零撤销；Unavailable/Suppress保持零权重，最终Goal编码与Contact/Lock旋转政策保持原边界",
                 new[] { "FormalGoalWeightPolicy" },
                 new[] { "formalWeightPolicyConsistent=false" },
                 formalGoalWeights,

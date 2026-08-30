@@ -5,7 +5,7 @@
 
 ## 2. 脚位置目标有效性
 
-- [ ] 2.1 删除Correction米域幅度决定PositionWeight的门，保持合法目标、作者权重、Unavailable/Suppress及旋转原语义
+- [x] 2.1 删除Correction米域幅度决定PositionWeight的门，保持合法目标、作者权重、Unavailable/Suppress及旋转原语义；Runtime候选已提交，效果待2.3独立Replay
 - [ ] 2.2 将唯一Diagnostics的正式权重不变量迁移到facts59/diagnosis28，不改质量评分或给旧包补字段
 - [ ] 2.3 独立构建加载并执行同Record Replay，核对近零修正、L339/L515/R611、全部脚与骨盆输出，保存结论及Proof
 

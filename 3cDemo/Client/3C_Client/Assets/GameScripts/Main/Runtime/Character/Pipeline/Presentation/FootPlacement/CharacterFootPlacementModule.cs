@@ -31,8 +31,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFullBodyIkGoal PelvisGoal;
         internal CharacterFullBodyIkGoal LeftGoal;
         internal CharacterFullBodyIkGoal RightGoal;
-        internal CharacterFootWeightedGoalSoleReference LeftWeightedGoalSole;
-        internal CharacterFootWeightedGoalSoleReference RightWeightedGoalSole;
+        internal bool HasVisibleFootOutputs;
+        internal Vector3 LeftVisibleSole;
+        internal Vector3 RightVisibleSole;
         internal CharacterFootGroundPathPage LeftGroundPath;
         internal CharacterFootGroundPathPage RightGroundPath;
         internal CharacterFootLandingObservationPage LeftLandingObservation;
@@ -76,8 +77,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PelvisGoal = default;
                 LeftGoal = default;
                 RightGoal = default;
-                LeftWeightedGoalSole = default;
-                RightWeightedGoalSole = default;
+                HasVisibleFootOutputs = false;
+                LeftVisibleSole = default;
+                RightVisibleSole = default;
                 LeftGroundPath = null;
                 RightGroundPath = null;
                 LeftLandingObservation = null;
@@ -117,8 +119,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PelvisGoal = default;
             LeftGoal = default;
             RightGoal = default;
-            LeftWeightedGoalSole = default;
-            RightWeightedGoalSole = default;
+            HasVisibleFootOutputs = false;
+            LeftVisibleSole = default;
+            RightVisibleSole = default;
             Diagnostics.Clear();
             FrameSequence = 0;
             CompletionIdentity = 0;
@@ -174,8 +177,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PelvisGoal = default;
             LeftGoal = default;
             RightGoal = default;
-            LeftWeightedGoalSole = default;
-            RightWeightedGoalSole = default;
+            HasVisibleFootOutputs = false;
+            LeftVisibleSole = default;
+            RightVisibleSole = default;
             LeftGroundPath = null;
             RightGroundPath = null;
             LeftLandingObservation = null;
@@ -296,8 +300,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
                 frame.RenderFrame,
                 frame.Pose.DenseComponentPoses);
-            CharacterFootPositionResponseBasis positionResponseBasis =
-                m_Rig.CapturePositionResponseBasis();
             CharacterFullBodyIkGoal pelvisGoal = CreatePelvisGoal();
             CharacterFullBodyIkGoal leftGoal = CreateFootGoal(
                 CharacterFootSide.Left,
@@ -510,16 +512,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var profileRevision = new FixedString128Bytes(
                 m_Settings.ProfileRevision);
             ulong worldRevision = m_WorldQuery.WorldRevision;
-            CharacterFootWeightedGoalSoleReference leftPreviousGoalSole =
-                ResolvePreviousWeightedGoalSole(
+            bool leftPreviousVisibleOutputAvailable =
+                TryResolvePreviousVisibleOutput(
                     committedBank,
                     CharacterFootSide.Left,
-                    frame.RenderFrame);
-            CharacterFootWeightedGoalSoleReference rightPreviousGoalSole =
-                ResolvePreviousWeightedGoalSole(
+                    out Vector3 leftPreviousVisibleOutputPoint);
+            bool rightPreviousVisibleOutputAvailable =
+                TryResolvePreviousVisibleOutput(
                     committedBank,
                     CharacterFootSide.Right,
-                    frame.RenderFrame);
+                    out Vector3 rightPreviousVisibleOutputPoint);
             var leftConstraintFrame = new CharacterFootStateFrame(
                 frame.RenderFrame,
                 frame.Pose.CompletionIdentity,
@@ -535,7 +537,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftPreparedPlantActive,
                 in leftPreparedPlantTarget,
                 in leftCurrentSupport,
-                leftPreviousGoalSole,
+                leftPreviousVisibleOutputAvailable,
+                leftPreviousVisibleOutputPoint,
                 in leftLockRequest,
                 leftCurrentStep.Support,
                 leftLockRequest.EventIdentity,
@@ -544,7 +547,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     leftCurrentStep.IsAuthoritative),
                 footPlacementWeight,
                 componentUp,
-                in positionResponseBasis,
                 frame.PresentationDeltaSeconds,
                 sourceLineage,
                 profileRevision,
@@ -565,7 +567,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightPreparedPlantActive,
                 in rightPreparedPlantTarget,
                 in rightCurrentSupport,
-                rightPreviousGoalSole,
+                rightPreviousVisibleOutputAvailable,
+                rightPreviousVisibleOutputPoint,
                 in rightLockRequest,
                 rightCurrentStep.Support,
                 rightLockRequest.EventIdentity,
@@ -574,7 +577,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rightCurrentStep.IsAuthoritative),
                 footPlacementWeight,
                 componentUp,
-                in positionResponseBasis,
                 frame.PresentationDeltaSeconds,
                 sourceLineage,
                 profileRevision,
@@ -769,29 +771,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bank.StrideHips = strideHips;
             if (!strideHips.ProducesPelvisGoal)
                 bank.PelvisSpring.Clear();
+            left = left.WithFootMotion(
+                in leftFootMotion,
+                leftGoal);
+            right = right.WithFootMotion(
+                in rightFootMotion,
+                rightGoal);
+
             bank.PelvisGoal = pelvisGoal;
             bank.LeftGoal = leftGoal;
             bank.RightGoal = rightGoal;
-            bank.LeftWeightedGoalSole = CaptureWeightedGoalSole(
-                frame.RenderFrame,
-                frame.Pose.CompletionIdentity,
-                CharacterFootSide.Left,
+            bank.LeftVisibleSole = ResolveWeightedGoalSole(
                 pose.Left,
                 in leftGoal,
                 goalRoot);
-            bank.RightWeightedGoalSole = CaptureWeightedGoalSole(
-                frame.RenderFrame,
-                frame.Pose.CompletionIdentity,
-                CharacterFootSide.Right,
+            bank.RightVisibleSole = ResolveWeightedGoalSole(
                 pose.Right,
                 in rightGoal,
                 goalRoot);
-            leftFootMotion = leftFootMotion.WithWeightedGoalSole(
-                bank.LeftWeightedGoalSole);
-            rightFootMotion = rightFootMotion.WithWeightedGoalSole(
-                bank.RightWeightedGoalSole);
-            left = left.WithFootMotion(in leftFootMotion, leftGoal);
-            right = right.WithFootMotion(in rightFootMotion, rightGoal);
+            bank.HasVisibleFootOutputs = true;
             bank.FrameSequence = frame.RenderFrame;
             bank.CompletionIdentity = frame.Pose.CompletionIdentity;
             if (bank.RecordDiagnostics)
@@ -1713,46 +1711,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref pelvisSpring);
         }
 
-        static CharacterFootWeightedGoalSoleReference CaptureWeightedGoalSole(
-            ulong frameSequence,
-            ulong completionIdentity,
-            CharacterFootSide side,
-            CharacterFootPlacementAnimatedFootPose foot,
-            in CharacterFullBodyIkGoal goal,
-            Transform poseRoot)
-        {
-            CharacterFullBodyIkEffectorSlot expectedSlot =
-                side == CharacterFootSide.Left
-                    ? CharacterFullBodyIkEffectorSlot.LeftFoot
-                    : CharacterFullBodyIkEffectorSlot.RightFoot;
-            if (poseRoot == null || !goal.IsValid || goal.Slot != expectedSlot ||
-                goal.SourceKind != CharacterFullBodyIkGoalSourceKind.FootPlacement ||
-                goal.Application != CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget)
-            {
-                throw new InvalidOperationException(
-                    "Foot weighted Goal Sole has no valid Goal source.");
-            }
-            return new CharacterFootWeightedGoalSoleReference(
-                frameSequence,
-                completionIdentity,
-                side,
-                ResolveWeightedGoalSole(foot, in goal, poseRoot),
-                goal.PositionWeight,
-                goal.RotationWeight);
-        }
-
         static Vector3 ResolveWeightedGoalSole(
             CharacterFootPlacementAnimatedFootPose foot,
             in CharacterFullBodyIkGoal goal,
             Transform poseRoot)
         {
-            if (poseRoot == null || !goal.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Foot weighted Goal Sole requires a valid pose and Goal.");
-            }
             Vector3 originalSole = foot.HeelPosition * 0.5f + foot.ToePosition * 0.5f;
-            if (goal.PositionWeight <= 0f)
+            if (poseRoot == null || goal.PositionWeight <= 0f)
                 return originalSole;
             Vector3 targetAnkle = poseRoot.TransformPoint(goal.ComponentPosition);
             Vector3 effectiveAnkle = Vector3.LerpUnclamped(
@@ -1788,41 +1753,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return reason;
         }
 
-        CharacterFootWeightedGoalSoleReference ResolvePreviousWeightedGoalSole(
+        static bool TryResolvePreviousVisibleOutput(
             CharacterFootPlacementBank committed,
             CharacterFootSide side,
-            ulong currentFrameSequence)
+            out Vector3 point)
         {
-            if (committed == null)
-                return default;
-            CharacterFootWeightedGoalSoleReference reference =
-                side == CharacterFootSide.Left
-                    ? committed.LeftWeightedGoalSole
-                    : committed.RightWeightedGoalSole;
-            if (!reference.Available)
+            point = default;
+            if (committed == null || !committed.HasFrame ||
+                !committed.HasVisibleFootOutputs)
+                return false;
+            point = side == CharacterFootSide.Left
+                ? committed.LeftVisibleSole
+                : committed.RightVisibleSole;
+            if (!CharacterPoseConstraintMath.IsFinite(point))
             {
-                if (committed.FrameSequence != 0 || committed.CompletionIdentity != 0)
-                {
-                    throw new InvalidOperationException(
-                        "Committed Foot result has no weighted Goal Sole reference.");
-                }
-                return default;
+                point = default;
+                return false;
             }
-            CharacterResolvedFootPair pair = committed.ResolvedFeet;
-            if (committed.HasFrame || !reference.IsValid ||
-                reference.Side != side ||
-                reference.FrameSequence != committed.FrameSequence ||
-                reference.CompletionIdentity != committed.CompletionIdentity ||
-                reference.FrameSequence >= currentFrameSequence ||
-                pair.FrameSequence != committed.FrameSequence ||
-                pair.CompletionIdentity != committed.CompletionIdentity ||
-                !pair.RigId.Equals(new FixedString64Bytes(m_Rig.Rig.RigId)) ||
-                !pair.RigRevision.Equals(new FixedString64Bytes(m_Rig.Rig.RigRevision)))
-            {
-                throw new InvalidOperationException(
-                    "Committed Foot weighted Goal Sole lineage is inconsistent.");
-            }
-            return reference;
+            return true;
         }
 
         static bool IsLandingReachCandidate(

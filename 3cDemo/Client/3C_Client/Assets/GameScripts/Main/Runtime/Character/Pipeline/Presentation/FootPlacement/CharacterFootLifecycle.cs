@@ -754,8 +754,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.CurrentSupport.Side != frame.Side ||
                 frame.CurrentSupport.Available &&
                 frame.CurrentSupport.Target.WorldRevision != frame.WorldRevision ||
-                frame.PreviousWeightedGoalSole.Available &&
-                !frame.PreviousWeightedGoalSole.IsValid ||
+                frame.PreviousVisibleOutputAvailable &&
+                !CharacterFootConstraintMath.Finite(
+                    frame.PreviousVisibleOutputPoint) ||
                 frame.PreparedPlantActive &&
                 (frame.PreparedPlantTarget.LandingEventIdentity == 0 ||
                  !CharacterFootConstraintMath.Finite(

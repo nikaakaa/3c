@@ -117,36 +117,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float LeftLegLength { get; }
         public float RightLegLength { get; }
 
-        internal CharacterFootPositionResponseBasis CapturePositionResponseBasis()
-        {
-            Transform owner = PoseRoot;
-            Matrix4x4 ownerToWorld = owner.localToWorldMatrix;
-            Matrix4x4 worldToOwner = owner.worldToLocalMatrix;
-            float determinant = ownerToWorld.determinant;
-            if (!float.IsFinite(determinant) || determinant == 0f)
-            {
-                throw new InvalidOperationException(
-                    "Foot position response owner transform is not invertible.");
-            }
-            for (int i = 0; i < 16; i++)
-            {
-                if (!float.IsFinite(ownerToWorld[i]) ||
-                    !float.IsFinite(worldToOwner[i]))
-                {
-                    throw new InvalidOperationException(
-                        "Foot position response owner transform is not finite.");
-                }
-            }
-            Vector3 ownerYAxisWorld = ownerToWorld.MultiplyVector(Vector3.up);
-            Vector4 worldToOwnerHeight = worldToOwner.GetRow(1);
-            return new CharacterFootPositionResponseBasis(
-                ownerYAxisWorld,
-                new Vector3(
-                    worldToOwnerHeight.x,
-                    worldToOwnerHeight.y,
-                    worldToOwnerHeight.z));
-        }
-
         internal CharacterFootPlacementAnimatedPose CaptureAnimatedPose(
             ulong renderFrame,
             NativeSlice<AnimationLocalBonePose> componentPoses)

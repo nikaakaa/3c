@@ -289,8 +289,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetVerticalClamped = false;
             PlantPreviousSelectedWorldTarget = default;
             PlantSelectedWorldTarget = default;
-            ContinuityReferenceAvailable = false;
-            ContinuityReferencePoint = default;
+            PreviousResponseOutputAvailable = false;
+            PreviousResponseOutputPoint = default;
             DesiredOutputPoint = default;
             ResponseOutputPoint = default;
             PlantResidualCaptureReason =
@@ -311,16 +311,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CorrectionResponseInitializationReason =
                 CharacterFootCorrectionResponseInitializationReason.None;
             CorrectionResponseDesired = 0f;
-            SupportDirectionRequested = default;
-            SupportDirectionPrevious = default;
-            SupportDirectionLimited = false;
-            SupportDirectionMaximumChangeDegrees = 0f;
-            SupportDirectionAppliedChangeDegrees = 0f;
-            CorrectionResponseWeightedGoalSoleTransferred = false;
+            CorrectionResponseRequestedDirection = default;
+            CorrectionResponsePreviousDirection = default;
+            CorrectionResponseDirectionLimited = false;
+            CorrectionResponseMaximumDirectionChangeDegrees = 0f;
+            CorrectionResponseAppliedDirectionChangeDegrees = 0f;
+            CorrectionResponseVisibleOutputTransferred = false;
             CorrectionResponseBeforeRebase = 0f;
             CorrectionResponsePrevious = 0f;
             CorrectionResponseCurrent = 0f;
-            SupportDirectionApplied = default;
+            CorrectionResponseDirection = default;
             CorrectionResponseDeltaDirection =
                 CharacterFootCorrectionResponseDeltaDirection.None;
             CorrectionResponseSelectedSpeed = 0f;
@@ -455,10 +455,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantSelectedWorldTarget = plant.SelectedWorldTarget;
             CharacterFootCorrectionResponseFact correctionResponse =
                 interpolation.CorrectionResponseFact;
-            ContinuityReferenceAvailable =
-                correctionResponse.ContinuityReferenceAvailable;
-            ContinuityReferencePoint =
-                correctionResponse.ContinuityReferencePoint;
+            PreviousResponseOutputAvailable =
+                correctionResponse.PreviousOutputAvailable;
+            PreviousResponseOutputPoint =
+                correctionResponse.PreviousOutputPoint;
             DesiredOutputPoint = correctionResponse.DesiredOutputPoint;
             ResponseOutputPoint = correctionResponse.ResponseOutputPoint;
             PlantResidualCaptureReason = plant.ResidualCaptureReason;
@@ -490,26 +490,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctionResponse.InitializationReason;
             CorrectionResponseDesired =
                 correctionResponse.DesiredResponse;
-            SupportDirectionRequested =
-                correctionResponse.RequestedSupportDirection;
-            SupportDirectionPrevious =
-                correctionResponse.PreviousSupportDirection;
-            SupportDirectionLimited =
-                correctionResponse.SupportDirectionLimited;
-            SupportDirectionMaximumChangeDegrees =
-                correctionResponse.MaximumSupportDirectionChangeDegrees;
-            SupportDirectionAppliedChangeDegrees =
-                correctionResponse.AppliedSupportDirectionChangeDegrees;
-            CorrectionResponseWeightedGoalSoleTransferred =
-                correctionResponse.WeightedGoalSoleTransferred;
+            CorrectionResponseRequestedDirection =
+                correctionResponse.RequestedResponseDirection;
+            CorrectionResponsePreviousDirection =
+                correctionResponse.PreviousResponseDirection;
+            CorrectionResponseDirectionLimited =
+                correctionResponse.DirectionLimited;
+            CorrectionResponseMaximumDirectionChangeDegrees =
+                correctionResponse.MaximumDirectionChangeDegrees;
+            CorrectionResponseAppliedDirectionChangeDegrees =
+                correctionResponse.AppliedDirectionChangeDegrees;
+            CorrectionResponseVisibleOutputTransferred =
+                correctionResponse.VisibleOutputTransferred;
             CorrectionResponseBeforeRebase =
                 correctionResponse.ResponseBeforeRebase;
             CorrectionResponsePrevious =
                 correctionResponse.PreviousResponse;
             CorrectionResponseCurrent =
                 correctionResponse.CurrentResponse;
-            SupportDirectionApplied =
-                correctionResponse.AppliedSupportDirection;
+            CorrectionResponseDirection =
+                correctionResponse.ResponseDirection;
             CorrectionResponseDeltaDirection =
                 correctionResponse.DeltaDirection;
             CorrectionResponseSelectedSpeed =
@@ -603,8 +603,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantTargetVerticalClamped { get; }
         internal Vector3 PlantPreviousSelectedWorldTarget { get; }
         internal Vector3 PlantSelectedWorldTarget { get; }
-        internal bool ContinuityReferenceAvailable { get; }
-        internal Vector3 ContinuityReferencePoint { get; }
+        internal bool PreviousResponseOutputAvailable { get; }
+        internal Vector3 PreviousResponseOutputPoint { get; }
         internal Vector3 DesiredOutputPoint { get; }
         internal Vector3 ResponseOutputPoint { get; }
         internal CharacterFootPlantResidualCaptureReason PlantResidualCaptureReason { get; }
@@ -624,16 +624,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootCorrectionResponseInitializationReason
             CorrectionResponseInitializationReason { get; }
         internal float CorrectionResponseDesired { get; }
-        internal Vector3 SupportDirectionRequested { get; }
-        internal Vector3 SupportDirectionPrevious { get; }
-        internal bool SupportDirectionLimited { get; }
-        internal float SupportDirectionMaximumChangeDegrees { get; }
-        internal float SupportDirectionAppliedChangeDegrees { get; }
-        internal bool CorrectionResponseWeightedGoalSoleTransferred { get; }
+        internal Vector3 CorrectionResponseRequestedDirection { get; }
+        internal Vector3 CorrectionResponsePreviousDirection { get; }
+        internal bool CorrectionResponseDirectionLimited { get; }
+        internal float CorrectionResponseMaximumDirectionChangeDegrees { get; }
+        internal float CorrectionResponseAppliedDirectionChangeDegrees { get; }
+        internal bool CorrectionResponseVisibleOutputTransferred { get; }
         internal float CorrectionResponseBeforeRebase { get; }
         internal float CorrectionResponsePrevious { get; }
         internal float CorrectionResponseCurrent { get; }
-        internal Vector3 SupportDirectionApplied { get; }
+        internal Vector3 CorrectionResponseDirection { get; }
         internal CharacterFootCorrectionResponseDeltaDirection
             CorrectionResponseDeltaDirection { get; }
         internal float CorrectionResponseSelectedSpeed { get; }
@@ -1086,8 +1086,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLockResponse lockResponseBefore,
             CharacterFootGoalOwnershipLossReason ownershipLossReason,
             float formalFootPlacementWeight,
-            in CharacterFootPositionResponseBasis positionResponseBasis,
-            CharacterFootWeightedGoalSoleReference previousWeightedGoalSole,
             in CharacterFootTransitionDecision preTransition,
             in CharacterFootTransitionDecision postTransition)
         {
@@ -1100,8 +1098,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockResponseBefore = lockResponseBefore;
             OwnershipLossReason = ownershipLossReason;
             FormalFootPlacementWeight = formalFootPlacementWeight;
-            PositionResponseBasis = positionResponseBasis;
-            PreviousWeightedGoalSole = previousWeightedGoalSole;
             PreTransition = preTransition;
             PostTransition = postTransition;
         }
@@ -1115,8 +1111,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockResponse LockResponseBefore { get; }
         internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }
         internal float FormalFootPlacementWeight { get; }
-        internal CharacterFootPositionResponseBasis PositionResponseBasis { get; }
-        internal CharacterFootWeightedGoalSoleReference PreviousWeightedGoalSole { get; }
         internal CharacterFootTransitionDecision PreTransition { get; }
         internal CharacterFootTransitionDecision PostTransition { get; }
         internal bool PostTransitionEvaluated =>
@@ -1162,8 +1156,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.Discrete.LockResponse,
                 frame.OwnershipLossReason,
                 frame.FootPlacementWeight,
-                frame.PositionResponseBasis,
-                frame.PreviousWeightedGoalSole,
                 in decision,
                 in decision);
         }
@@ -1190,8 +1182,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LockResponseBefore,
                 OwnershipLossReason,
                 FormalFootPlacementWeight,
-                PositionResponseBasis,
-                PreviousWeightedGoalSole,
                 in preTransition,
                 in postTransition);
         }
@@ -1221,21 +1211,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool initializedBefore,
             bool initializedThisFrame,
             CharacterFootCorrectionResponseInitializationReason initializationReason,
-            bool continuityReferenceAvailable,
-            Vector3 continuityReferencePoint,
+            bool previousOutputAvailable,
+            Vector3 previousOutputPoint,
             Vector3 desiredOutputPoint,
             Vector3 responseOutputPoint,
             float desiredResponse,
-            Vector3 requestedSupportDirection,
-            Vector3 previousSupportDirection,
-            bool supportDirectionLimited,
-            float maximumSupportDirectionChangeDegrees,
-            float appliedSupportDirectionChangeDegrees,
-            bool weightedGoalSoleTransferred,
+            Vector3 requestedResponseDirection,
+            Vector3 previousResponseDirection,
+            bool directionLimited,
+            float maximumDirectionChangeDegrees,
+            float appliedDirectionChangeDegrees,
+            bool visibleOutputTransferred,
             float responseBeforeRebase,
             float previousResponse,
             float currentResponse,
-            Vector3 supportDirection,
+            Vector3 responseDirection,
             CharacterFootCorrectionResponseDeltaDirection deltaDirection,
             float selectedSpeed,
             float appliedDelta)
@@ -1244,21 +1234,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             InitializedBefore = initializedBefore;
             InitializedThisFrame = initializedThisFrame;
             InitializationReason = initializationReason;
-            ContinuityReferenceAvailable = continuityReferenceAvailable;
-            ContinuityReferencePoint = continuityReferencePoint;
+            PreviousOutputAvailable = previousOutputAvailable;
+            PreviousOutputPoint = previousOutputPoint;
             DesiredOutputPoint = desiredOutputPoint;
             ResponseOutputPoint = responseOutputPoint;
             DesiredResponse = desiredResponse;
-            RequestedSupportDirection = requestedSupportDirection;
-            PreviousSupportDirection = previousSupportDirection;
-            SupportDirectionLimited = supportDirectionLimited;
-            MaximumSupportDirectionChangeDegrees = maximumSupportDirectionChangeDegrees;
-            AppliedSupportDirectionChangeDegrees = appliedSupportDirectionChangeDegrees;
-            WeightedGoalSoleTransferred = weightedGoalSoleTransferred;
+            RequestedResponseDirection = requestedResponseDirection;
+            PreviousResponseDirection = previousResponseDirection;
+            DirectionLimited = directionLimited;
+            MaximumDirectionChangeDegrees = maximumDirectionChangeDegrees;
+            AppliedDirectionChangeDegrees = appliedDirectionChangeDegrees;
+            VisibleOutputTransferred = visibleOutputTransferred;
             ResponseBeforeRebase = responseBeforeRebase;
             PreviousResponse = previousResponse;
             CurrentResponse = currentResponse;
-            AppliedSupportDirection = supportDirection;
+            ResponseDirection = responseDirection;
             DeltaDirection = deltaDirection;
             SelectedSpeed = selectedSpeed;
             AppliedDelta = appliedDelta;
@@ -1268,21 +1258,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool InitializedBefore { get; }
         internal bool InitializedThisFrame { get; }
         internal CharacterFootCorrectionResponseInitializationReason InitializationReason { get; }
-        internal bool ContinuityReferenceAvailable { get; }
-        internal Vector3 ContinuityReferencePoint { get; }
+        internal bool PreviousOutputAvailable { get; }
+        internal Vector3 PreviousOutputPoint { get; }
         internal Vector3 DesiredOutputPoint { get; }
         internal Vector3 ResponseOutputPoint { get; }
         internal float DesiredResponse { get; }
-        internal Vector3 RequestedSupportDirection { get; }
-        internal Vector3 PreviousSupportDirection { get; }
-        internal bool SupportDirectionLimited { get; }
-        internal float MaximumSupportDirectionChangeDegrees { get; }
-        internal float AppliedSupportDirectionChangeDegrees { get; }
-        internal bool WeightedGoalSoleTransferred { get; }
+        internal Vector3 RequestedResponseDirection { get; }
+        internal Vector3 PreviousResponseDirection { get; }
+        internal bool DirectionLimited { get; }
+        internal float MaximumDirectionChangeDegrees { get; }
+        internal float AppliedDirectionChangeDegrees { get; }
+        internal bool VisibleOutputTransferred { get; }
         internal float ResponseBeforeRebase { get; }
         internal float PreviousResponse { get; }
         internal float CurrentResponse { get; }
-        internal Vector3 AppliedSupportDirection { get; }
+        internal Vector3 ResponseDirection { get; }
         internal CharacterFootCorrectionResponseDeltaDirection DeltaDirection
         {
             get;
@@ -1474,81 +1464,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingSnapshot LandingSnapshot => Landing.Snapshot;
     }
 
-    public readonly struct CharacterFootWeightedGoalSoleReference
-    {
-        internal CharacterFootWeightedGoalSoleReference(
-            ulong frameSequence,
-            ulong completionIdentity,
-            CharacterFootSide side,
-            Vector3 worldSole,
-            float positionWeight,
-            float rotationWeight)
-        {
-            FrameSequence = frameSequence;
-            CompletionIdentity = completionIdentity;
-            Side = side;
-            WorldSole = worldSole;
-            PositionWeight = positionWeight;
-            RotationWeight = rotationWeight;
-            if (!IsValid)
-            {
-                throw new System.ArgumentException(
-                    "Foot weighted Goal Sole reference is invalid.");
-            }
-        }
-
-        public bool Available => FrameSequence != 0;
-        public ulong FrameSequence { get; }
-        public ulong CompletionIdentity { get; }
-        public CharacterFootSide Side { get; }
-        public Vector3 WorldSole { get; }
-        public float PositionWeight { get; }
-        public float RotationWeight { get; }
-
-        internal bool IsValid =>
-            FrameSequence != 0 && CompletionIdentity != 0 &&
-            (Side == CharacterFootSide.Left || Side == CharacterFootSide.Right) &&
-            CharacterFootConstraintMath.Finite(WorldSole) &&
-            float.IsFinite(PositionWeight) &&
-            PositionWeight >= 0f && PositionWeight <= 1f &&
-            float.IsFinite(RotationWeight) &&
-            RotationWeight >= 0f && RotationWeight <= 1f;
-    }
-
-    internal readonly struct CharacterFootPositionResponseBasis
-    {
-        internal CharacterFootPositionResponseBasis(
-            Vector3 ownerYAxisWorld,
-            Vector3 worldToOwnerHeight)
-        {
-            WorldUnitsPerPoseUnit = ownerYAxisWorld.magnitude;
-            WorldAxis = WorldUnitsPerPoseUnit > 0f
-                ? ownerYAxisWorld / WorldUnitsPerPoseUnit
-                : default;
-            HeightProjection = worldToOwnerHeight * WorldUnitsPerPoseUnit;
-            if (!IsValid)
-            {
-                throw new System.ArgumentException(
-                    "Foot position response owner basis is invalid.");
-            }
-        }
-
-        internal Vector3 WorldAxis { get; }
-        internal Vector3 HeightProjection { get; }
-        internal float WorldUnitsPerPoseUnit { get; }
-        internal bool IsValid =>
-            float.IsFinite(WorldUnitsPerPoseUnit) && WorldUnitsPerPoseUnit > 0f &&
-            CharacterFootConstraintMath.Finite(WorldAxis) &&
-            CharacterFootConstraintMath.Finite(HeightProjection) &&
-            Mathf.Abs(WorldAxis.sqrMagnitude - 1f) <=
-            CharacterFootConstraintMath.GeometryEpsilon &&
-            Mathf.Abs(Vector3.Dot(WorldAxis, HeightProjection) - 1f) <=
-            CharacterFootConstraintMath.GeometryEpsilon;
-
-        internal float ResolveHeight(Vector3 worldOffset) =>
-            Vector3.Dot(worldOffset, HeightProjection);
-    }
-
     internal readonly struct CharacterFootStateFrame
     {
         internal CharacterFootStateFrame(
@@ -1566,33 +1481,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool preparedPlantActive,
             in CharacterFootGroundPathLanding preparedPlantTarget,
             in CharacterFootCurrentSupportObservation currentSupport,
-            CharacterFootWeightedGoalSoleReference previousWeightedGoalSole,
+            bool previousVisibleOutputAvailable,
+            Vector3 previousVisibleOutputPoint,
             in CharacterFootLockRequest lockRequest,
             float formalSupport,
             ulong formalSupportEventIdentity,
             CharacterFootGoalOwnershipLossReason ownershipLossReason,
             float footPlacementWeight,
             Vector3 componentUp,
-            in CharacterFootPositionResponseBasis positionResponseBasis,
             float deltaSeconds,
             FixedString128Bytes sourceLineage,
             FixedString128Bytes profileRevision,
             ulong worldRevision,
             in CharacterFootMotionSettings settings)
         {
-            if (!positionResponseBasis.IsValid)
-            {
-                throw new System.ArgumentException(
-                    "Foot state frame has no valid position response basis.");
-            }
-            if (previousWeightedGoalSole.Available &&
-                (!previousWeightedGoalSole.IsValid ||
-                 previousWeightedGoalSole.Side != side ||
-                 previousWeightedGoalSole.FrameSequence >= frameSequence))
-            {
-                throw new System.ArgumentException(
-                    "Foot state frame weighted Goal Sole reference is inconsistent.");
-            }
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
             RigId = rigId;
@@ -1607,14 +1509,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreparedPlantActive = preparedPlantActive;
             PreparedPlantTarget = preparedPlantTarget;
             CurrentSupport = currentSupport;
-            PreviousWeightedGoalSole = previousWeightedGoalSole;
+            PreviousVisibleOutputAvailable = previousVisibleOutputAvailable;
+            PreviousVisibleOutputPoint = previousVisibleOutputPoint;
             LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
             OwnershipLossReason = ownershipLossReason;
             FootPlacementWeight = footPlacementWeight;
             ComponentUp = componentUp;
-            PositionResponseBasis = positionResponseBasis;
             DeltaSeconds = deltaSeconds;
             SourceLineage = sourceLineage;
             ProfileRevision = profileRevision;
@@ -1636,7 +1538,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PreparedPlantActive { get; }
         internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
         internal CharacterFootCurrentSupportObservation CurrentSupport { get; }
-        internal CharacterFootWeightedGoalSoleReference PreviousWeightedGoalSole { get; }
+        internal bool PreviousVisibleOutputAvailable { get; }
+        internal Vector3 PreviousVisibleOutputPoint { get; }
         internal CharacterFootLockRequest LockRequest { get; }
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }
@@ -1645,7 +1548,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OwnershipLossReason != CharacterFootGoalOwnershipLossReason.None;
         internal float FootPlacementWeight { get; }
         internal Vector3 ComponentUp { get; }
-        internal CharacterFootPositionResponseBasis PositionResponseBasis { get; }
         internal float DeltaSeconds { get; }
         internal FixedString128Bytes SourceLineage { get; }
         internal FixedString128Bytes ProfileRevision { get; }

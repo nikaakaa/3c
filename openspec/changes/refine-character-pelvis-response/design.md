@@ -30,7 +30,7 @@ Runtime用不可变`CharacterFootPelvisHeightTarget`保存本次真正消费的C
 
 同帧typed Reach Request提供Hip、有效Ankle目标、真实腿长、正式安全余量和lineage。所有实际参与的腿先形成唯一硬区间，进入现有Pelvis模块后一次用于目标和响应合法性。原动画弯曲余量可形成目标偏好，但不再缩小另一份最终输出硬区间。
 
-保留一份根Bank内的Spring状态、原频率与Handoff事件判定。旧速度的准入由同一响应对本帧目标方向判断，第8步将背向速度清理与Handoff事件门解耦。不增加第二响应或新速率参数。最终输出若因几何必须触界，统一阶段记录夹紧并清除继续向外的速度；之后Module只消费结果，不再次改写Pelvis输出。无交集、横向本已不可达等情况继续使用明确typed拒绝及既有Foot Reach保护，不以FBBIK伸直或降低未授权权重掩盖。
+保留一份根Bank内的Spring状态、原频率与Handoff/Velocity Reset业务。不增加第二响应或新速率参数。最终输出若因几何必须触界，统一阶段记录夹紧并清除继续向外的速度；之后Module只消费结果，不再次改写Pelvis输出。无交集、横向本已不可达等情况继续使用明确typed拒绝及既有Foot Reach保护，不以FBBIK伸直或降低未授权权重掩盖。
 
 此结构不能保证所有几何冲突都无突降；它先减少不必要目标上抬与动画姿态偏好造成的硬压，再用Replay评估剩余真实约束。
 
@@ -46,7 +46,7 @@ Reach Role可同时为FootTarget与PrimarySupport，后者只标该腿的优先�
 
 原动画压缩量仍为`LegLength-distance(AnimatedHip,AnimatedAnkle)`，原姿态区间计算只生成PosturePreference目标。它不可达时发布Evaluated=true/Available=false，共同HeightTarget仍是独立合法需求；不产生另一份输出夹紧。未消费姿态偏好的Release/Rejected帧为Evaluated=false，零字段不是测量。
 
-唯一AdvancePelvisResponse先把preferred target限制到选中的硬边界，计算既有Handoff事实后独立清除背离当前目标的旧速度，再按原频率执行一次Critical Spring，最后只对硬边界夹紧一次并清除朝外速度。区间先按正式Pelvis PositionWeight换算到Spring的未加权标量域；真正应用的位移仍为Output×PositionWeight。必须输出的安全平移不受5毫米显示门掩盖；非安全必需的小量仍保留原可见门，Release完成仍按既有GeometryEpsilon吸零。
+唯一AdvancePelvisResponse先把preferred target限制到选中的硬边界，在原Handoff条件下保留或清除背离目标的旧速度，再按原频率执行一次Critical Spring，最后只对硬边界夹紧一次并清除朝外速度。区间先按正式Pelvis PositionWeight换算到Spring的未加权标量域；真正应用的位移仍为Output×PositionWeight。必须输出的安全平移不受5毫米显示门掩盖；非安全必需的小量仍保留原可见门，Release完成仍按既有GeometryEpsilon吸零。
 
 Runtime发布完整左右Reach角色/输入/区间、公共交集与选择、PosturePreference实际输入、一次响应前后和硬夹紧事实。旧SupportReach字段与WithLandingReachOutput命名删除，不以旧字段代表新硬边界。ResponseEvaluated=false只表示本帧无需推进Spring，已计算Reach不因此变成无效；对未运行公式或响应不伪造零测量。非单位作者权重、横向不可达、无交集和无上一Spring等边界需按实际Replay覆盖报告，不由本轮全权重样本冒称全覆盖。
 
@@ -77,14 +77,8 @@ Runtime发布完整左右Reach角色/输入/区间、公共交集与选择、Pos
 
 ae10348只将Corin现有正式频率从3Hz改2Hz，并显式重建匹配的Float32/Fixed产品。023618按facts62/d31独立回放确认Foot保护保持、Correction超过50毫米30→23，但目标和硬边界允许回正时仍低于-5毫米的帧数208→270，实际Solved Knee超过10厘米的单步160→174。因此不按七维总分不变或R826单峰降低采纳，原参数3Hz和匹配产品恢复，失败原包/Proof保留。该实验不构成新默认值、分支、配置开关或ZZZ参数复原，完整结果见experiments/20260831-pelvis-frequency-2hz.md。
 
-## 持续Goal第三轮：独立取消背向目标的旧速度
+## 持续Goal第三轮：背向速度门实验未接纳
 
-025450与020243运动逐值恢复后，265帧仍有直接反例：本帧目标-0.0142205米，上一输出0.031981米，旧速度+0.458818米每秒，Handoff=None。旧门因没有Handoff继续使用正速度，输出先升到0.035712米，随后266遇硬上界才下降。这不是输入目标未更新或Foot Goal改变，而是旧速度只在交接事件上才接受方向检查。
+2edf9bc/586c828只移除清速度的Handoff前置，033902已实际出现30个无Handoff清速度帧，265/266靶点成立、Correction超过50毫米30→28、Foot保护与37项计数保持。但世界大步仍33个，R826仍626.929毫米，R996的168.357毫米Knee峰后移至R997的221.587毫米。全包Knee超过10厘米净减少不抵消该明确窗口代价，也不将其误报成全局新增问题类别。
 
-本步只取消清速度判定的Handoff前置。对已经按本帧完整硬Reach夹取的target，令direction=target-previousOutput；当abs(direction)>既有GeometryEpsilon且previousVelocity×direction<0时，将本帧Spring输入速度清零。没有上一状态时旧速度按原初始化为零，不能造历史。Handoff三个事件/flags继续独立按原公式生成；频率3、一次Critical Spring、硬夹紧、完成门、位置权重、共同目标与所有Foot/Bend业务不变。
-
-这优先跟随本帧目标，但可能改变速度/加速度或下游膝盖的翻侧时点，并不保证世界骨盆绝对单调；Root/原动画和真实移动边界仍参与最终世界运动。没有增加目标范围夹紧、前视输入或新的速度配置，也不声称ZZZ直接采用此门。
-
-只读冻结输入复算原式最大Output误差5.04e-8米，新门预测Correction超过50毫米30→28、世界Y超过50毫米仍33，负偏移积分基本不变、回正迟滞208→209。收益仅针对部分回归，不能替代实际Replay或宣布全部骨盆/膝盖问题完成。其它共同目标全时采用、取消姿态偏好、触界速度重建及目标速度跟踪候选仅只读复算，均没有进入当前Runtime。
-
-唯一Diagnostics只更新该强不变量及版本，不增加CSV列/Reporter或质量规则；旧62原包保留原解释，不重发成新63。以193957固定对照及025450直接前驱进行同RecordReplay，检查新增无Handoff清速度的实际帧、265/266和全部既定骨盆/Knee窗口，同时守住Foot、真实Reach和37项质量规则。
+根任务不把这条组合交付为可用改善，恢复原Handoff前置及facts62/d31，保留原始facts63/d32失败包和实验公式。Runtime当前不采用该新门，没有旧新并列分支。完整目标时序排除、运行证据、撤销与恢复结果见experiments/20260831-pelvis-velocity-direction.md。后续Bend处理需用户独立授权，不在这次骨盆实验中混入。

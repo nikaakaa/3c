@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/49";
+        const string Schema = "character-foot-motion-facts/50";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 49;
+        const int AnalyzerVersion = 50;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -147,6 +147,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"approachOwnership={document.coverage.approachProgressOwnershipCount} " +
                 $"actionHardOwnership={document.coverage.actionHardOwnershipCount} " +
                 $"contactTransitions={document.coverage.contactTransitionContextCount} " +
+                $"formalGoalWeights={document.coverage.formalGoalWeightPolicyCount} " +
+                $"reentryGeometry={document.coverage.contactReentryOutputGeometryCount} " +
                 $"stableSwingCorrectionCadence={document.coverage.stableSwingCorrectionResponseCadenceCount} " +
                 $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
@@ -251,7 +253,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.PreviousContactAnchorAvailable ==
                         previous.CurrentContactAnchorAvailable &&
                     current.PreviousContactAnchorEventIdentity ==
-                        previous.CurrentContactAnchorEventIdentity;
+                        previous.CurrentContactAnchorEventIdentity &&
+                    ContactAnchorFrame.From(current, true).SameAs(
+                        ContactAnchorFrame.From(previous, false));
                 if (!contextMatchesPreviousFrame)
                 {
                     throw new InvalidDataException(
@@ -275,6 +279,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Foot Motion Action occupancy incorrectly produced Hard Ownership Loss " +
                         $"Frame={current.Frame} Side={current.Side}.");
                 }
+                events.Add(new EventFact(
+                    "FormalGoalWeightPolicy", current.Side, current.Frame,
+                    current.Frame, current.Frame, ResolveEventIdentity(current),
+                    current.SourceIdentity, current.SourceCycle,
+                    DeltaSeconds(current),
+                    new SortedDictionary<string, double>(StringComparer.Ordinal)
+                    {
+                        ["FormalFootPlacementWeight"] =
+                            current.FormalFootPlacementWeight,
+                        ["LockWeight"] = current.CurrentLockRequestWeight,
+                        ["MotionPositionWeight"] = current.MotionPositionWeight,
+                        ["MotionRotationWeight"] = current.MotionRotationWeight,
+                        ["ResolvedPositionWeight"] = current.ResolvedPositionWeight,
+                        ["ResolvedRotationWeight"] = current.ResolvedRotationWeight,
+                        ["FinalGoalPositionWeight"] = current.FinalGoalPositionWeight,
+                        ["FinalGoalRotationWeight"] = current.FinalGoalRotationWeight
+                    },
+                    new SortedDictionary<string, bool>(StringComparer.Ordinal)
+                    {
+                        ["formalWeightPolicyConsistent"] = true,
+                        ["ready"] = current.ResolvedOutcome == "Ready",
+                        ["contactAnchorAvailable"] = current.CurrentContactAnchorAvailable
+                    }));
                 if (actionOccupied)
                 {
                     events.Add(new EventFact(
@@ -291,6 +318,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             StringComparer.Ordinal)
                         {
                             ["ActionFootWeight"] = current.ActionFootWeight,
+                            ["FormalFootPlacementWeight"] =
+                                current.FormalFootPlacementWeight,
                             ["MotionPositionWeight"] =
                                 current.MotionPositionWeight,
                             ["MotionRotationWeight"] =
@@ -315,10 +344,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 current.PreTransitionResetInterpolation,
                             ["postTransitionSuppressOutput"] =
                                 current.PostTransitionSuppressOutput,
+                            ["postTransitionEvaluated"] =
+                                current.PostTransitionEvaluated,
                             ["postTransitionResetInterpolation"] =
                                 current.PostTransitionResetInterpolation,
                             ["actionIndependentOwnership"] =
                                 actionIndependentOwnership
+                        }));
+                }
+                bool reentryGeometryAvailable =
+                    current.SameEventContactReentryRefreshed &&
+                    current.PreviousResponseOutputAvailable &&
+                    current.PlantInterpolationEvaluated &&
+                    current.CorrectionResponseEvaluated &&
+                    current.ResolvedOutcome == "Ready";
+                if (reentryGeometryAvailable)
+                {
+                    Vector3 capturedOutput = current.PlantSelectedWorldTarget +
+                        current.PlantWorldResidualCapturedBeforeDecay;
+                    events.Add(new EventFact(
+                        "ContactReentryOutputGeometry", current.Side,
+                        previous?.Frame ?? current.Frame, current.Frame,
+                        current.Frame, current.CurrentContactAnchorEventIdentity,
+                        current.SourceIdentity, current.SourceCycle,
+                        DeltaSeconds(current),
+                        new SortedDictionary<string, double>(StringComparer.Ordinal)
+                        {
+                            ["CapturedTargetToPreviousResponseDistanceMeters"] =
+                                Vector3.Distance(capturedOutput,
+                                    current.PreviousResponseOutputPoint),
+                            ["ResidualDecayStepMeters"] = Vector3.Distance(
+                                current.PlantWorldResidualCapturedBeforeDecay,
+                                current.PlantWorldResidualAfterDecay),
+                            ["CapturedTargetToDesiredStepMeters"] =
+                                Vector3.Distance(capturedOutput,
+                                    current.DesiredOutputPoint),
+                            ["DesiredToResponseStepMeters"] = Vector3.Distance(
+                                current.DesiredOutputPoint, current.ResponseOutputPoint),
+                            ["PreviousResponseToResponseStepMeters"] =
+                                Vector3.Distance(current.PreviousResponseOutputPoint,
+                                    current.ResponseOutputPoint),
+                            ["ResponseToFinalSoleStepMeters"] = Vector3.Distance(
+                                current.ResponseOutputPoint, current.ResolvedFinalSole)
+                        },
+                        new SortedDictionary<string, bool>(StringComparer.Ordinal)
+                        {
+                            ["sameEventReentryGeometryAvailable"] = true,
+                            ["residualCaptured"] =
+                                current.PlantResidualCaptureReason != "None",
+                            ["residualDecayApplied"] =
+                                current.PlantWorldResidualDecayApplied,
+                            ["reentryInterpolationHistoryRetained"] =
+                                current.ReentryInterpolationHistoryRetained
                         }));
                 }
                 bool contactRelevant = current.ContactEdge != "None" ||
@@ -358,6 +435,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         StringComparer.Ordinal)
                     {
                         ["transitionContractConsistent"] = true,
+                        ["postTransitionEvaluated"] =
+                            current.PostTransitionEvaluated,
+                        ["reentryOutputFactsAvailable"] =
+                            reentryGeometryAvailable,
                         ["contextMatchesPreviousFrame"] =
                             contextMatchesPreviousFrame,
                         ["previousLockRequested"] =
@@ -376,8 +457,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             current.SameEventContactReentryUnavailable,
                         ["retainedVerifiedAnchor"] =
                             current.RetainedVerifiedAnchor,
-                        ["continuousReentryTakeover"] =
-                            current.ContinuousReentryTakeover,
+                        ["reentryInterpolationHistoryRetained"] =
+                            current.ReentryInterpolationHistoryRetained,
                         ["previousAnchorAvailable"] =
                             current.PreviousContactAnchorAvailable,
                         ["currentAnchorAvailable"] =
@@ -457,6 +538,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     ["ApproachProgress"] =
                         current.InputFormalApproachContactToLandingProgress,
+                    ["FormalFootPlacementWeight"] =
+                        current.FormalFootPlacementWeight,
+                    ["FormalFootPlacementWeightDelta"] = sameLineage
+                        ? current.FormalFootPlacementWeight -
+                          previous.FormalFootPlacementWeight : 0d,
                     ["ApproachProgressDelta"] = progressDelta,
                     ["PreparedTargetPointStep"] = sameLineage &&
                         previous.PreparedTargetAvailable &&
@@ -503,7 +589,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["approachEventVisiblePositionOwned"] =
                         approachEventVisiblePositionOwned,
                     ["goalWeightChanged"] = goalWeightChanged,
-                    ["goalWeightAttributionAvailable"] = false,
+                    ["goalWeightAttributionAvailable"] = true,
+                    ["formalWeightPolicyConsistent"] = true,
                     ["selectedPositionFromSwingMotion"] =
                         current.SelectedSupportTarget.PositionSource ==
                         "SwingMotion",
@@ -1685,11 +1772,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     preTransitionTarget = current.PreTransitionTarget,
                     preTransitionAnchorCommand =
                         current.PreTransitionAnchorCommand,
-                    postTransitionReason = current.PostTransitionReason,
-                    postTransitionSource = current.PostTransitionSource,
-                    postTransitionTarget = current.PostTransitionTarget,
+                    postTransitionEvaluated = current.PostTransitionEvaluated,
+                    postTransitionReason = current.PostTransitionEvaluated
+                        ? current.PostTransitionReason : null,
+                    postTransitionSource = current.PostTransitionEvaluated
+                        ? current.PostTransitionSource : null,
+                    postTransitionTarget = current.PostTransitionEvaluated
+                        ? current.PostTransitionTarget : null,
                     postTransitionAnchorCommand =
-                        current.PostTransitionAnchorCommand,
+                        current.PostTransitionEvaluated
+                            ? current.PostTransitionAnchorCommand : null,
                     stateTargetCorrection = CharacterFootVectorFact.From(
                         current.StateTargetCorrection),
                     interpolationPolicy = current.InterpolationPolicy,
@@ -4923,6 +5015,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => value.kind == "ActionHardOwnership"),
                     contactTransitionContextCount = events.Count(
                         value => value.kind == "ContactTransitionContext"),
+                    formalGoalWeightPolicyCount = events.Count(
+                        value => value.kind == "FormalGoalWeightPolicy"),
+                    contactReentryOutputGeometryCount = events.Count(
+                        value => value.kind == "ContactReentryOutputGeometry"),
+                    postTransitionUnevaluatedCount = capture.FootRows.Count(
+                        value => !value.PostTransitionEvaluated),
+                    reentryOutputFactsUnavailableCount = capture.FootRows.Count(
+                        value => value.SameEventContactReentryRefreshed &&
+                            (!value.PreviousResponseOutputAvailable ||
+                             !value.PlantInterpolationEvaluated ||
+                             !value.CorrectionResponseEvaluated ||
+                             value.ResolvedOutcome != "Ready")),
                     stableSwingCorrectionResponseCadenceCount = events.Count(
                         value => value.kind ==
                                  "StableSwingCorrectionResponseCadence"),
@@ -5025,6 +5129,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 instanceIdentity = frame.ActionInstanceIdentity.ToString(
                     CultureInfo.InvariantCulture),
                 footWeight = frame.ActionFootWeight,
+                formalFootPlacementWeight = frame.FormalFootPlacementWeight,
                 grounded = frame.Grounded,
                 currentStepAuthoritative =
                     frame.CurrentStep.IsAuthoritative,
@@ -5035,6 +5140,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PreTransitionSuppressOutput,
                 preTransitionResetInterpolation =
                     frame.PreTransitionResetInterpolation,
+                postTransitionEvaluated = frame.PostTransitionEvaluated,
                 postTransitionSuppressOutput =
                     frame.PostTransitionSuppressOutput,
                 postTransitionResetInterpolation =
@@ -5061,11 +5167,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 previousCompletedLockWeightEventIdentity =
                     frame.PreviousCompletedLockWeightEventIdentity.ToString(
                         CultureInfo.InvariantCulture),
-                previousAnchorAvailable =
-                    frame.PreviousContactAnchorAvailable,
-                previousAnchorEventIdentity =
-                    frame.PreviousContactAnchorEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
+                previousAnchor = BuildContactAnchorFact(
+                    ContactAnchorFrame.From(frame, true)),
                 currentRequestedLock = frame.CurrentLockRequested,
                 currentRequestEventIdentity =
                     frame.CurrentLockRequestEventIdentity.ToString(
@@ -5085,18 +5188,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 currentCompletedLockWeightEventIdentity =
                     frame.CurrentCompletedLockWeightEventIdentity.ToString(
                         CultureInfo.InvariantCulture),
-                currentAnchorAvailable =
-                    frame.CurrentContactAnchorAvailable,
-                currentAnchorEventIdentity =
-                    frame.CurrentContactAnchorEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
+                currentAnchor = BuildContactAnchorFact(
+                    ContactAnchorFrame.From(frame, false)),
+                preTransition = new
+                {
+                    reason = frame.PreTransitionReason,
+                    source = frame.PreTransitionSource,
+                    target = frame.PreTransitionTarget,
+                    anchorCommand = frame.PreTransitionAnchorCommand,
+                    suppressOutput = frame.PreTransitionSuppressOutput,
+                    resetInterpolation = frame.PreTransitionResetInterpolation
+                },
+                postTransitionEvaluated = frame.PostTransitionEvaluated,
+                postTransition = BuildPostTransitionFact(frame),
                 sameEventReentryRefreshed =
                     frame.SameEventContactReentryRefreshed,
                 sameEventReentryUnavailable =
                     frame.SameEventContactReentryUnavailable,
                 retainedVerifiedAnchor = frame.RetainedVerifiedAnchor,
-                continuousReentryTakeover =
-                    frame.ContinuousReentryTakeover
+                reentryInterpolationHistoryRetained =
+                    frame.ReentryInterpolationHistoryRetained
             },
             preparedTarget = new
             {
@@ -5216,6 +5327,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.ResolvedEffectiveSoleCorrection),
                 positionWeight = frame.ResolvedPositionWeight,
                 rotationWeight = frame.ResolvedRotationWeight,
+                finalGoalPositionWeight = frame.FinalGoalPositionWeight,
+                finalGoalRotationWeight = frame.FinalGoalRotationWeight,
                 supportTarget = SupportTargetFact(
                     frame.ResolvedSupportTarget),
                 contactAvailable = frame.ResolvedContactAvailable,
@@ -5252,6 +5365,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.ResolvedLandingReachMinimumCompressionReserve
             }
         };
+
+        static object BuildContactAnchorFact(ContactAnchorFrame anchor) => new
+        {
+            available = anchor.Available,
+            eventIdentity = anchor.Event.ToString(CultureInfo.InvariantCulture),
+            acquiredFrameSequence = anchor.AcquiredFrame.ToString(
+                CultureInfo.InvariantCulture),
+            acquiredCompletionIdentity = anchor.AcquiredCompletion.ToString(
+                CultureInfo.InvariantCulture),
+            worldRevision = anchor.WorldRevision.ToString(CultureInfo.InvariantCulture),
+            surfaceIdentity = anchor.Surface,
+            point = CharacterFootVectorFact.From(anchor.Point),
+            normal = CharacterFootVectorFact.From(anchor.Normal)
+        };
+
+        static object BuildPostTransitionFact(FootFrame frame) =>
+            !frame.PostTransitionEvaluated ? null : new
+            {
+                reason = frame.PostTransitionReason,
+                source = frame.PostTransitionSource,
+                target = frame.PostTransitionTarget,
+                anchorCommand = frame.PostTransitionAnchorCommand,
+                suppressOutput = frame.PostTransitionSuppressOutput,
+                resetInterpolation = frame.PostTransitionResetInterpolation
+            };
 
         static object SupportTargetFact(SupportTargetFrame target) => new
         {
@@ -6048,6 +6186,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CorrectedAnkle = Vector("FootMotionCorrectedAnkle"),
                 MotionPositionWeight = Float("FootMotionPositionWeight"),
                 MotionRotationWeight = Float("FootMotionRotationWeight"),
+                FinalGoalPositionWeight = Float("FinalGoalPositionWeight"),
+                FinalGoalRotationWeight = Float("FinalGoalRotationWeight"),
                 Anchor = Vector("FootMotionSupportContactAnchor"),
                 ContactPlaneAvailable = Int("FootMotionContactPlaneAvailable") != 0,
                 ContactOwnership = Float("FootMotionContactOwnership"),
@@ -6167,6 +6307,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionPreviousContactAnchorAvailable") != 0,
                 PreviousContactAnchorEventIdentity =
                     Ulong("FootMotionPreviousContactAnchorEventIdentity"),
+                PreviousContactAnchorAcquiredFrameSequence =
+                    Ulong("FootMotionPreviousContactAnchorAcquiredFrameSequence"),
+                PreviousContactAnchorAcquiredCompletionIdentity =
+                    Ulong("FootMotionPreviousContactAnchorAcquiredCompletionIdentity"),
+                PreviousContactAnchorWorldRevision =
+                    Ulong("FootMotionPreviousContactAnchorWorldRevision"),
+                PreviousContactAnchorSurfaceIdentity =
+                    Int("FootMotionPreviousContactAnchorSurfaceIdentity"),
+                PreviousContactAnchorPoint =
+                    Vector("FootMotionPreviousContactAnchorPoint"),
+                PreviousContactAnchorNormal =
+                    Vector("FootMotionPreviousContactAnchorNormal"),
                 CurrentLockRequested =
                     Int("FootMotionCurrentLockRequested") != 0,
                 CurrentLockRequestEventIdentity =
@@ -6192,14 +6344,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionCurrentContactAnchorAvailable") != 0,
                 CurrentContactAnchorEventIdentity =
                     Ulong("FootMotionCurrentContactAnchorEventIdentity"),
+                CurrentContactAnchorAcquiredFrameSequence =
+                    Ulong("FootMotionCurrentContactAnchorAcquiredFrameSequence"),
+                CurrentContactAnchorAcquiredCompletionIdentity =
+                    Ulong("FootMotionCurrentContactAnchorAcquiredCompletionIdentity"),
+                CurrentContactAnchorWorldRevision =
+                    Ulong("FootMotionCurrentContactAnchorWorldRevision"),
+                CurrentContactAnchorSurfaceIdentity =
+                    Int("FootMotionCurrentContactAnchorSurfaceIdentity"),
+                CurrentContactAnchorPoint =
+                    Vector("FootMotionCurrentContactAnchorPoint"),
+                CurrentContactAnchorNormal =
+                    Vector("FootMotionCurrentContactAnchorNormal"),
                 SameEventContactReentryRefreshed =
                     Int("FootMotionSameEventContactReentryRefreshed") != 0,
                 SameEventContactReentryUnavailable =
                     Int("FootMotionSameEventContactReentryUnavailable") != 0,
                 RetainedVerifiedAnchor =
                     Int("FootMotionRetainedVerifiedAnchor") != 0,
-                ContinuousReentryTakeover =
-                    Int("FootMotionContinuousReentryTakeover") != 0,
+                ReentryInterpolationHistoryRetained =
+                    Int("FootMotionReentryInterpolationHistoryRetained") != 0,
+                FormalFootPlacementWeight =
+                    Float("FootMotionFormalFootPlacementWeight"),
+                PostTransitionEvaluated =
+                    Int("FootMotionPostTransitionEvaluated") != 0,
                 HardOwnershipLoss =
                     Int("FootMotionHardOwnershipLoss") != 0,
                 HardOwnershipLossReason =
@@ -6634,6 +6802,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequirePreparedAndSelectedTarget(frame);
             RequireCorrectionResponseDirectionHistory(frame);
             RequireResolvedFoot(frame);
+            RequireFormalGoalWeights(frame);
             RequireLegReachFacts(frame);
             if (!float.IsFinite(frame.LandingReachGoalClampDistance) ||
                 frame.LandingReachGoalClampDistance < 0f ||
@@ -8204,6 +8373,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequireLifecycleTransitionFacts(FootFrame frame)
         {
+            ContactAnchorFrame previousAnchor =
+                ContactAnchorFrame.From(frame, true);
+            ContactAnchorFrame currentAnchor =
+                ContactAnchorFrame.From(frame, false);
+            previousAnchor.RequireValid(frame, "Previous");
+            currentAnchor.RequireValid(frame, "Current");
+            RequireTransitionExecution(frame);
             RequireEnum<AnimationFootStepObservationLockMode>(
                 frame.PreviousLockRequestMode,
                 "FootMotionPreviousLockRequestMode");
@@ -8304,12 +8480,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ref expectedAnchorAvailable,
                 ref expectedAnchorEvent,
                 ref expectedCompleted);
-            ApplyAnchorCommand(
-                frame.PostTransitionAnchorCommand,
-                frame.CurrentLockRequestEventIdentity,
-                ref expectedAnchorAvailable,
-                ref expectedAnchorEvent,
-                ref expectedCompleted);
+            if (frame.PostTransitionEvaluated)
+            {
+                ApplyAnchorCommand(
+                    frame.PostTransitionAnchorCommand,
+                    frame.CurrentLockRequestEventIdentity,
+                    ref expectedAnchorAvailable,
+                    ref expectedAnchorEvent,
+                    ref expectedCompleted);
+            }
             bool expectedReentryRefreshed =
                 frame.PreTransitionReason ==
                 "SameEventContactReentryRefresh";
@@ -8325,14 +8504,49 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.CurrentContactAnchorAvailable &&
                 frame.PreviousContactAnchorEventIdentity ==
                     frame.CurrentContactAnchorEventIdentity &&
+                frame.PreTransitionAnchorCommand != "Create" &&
                 frame.PreTransitionAnchorCommand != "Release" &&
-                frame.PostTransitionAnchorCommand != "Release";
-            bool expectedContinuousTakeover =
+                (!frame.PostTransitionEvaluated ||
+                 frame.PostTransitionAnchorCommand != "Create" &&
+                 frame.PostTransitionAnchorCommand != "Release");
+            bool expectedReentryHistoryRetained =
                 expectedReentryRefreshed && expectedRetained &&
                 !frame.PreTransitionSuppressOutput &&
                 !frame.PreTransitionResetInterpolation &&
-                !frame.PostTransitionSuppressOutput &&
-                !frame.PostTransitionResetInterpolation;
+                (!frame.PostTransitionEvaluated ||
+                 !frame.PostTransitionSuppressOutput &&
+                 !frame.PostTransitionResetInterpolation);
+            if (expectedRetained && !previousAnchor.SameAs(currentAnchor))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion retained Anchor geometry or acquisition identity changed " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
+            if (expectedReentryRefreshed &&
+                (!expectedReentryHistoryRetained ||
+                 !frame.CurrentLockRequested ||
+                 frame.ContactEdge != "Rising" ||
+                 frame.PreTransitionSource != "Releasing" ||
+                 frame.PreTransitionTarget != "Landing" ||
+                 frame.PreTransitionAnchorCommand != "Retain" ||
+                 frame.CurrentLockRequestEventIdentity !=
+                 frame.PreviousContactAnchorEventIdentity))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion same-event Reentry history is inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
+            bool anchorCreated = frame.PreTransitionAnchorCommand == "Create" ||
+                frame.PostTransitionEvaluated &&
+                frame.PostTransitionAnchorCommand == "Create";
+            if (anchorCreated && currentAnchor.Available &&
+                (currentAnchor.AcquiredFrame != (ulong)frame.Frame ||
+                 currentAnchor.AcquiredCompletion != frame.CompletionIdentity))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion created Anchor acquisition identity is inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
             CharacterFootGoalOwnershipLossReason expectedOwnershipReason =
                 CharacterFootGoalOwnershipLossReason.None;
             if (!frame.Grounded)
@@ -8396,8 +8610,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.SameEventContactReentryUnavailable ==
                     expectedReentryUnavailable &&
                 frame.RetainedVerifiedAnchor == expectedRetained &&
-                frame.ContinuousReentryTakeover ==
-                    expectedContinuousTakeover &&
+                frame.ReentryInterpolationHistoryRetained ==
+                    expectedReentryHistoryRetained &&
                 ownershipReason == expectedOwnershipReason &&
                 frame.HardOwnershipLoss == expectedHardOwnershipLoss &&
                 preOwnershipTransition == expectedHardOwnershipLoss &&
@@ -8407,7 +8621,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     expectedHardOwnershipLoss &&
                 !frame.PostTransitionSuppressOutput &&
                 frame.PostTransitionResetInterpolation ==
-                    (frame.PostTransitionReason == "ReleaseCompleted");
+                    (frame.PostTransitionEvaluated &&
+                     frame.PostTransitionReason == "ReleaseCompleted");
             if (!consistent)
             {
                 throw new InvalidDataException(
@@ -8416,6 +8631,116 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Edge={frame.ContactEdge}/{expectedEdge} " +
                     $"Ownership={frame.HardOwnershipLossReason}/" +
                     $"{expectedOwnershipReason}.");
+            }
+        }
+
+        static void RequireTransitionExecution(FootFrame frame)
+        {
+            RequireEnum<CharacterFootTransitionReason>(
+                frame.PreTransitionReason, "FootMotionPreTransitionReason");
+            RequireEnum<CharacterFootConstraintState>(
+                frame.PreTransitionSource, "FootMotionPreTransitionSource");
+            RequireEnum<CharacterFootConstraintState>(
+                frame.PreTransitionTarget, "FootMotionPreTransitionTarget");
+            RequireEnum<CharacterFootAnchorCommand>(
+                frame.PreTransitionAnchorCommand,
+                "FootMotionPreTransitionAnchorCommand");
+            if (frame.ConstraintStateBefore != frame.PreTransitionSource)
+                throw new InvalidDataException(
+                    $"Foot Motion Lifecycle State Before is inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            if (!frame.PostTransitionEvaluated)
+            {
+                if (frame.PostTransitionReason != "None" ||
+                    frame.PostTransitionSource != "Swing" ||
+                    frame.PostTransitionTarget != "Swing" ||
+                    frame.PostTransitionAnchorCommand != "None" ||
+                    frame.PostTransitionSuppressOutput ||
+                    frame.PostTransitionResetInterpolation ||
+                    frame.PreTransitionSuppressOutput ||
+                    (frame.ResolvedOutcome != "CurrentSupportUnavailable" &&
+                     frame.ResolvedOutcome != "SupportTargetUnavailable"))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion unevaluated Post Transition is inconsistent " +
+                        $"Frame={frame.Frame} Side={frame.Side}.");
+                }
+                return;
+            }
+            RequireEnum<CharacterFootTransitionReason>(
+                frame.PostTransitionReason, "FootMotionPostTransitionReason");
+            RequireEnum<CharacterFootConstraintState>(
+                frame.PostTransitionSource, "FootMotionPostTransitionSource");
+            RequireEnum<CharacterFootConstraintState>(
+                frame.PostTransitionTarget, "FootMotionPostTransitionTarget");
+            RequireEnum<CharacterFootAnchorCommand>(
+                frame.PostTransitionAnchorCommand,
+                "FootMotionPostTransitionAnchorCommand");
+            if (frame.PostTransitionSource != frame.PreTransitionTarget ||
+                frame.ResolvedOutcome == "Ready" &&
+                frame.ConstraintState != frame.PostTransitionTarget)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion executed Post Transition State is inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            }
+        }
+
+        static void RequireFormalGoalWeights(FootFrame frame)
+        {
+            float formal = frame.FormalFootPlacementWeight;
+            if (!float.IsFinite(formal) || formal < 0f || formal > 1f)
+                throw new InvalidDataException(
+                    $"Foot Motion Formal Foot Placement Weight is invalid " +
+                    $"Frame={frame.Frame} Side={frame.Side}.");
+            float expectedRotation = 0f;
+            float expectedPosition = 0f;
+            if (frame.ResolvedOutcome == "Ready")
+            {
+                expectedRotation = frame.CurrentContactAnchorAvailable
+                    ? formal * frame.CurrentLockRequestWeight
+                    : 0f;
+                bool positionRequired =
+                    frame.ResolvedGoalTargetCorrection.sqrMagnitude >
+                    RuntimeGeometryEpsilon * RuntimeGeometryEpsilon ||
+                    expectedRotation > RuntimeGeometryEpsilon;
+                expectedPosition = positionRequired ? formal : 0f;
+                if (frame.ResolvedContactAvailable !=
+                    frame.CurrentContactAnchorAvailable ||
+                    frame.ResolvedContactAvailable &&
+                    (frame.ResolvedContactEventIdentity !=
+                     frame.CurrentContactAnchorEventIdentity ||
+                     Vector3.Distance(frame.ResolvedContactPoint,
+                         frame.CurrentContactAnchorPoint) > PositionNoiseFloor))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion Resolved Contact does not match Lifecycle Anchor " +
+                        $"Frame={frame.Frame} Side={frame.Side}.");
+                }
+            }
+            bool hasGoal = frame.ResolvedOutcome == "Ready" &&
+                (expectedPosition > RuntimeGeometryEpsilon ||
+                 expectedRotation > RuntimeGeometryEpsilon);
+            float expectedGoalPosition = hasGoal ? expectedPosition : 0f;
+            float expectedGoalRotation = hasGoal ? expectedRotation : 0f;
+            if (Math.Abs(frame.MotionPositionWeight - expectedPosition) >
+                    TimeEpsilon ||
+                Math.Abs(frame.MotionRotationWeight - expectedRotation) >
+                    TimeEpsilon ||
+                Math.Abs(frame.ResolvedPositionWeight - expectedPosition) >
+                    TimeEpsilon ||
+                Math.Abs(frame.ResolvedRotationWeight - expectedRotation) >
+                    TimeEpsilon ||
+                Math.Abs(frame.FinalGoalPositionWeight -
+                    expectedGoalPosition) > TimeEpsilon ||
+                Math.Abs(frame.FinalGoalRotationWeight -
+                    expectedGoalRotation) > TimeEpsilon)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Formal Goal weight policy is inconsistent " +
+                    $"Frame={frame.Frame} Side={frame.Side} " +
+                    $"Formal={formal:R} Position={expectedPosition:R} " +
+                    $"Rotation={expectedRotation:R}.");
             }
         }
 
@@ -8909,6 +9234,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPreviousCompletedLockWeightEventIdentity",
                 "FootMotionPreviousContactAnchorAvailable",
                 "FootMotionPreviousContactAnchorEventIdentity",
+                "FootMotionPreviousContactAnchorAcquiredFrameSequence",
+                "FootMotionPreviousContactAnchorAcquiredCompletionIdentity",
+                "FootMotionPreviousContactAnchorWorldRevision",
+                "FootMotionPreviousContactAnchorSurfaceIdentity",
+                "FootMotionPreviousContactAnchorPointX",
+                "FootMotionPreviousContactAnchorPointY",
+                "FootMotionPreviousContactAnchorPointZ",
+                "FootMotionPreviousContactAnchorNormalX",
+                "FootMotionPreviousContactAnchorNormalY",
+                "FootMotionPreviousContactAnchorNormalZ",
                 "FootMotionCurrentLockRequested",
                 "FootMotionCurrentLockRequestEventIdentity",
                 "FootMotionCurrentLockRequestMode",
@@ -8921,10 +9256,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionCurrentCompletedLockWeightEventIdentity",
                 "FootMotionCurrentContactAnchorAvailable",
                 "FootMotionCurrentContactAnchorEventIdentity",
+                "FootMotionCurrentContactAnchorAcquiredFrameSequence",
+                "FootMotionCurrentContactAnchorAcquiredCompletionIdentity",
+                "FootMotionCurrentContactAnchorWorldRevision",
+                "FootMotionCurrentContactAnchorSurfaceIdentity",
+                "FootMotionCurrentContactAnchorPointX",
+                "FootMotionCurrentContactAnchorPointY",
+                "FootMotionCurrentContactAnchorPointZ",
+                "FootMotionCurrentContactAnchorNormalX",
+                "FootMotionCurrentContactAnchorNormalY",
+                "FootMotionCurrentContactAnchorNormalZ",
                 "FootMotionSameEventContactReentryRefreshed",
                 "FootMotionSameEventContactReentryUnavailable",
                 "FootMotionRetainedVerifiedAnchor",
-                "FootMotionContinuousReentryTakeover",
+                "FootMotionReentryInterpolationHistoryRetained",
+                "FootMotionFormalFootPlacementWeight",
+                "FinalGoalPositionWeight", "FinalGoalRotationWeight",
+                "FootMotionPostTransitionEvaluated",
+                "FootMotionPreTransitionReason", "FootMotionPreTransitionSource",
+                "FootMotionPreTransitionTarget", "FootMotionPreTransitionAnchorCommand",
+                "FootMotionPostTransitionReason", "FootMotionPostTransitionSource",
+                "FootMotionPostTransitionTarget", "FootMotionPostTransitionAnchorCommand",
                 "FootMotionHardOwnershipLoss",
                 "FootMotionHardOwnershipLossReason",
                 "FootMotionPreTransitionSuppressOutput",
@@ -9854,6 +10206,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 CorrectedAnkle;
             internal float MotionPositionWeight;
             internal float MotionRotationWeight;
+            internal float FinalGoalPositionWeight;
+            internal float FinalGoalRotationWeight;
             internal Vector3 Anchor;
             internal bool ContactPlaneAvailable;
             internal float ContactOwnership;
@@ -9919,6 +10273,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong PreviousCompletedLockWeightEventIdentity;
             internal bool PreviousContactAnchorAvailable;
             internal ulong PreviousContactAnchorEventIdentity;
+            internal ulong PreviousContactAnchorAcquiredFrameSequence;
+            internal ulong PreviousContactAnchorAcquiredCompletionIdentity;
+            internal ulong PreviousContactAnchorWorldRevision;
+            internal int PreviousContactAnchorSurfaceIdentity;
+            internal Vector3 PreviousContactAnchorPoint;
+            internal Vector3 PreviousContactAnchorNormal;
             internal bool CurrentLockRequested;
             internal ulong CurrentLockRequestEventIdentity;
             internal string CurrentLockRequestMode;
@@ -9931,10 +10291,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong CurrentCompletedLockWeightEventIdentity;
             internal bool CurrentContactAnchorAvailable;
             internal ulong CurrentContactAnchorEventIdentity;
+            internal ulong CurrentContactAnchorAcquiredFrameSequence;
+            internal ulong CurrentContactAnchorAcquiredCompletionIdentity;
+            internal ulong CurrentContactAnchorWorldRevision;
+            internal int CurrentContactAnchorSurfaceIdentity;
+            internal Vector3 CurrentContactAnchorPoint;
+            internal Vector3 CurrentContactAnchorNormal;
             internal bool SameEventContactReentryRefreshed;
             internal bool SameEventContactReentryUnavailable;
             internal bool RetainedVerifiedAnchor;
-            internal bool ContinuousReentryTakeover;
+            internal bool ReentryInterpolationHistoryRetained;
+            internal float FormalFootPlacementWeight;
+            internal bool PostTransitionEvaluated;
             internal bool HardOwnershipLoss;
             internal string HardOwnershipLossReason;
             internal bool PreTransitionSuppressOutput;
@@ -10368,6 +10736,68 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? "SupportIntersection"
                     : "SupportConflict";
                 return result;
+            }
+        }
+
+        sealed class ContactAnchorFrame
+        {
+            internal bool Available;
+            internal ulong Event;
+            internal ulong AcquiredFrame;
+            internal ulong AcquiredCompletion;
+            internal ulong WorldRevision;
+            internal int Surface;
+            internal Vector3 Point;
+            internal Vector3 Normal;
+
+            internal static ContactAnchorFrame From(
+                FootFrame frame, bool previous) => new ContactAnchorFrame
+            {
+                Available = previous ? frame.PreviousContactAnchorAvailable :
+                    frame.CurrentContactAnchorAvailable,
+                Event = previous ? frame.PreviousContactAnchorEventIdentity :
+                    frame.CurrentContactAnchorEventIdentity,
+                AcquiredFrame = previous ?
+                    frame.PreviousContactAnchorAcquiredFrameSequence :
+                    frame.CurrentContactAnchorAcquiredFrameSequence,
+                AcquiredCompletion = previous ?
+                    frame.PreviousContactAnchorAcquiredCompletionIdentity :
+                    frame.CurrentContactAnchorAcquiredCompletionIdentity,
+                WorldRevision = previous ?
+                    frame.PreviousContactAnchorWorldRevision :
+                    frame.CurrentContactAnchorWorldRevision,
+                Surface = previous ? frame.PreviousContactAnchorSurfaceIdentity :
+                    frame.CurrentContactAnchorSurfaceIdentity,
+                Point = previous ? frame.PreviousContactAnchorPoint :
+                    frame.CurrentContactAnchorPoint,
+                Normal = previous ? frame.PreviousContactAnchorNormal :
+                    frame.CurrentContactAnchorNormal
+            };
+
+            internal bool SameAs(ContactAnchorFrame other) =>
+                Available == other.Available && Event == other.Event &&
+                AcquiredFrame == other.AcquiredFrame &&
+                AcquiredCompletion == other.AcquiredCompletion &&
+                WorldRevision == other.WorldRevision && Surface == other.Surface &&
+                Point.Equals(other.Point) && Normal.Equals(other.Normal);
+
+            internal void RequireValid(FootFrame frame, string label)
+            {
+                bool valid = FiniteVector(Point) && FiniteVector(Normal) &&
+                    (Available
+                        ? Event != 0 && AcquiredFrame != 0 &&
+                          AcquiredFrame <= (ulong)frame.Frame &&
+                          AcquiredCompletion != 0 && WorldRevision != 0 &&
+                          Surface != 0 &&
+                          Math.Abs(Normal.magnitude - 1f) <= RuntimeGeometryEpsilon
+                        : Event == 0 && AcquiredFrame == 0 &&
+                          AcquiredCompletion == 0 && WorldRevision == 0 &&
+                          Surface == 0 && Point.Equals(Vector3.zero) &&
+                          Normal.Equals(Vector3.zero));
+                if (!valid)
+                    throw new InvalidDataException(
+                        $"Foot Motion {label} Anchor snapshot is invalid " +
+                        $"Frame={frame.Frame} Side={frame.Side}.");
             }
         }
 
@@ -10816,6 +11246,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int approachProgressOwnershipCount;
             public int actionHardOwnershipCount;
             public int contactTransitionContextCount;
+            public int formalGoalWeightPolicyCount;
+            public int contactReentryOutputGeometryCount;
+            public int postTransitionUnevaluatedCount;
+            public int reentryOutputFactsUnavailableCount;
             public int stableSwingCorrectionResponseCadenceCount;
             public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;

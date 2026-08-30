@@ -80,6 +80,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "ActionHardOwnership");
             List<JObject> contactTransitions = context.Events(
                 "ContactTransitionContext");
+            List<JObject> formalGoalWeights = context.Events(
+                "FormalGoalWeightPolicy");
+            List<JObject> reentryGeometry = context.Events(
+                "ContactReentryOutputGeometry");
             CharacterFootDiagnosisTarget releaseTarget = context.Target(
                 "release-flyback",
                 "Releasing阶段是否出现Correction突跳后反向回拉",
@@ -393,7 +397,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisTarget approachOwnershipTarget =
                 context.Target(
                     "approach-progress-ownership",
-                    "正式Approach Progress推进是否只准备Prediction目标，而未在Contact Verification前取得Plant Position、Normal或Residual所有权；Goal权重变化另行保留待正式输入事实对账",
+                    "正式Approach只准备Prediction目标；Plant所有权不得提前接管，Goal权重按正式FootPlacementWeight与Contact政策独立对账",
                     new[] { "ApproachProgressOwnership" },
                     new[]
                     {
@@ -430,6 +434,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "FinalEffectiveCorrectionStep"),
                     "ApproachProgress",
                     "ApproachProgressDelta",
+                    "FormalFootPlacementWeight",
+                    "FormalFootPlacementWeightDelta",
                     "PreparedTargetPointStep",
                     "SelectedTargetPositionStep",
                     "FinalEffectiveCorrectionStep",
@@ -456,6 +462,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             ? 1d
                             : 0d,
                     "ActionFootWeight",
+                    "FormalFootPlacementWeight",
                     "MotionPositionWeight",
                     "MotionRotationWeight",
                     "ResolvedPositionWeight",
@@ -497,6 +504,49 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "CurrentLockRequestWeight",
                     "PreviousContactEdgeSeconds",
                     "CurrentContactEdgeSeconds");
+            contactTransitionTarget.categoricalMeasurements =
+                new SortedDictionary<string, List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["PostTransitionExecution"] = CategoryCounts(
+                        contactTransitions,
+                        value => CharacterFootDiagnosisContext.Evidence(
+                            value, "postTransitionEvaluated")
+                            ? "Executed" : "NotExecuted")
+                };
+            CharacterFootDiagnosisTarget formalGoalWeightTarget = context.Target(
+                "formal-goal-weight-policy",
+                "Ready与Unavailable帧的Motion、Resolved和最终Goal权重是否来自正式FootPlacementWeight及Contact/Lock政策",
+                new[] { "FormalGoalWeightPolicy" },
+                new[] { "formalWeightPolicyConsistent=false" },
+                formalGoalWeights,
+                value => CharacterFootDiagnosisContext.Evidence(
+                    value, "formalWeightPolicyConsistent")
+                    ? new List<string>()
+                    : new List<string> { "formalWeightPolicyConsistent=false" },
+                value => CharacterFootDiagnosisContext.Metric(
+                    value, "FormalFootPlacementWeight"),
+                "FormalFootPlacementWeight", "LockWeight",
+                "MotionPositionWeight", "MotionRotationWeight",
+                "ResolvedPositionWeight", "ResolvedRotationWeight",
+                "FinalGoalPositionWeight", "FinalGoalRotationWeight");
+            CharacterFootDiagnosisTarget reentryGeometryTarget = context.Target(
+                "contact-reentry-output-geometry",
+                "同Event重入帧的上一Response、Residual捕获与衰减、Desired、Response及最终Sole之间实际移动多少；历史保留不代表几何连续",
+                new[] { "ContactReentryOutputGeometry" },
+                new[] { "sameEventReentryGeometryAvailable=true" },
+                reentryGeometry,
+                value => CharacterFootDiagnosisContext.Evidence(
+                    value, "sameEventReentryGeometryAvailable")
+                    ? new List<string> { "sameEventReentryGeometryAvailable=true" }
+                    : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(
+                    value, "PreviousResponseToResponseStepMeters"),
+                "CapturedTargetToPreviousResponseDistanceMeters",
+                "ResidualDecayStepMeters", "CapturedTargetToDesiredStepMeters",
+                "DesiredToResponseStepMeters", "PreviousResponseToResponseStepMeters",
+                "ResponseToFinalSoleStepMeters");
+            reentryGeometryTarget.scorePolicy = "Informational";
             return context.Document(
                 DiagnosticId,
                 context.Target(
@@ -660,7 +710,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 lockWeightTarget,
                 approachOwnershipTarget,
                 actionOwnershipTarget,
-                contactTransitionTarget);
+                contactTransitionTarget,
+                formalGoalWeightTarget,
+                reentryGeometryTarget);
         }
 
         static List<CharacterFootDiagnosisCategoryCount> CategoryCounts(

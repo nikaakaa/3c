@@ -1,13 +1,16 @@
-## 1. 前置、行为Oracle与完整迁移清单
+## 1. 冻结当前保留IK与完整迁移清单
 
-- [ ] 1.1 从current spec建立唯一Pose Constraint Bank、Goal Assembler、Goal Set、FBBIK和Final Writer行为Oracle
-- [ ] 1.2 从current spec建立Foot Motion Data输入、输出、lineage与正式Curve消费Oracle
-- [ ] 1.3 从current `character-foot-placement-presentation`建立Foot、Support、Pelvis、Goal与FBBIK逐帧结果Oracle
-- [ ] 1.4 从current spec建立Clip、Blend Space、Linked Pose、Motion Matching、Transition Routing、Blend Stack和Inertialization正式节点迁移目录
+- [ ] 1.1 对照用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`与behavior-baseline.md核对当前动画／IK源码、Profile／Rig／作者数据、generated artifact及已有正式输入／诊断证据；后续相关差异单独报告，不等待Foot／IK全部归档
+- [ ] 1.2 记录当前Foot Motion实际输入、输出、lineage、Curve消费与未完成行为，不按旧spec补实现剩余Foot能力
+- [ ] 1.3 对账当前保留Foot、Support、Pelvis、Goal、FBBIK与Physical结果，列明已知问题、未覆盖输入、已撤除Reach硬夹紧和已撤销SmoothKnee，不把它们改成重构修复目标
+- [ ] 1.4 从current外部合同与当前已存在实现固定Clip、Blend Space、Linked Pose、Motion Matching、Transition Routing、Blend Stack和Inertialization迁移目录，不接入未配置内容
 - [ ] 1.5 盘点`PosePlanExecutionRuntime`、根`AnimationPresentationFrameTransaction`、Native Program、Staged Executor、Workspace、Action lifecycle、Source backend、Constraint、Writer、在线调参、Diagnostics和Compiler全部状态、页、索引、生命周期与调用顺序
 - [ ] 1.6 为每项现有字段标注唯一目标Owner、寿命类别、写入阶段、读取者和删除位置，分别识别静态Program、actor-local Execution View、Actor State、Program Frame Page、Module Pending页与根事务，拒绝无法归属的共享可变字段
 - [ ] 1.7 为全部现行Operation Code建立`新Family / 跨帧状态Owner / Frame页Owner / Execution Domain / Workspace需求 / 删除字段`迁移表，覆盖Parameter、ActionPlaybackInput lifecycle、Motion Matching、Pose History与Tuning读取
 - [ ] 1.8 固定本change不修改PoseState选择、source时间、Action lifecycle、生效中的Tuning值、Blend权重、Transition、Slot、Inertialization、Foot、Goal、FBBIK和Physical Pose结果
+
+- [ ] 1.9 明确不并入未实施IK维护提案的Foot请求／结果重排、Interpolation历史分型、Solver Reset方向修正与诊断列绑定统一；实际代码冲突单独报告
+- [ ] 1.10 按behavior-baseline.md逐项核对动画时钟、Transition／Blend／Slot顺序、Foot source选择、IK计算与持久状态、Root Bone写入政策；被下一帧消费的内部Fact不得当诊断冗余删除
 
 ## 2. 建立统一lineage、根事务与typed Result合同
 
@@ -18,17 +21,19 @@
 - [ ] 2.5 让现有单一运行路径先携带统一lineage、root lease和typed Result，不提前创建空壳Module、wrapper、第二Frame事务或第二执行路径
 - [ ] 2.6 对齐现有Animancer Evaluate Barrier，固定Barrier前验证、Barrier内执行、Writer后no-throw Seal和Fault语义
 
-## 3. 深化Pose Constraint Module
+- [ ] 2.7 按Build、Runtime创建、根Frame／跨Owner交接和Writer分配检查责任，删除迁移新增的重复静态扫描与多层完整校验，保留必要动态检查和原Fault政策
 
-- [ ] 3.1 将`CharacterPoseConstraintRuntime`及其根Bank移入正式Pose Constraints目录并保留唯一构造路径
-- [ ] 3.2 将Foot Placement、PoseBone Goal、Goal Contribution、Goal Assembler、Goal Set、FBBIK、BendHistory和Solver Result全部收进Constraint Module Implementation
+## 3. 收紧Pose Constraint外部边界并保留内部IK
+
+- [ ] 3.1 迁移当前`CharacterPoseConstraintRuntime`及根Bank外部归属并保留唯一构造路径，不重做Foot内部阶段或状态布局
+- [ ] 3.2 在Constraint内部整体保留当前Foot Placement、Pelvis、PoseBone Goal、Goal Contribution、Assembler、Goal Set、FBBIK和历史状态；只替换外部依赖，不改变公式、参数、准入、权重或数值顺序
 - [ ] 3.3 为Foot Placement、PoseBone Contribution、Goal Assembler和FBBIK建立各自typed编译Handle与per-operation Result
 - [ ] 3.4 让Program Runtime在每个Constraint Family Operation位置恰好调用一次对应入口并写入唯一completion
 - [ ] 3.5 让Constraint `Complete`只验证完整闭包并发布一个Constraint Result，不扫描Program、不维护第二Stage Schedule也不重新执行Operation
 - [ ] 3.6 删除调用方可见的NativeSlice、Goal offset/count、Operation index、Callsite index、内部Bank页和Diagnostics页
 - [ ] 3.7 让Constraint内部Pending页只响应根Frame lineage和唯一Seal/Discard，不再拥有可与根事务分离的完成身份
-- [ ] 3.8 将Foot Placement与FBBIK在线调参改为Constraint-owned Candidate Tuning Snapshot，保持现有字段、值域、resetOwnerState和生效时机
-- [ ] 3.9 确认Foot、Support、Pelvis、Goal编码、Assembler和BendHistory逐值保持行为Oracle，不把架构迁移变成算法修改
+- [ ] 3.8 将Foot Placement与FBBIK调参接入Constraint-owned Candidate Tuning Snapshot，保持当前字段、值域、成功resetOwnerState结果和生效时机，不并入Vendor方向或BendHistory行为修正
+- [ ] 3.9 对账Foot、Support、Pelvis、Goal、Assembler、Bend与最终骨骼保持冻结基线；发现差异定位外层迁移，不修改已保留IK公式或配置
 
 ## 4. 建立CharacterPoseSourceModule
 
@@ -147,6 +152,8 @@
 - [ ] 13.7 让Pose Watch只读取已冻结Committed页，不重新采样source、执行world query、运行FBBIK或推导Physical结果
 - [ ] 13.8 让正式Runtime与Preview通过同一Factory装配Projection内Program Image、actor-local Execution View、Program Runtime、Source Module、Constraint Module、Final Publication、根Frame Transaction与Tuning Snapshot
 - [ ] 13.9 删除Preview简化Executor、逐Preview第二Native Program、临时Program、默认World Context和Stale Projection fallback
+- [ ] 13.10 将新Runtime Result接回现有Sampler、Analyzer、Publisher、小报告／明细存储及七维评分，不新增第二列映射、采样或离线发布链
+- [ ] 13.11 对账诊断字段含义、原始输入／几何引用、评分权重／资格／分母保持；保留历史原包，不用总分变化替代行为对账
 
 ## 14. 激进清理与最终一致性
 
@@ -158,3 +165,5 @@
 - [ ] 14.6 更新`openspec/project.md`为实际PoseGraph Module、根事务/Owned页数据流、Projection内Program Image、actor-local Execution View与Tuning、Compiler Pass和ABI真相
 - [ ] 14.7 使用规定参数编译Runtime与Editor工程，并在每次构建后立即执行`dotnet build-server shutdown`
 - [ ] 14.8 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验
+- [ ] 14.9 核对未恢复中央Foot状态机、骨盆Reach硬夹紧、末端夹脚、已撤销SmoothKnee或CurrentSupport替代Swing包络候选，保留指定基线的有符号膝向运输，未接管未实施IK任务
+- [ ] 14.10 每个代码小步复用现有正式输入Replay／Proof和诊断链，对指定基线与上一保留小步分别保存输入、Body、source时间、Foot／Pelvis／Goal／Solved／Physical的差异；未解释业务差异时停止，不用调参或改评分补偿

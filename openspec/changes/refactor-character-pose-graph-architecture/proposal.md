@@ -27,20 +27,32 @@
 - 用分段typed ABI替换万能`CharacterPresentationPoseOperation`：公共Header只保存调度与typed value引用，Parameter Input/Resolve、Player、StateMachine、Action Input、Slot、Blend、Inertialization、Composition、Space Conversion、Component Control、Motion Matching、Pose History、Goal Contribution、Goal Assembler、FullBodyIK、Linked Pose与Output等Operation Family分别拥有固定Payload页。迁移前必须为全部现行Operation Code建立唯一Family、状态Owner、Frame页Owner、Execution Domain与删除字段映射；旧万能字段、`-1`组合、旧reader与兼容Projection直接删除。
 - 新增深`CharacterPoseSourceModule`，唯一拥有provider sample装配、有限Action sample Adapter、Animancer/Playable source、Physical Source Registry、capture binding、prepared resource、usage、retirement与deferred release。PoseState、Player、ActionPlaybackInput lifecycle、Transition、Slot与Blend的逻辑决定仍由Pose Program节点拥有；Source Module不得成为第二Action winner、选择器或权重Owner。
 - 新增深`CharacterPoseProgramRuntime`，唯一持有Program Image只读引用或自己的actor-local Execution View、Actor State、Program自有Frame页、Value workspace、持久Executor和全部Pose Operation调度。它接收根Frame lease，按编译Stage恰好调度每个Operation一次；外层Runtime、Source Module、Constraint Module和Diagnostics不得再次解释Operation。
-- 保留并深化前置Foot重构产生的`CharacterPoseConstraintRuntime`，唯一拥有Foot Placement、PoseBone Goal、Goal Contribution、Goal Assembler、唯一Goal Set、FBBIK、BendHistory和Solver Result。Program Runtime在每个Constraint Family Operation的编译位置通过typed编译Handle恰好调用一次对应入口并写入该Operation唯一completion；Constraint Module不扫描Program、不拥有第二份Stage Schedule，并在完整闭包结束后发布一个typed Constraint Result。其Interface不得暴露NativeSlice、Goal offset、Operation index、Callsite index或内部Bank页。
+- 保留当前`CharacterPoseConstraintRuntime`及其内部IK实现，仅收紧外部接口和存储归属，唯一拥有Foot Placement、PoseBone Goal、Goal Contribution、Goal Assembler、唯一Goal Set、FBBIK、BendHistory和Solver Result。Program Runtime在每个Constraint Family Operation的编译位置通过typed编译Handle恰好调用一次对应入口并写入该Operation唯一completion；Constraint Module不扫描Program、不拥有第二份Stage Schedule，并在完整闭包结束后发布一个typed Constraint Result。其Interface不得暴露NativeSlice、Goal offset、Operation index、Callsite index或内部Bank页。
 - 新增具体`CharacterFinalPosePublication` Module，唯一拥有Committed/Pending Final Pose物理页、完整Final Pose验证、Physical Writer binding、一次整Rig写入与Publication Result；Program Image中的Final Output只保存稳定Publication layout handle，Actor Runtime创建时将其绑定到当前Final Publication Pending页，不在共享Program Image中保存Actor页引用，也不分配第二Final Pose页。Topology只证明唯一Output与Publication requirement，具体Writer唯一性由Runtime Factory和Final Publication构造验证。当前只有一个Writer Implementation，不建立假设性可替换接口。
 - 将`CharacterAnimationPresentationRuntime`收窄为帧级协调根：`Apply Pending Tuning -> Begin Root Transaction -> Plan Control/Demand -> Prepare Sources -> Prepare Program -> Validate Barrier -> Animancer Evaluate -> Complete Program/Constraints -> Publish Final Pose -> Seal`。它拥有唯一根Frame Transaction，只交换typed Lease/Result，不保存节点业务状态、不理解Operation字段、不执行Foot/Goal/FBBIK数学。现有在线调参必须通过actor-local `CharacterPoseTuningSnapshot`按Program、Source与Constraint Owner分区预验证并原子提升Tuning Generation；Program Image只保存Build默认值，任何调参不得修改共享Image或Execution View。
-- 将Diagnostics改为单向Projector，只从同一成功Frame提交的`Source Result + Program Result + Constraint Result + Final Publication Result`及interest-gated冻结页生成Snapshot。删除对Native Program内部数组、Pending Workspace、Constraint内部状态和Physical Transform反推的读取。
+- 将Runtime Diagnostics改为单向Projector，只从同一成功Frame提交的`Source Result + Program Result + Constraint Result + Final Publication Result`及interest-gated冻结页生成Snapshot。删除跨Module内部页读取；后续仍接现有Sampler、Analyzer、Publisher、小报告／明细存储与七维评分，不重新实现它们。
 - Runtime与Preview继续使用同一Program Image schema、actor-local Execution View规则、Module Factory、根Frame事务、Source backend、World Context Adapter和FinalIK Pose Buffer backend；Preview不得保留简化Executor或临时Program。
 - 迁移完成后删除旧`PosePlanExecutionRuntime`巨型Implementation、旧`CharacterPoseGraphNativeProgram`混合容器、旧`CharacterPoseGraphStagedExecutor`巨型构造、旧`CharacterPresentationPoseOperation`万能ABI、旧Compiler Handler Registry、旧中央CompilationState、重复Validator/Codec知识和Diagnostics内部读取，不保留wrapper、开关、fallback或双运行链。actor-local Execution View只能是Program Image的只读物理视图，不得保留旧Native Program的Actor状态、Frame页、运行时Compile或独立schema。
 
+## Implementation Baseline
+
+用户指定的唯一行为基线固定为`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`，不随HEAD、工作区或其它change进度自动更新。已核对该提交的动画／IK核心执行链；代码入口、必须保持的计算顺序、状态与既有回放证据见[行为保护清单](behavior-baseline.md)。
+
+- Foot／IK已经到用户当前保留阶段，本change不要求全部待办完成或归档，也不把“差不多”解释为所有视觉问题已经解决。
+- 实施前对照该提交检查实际源码、配置与产物。之后的相关改动必须单独列出，由用户裁决冲突，不能覆盖或静默并入基线；无关工作不回退。
+- Foot、Pelvis、Goal、FBBIK公式、数值顺序、准入、权重、配置、Anchor、Rotation、连续历史与正常Reset保持。保留该提交中的有符号膝向运输；已撤除的骨盆Reach硬夹紧、末端夹脚、SmoothKnee和CurrentSupport替代Swing包络候选不恢复。
+- 本次只迁移外层调用、存储归属、根事务、Compiler、ABI和最终Pose发布。不借迁移重写Foot内部流程、修复Vendor历史方向、改变动画时钟／混合顺序、调整地面查询或重新调IK。
+- 已知抖动、穿透、离面、反弯及未覆盖输入原样记录；不能通过改算法、参数、评分或分母掩盖。不能只用“编译通过”或“总分不变”宣称行为等价。
+- 本轮仅更新重构文档，不启动代码迁移、Build或Replay，不将新架构提前写入current specs或project truth。
+
 ## Dependencies And Sequencing
 
-1. 已归档的`refactor-character-pose-constraint-transaction`及current specs已经固定Goal Contribution、唯一Assembler、唯一Goal Set、FBBIK与Pose Constraint Bank外部合同，本change直接以current合同为输入。
-2. 已归档的`build-character-foot-motion-data-foundation`已经固定Foot Motion作者数据；active `stabilize-character-foot-path-and-landing`必须先完成并归档，以其最终typed输入、唯一Result和根事务作为Foot行为Oracle。本change只把Foot作为不透明Constraint能力调用，不规定其内部Transition、Interpolation、Anchor或状态页布局。
-3. ClipPlayer与BlendSpacePlayer通用能力已经进入current specs。本change只迁移current source-local runtime，不依赖`add-character-presentation-blend-space`剩余的独立演示内容，也不恢复Sequence命名或第二实现。
-4. Linked Pose、Motion Matching、Transition Routing、Blend Stack与Inertialization按实施时current spec作为节点与Source生命周期输入；本change只迁移所有权和ABI，不改变其业务数学。
-5. 本change实施期间不得并行实施新的Pose节点、动画行为或Constraint行为change。Proposal可以现在存在，但Runtime实施只按上述顺序开始。
+1. current specs中唯一Goal Contribution、Assembler、Goal Set、FBBIK和Writer的外部数量与隔离合同继续保留；实际动画与IK行为按上面指定提交迁移。
+2. `build-character-foot-motion-data-foundation`已归档；`stabilize-character-foot-path-and-landing`未完成或未归档不再阻塞本change。其已保留实现属于基线，剩余行为任务不自动接管、不要求先做完。
+3. `refactor-character-ik-maintenance-boundaries`不是本次前置。尚未实施的Foot请求／结果重排、Interpolation历史分型、Solver Reset方向修正与诊断列绑定统一均不并入；不能将“后续消费其完成结果”继续作为隐含等待条件。
+4. ClipPlayer与BlendSpacePlayer通用能力已进入current specs；独立Blend Space演示内容不作为前置。Linked Pose、Motion Matching、Transition Routing、Blend Stack与Inertialization只迁移已存在的正式节点和source生命周期，不补装未运行内容。
+5. `compact-foot-diagnostic-publication`与`consolidate-foot-diagnostic-scoring`已落地的采样、分析、明细存储和评分链继续使用，不要求为PoseGraph迁移重新实现或先归档。
+6. 本次按指定提交冻结动画与IK算法、时钟和配置。若其它任务改动同一Owner、同一字段或同一行为基线，必须先报告具体冲突由用户决定，不覆盖已经改对的内容；无关任务不构成本change的全局等待条件。
 
 ## Impact
 
@@ -64,16 +76,20 @@
 - current Preview、Pose Watch和Live Debug允许读取完成workspace，但当前实现仍跨Native Program、Constraint与Workspace取值。本change把读取对象收敛为Committed Result和interest-gated诊断页，不改变可观察业务内容。
 - 当前实现没有保持外层协调器与Pose Plan执行职责的Locality。本change把该边界写成可执行的current delta，并明确删除旧巨型Owner的完成标准，避免只新增类名而不迁移责任。
 
+- current Foot spec已不固定内部状态机类名，而本change旧delta仍要求`CharacterFootStateMachine`；本次删除该过期约束，只保留当前Foot输入、结果与唯一事务边界，不重做已经完成的Lifecycle拆分。
+- 部分current／active文字仍按旧Reach夹紧与“Pelvis先读最终Resolved”描述；当前保留代码和用户最新裁决已撤除业务层骨盆／末端夹脚。这里明确保护已保留行为，不利用旧文字恢复政策，也不提前执行IK维护提案的内部请求／结果重排。
+- 已落地诊断已有唯一Sampler、Analyzer、Publisher、版本化小报告／明细存储和七维评分。本change只迁移Runtime事实来源；不新增第二采样、重新评分或旧格式兼容路径。
+
 ## Non-Goals
 
 - 不改变PoseState选择、Transition rule、Standard Blend、Blend Stack、Inertialization、Slot、Linked Pose、Blend Space、Motion Matching、Foot Placement、Goal、FBBIK或Writer的逐帧业务结果。
 - 不删除或降级现有actor-local在线调参能力；调参只迁移Owner与事务，不得修改共享Program Image、跨Actor传播或改变生效时机。
 - 不新增Pose节点、Layer、Control Rig、传统Animator Controller、第二PlayableGraph、第二Animator、第二IK solver或GPU动画路径。
-- 不重新设计Foot Contact Plan、Heel/Toe、脚掌旋转、Reactive、移动平台或上下楼专用动画。
+- 不重新设计Foot Contact Plan、Heel/Toe、脚掌旋转、Reactive、移动平台或上下楼专用动画；不恢复已撤销Reach夹紧或SmoothKnee，不接管任何未实施IK行为任务，不改正常初始化／Reset的IK结果。
 - 不改变Gameplay/Presentation边界，不把Pose、Program Actor State或Frame workspace写入Rollback snapshot或网络协议。
 - 不创建通用插件容器、运行时反射Handler、任意Operation注册表、Solver抽象接口或只有一个Adapter的假设性Seam。
-- 不以拆分文件行数作为完成标准；如果调用方仍需理解内部页、offset、index、Seal顺序或节点特例，视为重构未完成。
-- 不新增自动测试；实施阶段只执行项目规定的编译、静态检查和OpenSpec严格校验。
+- 不以拆分文件行数作为完成标准；如果调用方仍需理解内部页、offset、index、Seal顺序或节点特例，视为重构未完成。静态合法性只在Build证明、固定绑定只在Runtime创建检查；逐帧只检查变化事实和跨Owner交接，不在每层重复完整验证。
+- 不新增自动测试或手动验证任务；实施复用现有编译、静态检查与OpenSpec严格校验，并保留现有正式输入／诊断基线供同语义对账。重建或回放遵守项目显式入口，不创建验证旁路。
 
 ## Success Criteria
 
@@ -107,6 +123,9 @@ Runtime、Preview与Diagnostics消费同一Program Image和完成语义
 Diagnostics只读取Committed Result，不读取内部Workspace或重新执行节点
 不存在旧Runtime wrapper、旧Program容器、旧Executor构造、旧Handler Registry、旧ABI reader或fallback
 
-既有动画、Foot Placement、Goal、FBBIK和Final Pose业务结果保持迁移前Oracle
+既有动画、Foot Placement、Goal、FBBIK和Final Pose业务结果保持ad3527e103cc3235a63e8a1c1dbd26df5155e0ba基线
+Foot／IK未完成任务和归档状态不是本次开工前置
+不吸收未实施或已撤销的IK方案，不掩盖基线已有问题
+既有Sampler、Analyzer、Publisher、明细存储与七维评分保持原链路和数学
 Gameplay ContractHash、Float32/Fixed ProgramHash与Network identity不因Pose ABI重构改变
 ```

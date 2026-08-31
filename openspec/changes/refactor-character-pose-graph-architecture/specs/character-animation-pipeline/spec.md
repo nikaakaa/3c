@@ -6,6 +6,8 @@ SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同�
 
 正式运行 MUST由唯一`CharacterPoseProgramRuntime`执行Projection内部Program Image中的PoseStateMachine、Player、ActionPlaybackInput lifecycle、AnimationSlot、Local/Component Pose、Constraint Family与Output Operation；唯一`CharacterPoseSourceModule`负责source sample、Animancer/Playable与物理source生命周期；唯一`CharacterPoseConstraintRuntime`负责Foot Placement、PoseBone Goal、Goal Contribution、Assembler、唯一Goal Set、FBBIK与BendHistory；唯一`CharacterFinalPosePublication`负责唯一Committed/Pending Final Pose物理页与Physical Writer。Program Runtime MUST在每个Constraint Family Operation位置通过typed编译Handle调用一次对应Constraint入口，Constraint Module MUST不扫描Program或维护第二份Schedule。Module间 MUST只交换同Frame、Completion、Program、Projection、Rig与Tuning Generation lineage的typed Result。外层Runtime、Preview与Diagnostics MUST不创建第二Program Image语义、同一Actor第二Execution View、第二Program State、第二Action lifecycle、第二Operation执行、第二Constraint事务、第二Goal Set、第二FBBIK、第二Final Pose页或第二Writer。
 
+Constraint外部Owner变化 MUST整体保留指定提交ad3527e103cc3235a63e8a1c1dbd26df5155e0ba的动画时钟／混合、Foot、Pelvis、Goal与FBBIK实现、公式、配置、数值顺序和成功Reset结果；Foot／IK未完成或未归档不构成本change前置。本change不得恢复旧中央Foot状态机、已撤除业务Reach硬夹紧／末端夹脚、已撤销SmoothKnee或接管未实施IK维护任务。
+
 #### Scenario: 正常执行Foot Placement与FBBIK
 
 - **WHEN** Program Runtime执行到Foot Placement和PoseBone Goal Operation并由Constraint Module形成合法Goal Set与FBBIK结果
@@ -29,6 +31,8 @@ SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同�
 系统 MUST在Frame开始冻结Live、Capture、Pose Watch与detail interest及容量。Source、Program、Constraint和Final Publication Module MUST只在有匹配interest时从已完成Pending Result向各自固定诊断页深冻结数据；成功Seal后，唯一Diagnostics Projector MUST从匹配同一lineage与Tuning Generation的Committed Result生成只读Snapshot。Snapshot MAY包含Action lifecycle、source readiness/usage、PoseState、Player、Transition、Slot、Blend、Inertialization、Operation、Pose、Goal Contribution、Goal Set、FBBIK、Final Pose与Physical结果，但 MUST不参与运行计算。
 
 Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint Module或Final Publication的可变引用，不得读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推，也不得从Animancer weight重建事实。没有interest时 MUST跳过对应大页与逐骨骼复制，但正式执行结果不变。
+
+新的Runtime Snapshot MUST接回现有唯一Sampler、Analyzer、Publisher、小报告／明细存储与七维评分链。该迁移不改变采样窗口、输入、字段业务含义、规则阈值、评分权重、资格和分母，不新增第二采样／分析／发布或旧格式兼容路径；历史原包 MUST保持。
 
 #### Scenario: 导出每帧调试数据
 

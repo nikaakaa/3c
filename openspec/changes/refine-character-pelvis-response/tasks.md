@@ -89,5 +89,5 @@
 ## 15. 主支撑Reach执行权独立实验
 
 - [x] 15.1 核对91758ff历史准入、141106全链路与冻结前态单步模型，分开全腿观察／Primary执行／本腿完成／末端Goal投影；不复制旧目标或Foot规则，风险见实验MD
-- [ ] 15.2 实施唯一Primary硬边界、无Reach释放及逐腿可达性，清理旧选择／无历史LandingReach状态；同步唯一Diagnostics，不改37质量规则、Foot或Bend
+- [x] 15.2 e0e9678实施唯一Primary硬边界、无Reach释放及逐腿可达性；8f8c28a迁移68/37、无新CSV列。完整Editor规定flags构建57既有／依赖警告0错误并shutdown，strict97/97，显式Refresh后Console零错误；质量待15.3
 - [ ] 15.3 显式加载后运行原Record，逐阶段检查目标／自由响应／硬边界／Goal投影／实际脚骨与骨盆，按结果保留或精确撤销并验证恢复；仅追加简短MD，原采样不重归档

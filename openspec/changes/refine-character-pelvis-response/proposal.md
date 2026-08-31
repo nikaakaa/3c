@@ -12,7 +12,7 @@
 
 1. 合法Ready Foot目标的PositionWeight只取正式FootPlacementWeight，不以Correction长度或是否恰好为零决定有效性。Unavailable、Suppress和作者零权重保留原语义；旋转政策不变。
 2. 在现有Pelvis生产资格内，以同帧原动画双脚Sole与Resolved有效目标Sole形成有符号期望偏移：`min(targetL,targetR)-min(animatedL,animatedR)`，高度均沿同一Component Up。替换旧地形相对高度加正向脚补偿，不叠加两套公式。
-3. 真实腿长及正式安全余量形成统一硬区间；原动画弯曲程度只影响目标偏好，不再构成另一份输出硬夹紧。现有单一骨盆响应消费完整边界，外部不再二次改写其输出。不可达与Foot安全继续通过现有typed Reach与Goal链表达。
+3. 真实腿长及正式安全余量形成逐腿可达观察；第15步独立实验只让Accepted主支撑腿提供骨盆硬边界，Pelvis Release不采用硬边界。原动画弯曲程度只影响目标偏好。每脚Landing完成仍检查本腿实际可达；末端Goal径向投影只允许主支撑腿，非主脚目标与作者权重不变，真实求解误差必须实测。
 
 ## 与现有规格的关系
 
@@ -21,6 +21,7 @@
 - 当前Runtime的Correction幅度权重门及Analyzer对应不变量由第1步正式替换，不保留旧开关。
 - 旧active设计仍有未实现的PelvisMaximumUpVelocity/DownVelocity草案，与当前配置和本次保持既有响应的范围不同。本change不新增该组参数；相关active delta/design需同步成当前单一响应合同，不把旧草案混入本轮。用户原有proposal.md/project.md未提交内容不打包进本change。
 - 第3步替换两处输出夹紧的编排，但不把“位置绝对连续”升级为压倒真实腿长的保证。几何冲突必须显式产生必要下蹲或既有不可达结果。
+- 第15步明确替换第3步的“全部请求腿共同硬约束”政策：观察保留全部腿，硬执行权只归主支撑。它参考91758ff的准入结构，不复制其旧目标、动画弯曲余量或Foot退出规则。无权脚真实不可达属于实验风险，不能用隐式夹脚或Solver成功掩盖；以141106为直接回放对照。
 
 ## 范围与验证
 

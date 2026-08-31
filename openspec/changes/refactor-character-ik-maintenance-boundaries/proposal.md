@@ -68,17 +68,17 @@
 |---|---|---|
 | current `character-foot-placement-presentation`：唯一深模块、唯一根事务 | 一致，继续保留 | 不新增外部阶段和独立提交；只在模块内部区分请求与结果 |
 | current：字段只有一个写入Owner，下游不读Foot内部状态 | 原则一致，但Module仍读过程Motion.State重判准入，部分Pelvis输入通过临时Goal反算 | 决定和有效几何收进唯一请求生产者，Root只调度，下游只读被授权视图 |
-| current：`Resolved Foot必须形成紧凑下游合同`与`Pelvis必须只消费Resolved Foot Pair` | 名称和时序仍需分清：Pelvis读取初步需求，其输出上的本腿可达观察又参与原Landing完成判断 | delta把Pelvis输入改为内部typed脚需求，并重命名requirement；最终Resolved在原完成阶段后发布 |
+| 原current的Resolved/Pelvis合同 | 首两个代码闭环已区分请求与最终结果并通过固定基线回放 | 已直接同步current为`Pelvis必须只消费typed脚需求并保留可达观察`，delta保留同名MODIFIED，不再重复RENAMED；最终Resolved在原完成阶段后发布 |
 | current Foot诊断文字写为从Committed事实“深冻结”，animation pipeline要求Writer前冻结Pending、Seal后发布 | 冻结时机表述不一致 | 收紧Foot requirement为计算阶段捕获证据、Pending冻结、Writer补写实际输出、Committed只读发布；不改外层Fault政策 |
 | current `character-animation-pipeline`与Pose Graph：Vendor字段不能成为跨帧真相 | 一致，但Reset路径尚未落实 | 增补正式初始化方向与清空历史的可验证场景 |
-| active `stabilize-character-foot-path-and-landing` | Resolved/Pelvis条款仍保留双腿硬执行、Goal夹紧等过期要求；位置basis、Goal Sole任务混有未完成和已否决候选 | 以用户已接受的Reach撤除和233436行为为准，对账直接重叠合同；不为任务勾选复活旧实验 |
+| active `stabilize-character-foot-path-and-landing` | 已删除重复的旧Resolved/Pelvis差量，并将Reach硬执行、Goal夹紧条款对齐9da24a5后的保留政策 | 请求与最终结果由本change/current唯一维护；位置basis、Contact与Goal Sole未完成任务仍独立记录，不为勾选复活旧实验 |
 | active `refine-character-pelvis-response` | 任务已完成，第16步已删除全部Reach硬执行和末端夹脚，只保留观察及原Landing完成资格 | 本提案删除旧夹紧迁移目标，严格保留当前共同目标、软偏好、一次Spring及其参数 |
 | active `add-animation-relative-knee-response` | 明确为已否决、已撤销的SmoothKnee实验 | 不作为实施依赖，不恢复其配置、尾段或角差历史；保护stabilize中已保留的膝向运输 |
 | active `compact-foot-diagnostic-publication` | 小报告、analysis清单、details与索引已完成 | 保留单次解析、内存事实交接和只读查询；本change只统一字段搬运，不复建大型facts.json |
 | active `consolidate-foot-diagnostic-scoring` | 统一评分与本次统一字段映射不同 | 保留唯一评分Owner、维度、权重、分母、缺失语义和原始历史包 |
 | active `refactor-character-pose-graph-architecture` | 已计划外层Module、Program、Publication与Diagnostics Projector迁移 | 本次仅处理Foot内部和采样映射，不创建第二套外层协调器；后续重构消费本次收口后的合同 |
 
-原提案阶段仅更新本提案六份文档。用户现已通过Goal授权串行实施本change与后续Pose Graph重构，具体候选与验证见execution.md；尚未实施或验证的部分仍不写成已安装事实。`project.md`与stabilize仍有旧硬Reach保证，已与用户后续决定及当前源码不一致；实施/归档时必须沿唯一合同清除这些过期要求，不能据此恢复硬夹紧。旧“Pelvis读取最终Resolved”的输入阶段表述也须统一替换，防止后归档的delta覆盖当前决定。
+原提案阶段仅更新本提案六份文档。用户现已通过Goal授权串行实施本change与后续Pose Graph重构，具体候选与验证见execution.md；尚未实施或验证的部分仍不写成已安装事实。`project.md`与stabilize的旧硬Reach保证、夹脚任务和“Pelvis读取最终Resolved”表述已随首两个闭环对齐；stabilize的重复接口差量已删除，防止后归档覆盖当前决定。既有未提交文档改动保留，没有将其夹带入本次提交；余下历史/Reset/诊断要求只有实施验证后才进入current。
 
 ## Impact
 

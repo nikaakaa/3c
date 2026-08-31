@@ -158,24 +158,60 @@ Foot Placement MUST为每个根Bank预分配固定容量Future Body Translation 
 
 ### Requirement: Resolved Foot必须形成紧凑下游合同
 
-`CharacterResolvedFootResult` MUST只发布下游实际消费的Frame、Completion、Rig、Side、Final Sole与Ankle、Effective Correction、Goal Weight、Contact Reference与Ownership、Support Eligibility、Support Weight、Support Intent、Support Error、Event lineage、typed Reach Reference和Outcome。内部State、Transition Decision、Path、Anchor历史、Interpolation状态与Hard Constraint过程 MUST不进入正式下游合同，只 MAY进入Diagnostics。
+`CharacterResolvedFootResult` MUST只表示当前Foot流程完成既有Landing资格判断后的最终Goal输入。它 MUST发布下游实际消费的Frame、Completion、Rig、Side、Final Sole/Ankle/Rotation、有效Sole/Ankle/Rotation、Correction、作者位置/旋转权重、Contact Reference与Ownership、Support Eligibility、Support Intent与Weight、Support Error、Event lineage、所需typed Reach观察和Outcome。提供给Pelvis的初步需求 MUST使用不同的内部类型，不得把初步Resolved当作最终结果；迁移 MUST不复制两套同义字段或为已删除的夹脚建立受限输出合同。
 
-Resolved Foot Pair MUST只组合同Frame、Completion与Rig的左右Result，不重新计算State、Support、Reach或Goal，也不得成为第二Blackboard。Primary Support、Pelvis和Goal MUST只读取Resolved字段，不得读取Foot内部状态。
+最终Resolved Pair MUST只组合同Frame、Completion与Rig的两脚结果，不重新选择State、Support、Reach或Goal。内部State、Transition Decision、Path、Anchor历史与Interpolation过程 MUST不进入最终下游合同。Primary Support与Pelvis MUST只消费本模块内部的初步请求视图；Goal编码 MUST只读取最终Resolved与Pelvis Result，不得新增业务层Reach夹紧。必要的身份和数值检查 MUST复用现有生产/消费边界，不在每个内部阶段重复验证相同字段。
+
+最终Sole、Ankle、Rotation、有效目标与Correction MUST保持当前Foot/Heel/Toe几何和权重规则。未加权Goal、加权目标与实际Solved/Physical Pose MUST保持不同含义，不得把最终Goal输入称为已写入的物理脚底或保证它必然可达。原目标不可达时 MUST保留真实观察和原Landing资格结果，不硬改目标、权重或骨盆来制造成功。
+
+#### Scenario: 初步脚结果尚未完成Landing判断
+
+- **WHEN** Foot已完成本帧目标与Interpolation但Pelvis响应及其后的原Landing完成判断尚未结束
+- **THEN** Foot MUST只产生内部typed脚需求和完成凭据，不发布最终Resolved
+- **AND** 根Runtime与Goal消费者 MUST不能取得这份未完成结果作为正式输出
+
+#### Scenario: 原Landing资格不满足但目标保持
+
+- **WHEN** Foot进入原Landing完成检查且本腿在当前加权Pelvis位移下不满足可达资格
+- **THEN** 现有Transition MUST保留原未完成结果，不因此允许Full Lock
+- **AND** Foot目标、作者权重和Pelvis响应 MUST保持原行为，不补回末端夹脚或硬压骨盆
+
+#### Scenario: 正常输出保持
+
+- **WHEN** 相同输入进入基于233436保留行为整理后的内部阶段
+- **THEN** 分型迁移 MUST保持Goal的位置、旋转、权重和原连续性处理
+- **AND** MUST不新增一次Interpolation、Pelvis响应或FBBIK
+
+### Requirement: Pelvis必须只消费typed脚需求并保留可达观察
+
+Primary Support MUST只读取同Frame、Completion、Rig与Side的typed请求中正式Support Eligibility、Support Intent、Support Error、Event lineage与Pelvis Reach Reference。正式Support为零或Reference无效时 MUST按现有业务发布不可用，不得按相对权重归一制造支撑。Contact Reference、Pelvis Reach Reference和Landing Reach Request MUST保持独立含义。
+
+Pelvis MUST只消费请求中所需的目标与Reach视图、Primary Support Result、同帧动画/Body输入和显式设置，不得读取Foot State、Lock Mode、Anchor历史、Path Residual、Interpolation内部状态或Diagnostics。请求的未加权与有效目标 MUST明确分型，权重不得重复应用。
+
+Pelvis MUST继续使用233436组合中用户已接受的共同目标、软姿态偏好、一次Spring及Handoff/背向速度规则，并保留逐腿和交集的typed Reach观察。Reach MUST不夹取骨盆目标或输出、不清边界速度、不阻止Release回零、不强开骨盆权重；Primary Support不得作为例外。末端Foot径向夹脚和公共硬执行边界 MUST保持删除，不以重构之名恢复。
+
+原Landing完成可达资格 MUST继续使用本腿请求与当前实际加权Pelvis位移判断。该结果只作为现有Transition Resolver的准入输入，State仍由唯一Transition Runtime更新；Pelvis和Ground Constraint MUST不能直接反写离散State。删除硬Reach MUST不被扩大为删除原完成资格、改变作者权重或新增一个状态选择器。
 
 #### Scenario: 下游选择Support
 
-- **WHEN** Primary Support收到同lineage的Resolved Foot Pair
-- **THEN** 它 MUST只使用Resolved Support、Reach和Event字段完成选择
-- **AND** MUST不读取Foot State、Transition、Anchor或Interpolation状态
+- **WHEN** Primary Support收到合法的两脚请求
+- **THEN** 它 MUST仅按请求的正式Support与Event字段执行原有获取/保留选择
+- **AND** MUST不读取Foot State、Lock Mode或Interpolation历史
 
-### Requirement: Pelvis必须只消费Resolved Foot Pair
+#### Scenario: 可达观察参与原Landing完成
 
-Primary Support MUST只读取Resolved Pair公开的Support Eligibility、Support Intent、Support Error、Event lineage和Pelvis Reach Reference。Stride与Pelvis MUST只读取Primary Support Result、Final Sole、typed Reach Request和lineage，不得读取Foot State、Transition Decision、Anchor、Path或Interpolation内部状态。
+- **WHEN** 唯一Pelvis响应已产生本帧实际加权位移，原Foot流程请求检查Landing完成
+- **THEN** 本腿typed观察 MUST按当前位移计算原可达资格
+- **AND** Foot Lifecycle MUST按原政策消费该结果完成准入，不修改骨盆响应或脚目标
 
-Pelvis与Foot Goal发生可达冲突时，决定依据、限制结果和失败原因 MUST通过明确typed Reach合同表达；系统不得通过读取内部Foot状态、降低未授权Goal权重或让FBBIK隐式夹紧来补全缺失政策。
+#### Scenario: 主支撑观察不可达
 
-#### Scenario: Pelvis处理Reach输入
+- **WHEN** Primary Support腿的几何观察范围不包含当前Pelvis输出
+- **THEN** 系统 MUST保留真实不可达事实，不以Primary身份强制夹取骨盆或脚目标
+- **AND** MUST不新增公共硬区间、边界清速度或权重补偿
 
-- **WHEN** Resolved Foot Pair提供同lineage的Support与Reach事实
-- **THEN** Pelvis MUST只依据这些公开事实生成Target、Handoff与Spring结果
-- **AND** MUST不反向改变Foot State、Transition或Interpolation
+#### Scenario: 请求身份混杂
+
+- **WHEN** 请求与其对应观察或结果的Frame、Completion、Rig、Side或Event不匹配
+- **THEN** 现有唯一交接校验入口 MUST在正式发布前拒绝，不将同一检查复制到每个内部方法
+- **AND** MUST不借用上一帧结果、默认脚需求或另一只脚的裁决补全

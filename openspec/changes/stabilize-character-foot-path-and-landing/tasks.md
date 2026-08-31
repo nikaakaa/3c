@@ -72,7 +72,7 @@
 - [x] 6.1 在Foot Motion Profile新增必须显式序列化的`GroundPenetrationTolerance`与`LandingLockCompletionTolerance`，纳入Profile Revision并严格拒绝缺失、非有限与非正值；Corin首个候选均使用`0.01m`
 - [x] 6.2 在3.17持续准备Plant目标、3.20建立Verified Anchor后，删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`；保留普通Swing/UnlockedSupport对Accepted Ground Envelope的硬最低约束，确认Effective Correction仍只有唯一Interpolation Owner
 - [x] 6.3 在唯一Interpolation内建立同Event持久Prepared Plant Target、上一Selected World Target、上一实际World Output Point与完整Vector Plant World Residual；删除raw Contact累计max与全部Prepared Plant可见混合，Approach Progress只更新准备事实，首次Contact Verification选择Verified Target时才重基Residual并在同帧Advance
-- [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达仍可硬夹紧Goal
+- [x] 6.4 让Post Constraint对普通Swing/UnlockedSupport执行Accepted Ground Envelope硬最低约束，对Approach Plant Target和Landing/Locked Contact Anchor只测量穿透并发布容差、追赶与Full Lock门控；继承的超预算Plant误差由同一PlantBlend连续追赶且不得Full Lock，Reach不可达只保留几何观察与原Landing完成资格；后续9da24a5已删除Goal硬夹紧
 - [x] 6.5 让Landing只有在正式Lock Weight完成、位置残差不超过`LandingLockCompletionTolerance`、穿透不超过`GroundPenetrationTolerance`且Reach允许时进入Locked；Landing完成Decision延后到双脚/Pelvis Reach求解之后，未满足时保留同Anchor Landing继续接管
 - [x] 6.6 用`Runtime Ground Envelope + Formal Foot Height`生成Swing Raw Height，保持Foot XZ来自动画骨骼；唯一Target Height历史保存Accepted Landing沿Up高度，Swing按`Raw Height + Filtered Landing Height - Current Landing Height`输出，正常Phase直接通过，同Event Landing高度有效换代才限速，Plant接管时Swing发布Held并由Plant继续同一历史；记录Raw、History Before、Delta、Applied Delta、Held、Rate Limited、Clamp与Filtered Height
 - [x] 6.7 删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`的旧高度/目标政策、`NextSwingConstraintWeight`状态及对应代码和诊断列
@@ -127,10 +127,10 @@
 ## 8. 闭合Landing腿可达
 
 - [x] 8.1 在Foot Motion Profile新增必须显式序列化的米制最小Landing腿压缩余量，纳入Profile revision和严格校验，缺失时typed invalid且不提供默认值
-- [x] 8.2 让State Target与Resolved Foot发布Landing Reach Request，包含Event、世界Hip、目标Ankle、腿长与最小压缩余量
-- [x] 8.3 让Pelvis Builder求Primary Support腿与Landing腿Reach区间交集，并限制Target与Spring Output
-- [x] 8.4 在Reach无交集时保持支撑腿安全、按最小压缩余量夹紧Landing Foot Goal、发布`LandingReachUnavailable`并禁止Full Lock
-- [x] 8.5 发布Target/Solved Extension Ratio、Compression Reserve、Reach区间、交集和Goal夹紧量诊断事实
+- [x] 8.2 让唯一Foot请求生产者发布Landing Reach Request，包含Event、世界Hip、目标Ankle、腿长与最小压缩余量
+- [x] 8.3 让Pelvis Builder保留Primary Support腿与Landing腿Reach区间及交集观察；9da24a5已删除对Target与Spring Output的硬限制
+- [x] 8.4 在Reach不可达时发布本腿观察并参与原Landing完成资格；9da24a5已删除Primary安全例外及Landing Foot Goal径向夹紧
+- [x] 8.5 发布Target/Solved Extension Ratio、Compression Reserve、Reach区间与交集诊断事实；Goal夹紧量已随硬执行删除
 - [x] 8.6 在唯一FBBIK中让可靠的本帧动画弯曲向量保留符号，按本帧原腿轴到Target腿轴的旋转运输请求；Stable保存运输前动画方向，Applied保存实际请求，历史只在现有动画退化分支沿原投影与保留政策接管。保持权重、根Bank、Goal与Vendor算法，发布真实相邻方向dot；零Target腿轴明确拒绝，不补匿名方向
 - [x] 8.7 以160901认可行为、192218恢复包及同值203023新诊断基线，用既有Record对账有符号动画腿轴运输候选、Solved Knee与全部Foot/Pelvis质量，单列大腿轴角、零权重、退化输入与未覆盖边界，记录保留或拒绝结论（a40b71f／205014：已录15次强镜像翻侧归零，42项Foot诊断发生数不变；保留本步，R825–827零BendWeight深折叠未解决，见同一实验记录）
 

@@ -73,7 +73,7 @@
 - `20260829-140501-752-e0b6c973e2bb4899b95848178aa5b5ec`否定了只比较单帧Landing高度变化的首版强制刷新门。它触发13次Force Refresh，Verified Plant输出距离P95从`0.411997557m`降到`0.3432m`、最大从`0.683217m`降到`0.5906m`，但Stable Swing跳变从339增到343、Path Revision跳变从674增到675、穿透帧从57增到59，仍不能验收。最大误差帧的单帧变化约`0.18m`，而Filtered Landing到正式目标已经累计落后`1.0m`以上，说明判据必须按ZZZ证据比较内部历史到当前目标的累计距离，并且Approach/Plant接管后继续同一门，不能只在Swing处理。
 - `20260829-141725-255-db5452a034584b89b2978b4e26f1bbaa`以`matched:1044`证明累计高度差门显著减少第一层欠账：Swing与Plant分别触发43和44次Force Refresh，Landing输出距离P95从`0.4239204m`降到`0.255056143m`、最大从`0.632212043m`降到`0.3830328m`，Foot Placement引入/放大Contact Plane穿透事件从`23/18`降到`8/4`，Path Revision输出跳变从265降到225；但Stable Swing跳变仍为173，Landing退出跳变从5增到9，最大目标伸长比从`1.0000881`恶化到`1.00751`，仍不能验收。行级事实定位出三项结构缺口：Plant Policy内部的Next Swing仍可改写Current Contact拥有的Target Height identity；`MaximumVerticalCorrectionSpeed`限制相对Animated Sole的Correction却未先抵消动画基线移动，帧286在目标高度已零欠账时仍有`-0.3930326m`Correction差且只应用`-0.01m`；PreSwing的UnlockedSupport虽发布满权Reach Request，却被`IsSwing`候选门排除，帧681/682把伸长率`1.00678/1.00751`目标交给FBBIK。后续切片必须同时修正唯一History Owner、Correction基准重表达、PreSwing Reach与小量Pelvis安全输出，不能只提高0.6m/s参数。
 - `20260829-144901-958-2fdcb755001a4042a7745a72a76c9531`否定了“按上一Interpolation世界输出重表达Correction，再继续用单档`0.6m/s`追赶”的候选。它成功把最大目标伸长比从`1.00751`降到`0.999999762`、不低于1的行从2降到0，并把Formal Support正值但Runtime Support为零的行从306降到206；但Landing输出距离P95从`0.255056143m`恶化到`0.444362283m`、最大从`0.3830328m`恶化到`0.517514944m`，Stable Swing跳变从173增到214、Path Revision跳变从225增到297、Swing到Landing跳变从5增到26、Landing退出跳变从9增到45。原因是世界输出被真实限制为每帧1厘米后无法在正式Contact窗口内追上阶差，该基准重表达已从后续提交删除；唯一Height History所有权、Support解耦、PreSwing Reach和小量Pelvis安全输出继续作为独立候选验证。ZZZ只证明第二Correction历史存在两档速率与有限旁路，不证明其业务选择位；项目下一响应政策必须以正式Event/Contact/Reach和Replay定义，不得把匿名`0x199/0x54/0x252`直接命名为Landing模式。
-- 当前后续候选以三个可回退提交闭合上述责任链：`a408215`让无权威Foot Motion显式释放旧Goal、正式Support直接进入Resolved Foot/Primary Support，并让Target Revision与`FullAnchor -> Sliding`通过唯一Interpolation捕获Residual，稳定Locked不再继续套两层竖直限速；`5305aa1`把Swing Raw Height统一为`Ground Envelope + Formal Foot Height`，删除`LandingConstraintWeight`与`NextSwingConstraintWeight`，并把每脚Target Height历史从Swing连续到Approach/Plant；随后Reach切片把`Landing -> Locked`的Post-Interpolation Decision延后到双脚与Pelvis Reach求解之后，Resolved Foot发布带Event、Hip、目标Ankle、腿长与压缩余量的typed Request，无交集时保留支撑腿输出、夹紧Landing Goal并禁止Full Lock。该实现只代表完整候选已经具备可测上下游，不代表通过；必须在Edit Mode Refresh后用同一1044帧Replay重新验证Swing高度历史、Formal/Runtime Support一致性、LandingReachUnavailable、Goal夹紧、Full Lock门控、目标伸长比和物理跳变。
+- 历史候选`a408215`与`5305aa1`分别迁移正式Support、目标换代Residual与Swing高度。早期Reach切片曾硬改Pelvis和Landing Goal，但该执行已在`9da24a5`删除；当前保留基线为`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`及233436/205014证据。Reach仅保留逐腿／交集观察及实际加权Pelvis位移上的原Landing完成资格，不恢复夹脚或Primary硬保护。请求／最终结果的内部重排由IK维护重构统一完成，不再作为本change另一份接口任务。
 
 ## What Changes
 
@@ -88,10 +88,10 @@
 - 用独立typed `CharacterFootTransitionResolver`声明固定Transition边、判定阶段和优先级。Resolver只生成不可变Decision；唯一Transition Runtime应用State与Anchor命令，不执行插值、不查询世界、不写Goal。
 - 用纯`CharacterFootStateTargetResolver`按Transition后的离散State生成Correction Target、接触引用、Goal/Ownership目标和Interpolation Policy Request。State Target不得保存时间状态、推进Residual或跳转到另一State。
 - 用唯一typed `CharacterFootInterpolationRuntime`拥有Effective Correction、唯一Residual、上一Target与Completion。Swing Path换代、Landing Acquire和Release都提交固定Policy Request给它执行；按ZZZ已确认的分层顺序分别保存Plant Target高度历史与Effective Correction历史：先用独立`MaximumVerticalTargetSpeed`限制同Event目标高度变化，再用正式状态/Contact权重混合当前态与目标态，随后用`MaximumVerticalCorrectionSpeed`限制混合后Correction的Component Up变化，最后只由既有Foot Goal权重混回动画基线。两份历史不得合并，Contact Verification、同Event换点和Reentry不得无条件清零；删除分散在State分支中的`SwingResidual`、`AcquireResidual`、`ReleaseResidual`、`ContactProgress`与重复`Advance`数学。
-- Swing/UnlockedSupport的State Target只使用正式Ground Path、Envelope与Foot Height，并继续以Accepted Ground Envelope作为硬最低约束；Landing/Locked只使用冻结的同Event Anchor。删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`，Landing/Locked的Post-Interpolation Ground Constraint只测量Anchor穿透、发布追赶与Full Lock门控事实，不得再次改写可见Correction。Profile显式`GroundPenetrationTolerance`定义Contact接管允许的小范围穿透预算；超过预算时继续由唯一Interpolation限速追赶，不建立第二Floor旁路。Landing只有在正式Lock Weight完成、位置残差不超过独立`LandingLockCompletionTolerance`且穿透不超过预算后才可进入Full Lock。Reach夹紧仍为不可延迟的硬限制。
+- Swing/UnlockedSupport的State Target只使用正式Ground Path、Envelope与Foot Height，并继续以Accepted Ground Envelope作为硬最低约束；Landing/Locked只使用冻结的同Event Anchor。删除`AcquireByWeight`进入帧对Contact Anchor的立即`RaiseToMinimum`，Landing/Locked的Post-Interpolation Ground Constraint只测量Anchor穿透、发布追赶与Full Lock门控事实，不得再次改写可见Correction。Profile显式`GroundPenetrationTolerance`定义Contact接管允许的小范围穿透预算；超过预算时继续由唯一Interpolation限速追赶，不建立第二Floor旁路。Landing只有在正式Lock Weight完成、位置残差不超过独立`LandingLockCompletionTolerance`且穿透不超过预算后才可进入Full Lock。Reach只保留几何观察及原Landing完成资格，不硬改Goal或Pelvis。
 - 只把Foot Height接入Swing，使动画抬脚高度叠加到Runtime Ground Envelope，删除由`LandingConstraintWeight`乘`BaselineHeightError`或`FormalTargetCorrection`提前改脚目标的旧政策。
 - 只把Support接入Resolved Foot、Primary Support与Pelvis，使承重意图不再依赖Lock资格，并为Landing腿提供独立Reach请求。
-- 增加必须显式序列化的米制最小Landing腿压缩余量；缺失即typed invalid，不提供默认值。Pelvis优先求双腿可达交集，无法同时满足时夹紧Foot Goal并发布typed不可达结果，不允许完全伸直后继续进入Full Lock。
+- 增加必须显式序列化的米制最小Landing腿压缩余量；缺失即typed invalid，不提供默认值。Pelvis保留双腿区间及交集观察；不可达时保留真实目标和typed结果，由原Landing完成资格决定能否Full Lock，不新增目标夹紧。
 - 保留现有唯一Pelvis Critical Spring，并按本项目Landing Reach业务增加必须显式序列化的最大上升、下降速度；Spring积分后先限制速度，再把Target与Output限制在双腿Reach交集，撞到边界时清除继续向外的速度。ZZZ Pelvis字段映射未闭合，不作为该项目政策的证明或参数来源。
 - 最后用Contact、Lock Mode和Lock Weight替换旧PlantConfidence的Landing、Locked、Sliding与Release生命周期；由独立Transition、State Target与统一Interpolation链执行，Anchor与Interpolation各自只有一个typed Owner。
 - 保持`Swing / UnlockedSupport / Landing / Locked / Releasing`五个顶层状态不变，在同一Foot根Bank内增加分型Contact Transition Context，只保存上一正式Lock请求、距最近边沿时间、最近与最近释放Contact Event identity。Resolver生成Contact Rising/Falling/Same-Event Reentry Refresh事实，唯一Transition Runtime更新Context；Releasing期间同Event快速重入必须复用仍保留的Verified Anchor执行`Releasing -> Landing`强制刷新，不重查、不重建Anchor、不把Interpolation清零。Release完成后不复活旧Event，新Event必须执行自己的首次Plant Verification且不受上一Event回弹事实阻断。删除旧`PlantCycleConsumed`布尔，不新增Rebound或Grounded顶层状态。
@@ -117,7 +117,7 @@
 
 - current `character-foot-placement-presentation`已经删除`8fc704a`公式、PlantConfidence生命周期和单体`CharacterFootStateMachine/Context`实现约束，只保留一个权威Foot结果、typed状态单一写入、根事务和下游隔离边界。本change通过delta把内部实现收紧为独立Transition、纯State Target、统一Interpolation与Post Constraint固定顺序。
 - current spec只要求时间连续化、Transition和Constraint不能互相越权，不规定具体策略。本change安装正式Foot Motion输入、Transition边、Interpolation Policy、受控Ground穿透和迁移完成后的旧字段删除要求。
-- current Resolved Foot与Pelvis合同只规定下游不得读取Foot内部状态。本change进一步安装与Lock分离的正式Support Intent、Landing Reach和无交集时的Goal夹紧政策。
+- current Resolved Foot与Pelvis合同只规定下游不得读取Foot内部状态。与Lock分离的正式Support及Landing Reach观察保持；请求／最终结果合同由IK维护重构和current Foot规格统一拥有，旧无交集Goal夹紧政策已撤销。
 - current `character-animation-pipeline`规定新增22条Curve在没有正式消费者时不进入Runtime；本change通过新的Animation Pipeline requirement建立唯一Runtime Frame，并在消费者迁移时取代对应的旧Runtime输入。
 - active `refactor-character-pose-graph-architecture`对Foot的delta只调整Constraint/Final Publication所有权，与本change不矛盾；实施时仍需按其最终Program lineage重新对账。
 - current Landing Prediction与Ground Path要求PreSwing/Swing持续重新投影并在新Observation达到死区后换代，但尚未表达Prediction速度状态、Approach Plant目标准备和Contact Verification。本change把Tracking延续到Approach Contact，实际Contact Rising才通过一次Verification建立冻结Anchor；这不是第二查询路径，而是把预测目标与实际Plant世界事实分权。
@@ -153,7 +153,7 @@ Swing目标使用Runtime Envelope加正式Foot Height
 Support Intent不由Contact或Lock门控且Pelvis不出现无依据支撑空洞
 Pelvis上升与下降速度分别受Profile正式上限约束，Reach边界不得积累继续向外的Spring Velocity
 Landing腿与支撑腿Reach区间有交集时Pelvis输出位于交集内
-无交集时Foot Goal夹紧并拒绝Full Lock，不产生超长腿目标
+Reach不可达如实记录并参与原Landing完成，不改Foot Goal；不宣称保证所有目标可达
 Contact/Lock生命周期只读取正式Contact、Lock Mode与Lock Weight
 顶层Foot状态仍只有Swing、UnlockedSupport、Landing、Locked与Releasing
 Contact Rising/Falling与Same-Event Reentry Refresh只存在于同一根Bank内部Transition Context和Decision事实
@@ -166,7 +166,7 @@ Plant Target高度历史与Effective Correction历史分开持久化，按目标
 Landing/Lock附近单帧可见Foot Correction不得因进入State、Lock Weight完成或Post Constraint产生十厘米级跳变
 Landing/Locked Contact Correction的Component Up变化受同一Profile竖直速率限制，Swing/UnlockedSupport保持Accepted Ground Envelope可达，Landing只有在位置与穿透达到独立容差后才进入Full Lock
 Pre/Post Transition、Interpolation与Post Constraint顺序固定且每帧各执行一次
-Ground Path Envelope形成Swing目标并继续执行硬最低约束；Contact Anchor不得绕过Interpolation改写可见Correction，Reach仍可硬夹紧不可达Goal
+Ground Path Envelope形成Swing目标并继续执行硬最低约束；Contact Anchor不得绕过Interpolation改写可见Correction，Reach只保留不可达观察与原Landing完成资格
 Post Constraint只消费已接受预测Path；预测输入不变时不得执行实时地面查询或逐踏面切换输出
 旧隐藏Step、Constraint、PlantConfidence、PlantCycleConsumed布尔和Support消费者被删除
 不存在fallback、旧新双读、第二状态机、第二Goal链或TrainingEnemy变化

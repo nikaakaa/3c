@@ -1,10 +1,5 @@
 本差量的源码与行为对照固定为用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`；233436仅是对应回放证据，不能用当前HEAD或采样目录替代源码基线。
 
-## RENAMED Requirements
-
-- FROM: `### Requirement: Pelvis必须只消费Resolved Foot Pair`
-- TO: `### Requirement: Pelvis必须只消费typed脚需求并保留可达观察`
-
 ## MODIFIED Requirements
 
 ### Requirement: Resolved Foot必须形成紧凑下游合同

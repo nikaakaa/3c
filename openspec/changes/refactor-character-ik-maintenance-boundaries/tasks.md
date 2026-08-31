@@ -2,7 +2,7 @@
 
 - [x] 1.1 以用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`固定源码与行为基线，绑定233436运行证据及205014交叉对照；核对后续接口差异，不使用当前HEAD替代，不回退后续正确改动
 - [x] 1.2 建立Foot/Pelvis/Bend持久字段的写入Owner、消费者、初始化与Reset清单，区分运行历史、帧结果和过程证据
-- [ ] 1.3 对齐current、stabilize及project中的初步/最终结果和过期硬Reach条款，保留当前Reach观察与Landing资格；失败候选不作为前置，直接重叠行为工作不得并行
+- [x] 1.3 对齐current、stabilize及project中的初步/最终结果和过期硬Reach条款，保留当前Reach观察与Landing资格；失败候选不作为前置，直接重叠行为工作不得并行
 
 - [x] 1.4 按数据流和修改权限表，将目标、权重、Support/Reach决定及阶段输出落实到具体方法，列出非权威读取和重复决定的迁移位置
 
@@ -11,11 +11,11 @@
 - [x] 2.1 将既有初步结果迁为模块内部typed脚请求和Pair，明确未加权/有效目标、Support与Reach观察视图，删除同义副本，不增建硬裁决DTO
 - [x] 2.2 将Support事实和Reach观察准入收进唯一Foot请求生产者，删除Module从过程Motion.State/Step/Resolved重判的路径，保持当前条件和阈值
 - [x] 2.3 将权重与当前实际消费的加权脚几何统一在请求生产者，移除临时Goal编码再反解Pelvis输入的往返，保留原空间变换和数值顺序
-- [ ] 2.4 将Stride/Pelvis所需事实投影为最小typed输入，删除下游对原始Landing、完整Path或过程Context的混用，不复制业务判断
-- [ ] 2.5 将唯一Primary选择、Pelvis目标和一次Response适配到请求和准备结果，保留各自状态Owner、可达观察及配置
-- [ ] 2.6 将完成凭据限制在Foot内部，保留本腿可达观察到原Landing完成的唯一反馈，不增加迭代、不夹脚、不改权重
-- [ ] 2.7 Encoder只读最终Resolved与Pelvis结果，Assembler只汇聚，Solver只处理正式Goal和Pending Pose，Writer唯一写骨骼；删除旁路数据、阶段误名及未消费参数
-- [ ] 2.8 通过现有生产/消费边界与只读视图落实权限，不逐层重复重检；Root只拥有根Bank事务，不接管业务数学
+- [x] 2.4 将Stride/Pelvis所需事实投影为最小typed输入，删除下游对原始Landing、完整Path或过程Context的混用，不复制业务判断
+- [x] 2.5 将唯一Primary选择、Pelvis目标和一次Response适配到请求和准备结果，保留各自状态Owner、可达观察及配置
+- [x] 2.6 将完成凭据限制在Foot内部，保留本腿可达观察到原Landing完成的唯一反馈，不增加迭代、不夹脚、不改权重
+- [x] 2.7 Encoder只读最终Resolved与Pelvis结果，Assembler只汇聚，Solver只处理正式Goal和Pending Pose，Writer唯一写骨骼；删除旁路数据、阶段误名及未消费参数
+- [x] 2.8 通过现有生产/消费边界与只读视图落实权限，不逐层重复重检；Root只拥有根Bank事务，不接管业务数学
 
 ## 3. 运行历史与过程证据分责
 

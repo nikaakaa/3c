@@ -30,7 +30,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootDiagnosisPublisher
     {
-        const string FactsSchema = "character-foot-motion-facts/71";
         static readonly ICharacterFootDiagnosis[] s_Diagnoses =
         {
             new CharacterFootLandingLegExtensionDiagnosis(),
@@ -48,11 +47,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisContext context,
             CharacterFootDiagnosticPerformance performance)
         {
-            if (context == null || context.FactsSchema != FactsSchema)
+            if (context == null ||
+                context.FactsSchema != CharacterFootDiagnosticFormatIdentity.FactsSchema)
             {
                 throw new InvalidDataException(
                     $"Foot diagnosis facts schema '{context?.FactsSchema}' is invalid; " +
-                    $"expected '{FactsSchema}'.");
+                    $"expected '{CharacterFootDiagnosticFormatIdentity.FactsSchema}'.");
             }
             if (context.SourceIndices == null || context.SourceIndices.Count != 2)
                 throw new InvalidDataException("Foot diagnostic source indices are unavailable.");

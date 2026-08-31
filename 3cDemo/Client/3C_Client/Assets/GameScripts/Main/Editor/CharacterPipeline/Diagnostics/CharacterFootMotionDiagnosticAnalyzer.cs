@@ -55,9 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/71";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 71;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -5383,7 +5381,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             return new FactsDocument
             {
-                schema = Schema,
+                schema = CharacterFootDiagnosticFormatIdentity.FactsSchema,
                 sample = new SampleFact
                 {
                     identity = capture.SampleIdentity,
@@ -5405,7 +5403,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 analyzer = new AnalyzerFact
                 {
                     id = AnalyzerId,
-                    version = AnalyzerVersion,
+                    version = CharacterFootDiagnosticFormatIdentity.AnalyzerVersion,
                     segmentationPositionEpsilonMeters = PositionNoiseFloor,
                     landingReachCandidateCompressionReserveMeters =
                         LandingReachCompressionReserveMeters,

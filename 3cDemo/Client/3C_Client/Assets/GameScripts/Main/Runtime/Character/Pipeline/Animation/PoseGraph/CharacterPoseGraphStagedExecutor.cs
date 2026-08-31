@@ -516,7 +516,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         break;
                     case CharacterPoseOperationCode.FullBodyIK:
                         using (FullBodyIkMarker.Auto())
-                            EvaluateFullBodyIk(operation, deltaSeconds);
+                            EvaluateFullBodyIk(operation);
                         break;
                     case CharacterPoseOperationCode.LinkedPoseCall:
                         using (LinkedPoseMarker.Auto())
@@ -2302,7 +2302,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                    goalSet.ProducerCallSiteIndex == operation.FrameCacheIndex;
         }
 
-        void EvaluateFullBodyIk(AnimationPoseGraphNativeOperation operation, float deltaSeconds)
+        void EvaluateFullBodyIk(AnimationPoseGraphNativeOperation operation)
         {
             int input = operation.InputValueIndexA;
             int output = operation.OutputValueIndex;
@@ -2326,7 +2326,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BoneCount);
             CharacterFullBodyIkResult result = m_PoseConstraints.SolveFullBodyIk(
                 outputPose,
-                deltaSeconds,
                 operation.Index,
                 operation.FrameCacheIndex,
                 m_FrameSequence,

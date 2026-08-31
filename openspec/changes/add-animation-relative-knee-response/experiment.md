@@ -8,7 +8,7 @@
 
 候选Replay为20260831-183002-949-5b2fb1f3f4c647d18c7a88fc180e34f7，1043采样帧／2086脚行，facts70／diagnosis39。原始CSV、diagnoses与必要的replay-proof.json原地保留。官方Proof因7个产品身份字段变化为matched=false，但1044条逐帧记录完全一致，输入内容、起始Body、输入序列与Body轨迹hash均相同。没有修改比较器或伪造matched。
 
-用户已明确拒绝本次踏空回归。候选已退出Play，本轮只完成数据归因与记录，没有追加算法修改；源码尚未撤回160901，不能把当前候选或新产品称为保留版。
+用户已明确拒绝本次踏空回归并要求回退。已精确撤销f2c3ec0的14个Runtime／Corin Profile／Diagnostics文件改动，恢复160901对应的正式代码及facts69／diagnosis38；未恢复Reach，未修改Foot／Pelvis、评分或用户并行文档。新增模块及其meta随候选删除，可由f2c3ec0恢复；本目录设计和183002原始证据继续保留。正式产品重建与恢复Replay正在执行，完成前不把源码回退等同为已运行恢复。
 
 ## 实际移植与适配
 

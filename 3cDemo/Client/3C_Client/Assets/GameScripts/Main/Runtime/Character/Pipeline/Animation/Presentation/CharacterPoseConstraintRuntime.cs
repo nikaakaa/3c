@@ -3,7 +3,6 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using Unity.Collections;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
@@ -73,7 +72,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             internal CharacterFullBodyIkSolverOutcome SolverOutcome;
             internal CharacterFullBodyIkBendHistory BendHistory;
-            internal CharacterKneeAngleResponseHistory KneeAngleHistory;
             internal CharacterFullBodyIkSolverDiagnostics SolverDiagnostics;
             internal int SolverEffectorCount;
             internal readonly CharacterFullBodyIkEffectorDiagnostics[] SolverEffectors;
@@ -126,7 +124,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     BendHistory = default;
                 else
                     BendHistory = committed.BendHistory;
-                KneeAngleHistory = committed == null ? default : committed.KneeAngleHistory;
                 FootPlacement?.Begin(
                     committed?.FootPlacement,
                     RequiresFootDiagnostics(diagnosticsInterest));
@@ -155,7 +152,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 for (int i = 0; i < ContributionGoals.Length; i++)
                     ContributionGoals[i] = default;
                 BendHistory = default;
-                KneeAngleHistory = default;
                 FootPlacement?.ClearPending();
             }
 
@@ -174,7 +170,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterFinalIkFullBodySolver m_Solver;
         readonly CharacterFullBodyIkGoalAssembler m_GoalAssembler;
         readonly AnimationFinalPosePhysicalWriter m_FinalWriter;
-        readonly Transform m_PoseRoot;
         readonly FixedString64Bytes m_RigId;
         readonly FixedString64Bytes m_RigRevision;
         readonly CharacterFootPlacementDiagnosticsPage m_EmptyFootDiagnostics =
@@ -193,7 +188,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFootPlacementModule footPlacement,
             CharacterFinalIkFullBodySolver solver,
             AnimationFinalPosePhysicalWriter finalWriter,
-            Transform poseRoot,
             int contributionCount,
             int contributionGoalCount,
             string rigId,
@@ -203,7 +197,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Solver = solver ?? throw new ArgumentNullException(nameof(solver));
             m_GoalAssembler = new CharacterFullBodyIkGoalAssembler();
             m_FinalWriter = finalWriter ?? throw new ArgumentNullException(nameof(finalWriter));
-            m_PoseRoot = poseRoot ? poseRoot : throw new ArgumentNullException(nameof(poseRoot));
             m_RigId = new FixedString64Bytes(rigId ?? string.Empty);
             m_RigRevision = new FixedString64Bytes(rigRevision ?? string.Empty);
             if (m_RigId.Length == 0 || m_RigRevision.Length == 0)
@@ -445,7 +438,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal CharacterFullBodyIkResult SolveFullBodyIk(
             NativeSlice<AnimationLocalBonePose> pendingOutputComponentPose,
-            float deltaSeconds,
             int producerOperationIndex,
             int producerCallSiteIndex,
             ulong frameSequence,
@@ -456,15 +448,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 RequiresFullBodyIkDiagnostics(m_Pending.DiagnosticsInterest);
             if (!m_Pending.GoalSet.IsValid)
                 throw new InvalidOperationException("Full Body IK requires the unique assembled Goal Set.");
-            var kneeFrame = new CharacterKneeAngleResponseFrame(
-                deltaSeconds, m_PoseRoot.position, m_PoseRoot.rotation, m_PoseRoot.localToWorldMatrix);
             CharacterFullBodyIkResult result = m_Solver.SolvePrepared(
                 pendingOutputComponentPose,
                 in m_Pending.GoalSet,
                 m_Pending.Goals,
                 ref m_Pending.BendHistory,
-                ref m_Pending.KneeAngleHistory,
-                in kneeFrame,
                 frameSequence,
                 completionIdentity,
                 recordDiagnostics);
@@ -687,7 +675,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         static void ClearSolverBank(Bank bank)
         {
             bank.BendHistory = default;
-            bank.KneeAngleHistory = default;
             bank.SolverOutcome = default;
             bank.SolverDiagnostics = default;
             bank.SolverEffectorCount = 0;

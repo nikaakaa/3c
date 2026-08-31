@@ -6,12 +6,6 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    public enum CharacterKneeAngleResponsePolicy : byte
-    {
-        Disabled = 0,
-        Forced = 1
-    }
-
     public enum CharacterFullBodyIkSmoothing : byte
     {
         None = 0,
@@ -111,7 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [CreateAssetMenu(fileName = "CharacterFullBodyIkProfile", menuName = "3C/Character/Full Body IK Profile")]
     public sealed class CharacterFullBodyIkProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-full-body-ik-profile/v2";
+        public const string SchemaVersion = "character-full-body-ik-profile/v1";
         public const string SolverBackendIdentity = "rootmotion.finalik.full-body-biped-ik/indexed-pose-backend";
         public const string AuditedVendorSourceRevision = "7cd67a8e9ca9e22b68e466f60bf27aa29ea653cf3edc619566b0ac6d41ee3cb1";
 
@@ -128,9 +122,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterFullBodyIkLimbSettings m_RightArm = new CharacterFullBodyIkLimbSettings();
         [SerializeField] CharacterFullBodyIkLimbSettings m_LeftLeg = new CharacterFullBodyIkLimbSettings();
         [SerializeField] CharacterFullBodyIkLimbSettings m_RightLeg = new CharacterFullBodyIkLimbSettings();
-        [SerializeField] CharacterKneeAngleResponsePolicy m_KneeAngleResponsePolicy;
-        [SerializeField] float m_KneeAngleUpstairRate;
-        [SerializeField] float m_KneeAngleDownstairRate;
 
         public string Schema => m_Schema ?? string.Empty;
         public string ProfileId => m_ProfileId ?? string.Empty;
@@ -145,9 +136,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterFullBodyIkLimbSettings RightArm => m_RightArm;
         public CharacterFullBodyIkLimbSettings LeftLeg => m_LeftLeg;
         public CharacterFullBodyIkLimbSettings RightLeg => m_RightLeg;
-        public CharacterKneeAngleResponsePolicy KneeAngleResponsePolicy => m_KneeAngleResponsePolicy;
-        public float KneeAngleUpstairRate => m_KneeAngleUpstairRate;
-        public float KneeAngleDownstairRate => m_KneeAngleDownstairRate;
 
         internal void ApplyTuning(
             string fieldPath,
@@ -187,9 +175,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AppendLimb(parts, RightArm);
             AppendLimb(parts, LeftLeg);
             AppendLimb(parts, RightLeg);
-            parts.Add(((byte)KneeAngleResponsePolicy).ToString(CultureInfo.InvariantCulture));
-            parts.Add(Format(KneeAngleUpstairRate));
-            parts.Add(Format(KneeAngleDownstairRate));
             return StableHash.Compute(parts.ToArray()).ToString();
         }
 
@@ -212,10 +197,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RightArm.RequireValid("Right Arm");
             LeftLeg.RequireValid("Left Leg");
             RightLeg.RequireValid("Right Leg");
-            if (!Enum.IsDefined(typeof(CharacterKneeAngleResponsePolicy), KneeAngleResponsePolicy) ||
-                !float.IsFinite(KneeAngleUpstairRate) || KneeAngleUpstairRate < 0f ||
-                !float.IsFinite(KneeAngleDownstairRate) || KneeAngleDownstairRate < 0f)
-                throw new InvalidOperationException($"Full Body IK Profile '{name}' knee angle response is invalid.");
             if (!string.Equals(Revision, ComputeRevision(), StringComparison.Ordinal))
                 throw new InvalidOperationException($"Full Body IK Profile '{name}' revision is stale.");
         }

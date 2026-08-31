@@ -223,23 +223,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string completionIdentity;
         public string strideState;
         public bool available;
-        public string inputStage = "PrePelvisWeightedGoalAnkle";
+        public string inputStage = "PreFootReachWeightedGoalSole";
         public CharacterFootVectorFact componentUp;
-        public CharacterFootVectorFact referencePoint;
-        public double? footProximityRadius;
-        public CharacterFootVectorFact leftAnimatedAnkle;
-        public CharacterFootVectorFact rightAnimatedAnkle;
-        public CharacterFootVectorFact leftTargetAnkle;
-        public CharacterFootVectorFact rightTargetAnkle;
-        public double? leftCorrectionAlongUp;
-        public double? rightCorrectionAlongUp;
-        public string leftCandidateKind;
-        public string rightCandidateKind;
-        public bool leftCandidateAvailable;
-        public bool rightCandidateAvailable;
-        public double? leftCandidateValue;
-        public double? rightCandidateValue;
-        public string selection;
+        public CharacterFootVectorFact leftAnimatedSole;
+        public CharacterFootVectorFact rightAnimatedSole;
+        public CharacterFootVectorFact leftTargetSole;
+        public CharacterFootVectorFact rightTargetSole;
+        public double? animatedMinimumAlongUp;
+        public double? targetMinimumAlongUp;
         public double? requestedOffsetAlongUp;
     }
 

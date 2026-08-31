@@ -659,6 +659,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SpringIntegratedOutput => m_Result.Response.IntegratedOutput;
     }
 
+    internal readonly struct CharacterFootPelvisInput
+    {
+        internal CharacterFootPelvisInput(
+            in CharacterFootStrideIntentResult intent,
+            in CharacterFootPrimarySupportResult primarySupport,
+            in CharacterFootPelvisFrame frame,
+            in CharacterFootPelvisReachInput reach,
+            bool supportAvailable,
+            Vector3 supportAnkle,
+            float supportGoalWeight)
+        {
+            Intent = intent;
+            PrimarySupport = primarySupport;
+            Frame = frame;
+            Reach = reach;
+            SupportAvailable = supportAvailable;
+            SupportAnkle = supportAnkle;
+            SupportGoalWeight = supportGoalWeight;
+        }
+
+        internal CharacterFootStrideIntentResult Intent { get; }
+        internal CharacterFootPrimarySupportResult PrimarySupport { get; }
+        internal CharacterFootPelvisFrame Frame { get; }
+        internal CharacterFootPelvisReachInput Reach { get; }
+        internal bool SupportAvailable { get; }
+        internal Vector3 SupportAnkle { get; }
+        internal float SupportGoalWeight { get; }
+    }
+
     internal struct CharacterFootPelvisSpringState
     {
         internal bool HasValue;
@@ -736,19 +765,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static CharacterFootStrideIntentResult ResolveIntent(
-            in AnimationFootMotionRuntimeSample leftSwingStep,
-            in AnimationFootMotionRuntimeSample rightSwingStep,
-            bool hasSelectedSwing,
-            CharacterFootSide selectedSwingSide,
-            bool hasLeftNextSwingLanding,
-            in CharacterFootGroundPathLanding leftNextSwingLanding,
-            bool hasRightNextSwingLanding,
-            in CharacterFootGroundPathLanding rightNextSwingLanding,
-            bool leftGroundPathAccepted,
-            bool rightGroundPathAccepted,
-            bool grounded,
             in CharacterFootPlacementRequestPair requestPair,
             in CharacterFootPrimarySupportResult primarySupport,
+            bool grounded,
+            bool hasSelectedSwing,
+            CharacterFootSide selectedSwingSide,
             Vector3 componentUp)
         {
             if (!grounded)
@@ -766,29 +787,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? requestPair.Left.Support.ReachReference.Point
                     : requestPair.Right.Support.ReachReference.Point
                 : default;
+            CharacterFootStrideRequest left = requestPair.Left.Stride;
+            CharacterFootStrideRequest right = requestPair.Right.Stride;
             if (!TryResolveStride(
-                    in leftSwingStep,
-                    in rightSwingStep,
+                    in left,
+                    in right,
                     hasSelectedSwing,
                     selectedSwingSide,
                     primarySupport.HasValue,
                     primarySupport.Side,
                     primarySupport.LandingEventIdentity,
                     primarySupportContactAnchor,
-                    hasLeftNextSwingLanding,
-                    hasLeftNextSwingLanding
-                        ? leftNextSwingLanding.Point
-                        : default,
-                    hasLeftNextSwingLanding
-                        ? leftNextSwingLanding.LandingEventIdentity
-                        : 0,
-                    hasRightNextSwingLanding,
-                    hasRightNextSwingLanding
-                        ? rightNextSwingLanding.Point
-                        : default,
-                    hasRightNextSwingLanding
-                        ? rightNextSwingLanding.LandingEventIdentity
-                        : 0,
                     componentUp,
                     out CharacterFootSide supportSide,
                     out CharacterFootSide swingSide,
@@ -805,8 +814,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     true);
             }
             bool groundPathAccepted = swingSide == CharacterFootSide.Left
-                ? leftGroundPathAccepted
-                : rightGroundPathAccepted;
+                ? left.PathAccepted
+                : right.PathAccepted;
             if (!groundPathAccepted)
             {
                 return new CharacterFootStrideIntentResult(
@@ -833,8 +842,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult rightMotion,
             out CharacterFootSide swingSide)
         {
-            bool leftAuthoritativeSwing = IsAuthoritativeSwing(in leftStep);
-            bool rightAuthoritativeSwing = IsAuthoritativeSwing(in rightStep);
+            bool leftAuthoritativeSwing = CharacterFootStrideRequest.IsAuthoritativeSwing(in leftStep);
+            bool rightAuthoritativeSwing = CharacterFootStrideRequest.IsAuthoritativeSwing(in rightStep);
             bool leftSwingCandidate = leftAuthoritativeSwing &&
                                  leftMotion.Accepted &&
                                  leftMotion.LandingEventIdentity == leftStep.LandingEventIdentity;
@@ -862,21 +871,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return true;
         }
 
-        internal static bool TryResolveStride(
-            in AnimationFootMotionRuntimeSample leftSwingStep,
-            in AnimationFootMotionRuntimeSample rightSwingStep,
+        static bool TryResolveStride(
+            in CharacterFootStrideRequest left,
+            in CharacterFootStrideRequest right,
             bool hasSelectedSwing,
             CharacterFootSide selectedSwingSide,
             bool hasPrimarySupport,
             CharacterFootSide primarySupportSide,
             ulong primarySupportLandingEventIdentity,
             Vector3 primarySupportContactAnchor,
-            bool hasLeftNextSwingLanding,
-            Vector3 leftNextSwingLanding,
-            ulong leftNextSwingEventIdentity,
-            bool hasRightNextSwingLanding,
-            Vector3 rightNextSwingLanding,
-            ulong rightNextSwingEventIdentity,
             Vector3 componentUp,
             out CharacterFootSide supportSide,
             out CharacterFootSide swingSide,
@@ -903,7 +906,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (selectedSwingSide == CharacterFootSide.Left)
             {
-                if (!IsAuthoritativeSwing(in leftSwingStep))
+                if (!left.AuthoritativeSwing)
                 {
                     rejectReason = CharacterFootStrideRejectReason.MissingSwingLanding;
                     return false;
@@ -913,12 +916,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason = CharacterFootStrideRejectReason.SupportUnavailable;
                     return false;
                 }
-                if (!hasLeftNextSwingLanding ||
-                    leftNextSwingEventIdentity != leftSwingStep.LandingEventIdentity ||
-                    !Finite(leftNextSwingLanding))
+                if (!left.LandingAvailable ||
+                    left.LandingEventIdentity != left.StepEventIdentity ||
+                    !Finite(left.LandingPoint))
                 {
-                    rejectReason = leftNextSwingEventIdentity != 0 &&
-                                   leftNextSwingEventIdentity != leftSwingStep.LandingEventIdentity
+                    rejectReason = left.LandingEventIdentity != 0 &&
+                                   left.LandingEventIdentity != left.StepEventIdentity
                         ? CharacterFootStrideRejectReason.SwingIdentityMismatch
                         : CharacterFootStrideRejectReason.MissingSwingLanding;
                     return false;
@@ -926,11 +929,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportSide = CharacterFootSide.Right;
                 swingSide = CharacterFootSide.Left;
                 strideStart = primarySupportContactAnchor;
-                strideEnd = leftNextSwingLanding;
+                strideEnd = left.LandingPoint;
             }
             else
             {
-                if (!IsAuthoritativeSwing(in rightSwingStep))
+                if (!right.AuthoritativeSwing)
                 {
                     rejectReason = CharacterFootStrideRejectReason.MissingSwingLanding;
                     return false;
@@ -940,12 +943,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rejectReason = CharacterFootStrideRejectReason.SupportUnavailable;
                     return false;
                 }
-                if (!hasRightNextSwingLanding ||
-                    rightNextSwingEventIdentity != rightSwingStep.LandingEventIdentity ||
-                    !Finite(rightNextSwingLanding))
+                if (!right.LandingAvailable ||
+                    right.LandingEventIdentity != right.StepEventIdentity ||
+                    !Finite(right.LandingPoint))
                 {
-                    rejectReason = rightNextSwingEventIdentity != 0 &&
-                                   rightNextSwingEventIdentity != rightSwingStep.LandingEventIdentity
+                    rejectReason = right.LandingEventIdentity != 0 &&
+                                   right.LandingEventIdentity != right.StepEventIdentity
                         ? CharacterFootStrideRejectReason.SwingIdentityMismatch
                         : CharacterFootStrideRejectReason.MissingSwingLanding;
                     return false;
@@ -953,7 +956,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportSide = CharacterFootSide.Left;
                 swingSide = CharacterFootSide.Right;
                 strideStart = primarySupportContactAnchor;
-                strideEnd = rightNextSwingLanding;
+                strideEnd = right.LandingPoint;
             }
             if (!Finite(componentUp) || componentUp.sqrMagnitude <= GeometryEpsilon)
             {
@@ -964,15 +967,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return true;
         }
 
-        internal static CharacterFootStrideHipsResult ResolvePelvis(
+        internal static CharacterFootPelvisInput PreparePelvis(
             in CharacterFootStrideIntentResult intent,
-            in CharacterFootPlacementRequestPair requestPair,
+            in CharacterFootPlacementRequestPair requests,
             in CharacterFootPrimarySupportResult primarySupport,
-            in CharacterFootPelvisFrame frame,
-            in CharacterFootPelvisReachInput reachInput,
+            in CharacterFootPelvisFrame frame)
+        {
+            CharacterFootPlacementRequest support = intent.SupportSide == CharacterFootSide.Left
+                ? requests.Left : requests.Right;
+            bool supportAvailable = !(support.Outcome != CharacterFootResolvedOutcome.Ready ||
+                !support.Support.ReachReference.IsAvailable ||
+                support.Support.Weight <= CharacterPoseConstraintMath.Epsilon ||
+                support.Support.Eligibility == CharacterFootSupportEligibility.None ||
+                support.Support.EventIdentity != primarySupport.LandingEventIdentity);
+            CharacterFootLandingReachRequest leftReach = requests.Left.LandingReachRequest;
+            CharacterFootLandingReachRequest rightReach = requests.Right.LandingReachRequest;
+            var reach = new CharacterFootPelvisReachInput(
+                requests.Left.LandingReachAdmitted, in leftReach,
+                requests.Right.LandingReachAdmitted, in rightReach);
+            return new CharacterFootPelvisInput(
+                in intent, in primarySupport, in frame, in reach,
+                supportAvailable, support.Pose.EffectiveAnkle, support.Pose.GoalWeight);
+        }
+
+        internal static CharacterFootStrideHipsResult ResolvePelvis(
+            in CharacterFootPelvisInput input,
             in CharacterFootMotionSettings settings,
             ref CharacterFootPelvisSpringState spring)
         {
+            CharacterFootStrideIntentResult intent = input.Intent;
+            CharacterFootPrimarySupportResult primarySupport = input.PrimarySupport;
+            CharacterFootPelvisFrame frame = input.Frame;
+            CharacterFootPelvisReachInput reachInput = input.Reach;
             if (!intent.Accepted)
             {
                 if (!intent.ReleasePelvis)
@@ -983,14 +1009,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return ResolvePelvisRelease(
                     intent.RejectReason, in frame, in reachInput, in settings, ref spring);
             }
-            CharacterFootPlacementRequest supportRequest = intent.SupportSide == CharacterFootSide.Left
-                ? requestPair.Left
-                : requestPair.Right;
-            if (supportRequest.Outcome != CharacterFootResolvedOutcome.Ready ||
-                !supportRequest.Support.ReachReference.IsAvailable ||
-                supportRequest.Support.Weight <= CharacterPoseConstraintMath.Epsilon ||
-                supportRequest.Support.Eligibility == CharacterFootSupportEligibility.None ||
-                supportRequest.Support.EventIdentity != primarySupport.LandingEventIdentity)
+            if (!input.SupportAvailable)
             {
                 return ResolvePelvisRelease(
                     CharacterFootStrideRejectReason.SupportUnavailable,
@@ -1030,13 +1049,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? frame.LeftLegLength : frame.RightLegLength;
             if (!float.IsFinite(supportLegLength) || supportLegLength <= EndpointTolerance ||
                 !Finite(supportPose.HipPosition) || !Finite(supportPose.AnklePosition) ||
-                !Finite(supportRequest.Pose.EffectiveAnkle))
+                !Finite(input.SupportAnkle))
                 throw new ArgumentException("Pelvis posture input is invalid.");
             float postureReserve = Mathf.Max(
                 0f, supportLegLength -
                 Vector3.Distance(supportPose.HipPosition, supportPose.AnklePosition));
             bool postureAvailable = TryResolvePostureInterval(
-                supportPose.HipPosition, supportRequest.Pose.EffectiveAnkle, up,
+                supportPose.HipPosition, input.SupportAnkle, up,
                 supportLegLength, postureReserve,
                 out float postureUsableLength,
                 out float postureMinimum, out float postureMaximum);
@@ -1050,7 +1069,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 postureAvailable,
                 supportPose.HipPosition,
                 supportPose.AnklePosition,
-                supportRequest.Pose.EffectiveAnkle,
+                input.SupportAnkle,
                 supportLegLength,
                 postureReserve,
                 postureUsableLength,
@@ -1058,12 +1077,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 postureMaximum,
                 preferredTarget,
                 Mathf.Abs(preferredTarget - heightTarget.OffsetAlongUp) > GeometryEpsilon);
-            bool primaryRequired = supportRequest.Pose.GoalWeight > GeometryEpsilon;
+            bool primaryRequired = input.SupportGoalWeight > GeometryEpsilon;
             CharacterFootLandingReachRequest primaryRequest = primaryRequired
                 ? new CharacterFootLandingReachRequest(
                     primarySupport.LandingEventIdentity,
                     supportPose.HipPosition,
-                    supportRequest.Pose.EffectiveAnkle,
+                    input.SupportAnkle,
                     supportLegLength,
                     settings.MinimumLandingLegCompressionReserve)
                 : default;
@@ -1309,12 +1328,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return float.IsFinite(minimumAlongUp) &&
                 float.IsFinite(maximumAlongUp) && minimumAlongUp <= maximumAlongUp;
         }
-
-        static bool IsAuthoritativeSwing(in AnimationFootMotionRuntimeSample step) =>
-            step.IsValid &&
-            step.IsAuthoritative &&
-            step.IsSwing &&
-            step.HasConsistentLandingEventIdentity;
 
         static bool IsRetainablePrimarySupport(
             in CharacterFootPlacementRequest request) =>

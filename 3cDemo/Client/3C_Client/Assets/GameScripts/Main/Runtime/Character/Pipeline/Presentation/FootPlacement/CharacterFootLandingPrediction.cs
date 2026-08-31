@@ -479,8 +479,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingObservationDiagnostics observation,
             CharacterFootPlacementQueryRequest query,
             CharacterFootLandingSupport support,
-            CharacterFootLandingQuerySelectionDiagnostics querySelection,
-            CharacterFullBodyIkGoal goal)
+            CharacterFootLandingQuerySelectionDiagnostics querySelection)
         {
             Side = side;
             State = state;
@@ -514,106 +513,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingNormal = support.Normal;
             QueryDistance = support.Distance;
             QuerySelection = querySelection;
-            Goal = goal;
             GroundPath = default;
-            FootMotion = default;
         }
 
         CharacterFootLandingPredictionResult(
             in CharacterFootLandingPredictionResult source,
             in CharacterFootGroundPathResult groundPath)
         {
-            Side = source.Side;
-            State = source.State;
-            RejectReason = source.RejectReason;
-            StepSource = source.StepSource;
-            LandingEventIdentity = source.LandingEventIdentity;
-            TrajectoryGeneration = source.TrajectoryGeneration;
-            LandingConfidence = source.LandingConfidence;
-            TimeToLandingSeconds = source.TimeToLandingSeconds;
-            RootLocalLanding = source.RootLocalLanding;
-            FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
-            FutureBodyTranslationSourceIdentity = source.FutureBodyTranslationSourceIdentity;
-            FutureBodyRelativeTranslation = source.FutureBodyRelativeTranslation;
-            FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
-            CurrentAnimatedSole = source.CurrentAnimatedSole;
-            RawLandingCandidate = source.RawLandingCandidate;
-            Observation = source.Observation;
-            Query = source.Query;
-            SurfaceIdentity = source.SurfaceIdentity;
-            LandingPoint = source.LandingPoint;
-            LandingNormal = source.LandingNormal;
-            QueryDistance = source.QueryDistance;
-            QuerySelection = source.QuerySelection;
-            Goal = source.Goal;
+            this = source;
             GroundPath = groundPath;
-            FootMotion = source.FootMotion;
-        }
-
-        CharacterFootLandingPredictionResult(
-            in CharacterFootLandingPredictionResult source,
-            CharacterFootLandingStepSource stepSource,
-            AnimationFootMotionRuntimeSample step,
-            Vector3 currentAnimatedSole,
-            CharacterFullBodyIkGoal goal)
-        {
-            Side = source.Side;
-            State = source.State;
-            RejectReason = source.RejectReason;
-            StepSource = stepSource;
-            LandingEventIdentity = source.LandingEventIdentity;
-            TrajectoryGeneration = source.TrajectoryGeneration;
-            LandingConfidence = step.IsAuthoritative ? 1f : 0f;
-            TimeToLandingSeconds = step.TimeToLandingSeconds;
-            RootLocalLanding = step.RootLocalLanding;
-            FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
-            FutureBodyTranslationSourceIdentity = source.FutureBodyTranslationSourceIdentity;
-            FutureBodyRelativeTranslation = source.FutureBodyRelativeTranslation;
-            FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
-            CurrentAnimatedSole = currentAnimatedSole;
-            RawLandingCandidate = source.RawLandingCandidate;
-            Observation = source.Observation;
-            Query = source.Query;
-            SurfaceIdentity = source.SurfaceIdentity;
-            LandingPoint = source.LandingPoint;
-            LandingNormal = source.LandingNormal;
-            QueryDistance = source.QueryDistance;
-            QuerySelection = source.QuerySelection;
-            Goal = goal;
-            GroundPath = source.GroundPath;
-            FootMotion = source.FootMotion;
-        }
-
-        CharacterFootLandingPredictionResult(
-            in CharacterFootLandingPredictionResult source,
-            in CharacterFootSwingMotionResult footMotion,
-            CharacterFullBodyIkGoal goal)
-        {
-            Side = source.Side;
-            State = source.State;
-            RejectReason = source.RejectReason;
-            StepSource = source.StepSource;
-            LandingEventIdentity = source.LandingEventIdentity;
-            TrajectoryGeneration = source.TrajectoryGeneration;
-            LandingConfidence = source.LandingConfidence;
-            TimeToLandingSeconds = source.TimeToLandingSeconds;
-            RootLocalLanding = source.RootLocalLanding;
-            FutureBodyTranslationAvailable = source.FutureBodyTranslationAvailable;
-            FutureBodyTranslationSourceIdentity = source.FutureBodyTranslationSourceIdentity;
-            FutureBodyRelativeTranslation = source.FutureBodyRelativeTranslation;
-            FutureBodyTranslationVelocity = source.FutureBodyTranslationVelocity;
-            CurrentAnimatedSole = source.CurrentAnimatedSole;
-            RawLandingCandidate = source.RawLandingCandidate;
-            Observation = source.Observation;
-            Query = source.Query;
-            SurfaceIdentity = source.SurfaceIdentity;
-            LandingPoint = source.LandingPoint;
-            LandingNormal = source.LandingNormal;
-            QueryDistance = source.QueryDistance;
-            QuerySelection = source.QuerySelection;
-            Goal = goal;
-            GroundPath = source.GroundPath;
-            FootMotion = footMotion;
         }
         public CharacterFootSide Side { get; }
         public CharacterFootLandingPredictionState State { get; }
@@ -640,33 +548,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             get;
         }
-        public CharacterFullBodyIkGoal Goal { get; }
         internal CharacterFootGroundPathResult GroundPath { get; }
-        internal CharacterFootSwingMotionResult FootMotion { get; }
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
 
-        internal CharacterFootLandingPredictionResult WithLiveStep(
-            CharacterFootLandingStepSource stepSource,
-            AnimationFootMotionRuntimeSample step,
-            Vector3 currentAnimatedSole,
-            CharacterFullBodyIkGoal goal) =>
-            new CharacterFootLandingPredictionResult(
-                in this,
-                stepSource,
-                step,
-                currentAnimatedSole,
-                goal);
         internal CharacterFootLandingPredictionResult WithGroundPath(
             in CharacterFootGroundPathResult groundPath) =>
             new CharacterFootLandingPredictionResult(in this, in groundPath);
 
-        internal CharacterFootLandingPredictionResult WithFootMotion(
-            in CharacterFootSwingMotionResult footMotion,
-            CharacterFullBodyIkGoal goal) =>
-            new CharacterFootLandingPredictionResult(
-                in this,
-                in footMotion,
-                goal);
     }
 
     public readonly struct CharacterFootLandingPredictionFootDiagnostics
@@ -678,7 +566,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingSnapshot landing,
             bool approachPlantTargetPrepared,
             in CharacterFootCurrentSupportObservation currentSupport,
-            in CharacterResolvedFootResult resolved)
+            in CharacterResolvedFootResult resolved,
+            in CharacterFootSwingMotionResult footMotion,
+            in CharacterFullBodyIkGoal goal)
         {
             Side = result.Side;
             State = result.State;
@@ -702,7 +592,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingPoint = result.LandingPoint;
             LandingNormal = result.LandingNormal;
             QueryDistance = result.QueryDistance;
-            Goal = result.Goal;
+            Goal = goal;
             SourceAnklePosition = sourcePose.AnklePosition;
             SourceAnkleRotation = sourcePose.AnkleRotation;
             SourceHeelPosition = sourcePose.HeelPosition;
@@ -740,7 +630,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantVerificationUnavailable = landing.PlantVerificationUnavailable;
             ApproachPlantTargetPrepared = approachPlantTargetPrepared;
             CharacterFootGroundPathResult groundPath = result.GroundPath;
-            CharacterFootSwingMotionResult footMotion = result.FootMotion;
             GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
             FootMotion = new CharacterFootSwingMotionDiagnostics(in footMotion);
             CurrentSupport = new CharacterFootCurrentSupportDiagnostics(

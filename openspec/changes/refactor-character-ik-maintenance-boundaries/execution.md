@@ -62,3 +62,14 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - Body、正式输入、Foot、Resolved、Pelvis/Stride、Goal、Knee/Bend、实际采到的Solved/Physical及动画时序状态无业务差异。facts71/Analyzer71/d40和42个Target的规则、eligible、matched、occurrence、measurements、coverage与七维评分对象保持，总分仍为61.9，既有问题未被掩盖。
 - 覆盖限制：此Record的Action ownership、Contact reentry geometry、BodyReset均为0 eligible，窄Landing腿窗口仅2。CSV有Solved Knee，没有最终Physical Knee；未覆盖入口、路线、调度及最终Physical Knee不能冒充已通过。Reset独立修正尚未实施。
 - 测试任务已退出Play，Edit/Idle、未暂停、非编译、Console0，并明确交回Unity独占。共享HEAD后来出现的其它提交不替换候选与总基线；测试确认相关Runtime/Character与Diagnostics仍与候选一致。
+
+## 第二个闭环：收窄Pelvis输入并清除阶段混用
+
+状态：候选实现及Runtime/Editor编译完成，等待正式回放；上一通过为`2a6fe33`，总基线不变。
+
+- `CharacterFootStrideRequest`只保存正式Swing资格、Step Event、可用Landing的点／Event和Path接受事实；原始Step与GroundPathLanding不再进入Stride求值。删除恒等于CurrentStep的SelectedStep副本，Reach仍读取同一正式CurrentStep。
+- `PreparePelvis`只投影原有Support可用条件、加权踝点、位置权重、两腿Reach和既有帧输入；`ResolvePelvis`仅接收`CharacterFootPelvisInput`，不再访问完整脚请求。拒绝顺序、支撑选择、姿态区间和唯一Spring数学不变。
+- 完成凭据迁入`CharacterFootLifecycle.Completion`，过程字段全部私有；它自己消费本腿可达结果并执行原完成步骤。Module不能读取LandingCompletionPending、PreTransition或Interpolation等凭据内部数据，也不再取得随后会被覆盖的初步Motion。
+- Prediction结果不再携带Goal或最终Motion。删除无消费者的WithLiveStep及重复WithFootMotion拷贝；诊断分别读取同一帧的Prediction、最终Motion、Resolved与正式Goal。只读记录的GroundPath更新用值复制，保留原内容。
+- 删除初始零权重Foot/Pelvis Goal及其跨PredictFootPair/PredictEvent/RejectedEvent的传递；Encoder只在Foot完成后从最终Resolved编码。删除未进入插值的PreviousVisibleOutput参数、可见Sole Bank字段及其读取函数，不启用旧Goal Sole接管。
+- Editor及其Runtime依赖按规定构建成功、0错误，build server立即关闭；包及既有工程警告不在本次范围。未改Profile、Solver、历史响应、世界查询、诊断列或评分。

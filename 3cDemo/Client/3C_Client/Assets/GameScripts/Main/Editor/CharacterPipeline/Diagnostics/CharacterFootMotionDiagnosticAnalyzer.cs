@@ -1925,13 +1925,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.SourceIdentity,
                         StringComparison.Ordinal) ||
                     previous.SourceCycle != current.SourceCycle ||
-                    previous.GroundPathInputIdentity !=
-                    current.GroundPathInputIdentity ||
+                    previous.GroundPath.InputIdentity !=
+                    current.GroundPath.InputIdentity ||
                     current.PathContinuity.PathResidualRebuilt ||
                     !previous.PathContinuity.PathAvailableAfter ||
                     !current.PathContinuity.PathAvailableAfter ||
-                    previous.GroundPathState != "Accepted" ||
-                    current.GroundPathState != "Accepted")
+                    previous.GroundPath.State != "Accepted" ||
+                    current.GroundPath.State != "Accepted")
                 {
                     continue;
                 }
@@ -2046,19 +2046,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.PathContinuity.PathRevisionReason,
                         "PathAvailabilityChanged");
                 bool landingEventChanged =
-                    previous.NextLandingEventIdentity !=
-                    current.NextLandingEventIdentity ||
+                    previous.GroundPath.NextSwingLandingEventIdentity !=
+                    current.GroundPath.NextSwingLandingEventIdentity ||
                     RevisionReasonIncludes(
                         current.PathContinuity.PathRevisionReason,
                         "LandingEventChanged");
                 bool endpointTreadChanged =
-                    previous.NextLandingSurfaceIdentity != 0 &&
-                    current.NextLandingSurfaceIdentity != 0 &&
-                    previous.NextLandingSurfaceIdentity !=
-                    current.NextLandingSurfaceIdentity;
+                    previous.GroundPath.NextSwingLandingSurfaceIdentity != 0 &&
+                    current.GroundPath.NextSwingLandingSurfaceIdentity != 0 &&
+                    previous.GroundPath.NextSwingLandingSurfaceIdentity !=
+                    current.GroundPath.NextSwingLandingSurfaceIdentity;
                 double endpointDeltaMeters = Vector3.Distance(
-                    previous.NextLanding,
-                    current.NextLanding);
+                    previous.GroundPath.NextSwingLanding,
+                    current.GroundPath.NextSwingLanding);
                 bool landingPointRevised =
                     current.PathContinuity.PathLandingPointDelta > pathNoiseFloor ||
                     endpointDeltaMeters > pathNoiseFloor;
@@ -2094,8 +2094,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 else if (sameEvent && sameSource &&
                          previous.PathContinuity.PathAvailableAfter &&
                          current.PathContinuity.PathAvailableAfter &&
-                         previous.GroundPathState == "Accepted" &&
-                         current.GroundPathState == "Accepted")
+                         previous.GroundPath.State == "Accepted" &&
+                         current.GroundPath.State == "Accepted")
                 {
                     category = "StableSwingOutputJump";
                 }
@@ -3022,19 +3022,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !current.SelectedPhase.InApproachContactToLanding ||
                     !previousConsumedAvailable ||
                     !currentConsumedAvailable ||
-                    previous.NextLandingEventIdentity !=
+                    previous.GroundPath.NextSwingLandingEventIdentity !=
                     previous.SelectedLandingEventIdentity ||
-                    current.NextLandingEventIdentity !=
+                    current.GroundPath.NextSwingLandingEventIdentity !=
                     current.SelectedLandingEventIdentity)
                 {
                     continue;
                 }
                 double consumedPointDelta = Vector3.Distance(
-                    previous.NextLanding,
-                    current.NextLanding);
+                    previous.GroundPath.NextSwingLanding,
+                    current.GroundPath.NextSwingLanding);
                 bool consumedSurfaceChanged =
-                    previous.NextLandingSurfaceIdentity !=
-                    current.NextLandingSurfaceIdentity;
+                    previous.GroundPath.NextSwingLandingSurfaceIdentity !=
+                    current.GroundPath.NextSwingLandingSurfaceIdentity;
                 bool pointExceededAcceptanceDistance =
                     consumedPointDelta > current.PathContinuity.LandingAcceptanceDistance;
                 double observedPointDelta =
@@ -3144,20 +3144,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         observedLandingPointDeltaMeters =
                             observedPointDelta,
                         previousConsumedEventIdentity =
-                            previous.NextLandingEventIdentity.ToString(
+                            previous.GroundPath.NextSwingLandingEventIdentity.ToString(
                                 CultureInfo.InvariantCulture),
                         consumedEventIdentity =
-                            current.NextLandingEventIdentity.ToString(
+                            current.GroundPath.NextSwingLandingEventIdentity.ToString(
                                 CultureInfo.InvariantCulture),
                         previousConsumedSurfaceIdentity =
-                            previous.NextLandingSurfaceIdentity,
+                            previous.GroundPath.NextSwingLandingSurfaceIdentity,
                         consumedSurfaceIdentity =
-                            current.NextLandingSurfaceIdentity,
+                            current.GroundPath.NextSwingLandingSurfaceIdentity,
                         previousConsumedPoint =
                             CharacterFootVectorFact.From(
-                                previous.NextLanding),
+                                previous.GroundPath.NextSwingLanding),
                         consumedPoint = CharacterFootVectorFact.From(
-                            current.NextLanding),
+                            current.GroundPath.NextSwingLanding),
                         landingPointDeltaMeters = consumedPointDelta,
                         landingAcceptanceDistanceMeters =
                             current.PathContinuity.LandingAcceptanceDistance,
@@ -3231,8 +3231,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static bool ConsumedNextSwingLandingAvailable(
             FootFrame frame) =>
-            frame.NextLandingEventIdentity != 0 &&
-            frame.NextLandingSurfaceIdentity != 0;
+            frame.GroundPath.NextSwingLandingEventIdentity != 0 &&
+            frame.GroundPath.NextSwingLandingSurfaceIdentity != 0;
 
         static void AnalyzeLandingEvents(
             List<FootFrame> frames,
@@ -3685,9 +3685,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     -previousFloorCompensationAlongUp +
                     PositionNoiseFloor;
                 double stepHeight = upAvailable &&
-                                    previous.GroundPathTargetAvailable
+                                    previous.GroundPath.TargetAvailable
                     ? Vector3.Dot(
-                        previous.NextLanding - previous.LastLanding,
+                        previous.GroundPath.NextSwingLanding - previous.GroundPath.LastLanding,
                         up)
                     : 0d;
                 string stepDirection = stepHeight > PositionNoiseFloor
@@ -4331,28 +4331,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Stage(
                     CharacterFootPathStageNames.RawLandingToPathTarget,
                     previous.RawLandingAvailable && current.RawLandingAvailable &&
-                    previous.GroundPathTargetAvailable &&
-                    current.GroundPathTargetAvailable,
+                    previous.GroundPath.TargetAvailable &&
+                    current.GroundPath.TargetAvailable,
                     "RawLandingOrPathTargetUnavailable",
                     previous.RawLanding,
                     current.RawLanding,
-                    previous.NextLanding,
-                    current.NextLanding,
+                    previous.GroundPath.NextSwingLanding,
+                    current.GroundPath.NextSwingLanding,
                     previous.Frame,
                     current.Frame,
                     missing,
                     previous.RawLandingAvailable || current.RawLandingAvailable ||
-                    previous.GroundPathTargetAvailable ||
-                    current.GroundPathTargetAvailable),
+                    previous.GroundPath.TargetAvailable ||
+                    current.GroundPath.TargetAvailable),
                 Stage(
                     CharacterFootPathStageNames.PathTargetToSwingTarget,
-                    previous.GroundPathTargetAvailable &&
-                    current.GroundPathTargetAvailable &&
+                    previous.GroundPath.TargetAvailable &&
+                    current.GroundPath.TargetAvailable &&
                     previous.BuilderSwingTargetAvailable &&
                     current.BuilderSwingTargetAvailable,
                     "PathTargetOrSwingTargetUnavailable",
-                    previous.NextLanding,
-                    current.NextLanding,
+                    previous.GroundPath.NextSwingLanding,
+                    current.GroundPath.NextSwingLanding,
                     previous.BuilderSwingTargetCorrection,
                     current.BuilderSwingTargetCorrection,
                     previous.Frame,
@@ -4633,7 +4633,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             target = default;
             if (currentState.FootMotionState != "Accepted" ||
                 !currentState.BuilderSwingTargetAvailable ||
-                path.GroundPathState != "Accepted" ||
+                path.GroundPath.State != "Accepted" ||
                 path.GroundEnvelopeVertices.Count < 2 ||
                 !float.IsFinite(currentState.SwingProgress) ||
                 !currentState.FormalOutputObservationAvailable ||
@@ -4641,15 +4641,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     currentState.SwingFormalFootHeight) ||
                 currentState.PathContinuity.ComponentUp.sqrMagnitude <=
                 PositionNoiseFloor * PositionNoiseFloor ||
-                path.GroundPathComponentUp.sqrMagnitude <=
+                path.GroundPath.ComponentUp.sqrMagnitude <=
                 PositionNoiseFloor * PositionNoiseFloor)
             {
                 return false;
             }
             Vector3 up = currentState.PathContinuity.ComponentUp.normalized;
-            Vector3 groundPathUp = path.GroundPathComponentUp.normalized;
+            Vector3 groundPathUp = path.GroundPath.ComponentUp.normalized;
             Vector3 horizontal = Vector3.ProjectOnPlane(
-                path.NextLanding - path.LastLanding,
+                path.GroundPath.NextSwingLanding - path.GroundPath.LastLanding,
                 groundPathUp);
             float pathLength = horizontal.magnitude;
             if (!float.IsFinite(pathLength) ||
@@ -5143,7 +5143,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return frame.PathContinuity.PathCurrentLandingEventIdentity;
             if (frame.FootMotionEventIdentity != 0)
                 return frame.FootMotionEventIdentity;
-            return frame.NextLandingEventIdentity;
+            return frame.GroundPath.NextSwingLandingEventIdentity;
         }
 
         static void AnalyzePathContinuity(
@@ -5542,7 +5542,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => !value.PenetrationAvailable),
                     contactPlanePenetrationAvailability =
                         BuildPenetrationAvailabilityCounts(capture.FootRows),
-                    groundPathRejectedFootRowCount = capture.FootRows.Count(value => value.GroundPathState != "Accepted")
+                    groundPathRejectedFootRowCount = capture.FootRows.Count(value => value.GroundPath.State != "Accepted")
                 },
                 landingReaches = capture.FootRows
                     .Select(LandingReachFact.From)
@@ -5864,17 +5864,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "GroundSurfaceStartDistance", "GroundSurfaceStartHeight",
                 "GroundSurfaceEndDistance", "GroundSurfaceEndHeight"
             };
-            bool hasSurfaceGeometry = indices.ContainsKey(surfaceColumns[0]);
             foreach (string column in surfaceColumns)
-            {
-                if (indices.ContainsKey(column) != hasSurfaceGeometry)
-                    throw new InvalidDataException("Foot Motion surface geometry columns are incomplete.");
-            }
-            foreach (FootFrame foot in footRows.Values)
-            {
-                if (foot.GroundSurfaceFactsAvailable != hasSurfaceGeometry)
-                    throw new InvalidDataException("Foot Motion surface geometry schema does not match samples.");
-            }
+                if (!indices.ContainsKey(column))
+                    throw new InvalidDataException($"Foot Motion geometry CSV is missing '{column}'.");
             var surfaceSegments = new HashSet<(int frame, string side, int index)>();
             var contacts = new HashSet<(int frame, string side, int index)>();
             var envelope = new HashSet<(int frame, string side, int index)>();
@@ -5918,7 +5910,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ParseUlong(
                         Cell("GroundPathInputIdentity"),
                         "GroundPathInputIdentity") !=
-                        foot.GroundPathInputIdentity)
+                        foot.GroundPath.InputIdentity)
                 {
                     throw new InvalidDataException(
                         $"Foot Motion geometry CSV row {rowCount + 1} has mismatched lineage.");
@@ -5929,9 +5921,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int envelopeIndex = ParseInt(
                     Cell("GroundEnvelopeVertexIndex"),
                     "GroundEnvelopeVertexIndex");
-                int surfaceIndex = hasSurfaceGeometry
-                    ? ParseInt(Cell("GroundSurfaceSegmentIndex"), "GroundSurfaceSegmentIndex")
-                    : -1;
+                int surfaceIndex = ParseInt(Cell("GroundSurfaceSegmentIndex"), "GroundSurfaceSegmentIndex");
                 if (contactIndex < 0 && envelopeIndex < 0 && surfaceIndex < 0)
                 {
                     throw new InvalidDataException(
@@ -5945,7 +5935,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     float endDistance = ParseFloat(Cell("GroundSurfaceEndDistance"), "GroundSurfaceEndDistance");
                     float startHeight = ParseFloat(Cell("GroundSurfaceStartHeight"), "GroundSurfaceStartHeight");
                     float endHeight = ParseFloat(Cell("GroundSurfaceEndHeight"), "GroundSurfaceEndHeight");
-                    if (surfaceIndex >= foot.GroundSurfaceSegmentCount ||
+                    if (surfaceIndex >= foot.GroundPath.SurfaceSegmentCount ||
                         surfaceIdentity == 0 || faceIndex < 0 ||
                         !float.IsFinite(startDistance) || !float.IsFinite(endDistance) ||
                         !float.IsFinite(startHeight) || !float.IsFinite(endHeight) ||
@@ -5988,20 +5978,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             foreach (FootFrame foot in footRows.Values)
             {
-                if (foot.GroundEnvelopeVertexCount !=
+                if (foot.GroundPath.EnvelopeVertexCount !=
                     foot.GroundEnvelopeVertices.Count)
                 {
                     throw new InvalidDataException(
                         $"Foot Motion Envelope geometry count mismatch " +
                         $"Frame={foot.Frame} Side={foot.Side}.");
                 }
-                if (foot.GroundSurfaceFactsAvailable &&
-                    (foot.GroundSurfaceSegmentCount < 0 ||
-                     foot.GroundSurfaceSegmentCount != foot.GroundSurfaceObservedCount ||
-                     foot.GroundSurfaceSegmentCount > 0 && foot.GroundSurfaceWorldRevision == 0 ||
-                     foot.GroundPathState == "Accepted" &&
-                     (foot.GroundSurfaceState != CharacterFootGroundSurfaceState.Ready ||
-                      foot.GroundSurfaceSegmentCount == 0)))
+                if (foot.GroundPath.SurfaceSegmentCount < 0 ||
+                     foot.GroundPath.SurfaceSegmentCount != foot.GroundSurfaceObservedCount ||
+                     foot.GroundPath.SurfaceSegmentCount > 0 && foot.GroundPath.SurfaceWorldRevision == 0 ||
+                     foot.GroundPath.State == "Accepted" &&
+                     (foot.GroundPath.SurfaceState != CharacterFootGroundSurfaceState.Ready ||
+                      foot.GroundPath.SurfaceSegmentCount == 0))
                 {
                     throw new InvalidDataException(
                         $"Foot Motion surface geometry facts mismatch Frame={foot.Frame} Side={foot.Side}.");
@@ -6077,18 +6066,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Float(prefix + "Z"),
                 Float(prefix + "W"));
 
-            T EnumField<T>(string name) where T : struct, Enum
-            {
-                string value = Cell(name);
-                RequireEnum<T>(value, name);
-                return Enum.Parse<T>(value);
-            }
-
             string side = Cell("Side");
-            bool hasSurfaceFacts = indices.ContainsKey("GroundSurfaceState");
-            if (indices.ContainsKey("GroundSurfaceWorldRevision") != hasSurfaceFacts ||
-                indices.ContainsKey("GroundSurfaceSegmentCount") != hasSurfaceFacts)
-                throw new InvalidDataException("Foot Motion surface fact columns are incomplete.");
             var frame = new FootFrame
             {
                 SampleIdentity = Cell("SampleIdentity"),
@@ -6270,27 +6248,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RawLandingAvailable = Int("RawLandingAvailable") != 0,
                 CurrentAnimatedSole = Vector("CurrentAnimatedSole"),
                 RawLanding = Vector("RawLandingCandidate"),
-                GroundPathState = Cell("GroundPathState"),
-                GroundPathRejectReason = Cell("GroundPathRejectReason"),
-                GroundPathInputIdentity = Ulong("GroundPathInputIdentity"),
-                GroundSurfaceFactsAvailable = hasSurfaceFacts,
-                GroundSurfaceState = hasSurfaceFacts
-                    ? EnumField<CharacterFootGroundSurfaceState>("GroundSurfaceState")
-                    : default,
-                GroundSurfaceWorldRevision = hasSurfaceFacts ? Ulong("GroundSurfaceWorldRevision") : 0,
-                GroundSurfaceSegmentCount = hasSurfaceFacts ? Int("GroundSurfaceSegmentCount") : 0,
-                GroundPathTargetAvailable =
-                    Int("GroundPathTargetAvailable") != 0,
-                LastLandingEventIdentity = Ulong("GroundPathLastLandingEventIdentity"),
-                NextLandingEventIdentity = Ulong("GroundPathNextSwingLandingEventIdentity"),
-                NextLandingSurfaceIdentity =
-                    Int("GroundPathNextSwingLandingSurfaceIdentity"),
-                LastLanding = Vector("GroundPathLastLanding"),
-                NextLanding = Vector("GroundPathNextSwingLanding"),
-                GroundEnvelopeVertexCount =
-                    Int("GroundEnvelopeVertexCount"),
-                GroundPathComponentUp = Vector("GroundPathComponentUp"),
-                GroundPathRadius = Float("GroundPathRadius"),
                 FootMotionEventIdentity = Ulong("FootMotionLandingEventIdentity"),
                 FootMotionGroundPathInputIdentity =
                     Ulong("FootMotionGroundPathInputIdentity"),
@@ -6405,6 +6362,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PathContinuity = bindings.PathContinuity.Read(cells),
                 Lifecycle = bindings.Lifecycle.Read(cells),
                 OutputStages = bindings.OutputStages.Read(cells),
+                GroundPath = bindings.GroundPath.Read(cells),
                 Response = bindings.Response.Read(cells),
                 Solver = bindings.Solver.Read(cells),
                 Pelvis = bindings.Pelvis.Read(cells),
@@ -7263,7 +7221,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequireActualFootEnvelopeFacts(FootFrame frame)
         {
-            bool accepted = frame.GroundPathState == "Accepted" &&
+            bool accepted = frame.GroundPath.State == "Accepted" &&
                             frame.FootMotionState == "Accepted" &&
                             frame.ConstraintState == "Swing" &&
                             frame.GroundEnvelopeVertices.Count >= 2;
@@ -7303,7 +7261,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "InvalidComponentUp" ||
                     frame.ActualFootAxisRegion != "Unavailable" ||
                     frame.ActualEnvelopeCounterfactualState != "Unavailable" ||
-                    frame.GroundPathComponentUp.sqrMagnitude > 0.000001f ||
+                    frame.GroundPath.ComponentUp.sqrMagnitude > 0.000001f ||
                     valueMagnitude > PositionNoiseFloor ||
                     finiteSegmentMagnitude > PositionNoiseFloor ||
                     frame.ActualFootWithinGroundPathCorridor)
@@ -7313,9 +7271,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 return;
             }
-            Vector3 up = frame.GroundPathComponentUp.normalized;
+            Vector3 up = frame.GroundPath.ComponentUp.normalized;
             Vector3 horizontalAxis = Vector3.ProjectOnPlane(
-                frame.NextLanding - frame.LastLanding,
+                frame.GroundPath.NextSwingLanding - frame.GroundPath.LastLanding,
                 up);
             if (frame.SwingPathHorizontalAxisState == "DegenerateAxis")
             {
@@ -7340,20 +7298,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(
                     $"Foot Motion available Swing Path axis lacks a valid input " +
                     $"Frame={frame.Frame} Side={frame.Side} " +
-                    $"GroundPathState={frame.GroundPathState} " +
+                    $"GroundPathState={frame.GroundPath.State} " +
                     $"FootMotionState={frame.FootMotionState} " +
                     $"ConstraintState={frame.ConstraintState} " +
                     $"EnvelopeVertices={frame.GroundEnvelopeVertices.Count}.");
             }
             Vector3 direction = horizontalAxis.normalized;
             float expectedActual = Vector3.Dot(
-                frame.OriginalSole - frame.LastLanding,
+                frame.OriginalSole - frame.GroundPath.LastLanding,
                 direction);
             float expectedBaseline = Vector3.Dot(
-                frame.SwingBaselineSample - frame.LastLanding,
+                frame.SwingBaselineSample - frame.GroundPath.LastLanding,
                 direction);
             float expectedEnvelope = Vector3.Dot(
-                frame.SwingEnvelopeSample - frame.LastLanding,
+                frame.SwingEnvelopeSample - frame.GroundPath.LastLanding,
                 direction);
             if (Math.Abs(
                     frame.ActualFootHorizontalDistance - expectedActual) >
@@ -7377,7 +7335,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 expectedActual / pathLength);
             float distanceAlongAxis = closestPathParameter * pathLength;
             Vector3 actualHorizontalOffset = Vector3.ProjectOnPlane(
-                frame.OriginalSole - frame.LastLanding,
+                frame.OriginalSole - frame.GroundPath.LastLanding,
                 up);
             float crossTrackDistance = Vector3.Distance(
                 actualHorizontalOffset,
@@ -7387,9 +7345,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : expectedActual > pathLength + PositionNoiseFloor
                     ? "AfterPathEnd"
                     : "WithinPathSegment";
-            bool withinGroundPathCorridor = frame.GroundPathRadius > 0f &&
+            bool withinGroundPathCorridor = frame.GroundPath.Radius > 0f &&
                 crossTrackDistance <=
-                frame.GroundPathRadius + PositionNoiseFloor;
+                frame.GroundPath.Radius + PositionNoiseFloor;
             if (frame.ActualFootAxisRegion != axisRegion ||
                 Math.Abs(
                     frame.ActualFootClosestPathParameter -
@@ -7402,7 +7360,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     crossTrackDistance) > PositionNoiseFloor ||
                 Math.Abs(
                     frame.ActualFootGroundPathCorridorRadius -
-                    frame.GroundPathRadius) > PositionNoiseFloor ||
+                    frame.GroundPath.Radius) > PositionNoiseFloor ||
                 frame.ActualFootWithinGroundPathCorridor !=
                     withinGroundPathCorridor)
             {
@@ -7419,10 +7377,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Vector3 previous = vertices[i - 1];
                 Vector3 current = vertices[i];
                 float previousDistance = Vector3.Dot(
-                    previous - frame.LastLanding,
+                    previous - frame.GroundPath.LastLanding,
                     direction);
                 float currentDistance = Vector3.Dot(
-                    current - frame.LastLanding,
+                    current - frame.GroundPath.LastLanding,
                     direction);
                 float minimumDistance = Mathf.Min(
                     previousDistance,
@@ -9124,16 +9082,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "CurrentAnimatedSoleX", "CurrentAnimatedSoleY",
                 "CurrentAnimatedSoleZ",
                 "RawLandingCandidateX", "RawLandingCandidateY", "RawLandingCandidateZ",
-                "GroundPathState", "GroundPathRejectReason", "GroundPathInputIdentity",
-                "GroundPathTargetAvailable",
-                "GroundPathLastLandingEventIdentity", "GroundPathNextSwingLandingEventIdentity",
-                "GroundPathNextSwingLandingSurfaceIdentity",
-                "GroundPathLastLandingX", "GroundPathLastLandingY",
-                "GroundPathLastLandingZ",
-                "GroundPathNextSwingLandingX", "GroundPathNextSwingLandingY", "GroundPathNextSwingLandingZ",
-                "GroundEnvelopeVertexCount",
-                "GroundPathComponentUpX", "GroundPathComponentUpY", "GroundPathComponentUpZ",
-                "GroundPathRadius",
                 "FootMotionLandingEventIdentity", "FootMotionGroundPathInputIdentity",
                 "FinalGoalPositionWeight", "FinalGoalRotationWeight",
                 "FootMotionState", "FootMotionConstraintState",
@@ -9359,10 +9307,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             for (int i = 1; i < frames.Count; i++)
             {
-                if (frames[i - 1].GroundPathInputIdentity != frames[i].GroundPathInputIdentity ||
-                    frames[i - 1].NextLandingEventIdentity != frames[i].NextLandingEventIdentity ||
-                    Vector3.Distance(frames[i - 1].NextLanding, frames[i].NextLanding) > PositionNoiseFloor ||
-                    frames[i - 1].GroundPathState != frames[i].GroundPathState)
+                if (frames[i - 1].GroundPath.InputIdentity != frames[i].GroundPath.InputIdentity ||
+                    frames[i - 1].GroundPath.NextSwingLandingEventIdentity != frames[i].GroundPath.NextSwingLandingEventIdentity ||
+                    Vector3.Distance(frames[i - 1].GroundPath.NextSwingLanding, frames[i].GroundPath.NextSwingLanding) > PositionNoiseFloor ||
+                    frames[i - 1].GroundPath.State != frames[i].GroundPath.State)
                 {
                     return true;
                 }
@@ -9660,23 +9608,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 CurrentAnimatedSole;
             internal bool RawLandingAvailable;
             internal Vector3 RawLanding;
-            internal string GroundPathState;
-            internal string GroundPathRejectReason;
-            internal ulong GroundPathInputIdentity;
-            internal bool GroundPathTargetAvailable;
-            internal bool GroundSurfaceFactsAvailable;
-            internal CharacterFootGroundSurfaceState GroundSurfaceState;
-            internal ulong GroundSurfaceWorldRevision;
-            internal int GroundSurfaceSegmentCount;
             internal int GroundSurfaceObservedCount;
-            internal ulong LastLandingEventIdentity;
-            internal ulong NextLandingEventIdentity;
-            internal int NextLandingSurfaceIdentity;
-            internal Vector3 LastLanding;
-            internal Vector3 NextLanding;
-            internal int GroundEnvelopeVertexCount;
-            internal Vector3 GroundPathComponentUp;
-            internal float GroundPathRadius;
             internal readonly SortedDictionary<int, Vector3>
                 GroundEnvelopeVertices =
                     new SortedDictionary<int, Vector3>();
@@ -9756,6 +9688,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal CharacterFootPelvisSample Pelvis;
             internal CharacterFootSolverSample Solver;
             internal CharacterFootResponseSample Response;
+            internal CharacterFootGroundPathSample GroundPath;
             internal CharacterFootOutputStagesSample OutputStages;
             internal CharacterFootLifecycleSample Lifecycle;
             internal CharacterFootPathContinuitySample PathContinuity;

@@ -19,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PathContinuity = CharacterFootPathContinuityColumns.Schema.Bind(indices);
             Lifecycle = CharacterFootLifecycleColumns.Schema.Bind(indices);
             OutputStages = CharacterFootOutputStagesColumns.Schema.Bind(indices);
+            GroundPath = CharacterFootGroundPathColumns.Schema.Bind(indices);
             Response = CharacterFootResponseColumns.Schema.Bind(indices);
         }
 
@@ -33,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterFootCsvReader<CharacterFootPelvisSample> Pelvis { get; }
         internal CharacterFootCsvReader<CharacterFootSolverSample> Solver { get; }
         internal CharacterFootCsvReader<CharacterFootResponseSample> Response { get; }
+        internal CharacterFootCsvReader<CharacterFootGroundPathSample> GroundPath { get; }
         internal CharacterFootCsvReader<CharacterFootOutputStagesSample> OutputStages { get; }
         internal CharacterFootCsvReader<CharacterFootLifecycleSample> Lifecycle { get; }
         internal CharacterFootCsvReader<CharacterFootPathContinuitySample> PathContinuity { get; }

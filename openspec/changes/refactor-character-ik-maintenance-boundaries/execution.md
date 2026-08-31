@@ -206,8 +206,23 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 响应与接触列绑定
 
-状态：实现、Unity与Editor构建通过，0错误，build server已关闭；等待实际回放。
+状态：候选40dbf7f已通过实际Replay及全部正式明细对账。
 
 - 将81个响应与接触列收进55个typed绑定，包含Plant目标高度、前后输出、世界残差及方向响应。过去的本帧证据读取改为同一Response记录，未修改运行历史、算法、规则或格式identity。
 - Header、CSV写入、解析和必需列检查共用该组；PreviousResponseOutput和DeadlineHalfLife明确关联原有效性列，读写不屏蔽原值。
 - 累计612/1215列迁入绑定；比较点为上一ee0d95b/040120和固定ad3527e/233436，任务5尚未完成。
+
+## 响应与接触列的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-041556-779-26045e31d44646f89a7377d579d5a2ae`。最终源文件加载后唯一一次原Record，1044输入、1043采样帧、2086脚行；正式Proof为matched1044、aggregate空、DivergentFrameCount0。
+- 对上一040120与固定233436：1215列顺序、1191业务列逐值、几何22业务列保持，23主表及5几何身份列双向映射无冲突。新增81列精确相同，累计612列为605精确及7既有身份列。
+- 42项诊断的规则、计数、测量、coverage与quality保持；20447条正式明细除原有21个身份叶字段路径外相同。全部索引及原始分段校验、六个612列真实帧查询、summary/events/detail与geometry查询通过。
+- 测试已明确归还Unity，Edit/Idle、Console0。普通Record下没有非身份回归；Reset4.4、Action/Reentry零覆盖、Landing-leg两样本和最终Physical Knee缺口仍不构成已验证范围。
+
+## 路径连续性、状态转换与输出阶段列
+
+状态：Unity与Editor构建通过，0错误；build server已关闭，OpenSpec严格校验通过。等待实际回放。
+
+- 路径连续性51列、Contact状态转换64列、插值与地面约束输出44列分别进入独立typed组，共121个绑定、159列。采样读取原本帧证据，Analyzer按组读取，不变更路径更新、Contact边沿、残差、状态准入或约束数学。
+- 删除对应旧Header、手工写行、解析和必需列清单，保留原数据顺序与原始无效值。当前ComponentUp读取只迁移FootFrame所拥有的目标高度方向；探针与Pelvis各自的ComponentUp保持原来源。
+- 累计771/1215列迁入绑定。还需完成剩余字段、主行统一排序定义和Runtime证据分组，任务5不提前勾选。下一回放对40dbf7f/041556及固定ad3527e/233436。

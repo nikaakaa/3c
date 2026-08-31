@@ -205,43 +205,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionContactPlaneNormalX,FootMotionContactPlaneNormalY,FootMotionContactPlaneNormalZ," +
             "FootContactPlanePenetrationAvailability," +
             "FootMotionDesiredCorrectionX,FootMotionDesiredCorrectionY,FootMotionDesiredCorrectionZ," +
-            "FootMotionPathContinuityEvaluated,FootMotionPathRevisionReason,FootMotionPathResidualRebuilt,FootMotionTargetTrackingApplied," +
-            "FootMotionPathAvailableBefore,FootMotionPathAvailableAfter,FootMotionPathPreviousLandingEventIdentity,FootMotionPathCurrentLandingEventIdentity," +
-            "FootMotionPathPreviousTargetCorrectionX,FootMotionPathPreviousTargetCorrectionY,FootMotionPathPreviousTargetCorrectionZ," +
-            "FootMotionPathCurrentTargetCorrectionX,FootMotionPathCurrentTargetCorrectionY,FootMotionPathCurrentTargetCorrectionZ," +
-            "FootMotionPathLandingPointDeltaMeters,FootMotionPathTargetDeltaMeters," +
-            "FootMotionSwingResidualBeforeRevisionX,FootMotionSwingResidualBeforeRevisionY,FootMotionSwingResidualBeforeRevisionZ," +
-            "FootMotionSwingResidualBeforeDecayX,FootMotionSwingResidualBeforeDecayY,FootMotionSwingResidualBeforeDecayZ," +
-            "FootMotionSwingResidualAfterDecayX,FootMotionSwingResidualAfterDecayY,FootMotionSwingResidualAfterDecayZ," +
-            "FootMotionResidualOutputCorrectionX,FootMotionResidualOutputCorrectionY,FootMotionResidualOutputCorrectionZ," +
-            "FootMotionLandingAcceptanceDistance,FootMotionPathRevisionDistance,FootMotionSwingResidualTolerance," +
-            "FootMotionResidualTimeToLandingSeconds,FootMotionResidualBaseHalfLifeSeconds," +
-            "FootMotionResidualDeadlineHalfLifeAvailable,FootMotionResidualDeadlineHalfLifeSeconds,FootMotionResidualAppliedHalfLifeSeconds," +
-            "FootMotionSwingTargetHeightAdoptionMode,FootMotionSwingRawTargetHeightAlongUp,FootMotionSwingFilteredTargetHeightBefore,FootMotionSwingTargetHeightDelta," +
-            "FootMotionSwingTargetHeightAppliedDelta,FootMotionSwingTargetHeightUpdateHeld,FootMotionSwingTargetHeightForceRefreshed,FootMotionSwingTargetHeightRateLimited,FootMotionSwingTargetHeightClamped,FootMotionSwingTargetHeightForceRefreshDistance,FootMotionSwingTargetMaximumVerticalSpeed," +
-            "FootMotionSwingFilteredTargetHeightAlongUp,FootMotionTargetHeightComponentUpX,FootMotionTargetHeightComponentUpY,FootMotionTargetHeightComponentUpZ," +
-            "FootMotionPreTransitionReason,FootMotionPreTransitionSource,FootMotionPreTransitionTarget,FootMotionPreTransitionAnchorCommand," +
-            "FootMotionPostTransitionReason,FootMotionPostTransitionSource,FootMotionPostTransitionTarget,FootMotionPostTransitionAnchorCommand," +
-            "FootMotionLifecycleTransitionEvaluated,FootMotionPreviousLockRequestAvailable,FootMotionPreviousLockRequested,FootMotionPreviousLockRequestEventIdentity,FootMotionPreviousLockRequestMode,FootMotionPreviousLockRequestWeight," +
-            "FootMotionPreviousContactEdgeSeconds,FootMotionPreviousLatestContactEventIdentity,FootMotionPreviousLatestReleasedContactEventIdentity,FootMotionPreviousCompletedLockWeightEventIdentity,FootMotionPreviousContactAnchorAvailable,FootMotionPreviousContactAnchorEventIdentity," +
-            "FootMotionPreviousContactAnchorAcquiredFrameSequence,FootMotionPreviousContactAnchorAcquiredCompletionIdentity,FootMotionPreviousContactAnchorWorldRevision,FootMotionPreviousContactAnchorSurfaceIdentity,FootMotionPreviousContactAnchorPointX,FootMotionPreviousContactAnchorPointY,FootMotionPreviousContactAnchorPointZ,FootMotionPreviousContactAnchorNormalX,FootMotionPreviousContactAnchorNormalY,FootMotionPreviousContactAnchorNormalZ," +
-            "FootMotionCurrentLockRequested,FootMotionCurrentLockRequestEventIdentity,FootMotionCurrentLockRequestMode,FootMotionCurrentLockRequestWeight,FootMotionCurrentLockRequestAvailability,FootMotionContactEdge,FootMotionCurrentContactEdgeSeconds," +
-            "FootMotionCurrentLatestContactEventIdentity,FootMotionCurrentLatestReleasedContactEventIdentity,FootMotionCurrentCompletedLockWeightEventIdentity,FootMotionCurrentContactAnchorAvailable,FootMotionCurrentContactAnchorEventIdentity," +
-            "FootMotionCurrentContactAnchorAcquiredFrameSequence,FootMotionCurrentContactAnchorAcquiredCompletionIdentity,FootMotionCurrentContactAnchorWorldRevision,FootMotionCurrentContactAnchorSurfaceIdentity,FootMotionCurrentContactAnchorPointX,FootMotionCurrentContactAnchorPointY,FootMotionCurrentContactAnchorPointZ,FootMotionCurrentContactAnchorNormalX,FootMotionCurrentContactAnchorNormalY,FootMotionCurrentContactAnchorNormalZ," +
-            "FootMotionSameEventContactReentryRefreshed,FootMotionSameEventContactReentryUnavailable,FootMotionRetainedVerifiedAnchor,FootMotionReentryInterpolationHistoryRetained,FootMotionFormalFootPlacementWeight,FootMotionHardOwnershipLoss,FootMotionHardOwnershipLossReason," +
-            "FootMotionPreTransitionSuppressOutput,FootMotionPreTransitionResetInterpolation,FootMotionPostTransitionEvaluated,FootMotionPostTransitionSuppressOutput,FootMotionPostTransitionResetInterpolation," +
-            "FootMotionStateTargetCorrectionX,FootMotionStateTargetCorrectionY,FootMotionStateTargetCorrectionZ,FootMotionInterpolationPolicy," +
-            "FootMotionInterpolationOutputCorrectionX,FootMotionInterpolationOutputCorrectionY,FootMotionInterpolationOutputCorrectionZ,FootMotionInterpolationCompleted," +
-            "FootMotionConstraintStateBefore,FootMotionLockResponseBefore,FootMotionOutputStagesAvailable,FootMotionReleasingCompletedToSwing,FootMotionSafetyFloorAvailable," +
-            "FootMotionSafetyFloorOwner,FootMotionSafetyFloorOwnerSurfaceIdentity,FootMotionSafetyFloorOwnerPathIdentity," +
-            "FootMotionCorrectionBeforeSafetyFloorX,FootMotionCorrectionBeforeSafetyFloorY,FootMotionCorrectionBeforeSafetyFloorZ," +
-            "FootMotionSafetyFloorMinimumCorrectionX,FootMotionSafetyFloorMinimumCorrectionY,FootMotionSafetyFloorMinimumCorrectionZ," +
-            "FootMotionSafetyFloorOutputCorrectionX,FootMotionSafetyFloorOutputCorrectionY,FootMotionSafetyFloorOutputCorrectionZ," +
-            "FootMotionFinalEffectiveCorrectionX,FootMotionFinalEffectiveCorrectionY,FootMotionFinalEffectiveCorrectionZ," +
-            "FootMotionSafetyFloorClamped,FootMotionSafetyFloorClampMeters,FootMotionSafetyFloorClearanceBeforeMeters,FootMotionSafetyFloorClearanceAfterMeters," +
-            "FootMotionPlantInterpolationEvaluated,FootMotionPlantTargetEventIdentity,FootMotionPlantTargetVerified,FootMotionPlantTargetKind,FootMotionPlantLockResponse,FootMotionPlantLockWeightCompleted," +
-            "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
-            "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
+            CharacterFootPathContinuityColumns.Schema.Header + "," +
+            CharacterFootLifecycleColumns.Schema.Header + "," +
+            CharacterFootOutputStagesColumns.Schema.Header + "," +
             CharacterFootSupportTargetColumns.Selected.Header + "," +
             CharacterFootResponseColumns.Schema.Header + "," +
             CharacterFootCurrentSupportColumns.Schema.Header + "," +
@@ -2082,127 +2048,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ResolvePenetrationAvailability(in frame, in motion, in ik)
                     .ToString());
             Add(row, motion.DesiredCorrection);
-            Add(row, motion.PathContinuityEvaluated);
-            Add(row, motion.PathRevisionReason);
-            Add(row, motion.PathResidualRebuilt);
-            Add(row, motion.TargetTrackingApplied);
-            Add(row, motion.PathAvailableBefore);
-            Add(row, motion.PathAvailableAfter);
-            Add(row, motion.PathPreviousLandingEventIdentity);
-            Add(row, motion.PathCurrentLandingEventIdentity);
-            Add(row, motion.PathPreviousTargetCorrection);
-            Add(row, motion.PathCurrentTargetCorrection);
-            Add(row, motion.PathLandingPointDelta);
-            Add(row, motion.PathTargetDelta);
-            Add(row, motion.SwingResidualBeforeRevision);
-            Add(row, motion.SwingResidualBeforeDecay);
-            Add(row, motion.SwingResidualAfterDecay);
-            Add(row, motion.ResidualOutputCorrection);
-            Add(row, motion.LandingAcceptanceDistance);
-            Add(row, motion.PathRevisionDistance);
-            Add(row, motion.SwingResidualTolerance);
-            Add(row, motion.ResidualTimeToLandingSeconds);
-            Add(row, motion.ResidualBaseHalfLifeSeconds);
-            Add(row, motion.ResidualDeadlineHalfLifeAvailable);
-            Add(row, motion.ResidualDeadlineHalfLifeSeconds);
-            Add(row, motion.ResidualAppliedHalfLifeSeconds);
-            Add(row, motion.SwingTargetHeightAdoptionMode);
-            Add(row, motion.SwingRawTargetHeightAlongUp);
-            Add(row, motion.SwingFilteredTargetHeightBefore);
-            Add(row, motion.SwingTargetHeightDelta);
-            Add(row, motion.SwingTargetHeightAppliedDelta);
-            Add(row, motion.SwingTargetHeightUpdateHeld);
-            Add(row, motion.SwingTargetHeightForceRefreshed);
-            Add(row, motion.SwingTargetHeightRateLimited);
-            Add(row, motion.SwingTargetHeightClamped);
-            Add(row, motion.SwingTargetHeightForceRefreshDistance);
-            Add(row, motion.SwingTargetMaximumVerticalSpeed);
-            Add(row, motion.SwingFilteredTargetHeightAlongUp);
-            Add(row, motion.TargetHeightComponentUp);
-            Add(row, motion.PreTransitionReason);
-            Add(row, motion.PreTransitionSource.ToString());
-            Add(row, motion.PreTransitionTarget.ToString());
-            Add(row, motion.PreTransitionAnchorCommand);
-            Add(row, motion.PostTransitionReason);
-            Add(row, motion.PostTransitionSource.ToString());
-            Add(row, motion.PostTransitionTarget.ToString());
-            Add(row, motion.PostTransitionAnchorCommand);
-            Add(row, motion.LifecycleTransitionEvaluated);
-            Add(row, motion.PreviousLockRequestAvailable);
-            Add(row, motion.PreviousLockRequested);
-            Add(row, motion.PreviousLockRequestEventIdentity);
-            Add(row, motion.PreviousLockRequestMode);
-            Add(row, motion.PreviousLockRequestWeight);
-            Add(row, motion.PreviousContactEdgeSeconds);
-            Add(row, motion.PreviousLatestContactEventIdentity);
-            Add(row, motion.PreviousLatestReleasedContactEventIdentity);
-            Add(row, motion.PreviousCompletedLockWeightEventIdentity);
-            Add(row, motion.PreviousContactAnchorAvailable);
-            Add(row, motion.PreviousContactAnchorEventIdentity);
-            Add(row, motion.PreviousContactAnchorAcquiredFrameSequence);
-            Add(row, motion.PreviousContactAnchorAcquiredCompletionIdentity);
-            Add(row, motion.PreviousContactAnchorWorldRevision);
-            Add(row, motion.PreviousContactAnchorSurfaceIdentity);
-            Add(row, motion.PreviousContactAnchorPoint);
-            Add(row, motion.PreviousContactAnchorNormal);
-            Add(row, motion.CurrentLockRequested);
-            Add(row, motion.CurrentLockRequestEventIdentity);
-            Add(row, motion.CurrentLockRequestMode);
-            Add(row, motion.CurrentLockRequestWeight);
-            Add(row, motion.CurrentLockRequestAvailability);
-            Add(row, motion.ContactEdge);
-            Add(row, motion.CurrentContactEdgeSeconds);
-            Add(row, motion.CurrentLatestContactEventIdentity);
-            Add(row, motion.CurrentLatestReleasedContactEventIdentity);
-            Add(row, motion.CurrentCompletedLockWeightEventIdentity);
-            Add(row, motion.CurrentContactAnchorAvailable);
-            Add(row, motion.CurrentContactAnchorEventIdentity);
-            Add(row, motion.CurrentContactAnchorAcquiredFrameSequence);
-            Add(row, motion.CurrentContactAnchorAcquiredCompletionIdentity);
-            Add(row, motion.CurrentContactAnchorWorldRevision);
-            Add(row, motion.CurrentContactAnchorSurfaceIdentity);
-            Add(row, motion.CurrentContactAnchorPoint);
-            Add(row, motion.CurrentContactAnchorNormal);
-            Add(row, motion.SameEventContactReentryRefreshed);
-            Add(row, motion.SameEventContactReentryUnavailable);
-            Add(row, motion.RetainedVerifiedAnchor);
-            Add(row, motion.ReentryInterpolationHistoryRetained);
-            Add(row, motion.FormalFootPlacementWeight);
-            Add(row, motion.HardOwnershipLoss);
-            Add(row, motion.HardOwnershipLossReason);
-            Add(row, motion.PreTransitionSuppressOutput);
-            Add(row, motion.PreTransitionResetInterpolation);
-            Add(row, motion.PostTransitionEvaluated);
-            Add(row, motion.PostTransitionSuppressOutput);
-            Add(row, motion.PostTransitionResetInterpolation);
-            Add(row, motion.StateTargetCorrection);
-            Add(row, motion.InterpolationPolicy);
-            Add(row, motion.InterpolationOutputCorrection);
-            Add(row, motion.InterpolationCompleted);
-            Add(row, motion.ConstraintStateBefore.ToString());
-            Add(row, motion.LockResponseBefore.ToString());
-            Add(row, motion.OutputStagesAvailable);
-            Add(row, motion.ReleasingCompletedToSwing);
-            Add(row, motion.SafetyFloorAvailable);
-            Add(row, motion.SafetyFloorOwner.ToString());
-            Add(row, motion.SafetyFloorOwnerSurfaceIdentity);
-            Add(row, motion.SafetyFloorOwnerPathIdentity);
-            Add(row, motion.CorrectionBeforeSafetyFloor);
-            Add(row, motion.SafetyFloorMinimumCorrection);
-            Add(row, motion.SafetyFloorOutputCorrection);
-            Add(row, motion.FinalEffectiveCorrection);
-            Add(row, motion.SafetyFloorClamped);
-            Add(row, motion.SafetyFloorClampMeters);
-            Add(row, motion.SafetyFloorClearanceBeforeMeters);
-            Add(row, motion.SafetyFloorClearanceAfterMeters);
-            Add(row, motion.PlantInterpolationEvaluated);
-            Add(row, motion.PlantTargetEventIdentity);
-            Add(row, motion.PlantTargetVerified);
-            Add(row, motion.PlantTargetKind);
-            Add(row, motion.PlantLockResponse.ToString());
-            Add(row, motion.PlantLockWeightCompleted);
-            Add(row, motion.PlantDesiredPoint);
-            Add(row, motion.PlantFilteredPoint);
+            CharacterFootPathContinuityColumns.Schema.Write(row, in motion);
+            CharacterFootLifecycleColumns.Schema.Write(row, in motion);
+            CharacterFootOutputStagesColumns.Schema.Write(row, in motion);
             CharacterFootSupportTargetDiagnostics selectedTarget = motion.SelectedSupportTarget;
             CharacterFootSupportTargetColumns.Selected.Write(row, in selectedTarget);
             CharacterFootResponseColumns.Schema.Write(row, in motion);

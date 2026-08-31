@@ -290,8 +290,22 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## Foot Motion Core与最终Goal列
 
-状态：104列实现完成，Unity与Editor最终构建0错误，build server已关闭；等待实际回放。
+状态：候选96fc446已完成实际Replay和全部1160列迁移验证。
 
 - 将Foot Motion核心89列收进62个typed绑定。原Envelope交集、路径走廊、Builder目标、接触面与穿透可用性仍在原Sampler顺序计算一次，绑定只接收完成后的本帧证据，不进入Runtime控制链。
 - 将编码Goal和最终Foot/Pelvis Goal权重15列收进8个typed绑定。Goal只读取正式Goal、原Ankle及Pelvis Goal，不重选目标、不修改权重，也不把Goal冒充Physical结果。
 - 删除两个区段的旧Header、逐项Add、解析字段和必需列清单；原列名、顺序、值与格式identity保持。累计1160/1215列迁入绑定，剩余55列为身份/Foot状态/Step选择、RootLocalLanding与Action输入；之后仍需统一主行组合、格式identity、Runtime证据分组和Reset取证。
+
+## Motion Core与Goal列的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-052946-244-de5d186145984c77a619ad2417718c50`，唯一原Record完成1044输入/Body和2086脚行。对051323及固定233436，1191业务列逐值相同；新104列为102精确及2个身份列，Goal15列全部精确，累计1160列为1142精确及18既有身份列。
+- Envelope、走廊、接触面、穿透、Motion权重/状态/派生值及Encoded/Final/Pelvis Goal、Physical输出全部保持。42项诊断、20447明细及索引、六次1160列帧查询和其它正式查询一致；Proof matched1044、DivergentFrameCount0。
+- Unity已归还、Edit/Idle、failure空、Console0；Reset4.4和既有未覆盖限制不变。
+
+## 身份、Root Landing与Action输入列
+
+状态：最后55列实现完成，Unity与Editor最终构建0错误，build server已关闭；等待实际回放。
+
+- 将样本、Program、Frame、Foot状态、Plant Target和Step选择46列收进Identity绑定；FrameSequence保持当前Int32 ABI并在写入边界显式检查Runtime ulong可表示，身份与阶段字段不再散落在FootFrame。
+- RootLocalLanding三列进入独立Root Landing绑定。Grounded、HorizontalSpeed及左右Action身份/权重六列进入Action绑定；Analyzer按Identity.Side选择本脚Action，不在CSV解析器复制一份选中状态。
+- 删除最后的手工Header、逐项写行、局部Cell/Float/Int/Ulong/Vector解析和必需列清单。HasAnchor只由已读取的MotionCore身份与Constraint State派生，不按列名旁路读取。1215/1215列均进入typed绑定；主行统一组合、格式identity集中、Runtime证据分组和Reset取证仍待完成，任务5不提前勾选。

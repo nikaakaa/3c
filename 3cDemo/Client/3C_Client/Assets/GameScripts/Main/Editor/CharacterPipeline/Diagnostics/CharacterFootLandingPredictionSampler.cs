@@ -90,12 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "Tools/3C/Diagnostics/Foot Landing Sampling/Stop and Save";
         const string GeometryFileName = "ground-path-geometry.csv";
         static readonly string Header =
-            "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
-            "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,FootProfileId,FootProfileRevision,Side,State,RejectReason,StepSource," +
-            "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
-            "NextLandingTrackingState,NextLandingTrackingEventIdentity,VerifiedLastLandingAvailable,VerifiedLastLandingEventIdentity," +
-            "PlantTargetState,PlantTargetAvailable,PlantTargetEventIdentity,PlantTargetSurfaceIdentity,PlantTargetPointX,PlantTargetPointY,PlantTargetPointZ,PlantTargetNormalX,PlantTargetNormalY,PlantTargetNormalZ,PlantTargetTrajectoryGeneration,PlantTargetFutureBodyTranslationSourceIdentity,PlantTargetUpdated,PlantVerificationAttempted,PlantVerificationUnavailable,ApproachPlantTargetPrepared," +
-            "StepSelectionMaximumPredictionTimeSeconds,StepSelectionLastLandingEventIdentity,SelectedStepSource,SelectedLandingEventIdentity," +
+            CharacterFootIdentityColumns.Schema.Header + "," +
             CharacterFootStepColumns.SelectedPhase.Header + "," +
             CharacterFootStepColumns.Current.Header + "," +
             CharacterFootStepColumns.Incoming.Header + "," +
@@ -103,10 +98,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootEventColumns.Output.Header + "," +
             CharacterFootFormalObservationColumns.Input.Header + "," +
             CharacterFootEventColumns.Input.Header + "," +
-            "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
+            CharacterFootRootLandingColumns.Schema.Header + "," +
             CharacterFootTimingColumns.Schema.Header + "," +
             CharacterFootPredictionMotionColumns.Schema.Header + "," +
-            "Grounded,HorizontalSpeed,LeftActionInstanceIdentity,LeftActionFootWeight,RightActionInstanceIdentity,RightActionFootWeight," +
+            CharacterFootActionColumns.Schema.Header + "," +
             CharacterFootPrimarySupportColumns.Schema.Header + "," +
             CharacterFootRootHierarchyColumns.Schema.Header + "," +
             CharacterFootBodyCorrectionColumns.Schema.Header + "," +
@@ -1528,50 +1523,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             row.Clear();
             CharacterFootLandingPredictionInputDiagnostics input = frame.Input;
-            Add(row, session.SampleIdentity.ToString("N"));
-            Add(row, session.StartedUtc.ToString("O", CultureInfo.InvariantCulture));
-            Add(row, session.Program.ProgramIdentity);
-            Add(row, session.Program.ProjectionRevision);
-            Add(row, session.Program.PoseGraphId);
-            Add(row, session.Program.PoseGraphRevision);
-            Add(row, session.Program.PosePlanHash);
-            Add(row, frame.FrameSequence);
-            Add(row, frame.CompletionIdentity);
-            Add(row, targetRuntimeInstanceId.ToString("N"));
-            Add(row, targetHostInstanceId);
-            Add(row, frame.RootInstanceId);
-            Add(row, frame.ProfileId);
-            Add(row, frame.ProfileRevision);
-            Add(row, foot.Side.ToString());
-            Add(row, foot.State.ToString());
-            Add(row, foot.RejectReason.ToString());
-            Add(row, foot.StepSource.ToString());
-            Add(row, foot.LandingEventIdentity);
-            Add(row, foot.TrajectoryGeneration);
-            Add(row, foot.LandingConfidence);
-            Add(row, foot.TimeToLandingSeconds);
-            Add(row, foot.NextLandingTrackingState);
-            Add(row, foot.NextLandingTrackingEventIdentity);
-            Add(row, foot.VerifiedLastLandingAvailable);
-            Add(row, foot.VerifiedLastLandingEventIdentity);
-            Add(row, foot.PlantTargetState);
-            Add(row, foot.PlantTargetAvailable);
-            Add(row, foot.PlantTargetEventIdentity);
-            Add(row, foot.PlantTargetSurfaceIdentity);
-            Add(row, foot.PlantTargetPoint);
-            Add(row, foot.PlantTargetNormal);
-            Add(row, foot.PlantTargetTrajectoryGeneration);
-            Add(row, foot.PlantTargetFutureBodyTranslationSourceIdentity);
-            Add(row, foot.PlantTargetUpdated);
-            Add(row, foot.PlantVerificationAttempted);
-            Add(row, foot.PlantVerificationUnavailable);
-            Add(row, foot.ApproachPlantTargetPrepared);
             CharacterFootStepCandidateSelectionDiagnostics stepSelection =
                 foot.StepCandidateSelection;
-            Add(row, stepSelection.MaximumPredictionTimeSeconds);
-            Add(row, stepSelection.LastLandingEventIdentity);
-            Add(row, stepSelection.SelectedSource.ToString());
-            Add(row, stepSelection.SelectedLandingEventIdentity);
+            var identitySource = new CharacterFootIdentityCsvSource(
+                session.SampleIdentity.ToString("N"),
+                session.StartedUtc.ToString("O", CultureInfo.InvariantCulture),
+                session.Program.ProgramIdentity, session.Program.ProjectionRevision,
+                session.Program.PoseGraphId, session.Program.PoseGraphRevision,
+                session.Program.PosePlanHash, in frame,
+                targetRuntimeInstanceId.ToString("N"), targetHostInstanceId,
+                in foot, in stepSelection);
+            CharacterFootIdentityColumns.Schema.Write(row, in identitySource);
             CharacterFootStepCandidateDiagnostics selectedStep =
                 stepSelection.SelectedSource ==
                 CharacterFootLandingStepSource.FormalNextLanding
@@ -1610,15 +1572,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootFormalObservationColumns.Input.Write(row, in formalInputSource);
             var inputEvents = new CharacterFootEventCsvSource(hasInputObservedStep, inputObservedStep.Events);
             CharacterFootEventColumns.Input.Write(row, in inputEvents);
-            Add(row, foot.RootLocalLanding);
+            Vector3 rootLocalLanding = foot.RootLocalLanding;
+            CharacterFootRootLandingColumns.Schema.Write(row, in rootLocalLanding);
             CharacterFootTimingColumns.Schema.Write(row, in input);
             CharacterFootPredictionMotionColumns.Schema.Write(row, in input);
-            Add(row, input.Grounded);
-            Add(row, input.HorizontalSpeed);
-            Add(row, input.LeftActionInstanceIdentity);
-            Add(row, input.LeftActionFootWeight);
-            Add(row, input.RightActionInstanceIdentity);
-            Add(row, input.RightActionFootWeight);
+            CharacterFootActionColumns.Schema.Write(row, in input);
             CharacterFootPrimarySupportDiagnostics primarySupport = frame.PrimarySupport;
             CharacterFootPrimarySupportColumns.Schema.Write(row, in primarySupport);
             CharacterFootRootHierarchyColumns.Schema.Write(row, in roots);

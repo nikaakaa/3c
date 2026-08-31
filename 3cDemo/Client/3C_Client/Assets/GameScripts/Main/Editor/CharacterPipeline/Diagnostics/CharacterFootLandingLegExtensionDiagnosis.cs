@@ -178,13 +178,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public CharacterFootVectorFact componentUp;
         public string status;
-        public string selection;
         public bool intersectionEvaluated;
         public double? intersectionMinimumAlongUp;
         public double? intersectionMaximumAlongUp;
-        public bool available;
-        public double? minimumAlongUp;
-        public double? maximumAlongUp;
         public CharacterFootPelvisLegReachObservation left;
         public CharacterFootPelvisLegReachObservation right;
     }
@@ -194,10 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public bool evaluated;
         public bool completed;
-        public double? unconstrainedOutput;
-        public bool targetClamped;
-        public bool outputClamped;
-        public bool velocityCleared;
+        public double? integratedOutput;
         public bool hadPreviousState;
         public bool supportChanged;
         public bool velocityReset;
@@ -256,8 +249,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             targetCompressionReserveDistributionMeters;
         public CharacterFootDiagnosisDistribution
             solvedCompressionReserveDistributionMeters;
-        public CharacterFootDiagnosisDistribution
-            runtimeGoalClampDistributionMeters;
         public List<CharacterFootLandingReachRepresentative>
             representativeEvents;
 
@@ -344,13 +335,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             .Where(value => value.finalIkLegAvailable)
                             .Select(value =>
                                 value.solvedCompressionReserveMeters)
-                            .ToList()),
-                runtimeGoalClampDistributionMeters =
-                    CharacterFootDiagnosisDistribution.Create(
-                        observations
-                            .Where(value => value.runtimeReachEvaluated)
-                            .Select(value =>
-                                value.runtimeGoalClampDistanceMeters)
                             .ToList()),
                 representativeEvents = representatives
                     .OrderBy(value => value.startFrame)
@@ -439,8 +423,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public double solvedCompressionReserveMeters;
         public bool runtimeReachEvaluated;
         public bool runtimeReachAvailable;
-        public bool runtimeGoalClamped;
-        public double runtimeGoalClampDistanceMeters;
         public bool resolvedReachRequestAvailable;
         public string resolvedReachEventIdentity;
         public double resolvedReachLegLengthMeters;
@@ -450,13 +432,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string primarySupportLandingEventIdentity;
         public string strideState;
         public string strideSupportSide;
-        public bool pelvisHardReachAvailable;
-        public double pelvisHardReachMinimumAlongUpMeters;
-        public double pelvisHardReachMaximumAlongUpMeters;
-        public bool pelvisHardReachIntersectionExists;
+        public bool pelvisReachObservationEvaluated;
+        public double pelvisReachObservationMinimumAlongUpMeters;
+        public double pelvisReachObservationMaximumAlongUpMeters;
+        public bool pelvisReachObservationIntersectionExists;
         public double intersectionMinimumAlongUpMeters;
         public double intersectionMaximumAlongUpMeters;
-        public double pelvisHardReachConflictGapMeters;
+        public double pelvisReachObservationConflictGapMeters;
 
         internal static CharacterFootLandingReachObservation From(
             JObject value) =>
@@ -541,11 +523,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value.Value<bool>("runtimeReachEvaluated"),
                 runtimeReachAvailable =
                     value.Value<bool>("runtimeReachAvailable"),
-                runtimeGoalClamped =
-                    value.Value<bool>("runtimeGoalClamped"),
-                runtimeGoalClampDistanceMeters =
-                    value.Value<double>(
-                        "runtimeGoalClampDistanceMeters"),
                 resolvedReachRequestAvailable =
                     value.Value<bool>("resolvedReachRequestAvailable"),
                 resolvedReachEventIdentity =
@@ -569,24 +546,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 strideSupportSide =
                     value.Value<string>("strideSupportSide") ??
                     string.Empty,
-                pelvisHardReachAvailable =
-                    value.Value<bool>("pelvisHardReachAvailable"),
-                pelvisHardReachMinimumAlongUpMeters =
+                pelvisReachObservationEvaluated =
+                    value.Value<bool>("pelvisReachObservationEvaluated"),
+                pelvisReachObservationMinimumAlongUpMeters =
                     value.Value<double>(
-                        "pelvisHardReachMinimumAlongUpMeters"),
-                pelvisHardReachMaximumAlongUpMeters =
+                        "pelvisReachObservationMinimumAlongUpMeters"),
+                pelvisReachObservationMaximumAlongUpMeters =
                     value.Value<double>(
-                        "pelvisHardReachMaximumAlongUpMeters"),
-                pelvisHardReachIntersectionExists =
-                    value.Value<bool>("pelvisHardReachIntersectionExists"),
+                        "pelvisReachObservationMaximumAlongUpMeters"),
+                pelvisReachObservationIntersectionExists =
+                    value.Value<bool>("pelvisReachObservationIntersectionExists"),
                 intersectionMinimumAlongUpMeters =
                     value.Value<double>(
                         "intersectionMinimumAlongUpMeters"),
                 intersectionMaximumAlongUpMeters =
                     value.Value<double>(
                         "intersectionMaximumAlongUpMeters"),
-                pelvisHardReachConflictGapMeters =
-                    value.Value<double>("pelvisHardReachConflictGapMeters")
+                pelvisReachObservationConflictGapMeters =
+                    value.Value<double>("pelvisReachObservationConflictGapMeters")
             };
     }
 

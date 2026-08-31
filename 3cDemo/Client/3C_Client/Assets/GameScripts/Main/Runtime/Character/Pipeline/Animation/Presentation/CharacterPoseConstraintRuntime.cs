@@ -581,7 +581,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void SealFrame()
         {
             if (m_Pending.FootPlacement != null)
-                m_Pending.FootPlacement.HasFrame = false;
+                m_Pending.FootPlacement.IsPendingFrameOpen = false;
             m_Pending.Identity = m_NextBankIdentity++;
             m_Committed = m_Pending;
             m_HasCommitted = true;

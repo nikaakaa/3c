@@ -1,10 +1,10 @@
-# 主支撑Reach准入实验
+# Reach执行权变更记录
 
-## 对照与改动
+## 第15步：主支撑准入（历史）
 
 - 直接前驱：f2fd8a2，141106／facts66；固定193957仍是Foot效果对照。
 - 历史代码：91758ff7da8bc18f8716218a1ea13ec9c000061c。仅参考Accepted主支撑硬边界、Pelvis Release无Reach；不恢复旧目标、动画弯曲余量、0.12秒退出或旧旋转。
-- 当前候选：全腿请求及交集继续测量；只有Primary执行骨盆硬边界及末端Foot径向投影。Release保留真实Up和原Spring回零，无历史不启动Pelvis。每脚Landing完成按本腿实际加权位移后的几何核对，与执行权限分开。
+- 第15步候选：全腿请求及交集继续测量；只有Primary执行骨盆硬边界及末端Foot径向投影。Release保留真实Up和原Spring回零，无历史不启动Pelvis。每脚Landing完成按本腿实际加权位移后的几何核对，与执行权限分开。
 - 不变：Contact／Swing／Anchor／FootHeight／Goal权重／旋转、3Hz、20毫米余量、共同高度公式、Bend、Solver和37质量规则。
 
 ## 事前核对
@@ -28,3 +28,19 @@ Runtime e0e9678、Diagnostics 8f8c28a（68/37，无新CSV列）。完整Editor�
 原因：PelvisPreSolveTranslation只是求解前平移；FBBIK的spine mapping之后仍重建骨盆，limb mapping按原骨长产生真实脚端。FinalIkPelvisPositionResidual由现代码固定赋0，不是最终骨盆误差；唯一Writer与Solver骨盆仅微米差，额外位移发生在Writer前。首包已反证把取消非主脚Reach直接视为安全修复，当前不接纳。Unity后来处于非本任务拥有的Play，已询问是否可结束；不擅自中断，等待正式复验与精确撤回本候选。正确的max0诊断修复单列保留。
 
 后续只在本MD追加必要路径、关键窗口与处置；普通小步不复制原包或制作ZIP。
+
+## 第16步：按用户要求撤除全部硬执行
+
+当前保留删除状态。9da24a5删除全部骨盆Reach目标／输出夹紧、边界清速度／完成阻拦／强制权重及末端径向夹脚；1790663清理API和诊断到69/38，净减9个CSV标量，改名IntegratedOutput。逐腿观察与原Landing完成资格仍在，不是恒false兼容分支；5dfa6d1正确的max0诊断保留。用户的最新决定取代第15步恢复计划，不擅自装回硬限制。
+
+完整Editor57既有／依赖警告0错误、118.34秒并shutdown。160537首包因我误删ResolvedPelvisReachAvailable表头而发布失败，4934fb9恢复正确表头，原包不改；重新Unity编译零错误。最终160901正式发布1043帧／2086脚行、1215唯一列，官方Proof对141106 matched1044，完整frames／runtime identity相同，samples SHA与Proof一致。
+
+有效原包：`Diagnostics/FootPlacementRuns/20260831-160901-709-3e0df68f9d3640aaa82f4fbd2ec7c42f`。仅把Temp的必要原字节Proof复制到该目录`replay-proof.json`并核对哈希；未ZIP、复制采样或提交数据。
+
+相对141106：世界骨盆超过50毫米大步33→10，其中向下24→8；相对修正超过50毫米28→0。静止平地修正均值−22.278→0毫米，移动平地−15.355→+0.059毫米。322世界变化−45.877→+29.226毫米、466为−46.606→+12.918毫米；420仍下降49.571毫米，989仍下降63.375毫米。相对Primary-only的152254，大步22→10、向下11→8；输入与OriginalSole仍一致。
+
+副作用必须保留：实际Ankle Goal误差超过1毫米122行、超过10毫米82行，最大120.544毫米在L503/Releasing；有非零Goal的Pelvis误差超过1毫米145帧，最大40.396毫米在592。Solver全部Succeeded，不代表真实脚到Goal。12条Foot状态与后继目标因原Landing几何完成资格而改变，不能宣称全部Foot输出逐值保持。输入目标生产代码未改，不等于下游没有变化。
+
+37项规则／scorePolicy逐项不变。穿透命中34/90→19/84，但接触未贴合3/60→13/60；Stable143/344保持，Contact输出433/1051→418/1052。总分仍61.9，不作为通过证据。Solved Knee超过100毫米的步数157→160，额外offset步89→62；R826峰628.236→648.299毫米，不能把步数当翻膝次数。Action／同事件重入没有新增覆盖。
+
+结论：用户要求撤除的执行路径已实际删除并加载，骨盆硬突降和额外下压明显减少，整体质量未达标；剩余释放回落、动画／Root运动及FBBIK骨架映射仍影响最终骨盆，脚目标冲突也未解决。本步不再恢复Reach，也不混改Solver／权重掩盖代价。

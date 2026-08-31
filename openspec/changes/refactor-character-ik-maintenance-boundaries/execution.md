@@ -362,8 +362,21 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## Runtime Pelvis证据分组
 
-状态：实现完成，Runtime与Editor构建0错误，build server已关闭；等待实际回放。
+状态：候选691d627已完成实际Replay和全部1043 Pelvis Frame验证；任务5.1完成。
 
 - `CharacterFootStrideHipsDiagnostics`父记录只保留正式Result，并按需公开Core、Observation、HeightTarget、Posture、Reach和Response六个只读分组；删除原来的59项平铺访问面，不增加第二份Pelvis状态。
 - Core保存Stride状态、两脚侧、区间、进度、Slope、Sampled Ground、最终Delta及是否产出Goal；Observation保存Pose输入与动画Pelvis；HeightTarget、Posture、Reach分别读取对应子结果；Response统一Spring前值、输入、积分结果、目标、输出、速度及位置权重。
 - Editor Pelvis列、Gizmo和Visual Validation直接读取分组；Sampler中期望Physical Pelvis和Goal residual仍用Observation与Response的正式值。本步不改变Pelvis Result、Spring、目标、权重、Reach或CSV identity。回放通过后据此判断任务5.1。
+
+## Runtime Pelvis分组的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-063845-001-6be23d5ce4c140e1b459d3ea1a7853e6`。对063151及固定233436，1191业务列逐值相同，23身份列映射无冲突；1043个完整Pelvis Frame JSON在Core、Observation、HeightTarget、Posture、Reach、Response、Goal residual和Physical Pelvis上differentFrames均为0。
+- 42项诊断、20447明细及索引、几何、正式查询保持；Proof matched1044、DivergentFrameCount0，输入/Body/时钟及帧数组一致。Unity已归还、failure空、Console0。据此确认任务5.1完成。
+
+## 当前诊断格式identity集中
+
+状态：实现完成，Unity与Editor构建0错误，build server已关闭，严格校验通过；等待实际回放。
+
+- 新增唯一`CharacterFootDiagnosticFormatIdentity`，分别保存Facts Schema、Analyzer Version、Diagnosis Schema和Quality Score Schema。Analyzer、Publisher、Store、Diagnosis Writer和MCP Query统一读取该定义。
+- 四个identity保持原字符串和数字，未新增外部字段或升级ABI。Facts Schema与Analyzer Version虽然同为71，仍是两个独立常量；Manifest/Index存储Schema继续由Store原Owner持有，不误并入业务格式。
+- 删除各消费者中的重复字面量，不引入旧版本reader、别名或fallback。回放通过并完成最终全链对账后再判断任务5.4、5.5。

@@ -266,7 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/40",
+                schema = CharacterFootDiagnosticFormatIdentity.DiagnosisSchema,
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
@@ -540,7 +540,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [Serializable]
     internal sealed class CharacterFootQualityScorecard
     {
-        public string schema = "character-foot-quality-score/3";
+        public string schema = CharacterFootDiagnosticFormatIdentity.QualityScoreSchema;
         public string scoringVersion = "foot-quality-seven-dimensions/2";
         public string purpose = "ProvisionalReference";
         public bool isShallowReference = true;
